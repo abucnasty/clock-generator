@@ -63,7 +63,7 @@
         {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":72,"denominator":1},"cycles":15,"period_ticks":1080,"kept":true},
         {"swings":3,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":216,"denominator":1},"cycles":5,"period_ticks":1080,"kept":true}
       ],
-      "duty": [
+      "utilization": [
         {
           "producer": "machine:lithium",
           "members": [
@@ -78,7 +78,7 @@
             "numerator": 5312200000000001,
             "denominator": 1000000000000000
           },
-          "duty": {
+          "utilization": {
             "numerator": 244444442061,
             "denominator": 365213746439
           }
@@ -101,7 +101,7 @@
             "numerator": 495,
             "denominator": 8
           },
-          "duty": {
+          "utilization": {
             "numerator": 256,
             "denominator": 297
           }

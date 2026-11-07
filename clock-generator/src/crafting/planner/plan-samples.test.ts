@@ -18,22 +18,22 @@ const plannedPeriodOf = (composition: PlanComposition): number => composition.ov
 
 describe("the build plan", () => {
     describe.each(Object.entries(ConfigPaths))("of %s", (key, file) => {
-        it("matches its snapshot, its main period is the planning run's, and its duty is the feasibility pass's", async () => {
+        it("matches its snapshot, its main period is the planning run's, and its utilization is the feasibility pass's", async () => {
             const { config, feasibility, plan, validation } = await planOfSample(file);
             await expect(planSnapshotOf(plan, key)).toMatchFileSnapshot(path.join(SNAPSHOTS, `${key}.plan.json`));
 
-            // the duty of every machine group, in the groups that hold its machines, with the feasibility pass's figures
-            const listed = plan.groups.flatMap(group => group.duty);
-            for (const duty of feasibility.duties) {
-                const entries = listed.filter(entry => entry.producer === duty.group);
+            // the utilization of every machine group, in the groups that hold its machines, with the feasibility pass's figures
+            const listed = plan.groups.flatMap(group => group.utilization);
+            for (const utilization of feasibility.utilizations) {
+                const entries = listed.filter(entry => entry.producer === utilization.group);
                 expect(entries.flatMap(entry => entry.members).map(member => Number(member.split(":")[1])).sort((a, b) => a - b))
-                    .toEqual([...duty.machines].sort((a, b) => a - b));
+                    .toEqual([...utilization.machines].sort((a, b) => a - b));
                 for (const entry of entries) {
-                    expect([entry.crafts_needed, entry.crafts_capacity, entry.duty].map(it => `${it.numerator}/${it.denominator}`))
-                        .toEqual([duty.crafts_needed, duty.crafts_capacity, duty.duty].map(it => `${it.getNumerator}/${it.getDenominator}`));
+                    expect([entry.crafts_needed, entry.crafts_capacity, entry.utilization].map(it => `${it.numerator}/${it.denominator}`))
+                        .toEqual([utilization.crafts_needed, utilization.crafts_capacity, utilization.utilization].map(it => `${it.getNumerator}/${it.getDenominator}`));
                 }
             }
-            expect(listed.length).toBeGreaterThanOrEqual(feasibility.duties.length);
+            expect(listed.length).toBeGreaterThanOrEqual(feasibility.utilizations.length);
 
             expect(validation).not.toBeNull();
             const composition = plan.composition!;

@@ -8,7 +8,7 @@
 //   fuel     where the plan has fuel inserters: the view of the fuel being consumed that a clock's export makes (its own
 //            run with the fuel clocks), on the plan's clock, its history's reasons as texts
 //   speed    the as-built run again with nothing recorded, for ticks per second and scavenges per million ticks
-//   losses   with --losses: backpressureLossOf on the stored windows (supply gates)
+//   losses   with --losses: disturbanceTrialOf on the stored windows (supply gates)
 // It writes what every run observed, as hashes: per signal (an entity's field, or its events) and per period of the
 // clock, so that a difference names the run, the signal and the first period that differs. Component internals are
 // never read: only what a run hands back (the stock and timeline recordings, the histories, the figures), so that the
@@ -192,7 +192,7 @@ function figuresOf(run) {
         stability_check: run.stability_check,
         total_expected_output: run.total_expected_output,
         used_terminal_swing_count: run.used_terminal_swing_count,
-        backpressure_loss: run.backpressure_loss ?? null,
+        disturbance_trial: run.disturbance_trial ?? null,
     };
 }
 
@@ -302,7 +302,7 @@ const RUNS = {
     losses(engine, job, expected) {
         if (!job.windows || expected === undefined) return null;
         return () => {
-            const report = engine.backpressureLossOf(job.config, job.windows, job.period, expected, quiet);
+            const report = engine.disturbanceTrialOf(job.config, job.windows, job.period, expected, quiet);
             const signals = new Signals();
             signals.whole('report', report);
             return { signals, period: job.period, ticks: 0, ticks_simulated: 0 };

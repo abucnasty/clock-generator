@@ -99,7 +99,7 @@ function armOf(alternative, clock, config_path, selected_id, always_on = false) 
         always_on,
         verdict: clock.selected.verdict,
         holds: always_on ? null : assessment?.holds ?? alternative?.result.stability_check.holds ?? null,
-        recovers: always_on ? null : assessment?.backpressure_loss?.survives ?? null,
+        recovers: always_on ? null : assessment?.disturbance_trial?.survives ?? null,
         wake_ups_per_minute: always_on ? null : assessment?.wake_ups_per_minute ?? as_built?.wake_ups?.wake_ups_per_minute ?? null,
         items_per_second: clock.selected.items_per_second,
         period_ticks: clock.period_ticks, counted_ticks: clock.counted_ticks,

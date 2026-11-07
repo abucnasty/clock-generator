@@ -46,7 +46,7 @@ describe("verified primitive adapter orchestration (verification outcomes are ex
                 always_on_reasons: Object.fromEntries(left_open), random_margins: room?.random_margins,
             } as unknown as planning.BlueprintGenerationResult;
         });
-        const recovery = vi.spyOn(trial, "backpressureLossVerdictOf").mockReturnValue({ backpressure_loss: recovered });
+        const recovery = vi.spyOn(trial, "disturbanceTrialVerdictOf").mockReturnValue({ disturbance_trial: recovered });
         const starts = vi.spyOn(trial, "startDependenceVerdictOf").mockReturnValue({ verdict: "stable", expected_output_items: 32,
             starts: CLOCK_STARTS.map(start => ({ id: start.id, reaches_target: true })) } as trial.ClockAssessment["start_dependence"]);
         const signature = vi.spyOn(trial, "clockVerificationSignature").mockImplementation((on, result) => canonicalVerificationJson({
@@ -78,7 +78,7 @@ describe("verified primitive adapter orchestration (verification outcomes are ex
 
     it.each([false, null, "incomplete"] as const)("declines unsuccessful/unknown recovery %s rather than calling it stable", outcome => {
         const spies = arrange();
-        spies.recovery.mockReturnValue({ backpressure_loss: outcome === null ? null : { ...recovered,
+        spies.recovery.mockReturnValue({ disturbance_trial: outcome === null ? null : { ...recovered,
             survives: outcome !== false, ...(outcome === "incomplete" ? { not_tried: ["input"] } : {}) } });
         const result = verifiedPrimitiveRoundRobinPollingClock(config, { verify_as_built: true, logger: quiet }, 602);
         expect(result.clock).toBeNull();

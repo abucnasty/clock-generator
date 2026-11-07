@@ -46,7 +46,7 @@
         {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":96,"denominator":19},"cycles":18,"period_ticks":90.94736842105263,"kept":true},
         {"swings":3.125,"swings_exact":{"numerator":25,"denominator":8},"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":300,"denominator":19},"cycles":144,"period_ticks":2273.684210526316,"kept":true}
       ],
-      "duty": [
+      "utilization": [
         {
           "producer": "machine:iron-bacteria-cultivation",
           "members": [
@@ -61,7 +61,7 @@
             "numerator": 723,
             "denominator": 16
           },
-          "duty": {
+          "utilization": {
             "numerator": 6080,
             "denominator": 6507
           }

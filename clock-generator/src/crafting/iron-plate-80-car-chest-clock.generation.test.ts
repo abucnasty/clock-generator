@@ -1,7 +1,7 @@
 import path from "path";
 import {beforeAll, describe, expect, test} from "vitest";
 import {ClockAlternativesResult, generateClockAlternatives} from "./generate-blueprint";
-import {backpressureLossVerdictOf} from "./trial";
+import {disturbanceTrialVerdictOf} from "./trial";
 import {outputCapacityPerSecond} from "./alternatives";
 import {loadConfigFromFile} from "../config/loader";
 import type {Config} from "../config/schema";
@@ -52,12 +52,12 @@ describe("the car paste at 80.78/s", () => {
 
     test("says why the recovery of a clock of 356.524 ticks cannot be tried, and the selected clock meets the target rate", () => {
         const five = paste.alternatives.find(alternative => alternative.maker === "swings-5")!;
-        expect(backpressureLossVerdictOf(paste_config, five.result, quiet)).toEqual({
-            backpressure_loss: null,
-            backpressure_loss_not_tried: "A clock of 356.524 ticks does not repeat in whole ticks, so its output cannot be counted by the period",
+        expect(disturbanceTrialVerdictOf(paste_config, five.result, quiet)).toEqual({
+            disturbance_trial: null,
+            disturbance_trial_not_tried: "A clock of 356.524 ticks does not repeat in whole ticks, so its output cannot be counted by the period",
         });
         const selected = paste.alternatives[paste.selected_index];
         expect(selected.assessment.items_per_second).toBeCloseTo(80.78, 6);
-        expect(selected.assessment.backpressure_loss).not.toBeNull();
+        expect(selected.assessment.disturbance_trial).not.toBeNull();
     });
 });

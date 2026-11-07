@@ -17,7 +17,7 @@ function clock(id: string, entries = 0): ClockAlternativeView {
         assumptions: { kickStarts: [{ machineId: 'machine:1', item: 'pentapod-egg', items: 37 }], outputDrops: [],
             overrides: { kick_start_items: 37, check_start_dependence: false }, machineFuel: [] },
         assessment: { holds: true, items_per_second: 1, wake_ups_per_minute: 1,
-            backpressure_loss: null, start_dependence: null },
+            disturbance_trial: null, start_dependence: null },
     } as unknown as ClockAlternativeView;
 }
 

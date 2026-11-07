@@ -49,7 +49,7 @@
         {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":56,"denominator":1},"cycles":6,"period_ticks":336,"kept":true},
         {"swings":2,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":112,"denominator":1},"cycles":3,"period_ticks":336,"kept":true}
       ],
-      "duty": [
+      "utilization": [
         {
           "producer": "machine:utility-science-pack",
           "members": [
@@ -63,7 +63,7 @@
             "numerator": 2100260416666667,
             "denominator": 700000000000000
           },
-          "duty": {
+          "utilization": {
             "numerator": 2000000000000000,
             "denominator": 2100260416666667
           }

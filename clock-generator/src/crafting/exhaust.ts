@@ -48,7 +48,7 @@ export const EXHAUST_CHECK_PERIODS = 20;
 
 /**
  * Periods a window has to drain the backlog a lost output leaves: the periods a loss trial gives a build to be back at
- * its expected output before it has to hold it (MAX_RECOVERY_PERIODS less RECOVERY_HOLD_PERIODS, backpressure-loss.ts)
+ * its expected output before it has to hold it (MAX_RECOVERY_PERIODS less RECOVERY_HOLD_PERIODS, disturbance-trial.ts)
  */
 export const EXHAUST_RECOVERY_PERIODS = 32;
 
@@ -539,7 +539,7 @@ export function carriedItemsOf(plans: readonly ExhaustPlan[]): ItemName[] {
     return Array.from(new Set(plans.flatMap(plan => plan.windows.flatMap(window => window.items))));
 }
 
-/** How a loss trial of a result's output is run for these windows, and what its backlog has to fall back to (see backpressureLossOf) */
+/** How a loss trial of a result's output is run for these windows, and what its backlog has to fall back to (see disturbanceTrialOf) */
 export interface ResultLossTrial {
     /** Ticks the output is not taken away for */
     loss_ticks: number;

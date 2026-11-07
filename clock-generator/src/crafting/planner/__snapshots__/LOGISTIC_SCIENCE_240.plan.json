@@ -40,7 +40,7 @@
         {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":44,"denominator":1},"cycles":2,"period_ticks":88,"kept":true},
         {"swings":4,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":176,"denominator":1},"cycles":1,"period_ticks":176,"kept":true}
       ],
-      "duty": [
+      "utilization": [
         {
           "producer": "machine:logistic-science-pack",
           "members": [
@@ -54,7 +54,7 @@
             "numerator": 4409,
             "denominator": 384
           },
-          "duty": {
+          "utilization": {
             "numerator": 46080,
             "denominator": 48499
           }

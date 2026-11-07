@@ -33,7 +33,7 @@
         {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":24,"denominator":1},"cycles":3,"period_ticks":72,"kept":true},
         {"swings":6.375,"swings_exact":{"numerator":51,"denominator":8},"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":153,"denominator":1},"cycles":8,"period_ticks":1224,"kept":true}
       ],
-      "duty": [
+      "utilization": [
         {
           "producer": "machine:stone-brick",
           "members": [
@@ -47,7 +47,7 @@
             "numerator": 3675,
             "denominator": 128
           },
-          "duty": {
+          "utilization": {
             "numerator": 2048,
             "denominator": 2205
           }
@@ -65,7 +65,7 @@
             "numerator": 6523,
             "denominator": 800
           },
-          "duty": {
+          "utilization": {
             "numerator": 51635720605600,
             "denominator": 6324054988930371
           }

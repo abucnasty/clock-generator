@@ -5,7 +5,7 @@ export { FuelConsumptionView, ClockOnlyRun, SimulationStabilityCheck, SwingAttem
 export { generateClockForConfig, generateClockWithSwingBackoff } from "./generate-clock";
 export { ConfigValidation, validateConfig } from "./plan/validate-config";
 export { SerializableClockWindows, ClockBelt, clockBeltLabel } from "./clock";
-export { AsBuiltStabilityCheck, ClockAssessment, ClockVerdict, clockVerdictOf, LOOP_WINDOW_CHECK_TICKS, simulateClockOnly, clockFromWindows, backpressureLossOf } from "./trial";
+export { AsBuiltStabilityCheck, ClockAssessment, ClockVerdict, clockVerdictOf, LOOP_WINDOW_CHECK_TICKS, simulateClockOnly, clockFromWindows, disturbanceTrialOf } from "./trial";
 export { timeStudyWindowsClock } from "./candidates/time-study-windows";
 export { SearchReport, SearchCandidate, SearchRangeEdge } from "./candidates/search";
 export { hasPlannedWindowsNotHands } from "./candidates/pitch-pickups";

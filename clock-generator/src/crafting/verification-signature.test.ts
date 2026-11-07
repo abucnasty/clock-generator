@@ -85,7 +85,7 @@ describe("request-local duplicate verification", () => {
     });
     it("assesses a matching primary only once and still supplies a valid run for dependency checks", async () => {
         const logistic = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240);
-        const recovery = vi.spyOn(trial, "backpressureLossVerdictOf");
+        const recovery = vi.spyOn(trial, "disturbanceTrialVerdictOf");
         const generated = generateClockAlternatives(logistic, {logger: quiet});
         const keys = recovery.mock.calls.map(([config, result]) => signature(config, result));
         expect(keys.length).toBeGreaterThan(1);
@@ -119,7 +119,7 @@ describe("request-local duplicate verification", () => {
         // fractional swings does not make (alternatives.ts, fractionalMakesThePrimary)
         const military = await loadConfigFromFile(ConfigPaths.MILITARY_SCIENCE_120);
         const plan = planClockAlternatives(military, {logger: quiet});
-        const recovery = vi.spyOn(trial, "backpressureLossVerdictOf");
+        const recovery = vi.spyOn(trial, "disturbanceTrialVerdictOf");
         // the plan leaves the fractional task out here, as one that makes the primary clock again: made anyway, it is that duplicate
         const duplicate = runClockAlternativeTask(military, {...plan.context, fractional_is_primary: undefined}, "fractional", {logger: quiet}, [plan.primary!.signature]);
         // it lists nothing, and still carries the clocks it made as parts of the per-branch clock
@@ -130,6 +130,6 @@ describe("request-local duplicate verification", () => {
         recovery.mockClear();
         runClockAlternativeTask(military, {...plan.context, fractional_is_primary: undefined}, "fractional", {logger: quiet}, []);
         expect(skipping).toBeLessThan(recovery.mock.calls.length);
-        expect(plan.primary!.alternatives[0].assessment.backpressure_loss).not.toBeNull();
+        expect(plan.primary!.alternatives[0].assessment.disturbance_trial).not.toBeNull();
     });
 });

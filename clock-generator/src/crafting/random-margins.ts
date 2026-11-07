@@ -1,5 +1,5 @@
 import { amountVariance, EntityId, Inserter, Machine, ReadableEntityRegistry, yieldOf } from "../entities";
-import type { ExcessLoss } from "./backpressure-loss";
+import type { ExcessLoss } from "./disturbance-trial";
 import type { Ingredient } from "../data";
 import { OpenRange } from "../data-types";
 import { fraction } from "../data-types/fraction";
@@ -218,7 +218,7 @@ export function backlogAtLevel(sigma_crafts: number, spare_crafts: number, back_
 }
 
 /**
- * The excess trial of a clock (an ExcessLoss of backpressure-loss.ts): every machine's backlog of what comes back, placed
+ * The excess trial of a clock (an ExcessLoss of disturbance-trial.ts): every machine's backlog of what comes back, placed
  * at once; null where no machine has one
  */
 export function excessLossOf(crafting: readonly Pick<CraftingMargin, "machine_id" | "backlog">[]): ExcessLoss | null {

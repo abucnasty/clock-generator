@@ -51,7 +51,7 @@ import { Logger, defaultLogger } from "../../common/logger";
 import { FuelLevelRecorder, FuelLevelSeries, FuelPlan, fuelPlan } from "../fuel-view";
 import { StockDetail, StockRecorder, StockRecording } from "../machine-stock";
 import { TimelineRecorder, TimelineRecording, TimelineRecordingOptions } from "../timeline-recording";
-import { BackpressureLossOptions, LossOutcome, runLossTrials } from "../backpressure-loss";
+import { DisturbanceTrialOptions, LossOutcome, runLossTrials } from "../disturbance-trial";
 import { SerializableTransferHistory, serializeTransferHistory } from "../sequence/transfer-history-serializer";
 import { StateTransitionHistory } from "../sequence/state-transition-history";
 import { MachineFactsEntry } from "../insights";
@@ -500,9 +500,9 @@ export interface RunOptions {
     moving_pickup_phases?: MovingPickupPhases;
     /**
      * After the run, cut one supply of the build and give it back, several times over, and count what the build makes
-     * once it is back (see backpressure-loss.ts). For a run on clock windows alone; nothing is cut in any other run.
+     * once it is back (see disturbance-trial.ts). For a run on clock windows alone; nothing is cut in any other run.
      */
-    backpressure_loss?: BackpressureLossOptions;
+    disturbance_trial?: DisturbanceTrialOptions;
     /** Warmup length in simulation periods (default 10) */
     warmup_periods?: number;
     /**
@@ -607,7 +607,7 @@ export interface BuildRun extends PlannedOutputCycle, TransferPlan {
     total_expected_output: number;
     used_terminal_swing_count: number;
     /** What the build made after each trial of the loss, when one was asked for */
-    backpressure_loss: LossOutcome | undefined;
+    disturbance_trial: LossOutcome | undefined;
     /** The pickups whose start was recorded from the take that freed them (`PickupStartAtTheTake`) */
     pickups_from_the_take: number;
 }
@@ -676,7 +676,7 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
     const output = checkOutput(build, planned_cycle, transfer_plan.recipe_lcm, duration, simulated, final_history, repeat_periods, logger);
     const terminal_branches = neverBlockingBranchesOf(build.simulation_context.entity_registry, traitsOf(config), output_cycle_plan.entity_transfer_map,
         transfer_plan.recipe_lcm, new Set(all_output_inserters.map(it => it.inserter.entity_id.id)));
-    const backpressure_loss = backpressureLossOf(config, build, controlled, simulated, options, logger, terminal_branches);
+    const disturbance_trial = disturbanceTrialOf(config, build, controlled, simulated, options, logger, terminal_branches);
     // the run is over: the contexts it hands back keep their machines' states, and no longer the observers that fed the
     // histories (which would keep the raw transfers and transitions of the run alive for as long as the run is kept)
     // (the planned build's context is the run's own, except on a cold start, which runs a build made anew)
@@ -714,7 +714,7 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
         stability_check: output.stability_check,
         total_expected_output: output.total_expected_output,
         used_terminal_swing_count: output.used_terminal_swing_count,
-        backpressure_loss,
+        disturbance_trial,
         pickups_from_the_take,
     };
 }
@@ -1359,10 +1359,10 @@ function checkOutput(
 }
 
 /**
- * With the backpressure_loss option: the trials of the loss, from where the recorded run ended (see
- * backpressure-loss.ts). Nothing of them goes into the run's histories.
+ * With the disturbance_trial option: the trials of the loss, from where the recorded run ended (see
+ * disturbance-trial.ts). Nothing of them goes into the run's histories.
  */
-function backpressureLossOf(
+function disturbanceTrialOf(
     config: Config,
     build: RecordedBuild,
     controlled: ControlledBuild,
@@ -1372,7 +1372,7 @@ function backpressureLossOf(
     /** Where every terminal output drops into a sink that never blocks, its branches: judged by their rate (terminal-rate.ts) */
     terminal_branches: readonly TerminalBranch[],
 ): LossOutcome | undefined {
-    if (!options.backpressure_loss) {
+    if (!options.disturbance_trial) {
         return undefined;
     }
     // the run above is over: the trials go on from where it ended, and nothing of them goes into its histories
@@ -1381,7 +1381,7 @@ function backpressureLossOf(
     // so the observers that feed them have nothing to do: a trial ticks a few hundred thousand times
     const trial_context = build.simulation_context;
     detachHistoryObservers(build, trial_context);
-    const loss_period = options.backpressure_loss.period_ticks;
+    const loss_period = options.disturbance_trial.period_ticks;
     const repeat = subtickClockForPeriod(loss_period);
     const bin = Number.isInteger(loss_period) ? { ticks: loss_period, periods: 1 }
         : repeat === null ? null : { ticks: repeat.period_ticks, periods: repeat.scale };
@@ -1394,10 +1394,10 @@ function backpressureLossOf(
     const inserter_states = new Map(trial_context.inserters.map(it => [it.inserter_state.entity_id.id, it.inserter_state] as const));
     const watched_exports = exportedItemsOf(trial_context.entity_registry, new Set(simulated.output_inserter_states.map(state => state.entity_id.id)))
         .map(exported => ({ exported, fillers: exported.filler_ids.flatMap(id => inserter_states.get(id) ?? []) }));
-    const backpressure_loss = runLossTrials(trial_context, simulated.output_inserter_states, options.backpressure_loss, bin,
+    const disturbance_trial = runLossTrials(trial_context, simulated.output_inserter_states, options.disturbance_trial, bin,
         Math.max(bin.ticks, ...own_clock_ticks), proof_stride, watched_exports, terminal_branches);
-    logger.log(`Backpressure loss (${options.backpressure_loss.loss.kind}): recovers=${backpressure_loss.recovers} over ${backpressure_loss.trials.length} trials`);
-    return backpressure_loss;
+    logger.log(`Backpressure loss (${options.disturbance_trial.loss.kind}): recovers=${disturbance_trial.recovers} over ${disturbance_trial.trials.length} trials`);
+    return disturbance_trial;
 }
 
 /**
@@ -1422,8 +1422,8 @@ export interface TrialRun {
     fuel_levels?: FuelLevelSeries[];
     /** With the machine_stock option: what every machine and inserter held after each tick of the run */
     machine_stock?: StockRecording;
-    /** With the backpressure_loss option: what the build made after each trial of the loss */
-    backpressure_loss?: LossOutcome;
+    /** With the disturbance_trial option: what the build made after each trial of the loss */
+    disturbance_trial?: LossOutcome;
     /** With the detect_repeat option: the repeat that ended the recorded run early, when one was found */
     state_repeat?: StateRepeat;
 }
@@ -1449,7 +1449,7 @@ export function trialRunOf(run: BuildRun): TrialRun {
         machine_facts: machineFactsOfContext(run.simulation_context),
         fuel_levels: run.fuel_levels,
         machine_stock: run.machine_stock,
-        backpressure_loss: run.backpressure_loss,
+        disturbance_trial: run.disturbance_trial,
     };
 }
 

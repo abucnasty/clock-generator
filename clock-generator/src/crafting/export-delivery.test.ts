@@ -3,7 +3,7 @@ import { parseConfig } from "../config/loader";
 import type { Config } from "../config/schema";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { exportShortfallOfBins, exportShortfallsOfPeriod, exportShortfallsOfRun, exportedItemsOf } from "./export-delivery";
-import { judgedWithExports, judgeRecovery, type WatchedExport } from "./backpressure-loss";
+import { judgedWithExports, judgeRecovery, type WatchedExport } from "./disturbance-trial";
 import { clockFromWindows, generateClockForConfig, type SerializableClockWindows } from "./generate-blueprint";
 import { quiet } from "./generate-blueprint-test-helpers";
 

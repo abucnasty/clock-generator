@@ -47,7 +47,7 @@
         {"swings":3,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":432,"denominator":1},"cycles":2,"period_ticks":864,"kept":true},
         {"swings":null,"fractional":true,"listed_as":"fractional","pruned":{"rule":"cycle-refused","terms":{"reason":"Cannot satisfy fractional swing constraint: sub-cycle 0 requires 3 swings, but maximum allowed is 2 due to insertion limits. Total swings: 25, cycle multiplier: 8."}}}
       ],
-      "duty": [
+      "utilization": [
         {
           "producer": "machine:flying-robot-frame",
           "members": [
@@ -61,7 +61,7 @@
             "numerator": 4409,
             "denominator": 1280
           },
-          "duty": {
+          "utilization": {
             "numerator": 12800,
             "denominator": 13227
           }

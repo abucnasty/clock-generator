@@ -1,9 +1,9 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import {
-    backpressureLossesOf, judgeRecovery, LATE_AFTER_PERIODS, LOSS_PLACES, LOSS_SHARES, lossId, lossLabel, lossLimitOf, lossTrialsPartOfTheWay,
+    disturbanceTrialsOf, judgeRecovery, LATE_AFTER_PERIODS, LOSS_PLACES, LOSS_SHARES, lossId, lossLabel, lossLimitOf, lossTrialsPartOfTheWay,
     lossTrialsUntilStopped, LossOutcome, MAX_LOSS_PERIODS, MAX_RECOVERY_PERIODS, MAX_RUN_ON_PERIODS, reportOf, RUN_ON_EXACT_PERIODS,
     runsOn, verdictOf,
-} from "./backpressure-loss";
+} from "./disturbance-trial";
 import { SPOIL_LIMIT_SHARE } from "../common/rule-constants";
 import { notTriedSentence } from "./why-not-stable";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
@@ -171,7 +171,7 @@ describe("the losses a build can have", () => {
     });
 
     it("are one for each item that comes off a belt and one for each that leaves on one, the product of the build among them", () => {
-        const losses = backpressureLossesOf(createEntityRegistryFromConfig(structuredClone(config)), "automation-science-pack");
+        const losses = disturbanceTrialsOf(createEntityRegistryFromConfig(structuredClone(config)), "automation-science-pack");
         expect(losses.map(lossId).sort()).toEqual(["output:automation-science-pack", "supply:copper-plate", "supply:iron-gear-wheel"]);
         expect(losses.map(lossLabel)).toContain("copper plate stops arriving");
         expect(losses.map(lossLabel)).toContain("automation science pack is not taken away");

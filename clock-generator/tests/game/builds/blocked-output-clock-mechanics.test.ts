@@ -1,6 +1,6 @@
 import {describe, expect, test} from "vitest";
 import {SerializableClockWindows} from "../../../src/crafting/clock";
-import {backpressureLossOf} from "../../../src/crafting/trial";
+import {disturbanceTrialOf} from "../../../src/crafting/trial";
 import {BELT_SPEEDS} from "../helpers/belt-speed-fixtures";
 import {GameFixturePaths} from "../helpers/fixture-paths";
 import {expectRunIsConsistent, readFixtureFigures} from "../helpers/fixture-mechanics";
@@ -132,7 +132,7 @@ describe("the simulator holds the target and recovers when the output is blocked
     test.each(cases.map(variant => variant.name))("%s", name => {
         const variant = cases.find(it => it.name === name)!;
         const {ticks, expected} = periodOf(variant);
-        const report = backpressureLossOf(blockedOutputClockConfig(variant), plainClock(variant), ticks, expected, {log() {}, warn() {}, error() {}, debug() {}});
+        const report = disturbanceTrialOf(blockedOutputClockConfig(variant), plainClock(variant), ticks, expected, {log() {}, warn() {}, error() {}, debug() {}});
         expect(report.undisturbed.recovers, "the plain clock makes the expected output every period undisturbed").toBe(true);
         expect(report.undisturbed.recovered_after_bins).toBe(0);
         expect(report.not_tried, "the supply of plates and the gears' belt are the only losses").toEqual([]);

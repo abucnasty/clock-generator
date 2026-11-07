@@ -83,8 +83,8 @@ for (const run of runs) test(`original electromagnetic science scaffold, automat
         expect(config.overrides?.terminal_swing_count).toBeUndefined();
         const result = selected.result;
         expect(selected.verdict).toBe('stable');
-        expect(selected.assessment.backpressure_loss?.survives).toBe(true);
-        expect(selected.assessment.backpressure_loss?.not_tried ?? []).toHaveLength(0);
+        expect(selected.assessment.disturbance_trial?.survives).toBe(true);
+        expect(selected.assessment.disturbance_trial?.not_tried ?? []).toHaveLength(0);
         expect(result.stability_check.as_built?.holds).toBe(true);
         expect(result.simulation_duration.ticks).toBe(period);
         expect(Object.keys(result.always_on_reasons ?? {})).toHaveLength(0);

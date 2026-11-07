@@ -1,5 +1,5 @@
 import {expect, test} from "vitest";
-import {backpressureLossOf, clockFromWindows, generateClockAlternatives} from "./generate-blueprint";
+import {disturbanceTrialOf, clockFromWindows, generateClockAlternatives} from "./generate-blueprint";
 import {ConfigPaths} from "../config/config-paths";
 import {loadConfigFromFile} from "../config/loader";
 
@@ -32,5 +32,5 @@ test("grenade: the hand-made clock, as windows, holds in the simulator and gets 
     const made = clockFromWindows(forced, windows, 112, quiet);
     expect(made.stability_check.as_built?.holds).toBe(true);
     expect(made.stability_check.as_built?.actual_output_items).toBe(64);
-    expect(backpressureLossOf(forced, windows, 112, 64, quiet).survives).toBe(true);
+    expect(disturbanceTrialOf(forced, windows, 112, 64, quiet).survives).toBe(true);
 });

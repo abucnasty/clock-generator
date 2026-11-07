@@ -41,7 +41,7 @@
         {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":54,"denominator":1},"cycles":9,"period_ticks":486,"kept":true},
         {"swings":2.0625,"swings_exact":{"numerator":33,"denominator":16},"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":891,"denominator":8},"cycles":48,"period_ticks":5346,"kept":true}
       ],
-      "duty": [
+      "utilization": [
         {
           "producer": "machine:accumulator",
           "members": [
@@ -56,7 +56,7 @@
             "numerator": 997,
             "denominator": 40
           },
-          "duty": {
+          "utilization": {
             "numerator": 25600,
             "denominator": 26919
           }
@@ -74,7 +74,7 @@
             "numerator": 665,
             "denominator": 32
           },
-          "duty": {
+          "utilization": {
             "numerator": 45056,
             "denominator": 53865
           }
@@ -93,7 +93,7 @@
             "numerator": 699,
             "denominator": 16
           },
-          "duty": {
+          "utilization": {
             "numerator": 51200,
             "denominator": 56619
           }
@@ -111,7 +111,7 @@
             "numerator": 5612200000000001,
             "denominator": 160000000000000
           },
-          "duty": {
+          "utilization": {
             "numerator": 195061733781,
             "denominator": 865944945785
           }

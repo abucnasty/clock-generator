@@ -6,7 +6,7 @@ import { SwingDistribution } from "../sequence/cycle/swing-distribution";
 import { BlueprintGenerationResult, GenerateClockOptions, GuardedTaker, UnclockedRun, checkedClock, clockOfPlan, fractionalSwingsOf, unclockedRun } from "../plan/unclocked-run";
 import { alwaysEnabledInserters, isByProductOnlyInserter, unplannedInserterClocks, type InserterClock } from "../sequence/unplanned-inserter-clock";
 import { ClockBelt, beltPickupSlackTicks } from "../clock";
-import { backpressureLossVerdictOf, runClockOnBuild } from "../trial";
+import { disturbanceTrialVerdictOf, runClockOnBuild } from "../trial";
 import { DropTieBreak, dropTieBreak } from "../../config/drop-spacing";
 import { TurnGroup } from "../turn-groups";
 import type { AlwaysOnReason } from "../always-on-reasons";
@@ -767,9 +767,9 @@ function bestHolding(made: UnclockedRun, holding: HoldingWay[], shared: boolean)
     if (!shared && sharedItemDeadlockRisks(entity_registry).length > 0) return ranked[0] ?? null;
     let untried: HoldingWay | null = null;
     for (const held of ranked) {
-        const { backpressure_loss } = backpressureLossVerdictOf(made.config, held.clock, made.logger);
-        if (backpressure_loss?.survives === true) return held;
-        if (backpressure_loss === null) untried ??= held;
+        const { disturbance_trial } = disturbanceTrialVerdictOf(made.config, held.clock, made.logger);
+        if (disturbance_trial?.survives === true) return held;
+        if (disturbance_trial === null) untried ??= held;
     }
     return untried ?? (shared ? null : ranked[0] ?? null);
 }
@@ -896,7 +896,7 @@ export function roundRobinPollingClock(
                 // the guard per taker that holds and does not get back from a loss is remade once, right after it, with the takers into
                 // the machines the target is counted at enabled as before; no other remake and no search (DESIGN 3.1, R-busy)
                 if (way.per_taker_guard === true && way.unguarded_sinks === undefined && losses_decide
-                    && backpressureLossVerdictOf(made.config, clock_of_windows, made.logger).backpressure_loss?.survives === false) {
+                    && disturbanceTrialVerdictOf(made.config, clock_of_windows, made.logger).disturbance_trial?.survives === false) {
                     ways.splice(index + 1, 0, { ...way, unguarded_sinks: target_machines });
                 }
                 continue;

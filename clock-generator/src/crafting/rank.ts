@@ -20,7 +20,7 @@ export interface ClockRanking {
     meets_target_rate: boolean;
     /**
      * The clock meets the target rate and its backpressure losses could not be tried on it (the assessment's
-     * `backpressure_loss_not_tried` says why): whether it gets back is not known. It ranks below every clock that meets
+     * `disturbance_trial_not_tried` says why): whether it gets back is not known. It ranks below every clock that meets
      * the target rate and was tried, and above every clock that does not meet it, those tried and not getting back
      * included. False on a build with a deadlock risk, where the trials do not decide. The engine always sets it; a
      * ranking kept from before it (a stored result) lacks it, which reads as false.
@@ -62,7 +62,7 @@ export interface ClockRanking {
     wake_ups_per_minute: number | null;
     /**
      * The most periods the clock took to be back at its expected output over its backpressure loss trials
-     * (`BackpressureLossVerdict.recovered_after_periods`); null where it was not tried or does not get back, and absent
+     * (`DisturbanceTrialVerdict.recovered_after_periods`); null where it was not tried or does not get back, and absent
      * from a ranking kept from before 0.26.0. Of clocks equal on wake-ups the one that recovers sooner comes first
      * (decided 2026-10-31: on the container wagons, even hands recovered from the second cut of an input within 5
      * periods in the game where another clock of 0 wake-ups too took 33 to 48).
@@ -128,14 +128,14 @@ export function rankingOf(clock: Omit<ClockAlternative, "ranking">, config: Conf
         // with backed-up belts every clock goes without the slack, which is the choice
         matches_belt_choice: config.overrides?.backed_up_belts === true || !clock.result.belt_pickup_slack_left_out,
         wake_ups_per_minute: clock.assessment.wake_ups_per_minute,
-        recovery_periods: clock.assessment.backpressure_loss?.recovered_after_periods ?? null,
+        recovery_periods: clock.assessment.disturbance_trial?.recovered_after_periods ?? null,
         window_count: clock.ranking_window_count,
     };
 }
 
 /** The clock holds its expected output and its backpressure losses could not be tried on it */
-export function recoveryUntried(assessment: Pick<ClockAssessment, "holds" | "backpressure_loss" | "backpressure_loss_not_tried">): boolean {
-    return assessment.holds && assessment.backpressure_loss === null && assessment.backpressure_loss_not_tried !== undefined;
+export function recoveryUntried(assessment: Pick<ClockAssessment, "holds" | "disturbance_trial" | "disturbance_trial_not_tried">): boolean {
+    return assessment.holds && assessment.disturbance_trial === null && assessment.disturbance_trial_not_tried !== undefined;
 }
 
 /**

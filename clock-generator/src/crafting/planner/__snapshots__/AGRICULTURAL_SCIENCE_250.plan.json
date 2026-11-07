@@ -55,7 +55,7 @@
         {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":96,"denominator":5},"cycles":25,"period_ticks":480,"kept":true},
         {"swings":5,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":96,"denominator":1},"cycles":5,"period_ticks":480,"kept":true}
       ],
-      "duty": [
+      "utilization": [
         {
           "producer": "machine:nutrients-from-bioflux",
           "members": [
@@ -70,7 +70,7 @@
             "numerator": 23097,
             "denominator": 1250
           },
-          "duty": {
+          "utilization": {
             "numerator": 131800,
             "denominator": 993171
           }
@@ -89,7 +89,7 @@
             "numerator": 43,
             "denominator": 5
           },
-          "duty": {
+          "utilization": {
             "numerator": 40,
             "denominator": 43
           }
@@ -107,7 +107,7 @@
             "numerator": 723,
             "denominator": 32
           },
-          "duty": {
+          "utilization": {
             "numerator": 640,
             "denominator": 723
           }

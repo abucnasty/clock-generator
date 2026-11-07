@@ -40,7 +40,7 @@
         {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":36,"denominator":1},"cycles":2,"period_ticks":72,"kept":true},
         {"swings":4,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":144,"denominator":1},"cycles":1,"period_ticks":144,"kept":true}
       ],
-      "duty": [
+      "utilization": [
         {
           "producer": "machine:automation-science-pack",
           "members": [
@@ -54,7 +54,7 @@
             "numerator": 4409,
             "denominator": 320
           },
-          "duty": {
+          "utilization": {
             "numerator": 12800,
             "denominator": 13227
           }

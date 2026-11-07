@@ -18,7 +18,7 @@
  * One run makes the trials of a loss one after the other.
  *
  * A clock is not tried further than it has to be. The trials of a loss stop at the first that does not get back, and
- * the losses of a clock at the first it does not get back from (see backpressureLossOf): the clock does not recover
+ * the losses of a clock at the first it does not get back from (see disturbanceTrialOf): the clock does not recover
  * whatever the rest do, and the losses left are reported as not tried. A clock that gets back from everything runs
  * every trial.
  */
@@ -34,7 +34,7 @@ import { SPOIL_LIMIT_SHARE } from "../common/rule-constants";
 import { ContainerStorage } from "../simulation/components/container-storage";
 import { DropBy } from "../simulation/components/ports";
 
-export type BackpressureLoss =
+export type DisturbanceTrial =
     /** Nothing is cut: the run as it is, counted as the runs with a loss are */
     | { kind: "none" }
     /** The item stops arriving: no belt and no infinity chest has it */
@@ -65,7 +65,7 @@ function excessItems(loss: ExcessLoss): ItemName[] {
 }
 
 /** "supply:coal", "output:advanced-circuit", "none" */
-export function lossId(loss: BackpressureLoss): string {
+export function lossId(loss: DisturbanceTrial): string {
     if (loss.kind === "excess") {
         return `excess:${excessItems(loss).join("+")}`;
     }
@@ -73,7 +73,7 @@ export function lossId(loss: BackpressureLoss): string {
 }
 
 /** "coal stops arriving", "advanced circuit is not taken away": the item by its game name, as a sentence has it */
-export function lossLabel(loss: BackpressureLoss): string {
+export function lossLabel(loss: DisturbanceTrial): string {
     if (loss.kind === "none") {
         return "nothing is cut";
     }
@@ -211,8 +211,8 @@ export function runsOn(
     return firstBinAtRate(branches) >= late_after_bins && atRateFrom(before_the_mark, 0);
 }
 
-export interface BackpressureLossOptions {
-    loss: BackpressureLoss;
+export interface DisturbanceTrialOptions {
+    loss: DisturbanceTrial;
     /** Ticks of the clock period the windows are of */
     period_ticks: number;
     /** Items the output inserters are expected to drop in a period */
@@ -272,7 +272,7 @@ export interface LossTrial {
     ends_in: number[];
     /** Bins run past the recovery window, as a trial short late in it runs on; absent when it did not */
     ran_on_bins?: number;
-    /** What the container held of the watched items (BackpressureLossOptions.watched_backlog) after each bin; absent where none are watched */
+    /** What the container held of the watched items (DisturbanceTrialOptions.watched_backlog) after each bin; absent where none are watched */
     backlog_per_bin?: number[];
     /**
      * The export belts that received less than their consumers take in those bins; absent when none did. A build that
@@ -288,7 +288,7 @@ export interface WatchedExport {
 }
 
 export interface LossOutcome {
-    loss: BackpressureLoss;
+    loss: DisturbanceTrial;
     /** Ticks in a bin: the clock period, or the whole ticks after which a fractional period repeats */
     bin_ticks: number;
     /** Clock periods in a bin */
@@ -320,7 +320,7 @@ export interface LossOutcome {
  * first among the last kind. A mining drill is no supply that stops: the ore is in the ground. Fluids are left out,
  * as the simulator leaves them out: a loss of a fluid is not tried.
  */
-export function backpressureLossesOf(entity_registry: Pick<ReadableEntityRegistry, "getAll" | "getEntityById">, target_item?: ItemName): BackpressureLoss[] {
+export function disturbanceTrialsOf(entity_registry: Pick<ReadableEntityRegistry, "getAll" | "getEntityById">, target_item?: ItemName): DisturbanceTrial[] {
     const inserters = entity_registry.getAll().filter(Entity.isInserter);
     const supplied = new Set<ItemName>();
     const taken_away = new Set<ItemName>();
@@ -356,7 +356,7 @@ export function itemsCarried(entity_registry: Pick<ReadableEntityRegistry, "getE
 }
 
 /** What a loss switches off, and on again when it is over */
-function switchOf(context: SimulationContext, loss: BackpressureLoss): { cut(): void; restore(): void } {
+function switchOf(context: SimulationContext, loss: DisturbanceTrial): { cut(): void; restore(): void } {
     if (loss.kind === "none" || loss.kind === "excess") {
         return { cut: () => { }, restore: () => { } };
     }
@@ -477,7 +477,7 @@ function placeExcess(context: SimulationContext, loss: ExcessLoss): void {
 export function runLossTrials(
     context: SimulationContext,
     output_inserters: readonly InserterState[],
-    options: BackpressureLossOptions,
+    options: DisturbanceTrialOptions,
     bin: { ticks: number; periods: number },
     quiet_ticks: number,
     proof_stride: number | null,
@@ -731,15 +731,15 @@ export function runLossTrials(
 }
 
 /** What a clock does under every loss of its build */
-export interface BackpressureLossReport {
+export interface DisturbanceTrialReport {
     period_ticks: number;
     expected_output_items: number;
     /** The run with nothing cut, counted as the others: a clock that is off here is off without any loss */
     undisturbed: LossOutcome;
-    /** Those of the losses of the build (see backpressureLossesOf) that were tried, in the order they were tried */
+    /** Those of the losses of the build (see disturbanceTrialsOf) that were tried, in the order they were tried */
     losses: LossOutcome[];
-    /** The losses after the first the clock does not get back from, which were not tried (see backpressureLossOf) */
-    not_tried: BackpressureLoss[];
+    /** The losses after the first the clock does not get back from, which were not tried (see disturbanceTrialOf) */
+    not_tried: DisturbanceTrial[];
     /** The clock holds its expected output undisturbed and gets back to it after every loss */
     survives: boolean;
     /** The losses it does not get back from, by lossId */
@@ -758,8 +758,8 @@ export function reportOf(
     undisturbed: LossOutcome,
     losses: LossOutcome[],
     loss_limit: LossLimit | null = null,
-    not_tried: BackpressureLoss[] = [],
-): BackpressureLossReport {
+    not_tried: DisturbanceTrial[] = [],
+): DisturbanceTrialReport {
     const broken_by = losses.filter(outcome => !outcome.recovers).map(outcome => lossId(outcome.loss));
     const survives = undisturbed.recovers && broken_by.length === 0;
     return {
@@ -777,7 +777,7 @@ export function reportOf(
 }
 
 /** What the trials found about one clock, in the words a list of clocks needs */
-export interface BackpressureLossVerdict {
+export interface DisturbanceTrialVerdict {
     /** The clock gets back to its expected output after every loss of its build */
     survives: boolean;
     /** The losses it does not get back from, as lossLabel words them: "coal stops arriving" */
@@ -804,7 +804,7 @@ export interface BackpressureLossVerdict {
     loss_limit?: LossLimit;
 }
 
-export function verdictOf(report: BackpressureLossReport): BackpressureLossVerdict {
+export function verdictOf(report: DisturbanceTrialReport): DisturbanceTrialVerdict {
     return {
         survives: report.survives,
         broken_by: report.losses.filter(outcome => !outcome.recovers).map(outcome => lossLabel(outcome.loss)),

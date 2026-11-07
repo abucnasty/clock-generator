@@ -6,8 +6,8 @@ import type { AlwaysOnReason, AlwaysOnReasons } from "../always-on-reasons";
 import type { SerializableClockWindows } from "../clock";
 import { sharedItemDeadlockRisks } from "../deadlock-risk";
 import { BlueprintGenerationResult, GenerateClockOptions, UnclockedRun, unclockedRun } from "../plan/unclocked-run";
-import { backpressureLossVerdictOf } from "../trial";
-import type { BackpressureLossVerdict } from "../backpressure-loss";
+import { disturbanceTrialVerdictOf } from "../trial";
+import type { DisturbanceTrialVerdict } from "../disturbance-trial";
 import { finishedClock, holdsWithMargin } from "./round-robin-polling";
 import { partKey, type CoordinatedSourcesInput, type CoordinatedSourcesPart } from "./coordinated-sources-parts";
 import type { EnableControl, SourceControl } from "../strategy-catalog";
@@ -149,7 +149,7 @@ interface Trial {
     result: BlueprintGenerationResult;
     holds: boolean;
     wake_ups: number | null;
-    loss?: BackpressureLossVerdict | null;
+    loss?: DisturbanceTrialVerdict | null;
     /** Why it does not hold a tick either way (`holdsWithMargin`), or null where it does */
     margin?: string | null;
 }
@@ -249,8 +249,8 @@ export function coordinatedSourcesClock(config: Config, input: CoordinatedSource
         return trialOf(windows, left_open);
     };
     const deadlock_risk = sharedItemDeadlockRisks(registry).length > 0;
-    const lossOf = (trial: Trial): BackpressureLossVerdict | null => {
-        if (trial.loss === undefined) trial.loss = backpressureLossVerdictOf(made.config, trial.result, quiet).backpressure_loss;
+    const lossOf = (trial: Trial): DisturbanceTrialVerdict | null => {
+        if (trial.loss === undefined) trial.loss = disturbanceTrialVerdictOf(made.config, trial.result, quiet).disturbance_trial;
         return trial.loss;
     };
     const marginOf = (trial: Trial): string | null => {

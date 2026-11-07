@@ -24,7 +24,7 @@ beforeAll(async () => {
 const made = (override: Record<string, any> = {}): any => {
     const alternative: any = {
         id: 'time_division_windows', maker: 'even-hands', verdict: 'stable', deciders: 2,
-        assessment: { holds: true, backpressure_loss: { survives: true }, wake_ups_per_minute: 3, signals_per_minute: 4 }, ranking: { meets_target_rate: true },
+        assessment: { holds: true, disturbance_trial: { survives: true }, wake_ups_per_minute: 3, signals_per_minute: 4 }, ranking: { meets_target_rate: true },
         strategy: { id: 'time_division_windows', tuning_method: 'calculated', settings: { output_count: { kind: 'output_swings', count: 2 }, window_cycle: [], belt_pickups: [] }, output_swings: 2, routing: { router: 'direct' } },
         result: {
             used_terminal_swing_count: 2,
@@ -105,7 +105,7 @@ describe('the property module', () => {
         });
 
         it('stable-holds-and-survives-loss: a stable verdict on a clock that does not survive the loss', () => {
-            const problem = only(check(made({ 'assessment.backpressure_loss': { survives: false } })));
+            const problem = only(check(made({ 'assessment.disturbance_trial': { survives: false } })));
             expect(problem.property).toBe('stable-holds-and-survives-loss');
             expect(problem.alternative).toBe('time_division_windows');
             expect(problem.message).toBe('verdict stable against survives false: stable only when it is not unstable and survives');
@@ -113,8 +113,8 @@ describe('the property module', () => {
 
         it('stable-holds-and-survives-loss: a clock that does not hold is tried for the loss, and one that meets the target rate is not stable', () => {
             const unstable = check(made({ verdict: 'unstable', 'assessment.holds': false, 'ranking.meets_target_rate': false }));
-            expect(unstable.problems.map(it => it.message)).toEqual([expect.stringContaining('verdict unstable and backpressure_loss tried')]);
-            const recovery = check(made({ verdict: 'no recovery', 'assessment.backpressure_loss': { survives: false } }));
+            expect(unstable.problems.map(it => it.message)).toEqual([expect.stringContaining('verdict unstable and disturbance_trial tried')]);
+            const recovery = check(made({ verdict: 'no recovery', 'assessment.disturbance_trial': { survives: false } }));
             expect(recovery.problems.map(it => it.message)).toEqual(['meets the target rate with verdict no recovery']);
         });
 

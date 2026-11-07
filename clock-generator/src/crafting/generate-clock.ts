@@ -15,7 +15,7 @@ import type { AsBuiltRun } from "./trial";
 import { ArithmeticWindowsNotApplicable, batchedSwingsWindowsByArithmetic } from "./plan/batched-arithmetic";
 import { sharedLaneShortened } from "./plan/shared-lane-guard";
 import { estimatedOutputSwings } from "./plan/output-swing-estimate";
-import { backpressureLossVerdictOf } from "./trial";
+import { disturbanceTrialVerdictOf } from "./trial";
 import { OpenRange } from "../data-types";
 import { primitiveRoundRobinPollingOptionsSupported, verifiedPrimitiveRoundRobinPollingClock } from "./candidates/round-robin-polling-primitive-verified";
 import type { PrimitiveRoundRobinPollingAttemptReport } from "./round-robin-polling-primitive-policy";
@@ -154,7 +154,7 @@ function arithmeticBesidePlanned(clocks: MadeClocks, plan: UnclockedRun, planned
     if (!made.stability_check.holds || made_wake_ups === undefined || planned_wake_ups === undefined || !(made_wake_ups < planned_wake_ups)) {
         return planned;
     }
-    const survives = (result: BlueprintGenerationResult) => backpressureLossVerdictOf(plan.config, result, plan.logger).backpressure_loss?.survives === true;
+    const survives = (result: BlueprintGenerationResult) => disturbanceTrialVerdictOf(plan.config, result, plan.logger).disturbance_trial?.survives === true;
     if (!survives(made) && survives(planned)) {
         plan.logger.log("Windows by arithmetic: fewer wake-ups, but the clock does not get back from a loss the planned one gets back from");
         return planned;
@@ -188,7 +188,7 @@ function withSlackInside(made: MadeClocks, plan: UnclockedRun, planned: Blueprin
         || !(inside_wake_ups < primary_wake_ups)) {
         return primary;
     }
-    const survives = (result: BlueprintGenerationResult) => backpressureLossVerdictOf(plan.config, result, plan.logger).backpressure_loss?.survives === true;
+    const survives = (result: BlueprintGenerationResult) => disturbanceTrialVerdictOf(plan.config, result, plan.logger).disturbance_trial?.survives === true;
     if (!survives(inside) && survives(primary)) {
         plan.logger.log("Belt pickup slack inside the windows: fewer wake-ups, but the clock does not get back from a loss the primary one gets back from");
         return primary;
@@ -289,7 +289,7 @@ function withoutGhostWakeUps(made: MadeClocks, primary: BlueprintGenerationResul
     if (best === primary) {
         return primary;
     }
-    const survives = (it: BlueprintGenerationResult) => backpressureLossVerdictOf(plan.config, it, plan.logger).backpressure_loss?.survives === true;
+    const survives = (it: BlueprintGenerationResult) => disturbanceTrialVerdictOf(plan.config, it, plan.logger).disturbance_trial?.survives === true;
     if (!survives(best) && survives(primary)) {
         plan.logger.log(`Windows shaped against ghost wakeups (${textOf(moved)}): fewer wake-ups, but the clock does not get back from a loss the primary one gets back from`);
         return primary;

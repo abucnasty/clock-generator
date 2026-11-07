@@ -96,7 +96,7 @@
         {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":88,"denominator":1},"cycles":4,"period_ticks":352,"kept":true},
         {"swings":2,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":176,"denominator":1},"cycles":2,"period_ticks":352,"kept":true}
       ],
-      "duty": [
+      "utilization": [
         {
           "producer": "machine:chemical-science-pack",
           "members": [
@@ -113,7 +113,7 @@
             "numerator": 70427,
             "denominator": 6400
           },
-          "duty": {
+          "utilization": {
             "numerator": 768000,
             "denominator": 774697
           }
@@ -134,7 +134,7 @@
             "numerator": 6283,
             "denominator": 320
           },
-          "duty": {
+          "utilization": {
             "numerator": 38400,
             "denominator": 69113
           }
@@ -152,7 +152,7 @@
             "numerator": 947,
             "denominator": 4
           },
-          "duty": {
+          "utilization": {
             "numerator": 640,
             "denominator": 10417
           }

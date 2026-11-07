@@ -38,7 +38,7 @@ describe("generateClockForConfig", () => {
             expect(five_swings.verdict).toBe("no recovery");
             // its windows shaped against ghost wakeups (#641) wake fewer and do not get back from the bioflux loss; the
             // planned windows broke on the nutrients loss, the first tried
-            expect(five_swings.assessment.backpressure_loss).toMatchObject({ survives: false, broken_by: ["bioflux stops arriving"] });
+            expect(five_swings.assessment.disturbance_trial).toMatchObject({ survives: false, broken_by: ["bioflux stops arriving"] });
             // 108 windows before 8 were dropped against ghost wakeups (#641)
             expect(five_swings.inserter_window_count).toBe(100);
             expect(five_swings.ranking_window_count).toBe(100);
@@ -49,7 +49,7 @@ describe("generateClockForConfig", () => {
             const selected = alternatives[selected_index];
             expect(selected.maker).toBe("swings-2");
             expect(selected.verdict).toBe("stable");
-            expect(selected.assessment.backpressure_loss).toMatchObject({ survives: true, broken_by: [] });
+            expect(selected.assessment.disturbance_trial).toMatchObject({ survives: true, broken_by: [] });
         });
     });
 });

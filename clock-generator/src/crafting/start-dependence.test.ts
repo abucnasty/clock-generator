@@ -15,7 +15,7 @@ describe("the starts a clock is tried from", () => {
     it("describes actual samples and unavailable checks without prescribing a filled or free-running start", () => {
         const starts = [outcome("cold", true), outcome("ascending", false)];
         const dependence: StartDependence = { verdict: "start-dependent", starts, expected_output_items: 240 };
-        const assessment: ClockAssessment = { holds: true, backpressure_loss: null, items_per_second: 240, wake_ups_per_minute: 1, start_dependence: dependence };
+        const assessment: ClockAssessment = { holds: true, disturbance_trial: null, items_per_second: 240, wake_ups_per_minute: 1, start_dependence: dependence };
         const config = { overrides: { check_start_dependence: true } } as Config;
         const sampled = { id: "sampled", assessment };
         const summary = startDependenceSummary(config, [sampled]);
@@ -57,12 +57,12 @@ describe("the verdict of a clock tried from several starts", () => {
 
     it("lists a clock that depends on the start as unstable among the verdicts of a clock, and a stable one as it was", () => {
         const assessment = (start_dependence: StartDependence | null): ClockAssessment =>
-            ({ holds: true, backpressure_loss: null, items_per_second: 480, wake_ups_per_minute: 100, start_dependence });
+            ({ holds: true, disturbance_trial: null, items_per_second: 480, wake_ups_per_minute: 100, start_dependence });
         const dependence = (verdict: StartDependence["verdict"]): StartDependence => ({ verdict, starts: [], expected_output_items: 3072 });
         expect(clockVerdictOf(assessment(null))).toBe("stable");
         expect(clockVerdictOf(assessment(dependence("stable")))).toBe("stable");
         expect(clockVerdictOf(assessment(dependence("start-dependent")))).toBe("unstable");
-        expect(clockVerdictOf({ ...assessment(dependence("stable")), backpressure_loss: { survives: false, broken_by: ["coal stops arriving"], recovered_after_periods: null } })).toBe("no recovery");
+        expect(clockVerdictOf({ ...assessment(dependence("stable")), disturbance_trial: { survives: false, broken_by: ["coal stops arriving"], recovered_after_periods: null } })).toBe("no recovery");
     });
 });
 

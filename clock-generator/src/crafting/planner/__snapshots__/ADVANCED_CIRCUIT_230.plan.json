@@ -59,7 +59,7 @@
         {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":576,"denominator":23},"cycles":11,"period_ticks":275.4782608695652,"kept":true},
         {"swings":3.4375,"swings_exact":{"numerator":55,"denominator":16},"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":1980,"denominator":23},"cycles":16,"period_ticks":1377.391304347826,"kept":true}
       ],
-      "duty": [
+      "utilization": [
         {
           "producer": "machine:casting-copper-cable",
           "members": [
@@ -74,7 +74,7 @@
             "numerator": 575,
             "denominator": 2
           },
-          "duty": {
+          "utilization": {
             "numerator": 64,
             "denominator": 825
           }
@@ -93,7 +93,7 @@
             "numerator": 1601,
             "denominator": 48
           },
-          "duty": {
+          "utilization": {
             "numerator": 14720,
             "denominator": 17611
           }
@@ -111,7 +111,7 @@
             "numerator": 123,
             "denominator": 2
           },
-          "duty": {
+          "utilization": {
             "numerator": 460,
             "denominator": 4059
           }

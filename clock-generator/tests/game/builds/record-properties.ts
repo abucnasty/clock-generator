@@ -113,13 +113,13 @@ function deciderOrder(registry: ReturnType<typeof createEntityRegistryFromConfig
 function stableMeans(alternative: Alternative): string[] {
     const problems: string[] = [];
     const { verdict, assessment, ranking } = alternative;
-    const tried = assessment.backpressure_loss !== null;
+    const tried = assessment.disturbance_trial !== null;
     if (tried !== (verdict !== 'unstable')) {
-        problems.push(`verdict ${verdict} and backpressure_loss ${tried ? 'tried' : 'not tried'}: a clock is tried for the loss when it is not unstable, and not otherwise`);
+        problems.push(`verdict ${verdict} and disturbance_trial ${tried ? 'tried' : 'not tried'}: a clock is tried for the loss when it is not unstable, and not otherwise`);
     }
-    const survives = verdict !== 'unstable' && assessment.backpressure_loss?.survives === true;
+    const survives = verdict !== 'unstable' && assessment.disturbance_trial?.survives === true;
     if ((verdict === 'stable') !== survives) {
-        problems.push(`verdict ${verdict} against survives ${assessment.backpressure_loss?.survives}: stable only when it is not unstable and survives`);
+        problems.push(`verdict ${verdict} against survives ${assessment.disturbance_trial?.survives}: stable only when it is not unstable and survives`);
     }
     if (ranking.meets_target_rate && verdict !== 'stable') {
         problems.push(`meets the target rate with verdict ${verdict}`);

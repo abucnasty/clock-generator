@@ -2,7 +2,7 @@ import { chestName, ChestType } from "../common/entity-types";
 import { FactorioDataService, ItemName } from "../data";
 import { Chest, Entity } from "../entities";
 import { InserterState } from "../state";
-import { isEmptiedByTheBuild, itemsCarried } from "./backpressure-loss";
+import { isEmptiedByTheBuild, itemsCarried } from "./disturbance-trial";
 import type { SimulationContext } from "./sequence/simulation-context";
 import { ContainerStorage } from "../simulation/components/container-storage";
 

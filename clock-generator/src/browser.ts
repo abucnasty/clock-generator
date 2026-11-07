@@ -329,7 +329,7 @@ export type { MachineTargetRate } from './crafting/machine-target-rates';
 export { targetRateMaxOf } from './crafting/feasibility/max-rate';
 export type { TargetRateMax } from './crafting/feasibility/max-rate';
 export type { ClockInsight, MachineFactsEntry, SwingComparison } from './crafting/insights';
-export type { BackpressureLossVerdict } from './crafting/backpressure-loss';
+export type { DisturbanceTrialVerdict } from './crafting/disturbance-trial';
 export { whyNotStable, whyNotStableClockOf } from './crafting/why-not-stable';
 export type { NotMadeClock, SpareTime, WhyNotStable, WhyNotStableBuild, WhyNotStableCause, WhyNotStableClock } from './crafting/why-not-stable';
 export { deadlockRiskNote } from './crafting/deadlock-risk';

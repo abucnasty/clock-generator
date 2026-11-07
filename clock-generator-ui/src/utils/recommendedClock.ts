@@ -13,7 +13,7 @@ export interface PickRule {
 
 /** The fields of a clock the recommendation is worked out from, so the tests need not build a whole view */
 type PickableClock = Pick<ClockAlternativeView, 'id' | 'verdict' | 'ranking' | 'beltLabel' | 'deadlockRisk' | 'inserterWindowCount'> & {
-    assessment: Pick<ClockAlternativeView['assessment'], 'items_per_second'> & Partial<Pick<ClockAlternativeView['assessment'], 'start_dependence' | 'backpressure_loss'>>;
+    assessment: Pick<ClockAlternativeView['assessment'], 'items_per_second'> & Partial<Pick<ClockAlternativeView['assessment'], 'start_dependence' | 'disturbance_trial'>>;
     /** What the rate counts, which the sentences say in their words: none is the item made */
     counts?: TargetCounts;
 };
@@ -179,7 +179,7 @@ export function fewestDecidersReason(
 function reasonOf(alternatives: PickableClock[], pick: PickableClock, rule: PickRule | null): string {
     const { ranking } = pick;
     const rate = figure(pick.assessment.items_per_second - ranking.rate_off_target);
-    if (pick.assessment.backpressure_loss === null && pick.assessment.start_dependence?.verdict !== 'start-dependent') {
+    if (pick.assessment.disturbance_trial === null && pick.assessment.start_dependence?.verdict !== 'start-dependent') {
         return `Selected by the engine's rule at ${figure(pick.assessment.items_per_second)}/s. No usable recovery result is available.`;
     }
     // on a build with a deadlock risk a clock that holds the rate meets it, recovering or not; elsewhere it is Stable

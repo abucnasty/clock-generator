@@ -305,7 +305,7 @@ describe("generateClockForConfig", () => {
     // constraint locks the inserter to 1 swing/cycle. Since stack_size(16) < automated_insertion_limit(18),
     // one item is always picked first and never blocked, starving the other item indefinitely.
     // That the sample's selected clock is stable at the target rate is checked with its alternatives in
-    // backpressure-loss.test.ts.
+    // disturbance-trial.test.ts.
     describe("AUTOMATION_SCIENCE_240: issue #47 regression (multi-filter fractional per-item transfers)", async () => {
         // The sample is fully automatic; the regression needs the forced single swing, so it is set on this copy
         const config = structuredClone(await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240));

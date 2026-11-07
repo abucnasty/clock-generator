@@ -5,10 +5,10 @@
  *
  * - **Moving lane phases:** the clock is made for a moving belt and holds from the modeled start, but falls short from
  *   another lane phase of the belt: at the start (`as_built.failed_pickup_phases`), or only after a loss
- *   (`backpressure_loss.broken_at_other_lane_phases` holds every loss it does not get back from).
+ *   (`disturbance_trial.broken_at_other_lane_phases` holds every loss it does not get back from).
  * - **Taker order:** two or more inserters take one product from one machine, and the clock holds the target rate with them
  *   served in one order and not in another (`as_built.failed_taker_order`), or gets back after a loss in one order only
- *   (`backpressure_loss.broken_under_other_taker_orders`, told with the losses that it does not get back from).
+ *   (`disturbance_trial.broken_under_other_taker_orders`, told with the losses that it does not get back from).
  * - **Output chest full:** the build puts its output into a chest nothing takes from, and where the run that failed the
  *   clock ended the chest had no room left for it: the same chest the web form warns can fill up.
  * - **Export belt short:** the clock moves the target, and a belt with a consumption rate gets less than its consumers
@@ -19,7 +19,7 @@
  *
  * The UI calls this on its own view of the clocks, so the same words show there as in the result.
  */
-import type { BackpressureLossVerdict } from "./backpressure-loss";
+import type { DisturbanceTrialVerdict } from "./disturbance-trial";
 import type { ClockBelt } from "./clock";
 import type { ExportShortfall } from "./export-delivery";
 import type { ResultsTaken } from "./results-taken";
@@ -50,7 +50,7 @@ export interface SpareTime {
     spare_ticks: number;
     /** The ticks of a period it crafts */
     working_ticks: number;
-    /** The periods after a loss a build is given to be back at its expected output (see backpressure-loss.ts) */
+    /** The periods after a loss a build is given to be back at its expected output (see disturbance-trial.ts) */
     recovery_periods: number;
 }
 
@@ -63,7 +63,7 @@ export interface WhyNotStableClock {
     /** Stable over the target rate, which the selection picks where none meets goal 1 (`ClockRanking.stable_above_target`) */
     stable_above_target?: boolean;
     assessment: Pick<ClockAssessment, "holds" | "items_per_second"> & {
-        backpressure_loss: Pick<BackpressureLossVerdict, "survives" | "broken_by" | "broken_at_other_lane_phases" | "broken_under_other_taker_orders" | "not_tried"> | null;
+        disturbance_trial: Pick<DisturbanceTrialVerdict, "survives" | "broken_by" | "broken_at_other_lane_phases" | "broken_under_other_taker_orders" | "not_tried"> | null;
     };
     /** Whether the clock is made for a moving belt (its belt pickups have belt pickup slack) */
     moving_belt: boolean;
@@ -189,7 +189,7 @@ function movingLanePhases(clock: WhyNotStableClock, build: WhyNotStableBuild): W
                 + `${shortfall ? `: from such a start it moves ${shortfall}` : ""}. ${in_the_game}`,
         };
     }
-    const loss = clock.assessment.backpressure_loss;
+    const loss = clock.assessment.disturbance_trial;
     const other_phases = loss?.broken_at_other_lane_phases ?? [];
     if (clock.verdict === "no recovery" && loss !== null && loss.broken_by.length > 0 && loss.broken_by.every(it => other_phases.includes(it))) {
         return {
@@ -243,9 +243,9 @@ function spareTimeSentence(spare: SpareTime | null): string {
 }
 
 function noRecovery(clock: WhyNotStableClock): WhyNotStable {
-    const broken_by = clock.assessment.backpressure_loss?.broken_by ?? [];
-    const other_phases = clock.assessment.backpressure_loss?.broken_at_other_lane_phases ?? [];
-    const other_orders = clock.assessment.backpressure_loss?.broken_under_other_taker_orders ?? [];
+    const broken_by = clock.assessment.disturbance_trial?.broken_by ?? [];
+    const other_phases = clock.assessment.disturbance_trial?.broken_at_other_lane_phases ?? [];
+    const other_orders = clock.assessment.disturbance_trial?.broken_under_other_taker_orders ?? [];
     const at_the_start = broken_by.filter(it => !other_phases.includes(it) && !other_orders.includes(it));
     const elsewhere = broken_by.filter(it => other_phases.includes(it));
     const in_another_order = broken_by.filter(it => other_orders.includes(it));
@@ -261,7 +261,7 @@ function noRecovery(clock: WhyNotStableClock): WhyNotStable {
         : "was off its expected output in the run the losses are tried on, so whether it gets back after one is not known.";
     return {
         cause: "no recovery",
-        message: `The selected clock (${clock.label}) holds the target rate, but ${losses}${notTriedSentence(clock.assessment.backpressure_loss?.not_tried)}${spareTimeSentence(clock.spare_time)}`
+        message: `The selected clock (${clock.label}) holds the target rate, but ${losses}${notTriedSentence(clock.assessment.disturbance_trial?.not_tried)}${spareTimeSentence(clock.spare_time)}`
             + " A buffer, or a faster machine, lets it catch up.",
     };
 }

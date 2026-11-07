@@ -33,7 +33,7 @@
       "periods": [
         {"swings":5,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":12,"denominator":1},"cycles":12,"period_ticks":144,"kept":true}
       ],
-      "duty": [
+      "utilization": [
         {
           "producer": "machine:iron-ore-recycling",
           "members": [
@@ -47,7 +47,7 @@
             "numerator": 540,
             "denominator": 1
           },
-          "duty": {
+          "utilization": {
             "numerator": 80,
             "denominator": 81
           }

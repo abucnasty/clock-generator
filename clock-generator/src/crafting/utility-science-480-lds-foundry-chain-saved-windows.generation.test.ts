@@ -3,8 +3,8 @@ import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import type { Config } from "../config/schema";
 import { clockFromWindows, clockVerdictOf, type BlueprintGenerationResult, type SerializableClockWindows } from "./generate-blueprint";
-import { backpressureLossOf } from "./trial";
-import { verdictOf } from "./backpressure-loss";
+import { disturbanceTrialOf } from "./trial";
+import { verdictOf } from "./disturbance-trial";
 import { quiet } from "./generate-blueprint-test-helpers";
 
 // the utility science 480 build has a coal inserter that moves 15/8 hands a cycle, which stretches the period of every clock made from
@@ -77,7 +77,7 @@ describe("a saved clock for a shorter period, on the utility science 480 sample"
     });
 
     it("names the coal loss that settles into unequal periods, despite keeping the average target rate", () => {
-        const report = backpressureLossOf(config, result.clock_windows, PERIOD, result.stability_check.expected_output_items, quiet);
+        const report = disturbanceTrialOf(config, result.clock_windows, PERIOD, result.stability_check.expected_output_items, quiet);
         const coal = report.losses.find(outcome => outcome.loss.kind === "supply" && outcome.loss.item === "coal")!;
         const failures = coal.trials.filter(trial => !trial.recovers);
         expect(failures).toHaveLength(1);
@@ -87,12 +87,12 @@ describe("a saved clock for a shorter period, on the utility science 480 sample"
         expect(failures[0]).toMatchObject({cut_at: 84, restore_at: 130, loss_ticks: 718,
             proven: true, ends_in: [792, 744, 792, 744]});
         expect(failures[0].ends_in.reduce((sum, amount) => sum + amount, 0) / failures[0].ends_in.length).toBe(768);
-        const backpressure_loss = verdictOf(report);
+        const disturbance_trial = verdictOf(report);
         // the losses after coal are not tried, and the failing trial is the last of its loss
         expect(coal.trials[coal.trials.length - 1]).toBe(failures[0]);
-        expect(backpressure_loss).toEqual({survives: false, broken_by: ["coal stops arriving"], broken_at_other_lane_phases: [],
+        expect(disturbance_trial).toEqual({survives: false, broken_by: ["coal stops arriving"], broken_at_other_lane_phases: [],
             not_tried: ["utility science pack is not taken away"], recovered_after_periods: null});
-        const verdict = clockVerdictOf({ holds: true, backpressure_loss, items_per_second: 480, wake_ups_per_minute: null, start_dependence: null });
+        const verdict = clockVerdictOf({ holds: true, disturbance_trial, items_per_second: 480, wake_ups_per_minute: null, start_dependence: null });
         expect(verdict).toBe("no recovery");
     });
 });

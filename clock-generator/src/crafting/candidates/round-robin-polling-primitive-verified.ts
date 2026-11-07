@@ -12,7 +12,7 @@ import { EntityTransferCountMap, outputPathOf } from "../sequence/cycle/swing-co
 import { unplannedInserterClocks } from "../sequence/unplanned-inserter-clock";
 import { CLOCK_STARTS } from "../start-dependence";
 import { TargetProductionRate } from "../target-production-rate";
-import { backpressureLossVerdictOf, clockVerificationSignature, startDependenceVerdictOf } from "../trial";
+import { disturbanceTrialVerdictOf, clockVerificationSignature, startDependenceVerdictOf } from "../trial";
 import { canonicalVerificationJson } from "../verification-signature";
 import { finishedClock, roundRobinPollingClockRank, roundRobinPollingPlan, RoundRobinPollingNotApplicable, holdsWithMargin, offerWay } from "./round-robin-polling";
 import { constructPrimitiveRoundRobinPolling } from "./round-robin-polling-primitive";
@@ -122,9 +122,9 @@ export function verifiedPrimitiveRoundRobinPollingClock(
         if (result.stability_check.as_built.long_run_proven === undefined) { event.reason = "the as-built long-run check was unavailable"; continue; }
         event.stage = "recovery";
         detail?.(`Checking primitive grouped recovery ${report.attempts.length}`);
-        const loss = backpressureLossVerdictOf(derived, result, logger, detail, "throw");
-        if (loss.backpressure_loss?.survives !== true || (loss.backpressure_loss.not_tried?.length ?? 0) !== 0) {
-            event.reason = loss.backpressure_loss_not_tried ?? "recovery was unsuccessful or incomplete"; continue;
+        const loss = disturbanceTrialVerdictOf(derived, result, logger, detail, "throw");
+        if (loss.disturbance_trial?.survives !== true || (loss.disturbance_trial.not_tried?.length ?? 0) !== 0) {
+            event.reason = loss.disturbance_trial_not_tried ?? "recovery was unsuccessful or incomplete"; continue;
         }
         event.stage = "starts";
         const starts = config.overrides?.check_start_dependence === true
@@ -133,7 +133,7 @@ export function verifiedPrimitiveRoundRobinPollingClock(
             || starts.starts.length !== CLOCK_STARTS.length || CLOCK_STARTS.some(start => !starts.starts.some(outcome => outcome.id === start.id && outcome.reaches_target)))) {
             event.reason = "the requested starts were unsuccessful or incomplete"; continue;
         }
-        policy.verification = { signature: clockVerificationSignature(derived, result), backpressure_loss: loss.backpressure_loss, start_dependence: starts };
+        policy.verification = { signature: clockVerificationSignature(derived, result), disturbance_trial: loss.disturbance_trial, start_dependence: starts };
         event.stage = "accepted";
         holding.push(result);
     }

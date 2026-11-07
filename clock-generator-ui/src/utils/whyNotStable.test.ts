@@ -7,7 +7,7 @@ function view(overrides: Partial<ClockAlternativeView> = {}): ClockAlternativeVi
     return {
         id: 'swings-1', label: '1 output swing per cycle', verdict: 'unstable',
         ranking: { meets_target_rate: false, rate_off_target: 0, holds_expected_output: false, matches_belt_choice: true, wake_ups_per_minute: null, window_count: 4 },
-        assessment: { holds: false, items_per_second: 7.5, wake_ups_per_minute: null, backpressure_loss: null, start_dependence: null },
+        assessment: { holds: false, items_per_second: 7.5, wake_ups_per_minute: null, disturbance_trial: null, start_dependence: null },
         belt: { kind: 'moving', slack_ticks: [4] },
         asBuilt: { holds: false, actual_output_items: 176, start_phases_checked: 1, failed_start_offset: 0,
             failed_pickup_phases: { 'inserter:2': [3, 0] }, repeat_periods: 6, repeat_output_items: 880 },
@@ -38,7 +38,7 @@ describe('the note on why no clock is stable', () => {
     });
 
     it('reads the target off the recommended clock, and lists the clocks that could not be made', () => {
-        const short = view({ belt: null, asBuilt: null, assessment: { holds: false, items_per_second: 180, wake_ups_per_minute: null, backpressure_loss: null, start_dependence: null },
+        const short = view({ belt: null, asBuilt: null, assessment: { holds: false, items_per_second: 180, wake_ups_per_minute: null, disturbance_trial: null, start_dependence: null },
             ranking: { ...view().ranking, rate_off_target: -60 }, label: '2 output swings per cycle' });
         expect(whyNotStableOf([short], 0, false, [{ id: 'even-hands', label: 'Even hands', reason: 'even hands need a period of whole ticks, not 4.5' }])).toEqual({
             cause: 'nothing holds',

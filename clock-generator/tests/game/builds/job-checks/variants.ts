@@ -2,9 +2,9 @@
 // test of each build checked on the result that the record does not hold (see samples.ts for what the record does hold).
 import { expect } from 'vitest';
 import type { JobCheck } from '../record-job-checks';
-import { backpressureLossOf, COORDINATED_SOURCES_MAKER, selectableAsStable } from '../../../../src/crafting/generate-blueprint';
+import { disturbanceTrialOf, COORDINATED_SOURCES_MAKER, selectableAsStable } from '../../../../src/crafting/generate-blueprint';
 import type { ClockAlternative, ClockAlternativesResult } from '../../../../src/crafting/generate-blueprint';
-import { lossId, verdictOf, type BackpressureLossReport } from '../../../../src/crafting/backpressure-loss';
+import { lossId, verdictOf, type DisturbanceTrialReport } from '../../../../src/crafting/disturbance-trial';
 import { START_DEPENDENCE_NOT_CHECKED } from '../../../../src/crafting/start-dependence';
 import { SEARCH_MAKERS } from '../../../../src/crafting/generate-blueprint-test-helpers';
 import type { Config } from '../../../../src/config/schema';
@@ -57,7 +57,7 @@ const inserterCraftingBackedUp: JobCheck[] = [{
     name: 'the simulator tries the loss of the ore, the circuits and the output not taken away, and gets back from each',
     run: ({ config, generated }) => {
         const selected = selectedOf(generated);
-        const report = backpressureLossOf(config, selected.result.clock_windows, selected.result.simulation_duration.ticks,
+        const report = disturbanceTrialOf(config, selected.result.clock_windows, selected.result.simulation_duration.ticks,
             selected.result.stability_check.expected_output_items, quiet);
         expect(report.undisturbed.recovers).toBe(true);
         expect(report.losses.map(outcome => [lossId(outcome.loss), outcome.recovers])).toEqual(
@@ -67,11 +67,11 @@ const inserterCraftingBackedUp: JobCheck[] = [{
 
 // Automation science with one output swing a cycle (AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING): the sample no longer forces it, and with it no
 // clock made without a search is stable, which the last group needs
-const reports = new WeakMap<object, BackpressureLossReport>();
+const reports = new WeakMap<object, DisturbanceTrialReport>();
 /** The backpressure-loss report of an alternative, made once for the checks of a job that read it */
-const reportOf = (config: Config, alternative: ClockAlternative): BackpressureLossReport => {
+const reportOf = (config: Config, alternative: ClockAlternative): DisturbanceTrialReport => {
     if (!reports.has(alternative)) {
-        reports.set(alternative, backpressureLossOf(config, alternative.result.clock_windows, alternative.result.simulation_duration.ticks,
+        reports.set(alternative, disturbanceTrialOf(config, alternative.result.clock_windows, alternative.result.simulation_duration.ticks,
             alternative.result.stability_check.expected_output_items, quiet));
     }
     return reports.get(alternative)!;
@@ -81,9 +81,9 @@ const reportOf = (config: Config, alternative: ClockAlternative): BackpressureLo
  * ghost wakeups (#641): it gets back from none of the build's three losses. Since then no clock of the job breaks on a loss.
  */
 const BROKEN_AUTOMATION_WINDOWS = { "inserter:1": [{ start: 1, end: 20 }], "inserter:2": [{ start: 1, end: 21 }, { start: 37, end: 56 }, { start: 73, end: 73 }] };
-const brokenReportOf = (config: Config, generated: ClockAlternativesResult): BackpressureLossReport => {
+const brokenReportOf = (config: Config, generated: ClockAlternativesResult): DisturbanceTrialReport => {
     const fractional = byMaker(generated, 'fractional');
-    return backpressureLossOf(config, BROKEN_AUTOMATION_WINDOWS, fractional.result.simulation_duration.ticks,
+    return disturbanceTrialOf(config, BROKEN_AUTOMATION_WINDOWS, fractional.result.simulation_duration.ticks,
         fractional.result.stability_check.expected_output_items, quiet);
 };
 const automation: JobCheck[] = [
@@ -149,7 +149,7 @@ const automation: JobCheck[] = [
         name: 'cuts at fewer places when asked, to make the run shorter',
         run: ({ config, generated }) => {
             const selected = selectedOf(generated);
-            const shorter = backpressureLossOf(config, selected.result.clock_windows, selected.result.simulation_duration.ticks,
+            const shorter = disturbanceTrialOf(config, selected.result.clock_windows, selected.result.simulation_duration.ticks,
                 selected.result.stability_check.expected_output_items, quiet, { places: [0] });
             expect(shorter.losses.every(outcome => outcome.trials.length === 4)).toBe(true);
         },

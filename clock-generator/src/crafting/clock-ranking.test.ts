@@ -208,7 +208,7 @@ describe("a clock whose recovery could not be tried", () => {
 
     const config = { setpoint: { recipe: "iron-plate", items_per_second: 80 } } as Config;
     const assessment = (overrides: Partial<ClockAssessment>): ClockAssessment =>
-        ({ holds: true, backpressure_loss: null, items_per_second: 80, wake_ups_per_minute: 200, start_dependence: null, ...overrides });
+        ({ holds: true, disturbance_trial: null, items_per_second: 80, wake_ups_per_minute: 200, start_dependence: null, ...overrides });
     const ranked = (overrides: Partial<ClockAssessment>, deadlock = false): ClockRanking => {
         const clock_assessment = assessment(overrides);
         return rankingOf({ assessment: clock_assessment, verdict: clockVerdictOf(clock_assessment), ranking_window_count: 4,
@@ -217,25 +217,25 @@ describe("a clock whose recovery could not be tried", () => {
     const NOT_TRIED = "A clock of 47.537 ticks does not repeat in whole ticks, so its output cannot be counted by the period";
 
     it("is a clock that holds the target rate with no loss verdict and the reason the trials did not run", () => {
-        expect(clockVerdictOf(assessment({ backpressure_loss_not_tried: NOT_TRIED }))).toBe("stable");
-        expect(ranked({ backpressure_loss_not_tried: NOT_TRIED })).toMatchObject({ meets_target_rate: true, recovery_untried: true });
-        expect(ranked({ backpressure_loss: { survives: true, broken_by: [], recovered_after_periods: 3 } }))
+        expect(clockVerdictOf(assessment({ disturbance_trial_not_tried: NOT_TRIED }))).toBe("stable");
+        expect(ranked({ disturbance_trial_not_tried: NOT_TRIED })).toMatchObject({ meets_target_rate: true, recovery_untried: true });
+        expect(ranked({ disturbance_trial: { survives: true, broken_by: [], recovered_after_periods: 3 } }))
             .toMatchObject({ meets_target_rate: true, recovery_untried: false });
         expect(ranked({ holds: false })).toMatchObject({ meets_target_rate: false, recovery_untried: false });
     });
 
     it("is not one off the target rate, which ranks by its rate, nor one on a build with a deadlock risk, where the trials do not decide", () => {
-        expect(ranked({ backpressure_loss_not_tried: NOT_TRIED, items_per_second: 81.7 })).toMatchObject({ meets_target_rate: false, recovery_untried: false });
-        expect(ranked({ backpressure_loss_not_tried: NOT_TRIED }, true)).toMatchObject({ meets_target_rate: true, recovery_untried: false });
+        expect(ranked({ disturbance_trial_not_tried: NOT_TRIED, items_per_second: 81.7 })).toMatchObject({ meets_target_rate: false, recovery_untried: false });
+        expect(ranked({ disturbance_trial_not_tried: NOT_TRIED }, true)).toMatchObject({ meets_target_rate: true, recovery_untried: false });
     });
 
     it("is not stable above the target rate, which needs its recovery tried and passed, or on a build with a deadlock risk its output held", () => {
         const recovers = { survives: true, broken_by: [], recovered_after_periods: 3 };
-        expect(ranked({ backpressure_loss: recovers, items_per_second: 81.7 }).stable_above_target).toBe(true);
-        expect(ranked({ backpressure_loss_not_tried: NOT_TRIED, items_per_second: 81.7 }).stable_above_target).toBeUndefined();
-        expect(ranked({ backpressure_loss: { ...recovers, survives: false, broken_by: ["coal stops arriving"] }, items_per_second: 81.7 }).stable_above_target).toBeUndefined();
+        expect(ranked({ disturbance_trial: recovers, items_per_second: 81.7 }).stable_above_target).toBe(true);
+        expect(ranked({ disturbance_trial_not_tried: NOT_TRIED, items_per_second: 81.7 }).stable_above_target).toBeUndefined();
+        expect(ranked({ disturbance_trial: { ...recovers, survives: false, broken_by: ["coal stops arriving"] }, items_per_second: 81.7 }).stable_above_target).toBeUndefined();
         expect(ranked({ holds: false, items_per_second: 81.7 }).stable_above_target).toBeUndefined();
-        expect(ranked({ backpressure_loss_not_tried: NOT_TRIED, items_per_second: 81.7 }, true).stable_above_target).toBe(true);
+        expect(ranked({ disturbance_trial_not_tried: NOT_TRIED, items_per_second: 81.7 }, true).stable_above_target).toBe(true);
     });
 });
 
@@ -259,7 +259,7 @@ describe("a clock rounded down to whole ticks", () => {
     const config = { setpoint: { recipe: "iron-gear-wheel", items_per_second: 9.97 } } as Config;
     const ranked = (items_per_second: number, rounded_clock: Partial<RoundedClock> | undefined) => {
         const assessment: ClockAssessment = { holds: true, items_per_second, wake_ups_per_minute: 13.4, start_dependence: null,
-            backpressure_loss: { survives: true, broken_by: [], recovered_after_periods: 2 } };
+            disturbance_trial: { survives: true, broken_by: [], recovered_after_periods: 2 } };
         return rankingOf({ assessment, verdict: clockVerdictOf(assessment), ranking_window_count: 4, deadlock_risks: [],
             result: { belt_pickup_slack_left_out: false },
             ...(rounded_clock && { rounded: { period_ticks: 2888, runs_fast: items_per_second / 9.97 - 1, within_machines: true, tried_on_its_period: true, ...rounded_clock } }),

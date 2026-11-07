@@ -1,4 +1,4 @@
-import type { BackpressureLossVerdict } from "./backpressure-loss";
+import type { DisturbanceTrialVerdict } from "./disturbance-trial";
 import type { StartDependence } from "./start-dependence";
 import type { Config } from "../config";
 import { plannedTerminalSwingCount } from "./sequence/cycle/output-cycle";
@@ -54,7 +54,7 @@ export interface PrimitiveRoundRobinPollingPolicy {
     /** Only the exact assessed composition may reuse these completed checks. */
     verification?: {
         signature: string;
-        backpressure_loss: BackpressureLossVerdict;
+        disturbance_trial: DisturbanceTrialVerdict;
         start_dependence: StartDependence | null;
     };
 }

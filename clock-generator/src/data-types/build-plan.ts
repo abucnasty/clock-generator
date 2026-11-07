@@ -6,7 +6,7 @@
  * - the groups: the connected parts of the condensed graph once the SINK and the sources of no known bound are taken
  *   out; two groups share no node;
  * - per group, the main-period choices (the output swing counts the alternatives are listed for), each kept or pruned
- *   by a rule, and the duty of each machine group in it;
+ *   by a rule, and the utilization of each machine group in it;
  * - the composition of the group periods into the one main period;
  * - for a target that counts an item destroyed, whether its results get windows of their own.
  *
@@ -86,8 +86,8 @@ export interface RefusedPeriodChoice extends Omit<PeriodChoiceHead, "swings"> {
 
 export type PeriodChoice = KeptPeriodChoice | PrunedPeriodChoice | RefusedPeriodChoice;
 
-/** The duty of a machine group (feasibility/duty.ts) whose machines are in the group, exact */
-export interface PlanDuty {
+/** The utilization of a machine group (feasibility/utilization.ts) whose machines are in the group, exact */
+export interface PlanUtilization {
     /** The machine group's key, as the feasibility demand names it */
     readonly producer: string;
     /** Its machines (or drills) in this group, by vertex */
@@ -95,7 +95,7 @@ export interface PlanDuty {
     readonly crafts_needed: FactsRatio;
     readonly crafts_capacity: FactsRatio;
     /** crafts_needed / crafts_capacity */
-    readonly duty: FactsRatio;
+    readonly utilization: FactsRatio;
 }
 
 export interface PlanGroup {
@@ -105,7 +105,7 @@ export interface PlanGroup {
     /** The edges that carry an item into or out of its members, in edge order */
     readonly edges: readonly string[];
     readonly periods: readonly PeriodChoice[];
-    readonly duty: readonly PlanDuty[];
+    readonly utilization: readonly PlanUtilization[];
 }
 
 /** What is done where the main period is over the limit */

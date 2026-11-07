@@ -55,7 +55,7 @@
         {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":64,"denominator":3},"cycles":5,"period_ticks":106.66666666666667,"kept":true},
         {"swings":4.0625,"swings_exact":{"numerator":65,"denominator":16},"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":260,"denominator":3},"cycles":5,"period_ticks":433.3333333333333,"kept":true}
       ],
-      "duty": [
+      "utilization": [
         {
           "producer": "machine:carbon",
           "members": [
@@ -69,7 +69,7 @@
             "numerator": 551,
             "denominator": 8
           },
-          "duty": {
+          "utilization": {
             "numerator": 72,
             "denominator": 551
           }
@@ -87,7 +87,7 @@
             "numerator": 645,
             "denominator": 16
           },
-          "duty": {
+          "utilization": {
             "numerator": 144,
             "denominator": 215
           }
@@ -105,7 +105,7 @@
             "numerator": 723,
             "denominator": 40
           },
-          "duty": {
+          "utilization": {
             "numerator": 240,
             "denominator": 241
           }
@@ -123,7 +123,7 @@
             "numerator": 191481,
             "denominator": 10000
           },
-          "duty": {
+          "utilization": {
             "numerator": 48000,
             "denominator": 63827
           }

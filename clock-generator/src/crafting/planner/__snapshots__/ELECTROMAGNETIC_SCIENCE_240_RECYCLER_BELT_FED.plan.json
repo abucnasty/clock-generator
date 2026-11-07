@@ -668,7 +668,7 @@
         {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":40,"denominator":1},"cycles":605,"period_ticks":24200,"kept":true},
         {"swings":1,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":40,"denominator":1},"cycles":605,"period_ticks":24200,"kept":true}
       ],
-      "duty": [
+      "utilization": [
         {
           "producer": "machine:electromagnetic-science-pack",
           "members": [
@@ -683,7 +683,7 @@
             "numerator": 717,
             "denominator": 40
           },
-          "duty": {
+          "utilization": {
             "numerator": 2560,
             "denominator": 2629
           }
@@ -701,7 +701,7 @@
             "numerator": 51,
             "denominator": 8
           },
-          "duty": {
+          "utilization": {
             "numerator": 2048,
             "denominator": 2057
           }
@@ -719,7 +719,7 @@
             "numerator": 7390250000000001,
             "denominator": 312500000000000
           },
-          "duty": {
+          "utilization": {
             "numerator": 169421483278,
             "denominator": 789063130897
           }

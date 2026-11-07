@@ -1,7 +1,7 @@
 // node scripts/backpressure-sample.js <out dir> <KEY>
 // Whether each potential clock of one sample that holds its expected output survives backpressure loss (GOALS.md, "Backpressure Loss"), as
 // <out dir>/<KEY>.json: for every loss of the build (each supplied item stops arriving, each output is not taken
-// away) the fixed trials of src/crafting/backpressure-loss.ts, and whether the build is back at its expected output
+// away) the fixed trials of src/crafting/disturbance-trial.ts, and whether the build is back at its expected output
 // after each. A clock is tried no further than the first loss it does not get back from: the losses after it are
 // listed as `not_tried`, and the trials of a loss that fails end at its first failing trial. Simulator only: the harness cannot cut a supply. BACKED_UP=1 turns "Backed-up belts" on;
 // PLACES=0,0.5 cuts at fewer places in the period than the four of LOSS_PLACES, to make the run shorter.
@@ -10,8 +10,8 @@ const path = require("path"), fs = require("fs");
 const out = path.resolve(process.argv[2]);
 const key = process.argv[3];
 const { dist, quiet, loadSample } = require("./lib");
-const { generateClockAlternatives, backpressureLossOf } = dist("crafting/generate-blueprint.js");
-const { lossId } = dist("crafting/backpressure-loss.js");
+const { generateClockAlternatives, disturbanceTrialOf } = dist("crafting/generate-blueprint.js");
+const { lossId } = dist("crafting/disturbance-trial.js");
 const places = process.env.PLACES ? process.env.PLACES.split(",").map(Number) : undefined;
 
 (async () => {
@@ -32,7 +32,7 @@ const places = process.env.PLACES ? process.env.PLACES.split(",").map(Number) : 
             try {
                 // the config the clock was planned on: its output swings per cycle
                 const planned_on = { ...config, overrides: { ...config.overrides, terminal_swing_count: result.used_terminal_swing_count } };
-                const report = backpressureLossOf(planned_on, result.clock_windows, clock.period, result.stability_check.expected_output_items, quiet, { places });
+                const report = disturbanceTrialOf(planned_on, result.clock_windows, clock.period, result.stability_check.expected_output_items, quiet, { places });
                 clock.holds_undisturbed = report.undisturbed.recovers;
                 clock.survives = report.survives;
                 clock.broken_by = report.broken_by;

@@ -5,7 +5,7 @@ import type { Config } from "../config";
 import { Duration } from "../data-types";
 import type { BlueprintGenerationResult } from "./plan/unclocked-run";
 import { constructPrimitiveRoundRobinPolling } from "./candidates/round-robin-polling-primitive";
-import { backpressureLossVerdictOf, clockVerificationSignature, startDependenceVerdictOf } from "./trial";
+import { disturbanceTrialVerdictOf, clockVerificationSignature, startDependenceVerdictOf } from "./trial";
 import { withRunMemo } from "./plan/run-memo";
 
 const quiet = { log() {}, warn() {}, error() {}, debug() {} };
@@ -36,15 +36,15 @@ describe("verification policy compatibility", () => {
     it("strict recovery propagates a cancellation before simulation; legacy default still reports unavailable", () => {
         const cancelled = new Error("cancel recovery");
         const report = () => { throw cancelled; };
-        expect(() => backpressureLossVerdictOf(config, result, quiet, report, "throw")).toThrow(cancelled);
-        expect(backpressureLossVerdictOf(config, result, quiet, report)).toEqual({ backpressure_loss: null, backpressure_loss_not_tried: cancelled.message });
+        expect(() => disturbanceTrialVerdictOf(config, result, quiet, report, "throw")).toThrow(cancelled);
+        expect(disturbanceTrialVerdictOf(config, result, quiet, report)).toEqual({ disturbance_trial: null, disturbance_trial_not_tried: cancelled.message });
     });
 
     it("a memoized legacy unavailable verdict cannot hide a strict cancellation", () => withRunMemo(() => {
         const cancelled = new Error("cancel memoized recovery");
         const report = () => { throw cancelled; };
-        expect(backpressureLossVerdictOf(config, result, quiet, report).backpressure_loss).toBeNull();
-        expect(() => backpressureLossVerdictOf(config, result, quiet, report, "throw")).toThrow(cancelled);
+        expect(disturbanceTrialVerdictOf(config, result, quiet, report).disturbance_trial).toBeNull();
+        expect(() => disturbanceTrialVerdictOf(config, result, quiet, report, "throw")).toThrow(cancelled);
     }));
 
     it("strict requested starts propagate cancellation; legacy default remains null", () => {

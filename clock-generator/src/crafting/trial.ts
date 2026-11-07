@@ -11,7 +11,7 @@ import { StockDetail, StockRecording } from "./machine-stock";
 import { WakeUps, wakeUpsOfStock } from "./wake-ups";
 import { InserterCounters, inserterEnds, wakeUpsAndCountersOfStock } from "./inserter-counters";
 import { judgeCounterSpan, judgeLongRun, judgeProvenCycle, LONG_RUN_MAX_TICKS, LONG_RUN_SETTLE_SHARE, longRunPeriods, wholeOutputRepeats } from "./long-run";
-import { BackpressureLoss, BackpressureLossOptions, BackpressureLossReport, BackpressureLossVerdict, backpressureLossesOf, ExcessLoss, LATE_AFTER_PERIODS, LossOutcome, lossLimitOf, MAX_RECOVERY_PERIODS, reportOf, verdictOf } from "./backpressure-loss";
+import { DisturbanceTrial, DisturbanceTrialOptions, DisturbanceTrialReport, DisturbanceTrialVerdict, disturbanceTrialsOf, ExcessLoss, LATE_AFTER_PERIODS, LossOutcome, lossLimitOf, MAX_RECOVERY_PERIODS, reportOf, verdictOf } from "./disturbance-trial";
 import { SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForPeriod, withBeltPickupSlack } from "./clock";
 import type { SubtickPeriod } from "../common/subtick-period";
 import { canonicalKey, currentRunMemo } from "./plan/run-memo";
@@ -62,15 +62,15 @@ export interface ClockAssessment {
     holds: boolean;
     /**
      * Whether the clock gets back to its expected output after each loss of its build, and the losses it does not get
-     * back from (see backpressure-loss.ts). Null when no loss was tried: the clock does not hold its expected output
-     * to begin with, or the trials could not be run on it (then `backpressure_loss_not_tried` says why).
+     * back from (see disturbance-trial.ts). Null when no loss was tried: the clock does not hold its expected output
+     * to begin with, or the trials could not be run on it (then `disturbance_trial_not_tried` says why).
      */
-    backpressure_loss: BackpressureLossVerdict | null;
+    disturbance_trial: DisturbanceTrialVerdict | null;
     /**
      * Why the losses could not be tried on a clock that holds its expected output: the trials' error, such as a period
      * that does not repeat in whole ticks. Absent when they were tried, or the clock does not hold.
      */
-    backpressure_loss_not_tried?: string;
+    disturbance_trial_not_tried?: string;
     /** Items per second the exported clock moved in its clock-only run, over all copies; the target when it holds */
     items_per_second: number;
     /**
@@ -114,7 +114,7 @@ export interface ClockAssessment {
  * it by itself after every backpressure loss of its build (and, when the start dependence was checked, reaches it from every
  * start); no recovery when it holds and does not get back from some
  * loss; unstable when it does not hold or fails the sampled-start check. A clock the losses could not be tried on keeps
- * the word of what it holds, stable, and `backpressure_loss_not_tried` says why they were not: it ranks below every
+ * the word of what it holds, stable, and `disturbance_trial_not_tried` says why they were not: it ranks below every
  * clock tried and getting back, and above every clock tried and not (`recoveryUntried`, rank.ts).
  */
 export type ClockVerdict = "stable" | "no recovery" | "unstable";
@@ -125,7 +125,7 @@ export function clockVerdictOf(assessment: ClockAssessment): ClockVerdict {
     if (!assessment.holds || (assessment.start_dependence !== null && assessment.start_dependence.verdict !== "stable")) {
         return "unstable";
     }
-    return assessment.backpressure_loss?.survives === false ? "no recovery" : "stable";
+    return assessment.disturbance_trial?.survives === false ? "no recovery" : "stable";
 }
 
 export interface AsBuiltStabilityCheck {
@@ -666,44 +666,44 @@ export function clockFromWindows(
  * arriving, each item it puts on a belt or in a chest is not taken away), and has to be back at exactly its expected
  * output after each. Ordinary moving pickups are also tried with independent lane phases, one pickup at a time. The
  * losses stop at the first the clock does not get back from; the ones left are reported as not tried.
- * See backpressure-loss.ts for how a loss is run and judged.
+ * See disturbance-trial.ts for how a loss is run and judged.
  *
  * The config has to be the one the clock was planned on, as for clockFromWindows: the plan gives a fuel inserter its
  * clock. `expected_output_items` is what the output inserters drop in a period of the clock when it holds.
  */
-export function backpressureLossOf(
+export function disturbanceTrialOf(
     config: Config,
     clock_windows: SerializableClockWindows,
     period_ticks: number,
     expected_output_items: number,
     logger: Logger = defaultLogger,
-    options: Omit<BackpressureLossOptions, "loss" | "period_ticks" | "expected_output_items"> = {},
+    options: Omit<DisturbanceTrialOptions, "loss" | "period_ticks" | "expected_output_items"> = {},
     /** Called before the run of each loss, the one with nothing cut included */
-    on_loss?: (loss: BackpressureLoss, index: number, total: number) => void,
+    on_loss?: (loss: DisturbanceTrial, index: number, total: number) => void,
     /** Options of one loss over `options`, where a loss is tried in a way of its own (see resultLossOptionsOf) */
-    options_for?: (loss: BackpressureLoss) => Partial<BackpressureLossOptions>,
+    options_for?: (loss: DisturbanceTrial) => Partial<DisturbanceTrialOptions>,
     /** The excesses of results that come by chance the clock is tried with too, after the losses (randomExcessLossesOf) */
     excesses: readonly ExcessLoss[] = [],
     /** How the clock's runs plan, as the clock was planned (`fractionalSwingsOf`) */
     swings: FractionalSwings = {},
-): BackpressureLossReport {
+): DisturbanceTrialReport {
     const windows = new Map(Object.entries(clock_windows).map(([entity_id, ranges]) =>
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     const check_config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
     // each loss on a run of its own, so that a clock one loss breaks is not broken for the next
-    const outcomeOf = (loss: BackpressureLossOptions["loss"], phases?: MovingPickupPhases, order?: TakerOrder): LossOutcome => runClockOnBuild(check_config, windows, period_ticks, logger, {
+    const outcomeOf = (loss: DisturbanceTrialOptions["loss"], phases?: MovingPickupPhases, order?: TakerOrder): LossOutcome => runClockOnBuild(check_config, windows, period_ticks, logger, {
         ...swings,
         factorio_states: false,
         moving_pickup_phases: phases,
         ...(order !== undefined && { competing_takers_order: order }),
-        backpressure_loss: { loss_limit_ticks: loss_limit?.ticks, ...options, ...options_for?.(loss), loss, period_ticks, expected_output_items },
-    }).backpressure_loss!;
+        disturbance_trial: { loss_limit_ticks: loss_limit?.ticks, ...options, ...options_for?.(loss), loss, period_ticks, expected_output_items },
+    }).disturbance_trial!;
     const phase_starts = [...movingPickupPhaseStarts(config)];
     const registry = createEntityRegistryFromConfig(config);
-    const losses: BackpressureLoss[] = [...backpressureLossesOf(registry, config.setpoint.recipe), ...excesses];
+    const losses: DisturbanceTrial[] = [...disturbanceTrialsOf(registry, config.setpoint.recipe), ...excesses];
     // a build whose items spoil is tried with losses shorter than its loss limit only
     const loss_limit = lossLimitOf(registry);
-    const tried = (loss: BackpressureLoss, index: number): LossOutcome => {
+    const tried = (loss: DisturbanceTrial, index: number): LossOutcome => {
         on_loss?.(loss, index, losses.length + 1);
         const canonical = outcomeOf(loss);
         if (!canonical.recovers || phase_starts.length === 0) return canonical;
@@ -720,7 +720,7 @@ export function backpressureLossOf(
             pickup_phase_starts_checked: phase_starts.length};
     };
     const undisturbed = tried({ kind: "none" }, 0);
-    // The losses are tried in the order backpressureLossesOf gives: the supplies, then the outputs, the product's first.
+    // The losses are tried in the order disturbanceTrialsOf gives: the supplies, then the outputs, the product's first.
     // Of the losses the clocks of the samples do not get back from, the supplies are the more often, and no other order
     // saves more than a point and a half of the trials. They stop at the first the clock does not get back from at the
     // modeled phase: it does not recover whatever the rest do, and the rest are reported as not tried. A loss it gets back
@@ -743,7 +743,7 @@ export function backpressureLossOf(
     let judged = undisturbed;
     if (other_orders.length > 0) {
         const all: LossOutcome[] = [undisturbed, ...outcomes];
-        const runs: BackpressureLossOptions["loss"][] = [{ kind: "none" }, ...losses];
+        const runs: DisturbanceTrialOptions["loss"][] = [{ kind: "none" }, ...losses];
         orders: for (const order of other_orders) {
             for (let at = 0; at < all.length; at++) {
                 const outcome = outcomeOf(runs[at], undefined, order);
@@ -1059,7 +1059,7 @@ export function exhaustiveStartPhases(
  * expected output does not hold, and reports the lowest period of the cycle it ends in.
  */
 function overItsCycle(run: TrialRun): TrialRun["stability_check"] {
-    const cycle = run.backpressure_loss;
+    const cycle = run.disturbance_trial;
     if (!run.stability_check.holds || cycle === undefined || cycle.recovers) {
         return run.stability_check;
     }
@@ -1115,7 +1115,7 @@ export function startShiftsOf(period: number, counter: SubtickPeriod | null, pha
  * proof instead (see exhaustiveStartPhases), where that check applies.
  *
  * With `pickup_phase_cycles` each lane-phase start is judged over its repeating cycle, not its first period: its run
- * goes on with nothing cut, as the loss report's undisturbed run does (see backpressureLossOf), and a start that does
+ * goes on with nothing cut, as the loss report's undisturbed run does (see disturbanceTrialOf), and a start that does
  * not stay at the expected output fails. Observed windows ask for it: they are read off a run from one lane phase, and
  * on the express mirrored moving over-the-hood pickup windows read that way held their first period from every lane
  * phase but repeated six periods of 112 and one of 96 from nine of them, as the game does after a loss.
@@ -1179,7 +1179,7 @@ export function runAsBuiltCheck(
             continue;
         }
         const shifted = firstClockSpan(config, decider_windows, period, logger,
-            {...swings, moving_pickup_phases: phases, factorio_states: false, ...(pickup_phase_cycles && {backpressure_loss:
+            {...swings, moving_pickup_phases: phases, factorio_states: false, ...(pickup_phase_cycles && {disturbance_trial:
                 {loss: {kind: "none"}, period_ticks: period, expected_output_items: result.stability_check.expected_output_items}})});
         check.pickup_phase_starts_checked = (check.pickup_phase_starts_checked ?? 0) + 1;
         const judged = overItsCycle(shifted);
@@ -1746,49 +1746,49 @@ export function startDependenceVerdictOf(
 }
 
 /** What the backpressure loss trials of a clock found, or why they could not be run on it */
-export type BackpressureLossAssessment = Pick<ClockAssessment, "backpressure_loss" | "backpressure_loss_not_tried">;
+export type DisturbanceTrialAssessment = Pick<ClockAssessment, "disturbance_trial" | "disturbance_trial_not_tried">;
 
 /**
  * Tries a clock that holds its expected output for backpressure loss. When the trials cannot be run on it, which is
- * logged, the verdict is null and `backpressure_loss_not_tried` is the reason (see `clockVerdictOf`).
+ * logged, the verdict is null and `disturbance_trial_not_tried` is the reason (see `clockVerdictOf`).
  */
-export function backpressureLossVerdictOf(
+export function disturbanceTrialVerdictOf(
     planned_on: Config,
     result: BlueprintGenerationResult,
     logger: Logger,
     report?: (detail: string) => void,
     errors: "report" | "throw" = "report",
-): BackpressureLossAssessment {
+): DisturbanceTrialAssessment {
     // a clock is tried once in a generation, whichever alternative asks: the trials take seconds, and the one that picks the
     // windows of a clock and the one that assesses it are of the same clock
     const memo = currentRunMemo();
     let key: string | undefined;
     try {
-        key = memo === undefined ? undefined : backpressureLossKey(planned_on, result);
+        key = memo === undefined ? undefined : disturbanceTrialKey(planned_on, result);
     } catch (error) {
         if (errors === "throw") throw error;
         // a clock whose key cannot be made is tried as before, and fails in the trial if it cannot be tried
     }
     // A previously unavailable legacy trial is not a completed strict assessment.
-    const assess = () => triedBackpressureLoss(planned_on, result, logger, report, errors);
-    const assessed = memo === undefined || key === undefined ? assess() : memo.backpressureLoss(key, assess);
-    return errors === "throw" && assessed.backpressure_loss === null ? assess() : assessed;
+    const assess = () => triedDisturbanceTrial(planned_on, result, logger, report, errors);
+    const assessed = memo === undefined || key === undefined ? assess() : memo.disturbanceTrial(key, assess);
+    return errors === "throw" && assessed.disturbance_trial === null ? assess() : assessed;
 }
 
-function triedBackpressureLoss(
+function triedDisturbanceTrial(
     planned_on: Config,
     result: BlueprintGenerationResult,
     logger: Logger,
     report?: (detail: string) => void,
     errors: "report" | "throw" = "report",
-): BackpressureLossAssessment {
+): DisturbanceTrialAssessment {
     // the config the clock was planned on has its output swings per cycle
     const config = verificationPlanningConfigOf(planned_on, result);
     const quiet: Logger = { log: () => { }, warn: () => { }, error: logger.error.bind(logger), debug: () => { } };
     // a build with results that come by chance is tried with the backlog of them its margins say it takes up, too
     const excess = result.random_margins === undefined ? null : excessLossOf(result.random_margins.crafting);
     try {
-        return { backpressure_loss: verdictOf(backpressureLossOf(config, result.clock_windows, result.simulation_duration.ticks,
+        return { disturbance_trial: verdictOf(disturbanceTrialOf(config, result.clock_windows, result.simulation_duration.ticks,
             result.stability_check.expected_output_items, quiet, {}, (_loss, index, total) => report?.(`Trying backpressure loss ${index + 1}/${total}`),
             result.exhaust === undefined ? undefined : resultLossOptionsOf(result.exhaust.plans), excess === null ? [] : [excess],
             fractionalSwingsOf(result.output_cycle_plan))) };
@@ -1796,7 +1796,7 @@ function triedBackpressureLoss(
         if (errors === "throw") throw error;
         const reason = error instanceof Error ? error.message : String(error);
         logger.log(`Backpressure loss could not be tried: ${reason}`);
-        return { backpressure_loss: null, backpressure_loss_not_tried: reason };
+        return { disturbance_trial: null, disturbance_trial_not_tried: reason };
     }
 }
 
@@ -1807,7 +1807,7 @@ function triedBackpressureLoss(
  * recovery from the worst backlog is the arithmetic's (`drain_periods` of each window, within the periods a trial gives).
  * Every other loss as for any clock.
  */
-function resultLossOptionsOf(plans: readonly ExhaustPlan[]): (loss: BackpressureLoss) => Partial<BackpressureLossOptions> {
+function resultLossOptionsOf(plans: readonly ExhaustPlan[]): (loss: DisturbanceTrial) => Partial<DisturbanceTrialOptions> {
     return loss => {
         const trial = loss.kind === "output" ? resultLossTrialOf(plans, loss.item, MAX_RECOVERY_PERIODS - LATE_AFTER_PERIODS) : null;
         return trial === null ? {} : {
@@ -1834,7 +1834,7 @@ export interface RoundedClockTrial {
     /** The clock as it runs: its windows rounded, its clock-only check (`stability_check.as_built`) of its own period */
     result: BlueprintGenerationResult;
     holds: boolean;
-    loss: BackpressureLossAssessment;
+    loss: DisturbanceTrialAssessment;
     start_dependence: StartDependence | null;
 }
 
@@ -1868,7 +1868,7 @@ export function roundedClockTrial(
     };
     const holds = as_built.check.holds;
     logger.log(`Clock rounded to ${period_ticks} ticks: as-built=${as_built.check.actual_output_items}/${result.stability_check.expected_output_items} holds=${holds}`);
-    const loss = holds ? backpressureLossVerdictOf(planned_on, rounded, logger, report) : { backpressure_loss: null };
+    const loss = holds ? disturbanceTrialVerdictOf(planned_on, rounded, logger, report) : { disturbance_trial: null };
     const start_dependence = planned_on.overrides?.check_start_dependence === true
         ? startDependenceVerdictOf(planned_on, rounded, holds, logger, report) : null;
     // the result keeps the period the plan has: the rounded clock is the same export, counting it rounded down
@@ -1964,7 +1964,7 @@ export function clockVerificationSignature(config: Config, result: BlueprintGene
  * of the clock (`overrides.lcm`) are left out where they set nothing: they set the period of a run that is not given one, which
  * a whole period is, and the clocks of the inserters outside the plan, which a build without any has none of.
  */
-export function backpressureLossKey(planned_on: Config, result: BlueprintGenerationResult): string {
+export function disturbanceTrialKey(planned_on: Config, result: BlueprintGenerationResult): string {
     const period = result.simulation_duration.ticks;
     const { config: verification_config, fractional_swings } = verificationConfigOf(planned_on, result);
     const cycles_set_nothing = Number.isInteger(period)

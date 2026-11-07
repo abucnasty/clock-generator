@@ -71,7 +71,7 @@
         {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":480,"denominator":13},"cycles":24,"period_ticks":886.1538461538462,"kept":true},
         {"swings":null,"fractional":true,"listed_as":"fractional","pruned":{"rule":"cycle-refused","terms":{"reason":"Cannot satisfy fractional swing constraint: sub-cycle 0 requires 47 swings, but maximum allowed is 4 due to insertion limits. Total swings: 1530, cycle multiplier: 32. At 24 output swings a cycle, the most the insertion limits allow, every inserter swings a whole number of times a cycle: the clock of 24 output swings."}}}
       ],
-      "duty": [
+      "utilization": [
         {
           "producer": "machine:steel-plate",
           "members": [
@@ -85,7 +85,7 @@
             "numerator": 847,
             "denominator": 128
           },
-          "duty": {
+          "utilization": {
             "numerator": 832,
             "denominator": 847
           }
@@ -103,7 +103,7 @@
             "numerator": 6403,
             "denominator": 256
           },
-          "duty": {
+          "utilization": {
             "numerator": 16640,
             "denominator": 19209
           }
@@ -121,7 +121,7 @@
             "numerator": 42061,
             "denominator": 1000
           },
-          "duty": {
+          "utilization": {
             "numerator": 650000,
             "denominator": 1010599647
           }

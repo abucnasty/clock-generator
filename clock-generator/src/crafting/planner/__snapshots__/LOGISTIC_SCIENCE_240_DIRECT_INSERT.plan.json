@@ -50,7 +50,7 @@
         {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":48,"denominator":1},"cycles":6,"period_ticks":288,"kept":true},
         {"swings":4,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":192,"denominator":1},"cycles":3,"period_ticks":576,"kept":true}
       ],
-      "duty": [
+      "utilization": [
         {
           "producer": "machine:casting-iron",
           "members": [
@@ -64,7 +64,7 @@
             "numerator": 6283,
             "denominator": 128
           },
-          "duty": {
+          "utilization": {
             "numerator": 512,
             "denominator": 18849
           }
@@ -83,7 +83,7 @@
             "numerator": 2100260416666667,
             "denominator": 100000000000000
           },
-          "duty": {
+          "utilization": {
             "numerator": 2000000000000000,
             "denominator": 2100260416666667
           }
@@ -101,7 +101,7 @@
             "numerator": 747,
             "denominator": 2
           },
-          "duty": {
+          "utilization": {
             "numerator": 40,
             "denominator": 2241
           }
@@ -119,7 +119,7 @@
             "numerator": 6283,
             "denominator": 40
           },
-          "duty": {
+          "utilization": {
             "numerator": 320,
             "denominator": 18849
           }

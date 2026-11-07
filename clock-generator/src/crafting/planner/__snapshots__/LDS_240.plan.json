@@ -54,7 +54,7 @@
         {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":16,"denominator":1},"cycles":3,"period_ticks":48,"kept":true},
         {"swings":3,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":48,"denominator":1},"cycles":3,"period_ticks":144,"kept":true}
       ],
-      "duty": [
+      "utilization": [
         {
           "producer": "machine:casting-low-density-structure",
           "members": [
@@ -71,7 +71,7 @@
             "numerator": 687,
             "denominator": 10
           },
-          "duty": {
+          "utilization": {
             "numerator": 200,
             "denominator": 229
           }
@@ -89,7 +89,7 @@
             "numerator": 235,
             "denominator": 2
           },
-          "duty": {
+          "utilization": {
             "numerator": 15,
             "denominator": 47
           }

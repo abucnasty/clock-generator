@@ -1,6 +1,6 @@
 import { SerializableMachineFacts } from "../data-types/machine-facts";
 import { InserterStatus, MachineStatus } from "../state";
-import { MAX_RECOVERY_PERIODS, type BackpressureLossVerdict } from "./backpressure-loss";
+import { MAX_RECOVERY_PERIODS, type DisturbanceTrialVerdict } from "./disturbance-trial";
 import { describeSharedItem, type SharedItemDeadlockRisk } from "./deadlock-risk";
 import type { BlueprintGenerationResult } from "./generate-blueprint";
 import { CompactEntityStateTransitions, CompactStateTransitionHistory, transitionsOf } from "./sequence/compact-history";
@@ -383,7 +383,7 @@ export function startDependenceInsight(note: string, dependence: StartDependence
 
 /** The insights for one potential clock, the ones about the whole build first */
 /** Why a clock that holds its expected output is still not listed as stable (GOALS.md, "Backpressure Loss") */
-export function backpressureLossInsight(verdict: BackpressureLossVerdict, expected_output_items: number): ClockInsight {
+export function disturbanceTrialInsight(verdict: DisturbanceTrialVerdict, expected_output_items: number): ClockInsight {
     const what = verdict.broken_by.length > 0
         ? `This clock moves its ${expected_output_items} items every clock period for as long as nothing runs out and nothing backs up. `
             + `It does not get back to them after a loss: ${verdict.broken_by.join("; ")}.${notTriedSentence(verdict.not_tried)}`

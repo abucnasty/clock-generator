@@ -4,10 +4,10 @@
 // that is not in the exported clock (deciders, always-on reasons, the fuel view, the losses the simulator tries), or a relation between them.
 import { expect } from 'vitest';
 import type { JobCheck } from '../record-job-checks';
-import { backpressureLossOf, clockFromWindows, selectableAsStable, simulateClockOnly, validateConfig } from '../../../../src/crafting/generate-blueprint';
+import { disturbanceTrialOf, clockFromWindows, selectableAsStable, simulateClockOnly, validateConfig } from '../../../../src/crafting/generate-blueprint';
 import type { ClockAlternative, ClockAlternativesResult } from '../../../../src/crafting/generate-blueprint';
 import { windowDeciderCount } from '../../../../src/crafting/alternatives';
-import { lossId } from '../../../../src/crafting/backpressure-loss';
+import { lossId } from '../../../../src/crafting/disturbance-trial';
 import { excessLossOf } from '../../../../src/crafting/random-margins';
 import { clockIdentity } from '../../../../src/crafting/clock-identity';
 import { recordSimulationTimeline } from '../../../../src/crafting/record-timeline';
@@ -265,7 +265,7 @@ const electromagnetic240: JobCheck[] = [
 /** The simulator tries the loss of each supply and the output not taken away, and recovers from each */
 const lossesRecover = (config: Config, generated: ClockAlternativesResult, expected: [string, boolean][]) => {
     const selected = selectedOf(generated);
-    const report = backpressureLossOf(config, selected.result.clock_windows, selected.result.simulation_duration.ticks,
+    const report = disturbanceTrialOf(config, selected.result.clock_windows, selected.result.simulation_duration.ticks,
         selected.result.stability_check.expected_output_items, quiet);
     expect(report.undisturbed.recovers).toBe(true);
     expect(report.losses.map(outcome => [lossId(outcome.loss), outcome.recovers])).toEqual(expected);
@@ -475,7 +475,7 @@ const voiderExact: JobCheck[] = [
             const excess = excessLossOf(generated.alternatives[0].result.random_margins!.crafting)!;
             expect(excess).toEqual({ kind: 'excess', at: [{ machine_id: 'machine:1', item: 'iron-ore', count: 67 }] });
             const [planned, even] = generated.alternatives.map(alternative => {
-                const report = backpressureLossOf(config, alternative.result.clock_windows, 144, 960, quiet, {}, undefined, undefined, [excess]);
+                const report = disturbanceTrialOf(config, alternative.result.clock_windows, 144, 960, quiet, {}, undefined, undefined, [excess]);
                 return report.losses.find(it => it.loss.kind === 'excess')!;
             });
             // placed into the car at the start of the period, the batched clock brings 896 ore and then 960 again
@@ -515,7 +515,7 @@ const voiderExact: JobCheck[] = [
         name: 'is back at 960 ore a period after the ore stops coming, on every clock',
         run: ({ config, generated }) => {
             for (const alternative of generated.alternatives) {
-                const report = backpressureLossOf(config, alternative.result.clock_windows, 144, 960, quiet);
+                const report = disturbanceTrialOf(config, alternative.result.clock_windows, 144, 960, quiet);
                 expect(report.losses.map(it => [it.loss, it.recovers]), alternative.id).toEqual([[{ kind: 'supply', item: 'iron-ore' }, true]]);
             }
         },
@@ -538,7 +538,7 @@ const voiderOverbeaconed: JobCheck[] = [
         name: 'is back at 960 ore a period after the ore stops coming, on every clock',
         run: ({ config, generated }) => {
             for (const alternative of generated.alternatives) {
-                const report = backpressureLossOf(config, alternative.result.clock_windows, 144, 960, quiet);
+                const report = disturbanceTrialOf(config, alternative.result.clock_windows, 144, 960, quiet);
                 expect(report.losses.map(it => [it.loss, it.recovers]), alternative.id).toEqual([[{ kind: 'supply', item: 'iron-ore' }, true]]);
             }
         },

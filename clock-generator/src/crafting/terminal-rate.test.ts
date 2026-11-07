@@ -3,7 +3,7 @@ import { ConfigPaths } from "../config/config-paths";
 import { TestConfigPaths } from "../../tests/configs/paths";
 import { loadConfigFromFile } from "../config/loader";
 import { Entity } from "../entities";
-import { judgeRecovery, runsOn } from "./backpressure-loss";
+import { judgeRecovery, runsOn } from "./disturbance-trial";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { buildOutputInsertersOf, type EntityTransferCountMap } from "./sequence/cycle/swing-counts";
 import { targetItemOf } from "./sequence/cycle/target-ends";

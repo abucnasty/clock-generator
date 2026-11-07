@@ -3,7 +3,7 @@ import { ItemName } from "../data";
 /**
  * What a belt or chest of the surroundings does not give or take for now. A belt and an infinity chest are a supply
  * that is always full and a place that always takes: with nothing in either set that is what they are, which is
- * every run but the one that tests a loss of backpressure (see crafting/backpressure-loss.ts).
+ * every run but the one that tests a loss of backpressure (see crafting/disturbance-trial.ts).
  */
 export class SupplyGate {
     /** Items that have stopped arriving: an inserter finds none of them here */
