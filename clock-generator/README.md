@@ -284,7 +284,7 @@ normal inserter. Picking up from a belt (4 ticks) is calibrated on the legendary
 by any other prototype or quality is refused (follow-up F7). It is calibrated with 16-item hands on 4-item belt stacks
 only: a belt pickup with another hand (a `stack_size` other than 16, or an item that stacks to less) or from a lane whose
 `stack_size` is not 4 is generated with a warning that its timing is not tested, in the log, among the clocks' insights
-and in the web form's Build validation. Dropping onto a belt keeps the legendary stack inserter's
+and in the web form's Build check. Dropping onto a belt keeps the legendary stack inserter's
 timing, which is not checked for the others. The simulator also gives every inserter the stack inserter's wait for a
 full hand, which the other prototypes do not have in the game.
 
