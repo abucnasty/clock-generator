@@ -48,8 +48,8 @@ describe("the chip words of the settings", () => {
     const plain: ClockSettings = { output_count: { kind: "output_swings", count: 2 }, window_cycle: [], belt_pickups: [] };
 
     test("name the output count, and nothing else for the whole window cycle with no other setting", () => {
-        expect(settingChipsOf(plain).map(it => it.label)).toEqual(["output swings 2"]);
-        expect(settingChipsOf({ ...plain, output_count: { kind: "hands_brought_in", count: 3 } }).map(it => it.label)).toEqual(["hands brought in 3"]);
+        expect(settingChipsOf(plain).map(it => it.label)).toEqual(["2 output swings each output cycle"]);
+        expect(settingChipsOf({ ...plain, output_count: { kind: "hands_brought_in", count: 3 } }).map(it => it.label)).toEqual(["3 hands brought in each output cycle"]);
     });
 
     test("have a word for every value, in the order of the fields, all in lower case", () => {
@@ -59,9 +59,10 @@ describe("the chip words of the settings", () => {
             shared_windows: "window_a_swing", loops: "loop_exits_only", drill_windows: "a_tick_longer",
             belt_pickups: ["counted_from_entry", "room_for_a_hand_of_fuel"],
         }).map(it => it.label);
-        expect(labels).toEqual(["output swings 1", "shorter window cycle", "harmonic window cycle", "subtick clock", "rounded to 1199 ticks, 2.32% fast",
+        expect(labels).toEqual(["1 output swing each output cycle", "shorter window cycle", "harmonic window cycle", "subtick clock", "rounded to 1199 ticks, 2.32% fast",
             "one enable window a swing", "kanban pull: loop exits only", "drill windows a tick longer", "pickups counted from entry", "room for a hand of fuel"]);
         expect(labels.every(label => label === label.toLowerCase())).toBe(true);
+        expect(settingChipsOf({ ...plain, output_count: { kind: "hands_brought_in", count: 1 } })[0].label).toBe("1 hand brought in each output cycle");
         expect(settingChipsOf({ ...plain, shared_windows: "shared_enable_windows", loops: "loop_windows" }).map(it => it.label).slice(1))
             .toEqual(["shared enable windows", "kanban pull: loop windows"]);
         expect(settingChipsOf({ ...plain, window_cycle: [{ kind: "rounded_clock", window_cycle_ticks: 10, runs_fast: 0.00001 }] })[1].label).toBe("rounded to 10 ticks, under 0.01% fast");

@@ -123,7 +123,7 @@ describe("what the router gave each entity", () => {
         const bare = partGroups(CHAIN, [recommended, { ...other, always_on: undefined }], 20);
         const sources = sourceControlsOf(bare, new Map([["machine:2", 0], ["machine:1", 0], ["belt:1", 1]]), {}, logger, "gear");
         expect(sources[2].entities).toEqual({});
-        expect(logged).toEqual(["Per-branch clock, gear: inserter:1 left out of the sources, it is always enabled with no reason known"]);
+        expect(logged).toEqual(["Coordinated Sources, gear: inserter:1 left out of the sources, it is always enabled with no reason known"]);
         logged.length = 0;
         const unknown = partGroups(CHAIN, [{ ...recommended, strategy: undefined }], 20);
         expect(sourceControlsOf(unknown, new Map([["machine:2", 0], ["machine:1", 0], ["belt:1", 0]]), {}, logger, "gear").flatMap(it => Object.keys(it.entities))).toEqual([]);
