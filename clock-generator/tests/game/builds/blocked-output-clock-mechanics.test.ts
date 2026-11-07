@@ -29,13 +29,14 @@ const drops = readFixtureFigures<RecordedHand[]>(GameFixturePaths.TURBO_BELT_DRO
 const firstHandOf = (variant: BlockedOutputClockCase) => drops[`${variant.speed.name}/${variant.stackSize}`][0];
 
 /**
- * The clock the generator selects: a hand of 15 is shifted-swings; a hand of 16 is even-hands, or planned-belt-slack where
- * it ties with even-hands (stacks 2 and 4 with no wake-ups, an arm that swings back from a drop that emptied its hand not
+ * The clock the generator selects: a hand of 15 is the phase-shifted batch (phase_shifted_batch); a hand of 16 is time_division_windows, or takt_batches (stack 1) or
+ * takt_batches_observed where it ties with time_division_windows (stacks 2 and 4 with no wake-ups, an arm that swings back from a drop that emptied its hand not
  * counted; stack 1 at 18.848 wake-ups a minute with its windows made by arithmetic) and wins the tie
  */
 const PLANNED_SELECTED = new Set(["turbo-stack-1", "turbo-stack-2", "turbo-stack-4"].map(name => `blocked-output-${name}`));
 const selectedClockOf = (variant: BlockedOutputClockCase) =>
-    variant.stackSize === 3 ? "shifted-swings" : PLANNED_SELECTED.has(variant.name) ? "planned-belt-slack" : "even-hands";
+    variant.stackSize === 3 ? "phase_shifted_batch" : variant.name === "blocked-output-turbo-stack-1" ? "takt_batches"
+        : PLANNED_SELECTED.has(variant.name) ? "takt_batches_observed" : "time_division_windows";
 
 /** The hand the output inserter drops: 16 items, 15 at stack size 3 (docs/belt-pickup/experiments.md) */
 const handOf = (variant: BlockedOutputClockCase) => variant.stackSize === 3 ? 15 : 16;
@@ -124,7 +125,7 @@ describe("the recorded controls of the blocked-output fixtures", () => {
             expect(path.length, name).toBeGreaterThan(10);
         }
         // one case per path: the two selections the pins record
-        expect(new Set([...BLOCKED_OUTPUT_GENERATED.keys()].map(name => controls[name].generation!.selection.id))).toEqual(new Set(["planned-belt-slack", "shifted-swings"]));
+        expect(new Set([...BLOCKED_OUTPUT_GENERATED.keys()].map(name => controls[name].generation!.selection.id))).toEqual(new Set(["takt_batches_observed", "phase_shifted_batch"]));
     });
 });
 

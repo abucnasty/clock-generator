@@ -100,8 +100,8 @@ describe("the recorded clock controls of the container fixtures", () => {
             expect(new Set(family.map(control => control.generation!.selection.id)).size, recipe).toBe(1);
             expect(new Set(family.map(control => control.generation!.period)).size, recipe).toBe(1);
         }
-        expect(variants.filter(variant => variant.recipe === "iron-gear-wheel").map(variant => controls[variant.name].generation!.selection.id)[0]).toBe("planned-belt-slack");
-        expect(variants.filter(variant => variant.recipe === "electronic-circuit").map(variant => controls[variant.name].generation!.selection.id)[0]).toBe("planned-belt-slack");
+        expect(variants.filter(variant => variant.recipe === "iron-gear-wheel").map(variant => controls[variant.name].generation!.selection.id)[0]).toBe("takt_batches_observed");
+        expect(variants.filter(variant => variant.recipe === "electronic-circuit").map(variant => controls[variant.name].generation!.selection.id)[0]).toBe("takt_batches_observed");
     });
 
     test("the generated cases are fixtures of the family, one a recipe, and the path each takes is stated", () => {

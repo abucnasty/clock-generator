@@ -285,7 +285,7 @@ const lithium: JobCheck[] = [{
     name: 'every clock of the build says the two drops side-load onto another belt',
     run: ({ generated }) => {
         for (const variant of lithiumSiloCases()) {
-            const chosen = generated.alternatives.find(alternative => alternative.maker === variant.alternative)!;
+            const chosen = generated.alternatives.find(alternative => alternative.id === variant.alternative)!;
             expect(chosen.insights.filter(insight => insight.id === 'side-loaded-drop').map(insight => insight.what), variant.name).toEqual([
                 'Inserter 15 drops onto a 3 tile belt buffer that side-loads onto another belt. '
                 + 'Inserter 16 drops onto a 3 tile belt buffer that side-loads onto another belt.']);

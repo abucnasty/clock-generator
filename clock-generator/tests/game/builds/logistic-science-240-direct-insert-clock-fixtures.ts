@@ -25,7 +25,7 @@ export interface LogisticDirectInsertClockCase {
 }
 
 /** The id of the alternative the generated clock is: 96 ticks of fractional swings, the selected one for the config as it is until #595 */
-export const GENERATED_ALTERNATIVE = "fractional";
+export const GENERATED_ALTERNATIVE = "euclidean_swings";
 
 export function logisticDirectInsertClockCases(): LogisticDirectInsertClockCase[] {
     return [{name: "generated-one-copy", alternative: GENERATED_ALTERNATIVE}];

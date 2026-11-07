@@ -71,7 +71,7 @@
     "expected": 384,
     "verdict": "stable",
     "selection": {
-     "id": "planned-belt-slack",
+     "id": "round_robin_polling",
      "holds": true,
      "rate": 480,
      "supply": "moving"

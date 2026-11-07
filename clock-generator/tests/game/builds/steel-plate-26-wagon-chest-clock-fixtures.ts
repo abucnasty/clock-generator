@@ -27,7 +27,7 @@ import {PickupClockScenario} from "./pickup-clock-capture";
 export interface SteelWagonCase {
     name: string;
     /** The alternative recorded */
-    alternative: "planned-belt-slack-subtick";
+    alternative: "takt_batches_observed_subtick";
     /** The items the config leaves out of the window cycle (`overrides.ignored_lcm_ingredients`) */
     ignored_lcm_ingredients?: string[];
     order: "as-built" | "fill-last";
@@ -37,9 +37,9 @@ export interface SteelWagonCase {
 
 export function steelWagonCases(): SteelWagonCase[] {
     return [
-        {name: "steel-wagon-belt-slack", alternative: "planned-belt-slack-subtick", order: "as-built", window_cycle_ticks: 11520},
-        {name: "steel-wagon-belt-slack-fill-last", alternative: "planned-belt-slack-subtick", order: "fill-last", window_cycle_ticks: 11520},
-        {name: "steel-wagon-iron-ore-out-of-period", alternative: "planned-belt-slack-subtick", ignored_lcm_ingredients: ["iron-ore"], order: "as-built", window_cycle_ticks: 3840},
+        {name: "steel-wagon-belt-slack", alternative: "takt_batches_observed_subtick", order: "as-built", window_cycle_ticks: 11520},
+        {name: "steel-wagon-belt-slack-fill-last", alternative: "takt_batches_observed_subtick", order: "fill-last", window_cycle_ticks: 11520},
+        {name: "steel-wagon-iron-ore-out-of-period", alternative: "takt_batches_observed_subtick", ignored_lcm_ingredients: ["iron-ore"], order: "as-built", window_cycle_ticks: 3840},
     ];
 }
 

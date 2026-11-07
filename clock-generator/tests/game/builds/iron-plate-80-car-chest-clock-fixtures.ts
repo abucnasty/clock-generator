@@ -28,7 +28,7 @@ import {PickupClockScenario} from "./pickup-clock-capture";
 export interface CarCase {
     name: string;
     /** The alternative recorded */
-    alternative: "derived" | "swings-2" | "swings-3" | "swings-1";
+    alternative: "time_study_windows" | "takt_batches_observed_swings_2" | "takt_batches_observed_swings_3" | "takt_batches_observed_swings_1";
     /** The clock's window cycle in ticks */
     period: 72 | 144 | 288;
     order: "as-built" | "takers-last";
@@ -36,13 +36,13 @@ export interface CarCase {
 
 export function carCases(): CarCase[] {
     return [
-        {name: "car-derived", alternative: "derived", period: 288, order: "as-built"},
-        {name: "car-derived-takers-last", alternative: "derived", period: 288, order: "takers-last"},
-        {name: "car-swings-2", alternative: "swings-2", period: 144, order: "as-built"},
-        {name: "car-swings-2-takers-last", alternative: "swings-2", period: 144, order: "takers-last"},
-        {name: "car-swings-3", alternative: "swings-3", period: 72, order: "as-built"},
-        {name: "car-swings-3-takers-last", alternative: "swings-3", period: 72, order: "takers-last"},
-        {name: "car-swings-1", alternative: "swings-1", period: 72, order: "as-built"},
+        {name: "car-derived", alternative: "time_study_windows", period: 288, order: "as-built"},
+        {name: "car-derived-takers-last", alternative: "time_study_windows", period: 288, order: "takers-last"},
+        {name: "car-swings-2", alternative: "takt_batches_observed_swings_2", period: 144, order: "as-built"},
+        {name: "car-swings-2-takers-last", alternative: "takt_batches_observed_swings_2", period: 144, order: "takers-last"},
+        {name: "car-swings-3", alternative: "takt_batches_observed_swings_3", period: 72, order: "as-built"},
+        {name: "car-swings-3-takers-last", alternative: "takt_batches_observed_swings_3", period: 72, order: "takers-last"},
+        {name: "car-swings-1", alternative: "takt_batches_observed_swings_1", period: 72, order: "as-built"},
     ];
 }
 

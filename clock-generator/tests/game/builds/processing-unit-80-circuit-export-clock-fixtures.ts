@@ -21,7 +21,7 @@ const FOLDER = path.dirname(ConfigPaths.PROCESSING_UNIT_80_CIRCUIT_EXPORT);
  * The id of the alternative the generated clock is: the 24-tick one, which the rule for hands in groups makes stable, with a window of a tick at
  * each swing of the takers the surplus guard gates
  */
-export const GENERATED_ALTERNATIVE = "planned-belt-slack-per-hand";
+export const GENERATED_ALTERNATIVE = "round_robin_polling_per_hand";
 
 /** The scaffold has four throttle inserters (belt to infinity chest) and four chest inserters for the plastic, which the config does not have */
 const SCAFFOLD_INSERTERS = 8;

@@ -49,7 +49,7 @@
         "expected": 352.0,
         "verdict": "stable",
         "selection": {
-          "id": "swings-2",
+          "id": "takt_batches_swings_2",
           "holds": true,
           "rate": 330,
           "supply": "moving"

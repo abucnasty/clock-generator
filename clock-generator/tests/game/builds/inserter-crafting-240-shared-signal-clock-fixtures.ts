@@ -37,7 +37,7 @@ export function inserterCraftingClockCases(): InserterCraftingClockCase[] {
     return [
         {name: "hand-made-clock-three-copies", kind: "hand-made clock"},
         {name: "generated-three-copies", kind: "generated clock", alternative: GENERATED_ALTERNATIVE},
-        {name: "generated-backed-up-one-copy", kind: "generated clock", alternative: GENERATED_ALTERNATIVE, backed_up_one_copy: true},
+        {name: "generated-backed-up-one-copy", kind: "generated clock", alternative: BACKED_UP_ALTERNATIVE, backed_up_one_copy: true},
     ];
 }
 
@@ -60,7 +60,10 @@ export const COPIES = 3;
  * The clock recorded on the three copies (`swings-6`, 6 output swings): the generator's selected clock until the default dispatch changed, still
  * made; with the belts backed up it is the selected clock now
  */
-export const GENERATED_ALTERNATIVE = "swings-6";
+export const GENERATED_ALTERNATIVE = "takt_batches_observed_swings_6";
+
+/** The same clock with the belts backed up: the strategy and tuning method the backed-up build gets for it */
+export const BACKED_UP_ALTERNATIVE = "round_robin_polling_swings_6";
 
 /**
  * The copies are not alike, as they were built, and the config is the third (the eastern copy, with no overrides): the

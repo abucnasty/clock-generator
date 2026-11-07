@@ -64,7 +64,7 @@
     "expected": 32,
     "verdict": "stable",
     "selection": {
-     "id": "planned-belt-slack-per-hand",
+     "id": "round_robin_polling_per_hand",
      "holds": true,
      "rate": 80,
      "supply": "moving"
@@ -135,7 +135,7 @@
     "expected": 32,
     "verdict": "stable",
     "selection": {
-     "id": "planned-belt-slack-per-hand",
+     "id": "round_robin_polling_per_hand",
      "holds": true,
      "rate": 80,
      "supply": "backed_up"

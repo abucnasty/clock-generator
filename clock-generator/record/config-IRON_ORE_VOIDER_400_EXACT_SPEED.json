@@ -3,9 +3,9 @@
   "job": "config-IRON_ORE_VOIDER_400_EXACT_SPEED",
   "group": "config",
   "name": "IRON_ORE_VOIDER_400_EXACT_SPEED",
-  "config_sha256": "92b3eb314e02dcd57b30cfe0db2381088753d6cecedff48aba01c0fe66d0b74d",
-  "job_results_sha256": "2efa91d7b5632302ecacdc3184cdcd2bd7fd419450a69975151bb0fc2916cbff",
-  "selected": "even-hands",
+  "config_sha256": "62d8f918009de83eec3ca7cbf859d05bb64231caeb018aa1a40f156e64957d46",
+  "job_results_sha256": "5861240ef5aa7fa5fbd60f3da1e7868630c9d0cb38d9ce3c30be37effd1c74a8",
+  "selected": "time_division_windows",
   "selected_windows": {
     "inserter:1": "0-20,29-35,43-49,58-64,72-92,101-107,115-121,130-136",
     "inserter:2": "0-20,29-35,43-49,58-64,72-92,101-107,115-121,130-136",
@@ -15,7 +15,7 @@
     "inserter:6": "0-6,10-16,19-25,29-35,38-44,48-54,58-64,67-73,77-83,86-92,96-102,106-112,115-121,125-131,134-140"
   },
   "alternatives": [
-    {"id": "planned-belt-slack", "verdict": "no recovery", "holds": true, "rate": 400, "supply": null, "period": 144, "wake_ups": 25.175, "descriptions_cut": 0, "clock_sha256": "03bcb4e36bed9a642955cc3d81070986a1869af6f9bd34cb17f1ff49505e885e", "windows_sha256": "0d62a9ff2ee8eb1a181eb2dbe194109a127feb2c78be69d21a3d83ee002a6b33", "text_sha256": "2889cea29dcfa96ad6bfb5fe1cb7e15488ef4e07b8db66baae3f951edd9e8976", "results_sha256": "8812e28a6dd623322ea37112761c8675ce28a3f9718bdb0fe7d0fc9cf6d3b990"},
-    {"id": "even-hands", "verdict": "stable", "holds": true, "rate": 400, "supply": null, "period": 144, "wake_ups": 0, "descriptions_cut": 0, "clock_sha256": "719cfc482830f08461177b8cd086e39d44271fdf480c4767780adfc0a7d90d61", "windows_sha256": "697ceea34661a16ef20eaa11b3ae4aa41730c0ee363ba5c8dbfe5af1bb73a944", "text_sha256": "1eaf39c580746330cecf267c7da6e5a67458bf5f30a54d664d67a4194bdbb4bf", "results_sha256": "76593fa2f200756da74283f06c80ba6e9462d36dd77996aecdb421e63f9abe3f"}
+    {"id": "takt_batches_observed", "verdict": "no recovery", "holds": true, "rate": 400, "supply": null, "period": 144, "wake_ups": 25.175, "descriptions_cut": 0, "clock_sha256": "03bcb4e36bed9a642955cc3d81070986a1869af6f9bd34cb17f1ff49505e885e", "windows_sha256": "0d62a9ff2ee8eb1a181eb2dbe194109a127feb2c78be69d21a3d83ee002a6b33", "text_sha256": "62b473d2c6b70ab9d0a1ee7a38df6186c44eb5a7fbd52a932ee2c3eed55e013a", "results_sha256": "637c551325cdddd26183e3d33e0331cf985f870fc2867f027d067ad0b599309f"},
+    {"id": "time_division_windows", "verdict": "stable", "holds": true, "rate": 400, "supply": null, "period": 144, "wake_ups": 0, "descriptions_cut": 0, "clock_sha256": "719cfc482830f08461177b8cd086e39d44271fdf480c4767780adfc0a7d90d61", "windows_sha256": "697ceea34661a16ef20eaa11b3ae4aa41730c0ee363ba5c8dbfe5af1bb73a944", "text_sha256": "81e5b1e03b19ba753eb1774d17ee28033a2523f75c9d014e3692a44b750d3f92", "results_sha256": "954f39e63e3c37ca28a003c42864f5315f277c9c36024bbe7d4d8b8021e012f4"}
   ]
 }

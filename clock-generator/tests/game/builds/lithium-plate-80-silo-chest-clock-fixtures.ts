@@ -27,7 +27,7 @@ import {PickupClockScenario} from "./pickup-clock-capture";
 export interface LithiumSiloCase {
     name: string;
     /** The alternative recorded */
-    alternative: "swings-3" | "swings-7" | "swings-1";
+    alternative: "takt_batches_observed_swings_3" | "takt_batches_observed_swings_7" | "takt_batches_observed_swings_1";
     /** Set where the game does not hold this clock though the simulator does: the limit of the drops the config marks */
     known_limit?: "side-loaded-drop";
     order: "as-built" | "fill-last";
@@ -35,10 +35,10 @@ export interface LithiumSiloCase {
 
 export function lithiumSiloCases(): LithiumSiloCase[] {
     return [
-        {name: "lithium-silo-swings-3", alternative: "swings-3", order: "as-built"},
-        {name: "lithium-silo-swings-3-fill-last", alternative: "swings-3", order: "fill-last"},
-        {name: "lithium-silo-swings-1", alternative: "swings-1", order: "as-built"},
-        {name: "lithium-silo-swings-7", alternative: "swings-7", order: "as-built",
+        {name: "lithium-silo-swings-3", alternative: "takt_batches_observed_swings_3", order: "as-built"},
+        {name: "lithium-silo-swings-3-fill-last", alternative: "takt_batches_observed_swings_3", order: "fill-last"},
+        {name: "lithium-silo-swings-1", alternative: "takt_batches_observed_swings_1", order: "as-built"},
+        {name: "lithium-silo-swings-7", alternative: "takt_batches_observed_swings_7", order: "as-built",
             known_limit: "side-loaded-drop"},
     ];
 }
@@ -92,7 +92,7 @@ export function lithiumSiloScenario(variant: LithiumSiloCase): PickupClockScenar
         scaffold: () => lithiumSiloScaffold(variant.order),
         alternative: variant.alternative,
         // the clock with 7 output swings repeats over 7,560 ticks, longer than a minute
-        ...(variant.alternative === "swings-7" && {baseline: {ticks: 7560, reason: "the clock's output repeats over its 7,560-tick period, longer than a minute"}}),
+        ...(variant.alternative === "takt_batches_observed_swings_7" && {baseline: {ticks: 7560, reason: "the clock's output repeats over its 7,560-tick period, longer than a minute"}}),
         probeFile: path.join(__dirname, "lithium-plate-80-silo-chest-clock-probe.lua"),
         probe: {family: "lithium-silo"},
         controls: path.join(__dirname, "lithium-plate-80-silo-chest-clock-controls.json"),

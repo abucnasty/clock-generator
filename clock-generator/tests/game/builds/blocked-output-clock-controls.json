@@ -4,24 +4,24 @@
     "blocked-output-turbo-stack-1": {
       "recorded": {"pr":0,"commit":"57c76634","frozen_head":"57c76634","note":"recorded under the protocol in game ticks on the engine of this head; pr is set when the PR is opened","clock_sha256":"21ebc2b17cca59e081803c7480514cb5a6893ee2dd270c5c50eaf805a69383b0","clock_basis":"capture"},
       "native": {"protocol":"trailing-minute","generationVerdict":"stable","target":5,"period":192,"window":3600,"expected":300,"steady":7071,"baseline":{"ticks":3600,"total":299,"expected":300,"min":299,"max":303,"held":false,"meets":true,"measured":{"ticks":3456,"items":288,"expected":288,"stock_start":23,"stock_end":23,"net":288}},"disturbances":[{"kind":"block output","start":10671,"drop":11349,"release":11349,"recovered":15103}],"stock":{"lowest":8,"end":20,"holds":true},"result":"holds","ended":15103},
-      "generation": {"period":192,"expected":16,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":5,"supply":null},"clock_sha256":"21ebc2b17cca59e081803c7480514cb5a6893ee2dd270c5c50eaf805a69383b0"}
+      "generation": {"period":192,"expected":16,"verdict":"stable","selection":{"id":"takt_batches","holds":true,"rate":5,"supply":null},"clock_sha256":"21ebc2b17cca59e081803c7480514cb5a6893ee2dd270c5c50eaf805a69383b0"}
     },
     "blocked-output-turbo-stack-2": {
       "recorded": {"pr":0,"commit":"57c76634","frozen_head":"57c76634","note":"recorded under the protocol in game ticks on the engine of this head; pr is set when the PR is opened","clock_sha256":"1b12f1e0f191261f5b20f6450047cefb56e03b3a70562f16d4bbb33a5102cc7c","clock_basis":"capture"},
       "native": {"protocol":"trailing-minute","generationVerdict":"stable","target":5,"period":192,"window":3600,"expected":300,"steady":7071,"baseline":{"ticks":3600,"total":299,"expected":300,"min":299,"max":303,"held":false,"meets":true,"measured":{"ticks":3456,"items":288,"expected":288,"stock_start":21,"stock_end":21,"net":288}},"disturbances":[{"kind":"block output","start":10671,"drop":11755,"release":11755,"recovered":15509}],"stock":{"lowest":8,"end":20,"holds":true},"result":"holds","ended":15509},
-      "generation": {"period":192,"expected":16,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":5,"supply":null},"clock_sha256":"1b12f1e0f191261f5b20f6450047cefb56e03b3a70562f16d4bbb33a5102cc7c"},
-      "previous": {"id":"even-hands","clock_sha256":"91bb71053272144582c3c949f9acee0c6527f2a78a610c16ea1f2248d5d7beeb"}
+      "generation": {"period":192,"expected":16,"verdict":"stable","selection":{"id":"takt_batches_observed","holds":true,"rate":5,"supply":null},"clock_sha256":"1b12f1e0f191261f5b20f6450047cefb56e03b3a70562f16d4bbb33a5102cc7c"},
+      "previous": {"id":"time_division_windows","clock_sha256":"91bb71053272144582c3c949f9acee0c6527f2a78a610c16ea1f2248d5d7beeb"}
     },
     "blocked-output-turbo-stack-3": {
       "recorded": {"pr":0,"commit":"038ed41a","frozen_head":"038ed41a","note":"recorded under the protocol in game ticks before the PR was opened; pr is set when it is","clock_sha256":"aed3a5df815ed3278d859eda48ffecf2fd0fdf95f143f9fe332652f42b28a7bb","clock_basis":"capture"},
       "native": {"protocol":"trailing-minute","generationVerdict":"stable","target":5,"period":1440,"window":3600,"expected":300,"steady":6803,"baseline":{"ticks":3600,"total":300,"expected":300,"min":293,"max":307,"held":false,"meets":true,"measured":{"ticks":2880,"items":240,"expected":240,"stock_start":12,"stock_end":12,"net":240}},"disturbances":[{"kind":"block output","start":10403,"drop":11946,"release":11946,"recovered":15623}],"stock":{"lowest":0,"end":12,"holds":true},"result":"holds","ended":15623},
-      "generation": {"period":1440,"expected":120,"verdict":"stable","selection":{"id":"shifted-swings","holds":true,"rate":5,"supply":null},"clock_sha256":"aed3a5df815ed3278d859eda48ffecf2fd0fdf95f143f9fe332652f42b28a7bb"}
+      "generation": {"period":1440,"expected":120,"verdict":"stable","selection":{"id":"phase_shifted_batch","holds":true,"rate":5,"supply":null},"clock_sha256":"aed3a5df815ed3278d859eda48ffecf2fd0fdf95f143f9fe332652f42b28a7bb"}
     },
     "blocked-output-turbo-stack-4": {
       "recorded": {"pr":0,"commit":"57c76634","frozen_head":"57c76634","note":"recorded under the protocol in game ticks on the engine of this head; pr is set when the PR is opened","clock_sha256":"d6f9260c0e18ea03551cddb4bfd80d30e13e610bc7c5565c11354834c0ed4def","clock_basis":"capture"},
       "native": {"protocol":"trailing-minute","generationVerdict":"stable","target":5,"period":192,"window":3600,"expected":300,"steady":7071,"baseline":{"ticks":3600,"total":299,"expected":300,"min":299,"max":303,"held":false,"meets":true,"measured":{"ticks":3456,"items":288,"expected":288,"stock_start":21,"stock_end":21,"net":288}},"disturbances":[{"kind":"block output","start":10671,"drop":12707,"release":12707,"recovered":16461}],"stock":{"lowest":8,"end":20,"holds":true},"result":"holds","ended":16461},
-      "generation": {"period":192,"expected":16,"verdict":"stable","selection":{"id":"planned-belt-slack","holds":true,"rate":5,"supply":null},"clock_sha256":"d6f9260c0e18ea03551cddb4bfd80d30e13e610bc7c5565c11354834c0ed4def"},
-      "previous": {"id":"even-hands","clock_sha256":"e532fe8beb613ab122e70b6a7e4bcf5fffc23cd054989946e9e5745a9cb3caa3"}
+      "generation": {"period":192,"expected":16,"verdict":"stable","selection":{"id":"takt_batches_observed","holds":true,"rate":5,"supply":null},"clock_sha256":"d6f9260c0e18ea03551cddb4bfd80d30e13e610bc7c5565c11354834c0ed4def"},
+      "previous": {"id":"time_division_windows","clock_sha256":"e532fe8beb613ab122e70b6a7e4bcf5fffc23cd054989946e9e5745a9cb3caa3"}
     }
   }
 }

@@ -71,7 +71,7 @@
         "expected": 384.0,
         "verdict": "stable",
         "selection": {
-          "id": "derived",
+          "id": "time_study_windows",
           "holds": true,
           "rate": 80,
           "supply": null
@@ -152,7 +152,7 @@
         "expected": 384.0,
         "verdict": "stable",
         "selection": {
-          "id": "derived",
+          "id": "time_study_windows",
           "holds": true,
           "rate": 80,
           "supply": null
@@ -233,7 +233,7 @@
         "expected": 192,
         "verdict": "stable",
         "selection": {
-          "id": "swings-2",
+          "id": "takt_batches_observed_swings_2",
           "holds": true,
           "rate": 80,
           "supply": null
@@ -314,7 +314,7 @@
         "expected": 192,
         "verdict": "stable",
         "selection": {
-          "id": "swings-2",
+          "id": "takt_batches_observed_swings_2",
           "holds": true,
           "rate": 80,
           "supply": null
@@ -395,7 +395,7 @@
         "expected": 96.0,
         "verdict": "stable",
         "selection": {
-          "id": "swings-3",
+          "id": "takt_batches_observed_swings_3",
           "holds": true,
           "rate": 80,
           "supply": null
@@ -476,7 +476,7 @@
         "expected": 96.0,
         "verdict": "stable",
         "selection": {
-          "id": "swings-3",
+          "id": "takt_batches_observed_swings_3",
           "holds": true,
           "rate": 80,
           "supply": null
@@ -557,7 +557,7 @@
         "expected": 96.0,
         "verdict": "stable",
         "selection": {
-          "id": "swings-1",
+          "id": "takt_batches_observed_swings_1",
           "holds": true,
           "rate": 80,
           "supply": null
