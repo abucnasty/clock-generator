@@ -110,10 +110,11 @@ describe("generateClockForConfig", () => {
 
                 // inserter 1 and 3 windows end 3 ticks earlier since belt windows close before their last return swing,
                 // and inserter 3's last one more since its last hand after a craft start comes a tick sooner; they stay
-                // open the 4 ticks of belt pickup slack after their last pickup already, and none are added (#595)
+                // open the 4 ticks of belt pickup slack after their last pickup already, and none are added (#595); inserter 2's
+                // close a tick earlier, before the hand that left it asleep on its machine's list at the switch-off (#641)
                 it("batched swings for a moving belt keep the belt pickup slack inside the belt input inserters' windows", () => {
                     expect(windowsOf("planned-belt-slack")).toEqual({
-                        "inserter:2": [{ start: 1, end: 49 }, { start: 169, end: 209 }],
+                        "inserter:2": [{ start: 1, end: 48 }, { start: 169, end: 208 }],
                         "inserter:3": [{ start: 13, end: 33 }, { start: 181, end: 201 }, { start: 214, end: 222 }],
                         "inserter:1": [{ start: 206, end: 214 }],
                     });

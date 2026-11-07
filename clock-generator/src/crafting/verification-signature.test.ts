@@ -89,13 +89,14 @@ describe("request-local duplicate verification", () => {
         const generated = generateClockAlternatives(logistic, {logger: quiet});
         const keys = recovery.mock.calls.map(([config, result]) => signature(config, result));
         expect(keys.length).toBeGreaterThan(1);
-        // the clocks of the windows made by arithmetic and of the planned windows with the belt pickup slack inside them
-        // are tried while the primary windows are chosen (generate-clock.ts), before the alternative is assessed; the run
-        // memo serves the second ask, so theirs are the keys asked twice
+        // the clocks of the windows made by arithmetic, of the planned windows with the belt pickup slack inside them and of
+        // the windows shaped against ghost wakeups are tried while the primary windows are chosen (generate-clock.ts), before
+        // the alternative is assessed; the run memo serves the second ask, so theirs are the keys asked twice
         const repeated = keys.filter((key, index) => keys.indexOf(key) !== index);
-        const chosen = recovery.mock.calls.filter(([, result]) => result.window_maker === "arithmetic" || (result.belt?.kind === "moving" && result.belt.inside === true))
+        const chosen = recovery.mock.calls.filter(([, result]) => result.window_maker === "arithmetic"
+            || (result.belt?.kind === "moving" && result.belt.inside === true) || result.ghost_wakeup_windows !== undefined)
             .map(([config, result]) => signature(config, result));
-        expect(repeated).toHaveLength(2);
+        expect(repeated).toHaveLength(3);
         expect(chosen).toEqual(expect.arrayContaining(repeated));
         // Both clocks are stable; batched swings is selected on its fewer wake-ups although swings-1 recovers in 2 periods
         // rather than 3. Sharing the verification must preserve that choice.

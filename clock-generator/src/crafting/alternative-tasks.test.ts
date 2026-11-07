@@ -67,7 +67,8 @@ describe("output swing counts above the planned one", () => {
         const grenade = planClockAlternatives(await loadConfigFromFile(ConfigPaths.GRENADE_240_FILLS_BELT_EXACTLY), options);
         expect(grenade.context.planned_swings).toBe(1);
         expect(swingTasks(grenade)).toEqual(["swings-2", "swings-3"]);
-    });
+        // planning the three builds generates their clocks, which the shaping of the enable windows against ghost wakeups slowed (#695)
+    }, 120_000);
 });
 
 describe("the fractional swings task", () => {
