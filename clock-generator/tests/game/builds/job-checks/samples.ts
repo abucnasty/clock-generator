@@ -42,14 +42,14 @@ const productivityChain: JobCheck[] = [
         },
     },
     {
-        name: 'the shared clock has 6 deciders, shared windows, and says they share one wake window',
+        name: 'the shared clock has 6 deciders, shared windows, and says they share one enable window',
         run: ({ generated }) => {
             const shared = byMaker(generated, 'planned-belt-slack-shared');
-            expect(shared.label).toBe('Takt Batches, shared windows: 1 output swing each output cycle');
+            expect(shared.label).toBe('Round-Robin Polling, shared enable windows: 1 output swing each output cycle');
             expect(shared.deciders).toBe(6);
             // rule F rounded the coal hand up on this chain: the clock says so (`harmonic_window_cycle`)
             expect(shared.result.round_robin_polling).toEqual({ shared_windows: true, harmonic_window_cycle: true });
-            expect(shared.description).toContain('share one wake window');
+            expect(shared.description).toContain('share one enable window');
         },
     },
     {
@@ -58,15 +58,15 @@ const productivityChain: JobCheck[] = [
             const descriptions = (id: string) => deciderDescriptions(byMaker(generated, id));
             expect(descriptions('planned-belt-slack')).toContainEqual([
                 '2 inserters [item=plastic-bar] [item=electronic-circuit] (6, 9)',
-                '2.424 swings each in 1 window per 72-tick period: open 35–60',
+                '2.424 swings each in 1 enable window per 72-tick window cycle: open 35–60',
             ]);
             expect(descriptions('planned-belt-slack')).toContainEqual([
                 '2 inserters [item=advanced-circuit] [item=electronic-circuit] (8, 10)',
-                '3.333 swings each in 1 window per 72-tick period: open 3–28',
+                '3.333 swings each in 1 enable window per 72-tick window cycle: open 3–28',
             ]);
             expect(descriptions('planned-belt-slack-shared')).toContainEqual([
                 '3 inserters [item=copper-cable] [item=plastic-bar] [item=electronic-circuit] (5, 6, 9)',
-                '2.424 to 4.848 swings (inserters 6, 9: 2.424; inserter 5: 4.848) in 2 windows per 72-tick period: open 1–4, 35–72',
+                '2.424 to 4.848 swings (inserters 6, 9: 2.424; inserter 5: 4.848) in 2 enable windows per 72-tick window cycle: open 1–4, 35–72',
             ]);
         },
     },
@@ -348,13 +348,13 @@ const grenade: JobCheck[] = [
             const lines = (entity: Entities[number]) => (entity.player_description ?? '').split('\n');
             const groupLines = blueprint.entities.flatMap(entity => lines(entity).filter(line => line.startsWith('Group ')).map(line => [entity, line] as const));
             expect(groupLines.map(([entity, line]) => [entity.tags?.clock_generator?.inserters, line])).toEqual([
-                [[1, 2], 'Group 1 of 2: takes its turn in ticks 1–44 of the 112-tick period. Its combinators stand together, in the order of the turn.'],
-                [[7, 8], 'Group 2 of 2: takes its turn in ticks 57–100 of the 112-tick period. Its combinators stand together, in the order of the turn.'],
+                [[1, 2], 'Group 1 of 2: takes its turn in ticks 1–44 of the 112-tick window cycle. Its combinators stand together, in the order of the turn.'],
+                [[7, 8], 'Group 2 of 2: takes its turn in ticks 57–100 of the 112-tick window cycle. Its combinators stand together, in the order of the turn.'],
             ]);
             // after the lines that say what the combinator switches on and when, which stay the first two
             for (const [entity] of groupLines) expect(lines(entity)[2]).toMatch(/^Group /);
             expect(lines(tagged(blueprint.entities, 'inserters', [1, 2]))[0]).toBe('2 inserters, each [entity=assembling-machine-3] → [entity=turbo-transport-belt] [item=grenade] (1, 2)');
-            expect(lines(tagged(blueprint.entities, 'inserters', [1, 2]))[1]).toBe('1 swing each in 1 window per 112-tick period: open 1');
+            expect(lines(tagged(blueprint.entities, 'inserters', [1, 2]))[1]).toBe('1 swing each in 1 enable window per 112-tick window cycle: open 1');
         },
     },
     {
@@ -393,7 +393,7 @@ const grenade: JobCheck[] = [
             expect(spacing.title).toBe('Drops onto belt 1 fit between each other');
             expect(spacing.table?.rows).toEqual([['1 and 2', '14', '12', '14', '0', '0'], ['7 and 8', '14', '12', '14', '0', '0']]);
             // and which spacings of the copies, and distances between a copy's inserters, would fit as well
-            expect(spacing.explanation).toContain('The belt moves 14 tiles a period, so each hand lands on one of 14 tiles. With inserters 1 and 2 as they stand (3 tiles apart), '
+            expect(spacing.explanation).toContain('The belt moves 14 tiles a window cycle, so each hand lands on one of 14 tiles. With inserters 1 and 2 as they stand (3 tiles apart), '
                 + 'the copies fit 12, 16, 18, 20, 22 or 24 tiles apart; 13, 15, 17, 19, 23 or 25 apart only with a copy\'s inserters 7 tiles apart; 14 or 21 apart never. '
                 + 'The same holds at any of these spacings plus 14. Starting inserter 2 16, 32 or 48 ticks after inserter 1 also fits (a tile every 8 ticks).');
         },
