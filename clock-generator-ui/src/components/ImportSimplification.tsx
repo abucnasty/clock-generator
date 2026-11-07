@@ -64,7 +64,7 @@ export function ImportSimplification({ config, applied, onSimplify, onRestore, o
     if (checked?.kind === 'unavailable' && checked.repeatedGroups > 1) {
         const text = importedAsOneUnitText(checked, config);
         return <Alert severity="info" sx={{ mb: 2 }}>
-            <AlertTitle>Imported as one unit</AlertTitle>
+            <AlertTitle>Imported as one build</AlertTitle>
             <Typography variant="body2">{text.what}</Typography>
             <Typography variant="body2" sx={{ mt: 0.75 }}>{text.next}</Typography>
         </Alert>;

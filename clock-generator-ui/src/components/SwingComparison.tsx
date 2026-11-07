@@ -94,7 +94,7 @@ export function SwingComparison({ data }: { data: SwingComparisonData }) {
                 <Legend color={extraColor} text="Only in one run" />
             </Box>
             <ScrollX label={SCROLL_REGION_NAMES.swingComparison}>
-            <svg width={svgWidth} height={height} role="img" aria-label="Plan and exported clock drop ticks per inserter">
+            <svg width={svgWidth} height={height} role="img" aria-label="Plan and blueprint clock drop ticks per inserter">
                 <defs>
                     <marker id="swing-arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
                         <path d="M0,0 L6,3 L0,6 z" fill={movedColor} />
@@ -150,7 +150,7 @@ export function SwingComparison({ data }: { data: SwingComparisonData }) {
             </svg>
             </ScrollX>
             <Typography variant="caption" color="text.secondary">
-                Top row of each lane is the plan, bottom row the exported clock. Inserters that swing identically share a lane.
+                Top row of each lane is the plan, bottom row the blueprint clock. Inserters that swing identically share a lane.
             </Typography>
         </Box>
     );

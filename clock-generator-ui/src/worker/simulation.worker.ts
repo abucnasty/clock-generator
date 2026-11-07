@@ -213,7 +213,7 @@ function runStreaming(
         flushLogs();
         postResponse(response);
     } catch (error) {
-        const failure = failureOf(error, config, 'Simulation failed');
+        const failure = failureOf(error, config, 'Generate failed');
         postResponse({
             type: 'error',
             runId,
@@ -323,7 +323,7 @@ function failureOf(error: unknown, config: Config, fallback: string): { message:
         try {
             return { message: repeatedUnitsProblem(error), stack: error.stack, recovery: repeatedUnitsRecoveryOf(error, config) };
         } catch (failure) {
-            return { message: failure instanceof Error ? failure.message : 'The engine could not check the repeated-unit conversion.',
+            return { message: failure instanceof Error ? failure.message : 'The engine could not check the conversion to copies.',
                 stack: failure instanceof Error ? failure.stack : undefined };
         }
     }

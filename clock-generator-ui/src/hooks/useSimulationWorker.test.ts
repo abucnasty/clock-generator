@@ -263,7 +263,7 @@ describe('tasks alongside the primary alternative', () => {
         expect(latest().alternatives.map(a => a.id)).toEqual(['swings-1']);
         expect(latest().isRunning).toBe(true);
         expect(latest().generationAssumptions?.complete).toBe(false);
-        expect(latest().pendingAlternatives).toEqual(['Euclidean Swings', '2 output swings a cycle']);
+        expect(latest().pendingAlternatives).toEqual(['Euclidean Swings', '2 output swings each output cycle']);
         expect(worker.requests('task').at(-1)?.taskId).toBe('fractional');
 
         finishTask(runId, 'fractional', { signature: 'fractional', alternatives: [selectionClock('fractional', 1)] });

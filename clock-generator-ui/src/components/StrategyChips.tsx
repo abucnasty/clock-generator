@@ -3,7 +3,7 @@ import type { ClockBadge } from '../utils/clockSummary';
 import { clockChipsOf, type NamedClock } from '../utils/strategyNames';
 
 /**
- * What qualifies a clock's strategy, after its name: "· 2 output swings a cycle · shared enable windows". Each is a few
+ * What qualifies a clock's strategy, after its name: "· 2 output swings each output cycle · shared enable windows". Each is a few
  * words in the page's grey, with its line in the hover and for the keyboard.
  */
 export function ClockChips({ clock }: { clock: NamedClock }) {

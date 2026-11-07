@@ -68,7 +68,7 @@ export function prototypeSourceText(source: PrototypeSource | undefined): string
         case 'sample': return 'from the sample';
         case 'hand': return 'chosen by hand';
         case 'recipe': return 'picked for its recipe';
-        default: return 'from the config';
+        default: return 'from the configuration';
     }
 }
 

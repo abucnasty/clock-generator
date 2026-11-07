@@ -111,7 +111,7 @@ describe('the clocks table headers', () => {
 
 describe('COPIES_HELPER', () => {
     it('says what a copy is and what the clock is made for', () => {
-        expect(COPIES_HELPER).toBe("Describe one identical unit. Copies may include a partial unit, such as 0.5 or 2.25.");
+        expect(COPIES_HELPER).toBe("Describe only one copy. Copies may be partial, such as 0.5 or 2.25.");
     });
 });
 

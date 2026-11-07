@@ -33,7 +33,7 @@ describe('ruleProblemsOf, Clocked', () => {
         ['takes an end equal to the start (one tick)', [['12', '12']], '', []],
         ["refuses a window that ends at tick 0, which the config file can't hold", [['0', '0']], '', [[end(), endAtZero]]],
         // window 1 ends on the window cycle's last tick, window 2 one past it
-        ['checks the ticks against the crafting cycle when there is no "Repeat every"', [['0', '131'], ['0', '132'], ['140', '150']], '',
+        ['checks the ticks against the output cycle when there is no "Repeat every"', [['0', '131'], ['0', '132'], ['140', '150']], '',
             [[end(2), pastWindowCycle(132)], [start(3), pastWindowCycle(132)], [end(3), pastWindowCycle(132)]]],
         ['checks them against a valid "Repeat every" instead of the cycle', [['0', '263'], ['0', '264']], '264', [[end(2), pastWindowCycle(264)]]],
         ['refuses a "Repeat every" of 0', [['0', '5']], '0', [[REPEAT_LABEL, PROBLEM_TEXT.repeat]]],

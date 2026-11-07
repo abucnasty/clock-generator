@@ -1,5 +1,5 @@
 /**
- * What the rule editor knows of the clock it edits a rule for: the crafting cycle, the window cycle and, from Results,
+ * What the rule editor knows of the clock it edits a rule for: the output cycle, the window cycle and, from Results,
  * the clock's own wake windows. Pure functions; App works out which source is current, and `RuleTimingContext` hands it
  * to the rule form wherever it is mounted.
  */
@@ -7,9 +7,9 @@ import type { SerializableClockWindows } from 'clock-generator/browser';
 import { normalizeWindows } from './wakeWindows';
 
 export interface RuleTiming {
-    /** One crafting cycle, in ticks */
+    /** One output cycle, in ticks */
     cycleTicks: number | null;
-    /** The window cycle, in ticks: a whole number of crafting cycles, fractional for a subtick clock */
+    /** The window cycle, in ticks: a whole number of output cycles, fractional for a subtick clock */
     windowCycleTicks: number | null;
     /** Where the numbers come from: the clock on Results for this build, the last check, or nowhere yet */
     from: 'results' | 'check' | null;

@@ -20,13 +20,13 @@ it('renders replay controls using an agricultural build with recorded fuel and m
         onTick={() => {}} onChange={() => {}} onInspectActivity={() => {}} />);
     const connections = screen.getByRole('list', { name: 'Connection legend' });
     expect(within(connections).getAllByRole('listitem').map(item => item.textContent)).toEqual(['Selected or hovered route',
-        'Transfer at this tick · item and quantity', 'Recent activity · no quantity', 'Selected entity outline']);
+        'Swing at this tick · item and quantity', 'Recent activity · no quantity', 'Selected entity outline']);
     // the routes' legend comes before the states'
     expect(connections.compareDocumentPosition(screen.getByText('Entity states')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByRole('list', { name: 'Flow replay legend' })).toBeDefined();
-    expect(screen.getByRole('combobox', { name: 'Transfer scope' })).toBeDefined();
-    expect(screen.getByRole('button', { name: 'Previous transfer' })).toBeDefined();
-    expect(screen.getByRole('checkbox', { name: 'Play one crafting cycle' })).toBeDefined();
+    expect(screen.getByRole('combobox', { name: 'Swing scope' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Previous swing' })).toBeDefined();
+    expect(screen.getByRole('checkbox', { name: 'Play one output cycle' })).toBeDefined();
     expect(screen.getByText(/Belts show routes, not physical item positions\.$/)).toBeDefined();
     expect(screen.queryByText(/Highlights cover ticks/)).toBeNull();
     // a replay, not an editor

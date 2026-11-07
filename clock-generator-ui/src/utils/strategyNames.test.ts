@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { settingChipsOf } from 'clock-generator/light';
 import type { ClockRouting, ClockSettings, ClockStrategy, StrategyId, TuningMethod } from 'clock-generator/browser';
 import { CHIP_SEPARATOR, clockChipsOf, directRouterOf, familyCopyOf, fullClockName, pendingClockName, sourceLinesOf, strategyNameOf, type NamedClock } from './strategyNames';
 
@@ -10,6 +11,8 @@ const strategy = (id: StrategyId, tuning_method: TuningMethod = 'calculated', se
     ({ id, tuning_method, settings, output_swings: settings.output_count.count, routing: { router: 'direct' } });
 const coordinatedSources = (sources: ClockRouting['sources'] = []): ClockStrategy =>
     ({ id: null, tuning_method: null, settings: plain(), output_swings: 2, routing: { router: 'coordinated_sources', sources } });
+/** The words of the output-count chip, read from the catalog (the tests do not pin them) */
+const swingsChip = (count = 2, kind: 'output_swings' | 'hands_brought_in' = 'output_swings') => settingChipsOf({ ...plain(), output_count: { kind, count } })[0].label;
 const labels = (value: NamedClock) => clockChipsOf(value).map(chip => chip.label);
 const clock = (extra: Partial<NamedClock> = {}): NamedClock => ({ label: 'Engine label', strategy: strategy('takt_batches'), ...extra });
 
@@ -56,7 +59,7 @@ describe('strategyNameOf and familyCopyOf', () => {
 describe('the tuning method and selection chips', () => {
     it('come first after the name, with a tooltip each', () => {
         const chips = clockChipsOf(clock());
-        expect(chips.map(chip => [chip.id, chip.label])).toEqual([['tuning_method', 'calculated'], ['selection', 'one version'], ['output_count:output_swings', 'output swings 2']]);
+        expect(chips.map(chip => [chip.id, chip.label])).toEqual([['tuning_method', 'calculated'], ['selection', 'one version'], ['output_count:output_swings', swingsChip()]]);
         expect(chips[0].line).toContain('calculated from the build');
         expect(chips[1].line.length).toBeGreaterThan(0);
     });
@@ -67,12 +70,12 @@ describe('the tuning method and selection chips', () => {
     });
 
     it('say observed and found by search for the searched strategies, the selection once', () => {
-        expect(labels(clock({ strategy: strategy('pitch_pickups', 'observed') }))).toEqual(['observed', 'found by search', 'output swings 2']);
+        expect(labels(clock({ strategy: strategy('pitch_pickups', 'observed') }))).toEqual(['observed', 'found by search', swingsChip()]);
     });
 
     it('say best of several versions for Round-Robin Polling and have no tuning method for Coordinated Sources', () => {
-        expect(labels(clock({ strategy: strategy('round_robin_polling') }))).toEqual(['calculated', 'best of several versions', 'output swings 2']);
-        expect(labels(clock({ strategy: coordinatedSources() }))).toEqual(['best of several versions', 'output swings 2']);
+        expect(labels(clock({ strategy: strategy('round_robin_polling') }))).toEqual(['calculated', 'best of several versions', swingsChip()]);
+        expect(labels(clock({ strategy: coordinatedSources() }))).toEqual(['best of several versions', swingsChip()]);
     });
 });
 
@@ -102,19 +105,19 @@ describe('sourceLinesOf', () => {
 });
 
 describe('the chips of the settings', () => {
-    it('say the output swings of a cycle', () => {
-        expect(labels(clock())).toContain('output swings 2');
-        expect(labels(clock({ strategy: strategy('takt_batches', 'calculated', plain(1)) }))).toContain('output swings 1');
+    it('say the output swings each output cycle', () => {
+        expect(labels(clock())).toContain(swingsChip());
+        expect(labels(clock({ strategy: strategy('takt_batches', 'calculated', plain(1)) }))).toContain(swingsChip(1));
     });
 
     it('say the hands brought in for a target that counts an item destroyed', () => {
         const settings: ClockSettings = { ...plain(), output_count: { kind: 'hands_brought_in', count: 3 } };
-        expect(labels(clock({ strategy: strategy('time_division_windows', 'calculated', settings) }))).toContain('hands brought in 3');
+        expect(labels(clock({ strategy: strategy('time_division_windows', 'calculated', settings) }))).toContain(swingsChip(3, 'hands_brought_in'));
     });
 
     it('say the ticks a rounded clock is rounded to, and how fast it runs', () => {
         const rounded = (runs_fast: number) => clock({ strategy: strategy('takt_batches', 'calculated', { ...plain(), window_cycle: [{ kind: 'rounded_clock', window_cycle_ticks: 600, runs_fast }] }) });
-        expect(labels(rounded(0.0002)).slice(2)).toEqual(['output swings 2', 'rounded to 600 ticks, 0.02% fast']);
+        expect(labels(rounded(0.0002)).slice(2)).toEqual([swingsChip(), 'rounded to 600 ticks, 0.02% fast']);
         expect(labels(rounded(0.000001))[3]).toBe('rounded to 600 ticks, under 0.01% fast');
     });
 
@@ -154,7 +157,7 @@ describe('the chips of the settings', () => {
 describe('fullClockName', () => {
     it('joins the name and the chips', () => {
         const shared = clock({ strategy: strategy('round_robin_polling', 'calculated', { ...plain(), shared_windows: 'shared_enable_windows' }) });
-        expect(fullClockName(shared)).toBe(['Round-Robin Polling', 'calculated', 'best of several versions', 'output swings 2', 'shared enable windows'].join(CHIP_SEPARATOR));
+        expect(fullClockName(shared)).toBe(['Round-Robin Polling', 'calculated', 'best of several versions', swingsChip(), 'shared enable windows'].join(CHIP_SEPARATOR));
     });
 });
 
@@ -167,8 +170,8 @@ describe('pendingClockName', () => {
     });
 
     it('names a count of output swings by the count alone, as its strategy is known only after the run', () => {
-        expect(pendingClockName({ id: 'swings-6', label: '6 output swings per cycle' })).toBe('6 output swings a cycle');
-        expect(pendingClockName({ id: 'swings-1', label: '1 output swing per cycle' })).toBe('1 output swing a cycle');
+        expect(pendingClockName({ id: 'swings-6', label: '6 output swings each output cycle' })).toBe('6 output swings each output cycle');
+        expect(pendingClockName({ id: 'swings-1', label: '1 output swing each output cycle' })).toBe('1 output swing each output cycle');
     });
 
     it('keeps the label of a task it does not know', () => {

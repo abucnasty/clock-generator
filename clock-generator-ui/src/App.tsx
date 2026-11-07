@@ -926,8 +926,8 @@ function App() {
                 || document.querySelector('[data-edits-build]')) return;
             if (checked.kind === 'unavailable') {
                 notify({ severity: 'warning', text: checked.stage === 'check'
-                    ? `One complete unit was identified, but its check failed: ${checked.reason.message} Your build has not changed.`
-                    : `${checked.reason.message} Your build has not changed. Select one complete unit in Factorio and paste it again. Keep Items per Second as the total rate.` });
+                    ? `One complete copy was identified, but its check failed: ${checked.reason.message} Your build has not changed.`
+                    : `${checked.reason.message} Your build has not changed. Select one complete copy in Factorio and paste it again. Keep Items per Second as the total rate.` });
                 return;
             }
             if (checked.plan.sourceConfigKey !== oldKey) throw new Error('The conversion answer does not match this build.');
@@ -935,7 +935,7 @@ function App() {
             if (!next) throw new Error('The conversion answer could not be applied completely.');
             let complete: ((suffix?: string) => void) | undefined;
             const committed = commitBuildReplacement(snapshot, next, () => {
-                complete = offerUndoOfBuild(`Using one complete modeled unit with ${checked.plan.copies} copies. Items per Second is still the total.`,
+                complete = offerUndoOfBuild(`Using one complete modeled copy with ${checked.plan.copies} copies. Items per Second is still the total.`,
                     { deferAnnouncement: true, snapshot: snapshot.form }, oldKey);
             });
             if (!committed) return;
@@ -946,7 +946,7 @@ function App() {
             const current = captureBuildMutation();
             if (mountedRef.current && token === conversionTokenRef.current && current.buildId === snapshot.buildId
                 && current.revision === snapshot.revision && current.form === snapshot.form) {
-                notify({ severity: 'error', text: `Could not check the conversion: ${failure instanceof Error ? failure.message : 'The engine did not answer.'} Your build has not changed. Try again, or select one complete unit in Factorio and paste it again. Keep Items per Second as the total rate.` });
+                notify({ severity: 'error', text: `Could not check the conversion: ${failure instanceof Error ? failure.message : 'The engine did not answer.'} Your build has not changed. Try again, or select one complete copy in Factorio and paste it again. Keep Items per Second as the total rate.` });
             }
         } finally {
             if (mountedRef.current && token === conversionTokenRef.current) {

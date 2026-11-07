@@ -104,8 +104,8 @@ const DRILL_NO_CONDITIONAL = "Not available for mining drills: conditions read a
 const DRILL_NO_NEVER = 'Not available for a drill into a container: it would fill nothing.';
 const REPEAT_HELPER = (cycleTicks: number | null) =>
     cycleTicks === null
-        ? 'Leave empty to repeat every crafting cycle.'
-        : `Leave empty to repeat every crafting cycle (${ticksText(cycleTicks)} ticks).`;
+        ? 'Leave empty to repeat every output cycle.'
+        : `Leave empty to repeat every output cycle (${ticksText(cycleTicks)} ticks).`;
 const PLANNED_CAPTION = (label: string, ranges: { start: number; end: number }[]) =>
     `In the clock on Results, ${label} is on at ${ranges.length === 1 && ranges[0].start === ranges[0].end ? 'tick' : 'ticks'} ${joinRanges(ranges)}.`;
 const NO_PLANNED_CAPTION = (label: string) => `The clock on Results has no enable windows for ${label}.`;

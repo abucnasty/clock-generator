@@ -54,7 +54,7 @@ describe('flow replay', () => {
     });
 });
 
-it('uses the exact window cycle time for fractional crafting cycles, including truncated excerpts', () => {
+it('uses the exact window cycle time for fractional output cycles, including truncated excerpts', () => {
     expect(flowReplayCycles(50.087, { window_cycle_ticks: 50.087 * 11, end_tick: 551 })?.count).toBe(11);
     expect(flowReplayCycles(50.087, { window_cycle_ticks: 50.087 * 11, end_tick: 120 })?.count).toBe(3);
 });

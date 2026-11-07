@@ -11,13 +11,13 @@ function recoveryText(recovery: RepeatedUnitsRecovery): string {
     const conversion = recovery.conversion;
     if (conversion.kind === 'unavailable') {
         return conversion.stage === 'check'
-            ? `One complete unit was identified, but its check failed: ${conversion.message} Your build has not changed. Keep Items per Second as the total rate.`
-            : `${conversion.message} Select one complete unit in Factorio and paste it again. Keep Items per Second as the total rate. Your build has not changed.`;
+            ? `One complete copy was identified, but its check failed: ${conversion.message} Your build has not changed. Keep Items per Second as the total rate.`
+            : `${conversion.message} Select one complete copy in Factorio and paste it again. Keep Items per Second as the total rate. Your build has not changed.`;
     }
     const grouping = conversion.multiplicity === recovery.detectedCopies
-        ? `${conversion.multiplicity} identical units found.`
+        ? `${conversion.multiplicity} identical copies found.`
         : `A complete modeled grouping repeats ${conversion.multiplicity} times.`;
-    return `${grouping} Use one complete modeled unit with ${conversion.copies} copies. `
+    return `${grouping} Use one complete modeled copy with ${conversion.copies} copies. `
         + (recovery.configuredCopies !== 1 ? `Copies will change from ${recovery.configuredCopies} to ${conversion.copies}. ` : '')
         + 'Items per Second stays the total for all copies. Your build has not changed.';
 }
@@ -76,7 +76,7 @@ export function CheckErrorAlert({ message, crashed = false, internal, recovery, 
                 <Box sx={{ mt: 1, p: '6px' }}>
                     {/* MUI's message scroll container clips outside focus rings; reserve paint space on every side. */}
                     <Button variant="contained" color="success" onClick={onConvert} disabled={conversionPending}>
-                        {conversionPending ? 'Checking one unit…' : reducedMachines !== null ? `Use ${reducedMachines} ${reducedMachines === 1 ? 'machine' : 'machines'} × ${recovery.conversion.copies} copies` : `Use 1 group × ${recovery.conversion.copies} copies`}
+                        {conversionPending ? 'Checking one copy…' : reducedMachines !== null ? `Use ${reducedMachines} ${reducedMachines === 1 ? 'machine' : 'machines'} × ${recovery.conversion.copies} copies` : `Use 1 group × ${recovery.conversion.copies} copies`}
                     </Button>
                 </Box>
             )}

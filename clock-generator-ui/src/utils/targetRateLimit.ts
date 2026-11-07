@@ -217,7 +217,7 @@ export function targetRateLineOf(
     if (capacity === null) return null;
     if (max.otherLimit !== undefined) {
         const total = maxRateText(capacity, locale);
-        if (max.otherLimit === '') return `At most ${total}. Lower the rate or raise Copies. Describe one unit in the build.`;
+        if (max.otherLimit === '') return `At most ${total}. Lower the rate or raise Copies. Describe only one copy of the build.`;
         return copies !== 1 ? `At most ${total}. For one copy: ${max.otherLimit}` : `At most ${total}: ${max.otherLimit}`;
     }
     const one = max.machineIds.length === 1;
@@ -225,6 +225,6 @@ export function targetRateLineOf(
     const machines = `${machinesText(max.machineIds)} ${verb} ${maxRateText(max.perCopy, locale)}${one ? '' : ' together'}`;
     const total = maxRateText(capacity, locale);
     return copies !== 1
-        ? `At most ${total}: ${machines}, times ${copies} copies. Lower the rate or raise Copies. Describe one unit in the build.`
-        : `At most ${total}: ${machines}. Lower the rate or raise Copies. Describe one unit in the build.`;
+        ? `At most ${total}: ${machines}, times ${copies} copies. Lower the rate or raise Copies. Describe only one copy of the build.`
+        : `At most ${total}: ${machines}. Lower the rate or raise Copies. Describe only one copy of the build.`;
 }
