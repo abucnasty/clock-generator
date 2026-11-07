@@ -17,8 +17,8 @@ before its end.
 
 ## Procedure
 
-CAUTION: Start the workflow only from the `master` branch. A start from a different branch can release and deploy that
-branch. Issue [#657](https://github.com/abucnasty/clock-generator/issues/657) records this problem.
+NOTE: The workflow publishes only from `master`. A start from a different branch does the tests and does not
+release or deploy.
 
 1. Start `release.yml` on `master`.
 

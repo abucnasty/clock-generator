@@ -8,7 +8,7 @@ This fixture covers a northbound exit with the inserter directly north of it.
 ending in a northbound turbo underground exit. The input inserter stands one tile north of the exit and drops into
 the plant to its north. The base blueprint has `mirror: true`; the flipped case changes only the input inserter to
 `mirror: false`. The probe verifies the actual `mirroring` property against the host-supplied expectation.
-The ingredient drain is removed, so both lanes back up before the cell's inserters are placed in a staged start.
+The ingredient drain is removed, so both lanes back up before the build's inserters are put down in a staged start.
 The base scaffold has accumulators on lane 1 and supercapacitors on lane 2, both in stacks of four.
 The swapped case reverses only the four ingredient feeder filters and the input config lanes, using
 `swapElectromagneticIngredientFeeds` from the shared fixture helpers. The flipped case keeps these swapped
@@ -129,7 +129,7 @@ cannot be built in this geometry; generated clocks, including those of a moving 
 
 The [front clock controls](../../../../builds/README.md#front-pickup-operating-clocks) run this fixture's generated
 clocks at all four speeds and both mirroring states, with the ordinary electromagnetic targets (30/s turbo to 7.5/s
-normal), 63 baseline periods and the three ordinary disturbances, on Factorio 2.1.21 (2026-10-20).
+normal), 63 baseline window cycles and the three ordinary disturbances, on Factorio 2.1.21 (2026-10-20).
 
 | Config | Turbo | Express | Fast | Normal |
 | --- | --- | --- | --- | --- |
@@ -138,7 +138,7 @@ normal), 63 baseline periods and the three ordinary disturbances, on Factorio 2.
 
 Both mirroring states agree in every cell. A moving config gets a clock made for moving belts; its express and
 normal verdicts come from moving lane-phase starts this exit cannot have, and on the backed-up exit every one of
-them holds its target in all 63 baseline periods and after every disturbance. **A moving config is safe on this
+them holds its target in all 63 baseline window cycles and after every disturbance. **A moving config is safe on this
 layout.** At normal it does better than the backed-up config's own clock, whose alternatives all fail.
 
 

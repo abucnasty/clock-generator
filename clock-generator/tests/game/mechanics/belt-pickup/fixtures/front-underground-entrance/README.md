@@ -13,7 +13,7 @@ flag. The flipped variant uses `flipFrontUndergroundInput(blueprint, "entrance")
 
 For the backed-up case, `backUpFrontUndergroundEntrance` removes exactly the ingredient drain loader, preserving
 the output drain and every other entity. Its position differs from the older side-pickup scaffolds, so their
-plant-center-based drain selector must not be used here. All four cases stage the cell's inserters until the pickup
+plant-center-based drain selector must not be used here. All four cases stage the build's inserters until the pickup
 lanes have stayed full for 600 ticks. This allows back-pressure to travel through the long underground when the
 drain is absent. Full lanes alone do not establish that a belt has stopped; the capture checks motion separately.
 
@@ -216,10 +216,10 @@ gate are excluded from these counts.
 
 The [front clock controls](../../../../builds/README.md#front-pickup-operating-clocks) run generated clocks on the
 supplied compact scaffold at all four speeds, both mirroring states, moving and backed-up supply, electronic
-circuits (iron plate and copper cable) and gears (iron plate on both lanes), at 6/s: 32 runs of 63 baseline periods
-and three 24-period disturbances, on Factorio 2.1.21 (2026-10-20). The assembler runs at crafting speed 50 (two
+circuits (iron plate and copper cable) and gears (iron plate on both lanes), at 6/s: 32 runs of 63 baseline window cycles
+and three disturbances of 24 window cycles, on Factorio 2.1.21 (2026-10-20). The assembler runs at crafting speed 50 (two
 legendary speed modules, four legendary beacons). All 32 clocks are stable, and all 32 hold their target in every
-baseline period and get back to it after every disturbance. 29 of them are byte-identical to the
+baseline window cycle and go back to it after every disturbance. 29 of them are byte-identical to the
 [over-the-hood exit](../over-the-hood-underground-exit/README.md)'s clocks of the same speed, mirroring, supply and
 family; the original electromagnetic-plant scaffold has no clock control.
 

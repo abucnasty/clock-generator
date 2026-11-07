@@ -78,7 +78,8 @@ jobs:
   # The documentation checks: the generated files are what their sources give (the sidecar's PORTAL.md from the user
   # topics on exporting a build, docs/maintainer/configuration-file-fields.md from the engine's ConfigSchema), and every bold label
   # of the user topics is a string of the site, of the sidecar or of docs/game-labels.tsv. They run on every pull request
-  # and every call, documentation only or not: a change to a topic, to the schema or to a label can break them.
+  # and every call, documentation only or not: a change to a topic, to the schema or to a label can break them. On a
+  # pull request, the Markdown lines it adds use none of the glossary's Avoid words.
   docs:
     name: Docs checks
     runs-on: ubuntu-latest
@@ -87,7 +88,10 @@ jobs:
       run:
         working-directory: clock-generator
     steps:
+      # the base of a pull request is the first parent of its merge commit
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - uses: actions/setup-node@v4
         with:
@@ -106,6 +110,11 @@ jobs:
 
       - name: Bold labels of the user topics
         run: npm run test:docs -- --reporter=default
+
+      # the lines the pull request adds only: the words already there are a sweep's, not this pull request's
+      - name: Glossary Avoid words in the added Markdown
+        if: github.event_name == 'pull_request'
+        run: npm run docs:avoid-words -- --base HEAD^1
 
   # Whether the tests have anything to test: not when a pull request to master, to a feature/ or to a release/ branch changes
   # documentation only. The output is called `generation` for the generation tests it first decided; the unit and UI jobs

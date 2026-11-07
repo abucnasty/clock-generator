@@ -2,7 +2,7 @@
 
 | Build | Credit | Source | Issues | Recorded in the game |
 |---|---|---|---|---|
-| `lithium-plate-80-silo-chest` | abucnasty | blueprint given on 2026-10-21 | none recorded | Scaffold: yes (a blueprint given 2026-10-21). Two cryogenic plants fill a rocket silo taken as a chest and six furnaces empty it, all legendary, 80 plates a second. The selected clock (3 output swings, 1080 ticks) recorded 1440 in every period, both build orders, and got back to it after the holmium plates were cut twice and the output blocked; the clock with 1 output swing too. The clock with 7 output swings is short in the game (a side-loaded output belt, the sample's README). the chest ends agree (on the 2160-tick clock the inserters into the silo wake 4 times a period in both the game and the simulator); output inserters 11 and 12 (furnace to belt) wake 10 times a period in the game and 0 in a simulator started cold, because the furnaces' output levels the game's warm-up leaves decide it: started from the recording's first sample the simulator equals the game on all 16 inserters (`scripts/sim-game-check.js`). Note: in `test:game`. |
+| `lithium-plate-80-silo-chest` | abucnasty | blueprint given on 2026-10-21 | none recorded | Scaffold: yes (a blueprint given 2026-10-21). Two cryogenic plants fill a rocket silo taken as a chest and six furnaces empty it, all legendary, 80 plates a second. The recommended clock (3 output swings, 1080 ticks) recorded 1440 in every window cycle, both build orders, and got back to it after the holmium plates were cut twice and the output blocked; the clock with 1 output swing too. The clock with 7 output swings is short in the game (a side-loaded output belt, the sample's README). the chest ends agree (on the 2160-tick clock the inserters into the silo wake 4 times a window cycle in both the game and the simulator); output inserters 11 and 12 (furnace to belt) wake 10 times a window cycle in the game and 0 in a simulator started cold, because the furnaces' output levels the game's warm-up leaves decide it: started from the recording's first sample the simulator equals the game on all 16 inserters (`scripts/sim-game-check.js`). Note: in `test:game`. |
 
 The build: two legendary cryogenic plants make lithium from holmium plates (infinity chests) and fluids
 (infinity pipes), and two stack inserters put it into a rocket silo, which is used as a chest. Six stack inserters take
@@ -34,15 +34,15 @@ cryogenic plants 2 × 53.122 / 20 × 5 × 3 = 79.7 lithium a second, of which 80
 
 ## In the game
 
-The selected clock (3 output swings, 1080 ticks) and the clock with 1 output swing move 1440 plates in each of 63
-periods in the game, and get back to it after the holmium plates are cut for 2 periods, the output is blocked for 4 and
+The recommended clock (3 output swings, 1080 ticks) and the clock with 1 output swing move 1440 plates in each of 63
+window cycles in the game, and go back to it after the holmium plates are cut for 2 window cycles, the output is blocked for 4 and
 the holmium plates are cut again (`tests/game/builds/lithium-plate-80-silo-chest-clock-controls.json`). The recording starts with a
 filled silo: the harness warms the build up for 3600 ticks without a clock before the clock starts, so the silo holds
 218 lithium then, whatever the config says. Each cut empties it. Building the two inserters that fill the silo after
-the six that empty it changed nothing in any period.
+the six that empty it changed nothing in any window cycle.
 
 The clock with 7 output swings (7560 ticks) is stable in the simulator but not in the game: it moves 9,440 to 9,600 of
-its 10,080 plates a period. The output inserters of the two eastern furnaces drop onto underground belt entrances whose
+its 10,080 plates a window cycle. The output inserters of the two eastern furnaces drop onto underground belt entrances whose
 exits side-load onto the belt that already carries the other four furnaces' plates. The export describes all of it as one
 belt, and the simulator gives those two inserters the room of that belt. In the game they wait for the merge, their
 furnaces stop with a full output, and the inserters that feed those furnaces from the silo miss hands. The clock opens

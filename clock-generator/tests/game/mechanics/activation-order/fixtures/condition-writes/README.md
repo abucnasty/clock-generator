@@ -15,7 +15,7 @@ The [screenshot provenance](../../../screenshots.generated.json) records the exa
 It shows the warmed layout without the observation stock/interventions.
 
 The fixture retains 26 alarms, 15 wakes, 21 directly observed sleeps and 42 updates. An equivalent-true assignment
-can wake an asleep partial hand. A source alarm can wake a circuit-disabled hand, whose update sleeps without
+can wake a partial hand in sleep. A source alarm can wake a circuit-disabled hand, whose update sleeps without
 pickup. At re-enable 9, assignment, update and sleep precede a distinct control-change alarm; update 10 takes two
 items, visible in row 11. Initially full hands already delivered before disable, so this does not establish behavior
 for a full carried hand across that edge.

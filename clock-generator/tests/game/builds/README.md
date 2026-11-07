@@ -4,7 +4,7 @@ These tests check throughput, startup and/or recovery of generated clocks. They 
 `resources/config-samples/` or the isolated pickup fixtures, without moving a general sample merely because a test
 uses it. Setup, selective execution and artifact retention are in the [game verification guide](../README.md).
 
-- `scaffold-recordings.game.test.ts`: the catalog of complete sample builds, including wake-up/recording comparisons.
+- `scaffold-recordings.game.test.ts`: the catalog of complete sample builds, including wakeup/recording comparisons.
 - `moving-pickup.game.test.ts`: different-item pickup geometry, moving/backed-up supply and recovery.
 - `same-item-pickup-clock.game.test.ts`: same-item lane fallback, throughput and recovery.
 - `over-hood-pickup-clock.game.test.ts`, `front-pickup-clock.game.test.ts`: the over-the-hood exit and the front
@@ -20,9 +20,9 @@ uses it. Setup, selective execution and artifact retention are in the [game veri
 - `processing-unit-80-circuit-export-clock.game.test.ts`: the circuit export build (processing units from two circuit machines and two advanced circuit machines, an export belt) on its throttled scaffold with the generated clock, as it is and with the belts backed up.
 - `utility-science-480-lds-foundry-chain-clock.game.test.ts`: the utility science 480 build (a chain of machines with a coal inserter that moves 15/8 hands a cycle) with the generated clock.
 - `productivity-module-80-chest-chain-clock.game.test.ts`: the productivity module chain (nine machines and three chests, 80 a second over 6 copies) with the generated clock.
-- `electromagnetic-science-240-recycler-belt-fed-clock.game.test.ts`: the whole 211-entity blueprint of #100, both cells, under the clock the generator selects for the sample's automatic config (240/s over five copies): 3,600 periods at 96 science/s, nine losses with recovery, and two cold starts, with the science of each plant and its buffer closed at every period.
-- `iron-ore-voider-400-clock.game.test.ts`: the ore voider's recycler cell, at exact speed and overbeaconed, 400 iron ore a second destroyed, an hour on the generated clock: what comes back is random, so the hour's mean is judged against the binomial's range, with the car never full, the target back after the ore is cut and after a backlog in the car, and the recycler's input watched while a stack of its result waits.
-- `electromagnetic-science-330-drained-end-clock.game.test.ts`: the electromagnetic science build (330 a second over 11 copies) on the owner's drained-end scaffold of one plant (`electromagnetic-science-330-drained-end.scaffold`, #458): the input line of accumulators and supercapacitors runs past the plant into a loader and a void chest, so it moves. The generated clock for the config as it is (swings-2, 704 ticks), steady state and a baseline, with no disturbance.
+- `electromagnetic-science-240-recycler-belt-fed-clock.game.test.ts`: the whole 211-entity blueprint of #100, both cells, under the clock the generator selects for the sample's automatic config (240/s over five copies): 3,600 window cycles at 96 science/s, nine losses with recovery, and two cold starts, with the science of each plant and its buffer closed at every window cycle.
+- `iron-ore-voider-400-clock.game.test.ts`: the ore voider's recycler build, at exact speed and overbeaconed, 400 iron ore a second destroyed, an hour on the generated clock: what comes back is random, so the hour's mean is judged against the binomial's range, with the car never full, the target back after the ore is cut and after a backlog in the car, and the recycler's input watched while a stack of its result waits.
+- `electromagnetic-science-330-drained-end-clock.game.test.ts`: the electromagnetic science build (330 a second over 11 copies) on abucnasty's drained-end scaffold of one plant (`electromagnetic-science-330-drained-end.scaffold`, #458): the input line of accumulators and supercapacitors runs past the plant into a loader and a void chest, so it moves. The generated clock for the config as it is (swings-2, 704 ticks), steady state and a baseline, with no disturbance.
 
 From `clock-generator/`, select a file or case:
 
@@ -32,20 +32,20 @@ npm run test:game -- tests/game/builds/moving-pickup.game.test.ts -t 'straight-b
 ```
 
 The original turbo moving/different-item matrix has 12 cases; the original same-item clock matrix has six. Their recovery trials run many
-periods and are deliberately separate from the short mechanic probes. Do not run them for prose or a probe-only
+window cycles and are deliberately separate from the short mechanic probes. Do not run them for prose or a probe-only
 refactor that does not change clock behavior. `npm run test:game:watch` currently watches the scaffold-recordings
 suite; it is not a generic visual mode for every mechanic test.
 
 ## How a clock run is timed
 
-A clock run is timed in game minutes and never in clock periods; the rule, in full, is in the [game verification
+A clock run is timed in game minutes and never in window cycles; the rule, in full, is in the [game verification
 guide](../README.md#how-a-run-is-timed) and is coded once, in `helpers/lua/steady.lua`. For the clock families here:
 
-- **Steady state:** the first moment the machines that make the target item have made the target amount (the target rate times
+- **Steady state:** the first moment the machines that make the target item have made the target amount (the setpoint times
   60 seconds) over the last minute. The run waits for it up to ten minutes.
 - **Baseline:** one minute (3,600 ticks) after it, judged by the rate between returns to the target: the clock holds when the last
   minute never falls below the target amount, or, where the output comes in bursts and does, when the products from steady state to
-  the last return to the target make at least the target rate over those ticks. A family may ask for a longer baseline with a
+  the last return to the target make at least the setpoint over those ticks. A family may ask for a longer baseline with a
   stated reason, never over ten minutes (36,000 ticks).
 - **Disturbances:** the ingredient cuts and the output block follow, each until the output falls below the baseline's lowest
   minute, then released; the clock has to be back at steady state within ten minutes of each release.
@@ -53,13 +53,13 @@ guide](../README.md#how-a-run-is-timed) and is coded once, in `helpers/lua/stead
   state, the baseline's total against the target, and each disturbance's start, release and recovery.
 - **Mechanics probes** (`../mechanics/`) are recorded again only when the game binary changes.
 
-The sections below that count periods (60 untouched periods, cuts at periods 66-68, 63 baseline periods, 33 judged recovery periods)
-record how a family was measured when it was recorded in periods. The controls files of the families already moved to this rule
-(pickup, front, over the hood, blocked output) carry the new summary; the rest keep the period counts until they are moved.
+The sections below that count window cycles (60 untouched window cycles, cuts at window cycles 66-68, 63 baseline window cycles, 33 judged recovery window cycles)
+record how a family was measured when it was recorded in window cycles. The controls files of the families already moved to this rule
+(pickup, front, over the hood, blocked output) carry the new summary; the rest keep the window cycle counts until they are moved.
 
 ## Pickup speed backfill
 
-The paragraphs of this section describe the original backfill (#245), which counted clock periods; its summaries are history.
+The paragraphs of this section describe the original backfill (#245), which counted window cycles; its summaries are history.
 
 The `speed coverage:` runner covers all four belt speeds, all three ordinary pickup geometries, both
 moving/backed-up supplies and the electromagnetic/gear families: 48 configurations. Its original backfill
@@ -68,34 +68,34 @@ Electromagnetic targets scale with speed: 30/s turbo, 22.5/s express, 15/s fast 
 The original pickup and machine positions stay fixed. Slower underground runs are split where needed
 to remain within native connection range; backed-up variants remove only the ingredient drain.
 
-Each new case measures one continuous clock run. After ten settling periods, at least 60 untouched
-periods precede the ingredient/output disturbances. Ingredient cuts are at periods 66–68 and 104–106;
+Each new case measures one continuous clock run. After ten settling window cycles, at least 60 untouched
+window cycles precede the ingredient/output disturbances. Ingredient cuts are at window cycles 66–68 and 104–106;
 output disposal is blocked at 84–88. Machine inventories and clock state remain untouched. Recovery is
-assessed after six additional periods for moving supply and ten for backed-up supply.
-Each disturbance must reduce output below the lowest baseline period before its recovery is assessed.
+assessed after six additional window cycles for moving supply and ten for backed-up supply.
+Each disturbance must reduce output below the lowest baseline window cycle before its recovery is assessed.
 
-Long default clocks can exceed the recorder's 72,000 detailed-tick limit even for 60 periods. The shared
+Long default clocks can exceed the recorder's 72,000 detailed-tick limit even for 60 window cycles. The shared
 Lua probe therefore aggregates actual output-inserter held-count decreases at native clock wraps during
-settling, retaining complete-period counts through all interventions. The recorder then captures only
-two detailed periods, which must match overlapping compact aggregates exactly. This preserves the limit
+settling, retaining complete-window-cycle counts through all interventions. The recorder then captures only
+two detailed window cycles, which must match overlapping compact aggregates exactly. This preserves the limit
 and avoids resetting the build or retaining millions of redundant samples.
 
-The original backfill's native period summaries (#245) are kept in
-[pickup-clock-history-controls.json](pickup-clock-history-controls.json), separately from the generator's verdict. A measured throughput/recovery counterexample is not a claim that the selected clock is safe.
+The original backfill's native window cycle summaries (#245) are kept in
+[pickup-clock-history-controls.json](pickup-clock-history-controls.json), separately from the generator's verdict. A measured throughput/recovery counterexample is not a claim that the recommended clock is safe.
 Express moving half-tile generation already reports `no recovery`; the backfill preserves that verdict.
 Unsupported sources are not overridden to generate clocks.
 
-The backfill retained 39 native runs, each with 63 baseline periods and three recovery windows.
-All 21 gear clocks meet their 16-item target in every baseline/recovery period. Eight of the 18
+The backfill retained 39 native runs, each with 63 baseline window cycles and three recovery windows.
+All 21 gear clocks meet their 16-item target in every baseline/recovery window cycle. Eight of the 18
 lower-speed electromagnetic clocks meet both; ten preserve counterexamples. Two of those already
 receive the generator verdict `no recovery` (express moving half-tile pickups). Eight receive `stable`
-but miss native baseline or recovery periods. Exact counts are in the committed summaries; the
+but miss native baseline or recovery window cycles. Exact counts are in the committed summaries; the
 [experiment report](../../../docs/belt-pickup/experiments.md) compares the scenarios.
 
 These are complete-clock observations. Finite input refill, clock/input phase, machine wake timing,
 and occupied output-belt history remain possible contributors; this capture does not isolate a cause.
 In particular, normal moving half-tile clocks meet their baseline target but alternate after the
-**output blockage** at period 84, while both ingredient-cut recoveries meet target.
+**output blockage** at window cycle 84, while both ingredient-cut recoveries meet target.
 
 Retained replay also checks native machine recipe/speed/productivity, machine connections, hand
 capacities, input belt tier/ingredients/stack sizes, output product and observed four-item belt drops,
@@ -119,8 +119,8 @@ Factorio and checks the selected rate against the target, unless calibration is 
 measurements; review the actual reports before updating expectations. `BELT_CLOCK_REPLAY_DIR` can
 validate retained recordings and compact reports offline, without another native run.
 
-Native runs also capture selected clocks whose simulated rate is below the requested rate. Keep those
-shortfalls explicit: collecting their output does not certify the clock. Check the selected alternative's
+Native runs also capture recommended clocks whose simulated rate is below the requested rate. Keep those
+shortfalls explicit: collecting their output does not certify the clock. Check the selected clock's
 required supply as well as its verdict; a backed-up fallback selected for moving input is a different
 operating condition. Cache entries keep underground entrances and exits separate because their layout can
 affect arm travel.
@@ -145,7 +145,7 @@ for backed-up belts); and the two normal backed-up underground configurations on
 them, every belt-fed window as long as a hand takes from the lanes at rest (#479, `99fb9812`: swings-1, in place of the
 clock planned with the belts moving that #275 recorded and the generator no longer makes; the #275 recording is in the
 history file), each with 63 untouched
-baseline periods and three effective disturbances. The two normal moving underground entries keep their #265
+baseline window cycles and three effective disturbances. The two normal moving underground entries keep their #265
 recording with the generator's "unstable" verdict for the same clock (#266). The recordings these replaced, and the
 #253 recapture on engine `4f2d4e35` before them, stay in
 [pickup-clock-history-controls.json](pickup-clock-history-controls.json) as the historical evidence of the clocks they
@@ -153,9 +153,9 @@ recorded.
 
 | Result | Cases | Interpretation |
 | --- | --- | --- |
-| Stable, exact baseline and recovery | 44 | The selected clock works under its configured supply. This includes turbo straight moving, whose earlier clock over-produced in two early periods from the coverage protocol's calibration state; the clock since #266 runs exact from the first period. It also includes the normal backed-up underground entrance/exit (#275): their backed-up belts refill the pickup slower than a stack a tick, every clock planned for backed-up supply misses (the fractional clock before moved 96, 128, 128 against 176 natively, matching its holds false), and the clock for backed-up belts whose belt-fed windows last as long as a hand takes from the lanes at rest holds (#456, #479); the cold-start controls below still check the simulator against the measured starts with fixed windows |
-| Exact baseline and recovery in these warm recordings, generator says unstable | 2 | Normal moving underground entrance/exit: the generator finds the clock failing from cold lane phase [3,0], and the game never settles from it either, nor from four other phases, among them the exit's natural one, where it cycles at 143 a period against 176 ("Normal underground lane phases" below). The warm runs started at a phase that holds |
-| Exact baseline and recovery, generator says no recovery | 2 | Express moving underground entrance/exit (#269): every loss the generator tries fails from lane phase [1,5] alone, which the capture cannot set up ([lane-phase-controls.json](lane-phase-controls.json), `recovery_phase`). Their clocks before, made for backed-up belts, moved 352 a period against 528 under moving supply; with every inserter always enabled the game moves 704 to 716 through this pickup |
+| Stable, exact baseline and recovery | 44 | The recommended clock works under its configured supply. This includes turbo straight moving, whose earlier clock over-produced in two early window cycles from the coverage protocol's calibration state; the clock since #266 runs exact from the first window cycle. It also includes the normal backed-up underground entrance/exit (#275): their backed-up belts refill the pickup slower than a stack a tick, every clock planned for backed-up supply misses (the subtick clock before moved 96, 128, 128 against 176 natively, matching its holds false), and the clock for backed-up belts whose belt-fed windows last as long as a hand takes from the lanes at rest holds (#456, #479); the cold-start controls below still check the simulator against the measured starts with fixed windows |
+| Exact baseline and recovery in these steady-state recordings, generator says unstable | 2 | Normal moving underground entrance/exit: the generator finds the clock failing from cold lane phase [3,0], and the game never settles from it either, nor from four other phases, among them the exit's natural one, where it cycles at 143 a window cycle against 176 ("Normal underground lane phases" below). The steady-state runs started at a phase that holds |
+| Exact baseline and recovery, generator says no recovery | 2 | Express moving underground entrance/exit (#269): every loss the generator tries fails from lane phase [1,5] alone, which the capture cannot set up ([lane-phase-controls.json](lane-phase-controls.json), `recovery_phase`). Their clocks before, made for backed-up belts, moved 352 a window cycle against 528 under moving supply; with every inserter always enabled the game moves 704 to 716 through this pickup |
 
 No failing captured ordinary default is marked stable for its actual supply. These checks do not close broader
 startup timing or over-the-hood operating clocks.
@@ -164,14 +164,14 @@ startup timing or over-the-hood operating clocks.
 the generator's verifier fails the two normal moving underground clocks from, [3,0], with the game's output from
 that start.
 
-The record (`pickup-*` jobs, checked against these controls by `clock-controls.test.ts`) holds the selected periods, verdicts and supply, and the per-job checks (`job-checks/fixtures.ts`) set them against
+The record (`pickup-*` jobs, checked against these controls by `clock-controls.test.ts`) holds the selected window cycle times, verdicts and supply, and the per-job checks (`job-checks/fixtures.ts`) set them against
 these native controls for the nine fixtures of `belt-pickup-clock-cases.ts`, each the only one to take its path through
 the generator; `belt-pickup-clock-mechanics.test.ts` checks the recorded figures of all 48 against the simulator without
-generating. A build whose warm recording holds while the generator finds a failing cold lane phase has
-to fail at the pinned phase, and one whose recording holds and recovers while the generator says "no recovery" has to
+generating. A build whose steady-state recording holds while the generator finds a failing cold lane phase has
+to fail at the pinned phase, and one whose recording holds and has recovery while the generator says "no recovery" has to
 fail every loss it fails from its pinned lane phase. A measured shortfall on any build still fails, and where a clock was recorded under
 its own supply, a baseline miss has to make the generator's own holds verdict false. Fresh generation also
-saves the selected rate, required supply and alternative id in `generation-selection.json` when that metadata
+saves the selected rate, required supply and clock id in `generation-selection.json` when that metadata
 is available in its cache.
 
 To replay against the original 39 controls, set
@@ -185,8 +185,8 @@ the passing measurement test alone does not certify a clock that a control recor
 
 [pickup-clock-start-controls.json](pickup-clock-start-controls.json) (`backed_up_start`, #253) records the normal underground
 entrance/exit with new empty machines/hands and verified stationary `[0,64]` stock on both half-tile lanes.
-At offset 0, all 16 periods produce 176 items. Rotating the same windows by 1287 ticks makes both game and
-simulator alternate 144/208 for all 16 periods. The mean is 176, but exact per-period output fails. The
+At offset 0, all 16 window cycles produce 176 items. Rotating the same windows by 1287 ticks makes both game and
+simulator alternate 144/208 for all 16 window cycles. The mean is 176, but exact per-window-cycle output fails. The
 windows are the old swings-1 selection, kept as fixed-window checks of the simulator against the game's
 measured cold starts: both tests build them as given, independent of the selection, which since the window
 trim is fractional for these two builds and is judged on its own recording like any other default.
@@ -194,7 +194,7 @@ trim is fractional for these two builds and is judged on its own recording like 
 The staged harness's default saturation check establishes fullness, which can still occur while stock moves.
 These fixtures wait for 1,200 saturation ticks and additionally assert stationary stock before the first grab;
 that wait is a fixture setup, not a general timing rule. Earlier short-saturation pilots are not used as evidence
-for a fully backed-up start. Counts begin at cold placement and include the first period; no observed arm arrivals
+for a fully backed-up start. Counts begin at cold placement and include the first window cycle; no observed arm arrivals
 or later stock are fed back into the simulator.
 
 ```bash
@@ -208,30 +208,30 @@ BELT_SPEED_CAPTURE_DIR=.scratch/belt-clock-startup-new \
 normal moving underground entrance and exit at all 64 pairs of input lane phases, 128 runs in Factorio 2.1.21
 (#266, 2026-10-20, on master `f6c598c8`), under the fixed windows of their swings-1 clock. The fixture clears every
 supply-chain line of both lanes, seeds it on the requested lattice and checks the lanes before the first grab and in
-every period; its probe, test and runs were not kept in the repository. Entrance and exit recorded the
+every window cycle; its probe, test and runs were not kept in the repository. Entrance and exit recorded the
 same counts on both clocked inserters in every cell. Five cells never settle: [3,0], [3,1] and [3,7] repeat 176, 160,
-144, 128, 128, 144, and [3,3] and [3,4] repeat 128, 144, 160, 128, 144, 176, 143 a period against 176. [3,3] is the
+144, 128, 128, 144, and [3,3] and [3,4] repeat 128, 144, 160, 128, 144, 176, 143 a window cycle against 176. [3,3] is the
 exit's natural phase: a staged start of the build without seeding lands there.
 
 `normal-underground-lane-phase.generation.test.ts` runs the simulator from each cell. In every cell of both builds it
-moves the game's output and pickups in every period, and its output inserter holds the game's count in every tick.
+moves the game's output and pickups in every window cycle, and its output inserter holds the game's count in every tick.
 Since #267 that includes the 13 cells per build where the input and the output window open in the same tick on a
 machine at its output block: the output inserter puts the products onto a belt, so the game's belt-fed input takes its
 first stack a tick after they are taken, and the simulator does too. `known_differences` is empty; a cell listed there
-would be held only on its last eight periods.
+would be held only on its last eight window cycles.
 
 ### Clocked cold starts
 
 [pickup-clock-start-controls.json](pickup-clock-start-controls.json) (`cold_start`) records 57 clocked cold starts in
-Factorio 2.1.21 (#273, 2026-10-20, frozen head `98f362ce`), each 16 periods from the harness's staged start, with nothing written to a
+Factorio 2.1.21 (#273, 2026-10-20, frozen head `98f362ce`), each 16 window cycles from the harness's staged start, with nothing written to a
 belt: the game's own lane phase at placement, read off the pickup tile. The four normal backed-up side underground runs (entrance and
 exit, near lanes 1 and 2) were recorded again on the clock #456 selects for them (#479, frozen head `99fb9812`: swings-1,
 every belt-fed window as long as a hand takes from the lanes at rest); the game follows the simulator tick for tick from
-placement on it, as it did on the two clocks before (the fractional clock, then the one planned with the belts moving).
+placement on it, as it did on the two clocks before (the subtick clock, then the one planned with the belts moving).
 
 - **The matrix, 48:** every electromagnetic side pickup fixture at 4 tiers × straight belt, underground entrance and
-  exit × moving and backed-up supply, on the generator's selected clock, at near lane 1 and at near lane 2. Near lane 2
-  is the cell reflected (`reflectOrdinaryPickup`) with its plant mirrored as well, without which its fluid inputs miss
+  exit × moving and backed-up supply, on the generator's recommended clock, at near lane 1 and at near lane 2. Near lane 2
+  is the build reflected (`reflectOrdinaryPickup`) with its machine mirrored as well, without which its fluid inputs miss
   the reflected pipes and nothing is made; the config names lane 2 near and keeps the near lane's item.
 - **The deciding cases, 9,** of the rule that a clock's first two ticks are dark: the express entrance started 30 ticks
   into an input window, the backed turbo entrance 10 ticks in, and two over-the-hood clocks 123 and 174 ticks in, near
@@ -239,23 +239,23 @@ placement on it, as it did on the two clocks before (the fractional clock, then 
   (`decider_order`), with the inserters built in reverse (`build_order`), and moved (`position`); and the two over-hood
   clocks unrotated.
 
-Each run keeps its clock (windows, period, terminal swings and the hash of the exported clock), the lane phases at
+Each run keeps its clock (windows, window cycle time, terminal swings and the hash of the exported clock), the lane phases at
 placement and in the model's frame (native - 4 × the tier's speed), and what the game's output and input inserters
-moved in each period and held in each tick of the model's frame (model `held[i]` = sample `i + 4`), as sha256.
-`pickup-clock-cold-start.game.test.ts` records them again: the same clock, a cold cell, the clock a tick behind the
-probe, every period on the placement lattice, and both series as kept. Its probe
+moved in each window cycle and held in each tick of the model's frame (model `held[i]` = sample `i + 4`), as sha256.
+`pickup-clock-cold-start.game.test.ts` records them again: the same clock, a build at a cold start, the clock a tick behind the
+probe, every window cycle on the placement lattice, and both series as kept. Its probe
 (`pickup-clock-cold-start-probe.lua`) only observes. The raw runs, the scratch fixture they came from and their
 analyses were not kept in the repository.
 
 `pickup-clock-cold-start-mechanics.test.ts` runs the simulator from each cold start and holds both clocked inserters'
-counts in every tick and their items in every period: 57 of 57, the input of one held only by its output (a hand back
+counts in every tick and their items in every window cycle: 57 of 57, the input of one held only by its output (a hand back
 from its swing as the output block is lifted, a tick early in the simulator, once). On the engine before the clock's
-start rule the 11 runs where a window the latency carries over the period's end reaches ticks 0-1 fail, and the
+start rule the 11 runs where a window the latency carries over the window cycle's end reaches ticks 0-1 fail, and the
 other 46 pass.
 
 The same test builds each run's clock from its stored windows and requires the hash the run was recorded on (the four
-fractional-clock runs of the fast tier cannot be rebuilt from windows, and the test says so). `clock-controls.test.ts` checks the clock of each run started at the period's
-beginning (a side pickup fixture on near lane 1, and the over-the-hood run) against the record's selected clock of its fixture, with no generation.
+fractional-clock runs of the fast tier cannot be rebuilt from windows, and the test says so). `clock-controls.test.ts` checks the clock of each run started at the window cycle's
+beginning (a side pickup fixture on near lane 1, and the over-the-hood run) against the record's recommended clock of its fixture, with no generation.
 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/belt-clock-cold-start-new \
@@ -271,26 +271,26 @@ and metadata, and the schedule), `recorded.clock_basis` says how it is known (`c
 equals `native`; `history`: the pin has not changed since the commit that recorded `native`; `regenerated`: the clock
 generated on the engine of that commit; `built`: a hand-made clock, which no selection makes, so it has no pin and the
 hash is `builtClockIdentity` of the build's blueprint, recomputed by `clock-controls.test.ts`), and `generation.clock_sha256` is the clock the selection makes today, checked by
-`clock-controls.test.ts` against the record's alternative of the same id, for a build that is a job of the record (`clock-generator/record/`), or the family's `*.generation.test.ts` (ready pull requests) for one that is not.
+`clock-controls.test.ts` against the record's clock of the same id, for a build that is a job of the record (`clock-generator/record/`), or the family's `*.generation.test.ts` (ready pull requests) for one that is not.
 
 - `clock-controls.test.ts` runs with the unit tests and reads the files only: it fails where the pin and the recording
   name different clocks, which is what editing a pin to follow a moved selection leaves behind: record the entry
   again in the game and set `recorded.clock_sha256` (a pin that moves is recorded again; nothing is carried over).
   It also checks every generation pin against the record (`clock-generator/record/`, one file per blast job): the pin is the
-  clock hash, period, verdict, holds, rate and supply of the record job's alternative with the pin's id, and the game's run agrees
-  with that alternative's verdict. A pin of a build that is a sample with an option set (belts backed up, an ingredient left out of the
-  period) is of a job of the variants group (`variant-jobs.ts`), which lists the recording or test that qualifies each.
+  clock hash, window cycle time, verdict, holds, rate and supply of the record job's clock with the pin's id, and the game's run agrees
+  with that clock's verdict. A pin of a build that is a sample with an option set (belts backed up, an ingredient left out of the
+  window cycle time) is of a job of the variants group (`variant-jobs.ts`), which lists the recording or test that qualifies each.
 - A game test checks the hash of the clock it generated against the recorded one before it starts Factorio
   (`pickup-clock-capture.ts`; `BELT_CLOCK_CALIBRATE=1` skips the check to record a new summary).
 - The cold starts (`pickup-clock-start-controls.json`, `cold_start`) keep the same pair per clock:
   `clock_sha256` (checked by `pickup-clock-cold-start-mechanics.test.ts` against the clock the stored windows build and the fixture's
-  pin, and for the runs started at the period's beginning by `clock-controls.test.ts` against the record's selection)
+  pin, and for the runs started at the window cycle's beginning by `clock-controls.test.ts` against the record's selection)
   and `recorded_clock_sha256` (checked by the game test).
 - Three scaffold-recordings builds expect values that belong to one clock (agricultural science having no dip and no
   difference after its staged start, agricultural science with backed-up belts having no difference, and the moved
   inserters of chemical science with a shared foundry): `scaffold-recordings-clock-pins.json`.
-- The agricultural science scaffold's control on the 2-swing clock keeps one line: inserter 11 moves 371.33 a period in the
-  game and 370.16 in the simulator. Since #333 the simulator runs a clock of whole ticks by its own period (960 ticks for
+- The agricultural science scaffold's control on the 2-swing clock keeps one line: inserter 11 moves 371.33 a window cycle in the
+  game and 370.16 in the simulator. Since #333 the simulator runs a clock of whole ticks by its own window cycle time (960 ticks for
   this one, where the plan has 480), so the run the test compares is twice as long, and its two one-hand dips fall before
   the compared part (#364, #401). The backed-up case needs no allowance.
 
@@ -306,48 +306,48 @@ Sidecar must capture supported belt model 2, the over-the-hood layout and the co
 using clocks generated on engine `4f2d4e35` and Factorio 2.1.21. Twenty-one pass exact baseline and recovery output,
 including all 16 same-item cases. Eight already receive unstable/no-recovery verdicts. Three are marked stable
 but fail recovery: turbo moving in both mirroring states, and express moving when mirrored. Each capture has
-63 untouched baseline periods and overlapping detailed-recorder checks. These controls are historical evidence;
-changed selected clocks need fresh game verification rather than replacement of the old counts.
+63 untouched baseline window cycles and overlapping detailed-recorder checks. These controls are historical evidence;
+changed recommended clocks need fresh game verification rather than replacement of the old counts.
 
 The current default expectations are [over-hood-clock-controls.json](over-hood-clock-controls.json), each entry with
-the PR that recorded it and its frozen head. The two express moving mixed-item variants whose selected clock #272
+the PR that recorded it and its frozen head. The two express moving mixed-item variants whose recommended clock #272
 changed (observed windows judge each lane-phase start over its repeating cycle) were re-recorded from the generator on
 Factorio 2.1.21 (frozen head `4162ddfe`, the PR's source commit before its last amend), both exact in baseline and
 recovery:
-the mirrored one, whose old clock repeated six 112-item periods and one 96-item period after each disturbance, holds
+the mirrored one, whose old clock repeated six 112-item window cycles and one 96-item window cycle after each disturbance, holds
 112 throughout with its input window 3 ticks longer, and the unmirrored one keeps 96 with its input window a tick
-longer. The nine mixed-item variants whose selected clock #269 changed to observed windows (an observed-windows clock
+longer. The nine mixed-item variants whose recommended clock #269 changed to observed windows (an observed-windows clock
 holds when its own windows hold) were re-recorded on Factorio 2.1.21 (frozen head `959c08d5`), all exact in baseline and
-recovery, the normal mirrored moving one after two short periods following its last disturbance; among them fast
+recovery, the normal mirrored moving one after two short window cycles following its last disturbance; among them fast
 unmirrored backed, recorded for the first time. #265 re-recorded 28 variants with the clocks of the belt window-end
 trim on Factorio 2.1.21 (frozen head `77f11ce6`), and kept #254's recordings of the three whose exported clock the trim
 leaves byte-identical (its express-mirrored-moving copy corrected a stale `generationVerdict` to the generator's "no
 recovery", said since the lane-phase audit; the history entry's note keeps it). Of #265's 31 entries, 25 pass their baseline and recoveries exactly — the mirrored moving
-turbo's third recovery overshoots one period and pauses four before holding target for its last 14 periods —
+turbo's third recovery overshoots one window cycle and pauses four before holding target for its last 14 window cycles —
 five are correctly rejected, with native baseline misses behind each holds-false pick (fast mirrored at both
 supplies, fast unmirrored moving, normal mirrored at both supplies), and the copied mirrored moving express
 keeps its no-recovery counterexample.
 
 These compact builds can keep producing through the ordinary runner's short outages using stored stock.
-Their three successive disturbances therefore last 24 periods, with machine inventories and clock state
+Their three successive disturbances therefore last 24 window cycles, with machine inventories and clock state
 untouched. A disturbance must reduce output below the baseline before recovery is assessed. If the baseline
-already contains zero-output periods, the summary retains all counts and marks recovery `not_assessed`;
+already contains zero-output window cycles, the summary retains all counts and marks recovery `not_assessed`;
 that clock has already failed its undisturbed throughput check.
 
 The [bounded turbo trace](lane-phase-controls.json) (`over_hood_turbo_trace`, #254) preserves a separate, shorter ingredient-loss
 counterexample. Before the interruption, both lanes share a phase. Afterwards, only the interrupted lane
-shifts by half a stack interval. The clock was marked stable, but native output repeats a 48-item period
-among four 64-item periods instead of 64 every 640 ticks. The existing pickup kernel reproduces this pattern
+shifts by half a stack interval. The clock was marked stable, but native output repeats a 48-item window cycle
+among four 64-item window cycles instead of 64 every 640 ticks. The existing pickup kernel reproduces this pattern
 with different initial lane phases. A common clock shift alone does not check that state.
 
 The matching express trace is retained in [lane-phase-controls.json](lane-phase-controls.json) (`over_hood_express_trace`, #255).
-The old mirrored express clock repeats six 112-item periods and one 96-item period after recovery. Separate
-lane phases reproduce that seven-period cycle in the existing simulator too, under its own loss protocol: from 9 of
-its 64 lane-phase starts the clock repeats it with nothing lost, while the clock-only check judged one period of each
+The old mirrored express clock repeats six 112-item window cycles and one 96-item window cycle after recovery. Separate
+lane phases reproduce that cycle of seven window cycles in the existing simulator too, under its own loss protocol: from 9 of
+its 64 lane-phase starts the clock repeats it with nothing lost, while the clock-only check judged one window cycle of each
 start and passed them all. Observed windows now judge each start over its repeating cycle, and the new default holds
 112 in the game after every disturbance.
 Native observer ticks have a different origin from the exported clock, so the comparison uses relative lane
-phase and cycle rotation; it does not claim the same initial inventory, first failing period or loss transient.
+phase and cycle rotation; it does not claim the same initial inventory, first failing window cycle or loss transient.
 
 Clock verification now varies ordinary moving lanes independently in both steady-output and recovery checks.
 The historical summaries preserve the original clocks and verdicts. A passing capture/replay means the recorded
@@ -358,10 +358,10 @@ audited selection and hashes its exact exported blueprint/schedule, regenerated 
 native recording of that clock. The lane-phase audit's three changed clocks keep their native counts from that time
 (#255) in [over-hood-clock-history-controls.json](over-hood-clock-history-controls.json). Until #269
 fast-unmirrored-backed-different-items had no recording: its fractional selection repeated every 16,160 ticks, more
-than a 63-period recording fits under the harness's 72,000-tick cap, and moved 6.95 a second against 6 with holds
-false. Its observed windows at 800 ticks hold 80 a period, in the game too.
+than a 63-window-cycle recording fits under the harness's 72,000-tick cap, and moved 6.95 a second against 6 with holds
+false. Its observed windows at 800 ticks hold 80 a window cycle, in the game too.
 The portable record (`overhood-*` jobs, checked against these controls by `clock-controls.test.ts`) holds these selections, exact clock hashes and the final
-untouched final native recovery windows for clocks marked stable (at least eight periods for moving supply,
+untouched final native recovery windows for clocks marked stable (at least eight window cycles for moving supply,
 five for backed-up supply, whose assessment starts later), for the nine fixtures of `over-hood-clock-cases.ts`, each the
 only one to take its path through the generator. `over-hood-clock-mechanics.test.ts` checks the recorded first hands and
 the controls of all 32 against the simulator and the fixture configs without generating (the recovery windows
@@ -373,21 +373,21 @@ coverage.
 
 Since the long run is judged by state repetition (proof-verification, 2026-10-19), two entries changed:
 `over-hood-{express,turbo}-unmirrored-backed-different-items`. Their old 800-tick `planned-belt-slack` picks never
-held 80 a period: the simulation repeats a 16-period cycle in which one period moves 96 (one extra hand), an
-eternal average of 81.04. The old 45-period long run judged 30 bins that held exactly one such spike, which one
+held 80 a window cycle: the simulation repeats a cycle of 16 window cycles in which one window cycle moves 96 (one extra hand), an
+eternal average of 81.04. The old 45-window-cycle long run judged 30 bins that held exactly one such spike, which one
 hand of tolerance absorbed; the proven cycle does not. The game agrees: the retained native baselines of #254 in
-[over-hood-clock-history-controls.json](over-hood-clock-history-controls.json) run 63 periods per variant and move 96 at periods
+[over-hood-clock-history-controls.json](over-hood-clock-history-controls.json) run 63 window cycles per variant and move 96 at window cycles
 15, 31, 47 and 63, which nothing compared before because the old test read the baseline only for "stable"
-verdicts and these two were "no recovery". Fresh 64-period headless runs of the old clocks reproduce it (96 at
-periods 8, 24, 40 and 56; #258, not kept in the repository), and the express run was watched in game.
-The mechanism, read off those recordings: the belt input inserter picks 324 items a period against the planned
+verdicts and these two were "no recovery". Fresh 64-window-cycle headless runs of the old clocks reproduce it (96 at
+window cycles 8, 24, 40 and 56; #258, not kept in the repository), and the express run was watched in game.
+The mechanism, read off those recordings: the belt input inserter picks 324 items a window cycle against the planned
 320 - after its last planned return swing its window still holds one pickup tick, which on a backed-up belt
-always grabs one 4-item stack - and the carried partial hand becomes an extra full hand every 4th period, in
+always grabs one 4-item stack - and the carried partial hand becomes an extra full hand every 4th window cycle, in
 recipe proportion; the assembler has the spare speed to craft them, and the output inserter drops the extra
-96-item hand every 16th period. Every alternative of those two variants carried the same cycle, so both pinned
+96-item hand every 16th window cycle. Every clock of those two variants carried the same cycle, so both pinned
 an unstable selection until the belt window-end trim (`b654e895`) removed the extra pickup at its source: a
 belt-fed inserter's input window now ends one rotation before its last return swing. Both variants again select
-planned-belt-slack, at period 960, and #265's recordings show their baselines and recoveries exact in the game;
+planned-belt-slack, at a window cycle time of 960, and #265's recordings show their baselines and recoveries exact in the game;
 the old recordings stand as the in-game confirmation that the old picks fail.
 
 ```bash
@@ -408,7 +408,7 @@ and after each restoration; it does not feed observations into the simulator.
   at four speeds, both mirroring states, moving/backed-up supply, electronic circuits from iron plate and copper
   cable and gears from iron on both lanes, at 6/s. Its assembler runs at crafting speed 50 (two legendary speed
   modules and four legendary beacons), productivity 0. Like the over-the-hood builds it keeps producing through the
-  ordinary short outages on its stock, so its three disturbances last 24 periods.
+  ordinary short outages on its stock, so its three disturbances last 24 window cycles.
 - **Front exit, backed up, 8:** the electromagnetic-plant [fixture](../mechanics/belt-pickup/fixtures/front-underground-exit/README.md)
   at four speeds and both mirroring states, with the ordinary electromagnetic targets (30/s turbo to 7.5/s normal)
   and the ordinary disturbances.
@@ -417,23 +417,23 @@ and after each restoration; it does not feed observations into the simulator.
   assessed as for backed-up supply.
 
 [front-clock-controls.json](front-clock-controls.json) holds the 48 native summaries, recorded on Factorio 2.1.21
-from clocks generated on `5cb7c83b` (#274), each with 63 untouched baseline periods and three disturbances that cut
+from clocks generated on `5cb7c83b` (#274), each with 63 untouched baseline window cycles and three disturbances that cut
 output; the two normal backed-up exits were recorded again on #456's clock (#479, `99fb9812`). **All 48 meet exact baseline and
 recovery output.** All 32 entrance clocks are stable and exact. All eight backed-up exit clocks are stable and exact.
-At normal, in both mirroring states, every clock planned for backed-up supply fails (the fractional clock selected
+At normal, in both mirroring states, every clock planned for backed-up supply fails (the subtick clock selected
 before, holds false at 5.45 of 7.5/s, missed natively, 128, 128, 96 repeating against 176, the generator's own
 as-built repeat); the selection since #456 is a stable clock for backed-up belts, every belt-fed window as long as a hand
-takes from the lanes at rest, which moves 176 in every period (the clock planned with the belts moving, which #275 recorded, is no
-longer made; it is the moving config's). All eight moving-config exit clocks hold and recover exactly on the backed-up exit, including
+takes from the lanes at rest, which moves 176 in every window cycle (the clock planned with the belts moving, which #275 recorded, is no
+longer made; it is the moving config's). All eight moving-config exit clocks hold exactly and have recovery on the backed-up exit, including
 the express ones the generator calls "no recovery" and the normal ones it calls "unstable": both verdicts come
 from moving lane-phase starts ([1,5] or [5,1]; [0,3]) that this exit cannot have.
 
 The portable record (`front-*` jobs, checked by `clock-controls.test.ts`, with the per-job checks of `job-checks/fixtures.ts`) pins each selection and its exact exported clock (each entry's
 `generation`) for the nine fixtures of `front-clock-cases.ts`, each the only one to take its path through the generator,
 and checks it against its native summary beside it: a baseline miss under the selection's own supply needs holds false;
-a stable clock needs an exact baseline and its last recovery periods at target. `front-clock-mechanics.test.ts` checks the
+a stable clock needs an exact baseline and its last recovery window cycles at target. `front-clock-mechanics.test.ts` checks the
 recorded figures of all 48 against the simulator without generating: the first hands of each tier, and the controls
-(exact baseline and recovery, the verdicts of the moving-config exits, the rate over the pinned period). 29 of the 32
+(exact baseline and recovery, the verdicts of the moving-config exits, the rate over the pinned window cycle). 29 of the 32
 entrance clocks are byte-identical to the over-the-hood pins of the same speed, mirroring, supply and family;
 the builds differ in the game, so each has its own control.
 
@@ -451,14 +451,14 @@ inserter from an infinity chest of iron plates; the output stack inserter drops 
 runs ten tiles to a loader into an infinity chest. The probe ([blocked-output-clock-probe.lua](blocked-output-clock-probe.lua))
 sets the belt stack size with `force.belt_stack_size_bonus`, as the [belt-drop calibration](../mechanics/belt-drop/README.md)
 does, and checks research unchanged; the input is chest-fed, so the stack size reaches the drop only. Its one
-disturbance is the output alone: the loader is removed at period 66 and rebuilt at period 90, and recovery is judged
-from period 96 to 130. The capture runner takes the scenario's own probe, intervention and hardware check
+disturbance is the output alone: the loader is removed at window cycle 66 and rebuilt at window cycle 90, and recovery is judged
+from window cycle 96 to 130. The capture runner takes the scenario's own probe, intervention and hardware check
 (a chest-fed input, crafting speed 3.125, every drop the case's stack size, hands of 15 at stack size 3 and 16 otherwise).
 
 [blocked-output-clock-controls.json](blocked-output-clock-controls.json) holds the 16 native summaries, recorded on
 Factorio 2.1.21 on `b9fd341b` (#277); express stack 3 again on `6367fc83`, for the shifted swings clock of 1,440 ticks it selects
-now. **All 16 selected clocks are stable and meet exact baseline (63 periods) and recovery output (33 periods).** Output stops one to ten periods into the block, once the belt behind the drop is full (about 39
-stacks), where the simulator holds the output inserter at once; the periods judged after the release are the same in
+now. **All 16 recommended clocks are stable and meet exact baseline (63 window cycles) and recovery output (33 window cycles).** Output stops one to ten window cycles into the block, once the belt behind the drop is full (about 39
+stacks), where the simulator holds the output inserter at once; the window cycles judged after the release are the same in
 both ([experiments](../../../docs/belt-pickup/experiments.md#generated-clocks-and-drops)). The portable
 `blocked-output-clock-mechanics.test.ts` checks all 16 controls against the fixture config, the documentation and the
 belt-drop calibration's drop figures, and runs a plain clock built from those figures through the block and release in
@@ -480,18 +480,18 @@ to copper plates, making iron gears; a legendary wagon, a car and a tank whose s
 plates and copper cable, making electronic circuits. Infinity chests feed the container, one legendary stack inserter
 takes from it into a legendary assembler 3 (crafting speed 3.125) and the output inserter drops into a disposal chest,
 at 5 a second. The slot filters and the wagon's quality come with the blueprint; the wagon stands on rails. The probe
-([container-clock-probe.lua](container-clock-probe.lua)) counts the output inserter's drops per period.
+([container-clock-probe.lua](container-clock-probe.lua)) counts the output inserter's drops per window cycle.
 
-**Cuts that empty the container.** A container between two inserters is a buffer: a 2-period cut, as the belt-fed
+**Cuts that empty the container.** A container between two inserters is a buffer: a 2-window-cycle cut, as the belt-fed
 families have, does not disturb it. So each supply cut lasts until the container's stock of the cut input is gone (its
-slots and stack sizes from the game data, plus 8 periods; up to 321 periods for the legendary wagon), the output block
-lasts 4 periods (the disposal chest is filled), and recovery is judged over 40 periods after each disturbance, the first
-6 after the release left out. Do not compare these recordings period for period with the 2-period families.
+slots and stack sizes from the game data, plus 8 window cycles; up to 321 window cycles for the legendary wagon), the output block
+lasts 4 window cycles (the disposal chest is filled), and recovery is judged over 40 window cycles after each disturbance, the first
+6 after the release left out. Do not compare these recordings window cycle for window cycle with the 2-window-cycle families.
 
 [container-clock-controls.json](container-clock-controls.json) holds the 6 native summaries, recorded on Factorio 2.1.21
-at commit `000ad913`. **All 6 selected clocks are stable, meet exact baseline output (63 periods), drop to 0 in every
-disturbance and are exact in all 33 judged periods after each.** `container-clock-mechanics.test.ts` checks all 6 without
-generating: each container's slots and stock in the simulator, the cut lengths against the stock, the periods the game
+at commit `000ad913`. **All 6 recommended clocks are stable, meet exact baseline output (63 window cycles), drop to 0 in every
+disturbance and are exact in all 33 judged window cycles after each.** `container-clock-mechanics.test.ts` checks all 6 without
+generating: each container's slots and stock in the simulator, the cut lengths against the stock, the window cycles the game
 took to run dry under each cut, and the controls against the fixture configs. `clock-controls.test.ts` checks
 the selection and exported clock of the 2 cases in [container-clock-cases.ts](container-clock-cases.ts) (one a recipe: the
 clock depends on the recipe, and the 3 fixtures of each recipe record one clock hash) against the record's `containers-` jobs and each against its native summary.
@@ -505,19 +505,19 @@ BELT_SPEED_CAPTURE_DIR=.scratch/container-new BELT_CLOCK_CALIBRATE=1 \
 
 `lithium-plate-80-silo-chest-clock.game.test.ts` enumerates 4 controls ([lithium-plate-80-silo-chest-clock-fixtures.ts](lithium-plate-80-silo-chest-clock-fixtures.ts))
 on the lithium plate build (`LITHIUM_PLATE_80_SILO_CHEST`, its README in the sample's folder): two cryogenic plants put
-lithium into a rocket silo, six furnaces take it out, 80 plates a second. The selected clock (3 output swings, 1080
+lithium into a rocket silo, six furnaces take it out, 80 plates a second. The recommended clock (3 output swings, 1080
 ticks) is recorded as built and with the two inserters that fill the silo built after the six that empty it; the clock
 with 1 output swing is a second check, and the clock with 7 output swings (7560 ticks) is the known limit below. The
 probe ([lithium-plate-80-silo-chest-clock-probe.lua](lithium-plate-80-silo-chest-clock-probe.lua)) counts the drops of the six output inserters per
-period. The protocol is the standard one: the holmium plates cut for 2 periods, the output blocked for 4, the holmium plates
+window cycle. The protocol is the standard one: the holmium plates cut for 2 window cycles, the output blocked for 4, the holmium plates
 cut again. The silo holds at most 250 lithium, so each cut empties it. The warm-up of 3600 ticks without a clock fills the
 silo before the clock starts, though the config exports it empty.
 
 [lithium-plate-80-silo-chest-clock-controls.json](lithium-plate-80-silo-chest-clock-controls.json) holds the 4 native summaries, recorded on Factorio
-2.1.21 at commit `759e9a50`. **The selected clock, in both build orders, and the clock with 1 output swing meet exact
-baseline output (63 periods), drop to 0 in every disturbance and are exact in every judged period after each; the two
-build orders are equal in every period.** The clock with 7 output swings is stable in the simulator and short in the game,
-9,440 to 9,600 of 10,080 in every period: the output inserters of two furnaces drop onto underground entrances whose exits
+2.1.21 at commit `759e9a50`. **The recommended clock, in both build orders, and the clock with 1 output swing meet exact
+baseline output (63 window cycles), drop to 0 in every disturbance and are exact in every judged window cycle after each; the two
+build orders are equal in every window cycle.** The clock with 7 output swings is stable in the simulator and short in the game,
+9,440 to 9,600 of 10,080 in every window cycle: the output inserters of two furnaces drop onto underground entrances whose exits
 side-load onto the shared output belt, which the config describes as one belt with room for every drop
 ([scope](../../../docs/game-data-and-scope.md)). `clock-controls.test.ts` pins each clock against the record and `game-runs-hold.test.ts` checks it
 against its native summary.
@@ -531,19 +531,19 @@ BELT_SPEED_CAPTURE_DIR=.scratch/lithium-silo-new BELT_CLOCK_CALIBRATE=1 \
 
 `iron-plate-80-car-chest-clock.game.test.ts` enumerates 3 controls ([iron-plate-80-car-chest-clock-fixtures.ts](iron-plate-80-car-chest-clock-fixtures.ts)) on the iron plate
 build (`IRON_PLATE_80_CAR_CHEST`, its README in the sample's folder): a big mining drill drops iron ore into a car, two furnaces take
-it out, 80 plates a second. The harness puts the ore under the drill. The selected clock (3 output swings, 72 ticks) is
+it out, 80 plates a second. The harness puts the ore under the drill. The recommended clock (3 output swings, 72 ticks) is
 recorded as built and with the two inserters that take from the car built after the output inserters; the clock with 1
-output swing is a second check. Each clock enables the drill one tick a period, the tick before the two inserters that take
+output swing is a second check. Each clock enables the drill one tick a window cycle, the tick before the two inserters that take
 from the car; the harness wires it with its resource reading off. The probe ([iron-plate-80-car-chest-clock-probe.lua](iron-plate-80-car-chest-clock-probe.lua)) counts the drops of the two output
-inserters per period. The car holds 4,000 ore, so the cuts are those of the container family: the drill is stopped
-(disabled by script) until the car has run dry (71 periods), the output blocked for 4, the drill stopped again, each
-followed for 40 periods, the first 6 after a release not judged. A drill is no supply that stops in the generator's
-checks; here it is stopped as the supply cut. Do not compare these recordings period for period with the 2-period
+inserters per window cycle. The car holds 4,000 ore, so the cuts are those of the container family: the drill is stopped
+(disabled by script) until the car has run dry (71 window cycles), the output blocked for 4, the drill stopped again, each
+followed for 40 window cycles, the first 6 after a release not judged. A drill is no supply that stops in the generator's
+checks; here it is stopped as the supply cut. Do not compare these recordings window cycle for window cycle with the 2-window-cycle
 families.
 
 [iron-plate-80-car-chest-clock-controls.json](iron-plate-80-car-chest-clock-controls.json) holds the 3 native summaries, recorded on Factorio 2.1.21 at commit
-`1571a1be`. **All 3 meet exact baseline output (63 periods), drop in every disturbance (to 0 with the drill stopped) and are
-exact in all 33 judged periods after each; the two build orders are equal in every period.**
+`1571a1be`. **All 3 meet exact baseline output (63 window cycles), drop in every disturbance (to 0 with the drill stopped) and are
+exact in all 33 judged window cycles after each; the two build orders are equal in every window cycle.**
 `iron-plate-80-car-chest-clock.generation.test.ts` pins each clock and checks it against its native summary.
 
 ```bash
@@ -557,23 +557,23 @@ BELT_SPEED_CAPTURE_DIR=.scratch/car-new BELT_CLOCK_CALIBRATE=1 \
 the steel build (`STEEL_PLATE_26_WAGON_CHEST`, its README in the sample's folder): one cargo wagon is a hub that a big
 mining drill fills with iron ore, a furnace takes the ore from and puts plates back into, a second takes the plates from
 and puts steel back into, and one inserter empties of steel onto the output belt, 26 steel a second. The harness puts the
-ore under the drill and builds the wagon after its rails. The selected clock (planned with belt slack, a subtick clock of
-11,520 ticks for 13 periods) is recorded as built and with the two inserters that put into the wagon built after every
-other entity; the clock the config makes with iron ore out of its period (`ignored_lcm_ingredients`) is a second check,
-recorded as its subtick clock (3,840 ticks for 13 periods): the capture exports an alternative's subtick clock where it has one, so the clock rounded to 295
-ticks is not recorded. Each clock enables the drill a window of two positions a period, 1.08 ticks on average, before
+ore under the drill and builds the wagon after its rails. The recommended clock (planned with belt slack, a subtick clock of
+11,520 ticks for 13 window cycles) is recorded as built and with the two inserters that put into the wagon built after every
+other entity; the clock the config makes with iron ore out of its window cycle time (`ignored_lcm_ingredients`) is a second check,
+recorded as its subtick clock (3,840 ticks for 13 window cycles): the capture exports a clock as its subtick clock where it has one, so the clock rounded to 295
+ticks is not recorded. Each clock enables the drill a window of two positions a window cycle, 1.08 ticks on average, before
 the inserter that takes the ore; the harness wires it with its resource reading off. The probe ([steel-plate-26-wagon-chest-clock-probe.lua](steel-plate-26-wagon-chest-clock-probe.lua)) counts the drops of the
-inserter from the wagon to the belt per period, and also keeps the wagon's contents at each period's start and each
+inserter from the wagon to the belt per window cycle, and also keeps the wagon's contents at each window cycle's start and each
 furnace's ticks with a full output. The wagon holds 1,000 ore, 500 plates and 500 steel, so the cuts are those of the
-container family: the drill is stopped (disabled by script) until the wagon has run dry of steel (9 and 10 periods), the
-output blocked for 4, the drill stopped again, each followed for 40 periods, the first 6 after a release not judged. A
+container family: the drill is stopped (disabled by script) until the wagon has run dry of steel (9 and 10 window cycles), the
+output blocked for 4, the drill stopped again, each followed for 40 window cycles, the first 6 after a release not judged. A
 drill is no supply that stops in the generator's checks; here it is stopped as the supply cut. Do not compare these
-recordings period for period with the 2-period families.
+recordings window cycle for window cycle with the 2-window-cycle families.
 
 [steel-plate-26-wagon-chest-clock-controls.json](steel-plate-26-wagon-chest-clock-controls.json) holds the 3 native summaries, recorded on Factorio
-2.1.21 at commit `1571a1be`. **All 3 meet exact baseline output (63 periods), drop in every disturbance (to 0 with the
-drill stopped) and are exact in all 33 judged periods after each; the two build orders are equal in every period.** A
-full plate or steel filter stops a furnace a few ticks a period in some states, with no steel lost (the sample's README).
+2.1.21 at commit `1571a1be`. **All 3 meet exact baseline output (63 window cycles), drop in every disturbance (to 0 with the
+drill stopped) and are exact in all 33 judged window cycles after each; the two build orders are equal in every window cycle.** A
+full plate or steel filter stops a furnace a few ticks a window cycle in some states, with no steel lost (the sample's README).
 `clock-controls.test.ts` pins each clock against the record and checks it against its native summary.
 
 ```bash
@@ -585,19 +585,19 @@ BELT_SPEED_CAPTURE_DIR=.scratch/steel-wagon-new BELT_CLOCK_CALIBRATE=1 \
 
 `inserter-crafting-240-shared-signal-clock.game.test.ts` records the inserter build (`INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK`, 240 a second over three
 copies of 80, [inserter-crafting-240-shared-signal-clock-three-copies.scaffold](inserter-crafting-240-shared-signal-clock-three-copies.scaffold)) twice, with the protocol of the
-families above: 63 untouched periods, the ore cut at periods 66-68, the output blocked at 84-88, the circuits cut at
-104-106, the first 6 periods after a release not judged. The three copies stand in a row; the ore lines run on past the last
+families above: 63 untouched window cycles, the ore cut at window cycles 66-68, the output blocked at 84-88, the circuits cut at
+104-106, the first 6 window cycles after a release not judged. The three copies stand in a row; the ore lines run on past the last
 copy into loaders and void chests (drained and moving); the copies are not alike (the first two have a gear assembler at
 44.92, the first a fourth furnace at 91.875), and the config is the third.
 
 - `hand-made-clock-three-copies`: the hand-made clock, kept. It is one clock for the three copies: a counter of the clock signal
-  that counts 0 to 215 (a period of 216 ticks), an iron plate window on ticks 1-33 and 109-138 for the 12 ore and 12 plate
+  that counts 0 to 215 (a window cycle time of 216 ticks), an iron plate window on ticks 1-33 and 109-138 for the 12 ore and 12 plate
   inserters, an iron gear wheel window on ticks 1-65 and 109-173 for the 3 gear inserters; the circuit and output inserters
   are not wired. The test names the clock to the harness (`built_clock`: the counter's entity number in the blueprint, its
-  period and the value it starts at), and the harness records it as it records a generated one, cut at its wraps. The
-  recorder schema reads a clock that counts from 0 only when the recording names its period (the harness writes it), and then
+  wraparound value and the value it starts at), and the harness records it as it records a generated one, cut at its wraps. The
+  recorder schema reads a clock that counts from 0 only when the recording names its wraparound value (the harness writes it), and then
   checks every sample against the clock's count, so a missing signal is still refused.
-- `generated-three-copies`: the same blueprint with the hand-made clock's three combinators taken out and the generator's selected clock
+- `generated-three-copies`: the same blueprint with the hand-made clock's three combinators taken out and the generator's recommended clock
   for the config (`swings-2`, 72 ticks, 2 output swings) wired to the inserters of each copy. The test says the build holds 3
   copies (`copies: 3`; without it a build is one copy and a machine beyond the config is refused), and the harness finds them
   from the build's machines and inserters (machines that inserters move items between are one copy; belts, which the copies
@@ -605,14 +605,14 @@ copy into loaders and void chests (drained and moving); the copies are not alike
   the build warms up, as an unclocked build's do, so the furnaces have their recipes when the build is matched.
 
 [inserter-crafting-240-shared-signal-clock-controls.json](inserter-crafting-240-shared-signal-clock-controls.json) holds the 2 native summaries, recorded on Factorio 2.1.21 at commit
-`e1c0aadb`. **The hand-made clock gives 864 (288 a copy) in each of 63 periods, as a separate probe measured it, and the
-same recoveries: the ore cut 528, 0, 96 then 864 from the first judged period; the output block 80, 0, 0, 232,
-808 then 864; the circuit cut 184, 0, 356 then 864. The generated clock gives 288 in each of 63 periods of 72 ticks and is
-back at 288 in every judged period after the ore cut and the block, and after the circuit cut in all but the first judged
-period (284).** The cuts are in periods of each clock, so they last 432 ticks for the hand-made clock and 144 for the
+`e1c0aadb`. **The hand-made clock gives 864 (288 a copy) in each of 63 window cycles, as a separate probe measured it, and the
+same recoveries: the ore cut 528, 0, 96 then 864 from the first judged window cycle; the output block 80, 0, 0, 232,
+808 then 864; the circuit cut 184, 0, 356 then 864. The generated clock gives 288 in each of 63 window cycles of 72 ticks and is
+back at 288 in every judged window cycle after the ore cut and the block, and after the circuit cut in all but the first judged
+window cycle (284).** The cuts are in window cycles of each clock, so they last 432 ticks for the hand-made clock and 144 for the
 generated one: do not compare the two recoveries tick for tick. Both builds are the three copies on drained lines,
 not the one-copy scaffold of `scaffold-recordings.game.test.ts`. A drop in the first tick of a recording is not seen by it, so
-the compact count of its first period is checked less that drop (the probe counts it).
+the compact count of its first window cycle is checked less that drop (the probe counts it).
 `clock-controls.test.ts` pins the generated clock against the record, and `game-runs-hold.test.ts` checks it against its native summary. The hand-made
 clock is tied to its recording by the hash of the clock in the blueprint (`recorded.clock_basis` `built`), and the generated
 one by its pin, as in the other families.
@@ -626,16 +626,16 @@ BELT_SPEED_CAPTURE_DIR=.scratch/inserter-crafting-240-shared-signal-clock-new BE
 
 `grenade-clock.game.test.ts` records the grenade build (`GRENADE_240_FILLS_BELT_EXACTLY`, 240 a second over 7 copies, the sample's
 README) four times: on one copy (`grenade-240-fills-belt-exactly-hand-clock.blueprint`: the scaffold with the hand-made clock) and on the full build
-of seven (`grenade-240-fills-belt-exactly-full-build.blueprint`), each with the hand-made clock, kept (`built_clock`), and with the generator's selected clock
+of seven (`grenade-240-fills-belt-exactly-full-build.blueprint`), each with the hand-made clock, kept (`built_clock`), and with the generator's recommended clock
 (`planned-belt-slack`, 112 ticks), wired to the inserters and drills of every copy (`copies`) with the hand-made clock's deciders taken
-out. The protocol is the family's with three losses the build has: the foundries stopped for 2 periods, the output loader taken
-away for 30 periods and rebuilt (a copy's belt takes 6 periods of grenades before it is full, so the family's 4 would change
-nothing), and the drills stopped for 2. The probe counts the drops of the output inserters per period and per inserter and the
+out. The protocol is the family's with three losses the build has: the foundries stopped for 2 window cycles, the output loader taken
+away for 30 window cycles and rebuilt (a copy's belt takes 6 window cycles of grenades before it is full, so the family's 4 would change
+nothing), and the drills stopped for 2. The probe counts the drops of the output inserters per window cycle and per inserter and the
 ticks each waits for room on the belt.
 
 [grenade-clock-controls.json](grenade-clock-controls.json) holds the 4 native summaries; `clock-controls.test.ts`
-pins the generated clock, `game-runs-hold.test.ts` checks the runs, and `src/crafting/grenade-clock.generation.test.ts` checks the hand-made clock in the simulator. All four hold their target in every baseline period
-(64 on a copy, 448 on seven) with no wait for the belt, and get back after every loss.
+pins the generated clock, `game-runs-hold.test.ts` checks the runs, and `src/crafting/grenade-clock.generation.test.ts` checks the hand-made clock in the simulator. All four hold their target in every baseline window cycle
+(64 on a copy, 448 on seven) with no wait for the belt, and go back to it after every disturbance.
 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/grenade-new BELT_CLOCK_CALIBRATE=1 \
@@ -644,24 +644,24 @@ BELT_SPEED_CAPTURE_DIR=.scratch/grenade-new BELT_CLOCK_CALIBRATE=1 \
 
 ## the utility science 480 build
 
-`utility-science-480-lds-foundry-chain-clock.game.test.ts` records the generator's selected clock for `UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN` (480 utility science packs a second
-over 3.5 copies; the scaffold is one copy, 137.14 a second, 384 packs in a period of 168 ticks) on the sample's scaffold. The clock is
+`utility-science-480-lds-foundry-chain-clock.game.test.ts` records the generator's recommended clock for `UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN` (480 utility science packs a second
+over 3.5 copies; the scaffold is one copy, 137.14 a second, 384 packs in a window cycle of 168 ticks) on the sample's scaffold. The clock is
 `planned-belt-slack`: the windows of `src/crafting/candidates/round-robin-polling.ts` (hands rounded up where they are fractional, the
-order of the chain of machines), made without a search. The harness wires it to the inserters of the cell. The protocol is the
-family's with the losses the cell has: 63 whole periods, then the coal cut for 6 periods (the cell holds about two periods of it),
-the two output loaders taken away for 4 periods and rebuilt, and the processing units cut for 2. The probe counts the drops of the
-eight output inserters per period.
+order of the chain of machines), made without a search. The harness wires it to the inserters of the build. The protocol is the
+family's with the losses the build has: 63 whole window cycles, then the coal cut for 6 window cycles (the build holds about two window cycles of it),
+the two output loaders taken away for 4 window cycles and rebuilt, and the processing units cut for 2. The probe counts the drops of the
+eight output inserters per window cycle.
 
 [utility-science-480-lds-foundry-chain-clock-controls.json](utility-science-480-lds-foundry-chain-clock-controls.json) holds the native summary and the pin of the clock
-(`clock-controls.test.ts` checks the pin, `game-runs-hold.test.ts` the run): 384 in all 63 baseline periods, and 384 again after each loss.
+(`clock-controls.test.ts` checks the pin, `game-runs-hold.test.ts` the run): 384 in all 63 baseline window cycles, and 384 again after each loss.
 
 Thaeln's own clock for the build, given on 2026-10-23, was recorded on the same scaffold while the rule was written (it is a
 blueprint of five combinators with no wires to inserters, so the harness wired it): a counter of 0 to 335 (336 ticks, two cycles) and four
 window combinators, each outputting the signal of the item the inserters it switches move (utility science pack for the 8 output
 inserters, processing unit for the 8 that take units and frames off the belts, low density structure for the 8 between foundries
 and machines, plastic bar for the 4 between the cryogenic plant and the foundries). **The coal inserter has no signal and is not
-on the clock: it runs all the time.** It makes 768 packs in every one of 107 periods and gets back from a cut of the coal, the output
-and the units (184.8 wake-ups a minute by the series' method, 211.8 in the simulator). It is evidence and a benchmark for the rule, not
+on the clock: it runs all the time.** It makes 768 packs in every one of 107 window cycles and gets back from a cut of the coal, the output
+and the units (184.8 wakeups a minute by the series' method, 211.8 in the simulator). It is evidence and a benchmark for the rule, not
 a control of this family.
 
 ```bash
@@ -671,20 +671,20 @@ BELT_SPEED_CAPTURE_DIR=.scratch/utility-science-480-lds-foundry-chain-new BELT_C
 
 ## The productivity module chain
 
-`productivity-module-80-chest-chain-clock.game.test.ts` records the generator's selected clock for `PRODUCTIVITY_MODULE_80_CHEST_CHAIN` (80 productivity
-modules a second over 6 copies; the scaffold is one copy, 13.33 a second, 16 modules in a period of 72 ticks) on the sample's scaffold.
+`productivity-module-80-chest-chain-clock.game.test.ts` records the generator's recommended clock for `PRODUCTIVITY_MODULE_80_CHEST_CHAIN` (80 productivity
+modules a second over 6 copies; the scaffold is one copy, 13.33 a second, 16 modules in a window cycle of 72 ticks) on the sample's scaffold.
 The clock is `planned-belt-slack`: the windows of `src/crafting/candidates/round-robin-polling.ts` (hands rounded up where they are fractional,
 the order of the chain of machines), made without a search. The harness wires it to the 14 inserters of the build. The protocol is the
-family's with the losses the build has, each long enough to be felt, since the build holds stock: 63 whole periods, then the coal
-cut for 40 periods (the inserter that puts the coal on the belt is switched off and the belt emptied; the output first falls short
-about 33 periods in), the output loader taken away for 24 (the output belt takes about 11 periods of modules before it is full) and
+family's with the losses the build has, each long enough to be felt, since the build holds stock: 63 whole window cycles, then the coal
+cut for 40 window cycles (the inserter that puts the coal on the belt is switched off and the belt emptied; the output first falls short
+about 33 window cycles in), the output loader taken away for 24 (the output belt takes about 11 window cycles of modules before it is full) and
 rebuilt, and the two foundries casting iron stopped for 26 (the output falls short after about 13). The probe counts the drops of
-the output inserter per period.
+the output inserter per window cycle.
 
 [productivity-module-80-chest-chain-clock-controls.json](productivity-module-80-chest-chain-clock-controls.json) holds the native summary and the pin of the clock
-(`clock-controls.test.ts` checks the pin, `game-runs-hold.test.ts` the run): 16 in all 63 baseline periods, and 16 again after each loss.
-Recorded for 36,000 ticks after the warm-up and settle with `scripts/record-clock.js`, the same clock made 16 in all 499 periods,
-with 602.8 wake-ups a minute against the simulator's 575.6, and the simulator laid against the game entity by entity had no issues;
+(`clock-controls.test.ts` checks the pin, `game-runs-hold.test.ts` the run): 16 in all 63 baseline window cycles, and 16 again after each loss.
+Recorded for 36,000 ticks after the warm-up and settle with `scripts/record-clock.js`, the same clock made 16 in all 499 window cycles,
+with 602.8 wakeups a minute against the simulator's 575.6, and the simulator laid against the game entity by entity had no issues;
 the clock made for "Backed-up belts" did the same. The clock before the rule ranked its placements (staged, the first that held)
 had 858.5 in the game and 843.8 in the simulator.
 

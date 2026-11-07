@@ -29,8 +29,8 @@ Release the work that you merged while `RELEASE_HOLD` was `true`: the clock gene
 
    No workflow starts. A change of the variable does not start a workflow.
 
-CAUTION: Start the workflow only from the `master` branch. A start from a different branch can release and deploy that
-branch. Issue [#657](https://github.com/abucnasty/clock-generator/issues/657) records this problem.
+NOTE: The workflow publishes only from `master`. A start from a different branch does the tests and does not
+release or deploy.
 
 4. Start `release.yml` on `master`.
 
@@ -41,8 +41,8 @@ branch. Issue [#657](https://github.com/abucnasty/clock-generator/issues/657) re
    The workflow does the tests first. Then the `release` job makes the GitHub release of the held version and its tag.
    The `production` job deploys the tag to production.
 
-CAUTION: Start the workflow only from the `master` branch. A start from a different branch can upload the sidecar of
-that branch. Issue [#657](https://github.com/abucnasty/clock-generator/issues/657) records this problem.
+NOTE: The workflow publishes only from `master`. A start from a different branch does the tests and does not
+upload the sidecar.
 
 5. Start `publish-sidecar.yml` on `master`. A push starts it only when the push changes `clock-generator-sidecar/`.
 

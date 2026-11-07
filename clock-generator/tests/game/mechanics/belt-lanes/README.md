@@ -1,6 +1,6 @@
 # Belt lane recording
 
-`belt-lanes.game.test.ts` records the automation-science cell and checks drop-lane identity, occupancy and room
+`belt-lanes.game.test.ts` records the automation-science build and checks drop-lane identity, occupancy and room
 at each tick. `near-lane.game.test.ts` uses the utility science 480 build, where two belts carry processing units and robot
 frames on opposite lanes. Their inserters must retain the processing-unit lane associated with their own belt.
 
