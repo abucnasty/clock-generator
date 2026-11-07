@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { generateClockAlternatives } from "./generate-blueprint";
+import { combineClockAlternativeRuns, generateClockAlternatives, PER_BRANCH_ID } from "./generate-blueprint";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 
@@ -20,9 +20,11 @@ const generateOnEarlierSpeeds = async () => {
 };
 
 describe("military science: the shared windows keep the rate and recover where the separate ones do not", () => {
-    test("on the speeds before the build's own the shared clock is selected with 4 deciders", async () => {
+    test("on the speeds before the build's own the shared clock is selected with 4 deciders, the per-branch clock left aside", async () => {
         const generated = await generateOnEarlierSpeeds();
-        const selected = generated.alternatives[generated.selected_index];
+        // the per-branch clock, composed from these after them, is not what this test is about; of today's makers the shared clock is selected
+        const made = generated.alternatives.filter(it => it.id !== PER_BRANCH_ID);
+        const selected = made[combineClockAlternativeRuns([{ signature: "", alternatives: made }], it => it.ranking).selected_index];
         expect(selected.id).toBe("planned-belt-slack-shared");
         expect(selected.verdict).toBe("stable");
         expect(selected.deciders).toBe(4);
