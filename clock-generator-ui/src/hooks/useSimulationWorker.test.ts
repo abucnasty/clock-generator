@@ -78,7 +78,7 @@ function checkOnNewWorker(index: number) {
 }
 
 /** A task of a plan, which runs on every build unless the fields say otherwise */
-const task = (id: string, label: string, fields: Pick<Partial<ClockAlternativeTask>, 'only_when_needed' | 'fallback'> = {}): ClockAlternativeTask =>
+const task = (id: string, label: string, fields: Pick<Partial<ClockAlternativeTask>, 'only_when_needed' | 'fallback' | 'per_branch'> = {}): ClockAlternativeTask =>
     ({ id, label, only_when_needed: false, ...fields });
 const twoTasks = [task('one', 'One'), task('two', 'Two')];
 const remaining = task('remaining', 'Remaining');
@@ -353,6 +353,46 @@ describe('tasks alongside the primary alternative', () => {
             expect(requested()).toEqual(['derived']);
             finish('derived', selectionClock('derived', 1));
             expect(requested()).toEqual(['derived']);
+            expect(latest().isRunning).toBe(false);
+            expect(latest().skippedSearches).toEqual([]);
+        });
+    });
+
+    describe('the per-branch clock', () => {
+        const perBranch = task('per-branch', 'Coordinated parts', { per_branch: true });
+        const part = (alternative_id: string) => ({ name: alternative_id, alternative_id, verdict: 'stable' as const, period_ticks: 10,
+            windows: { 'inserter:1': [{ start: 0, end: alternative_id.length }] }, counted: true });
+
+        it('runs last, after the searches, with the parts of every run and the clock they recommend, and is not a skipped search', async () => {
+            await initialize();
+            generate();
+            const runId = answerPlan([task('one', 'One'), task('derived', 'Observed windows', { only_when_needed: true }), perBranch]);
+            const requests = () => workers.flatMap(w => w.requests('task')).filter(m => m.runId === runId);
+            expect(requests().map(m => m.taskId)).toEqual(['one']);
+            finishTask(runId, 'one', { signature: 'one', alternatives: [selectionClock('one', 3)], parts: [part('one')] });
+            expect(requests().map(m => m.taskId)).not.toContain('per-branch');
+            // the search that waits runs or is left out first; only then the per-branch clock
+            if (requests().some(m => m.taskId === 'derived')) {
+                expect(requests().map(m => m.taskId)).not.toContain('per-branch');
+                finishTask(runId, 'derived', null);
+            }
+            const sent = requests().find(m => m.taskId === 'per-branch');
+            expect(sent?.perBranch).toEqual({ recommended_id: 'one', parts: [part('one')] });
+            expect(sent?.assessedSignatures).toContain('one');
+            finishTask(runId, 'per-branch', { signature: 'per-branch', alternatives: [selectionClock('per-branch', 1)] });
+            const done = latest();
+            expect(done.isRunning).toBe(false);
+            expect(done.skippedSearches).not.toContain('Coordinated signal system');
+            expect(done.alternatives.map(it => it.id)).toEqual(['one', 'per-branch']);
+            expect(done.alternatives[done.selectedAlternativeIndex].id).toBe('per-branch');
+        });
+
+        it('is not run where no clock was made to start from', async () => {
+            await initialize();
+            generate();
+            const runId = answerPlan([task('one', 'One'), perBranch]);
+            finishTask(runId, 'one', null);
+            expect(workers.flatMap(w => w.requests('task')).filter(m => m.runId === runId).map(m => m.taskId)).toEqual(['one']);
             expect(latest().isRunning).toBe(false);
             expect(latest().skippedSearches).toEqual([]);
         });

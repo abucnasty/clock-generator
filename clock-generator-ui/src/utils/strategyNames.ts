@@ -91,6 +91,16 @@ export const FAMILY_COPY: Record<StrategyFamily, FamilyCopy> = {
         practice: 'Pitch is the time needed in a production area to make one container of products. Here the container is a full hand. '
             + 'Source: Lean Enterprise Institute, Lean Lexicon, "Pitch" (https://www.lean.org/lexicon-terms/pitch/).',
     },
+    'per-branch': {
+        name: 'Coordinated signal system',
+        line: 'Each part of the build gets the enable window rule that fits it, all on one shared window cycle.',
+        definition: 'The inserters that take from one machine, belt or chest are one part. Each part takes its enable windows from one of the other clocks made for the build. '
+            + 'All parts share one window cycle: the window cycle of the recommended clock. '
+            + 'The parts are chosen one at a time, from the output upstream, by the wakeups of the whole clock.',
+        practice: 'Traffic signals along a road work together in a coordination plan. All signals of the plan use the same cycle length. '
+            + 'The split and the offset are set for each intersection. '
+            + 'Source: FHWA, Traffic Signal Timing Manual, sections 6.3.1, 6.3.3 and 6.3.4 (https://ops.fhwa.dot.gov/publications/fhwahop08024/chapter6.htm).',
+    },
     'exhaust': {
         name: 'Exhaust',
         line: 'Clears byproducts out of the machine that makes them.',
@@ -225,6 +235,7 @@ export function pendingClockName(task: { id: string; label: string }): string {
         'shifted-swings': 'signal-offset',
         'full-hand': 'pitch-pickups',
         'primitive-grouped': 'round-robin-polling',
+        'per-branch': 'per-branch',
     };
     const family = names[task.id];
     if (family) return FAMILY_COPY[family].name;

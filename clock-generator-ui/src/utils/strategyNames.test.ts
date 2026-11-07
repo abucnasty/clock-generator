@@ -22,7 +22,7 @@ describe('strategyNameOf and familyCopyOf', () => {
 
     it('has a name, a line, a definition and a practice for every family, and no old name', () => {
         const families = Object.keys(FAMILY_COPY) as StrategyFamily[];
-        expect(families).toHaveLength(9);
+        expect(families).toHaveLength(10);
         for (const family of families) {
             const copy = FAMILY_COPY[family];
             for (const text of Object.values(copy)) expect(text.length).toBeGreaterThan(0);
@@ -81,6 +81,7 @@ describe('pendingClockName', () => {
         expect(pendingClockName({ id: 'derived', label: 'Observed windows' })).toBe('Time-study windows');
         expect(pendingClockName({ id: 'full-hand', label: 'Full-hand output swings' })).toBe('Pitch pickups');
         expect(pendingClockName({ id: 'primitive-grouped', label: 'Small batches' })).toBe('Round-robin polling');
+        expect(pendingClockName({ id: 'per-branch', label: 'Coordinated parts' })).toBe('Coordinated signal system');
     });
 
     it('names a count of output swings by the count alone, as its family is known only after the run', () => {

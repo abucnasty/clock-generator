@@ -170,7 +170,8 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
     }));
     // the same clock made with shared windows, listed after it
     const also = run.also?.flatMap(it => toRunView(it, config) ?? []);
-    return { signature: run.signature, alternatives, ...(also?.length ? { also } : {}) };
+    // the clocks the run made, for the per-branch clock that is made from them
+    return { signature: run.signature, alternatives, ...(also?.length ? { also } : {}), ...(run.parts !== undefined && { parts: run.parts }) };
 }
 
 /** Runs one plan or task with streamed logs and progress; errors are posted instead of thrown */
@@ -485,11 +486,15 @@ function handleTask(
     context: import('clock-generator/browser').ClockAlternativeContext,
     taskId: string,
     assessedSignatures: string[] = [],
+    perBranch?: import('clock-generator/browser').PerBranchInput,
 ): void {
     runStreaming(runId, config, debugSteps, streamLogs, (options) => {
         requireValidConfig(config);
         const notMade: NotMadeClock[] = [];
-        const run = clockGenerator.runClockAlternativeTask(config, context, taskId, { ...options, on_not_made: clock => notMade.push(clock) }, assessedSignatures);
+        // the per-branch clock is made from the parts of the runs before it, not from the context
+        const run = perBranch !== undefined
+            ? clockGenerator.runPerBranchTask(config, perBranch, options, assessedSignatures)
+            : clockGenerator.runClockAlternativeTask(config, context, taskId, { ...options, on_not_made: clock => notMade.push(clock) }, assessedSignatures);
         return { type: 'task-completed', runId, taskId, run: toRunView(run, config), notMade };
     });
 }
@@ -528,7 +533,7 @@ ctx.onmessage = async (event: MessageEvent<WorkerRequest>) => {
             handlePlan(request.runId, request.config, request.debugSteps, request.streamLogs);
             break;
         case 'task':
-            handleTask(request.runId, request.config, request.debugSteps, request.streamLogs, request.context, request.taskId, request.assessedSignatures);
+            handleTask(request.runId, request.config, request.debugSteps, request.streamLogs, request.context, request.taskId, request.assessedSignatures, request.perBranch);
             break;
         case 'query':
             handleQuery(request.requestId, request.query);

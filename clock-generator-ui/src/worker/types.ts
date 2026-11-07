@@ -2,6 +2,7 @@ import type { InternalError } from '../utils/internalError';
 import type { ValidationDiagnostic } from '../utils/buildValidation';
 import type { z } from 'zod';
 import type {
+    PerBranchInput,
     AlwaysOnReasons,
     AsBuiltStabilityCheck,
     BeltConfigSchema,
@@ -246,6 +247,8 @@ export interface TaskRequest {
     taskId: string;
     /** Signatures of clocks other runs assess (see PlannedResponse.primarySignature) */
     assessedSignatures?: string[];
+    /** For the per-branch clock's task: the parts of every run before it and the clock they recommend */
+    perBranch?: PerBranchInput;
 }
 
 /**
