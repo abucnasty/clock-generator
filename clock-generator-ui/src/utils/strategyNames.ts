@@ -93,9 +93,9 @@ export const FAMILY_COPY: Record<StrategyFamily, FamilyCopy> = {
     },
     'per-branch': {
         name: 'Coordinated signal system',
-        line: 'Each part gets the enable window rule that fits it, on one shared window cycle.',
-        definition: 'A part is the inserters that take from one machine, belt or chest. Each part uses the enable windows of one other clock made for the build. '
-            + 'All parts use the window cycle of the recommended clock. The generator sets the parts one at a time, from the output upstream. '
+        line: 'The inserters of each source get their own enable windows, on one shared window cycle.',
+        definition: 'A source is a machine, belt or chest that inserters take from. The inserters of one source use the enable windows of one other clock made for the build. '
+            + 'All sources use the window cycle of the recommended clock. The generator sets the sources one at a time, from the output upstream. '
             + 'It keeps the setting with the smallest number of wakeups for the full clock.',
         practice: 'Traffic signals along a road work together in a coordination plan. All signals of the plan use the same cycle length. '
             + 'The split and the offset are set for each intersection. '

@@ -81,7 +81,7 @@ describe('pendingClockName', () => {
         expect(pendingClockName({ id: 'derived', label: 'Observed windows' })).toBe('Time-study windows');
         expect(pendingClockName({ id: 'full-hand', label: 'Full-hand output swings' })).toBe('Pitch pickups');
         expect(pendingClockName({ id: 'primitive-grouped', label: 'Small batches' })).toBe('Round-robin polling');
-        expect(pendingClockName({ id: 'per-branch', label: 'Coordinated parts' })).toBe('Coordinated signal system');
+        expect(pendingClockName({ id: 'per-branch', label: 'Coordinated sources' })).toBe('Coordinated signal system');
     });
 
     it('names a count of output swings by the count alone, as its family is known only after the run', () => {

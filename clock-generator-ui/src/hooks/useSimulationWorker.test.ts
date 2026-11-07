@@ -359,7 +359,7 @@ describe('tasks alongside the primary alternative', () => {
     });
 
     describe('the per-branch clock', () => {
-        const perBranch = task('per-branch', 'Coordinated parts', { per_branch: true });
+        const perBranch = task('per-branch', 'Coordinated sources', { per_branch: true });
         const part = (alternative_id: string) => ({ name: alternative_id, alternative_id, verdict: 'stable' as const, period_ticks: 10,
             windows: { 'inserter:1': [{ start: 0, end: alternative_id.length }] }, counted: true });
 
