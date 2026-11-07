@@ -8,6 +8,10 @@ a line that names the reason and lists the jobs. A pull request that moves no re
 CI checks this file: the "Record check" fails when a selected clock got worse than in the base and its job key is not in the lines the pull
 request adds to this file.
 
+## Record and harness name the window cycle (#710)
+The record format is clock-record-2: the `period` key of each alternative is now `window_cycle_ticks`. No selection, rate, window, wakeup or `clock_sha256` moved.
+- all 86 jobs: the format and the key
+
 ## Release 0.28.0 (release/0-28-0)
 Every clock blueprint carries the engine's version, so the `text_sha256` of each clock moves with the bump from 0.27.2 to 0.28.0. No selection, rate, window or wakeup moved.
 - all 86 jobs: `text_sha256` of every clock, for the version in the blueprint text
