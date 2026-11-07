@@ -47,7 +47,7 @@ const bigBuild = (): Config => ({
                 },
             },
         },
-        { source: { type: 'machine', id: 2 }, sink: { type: 'machine', id: 1 }, stack_size: 12, overrides: { enable_control: { mode: 'CLOCKED', ranges: [{ start: 10, end: 90 }], period_duration_ticks: 600 } } },
+        { source: { type: 'machine', id: 2 }, sink: { type: 'machine', id: 1 }, stack_size: 12, overrides: { enable_control: { mode: 'CLOCKED', ranges: [{ start: 10, end: 90 }], window_cycle_ticks: 600 } } },
     ],
     belts: [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }] }],
     chests: [
@@ -65,7 +65,7 @@ function generatedBuild(inserters: number): Config {
         source: { type: 'machine', id: (i % build.machines.length) + 1 },
         sink: { type: 'chest', id: 1 },
         stack_size: (i % 16) + 1,
-        overrides: { enable_control: { mode: 'CLOCKED', ranges: [{ start: i * 7, end: i * 7 + 13 + (i % 5) }], period_duration_ticks: 600 + i } },
+        overrides: { enable_control: { mode: 'CLOCKED', ranges: [{ start: i * 7, end: i * 7 + 13 + (i % 5) }], window_cycle_ticks: 600 + i } },
     })) as unknown as Config['inserters'];
     return build;
 }
@@ -220,6 +220,32 @@ describe('share links made before the setpoint and the kick start were named so'
         if (old.kind !== 'build') throw new Error('Expected a decoded build');
         const current = { ...smallBuild(), overrides: { kick_start_items: 50 } };
         expect(ConfigSchema.parse(old.config)).toEqual(ConfigSchema.parse(current));
+    });
+});
+
+describe('share links made before the window cycle time was named so', () => {
+    /** A link as the site made it before: a Clocked override of an inserter carries `period_duration_ticks` */
+    const formerLink = async () => {
+        const build = smallBuild();
+        build.inserters = [{ ...build.inserters[0], overrides: { enable_control: { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }], period_duration_ticks: 120 } } }] as unknown as Config['inserters'];
+        return linkTo(build, 'An old link');
+    };
+
+    it('still opens: the build loads with its window cycle time, and nothing is left under the old name', async () => {
+        const decoded = await decodeShareLink(await formerLink());
+        if (decoded.kind !== 'build') throw new Error(`Expected a decoded build, not ${decoded.problem}`);
+        const file = readConfigFile(JSON.stringify(decoded.config));
+        const parsed = parseFormConfig(ConfigSchema, file);
+        expect(parsed.success).toBe(true);
+        const control = parsed.data!.inserters[0].overrides?.enable_control;
+        expect(control).toEqual({ mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }], window_cycle_ticks: 120 });
+        expect(JSON.stringify(file)).not.toContain('period_duration_ticks');
+    });
+
+    it('is read by the schema without the file reader as well', async () => {
+        const decoded = await decodeShareLink(await formerLink());
+        if (decoded.kind !== 'build') throw new Error('Expected a decoded build');
+        expect(ConfigSchema.parse(decoded.config).inserters[0].overrides?.enable_control).toMatchObject({ window_cycle_ticks: 120 });
     });
 });
 

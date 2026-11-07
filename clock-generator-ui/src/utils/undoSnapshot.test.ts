@@ -31,7 +31,7 @@ function form(): ConfigFormData {
         ...config,
         inserters: [
             inserter(1, { source: { type: 'belt', id: 1, near_lane: 1 }, sink: { type: 'machine', id: 3 }, stack_size: 16,
-                overrides: { enable_control: { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }], period_duration_ticks: 60 } } }),
+                overrides: { enable_control: { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }], window_cycle_ticks: 60 } } }),
             inserter(2, { source: { type: 'machine', id: 3 }, sink: { type: 'chest', id: 2 }, stack_size: 16 }),
             inserter(3, { source: { type: 'machine', id: 1 }, sink: { type: 'machine', id: 2 }, stack_size: 16, overrides: { enable_control: { mode: 'ALWAYS' } }, _forced_always: true }),
         ],

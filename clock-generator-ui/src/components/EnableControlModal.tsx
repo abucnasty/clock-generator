@@ -320,7 +320,7 @@ export function EnableControlFormContent({
         setMode(copied.mode);
         if (copied.mode === EnableControlMode.CLOCKED) {
             setRanges(copied.ranges.length > 0 ? draftWindowsOf(copied.ranges) : [{ ...EMPTY_WINDOW }]);
-            setWindowCycleDuration(copied.period_duration_ticks?.toString() || '');
+            setWindowCycleDuration(copied.window_cycle_ticks?.toString() || '');
         } else if (copied.mode === EnableControlMode.CONDITIONAL) {
             setRuleSet(copied.rule_set || createDefaultRuleSet());
             setLatchEnabled(!!copied.latch);

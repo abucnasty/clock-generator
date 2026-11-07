@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
-import { ChestType, dropFractionalSwingsOverride, migrateBeltSupplyOverrides, migrateMiningProductivityLevel, renameLoopSeedItemsToKickStart, renameTargetOutputToSetpoint } from 'clock-generator/light';
+import { ChestType, dropFractionalSwingsOverride, migrateBeltSupplyOverrides, migrateMiningProductivityLevel, renameClockedPeriodInConfig, renameLoopSeedItemsToKickStart, renameTargetOutputToSetpoint } from 'clock-generator/light';
 import { askEngine } from '../worker/engineClient';
 import {
     backupKey,
@@ -80,12 +80,15 @@ function migrateChests(chests: unknown[]): ChestFormData[] {
     });
 }
 
-/** A config with the names it had before: the setpoint was `target_output`, and the kick start `loop_seed_items` of the overrides (the schema reads them too) */
+/**
+ * A config with the names it had before: the setpoint was `target_output`, the kick start `loop_seed_items` of the overrides, and the
+ * window cycle time of a Clocked override `period_duration_ticks` (the schema reads them too)
+ */
 // a file or saved form is read by the shape it has, before any check: no type holds all the shapes it had
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function readFormerNames(parsed: unknown): any {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const config = renameTargetOutputToSetpoint(parsed) as any;
+    const config = renameClockedPeriodInConfig(renameTargetOutputToSetpoint(parsed)) as any;
     return typeof config?.overrides === 'object' && config.overrides !== null
         ? { ...config, overrides: renameLoopSeedItemsToKickStart(config.overrides) } : config;
 }

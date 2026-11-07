@@ -11,7 +11,7 @@ const ctx = { itemLabel: named, cycleTicks: 132 };
 const clocked = (ranges: { start: number; end: number }[], window_cycle_ticks?: number): EnableControlOverride => ({
     mode: 'CLOCKED',
     ranges,
-    ...(window_cycle_ticks !== undefined && { period_duration_ticks: window_cycle_ticks }),
+    ...(window_cycle_ticks !== undefined && { window_cycle_ticks: window_cycle_ticks }),
 });
 
 /** The electromagnetic-science sample's Inserter 2 */

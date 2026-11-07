@@ -331,7 +331,7 @@ export function otherTakerOrdersOf(config: Config, windows: Map<string, OpenRang
         const id = EntityId.forInserter(inserter.id ?? index + 1).id;
         const control = inserter.overrides?.enable_control;
         if (control?.mode === "NEVER") { enabled_at.set(id, new Uint8Array(ticks)); return; }
-        if (control?.mode !== "CLOCKED" || (control.period_duration_ticks !== undefined && control.period_duration_ticks !== window_cycle_ticks)) {
+        if (control?.mode !== "CLOCKED" || (control.window_cycle_ticks !== undefined && control.window_cycle_ticks !== window_cycle_ticks)) {
             // always enabled, or on a clock of its own modulus: it can meet the others at any tick
             enabled_at.set(id, null);
             return;
@@ -1741,7 +1741,7 @@ export function buildAsBuiltConfig(
             return fuel_clock === undefined ? { mode: "AUTO" } : {
                 mode: "CLOCKED",
                 ranges: [{ start: fuel_clock.window.start_inclusive, end: fuel_clock.window.end_inclusive }],
-                period_duration_ticks: fuel_clock.modulus,
+                window_cycle_ticks: fuel_clock.modulus,
                 decider_build_order: decider_build_order.get(entity_key),
             };
         }
@@ -1749,7 +1749,7 @@ export function buildAsBuiltConfig(
         if (ranges && ranges.length > 0) {
             // moved by the latency: the clock's start leaves as many ticks dark (a fuel clock of its own, above, is moved
             // by none, so nothing of its start is dark)
-            return { mode: "CLOCKED", ranges, period_duration_ticks: window_cycle_ticks, decider_build_order: decider_build_order.get(entity_key),
+            return { mode: "CLOCKED", ranges, window_cycle_ticks: window_cycle_ticks, decider_build_order: decider_build_order.get(entity_key),
                 latency_ticks: CIRCUIT_LATENCY_TICKS };
         }
         return current?.mode === "NEVER" ? current : { mode: "ALWAYS" };

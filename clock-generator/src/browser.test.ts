@@ -81,6 +81,7 @@ describe("the light entry", () => {
             "config/migrate-kick-start.ts",
             "config/migrate-mining-productivity.ts",
             "config/migrate-setpoint.ts",
+            "config/migrate-window-cycle.ts",
             "crafting/candidates/coordinated-sources-parts.ts",
             "crafting/rank.ts",
             "crafting/sequence/compact-history.ts",

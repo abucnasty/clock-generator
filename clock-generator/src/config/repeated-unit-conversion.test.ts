@@ -77,7 +77,7 @@ describe('complete repeated-unit conversion', () => {
                 { id: i * 3 + 1, source: { type: 'chest' as const, id: 7 }, sink: { type: 'machine' as const, id: i + 1 }, filters: ['coal'], overrides: { enable_control: { mode: 'ALWAYS' as const } } },
                 { id: i * 3 + 2, source: { type: 'machine' as const, id: i + 1 }, sink: { type: 'chest' as const, id: i + 1 }, filters: ['iron-plate'] },
                 { id: i * 3 + 3, source: { type: 'chest' as const, id: i + 1 }, sink: { type: 'belt' as const, id: 1 }, filters: ['iron-plate'], overrides: { animation: { pickup_duration_ticks: 10 },
-                    enable_control: { mode: 'CLOCKED' as const, ranges: [{ start: 0, end: 10 }, { start: 20, end: 30 }], period_duration_ticks: 40 } } },
+                    enable_control: { mode: 'CLOCKED' as const, ranges: [{ start: 0, end: 10 }, { start: 20, end: 30 }], window_cycle_ticks: 40 } } },
             ]).flat(), overrides: { backed_up_belts: false, ignored_lcm_ingredients: ['coal'], kick_start_items: 0 },
         } as Config;
         const plan = planRepeatedUnitConversion(source);

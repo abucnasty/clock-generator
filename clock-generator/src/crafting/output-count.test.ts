@@ -19,13 +19,13 @@ const runAsBuilt = async (output_window_start: number) => {
         ...config,
         inserters: config.inserters.map(inserter => ({
             ...inserter,
-            overrides: { enable_control: { mode: "CLOCKED" as const, ranges: window(output_window_start, output_window_start + 33), period_duration_ticks: window_cycle_ticks } },
+            overrides: { enable_control: { mode: "CLOCKED" as const, ranges: window(output_window_start, output_window_start + 33), window_cycle_ticks: window_cycle_ticks } },
         })),
         drills: {
             ...config.drills!,
             configs: config.drills!.configs.map(drill => ({
                 ...drill,
-                overrides: { enable_control: { mode: "CLOCKED" as const, ranges: [{ start: 1, end: 5 }], period_duration_ticks: window_cycle_ticks } },
+                overrides: { enable_control: { mode: "CLOCKED" as const, ranges: [{ start: 1, end: 5 }], window_cycle_ticks: window_cycle_ticks } },
             })),
         },
     };

@@ -46,7 +46,7 @@ export function enableControlDraftOf(current?: EnableControlOverride, planned?: 
     return {
         mode: current?.mode ?? EnableControlMode.AUTO,
         ranges: clocked ? draftWindowsOf(clocked.ranges) : fromPlan ? draftWindowsOf(fromPlan.ranges) : [{ ...EMPTY_WINDOW }],
-        windowCycleDuration: clocked?.period_duration_ticks?.toString() ?? (fromPlan ? `${fromPlan.windowCycleTicks}` : ''),
+        windowCycleDuration: clocked?.window_cycle_ticks?.toString() ?? (fromPlan ? `${fromPlan.windowCycleTicks}` : ''),
         ruleSet: conditional?.rule_set ?? createDefaultRuleSet(),
         latchEnabled: !!conditional?.latch,
         releaseCondition: conditional?.latch?.release,
@@ -85,7 +85,7 @@ export function buildEnableControlOverride(draft: EnableControlDraft): EnableCon
             const override: EnableControlOverride = { mode: EnableControlMode.CLOCKED, ranges };
             const window_cycle_ticks = repeatTicksOf(draft.windowCycleDuration);
             if (window_cycle_ticks !== null) {
-                override.period_duration_ticks = window_cycle_ticks;
+                override.window_cycle_ticks = window_cycle_ticks;
             }
             return override;
         }

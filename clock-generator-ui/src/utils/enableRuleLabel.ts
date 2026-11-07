@@ -101,8 +101,8 @@ export function describeEnableRule(
                 const text = `${MODE_CLOCKED}${NO_RANGES}`;
                 return { mode, quiet, chip: cut(text), summary: text };
             }
-            const window_cycle = override.period_duration_ticks && override.period_duration_ticks > 0
-                ? `${WINDOW_CYCLE_JOINER}${override.period_duration_ticks}`
+            const window_cycle = override.window_cycle_ticks && override.window_cycle_ticks > 0
+                ? `${WINDOW_CYCLE_JOINER}${override.window_cycle_ticks}`
                 : '';
             return {
                 mode,

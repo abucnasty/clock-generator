@@ -12,7 +12,7 @@ import {
 const ruleSet = { operator: 'OR', rules: [] } as unknown as RuleSet;
 const release = { operator: 'AND', rules: [] } as unknown as RuleSet;
 
-const clocked: EnableControlOverride = { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }, { start: 20, end: 30 }], period_duration_ticks: 60 };
+const clocked: EnableControlOverride = { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }, { start: 20, end: 30 }], window_cycle_ticks: 60 };
 const clockedWindows = [{ start: '0', end: '10' }, { start: '20', end: '30' }];
 const conditional: EnableControlOverride = { mode: 'CONDITIONAL', rule_set: ruleSet, latch: { release } };
 
@@ -62,10 +62,10 @@ describe('buildEnableControlOverride', () => {
         { why: 'a stored CLOCKED rule as it is', draft: clockedDraft, saved: clocked },
         { why: 'a CLOCKED window of one tick, leaving out one that ends before it starts',
             draft: { ...clockedDraft, ranges: [{ start: '0', end: '10' }, { start: '5', end: '5' }, { start: '9', end: '3' }] },
-            saved: { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }, { start: 5, end: 5 }], period_duration_ticks: 60 } },
+            saved: { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }, { start: 5, end: 5 }], window_cycle_ticks: 60 } },
         { why: 'no CLOCKED window with an empty or unwhole field, never making a value up',
             draft: { ...clockedDraft, ranges: [{ start: '', end: '10' }, { start: '1.5', end: '3' }, { start: ' 4 ', end: '6' }] },
-            saved: { mode: 'CLOCKED', ranges: [{ start: 4, end: 6 }], period_duration_ticks: 60 } },
+            saved: { mode: 'CLOCKED', ranges: [{ start: 4, end: 6 }], window_cycle_ticks: 60 } },
         ...['', '0', '-5', 'abc', '1.5'].map((windowCycleDuration): Saving => ({ why: `no CLOCKED period of ${JSON.stringify(windowCycleDuration)}`,
             draft: { ...clockedDraft, windowCycleDuration }, saved: { mode: 'CLOCKED', ranges: clocked.ranges } })),
         { why: 'a CONDITIONAL rule with its latch', draft: conditionalDraft, saved: conditional },
