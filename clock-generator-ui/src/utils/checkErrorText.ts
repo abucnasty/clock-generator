@@ -1,7 +1,7 @@
 import { formatNumberText } from './numberText';
 import type { TargetCounts } from './targetCounts';
 
-/** The engine's message when the machines cannot make the target rate (`plan-run.ts`), with its two numbers */
+/** The engine's message when the machines cannot make the target rate (`unclocked-run.ts`), with its two numbers */
 const CANNOT_MEET_RATE = /The current configuration cannot meet the target production rate\. Total output capacity is ([-\d.eE+]+) items\/second, but target production rate is ([-\d.eE+]+) items\/second\./;
 
 /** What the page says instead of the engine's words, with what to do next */

@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { observedWindowsClock } from "./observed-windows";
+import { timeStudyWindowsClock } from "./time-study-windows";
 import { generateClockWithSwingBackoff } from "../generate-clock";
 import { pickupClockCase, pickupClockConfig } from "../../../tests/game/builds/pickup-clock-speed-coverage";
 
@@ -12,7 +12,7 @@ it("holds observed windows by their own clock-only check, not by the run they we
     const variant = pickupClockCase("electromagnetic", "express", "underground-entrance", false);
     const config = await pickupClockConfig(variant);
     const result = generateClockWithSwingBackoff({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } },
-        { logger: quiet }, (swings_config, options) => observedWindowsClock(swings_config, options, "always"));
+        { logger: quiet }, (swings_config, options) => timeStudyWindowsClock(swings_config, options, "always"));
 
     expect(result.used_terminal_swing_count).toBe(3);
     expect(result.stability_check.holds).toBe(true);

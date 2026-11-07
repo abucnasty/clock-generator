@@ -6,7 +6,7 @@ import { encodeBlueprintFile } from "../blueprints/serde";
 import { generateClockForConfig } from "../crafting/generate-blueprint";
 import { quiet } from "../crafting/generate-blueprint-test-helpers";
 import { ClockSchedule } from "../crafting/blueprint";
-import { BlueprintGenerationResult } from "../crafting/plan/plan-run";
+import { BlueprintGenerationResult } from "../crafting/plan/unclocked-run";
 import { clockOfBlueprintString, clockPeriodTicks } from "./factorio-harness";
 
 /**

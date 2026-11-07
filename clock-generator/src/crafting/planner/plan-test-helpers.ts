@@ -10,7 +10,7 @@ import type Fraction from "../../data-types/fraction";
 import { toPlannerFacts } from "../facts/to-planner-facts";
 import { feasibilityOf, type Feasibility } from "../feasibility/assert-feasible";
 import { plannerGraphOf } from "../graph/build-graph";
-import { maxSwingsOfPreparedBuild } from "../plan/plan-run";
+import { maxSwingsOfPreparedBuild } from "../plan/unclocked-run";
 import { ConfigValidation, validateConfig } from "../plan/validate-config";
 import { PrepareStep } from "../runner/steps/prepare-step";
 import { createEntityRegistryFromConfig, SimulationContext } from "../sequence/simulation-context";

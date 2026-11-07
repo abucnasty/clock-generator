@@ -26,15 +26,15 @@ describe("generateClockForConfig", () => {
             });
 
             it("has fractional_swings_enabled set to false", () => {
-                expect(result.crafting_cycle_plan.fractional_swings_enabled).toBe(false);
+                expect(result.output_cycle_plan.fractional_swings_enabled).toBe(false);
             });
 
             it("does not have swing_distribution defined", () => {
-                expect(result.crafting_cycle_plan.swing_distribution).toBeUndefined();
+                expect(result.output_cycle_plan.swing_distribution).toBeUndefined();
             });
 
             it("does not have cycle_multiplier defined", () => {
-                expect(result.crafting_cycle_plan.cycle_multiplier).toBeUndefined();
+                expect(result.output_cycle_plan.cycle_multiplier).toBeUndefined();
             });
 
             // configs saved when the switch existed carry use_fractional_swings: true, which is read and dropped
@@ -44,7 +44,7 @@ describe("generateClockForConfig", () => {
                 expect(saved.overrides).toEqual({});
                 expect({ ...saved, overrides: undefined }).toEqual(await parseConfig(JSON.stringify(config)));
                 const again = generateClockForConfig(saved);
-                expect(again.crafting_cycle_plan.fractional_swings_enabled).toBe(false);
+                expect(again.output_cycle_plan.fractional_swings_enabled).toBe(false);
                 expect(again.clock_windows).toEqual(result.clock_windows);
                 expect(again.simulation_duration.ticks).toBe(result.simulation_duration.ticks);
             });
@@ -77,7 +77,7 @@ describe("generateClockForConfig", () => {
 
             it("has correct tick ranges for input inserter transfers", () => {
                 // Get the actual EntityId instances from the map keys
-                const keys = Array.from(result.crafting_cycle_plan.entity_transfer_map.keys());
+                const keys = Array.from(result.output_cycle_plan.entity_transfer_map.keys());
                 // inserter id 3 is the LDS + blue chip inserter in this configuration
                 const input_inserter_id: EntityId = keys.find(k => k.id === EntityId.forInserter(3).id)!;
 

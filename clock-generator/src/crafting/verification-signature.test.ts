@@ -65,7 +65,7 @@ describe("candidate verification identity", () => {
         expect(Object.values(built.unplanned_inserter_clocks ?? {}).some(clock => clock.own_clock)).toBe(true);
         const fractional = plannedFractionally(fuel, built);
         // the same cycle, so that only planning it with fractional swings parts the two
-        expect(fractional.crafting_cycle_plan.total_duration.ticks).toBe(built.crafting_cycle_plan.total_duration.ticks);
+        expect(fractional.output_cycle_plan.total_duration.ticks).toBe(built.output_cycle_plan.total_duration.ticks);
         expect(signature(fuel, fractional)).not.toBe(signature(fuel, built));
         const fractional_count = {...plannedFractionally(config, result), used_terminal_swing_count: 1.5};
         expect(signature(config, fractional_count)).not.toBe(signature(config, {...result, used_terminal_swing_count: 1.5}));

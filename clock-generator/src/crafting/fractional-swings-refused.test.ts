@@ -4,7 +4,7 @@ import { ConfigPaths } from '../config/config-paths';
 import { loadConfigFromFile } from '../config/loader';
 import { fraction } from '../data-types/fraction';
 import { generateClockWithSwingBackoff } from './generate-clock';
-import type { BlueprintGenerationResult } from './plan/plan-run';
+import type { BlueprintGenerationResult } from './plan/unclocked-run';
 import { planOfConfig, planOfSample } from './planner/plan-test-helpers';
 import { FractionalSwingsRefusedError } from './sequence/cycle/swing-distribution';
 
@@ -12,7 +12,7 @@ const quiet = { log() {}, warn() {}, error() {}, debug() {} };
 const config = { target_output: { counts: 'made' }, overrides: {} } as unknown as Config;
 
 function result(count: number, holds: boolean, fractional = true): BlueprintGenerationResult {
-    return { used_terminal_swing_count: count, crafting_cycle_plan: { fractional_swings_enabled: fractional },
+    return { used_terminal_swing_count: count, output_cycle_plan: { fractional_swings_enabled: fractional },
         stability_check: { holds, actual_output_items: holds ? 32 : 16, expected_output_items: 32, used_lcm: 1 } } as unknown as BlueprintGenerationResult;
 }
 

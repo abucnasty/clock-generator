@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import type { Config } from "../config/schema";
-import { combineClockAlternativeRuns, generateClockAlternatives, PER_BRANCH_ID, simulateClockOnly, type BlueprintGenerationResult } from "../crafting/generate-blueprint";
+import { combineClockAlternativeRuns, generateClockAlternatives, COORDINATED_SOURCES_ID, simulateClockOnly, type BlueprintGenerationResult } from "../crafting/generate-blueprint";
 import type { StockRecording } from "../crafting/machine-stock";
 import { returnTicksOf, wakeUpsOfStock } from "../crafting/wake-ups";
 import { createEntityRegistryFromConfig } from "../crafting/sequence/simulation-context";
@@ -30,7 +30,7 @@ beforeAll(async () => {
     const sample = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
     config = { ...sample, overrides: { ...sample.overrides, terminal_swing_count: 1 } };
     // the clock the generator recommends from today's makers: the per-branch clock composed from them wakes none of these inserters
-    const made = generateClockAlternatives(config, { logger: quiet }).alternatives.filter(it => it.id !== PER_BRANCH_ID);
+    const made = generateClockAlternatives(config, { logger: quiet }).alternatives.filter(it => it.id !== COORDINATED_SOURCES_ID);
     result = made[combineClockAlternativeRuns([{ signature: "", alternatives: made }], it => it.ranking).selected_index].result;
     period = result.simulation_duration.ticks;
     stock = simulateClockOnly(config, result.clock_windows, period, PERIODS, quiet);

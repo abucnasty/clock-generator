@@ -2,7 +2,7 @@
 // test of each build checked on the result that the record does not hold (see samples.ts for what the record does hold).
 import { expect } from 'vitest';
 import type { JobCheck } from '../record-job-checks';
-import { backpressureLossOf, PER_BRANCH_ID, selectableAsStable } from '../../../../src/crafting/generate-blueprint';
+import { backpressureLossOf, COORDINATED_SOURCES_ID, selectableAsStable } from '../../../../src/crafting/generate-blueprint';
 import type { ClockAlternative, ClockAlternativesResult } from '../../../../src/crafting/generate-blueprint';
 import { lossId, verdictOf, type BackpressureLossReport } from '../../../../src/crafting/backpressure-loss';
 import { START_DEPENDENCE_NOT_CHECKED } from '../../../../src/crafting/start-dependence';
@@ -182,7 +182,7 @@ const automation: JobCheck[] = [
         run: ({ generated }) => {
             expect(generated.skipped_searches).toEqual([]);
             // the per-branch clock is made after the searches and does not count toward the gate
-            expect(generated.alternatives.filter(a => !SEARCH_IDS.includes(a.id) && a.id !== PER_BRANCH_ID).some(a => selectableAsStable(a.ranking))).toBe(false);
+            expect(generated.alternatives.filter(a => !SEARCH_IDS.includes(a.id) && a.id !== COORDINATED_SOURCES_ID).some(a => selectableAsStable(a.ranking))).toBe(false);
         },
     },
     {
@@ -213,13 +213,13 @@ const fractionalSwings: JobCheck[] = [{
     name: 'the fractional swings alternative: a cycle multiplier, a swing distribution that sums to the totals and alternates, a duration extended by the multiplier',
     run: ({ generated }) => {
         const result = byId(generated, 'fractional').result;
-        expect(result.crafting_cycle_plan.fractional_swings_enabled).toBe(true);
-        expect(result.crafting_cycle_plan.cycle_multiplier).toBeDefined();
-        expect(result.crafting_cycle_plan.cycle_multiplier).toBeGreaterThan(1);
-        expect(result.crafting_cycle_plan.swing_distribution).toBeDefined();
-        expect(result.crafting_cycle_plan.swing_distribution!.size).toBeGreaterThan(0);
-        const distribution = result.crafting_cycle_plan.swing_distribution!;
-        const cycle_multiplier = result.crafting_cycle_plan.cycle_multiplier!;
+        expect(result.output_cycle_plan.fractional_swings_enabled).toBe(true);
+        expect(result.output_cycle_plan.cycle_multiplier).toBeDefined();
+        expect(result.output_cycle_plan.cycle_multiplier).toBeGreaterThan(1);
+        expect(result.output_cycle_plan.swing_distribution).toBeDefined();
+        expect(result.output_cycle_plan.swing_distribution!.size).toBeGreaterThan(0);
+        const distribution = result.output_cycle_plan.swing_distribution!;
+        const cycle_multiplier = result.output_cycle_plan.cycle_multiplier!;
         for (const swingDist of distribution.values()) {
             const sum = swingDist.swings_per_subcycle.reduce((a, b) => a + b, 0);
             expect(sum).toBe(swingDist.total_swings);
@@ -228,7 +228,7 @@ const fractionalSwings: JobCheck[] = [{
         // Should have alternating distribution (values differ by at most 1)
         const swings = distribution.get('inserter:1')!.swings_per_subcycle;
         expect(Math.max(...swings) - Math.min(...swings)).toBeLessThanOrEqual(1);
-        expect(result.simulation_duration.ticks).toBe(result.crafting_cycle_plan.total_duration.ticks * cycle_multiplier);
+        expect(result.simulation_duration.ticks).toBe(result.output_cycle_plan.total_duration.ticks * cycle_multiplier);
     },
 }];
 

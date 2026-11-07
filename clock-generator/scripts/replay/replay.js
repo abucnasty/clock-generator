@@ -3,8 +3,8 @@
 //   asbuilt  the build on the job's stored clock windows alone (runClockOnBuild: cold start, the default taker order),
 //            warm-up plus 4 periods, with the machine stock, the Factorio states, the timeline recording, the fuel
 //            levels and repeat detection
-//   plan     the planning run of the config (runBuild as planRun runs it, with the machine stock and fuel levels
-//            watched), and the figures planRun reads off it (its windows, lane capacity check)
+//   plan     the planning run of the config (runBuild as unclockedRun runs it, with the machine stock and fuel levels
+//            watched), and the figures unclockedRun reads off it (its windows, lane capacity check)
 //   fuel     where the plan has fuel inserters: the view of the fuel being consumed that a clock's export makes (its own
 //            run with the fuel clocks), on the plan's clock, its history's reasons as texts
 //   speed    the as-built run again with nothing recorded, for ticks per second and scavenges per million ticks
@@ -174,7 +174,7 @@ function timelineSignals(signals, timeline) {
     for (const [entity_id, rows] of by_entity) signals.events(`timeline-events:${entity_id}`, rows);
 }
 
-/** What planRun reads off its run and what a run hands back besides its recordings, as plain data */
+/** What unclockedRun reads off its run and what a run hands back besides its recordings, as plain data */
 function figuresOf(run) {
     return {
         duration_ticks: run.duration.ticks,
@@ -217,7 +217,7 @@ function loadEngine(dir) {
     need('data/factorio-data-file.js');
     return {
         ...need('crafting/trial.js'),
-        ...need('crafting/plan/plan-run.js'),
+        ...need('crafting/plan/unclocked-run.js'),
         ...need('crafting/sequence/compact-history.js'),
         ...need('config/lane-capacity-validator.js'),
         OpenRange: need('data-types/open-range.js').OpenRange,
@@ -263,7 +263,7 @@ const RUNS = {
     },
     plan(engine, job) {
         return () => {
-            // as planRun runs it (factorio_states as planRun's default), with the stock and the fuel watched
+            // as unclockedRun runs it (factorio_states as unclockedRun's default), with the stock and the fuel watched
             const run = engine.runBuild(job.config, { logger: quiet, machine_stock: true, fuel_levels: true });
             engine.assertLaneCapacity(job.config);
             const signals = new Signals();
@@ -280,7 +280,7 @@ const RUNS = {
             // the view of the fuel being consumed, as a clock's export makes it (a run of its own with the fuel clocks), on
             // the plan's own clock; only builds with fuel inserters have one. Its history carries the reason table's
             // numbers, which are this process's: it is hashed with its reasons as texts (toPortable)
-            const plan = engine.planRun(job.config, { logger: quiet });
+            const plan = engine.unclockedRun(job.config, { logger: quiet });
             const signals = new Signals();
             const has_fuel = [...plan.run.inserter_clocks.values()].some(clock => clock.kind === 'fuel');
             const view = has_fuel ? engine.exportClock(plan, engine.clockOfPlan(plan), engine.clockOfPlan(plan).windows,

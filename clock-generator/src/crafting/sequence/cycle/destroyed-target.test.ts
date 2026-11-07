@@ -3,7 +3,7 @@ import { loadConfigFromFile } from "../../../config/loader";
 import type { Config } from "../../../config/schema";
 import { createEntityRegistryFromConfig } from "../simulation-context";
 import { TargetProductionRate } from "../../target-production-rate";
-import { CraftingCyclePlan } from "./crafting-cycle";
+import { OutputCyclePlan } from "./output-cycle";
 import { targetInsertersOf, targetMachinesOf } from "./target-ends";
 import { fraction } from "../../../data-types/fraction";
 import { ConfigPaths } from "../../../config/config-paths";
@@ -12,9 +12,9 @@ import { ConfigPaths } from "../../../config/config-paths";
 // stack inserters; the recycler (9 crafts a tick) gives a quarter back into its car, which two stack inserters empty into it
 const FIXTURE = ConfigPaths.IRON_ORE_VOIDER_400_EXACT_SPEED;
 
-async function planOf(edit: (config: Config) => Config = config => config): Promise<CraftingCyclePlan> {
+async function planOf(edit: (config: Config) => Config = config => config): Promise<OutputCyclePlan> {
     const config = edit(await loadConfigFromFile(FIXTURE));
-    return CraftingCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), createEntityRegistryFromConfig(config), config, fraction(1), config.overrides ?? {});
+    return OutputCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), createEntityRegistryFromConfig(config), config, fraction(1), config.overrides ?? {});
 }
 
 describe("a target that counts an item destroyed", () => {
@@ -60,7 +60,7 @@ describe("a target that counts an item destroyed", () => {
     });
 });
 
-function EntityTransferLcm(plan: CraftingCyclePlan): number {
+function EntityTransferLcm(plan: OutputCyclePlan): number {
     const denominators = plan.entity_transfer_map.entries_array().map(([, planned]) => planned.total_transfer_count.getDenominator);
     const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
     return denominators.reduce((lcm, denominator) => lcm / gcd(lcm, denominator) * denominator, 1);

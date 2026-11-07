@@ -8,7 +8,7 @@
  * recorded for the tests and for the planner steps to come.
  */
 import type { Config } from "../../config";
-import type { BuildPlan, PlanDuty, PlanGroup, ResultWindowsDecision } from "../../data-types/build-plan";
+import type { BuildPlan, PlanDuty, PlanGroup, ExhaustDecision } from "../../data-types/build-plan";
 import type Fraction from "../../data-types/fraction";
 import type { PlannerFacts } from "../../data-types/planner-facts";
 import type { PlannerGraph } from "../../data-types/planner-graph";
@@ -18,7 +18,7 @@ import { TargetProductionRate } from "../target-production-rate";
 import { compositionOf, transferKeyOf } from "./composition";
 import { GroupShape, groupsOf } from "./groups";
 import { CycleArithmetic, plannedPeriodsOf } from "./periods";
-import { resultWindowsDecisionOf } from "./result-windows";
+import { exhaustDecisionOf } from "./exhaust";
 
 const ratioOf = (value: Fraction) => ({ numerator: value.getNumerator, denominator: value.getDenominator });
 
@@ -48,12 +48,12 @@ function dutiesIn(group: GroupShape, feasibility: Feasibility): PlanDuty[] {
  */
 export function planBuild(facts: PlannerFacts, graph: PlannerGraph, feasibility: Feasibility, cycle: CycleArithmetic | null): BuildPlan {
     const { unbounded_sources, groups } = groupsOf(facts, graph);
-    const result_windows: ResultWindowsDecision | null = cycle === null || cycle.config.target_output.counts !== "destroyed" ? null
-        : resultWindowsDecisionOf(TargetProductionRate.fromConfig(cycle.config.target_output), cycle.registry, cycle.config, cycle.config.overrides ?? {});
+    const exhaust: ExhaustDecision | null = cycle === null || cycle.config.target_output.counts !== "destroyed" ? null
+        : exhaustDecisionOf(TargetProductionRate.fromConfig(cycle.config.target_output), cycle.registry, cycle.config, cycle.config.overrides ?? {});
     const group_of = new Map<string, number>();
     const edge = new Map(graph.edges.map(it => [it.key, it]));
     groups.forEach((group, at) => group.edges.forEach(key => group_of.set(transferKeyOf(edge.get(key)!.entity, edge.get(key)!.item), at)));
-    const periods = cycle === null ? null : plannedPeriodsOf(cycle, groups, group_of, result_windows);
+    const periods = cycle === null ? null : plannedPeriodsOf(cycle, groups, group_of, exhaust);
     return {
         schema: 1,
         target: graph.target,
@@ -66,7 +66,7 @@ export function planBuild(facts: PlannerFacts, graph: PlannerGraph, feasibility:
             duty: dutiesIn(group, feasibility),
         })),
         composition: periods === null ? null : compositionOf(periods, groups),
-        result_windows,
+        exhaust,
     };
 }
 

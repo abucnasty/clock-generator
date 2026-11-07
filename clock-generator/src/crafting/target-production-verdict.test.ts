@@ -3,7 +3,7 @@ import path from "node:path";
 import { afterEach, expect, test, vi } from "vitest";
 import { parseConfig } from "../config/loader";
 import { OpenRange } from "../data-types";
-import * as planning from "./plan/plan-run";
+import * as planning from "./plan/unclocked-run";
 import * as competing from "../simulation/competing-takers";
 import * as moving from "./moving-pickup-phase-starts";
 import { runAsBuiltCheck } from "./trial";

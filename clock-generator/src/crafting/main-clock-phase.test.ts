@@ -6,8 +6,8 @@ import type { Config } from "../config/schema";
 import { Duration, OpenRange } from "../data-types";
 import { TickProvider } from "../simulation/current-tick-provider";
 import { EnableControl } from "../simulation/controls/enable-control";
-import * as planning from "./plan/plan-run";
-import { constructPrimitiveGroupedHands } from "./candidates/primitive-grouped-hands";
+import * as planning from "./plan/unclocked-run";
+import { constructPrimitiveRoundRobinPolling } from "./candidates/round-robin-polling-primitive";
 import { rotateRanges } from "./clock";
 import { buildAsBuiltConfig, exhaustiveCrossingKey, exhaustiveStartPhases, runAsBuiltCheck, runClockOnBuild, startDependenceOf } from "./trial";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
@@ -41,7 +41,7 @@ describe("shared main-clock phase composition", () => {
     beforeAll(async () => {
         const control = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED);
         auto = { ...control, overrides: undefined, inserters: control.inserters.map(inserter => ({ ...inserter, overrides: undefined })) };
-        const construction = constructPrimitiveGroupedHands(auto);
+        const construction = constructPrimitiveRoundRobinPolling(auto);
         const compact = construction.attempts.find(attempt => !attempt.options.share_windows && attempt.options.feeder_offset === 1)!;
         if (compact.result.kind !== "constructed") throw new Error(compact.result.reason);
         windows = new Map(Object.entries(compact.result.planned_windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))]));

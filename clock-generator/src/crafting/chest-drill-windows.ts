@@ -6,7 +6,7 @@ import { OpenRange } from "../data-types";
 import Fraction, { fraction } from "../data-types/fraction";
 import { Chest, Entity, EntityId, handSizeFor, MiningDrill, ReadableEntityRegistry } from "../entities";
 import { DrillState, EntityStateFactory } from "../state";
-import { CraftingCyclePlan } from "./sequence/cycle/crafting-cycle";
+import { OutputCyclePlan } from "./sequence/cycle/output-cycle";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { TargetProductionRate } from "./target-production-rate";
 import { ContainerStorage } from "../simulation/components/container-storage";
@@ -162,7 +162,7 @@ function chestDrillsOf(config: Config): ChestDrillConfig[] {
 function takerRates(config: Config, registry: ReadableEntityRegistry): Map<string, Map<string, Fraction>> {
     const rates = new Map<string, Map<string, Fraction>>();
     const forced = config.overrides?.terminal_swing_count;
-    const cycle = CraftingCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), registry, config, fraction(1), config.overrides,
+    const cycle = OutputCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), registry, config, fraction(1), config.overrides,
         undefined, forced !== undefined && !Number.isInteger(forced));
     for (const transfer of cycle.entity_transfer_map.values()) {
         if (!Entity.isInserter(transfer.entity)) {

@@ -92,7 +92,7 @@ export function resultComesBack(machine: Pick<MachineFormData, 'id' | 'result_ta
 
 /**
  * The most the machines making the target can make together, from each one's max rate. They are picked as the engine's
- * check picks them (`planCraftingCycle`): the machines whose output item is named as the target recipe. Null when none
+ * check picks them (`planOutputCycle`): the machines whose output item is named as the target recipe. Null when none
  * makes it, or while a machine's facts are not known yet: it might make the target, and a sum without it would be too
  * low, and find a problem where there is none.
  *
@@ -154,7 +154,7 @@ export function totalMachineCapacity(max: MachinesMax, copies: number): number |
     }
 }
 
-/** Same comparison as planCraftingCycle for supported values; unsupported arithmetic must not crash the editable form. */
+/** Same comparison as planOutputCycle for supported values; unsupported arithmetic must not crash the editable form. */
 export function isTargetAboveMax(itemsPerSecond: number, copies: number, max: MachinesMax | null): boolean {
     if (!max || !(itemsPerSecond > 0) || copiesProblem(copies) || !Number.isFinite(itemsPerSecond)) return false;
     const capacity = totalMachineCapacity(max, copies);

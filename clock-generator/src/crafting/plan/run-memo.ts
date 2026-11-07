@@ -1,4 +1,4 @@
-import type { BuildRun, RunOptions } from "./plan-run";
+import type { BuildRun, RunOptions } from "./unclocked-run";
 import type { Config } from "../../config";
 import type { BackpressureLossAssessment } from "../trial";
 

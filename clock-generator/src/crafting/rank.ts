@@ -2,7 +2,7 @@ import { Config } from "../config";
 import { ClockAlternative, ClockAlternativeRun } from "./alternatives";
 import type { ClockAssessment } from "./trial";
 import { SerializableClockWindows } from "./clock";
-import { BlueprintGenerationResult } from "./plan/plan-run";
+import { BlueprintGenerationResult } from "./plan/unclocked-run";
 
 /**
  * What the selection compares between two alternatives, in this order (see `combineClockAlternativeRuns`), worked out

@@ -3,7 +3,7 @@ import type { Config } from "../config/schema";
 import { Entity, EntityId } from "../entities";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { generateClockAlternatives, type BlueprintGenerationResult, type ClockAlternative, type ClockAlternativesResult } from "./generate-blueprint";
-import { CraftingCyclePlan } from "./sequence/cycle/crafting-cycle";
+import { OutputCyclePlan } from "./sequence/cycle/output-cycle";
 import { TargetProductionRate } from "./target-production-rate";
 import { fraction } from "../data-types/fraction";
 
@@ -28,9 +28,9 @@ export const withSearches = (config: Config): Config =>
  */
 export function plannedFractionally(planned_on: Config, made: BlueprintGenerationResult): BlueprintGenerationResult {
     const count = made.used_terminal_swing_count;
-    const crafting_cycle_plan = CraftingCyclePlan.create(TargetProductionRate.fromConfig(planned_on.target_output),
+    const output_cycle_plan = OutputCyclePlan.create(TargetProductionRate.fromConfig(planned_on.target_output),
         createEntityRegistryFromConfig(planned_on), planned_on, fraction(count), { ...planned_on.overrides, terminal_swing_count: count }, undefined, true);
-    return { ...made, crafting_cycle_plan };
+    return { ...made, output_cycle_plan };
 }
 
 /**

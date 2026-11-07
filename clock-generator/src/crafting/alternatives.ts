@@ -19,19 +19,19 @@ import { backpressureLossInsight, beltPickupNotTestedInsights, chestDrillInsight
 import { chestDrillFallbackConfig, ChestDrillClock, hasPlannedChestDrill } from "./chest-drill-windows";
 import { chestDrillReasons } from "./always-on-reasons";
 import { ClockBelt, clockBeltLabel, fuelHandRoomTicks } from "./clock";
-import { evenHandsClock } from "./candidates/even-hands";
-import { fullHandClock } from "./candidates/full-hand";
-import { perHandWindowsClock } from "./candidates/grouped-hands";
-import { observedWindowsClock } from "./candidates/observed-windows";
-import { shiftedSwingsClock } from "./candidates/shifted-swings";
+import { timeDivisionWindowsClock } from "./candidates/time-division-windows";
+import { pitchPickupsClock } from "./candidates/pitch-pickups";
+import { perHandWindowsClock } from "./candidates/round-robin-polling";
+import { timeStudyWindowsClock } from "./candidates/time-study-windows";
+import { phaseShiftedBatchClock } from "./candidates/phase-shifted-batch";
 import { generateClockForConfig, generateClockWithSwingBackoff, terminalCountForAlternativePlanning } from "./generate-clock";
-import { primitiveGroupedOptionsSupported, verifiedPrimitiveGroupedClock } from "./candidates/verified-primitive-grouped";
-import { primitiveGroupedConfigSupported } from "./candidates/primitive-grouped-hands";
+import { primitiveRoundRobinPollingOptionsSupported, verifiedPrimitiveRoundRobinPollingClock } from "./candidates/round-robin-polling-primitive-verified";
+import { primitiveRoundRobinPollingConfigSupported } from "./candidates/round-robin-polling-primitive";
 import { MAX_OBSERVED_WINDOWS_PERIOD_TICKS, swingCountsListed } from "./planner/periods";
-import { SecondaryPlanningInvariantError, secondaryPlanningCountOf, verificationPlanningConfigOf, withSecondaryPlanningProvenance, type SecondaryPlanningCount } from "./primitive-grouped-policy";
-import { collectingParts, perBranchInputOf, type PerBranchInput, type PerBranchPart } from "./candidates/per-branch-parts";
-import { perBranchClock } from "./candidates/per-branch";
-import { BlueprintGenerationResult, GenerateClockOptions, SimulationStabilityCheck, fractionalStartOf, fractionalSwingsOf } from "./plan/plan-run";
+import { SecondaryPlanningInvariantError, secondaryPlanningCountOf, verificationPlanningConfigOf, withSecondaryPlanningProvenance, type SecondaryPlanningCount } from "./round-robin-polling-primitive-policy";
+import { collectingParts, coordinatedSourcesInputOf, type CoordinatedSourcesInput, type CoordinatedSourcesPart } from "./candidates/coordinated-sources-parts";
+import { coordinatedSourcesClock } from "./candidates/coordinated-sources";
+import { BlueprintGenerationResult, GenerateClockOptions, SimulationStabilityCheck, fractionalStartOf, fractionalSwingsOf } from "./plan/unclocked-run";
 import { EntityTransferCountMap } from "./sequence/cycle/swing-counts";
 import { withRunMemo } from "./plan/run-memo";
 import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, ROUNDED_CLOCK_MAX_FAST, RoundedClock, roundedRateAllowed, searchesToRun, searchesAreNeeded } from "./rank";
@@ -113,10 +113,10 @@ export interface ClockAlternativeRun<T = ClockAlternative> {
     /** Runs of the same clock made with shared windows (see `SHARED_WINDOWS_NOTE`), listed after this run when it is */
     also?: ClockAlternativeRun<T>[];
     /**
-     * The clocks this run made, listed or not, as parts of the per-branch clock (per-branch-parts.ts): its alternatives and the
+     * The clocks this run made, listed or not, as parts of the per-branch clock (coordinated-sources-parts.ts): its alternatives and the
      * ways of the constructions it ran. Absent on a run that made none.
      */
-    parts?: PerBranchPart[];
+    parts?: CoordinatedSourcesPart[];
 }
 
 /** What the remaining alternatives need from the first (batched swings) run */
@@ -130,7 +130,7 @@ export interface ClockAlternativeContext {
     /** Clock period of the primary alternative */
     period_ticks: number;
     /** The primary alternative's results come too rarely for whole hands in a period: it is a clock of result windows */
-    result_windows?: boolean;
+    exhaust?: boolean;
     /** Small batches was tried for the primary alternative (its first plan's period too long): it is not offered again */
     primitive_tried?: boolean;
     /** The "Fractional swings" alternative would make the primary clock again (see fractionalMakesThePrimary): it is not made */
@@ -153,9 +153,9 @@ export interface ClockAlternativeTask {
     fallback?: boolean;
     /**
      * The per-branch clock: made last, from the parts of every run before it and the clock they recommend
-     * (`perBranchInputOf`), by `runPerBranchTask`, not by `runClockAlternativeTask`. It is not a search and not a fallback.
+     * (`coordinatedSourcesInputOf`), by `runCoordinatedSourcesTask`, not by `runClockAlternativeTask`. It is not a search and not a fallback.
      */
-    per_branch?: true;
+    coordinated_sources?: true;
 }
 
 
@@ -316,10 +316,10 @@ function primaryDefinition(config: Config, options: GenerateClockOptions, report
     const result = config.overrides?.backed_up_belts === true
         ? withFuelHandRoomWhereNeeded(() => generate(config), () => takesFuelOffABelt(config) ? generate(config, true) : undefined)
         : generate(config);
-    if (result.result_windows !== undefined) {
+    if (result.exhaust !== undefined) {
         return { id: RESULTS_IN_TURN_ID, label: RESULTS_IN_TURN_LABEL, description: RESULTS_IN_TURN_DESCRIPTION, family: "exhaust", run: () => result };
     }
-    if (result.primitive_grouped !== undefined) {
+    if (result.primitive_round_robin_polling !== undefined) {
         return { id: "primitive-grouped", label: "Small batches",
             description: "Uses small output batches when the initial clock would be too long. Checked for timing margin, clock starts and recovery after interruptions.",
             family: "round-robin-polling", qualifiers: ["shorter-window-cycle"],
@@ -476,7 +476,7 @@ function alternativeDefinitionsFor(
     const { lower: lower_counts, higher: higher_counts } = swingCountsListed(swings, context.planned_swings ?? swings, swings_forced, context.period_ticks);
     // a target that counts an item destroyed is planned by arithmetic: its period and every inserter's hands are worked
     // out, not tried, so no other count or search is offered; even hands moves the same hands
-    if (config.target_output.counts === "destroyed" && context.result_windows === true) {
+    if (config.target_output.counts === "destroyed" && context.exhaust === true) {
         // results that come by small chances: the windows are worked out, and the primary clock opens them in turn
         return [];
     }
@@ -486,7 +486,7 @@ function alternativeDefinitionsFor(
             label: "Even hands",
             description: EVEN_HANDS_DESCRIPTION,
             family: "time-division-slots",
-            run: () => generateClockWithSwingBackoff(base_config, quiet, evenHandsClock),
+            run: () => generateClockWithSwingBackoff(base_config, quiet, timeDivisionWindowsClock),
         }];
     }
     return [
@@ -508,7 +508,7 @@ function alternativeDefinitionsFor(
             label: "Even hands",
             description: EVEN_HANDS_DESCRIPTION,
             family: "time-division-slots",
-            run: () => generateClockWithSwingBackoff(base_config, quiet, evenHandsClock),
+            run: () => generateClockWithSwingBackoff(base_config, quiet, timeDivisionWindowsClock),
         },
         ...(context.period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? [] : [{
             id: "derived",
@@ -520,7 +520,7 @@ function alternativeDefinitionsFor(
                 + `one per craft, so its inserters usually have more wake windows than in ${BATCHED_SWINGS_LABEL}, which groups several swings into one window. An inserter between two machines that waits at `
                 + "its source for a full hand gets short, evenly spaced windows instead when they stay stable, so it grabs a hand "
                 + "that is already there rather than staying enabled while the machine crafts.",
-            run: () => generateClockWithSwingBackoff(base_config, quiet, (swings_config, options) => observedWindowsClock(swings_config, options, "always")),
+            run: () => generateClockWithSwingBackoff(base_config, quiet, (swings_config, options) => timeStudyWindowsClock(swings_config, options, "always")),
             search: true,
         }]),
         ...(context.period_ticks > MAX_OBSERVED_WINDOWS_PERIOD_TICKS ? [] : [{
@@ -535,7 +535,7 @@ function alternativeDefinitionsFor(
                 + "output swing and a moved swing passes the clock-only check.",
             run: () => {
                 // one search at the planned swing count; backing off would repeat it for every lower count
-                const result = observedWindowsClock(base_config, quiet, "uneven_output");
+                const result = timeStudyWindowsClock(base_config, quiet, "moved_output_swing");
                 assert(result.search?.kind === "moved output swing" && result.search.picked !== null, "no moved output swing passes the clock-only check");
                 return result;
             },
@@ -555,7 +555,7 @@ function alternativeDefinitionsFor(
                 + "and a shift passes.",
             run: () => {
                 // one search at the planned swing count, like uneven output swings
-                const result = shiftedSwingsClock(base_config, { ...quiet, belt_pickup_slack: "always" });
+                const result = phaseShiftedBatchClock(base_config, { ...quiet, belt_pickup_slack: "always" });
                 assert(result.search?.kind === "shifted cycle" && result.search.picked !== null, "no shifted round of swings passes the clock-only check");
                 return result;
             },
@@ -594,27 +594,27 @@ function alternativeDefinitionsFor(
                 // input windows come from the first planned run whose clock passes, most batched first
                 const full_hand: GenerateClockOptions = { ...quiet, belt_pickup_slack: "always" };
                 if (context.primary_stable) {
-                    return generateClockWithSwingBackoff(base_config, full_hand, fullHandClock);
+                    return generateClockWithSwingBackoff(base_config, full_hand, pitchPickupsClock);
                 }
                 const stable_lower = lower_counts.find(lower =>
                     known_stable(`swings-${lower}`) ?? holds(withSwings(lower, { ...quiet, on_progress_detail: undefined })));
                 return stable_lower === undefined
-                    ? generateClockWithSwingBackoff(base_config, full_hand, fullHandClock)
-                    : fullHandClock({ ...base_config, overrides: { ...base_config.overrides, terminal_swing_count: stable_lower } }, full_hand);
+                    ? generateClockWithSwingBackoff(base_config, full_hand, pitchPickupsClock)
+                    : pitchPickupsClock({ ...base_config, overrides: { ...base_config.overrides, terminal_swing_count: stable_lower } }, full_hand);
             },
             search: true,
         },
         // Small batches where its first plan's period was not too long, so the primary did not try it: a fallback, made
         // only where no clock made before it can be selected as stable, so it never moves a clock that was selected
-        ...(context.primitive_tried === true || !primitiveGroupedOptionsSupported(small_batches_config, SMALL_BATCHES_OPTIONS)
-            || !primitiveGroupedConfigSupported(small_batches_config) ? [] : [{
+        ...(context.primitive_tried === true || !primitiveRoundRobinPollingOptionsSupported(small_batches_config, SMALL_BATCHES_OPTIONS)
+            || !primitiveRoundRobinPollingConfigSupported(small_batches_config) ? [] : [{
             id: "primitive-grouped",
             label: "Small batches",
             family: "round-robin-polling" as const,
             qualifiers: ["shorter-window-cycle" as const],
             description: "Uses small output batches when no planned clock holds. Checked for timing margin, clock starts and recovery after interruptions.",
             run: () => {
-                const made = verifiedPrimitiveGroupedClock(small_batches_config, { ...quiet, ...SMALL_BATCHES_OPTIONS },
+                const made = verifiedPrimitiveRoundRobinPollingClock(small_batches_config, { ...quiet, ...SMALL_BATCHES_OPTIONS },
                     context.planned_swings ?? swings, "no-count-holds");
                 if (made.clock === null) throw new Error(made.report.reason ?? "no clock of small batches holds");
                 return made.clock;
@@ -715,7 +715,7 @@ function runAlternative(
  * A run with its parts for the per-branch clock (`ClockAlternativeRun.parts`): every alternative it lists, its own and those of
  * the runs listed after it, then the ways the constructions offered while it ran (`ways`)
  */
-function withParts(run: ClockAlternativeRun, config: Config, ways: readonly PerBranchPart[]): ClockAlternativeRun {
+function withParts(run: ClockAlternativeRun, config: Config, ways: readonly CoordinatedSourcesPart[]): ClockAlternativeRun {
     const listed: ClockAlternative[] = [];
     const walk = (it: ClockAlternativeRun) => { listed.push(...it.alternatives); it.also?.forEach(walk); };
     walk(run);
@@ -725,7 +725,7 @@ function withParts(run: ClockAlternativeRun, config: Config, ways: readonly PerB
 }
 
 /** An alternative as a part of the per-branch clock, with how its clock is planned */
-function alternativePart(config: Config, alternative: ClockAlternative): PerBranchPart {
+function alternativePart(config: Config, alternative: ClockAlternative): CoordinatedSourcesPart {
     const { result } = alternative;
     const { overrides } = verificationPlanningConfigOf(config, result);
     return {
@@ -735,7 +735,7 @@ function alternativePart(config: Config, alternative: ClockAlternative): PerBran
         ...(result.always_on_reasons !== undefined && { always_on: result.always_on_reasons }),
         plan: { ...(overrides?.terminal_swing_count !== undefined && { terminal_swing_count: overrides.terminal_swing_count }),
             ...(overrides?.lcm !== undefined && { lcm: overrides.lcm }),
-            ...(fractionalSwingsOf(result.crafting_cycle_plan).fractional_swings === true && { fractional_swings: true as const }) },
+            ...(fractionalSwingsOf(result.output_cycle_plan).fractional_swings === true && { fractional_swings: true as const }) },
     };
 }
 
@@ -753,7 +753,7 @@ function perHandRun(
     verification_cache?: Map<string, VerificationAssessment>,
     settle_unstable?: boolean,
 ): ClockAlternativeRun | null {
-    const varied = run.alternatives.find(it => it.result.grouped_hands?.guarded_takers !== undefined && it.result.primitive_grouped === undefined);
+    const varied = run.alternatives.find(it => it.result.round_robin_polling?.guarded_takers !== undefined && it.result.primitive_round_robin_polling === undefined);
     if (varied === undefined) return null;
     const per_hand = runAlternativeOf({
         ...definition,
@@ -789,8 +789,8 @@ function sharedRun(
     verification_cache?: Map<string, VerificationAssessment>,
     settle_unstable?: boolean,
 ): ClockAlternativeRun {
-    if (definition.shared_windows === undefined || !run.alternatives.some(it => it.result.grouped_hands !== undefined
-        && it.result.primitive_grouped === undefined)) {
+    if (definition.shared_windows === undefined || !run.alternatives.some(it => it.result.round_robin_polling !== undefined
+        && it.result.primitive_round_robin_polling === undefined)) {
         return run;
     }
     let shared_definition: AlternativeDefinition | undefined;
@@ -810,7 +810,7 @@ function sharedRun(
         // a clock that is not the grouped hands' with shared windows is not an alternative, and not worth assessing
         run: () => {
             const made = shared_run();
-            if (made.grouped_hands?.shared_windows !== true) throw new Error("no shared windows hold");
+            if (made.round_robin_polling?.shared_windows !== true) throw new Error("no shared windows hold");
             return made;
         },
         id: `${definition.id}-shared`,
@@ -818,7 +818,7 @@ function sharedRun(
         description: `${definition.description} ${SHARED_WINDOWS_NOTE}`,
         shared_windows: undefined,
     }, config, logger, report, new Set([...(assessed ?? []), run.signature]), verification_cache, undefined, settle_unstable);
-    const listed = shared?.alternatives.filter(it => it.verdict === "stable" && it.result.grouped_hands?.shared_windows === true) ?? [];
+    const listed = shared?.alternatives.filter(it => it.verdict === "stable" && it.result.round_robin_polling?.shared_windows === true) ?? [];
     return shared === null || listed.length === 0 ? run : { ...run, also: [...(run.also ?? []), { ...shared, alternatives: listed }] };
 }
 
@@ -859,7 +859,7 @@ function runAlternativeOf(
     // the planning simulation drives inserters from inventory levels and can over- or undershoot
     // where the exported clock does not; in game, recordings matched the clock-only check
     let held = holds(result);
-    const completed = result.primitive_grouped?.verification;
+    const completed = result.primitive_round_robin_polling?.verification;
     const cached = completed?.signature === signature ? { backpressure_loss: completed.backpressure_loss,
         backpressure_loss_not_tried: undefined, start_dependence: completed.start_dependence } : verification_cache?.get(signature);
     let loss: BackpressureLossAssessment = cached
@@ -987,7 +987,7 @@ function runAlternativeOf(
                     { ...(used.planned_on ?? config), overrides: { ...(used.planned_on ?? config).overrides, terminal_swing_count: trial.result.used_terminal_swing_count } },
                     trial.result.clock_windows, trial.clock_period, expected_output_items,
                     exact && trial.result.loop_windows !== undefined ? LOOP_WINDOW_CHECK_TICKS : FREE_RUNNING_CHECK_TICKS, logger,
-                    fractionalSwingsOf(trial.result.crafting_cycle_plan));
+                    fractionalSwingsOf(trial.result.output_cycle_plan));
             } catch (error) {
                 logger.log(`Clock alternative "${label}" could not be started from other places: ${error instanceof Error ? error.message : String(error)}`);
                 made = null;
@@ -1172,22 +1172,22 @@ function planPrimaryAndTasks(
         without_in_loop_windows: () => primaryDefinition(config, { ...options, loop_windows: "out-of-loop" }, options.on_progress_detail),
     };
     const context: ClockAlternativeContext = {
-        ...(result.primitive_grouped === undefined ? {} : { secondary_planning: {
-            source: "primitive-primary" as const, terminal_swing_count: result.primitive_grouped.terminal_swing_count } }),
+        ...(result.primitive_round_robin_polling === undefined ? {} : { secondary_planning: {
+            source: "primitive-primary" as const, terminal_swing_count: result.primitive_round_robin_polling.terminal_swing_count } }),
         swings: terminalCountForAlternativePlanning(result),
-        planned_swings: result.primitive_grouped?.terminal_swing_count ?? result.swing_backoff_report?.period_limit_pruning?.requested_terminal_swing_count
+        planned_swings: result.primitive_round_robin_polling?.terminal_swing_count ?? result.swing_backoff_report?.period_limit_pruning?.requested_terminal_swing_count
             ?? result.swing_backoff_report?.initial_terminal_swing_count,
         primary_stable: holds(result),
         period_ticks: result.simulation_duration.ticks,
-        ...((result.primitive_grouped !== undefined || result.swing_backoff_report?.primitive_grouped_attempt !== undefined) && { primitive_tried: true }),
-        ...(result.result_windows !== undefined && { result_windows: true }),
+        ...((result.primitive_round_robin_polling !== undefined || result.swing_backoff_report?.primitive_grouped_attempt !== undefined) && { primitive_tried: true }),
+        ...(result.exhaust !== undefined && { exhaust: true }),
         ...(fractionalMakesThePrimary(config, definition, result) && { fractional_is_primary: true as const }),
     };
     const tasks: ClockAlternativeTask[] = [...alternativeDefinitions(config, context, {})
         .map(definition => ({
             id: definition.id, label: definition.label, only_when_needed: onlyWhenNeeded(definition, config),
             ...(definition.fallback === true ? { fallback: true } : {}),
-        })), { id: PER_BRANCH_ID, label: PER_BRANCH_LABEL, only_when_needed: false, per_branch: true }];
+        })), { id: COORDINATED_SOURCES_ID, label: COORDINATED_SOURCES_LABEL, only_when_needed: false, coordinated_sources: true }];
     on_tasks?.(context, tasks, clockVerificationSignature(config, result));
     const primary_run = runAlternative(primary, config, logger, options.on_progress_detail, undefined, undefined, options.on_not_made);
     return { primary: primary_run === null ? null : withParts(primary_run, config, primary_ways), context, tasks };
@@ -1205,7 +1205,7 @@ function planPrimaryAndTasks(
  * left out as well.
  */
 function fractionalMakesThePrimary(config: Config, primary: AlternativeDefinition, result: BlueprintGenerationResult): boolean {
-    const start = fractionalStartOf(result.crafting_cycle_plan)?.toDecimal();
+    const start = fractionalStartOf(result.output_cycle_plan)?.toDecimal();
     const report = result.swing_backoff_report;
     return primary.id === "planned-belt-slack" && holds(result) && config.target_output.counts !== "destroyed"
         && config.overrides?.terminal_swing_count === undefined
@@ -1213,7 +1213,7 @@ function fractionalMakesThePrimary(config: Config, primary: AlternativeDefinitio
         && !(config.overrides?.backed_up_belts === true && takesFuelOffABelt(config))
         && result.loop_windows === undefined && !hasPlannedChestDrill(config)
         && start !== undefined && Number.isInteger(start) && start === result.used_terminal_swing_count
-        && EntityTransferCountMap.lcm(result.crafting_cycle_plan.entity_transfer_map) === 1
+        && EntityTransferCountMap.lcm(result.output_cycle_plan.entity_transfer_map) === 1
         && !fractionalSwingsChangeChecksOf(config, result);
 }
 
@@ -1258,28 +1258,28 @@ function runTask(
 }
 
 /** The id of the per-branch clock (DESIGN D7) */
-export const PER_BRANCH_ID = "per-branch";
-const PER_BRANCH_LABEL = "Coordinated sources";
-const PER_BRANCH_DESCRIPTION = "The inserters of each source use the enable windows of one other clock made for the build, on one shared window cycle. "
+export const COORDINATED_SOURCES_ID = "per-branch";
+const COORDINATED_SOURCES_LABEL = "Coordinated sources";
+const COORDINATED_SOURCES_DESCRIPTION = "The inserters of each source use the enable windows of one other clock made for the build, on one shared window cycle. "
     + "A source is a machine, belt or chest that inserters take from. The generator sets the sources one at a time, from the output "
     + "upstream. It keeps the setting with the smallest number of wakeups for the full clock, until no source changes.";
 
 /**
- * Makes the per-branch clock (candidates/per-branch.ts) from the parts of the runs before it and the clock they recommend
- * (`perBranchInputOf`), checked as every alternative is; listed only where it is stable and another clock than those runs'
+ * Makes the per-branch clock (candidates/coordinated-sources.ts) from the parts of the runs before it and the clock they recommend
+ * (`coordinatedSourcesInputOf`), checked as every alternative is; listed only where it is stable and another clock than those runs'
  * (`assessed_signatures`). Null where there is nothing to compose: it is not a clock that could not be made.
  */
-export function runPerBranchTask(
+export function runCoordinatedSourcesTask(
     config: Config,
-    input: PerBranchInput,
+    input: CoordinatedSourcesInput,
     options: GenerateClockOptions = {},
     assessed_signatures: readonly string[] = [],
 ): ClockAlternativeRun | null {
     return withRunMemo(() => {
         const logger = options.logger ?? defaultLogger;
         const quiet = quietOptions(options, logger, options.on_progress_detail);
-        const run = runAlternativeOf({ id: PER_BRANCH_ID, label: PER_BRANCH_LABEL, description: PER_BRANCH_DESCRIPTION, family: "per-branch",
-            run: () => perBranchClock(config, input, { ...quiet, logger }) }, config, logger, options.on_progress_detail, new Set(assessed_signatures), undefined, undefined, false);
+        const run = runAlternativeOf({ id: COORDINATED_SOURCES_ID, label: COORDINATED_SOURCES_LABEL, description: COORDINATED_SOURCES_DESCRIPTION, family: "per-branch",
+            run: () => coordinatedSourcesClock(config, input, { ...quiet, logger }) }, config, logger, options.on_progress_detail, new Set(assessed_signatures), undefined, undefined, false);
         const listed = run?.alternatives.filter(it => it.verdict === "stable") ?? [];
         return run === null || listed.length === 0 ? null : { ...run, alternatives: listed };
     });
@@ -1399,10 +1399,10 @@ function generateAllAlternatives(config: Config, options: GenerateClockOptions):
     const so_far = combineClockAlternativeRuns(runs, it => it.ranking);
     const recommended = so_far.alternatives[so_far.selected_index];
     if (recommended !== undefined) {
-        current_step = PER_BRANCH_LABEL;
+        current_step = COORDINATED_SOURCES_LABEL;
         total++;
         report();
-        runs.push(runPerBranchTask(config, perBranchInputOf(runs, recommended.id), { ...options, on_progress_detail: report }, signaturesOf(runs)));
+        runs.push(runCoordinatedSourcesTask(config, coordinatedSourcesInputOf(runs, recommended.id), { ...options, on_progress_detail: report }, signaturesOf(runs)));
         completed++;
     }
 

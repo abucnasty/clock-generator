@@ -1,5 +1,5 @@
 import { FactorioBlueprintFile, BlueprintBookBuilder } from "../blueprints/blueprint";
-import { BlueprintGenerationResult } from "./plan/plan-run";
+import { BlueprintGenerationResult } from "./plan/unclocked-run";
 
 /** A book with the modulo-clock and the full-window blueprint when both exist, otherwise the single blueprint */
 export function blueprintFileFor(result: BlueprintGenerationResult): FactorioBlueprintFile {

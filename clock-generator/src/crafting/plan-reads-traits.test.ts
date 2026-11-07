@@ -18,7 +18,7 @@ import { handOfItem, machinesInOrder, mainProductRateOf, neverRefuses, traitsOf,
 import { outputCapacityPerSecond } from "./alternatives";
 import { beltPickupSlackTicks, fuelHandRoomTicks } from "./clock";
 import { computeMachineTargetRates, MachineTargetRate } from "./machine-target-rates";
-import { CraftingCyclePlan } from "./sequence/cycle/crafting-cycle";
+import { OutputCyclePlan } from "./sequence/cycle/output-cycle";
 import type { EntityTransferCountMap } from "./sequence/cycle/swing-counts";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { TargetProductionRate } from "./target-production-rate";
@@ -62,7 +62,7 @@ function oldComputeMachineTargetRates(config: Config): MachineTargetRate[] {
     assertInserterCoverage(config);
     const registry = createEntityRegistryFromConfig(config);
     const target = TargetProductionRate.fromConfig(config.target_output);
-    const cycle = CraftingCyclePlan.create(target, registry, config, fraction(1));
+    const cycle = OutputCyclePlan.create(target, registry, config, fraction(1));
     const seconds = cycle.total_duration_ticks.divide(60);
     const taken = new Map<string, number>();
     const placing = new Map(registry.getAll().filter(Entity.isMachine).flatMap(machine =>

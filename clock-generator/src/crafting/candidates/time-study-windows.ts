@@ -6,16 +6,16 @@ import { EntityId } from "../../entities";
 import { InventoryTransferHistory } from "../sequence/inventory-transfer-history";
 import { Logger } from "../../common/logger";
 import { withBeltPickupSlack } from "../clock";
-import { BlueprintGenerationResult, GenerateClockOptions, TrialRun, alwaysEnabledByConfig, clockOfPlan, clockOnlyRunOf, exportClock, planRun, windowsFromHistory } from "../plan/plan-run";
+import { BlueprintGenerationResult, GenerateClockOptions, TrialRun, alwaysEnabledByConfig, clockOfPlan, clockOnlyRunOf, exportClock, unclockedRun, windowsFromHistory } from "../plan/unclocked-run";
 import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, FULL_CHECK_START_PHASES, runAsBuiltCheck, runClockOnBuild, trialWithLoopWindows } from "../trial";
-import { fullHandTransferWindows } from "./full-hand";
+import { pitchPickupsTransferWindows } from "./pitch-pickups";
 import { Confirmed, QuickTrial, SearchReport, confirm, quickTrial, search } from "./search";
 import { busyDeciderRanges, evenlySpacedOutputWindows, outputSwingCountsOf, paddedWindows } from "./transforms";
 import { transitionsOf } from "../sequence/compact-history";
-import { deriveUnevenOutputClockWindows } from "./uneven-output";
+import { movedOutputSwingWindows } from "./moved-output-swing";
 
 
-export interface DerivedClockWindowsReport {
+export interface TimeStudyWindowsReport {
     /** Whether the blueprint's windows (planned or derived) pass the as-built check */
     succeeded: boolean;
     /** True when the planned windows already passed the as-built check from every start phase, so nothing was derived */
@@ -35,7 +35,7 @@ export interface DerivedClockWindowsReport {
 const DERIVED_WINDOW_END_PADDING_CANDIDATES = [0, 1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16];
 
 /** What deriving windows under given output windows yields */
-export interface DerivedWindows {
+export interface TimeStudyWindows {
     windows: Map<string, OpenRange[]> | null;
     end_padding_ticks: number | null;
     verification: TrialRun | null;
@@ -61,7 +61,7 @@ function deriveClockWindows(
     period: number,
     logger: Logger,
     report?: (detail: string) => void,
-): DerivedWindows {
+): TimeStudyWindows {
     const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
     const planned_windows = windowsFromHistory(planned_history, createEntityRegistryFromConfig(config), alwaysEnabledByConfig(config));
     const output_windows = new Map(Array.from(planned_windows).filter(([key]) => output_inserter_ids.has(key)));
@@ -69,12 +69,12 @@ function deriveClockWindows(
     const drill_ids = new Set(Array.from(planned_history.keys()).filter(EntityId.isDrill).map(it => it.id));
     const drill_windows = new Map(Array.from(planned_windows).filter(([key]) => drill_ids.has(key)));
 
-    const planned = deriveWithOutputWindows(base_config, output_windows, drill_windows, output_inserter_ids, belt_pickup_slack, period, "planned output", logger, report);
+    const planned = deriveTimeStudyWindows(base_config, output_windows, drill_windows, output_inserter_ids, belt_pickup_slack, period, "planned output", logger, report);
     if (planned.windows !== null || planned.even_output_windows === null) {
         return planned;
     }
     // Bunched output swings (e.g. a double swing then a long gap) can leave a partial stack in hand when the window closes
-    const even = deriveWithOutputWindows(base_config, planned.even_output_windows, drill_windows, output_inserter_ids, belt_pickup_slack, period, "evenly spaced output", logger, report);
+    const even = deriveTimeStudyWindows(base_config, planned.even_output_windows, drill_windows, output_inserter_ids, belt_pickup_slack, period, "evenly spaced output", logger, report);
     if (even.windows !== null) {
         return even;
     }
@@ -100,7 +100,7 @@ function checkOfRun(run: TrialRun): AsBuiltStabilityCheck {
  * the pick is taken on its quick trial, for a caller that confirms its own pick. When no padding is confirmed, the
  * quick trial that moved the most is reported, as one run from the generator's start.
  */
-export function deriveWithOutputWindows(
+export function deriveTimeStudyWindows(
     base_config: Config,
     output_windows: Map<string, OpenRange[]>,
     drill_windows: Map<string, OpenRange[]>,
@@ -111,7 +111,7 @@ export function deriveWithOutputWindows(
     logger: Logger,
     report?: (detail: string) => void,
     confirm_pick: boolean = true,
-): DerivedWindows {
+): TimeStudyWindows {
     const fixed_windows = new Map([...output_windows, ...drill_windows]);
     report?.(`Simulating with only the output inserters clocked (${label} windows)`);
     const derivation = runClockOnBuild(base_config, fixed_windows, period, logger);
@@ -169,9 +169,9 @@ export function deriveWithOutputWindows(
  * The observed windows candidate: the clock of the plan with the windows of every inserter but the output inserters
  * made anew from what it does in a run of the build under the output windows alone (see `deriveClockWindows`), and
  * for machine-to-machine inserters that wait at their source for a full hand, brief windows that find one
- * (`fullHandTransferWindows`). With `mode` "prefer_planned" the planned windows stay where they pass the clock-only
+ * (`pitchPickupsTransferWindows`). With `mode` "prefer_planned" the planned windows stay where they pass the clock-only
  * check from every start phase, which is what the config override `derive_clock_windows` asks for; "always" derives
- * anyway; "uneven_output" derives with one output swing moved off its planned start (`deriveUnevenOutputClockWindows`).
+ * anyway; "moved_output_swing" derives with one output swing moved off its planned start (`movedOutputSwingWindows`).
  * The windows of the inserters of a loop are kept or dropped as for a planned clock. When nothing derived passes, the
  * planned windows are exported with the report of what was tried.
  *
@@ -180,12 +180,12 @@ export function deriveWithOutputWindows(
  * hold their first period from another and still fall short every few periods. The plan's belt pickup slack is decided
  * as for any planned clock (see clockOfPlan).
  */
-export function observedWindowsClock(
+export function timeStudyWindowsClock(
     config: Config,
     options: GenerateClockOptions = {},
-    mode: "prefer_planned" | "always" | "uneven_output" = "prefer_planned",
+    mode: "prefer_planned" | "always" | "moved_output_swing" = "prefer_planned",
 ): BlueprintGenerationResult {
-    const plan = planRun(config, options);
+    const plan = unclockedRun(config, options);
     const clock = clockOfPlan(plan, options);
     const { logger, run } = plan;
     const { stability_check, duration, final_history, output_inserter_ids, output_machine_state_machines, simulation_context } = run;
@@ -216,7 +216,7 @@ export function observedWindowsClock(
         }
         return fed;
     };
-    const exportPlanned = (fed: ReturnType<typeof feedPlanned>, derived_clock_windows: DerivedClockWindowsReport, report?: SearchReport): BlueprintGenerationResult =>
+    const exportPlanned = (fed: ReturnType<typeof feedPlanned>, derived_clock_windows: TimeStudyWindowsReport, report?: SearchReport): BlueprintGenerationResult =>
         exportClock(plan, clock, fed?.windows ?? planned_windows, options,
             { clock_only_run, loop_windows: fed?.loop_windows, item_names: fed?.item_names, derived_clock_windows, search: report });
     if (planned_stable && planned_check.holds && mode === "prefer_planned") {
@@ -226,15 +226,15 @@ export function observedWindowsClock(
         return exportPlanned(fed, { succeeded: true, kept_planned_windows: true, end_padding_ticks: null });
     }
 
-    const uneven = mode !== "uneven_output" ? null : deriveUnevenOutputClockWindows(
+    const uneven = mode !== "moved_output_swing" ? null : movedOutputSwingWindows(
         config, final_history, output_inserter_ids, clock.belt_pickup_slack, duration.ticks,
         Math.min(...output_machine_state_machines.map(it => it.machine_state.machine.crafting_rate.ticks_per_craft)),
         logger, options.on_progress_detail);
     // without a moved swing that works there is nothing to export; plain observed windows are their own alternative
-    const derived: Omit<DerivedWindows, "even_output_windows" | "search"> & { search?: SearchReport } = mode === "uneven_output"
+    const derived: Omit<TimeStudyWindows, "even_output_windows" | "search"> & { search?: SearchReport } = mode === "moved_output_swing"
         ? uneven ?? { windows: null, end_padding_ticks: null, verification: null, as_built: null }
         : deriveClockWindows(config, final_history, output_inserter_ids, clock.belt_pickup_slack, duration.ticks, logger, options.on_progress_detail);
-    const report: DerivedClockWindowsReport = {
+    const report: TimeStudyWindowsReport = {
         succeeded: derived.windows !== null,
         kept_planned_windows: false,
         end_padding_ticks: derived.end_padding_ticks,
@@ -246,7 +246,7 @@ export function observedWindowsClock(
     stability_check.holds = derived.windows !== null && (derived.as_built?.holds ?? false);
 
     if (derived.windows !== null && derived.verification !== null) {
-        const full_hand = fullHandTransferWindows(non_deriving_config, derived.windows, derived.verification,
+        const full_hand = pitchPickupsTransferWindows(non_deriving_config, derived.windows, derived.verification,
             output_inserter_ids, simulation_context.entity_registry, duration.ticks, logger, options.on_progress_detail);
         const windows = full_hand?.windows ?? derived.windows;
         if (full_hand) {

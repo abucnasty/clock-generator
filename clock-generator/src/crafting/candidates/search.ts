@@ -3,7 +3,7 @@ import { OpenRange } from "../../data-types";
 import { EntityId } from "../../entities";
 import { Logger } from "../../common/logger";
 import { StockRecording } from "../machine-stock";
-import { TrialRun } from "../plan/plan-run";
+import { TrialRun } from "../plan/unclocked-run";
 import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FULL_CHECK_START_PHASES, runAsBuiltCheck } from "../trial";
 
 /**

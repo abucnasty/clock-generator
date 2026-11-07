@@ -15,10 +15,10 @@ describe("constructionOf", () => {
     });
 
     test("is the grouped hands for the grouped hands rule's result and for small batches", () => {
-        expect(constructionOf({ grouped_hands: { shared_windows: false } })).toBe("grouped-hands");
-        expect(constructionOf({ primitive_grouped: {} as never })).toBe("grouped-hands");
+        expect(constructionOf({ round_robin_polling: { shared_windows: false } })).toBe("grouped-hands");
+        expect(constructionOf({ primitive_round_robin_polling: {} as never })).toBe("grouped-hands");
         // the grouped hands win over the arithmetic mark: the mark is only of a clock made by arithmetic
-        expect(constructionOf({ window_maker: "arithmetic", grouped_hands: { shared_windows: false } })).toBe("grouped-hands");
+        expect(constructionOf({ window_maker: "arithmetic", round_robin_polling: { shared_windows: false } })).toBe("grouped-hands");
     });
 });
 
@@ -26,21 +26,21 @@ describe("strategyOf", () => {
     test("batched swings are takt batches from the planning run and from arithmetic, round-robin polling from the grouped hands", () => {
         expect(strategyOf("batched-swings", result(), findings())).toEqual({ family: "takt-batches", qualifiers: ["output-swings"], settings: plain, construction: "planning-run", output_swings: 2, routing: { router: "direct" } });
         expect(strategyOf("batched-swings", result({ window_maker: "arithmetic" }), findings()).construction).toBe("arithmetic");
-        const grouped = strategyOf("batched-swings", result({ grouped_hands: { shared_windows: false } }), findings());
+        const grouped = strategyOf("batched-swings", result({ round_robin_polling: { shared_windows: false } }), findings());
         expect(grouped).toMatchObject({ family: "round-robin-polling", construction: "grouped-hands" });
     });
 
     test("shared windows are read off the result, and a window a swing from the definition (the per-hand clock's result shares none)", () => {
-        const shared = strategyOf("batched-swings", result({ grouped_hands: { shared_windows: true } }), findings());
+        const shared = strategyOf("batched-swings", result({ round_robin_polling: { shared_windows: true } }), findings());
         expect(shared.qualifiers).toEqual(["output-swings", "shared-enable-windows"]);
         expect(shared.settings.shared_windows).toBe("shared_enable_windows");
-        const a_swing = strategyOf("batched-swings", result({ grouped_hands: { shared_windows: false } }), findings({ definition_qualifiers: ["shorter-window-cycle", "window-a-swing"] }));
+        const a_swing = strategyOf("batched-swings", result({ round_robin_polling: { shared_windows: false } }), findings({ definition_qualifiers: ["shorter-window-cycle", "window-a-swing"] }));
         expect(a_swing.qualifiers).toEqual(["output-swings", "shorter-window-cycle", "window-a-swing"]);
         expect(a_swing.settings).toEqual({ ...plain, window_cycle: [{ kind: "shorter_window_cycle" }], shared_windows: "window_a_swing" });
     });
 
     test("small batches are round-robin polling with a shorter window cycle", () => {
-        const small = strategyOf("round-robin-polling", result({ primitive_grouped: {} }), findings({ definition_qualifiers: ["shorter-window-cycle"] }));
+        const small = strategyOf("round-robin-polling", result({ primitive_round_robin_polling: {} }), findings({ definition_qualifiers: ["shorter-window-cycle"] }));
         expect(small).toEqual({ family: "round-robin-polling", qualifiers: ["output-swings", "shorter-window-cycle"], settings: { ...plain, window_cycle: [{ kind: "shorter_window_cycle" }] }, construction: "grouped-hands", output_swings: 2, routing: { router: "direct" } });
     });
 
@@ -52,9 +52,9 @@ describe("strategyOf", () => {
 
     test("pickups counted from their entry and the rounded-up hands of rule F leave a mark each", () => {
         expect(strategyOf("batched-swings", result({ pickups_from_entry: true }), findings()).qualifiers).toEqual(["output-swings", "pickups-from-entry"]);
-        const harmonic = strategyOf("batched-swings", result({ grouped_hands: { shared_windows: false, harmonic_window_cycle: true } }), findings());
+        const harmonic = strategyOf("batched-swings", result({ round_robin_polling: { shared_windows: false, harmonic_window_cycle: true } }), findings());
         expect(harmonic).toMatchObject({ family: "round-robin-polling", qualifiers: ["output-swings", "harmonic-window-cycle"] });
-        expect(strategyOf("batched-swings", result({ grouped_hands: { shared_windows: false } }), findings()).qualifiers).toEqual(["output-swings"]);
+        expect(strategyOf("batched-swings", result({ round_robin_polling: { shared_windows: false } }), findings()).qualifiers).toEqual(["output-swings"]);
     });
 
     test("a target that counts an item destroyed brings in hands instead of output swings", () => {
@@ -75,13 +75,13 @@ describe("strategyOf", () => {
 describe("the router of a strategy", () => {
     test("is direct for every clock but the per-branch one", () => {
         expect(strategyOf("takt-batches", result(), findings()).routing).toEqual({ router: "direct" });
-        expect(strategyOf("batched-swings", result({ grouped_hands: { shared_windows: false } }), findings()).routing).toEqual({ router: "direct" });
+        expect(strategyOf("batched-swings", result({ round_robin_polling: { shared_windows: false } }), findings()).routing).toEqual({ router: "direct" });
         expect(strategyOf("exhaust", result(), findings()).routing).toEqual({ router: "direct" });
     });
 
     test("is Coordinated Sources on the per-branch clock, with the sources the run recorded", () => {
         const sources = [{ source: "machine:1", entities: { "inserter:1": { kind: "strategy" as const, family: "exhaust" as const } } }];
-        expect(strategyOf("per-branch", result({ per_branch: { parts: { "machine:1": "exhaust" }, sources } }), findings()).routing)
+        expect(strategyOf("per-branch", result({ coordinated_sources: { parts: { "machine:1": "exhaust" }, sources } }), findings()).routing)
             .toEqual({ router: "coordinated_sources", sources });
     });
 });
@@ -102,7 +102,7 @@ describe("the settings of a strategy", () => {
     });
 
     test("add what the listing of a clock adds to the window cycle, which can follow a harmonic or shorter one", () => {
-        const harmonic = strategyOf("batched-swings", result({ grouped_hands: { shared_windows: false, harmonic_window_cycle: true } }), findings());
+        const harmonic = strategyOf("batched-swings", result({ round_robin_polling: { shared_windows: false, harmonic_window_cycle: true } }), findings());
         const subtick = strategyListedAs(harmonic, { qualifiers: ["phase-accumulator"] });
         expect(subtick.settings.window_cycle).toEqual([{ kind: "harmonic_window_cycle" }, { kind: "subtick_clock" }]);
         expect(subtick.qualifiers).toEqual(["output-swings", "harmonic-window-cycle", "phase-accumulator"]);

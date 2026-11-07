@@ -139,7 +139,7 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
             overrides: config.overrides,
             machineFuel: config.machines.flatMap(machine => machine.fuel === undefined ? [] : [{ machineId: machine.id, fuel: machine.fuel }]),
         },
-        copies: result.crafting_cycle_plan.production_rate.copies,
+        copies: result.output_cycle_plan.production_rate.copies,
         ...(config.target_output.counts === 'destroyed' && { counts: 'destroyed' as const }),
         verdict: alternative.verdict,
         ranking: alternative.ranking,
@@ -149,7 +149,7 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         asBuilt: result.stability_check.as_built ?? null,
         expectedOutputItems: result.stability_check.expected_output_items,
         terminalSwingCount: result.used_terminal_swing_count,
-        cycleTicks: result.crafting_cycle_plan.total_duration.ticks,
+        cycleTicks: result.output_cycle_plan.total_duration.ticks,
         blueprintString: clockGenerator.encodeBlueprintFileBrowser(clockGenerator.blueprintFileFor(result)),
         install: installFactsOf(result),
         transferHistory: result.serializable_transfer_history,
@@ -486,14 +486,14 @@ function handleTask(
     context: import('clock-generator/browser').ClockAlternativeContext,
     taskId: string,
     assessedSignatures: string[] = [],
-    perBranch?: import('clock-generator/browser').PerBranchInput,
+    coordinatedSources?: import('clock-generator/browser').CoordinatedSourcesInput,
 ): void {
     runStreaming(runId, config, debugSteps, streamLogs, (options) => {
         requireValidConfig(config);
         const notMade: NotMadeClock[] = [];
         // the per-branch clock is made from the parts of the runs before it, not from the context
-        const run = perBranch !== undefined
-            ? clockGenerator.runPerBranchTask(config, perBranch, options, assessedSignatures)
+        const run = coordinatedSources !== undefined
+            ? clockGenerator.runCoordinatedSourcesTask(config, coordinatedSources, options, assessedSignatures)
             : clockGenerator.runClockAlternativeTask(config, context, taskId, { ...options, on_not_made: clock => notMade.push(clock) }, assessedSignatures);
         return { type: 'task-completed', runId, taskId, run: toRunView(run, config), notMade };
     });
@@ -533,7 +533,7 @@ ctx.onmessage = async (event: MessageEvent<WorkerRequest>) => {
             handlePlan(request.runId, request.config, request.debugSteps, request.streamLogs);
             break;
         case 'task':
-            handleTask(request.runId, request.config, request.debugSteps, request.streamLogs, request.context, request.taskId, request.assessedSignatures, request.perBranch);
+            handleTask(request.runId, request.config, request.debugSteps, request.streamLogs, request.context, request.taskId, request.assessedSignatures, request.coordinatedSources);
             break;
         case 'query':
             handleQuery(request.requestId, request.query);

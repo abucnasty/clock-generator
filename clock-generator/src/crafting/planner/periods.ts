@@ -3,7 +3,7 @@
  * the counts above and below the main one, and fractional swings), each with its period, kept or
  * pruned by arithmetic before any simulation. The one rule that prunes is P-limit: a period of SIMULATION_BUDGET_TICKS or
  * more cannot be simulated, nor, under whole-counter checks, a fractional period whose whole counter
- * is that long (`counterOverLimitOf`). Each count's hands come from today's cycle plan (`CraftingCyclePlan.create`), never
+ * is that long (`counterOverLimitOf`). Each count's hands come from today's cycle plan (`OutputCyclePlan.create`), never
  * worked out again here; an alternative's count that the cycle plan refuses is listed as refused, with the plan's reason,
  * as its run fails. Fractional swings an inserter cannot make within its insertion limits are listed, as their run makes
  * them, at the first whole count below that the cycle plan accepts, unless the config forces a count; refused where none is,
@@ -11,12 +11,12 @@
  */
 import assert from "../../common/assert";
 import type { Config } from "../../config";
-import type { PeriodChoice, PeriodListing, ResultWindowsDecision } from "../../data-types/build-plan";
+import type { PeriodChoice, PeriodListing, ExhaustDecision } from "../../data-types/build-plan";
 import Fraction, { fraction } from "../../data-types/fraction";
 import { Entity, type ReadableEntityRegistry } from "../../entities";
 import { targetInsertersOf, targetMachinesOf, type TargetItem } from "../sequence/cycle/target-ends";
 import { SIMULATION_BUDGET_TICKS, counterOverLimitOf } from "../plan/clock-period-limit";
-import { CraftingCyclePlan, plannedTerminalSwingCount } from "../sequence/cycle/crafting-cycle";
+import { OutputCyclePlan, plannedTerminalSwingCount } from "../sequence/cycle/output-cycle";
 import { FractionalSwingsRefusedError, fractionalSwingsWholeAt } from "../sequence/cycle/swing-distribution";
 import { TargetProductionRate } from "../target-production-rate";
 import { CycleMeasure, cycleMeasureOf } from "./composition";
@@ -53,7 +53,7 @@ export interface CycleArithmetic {
     readonly registry: ReadableEntityRegistry;
     /**
      * For a target that counts an item made: the output swings a cycle the output machines can make before they block,
-     * as the planning run's prepare step finds them on the config with fractional swings on or off (planCraftingCycle's
+     * as the planning run's prepare step finds them on the config with fractional swings on or off (planOutputCycle's
      * `max_swings_possible`); null for a target that counts an item destroyed
      */
     readonly max_swings: ((fractional: boolean) => Fraction) | null;
@@ -66,7 +66,7 @@ interface PlannedCount {
     readonly swings_exact?: Fraction;
     readonly fractional: boolean;
     readonly listed_as: PeriodListing;
-    readonly cycle: CraftingCyclePlan;
+    readonly cycle: OutputCyclePlan;
     readonly measure: CycleMeasure;
 }
 
@@ -127,7 +127,7 @@ function choiceOf(count: ListedCount, group: number): PeriodChoice {
  * at least 1: the count a planning run reports it used (`used_terminal_swing_count`), which the alternatives' lists of
  * counts start from. It is the planned count but for fractional swings and takers that share a machine's output.
  */
-function outputSwingsOf(cycle: CraftingCyclePlan, registry: ReadableEntityRegistry, target: TargetItem): number {
+function outputSwingsOf(cycle: OutputCyclePlan, registry: ReadableEntityRegistry, target: TargetItem): number {
     const machines = targetMachinesOf(target, registry);
     const takers_of = machines.map(machine => new Set(targetInsertersOf(machine, target, registry).map(inserter => inserter.entity_id.id)));
     const inserters = registry.getAll().filter(Entity.isInserter);
@@ -144,43 +144,43 @@ function outputSwingsOf(cycle: CraftingCyclePlan, registry: ReadableEntityRegist
 }
 
 /**
- * The periods of a build's groups at every count today's alternatives are listed for. `result_windows` is the decision of
- * a destroyed target's results (planner/result-windows.ts), which its cycle is made with.
+ * The periods of a build's groups at every count today's alternatives are listed for. `exhaust` is the decision of
+ * a destroyed target's results (planner/exhaust.ts), which its cycle is made with.
  */
 export function plannedPeriodsOf(
     input: CycleArithmetic,
     groups: readonly GroupShape[],
     group_of: ReadonlyMap<string, number>,
-    result_windows: ResultWindowsDecision | null,
+    exhaust: ExhaustDecision | null,
 ): PlannedPeriods {
     const { config, registry } = input;
     const overrides = config.overrides ?? {};
     const target = TargetProductionRate.fromConfig(config.target_output);
     const forced = overrides.terminal_swing_count !== undefined;
-    const planned = (cycle: CraftingCyclePlan, listed_as: PeriodListing, is_fractional = false, swings_exact?: Fraction): PlannedCount => {
-        const swings = target.counts === "destroyed" ? result_windows!.hands : plannedTerminalSwingCount(cycle);
+    const planned = (cycle: OutputCyclePlan, listed_as: PeriodListing, is_fractional = false, swings_exact?: Fraction): PlannedCount => {
+        const swings = target.counts === "destroyed" ? exhaust!.hands : plannedTerminalSwingCount(cycle);
         assert(swings !== undefined, "the cycle plan has no output swing count");
         return { swings, ...(is_fractional && swings_exact !== undefined ? { swings_exact } : {}), fractional: is_fractional, listed_as, cycle,
             measure: cycleMeasureOf(config, cycle, groups, group_of) };
     };
 
     if (target.counts === "destroyed") {
-        assert(result_windows !== null, "a destroyed target is planned with the decision of its results' windows");
+        assert(exhaust !== null, "a destroyed target is planned with the decision of its results' windows");
         // planned by arithmetic: one count, no backoff, no other count offered (even hands moves the same hands)
-        const main = planned(CraftingCyclePlan.create(target, registry, config, fraction(1), overrides, result_windows), "main");
+        const main = planned(OutputCyclePlan.create(target, registry, config, fraction(1), overrides, exhaust), "main");
         return { per_group: groups.map((_, at) => [choiceOf(main, at)]), tried: [main], main, can_back_off: false, listed_from: null };
     }
 
     assert(input.max_swings !== null, "a target that counts an item made is planned on the swings its prepare step found");
     const max_swings = input.max_swings;
-    const atCount = (count: number, listed_as: PeriodListing) => planned(CraftingCyclePlan.create(target, registry, config, fraction(count),
+    const atCount = (count: number, listed_as: PeriodListing) => planned(OutputCyclePlan.create(target, registry, config, fraction(count),
         { ...overrides, terminal_swing_count: count }), listed_as);
     const under = (count: PlannedCount) => count.measure.main_period.toDecimal() < SIMULATION_BUDGET_TICKS;
 
     // the planning run's count, then today's swing backoff while the period is over the limit; the main clock's count
     // is the first under it, or the planned one where there is none
     const can_back_off = !forced;
-    const first = planned(CraftingCyclePlan.create(target, registry, config, max_swings(false), overrides), "planned", false, max_swings(false));
+    const first = planned(OutputCyclePlan.create(target, registry, config, max_swings(false), overrides), "planned", false, max_swings(false));
     const tried: PlannedCount[] = [first];
     if (!under(first) && can_back_off) {
         for (let count = first.swings - 1; count >= 1 && !under(tried[tried.length - 1]); count--) {
@@ -205,7 +205,7 @@ export function plannedPeriodsOf(
     const listed_from = main_at === 0 ? outputSwingsOf(main.cycle, registry, item) : main.swings;
     const planned_from = main_at === 0 ? listed_from : first.swings;
     const { lower, higher } = swingCountsListed(listed_from, planned_from, forced, main.measure.main_period.toDecimal());
-    const fractionalAt = (swings: Fraction, count_overrides: typeof overrides) => CraftingCyclePlan.create(target, registry, config, swings,
+    const fractionalAt = (swings: Fraction, count_overrides: typeof overrides) => OutputCyclePlan.create(target, registry, config, swings,
         count_overrides, undefined, true);
     const toggled = alternative(null, "fractional", true, () => {
         const exact = max_swings(true);
@@ -216,7 +216,7 @@ export function plannedPeriodsOf(
             // as the run backs off (generateClockWithSwingBackoff): the first whole count below that the cycle plan accepts
             const refused = error.swings_per_cycle;
             for (let count = Math.ceil(refused.getNumerator / refused.getDenominator) - 1; count >= 1; count--) {
-                let cycle: CraftingCyclePlan;
+                let cycle: OutputCyclePlan;
                 try {
                     cycle = fractionalAt(fraction(count), { ...overrides, terminal_swing_count: count });
                 } catch (lower) {

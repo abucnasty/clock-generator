@@ -3,8 +3,8 @@ import { loadConfigFromFile } from "../../config/loader";
 import { ConfigPaths } from "../../config/config-paths";
 import type { Config } from "../../config/schema";
 import { quiet } from "../generate-blueprint-test-helpers";
-import { planRun } from "../plan/plan-run";
-import { evenHandsClock, evenHandsWindows } from "./even-hands";
+import { unclockedRun } from "../plan/unclocked-run";
+import { timeDivisionWindowsClock, timeDivisionWindows } from "./time-division-windows";
 
 // The accumulator build of issue 152: two accumulator plants (machines 1 and 2), each fed iron by one caster (3, by
 // inserters 3 and 4) and batteries by a battery plant of its own (4 by inserter 6, 5 by inserter 8); the battery
@@ -21,10 +21,10 @@ describe("even hands", () => {
     });
 
     it("gives every inserter one window a hand, spread evenly, and the two halves the same windows", () => {
-        const plan = planRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, { logger: quiet });
+        const plan = unclockedRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, { logger: quiet });
         const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
         expect(duration.ticks).toBe(972);
-        const windows = evenHandsWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks);
+        const windows = timeDivisionWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks);
         const of = (id: number) => windows.get(`inserter:${id}`)!.map(range => [range.start_inclusive, range.end_inclusive]);
         // hands a period: 288 accumulators, 384 iron and 960 batteries into each accumulator plant, 320 iron and 320
         // copper into each battery plant, in hands of 16
@@ -41,7 +41,7 @@ describe("even hands", () => {
     });
 
     it("holds the build's 576 a period from every start the clock-only check tries", () => {
-        const result = evenHandsClock({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, { logger: quiet });
+        const result = timeDivisionWindowsClock({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, { logger: quiet });
         expect(result.stability_check.as_built?.holds).toBe(true);
         expect(result.stability_check.holds).toBe(true);
         expect(result.stability_check.expected_output_items).toBe(576);
@@ -50,6 +50,6 @@ describe("even hands", () => {
 
     it("is not made for a build whose inserters take from a belt", async () => {
         const belt_fed = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
-        expect(() => evenHandsClock(belt_fed, { logger: quiet })).toThrow(/every inserter takes from a machine or a chest/);
+        expect(() => timeDivisionWindowsClock(belt_fed, { logger: quiet })).toThrow(/every inserter takes from a machine or a chest/);
     });
 });

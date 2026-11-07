@@ -8,7 +8,7 @@ import { buildFlowGraph, type EntityNodeData, type InserterNodeData, type DrillN
 import { configToFormData } from '../utils/configForm/configMapping';
 import { flowEntityKey, flowFocus } from '../utils/flowFocus';
 import { adjacentTransfer, flowEventSummary, flowReplayFrame, flowReplayIndex, flowReplaySnapshot, flowReplayCycles, flowTransferTicks, flowTransferAmounts, type FlowReplaySnapshot } from '../utils/flowReplay';
-import { craftingCycleAt, craftingCycleIndex } from '../utils/craftingCycles';
+import { outputCycleAt, outputCycleIndex } from '../utils/outputCycles';
 import type { TimelineInspection } from '../utils/timelineInspection';
 import { timelineStateLabel, timelineStateStyle } from '../utils/timelinePresentation';
 import { patternBackground } from '../theme/beltCharts';
@@ -102,7 +102,7 @@ function ReplayContent({ config, recording, tick, inspection, cycleTicks, onTick
     const playing = playingRecording === recording;
     const speed = inspection.replaySpeed ?? 0.25;
     const cycles = useMemo(() => flowReplayCycles(cycleTicks, recording), [cycleTicks, recording]);
-    const cycle = craftingCycleAt(cycles, craftingCycleIndex(cycles, tick));
+    const cycle = outputCycleAt(cycles, outputCycleIndex(cycles, tick));
     const firstTick = inspection.replayCycleOnly && cycle ? Math.ceil(cycle.start) : 0;
     const lastTick = inspection.replayCycleOnly && cycle ? Math.min(recording.end_tick, Math.ceil(cycle.end) - (cycle.end === cycles?.end ? 0 : 1)) : recording.end_tick;
     const cursor = useRef({ tick, onTick, lastTick });
@@ -212,9 +212,9 @@ function ReplayContent({ config, recording, tick, inspection, cycleTicks, onTick
         <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, mb: 1 }}>
             <FormControlLabel label="Play one crafting cycle" control={<Checkbox size="small" disabled={!cycles} checked={inspection.replayCycleOnly === true && Boolean(cycles)} onChange={(_, checked) => { setPlayingRecording(null); onChange({ replayCycleOnly: checked }); }} />} />
             {cycle && <>
-                <Button size="small" color="inherit" disabled={cycle.start === 0} onClick={() => { const target = craftingCycleAt(cycles, craftingCycleIndex(cycles, tick) - 1); if (target) seek(Math.ceil(target.start)); }}>Previous cycle</Button>
-                <Typography variant="caption">Crafting cycle {craftingCycleIndex(cycles, tick) + 1} of {cycles?.count} · {number(cycle.start)}–{number(cycle.end)} ticks</Typography>
-                <Button size="small" color="inherit" disabled={craftingCycleIndex(cycles, tick) + 1 === cycles?.count} onClick={() => { const target = craftingCycleAt(cycles, craftingCycleIndex(cycles, tick) + 1); if (target) seek(Math.ceil(target.start)); }}>Next cycle</Button>
+                <Button size="small" color="inherit" disabled={cycle.start === 0} onClick={() => { const target = outputCycleAt(cycles, outputCycleIndex(cycles, tick) - 1); if (target) seek(Math.ceil(target.start)); }}>Previous cycle</Button>
+                <Typography variant="caption">Crafting cycle {outputCycleIndex(cycles, tick) + 1} of {cycles?.count} · {number(cycle.start)}–{number(cycle.end)} ticks</Typography>
+                <Button size="small" color="inherit" disabled={outputCycleIndex(cycles, tick) + 1 === cycles?.count} onClick={() => { const target = outputCycleAt(cycles, outputCycleIndex(cycles, tick) + 1); if (target) seek(Math.ceil(target.start)); }}>Next cycle</Button>
             </>}
         </Box>
         <Box component="ul" aria-label="Connection legend" sx={{ m: 0, mb: 0.5, p: 0, display: 'flex', gap: 2, flexWrap: 'wrap', listStyle: 'none' }}>

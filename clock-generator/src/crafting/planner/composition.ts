@@ -8,18 +8,18 @@ import type { Config } from "../../config";
 import type { OverLimitAction, PlanComposition } from "../../data-types/build-plan";
 import Fraction from "../../data-types/fraction";
 import { SIMULATION_BUDGET_TICKS } from "../plan/clock-period-limit";
-import { carriedItemsOf } from "../result-windows";
-import type { CraftingCyclePlan } from "../sequence/cycle/crafting-cycle";
+import { carriedItemsOf } from "../exhaust";
+import type { OutputCyclePlan } from "../sequence/cycle/output-cycle";
 import { EntityTransferCountMap } from "../sequence/cycle/swing-counts";
 import type { GroupShape } from "./groups";
 import { MAX_OBSERVED_WINDOWS_PERIOD_TICKS, type PlannedPeriods } from "./periods";
 
 /**
  * The items whose hands are left out of a cycle's lcm: the config's (`overrides.ignored_lcm_ingredients`), and the
- * results whose hands their windows carry from one period to the next, which are whole in no period (result-windows.ts)
+ * results whose hands their windows carry from one period to the next, which are whole in no period (exhaust.ts)
  */
-export function ignoredLcmItemsOf(config: Config, cycle: CraftingCyclePlan): string[] {
-    const carried = cycle.result_windows === undefined ? [] : carriedItemsOf(cycle.result_windows);
+export function ignoredLcmItemsOf(config: Config, cycle: OutputCyclePlan): string[] {
+    const carried = cycle.exhaust === undefined ? [] : carriedItemsOf(cycle.exhaust);
     return [...(config.overrides?.ignored_lcm_ingredients ?? []), ...carried];
 }
 
@@ -45,7 +45,7 @@ const lcm = (a: number, b: number): number => a / gcd(a, b) * b;
  * The measure of a cycle plan over the groups; `group_of` gives the group (by its index) of an edge by its transfer key
  * (transferKeyOf). A hand of an edge in no group counts in the build's lcm only.
  */
-export function cycleMeasureOf(config: Config, cycle: CraftingCyclePlan, groups: readonly GroupShape[], group_of: ReadonlyMap<string, number>): CycleMeasure {
+export function cycleMeasureOf(config: Config, cycle: OutputCyclePlan, groups: readonly GroupShape[], group_of: ReadonlyMap<string, number>): CycleMeasure {
     const ignored = ignoredLcmItemsOf(config, cycle);
     const computed_lcm = EntityTransferCountMap.lcm(cycle.entity_transfer_map, ignored.length > 0 ? ignored : undefined);
     const group_cycles = groups.map(() => 1);

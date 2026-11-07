@@ -4,7 +4,7 @@ import type { Ingredient } from "../data";
 import { OpenRange } from "../data-types";
 import { fraction } from "../data-types/fraction";
 import { rotateRanges } from "./clock";
-import { CraftingCyclePlan } from "./sequence/cycle/crafting-cycle";
+import { OutputCyclePlan } from "./sequence/cycle/output-cycle";
 import { destroyedTargetCrafts, resultTakersOf } from "./sequence/cycle/swing-counts";
 import { targetInsertersOf, targetMachinesOf } from "./sequence/cycle/target-ends";
 
@@ -267,14 +267,14 @@ function ticksToCover(back: Ingredient[], rolls_per_tick: number, spare_per_tick
 
 /**
  * Hands an inserter starts in a window: it acts in every tick of the window, so a window of W ticks starts
- * floor((W - 1) / swing) + 1 hands where its source has them (inserters.md section 9 of the mechanics docs; see even-hands.ts)
+ * floor((W - 1) / swing) + 1 hands where its source has them (inserters.md section 9 of the mechanics docs; see time-division-windows.ts)
  */
 function handsThatFit(window: OpenRange, swing_ticks: number): number {
     return Math.floor((window.end_inclusive - window.start_inclusive) / swing_ticks) + 1;
 }
 
 /** Crafts a period of a machine that destroys the target item: what its plan brings in, over what a craft keeps of it */
-function craftsPerPeriod(plan: CraftingCyclePlan, machine: Machine, registry: Pick<ReadableEntityRegistry, "getAll">, cycles: number): number {
+function craftsPerPeriod(plan: OutputCyclePlan, machine: Machine, registry: Pick<ReadableEntityRegistry, "getAll">, cycles: number): number {
     const target = { item: plan.production_rate.machine_production_rate.item, counts: plan.production_rate.counts };
     const brought = targetInsertersOf(machine, target, registry)
         .map(inserter => plan.entity_transfer_map.get(inserter.entity_id))
@@ -291,7 +291,7 @@ function craftsPerPeriod(plan: CraftingCyclePlan, machine: Machine, registry: Pi
  * crafting against the spread of what comes back into it, which no window of an inserter holds.
  */
 export function randomAmountMargins(
-    plan: CraftingCyclePlan,
+    plan: OutputCyclePlan,
     registry: Pick<ReadableEntityRegistry, "getAll">,
     windows: ReadonlyMap<string, OpenRange[]>,
     period: number,
@@ -377,7 +377,7 @@ function lengthenedWindows(ranges: OpenRange[], hands: number, swing_ticks: numb
 }
 
 /** Items the takers' windows can move a period beyond their planned hands, in whole hands */
-function roomOf(takers: Inserter[], item: string, windows: ReadonlyMap<string, OpenRange[]>, plan: CraftingCyclePlan, cycles: number): number {
+function roomOf(takers: Inserter[], item: string, windows: ReadonlyMap<string, OpenRange[]>, plan: OutputCyclePlan, cycles: number): number {
     let room = 0;
     for (const taker of takers) {
         const planned = plan.entity_transfer_map.get(taker.entity_id);

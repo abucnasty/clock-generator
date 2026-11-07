@@ -17,13 +17,13 @@ import type { SubtickPeriod } from "../common/subtick-period";
 import { canonicalKey, currentRunMemo } from "./plan/run-memo";
 import { wholeCounterOf } from "./plan/clock-period-limit";
 import { assessTargetProduction, TargetProduction } from "./target-production";
-import { BlueprintGenerationResult, BuildRun, FractionalSwings, LCM_STABILITY_TOLERANCE, SIMULATION_BUDGET_TICKS, RunOptions, fractionalSwingsOf, SimulationStabilityCheck, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, coldControlledTrialBuild, planRun, provenRepeatBin, runBuild, trialRunOf, withInserterClocks } from "./plan/plan-run";
+import { BlueprintGenerationResult, BuildRun, FractionalSwings, LCM_STABILITY_TOLERANCE, SIMULATION_BUDGET_TICKS, RunOptions, fractionalSwingsOf, SimulationStabilityCheck, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, coldControlledTrialBuild, unclockedRun, provenRepeatBin, runBuild, trialRunOf, withInserterClocks } from "./plan/unclocked-run";
 import { SimulationTick } from "./runner/simulation-tick";
 import { simulationStateKey } from "./runner/steady-state";
 import { inLoopInserterWindows, loopInserterWindows } from "./candidates/loop-windows";
 import type { LoopStockBound } from "./candidates/loop-stock-bound";
 import { CLOCK_STARTS, ClockStart, StartDependence, StartOutcome, cycleOf, startVerdictOf, startsReachingTarget } from "./start-dependence";
-import { plannedWithFractionalSwings } from "./sequence/cycle/crafting-cycle";
+import { plannedWithFractionalSwings } from "./sequence/cycle/output-cycle";
 import { movingPickupPhaseStarts } from "./moving-pickup-phase-starts";
 import { canonicalVerificationJson } from "./verification-signature";
 import { DeciderOrder, deciderBuildOrder, reversedDeciderOrder } from "./decider-order";
@@ -31,10 +31,10 @@ import { withChestDrillWindows } from "./chest-drill-windows";
 import type { FullOutputChest } from "./full-output-chests";
 import { ExportShortfall, exportShortfallOfBins, exportShortfallsOfRun, exportedItemsOf } from "./export-delivery";
 import { ResultsTaken, resultsTakenOf } from "./results-taken";
-import { ResultWindowsPlan, resultLossTrialOf } from "./result-windows";
+import { ExhaustPlan, resultLossTrialOf } from "./exhaust";
 import { excessLossOf } from "./random-margins";
 import { TakerOrder, takerOrderName, independentTakerOrdersToCheck } from "../simulation/competing-takers";
-import { verificationPlanningConfigOf, verificationTerminalCountOf } from "./primitive-grouped-policy";
+import { verificationPlanningConfigOf, verificationTerminalCountOf } from "./round-robin-polling-primitive-policy";
 import { CIRCUIT_LATENCY_TICKS } from "../common/rule-constants";
 import { WakeUpsFromStarts, hasStockTheClockDoesNotSet, wakeUpsFromStarts } from "./wake-ups-from-starts";
 
@@ -648,7 +648,7 @@ export function clockFromWindows(
     /** Plan it with fractional swings, as the "Fractional swings" alternative plans its clocks */
     swings: FractionalSwings = {},
 ): BlueprintGenerationResult {
-    const plan = planRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, { logger, ...swings });
+    const plan = unclockedRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, { logger, ...swings });
     // the windows are built as they are: nothing is added to them, so the clock goes without belt pickup slack, and the
     // inserters of a loop without windows stay always enabled
     const clock = clockOfPlan(plan, { belt_pickup_slack: "never" });
@@ -955,7 +955,7 @@ export function exhaustiveStartPhases(
 
     for (let offset = 0; offset < counter_ticks && outcome.holds; offset++) {
         const rotated_config = offset === 0 ? as_built : buildAsBuiltConfig(config, decider_windows, period, undefined, "built", offset);
-        const context = coldControlledTrialBuild(rotated_config, base.crafting_cycle_plan, base.recipe_lcm, {}, quiet);
+        const context = coldControlledTrialBuild(rotated_config, base.output_cycle_plan, base.recipe_lcm, {}, quiet);
         const output_states = context.inserters.map(it => it.inserter_state)
             .filter(state => base.output_inserter_ids.has(state.entity_id.id));
         const dropped = () => output_states.reduce((sum, state) => sum + state.items_dropped, 0);
@@ -1737,7 +1737,7 @@ export function startDependenceVerdictOf(
     try {
         report?.("Trying other starts");
         return startDependenceOf(config, result.clock_windows, result.simulation_duration.ticks, result.stability_check.expected_output_items, cold_holds, quiet,
-            CLOCK_STARTS, fractionalSwingsOf(result.crafting_cycle_plan));
+            CLOCK_STARTS, fractionalSwingsOf(result.output_cycle_plan));
     } catch (error) {
         if (errors === "throw") throw error;
         logger.log(`Start dependence could not be tried: ${error instanceof Error ? error.message : error}`);
@@ -1790,8 +1790,8 @@ function triedBackpressureLoss(
     try {
         return { backpressure_loss: verdictOf(backpressureLossOf(config, result.clock_windows, result.simulation_duration.ticks,
             result.stability_check.expected_output_items, quiet, {}, (_loss, index, total) => report?.(`Trying backpressure loss ${index + 1}/${total}`),
-            result.result_windows === undefined ? undefined : resultLossOptionsOf(result.result_windows.plans), excess === null ? [] : [excess],
-            fractionalSwingsOf(result.crafting_cycle_plan))) };
+            result.exhaust === undefined ? undefined : resultLossOptionsOf(result.exhaust.plans), excess === null ? [] : [excess],
+            fractionalSwingsOf(result.output_cycle_plan))) };
     } catch (error) {
         if (errors === "throw") throw error;
         const reason = error instanceof Error ? error.message : String(error);
@@ -1807,7 +1807,7 @@ function triedBackpressureLoss(
  * recovery from the worst backlog is the arithmetic's (`drain_periods` of each window, within the periods a trial gives).
  * Every other loss as for any clock.
  */
-function resultLossOptionsOf(plans: readonly ResultWindowsPlan[]): (loss: BackpressureLoss) => Partial<BackpressureLossOptions> {
+function resultLossOptionsOf(plans: readonly ExhaustPlan[]): (loss: BackpressureLoss) => Partial<BackpressureLossOptions> {
     return loss => {
         const trial = loss.kind === "output" ? resultLossTrialOf(plans, loss.item, MAX_RECOVERY_PERIODS - LATE_AFTER_PERIODS) : null;
         return trial === null ? {} : {
@@ -1859,7 +1859,7 @@ export function roundedClockTrial(
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     const as_built = runAsBuiltCheck(config, windows, period_ticks, quietLogger(logger), AS_BUILT_START_PHASES,
         (n, total) => report?.(`Checking the clock rounded to ${period_ticks} ticks, clock start ${n}/${total}`), FREE_RUNNING_CHECK_TICKS,
-        undefined, false, "loop-windows", fractionalSwingsOf(result.crafting_cycle_plan));
+        undefined, false, "loop-windows", fractionalSwingsOf(result.output_cycle_plan));
     const rounded: BlueprintGenerationResult = {
         ...result,
         clock_windows,
@@ -1899,7 +1899,7 @@ export function withSettledOutput(
     try {
         const planning = verificationPlanningConfigOf(planned_on, result);
         const config = { ...planning, overrides: { ...planning.overrides, derive_clock_windows: false } };
-        const swings = fractionalSwingsOf(result.crafting_cycle_plan);
+        const swings = fractionalSwingsOf(result.output_cycle_plan);
         const windows = withChestDrillWindows(config, new Map(Object.entries(result.clock_windows).map(([entity_id, ranges]) =>
             [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const)), period);
         const long_run = longRunOfFreeRunningBuild(config, windows, period, result.stability_check.expected_output_items, quietLogger(logger), FREE_RUNNING_CHECK_TICKS, swings, "hands");
@@ -1922,7 +1922,7 @@ function verificationConfigOf(config: Config, result: BlueprintGenerationResult)
         [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     const verification_config = buildAsBuiltConfig({ ...config, overrides: { ...config.overrides,
         derive_clock_windows: false, terminal_swing_count: verificationTerminalCountOf(result) } }, windows, result.simulation_duration.ticks);
-    const fractional_swings = fractionalSwingsChangeChecksOn(verification_config, result) && plannedWithFractionalSwings(result.crafting_cycle_plan);
+    const fractional_swings = fractionalSwingsChangeChecksOn(verification_config, result) && plannedWithFractionalSwings(result.output_cycle_plan);
     return { config: verification_config, fractional_swings };
 }
 
@@ -1952,7 +1952,7 @@ export function clockVerificationSignature(config: Config, result: BlueprintGene
     return canonicalVerificationJson({ config: verification.config, fractional_swings: verification.fractional_swings, period: result.simulation_duration.ticks, windows: result.clock_windows,
         belt_kind: result.belt?.kind ?? null, belt_pickup_slack_left_out: result.belt_pickup_slack_left_out,
         expected_output: result.stability_check.expected_output_items,
-        base_cycle_ticks: result.crafting_cycle_plan.total_duration.ticks,
+        base_cycle_ticks: result.output_cycle_plan.total_duration.ticks,
         transfer_plan: result.serializable_transfer_plan,
         inserter_clocks: result.unplanned_inserter_clocks,
         check: result.stability_check.as_built ?? result.stability_check });

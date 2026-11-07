@@ -5,7 +5,7 @@ import {loadConfigFromFile} from "../../config/loader";
 import {ACTIVATION_ORDER, InserterDispatch} from "../../simulation/dispatch";
 import {SimulationContext} from "../sequence/simulation-context";
 import {generateClockForConfig} from "../generate-clock";
-import {planRun} from "./plan-run";
+import {unclockedRun} from "./unclocked-run";
 
 /** What `make` returns with every run it makes under `dispatch` */
 function underDispatch<T>(dispatch: InserterDispatch, make: () => T): T {
@@ -24,7 +24,7 @@ function underDispatch<T>(dispatch: InserterDispatch, make: () => T): T {
 
 /** The windows the planning run reads off a build, every run of it made under `dispatch` */
 function plannedWindows(config: Config, dispatch: InserterDispatch): Record<string, string[]> {
-    const windows = underDispatch(dispatch, () => planRun(config).unslacked_windows);
+    const windows = underDispatch(dispatch, () => unclockedRun(config).unslacked_windows);
     return Object.fromEntries([...windows].sort(([a], [b]) => a.localeCompare(b))
         .map(([id, ranges]) => [id, ranges.map(range => `${range.start_inclusive}-${range.end_inclusive}`)]));
 }

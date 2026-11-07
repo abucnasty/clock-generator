@@ -6,7 +6,7 @@ import {OpenRange} from "../data-types";
 import type {MutableTickProvider} from "../simulation/current-tick-provider";
 import * as phases from "../simulation/tick-phases";
 import type {SimulationContext} from "./sequence/simulation-context";
-import * as planning from "./plan/plan-run";
+import * as planning from "./plan/unclocked-run";
 import * as state from "./runner/steady-state";
 import * as target from "./target-production";
 import {exhaustiveStartPhases, runAsBuiltCheck} from "./trial";

@@ -3,9 +3,9 @@ import type { Config } from "../../config";
 import { ConfigPaths } from "../../config/config-paths";
 import { loadConfigFromFile } from "../../config/loader";
 import { ChestType } from "../../common/entity-types";
-import * as planning from "../plan/plan-run";
+import * as planning from "../plan/unclocked-run";
 import * as contexts from "../sequence/simulation-context";
-import { evenHandsClock } from "./even-hands";
+import { timeDivisionWindowsClock } from "./time-division-windows";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -16,17 +16,17 @@ describe("even-hands hard topology preflight", () => {
         drill = await loadConfigFromFile(ConfigPaths.GRENADE_240_FILLS_BELT_EXACTLY);
     });
     it("refuses belt sources using the existing source rule before any planning", () => {
-        const plan = vi.spyOn(planning, "planRun").mockImplementation(() => { throw new Error("planning must not run"); });
+        const plan = vi.spyOn(planning, "unclockedRun").mockImplementation(() => { throw new Error("planning must not run"); });
         const before = JSON.stringify(belt);
         expect(belt.inserters.some(inserter => inserter.source.type === "belt")).toBe(true);
-        expect(() => evenHandsClock(belt)).toThrow("only made where every inserter takes from a machine or a chest");
+        expect(() => timeDivisionWindowsClock(belt)).toThrow("only made where every inserter takes from a machine or a chest");
         expect(plan).not.toHaveBeenCalled();
         expect(JSON.stringify(belt)).toBe(before);
     });
     it("refuses drills using the existing rule before prepare/count arithmetic", () => {
-        const plan = vi.spyOn(planning, "planRun").mockImplementation(() => { throw new Error("planning must not run"); });
+        const plan = vi.spyOn(planning, "unclockedRun").mockImplementation(() => { throw new Error("planning must not run"); });
         expect(drill.drills?.configs.length).toBeGreaterThan(0);
-        expect(() => evenHandsClock(drill)).toThrow("even hands are not made for a build with mining drills");
+        expect(() => timeDivisionWindowsClock(drill)).toThrow("even hands are not made for a build with mining drills");
         expect(plan).not.toHaveBeenCalled();
     });
     const supported: Config = {
@@ -43,16 +43,16 @@ describe("even-hands hard topology preflight", () => {
     };
     it("lets supported machine/chest topology reach unchanged planning and propagate its errors", () => {
         const sentinel = new Error("actual later planning error");
-        const plan = vi.spyOn(planning, "planRun").mockImplementation(() => { throw sentinel; });
-        expect(() => evenHandsClock(supported)).toThrow(sentinel);
+        const plan = vi.spyOn(planning, "unclockedRun").mockImplementation(() => { throw sentinel; });
+        expect(() => timeDivisionWindowsClock(supported)).toThrow(sentinel);
         expect(plan).toHaveBeenCalledOnce();
         expect(plan.mock.calls[0][0]).toBe(supported);
     });
     it("propagates registry construction errors before planning", () => {
         const sentinel = new Error("actual registry construction error");
         const registry = vi.spyOn(contexts, "createEntityRegistryFromConfig").mockImplementation(() => { throw sentinel; });
-        const plan = vi.spyOn(planning, "planRun").mockImplementation(() => { throw new Error("planning must not run"); });
-        expect(() => evenHandsClock(supported)).toThrow(sentinel);
+        const plan = vi.spyOn(planning, "unclockedRun").mockImplementation(() => { throw new Error("planning must not run"); });
+        expect(() => timeDivisionWindowsClock(supported)).toThrow(sentinel);
         expect(registry).toHaveBeenCalledOnce();
         expect(registry.mock.calls[0][0]).toBe(supported);
         expect(plan).not.toHaveBeenCalled();

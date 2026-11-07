@@ -2,7 +2,7 @@ import assert from '../common/assert';
 import type { Config } from '../config/schema';
 import { fraction } from '../data-types/fraction';
 import { createEntityRegistryFromConfig } from './sequence/simulation-context';
-import { CraftingCyclePlan } from './sequence/cycle/crafting-cycle';
+import { OutputCyclePlan } from './sequence/cycle/output-cycle';
 import { EntityTransferCountMap } from './sequence/cycle/swing-counts';
 import { TargetProductionRate } from './target-production-rate';
 import type { SwingPeriodRejection, WholeSwingArithmeticSnapshot } from './plan/clock-period-limit';
@@ -23,10 +23,10 @@ export function* wholeSwingPeriodsBelow(
     const registry = createEntityRegistryFromConfig(config);
     const target = TargetProductionRate.fromConfig(config.target_output);
     for (let count = snapshot.terminal_swing_count - 1; count >= 1; count--) {
-        const plan = CraftingCyclePlan.create(target, registry, config, fraction(count), { ...config.overrides, terminal_swing_count: count });
+        const plan = OutputCyclePlan.create(target, registry, config, fraction(count), { ...config.overrides, terminal_swing_count: count });
         const computed_lcm = EntityTransferCountMap.lcm(plan.entity_transfer_map, config.overrides?.ignored_lcm_ingredients);
         const effective_lcm = config.overrides?.lcm ?? computed_lcm;
-        const period_ticks = CraftingCyclePlan.ticksOfCycles(plan, effective_lcm);
+        const period_ticks = OutputCyclePlan.ticksOfCycles(plan, effective_lcm);
         assert(Number.isFinite(period_ticks) && period_ticks > 0,
             `Clock period of ${period_ticks} ticks exceeds maximum allowed ${limit_ticks} ticks`);
         yield { terminal_swing_count: count, base_cycle_ticks: plan.total_duration_ticks.toDecimal(),

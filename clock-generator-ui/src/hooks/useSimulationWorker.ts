@@ -2,7 +2,7 @@ import type { InternalError } from '../utils/internalError';
 import type { ValidationDiagnostic } from '../utils/buildValidation';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { Config, ConfigValidation, DebugSteps, LogMessage, SerializableClockWindows, SerializableTransferHistory, PortableStateTransitionHistory, SwingBackoffReport, GenerationProgress } from 'clock-generator/browser';
-import { combineClockAlternativeRuns, perBranchInputOf, searchesAreNeeded, searchesToRun } from 'clock-generator/light';
+import { combineClockAlternativeRuns, coordinatedSourcesInputOf, searchesAreNeeded, searchesToRun } from 'clock-generator/light';
 import type { ClockAlternativeContext, ClockAlternativeTask, NotMadeClock } from 'clock-generator/browser';
 import type { ClockAlternativeRunView, ClockAlternativeView, CraftingMachineData, FuelViewData, RecipeInfo, ShiftOptionsView, WorkerRequest, WorkerResponse } from '../worker/types';
 import { askEngine, createSimulationWorker, loadFactorioData } from '../worker/engineClient';
@@ -212,15 +212,15 @@ const signaturesOf = (run: ClockAlternativeRunView): string[] => [run.signature,
 
 /** The labels of the searches a generation did not run; a fallback that was not needed is not one of them */
 const skippedSearchesOf = (generation: Generation): string[] =>
-    generation.skipped.filter(task => !task.fallback && !task.per_branch).map(pendingClockName);
+    generation.skipped.filter(task => !task.fallback && !task.coordinated_sources).map(pendingClockName);
 
 const emptyResults = (): ResultsView => ({
     generationAssumptions: null, alternatives: [], selectedAlternativeIndex: 0, pendingAlternatives: [],
     skippedSearches: [], notMade: [], searchedDeeper: false, pickRule: null, generatedFor: null, stoppedEarly: false, pickGone: null,
 });
 
-/** A run for `perBranchInputOf`: its alternatives that carry a strategy (a live generation's all do; a clock kept before it was carried does not) */
-function withStrategies(run: ClockAlternativeRunView | null): Parameters<typeof perBranchInputOf>[0][number] {
+/** A run for `coordinatedSourcesInputOf`: its alternatives that carry a strategy (a live generation's all do; a clock kept before it was carried does not) */
+function withStrategies(run: ClockAlternativeRunView | null): Parameters<typeof coordinatedSourcesInputOf>[0][number] {
     if (run === null) return null;
     return {
         parts: run.parts,
@@ -503,8 +503,8 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                 // earlier alias with an empty run, regardless of worker completion order.
                 assessedSignatures: [...new Set([...generation.assessedSignatures,
                     ...generation.runs.slice(0, 1 + generation.tasks.findIndex(candidate => candidate.id === task.id))
-                        .flatMap(run => task.per_branch === true ? (run === null ? [] : signaturesOf(run)) : run?.alternatives.length ? [run.signature] : [])])],
-                ...(task.per_branch === true && { perBranch: perBranchInputOf(generation.runs.map(withStrategies),
+                        .flatMap(run => task.coordinated_sources === true ? (run === null ? [] : signaturesOf(run)) : run?.alternatives.length ? [run.signature] : [])])],
+                ...(task.coordinated_sources === true && { coordinatedSources: coordinatedSourcesInputOf(generation.runs.map(withStrategies),
                     (({ alternatives, selected_index }) => alternatives[selected_index].id)(combineClockAlternativeRuns(generation.runs, it => it.ranking))) }),
             } satisfies WorkerRequest);
         }
@@ -570,9 +570,9 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                 generation.tasks = response.tasks;
                 generation.runs = [null, ...response.tasks.map(() => null)];
                 generation.notMade = [[], ...response.tasks.map(() => [])];
-                generation.waiting = response.tasks.filter(task => task.only_when_needed && !task.per_branch);
-                generation.last = response.tasks.filter(task => task.per_branch === true);
-                generation.queue = orderAlternativeTasks(response.tasks.filter(task => !task.only_when_needed && !task.per_branch));
+                generation.waiting = response.tasks.filter(task => task.only_when_needed && !task.coordinated_sources);
+                generation.last = response.tasks.filter(task => task.coordinated_sources === true);
+                generation.queue = orderAlternativeTasks(response.tasks.filter(task => !task.only_when_needed && !task.coordinated_sources));
                 generation.primaryPending = true;
                 generation.assessedSignatures = [response.primarySignature];
                 // the planning worker goes on with the primary alternative

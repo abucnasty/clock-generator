@@ -5,25 +5,25 @@ import { OpenRange } from "../../data-types";
 import { Entity } from "../../entities";
 import type { AlwaysOnReason } from "../always-on-reasons";
 import { ClockPeriodLimitError } from "../plan/clock-period-limit";
-import { planRun, withInserterClocks, withRoomForRandomAmounts, type BlueprintGenerationResult, type GenerateClockOptions } from "../plan/plan-run";
-import type { PrimitiveGroupedAttemptReport, PrimitiveGroupedPolicy } from "../primitive-grouped-policy";
-import { plannedTerminalSwingCount } from "../sequence/cycle/crafting-cycle";
+import { unclockedRun, withInserterClocks, withRoomForRandomAmounts, type BlueprintGenerationResult, type GenerateClockOptions } from "../plan/unclocked-run";
+import type { PrimitiveRoundRobinPollingAttemptReport, PrimitiveRoundRobinPollingPolicy } from "../round-robin-polling-primitive-policy";
+import { plannedTerminalSwingCount } from "../sequence/cycle/output-cycle";
 import { EntityTransferCountMap, outputPathOf } from "../sequence/cycle/swing-counts";
 import { unplannedInserterClocks } from "../sequence/unplanned-inserter-clock";
 import { CLOCK_STARTS } from "../start-dependence";
 import { TargetProductionRate } from "../target-production-rate";
 import { backpressureLossVerdictOf, clockVerificationSignature, startDependenceVerdictOf } from "../trial";
 import { canonicalVerificationJson } from "../verification-signature";
-import { finishedClock, groupedClockRank, groupedHandsPlan, GroupedHandsNotApplicable, holdsWithMargin, offerWay } from "./grouped-hands";
-import { constructPrimitiveGroupedHands } from "./primitive-grouped-hands";
+import { finishedClock, roundRobinPollingClockRank, roundRobinPollingPlan, RoundRobinPollingNotApplicable, holdsWithMargin, offerWay } from "./round-robin-polling";
+import { constructPrimitiveRoundRobinPolling } from "./round-robin-polling-primitive";
 
-export interface VerifiedPrimitiveGroupedResult {
+export interface VerifiedPrimitiveRoundRobinPollingResult {
     clock: BlueprintGenerationResult | null;
-    report: PrimitiveGroupedAttemptReport;
+    report: PrimitiveRoundRobinPollingAttemptReport;
 }
 
 /** Only the reviewed default policy: explicit caller alternatives keep their established semantics. */
-export function primitiveGroupedOptionsSupported(config: Config, options: GenerateClockOptions): boolean {
+export function primitiveRoundRobinPollingOptionsSupported(config: Config, options: GenerateClockOptions): boolean {
     return options.verify_as_built === true && options.shared_windows !== true
         && options.belt_pickup_slack !== "never" && options.fuel_hand_room !== true
         && config.overrides?.derive_clock_windows !== true && config.overrides?.lcm === undefined
@@ -32,21 +32,21 @@ export function primitiveGroupedOptionsSupported(config: Config, options: Genera
 }
 
 /**
- * Assess a pure AUTO construction using an authentic derived PlanRun. No user config or accepted physical controls
+ * Assess a pure AUTO construction using an authentic derived UnclockedRun. No user config or accepted physical controls
  * are inferred from that planning run. Failure is evidence for fallback, never a fabricated simulation verdict.
  */
-export function verifiedPrimitiveGroupedClock(
+export function verifiedPrimitiveRoundRobinPollingClock(
     config: Config, options: GenerateClockOptions, requested_terminal_swing_count: number,
-    trigger: PrimitiveGroupedPolicy["trigger"] = "initial-period-limit",
-): VerifiedPrimitiveGroupedResult {
-    const report: PrimitiveGroupedAttemptReport = { strategy: "primitive-grouped", eligibility: "separate-windows-only",
+    trigger: PrimitiveRoundRobinPollingPolicy["trigger"] = "initial-period-limit",
+): VerifiedPrimitiveRoundRobinPollingResult {
+    const report: PrimitiveRoundRobinPollingAttemptReport = { strategy: "primitive-grouped", eligibility: "separate-windows-only",
         outcome: "inapplicable", attempts: [] };
-    const refused = (reason: string): VerifiedPrimitiveGroupedResult => ({ clock: null, report: { ...report, reason } });
-    if (!primitiveGroupedOptionsSupported(config, options)) return refused("the caller's scheduling options are outside the primitive separate-window policy");
+    const refused = (reason: string): VerifiedPrimitiveRoundRobinPollingResult => ({ clock: null, report: { ...report, reason } });
+    if (!primitiveRoundRobinPollingOptionsSupported(config, options)) return refused("the caller's scheduling options are outside the primitive separate-window policy");
     let construction;
-    try { construction = constructPrimitiveGroupedHands(config); }
+    try { construction = constructPrimitiveRoundRobinPolling(config); }
     catch (error) {
-        if (error instanceof GroupedHandsNotApplicable || error instanceof ClockPeriodLimitError) return refused(error.message);
+        if (error instanceof RoundRobinPollingNotApplicable || error instanceof ClockPeriodLimitError) return refused(error.message);
         throw error;
     }
     const ways = construction.attempts.filter(attempt => !attempt.options.share_windows && attempt.result.kind === "constructed");
@@ -58,9 +58,9 @@ export function verifiedPrimitiveGroupedClock(
     // This derived policy is internal. Original AUTO intent and every physical field remain untouched.
     const derived: Config = { ...config, overrides: { ...config.overrides,
         terminal_swing_count: construction.terminal_swing_count, lcm: construction.grouped_cycles } };
-    const made = planRun(derived, options);
+    const made = unclockedRun(derived, options);
     const { run } = made;
-    assert(plannedTerminalSwingCount(run.crafting_cycle_plan) === construction.terminal_swing_count, "primitive planner count changed");
+    assert(plannedTerminalSwingCount(run.output_cycle_plan) === construction.terminal_swing_count, "primitive planner count changed");
     assert(run.duration.ticks === construction.period_ticks && run.recipe_lcm === construction.grouped_cycles, "primitive period/cycles changed");
     assert(canonicalVerificationJson(EntityTransferCountMap.serialize(run.swing_counts)) === canonicalVerificationJson(construction.transfer_plan), "primitive transfer facts changed");
     const registry = run.simulation_context.entity_registry;
@@ -87,7 +87,7 @@ export function verifiedPrimitiveGroupedClock(
             if (held_without_room > 0) break;
         }
         const built = attempt.result;
-        const grouped = groupedHandsPlan(registry, run.swing_counts, run.recipe_lcm, run.duration.ticks,
+        const grouped = roundRobinPollingPlan(registry, run.swing_counts, run.recipe_lcm, run.duration.ticks,
             config.overrides?.backed_up_belts !== true, attempt.options, null, { output_paths, direct_sources, retained_clocks: clocks });
         const serialize = (windows: Map<string, OpenRange[]>) => Object.fromEntries([...windows].map(([id, ranges]) =>
             [id, ranges.map(range => ({ start: range.start_inclusive, end: range.end_inclusive }))]));
@@ -98,7 +98,7 @@ export function verifiedPrimitiveGroupedClock(
         const key = canonicalVerificationJson({ windows: serialize(windows), retained, busy: built.busy });
         if (seen.has(key)) continue;
         seen.add(key);
-        const event: PrimitiveGroupedAttemptReport["attempts"][number] = { construction_key: key, stage: "margin" };
+        const event: PrimitiveRoundRobinPollingAttemptReport["attempts"][number] = { construction_key: key, stage: "margin" };
         report.attempts.push(event);
         detail?.(`Checking primitive grouped margins ${report.attempts.length}`);
         const margin = holdsWithMargin(made, windows, construction.period_ticks);
@@ -107,10 +107,10 @@ export function verifiedPrimitiveGroupedClock(
         const left_open = new Map<string, AlwaysOnReason>(built.busy.map(id => [id, { kind: "busy", period_ticks: construction.period_ticks }]));
         let result = finishedClock(made, windows, grouped.turns, { ...options, loop_windows: false }, left_open, room);
         offerWay(`primitive ${attempt.options.feeder_offset === 1 ? "compact" : "staged"}${attempt.options.surplus_guard === true ? " with the surplus guard" : ""}`, result, grouped.guarded);
-        const policy: PrimitiveGroupedPolicy = { strategy: "primitive-grouped", trigger,
+        const policy: PrimitiveRoundRobinPollingPolicy = { strategy: "primitive-grouped", trigger,
             requested_terminal_swing_count, terminal_swing_count: construction.terminal_swing_count, grouped_cycles: construction.grouped_cycles,
             construction_key: key, options: { ...attempt.options, share_windows: false }, loop_refinement: false };
-        result = { ...result, grouped_hands: { shared_windows: false }, primitive_grouped: policy };
+        result = { ...result, round_robin_polling: { shared_windows: false }, primitive_round_robin_polling: policy };
         assert(canonicalVerificationJson(result.clock_windows) === canonicalVerificationJson(serialize(withInserterClocks(windows, clocks, construction.period_ticks))), "primitive exported controls changed");
         assert(canonicalVerificationJson(result.unplanned_inserter_clocks ?? {}) === canonicalVerificationJson(construction.retained_clocks), "primitive exported by-product controls changed");
         for (const inserter of construction.inserters) assert(result.clock_windows[inserter.id]?.length
@@ -138,7 +138,7 @@ export function verifiedPrimitiveGroupedClock(
         holding.push(result);
     }
     // Same objective and stable-order tie break as ordinary grouped selection, within the eligible assessed set.
-    const ordered = holding.map((clock, index) => ({ clock, index, rank: groupedClockRank(registry, clock) }))
+    const ordered = holding.map((clock, index) => ({ clock, index, rank: roundRobinPollingClockRank(registry, clock) }))
         .sort((a, b) => a.rank[0] - b.rank[0] || a.rank[1] - b.rank[1] || a.index - b.index);
     if (ordered.length === 0) return { clock: null, report };
     return { clock: ordered[0].clock, report: { ...report, outcome: "accepted" } };

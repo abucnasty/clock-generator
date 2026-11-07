@@ -5,7 +5,7 @@ import { ConfigPaths } from "../config/config-paths";
 import { TestConfigPaths } from "../../tests/configs/paths";
 import { EntityId } from "../entities";
 import { FeasibilityError } from "../config/errors";
-import { planCraftingCycle } from "./plan/plan-run";
+import { planOutputCycle } from "./plan/unclocked-run";
 import { SimulationContext } from "./sequence/simulation-context";
 import { alwaysOnReasonProblems, alwaysOnReasonProblemsOf, withSearches } from "./generate-blueprint-test-helpers";
 
@@ -36,7 +36,7 @@ describe("generateClockForConfig", () => {
             result = generateClockForConfig(config);
 
             // Get the actual EntityId instances from the map keys
-            const keys = Array.from(result.crafting_cycle_plan.entity_transfer_map.keys());
+            const keys = Array.from(result.output_cycle_plan.entity_transfer_map.keys());
             inserterId = keys.find(k => k.id === "inserter:1")!;
             drillId = keys.find(k => k.id === "drill:1")!;
         });
@@ -47,13 +47,13 @@ describe("generateClockForConfig", () => {
 
         it("generates a blueprint, a crafting cycle plan of 144 ticks for stone bricks and a simulation duration", () => {
             expect(result.blueprint).toBeDefined();
-            expect(result.crafting_cycle_plan.total_duration.ticks).toBe(144);
-            expect(result.crafting_cycle_plan.production_rate.machine_production_rate.item).toBe("stone-brick");
+            expect(result.output_cycle_plan.total_duration.ticks).toBe(144);
+            expect(result.output_cycle_plan.production_rate.machine_production_rate.item).toBe("stone-brick");
             expect(result.simulation_duration.ticks).toBeGreaterThan(0);
         });
 
         it("plans 6 transfers of stone bricks, in hands of 16, for the output inserter (inserter:1)", () => {
-            const transferCounts = result.crafting_cycle_plan.entity_transfer_map.getOrThrow(inserterId);
+            const transferCounts = result.output_cycle_plan.entity_transfer_map.getOrThrow(inserterId);
             expect(transferCounts.total_transfer_count.toDecimal()).toBe(6);
             expect(transferCounts.item_transfers.length).toBe(1);
             expect(transferCounts.item_transfers[0].item_name).toBe("stone-brick");
@@ -62,7 +62,7 @@ describe("generateClockForConfig", () => {
         });
 
         it("plans transfers of stone for the drill (drill:1)", () => {
-            const transferCounts = result.crafting_cycle_plan.entity_transfer_map.getOrThrow(drillId);
+            const transferCounts = result.output_cycle_plan.entity_transfer_map.getOrThrow(drillId);
             expect(transferCounts.total_transfer_count.toDecimal()).toBeGreaterThan(0);
             expect(transferCounts.item_transfers.length).toBe(1);
             expect(transferCounts.item_transfers[0].item_name).toBe("stone");
@@ -147,15 +147,15 @@ describe("generateClockForConfig", () => {
         });
 
         it("plans logistic science packs in a cycle of 192 ticks (48 ticks per swing × 4 swings), with 4 transfers for each output inserter", () => {
-            expect(result.crafting_cycle_plan.production_rate.machine_production_rate.item).toBe("logistic-science-pack");
+            expect(result.output_cycle_plan.production_rate.machine_production_rate.item).toBe("logistic-science-pack");
             // With 2 output machines and a target rate of 240 items/sec over 6 copies,
             // each machine produces at 1/3 items/tick (240/6/60/2).
             // A stack of 16 items takes 48 ticks per machine.
             // With 4 swings per cycle, total duration = 192 ticks.
-            expect(result.crafting_cycle_plan.total_duration.ticks).toBe(192);
-            const keys = Array.from(result.crafting_cycle_plan.entity_transfer_map.keys());
+            expect(result.output_cycle_plan.total_duration.ticks).toBe(192);
+            const keys = Array.from(result.output_cycle_plan.entity_transfer_map.keys());
             for (const inserter of [1, 7]) {
-                const transferCounts = result.crafting_cycle_plan.entity_transfer_map.getOrThrow(keys.find(k => k.id === EntityId.forInserter(inserter).id)!);
+                const transferCounts = result.output_cycle_plan.entity_transfer_map.getOrThrow(keys.find(k => k.id === EntityId.forInserter(inserter).id)!);
                 expect(transferCounts.total_transfer_count.toDecimal()).toBe(4);
             }
         });
@@ -167,7 +167,7 @@ describe("generateClockForConfig", () => {
                 ...config,
                 target_output: { ...config.target_output, items_per_second: config.target_output.items_per_second * 2, copies: config.target_output.copies * 2 },
             });
-            expect(modifiedResult.crafting_cycle_plan.total_duration.ticks).toBe(result.crafting_cycle_plan.total_duration.ticks);
+            expect(modifiedResult.output_cycle_plan.total_duration.ticks).toBe(result.output_cycle_plan.total_duration.ticks);
         });
     });
 
@@ -177,7 +177,7 @@ describe("generateClockForConfig", () => {
         it("records the input inserter transferring both required ingredient types", () => {
             const result = generateClockForConfig(config);
             expect(alwaysOnReasonProblems(config, result, "planned")).toEqual([]);
-            const keys = Array.from(result.crafting_cycle_plan.entity_transfer_map.keys());
+            const keys = Array.from(result.output_cycle_plan.entity_transfer_map.keys());
             const inserterTransfers = result.transfer_history.getOrThrow(keys.find(k => k.id === EntityId.forInserter(1).id)!);
             expect(inserterTransfers.length).toBeGreaterThan(0);
             const transferredItems = new Set(inserterTransfers.map(t => t.item_name));
@@ -284,7 +284,7 @@ describe("generateClockForConfig", () => {
                 + "for one copy): Machine 1 (flying robot frame) crafts at most 3.44 a second. The target needs 33.33 crafts a second of it (66.67 a "
                 + "second of flying robot frame at 2 a craft).");
             const quiet = { log: () => { }, warn: () => { }, error: () => { }, debug: () => { } };
-            expect(() => planCraftingCycle(over, SimulationContext.fromConfig(over), quiet)).toThrow("cannot meet the target production rate");
+            expect(() => planOutputCycle(over, SimulationContext.fromConfig(over), quiet)).toThrow("cannot meet the target production rate");
         });
     });
 
@@ -314,7 +314,7 @@ describe("generateClockForConfig", () => {
         it("generates a blueprint whose input inserter (1) transfers both copper-plate and iron-gear-wheel (not just one), and whose output inserter (2) transfers", () => {
             const result = generateClockForConfig(config);
             expect(result.blueprint).toBeDefined();
-            const keys = Array.from(result.crafting_cycle_plan.entity_transfer_map.keys());
+            const keys = Array.from(result.output_cycle_plan.entity_transfer_map.keys());
             // inserter:1 = belt→machine (copper-plate + iron-gear-wheel), no explicit id in config → index+1
             const input_transfers = result.transfer_history.getOrThrow(keys.find(k => k.id === EntityId.forInserter(1).id)!);
             // inserter:2 = machine→belt (automation-science-pack)

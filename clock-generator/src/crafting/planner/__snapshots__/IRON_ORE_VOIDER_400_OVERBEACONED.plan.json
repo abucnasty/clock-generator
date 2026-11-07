@@ -85,7 +85,7 @@
       "action": "none"
     }
   },
-  "result_windows": {
+  "exhaust": {
     "kind": "whole-hands",
     "hands": 5,
     "terms": {

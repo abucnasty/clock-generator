@@ -78,7 +78,7 @@ function checkOnNewWorker(index: number) {
 }
 
 /** A task of a plan, which runs on every build unless the fields say otherwise */
-const task = (id: string, label: string, fields: Pick<Partial<ClockAlternativeTask>, 'only_when_needed' | 'fallback' | 'per_branch'> = {}): ClockAlternativeTask =>
+const task = (id: string, label: string, fields: Pick<Partial<ClockAlternativeTask>, 'only_when_needed' | 'fallback' | 'coordinated_sources'> = {}): ClockAlternativeTask =>
     ({ id, label, only_when_needed: false, ...fields });
 const twoTasks = [task('one', 'One'), task('two', 'Two')];
 const remaining = task('remaining', 'Remaining');
@@ -359,14 +359,14 @@ describe('tasks alongside the primary alternative', () => {
     });
 
     describe('the per-branch clock', () => {
-        const perBranch = task('per-branch', 'Coordinated sources', { per_branch: true });
+        const coordinatedSources = task('per-branch', 'Coordinated sources', { coordinated_sources: true });
         const part = (alternative_id: string) => ({ name: alternative_id, alternative_id, verdict: 'stable' as const, period_ticks: 10,
             windows: { 'inserter:1': [{ start: 0, end: alternative_id.length }] }, counted: true });
 
         it('runs last, after the searches, with the parts of every run and the clock they recommend, and is not a skipped search', async () => {
             await initialize();
             generate();
-            const runId = answerPlan([task('one', 'One'), task('derived', 'Observed windows', { only_when_needed: true }), perBranch]);
+            const runId = answerPlan([task('one', 'One'), task('derived', 'Observed windows', { only_when_needed: true }), coordinatedSources]);
             const requests = () => workers.flatMap(w => w.requests('task')).filter(m => m.runId === runId);
             expect(requests().map(m => m.taskId)).toEqual(['one']);
             finishTask(runId, 'one', { signature: 'one', alternatives: [selectionClock('one', 3)], parts: [part('one')] });
@@ -377,7 +377,7 @@ describe('tasks alongside the primary alternative', () => {
                 finishTask(runId, 'derived', null);
             }
             const sent = requests().find(m => m.taskId === 'per-branch');
-            expect(sent?.perBranch).toEqual({ recommended_id: 'one', parts: [part('one')] });
+            expect(sent?.coordinatedSources).toEqual({ recommended_id: 'one', parts: [part('one')] });
             expect(sent?.assessedSignatures).toContain('one');
             finishTask(runId, 'per-branch', { signature: 'per-branch', alternatives: [selectionClock('per-branch', 1)] });
             const done = latest();
@@ -390,7 +390,7 @@ describe('tasks alongside the primary alternative', () => {
         it('is not run where no clock was made to start from', async () => {
             await initialize();
             generate();
-            const runId = answerPlan([task('one', 'One'), perBranch]);
+            const runId = answerPlan([task('one', 'One'), coordinatedSources]);
             finishTask(runId, 'one', null);
             expect(workers.flatMap(w => w.requests('task')).filter(m => m.runId === runId).map(m => m.taskId)).toEqual(['one']);
             expect(latest().isRunning).toBe(false);

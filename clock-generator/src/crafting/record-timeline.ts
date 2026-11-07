@@ -3,7 +3,7 @@ import { EntityId } from "../entities";
 import { OpenRange } from "../data-types";
 import { Logger } from "../common/logger";
 import { SerializableClockWindows } from "./clock";
-import { SIMULATION_BUDGET_TICKS, runBuild, SerializableInserterClock } from "./plan/plan-run";
+import { SIMULATION_BUDGET_TICKS, runBuild, SerializableInserterClock } from "./plan/unclocked-run";
 import { runClockOnBuild } from "./trial";
 import { TimelineRecording } from "./timeline-recording";
 import { InserterClock } from "./sequence/unplanned-inserter-clock";

@@ -7,7 +7,7 @@ import { Entity, handSizeFor, Inserter, ReadableEntityRegistry } from "../../ent
 import { graphOf } from "../feasibility/assert-feasible";
 import { Logger } from "../../common/logger";
 import { StockRecording } from "../machine-stock";
-import { alwaysEnabledByConfig } from "../plan/plan-run";
+import { alwaysEnabledByConfig } from "../plan/unclocked-run";
 
 /**
  * Whether any of a sink's feeders can carry the sink's fuel. Every inserter has filtered items, derived from its

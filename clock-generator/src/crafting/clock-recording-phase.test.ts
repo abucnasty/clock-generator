@@ -5,7 +5,7 @@ import { loadConfigFromFile } from "../config/loader";
 import { OpenRange } from "../data-types";
 import { generateClockForConfig } from "./generate-clock";
 import { rotateRanges } from "./clock";
-import { BuildRun, RunOptions, runBuild } from "./plan/plan-run";
+import { BuildRun, RunOptions, runBuild } from "./plan/unclocked-run";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { unplannedInserterClocks } from "./sequence/unplanned-inserter-clock";
 import { runThroughTicks } from "./sequence/interceptors/inserter-enable-control-factory";

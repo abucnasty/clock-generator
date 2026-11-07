@@ -7,7 +7,7 @@ import { Duration, OpenRange } from "../data-types";
 import { ReadableEntityRegistry, Inserter, EntityId, Entity } from "../entities";
 import { InventoryTransfer } from "./sequence/inventory-transfer";
 import { InventoryTransferHistory } from "./sequence/inventory-transfer-history";
-import { CraftingCyclePlan } from "./sequence/cycle/crafting-cycle";
+import { OutputCyclePlan } from "./sequence/cycle/output-cycle";
 import { InserterClock } from "./sequence/unplanned-inserter-clock";
 import {
     chestDrillDescriptionLines, clockDescriptionLines, deciderWindows, formatRate, generatorDescriptionLines, itemIcons, lockFilterDescription, PART_OF_THE_CLOCK,
@@ -40,7 +40,7 @@ function createDeciderCombinatorForTransfers(
     inventory_transfers: InventoryTransfer[],
     entity_id: EntityId,
     entity_registry: ReadableEntityRegistry,
-    cycle: CraftingCyclePlan,
+    cycle: OutputCyclePlan,
     cycles_in_period: number,
     period: PeriodText,
     position: Position,
@@ -134,7 +134,7 @@ function createDeciderCombinatorForTransfers(
  * The rate the clock was made for, so a blueprint says what it is meant to deliver:
  * "Target: 265 [item=agricultural-science-pack] per second over 5 copies (53 each)"
  */
-function targetRateDescription(cycle: CraftingCyclePlan): string {
+function targetRateDescription(cycle: OutputCyclePlan): string {
     const target = cycle.production_rate;
     const item_icon = SignalId.toDescriptionString(SignalId.item(target.total_production_rate.item));
     const total = formatRate(target.total_production_rate.amount_per_second.toDecimal());
@@ -361,7 +361,7 @@ export interface SignalPerInserterBlueprint {
 
 export function createSignalPerInserterBlueprint(
     final_output_item_name: string,
-    cycle: CraftingCyclePlan,
+    cycle: OutputCyclePlan,
     total_duration: Duration,
     /** The whole number of crafting cycles the period is made of (the recipe LCM), which the swings of a cycle are multiplied by */
     cycles_in_period: number,

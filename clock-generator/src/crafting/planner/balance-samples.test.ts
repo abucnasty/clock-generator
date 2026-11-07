@@ -14,7 +14,7 @@ import { buildOutputInsertersOf, destroyedTargetCrafts, type EntityTransferCount
 import { createEntityRegistryFromConfig } from "../sequence/simulation-context";
 import { TargetProductionRate } from "../target-production-rate";
 import { Balance, balanceBuildOf, DRILL_ITEMS_PER_SWING, periodCyclesOf } from "./balance";
-import { destroyedTargetBasisOf } from "./result-windows";
+import { destroyedTargetBasisOf } from "./exhaust";
 
 /**
  * The oracle of the balance equations: every sample's transfers at several counts, recorded from the demand walk they

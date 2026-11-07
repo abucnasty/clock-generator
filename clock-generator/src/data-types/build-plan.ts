@@ -14,7 +14,7 @@
  */
 import type { FactsRatio } from "./planner-facts";
 import type { PlannerGraph } from "./planner-graph";
-import type { ResultWindowsPlan } from "../crafting/result-windows";
+import type { ExhaustPlan } from "../crafting/exhaust";
 
 /** Why a source vertex is no part of any group: it brings what the build takes from outside, with no bound known */
 export type UnboundedSourceKind = "nothing-drops-on" | "infinity-supply";
@@ -150,8 +150,8 @@ export interface PlanComposition {
     readonly over_limit_action: OverLimitAction;
 }
 
-/** The arithmetic of a destroyed target's decision (planner/result-windows.ts) */
-export interface ResultWindowsTerms {
+/** The arithmetic of a destroyed target's decision (planner/exhaust.ts) */
+export interface ExhaustTerms {
     readonly item: string;
     /** The machines that destroy it, by number */
     readonly machines: readonly number[];
@@ -170,15 +170,15 @@ export interface ResultWindowsTerms {
     readonly longest_period_ticks: number;
 }
 
-export type ResultWindowsDecision =
-    | { readonly kind: "whole-hands"; readonly hands: number; readonly terms: ResultWindowsTerms }
+export type ExhaustDecision =
+    | { readonly kind: "whole-hands"; readonly hands: number; readonly terms: ExhaustTerms }
     | {
         readonly kind: "result-windows";
         /** Hands a cycle: base_hands x cycles; the cycle is the whole period */
         readonly hands: number;
         readonly cycles: number;
-        readonly terms: ResultWindowsTerms;
-        readonly plans: readonly ResultWindowsPlan[];
+        readonly terms: ExhaustTerms;
+        readonly plans: readonly ExhaustPlan[];
     };
 
 export interface BuildPlan {
@@ -189,5 +189,5 @@ export interface BuildPlan {
     /** Null where the build has no cycle to plan (it is refused before) */
     readonly composition: PlanComposition | null;
     /** For a target that counts an item destroyed; null for every other */
-    readonly result_windows: ResultWindowsDecision | null;
+    readonly exhaust: ExhaustDecision | null;
 }

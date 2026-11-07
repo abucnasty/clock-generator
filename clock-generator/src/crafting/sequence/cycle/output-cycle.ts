@@ -10,11 +10,11 @@ import type { Config } from "../../../config/schema";
 import { destroyedTargetBalance, madeTargetBalance, transfersOfBalance } from "./cycle-transfers";
 import { FractionalSwingsRefusedError, SwingDistribution, SwingDistributionMap } from "./swing-distribution";
 import { returnedTargetRefusal } from "./target-ends";
-import type { ResultWindowsPlan } from "../../result-windows";
-import type { ResultWindowsDecision } from "../../../data-types/build-plan";
-import { destroyedTargetBasisOf, resultWindowsDecisionOf } from "../../planner/result-windows";
+import type { ExhaustPlan } from "../../exhaust";
+import type { ExhaustDecision } from "../../../data-types/build-plan";
+import { destroyedTargetBasisOf, exhaustDecisionOf } from "../../planner/exhaust";
 
-export interface CraftingCyclePlan {
+export interface OutputCyclePlan {
     /** Duration of a single base cycle (before LCM multiplication) */
     readonly total_duration: Duration;
     /**
@@ -52,37 +52,37 @@ export interface CraftingCyclePlan {
     /**
      * A target that counts an item destroyed whose results come too rarely for their takers' hands to come out whole in
      * a period the container they are placed into holds: the windows of those takers by arithmetic, one plan a machine
-     * (see result-windows.ts). The cycle is then the whole period, and the takers' hands a cycle are not whole: they are
+     * (see exhaust.ts). The cycle is then the whole period, and the takers' hands a cycle are not whole: they are
      * carried from one window to the next. Absent for every other plan.
      */
-    readonly result_windows?: readonly ResultWindowsPlan[];
+    readonly exhaust?: readonly ExhaustPlan[];
 }
 
-export const CraftingCyclePlan = {
+export const OutputCyclePlan = {
     create: createPlan,
     print: print,
     ticksOfCycles: ticksOfCycles,
 }
 
 // Internal arithmetic provenance, separate from final-taker aggregate reporting. It adds no serialized plan/API field.
-const planned_terminal_counts = new WeakMap<CraftingCyclePlan, number>();
+const planned_terminal_counts = new WeakMap<OutputCyclePlan, number>();
 
-export function plannedTerminalSwingCount(plan: CraftingCyclePlan): number | undefined {
+export function plannedTerminalSwingCount(plan: OutputCyclePlan): number | undefined {
     return planned_terminal_counts.get(plan);
 }
 
 // The plans made with fractional swings asked for, whether or not a swing came out fractional; no serialized field either
-const planned_with_fractional_swings = new WeakSet<CraftingCyclePlan>();
+const planned_with_fractional_swings = new WeakSet<OutputCyclePlan>();
 
 /**
  * Whether the plan was made with fractional swings asked for (the "Fractional swings" alternative): a run of its clock is
  * planned so too. True also where every swing came out whole (`fractional_swings_enabled` false).
  */
-export function plannedWithFractionalSwings(plan: CraftingCyclePlan): boolean {
+export function plannedWithFractionalSwings(plan: OutputCyclePlan): boolean {
     return planned_with_fractional_swings.has(plan);
 }
 
-function withPlannedTerminalCount(plan: CraftingCyclePlan, count: Fraction): CraftingCyclePlan {
+function withPlannedTerminalCount(plan: OutputCyclePlan, count: Fraction): OutputCyclePlan {
     planned_terminal_counts.set(plan, count.toDecimal());
     return plan;
 }
@@ -92,7 +92,7 @@ function withPlannedTerminalCount(plan: CraftingCyclePlan, count: Fraction): Cra
  * LCM). Multiplied as a fraction: 25 cycles of 115.2 ticks are 2880 ticks, where 19.2 * 6 * 25 in floating point is
  * 2879.9999999999995, which is no whole number of ticks to anything that asks.
  */
-function ticksOfCycles(plan: Pick<CraftingCyclePlan, "total_duration_ticks">, cycles: number): number {
+function ticksOfCycles(plan: Pick<OutputCyclePlan, "total_duration_ticks">, cycles: number): number {
     return plan.total_duration_ticks.multiply(cycles).toDecimal();
 }
 
@@ -100,7 +100,7 @@ function ticksOfCycles(plan: Pick<CraftingCyclePlan, "total_duration_ticks">, cy
  * The plan of a target that counts an item destroyed, by plain arithmetic (destroyedTargetBalance): a cycle is
  * the fewest hands of the item brought into each machine that last a whole number of ticks at the target rate (an
  * overridden output swing count sets them instead), and the transfers of every inserter follow from them. Whether the
- * results get windows of their own is the decision `resultWindowsDecisionOf` makes (planner/result-windows.ts): the one
+ * results get windows of their own is the decision `exhaustDecisionOf` makes (planner/exhaust.ts): the one
  * given, as the build plan records it, or made here.
  */
 function createDestroyedPlan(
@@ -108,11 +108,11 @@ function createDestroyedPlan(
     entity_registry: ReadableEntityRegistry,
     config: Config,
     config_overrides: Partial<ConfigOverrides>,
-    decided: ResultWindowsDecision | undefined,
-): CraftingCyclePlan {
+    decided: ExhaustDecision | undefined,
+): OutputCyclePlan {
     const basis = destroyedTargetBasisOf(target_production_rate, entity_registry, config_overrides);
     const { item, machines, ticks_per_hand, forced } = basis;
-    const planOf = (hands: number, result_windows?: readonly ResultWindowsPlan[]): CraftingCyclePlan => {
+    const planOf = (hands: number, exhaust?: readonly ExhaustPlan[]): OutputCyclePlan => {
         const period_ticks = ticks_per_hand.multiply(hands);
         return {
             total_duration: Duration.ofTicks(period_ticks.toDecimal()),
@@ -122,17 +122,17 @@ function createDestroyedPlan(
             production_rate: target_production_rate,
             fractional_swings_enabled: false,
             terminal_swing_count_overridden: forced !== undefined,
-            ...(result_windows !== undefined && { result_windows }),
+            ...(exhaust !== undefined && { exhaust }),
         };
     };
-    const decision = decided ?? resultWindowsDecisionOf(target_production_rate, entity_registry, config, config_overrides, basis);
+    const decision = decided ?? exhaustDecisionOf(target_production_rate, entity_registry, config, config_overrides, basis);
     return decision.kind === "result-windows" ? planOf(decision.hands, decision.plans) : planOf(decision.hands);
 }
 
 /**
  * The crafting cycle of a build: for a target that counts an item made, `max_possible_swings` output swings a cycle (whole
  * unless `fractional_swings` asks for the fraction itself); for one that counts an item destroyed, the hands its
- * arithmetic gives, and `result_windows` is the decision of its results' windows where the build plan has made it. The
+ * arithmetic gives, and `exhaust` is the decision of its results' windows where the build plan has made it. The
  * transfers are the balance of the config's planner graph (cycle-transfers.ts); the registry is the one made from it.
  */
 function createPlan(
@@ -141,13 +141,13 @@ function createPlan(
     config: Config,
     max_possible_swings: Fraction,
     config_overrides: Partial<ConfigOverrides> = {},
-    result_windows?: ResultWindowsDecision,
+    exhaust?: ExhaustDecision,
     /** The "Fractional swings" alternative's planning: swings a cycle as the fraction the machines make, alternated over sub-cycles */
     fractional_swings: boolean = false,
-): CraftingCyclePlan {
+): OutputCyclePlan {
     assertMachineResultTargetsSupported(entity_registry);
     if (target_production_rate.counts === "destroyed") {
-        return createDestroyedPlan(target_production_rate, entity_registry, config, config_overrides, result_windows);
+        return createDestroyedPlan(target_production_rate, entity_registry, config, config_overrides, exhaust);
     }
     const plan = createMadePlan(target_production_rate, entity_registry, config, max_possible_swings, config_overrides, fractional_swings);
     if (fractional_swings) {
@@ -163,7 +163,7 @@ function createMadePlan(
     max_possible_swings: Fraction,
     config_overrides: Partial<ConfigOverrides>,
     fractional_swings: boolean,
-): CraftingCyclePlan {
+): OutputCyclePlan {
     const returned = returnedTargetRefusal({ item: target_production_rate.machine_production_rate.item, counts: "made" },
         target_production_rate.total_production_rate.amount_per_second.toDecimal(), entity_registry);
     if (returned !== null) {
@@ -305,7 +305,7 @@ function distributionsAt(swings_per_cycle: Fraction, distributions: () => SwingD
     }
 }
 
-function print(plan: CraftingCyclePlan): void {
+function print(plan: OutputCyclePlan): void {
     console.log("----------------------")
     console.log(`Crafting Cycle Plan:`)
     console.log(`- Total Duration: ${plan.total_duration.ticks} ticks`)

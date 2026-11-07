@@ -38,7 +38,7 @@ export { StatusCategory, statusToCategory } from "./state/status-category";
 
 export { combineClockAlternativeRuns, searchesAreNeeded, searchesToRun } from "./crafting/rank";
 
-export { perBranchInputOf } from "./crafting/candidates/per-branch-parts";
+export { coordinatedSourcesInputOf } from "./crafting/candidates/coordinated-sources-parts";
 
 export { whyNotStable, whyNotStableClockOf } from "./crafting/why-not-stable";
 

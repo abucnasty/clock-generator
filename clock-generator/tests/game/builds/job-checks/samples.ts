@@ -48,7 +48,7 @@ const productivityChain: JobCheck[] = [
             expect(shared.label).toBe('Batched swings, shared windows: 1 output swing per cycle');
             expect(shared.deciders).toBe(6);
             // rule F rounded the coal hand up on this chain: the clock says so (`harmonic_window_cycle`)
-            expect(shared.result.grouped_hands).toEqual({ shared_windows: true, harmonic_window_cycle: true });
+            expect(shared.result.round_robin_polling).toEqual({ shared_windows: true, harmonic_window_cycle: true });
             expect(shared.description).toContain('share one wake window');
         },
     },

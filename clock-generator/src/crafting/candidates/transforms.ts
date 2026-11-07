@@ -2,7 +2,7 @@ import { OpenRange } from "../../data-types";
 import { InserterStatus } from "../../state";
 import { rotateRanges } from "../clock";
 import { CIRCUIT_LATENCY_TICKS } from "../../common/rule-constants";
-import { TrialRun } from "../plan/plan-run";
+import { TrialRun } from "../plan/unclocked-run";
 import { transitionsOf } from "../sequence/compact-history";
 
 /**

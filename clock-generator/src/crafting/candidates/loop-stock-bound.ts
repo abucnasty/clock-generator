@@ -2,7 +2,7 @@ import { Config } from "../../config";
 import { FactorioDataService } from "../../data";
 import { handOfItem, traitsOf, traitsOfMachine } from "../../entities/traits/traits-of";
 import type { SerializableClockWindows } from "../clock";
-import type { BlueprintGenerationResult } from "../plan/plan-run";
+import type { BlueprintGenerationResult } from "../plan/unclocked-run";
 import { computeMachineTargetRates } from "../machine-target-rates";
 import { LoopEdge, machineLoopsOf } from "./loop-windows";
 

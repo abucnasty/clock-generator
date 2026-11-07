@@ -5,10 +5,10 @@ import type { Config } from "../config";
 import { fraction } from "../data-types/fraction";
 import { runClockAlternativeTask } from "./alternatives";
 import * as generation from "./generate-clock";
-import { SecondaryPlanningInvariantError, secondaryPlanningCountOf, verificationPlanningConfigOf, verificationTerminalCountOf, withSecondaryPlanningProvenance } from "./primitive-grouped-policy";
-import type { BlueprintGenerationResult } from "./plan/plan-run";
+import { SecondaryPlanningInvariantError, secondaryPlanningCountOf, verificationPlanningConfigOf, verificationTerminalCountOf, withSecondaryPlanningProvenance } from "./round-robin-polling-primitive-policy";
+import type { BlueprintGenerationResult } from "./plan/unclocked-run";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
-import { CraftingCyclePlan, plannedTerminalSwingCount } from "./sequence/cycle/crafting-cycle";
+import { OutputCyclePlan, plannedTerminalSwingCount } from "./sequence/cycle/output-cycle";
 import { TargetProductionRate } from "./target-production-rate";
 import * as trial from "./trial";
 
@@ -44,9 +44,9 @@ describe("count-only secondary planning provenance", () => {
     });
 
     it("types invalid secondary provenance and malformed derived context as invariants", () => {
-        const missingPlan = { ...base, crafting_cycle_plan: {} as BlueprintGenerationResult["crafting_cycle_plan"] };
+        const missingPlan = { ...base, output_cycle_plan: {} as BlueprintGenerationResult["output_cycle_plan"] };
         const badLcm = { ...base, used_lcm: Number.NaN };
-        const borrowed = { ...base, primitive_grouped: { strategy: "primitive-grouped" as const,
+        const borrowed = { ...base, primitive_round_robin_polling: { strategy: "primitive-grouped" as const,
             trigger: "initial-period-limit" as const, requested_terminal_swing_count: 602, terminal_swing_count: 1,
             grouped_cycles: 1, construction_key: "primary", loop_refinement: false as const,
             options: { share_windows: false as const, feeder_offset: 1, surplus_guard: false } } };
@@ -59,7 +59,7 @@ describe("count-only secondary planning provenance", () => {
 
     it("propagates a missing actual plan through the public task boundary instead of reporting an ordinary refusal", () => {
         const context = { secondary_planning: policy, swings: 1, planned_swings: 1, primary_stable: true, period_ticks: 40 };
-        const malformed = { ...base, crafting_cycle_plan: {} as BlueprintGenerationResult["crafting_cycle_plan"] };
+        const malformed = { ...base, output_cycle_plan: {} as BlueprintGenerationResult["output_cycle_plan"] };
         vi.spyOn(generation, "generateClockWithSwingBackoff").mockReturnValue(malformed);
         const notMade = vi.fn();
 
@@ -88,13 +88,13 @@ describe("count-only secondary planning provenance", () => {
         const registry = createEntityRegistryFromConfig(config);
         const target = TargetProductionRate.fromConfig(config.target_output);
         const actualResult = (count: number, legacyAggregate: number, lcm: number): BlueprintGenerationResult => {
-            const plan = CraftingCyclePlan.create(target, registry, config, fraction(count), config.overrides ?? {});
-            return { ...base, crafting_cycle_plan: plan, used_terminal_swing_count: legacyAggregate, used_lcm: lcm,
-                primitive_grouped: undefined, secondary_planning: undefined };
+            const plan = OutputCyclePlan.create(target, registry, config, fraction(count), config.overrides ?? {});
+            return { ...base, output_cycle_plan: plan, used_terminal_swing_count: legacyAggregate, used_lcm: lcm,
+                primitive_round_robin_polling: undefined, secondary_planning: undefined };
         };
         const two = actualResult(2, 4, 605);
         const three = actualResult(3, 6, 121);
-        expect(plannedTerminalSwingCount(two.crafting_cycle_plan)).toBe(2);
+        expect(plannedTerminalSwingCount(two.output_cycle_plan)).toBe(2);
 
         const untouched = structuredClone(config);
         const context = { secondary_planning: { ...policy, terminal_swing_count: 2 }, swings: 1, planned_swings: 1,
@@ -114,9 +114,9 @@ describe("count-only secondary planning provenance", () => {
         expect(verificationTerminalCountOf(secondaryTwo)).toBe(2);
         expect(verificationPlanningConfigOf(config, secondaryTwo).overrides).toMatchObject({ terminal_swing_count: 2, lcm: 605 });
         expect(secondaryThree.secondary_planning).toEqual({ source: "primitive-primary", terminal_swing_count: 3, effective_lcm: 121 });
-        expect(secondaryThree.primitive_grouped).toBeUndefined();
+        expect(secondaryThree.primitive_round_robin_polling).toBeUndefined();
 
-        const primitive = { ...two, primitive_grouped: { strategy: "primitive-grouped" as const, trigger: "initial-period-limit" as const,
+        const primitive = { ...two, primitive_round_robin_polling: { strategy: "primitive-grouped" as const, trigger: "initial-period-limit" as const,
             requested_terminal_swing_count: 602, terminal_swing_count: 2, grouped_cycles: 1, construction_key: "primary",
             loop_refinement: false as const, options: { share_windows: false as const, feeder_offset: 1, surplus_guard: false } } };
         expect(verificationTerminalCountOf(primitive)).toBe(2);

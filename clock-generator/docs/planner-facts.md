@@ -87,7 +87,7 @@ pass after the feasibility pass and before any simulation, over the facts, the g
 - **Composition**: the main period, the cycle's ticks times the lcm of every hand's denominator or the config's own lcm,
   with each group's cycles, and what is done over the limit (today's swing backoff, or refused).
 - **Result windows** of a target that counts an item destroyed: whole hands, or windows of their own for results that
-  come by small chances (`src/crafting/planner/result-windows.ts`).
+  come by small chances (`src/crafting/planner/exhaust.ts`).
 
 Nothing reads the plan yet but the result windows' decision: a planning run of a destroyed target makes its cycle plan
 with the decision of the config's plan (`buildPlanOfConfig`, once per config object), the same decision it made itself

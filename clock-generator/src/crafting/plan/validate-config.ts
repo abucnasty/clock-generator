@@ -7,11 +7,11 @@ import { assertFeasible } from "../feasibility/assert-feasible";
 import { assertLaneCapacity } from "../../config/lane-capacity-validator";
 import { SimulationContext } from "../sequence/simulation-context";
 import { SerializableTransferPlan } from "../sequence/cycle/swing-counts";
-import { CraftingCyclePlan } from "../sequence/cycle/crafting-cycle";
+import { OutputCyclePlan } from "../sequence/cycle/output-cycle";
 import { PrepareStep } from "../runner/steps/prepare-step";
 import { Logger } from "../../common/logger";
 import { Inserter } from "../../entities";
-import { planCraftingCycle, transferPlanOf } from "../plan/plan-run";
+import { planOutputCycle, transferPlanOf } from "../plan/unclocked-run";
 
 /** What validating a config finds out before any clock is generated */
 export interface ConfigValidation {
@@ -52,21 +52,21 @@ export function validateConfig(config: Config, options: { logger?: Logger; fract
         new PrepareStep(simulation_context).execute();
     }
 
-    const { crafting_cycle_plan, output_inserters, all_output_inserters } = planCraftingCycle(config, simulation_context, logger, options.fractional_swings === true);
+    const { output_cycle_plan, output_inserters, all_output_inserters } = planOutputCycle(config, simulation_context, logger, options.fractional_swings === true);
     // the planner has accepted the target: now no belt lane may be asked for more than it carries
     assertLaneCapacity(config);
-    const { recipe_lcm, serializable_transfer_plan } = transferPlanOf(config, crafting_cycle_plan, simulation_context);
-    const cycle_ticks = crafting_cycle_plan.total_duration.ticks;
+    const { recipe_lcm, serializable_transfer_plan } = transferPlanOf(config, output_cycle_plan, simulation_context);
+    const cycle_ticks = output_cycle_plan.total_duration.ticks;
     // the hands one output machine gives up a cycle, over all the inserters that take from it; for a target that counts an
     // item destroyed, the hands brought into one machine that destroys it, over all the inserters that bring them (as the
     // clocks are named)
-    const destroyed = crafting_cycle_plan.production_rate.counts === "destroyed";
+    const destroyed = output_cycle_plan.production_rate.counts === "destroyed";
     const machine_of = (it: { inserter: Inserter }) => (destroyed ? it.inserter.sink : it.inserter.source).entity_id.id;
     const first_output_machine_id = machine_of(output_inserters[0]);
     const output_ids = new Set(all_output_inserters
         .filter(it => machine_of(it) === first_output_machine_id)
         .map(it => it.inserter.entity_id.id));
-    const output_swings_per_cycle = crafting_cycle_plan.entity_transfer_map.entries_array()
+    const output_swings_per_cycle = output_cycle_plan.entity_transfer_map.entries_array()
         .filter(([entity_id]) => output_ids.has(entity_id.id))
         .reduce((sum, [, planned]) => sum + planned.total_transfer_count.toDecimal(), 0) || 1;
     return {
@@ -75,6 +75,6 @@ export function validateConfig(config: Config, options: { logger?: Logger; fract
         output_swings_per_cycle,
         counts: config.target_output.counts ?? "made",
         cycle_ticks,
-        period_ticks: CraftingCyclePlan.ticksOfCycles(crafting_cycle_plan, recipe_lcm),
+        period_ticks: OutputCyclePlan.ticksOfCycles(output_cycle_plan, recipe_lcm),
     };
 }

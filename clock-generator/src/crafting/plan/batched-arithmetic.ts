@@ -2,7 +2,7 @@ import { OpenRange } from "../../data-types";
 import { Entity, handSizeFor, Inserter, Machine, ReadableEntityRegistry } from "../../entities";
 import { FactorioDataService } from "../../data/factorio-data-service";
 import { machineFactsOfEntity } from "../../entities/traits/machine-facts-of";
-import { CraftingCyclePlan } from "../sequence/cycle/crafting-cycle";
+import { OutputCyclePlan } from "../sequence/cycle/output-cycle";
 import { targetMachinesOf } from "../sequence/cycle/target-ends";
 import { alwaysEnabledInserters, byProductOnlyInserters, fuelOnlyInserters } from "../sequence/unplanned-inserter-clock";
 import { StockWalk, WalkHand, WalkSwing, WINDOW_LATENCY_TICKS, walkMachineStock } from "./stock-walk";
@@ -40,7 +40,7 @@ function refuse(reason: string): never {
 
 export interface ArithmeticWindowsInput {
     entity_registry: ReadableEntityRegistry;
-    crafting_cycle_plan: CraftingCyclePlan;
+    output_cycle_plan: OutputCyclePlan;
     /** The clock's period, whole ticks */
     period_ticks: number;
     /** Cycles in the period */
@@ -147,10 +147,10 @@ function cycleOf(tick: number, cycle_starts: readonly number[]): number {
  * `ArithmeticWindowsNotApplicable` for a build it has no rule for.
  */
 export function batchedSwingsWindowsByArithmetic(input: ArithmeticWindowsInput): ArithmeticWindows {
-    const { entity_registry: registry, crafting_cycle_plan: plan, period_ticks: period, recipe_lcm: cycles } = input;
+    const { entity_registry: registry, output_cycle_plan: plan, period_ticks: period, recipe_lcm: cycles } = input;
     if (!Number.isInteger(period)) refuse(`a period of ${period} ticks is not whole`);
     if (plan.fractional_swings_enabled) refuse("fractional swings are planned by their own clock");
-    if (plan.result_windows !== undefined) refuse("results that come by chance get windows of their own");
+    if (plan.exhaust !== undefined) refuse("results that come by chance get windows of their own");
     if (plan.production_rate.counts !== "made") refuse("a target that counts an item destroyed is planned by its own arithmetic");
     const cycle_ticks = plan.total_duration_ticks.toDecimal();
     if (Math.abs(cycle_ticks * cycles - period) > 1e-6) refuse(`the period ${period} is not ${cycles} cycles of ${cycle_ticks} ticks`);

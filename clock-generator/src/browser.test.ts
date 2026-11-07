@@ -79,7 +79,7 @@ describe("the light entry", () => {
             "config/migrate-blocked-slots.ts",
             "config/migrate-fractional-swings.ts",
             "config/migrate-mining-productivity.ts",
-            "crafting/candidates/per-branch-parts.ts",
+            "crafting/candidates/coordinated-sources-parts.ts",
             "crafting/rank.ts",
             "crafting/sequence/compact-history.ts",
             "crafting/strategy-catalog.ts",

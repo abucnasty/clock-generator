@@ -1,4 +1,4 @@
-import type { BlueprintGenerationResult } from "./plan/plan-run";
+import type { BlueprintGenerationResult } from "./plan/unclocked-run";
 import type { BeltPickupSetting, ClockRouting, ClockSettings, OutputCountSetting, WindowCycleSetting } from "./strategy-catalog";
 
 /**
@@ -61,7 +61,7 @@ export type StrategyConstruction =
     | "planning-run"
     /** Worked out from the plan's hands, the crafting cycle and the stock walk (batched-arithmetic.ts) */
     | "arithmetic"
-    /** Built from the hands and what each source holds, one group after another (candidates/grouped-hands.ts) */
+    /** Built from the hands and what each source holds, one group after another (candidates/round-robin-polling.ts) */
     | "grouped-hands";
 
 export interface ClockStrategy {
@@ -97,8 +97,8 @@ export interface StrategyFindings {
 }
 
 /** The construction that made the windows of a clock built from batched swings */
-export function constructionOf(result: Pick<BlueprintGenerationResult, "window_maker" | "grouped_hands" | "primitive_grouped">): StrategyConstruction {
-    if (result.grouped_hands !== undefined || result.primitive_grouped !== undefined) return "grouped-hands";
+export function constructionOf(result: Pick<BlueprintGenerationResult, "window_maker" | "round_robin_polling" | "primitive_round_robin_polling">): StrategyConstruction {
+    if (result.round_robin_polling !== undefined || result.primitive_round_robin_polling !== undefined) return "grouped-hands";
     return result.window_maker === "arithmetic" ? "arithmetic" : "planning-run";
 }
 
@@ -112,7 +112,7 @@ const BATCHED_FAMILIES: readonly DefinitionFamily[] = ["batched-swings", "round-
  */
 export function strategyOf(
     family: DefinitionFamily,
-    result: Pick<BlueprintGenerationResult, "window_maker" | "grouped_hands" | "primitive_grouped" | "loop_windows" | "fuel_hand_room_ticks" | "used_terminal_swing_count" | "pickups_from_entry" | "per_branch">,
+    result: Pick<BlueprintGenerationResult, "window_maker" | "round_robin_polling" | "primitive_round_robin_polling" | "loop_windows" | "fuel_hand_room_ticks" | "used_terminal_swing_count" | "pickups_from_entry" | "coordinated_sources">,
     findings: StrategyFindings,
 ): ClockStrategy {
     const construction = BATCHED_FAMILIES.includes(family) ? constructionOf(result) : undefined;
@@ -120,8 +120,8 @@ export function strategyOf(
         : construction === "grouped-hands" ? "round-robin-polling" : "takt-batches";
     const output_count: OutputCountSetting = { kind: findings.destroyed_target ? "hands_brought_in" : "output_swings", count: result.used_terminal_swing_count };
     const settings: ClockSettings = { output_count, window_cycle: [], belt_pickups: [] };
-    if (result.grouped_hands?.shared_windows === true) settings.shared_windows = "shared_enable_windows";
-    if (result.grouped_hands?.harmonic_window_cycle === true) settings.window_cycle.push({ kind: "harmonic_window_cycle" });
+    if (result.round_robin_polling?.shared_windows === true) settings.shared_windows = "shared_enable_windows";
+    if (result.round_robin_polling?.harmonic_window_cycle === true) settings.window_cycle.push({ kind: "harmonic_window_cycle" });
     if (result.pickups_from_entry === true) settings.belt_pickups.push("counted_from_entry");
     for (const qualifier of findings.definition_qualifiers) {
         // found by search is the selection of the strategy, not a setting; a qualifier that is not a setting of a definition is the record's alone
@@ -136,7 +136,7 @@ export function strategyOf(
         drills_always_on: findings.chest_drill_fallback === "always-on"
     });
     return { family: resolved, qualifiers, settings, ...(construction !== undefined && { construction }), output_swings: result.used_terminal_swing_count,
-        routing: routingOf(resolved, result.per_branch) };
+        routing: routingOf(resolved, result.coordinated_sources) };
 }
 
 /**
@@ -180,7 +180,7 @@ export function strategyListedAs(strategy: ClockStrategy, listing: { qualifiers?
 }
 
 /** The route of a clock: Coordinated Sources for the per-branch clock, whose sources the run recorded; the direct route for every other */
-function routingOf(family: StrategyFamily, per_branch: BlueprintGenerationResult["per_branch"]): ClockRouting {
+function routingOf(family: StrategyFamily, coordinated_sources: BlueprintGenerationResult["coordinated_sources"]): ClockRouting {
     if (family !== "per-branch") return { router: "direct" };
-    return { router: "coordinated_sources", ...(per_branch !== undefined && { sources: per_branch.sources }) };
+    return { router: "coordinated_sources", ...(coordinated_sources !== undefined && { sources: coordinated_sources.sources }) };
 }

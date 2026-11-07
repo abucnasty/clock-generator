@@ -4,7 +4,7 @@ import { OpenRange } from "../../data-types";
 import { Entity, EntityId, handSizeFor, ReadableEntityRegistry } from "../../entities";
 import { InserterStatus, MachineStatus } from "../../state";
 import { Logger } from "../../common/logger";
-import { BlueprintGenerationResult, GenerateClockOptions, LCM_STABILITY_TOLERANCE, TrialRun, checkedClock, clockOfPlan, planRun } from "../plan/plan-run";
+import { BlueprintGenerationResult, GenerateClockOptions, LCM_STABILITY_TOLERANCE, TrialRun, checkedClock, clockOfPlan, unclockedRun } from "../plan/unclocked-run";
 import { AsBuiltRun, AsBuiltStabilityCheck, runClockOnBuild } from "../trial";
 import { StockRecording } from "../machine-stock";
 import { Confirmed, QuickTrial, SearchReport, confirm, quickTrial, search } from "./search";
@@ -54,7 +54,7 @@ interface TimingTrial extends QuickTrial {
 }
 
 /** What the full-hand search yields: the windows, the confirming check and its run, and what it tried */
-interface FullHandWindows {
+interface PitchPickupsWindows {
     windows: Map<string, OpenRange[]>;
     result: TrialRun;
     check: AsBuiltStabilityCheck;
@@ -77,7 +77,7 @@ interface FullHandWindows {
  * windows already fill most hands in one grab (and, with count_waits, when most pickups do not wait at the machine
  * either), unless the build moves more than the expected output under them.
  */
-function fullHandOutputWindows(
+function pitchPickupsOutputWindows(
     config: Config,
     windows: Map<string, OpenRange[]>,
     output_swings: Map<string, number>,
@@ -88,7 +88,7 @@ function fullHandOutputWindows(
     count_waits = false,
     /** Judge each lane-phase start of the trials over its repeating cycle (see runAsBuiltCheck): observed windows do */
     pickup_phase_cycles = false,
-): FullHandWindows | null {
+): PitchPickupsWindows | null {
     const swing_counts = Array.from(new Set(Array.from(output_swings.values(), s => Math.round(s * 1e6) / 1e6)));
     if (swing_counts.length !== 1 || !Number.isInteger(swing_counts[0]) || swing_counts[0] < 1) {
         return null;
@@ -252,7 +252,7 @@ export function hasPlannedWindowsNotHands(always_enabled: ReadonlySet<string>, i
  * evenly spaced windows instead (one inserter at a time), kept only when the clock-only check passes from every
  * start phase. In game, a long window keeps the inserter rescanning both machines while it waits.
  */
-export function fullHandTransferWindows(
+export function pitchPickupsTransferWindows(
     config: Config,
     windows: Map<string, OpenRange[]>,
     verification: TrialRun,
@@ -262,7 +262,7 @@ export function fullHandTransferWindows(
     logger: Logger,
     report?: (detail: string) => void,
 ): { windows: Map<string, OpenRange[]>; result: TrialRun; check: AsBuiltStabilityCheck; inserters: string[] } | null {
-    let current: FullHandWindows | null = null;
+    let current: PitchPickupsWindows | null = null;
     const inserters: string[] = [];
     const always_enabled = new Set(alwaysEnabledInserters(entity_registry).map(it => it.entity_id.id));
     for (const [entity_id, transfers] of verification.transfer_history.entries()) {
@@ -282,8 +282,8 @@ export function fullHandTransferWindows(
             || transfers.length === 0 || transfers.some(t => t.amount !== stack_size)) {
             continue;
         }
-        // the windows around these are observed windows, checked as they are (see observedWindowsClock)
-        const found = fullHandOutputWindows(config, current?.windows ?? windows, new Map([[entity_id.id, transfers.length]]),
+        // the windows around these are observed windows, checked as they are (see timeStudyWindowsClock)
+        const found = pitchPickupsOutputWindows(config, current?.windows ?? windows, new Map([[entity_id.id, transfers.length]]),
             new Set([source.entity_id.id]), period, logger, report, true, true);
         if (found) {
             current = found;
@@ -295,12 +295,12 @@ export function fullHandTransferWindows(
 
 /**
  * The full-hand output candidate: the clock of the plan with the output inserters' windows replaced by one swing each,
- * timed so the machine already holds a full hand (`fullHandOutputWindows`), checked and exported as a planned clock is.
+ * timed so the machine already holds a full hand (`pitchPickupsOutputWindows`), checked and exported as a planned clock is.
  * Not searched where a full hand would wait past the output block, which would refuse input drops every cycle; the
  * planned windows are exported then, and when no timing keeps the expected output.
  */
-export function fullHandClock(config: Config, options: GenerateClockOptions = {}): BlueprintGenerationResult {
-    const plan = planRun(config, options);
+export function pitchPickupsClock(config: Config, options: GenerateClockOptions = {}): BlueprintGenerationResult {
+    const plan = unclockedRun(config, options);
     const clock = clockOfPlan(plan, options);
     const { output_inserters, output_machine_state_machines, swing_counts, output_inserter_ids, recipe_lcm, duration } = plan.run;
     // waiting for a full hand past the output block would refuse input drops every cycle
@@ -313,7 +313,7 @@ export function fullHandClock(config: Config, options: GenerateClockOptions = {}
             output_swings.set(entity_id.id, etc.total_transfer_count.toDecimal() * recipe_lcm);
         }
     }
-    const full_hand = !full_hand_fits ? null : fullHandOutputWindows(
+    const full_hand = !full_hand_fits ? null : pitchPickupsOutputWindows(
         { ...config, overrides: { ...config.overrides, derive_clock_windows: false } },
         clock.windows, output_swings,
         new Set(output_inserters.map(os => os.inserter.source.entity_id.id)),

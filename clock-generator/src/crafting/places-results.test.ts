@@ -4,7 +4,7 @@ import { ConfigSchema, type Config } from '../config/schema';
 import { EntityState, MachineStatus } from '../state';
 import { SlotStorage } from '../simulation/components/slot-storage';
 import { SimulationContext, createEntityRegistryFromConfig } from './sequence/simulation-context';
-import { CraftingCyclePlan } from './sequence/cycle/crafting-cycle';
+import { OutputCyclePlan } from './sequence/cycle/output-cycle';
 import { TargetProductionRate } from './target-production-rate';
 import { fraction } from '../data-types/fraction';
 import { ConfigPaths } from '../config/config-paths';
@@ -203,11 +203,11 @@ describe('a rocket silo as the result target', () => {
 
     it('takes results too rare for their hands to come out whole in a clock period: each set of takers gets a window a period', async () => {
         // at +300% (scrap recycling productivity researched to level 30) the takers' hands come out whole in no period
-        // the silo holds; see result-windows.test.ts
+        // the silo holds; see exhaust.test.ts
         const config = await parseConfig(await scrapIntoSilo('uncommon', 300));
         const registry = createEntityRegistryFromConfig(config);
-        const plan = CraftingCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), registry, config, fraction(1), {});
-        expect(plan.result_windows?.[0].windows).toHaveLength(12);
-        expect(plan.result_windows?.[0].period).toBe(5760);
+        const plan = OutputCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), registry, config, fraction(1), {});
+        expect(plan.exhaust?.[0].windows).toHaveLength(12);
+        expect(plan.exhaust?.[0].period).toBe(5760);
     });
 });

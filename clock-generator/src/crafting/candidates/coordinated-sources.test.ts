@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { partGroups, sourceControlsOf, tiledWindows, upstreamOrder, type GroupedInserter } from "./per-branch";
-import { collectingParts, offerPart, partKey, partsWanted, perBranchInputOf, type PerBranchPart } from "./per-branch-parts";
+import { partGroups, sourceControlsOf, tiledWindows, upstreamOrder, type GroupedInserter } from "./coordinated-sources";
+import { collectingParts, offerPart, partKey, partsWanted, coordinatedSourcesInputOf, type CoordinatedSourcesPart } from "./coordinated-sources-parts";
 
 const window = (start: number, end: number) => ({ start, end });
 
@@ -12,7 +12,7 @@ const CHAIN: GroupedInserter[] = [
     { id: "inserter:4", source: "machine:2", sink: "belt:2" },
 ];
 
-const part = (name: string, period_ticks: number, windows: PerBranchPart["windows"], extra: Partial<PerBranchPart> = {}): PerBranchPart =>
+const part = (name: string, period_ticks: number, windows: CoordinatedSourcesPart["windows"], extra: Partial<CoordinatedSourcesPart> = {}): CoordinatedSourcesPart =>
     ({ name, period_ticks, windows, counted: true, ...extra });
 
 describe("the windows of a part on the shared period", () => {
@@ -55,13 +55,13 @@ describe("the input of the per-branch clock", () => {
     const counted_per_hand = part("compact, per hand", 24, { "inserter:1": [window(2, 2)] });
 
     it("lists the stable alternatives first, then the ways, each set of windows once, a counted one before one not yet counted", () => {
-        const input = perBranchInputOf([{ parts: [way, per_hand] }, null, { parts: [stable, unstable, same_way], also: [{ parts: [counted_per_hand] }] }], "planned-belt-slack");
+        const input = coordinatedSourcesInputOf([{ parts: [way, per_hand] }, null, { parts: [stable, unstable, same_way], also: [{ parts: [counted_per_hand] }] }], "planned-belt-slack");
         expect(input.recommended_id).toBe("planned-belt-slack");
         expect(input.parts.map(it => it.name)).toEqual(["planned-belt-slack", "staged", "compact, per hand"]);
     });
 
     it("keeps the recommended clock though it is not stable", () => {
-        expect(perBranchInputOf([{ parts: [stable, unstable] }], "swings-2").parts.map(it => it.name)).toEqual(["planned-belt-slack", "swings-2"]);
+        expect(coordinatedSourcesInputOf([{ parts: [stable, unstable] }], "swings-2").parts.map(it => it.name)).toEqual(["planned-belt-slack", "swings-2"]);
     });
 
     it("keys a part by its period and its windows, in the order of the inserters' ids", () => {
@@ -134,7 +134,7 @@ describe("the strategy of a part", () => {
     it("is the one of the alternative it is, and Round-Robin Polling by the grouped hands for a way", () => {
         const alternative = part("exhaust", 24, { "inserter:1": [window(0, 3)] }, { alternative_id: "exhaust", verdict: "stable" });
         const way = part("staged", 24, { "inserter:1": [window(1, 3)] });
-        const input = perBranchInputOf([{ alternatives: [{ id: "exhaust", strategy: { family: "exhaust" } }], parts: [alternative, way] }], "exhaust");
+        const input = coordinatedSourcesInputOf([{ alternatives: [{ id: "exhaust", strategy: { family: "exhaust" } }], parts: [alternative, way] }], "exhaust");
         expect(input.parts.map(it => it.strategy)).toEqual([{ family: "exhaust" }, { family: "round-robin-polling", construction: "grouped-hands" }]);
     });
 });

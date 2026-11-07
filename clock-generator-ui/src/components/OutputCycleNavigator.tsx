@@ -1,16 +1,16 @@
 import { Box, Button, TextField, Typography } from '@mui/material';
 import { ChevronLeft, ChevronRight } from '@mui/icons-material';
-import { craftingCycleAt, type CraftingCycles } from '../utils/craftingCycles';
+import { outputCycleAt, type OutputCycles } from '../utils/outputCycles';
 import { GLOSSARY } from '../utils/glossary';
 import { formatNumberText } from '../utils/numberText';
 import { HANDS_TEXT, type TargetCounts } from '../utils/targetCounts';
 
 const definition = GLOSSARY.find(entry => entry.id === 'crafting-cycle')!.definition;
 
-export function CraftingCycleNavigator({ cycles, index, periodTicks, swings, counts, onSelect }: {
-    cycles: CraftingCycles | null; index: number; periodTicks: number; swings: number; counts?: TargetCounts; onSelect(index: number): void;
+export function OutputCycleNavigator({ cycles, index, periodTicks, swings, counts, onSelect }: {
+    cycles: OutputCycles | null; index: number; periodTicks: number; swings: number; counts?: TargetCounts; onSelect(index: number): void;
 }) {
-    const cycle = craftingCycleAt(cycles, index);
+    const cycle = outputCycleAt(cycles, index);
     const number = (n: number) => formatNumberText(n, { maxDecimals: 3 });
     if (!cycles || !cycle) return <Typography variant="body2" sx={{ mb: 1 }}>This saved result does not include a valid crafting-cycle length. Generate again to explore its planned cycles.</Typography>;
     return <Box component="section" aria-label="Crafting cycle navigation" sx={{ border: 1, borderColor: 'divider', p: 1.5, mb: 1.5 }}>

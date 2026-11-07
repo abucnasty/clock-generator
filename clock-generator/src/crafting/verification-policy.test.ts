@@ -3,8 +3,8 @@ import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import type { Config } from "../config";
 import { Duration } from "../data-types";
-import type { BlueprintGenerationResult } from "./plan/plan-run";
-import { constructPrimitiveGroupedHands } from "./candidates/primitive-grouped-hands";
+import type { BlueprintGenerationResult } from "./plan/unclocked-run";
+import { constructPrimitiveRoundRobinPolling } from "./candidates/round-robin-polling-primitive";
 import { backpressureLossVerdictOf, clockVerificationSignature, startDependenceVerdictOf } from "./trial";
 import { withRunMemo } from "./plan/run-memo";
 
@@ -15,19 +15,19 @@ describe("verification policy compatibility", () => {
     beforeAll(async () => {
         const control = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED);
         config = { ...control, overrides: undefined, inserters: control.inserters.map(inserter => ({ ...inserter, overrides: undefined })) };
-        const artifact = constructPrimitiveGroupedHands(config);
+        const artifact = constructPrimitiveRoundRobinPolling(config);
         const attempt = artifact.attempts.find(attempt => attempt.result.kind === "constructed" && !attempt.options.share_windows)!;
         if (attempt.result.kind !== "constructed") throw new Error("expected construction");
         result = { clock_windows: attempt.result.control_windows, simulation_duration: Duration.ofTicks(40),
-            used_terminal_swing_count: 2, crafting_cycle_plan: { total_duration: Duration.ofTicks(40) },
-            stability_check: { expected_output_items: 32 }, primitive_grouped: { strategy: "primitive-grouped", trigger: "initial-period-limit",
+            used_terminal_swing_count: 2, output_cycle_plan: { total_duration: Duration.ofTicks(40) },
+            stability_check: { expected_output_items: 32 }, primitive_round_robin_polling: { strategy: "primitive-grouped", trigger: "initial-period-limit",
                 terminal_swing_count: 1, grouped_cycles: 1, requested_terminal_swing_count: 602 } } as unknown as BlueprintGenerationResult;
     });
 
     it("uses identical physical verification identity from original AUTO and the derived policy clone", () => {
         const clone = { ...config, overrides: { terminal_swing_count: 1, lcm: 1 } };
         expect(clockVerificationSignature(config, result)).toBe(clockVerificationSignature(clone, result));
-        const old = { ...result, primitive_grouped: undefined };
+        const old = { ...result, primitive_round_robin_polling: undefined };
         expect(clockVerificationSignature(config, old)).not.toBe(clockVerificationSignature(config, result));
         expect(result.used_terminal_swing_count).toBe(2);
         expect(config.overrides).toBeUndefined();

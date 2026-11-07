@@ -38,37 +38,37 @@ import { rotateRanges } from "./clock";
 
 /**
  * The longest period the windows are planned on: a simulator budget, not a proof. 20 check periods x 24,000 ticks =
- * 480,000 < 500,000 (SIMULATION_BUDGET_TICKS), so the simulator can check RESULT_WINDOWS_CHECK_PERIODS of them in its
+ * 480,000 < 500,000 (SIMULATION_BUDGET_TICKS), so the simulator can check EXHAUST_CHECK_PERIODS of them in its
  * run. No record job reaches it.
  */
-export const RESULT_WINDOWS_PERIOD_BUDGET_TICKS = 24_000;
+export const EXHAUST_PERIOD_BUDGET_TICKS = 24_000;
 
 /** Periods the simulator runs the windows for after its warmup, to see each result taken out as it comes */
-export const RESULT_WINDOWS_CHECK_PERIODS = 20;
+export const EXHAUST_CHECK_PERIODS = 20;
 
 /**
  * Periods a window has to drain the backlog a lost output leaves: the periods a loss trial gives a build to be back at
  * its expected output before it has to hold it (MAX_RECOVERY_PERIODS less RECOVERY_HOLD_PERIODS, backpressure-loss.ts)
  */
-export const RESULT_WINDOWS_RECOVERY_PERIODS = 32;
+export const EXHAUST_RECOVERY_PERIODS = 32;
 
 /**
  * Periods the output of a result is not taken away for in a loss trial of these windows, at most: the trial confirms
  * the arithmetic of the recovery (`drain_periods`), and does not run to where the build stops (a silo takes 4,000 copper
  * cables, 200 periods of 96 s)
  */
-export const RESULT_WINDOWS_LOSS_PERIODS = 4;
+export const EXHAUST_LOSS_PERIODS = 4;
 
 /** The periods after the release of such a loss: twice the predicted drain and the periods a recovery has to hold, within these */
-export const RESULT_WINDOWS_TRIAL_PERIODS = { least: 16, most: 64 } as const;
+export const EXHAUST_TRIAL_PERIODS = { least: 16, most: 64 } as const;
 
 /** Cells the weight a container lifts is counted in: every result's weight a period is rounded up to a cell */
 const WEIGHT_CELLS = 4096;
 
-export type ResultWindowsKind = "staggered" | "shared";
+export type ExhaustKind = "staggered" | "shared";
 
 /** The window a period of the inserters that take the same results */
-export interface ResultWindow {
+export interface ExhaustWindow {
     /** The results they take, in the recipe's order */
     items: ItemName[];
     /** The inserters, by entity id: all of them on the same window */
@@ -80,7 +80,7 @@ export interface ResultWindow {
     /**
      * What is left to take when their output has not been taken away until the build stopped: the container full of
      * the lightest of them, and a stack of each waiting in the machine. The window takes it over their expected count
-     * within RESULT_WINDOWS_RECOVERY_PERIODS periods.
+     * within EXHAUST_RECOVERY_PERIODS periods.
      */
     backlog_items: number;
     /** The hand of each of the inserters */
@@ -121,15 +121,15 @@ export interface ContainerMargin {
 }
 
 /** The plan of the windows of one machine's results */
-export interface ResultWindowsPlan {
+export interface ExhaustPlan {
     machine_id: number;
-    kind: ResultWindowsKind;
+    kind: ExhaustKind;
     /** Ticks of the period: `cycles` feed cycles */
     period: number;
     cycles: number;
     /** Crafts of the machine a period */
     crafts: number;
-    windows: ResultWindow[];
+    windows: ExhaustWindow[];
     container: ContainerMargin;
 }
 
@@ -144,14 +144,14 @@ export interface TakerGroup {
     swing_ticks: number;
 }
 
-/** The inputs of the plan of one machine, from the destroyed target's arithmetic (crafting-cycle.ts) */
-export interface ResultWindowsInput {
+/** The inputs of the plan of one machine, from the destroyed target's arithmetic (output-cycle.ts) */
+export interface ExhaustInput {
     machine: Machine;
     registry: Pick<ReadableEntityRegistry, "getAll" | "getEntityById">;
     /** Ticks of one feed cycle (the fewest hands brought that last whole ticks), and the crafts it makes */
     cycle_ticks: number;
     crafts_per_cycle: number;
-    kind: ResultWindowsKind;
+    kind: ExhaustKind;
     /** Feed cycles a period where the config sets them (`overrides.terminal_swing_count`); found here otherwise */
     cycles?: number;
     level?: number;
@@ -321,7 +321,7 @@ function agesBefore(openings: readonly number[], before: number, period: number)
 }
 
 /** The openings of the windows of `count` groups in a period: spread evenly, or all at its start */
-function openingsOf(kind: ResultWindowsKind, count: number, period: number): number[] {
+function openingsOf(kind: ExhaustKind, count: number, period: number): number[] {
     return Array.from({ length: count }, (_, index) => kind === "shared" ? 0 : Math.round(index * period / count));
 }
 
@@ -332,7 +332,7 @@ type WorstHeld = ContainerMargin & { at_level_units: number };
  * What the container holds at the worst moment of a period of `cycles` feed cycles: just before each opening, each
  * result counted over whole feed cycles since its group's window opened (a part of a cycle counted as a whole one)
  */
-function worstHeld(input: ResultWindowsInput, measure: ContainerMeasure, groups: readonly TakerGroup[], cycles: number, level: number): WorstHeld {
+function worstHeld(input: ExhaustInput, measure: ContainerMeasure, groups: readonly TakerGroup[], cycles: number, level: number): WorstHeld {
     const period = cycles * input.cycle_ticks;
     const rolls_per_cycle = input.crafts_per_cycle * rollsPerCraft(input.machine);
     const openings = openingsOf(input.kind, groups.length, period);
@@ -360,14 +360,14 @@ function worstHeld(input: ResultWindowsInput, measure: ContainerMeasure, groups:
  * The plan of the windows of a machine's results (see the top of this file). Throws where the container is not one whose
  * room is known, or does not hold the results of a single feed cycle.
  */
-export function resultWindowsPlan(input: ResultWindowsInput): ResultWindowsPlan {
+export function exhaustPlan(input: ExhaustInput): ExhaustPlan {
     // every run of the build plans its cycle again (each start phase and trial of a clock): the arithmetic is made once
     const key = planKeyOf(input);
     const known = key === null ? undefined : planned.get(key);
     if (known !== undefined) {
         return known;
     }
-    const plan = planResultWindows(input);
+    const plan = planExhaust(input);
     if (key !== null) {
         if (planned.size >= MAX_PLANS_KEPT) {
             planned.delete(planned.keys().next().value!);
@@ -378,11 +378,11 @@ export function resultWindowsPlan(input: ResultWindowsInput): ResultWindowsPlan 
 }
 
 /** Plans kept by what they are made of (see planKeyOf), the oldest dropped first */
-const planned = new Map<string, ResultWindowsPlan>();
+const planned = new Map<string, ExhaustPlan>();
 const MAX_PLANS_KEPT = 64;
 
 /** Everything a plan is made of, as a string; null where the result target is no container in the registry */
-function planKeyOf(input: ResultWindowsInput): string | null {
+function planKeyOf(input: ExhaustInput): string | null {
     const { machine, registry } = input;
     const chest = machine.result_target === undefined ? null : registry.getEntityById(machine.result_target);
     if (chest === null || !Entity.isChest(chest)) {
@@ -410,11 +410,11 @@ function containerOf(machine: Machine, registry: Pick<ReadableEntityRegistry, "g
 }
 
 /** The longest whole number of feed cycles, up to the longest period, whose results the container holds at the level */
-function longestCycles(input: ResultWindowsInput, measure: ContainerMeasure, groups: readonly TakerGroup[], level: number): number {
+function longestCycles(input: ExhaustInput, measure: ContainerMeasure, groups: readonly TakerGroup[], level: number): number {
     const fits = (cycles: number) => worstHeld(input, measure, groups, cycles, level).at_level_units <= measure.capacity;
     assert(fits(1), `Machine ${input.machine.entity_id.number} places more into ${input.machine.result_target} in one cycle of ${input.cycle_ticks} ticks `
         + "than it holds in all but 1 in 740 cycles");
-    const longest = Math.max(1, Math.floor(RESULT_WINDOWS_PERIOD_BUDGET_TICKS / input.cycle_ticks));
+    const longest = Math.max(1, Math.floor(EXHAUST_PERIOD_BUDGET_TICKS / input.cycle_ticks));
     // the longest that fits: doubled while it fits, then halved back into the last step (what it holds grows with the period)
     let low = 1;
     let high = 2;
@@ -434,7 +434,7 @@ function longestCycles(input: ResultWindowsInput, measure: ContainerMeasure, gro
     return low;
 }
 
-function planResultWindows(input: ResultWindowsInput): ResultWindowsPlan {
+function planExhaust(input: ExhaustInput): ExhaustPlan {
     const { machine, registry } = input;
     const level = input.level ?? RANDOM_MARGIN_LEVEL;
     const name = `Machine ${machine.entity_id.number}`;
@@ -445,13 +445,13 @@ function planResultWindows(input: ResultWindowsInput): ResultWindowsPlan {
     const crafts = cycles * input.crafts_per_cycle;
     const rolls = crafts * rollsPerCraft(machine);
     const openings = openingsOf(input.kind, groups.length, period);
-    const windows = groups.map((group, index): ResultWindow => {
+    const windows = groups.map((group, index): ExhaustWindow => {
         const items_at_level = countAtLevel(countDistribution(group.results[0], rolls), level);
         const expected = group.items.reduce((sum, item) => sum + machine.outputs.find(it => it.item_name === item)!.amount_per_craft.toDecimal() * crafts, 0);
         // a lost output leaves the container full of them: drained at the window's room over their expected count
         const backlog_items = Math.max(...group.items.map(item => measure.mostOf(item)))
             + group.items.reduce((sum, item) => sum + FactorioDataService.findItemOrThrow(item).stack_size, 0);
-        const taken = Math.max(items_at_level, expected + backlog_items / RESULT_WINDOWS_RECOVERY_PERIODS);
+        const taken = Math.max(items_at_level, expected + backlog_items / EXHAUST_RECOVERY_PERIODS);
         // each taker may hold a part hand from the window before, which the window fills first
         const left_over = group.takers * (group.hand - 1);
         const hands = Math.max(1, Math.ceil((taken + left_over) / (group.takers * group.hand)));
@@ -491,16 +491,16 @@ export function resultsFitContainer(
     if (measure === null) {
         return true;
     }
-    const input: ResultWindowsInput = { machine, registry, cycle_ticks, crafts_per_cycle, kind: "shared", level };
+    const input: ExhaustInput = { machine, registry, cycle_ticks, crafts_per_cycle, kind: "shared", level };
     return worstHeld(input, measure, takerGroupsOf(machine, registry), cycles, level).at_level_units <= measure.capacity;
 }
 
 /**
  * Whether the windows of a machine's results can be planned: its feed cycle lasts whole ticks, its container's room is
  * known, and the container holds one cycle's results at the level. Where not, the destroyed target keeps the plan that
- * simulates its period (crafting-cycle.ts), as it had before these windows.
+ * simulates its period (output-cycle.ts), as it had before these windows.
  */
-export function resultWindowsFeasible(
+export function exhaustFeasible(
     machine: Machine,
     registry: Pick<ReadableEntityRegistry, "getAll" | "getEntityById">,
     cycle_ticks: number,
@@ -512,12 +512,12 @@ export function resultWindowsFeasible(
     if (!Number.isInteger(cycle_ticks) || measure === null) {
         return false;
     }
-    const input: ResultWindowsInput = { machine, registry, cycle_ticks, crafts_per_cycle, kind: "staggered", level };
+    const input: ExhaustInput = { machine, registry, cycle_ticks, crafts_per_cycle, kind: "staggered", level };
     return worstHeld(input, measure, takerGroupsOf(machine, registry), 1, level).at_level_units <= measure.capacity;
 }
 
 /** The windows of the inserters that take the results out, by inserter id, a period of `plan.period` */
-export function resultWindowRanges(plan: ResultWindowsPlan): Map<string, OpenRange[]> {
+export function exhaustWindowRanges(plan: ExhaustPlan): Map<string, OpenRange[]> {
     const windows = new Map<string, OpenRange[]>();
     for (const window of plan.windows) {
         const ranges = rotateRanges([OpenRange.from(0, window.window_ticks - 1)], window.opening, plan.period);
@@ -529,13 +529,13 @@ export function resultWindowRanges(plan: ResultWindowsPlan): Map<string, OpenRan
 }
 
 /** Whether an inserter takes results out of the container a machine of the plans places them into */
-export function takesResultOf(plans: readonly ResultWindowsPlan[], inserter_id: EntityId | string): boolean {
+export function takesResultOf(plans: readonly ExhaustPlan[], inserter_id: EntityId | string): boolean {
     const id = typeof inserter_id === "string" ? inserter_id : inserter_id.id;
     return plans.some(plan => plan.windows.some(window => window.inserter_ids.includes(id)));
 }
 
 /** The items whose hands the windows carry across periods: no period makes them whole */
-export function carriedItemsOf(plans: readonly ResultWindowsPlan[]): ItemName[] {
+export function carriedItemsOf(plans: readonly ExhaustPlan[]): ItemName[] {
     return Array.from(new Set(plans.flatMap(plan => plan.windows.flatMap(window => window.items))));
 }
 
@@ -557,21 +557,21 @@ export interface ResultLossTrial {
 
 /**
  * The loss trial of the output of `item` for a clock of these windows: the output is not taken away for at most
- * RESULT_WINDOWS_LOSS_PERIODS periods (fewer where the window's worst backlog comes sooner), and the build is run for
+ * EXHAUST_LOSS_PERIODS periods (fewer where the window's worst backlog comes sooner), and the build is run for
  * twice the periods the window's margin drains what that leaves and the periods a recovery holds, between
- * RESULT_WINDOWS_TRIAL_PERIODS' bounds. Null for an item no window takes.
+ * EXHAUST_TRIAL_PERIODS' bounds. Null for an item no window takes.
  */
-export function resultLossTrialOf(plans: readonly ResultWindowsPlan[], item: ItemName, hold_periods: number): ResultLossTrial | null {
+export function resultLossTrialOf(plans: readonly ExhaustPlan[], item: ItemName, hold_periods: number): ResultLossTrial | null {
     for (const plan of plans) {
         const window = plan.windows.find(it => it.items.includes(item));
         if (window === undefined) {
             continue;
         }
-        const loss_periods = Math.max(1, Math.min(RESULT_WINDOWS_LOSS_PERIODS, Math.ceil(window.backlog_items / window.expected_items)));
+        const loss_periods = Math.max(1, Math.min(EXHAUST_LOSS_PERIODS, Math.ceil(window.backlog_items / window.expected_items)));
         const predicted_backlog = Math.min(window.backlog_items, loss_periods * window.expected_items);
         const predicted_drain_periods = predicted_backlog / window.margin_items;
-        const recovery_periods = Math.min(RESULT_WINDOWS_TRIAL_PERIODS.most,
-            Math.max(RESULT_WINDOWS_TRIAL_PERIODS.least, 2 * Math.ceil(predicted_drain_periods) + hold_periods));
+        const recovery_periods = Math.min(EXHAUST_TRIAL_PERIODS.most,
+            Math.max(EXHAUST_TRIAL_PERIODS.least, 2 * Math.ceil(predicted_drain_periods) + hold_periods));
         return {
             loss_ticks: loss_periods * plan.period, recovery_periods, container_id: plan.container.container_id, items: window.items,
             backlog_limit: window.items_at_level + window.inserter_ids.length * window.hand, predicted_backlog, predicted_drain_periods,

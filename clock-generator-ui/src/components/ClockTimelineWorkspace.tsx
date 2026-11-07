@@ -20,8 +20,8 @@ import { configToFormData } from '../utils/configForm/configMapping';
 import { chestConfigItems } from '../utils/configForm/formData';
 import { entityOptionsOf } from '../utils/inserterOptions';
 import { entityLabelIn } from '../utils/entityLabel';
-import { craftingCycles, craftingCycleAt, craftingCycleIndex, craftingCycleRange } from '../utils/craftingCycles';
-import { CraftingCycleNavigator } from './CraftingCycleNavigator';
+import { outputCycles, outputCycleAt, outputCycleIndex, outputCycleRange } from '../utils/outputCycles';
+import { OutputCycleNavigator } from './OutputCycleNavigator';
 
 const FlowReplay = lazy(() => import('./FlowReplay').then(module => ({ default: module.FlowReplay })));
 const EvidenceChart = lazy(() => import('./TimelineEvidenceChart').then(module => ({ default: module.TimelineEvidenceChart })));
@@ -123,11 +123,11 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
     const domain = !recordingWanted ? 'windows' : inspection.run;
     const savedRange = inspection.ranges[domain];
     const tick = Math.max(0, Math.min(Math.floor(duration), inspection.tick));
-    const cycles = useMemo(() => craftingCycles(props.selected.cycleTicks, duration), [props.selected.cycleTicks, duration]);
-    const cycleIndex = Math.min((cycles?.count ?? 1) - 1, inspection.cycleIndex ?? craftingCycleIndex(cycles, tick));
+    const cycles = useMemo(() => outputCycles(props.selected.cycleTicks, duration), [props.selected.cycleTicks, duration]);
+    const cycleIndex = Math.min((cycles?.count ?? 1) - 1, inspection.cycleIndex ?? outputCycleIndex(cycles, tick));
     const range = useMemo(() => {
-        const cycle = inspection.view === 'cycles' ? craftingCycleAt(cycles, cycleIndex) : null;
-        return cycle ? craftingCycleRange(cycle, duration) : clampTimelineRange(savedRange, duration);
+        const cycle = inspection.view === 'cycles' ? outputCycleAt(cycles, cycleIndex) : null;
+        return cycle ? outputCycleRange(cycle, duration) : clampTimelineRange(savedRange, duration);
     }, [inspection.view, cycles, cycleIndex, savedRange, duration]);
     const current = useRef({ inspection, duration, domain, range });
     useEffect(() => { current.current = { inspection, duration, domain, range }; }, [inspection, duration, domain, range]);
@@ -136,14 +136,14 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
         patch({ ranges: { ...previous.ranges, [key]: clampTimelineRange(next, end) } });
     }, [patch]);
     const selectCycle = useCallback((index: number) => {
-        const cycle = craftingCycleAt(cycles, index);
+        const cycle = outputCycleAt(cycles, index);
         if (!cycle) return;
         patch({ cycleIndex: index, tick: Math.ceil(cycle.start) });
     }, [cycles, patch]);
     const setTick = useCallback((value: number) => {
         const { duration: end, range: window, inspection: previous } = current.current;
         const next = Math.max(0, Math.min(Math.floor(end), Math.round(value)));
-        patch({ tick: next, ...(previous.view === 'cycles' ? { cycleIndex: craftingCycleIndex(cycles, next) } : {}) });
+        patch({ tick: next, ...(previous.view === 'cycles' ? { cycleIndex: outputCycleIndex(cycles, next) } : {}) });
         if (previous.view !== 'cycles' && (next < window.start || next > window.end)) {
             const half = (window.end - window.start) / 2;
             setRange({ start: next - half, end: next + half });
@@ -151,7 +151,7 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
     }, [patch, setRange, cycles]);
     const zoom = useCallback((factor: number, cursor: number) => setRange(zoomTimeline(current.current.range, factor, cursor, current.current.duration)), [setRange]);
     const inspect = useCallback((entityId: string, at: number) => {
-        patch({ entityId, tick: Math.round(at), ...(current.current.inspection.view === 'cycles' ? { cycleIndex: craftingCycleIndex(cycles, at) } : {}) });
+        patch({ entityId, tick: Math.round(at), ...(current.current.inspection.view === 'cycles' ? { cycleIndex: outputCycleIndex(cycles, at) } : {}) });
         const { range: window, duration: end } = current.current;
         if (current.current.inspection.view !== 'cycles' && (at < window.start || at > window.end)) { const half = (window.end - window.start) / 2; setRange(clampTimelineRange({ start: at - half, end: at + half }, end)); }
     }, [patch, setRange, cycles]);
@@ -200,7 +200,7 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
         {recordingWanted && !isFlow && selected?.type === 'belt' && <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>Showing connected inserters. Physical belt contents are not recorded.</Typography>}
         {recordingWanted && !isFlow && selected?.type !== 'belt' && <FormControlLabel sx={{ mb: 0.5 }} label="Show connected entities" control={<Checkbox size="small" checked={inspection.showConnections === true} onChange={(_, showConnections) => patch({ showConnections })} />} />}
         {inspection.view === 'activity' && <TimelineSignals signals={inspection.signals} onChange={signals => patch({ signals })} />}
-        {inspection.view === 'cycles' && <CraftingCycleNavigator cycles={cycles} index={cycleIndex} periodTicks={props.selected.simulationDurationTicks} swings={props.selected.terminalSwingCount} counts={props.selected.counts} onSelect={selectCycle} />}
+        {inspection.view === 'cycles' && <OutputCycleNavigator cycles={cycles} index={cycleIndex} periodTicks={props.selected.simulationDurationTicks} swings={props.selected.terminalSwingCount} counts={props.selected.counts} onSelect={selectCycle} />}
         {recordingWanted && <Typography variant="body2" sx={{ mb: 1 }}>
             {props.selected.ranking.meets_target_rate ? `This clock meets ${number(props.selected.assessment.items_per_second)} items/s across all copies. Pauses can be part of that pattern.`
                 : 'Explore the recorded activity alongside this clock’s assessed output.'}

@@ -5,15 +5,15 @@ import type { Config } from "../../config/schema";
 import { Entity, EntityId, type Machine } from "../../entities";
 import { fraction } from "../../data-types/fraction";
 import { createEntityRegistryFromConfig } from "../sequence/simulation-context";
-import { CraftingCyclePlan } from "../sequence/cycle/crafting-cycle";
+import { OutputCyclePlan } from "../sequence/cycle/output-cycle";
 import { EntityTransferCountMap, outputPathOf } from "../sequence/cycle/swing-counts";
 import { unplannedInserterClocks } from "../sequence/unplanned-inserter-clock";
 import { TargetProductionRate } from "../target-production-rate";
-import * as planning from "../plan/plan-run";
+import * as planning from "../plan/unclocked-run";
 import { ClockPeriodLimitError } from "../plan/clock-period-limit";
 import * as unplanned from "../sequence/unplanned-inserter-clock";
-import { groupedHandsPlan, GroupedHandsNotApplicable, heldAtTurn, roomAtTurn, type GroupedHandsComposition } from "./grouped-hands";
-import { assertAcyclicGroupedDependencies, constructPrimitiveGroupedHands } from "./primitive-grouped-hands";
+import { roundRobinPollingPlan, RoundRobinPollingNotApplicable, heldAtTurn, roomAtTurn, type RoundRobinPollingComposition } from "./round-robin-polling";
+import { assertAcyclicGroupedDependencies, constructPrimitiveRoundRobinPolling } from "./round-robin-polling-primitive";
 
 describe("pure primitive grouped construction", () => {
     let config: Config;
@@ -25,9 +25,9 @@ describe("pure primitive grouped construction", () => {
 
     it("constructs from the normal output unit without prepare, simulation, a forced batch or config mutation", () => {
         const before = JSON.stringify(config);
-        const run = vi.spyOn(planning, "planRun").mockImplementation(() => { throw new Error("scheduled planning is forbidden in pure construction"); });
+        const run = vi.spyOn(planning, "unclockedRun").mockImplementation(() => { throw new Error("scheduled planning is forbidden in pure construction"); });
         try {
-            const artifact = constructPrimitiveGroupedHands(config);
+            const artifact = constructPrimitiveRoundRobinPolling(config);
             expect(run).not.toHaveBeenCalled();
             expect(artifact).toMatchObject({ kind: "pure-construction", terminal_swing_count: 1, base_cycle_ticks: 40, grouped_cycles: 1, period_ticks: 40 });
             expect(artifact).not.toHaveProperty("stability_check");
@@ -46,7 +46,7 @@ describe("pure primitive grouped construction", () => {
     });
 
     it("counts final buffered takers once while preserving the internal drain and direct dependency", () => {
-        const artifact = constructPrimitiveGroupedHands(config);
+        const artifact = constructPrimitiveRoundRobinPolling(config);
         expect(artifact.final_output_inserter_ids).toEqual(["inserter:2", "inserter:1"]);
         expect(artifact.inserters.find(inserter => inserter.id === "inserter:4")!.role).toBe("internal-buffer-drain");
         expect(artifact.inserters.find(inserter => inserter.id === "inserter:2")!.role).toBe("terminal-output");
@@ -61,7 +61,7 @@ describe("pure primitive grouped construction", () => {
     });
 
     it("moves the drain of each science plant with its plant's turn at the supercapacitor plant, so both plants are emptied at the same point of their turns", () => {
-        const artifact = constructPrimitiveGroupedHands(config);
+        const artifact = constructPrimitiveRoundRobinPolling(config);
         const takers = config.inserters.filter(inserter => inserter.source.type === "machine" && inserter.sink.type === "machine"
             && config.machines.find(machine => machine.id === inserter.source.id)?.recipe === "supercapacitor");
         expect(takers).toHaveLength(2);
@@ -84,7 +84,7 @@ describe("pure primitive grouped construction", () => {
     });
 
     it("gives each science plant room when its supercapacitor turn opens, which the drain left where it was did not give the east plant", () => {
-        const artifact = constructPrimitiveGroupedHands(config);
+        const artifact = constructPrimitiveRoundRobinPolling(config);
         const registry = createEntityRegistryFromConfig(config);
         const takers = config.inserters.filter(inserter => inserter.source.type === "machine" && inserter.sink.type === "machine"
             && config.machines.find(machine => machine.id === inserter.source.id)?.recipe === "supercapacitor");
@@ -116,7 +116,7 @@ describe("pure primitive grouped construction", () => {
     });
 
     it("retains the computed rejected-result control in composed windows and control keys without a planned red hand", () => {
-        const artifact = constructPrimitiveGroupedHands(config);
+        const artifact = constructPrimitiveRoundRobinPolling(config);
         const registry = createEntityRegistryFromConfig(config);
         const red = unplannedInserterClocks(registry, artifact.period_ticks).get("inserter:9")!;
         expect(artifact.retained_clocks["inserter:9"]).toEqual({ kind: red.kind, modulus: red.modulus, own_clock: false,
@@ -131,7 +131,7 @@ describe("pure primitive grouped construction", () => {
     });
 
     it("keeps both mixed items on one arm and budgets their combined occupancy with the actual stacked-belt slack", () => {
-        const artifact = constructPrimitiveGroupedHands(config);
+        const artifact = constructPrimitiveRoundRobinPolling(config);
         const mixed = artifact.transfer_plan.entities.find(entity => entity.entity_number === 11)!;
         expect(mixed.item_transfers.map(item => [item.item_name, item.numerator, item.denominator]).sort()).toEqual([
             ["holmium-plate", 64, 121], ["superconductor", 64, 121],
@@ -146,7 +146,7 @@ describe("pure primitive grouped construction", () => {
     });
 
     it("does not invent a hand or delay for the direct edge when ordering its feeder", () => {
-        const artifact = constructPrimitiveGroupedHands(config);
+        const artifact = constructPrimitiveRoundRobinPolling(config);
         const compact = artifact.attempts.find(attempt => !attempt.options.share_windows && attempt.options.feeder_offset === 1 && !attempt.options.surplus_guard)!;
         expect(compact.result.kind).toBe("constructed");
         if (compact.result.kind !== "constructed") throw new Error(compact.result.reason);
@@ -156,34 +156,34 @@ describe("pure primitive grouped construction", () => {
 
     it.each(["iron-plate", "processing-unit"])("preserves zero/multiple accepted-result refusal for target recipe %s", recipe => {
         const unsupported = { ...config, machines: config.machines.map(machine => machine.id === 3 ? { ...machine, recipe } : machine) };
-        expect(() => constructPrimitiveGroupedHands(unsupported)).toThrow(/takes none|several results/);
+        expect(() => constructPrimitiveRoundRobinPolling(unsupported)).toThrow(/takes none|several results/);
     });
 
     it.each([{ terminal_swing_count: 1 }, { lcm: 1 }])("does not replace an explicit scheduling policy %j", overrides => {
-        expect(() => constructPrimitiveGroupedHands({ ...config, overrides })).toThrow(/requires automatic/);
+        expect(() => constructPrimitiveRoundRobinPolling({ ...config, overrides })).toThrow(/requires automatic/);
     });
 
     it("keeps explicit Always and missing physical outlet coverage as refusals", () => {
         const forced = { ...config, inserters: config.inserters.map(inserter => inserter.id === 10 ? { ...inserter,
             overrides: { enable_control: { mode: "ALWAYS" as const } } } : inserter) };
-        expect(() => constructPrimitiveGroupedHands(forced)).toThrow(/requires automatic/);
-        expect(() => constructPrimitiveGroupedHands({ ...config, inserters: config.inserters.filter(inserter => inserter.id !== 9) })).toThrow();
+        expect(() => constructPrimitiveRoundRobinPolling(forced)).toThrow(/requires automatic/);
+        expect(() => constructPrimitiveRoundRobinPolling({ ...config, inserters: config.inserters.filter(inserter => inserter.id !== 9) })).toThrow();
     });
 
     it.each([500000, 600000])("rejects primitive period %s before computing/unrolling by-product clocks", period => {
         const too_slow = { ...config, target_output: { ...config.target_output, items_per_second: config.target_output.items_per_second * 40 / period } };
         const compute = vi.spyOn(unplanned, "unplannedInserterClocks");
         try {
-            expect(() => constructPrimitiveGroupedHands(too_slow)).toThrow(ClockPeriodLimitError);
+            expect(() => constructPrimitiveRoundRobinPolling(too_slow)).toThrow(ClockPeriodLimitError);
             expect(compute).not.toHaveBeenCalled();
         } finally { compute.mockRestore(); }
     });
 
     it.each([NaN, Infinity, -Infinity, 0, -1])("rejects invalid computed period %s without classifying it as retryable", period => {
-        const ticks = vi.spyOn(CraftingCyclePlan, "ticksOfCycles").mockReturnValue(period);
+        const ticks = vi.spyOn(OutputCyclePlan, "ticksOfCycles").mockReturnValue(period);
         try {
             let failure: unknown;
-            try { constructPrimitiveGroupedHands(config); } catch (error) { failure = error; }
+            try { constructPrimitiveRoundRobinPolling(config); } catch (error) { failure = error; }
             expect(failure).toBeInstanceOf(Error);
             expect(failure).not.toBeInstanceOf(ClockPeriodLimitError);
             expect((failure as Error).message).toMatch(/positive and finite/);
@@ -194,22 +194,22 @@ describe("pure primitive grouped construction", () => {
         const grenade = await loadConfigFromFile(ConfigPaths.GRENADE_240_FILLS_BELT_EXACTLY);
         const slow = { ...grenade, overrides: undefined, inserters: grenade.inserters.map(inserter => ({ ...inserter, overrides: undefined })),
             drills: { ...grenade.drills!, configs: grenade.drills!.configs.map(drill => ({ ...drill, overrides: undefined, speed_bonus: -0.99 })) } };
-        const artifact = constructPrimitiveGroupedHands(slow);
+        const artifact = constructPrimitiveRoundRobinPolling(slow);
         expect(artifact.attempts.every(attempt => attempt.result.kind === "refused")).toBe(true);
         expect(artifact.attempts.map(attempt => attempt.result.kind === "refused" ? attempt.result.reason : "unexpected").join(" ")).toMatch(/drill:.*outside/);
     });
 
     it("preserves consecutive-hand room refusal and cannot exclude a planned loader as an unplanned clock", () => {
         const registry = createEntityRegistryFromConfig(config), target = TargetProductionRate.fromConfig(config.target_output);
-        const cycle = CraftingCyclePlan.create(target, registry, config, fraction(1));
+        const cycle = OutputCyclePlan.create(target, registry, config, fraction(1));
         const paths = registry.getAll().filter(Entity.isMachine).filter(machine => machine.output.item_name === target.machine_production_rate.item).map(machine => outputPathOf(machine, registry));
         const clocks = unplannedInserterClocks(registry, 40);
-        const composition: GroupedHandsComposition = { retained_clocks: clocks, output_paths: paths, direct_sources: new Map([["machine:3", ["machine:4"]]]) };
+        const composition: RoundRobinPollingComposition = { retained_clocks: clocks, output_paths: paths, direct_sources: new Map([["machine:3", ["machine:4"]]]) };
         const overloaded = EntityTransferCountMap.fromEntries([...cycle.entity_transfer_map].map(([id, transfer]): [typeof id, typeof transfer] => [id,
             id.number === 11 && EntityId.isInserter(id) ? { ...transfer, item_transfers: transfer.item_transfers.map(item => ({ ...item, transfer_count: fraction(100) })) } : transfer]));
-        expect(() => groupedHandsPlan(registry, overloaded, 1, 40, true, undefined, null, composition)).toThrow(/do not follow each other under the limit/);
+        expect(() => roundRobinPollingPlan(registry, overloaded, 1, 40, true, undefined, null, composition)).toThrow(/do not follow each other under the limit/);
         const forged = new Map([["inserter:10", { ...clocks.get("inserter:9")!, inserter_id: EntityId.forInserter(10) }]]);
-        expect(() => groupedHandsPlan(registry, cycle.entity_transfer_map, 1, 40, true, undefined, null,
+        expect(() => roundRobinPollingPlan(registry, cycle.entity_transfer_map, 1, 40, true, undefined, null,
             { ...composition, retained_clocks: forged })).toThrow(/not a retained/);
     });
 
@@ -217,7 +217,7 @@ describe("pure primitive grouped construction", () => {
         const machine = (id: number, target?: number) => ({ entity_id: EntityId.forMachine(id),
             ...(target === undefined ? {} : { result_target: EntityId.forMachine(target) }) }) as Machine;
         const feeder = { entity_id: EntityId.forInserter(1), source: { entity_id: EntityId.forMachine(2) }, sink: { entity_id: EntityId.forMachine(1) } };
-        expect(() => assertAcyclicGroupedDependencies({ getAll: () => [machine(1, 2), machine(2), feeder] })).toThrow(GroupedHandsNotApplicable);
+        expect(() => assertAcyclicGroupedDependencies({ getAll: () => [machine(1, 2), machine(2), feeder] })).toThrow(RoundRobinPollingNotApplicable);
         expect(() => assertAcyclicGroupedDependencies({ getAll: () => [machine(1, 2), machine(2)] })).not.toThrow();
     });
 
@@ -225,10 +225,10 @@ describe("pure primitive grouped construction", () => {
         const ordinary = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN);
         const auto = { ...ordinary, overrides: undefined, inserters: ordinary.inserters.map(inserter => ({ ...inserter, overrides: undefined })) };
         const registry = createEntityRegistryFromConfig(auto), target = TargetProductionRate.fromConfig(auto.target_output);
-        const cycle = CraftingCyclePlan.create(target, registry, auto, fraction(1));
-        const artifact = constructPrimitiveGroupedHands(auto);
+        const cycle = OutputCyclePlan.create(target, registry, auto, fraction(1));
+        const artifact = constructPrimitiveRoundRobinPolling(auto);
         for (const attempt of artifact.attempts) if (attempt.result.kind === "constructed") {
-            const old = groupedHandsPlan(registry, cycle.entity_transfer_map, artifact.grouped_cycles, artifact.period_ticks, true, attempt.options);
+            const old = roundRobinPollingPlan(registry, cycle.entity_transfer_map, artifact.grouped_cycles, artifact.period_ticks, true, attempt.options);
             expect(attempt.result.planned_windows).toEqual(Object.fromEntries([...old.windows].map(([id, ranges]) => [id,
                 ranges.map(range => ({ start: range.start_inclusive, end: range.end_inclusive }))])));
             expect(attempt.result.busy).toEqual(old.busy);

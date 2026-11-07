@@ -5,7 +5,7 @@ import { TestConfigPaths } from '../../tests/configs/paths';
 import type { Config } from '../config';
 import { SimulationContext } from './sequence/simulation-context';
 import { TimelineRecorder } from './timeline-recording';
-import { SIMULATION_BUDGET_TICKS, runBuild, trialRunOf } from './plan/plan-run';
+import { SIMULATION_BUDGET_TICKS, runBuild, trialRunOf } from './plan/unclocked-run';
 import { recordSimulationTimeline } from './record-timeline';
 import { quiet } from './generate-blueprint-test-helpers';
 import { expandStateTransitionHistory } from './sequence/compact-history';

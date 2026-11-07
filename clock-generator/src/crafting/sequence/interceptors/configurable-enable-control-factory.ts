@@ -4,7 +4,7 @@ import { AlwaysEnabledControl, EnableControl } from "../../../simulation/control
 import { ResettableRegistry } from "../../../simulation/controls/resettable-registry";
 import { TickProvider } from "../../../simulation/current-tick-provider";
 import { EnableControlOverrideConfig } from "../../../config/schema";
-import { CraftingCyclePlan } from "../cycle/crafting-cycle";
+import { OutputCyclePlan } from "../cycle/output-cycle";
 import { Duration, OpenRange } from "../../../data-types";
 import { ReadableEntityStateRegistry } from "../../../state";
 import { runThroughTicks } from "./inserter-enable-control-factory";
@@ -30,7 +30,7 @@ export class ConfigurableEnableControlFactory {
     constructor(
         private readonly override_map: EntityEnableControlOverrideMap,
         private readonly tick_provider: TickProvider,
-        private readonly crafting_cycle_plan: CraftingCyclePlan,
+        private readonly output_cycle_plan: OutputCyclePlan,
         private readonly resettable_registry: ResettableRegistry,
         entity_state_registry: ReadableEntityStateRegistry,
         /**
@@ -108,7 +108,7 @@ export class ConfigurableEnableControlFactory {
     ): EnableControl {
         const period_duration = override.period_duration_ticks !== undefined
             ? Duration.ofTicks(override.period_duration_ticks)
-            : this.crafting_cycle_plan.total_duration;
+            : this.output_cycle_plan.total_duration;
 
         // Validate and warn if ranges exceed cycle duration
         const enabled_ranges = override.ranges.map(range => {

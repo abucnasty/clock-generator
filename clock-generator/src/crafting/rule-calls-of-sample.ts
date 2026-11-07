@@ -4,7 +4,7 @@ import { Logger } from "../common/logger";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { ClockAlternative, ClockAlternativesResult, generateClockAlternatives } from "./alternatives";
 import { StockRecording } from "./machine-stock";
-import { runBuild } from "./plan/plan-run";
+import { runBuild } from "./plan/unclocked-run";
 import { removedBetween, RuleRemoval } from "./rule-call";
 import { ruleCount, RuleCountRun } from "./rule-count";
 import { ruleCountInputOfStock } from "./rule-count-stock";

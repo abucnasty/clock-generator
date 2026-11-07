@@ -2,7 +2,7 @@ import assert from "../../../common/assert";
 import { Entity, EntityId, handSizeFor, Inserter, Machine, MiningDrill, miningDrillMaxInsertion } from "../../../entities";
 import { EntityTransferCountMap, outputPathOf } from "../cycle/swing-counts";
 import { targetInsertersOf, targetMachinesOf } from "../cycle/target-ends";
-import { resultWindowRanges, takesResultOf } from "../../result-windows";
+import { exhaustWindowRanges, takesResultOf } from "../../exhaust";
 import { AlwaysEnabledControl, EnableControl } from "../../../simulation/controls/enable-control";
 import { ResettableRegistry } from "../../../simulation/controls/resettable-registry";
 import { TickProvider } from "../../../simulation/current-tick-provider";
@@ -10,7 +10,7 @@ import { assertIsInserterState, assertIsMachineState, EntityState, InserterState
 import { TransportBelt } from "../../../simulation/archetypes/transport-belt";
 import { ItemName } from "../../../data";
 import { computeSimulationMode, SimulationMode, simulationModeForInput } from "../simulation-mode";
-import { CraftingCyclePlan } from "../cycle/crafting-cycle";
+import { OutputCyclePlan } from "../cycle/output-cycle";
 import { Duration, OpenRange } from "../../../data-types";
 import { SwingDistribution } from "../cycle/swing-distribution";
 import { InserterClock, alwaysEnabledInserters } from "../unplanned-inserter-clock";
@@ -39,7 +39,7 @@ export class EnableControlFactory {
 
     constructor(
         private readonly entity_state_registry: ReadableEntityStateRegistry,
-        private readonly crafting_cycle_plan: CraftingCyclePlan,
+        private readonly output_cycle_plan: OutputCyclePlan,
         private readonly tick_provider: TickProvider,
         private readonly resettable_registry: ResettableRegistry,
         private readonly logger: Logger,
@@ -59,8 +59,8 @@ export class EnableControlFactory {
         /** Whether a clock of a p/q-tick period runs through as well (`runThroughTicks`), given a game tick provider */
         private readonly counter_runs_through: boolean = false,
     ) {
-        this.target_output_item_name = this.crafting_cycle_plan.production_rate.machine_production_rate.item;
-        this.entity_transfer_map = this.crafting_cycle_plan.entity_transfer_map;
+        this.target_output_item_name = this.output_cycle_plan.production_rate.machine_production_rate.item;
+        this.entity_transfer_map = this.output_cycle_plan.entity_transfer_map;
         for (const state of this.entity_state_registry.getAllStates()) {
             if (EntityState.isInserter(state)) {
                 this.entities.push(state.inserter);
@@ -104,12 +104,12 @@ export class EnableControlFactory {
         const source_state = this.entity_state_registry.getSourceStateOrThrow(entity_id);
         const sink_state = this.entity_state_registry.getSinkStateOrThrow(entity_id);
 
-        // results that come too rarely for whole hands in a period: each taker on its window of the plan (result-windows.ts),
+        // results that come too rarely for whole hands in a period: each taker on its window of the plan (exhaust.ts),
         // carrying a part hand from one window to the next
-        const result_windows = this.crafting_cycle_plan.result_windows;
-        if (result_windows !== undefined && takesResultOf(result_windows, entity_id)) {
-            const plan = result_windows.find(it => takesResultOf([it], entity_id))!;
-            const ranges = resultWindowRanges(plan).get(entity_id.id)!;
+        const exhaust = this.output_cycle_plan.exhaust;
+        if (exhaust !== undefined && takesResultOf(exhaust, entity_id)) {
+            const plan = exhaust.find(it => takesResultOf([it], entity_id))!;
+            const ranges = exhaustWindowRanges(plan).get(entity_id.id)!;
             return EnableControl.lambda(() => {
                 const tick = this.tick_provider.getCurrentTick() % plan.period;
                 return ranges.some(range => tick >= range.start_inclusive && tick <= range.end_inclusive);
@@ -118,7 +118,7 @@ export class EnableControlFactory {
 
         // a target that counts an item destroyed: every inserter of the plan into a machine that destroys it, or out of
         // where that machine places its results, moves its planned hands and no more (planned by arithmetic)
-        if (this.crafting_cycle_plan.production_rate.counts === "destroyed" && this.entity_transfer_map.has(entity_id)
+        if (this.output_cycle_plan.production_rate.counts === "destroyed" && this.entity_transfer_map.has(entity_id)
             && ((EntityState.isMachine(sink_state) && this.terminal_machine_states.has(sink_state))
                 || Array.from(this.terminal_machine_states).some(machine => machine.machine.result_target?.id === source_state.entity_id.id))) {
             return this.plannedHandsAndNoMore(entity_state);
@@ -133,7 +133,7 @@ export class EnableControlFactory {
                 terminal_machine,
                 this.output_sources.get(entity_state.entity_id.id)?.container ?? null,
             );
-            if (this.crafting_cycle_plan.fractional_swings_enabled) {
+            if (this.output_cycle_plan.fractional_swings_enabled) {
                 return by_clock;
             }
             return EnableControl.all([this.plannedItemsAndNoMore(entity_state, terminal_machine), by_clock]);
@@ -159,7 +159,7 @@ export class EnableControlFactory {
         // Check if this inserter feeds into any terminal machine.
         // Skip for fractional swings, or when individual item transfers are fractional.
         // (Fractional per-item transfers are handled separately below in the belt→machine branch.)
-        if (!this.crafting_cycle_plan.fractional_swings_enabled) {
+        if (!this.output_cycle_plan.fractional_swings_enabled) {
             if (EntityState.isMachine(sink_state) && this.terminal_machine_states.has(sink_state)) {
                 if (!this.hasFractionalPerItemTransfers(entity_state.inserter)) {
                     additional_enable_controls.push(
@@ -188,7 +188,7 @@ export class EnableControlFactory {
             // item before running out of cycle budget. Using AlwaysEnabledControl lets the
             // machine's own automated_insertion_limit blocking naturally rotate through all
             // items without any clocked or latched intervention.
-            if (this.crafting_cycle_plan.terminal_swing_count_overridden &&
+            if (this.output_cycle_plan.terminal_swing_count_overridden &&
                 this.terminal_machine_states.has(sink_state) &&
                 this.hasFractionalPerItemTransfers(entity_state.inserter)) {
                 return AlwaysEnabledControl;
@@ -472,7 +472,7 @@ export class EnableControlFactory {
         );
 
         // For fractional swings, use clocked control to schedule inserters at end of subcycle
-        if (this.crafting_cycle_plan.fractional_swings_enabled) {
+        if (this.output_cycle_plan.fractional_swings_enabled) {
             const enabled_ranges = this.computeInputInserterEnableRanges(inserter)
             this.logger.log(`Fractional swings enabled for inserter ${inserter.entity_id.id}, enabled ranges:`);
             enabled_ranges.forEach(range => {
@@ -599,7 +599,7 @@ export class EnableControlFactory {
 
         // For fractional swings, use the same enable ranges as fromMachinetoMachine
         // to ensure consistent timing
-        if (this.crafting_cycle_plan.fractional_swings_enabled) {
+        if (this.output_cycle_plan.fractional_swings_enabled) {
             return this.clockedForCycle(
                 this.computeInputInserterEnableRanges(inserter_state.inserter)
             );
@@ -634,7 +634,7 @@ export class EnableControlFactory {
         const swings_per_cycle = this.transferCountOf(inserter_state.inserter).total_transfer_count;
         const hand_size = handSizeFor(inserter_state.inserter, source_state.machine.output.item_name);
         const items_per_span = swings_per_cycle.getNumerator * hand_size;
-        const span_ticks = CraftingCyclePlan.ticksOfCycles(this.crafting_cycle_plan, swings_per_cycle.getDenominator);
+        const span_ticks = OutputCyclePlan.ticksOfCycles(this.output_cycle_plan, swings_per_cycle.getDenominator);
 
         let span: number | null = null;
         let allowed = 0;
@@ -663,7 +663,7 @@ export class EnableControlFactory {
         const swings_per_cycle = planned.total_transfer_count;
         const hand_size = planned.stack_size;
         const items_per_span = swings_per_cycle.getNumerator * hand_size;
-        const span_ticks = CraftingCyclePlan.ticksOfCycles(this.crafting_cycle_plan, swings_per_cycle.getDenominator);
+        const span_ticks = OutputCyclePlan.ticksOfCycles(this.output_cycle_plan, swings_per_cycle.getDenominator);
 
         let span: number | null = null;
         let allowed = 0;
@@ -701,8 +701,8 @@ export class EnableControlFactory {
         // For output inserters, we don't use the sourceIsGreaterThanStackSize check because
         // the cycle is designed to produce the right number of items overall, and consecutive
         // swings may need to happen before the machine has time to replenish inventory.
-        if (this.crafting_cycle_plan.fractional_swings_enabled && this.crafting_cycle_plan.swing_distribution) {
-            const distribution = this.crafting_cycle_plan.swing_distribution.get(inserter_state.inserter.entity_id.id);
+        if (this.output_cycle_plan.fractional_swings_enabled && this.output_cycle_plan.swing_distribution) {
+            const distribution = this.output_cycle_plan.swing_distribution.get(inserter_state.inserter.entity_id.id);
 
             if (distribution) {
                 const enabled_ranges = this.computeOutputInserterEnableRanges(inserter_state, distribution);
@@ -738,7 +738,7 @@ export class EnableControlFactory {
      * The input inserter is enabled from the end of the output inserter's schedule until the end of the crafting cycle.
      */
     private enabledAfterOutputInserter(inserter_state: InserterState, sink_state: MachineState): EnableControl {
-        const base_cycle_duration = this.crafting_cycle_plan.total_duration.ticks;
+        const base_cycle_duration = this.output_cycle_plan.total_duration.ticks;
 
         // Create enable ranges that start after each output inserter range ends until end of cycle
         const enabled_ranges = this.rangesAfterOutputInserters(sink_state, range => {
@@ -786,19 +786,19 @@ export class EnableControlFactory {
     ): OpenRange[] {
         const transfer_count = this.transferCountOf(inserter_state.inserter);
         const animation = inserter_state.inserter.animation;
-        const base_cycle_duration = this.crafting_cycle_plan.total_duration.ticks;
+        const base_cycle_duration = this.output_cycle_plan.total_duration.ticks;
 
         // For non-fractional swings, use the original logic
-        if (!this.crafting_cycle_plan.fractional_swings_enabled) {
+        if (!this.output_cycle_plan.fractional_swings_enabled) {
             return this.computeEnableRangesToMachineNonFractional(inserter_state, sink_state);
         }
 
         // For fractional swings, compute ranges at the END of each sub-cycle
         // Input inserters should swing right before the output inserters of their sink machine
-        const cycle_multiplier = this.crafting_cycle_plan.cycle_multiplier ?? 1;
+        const cycle_multiplier = this.output_cycle_plan.cycle_multiplier ?? 1;
 
         // Get the swing distribution for this inserter if available
-        const swing_distribution = this.crafting_cycle_plan.swing_distribution?.get(inserter_state.inserter.entity_id.id);
+        const swing_distribution = this.output_cycle_plan.swing_distribution?.get(inserter_state.inserter.entity_id.id);
 
         // Time per swing cycle
         const ticks_per_swing = animation.total.ticks + 1;
@@ -858,7 +858,7 @@ export class EnableControlFactory {
 
         return this.rangesAfterOutputInserters(sink_state, range => {
             const output_inserter_end = range.end_inclusive;
-            const end_of_cycle = this.crafting_cycle_plan.total_duration.ticks;
+            const end_of_cycle = this.output_cycle_plan.total_duration.ticks;
 
             let start_tick = output_inserter_end
             let end_tick = start_tick + total_transfer_duration.ticks
@@ -889,8 +889,8 @@ export class EnableControlFactory {
         distribution: SwingDistribution,
     ): OpenRange[] {
         const animation = inserter_state.inserter.animation;
-        const base_cycle_duration = this.crafting_cycle_plan.total_duration.ticks;
-        const cycle_multiplier = this.crafting_cycle_plan.cycle_multiplier ?? 1;
+        const base_cycle_duration = this.output_cycle_plan.total_duration.ticks;
+        const cycle_multiplier = this.output_cycle_plan.cycle_multiplier ?? 1;
 
         // Time for a complete swing cycle: pickup + swing + drop + swing back
         // We use (total + 1) as the swing duration to account for the pickup tick
@@ -936,11 +936,11 @@ export class EnableControlFactory {
         inserter: Inserter,
     ): OpenRange[] {
         const animation = inserter.animation;
-        const base_cycle_duration = this.crafting_cycle_plan.total_duration.ticks;
-        const cycle_multiplier = this.crafting_cycle_plan.cycle_multiplier ?? 1;
+        const base_cycle_duration = this.output_cycle_plan.total_duration.ticks;
+        const cycle_multiplier = this.output_cycle_plan.cycle_multiplier ?? 1;
 
         // Get the swing distribution for this inserter
-        const distribution = this.crafting_cycle_plan.swing_distribution?.get(inserter.entity_id.id);
+        const distribution = this.output_cycle_plan.swing_distribution?.get(inserter.entity_id.id);
 
         // Time for a complete swing cycle
         const ticks_per_swing = animation.total.ticks + 1;
@@ -1016,7 +1016,7 @@ export class EnableControlFactory {
     ): boolean {
         const stack_size = handSizeFor(inserter, source_machine.output.item_name);
         const ticks_to_stack = this.ticksToProduceStack(source_machine, stack_size);
-        const cycle_duration = this.crafting_cycle_plan.total_duration.ticks;
+        const cycle_duration = this.output_cycle_plan.total_duration.ticks;
 
         // Check if this is a fractional swing case (cycle produces less than a full stack).
         // In fractional swing cases, the cycle duration is artificially shorter than what 
@@ -1095,7 +1095,7 @@ export class EnableControlFactory {
             // Subsequent swings happen as items continue to be produced.
             // The enable window may wrap around the cycle boundary.
             if (this.isSlowMachine(source_state.machine, inserter_state.inserter, total_transfer_count)) {
-                const cycle_duration = this.crafting_cycle_plan.total_duration.ticks;
+                const cycle_duration = this.output_cycle_plan.total_duration.ticks;
                 const stack_size = handSizeFor(inserter_state.inserter, source_state.machine.output.item_name);
                 const ticks_to_stack = this.ticksToProduceStack(source_state.machine, stack_size);
 
@@ -1154,10 +1154,10 @@ export class EnableControlFactory {
      * For non-fractional, returns the base period.
      */
     private getExtendedPeriodDuration(): Duration {
-        if (this.crafting_cycle_plan.fractional_swings_enabled && this.crafting_cycle_plan.cycle_multiplier) {
-            return Duration.ofTicks(CraftingCyclePlan.ticksOfCycles(this.crafting_cycle_plan, this.crafting_cycle_plan.cycle_multiplier));
+        if (this.output_cycle_plan.fractional_swings_enabled && this.output_cycle_plan.cycle_multiplier) {
+            return Duration.ofTicks(OutputCyclePlan.ticksOfCycles(this.output_cycle_plan, this.output_cycle_plan.cycle_multiplier));
         }
-        return this.crafting_cycle_plan.total_duration;
+        return this.output_cycle_plan.total_duration;
     }
 
     /**
@@ -1169,7 +1169,7 @@ export class EnableControlFactory {
         const swings_per_cycle = this.transferCountOf(inserter).total_transfer_count;
         const numerator = swings_per_cycle.getNumerator;
         const cycles = swings_per_cycle.getDenominator;
-        const cycle_ticks = this.crafting_cycle_plan.total_duration.ticks;
+        const cycle_ticks = this.output_cycle_plan.total_duration.ticks;
 
         const enabled_ranges: OpenRange[] = [];
         for (let cycle = 0; cycle < cycles; cycle++) {
@@ -1182,7 +1182,7 @@ export class EnableControlFactory {
         }
 
         const clocked_control = EnableControl.clocked({
-            periodDuration: Duration.ofTicks(CraftingCyclePlan.ticksOfCycles(this.crafting_cycle_plan, cycles)),
+            periodDuration: Duration.ofTicks(OutputCyclePlan.ticksOfCycles(this.output_cycle_plan, cycles)),
             enabledRanges: enabled_ranges,
             exact_subtick_positions: this.exact_subtick_positions,
             tickProvider: this.tick_provider,
@@ -1300,7 +1300,7 @@ export class EnableControlFactory {
      * Find all machines that produce the target output item.
      */
     private findFinalMachines(): Set<MachineState> {
-        const target = { item: this.target_output_item_name, counts: this.crafting_cycle_plan.production_rate.counts };
+        const target = { item: this.target_output_item_name, counts: this.output_cycle_plan.production_rate.counts };
         const target_ids = new Set(targetMachinesOf(target, { getAll: () => this.allEntities() }).map(it => it.entity_id.id));
         const final_machines = this.entity_state_registry
             .getAllStates()
@@ -1319,9 +1319,9 @@ export class EnableControlFactory {
      */
     private findFinalInserters(): Set<InserterState> {
         const final_inserters = new Set<InserterState>();
-        if (this.crafting_cycle_plan.production_rate.counts === "destroyed") {
+        if (this.output_cycle_plan.production_rate.counts === "destroyed") {
             // the inserters that bring the item in from outside: controlled with the rest of the plan (plannedHandsAndNoMore)
-            const target = { item: this.target_output_item_name, counts: this.crafting_cycle_plan.production_rate.counts };
+            const target = { item: this.target_output_item_name, counts: this.output_cycle_plan.production_rate.counts };
             for (const terminal_machine of this.terminal_machine_states) {
                 const ids = new Set(targetInsertersOf(terminal_machine.machine, target, { getAll: () => this.allEntities() }).map(it => it.entity_id.id));
                 for (const inserter of this.entity_state_registry.getAllStates().filter(EntityState.isInserter).filter(it => ids.has(it.entity_id.id))) {

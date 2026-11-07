@@ -5,7 +5,7 @@ import { InserterStatus, MachineStatus } from "../../state";
 import { Logger } from "../../common/logger";
 import { CIRCUIT_LATENCY_TICKS } from "../../common/rule-constants";
 import { AsBuiltRun } from "../trial";
-import { BlueprintGenerationResult, GenerateClockOptions, TrialRun, checkedClock, clockOfPlan, planRun } from "../plan/plan-run";
+import { BlueprintGenerationResult, GenerateClockOptions, TrialRun, checkedClock, clockOfPlan, unclockedRun } from "../plan/unclocked-run";
 import { Confirmed, QuickTrial, SearchRangeEdge, SearchReport, confirm, quickTrial, search } from "./search";
 import { cycleOfWindow, withCycleShifted } from "./transforms";
 import { transitionsOf } from "../sequence/compact-history";
@@ -271,12 +271,12 @@ function shiftedCycleWindows(
  * in the period (`shiftedCycleWindows`), checked and exported as a planned clock is. The planned windows are exported
  * when no shift passes.
  */
-export function shiftedSwingsClock(config: Config, options: GenerateClockOptions = {}): BlueprintGenerationResult {
-    const plan = planRun(config, options);
+export function phaseShiftedBatchClock(config: Config, options: GenerateClockOptions = {}): BlueprintGenerationResult {
+    const plan = unclockedRun(config, options);
     const clock = clockOfPlan(plan, options);
     const shifted = shiftedCycleWindows(
         { ...config, overrides: { ...config.overrides, derive_clock_windows: false } },
-        clock.windows, plan.entity_ids, plan.run.crafting_cycle_plan.total_duration.ticks, plan.run.duration.ticks, plan.logger, options.on_progress_detail,
+        clock.windows, plan.entity_ids, plan.run.output_cycle_plan.total_duration.ticks, plan.run.duration.ticks, plan.logger, options.on_progress_detail,
     );
     const report = shifted === null ? undefined : {
         ...shifted.search,

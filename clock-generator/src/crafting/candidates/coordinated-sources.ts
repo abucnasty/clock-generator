@@ -5,18 +5,18 @@ import { Entity } from "../../entities";
 import type { AlwaysOnReason, AlwaysOnReasons } from "../always-on-reasons";
 import type { SerializableClockWindows } from "../clock";
 import { sharedItemDeadlockRisks } from "../deadlock-risk";
-import { BlueprintGenerationResult, GenerateClockOptions, PlanRun, planRun } from "../plan/plan-run";
+import { BlueprintGenerationResult, GenerateClockOptions, UnclockedRun, unclockedRun } from "../plan/unclocked-run";
 import { backpressureLossVerdictOf } from "../trial";
 import type { BackpressureLossVerdict } from "../backpressure-loss";
-import { finishedClock, holdsWithMargin } from "./grouped-hands";
-import { partKey, type PerBranchInput, type PerBranchPart } from "./per-branch-parts";
+import { finishedClock, holdsWithMargin } from "./round-robin-polling";
+import { partKey, type CoordinatedSourcesInput, type CoordinatedSourcesPart } from "./coordinated-sources-parts";
 import type { EnableControl, SourceControl } from "../strategy-catalog";
 
 /**
  * The per-branch clock (DESIGN D7, PR 18): each part of the build gets the windows of the clock that fits it, all on one shared
  * period, the period of today's recommended clock.
  *
- * - **Parts:** every clock the other makers built for the build (`PerBranchPart`): the stable alternatives, every way of the grouped
+ * - **Parts:** every clock the other makers built for the build (`CoordinatedSourcesPart`): the stable alternatives, every way of the grouped
  *   hands construction (whether its clock holds as a whole or not), and the per-hand shape of every way that guards takers. A part
  *   gives windows where its period divides the shared one (its windows repeated) and its own clock's long run was counted as built;
  *   a part with no count gives none.
@@ -26,20 +26,20 @@ import type { EnableControl, SourceControl } from "../strategy-catalog";
  *   has and the other groups as they are, ranked by the wakeups of the whole clock as built from the cold start; passes until
  *   nothing changes. The clocks that hold are ranked by fewest wakeups (to a thousandth), the current choice first on a tie, and
  *   the backpressure losses are tried in that order: the first that gets back from every loss is taken (`bestHolding` of
- *   grouped-hands.ts). No product over the groups is searched, and nothing is ranked by a prediction.
+ *   round-robin-polling.ts). No product over the groups is searched, and nothing is ranked by a prediction.
  * - **The clock** is then checked as a whole: the one-tick margin here (`holdsWithMargin`), and the checks of every alternative
  *   where it is listed (as built from every start, every loss).
  *
- * Throws PerBranchNotApplicable where there is nothing to compose: no recommended clock among the parts, a period that is not
+ * Throws CoordinatedSourcesNotApplicable where there is nothing to compose: no recommended clock among the parts, a period that is not
  * whole, no group with a choice, or a local choice that keeps the recommended clock.
  */
-export class PerBranchNotApplicable extends Error { }
+export class CoordinatedSourcesNotApplicable extends Error { }
 
 /** The most passes over the groups: a pass that changes nothing ends it sooner */
-export const PER_BRANCH_MAX_PASSES = 8;
+export const COORDINATED_SOURCES_MAX_PASSES = 8;
 
 function refuse(reason: string): never {
-    throw new PerBranchNotApplicable(reason);
+    throw new CoordinatedSourcesNotApplicable(reason);
 }
 
 const quiet: Logger = { log: () => { }, info: () => { }, warn: () => { }, error: () => { }, debug: () => { } } as unknown as Logger;
@@ -55,7 +55,7 @@ export function tiledWindows(windows: SerializableClockWindows, period_ticks: nu
 /** One choice of a group: the windows of each of its inserters (null: always enabled), and the parts that give them */
 export interface GroupChoice {
     windows: Record<string, { start: number; end: number }[] | null>;
-    parts: PerBranchPart[];
+    parts: CoordinatedSourcesPart[];
 }
 
 /** The inserters that take from one source entity, and the choices the parts give them */
@@ -93,7 +93,7 @@ export function upstreamOrder(inserters: readonly GroupedInserter[]): string[] {
 }
 
 /** The groups of the inserters by source, each with the distinct windows the parts give it, in the order of the parts */
-export function partGroups(inserters: readonly GroupedInserter[], parts: readonly PerBranchPart[], shared_ticks: number): PartGroup[] {
+export function partGroups(inserters: readonly GroupedInserter[], parts: readonly CoordinatedSourcesPart[], shared_ticks: number): PartGroup[] {
     const groups = upstreamOrder(inserters).map(source => ({ source, inserters: inserters.filter(it => it.source === source).map(it => it.id),
         choices: [] as GroupChoice[], keys: new Map<string, GroupChoice>() }));
     for (const part of parts) {
@@ -156,16 +156,16 @@ interface Trial {
 }
 
 /** How a part is shown in the log */
-const partName = (part: PerBranchPart): string => part.alternative_id ?? part.name;
+const partName = (part: CoordinatedSourcesPart): string => part.alternative_id ?? part.name;
 
 /**
  * The plan the composed clocks run on: the config with the recommended clock's output swings, cycles and fractional swings; where its
  * period is not the shared one, planned again with the cycles that make it so
  */
-function sharedPlan(config: Config, recommended: PerBranchPart): PlanRun {
+function sharedPlan(config: Config, recommended: CoordinatedSourcesPart): UnclockedRun {
     const plan = recommended.plan ?? {};
     const swings = plan.fractional_swings === true ? { fractional_swings: true as const } : {};
-    const planned = (lcm?: number) => planRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false,
+    const planned = (lcm?: number) => unclockedRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false,
         ...(plan.terminal_swing_count !== undefined && { terminal_swing_count: plan.terminal_swing_count }),
         ...(lcm !== undefined && { lcm }) } }, { logger: quiet, ...swings });
     let made = planned(plan.lcm);
@@ -178,8 +178,8 @@ function sharedPlan(config: Config, recommended: PerBranchPart): PlanRun {
     return made;
 }
 
-/** The per-branch clock of a build from its parts (see PerBranchNotApplicable above) */
-export function perBranchClock(config: Config, input: PerBranchInput, options: GenerateClockOptions = {}): BlueprintGenerationResult {
+/** The per-branch clock of a build from its parts (see CoordinatedSourcesNotApplicable above) */
+export function coordinatedSourcesClock(config: Config, input: CoordinatedSourcesInput, options: GenerateClockOptions = {}): BlueprintGenerationResult {
     const logger = options.logger ?? defaultLogger;
     const recommended = input.parts.find(part => part.alternative_id === input.recommended_id);
     if (recommended === undefined) refuse(`the recommended clock ${input.recommended_id} is not among the parts`);
@@ -203,7 +203,7 @@ export function perBranchClock(config: Config, input: PerBranchInput, options: G
         trials.set(key, trial);
         return trial;
     };
-    const fits = (part: PerBranchPart) => Number.isInteger(part.period_ticks) && Number.isInteger(shared_ticks / part.period_ticks)
+    const fits = (part: CoordinatedSourcesPart) => Number.isInteger(part.period_ticks) && Number.isInteger(shared_ticks / part.period_ticks)
         && (part === recommended || part.alternative_id === undefined || part.verdict === "stable");
     const candidates = input.parts.filter(part => part !== recommended && fits(part) && part.counted !== false);
     // a part gives windows where its own clock on the shared period was counted as built: one of that period counted already (its own
@@ -264,7 +264,7 @@ export function perBranchClock(config: Config, input: PerBranchInput, options: G
 
     // from the recommended clock: every group at the choice its windows are
     const current = new Map<string, number>(groups.map(group => [group.source, 0]));
-    for (let pass = 0; pass < PER_BRANCH_MAX_PASSES; pass++) {
+    for (let pass = 0; pass < COORDINATED_SOURCES_MAX_PASSES; pass++) {
         let changed = false;
         for (const group of choosing) {
             const at = current.get(group.source)!;
@@ -303,12 +303,12 @@ export function perBranchClock(config: Config, input: PerBranchInput, options: G
     logger.log(`Per-branch clock: ${groups.map(group => `${group.source} from ${partName(group.choices[current.get(group.source)!].parts[0])}`).join(", ")}; `
         + `${trials.size} clocks simulated`);
     const result = finishedClock(made, map, [], { ...options, loop_windows: false }, left_open);
-    return { ...result, per_branch: { parts: Object.fromEntries(groups.map(group => [group.source, partName(group.choices[current.get(group.source)!].parts[0])])),
+    return { ...result, coordinated_sources: { parts: Object.fromEntries(groups.map(group => [group.source, partName(group.choices[current.get(group.source)!].parts[0])])),
         sources: sourceControlsOf(groups, current, result.always_on_reasons ?? {}, logger, config.target_output.recipe) } };
 }
 
 /** The inserters a part leaves always enabled, with its reasons */
-function leftOpenOf(part: PerBranchPart, inserters: readonly GroupedInserter[], windows: SerializableClockWindows): Map<string, AlwaysOnReason> {
+function leftOpenOf(part: CoordinatedSourcesPart, inserters: readonly GroupedInserter[], windows: SerializableClockWindows): Map<string, AlwaysOnReason> {
     return new Map(inserters.flatMap(it => {
         const reason = windows[it.id]?.length ? undefined : part.always_on?.[it.id];
         return reason === undefined ? [] : [[it.id, reason] as const];

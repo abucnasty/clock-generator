@@ -1,17 +1,17 @@
 /**
- * Whether a target that counts an item destroyed gets windows of results (result-windows.ts), by arithmetic over the
+ * Whether a target that counts an item destroyed gets windows of results (exhaust.ts), by arithmetic over the
  * registry: the decision the build plan records and the cycle plan of such a target is made from
- * (`CraftingCyclePlan.create`, crafting-cycle.ts). A plan of whole hands where the takers' hands come out whole in a
+ * (`OutputCyclePlan.create`, output-cycle.ts). A plan of whole hands where the takers' hands come out whole in a
  * period the container holds, or where the windows cannot be planned; else one window a period for each result, on the
  * longest period the containers hold.
  */
 import assert from "../../common/assert";
 import type { ConfigOverrides } from "../../config";
 import type { Config } from "../../config/schema";
-import type { ResultWindowsDecision, ResultWindowsTerms } from "../../data-types/build-plan";
+import type { ExhaustDecision, ExhaustTerms } from "../../data-types/build-plan";
 import Fraction, { fraction } from "../../data-types/fraction";
 import { Entity, handSizeFor, Machine, ReadableEntityRegistry } from "../../entities";
-import { RESULT_WINDOWS_PERIOD_BUDGET_TICKS, resultsFitContainer, resultWindowsFeasible, resultWindowsPlan, sharedHandRefusal } from "../result-windows";
+import { EXHAUST_PERIOD_BUDGET_TICKS, resultsFitContainer, exhaustFeasible, exhaustPlan, sharedHandRefusal } from "../exhaust";
 import { destroyedTargetBalance, transfersOfBalance } from "../sequence/cycle/cycle-transfers";
 import { destroyedTargetCrafts, EntityTransferCountMap } from "../sequence/cycle/swing-counts";
 import { targetInsertersOf, targetMachinesOf } from "../sequence/cycle/target-ends";
@@ -60,13 +60,13 @@ export function destroyedTargetBasisOf(
  * The decision of a destroyed target: windows of results or whole hands, with its terms. Throws where an inserter takes
  * several results out of where a machine places them, which can stop the build for good.
  */
-export function resultWindowsDecisionOf(
+export function exhaustDecisionOf(
     target_production_rate: TargetProductionRate,
     entity_registry: ReadableEntityRegistry,
     config: Config,
     config_overrides: Partial<ConfigOverrides>,
     basis: DestroyedTargetBasis = destroyedTargetBasisOf(target_production_rate, entity_registry, config_overrides),
-): ResultWindowsDecision {
+): ExhaustDecision {
     const { item, machines, hand, ticks_per_hand, base_hands, forced } = basis;
     for (const machine of machines) {
         const shared = sharedHandRefusal(machine, entity_registry);
@@ -84,8 +84,8 @@ export function resultWindowsDecisionOf(
         machine => craftsOf(machine, whole_hands));
     // asked only where whole hands do not fit, as the plan asks it
     const feasible = whole_fits ? null
-        : machines.every(machine => resultWindowsFeasible(machine, entity_registry, cycle_ticks, crafts_per_cycle(machine)));
-    const terms: ResultWindowsTerms = {
+        : machines.every(machine => exhaustFeasible(machine, entity_registry, cycle_ticks, crafts_per_cycle(machine)));
+    const terms: ExhaustTerms = {
         item,
         machines: machines.map(machine => machine.entity_id.number),
         hand,
@@ -95,7 +95,7 @@ export function resultWindowsDecisionOf(
         cycle_ticks,
         whole_hands_fit: whole_fits,
         windows_feasible: feasible,
-        longest_period_ticks: RESULT_WINDOWS_PERIOD_BUDGET_TICKS,
+        longest_period_ticks: EXHAUST_PERIOD_BUDGET_TICKS,
     };
     if (whole_fits || feasible === false) {
         return { kind: "whole-hands", hands: whole_hands, terms };
@@ -104,9 +104,9 @@ export function resultWindowsDecisionOf(
     assert(forced === undefined || forced % base_hands === 0,
         `${forced} hands of ${item} a cycle do not last whole ticks: the windows of results that come this rarely need a multiple of ${base_hands}`);
     const cycles = forced !== undefined ? forced / base_hands : Math.min(...machines.map(machine =>
-        resultWindowsPlan({ machine, registry: entity_registry, cycle_ticks, crafts_per_cycle: crafts_per_cycle(machine), kind: "staggered" }).cycles));
+        exhaustPlan({ machine, registry: entity_registry, cycle_ticks, crafts_per_cycle: crafts_per_cycle(machine), kind: "staggered" }).cycles));
     const plans = machines.map(machine =>
-        resultWindowsPlan({ machine, registry: entity_registry, cycle_ticks, crafts_per_cycle: crafts_per_cycle(machine), kind: "staggered", cycles }));
+        exhaustPlan({ machine, registry: entity_registry, cycle_ticks, crafts_per_cycle: crafts_per_cycle(machine), kind: "staggered", cycles }));
     return { kind: "result-windows", hands: base_hands * cycles, cycles, terms, plans };
 }
 
@@ -114,7 +114,7 @@ export function resultWindowsDecisionOf(
  * Whether the takers' hands of a destroyed target's plan come out whole in a period the windows of results can be
  * planned on, and each machine's container holds what that period gives in all but 1 in 740 periods (every result
  * counted over the whole period): then the period is simulated as any other. Where not, the results get one window a
- * period each (result-windows.ts).
+ * period each (exhaust.ts).
  */
 function wholeHandsFit(
     transfers: EntityTransferCountMap,
@@ -133,7 +133,7 @@ function wholeHandsFit(
                 cycles = cycles / gcd(cycles, denominator) * denominator;
             }
         }
-        return cycles * cycle_ticks <= RESULT_WINDOWS_PERIOD_BUDGET_TICKS
+        return cycles * cycle_ticks <= EXHAUST_PERIOD_BUDGET_TICKS
             && resultsFitContainer(machine, entity_registry, cycle_ticks, craftsOf(machine), cycles);
     });
 }

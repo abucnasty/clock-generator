@@ -3,7 +3,7 @@ import { ConfigPaths } from "../../config/config-paths";
 import { loadConfigFromFile } from "../../config/loader";
 import { generateClockAlternatives } from "../alternatives";
 import { quiet } from "../generate-blueprint-test-helpers";
-import { runBuild } from "../plan/plan-run";
+import { runBuild } from "../plan/unclocked-run";
 import { expandStateTransitionHistory, toPortable } from "./compact-history";
 import { RecordedBothWays, historyDifference, recordBothWays } from "./legacy-state-transition-history.fixture";
 

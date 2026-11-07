@@ -11,7 +11,7 @@ import { TargetProductionRate } from "./target-production-rate";
 // ============================================================================
 //
 // The editor says it under "Next copy stands", for a period estimated from the config alone: the ticks one output hand takes at
-// the rate the target asks of a machine, which is the clock planner's base cycle (`CraftingCyclePlan.create`). The clock's own
+// the rate the target asks of a machine, which is the clock planner's base cycle (`OutputCyclePlan.create`). The clock's own
 // period is that times the cycles in which every inserter moves whole hands, which only the plan knows, so the note says it is
 // an estimate and the result (the drop-spacing insight) speaks of the clock's period.
 

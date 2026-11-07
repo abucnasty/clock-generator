@@ -1,8 +1,8 @@
 import type { BackpressureLossVerdict } from "./backpressure-loss";
 import type { StartDependence } from "./start-dependence";
 import type { Config } from "../config";
-import { plannedTerminalSwingCount } from "./sequence/cycle/crafting-cycle";
-import type { BlueprintGenerationResult } from "./plan/plan-run";
+import { plannedTerminalSwingCount } from "./sequence/cycle/output-cycle";
+import type { BlueprintGenerationResult } from "./plan/unclocked-run";
 
 /** Only the actual primitive primary may seed this internal, serializable secondary count policy. */
 export interface SecondaryPlanningCount {
@@ -32,15 +32,15 @@ export function secondaryPlanningCountOf(config: Config, context: { secondary_pl
 }
 
 export function withSecondaryPlanningProvenance<T extends BlueprintGenerationResult>(result: T): T {
-    const count = plannedTerminalSwingCount(result.crafting_cycle_plan);
+    const count = plannedTerminalSwingCount(result.output_cycle_plan);
     if (count === undefined || !Number.isFinite(count) || count <= 0) throw new SecondaryPlanningInvariantError("secondary result has no actual planner count");
     if (!Number.isFinite(result.used_lcm) || result.used_lcm <= 0) throw new SecondaryPlanningInvariantError("secondary result has no actual LCM");
-    if (result.primitive_grouped !== undefined) throw new SecondaryPlanningInvariantError("a secondary result cannot borrow primitive verification");
+    if (result.primitive_round_robin_polling !== undefined) throw new SecondaryPlanningInvariantError("a secondary result cannot borrow primitive verification");
     return { ...result, secondary_planning: { source: "primitive-primary", terminal_swing_count: count, effective_lcm: result.used_lcm } };
 }
 
 /** Derived scheduling policy, distinct from user overrides and legacy final-taker aggregate counts. */
-export interface PrimitiveGroupedPolicy {
+export interface PrimitiveRoundRobinPollingPolicy {
     strategy: "primitive-grouped";
     /** Tried because the first plan's period is too long, or because no planned count held */
     trigger: "initial-period-limit" | "no-count-holds";
@@ -59,7 +59,7 @@ export interface PrimitiveGroupedPolicy {
     };
 }
 
-export interface PrimitiveGroupedAttemptReport {
+export interface PrimitiveRoundRobinPollingAttemptReport {
     strategy: "primitive-grouped";
     eligibility: "separate-windows-only";
     outcome: "accepted" | "inapplicable" | "failed";
@@ -70,16 +70,16 @@ export interface PrimitiveGroupedAttemptReport {
 /** Preserve the historical reporting alias; only the new policy supplies a different verification unit. */
 interface VerificationPlanningResult {
     used_terminal_swing_count: number;
-    primitive_grouped?: PrimitiveGroupedPolicy;
+    primitive_round_robin_polling?: PrimitiveRoundRobinPollingPolicy;
     secondary_planning?: SecondaryPlanningProvenance;
 }
 
 export function verificationTerminalCountOf(result: VerificationPlanningResult): number {
-    return result.primitive_grouped?.terminal_swing_count ?? result.secondary_planning?.terminal_swing_count ?? result.used_terminal_swing_count;
+    return result.primitive_round_robin_polling?.terminal_swing_count ?? result.secondary_planning?.terminal_swing_count ?? result.used_terminal_swing_count;
 }
 
 export function verificationPlanningConfigOf(config: Config, result: VerificationPlanningResult): Config {
-    const cycles = result.primitive_grouped?.grouped_cycles ?? result.secondary_planning?.effective_lcm;
+    const cycles = result.primitive_round_robin_polling?.grouped_cycles ?? result.secondary_planning?.effective_lcm;
     return { ...config, overrides: { ...config.overrides, terminal_swing_count: verificationTerminalCountOf(result),
         ...(cycles === undefined ? {} : { lcm: cycles }) } };
 }

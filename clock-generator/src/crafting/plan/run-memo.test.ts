@@ -8,7 +8,7 @@ import { SimulationContext } from "../sequence/simulation-context";
 import { generateClockAlternatives } from "../alternatives";
 import { generateClockForConfig } from "../generate-clock";
 import { backpressureLossKey, backpressureLossVerdictOf } from "../trial";
-import { BlueprintGenerationResult, planRun, runBuild, trialRunOf } from "./plan-run";
+import { BlueprintGenerationResult, unclockedRun, runBuild, trialRunOf } from "./unclocked-run";
 import { InserterTransferTracker } from "../../simulation/observers/inserter-transfer-tracker";
 import { DrillTransferTracker } from "../../simulation/observers/drill-transfer-tracker";
 import { StateTransitionTracker } from "../../simulation/observers/state-transition-tracker";
@@ -120,11 +120,11 @@ describe("the memo of the runs of a generation", () => {
     });
 
     it("reads a kept run as a run made anew: the windows of a plan and a trial", () => {
-        const fresh = planRun(config, options);
+        const fresh = unclockedRun(config, options);
         const fresh_trial = trialRunOf(fresh.run);
         withRunMemo(() => {
-            const first = planRun(config, options);
-            const again = planRun(config, options);
+            const first = unclockedRun(config, options);
+            const again = unclockedRun(config, options);
             expect(currentRunMemo()!.hits).toBe(1);
             expect(again.unslacked_windows).toEqual(fresh.unslacked_windows);
             expect(first.unslacked_windows).toEqual(fresh.unslacked_windows);
@@ -219,16 +219,16 @@ describe("the memo of the runs of a generation", () => {
     });
 
     it("gives a planning run the plan of the first, as a plan made anew would be", () => {
-        const fresh = planRun(config, options);
+        const fresh = unclockedRun(config, options);
         withRunMemo(() => {
-            const first = planRun(config, options);
-            const again = planRun({ ...config }, options);
+            const first = unclockedRun(config, options);
+            const again = unclockedRun({ ...config }, options);
             expect(currentRunMemo()!.hits).toBe(1);
             expect(again.run.final_history).toBe(first.run.final_history);
             expect(again.unslacked_windows).toEqual(fresh.unslacked_windows);
             expect(again.item_names).toEqual(fresh.item_names);
             expect(again.run.stability_check).toEqual(fresh.run.stability_check);
-            expect(again.run.crafting_cycle_plan.total_duration).toEqual(fresh.run.crafting_cycle_plan.total_duration);
+            expect(again.run.output_cycle_plan.total_duration).toEqual(fresh.run.output_cycle_plan.total_duration);
         }, 0);
     });
 

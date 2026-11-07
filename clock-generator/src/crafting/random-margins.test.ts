@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { loadConfigFromFile } from "../config/loader";
 import { OpenRange } from "../data-types";
 import { fraction } from "../data-types/fraction";
-import { CraftingCyclePlan } from "./sequence/cycle/crafting-cycle";
+import { OutputCyclePlan } from "./sequence/cycle/output-cycle";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { TargetProductionRate } from "./target-production-rate";
 import { backlogAtLevel, binomialQuantile, excessAtLevel, excessLossOf, randomAmountMargins } from "./random-margins";
@@ -14,7 +14,7 @@ const FIXTURE = ConfigPaths.IRON_ORE_VOIDER_400_EXACT_SPEED;
 async function marginsOf(windows: Map<string, OpenRange[]>) {
     const config = await loadConfigFromFile(FIXTURE);
     const registry = createEntityRegistryFromConfig(config);
-    const plan = CraftingCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), registry, config, fraction(1));
+    const plan = OutputCyclePlan.create(TargetProductionRate.fromConfig(config.target_output), registry, config, fraction(1));
     // 12 cycles of 12 ticks
     return randomAmountMargins(plan, registry, windows, 144, 12);
 }

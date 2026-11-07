@@ -4,8 +4,8 @@ import { OpenRange } from "../../data-types";
 import { EntityId } from "../../entities";
 import { InventoryTransferHistory } from "../sequence/inventory-transfer-history";
 import { Logger } from "../../common/logger";
-import { DerivedWindows, deriveWithOutputWindows } from "../candidates/observed-windows";
-import { alwaysEnabledByConfig, windowsFromHistory } from "../plan/plan-run";
+import { TimeStudyWindows, deriveTimeStudyWindows } from "../candidates/time-study-windows";
+import { alwaysEnabledByConfig, windowsFromHistory } from "../plan/unclocked-run";
 import { Confirmed, QuickTrial, confirm, search } from "./search";
 import { withOutputWindowMoved } from "./transforms";
 
@@ -13,7 +13,7 @@ import { withOutputWindowMoved } from "./transforms";
 const MAX_UNEVEN_OUTPUT_CANDIDATES = 24;
 
 
-interface UnevenOutputCandidate {
+interface MovedOutputSwingCandidate {
     /** Index of the moved window among each output inserter's windows, in clock order */
     window_index: number;
     shift_ticks: number;
@@ -25,11 +25,11 @@ interface UnevenOutputCandidate {
  * put as the reference. A moved window keeps at least its own length clear of its neighbours. Every output inserter
  * moves the same window by the same amount. Empty when there is a single window per period or the period is fractional.
  */
-function unevenOutputCandidates(
+function movedOutputSwingCandidates(
     output_windows: Map<string, OpenRange[]>,
     period: number,
     step_ticks: number,
-): UnevenOutputCandidate[] {
+): MovedOutputSwingCandidate[] {
     const sorted = new Map(Array.from(output_windows, ([key, ranges]) =>
         [key, [...ranges].sort((a, b) => a.start_inclusive - b.start_inclusive)] as const));
     const count = Math.min(...Array.from(sorted.values(), ranges => ranges.length));
@@ -55,7 +55,7 @@ function unevenOutputCandidates(
     const span = room.reduce((sum, it) => sum + Math.max(0, it.max - it.min), 0);
     const step = Math.max(step_ticks, span / MAX_UNEVEN_OUTPUT_CANDIDATES, 1);
 
-    const candidates: UnevenOutputCandidate[] = [];
+    const candidates: MovedOutputSwingCandidate[] = [];
     for (const { window_index, min, max } of room) {
         const shifts = new Set<number>();
         for (let n = 1; n * step <= Math.max(max, -min); n++) {
@@ -76,7 +76,7 @@ function unevenOutputCandidates(
  * positions pass too is confirmed before one whose do not, the smallest move of those (see search.ts). Null when there
  * is nothing to move or no position passes.
  */
-export function deriveUnevenOutputClockWindows(
+export function movedOutputSwingWindows(
     config: Config,
     planned_history: InventoryTransferHistory,
     output_inserter_ids: Set<string>,
@@ -85,20 +85,20 @@ export function deriveUnevenOutputClockWindows(
     step_ticks: number,
     logger: Logger,
     report?: (detail: string) => void,
-): DerivedWindows | null {
+): TimeStudyWindows | null {
     const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
     const planned_windows = windowsFromHistory(planned_history, createEntityRegistryFromConfig(config), alwaysEnabledByConfig(config));
     const output_windows = new Map(Array.from(planned_windows).filter(([key]) => output_inserter_ids.has(key)));
     const drill_ids = new Set(Array.from(planned_history.keys()).filter(EntityId.isDrill).map(it => it.id));
     const drill_windows = new Map(Array.from(planned_windows).filter(([key]) => drill_ids.has(key)));
 
-    const candidates = unevenOutputCandidates(output_windows, period, step_ticks);
-    const describe = (candidate: UnevenOutputCandidate) => `output swing ${candidate.window_index + 1} moved ${candidate.shift_ticks} ticks`;
-    const { picked, pick, tried } = search<UnevenOutputCandidate, QuickTrial & { derived: DerivedWindows }, Confirmed>({
+    const candidates = movedOutputSwingCandidates(output_windows, period, step_ticks);
+    const describe = (candidate: MovedOutputSwingCandidate) => `output swing ${candidate.window_index + 1} moved ${candidate.shift_ticks} ticks`;
+    const { picked, pick, tried } = search<MovedOutputSwingCandidate, QuickTrial & { derived: TimeStudyWindows }, Confirmed>({
         candidates,
         // each position gets its own observed windows, with the padding search and its pick taken on the quick trial
         quick: (candidate, index) => {
-            const derived = deriveWithOutputWindows(base_config, candidate.output_windows, drill_windows, output_inserter_ids,
+            const derived = deriveTimeStudyWindows(base_config, candidate.output_windows, drill_windows, output_inserter_ids,
                 belt_pickup_slack, period, describe(candidate), logger,
                 report && (detail => report(`Position ${index + 1}/${candidates.length}: ${detail}`)), false);
             // only the windows that pass are read again; the runs of a position that does not are let go

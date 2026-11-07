@@ -235,7 +235,7 @@ export interface BackpressureLossOptions {
     /**
      * Every trial cuts the item for this many ticks, at each place, and none runs until the build has stopped: for a loss
      * whose recovery is worked out by arithmetic and only confirmed here (a result of windows for results that come by
-     * small chances, result-windows.ts)
+     * small chances, exhaust.ts)
      */
     fixed_loss_ticks?: number;
     /**

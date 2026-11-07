@@ -4,10 +4,10 @@ import { ConfigPaths } from '../config/config-paths';
 import type { Config } from '../config/schema';
 import { wholeSwingPeriodsBelow } from './whole-swing-periods';
 import { ClockPeriodLimitError, type WholeSwingArithmeticSnapshot } from './plan/clock-period-limit';
-import { runBuild, type BlueprintGenerationResult, type GenerateClockOptions, type RunOptions } from './plan/plan-run';
+import { runBuild, type BlueprintGenerationResult, type GenerateClockOptions, type RunOptions } from './plan/unclocked-run';
 import { generateClockWithSwingBackoff, terminalCountForAlternativePlanning } from './generate-clock';
 import { createEntityRegistryFromConfig } from './sequence/simulation-context';
-import { CraftingCyclePlan, plannedTerminalSwingCount } from './sequence/cycle/crafting-cycle';
+import { OutputCyclePlan, plannedTerminalSwingCount } from './sequence/cycle/output-cycle';
 import { EntityTransferCountMap } from './sequence/cycle/swing-counts';
 import { TargetProductionRate } from './target-production-rate';
 import { fraction } from '../data-types/fraction';
@@ -72,8 +72,8 @@ describe('automatic whole-swing period eligibility', () => {
         // A short bounded run tests the existing result alias without accepting or verifying these large windows.
         const legacy = runBuild(shared, { logger: quiet, period_ticks: 40, warmup_periods: 0 });
         expect(legacy.used_terminal_swing_count).toBe(594);
-        expect(plannedTerminalSwingCount(legacy.crafting_cycle_plan)).toBe(297);
-        expect(legacy.crafting_cycle_plan).not.toHaveProperty('planned_terminal_swing_count');
+        expect(plannedTerminalSwingCount(legacy.output_cycle_plan)).toBe(297);
+        expect(legacy.output_cycle_plan).not.toHaveProperty('planned_terminal_swing_count');
         const generate = vi.fn((candidate: Config) => {
             const count = candidate.overrides?.terminal_swing_count;
             if (count === undefined) throw failure;
@@ -228,7 +228,7 @@ describe('strict period limits and existing arithmetic policies', () => {
         const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250);
         config.overrides = { ignored_lcm_ingredients: ['nutrients'] };
         const registry = createEntityRegistryFromConfig(config), target = TargetProductionRate.fromConfig(config.target_output);
-        const at = (count: number) => CraftingCyclePlan.create(target, registry, config, fraction(count));
+        const at = (count: number) => OutputCyclePlan.create(target, registry, config, fraction(count));
         const seven = at(7), six = at(6);
         const fuelAt = (plan: typeof seven) => [...plan.entity_transfer_map.values()].find(row => row.entity.entity_id.number === 11)!
             .item_transfers.find(item => item.item_name === 'nutrients')!.transfer_count;
@@ -238,7 +238,7 @@ describe('strict period limits and existing arithmetic policies', () => {
         const rows = [...wholeSwingPeriodsBelow(snapshotOf(config, 8), 500000)];
         expect(rows[0]).toMatchObject({ terminal_swing_count: 7,
             computed_lcm: EntityTransferCountMap.lcm(seven.entity_transfer_map, ['nutrients']),
-            period_ticks: CraftingCyclePlan.ticksOfCycles(seven, EntityTransferCountMap.lcm(seven.entity_transfer_map, ['nutrients'])) });
+            period_ticks: OutputCyclePlan.ticksOfCycles(seven, EntityTransferCountMap.lcm(seven.entity_transfer_map, ['nutrients'])) });
         expect(rows[1]).toMatchObject({ terminal_swing_count: 6,
             computed_lcm: EntityTransferCountMap.lcm(six.entity_transfer_map, ['nutrients']) });
         const immutable = snapshotOf(config, 3);
