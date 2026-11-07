@@ -59,7 +59,7 @@ describe('the words of the Setpoint row', () => {
 
 describe('the note on a target at the maximum', () => {
     it('shows when the target the paste fills is the export\'s suggested maximum, and not for an estimate', () => {
-        expect(maximumTargetNote('mod')).toBe('At the maximum the clock has no slack to recover from a disturbance; lower the rate for headroom.');
+        expect(maximumTargetNote('mod')).toBe('At the maximum the clock has no room to go back to its rate after a supply stop or an output blockage; lower the rate for headroom.');
         expect(maximumTargetNote('inferred')).toBeNull();
     });
 });

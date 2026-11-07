@@ -44,7 +44,7 @@ export function useInserterValidation(
                 found => {
                     if (current) setResult(previous => previous?.key === key && JSON.stringify(previous.coverage) === JSON.stringify(found) ? previous : { key, coverage: found });
                 },
-                error => { if (current) console.error('Failed to validate inserter coverage:', error); },
+                error => { if (current) console.error('Failed to check inserter coverage:', error); },
             );
         }, 200);
         return () => { current = false; clearTimeout(timer); };

@@ -35,7 +35,7 @@ function InternalDetails({ error, copied, onCopied }: { error: InternalError; co
 }
 
 /**
- * Engine refusal details inside Build validation, or a standalone operational failure when its worker crashed.
+ * Engine refusal details inside Build check, or a standalone operational failure when its worker crashed.
  * Not a live region: focusing the validation panel or the standalone failure reads the message once.
  */
 export function CheckErrorAlert({ message, crashed = false, internal, recovery, machineCount, counts, conversionPending = false, onConvert, embedded = false }: {

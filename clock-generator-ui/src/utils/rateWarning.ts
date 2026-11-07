@@ -63,7 +63,7 @@ function clockWarningOf(
     if (alternative.assessment.backpressure_loss?.survives === false || alternative.verdict === 'no recovery') {
         const losses = lossesOf(alternative);
         warnings.push(losses
-            ? `This clock does not recover: after ${losses} for a while, the build does not get back to its rate by itself in the simulator.${notTriedOf(alternative)}`
+            ? `This clock has no recovery: after ${losses} for a while, the build does not go back to its rate by itself in the simulator.${notTriedOf(alternative)}`
             : alternative.assessment.backpressure_loss === null
                 ? 'No usable recovery result is available for this clock.'
                 : 'Recovery could not be assessed: the simulator baseline for the loss trials was off its expected output.');
@@ -71,7 +71,7 @@ function clockWarningOf(
     const { items_per_second } = alternative.assessment;
     const runsFast = alternative.ranking.runs_fast;
     if (runsFast !== undefined) {
-        warnings.push(`This clock’s period is rounded down to whole ticks, so it runs ${fastPercent(runsFast)} fast: `
+        warnings.push(`This clock’s window cycle time is rounded down to whole ticks, so it runs ${fastPercent(runsFast)} fast: `
             // to three decimals: a rate 0.1% fast prints as the target at two
             + `${Number(items_per_second.toFixed(3))}/s for the ${Number((items_per_second - alternative.ranking.rate_off_target).toFixed(3))}/s requested, `
             + 'within the 0.1% a rounded clock may run and what the machines can make.');

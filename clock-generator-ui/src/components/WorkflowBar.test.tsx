@@ -31,7 +31,7 @@ it('turns Generate off while the build is refused, says why, and counts each pro
     const generate = screen.getByRole('button', { name: 'Generate' });
     expect((generate as HTMLButtonElement).disabled).toBe(true);
     // the count chip is what it is described by
-    expect(generate.getAttribute('aria-describedby')).toBe(screen.getByText('2 validation errors').closest('[id]')?.id);
+    expect(generate.getAttribute('aria-describedby')).toBe(screen.getByText('2 check errors').closest('[id]')?.id);
     await user.hover(generate.parentElement!);
     expect(await screen.findByText(CHECK_TEXT.generateRefusedTooltip)).toBeDefined();
     fireEvent.click(generate);

@@ -24,7 +24,7 @@ export const PROBLEM_TEXT = {
     endBeforeStart: (start: number) => `The end must not be before the start (${start}).`,
     // the config file holds a window's end as a number above 0, so a window can't end at tick 0
     endAtZero: "The end must be tick 1 or later: an enable window can't end at tick 0.",
-    pastPeriod: (period: number) => `Past the end of the ${period}-tick period: the last tick is ${period - 1}.`,
+    pastPeriod: (period: number) => `Past the end of the ${period}-tick window cycle: the last tick is ${period - 1}.`,
     repeat: 'Enter a whole number of ticks, 1 or more, or leave it empty.',
     pickItem: 'Pick an item.',
     drillConditional: "Mining drills can't use a Conditional rule. Pick another mode.",

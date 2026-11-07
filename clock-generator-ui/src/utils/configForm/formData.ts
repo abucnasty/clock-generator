@@ -111,11 +111,11 @@ export const BELT_FORM_DEFAULT_STACK_SIZE = 4;
 
 export const BELT_STRATEGIES: { value: BeltStrategyFormValue; label: string; description: string }[] = [
     { value: 'normal', label: 'Normal', description: 'Endless: always has items to pick up and room to drop onto.' },
-    { value: 'export', label: 'Export', description: 'Normal, plus a consumption rate per lane for machines outside this config. Inserters filling the lane are clocked for that rate.' },
+    { value: 'export', label: 'Export', description: 'Normal, plus a consumption rate per lane for machines outside this configuration. Inserters filling the lane are clocked for that rate.' },
 ];
 
 export const LANE_CONSUMPTION_TOOLTIP =
-    'Items per second taken off this lane by machines outside this config. Inserters filling the lane are planned for this rate.';
+    'Items per second taken off this lane by machines outside this configuration. Inserters filling the lane are planned for this rate.';
 
 /** Switching a belt to normal drops the lane consumption rates only export belts have */
 export function beltStrategyUpdate(belt: BeltFormData, strategy: BeltStrategyFormValue): Partial<BeltFormData> {

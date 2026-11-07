@@ -230,11 +230,11 @@ describe('PendingChecks', () => {
 });
 
 describe('CHECK_TEXT', () => {
-    it('uses Check for actions, names Build validation as the failure destination, and uses three dots while busy', () => {
+    it('uses Check for actions, names Build check as the failure destination, and uses three dots while busy', () => {
         for (const text of Object.values(CHECK_TEXT)) {
             expect(text).not.toMatch(/\b(?:validate|validated|valid)\b/i);
         }
-        expect(CHECK_TEXT.planFailed).toContain('Build validation');
+        expect(CHECK_TEXT.planFailed).toContain('Build check');
         expect(CHECK_TEXT.checking).toBe('Checking...');
         expect(CHECK_TEXT.generating).toBe('Generating...');
         expect(CHECK_TEXT.cancel).toBe('Cancel');

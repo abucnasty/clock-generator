@@ -21,6 +21,9 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: clocks are named for the practice they follow, and the table shows signals a minute
 - generation: logistic science, chemical science, electric furnace and three other builds recommend clocks with fewer wakeups
 
+### Fixed
+- ui: the install guide says Enable if, and the site's words follow the glossary
+
 ## [0.27.2] - 2026-11-05
 
 ### Fixed

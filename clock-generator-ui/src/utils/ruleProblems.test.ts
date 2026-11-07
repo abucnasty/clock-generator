@@ -45,7 +45,7 @@ describe('ruleProblemsOf, Clocked', () => {
 
     it('names the start an end is before, and tells the last tick of the period, one before its length', () => {
         expect(endBeforeStart(10)).toMatch(/ the start \(10\)\.$/);
-        expect(pastPeriod(132)).toMatch(/ 132-tick period: the last tick is 131\.$/);
+        expect(pastPeriod(132)).toMatch(/ 132-tick window cycle: the last tick is 131\.$/);
     });
 
     it('does not check past the period when it is unknown or fractional', () => {

@@ -157,9 +157,9 @@ export function TargetOutputForm({
             <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 0.75, mt: 0.5 }}>
                 <Box component="span">{itemsPerSecondHelper(itemsPerSecond, copies)}</Box>
                 <HelpButton label="About copies">
-                    <Typography variant="body2" sx={{ mb: 1 }}>Describe one setup in the Build section: its machines, inserters, belts, and chests. Copies is how many identical setups you want to model.</Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>Items per Second is the combined target for all copies. For example, 250 items/s with 5 copies means each setup makes 50 items/s.</Typography>
-                    <Typography variant="body2">Copies may include a partial setup, such as 0.5 or 2.25. You do not need to duplicate the rows for each copy.</Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>Describe one build in the Build section: its machines, inserters, belts, and chests. Copies is how many identical builds you want to model.</Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>Items per Second is the combined target for all copies. For example, 250 items/s with 5 copies means each build makes 50 items/s.</Typography>
+                    <Typography variant="body2">Copies may include a partial build, such as 0.5 or 2.25. You do not need to duplicate the rows for each copy.</Typography>
                 </HelpButton>
             </Typography>
         </Paper>

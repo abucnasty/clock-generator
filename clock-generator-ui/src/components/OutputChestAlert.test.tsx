@@ -23,7 +23,7 @@ it.each([
 ])('warns that $name at the end of a line can fill up, with its own icon, and switches it to an infinity chest', async ({ chest, name, text, icon }) => {
     const onSwitchType = vi.fn();
     const { user, container, rerender } = show(alert(chest, [into], { onSwitchType }), { names: ironPlate });
-    expect(screen.getByRole('region', { name: 'Build validation' })).toBeDefined();
+    expect(screen.getByRole('region', { name: 'Build check' })).toBeDefined();
     // advice in the page, not an interruption
     expect(screen.queryByRole('alert')).toBeNull();
     // named by what it is
