@@ -24,6 +24,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ### Fixed
 - ui: the install guide says Enable if, and the site's words follow the glossary
+- simulation: inserters honor the item's stack size limit during a transfer
 
 ## [0.27.2] - 2026-11-05
 
