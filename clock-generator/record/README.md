@@ -39,13 +39,13 @@ A clock in `alternatives`:
 | `text_sha256` | the hash of the exported blueprint with its text, which moves with any description |
 | `results_sha256` | the digest of what the clock hash leaves out: label, description, insights, verdict, assessment, the simulation's histories, the clock-only run, the fuel view |
 
-## Alternative ids
+## Clock ids
 
-An alternative's `id` is derived from the strategy and the settings of its clock (`takt_batches_observed`, `round_robin_polling_per_hand`,
+A clock's `id` is derived from the strategy and the settings of the clock (`takt_batches_observed`, `round_robin_polling_per_hand`,
 `takt_batches_swings_6`, `coordinated_sources`). The blast writes the slot that made each clock into its job file as `maker` (the id it had
 before the ids were derived); the record does not hold it, so its format stays `clock-record-1`. `record check` reads an id of the committed
 record that is a maker of the run, and not an id of it, as the id the run gave that maker's clock, so a pure rename of the ids is no
-difference. A pin of a game test (`selection.id`) is of the record's ids: its alternative is the one with the pin's `clock_sha256`.
+difference. A pin of a game test (`selection.id`) is of the record's ids: its clock is the one with the pin's `clock_sha256`.
 
 ## Regenerating it
 
