@@ -7,13 +7,13 @@ difference fails with a table of job, field, before and after.
 It holds what `blast.sh` computes for the job and nothing else: no seconds, no path, no machine. A job is one of the blast's seven groups
 (`config`, `pickup`, `overhood`, `front`, `blocked`, `containers`, `variants`): the sample configs as they are, the fixtures, and the variants (a sample with the options a game recording or a test sets on it: belts backed up, an ingredient left out of the window cycle; `tests/game/builds/variant-jobs.ts` lists each with what qualifies it).
 
-## Fields (format `clock-record-1`)
+## Fields (format `clock-record-2`)
 
-A field's name and meaning do not change; a new field or a changed meaning is a new format number (`clock-record-2`) and rewrites every file.
+A field's name and meaning do not change; a new field or a changed meaning is a new format number (`clock-record-3`) and rewrites every file. `clock-record-1` named the window cycle time `period`; `clock-record-2` names it `window_cycle_ticks`, and `record.py worse` still reads a base record in `clock-record-1`.
 
 | Field | Meaning |
 | --- | --- |
-| `format` | `clock-record-1` |
+| `format` | `clock-record-2` |
 | `job`, `group`, `name` | the blast's job key (`config-ACCUMULATOR_640`), its group and its name |
 | `config_sha256` | the hash of the job's config as the blast loads it: it says whether a moved result comes with a moved config |
 | `job_results_sha256` | the digest of what belongs to the job and to no single clock: why it is not stable, the selected index, the clocks' ids |
@@ -31,7 +31,7 @@ A clock in `alternatives`:
 | `holds` | whether the clock holds the target |
 | `rate` | items a second it makes |
 | `supply` | the belt's kind the clock was weighed with: `moving` or `backed_up`; null where the build has none |
-| `period` | the window cycle time in ticks |
+| `window_cycle_ticks` | the window cycle time in ticks |
 | `wake_ups` | inserter wakeups a minute, to three decimals; null where the clock has none |
 | `descriptions_cut` | how many descriptions Factorio's 500-byte limit cut (0 in all but one clock of the first record) |
 | `clock_sha256` | the hash of the exported clock's identity (the blueprint without its text, and the schedule): the hash a game recording is tied to |
@@ -43,7 +43,7 @@ A clock in `alternatives`:
 
 A clock's `id` is derived from the strategy and the settings of the clock (`takt_batches_observed`, `round_robin_polling_per_hand`,
 `takt_batches_swings_6`, `coordinated_sources`). The blast writes the slot that made each clock into its job file as `maker` (the id it had
-before the ids were derived); the record does not hold it, so its format stays `clock-record-1`. `record check` reads an id of the committed
+before the ids were derived); the record does not hold it, so its format does not change. `record check` reads an id of the committed
 record that is a maker of the run, and not an id of it, as the id the run gave that maker's clock, so a pure rename of the ids is no
 difference. A pin of a game test (`selection.id`) is of the record's ids: its clock is the one with the pin's `clock_sha256`.
 

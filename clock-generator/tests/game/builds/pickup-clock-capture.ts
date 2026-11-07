@@ -123,7 +123,7 @@ async function prepare(scenario: PickupClockScenario): Promise<Prepared> {
     const started = performance.now();
     if (scenario.keep_built_clock) {
         const built = scenario.built_clock!;
-        const kept = {config, period: built.period, expected: config.setpoint.items_per_second * built.period / 60,
+        const kept = {config, period: built.window_cycle_ticks, expected: config.setpoint.items_per_second * built.window_cycle_ticks / 60,
             generationSeconds: 0, generationVerdict: "the build's own clock", clockSha256: scenario.builtClockSha256?.()};
         generated.set(key, kept);
         return kept;

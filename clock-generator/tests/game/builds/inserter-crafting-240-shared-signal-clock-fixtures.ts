@@ -46,7 +46,7 @@ const SCAFFOLD = path.join(__dirname, "inserter-crafting-240-shared-signal-clock
 const ONE_COPY_SCAFFOLD = path.join(path.dirname(ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK), "inserter-crafting-240-shared-signal-clock.scaffold");
 
 /** The counter of the hand-made clock (entity 36 of the blueprint): 0 to 215 */
-export const OWNER_CLOCK: BuiltClock = {counter: 36, period: 216, first_value: 0};
+export const OWNER_CLOCK: BuiltClock = {counter: 36, window_cycle_ticks: 216, first_value: 0};
 
 /** The sha256 of the identity of the hand-made clock in the blueprint (`builtClockIdentity`): what its control names it by */
 export function handMadeClockHash(): string {

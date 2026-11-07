@@ -41,7 +41,7 @@ test.skipIf(!JOBS || !INPUTS)('replay inputs', async () => {
         if (config !== null && !plain(config)) throw new Error(`replay: the config of ${key} is not plain data`);
         const selected = blast.selected;
         const input = { key, group: job.group, name: job.name, config,
-            ...(selected?.windows && { windows: selected.windows, period: selected.period }) };
+            ...(selected?.windows && { windows: selected.windows, period: selected.window_cycle_ticks ?? selected.period }) };
         fs.writeFileSync(path.join(INPUTS!, `${key}.json`), JSON.stringify(input));
         written++;
     }

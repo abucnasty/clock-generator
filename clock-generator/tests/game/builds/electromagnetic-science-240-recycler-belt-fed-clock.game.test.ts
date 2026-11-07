@@ -98,7 +98,7 @@ for (const run of runs) test(`original electromagnetic science scaffold, automat
         expect([...Array(window_cycle_ticks).keys()].filter(tick => open(turnsA, tick) && open(turnsB, tick))).toEqual([]);
         fs.writeFileSync(path.join(directory, 'generation.json'), JSON.stringify({
             selected: selected.id, verdict: selected.verdict, assessment: selected.assessment,
-            period: window_cycle_ticks, windows: result.clock_windows,
+            window_cycle_ticks, windows: result.clock_windows,
         }, null, 2));
         const combinatorOf = new Map<number, number>(result.schedule.inserter_combinators
             .flatMap((row: any) => row.inserter_ids.map((id: number) => [id, row.entity_number] as const)));
@@ -106,7 +106,7 @@ for (const run of runs) test(`original electromagnetic science scaffold, automat
         // the build is two of the config's copies: 96 science a second, 5,760 in the trailing minute
         const target = config.setpoint.items_per_second / (config.setpoint.copies ?? 1) * COPIES;
         expect(target).toBe(96);
-        const options = {period: window_cycle_ticks, cold: run.cold, initialization_delay_ticks: run.cold ? 2 : 0, window: RUN_PROTOCOL.window,
+        const options = {window_cycle_ticks, cold: run.cold, initialization_delay_ticks: run.cold ? 2 : 0, window: RUN_PROTOCOL.window,
             expected: Math.round(target * RUN_PROTOCOL.window / 60 * 1e6) / 1e6, baseline: RUN_PROTOCOL.baseline, cap};
         const {recording, build, start} = await recordInFactorio({factorio: factorio!, save: save!, config, copies: COPIES,
             blueprint: bytes.toString('utf8').trim(),

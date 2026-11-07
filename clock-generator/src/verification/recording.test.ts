@@ -14,60 +14,60 @@ const recording = (clock_values: number[]) => ({
 });
 
 describe("the recorded clock", () => {
-    it("counts 1 to its period in the game and is read as 0-based positions in the period", () => {
+    it("counts 1 to its window cycle in the game and is read as 0-based positions in the window cycle", () => {
         const parsed = parseRecording(recording([1, 2, 3, 4, 1, 2, 3, 4]));
         expect(parsed.clock?.values).toEqual([0, 1, 2, 3, 0, 1, 2, 3]);
         expect(recordedClockWindowCycle(parsed)).toBe(4);
     });
 
     it("is rejected when it reads 0, which a clock counting from 1 never does", () => {
-        expect(() => parseRecording(recording([0, 1, 2, 3]))).toThrow(/counts 1 to its period/);
+        expect(() => parseRecording(recording([0, 1, 2, 3]))).toThrow(/counts 1 to its window cycle/);
     });
 });
 
 describe("the recorded clock of a build's own clock", () => {
-    const stamped = (values: number[], stamp: { first_value?: number; period?: number }) => ({
+    const stamped = (values: number[], stamp: { first_value?: number; window_cycle_ticks?: number }) => ({
         ...recording(values),
         clock: { values, ...stamp },
     });
 
     it("may count from 0, and its values are the positions", () => {
-        const parsed = parseRecording(stamped([0, 1, 2, 3, 0, 1, 2, 3], { first_value: 0, period: 4 }));
+        const parsed = parseRecording(stamped([0, 1, 2, 3, 0, 1, 2, 3], { first_value: 0, window_cycle_ticks: 4 }));
         expect(parsed.clock?.values).toEqual([0, 1, 2, 3, 0, 1, 2, 3]);
         expect(recordedClockWindowCycle(parsed)).toBe(4);
     });
 
-    it("may count from 1 with a period, as a generated clock does", () => {
-        const parsed = parseRecording(stamped([1, 2, 3, 1, 2, 3], { first_value: 1, period: 3 }));
+    it("may count from 1 with a window cycle, as a generated clock does", () => {
+        const parsed = parseRecording(stamped([1, 2, 3, 1, 2, 3], { first_value: 1, window_cycle_ticks: 3 }));
         expect(parsed.clock?.values).toEqual([0, 1, 2, 0, 1, 2]);
     });
 
-    it("needs its period when it counts from 0", () => {
-        expect(() => parseRecording(stamped([0, 1, 2, 3], { first_value: 0 }))).toThrow(/needs its period/);
+    it("needs its window cycle when it counts from 0", () => {
+        expect(() => parseRecording(stamped([0, 1, 2, 3], { first_value: 0 }))).toThrow(/needs its window cycle/);
     });
 
     it("is refused when the clock signal was absent (always 0)", () => {
-        expect(() => parseRecording(stamped([0, 0, 0, 0], { first_value: 0, period: 4 }))).toThrow(/shows 1/);
+        expect(() => parseRecording(stamped([0, 0, 0, 0], { first_value: 0, window_cycle_ticks: 4 }))).toThrow(/shows 1/);
     });
 
     it("is refused when a value is skipped, repeated or starts late", () => {
-        expect(() => parseRecording(stamped([0, 1, 3, 0], { first_value: 0, period: 4 }))).toThrow(/shows 2/);
-        expect(() => parseRecording(stamped([0, 1, 1, 2], { first_value: 0, period: 4 }))).toThrow(/shows 2/);
-        expect(() => parseRecording(stamped([1, 2, 3, 0], { first_value: 0, period: 4 }))).toThrow(/shows 0/);
+        expect(() => parseRecording(stamped([0, 1, 3, 0], { first_value: 0, window_cycle_ticks: 4 }))).toThrow(/shows 2/);
+        expect(() => parseRecording(stamped([0, 1, 1, 2], { first_value: 0, window_cycle_ticks: 4 }))).toThrow(/shows 2/);
+        expect(() => parseRecording(stamped([1, 2, 3, 0], { first_value: 0, window_cycle_ticks: 4 }))).toThrow(/shows 0/);
     });
 
-    it("is refused when the period is not the one named, or the recording holds part of a period", () => {
-        expect(() => parseRecording(stamped([0, 1, 2, 3, 4, 5], { first_value: 0, period: 4 }))).toThrow(/shows 0/);
-        expect(() => parseRecording(stamped([0, 1, 2, 3, 0, 1], { first_value: 0, period: 4 }))).toThrow(/not whole periods/);
+    it("is refused when the window cycle is not the one named, or the recording holds part of a window cycle", () => {
+        expect(() => parseRecording(stamped([0, 1, 2, 3, 4, 5], { first_value: 0, window_cycle_ticks: 4 }))).toThrow(/shows 0/);
+        expect(() => parseRecording(stamped([0, 1, 2, 3, 0, 1], { first_value: 0, window_cycle_ticks: 4 }))).toThrow(/not whole window cycles/);
     });
 
     it("leaves a generated clock as it was: no stamp, a 0 is refused", () => {
-        expect(() => parseRecording(stamped([1, 2, 0, 1], {}))).toThrow(/counts 1 to its period/);
+        expect(() => parseRecording(stamped([1, 2, 0, 1], {}))).toThrow(/counts 1 to its window cycle/);
     });
 });
 
 describe("the positions of the windows", () => {
-    it("are the recorded positions less the tick the lock filter takes, around the period", () => {
+    it("are the recorded positions less the tick the lock filter takes, around the window cycle", () => {
         const parsed = parseRecording(recording([1, 2, 3, 4, 1, 2, 3, 4]));
         expect(CLOCK_TO_WINDOW_TICKS).toBe(1);
         expect(windowPositions(parsed)).toEqual([3, 0, 1, 2, 3, 0, 1, 2]);
