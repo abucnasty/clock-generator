@@ -118,6 +118,26 @@ function selectionClock(id: string, wakeUps: number): ClockAlternativeView {
 const planSelection = (clocks: ClockAlternativeView[], pending = false) =>
     answerPlan(pending ? [remaining] : [], { signature: 'primary', alternatives: clocks });
 
+describe('the start', () => {
+    it('says how far it has come', async () => {
+        await initialize();
+        expect(latest().startup).toEqual({ dataLoaded: true, engineReady: true, workersReady: true });
+    });
+
+    it('names the step a worker died in before it started', async () => {
+        rendered = renderHook(useSimulationWorker);
+        await act(async () => {
+            const initializing = latest().initialize();
+            for (let i = 0; i < 5; i++) await Promise.resolve();
+            workers[0].onerror?.({ message: 'module script failed to load' } as ErrorEvent);
+            await initializing;
+        });
+        expect(latest().isInitialized).toBe(false);
+        expect(latest().startup).toEqual({ dataLoaded: true, engineReady: true, workersReady: false });
+        expect(latest().error).toBe('module script failed to load (while starting the simulator workers)');
+    });
+});
+
 describe('selection after generation', () => {
     it('keeps the clocks that could not be made in the order of their tasks, whichever finishes first', async () => {
         await initialize();

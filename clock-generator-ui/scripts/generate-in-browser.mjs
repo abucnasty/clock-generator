@@ -6,7 +6,7 @@
 // production build is what is deployed.
 // Needs the engine built and the game data and examples copied, which `npm run build` does, and, once,
 // `npx playwright install --only-shell chromium`.
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import { createServer, preview } from 'vite';
@@ -22,6 +22,28 @@ for (const file of ['public/data-filtered.json', 'public/examples/index.json', '
         console.error(`${file} is missing: run \`npm run build\` first`);
         process.exit(1);
     }
+}
+
+/**
+ * The production build's workers are one file each, which nothing imports: WebKit (Safari, and every browser on iOS)
+ * loads a worker's file a second time when a chunk imports it, and that second copy takes over the worker's messages
+ * and never answers them, so the page hung on "Loading Factorio data..." there. Chromium shares the one copy, so the
+ * runs below cannot see it. Returns what breaks the rule.
+ */
+function splitWorkers() {
+    const assets = fileURLToPath(new URL('../dist/assets/', import.meta.url));
+    const scripts = readdirSync(assets).filter((file) => file.endsWith('.js'));
+    const workers = scripts.filter((file) => /\.worker-[\w-]+\.js$/.test(file));
+    if (workers.length === 0) return ['dist/assets holds no worker file'];
+    const problems = [];
+    for (const file of scripts) {
+        const code = readFileSync(`${assets}${file}`, 'utf8');
+        for (const worker of workers) {
+            if (file !== worker && code.includes(`./${worker}`)) problems.push(`${file} imports the worker file ${worker}`);
+        }
+        if (workers.includes(file) && /\bimport\s*\(|\bfrom\s*["']\.\//.test(code)) problems.push(`the worker file ${file} imports another chunk`);
+    }
+    return problems;
 }
 
 /** Generates the example on the page at `url`; returns the errors, none when a clock came */
@@ -284,8 +306,15 @@ const servers = {
     'the production build': () => preview({ root, logLevel: 'warn', preview: { port: 4173, open: false } }),
 };
 
+const workerProblems = splitWorkers();
+if (workerProblems.length > 0) {
+    console.error(`The production build splits a worker:\n${workerProblems.map((problem) => `  ${problem}`).join('\n')}`);
+} else {
+    console.log('The production build keeps each worker in one file');
+}
+
 const browser = await chromium.launch();
-let failed = false;
+let failed = workerProblems.length > 0;
 try {
     for (const [name, start] of Object.entries(servers)) {
         const server = await start();

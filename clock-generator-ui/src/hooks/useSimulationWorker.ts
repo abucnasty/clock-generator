@@ -15,6 +15,7 @@ import { NO_CRAFTING_MACHINES } from '../utils/machinePrototype';
 import { fullClockName, pendingClockName } from '../utils/strategyNames';
 import { afterCancel, keyToShow, selectionAfterRun, type DroppedResults, type KeptPick, type KeptResults, type RunStop, type ShownResults } from '../utils/resultsCache';
 import { openResultsStore, readShownMarker, writeShownMarker, type ResultsStore } from '../utils/resultsStore';
+import { pendingStartupStep, startupFailureText, type StartupProgress } from '../utils/startupSteps';
 import { busyWorkersOf, checkToResend, crashOutcome, replaceWorkers } from '../worker/pool';
 import { orderAlternativeTasks } from '../worker/alternativeQueue';
 import type { GenerationAssumptions, RepeatedUnitsRecovery } from '../worker/types';
@@ -90,6 +91,8 @@ interface UseSimulationWorkerResult {
     error: string | null;
     errorRecovery: RepeatedUnitsRecovery | null;
     initialize: () => void;
+    /** How far the start has come, for naming the step that failed or did not answer */
+    startup: SimulatorStartup;
     /** Generates clocks for `config`; `searchDeeper` runs the slower searches this once, without changing what is recorded */
     runSimulation: (config: Config, debugSteps: DebugSteps, streamLogs: boolean, searchDeeper?: boolean) => void;
     /** What the last Generate was for; null when nothing is generated */
@@ -126,6 +129,10 @@ interface UseSimulationWorkerResult {
 }
 
 const PRIMARY_STEP = 'First clock';
+
+/** The startup steps this hook takes (see StartupProgress) */
+type SimulatorStartup = Pick<StartupProgress, 'dataLoaded' | 'engineReady' | 'workersReady'>;
+const NOT_STARTED: SimulatorStartup = { dataLoaded: false, engineReady: false, workersReady: false };
 
 export interface GenerationProgressStore {
     get: () => GenerationProgress | null;
@@ -235,6 +242,7 @@ const resultsStore = () => (sharedResultsStore ??= openResultsStore());
 
 export function useSimulationWorker(): UseSimulationWorkerResult {
     const [isInitialized, setIsInitialized] = useState(false);
+    const [startup, setStartup] = useState<SimulatorStartup>(NOT_STARTED);
     const [isRunning, setIsRunning] = useState(false);
     const [progressStore] = useState(createProgressStore);
     const [recipeNames, setRecipeNames] = useState<string[]>([]);
@@ -693,14 +701,24 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
     }, [startWorker]);
 
     const initialize = useCallback(async () => {
+        // the steps done so far, read when one fails, as the render may not have caught up
+        let progress = NOT_STARTED;
+        const done = (step: keyof SimulatorStartup) => {
+            progress = { ...progress, [step]: true };
+            setStartup(progress);
+        };
         try {
             // Generation runs in a pool of workers; the names and recipes for the forms come from the query worker
             terminateWorkers();
+            setStartup(NOT_STARTED);
+            loadFactorioData().then(() => done('dataLoaded'), () => {});
             const pool = Array.from({ length: workerPoolSize() }, () => startWorker(false));
             workersRef.current = pool.map(it => it.worker);
             const workersReady = Promise.all(pool.map(it => it.ready));
+            void workersReady.then(() => done('workersReady'), () => {});
 
             const lookups = await askEngine({ kind: 'lookups' });
+            done('engineReady');
             // the pickers offer no mod, internal or hidden entry; a build that holds one still shows it
             setRecipeNames(pickerIds(lookups.recipeNames, new Set(lookups.hiddenRecipes)));
             // recycling recipes stay out of the open list, and a typed search finds them
@@ -715,7 +733,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             setIsInitialized(true);
         } catch (err) {
             console.error('Failed to initialize:', err);
-            setError(err instanceof Error ? err.message : 'Failed to initialize');
+            setError(startupFailureText(err instanceof Error ? err.message : 'Failed to initialize', pendingStartupStep(progress)));
             setErrorRecovery(null);
         }
     }, [startWorker, terminateWorkers]);
@@ -923,6 +941,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         error,
         errorRecovery,
         initialize,
+        startup,
         runSimulation,
         generatedFor,
         clearResults,
