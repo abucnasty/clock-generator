@@ -17,6 +17,7 @@ import {
 import { Abc, Code, FullscreenExit, LocalCafe } from '@mui/icons-material';
 import type { ChestType, Config, DebugSteps, InserterCoverageIssue, InserterFixOption } from 'clock-generator/browser';
 import { useSimulationWorker } from './hooks/useSimulationWorker';
+import { useStartupTimeout } from './hooks/useStartupTimeout';
 import { useConfigForm, type BuildMutationSnapshot } from './hooks/useConfigForm';
 import type { InserterFormData } from './hooks/useConfigForm';
 import { useInserterValidation } from './hooks/useInserterValidation';
@@ -178,6 +179,7 @@ function App() {
         error,
         errorRecovery,
         initialize,
+        startup,
         runSimulation,
         generatedFor,
         generationAssumptions,
@@ -257,8 +259,10 @@ function App() {
     const [resultsRestored, setResultsRestored] = useState(false);
     // the page waits for the workers, for the saved config, which the engine's worker checks, and for its kept clocks
     const isInitialized = workersReady && isConfigLoaded && resultsRestored;
+    // a step that never answers fires no error: after a time limit the alert names the first one not done
+    const startupTimedOut = useStartupTimeout({ ...startup, configLoaded: isConfigLoaded, storeOpened: resultsStoreReady, resultsRestored });
     // until the workers are ready, an error is one that stopped them starting
-    const startupError = (!workersReady && error) || configLoadError;
+    const startupError = (!workersReady && error) || configLoadError || startupTimedOut;
 
     const [debugSteps, setDebugSteps] = useState<DebugSteps>({
         prepare: false,

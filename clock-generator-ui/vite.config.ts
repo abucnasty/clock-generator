@@ -29,7 +29,14 @@ export default defineConfig({
     setupFiles: ['src/test/setup.ts'],
   },
   worker: {
-    // the simulation worker dynamically imports clock-generator, which needs code splitting
     format: 'es',
+    rollupOptions: {
+      output: {
+        // The worker is one file. Split, the engine's chunk imports the code it shares with the worker from the
+        // worker's own file, and WebKit (Safari, and every browser on iOS) loads that file a second time: its second
+        // copy takes over the worker's messages and never answers them, so the page never starts.
+        inlineDynamicImports: true,
+      },
+    },
   },
 })
