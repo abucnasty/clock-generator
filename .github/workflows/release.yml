@@ -14,7 +14,7 @@ name: Release
 # hotfix merge. Opening a pull request, naming a branch or editing a title releases nothing: only a merge makes the push.
 # On a release or a hotfix merge:
 # - A generator version with no tag gets a tag at the pushed commit and a GitHub release from CHANGELOG.md. The site
-#   players use is deployed from that tag, after the release exists.
+#   users use is deployed from that tag, after the release exists.
 # - A sidecar version that the mod portal does not have is published by publish-sidecar.yml, which this workflow calls.
 # - A merge where neither version is new fails: a release that releases nothing is a mistake.
 #
@@ -127,7 +127,7 @@ jobs:
           echo "released=true" >> "$GITHUB_OUTPUT"
 
   production:
-    # The site players use: the tag of a release or a hotfix, after its release exists; or, on a run by hand, the latest
+    # The site users use: the tag of a release or a hotfix, after its release exists; or, on a run by hand, the latest
     # released tag again
     name: Deploy to production
     needs: release

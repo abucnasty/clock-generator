@@ -44,7 +44,7 @@ then.
 
 6. When the required checks are correct, abucnasty merges the pull request. The merge releases the commit of the merge.
 
-7. Open a second pull request, from `hotfix/<version>` into `master`. Resolve the conflicts in this pull request.
+7. Open a second pull request, from `hotfix/<version>` into `master`, with the title `chore: bring <version> into master`. Resolve the conflicts in this pull request.
    Then abucnasty merges it with a merge commit. This merge releases nothing.
 
 ## Result

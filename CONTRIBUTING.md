@@ -317,8 +317,8 @@ A hotfix ships one fix on the commit that was deployed last (the latest tag), wi
    the dated section of the changelog and the regenerated record (as in step 5 of a release).
 3. Open a pull request into `hotfix/<version>` titled `hotfix: <version>, ...`, with the `change.md` template.
    Its merge releases that commit.
-4. Bring `hotfix/<version>` into `master` with a pull request and a merge commit. Resolve the conflicts in that pull
-   request. It releases nothing.
+4. Bring `hotfix/<version>` into `master` with a pull request titled `chore: bring <version> into master` and a merge commit.
+   Resolve the conflicts in that pull request. It releases nothing.
 
 The route works only from tags made after the pull request that added it.
 
