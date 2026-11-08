@@ -11,6 +11,8 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ## [Unreleased]
 
+## [0.28.1] - 2026-11-07
+
 ### Fixed
 - ui: the page starts in Safari and on iPhones instead of loading forever
 
