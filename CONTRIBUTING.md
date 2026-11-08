@@ -8,8 +8,9 @@ for someone reading that history later. These rules hold for every pull request,
 ### Branch and type
 
 Name the branch `<type>/<slug>`, the slug at most five words in kebab-case and without the issue number (the title
-carries it): `fix/moving-belt-pickup`. An integration branch is `release/<slug>`. The type says what the change does for
-the user, the person generating clocks:
+carries it): `fix/moving-belt-pickup`. There is no integration branch: every typed branch is made from `master` and merges
+back into it. `release/<slug>` is the branch of a release pull request, made from `master`. The type says what the change
+does for the user, the person generating clocks:
 
 | Type | The change | User changelog |
 | --- | --- | --- |
@@ -20,9 +21,10 @@ the user, the person generating clocks:
 | `test` | adds or changes tests, fixtures or game coverage only | none |
 | `docs` | changes documentation only | none |
 | `chore` | changes tooling, CI or scripts: nothing the user sees | none |
-| `release` | prepares, dates or integrates a version | dates its section |
+| `hotfix` | ships one fix on the last deployed commit: a fix built on the latest tag, released without the latest `master` | Fixed, and it dates its own section |
+| `release` | prepares and dates a version | dates its section |
 
-A pull request with an entry in a user changelog (`CHANGELOG.md` or the sidecar's) is a `feature`, `fix` or `perf`.
+A pull request with an entry in a user changelog (`CHANGELOG.md` or the sidecar's) is a `feature`, `fix`, `perf` or `hotfix`.
 Split a pull request that mixes types when its parts can merge apart; otherwise give it the type with the most user
 impact: `fix`, then `feature`, then `perf`.
 
@@ -38,7 +40,7 @@ Start from the type's template in `.github/PULL_REQUEST_TEMPLATE/`: copy it, fil
 
 | Template | Types |
 | --- | --- |
-| `change.md` | `feature`, `fix`, `perf` |
+| `change.md` | `feature`, `fix`, `perf`, `hotfix` (its Version slot carries the patch bump) |
 | `refactor.md`, `test.md`, `docs.md`, `chore.md`, `release.md` | the type of the same name |
 
 Fill every slot; a `{…}` placeholder left in shows a rule was skipped. The visible body fits on one screen, about 25
@@ -53,9 +55,9 @@ lines: put longer lists in a `<details>` block. The slots that carry a rule:
   ran: a skipped game test is not game verification.
 - **Impact**: the door (two-way, or one-way and what cannot be undone) and what it affects (whose builds, saved configs,
   CI time, or none).
-- **Version**: the generator version, `sidecar <version>`, both, `bundled: #<pull request>` when another pull request
-  carries the bump (as under a [release hold](#release-hold-for-unreleased-merges)), or `none`. A fix reaches users
-  only with a version bump, in its own pull request or in the one that carries the bump.
+- **Version**: `none` for every pull request except a release or a hotfix: its changelog line waits under `[Unreleased]`
+  for a release pull request, which carries the bump (see [Releasing](#releasing)). A release or hotfix pull request
+  writes the generator version, `sidecar <version>`, or both.
 - **Changelog**: the file (`CHANGELOG.md` or `sidecar`) and the exact entry, or `none: no user impact`.
 - **Overview** (release): two to four lines on what the release changes for the user, by area, above the list of
   pull requests it ships.
@@ -172,7 +174,7 @@ reduction from scheduling changes; do not report a faster test from a less busy 
 sample or fixture and every clock it weighed (verdict, holds, rate, window cycle time, wakeups, windows, clock hash). The check named "Rec summary" in CI
 generates the jobs in six shards (`Rec 1/6` to `Rec 6/6`, dealt out by the seconds each job took on a runner,
 `clock-generator/ci/record-durations.json`), joins them and compares them with the committed files field by field; a difference fails with a table of job,
-field, before and after in the job summary. The check runs on every pull request to `master`, `feature/` or `release/` that changes more than documentation, and reports
+field, before and after in the job summary. The check runs on every pull request to `master` or `hotfix/` that changes more than documentation, and reports
 success on one that changes documentation only. Its name is stable so that it can be a required check. It is never faster than the slowest job
 (the productivity module chest chain). After a change to the jobs or the engine, refresh the durations with
 `node scripts/ci/update-record-durations.js <dir of the downloaded record-jobs-* artifacts of a run>`. The same script prints the shard
@@ -254,8 +256,8 @@ is never loosened because a job fails it.
 | Check name | What it does | Runs |
 | --- | --- | --- |
 | Unit tests | knip, typecheck, build, lint, `npm test` (the units, `clock-controls.test.ts` among them) | every pull request that changes more than documentation |
-| `Gen 1/2` and `Gen 2/2`, then `Gen summary` | the `*.generation.test.ts` files, dealt out by `ci/generation-durations.json` | ready pull requests to `master`, `feature/` or `release/` that change more than documentation, and releases; on a draft the shards do not run and the check fails (below) |
-| `Rec 1/6` to `Rec 6/6`, then `Rec summary` | the 86 jobs, joined, compared with `record/`, with the properties, the per-job checks and the never-worse rule | ready pull requests to `master`, `feature/` or `release/` that change more than documentation; on a draft the shards do not run and the check fails (below) |
+| `Gen 1/2` and `Gen 2/2`, then `Gen summary` | the `*.generation.test.ts` files, dealt out by `ci/generation-durations.json` | ready pull requests to `master` or `hotfix/` that change more than documentation, and releases; on a draft the shards do not run and the check fails (below) |
+| `Rec 1/6` to `Rec 6/6`, then `Rec summary` | the 86 jobs, joined, compared with `record/`, with the properties, the per-job checks and the never-worse rule | ready pull requests to `master` or `hotfix/` that change more than documentation; on a draft the shards do not run and the check fails (below) |
 | `UI build`, `UI samples`, `UI browser` | the UI | every pull request that changes more than documentation |
 | `Docs checks` | PORTAL.md and the configuration file fields topic are current, and the bold labels of the user topics are strings of the site, the sidecar or the game ([docs/README.md](docs/README.md#checks)) | every pull request |
 
@@ -264,28 +266,64 @@ record shards) do not run on a draft pull request; unit tests, the UI build, the
 "Gen summary" and "Rec summary" run and fail with "not run on a draft: mark the pull request ready, or run
 `gh workflow run test.yml --ref <branch>`": a skipped required check counts as passing, so they never skip or pass there. Marking the pull
 request ready (`ready_for_review`) runs everything, as does a push to a ready pull request, a run by hand (`gh workflow run test.yml --ref <branch>`)
-and a release or sidecar run that calls the workflow.
+and a release run that calls the workflow.
 
-The ruleset "Integration branches: CI before merge" (`feature/*`, `release/*`) lists `Rec summary` among its required checks, so a record
-that moved without a file, a property problem or an unnamed worse selected clock stops a merge into an integration branch. No ruleset
-covers `master` today. After a change to the jobs, refresh `ci/record-durations.json` (above); after a change to the generation tests,
+The rulesets "Protect Master Branch" (`master`) and "Hotfix branches: PR and CI before merge" (`hotfix/*`) list `Rec summary` among their
+required checks, so a record that moved without a file, a property problem or an unnamed worse selected clock stops a merge into either. After a change to the jobs, refresh `ci/record-durations.json` (above); after a change to the generation tests,
 `node scripts/ci/update-generation-durations.js <dir of the downloaded generation-test-results-* artifacts of a run>` (a median of several runs is
 steadier than one).
 
-## Release hold for unreleased merges
+## Releasing
 
-Work can be merged into `master` as an **unreleased merge** while the repository Actions variable `RELEASE_HOLD` is
-`true`. Both publishing workflows enforce that hold, including manual dispatches; tests and master preview deployments
-remain enabled. Keep the hold active until the held work is ready to release.
+Only two merges release and deploy: a **release** pull request and a **hotfix** pull request. Every other merge releases
+nothing; a merge to `master` gets a preview deployment, with its address in the run summary of `release.yml`. The workflow
+looks up the pull request behind each push to `master` and to `hotfix/*` (`.github/scripts/release-gate.sh`) and releases
+only when that pull request is merged, from a branch of this repository, and is one of these:
 
-Reserve the next engine/UI version and the next Sidecar version for the work held back. Keep the engine/UI package and
-lock versions synchronized. Update the existing unreleased changelog sections rather than adding a version for
-each change. Keep Sidecar's `info.json`, newest changelog entry, `LATEST_SIDECAR_VERSION`, feature-version
-checks and documentation aligned at the reserved Sidecar version. Published version numbers and their GitHub release
-notes stay unchanged; a published changelog entry may be reworded when it keeps its meaning and its version.
+| Pull request | Into | From | Title |
+| --- | --- | --- | --- |
+| release | `master` | `release/<slug>` | `release: <version>, ...` |
+| hotfix | `hotfix/<version>` | any branch, normally `fix/<slug>` | `hotfix: <version>, ...` |
 
-While the hold is on, publishing waits until the user authorizes the release. Do not clear `RELEASE_HOLD` or dispatch publishing
-workflows to bypass that hold. At release time, finalize both changelog dates/summaries and run the release
-checks. Only then set the repository variable to `false` and explicitly dispatch the release and Sidecar
-publishing workflows on `master` (a change outside the Sidecar directory does not trigger its push workflow).
-Reserved versions and published GitHub release notes remain unchanged until that release.
+On the merge, `release.yml` tags and releases a generator version that has no tag, deploys that tag to production, and
+publishes a sidecar version that the mod portal does not have (`publish-sidecar.yml`). A release or hotfix merge where
+neither version is new fails.
+
+### Everyday
+
+Typed pull requests merge into `master` unreleased. Each user-visible change puts its line under `[Unreleased]` in the
+changelog and writes `none` in its Version slot. `master` must stay shippable after every merge, because the next
+release ships all of it.
+
+### A release
+
+1. Try `master` on its preview address (in the run summary of its last `release.yml` run). This is the UAT.
+2. Make the branch `release/<slug>` from `master`.
+3. Bump the generator version in `clock-generator` and `clock-generator-ui`, with their lock files. If the sidecar ships,
+   bump its three places: `info.json`, the newest entry of `changelog.txt` and `LATEST_SIDECAR_VERSION`.
+4. Date the section of the version in the changelogs: `[Unreleased]` becomes the version.
+5. Regenerate the [record](#the-record-of-the-blast-jobs). Only `text_sha256` may move, because the blueprint carries the
+   engine version. Add a `Release x.y.z` entry to `MOVES.md`. Any other move stops the pull request.
+6. Open a pull request into `master` titled `release: x.y.z, ...`, with the `release.md` template.
+7. abucnasty merges it. The merge releases.
+
+### A hotfix
+
+A hotfix ships one fix on the commit that was deployed last (the latest tag), without the unreleased work on `master`.
+
+1. Make the branch `hotfix/<version>` from the latest tag, for example
+   `git push origin v0.28.1:refs/heads/hotfix/0.28.2`.
+2. Make the branch `fix/<slug>` from `hotfix/<version>`. Put in it the fix, the patch bump (both packages and lock files),
+   the dated section of the changelog and the regenerated record (as in step 5 of a release).
+3. Open a pull request into `hotfix/<version>` titled `hotfix: <version>, ...`, with the `change.md` template.
+   Its merge releases that commit.
+4. Bring `hotfix/<version>` into `master` with a pull request and a merge commit. Resolve the conflicts in that pull
+   request. It releases nothing.
+
+The route works only from tags made after the pull request that added it.
+
+### Run workflow
+
+"Run workflow" is for recovery only. `release.yml` deploys the latest released tag to production again, and never makes a
+tag or a release. `publish-sidecar.yml` tries again the upload of the sidecar of a release or hotfix merge: it runs
+the same lookup on the last commit of the branch, and uploads only when that commit is such a merge.
