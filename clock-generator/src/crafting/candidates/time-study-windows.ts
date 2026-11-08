@@ -154,6 +154,8 @@ export function deriveTimeStudyWindows(
         },
         neighbours: () => true,
         tieBreak: (a, b) => a.candidate - b.candidate,
+        // the paddings are listed smallest first, and the page shows the candidates of shifts only (simulation.worker.ts)
+        in_order: true,
         confirm: ({ candidate: padding, quick }) => confirm_pick
             ? confirm(base_config, quick.windows, window_cycle_ticks, logger, ticks(padding), report, quick.run, true)
             : { result: quick.result, check: checkOfRun(quick.result) },
