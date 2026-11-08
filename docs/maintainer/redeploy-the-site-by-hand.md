@@ -5,20 +5,19 @@ id: redeploy-the-site-by-hand
 
 # Redeploy the site by hand
 
-Deploy the version of `master` to production again. For example, do this after a run of `release.yml` that stopped
+Deploy the latest released version to production again. For example, do this after a run of `release.yml` that stopped
 before its end.
 
 ## Before you start
 
-- `RELEASE_HOLD` is not `true`, `True` or `TRUE`. If it is, the `production` job does not start.
 - The secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` are set.
-- The version in `package.json` on `master` is the version to deploy. You cannot deploy a previous version: rollback
-  is not available.
+- The version to deploy has a GitHub release, and it is the latest GitHub release. You cannot deploy a previous
+  version: rollback is not available.
 
 ## Procedure
 
-NOTE: The workflow publishes only from `master`. A start from a different branch does the tests and does not
-release or deploy.
+NOTE: The `production` job runs from `master` only. A start from a different branch does the tests and does not
+deploy.
 
 1. Start `release.yml` on `master`.
 
@@ -26,9 +25,9 @@ release or deploy.
    gh workflow run release.yml --ref master
    ```
 
-   The workflow does the tests first, with the generation tests. If the version has no GitHub release, the `release`
-   job makes it. Then the `production` job deploys the commit of the tag `v<version>`. A start by hand does not make a
-   preview deployment.
+   The workflow does the tests first, with the generation tests. A start by hand never makes a tag or a GitHub release,
+   and it does not make a preview deployment. The `production` job deploys the commit of the tag of the latest GitHub
+   release.
 
 2. Open the summary of the workflow run.
 
@@ -36,7 +35,10 @@ release or deploy.
 
 ## Result
 
-The site of the users has the version of `master` again.
+The site of the users has the latest released version again.
+
+If a merge of a release stopped before it made the tag, a start by hand does not release it. Start the failed run again
+in GitHub (**Re-run failed jobs**).
 
 ## Related information
 

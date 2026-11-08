@@ -15,4 +15,4 @@ factorio: {what ran, or not run}
 
 **Blast:** {zero-change | N jobs moved, listed | selective: jobs | not run: reason}
 **Changelog:** {CHANGELOG.md | sidecar}: {the exact entry}, or none: no user impact
-**Version:** {generator version | sidecar version | both | bundled: #pull request | none}
+**Version:** {generator version | sidecar version | both | none}

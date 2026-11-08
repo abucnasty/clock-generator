@@ -58,34 +58,36 @@ checks and retained probe captures.
 There are two versions.
 
 The clock generator and its UI (`clock-generator`, `clock-generator-ui`) share one. Bump the two together, with a
-section for the new version in `CHANGELOG.md`. Merging a new version to `master` creates the GitHub release
-(`.github/workflows/release.yml`); a merge that does not change the version releases nothing.
+section for the new version in `CHANGELOG.md`. Only two merges release a version (`.github/workflows/release.yml`):
+
+- a **release pull request**: into `master`, from a branch `release/<slug>`, titled `release: ...`;
+- a **hotfix pull request**: into a branch `hotfix/<version>` that was made from the latest tag, titled `hotfix: ...`. It
+  ships one fix on the last deployed commit, without the unreleased work on `master`.
+
+Every other merge releases nothing: its changelog line waits under `[Unreleased]` for the next release pull request. The
+workflow looks up the pull request behind the pushed commit, so opening a pull request, naming a branch or editing a title
+releases nothing; only a merge does. On a release or hotfix merge, a version with no tag gets a tag and a GitHub release.
+A merge where neither the generator nor the sidecar has a new version fails. The steps are in
+[Releasing](CONTRIBUTING.md#releasing).
 
 The same workflow deploys the site. Vercel deploys nothing by itself, not `master` and not a pull request:
 `vercel.json` switches that off. The site users use is deployed when a version is released, from
 the commit of its tag and after its GitHub release exists, so `master` can run ahead of what users have. A fix
-reaches them with a version bump: a patch version and its changelog section, in the pull request of the fix or in one
-that carries the bump for several (its Version slot says which; see [Pull requests](CONTRIBUTING.md#pull-requests)).
-Every merge to `master` is also deployed as a preview, with its address in the summary of the workflow run. The
-deployments need the secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`; the two ids are in
-`.vercel/repo.json` (or `.vercel/project.json`) after `vercel link`. Starting the workflow by hand deploys the current version again.
+reaches them with a release or a hotfix: a version bump and its changelog section.
+Every merge to `master` is also deployed as a preview, with its address in the summary of the workflow run; the
+UAT of a release runs there. The deployments need the secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`;
+the two ids are in `.vercel/repo.json` (or `.vercel/project.json`) after `vercel link`. Starting the workflow by hand
+(a recovery) deploys the latest released tag again; it never makes a release.
 
-The `clock-generator-sidecar` mod has a version of its own and is only released when the mod changes. Bump its
-`info.json`, add the version to its `changelog.txt`, and set `LATEST_SIDECAR_VERSION` in
-`clock-generator/src/config/sidecar-version.ts` to match; a test fails if those three drift apart. Merging a change
-to the mod's folder to `master` publishes a version the Factorio mod portal does not have yet
-(`.github/workflows/publish-sidecar.yml`, which needs the `FACTORIO_MOD_API_KEY` secret and can also be started by
-hand). A release of the generator does not publish the mod. The upload sends only the zip: the long description on
+The `clock-generator-sidecar` mod has a version of its own. Bump its `info.json`, add the version to its
+`changelog.txt`, and set `LATEST_SIDECAR_VERSION` in `clock-generator/src/config/sidecar-version.ts` to match; a test
+fails if those three drift apart. A release or hotfix merge publishes a version the Factorio mod portal does not have yet
+(`.github/workflows/publish-sidecar.yml`, which release.yml calls and which needs the `FACTORIO_MOD_API_KEY` secret). A
+merge to the mod's folder that is not a release or a hotfix publishes nothing. A failed upload can be tried again with
+"Run workflow" on the branch of the merge. The upload sends only the zip: the long description on
 the mod's portal page is `clock-generator-sidecar/PORTAL.md`, pasted there by hand (Edit) after a release. PORTAL.md is
 generated from the user topics `docs/user/export-a-build.md` and `docs/user/sidecar-export-contents.md`: edit those, then
 run `npm run docs:portal` in `clock-generator/` (CI fails when PORTAL.md is not current).
-
-For an **unreleased merge to master**, set the repository Actions variable `RELEASE_HOLD` to `true` before
-merging. The release job, production deployment and Sidecar upload all honor it on pushes and manual runs;
-tests and preview deployments continue. Leave upcoming changelog entries undated/unreleased. The variable is a
-publication hold, not a rollback: clearing it makes later publishing runs eligible to release the current
-versions. Once a release is authorized, finalize the changelogs, set the variable to `false`, and dispatch both
-publishing workflows on `master`. Clearing the variable alone starts no workflow. See [Contributing](CONTRIBUTING.md).
 
 The `clock-generator-recorder` mod is a development tool. It keeps its own version by hand and is not published. It
 depends on the sidecar and uses its extraction and export, so it needs the sidecar of this repository beside it.
