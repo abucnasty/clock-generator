@@ -28,6 +28,7 @@ import { movingPickupPhaseStarts } from "./moving-pickup-phase-starts";
 import { canonicalVerificationJson } from "./verification-signature";
 import { DeciderOrder, deciderBuildOrder, reversedDeciderOrder } from "./decider-order";
 import { withChestDrillWindows } from "./chest-drill-windows";
+import { lossRunPool } from "./loss-run-pool";
 import type { FullOutputChest } from "./full-output-chests";
 import { ExportShortfall, exportShortfallOfBins, exportShortfallsOfRun, exportedItemsOf } from "./export-delivery";
 import { ResultsTaken, resultsTakenOf } from "./results-taken";
@@ -690,19 +691,38 @@ export function disturbanceTrialOf(
     const windows = new Map(Object.entries(clock_windows).map(([entity_id, ranges]) =>
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     const check_config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
-    // each loss on a run of its own, so that a clock one loss breaks is not broken for the next
-    const outcomeOf = (loss: DisturbanceTrialOptions["loss"], phases?: MovingPickupPhases, order?: TakerOrder): LossOutcome => runClockOnBuild(check_config, windows, window_cycle_ticks, logger, {
-        ...swings,
-        factorio_states: false,
-        moving_pickup_phases: phases,
-        ...(order !== undefined && { competing_takers_order: order }),
-        disturbance_trial: { loss_limit_ticks: loss_limit?.ticks, ...options, ...options_for?.(loss), loss, window_cycle_ticks, expected_output_items },
-    }).disturbance_trial!;
     const phase_starts = [...movingPickupPhaseStarts(config)];
     const registry = createEntityRegistryFromConfig(config);
     const losses: DisturbanceTrial[] = [...disturbanceTrialsOf(registry, config.setpoint.recipe), ...excesses];
     // a build whose items spoil is tried with losses shorter than its loss limit only
     const loss_limit = lossLimitOf(registry);
+    const optionsOf = (loss: DisturbanceTrialOptions["loss"], phases?: MovingPickupPhases, order?: TakerOrder): ClockTrialOptions => ({
+        ...swings,
+        factorio_states: false,
+        moving_pickup_phases: phases,
+        ...(order !== undefined && { competing_takers_order: order }),
+        disturbance_trial: { loss_limit_ticks: loss_limit?.ticks, ...options, ...options_for?.(loss), loss, window_cycle_ticks, expected_output_items },
+    });
+    // The runs made ahead in worker threads (loss-run-pool.ts), where there are some: each is the run outcomeOf would make,
+    // so the trial below reads the same outcomes in the same order, and stops where it would. The other orders were
+    // other_orders below, set before any run of them is asked for.
+    const pool = lossRunPool();
+    const ahead = new Map<string, LossOutcome>();
+    let other_orders: readonly TakerOrder[] = [];
+    const runKey = (loss: DisturbanceTrialOptions["loss"], phases?: MovingPickupPhases, order?: TakerOrder) =>
+        `${loss.kind === "none" ? -1 : losses.indexOf(loss)}|${phases === undefined ? -1 : phase_starts.indexOf(phases)}|${order === undefined ? -1 : other_orders.indexOf(order)}`;
+    type LossRun = readonly [DisturbanceTrialOptions["loss"], MovingPickupPhases?, TakerOrder?];
+    const makeAhead = (runs: readonly LossRun[]) => {
+        const wanted = runs.filter(run => !ahead.has(runKey(...run)));
+        if (pool === null || wanted.length < 2) return;
+        const answers = pool.run(wanted.map(run => ({ config: check_config, windows: clock_windows, window_cycle_ticks, options: optionsOf(...run) })));
+        wanted.forEach((run, at) => ahead.set(runKey(...run), answers[at]));
+    };
+    // each loss on a run of its own, so that a clock one loss breaks is not broken for the next
+    const outcomeOf = (loss: DisturbanceTrialOptions["loss"], phases?: MovingPickupPhases, order?: TakerOrder): LossOutcome =>
+        ahead.get(runKey(loss, phases, order)) ?? runClockOnBuild(check_config, windows, window_cycle_ticks, logger, optionsOf(loss, phases, order)).disturbance_trial!;
+    // every run under the default order at once: a clock that gets back from everything needs them all
+    makeAhead([{ kind: "none" } as const, ...losses].flatMap((loss): LossRun[] => [[loss], ...phase_starts.map((phases): LossRun => [loss, phases])]));
     const tried = (loss: DisturbanceTrial, index: number): LossOutcome => {
         on_loss?.(loss, index, losses.length + 1);
         const canonical = outcomeOf(loss);
@@ -738,13 +758,14 @@ export function disturbanceTrialOf(
     // is checked under (`otherTakerOrdersOf`), the lane phases under the default order alone. Only a clock that gets back
     // from everything under the default order is tried so, a loss at a time and no further than its first failure: one
     // that does not already fails its verdict.
-    const other_orders = undisturbed.recovers && outcomes.length === losses.length && outcomes.every(it => it.recovers)
+    other_orders = undisturbed.recovers && outcomes.length === losses.length && outcomes.every(it => it.recovers)
         ? otherTakerOrdersOf(check_config, windows, window_cycle_ticks) : [];
     let judged = undisturbed;
     if (other_orders.length > 0) {
         const all: LossOutcome[] = [undisturbed, ...outcomes];
         const runs: DisturbanceTrialOptions["loss"][] = [{ kind: "none" }, ...losses];
         orders: for (const order of other_orders) {
+            makeAhead(runs.map((loss): LossRun => [loss, undefined, order]));
             for (let at = 0; at < all.length; at++) {
                 const outcome = outcomeOf(runs[at], undefined, order);
                 const before = all[at];
