@@ -1,34 +1,23 @@
 name: Publish sidecar mod
 
 # The sidecar mod has a version of its own (clock-generator-sidecar/info.json) and is published to the Factorio mod
-# portal when that version is not there yet. It runs when the mod's folder changes on master, and by hand
-# ("Run workflow", or `gh workflow run publish-sidecar.yml`) to try a failed upload again. A release of the clock
-# generator does not publish the mod. Nothing is published unless the unit tests, the UI build and the UI's Generate in
-# a browser of test.yml pass: among them are the tests that keep the mod's version, its changelog and the version the
-# generator asks for in step.
-# RELEASE_HOLD=true blocks uploads on push and manual dispatch, while tests remain enabled.
+# portal when that version is not there yet. Only a release or a hotfix merge publishes it, as part of release.yml:
+# - release.yml calls this workflow after its gate, and the tests of the release have passed, when the version of the mod
+#   is not on the portal;
+# - "Run workflow" (or `gh workflow run publish-sidecar.yml --ref <branch>`) tries a failed upload again. It runs the gate
+#   of release.yml (.github/scripts/release-gate.sh) on the last commit of the branch, and uploads only when that commit
+#   is a release or a hotfix merge. It does not run the tests again: the commit has passed them in its release run.
+# A merge to the folder of the mod that is not a release or a hotfix merge publishes nothing.
 on:
-  push:
-    branches:
-      - master
-    paths:
-      - clock-generator-sidecar/**
+  workflow_call:
   workflow_dispatch:
 
 jobs:
-  tests:
-    name: Tests
-    uses: ./.github/workflows/test.yml
+  publish-sidecar:
+    runs-on: ubuntu-latest
     permissions:
       contents: read
-    with:
-      generation: false
-
-  publish-sidecar:
-    # publish from master only: a dispatch from another branch would upload that branch's sidecar (#657)
-    if: vars.RELEASE_HOLD != 'true' && github.ref == 'refs/heads/master'
-    needs: tests
-    runs-on: ubuntu-latest
+      pull-requests: read
     # holds the FACTORIO_MOD_API_KEY secret, and can require approval before anything is published
     environment: mod-portal
     env:
@@ -36,15 +25,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # a call from release.yml has passed this gate already
+      - name: Gate, is this a release or a hotfix merge?
+        id: gate
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+        run: .github/scripts/release-gate.sh "$REPO" "$GITHUB_SHA" "$BRANCH"
+
       - name: Read the version of the mod
         run: echo "VERSION=$(node -p "require('./clock-generator-sidecar/info.json').version")" >> "$GITHUB_ENV"
 
       - name: Skip when the portal already has this version
         id: portal
+        if: steps.gate.outputs.release != 'false'
         run: |
-          # a portal that cannot be read is an error, not a version that is missing
-          RELEASES=$(curl -fsS "https://mods.factorio.com/api/mods/$MOD_NAME/full")
-          if echo "$RELEASES" | jq -e --arg v "$VERSION" '.releases[] | select(.version == $v)' > /dev/null; then
+          if [ "$(.github/scripts/portal-has-version.sh "$MOD_NAME" "$VERSION")" = true ]; then
             echo "$MOD_NAME $VERSION is already on the mod portal, skipping."
             echo "publish=false" >> "$GITHUB_OUTPUT"
           else

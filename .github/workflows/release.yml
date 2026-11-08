@@ -1,18 +1,27 @@
 name: Release
 
-# A release of the clock generator and its UI, and the deployment of the site. The sidecar mod has a version of its
-# own and is published by publish-sidecar.yml, only when the mod changes.
+# A release of the clock generator and its UI, the deployment of the site and the publishing of the sidecar mod.
+#
+# Only two merges release and deploy:
+# - a release pull request: into master, from a branch release/<slug>, titled `release: ...`;
+# - a hotfix pull request: into a branch hotfix/<version> (made from the latest tag), from any branch of this
+#   repository, titled `hotfix: ...`.
+# Every other push releases nothing. A push to master is still deployed as a preview, with an address of its own in the
+# run's summary, to try what is on master before it is released.
+#
+# The workflow runs on every push to master and to hotfix/**. After the tests, the gate (.github/scripts/release-gate.sh)
+# looks up the pull request behind the pushed commit, and the rest of the `release` job runs only for a release or a
+# hotfix merge. Opening a pull request, naming a branch or editing a title releases nothing: only a merge makes the push.
+# On a release or a hotfix merge:
+# - A generator version with no tag gets a tag at the pushed commit and a GitHub release from CHANGELOG.md. The site
+#   players use is deployed from that tag, after the release exists.
+# - A sidecar version that the mod portal does not have is published by publish-sidecar.yml, which this workflow calls.
+# - A merge where neither version is new fails: a release that releases nothing is a mistake.
 #
 # Vercel deploys nothing by itself, not master and not a pull request (vercel.json switches that off); this
-# workflow does:
-# - The site players use is deployed when a version is released, from the commit of its tag, after its GitHub
-#   release exists. A merge that does not change the version releases nothing and does not reach players.
-# - Every merge to master is deployed as a preview, with an address of its own in the run's summary, to try what is
-#   on master before it is released.
-# "Run workflow" (or `gh workflow run release.yml`) deploys the current version to production again, for a run that
-# failed part way.
-# RELEASE_HOLD=true pauses GitHub releases and production deployment, including manual dispatches.
-# Tests and master preview deployments remain enabled during an unreleased merge.
+# workflow does.
+# "Run workflow" (or `gh workflow run release.yml`) is for recovery: it deploys the latest released tag to production
+# again, for a run that failed part way. It never makes a tag or a release.
 # Nothing is released or deployed unless the tests pass: the unit and generation tests, the UI build and the UI's
 # Generate in a browser of test.yml.
 #
@@ -22,6 +31,7 @@ on:
   push:
     branches:
       - master
+      - hotfix/**
   workflow_dispatch:
 
 # one at a time, so two merges close together cannot release or deploy out of order
@@ -43,20 +53,31 @@ jobs:
       generation: true
 
   release:
-    # publish from master only: a dispatch from another branch would release that branch's version (#657)
-    if: vars.RELEASE_HOLD != 'true' && github.ref == 'refs/heads/master'
     needs: tests
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: read
     outputs:
       version: ${{ steps.version.outputs.version }}
       released: ${{ steps.release.outputs.released }}
+      sidecar: ${{ steps.new.outputs.sidecar }}
     steps:
       - uses: actions/checkout@v4
 
+      # a run by hand has no merge behind it: it releases nothing
+      - name: Gate, is this a release or a hotfix merge?
+        id: gate
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+        run: .github/scripts/release-gate.sh "$REPO" "$GITHUB_SHA" "$BRANCH"
+
       - name: Check versions are in sync
         id: version
+        if: steps.gate.outputs.release == 'true'
         run: |
           GENERATOR=$(node -p "require('./clock-generator/package.json').version")
           UI=$(node -p "require('./clock-generator-ui/package.json').version")
@@ -66,17 +87,37 @@ jobs:
           fi
           echo "version=$GENERATOR" >> "$GITHUB_OUTPUT"
 
-      - name: Create GitHub Release
-        id: release
+      - name: Find what is new
+        id: new
+        if: steps.gate.outputs.release == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
+          SIDECAR=$(node -p "require('./clock-generator-sidecar/info.json').version")
+          GENERATOR_NEW=true
           if gh release view "v$VERSION" > /dev/null 2>&1; then
-            echo "v$VERSION is already released, skipping."
-            echo "released=false" >> "$GITHUB_OUTPUT"
-            exit 0
+            GENERATOR_NEW=false
           fi
+          SIDECAR_NEW=true
+          if [ "$(.github/scripts/portal-has-version.sh clock-generator-sidecar "$SIDECAR")" = true ]; then
+            SIDECAR_NEW=false
+          fi
+          if [ "$GENERATOR_NEW" = false ] && [ "$SIDECAR_NEW" = false ]; then
+            echo "::error::Nothing to release: clock-generator $VERSION is already released as v$VERSION, and clock-generator-sidecar $SIDECAR is already on the mod portal. Bump a version in the pull request."
+            exit 1
+          fi
+          echo "generator=$GENERATOR_NEW" >> "$GITHUB_OUTPUT"
+          echo "sidecar=$SIDECAR_NEW" >> "$GITHUB_OUTPUT"
+          echo "New: clock-generator $VERSION $GENERATOR_NEW, clock-generator-sidecar $SIDECAR $SIDECAR_NEW"
+
+      - name: Create GitHub Release
+        id: release
+        if: steps.new.outputs.generator == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
           NOTES=$(awk -v version="$VERSION" 'index($0, "## [" version "]") == 1 { found = 1; next } found && /^## \[/ { exit } found { print }' CHANGELOG.md)
           if [ -z "$NOTES" ]; then
             echo "::error::CHANGELOG.md has no section for $VERSION"
@@ -86,44 +127,72 @@ jobs:
           echo "released=true" >> "$GITHUB_OUTPUT"
 
   production:
-    # The site players use: only a released version, and only after its release exists
+    # The site players use: the tag of a release or a hotfix, after its release exists; or, on a run by hand, the latest
+    # released tag again
     name: Deploy to production
     needs: release
-    if: vars.RELEASE_HOLD != 'true' && github.ref == 'refs/heads/master' && (needs.release.outputs.released == 'true' || github.event_name == 'workflow_dispatch')
+    if: needs.release.outputs.released == 'true' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master')
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERSION: ${{ needs.release.outputs.version }}
     steps:
       - name: Check the Vercel secrets
         run: |
           if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
-            echo "::error::VERCEL_TOKEN, VERCEL_ORG_ID and VERCEL_PROJECT_ID have to be set as secrets to deploy v$VERSION. Set them, then run this workflow by hand."
+            echo "::error::VERCEL_TOKEN, VERCEL_ORG_ID and VERCEL_PROJECT_ID have to be set as secrets to deploy to production. Set them, then run this workflow by hand."
             exit 1
           fi
 
-      # the commit of the version, which is not the last commit of master when this is run by hand
+      - name: Find the tag to deploy
+        id: tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASED_VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            TAG=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)
+          else
+            TAG="v$RELEASED_VERSION"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      # the commit of the tag, which is not the commit of the push when this is run by hand
       - uses: actions/checkout@v4
         with:
-          ref: v${{ needs.release.outputs.version }}
+          ref: ${{ steps.tag.outputs.tag }}
 
       - uses: actions/setup-node@v4
         with:
           node-version: 24
 
       - name: Build and deploy
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
         run: |
           npm install --global vercel@61.1.0
           vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
           vercel build --prod --token="$VERCEL_TOKEN"
           URL=$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")
-          echo "Deployed v$VERSION to production: $URL" >> "$GITHUB_STEP_SUMMARY"
+          echo "Deployed $TAG to production: $URL" >> "$GITHUB_STEP_SUMMARY"
+
+  sidecar:
+    # The sidecar mod, only when its version is new on the mod portal
+    name: Publish the sidecar
+    needs: release
+    if: needs.release.outputs.sidecar == 'true'
+    uses: ./.github/workflows/publish-sidecar.yml
+    permissions:
+      contents: read
+      pull-requests: read
+    secrets: inherit
 
   preview:
     # What is on master, released or not, at an address of its own
     name: Deploy master as a preview
     needs: tests
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
