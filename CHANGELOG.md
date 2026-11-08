@@ -11,6 +11,9 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ## [Unreleased]
 
+### Changed
+- generation: clocks with observed windows are found faster on large builds
+
 ## [0.28.1] - 2026-11-07
 
 ### Fixed

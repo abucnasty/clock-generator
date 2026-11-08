@@ -50,6 +50,13 @@ interface Search<C, Q extends QuickTrial, R> {
     tieBreak: (a: Tried<C, Q>, b: Tried<C, Q>) => number;
     /** The confirming trial (see `confirm`); null when the candidate does not pass it */
     confirm: (pick: Tried<C, Q>) => R | null;
+    /**
+     * True when `tieBreak` orders candidates of the same margin as the list does and the rows do not wrap: the candidates
+     * are then tried in the list's order and the search stops at the first pick confirmed, which is the one the whole
+     * search confirms first (see `search`). Only for a search whose untried candidates nobody reads: `tried` then ends
+     * at the pick.
+     */
+    in_order?: boolean;
 }
 
 interface SearchResult<C, Q extends QuickTrial, R> {
@@ -57,7 +64,7 @@ interface SearchResult<C, Q extends QuickTrial, R> {
     picked: R | null;
     /** The candidate that was picked, when one was */
     pick: Tried<C, Q> | null;
-    /** Every candidate with its quick trial, in the order of the candidate list */
+    /** Every candidate with its quick trial, in the order of the candidate list; up to the pick only, for a search `in_order` */
     tried: Tried<C, Q>[];
 }
 
@@ -96,12 +103,36 @@ function marginOf<C, Q extends QuickTrial>(tried: readonly Tried<C, Q>[], index:
 const MARGIN_WANTED = 1;
 
 export function search<C, Q extends QuickTrial, R>(it: Search<C, Q, R>): SearchResult<C, Q, R> {
-    const tried: Tried<C, Q>[] = it.candidates.map((candidate, index) => ({ candidate, index, quick: it.quick(candidate, index) }));
+    const tried: Tried<C, Q>[] = [];
+    const tryAt = (index: number) => tried[index] ??= { candidate: it.candidates[index], index, quick: it.quick(it.candidates[index], index) };
+    const confirmed = new Map<number, R | null>();
+    const confirmOnce = (pick: Tried<C, Q>) => {
+        if (!confirmed.has(pick.index)) confirmed.set(pick.index, it.confirm(pick));
+        return confirmed.get(pick.index)!;
+    };
+    if (it.in_order === true && it.wraps !== true && MARGIN_WANTED === 1) {
+        // A candidate has the margin wanted once it and its neighbours on both sides of its row pass. Those come first in
+        // the ranking below, in the list's order, so the first found here is the first the ranking confirms, the next found
+        // the next; one confirmed ends the search with the same pick as trying every candidate first. Where none is
+        // confirmed, the rest are tried and ranked below, and the confirmations made here are not made again.
+        for (let index = 0; index < it.candidates.length; index++) {
+            const after = tryAt(index);
+            if (index < 2 || confirmed.size >= MAX_CONFIRMATIONS) continue;
+            const before = tried[index - 2], middle = tried[index - 1];
+            if (!before.quick.holds || !middle.quick.holds || !after.quick.holds || !(it.eligible?.(middle.candidate) ?? true)
+                || !it.neighbours(before.candidate, middle.candidate) || !it.neighbours(after.candidate, middle.candidate)) continue;
+            const result = confirmOnce(middle);
+            if (result !== null) {
+                return { picked: result, pick: middle, tried };
+            }
+        }
+    }
+    it.candidates.forEach((_, index) => tryAt(index));
     const rank = (t: Tried<C, Q>) => Math.min(MARGIN_WANTED, marginOf(tried, t.index, it.neighbours, it.wraps ?? false));
     const ranked = tried.filter(t => t.quick.holds && (it.eligible?.(t.candidate) ?? true))
         .sort((a, b) => rank(b) - rank(a) || it.tieBreak(a, b));
     for (const pick of ranked.slice(0, MAX_CONFIRMATIONS)) {
-        const result = it.confirm(pick);
+        const result = confirmOnce(pick);
         if (result !== null) {
             return { picked: result, pick, tried };
         }
