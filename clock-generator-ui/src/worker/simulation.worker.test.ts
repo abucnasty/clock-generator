@@ -140,9 +140,12 @@ it('keeps an out-of-order recycler machine target, byproduct belt, and bend capt
 });
 
 describe('repeated units: the real engine separates Check and generation recovery, the recomputed conversion and query failure', () => {
-    /** Eight gear assemblers between the same two belts, eight repeated units set as half a copy */
+    /**
+     * Eight gear assemblers between the same two belts, eight repeated units set as half a copy; as 4 copies they take 7
+     * plates a second from the plate lane they share, of the 7.5 it gets
+     */
     const source: Config = {
-        setpoint: { recipe: 'iron-gear-wheel', items_per_second: 4, copies: 0.5 },
+        setpoint: { recipe: 'iron-gear-wheel', items_per_second: 3.5, copies: 0.5 },
         machines: Array.from({ length: 8 }, (_, i) => ({ id: i + 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 })),
         inserters: Array.from({ length: 8 }, (_, i) => [
             { id: 2 * i + 1, source: { type: 'belt' as const, id: 1 }, sink: { type: 'machine' as const, id: i + 1 }, stack_size: 1, filters: ['iron-plate'] },
@@ -362,18 +365,21 @@ describe('live advice on a gear assembler, which does not block', () => {
     it.each([
         { name: 'a belt pickup of untested timing', config: gears({ stack_size: 2 }), field: 'pickupNotTested', source: 'calibration',
             warning: pickupNotTested },
-        // 100 copies of a gear assembler, each taking 1.5 iron plates a second, if they shared a lane that carries 120
-        { name: 'a lane the copies ask too much of', config: gears({ items_per_second: 75, copies: 100 }),
-            field: 'laneSharedByCopies', source: 'lanes',
-            warning: 'If the 100 copies share lane 1 of belt 1, they take 1.25 times what it carries (100 × 1.5 = 150 a second, of 120). '
-                + 'The configuration cannot say yet whether its copies share these lanes, so this is only a warning: a build whose copies have '
-                + 'belts of their own is not affected.' },
     ] as const)('warns live of $name, and Check goes on', async ({ config, field, source, warning }) => {
         const live = await coverageOf(config);
         expect(live).toEqual({ ...nothingLive, [field]: warning });
         expect(listed(live, config.machines).map(({ source, severity, blocksGeneration, text }) => ({ source, severity, blocksGeneration, text })))
             .toEqual([{ source, severity: 'warning', blocksGeneration: false, text: warning }]);
         expect(await send({ type: 'validate', requestId: 61, config })).toMatchObject({ type: 'validated' });
+    });
+
+    it('refuses at Check the copies taking more from a lane they share than it gets, and warns of nothing live', async () => {
+        // 100 copies of a gear assembler, each taking 1.5 iron plates a second, from a lane they share that gets 120
+        const config = gears({ items_per_second: 75, copies: 100 });
+        expect(await coverageOf(config)).toEqual(nothingLive);
+        expect(await send({ type: 'validate', requestId: 62, config })).toMatchObject({ type: 'validation-failed',
+            message: expect.stringContaining('Lane 1 of belt 1 is shared by the 100 copies. Together they take 100 × 1.5 = 150 a second from it, '
+                + 'and its supply rate is 120 a second. If each copy has a lane of its own, set the lane to one per copy. Else use fewer copies.') });
     });
 
     it('says nothing of a pickup from 4-item belt stacks, and notes a drop the Sidecar marked as side-loading', async () => {

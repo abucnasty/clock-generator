@@ -5,10 +5,13 @@ import { planRepeatedUnitConversion } from './repeated-unit-conversion';
 import { validateConfig } from '../crafting/plan/validate-config';
 import { FeasibilityError } from './errors';
 
-/** Actual free-lane gear build: four total items/s requires the multiplied Copies after extraction. */
+/**
+ * Actual free-lane gear build: 3.5 total items/s requires the multiplied Copies after extraction. The copies take 7 plates
+ * a second from the plate lane they share, of the 7.5 it gets.
+ */
 function eightUnits(): Config {
     return {
-        setpoint: { recipe: 'iron-gear-wheel', items_per_second: 4, copies: 0.5 },
+        setpoint: { recipe: 'iron-gear-wheel', items_per_second: 3.5, copies: 0.5 },
         machines: Array.from({ length: 8 }, (_, i) => ({ id: i + 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 })),
         inserters: Array.from({ length: 8 }, (_, i) => [
             { id: 2 * i + 1, source: { type: 'belt' as const, id: 1, near_lane: 1 as const }, sink: { type: 'machine' as const, id: i + 1 }, stack_size: 1, filters: ['iron-plate'] },
