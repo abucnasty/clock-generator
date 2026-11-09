@@ -9,7 +9,10 @@ name: Release
 # Every other push releases nothing. A push to master is still deployed as a preview, with an address of its own in the
 # run's summary, to try what is on master before it is released.
 #
-# The workflow runs on every push to master and to hotfix/**. After the tests, the gate (.github/scripts/release-gate.sh)
+# The workflow runs on every push to master and to hotfix/**. First the `lookup` job asks whether a pull request of this
+# repository already passed test.yml on the very tree that was pushed (.github/scripts/tested-tree.sh; the `changes` job
+# of test.yml records the tree of each pull request as an artifact, and the artifact lasts 14 days). If so, the `tests` job
+# is skipped and the run goes on with the gate. Else the tests run, as before. After the tests, the gate (.github/scripts/release-gate.sh)
 # looks up the pull request behind the pushed commit, and the rest of the `release` job runs only for a release or a
 # hotfix merge. Opening a pull request, naming a branch or editing a title releases nothing: only a merge makes the push.
 # On a release or a hotfix merge:
@@ -23,7 +26,8 @@ name: Release
 # "Run workflow" (or `gh workflow run release.yml`) is for recovery: it deploys the latest released tag to production
 # again, for a run that failed part way. It never makes a tag or a release.
 # Nothing is released or deployed unless the tests pass: the unit and generation tests, the UI build and the UI's
-# Generate in a browser of test.yml.
+# Generate in a browser of test.yml. Those tests passed either in this run or, for the same tree, in a pull request. A run by
+# hand looks nothing up: its tests always run.
 #
 # The deployments need three secrets: VERCEL_TOKEN (a token of the Vercel account), VERCEL_ORG_ID and
 # VERCEL_PROJECT_ID (both in .vercel/repo.json or .vercel/project.json after `vercel link`). See "Versioning" in the README.
@@ -44,8 +48,34 @@ env:
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
 jobs:
+  lookup:
+    # Did a pull request of this repository already pass test.yml on this tree? Seconds, not minutes. When it cannot tell,
+    # for example when GitHub cannot be read, `tested` stays empty and the tests run: a failed lookup costs time only.
+    name: Tested tree
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      tested: ${{ steps.tested.outputs.tested }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # a run by hand has no pushed tree behind it: it keeps its tests
+      - name: Was this tree tested in a pull request?
+        id: tested
+        if: github.event_name == 'push'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: .github/scripts/tested-tree.sh "$REPO" "$GITHUB_SHA"
+
   tests:
     name: Tests
+    needs: lookup
+    # run unless the tree is tested; also when the lookup job itself failed or was skipped, which leaves `tested` empty
+    if: ${{ !cancelled() && needs.lookup.outputs.tested != 'true' }}
     uses: ./.github/workflows/test.yml
     permissions:
       contents: read
@@ -53,7 +83,10 @@ jobs:
       generation: true
 
   release:
-    needs: tests
+    # the tests passed in this run, or were skipped because a pull request passed them on this tree; not when they
+    # failed or were cancelled (a skipped `tests` would skip this job without the explicit condition)
+    needs: [lookup, tests]
+    if: ${{ !cancelled() && (needs.tests.result == 'success' || (needs.tests.result == 'skipped' && needs.lookup.outputs.tested == 'true')) }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -191,8 +224,8 @@ jobs:
   preview:
     # What is on master, released or not, at an address of its own
     name: Deploy master as a preview
-    needs: tests
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: [lookup, tests]
+    if: ${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/master' && (needs.tests.result == 'success' || (needs.tests.result == 'skipped' && needs.lookup.outputs.tested == 'true')) }}
     runs-on: ubuntu-latest
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}

@@ -7,13 +7,40 @@ id: site-and-sidecar-publishing
 
 Two workflows send the clock generator to its users. `release.yml` releases the clock generator and deploys the site
 to Vercel. It also calls `publish-sidecar.yml`, which uploads the sidecar to the Factorio mod portal. `release.yml`
-starts the tests of `test.yml` first. If a test is not correct, the workflow does not release, deploy or upload.
+starts the tests of `test.yml` first, unless a pull request already passed them on the same files (see
+[Tests that a pull request already passed](#tests-that-a-pull-request-already-passed)). If a test is not correct, the
+workflow does not release, deploy or upload.
 
 ## A push to master
 
 Each push to `master` starts `release.yml`. Its `preview` job deploys `master` as a preview deployment, at a different
 address. The summary of the workflow run shows the address. A preview deployment does not change the site of the
 users. The UAT of a release uses this address.
+
+## Tests that a pull request already passed
+
+The `tests` job of `release.yml` takes about 6.5 minutes, and the `test.yml` run of the pull request usually tested the
+same files. To save the time, each run of `test.yml` on a pull request uploads a small artifact. Its name is
+`tested-tree-<tree>`, where `<tree>` is the Git tree of the merge commit that the run tested. The artifact stays for 14
+days. The `lookup` job of `release.yml` starts first. It runs `.github/scripts/tested-tree.sh`, which gets the tree of the
+pushed commit and looks for an artifact with that name. The script accepts the artifact only if all these are true:
+
+- The artifact has not expired.
+- Its workflow run is `.github/workflows/test.yml`, on the event `pull_request`, and it ended with success.
+- The head repository of the run is this repository. A pull request from a fork can change the workflow and upload a
+  false artifact, so the script does not trust it.
+
+A run that skipped the generation or record tests because the pull request changed documentation only is accepted. The
+pull request passed under that rule. The script shows `tested` or `not tested` with the reason in the summary of the
+`lookup` job.
+
+If the tree is tested, the `tests` job does not start. The `release` and `preview` jobs start when the tests passed, or
+when they did not start because the tree is tested. They do not start when the tests failed or were cancelled. If the
+script finds no artifact, or cannot read GitHub, the tests run as before.
+
+The tree of a squash merge is the same as the tree of the merge commit of the pull request only when `master` did not
+change after that run. If `master` changed, bring the branch up to date, wait for the new run of `test.yml`, and then
+merge. A start of `release.yml` by hand does no lookup, and its tests always run.
 
 ## Which merges release
 

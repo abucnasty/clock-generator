@@ -285,6 +285,9 @@ only when that pull request is merged, from a branch of this repository, and is 
 | release | `master` | `release/<slug>` | `release: <version>, ...` |
 | hotfix | `hotfix/<version>` | any branch, normally `fix/<slug>` | `hotfix: <version>, ...` |
 
+A push whose tree a pull request already tested skips the re-test (`.github/scripts/tested-tree.sh`), so merge a pull
+request that is up to date with `master`.
+
 On the merge, `release.yml` tags and releases a generator version that has no tag, deploys that tag to production, and
 publishes a sidecar version that the mod portal does not have (`publish-sidecar.yml`). A release or hotfix merge where
 neither version is new fails.
