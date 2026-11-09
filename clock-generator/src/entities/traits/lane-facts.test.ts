@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { Config, ConfigSchema } from "../../config/schema";
 import { beltLanesOfFacts, supplyOfLaneEnd } from "./lane";
-import { everyInputLaneIsDeadEnd, isDeadEnd, laneFactsOf } from "./lane-facts";
+import { fraction } from "../../data-types/fraction";
+import { ratioOf } from "./ratio";
+import { decidedBySharedLaneModel, everyInputLaneIsDeadEnd, isDeadEnd, laneFactsOf, sharedLaneModelEnds } from "./lane-facts";
 
 type Parts = Partial<Pick<Config, "machines" | "inserters" | "belts" | "chests" | "overrides">>;
 
@@ -167,5 +169,19 @@ describe("the lane traits of the facts", () => {
     it("name a dead end backed up and an outlet moving", () => {
         expect(supplyOfLaneEnd({ kind: "dead_end" })).toBe("backed_up");
         expect(supplyOfLaneEnd({ kind: "outlet", outlet_rate: { numerator: 1, denominator: 1 } })).toBe("moving");
+    });
+});
+
+describe("the lanes the shared-lane model decides", () => {
+    it("runs a dead end as it is and an unknown end as a dead end, and no outlet", () => {
+        expect(sharedLaneModelEnds({ kind: "dead_end" })).toEqual([{ kind: "dead_end" }]);
+        expect(sharedLaneModelEnds({ kind: "unknown" })).toEqual([{ kind: "dead_end" }]);
+        expect(sharedLaneModelEnds({ kind: "outlet", outlet_rate: ratioOf(fraction(120)) })).toEqual([]);
+    });
+
+    it("decides a dead end alone: an unknown end is also checked as a free outlet by the run of one copy", () => {
+        expect(decidedBySharedLaneModel({ kind: "dead_end" })).toBe(true);
+        expect(decidedBySharedLaneModel({ kind: "unknown" })).toBe(false);
+        expect(decidedBySharedLaneModel({ kind: "outlet", outlet_rate: ratioOf(fraction(120)) })).toBe(false);
     });
 });

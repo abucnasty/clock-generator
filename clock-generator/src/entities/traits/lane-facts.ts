@@ -39,6 +39,24 @@ export function isDeadEnd(facts: LaneFacts): boolean {
     return facts.lane_end.kind === "dead_end";
 }
 
+/**
+ * The ends under which the shared-lane model (crafting/shared-lane-verdict.ts) runs a lane with every copy's takers on
+ * it; the one place that says which lanes it decides. A dead end is run as it is, and an unknown end as a dead end. An
+ * outlet is not run: on a flowing lane the model is harsher than the game (three copies on ore lanes into loaders lose
+ * swings in the model under clocks that hold in the game), so a lane with an outlet keeps the check of one copy and the
+ * guard of the windows by arithmetic (crafting/plan/shared-lane-guard.ts). The run of one copy reads an unknown end as
+ * a free outlet, so a lane of unknown end is checked under both ends.
+ */
+export function sharedLaneModelEnds(lane_end: LaneEnd): readonly LaneEnd[] {
+    return lane_end.kind === "outlet" ? [] : [{ kind: "dead_end" }];
+}
+
+/** Whether the shared-lane model checks the lane under every end it can have, so that nothing else has to */
+export function decidedBySharedLaneModel(lane_end: LaneEnd): boolean {
+    const ends = sharedLaneModelEnds(lane_end).map(end => end.kind);
+    return lane_end.kind === "unknown" ? ends.includes("dead_end") && ends.includes("outlet") : ends.includes(lane_end.kind);
+}
+
 /** Whether the config's lanes all end in a dead end: the one place the config's switch is read */
 function configDeadEnds(config: Pick<Config, "overrides">): boolean {
     return config.overrides?.backed_up_belts === true;
