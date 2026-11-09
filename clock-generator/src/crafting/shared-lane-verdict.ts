@@ -133,7 +133,7 @@ function rowAxisOf(config: Config): FlowDirection {
 interface LaneWindow { start: number; end: number }
 
 /** The enable windows of a lane's takers as the lane sees them: theirs joined where they touch or overlap, by when they open */
-export function laneWindowsOf(ranges: readonly { start: number; end: number }[], window_cycle_ticks: number): LaneWindow[] {
+function laneWindowsOf(ranges: readonly { start: number; end: number }[], window_cycle_ticks: number): LaneWindow[] {
     const joined: LaneWindow[] = [];
     for (const range of [...ranges].sort((a, b) => a.start - b.start)) {
         const last = joined[joined.length - 1];
@@ -206,7 +206,7 @@ const counted = (value: number) => value.toLocaleString("en-US");
  * the entry of the lane gets too few. Its inserter 3 takes 2,240 in 50 window cycles, and 3,360 when no other copy takes
  * from the lane." The game's names of items have no plural.
  */
-export function describeSharedLaneLoss(loss: Omit<SharedLaneLoss, "text">): string {
+function describeSharedLaneLoss(loss: Omit<SharedLaneLoss, "text">): string {
     const end = loss.lane_end === "dead_end" ? "ends in a dead end" : "has an unknown end, which is checked as a dead end";
     const item = FactorioDataService.isAvailable() ? FactorioDataService.itemNameInSentence(loss.item) : loss.item;
     return `Lane ${loss.lane} of belt ${loss.belt_id} ${end}, and ${loss.copies} copies take ${item} from it. `
