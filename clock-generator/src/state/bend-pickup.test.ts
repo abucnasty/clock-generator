@@ -6,7 +6,7 @@ import {ConfigSchema} from "../config/schema";
 import {SimulationContext} from "../crafting/sequence/simulation-context";
 import {bindHandPorts} from "../simulation/components/hand-ports";
 import {BeltSpeed} from "../entities/belt";
-import {BackedUpPickupLane} from "./backed-up-pickup-lane";
+import {BackpressurePickupLane} from "./backpressure-pickup-lane";
 import {BeltPickupLane} from "./belt-pickup-lane";
 import {EntityState} from "./entity-state";
 
@@ -41,7 +41,7 @@ test("production curved pickup matches all 170 native hands from observed full s
         const state = context.inserters[0].inserter_state;
         const source = context.state_registry.getStateByEntityIdOrThrow(state.inserter.source.entity_id);
         if (!EntityState.isBelt(source)) throw Error("Expected belt source");
-        const lanes = clip.stock.map((stock, index) => new BackedUpPickupLane(BeltSpeed.TURBO_TRANSPORT_BELT,
+        const lanes = clip.stock.map((stock, index) => new BackpressurePickupLane(BeltSpeed.TURBO_TRANSPORT_BELT,
             pickupLaneLength("bend-right-upstream", index + 1), 4, stock[0][0]));
         source.seedPickups(state.entity_id.id, lanes);
         const pickup = bindHandPorts({inserterState: state, sourceState: source,

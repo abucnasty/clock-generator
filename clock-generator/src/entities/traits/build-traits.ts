@@ -16,7 +16,8 @@ import { OverloadMultiplier } from "../machine/traits/overload-multiplier";
 import { drillEnergy, EnergyTrait, machineEnergy } from "./energy";
 import { HandTrait, inserterHand } from "./hand";
 import { InputLimitsTrait, machineInputLimits } from "./input-limits";
-import { beltLanes, LaneTrait } from "./lane";
+import { beltLanesOfFacts, LaneTrait } from "./lane";
+import { laneFactsOf } from "./lane-facts";
 import { LoopTrait, machineLoop } from "./loop";
 import { machineOutputBlock, OutputBlockTrait } from "./output-block";
 import { drillPlacement, machinePlacement, PlacementTarget, PlacementTrait } from "./placement";
@@ -212,13 +213,13 @@ function inserterTraitsOf(
  */
 export function buildTraits(config: Config): ConfigTraits {
     const traits: Record<string, NodeTraits> = {};
-    const supply = config.overrides?.backed_up_belts === true ? "backed_up" : "moving";
+    const lane_facts = laneFactsOf(config);
 
     const belt_lanes = new Map<number, readonly Lane[]>();
     const lane_traits = new Map<number, readonly LaneTrait[]>();
     config.belts.forEach((belt: BeltConfig) => {
         belt_lanes.set(belt.id, lanesOf(belt));
-        const lanes = beltLanes(belt, supply);
+        const lanes = beltLanesOfFacts(belt, lane_facts);
         lane_traits.set(belt.id, lanes);
         lanes.forEach(lane => {
             traits[lane.key] = { kind: "lane", entity: lane.belt, lane, spoilage: spoilageOf(lane.item === null ? [] : [lane.item]) };
