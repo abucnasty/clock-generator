@@ -53,14 +53,14 @@ body:
     id: clock
     attributes:
       label: Clock
-      description: The name of the clock you used, as the clock table shows it. Leave empty if generating did not get that far.
+      description: The name of the clock you used, as the Clock column of Compare other clocks shows it. Leave empty if generating did not get that far.
       placeholder: Moved Output Swing
 
   - type: textarea
     id: log
     attributes:
       label: Error message or log
-      description: If a check or generating failed, the error it showed. For a failed generation, the content of the Log tab under Results helps too.
+      description: If a check or generating failed, the error it showed. For a failed generation, the generator log helps too. Switch on Show generator log below in ⋮ > Developer tools, generate again, and copy the Developer logs.
       render: text
 
   - type: dropdown
@@ -83,8 +83,8 @@ body:
   - type: textarea
     id: blueprint
     attributes:
-      label: Blueprint of the build
-      description: A blueprint string of the build as it stands in the game, with the clock. Save a long string in a `.txt` file and drag the file in.
+      label: Blueprint string of the build and the clock
+      description: A blueprint string of the build as it stands in the game, with the clock installed. Save a long string in a `.txt` file and drag the file in.
 
   - type: textarea
     id: screenshots
