@@ -88,7 +88,10 @@ export interface InserterFormData {
     _forced_always?: true;
 }
 
-export interface BeltLaneFormData {
+/** The lane facts a lane of the config may state; the form keeps them as the config gives them and has no field for them yet */
+type LaneFactsFormData = Pick<Config['belts'][number]['lanes'][number], 'supply_rate' | 'lane_end' | 'sharing'>;
+
+export interface BeltLaneFormData extends LaneFactsFormData {
     ingredient: string;
     stack_size: number;
     /** Export belts only: items per second taken off this lane by consumers outside the config */
@@ -117,12 +120,12 @@ export const BELT_STRATEGIES: { value: BeltStrategyFormValue; label: string; des
 export const LANE_CONSUMPTION_TOOLTIP =
     'Items per second taken off this lane by machines outside this configuration. Inserters filling the lane are planned for this rate.';
 
-/** Switching a belt to normal drops the lane consumption rates only export belts have */
+/** Switching a belt to normal drops the lane consumption rates only export belts have, and keeps every other lane field */
 export function beltStrategyUpdate(belt: BeltFormData, strategy: BeltStrategyFormValue): Partial<BeltFormData> {
     if (strategy === 'export') {
         return { strategy };
     }
-    const lanes = belt.lanes.map((lane) => ({ ingredient: lane.ingredient, stack_size: lane.stack_size })) as BeltFormData['lanes'];
+    const lanes = belt.lanes.map(({ consumption_per_second: _c, ...lane }) => { void _c; return lane; }) as BeltFormData['lanes'];
     return { strategy: undefined, lanes };
 }
 
