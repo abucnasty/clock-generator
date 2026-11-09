@@ -60,7 +60,7 @@ export { suggestedTargetOf } from './config/suggested-target';
 export type { SuggestedTarget } from './config/suggested-target';
 export { ImportPipeline } from './config/import-pipeline';
 export type { ImportInput, ImportStep, ImportedMachine } from './config/import-pipeline';
-export { Option } from './data-types/option';
+export * as Option from 'fp-ts/Option';
 
 export {
     BeltPickupSinkError,
