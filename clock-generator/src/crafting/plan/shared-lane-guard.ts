@@ -1,6 +1,7 @@
 import { OpenRange } from "../../data-types";
 import { laneLoads } from "../../config/lane-capacity-validator";
 import { Config } from "../../config/schema";
+import { decidedBySharedLaneModel, laneFactsOf } from "../../entities/traits/lane-facts";
 
 /**
  * Where the windows made by arithmetic (batched-arithmetic.ts) are not trusted for the copies of a build: a belt the copies
@@ -15,6 +16,9 @@ import { Config } from "../../config/schema";
  * emptied (three copies 9 tiles apart on a turbo belt, 72 ticks, a window cycle of 72: the third copy made three quarters of its
  * share). The planning run's windows, longer where its takers wait for room, are kept there.
  *
+ * A belt whose lanes the shared-lane model decides (`decidedBySharedLaneModel`: a lane that ends in a dead end) is left
+ * to the model, which runs every copy's takers on the lane and judges any clock, the windows by arithmetic too.
+ *
  * Returns why the windows by arithmetic are not used, or null where nothing of this holds.
  */
 export function sharedLaneShortened(config: Config, made: ReadonlyMap<string, readonly OpenRange[]>,
@@ -24,7 +28,9 @@ export function sharedLaneShortened(config: Config, made: ReadonlyMap<string, re
     const open = (windows: ReadonlyMap<string, readonly OpenRange[]>, id: string) =>
         (windows.get(id) ?? []).reduce((ticks, range) => ticks + range.end_inclusive - range.start_inclusive + 1, 0);
     // what the copies take from each belt, over every lane the takes can use, against what those lanes carry
-    const takes = laneLoads(config).filter(load => load.kind === "take");
+    const facts = laneFactsOf(config);
+    const takes = laneLoads(config).filter(load => load.kind === "take"
+        && !load.lanes.every(lane => decidedBySharedLaneModel(facts.of(load.belt_id, lane as 1 | 2).lane_end)));
     for (const belt_id of new Set(takes.map(load => load.belt_id))) {
         const all = takes.filter(load => load.belt_id === belt_id).reduce((widest, load) => load.lanes.length > widest.lanes.length ? load : widest);
         const spare = all.capacity_per_second.subtract(all.items_per_second.multiply(copies));

@@ -28,6 +28,15 @@ describe("windows by arithmetic on a belt the copies share", () => {
         expect(sharedLaneShortened(copiesOf(config, 1), made, planned)).toBeNull();
     });
 
+    it("leaves a belt whose lanes end in a dead end to the shared-lane model, and keeps one whose end is unknown", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK);
+        const ended = (kind: "dead_end" | "unknown"): Config => ({ ...config, belts: config.belts.map(belt => belt.id !== 1 ? belt
+            : { ...belt, lanes: belt.lanes.map(lane => ({ ...lane, lane_end: { kind } })) as typeof belt.lanes }) });
+        expect(sharedLaneShortened(ended("dead_end"), made, planned)).toBeNull();
+        expect(sharedLaneShortened(ended("unknown"), made, planned)).toBe(
+            "the 3 copies take 160.00 a second from belt 1, of 240.00, and inserter:1, inserter:2 would be open for less than the unclocked run has them");
+    });
+
     it("leaves takers the arithmetic opens for as long as the planning run", async () => {
         const config = await loadConfigFromFile(ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK);
         const as_long = windows({ "inserter:1": [[23, 30], [47, 54]], "inserter:2": [[23, 30], [47, 54]] });
