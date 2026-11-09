@@ -19,7 +19,7 @@ describe('installSteps', () => {
         expect(installSteps(input).map(it => it.id)).toEqual(order);
     });
 
-    it.each([false, true])('needs no clock when no inserter or drill is on the clock (each Always on, Never on, or with nothing to wait for): one step, book %s', book => {
+    it.each([false, true])('needs no clock when no inserter or drill is on the clock (each Always on, or with nothing to wait for): one step, book %s', book => {
         expect(installSteps({ book, wiring: [], drills: [] })).toEqual([{ id: 'none', ...INSTALL_COPY.none }]);
     });
 
@@ -44,10 +44,9 @@ describe('installSteps', () => {
             'the Clock lock and every combinator described "Part of the clock"',
             'The combinator\'s description names the same inserters; this list has all of it.',
         ]],
-        ['says what an inserter outside the list does, true for Always on, Never on and nothing to wait for, and how to undo an older clock', plain, 'others', [
+        ['says what an inserter outside the list does, true for Always on and nothing to wait for, and how to undo an older clock', plain, 'others', [
             'gets no combinator',
             'One set to Always on, or with nothing to wait for, runs all the time: do not wire it.',
-            'One set to Never on is never switched on by the clock: keep it off in the game yourself.',
             'remove its wire, or untick Enable if',
         ]],
         ['says the lock is off', plain, 'lock', ['It is off']],
@@ -58,7 +57,7 @@ describe('installSteps', () => {
 
     it.each<[string, Input, RegExp]>([
         ['anything of 500 bytes, as the list has all of the description', plain, /500 bytes/],
-        ['that an inserter not in the list runs all the time, which is not true of one set to Never on', plain, /not in the list runs all the time/],
+        ['that an inserter not in the list runs all the time', plain, /not in the list runs all the time/],
         ['anything of drills when the only drill is always on, as it has no combinator', plain, /drill/i],
         ['what is not confirmed: carrying the wire along power poles', { ...withDrill, book: true }, /power pole/i],
     ])('does not state %s', (_, input, claim) => {

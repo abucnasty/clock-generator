@@ -58,7 +58,6 @@ describe('buildEnableControlOverride', () => {
         { why: 'no rule for AUTO', draft: enableControlDraftOf(), saved: undefined },
         { why: 'no rule for a stored AUTO rule', draft: enableControlDraftOf({ mode: 'AUTO' }), saved: undefined },
         { why: 'only the mode for ALWAYS', draft: { ...clockedDraft, mode: 'ALWAYS' }, saved: { mode: 'ALWAYS' } },
-        { why: 'only the mode for NEVER', draft: { ...conditionalDraft, mode: 'NEVER' }, saved: { mode: 'NEVER' } },
         { why: 'a stored CLOCKED rule as it is', draft: clockedDraft, saved: clocked },
         { why: 'a CLOCKED window of one tick, leaving out one that ends before it starts',
             draft: { ...clockedDraft, ranges: [{ start: '0', end: '10' }, { start: '5', end: '5' }, { start: '9', end: '3' }] },
@@ -113,7 +112,7 @@ describe('enableControlOverrideChanged', () => {
         { why: 'a Save of no rule over none', saved: undefined, stored: undefined, changed: false },
         { why: 'a Save of no rule over a stored AUTO rule', saved: undefined, stored: { mode: 'AUTO' }, changed: false },
         { why: 'a Save of a CLOCKED rule as the form built it', saved: buildEnableControlOverride(clockedDraft), stored: clocked, changed: false },
-        { why: 'another rule', saved: { mode: 'NEVER' }, stored: { mode: 'ALWAYS' }, changed: true },
+        { why: 'another rule', saved: clocked, stored: { mode: 'ALWAYS' }, changed: true },
         { why: 'Clear Override on a stored rule', saved: undefined, stored: { mode: 'ALWAYS' }, changed: true },
         { why: 'a rule where there was none', saved: { mode: 'ALWAYS' }, stored: undefined, changed: true },
     ])('is $changed for $why', ({ saved, stored, changed }) => {

@@ -42,11 +42,10 @@ const said = (condition: Condition) => ruleSentenceOf(conditional(one(condition)
 const range = { start: 12, end: 20 };
 
 describe('ruleSentenceOf', () => {
-    it('says Auto, Always on and Never on in their own words', () => {
+    it('says Auto and Always on in their own words', () => {
         expect(ruleSentenceOf(undefined, ctx)).toBe(RULE_COPY.auto);
         expect(ruleSentenceOf({ mode: 'AUTO' }, ctx)).toBe(RULE_COPY.auto);
         expect(ruleSentenceOf({ mode: 'ALWAYS' }, ctx)).toBe(RULE_COPY.always);
-        expect(ruleSentenceOf({ mode: 'NEVER' }, ctx)).toBe(RULE_COPY.never);
     });
 
     it.each<[string, EnableControlOverride, Partial<Parameters<typeof ruleSentenceOf>[1]>, string]>([
@@ -117,7 +116,6 @@ describe('blueprintNoteOf', () => {
     it.each([
         ['AUTO', 'The generator finds this inserter\'s enable windows, and the blueprint switches it on in them.', 'The generator finds this mining drill\'s enable windows, and the blueprint switches it on in them.'],
         ['ALWAYS', 'Not wired to the clock: no combinator.', 'Not wired to the clock: no combinator.'],
-        ['NEVER', 'The simulator keeps it off. The blueprint has no combinator for it, so keep it off in the game yourself.', 'The simulator keeps it off. The blueprint has no combinator for it, so keep it off in the game yourself.'],
         ['CLOCKED', 'These ticks are not copied into the blueprint. The simulator switches the inserter on in them while it plans the clock; the blueprint then switches it on in the ticks it moved items, which can be fewer.', 'These ticks are not copied into the blueprint. The simulator switches the mining drill on in them while it plans the clock; the blueprint then switches it on in the ticks it moved items, which can be fewer.'],
         ['CONDITIONAL', 'The blueprint holds no circuit condition from this rule. The simulator follows the rule while it plans the clock; the blueprint then switches the inserter on in the ticks it moved items.', 'The blueprint holds no circuit condition from this rule. The simulator follows the rule while it plans the clock; the blueprint then switches the mining drill on in the ticks it moved items.'],
     ] as const)('says what of a %s rule reaches the blueprint', (mode, inserter, drill) => {

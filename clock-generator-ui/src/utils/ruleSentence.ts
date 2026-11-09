@@ -28,7 +28,6 @@ export const RULE_COPY = {
     blueprintLabel: 'In the blueprint',
     auto: 'Auto: the generator decides when it is on.',
     always: 'On all the time.',
-    never: 'Never on.',
     noWindows: 'No enable windows yet.',
     noWindowsTyped: 'No enable windows yet: enter a start and an end tick.',
     leftOut: (numbers: number[]) =>
@@ -39,8 +38,6 @@ export const RULE_COPY = {
         [EnableControlMode.AUTO]: (entity: string) =>
             `The generator finds this ${entity}'s enable windows, and the blueprint switches it on in them.`,
         [EnableControlMode.ALWAYS]: () => 'Not wired to the clock: no combinator.',
-        [EnableControlMode.NEVER]: () =>
-            'The simulator keeps it off. The blueprint has no combinator for it, so keep it off in the game yourself.',
         [EnableControlMode.CLOCKED]: (entity: string) =>
             `These ticks are not copied into the blueprint. The simulator switches the ${entity} on in them while it plans the clock; the blueprint then switches it on in the ticks it moved items, which can be fewer.`,
         [EnableControlMode.CONDITIONAL]: (entity: string) =>
@@ -141,8 +138,6 @@ export function ruleSentenceOf(override: EnableControlOverride | undefined, ctx:
     switch (override?.mode ?? EnableControlMode.AUTO) {
         case EnableControlMode.ALWAYS:
             return RULE_COPY.always;
-        case EnableControlMode.NEVER:
-            return RULE_COPY.never;
         case EnableControlMode.CLOCKED: {
             const clocked = override as Extract<EnableControlOverride, { mode: 'CLOCKED' }>;
             const every = clocked.window_cycle_ticks !== undefined
