@@ -16,7 +16,13 @@
 // BLAST_GROUPS (default config; also pickup,overhood,front,blocked,containers,variants), BLAST_SKIP (comma list of
 // jobs to leave out; none by default), BLAST_FUNCTIONS (1: record the functions each job runs; off by default; see below), BLAST_ONE (1:
 // the process runs the first job nobody has claimed and stops, and leaves <BLAST_OUT>/.drained when none is left: blast.sh
-// starts a process for every job, so that no job meets what an earlier one left in the engine's memory, a memo for one).
+// starts a process for every job, so that no job meets what an earlier one left in the engine's memory, a memo for one),
+// CLOCK_EXPLORE (1: generate with `explore_strategies`, the explore mode; every job file then also holds `explored`, see below; key.py
+// keys it, so the run has an entry of its own and never mixes with the normal ones).
+//
+// With CLOCK_EXPLORE=1 every job file also holds `explored`: the clock the shipped strategies selected and the best clock of the explored
+// strategies, each with its strategy, verdict and wake-ups a minute, whether the best beats the selected one by the ranking, and every explored
+// clock (explore.py lists them). The job files of a normal run have no such field.
 //
 // With BLAST_FUNCTIONS=1, in generate mode every job also leaves <BLAST_OUT>/.functions/<job>.json: the byte ranges of the functions of the engine's
 // build (dist/) that ran during the job, and the files of dist/ loaded so far in this process (V8 binary precise coverage,
@@ -46,6 +52,7 @@ const OUT = process.env.BLAST_OUT;
 const CLAIMS = process.env.BLAST_CLAIMS || (OUT && path.join(OUT, '.claims'));
 const MODE = process.env.BLAST_MODE ?? 'generate';
 const ONE = process.env.BLAST_ONE === '1';
+const EXPLORE = process.env.CLOCK_EXPLORE === '1';
 const ONLY = process.env.BLAST_ONLY ? process.env.BLAST_ONLY.split(',') : undefined;
 const SKIP = (process.env.BLAST_SKIP ?? '').split(',').filter(Boolean);
 const GROUPS = (process.env.BLAST_GROUPS || 'config').split(',');
@@ -206,7 +213,7 @@ async function jobChecksModule(): Promise<{ runJobChecks: (job: string, config: 
 /** Every alternative of a config, each exported clock hashed, and the selected one; with the properties and the per-job checks of the result, where the modules are there */
 function clocksOf(config: any, expand: ExpandHistory | undefined, key: string, properties: Awaited<ReturnType<typeof propertyModule>>,
     jobChecks: Awaited<ReturnType<typeof jobChecksModule>>) {
-    const generated = generateClockAlternatives(config, { logger: quiet });
+    const generated = generateClockAlternatives(config, { logger: quiet, ...(EXPLORE && { explore_strategies: true as const }) });
     const summary = (a: any) => {
         const exported = a.result.subtick ?? a.result;
         const with_text = { blueprint: encodeBlueprintFile({ blueprint: exported.blueprint }), schedule: exported.schedule };
@@ -219,6 +226,18 @@ function clocksOf(config: any, expand: ExpandHistory | undefined, key: string, p
         };
     };
     const alternatives = generated.alternatives.map(summary);
+    /** A clock as the explore summary lists it: the strategy that made it, its verdict and its cost, as the ranking compares them */
+    const picked = (a: any) => {
+        const exported = a.result.subtick ?? a.result;
+        return { id: a.id, strategy: a.strategy.id ?? a.strategy.routing.router, tuning_method: a.strategy.tuning_method, verdict: a.verdict,
+            meets_target_rate: a.ranking.meets_target_rate, wake_ups_per_minute: a.ranking.wake_ups_per_minute, clock_sha256: sha(clockIdentity(exported)) };
+    };
+    const explored = generated.explored === undefined ? undefined : {
+        selected: generated.alternatives[generated.selected_index] === undefined ? null : picked(generated.alternatives[generated.selected_index]),
+        best: generated.explored.best_index === null ? null : picked(generated.explored.alternatives[generated.explored.best_index]),
+        beats_selection: generated.explored.beats_selection, same_as_shipped: generated.explored.same_as_shipped,
+        alternatives: generated.explored.alternatives.map(picked),
+    };
     const job_results = digestJob(generated);
     // the job's own digest: why_not_stable, the selected index and the ids, then every alternative's, in order
     const results_sha256 = sha([job_results.results_sha256, ...alternatives.map(a => a.results_sha256)]);
@@ -237,6 +256,7 @@ function clocksOf(config: any, expand: ExpandHistory | undefined, key: string, p
         ...(checked !== undefined && { properties: { ...checked as object, seconds: (checks_started - started) / 1000 } }),
         ...(job_checks !== undefined && { checks: { ...job_checks as object, seconds: (Date.now() - checks_started) / 1000 } }),
         selected: alternatives[generated.selected_index], alternatives,
+        ...(explored !== undefined && { explored }),
     };
 }
 

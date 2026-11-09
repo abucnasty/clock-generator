@@ -41,8 +41,9 @@ FORMAT = 't1-engine-1'
 PATHS = ['clock-generator/src', 'clock-generator/resources', 'clock-generator/package-lock.json', 'clock-generator/tsconfig.json']
 
 
-# CLOCK_* variables the engine reads that change what it generates: keyed, by name and value (none today)
-ENV_KEYED: list[str] = []
+# CLOCK_* variables that change what a blast generates: keyed, by name and value. CLOCK_EXPLORE=1 is read by blast.blastrun.ts (not by the engine), which
+# then passes `explore_strategies`: the jobs also hold the explored clocks, so a run under it has an entry of its own and is never carried from another
+ENV_KEYED: list[str] = ['CLOCK_EXPLORE']
 # changes generation too, but the runner clears it (blast.sh runs every process with `env -u`), so it is never in effect
 ENV_CLEARED = ['CLOCK_PROOF_PHASES']
 # read by the harness or the scripts, not by generation: the game recording store (src/harness) and the sweep scripts' checkout
