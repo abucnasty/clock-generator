@@ -143,15 +143,20 @@ export interface SharedLaneRun {
 class DropRecorder implements CopyTakerTick {
     public readonly hands: HandDropped[] = [];
     private dropped: number;
+    /** The item the hand held after the last tick: what a drop in this tick put down */
+    private held: string | null;
 
     constructor(private readonly inserter: InserterArchetype, private readonly now: () => number) {
         this.dropped = inserter.inserter_state.items_dropped;
+        this.held = inserter.inserter_state.held_item?.item_name ?? null;
     }
 
     public tick(): void {
-        const dropped = this.inserter.inserter_state.items_dropped;
-        if (dropped > this.dropped) this.hands.push({ tick: this.now(), items: dropped - this.dropped });
+        const state = this.inserter.inserter_state;
+        const dropped = state.items_dropped;
+        if (dropped > this.dropped) this.hands.push({ tick: this.now(), item: this.held ?? "", items: dropped - this.dropped });
         this.dropped = dropped;
+        this.held = state.held_item?.item_name ?? this.held;
     }
 }
 

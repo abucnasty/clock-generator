@@ -18,6 +18,7 @@ import type { CopyTakerTick } from "./world";
 /** A hand that an inserter put down, at the tick it did */
 export interface HandDropped {
     readonly tick: number;
+    readonly item: ItemName;
     readonly items: number;
 }
 
@@ -46,7 +47,7 @@ class DropAsTheSimulatedCopy implements HandDropPort {
     public drop(): void {
         const held = this.state.held_item;
         if (held === null) return;
-        this.dropped.push({ tick: this.tick_provider.getCurrentTick(), items: held.quantity });
+        this.dropped.push({ tick: this.tick_provider.getCurrentTick(), item: held.item_name, items: held.quantity });
         dropFromHand(this.state, this.scratch, held.quantity, this.notifications);
         this.scratch.drop_ticks += 1;
     }

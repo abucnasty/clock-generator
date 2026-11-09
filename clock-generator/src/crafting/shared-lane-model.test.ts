@@ -97,7 +97,8 @@ const quiet = { log: () => {}, warn: () => {}, error: () => {}, debug: () => {} 
 function handsOfTaker(config: Config, rows: readonly LaneRow[] | null): string {
     if (rows !== null) {
         const model = runOnSharedLanes(config, gearWindows, 120, rows, 30, quiet);
-        return JSON.stringify(model.takers.find(taker => taker.copy === 0 && taker.inserter_id === "inserter:1")!.hands);
+        return JSON.stringify(model.takers.find(taker => taker.copy === 0 && taker.inserter_id === "inserter:1")!.hands
+            .map(({ tick, items }) => ({ tick, items })));
     }
     const hands: { tick: number; items: number }[] = [];
     runClockOnBuild({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, gearWindows, 120, quiet, {
