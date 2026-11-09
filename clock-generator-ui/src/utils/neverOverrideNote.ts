@@ -9,12 +9,15 @@ function numbersText(ids: number[]): string {
  * What the site tells the user when a file, a share link or a saved build held the Never on override, which is removed: each
  * such inserter and mining drill now uses Auto. Null when none did.
  * "Never on is no longer an option: inserters 2 and 5, and mining drill 1 now use Auto."
+ * "Never on is no longer an option: inserter 1 and mining drill 1 now use Auto."
  */
 export function neverOverrideNoteOf(entities: readonly NeverOverrideEntity[]): string | null {
     if (entities.length === 0) return null;
     const idsOf = (type: NeverOverrideEntity['type']) => entities.filter(entity => entity.type === type).map(entity => entity.id);
     const named = (noun: string, ids: number[]) => ids.length === 0 ? [] : [`${ids.length === 1 ? noun : `${noun}s`} ${numbersText(ids)}`];
-    const who = [...named('inserter', idsOf('inserter')), ...named('mining drill', idsOf('drill'))].join(', and ');
+    const groups = [...named('inserter', idsOf('inserter')), ...named('mining drill', idsOf('drill'))];
+    // A group that lists several ids already holds a comma or an "and", so ", and" keeps the two groups apart
+    const who = groups.join(groups.some(group => group.includes(',') || group.includes(' and ')) ? ', and ' : ' and ');
     return `Never on is no longer an option: ${who} now ${entities.length === 1 ? 'uses' : 'use'} Auto.`;
 }
 

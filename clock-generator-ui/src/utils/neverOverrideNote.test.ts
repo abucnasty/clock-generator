@@ -10,6 +10,12 @@ describe('neverOverrideNoteOf', () => {
         ['names one mining drill', [{ type: 'drill', id: 1 }], 'Never on is no longer an option: mining drill 1 now uses Auto.'],
         ['lists several inserters', [{ type: 'inserter', id: 2 }, { type: 'inserter', id: 5 }, { type: 'inserter', id: 9 }],
             'Never on is no longer an option: inserters 2, 5 and 9 now use Auto.'],
+        ['joins one inserter and one mining drill without a comma', [{ type: 'drill', id: 1 }, { type: 'inserter', id: 1 }],
+            'Never on is no longer an option: inserter 1 and mining drill 1 now use Auto.'],
+        ['keeps the comma for several inserters and one mining drill', [{ type: 'inserter', id: 2 }, { type: 'inserter', id: 5 }, { type: 'drill', id: 1 }],
+            'Never on is no longer an option: inserters 2 and 5, and mining drill 1 now use Auto.'],
+        ['names one inserter alone and one mining drill alone', [{ type: 'inserter', id: 7 }],
+            'Never on is no longer an option: inserter 7 now uses Auto.'],
         ['lists inserters and then mining drills', [{ type: 'drill', id: 1 }, { type: 'drill', id: 2 }, { type: 'inserter', id: 2 }, { type: 'inserter', id: 5 }],
             'Never on is no longer an option: inserters 2 and 5, and mining drills 1 and 2 now use Auto.'],
     ])('%s', (_, entities, text) => {
@@ -21,7 +27,7 @@ describe('neverOverrideNoteOfConfig and neverOverrideNoteOfText', () => {
     const config = { inserters: [{ id: 4, ...never }, { id: 5 }], drills: { configs: [{ id: 2, ...never }] } };
 
     it('name the entities of a config that is not yet checked', () => {
-        const note = 'Never on is no longer an option: inserter 4, and mining drill 2 now use Auto.';
+        const note = 'Never on is no longer an option: inserter 4 and mining drill 2 now use Auto.';
         expect(neverOverrideNoteOfConfig(config)).toBe(note);
         expect(neverOverrideNoteOfText(JSON.stringify(config))).toBe(note);
     });
