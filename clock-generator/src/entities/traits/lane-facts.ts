@@ -47,9 +47,10 @@ function configDeadEnds(config: Pick<Config, "overrides">): boolean {
 /** One lane of a belt as the config lists it, with the lane facts it states */
 type LaneConfig = Config["belts"][number]["lanes"][number];
 
-/** A lane end the config states, with the outlet's rate made exact */
-function laneEndOf(stated: NonNullable<LaneConfig["lane_end"]>): LaneEnd {
-    return stated.kind === "outlet" ? { kind: "outlet", outlet_rate: ratioOf(fraction(stated.outlet_rate)) } : { kind: stated.kind };
+/** A lane end the config states, with the outlet's rate made exact: an outlet that states no rate is free, at the lane's capacity */
+function laneEndOf(stated: NonNullable<LaneConfig["lane_end"]>, capacity: Ratio): LaneEnd {
+    if (stated.kind !== "outlet") return { kind: stated.kind };
+    return { kind: "outlet", outlet_rate: stated.outlet_rate === undefined ? capacity : ratioOf(fraction(stated.outlet_rate)) };
 }
 
 /**
@@ -70,7 +71,7 @@ export function laneFactsOf(config: LaneFactsConfig): LaneFactsOfBuild {
             const capacity = ratioOf(laneItemsPerSecond(belt_speed, laneStackFor(belt, lane)));
             by_lane.set(`${belt.id}/${lane}`, {
                 supply_rate: stated?.supply_rate === undefined ? capacity : ratioOf(fraction(stated.supply_rate)),
-                lane_end: stated?.lane_end !== undefined ? laneEndOf(stated.lane_end)
+                lane_end: stated?.lane_end !== undefined ? laneEndOf(stated.lane_end, capacity)
                     : dead_end ? { kind: "dead_end" } : { kind: "outlet", outlet_rate: capacity },
                 sharing: stated?.sharing ?? "shared_by_copies",
             });

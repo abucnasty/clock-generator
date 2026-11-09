@@ -44,6 +44,7 @@ describe("lane facts in the configuration", () => {
         ["a supply rate", { supply_rate: 120.7 }],
         ["a dead end", { lane_end: { kind: "dead_end" } }],
         ["an outlet with its rate", { lane_end: { kind: "outlet", outlet_rate: 88 } }],
+        ["a free outlet, without a rate", { lane_end: { kind: "outlet" } }],
         ["an unknown end", { lane_end: { kind: "unknown" } }],
         ["a lane each copy has to itself", { sharing: "one_per_copy" }],
         ["a lane the copies share", { sharing: "shared_by_copies" }],
@@ -67,7 +68,6 @@ describe("lane facts in the configuration", () => {
     it.each<[string, Record<string, unknown>]>([
         ["a supply rate of zero", { supply_rate: 0 }],
         ["a supply rate that is not a number", { supply_rate: "120" }],
-        ["an outlet without its rate", { lane_end: { kind: "outlet" } }],
         ["an outlet rate of zero", { lane_end: { kind: "outlet", outlet_rate: 0 } }],
         ["an end of another kind", { lane_end: { kind: "loop" } }],
         ["an end given as text", { lane_end: "dead_end" }],

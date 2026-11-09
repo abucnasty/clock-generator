@@ -95,6 +95,11 @@ describe("the lane facts a config states", () => {
         expect(facts.of(1, 1).lane_end).toEqual(lane_end.kind === "outlet" ? { kind: "outlet", outlet_rate: { numerator: 15, denominator: 2 } } : lane_end);
     });
 
+    it.each([[true], [false]])("reads an outlet that states no rate as a free outlet at the lane's capacity (switch %s)", backed_up_belts => {
+        const facts = laneFactsOf(configOf({ belts: stating({ lane_end: { kind: "outlet" } }), overrides: { backed_up_belts } }));
+        expect(facts.of(1, 1).lane_end).toEqual({ kind: "outlet", outlet_rate: { numerator: 120, denominator: 1 } });
+    });
+
     it("leaves every lane that states nothing as the switch gives it", () => {
         for (const backed_up_belts of [true, false]) {
             const stated = laneFactsOf(configOf({

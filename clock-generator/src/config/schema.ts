@@ -571,8 +571,9 @@ const BeltTypeSchema = z.enum([
 
 /**
  * What happens to an item at the downstream end of a lane, as `LaneEnd` in entities/traits/lane-facts.ts has it. A dead
- * end holds the items until a hand takes them; an outlet carries them away at `outlet_rate` items a second; "unknown" is
- * an end that the build does not show.
+ * end holds the items until a hand takes them; an outlet carries them away at `outlet_rate` items a second, and an outlet
+ * that states no rate is a free outlet at the lane's capacity (which follows the belt and the stack size, so a number
+ * written for it would go stale); "unknown" is an end that the build does not show.
  */
 const LaneEndConfigSchema = z.discriminatedUnion("kind", [
     z.object({
@@ -580,7 +581,7 @@ const LaneEndConfigSchema = z.discriminatedUnion("kind", [
     }),
     z.object({
         kind: z.literal("outlet").describe("outlet: the lane continues, and the items that no hand takes move away."),
-        outlet_rate: z.number().positive().describe("The items per second that move off the end of the lane."),
+        outlet_rate: z.number().positive().optional().describe("The items per second that move off the end of the lane. The default is the lane's capacity."),
     }),
     z.object({
         kind: z.literal("unknown").describe("unknown: the configuration does not know the end of the lane."),
