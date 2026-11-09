@@ -1063,8 +1063,16 @@ function runAlternativeOf(
         if (!trial.held) return [];
         if (!shared_lane_losses_of.has(trial)) {
             const on = used.planned_on ?? config;
-            const judged = judgeSharedLanes({ ...on, overrides: { ...on.overrides, terminal_swing_count: trial.result.used_terminal_swing_count } },
-                trial.result.clock_windows, trial.clock_window_cycle, logger);
+            let judged;
+            try {
+                judged = judgeSharedLanes({ ...on, overrides: { ...on.overrides, terminal_swing_count: trial.result.used_terminal_swing_count } },
+                    trial.result.clock_windows, trial.clock_window_cycle, logger);
+            } catch (error) {
+                if (isInternalError(error)) throw error;
+                logger.warn(`Clock "${label}": the lanes its copies share could not be checked: ${error instanceof Error ? error.message : String(error)}`);
+                shared_lane_losses_of.set(trial, []);
+                return [];
+            }
             if (judged.lanes.length > 0) {
                 logger.log(`Clock "${label}": the shared lanes ${judged.lanes.join(", ")}: the refill arithmetic says ${judged.fast_check_passes ? "they refill in time" : "they may run short"}; `
                     + `with every copy on them, ${judged.losses.length === 0 ? "no copy loses swings" : `${judged.losses.length} takers lose swings`}`);
