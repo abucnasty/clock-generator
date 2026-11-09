@@ -32,3 +32,47 @@ describe("backed-up belt configuration", () => {
         expect(ConfigOverridesSchema.safeParse({ backed_up_belts: "true" }).success).toBe(false);
     });
 });
+
+describe("lane facts in the configuration", () => {
+    const configWith = (lane: Record<string, unknown>, strategy?: "export") => ({
+        setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+        machines: [], inserters: [],
+        belts: [{ id: 1, type: "turbo-transport-belt", ...(strategy && { strategy }), lanes: [{ ingredient: "iron-plate", stack_size: 4, ...lane }] }],
+    });
+
+    it.each<[string, Record<string, unknown>]>([
+        ["a supply rate", { supply_rate: 120.7 }],
+        ["a dead end", { lane_end: { kind: "dead_end" } }],
+        ["an outlet with its rate", { lane_end: { kind: "outlet", outlet_rate: 88 } }],
+        ["an unknown end", { lane_end: { kind: "unknown" } }],
+        ["a lane each copy has to itself", { sharing: "one_per_copy" }],
+        ["a lane the copies share", { sharing: "shared_by_copies" }],
+        ["all three", { supply_rate: 60, lane_end: { kind: "dead_end" }, sharing: "one_per_copy" }],
+    ])("keeps %s on a lane as the file states it", async (_, lane) => {
+        const input = configWith(lane);
+        for (const config of [ConfigSchema.parse(input), await parseConfig(JSON.stringify(input))]) {
+            expect(config.belts[0].lanes[0]).toEqual({ ingredient: "iron-plate", stack_size: 4, ...lane });
+        }
+    });
+
+    it("keeps the facts of an export lane beside its consumption", () => {
+        const lane = { consumption_per_second: 5, lane_end: { kind: "outlet", outlet_rate: 5 }, sharing: "one_per_copy" };
+        expect(ConfigSchema.parse(configWith(lane, "export")).belts[0].lanes[0]).toEqual({ ingredient: "iron-plate", stack_size: 4, ...lane });
+    });
+
+    it("adds no lane fact to a lane that states none", () => {
+        expect(ConfigSchema.parse(configWith({})).belts[0].lanes[0]).toStrictEqual({ ingredient: "iron-plate", stack_size: 4 });
+    });
+
+    it.each<[string, Record<string, unknown>]>([
+        ["a supply rate of zero", { supply_rate: 0 }],
+        ["a supply rate that is not a number", { supply_rate: "120" }],
+        ["an outlet without its rate", { lane_end: { kind: "outlet" } }],
+        ["an outlet rate of zero", { lane_end: { kind: "outlet", outlet_rate: 0 } }],
+        ["an end of another kind", { lane_end: { kind: "loop" } }],
+        ["an end given as text", { lane_end: "dead_end" }],
+        ["a sharing of another kind", { sharing: "shared" }],
+    ])("refuses %s", (_, lane) => {
+        expect(ConfigSchema.safeParse(configWith(lane)).success).toBe(false);
+    });
+});

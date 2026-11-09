@@ -569,9 +569,38 @@ const BeltTypeSchema = z.enum([
     BeltType.TURBO_TRANSPORT_BELT
 ]);
 
+/**
+ * What happens to an item at the downstream end of a lane, as `LaneEnd` in entities/traits/lane-facts.ts has it. A dead
+ * end holds the items until a hand takes them; an outlet carries them away at `outlet_rate` items a second; "unknown" is
+ * an end that the build does not show.
+ */
+const LaneEndConfigSchema = z.discriminatedUnion("kind", [
+    z.object({
+        kind: z.literal("dead_end").describe("dead_end: the lane stops, and the items stay on it until a hand takes them."),
+    }),
+    z.object({
+        kind: z.literal("outlet").describe("outlet: the lane continues, and the items that no hand takes move away."),
+        outlet_rate: z.number().positive().describe("The items per second that move off the end of the lane."),
+    }),
+    z.object({
+        kind: z.literal("unknown").describe("unknown: the configuration does not know the end of the lane."),
+    }),
+]);
+
+/** Whether every copy of the unit takes from the same lane, or each copy has a lane of its own (`LaneSharing`) */
+const LaneSharingConfigSchema = z.enum(["shared_by_copies", "one_per_copy"]);
+
+/**
+ * One lane of a belt. The lane facts (`supply_rate`, `lane_end`, `sharing`) are optional, and each one is read alone:
+ * a fact that the lane does not state is derived as entities/traits/lane-facts.ts `laneFactsOf` says. A field without a
+ * default, so that a config that states none is written back without them.
+ */
 const BeltLaneConfigSchema = z.object({
     ingredient: z.string().describe("The name of the item on the lane."),
     stack_size: z.number().int().positive().describe("The number of items in each stack on the lane."),
+    supply_rate: z.number().positive().optional().describe("The items per second that come onto the lane where it starts. The default is the lane's capacity."),
+    lane_end: LaneEndConfigSchema.optional().describe("The end of the lane. Without it, backed_up_belts sets the end."),
+    sharing: LaneSharingConfigSchema.optional().describe("shared_by_copies (default): all copies take from this lane. one_per_copy: each copy has a lane of its own."),
 });
 
 const ExportBeltLaneConfigSchema = BeltLaneConfigSchema.extend({
