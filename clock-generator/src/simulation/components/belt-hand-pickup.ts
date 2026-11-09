@@ -4,7 +4,7 @@ import { BeltPickupLayout, pickupLaneLength, pickupTargetRadius } from "../../co
 import type { TickProvider } from "../current-tick-provider";
 import { FactorioDataService, ItemName } from "../../data";
 import { beltPickupCalibrated } from "../../entities/inserter/metadata/inserter-spec";
-import { BackedUpPickupLane } from "../../state/backed-up-pickup-lane";
+import { BackpressurePickupLane } from "../../state/backpressure-pickup-lane";
 import { BeltPickupArm } from "../../state/belt-pickup-arm";
 import { BeltPickupLane } from "../../state/belt-pickup-lane";
 import type { InserterState } from "../../state/inserter-state";
@@ -68,7 +68,7 @@ export class BeltHandPickup implements HandPickupPort {
         const stockOf = (lane: BeltLane, index: number) => {
             const length = pickupLaneLength(inserter.pickup_layout ?? "side-straight", index + 1, pickup_length);
             return inserter.belt_supply === "backed_up"
-                ? new BackedUpPickupLane(belt.belt_speed, length, lane.stack_size)
+                ? new BackpressurePickupLane(belt.belt_speed, length, lane.stack_size)
                 : new BeltPickupLane(belt.belt_speed, length, lane.stack_size, 0);
         };
         this.pickups = this.lanes.map((lane, index) => lane.pickupOf(inserter_id) ?? lane.addPickup(inserter_id, stockOf(lane, index)));

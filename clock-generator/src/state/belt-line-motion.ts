@@ -1,19 +1,19 @@
 import { BeltSpeed } from "../entities/belt";
 
-/** The room one stack takes on a lane, in 1/256-tile units (BackedUpPickupLane, BeltPickupLane) */
+/** The room one stack takes on a lane, in 1/256-tile units (BackpressurePickupLane, BeltPickupLane) */
 const STACK_SPACING = 64;
 
 /**
- * Whether a belt line is moving: the closing of the gaps that takes leave in a backed-up line. In a tick the belt moves
+ * Whether a belt line is moving: the closing of the gaps that takes leave in a line under backpressure. In a tick the belt moves
  * its lines first: a line that is moving closes its gap by its speed (8, 16, 24 or 32 units a tick), and once no gap is
  * left it stops in the next tick. Then the inserters: a take that empties a stack leaves a gap of one stack and sets the
  * line moving at once, so an inserter updated later in that tick finds it moving. A line is so moving in the tick of a
  * take and for ceil(gap / speed) ticks after it; for a stack of four on a turbo belt, 2 ticks a stack taken, plus the tick
  * of the take.
  *
- * Read in Factorio 2.1.24 on a backed-up turbo belt of stacks of four, fed from its start, nothing taking downstream (the
+ * Read in Factorio 2.1.24 on a turbo belt under backpressure, stacks of four, fed from its start, nothing taking downstream (the
  * sample metallurgic science build): 9,658 of 9,658 ticks in which the game moved either of its two lines, and no other,
- * worked out from the takes in the recording. Other belt speeds, stack sizes, a belt that is not backed up and a belt
+ * worked out from the takes in the recording. Other belt speeds, stack sizes, a belt without backpressure and a belt
  * taken from downstream are not checked.
  */
 export class BeltLineMotion {

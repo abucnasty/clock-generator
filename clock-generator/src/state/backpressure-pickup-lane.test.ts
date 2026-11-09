@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import {beforeAll, expect, test} from "vitest";
-import {BackedUpPickupLane, backedUpHandGrabTicks} from "./backed-up-pickup-lane";
+import {BackpressurePickupLane, backpressureHandGrabTicks} from "./backpressure-pickup-lane";
 import {BeltSpeed} from "../entities/belt";
 import {Config} from "../config";
 import {loadConfigFromFile} from "../config/loader";
@@ -20,7 +20,7 @@ let config: Config;
 beforeAll(async () => {config = await loadConfigFromFile(path.join(GameFixturePaths.DIFFERENT_ITEMS, "config.json"));});
 
 // Collection and stock are independently predicted. Native arm arrival and drop boundaries remain inputs.
-for (const clip of fixture.clips) test(`production backed-up stock matches native clip: ${clip.name}`, () => {
+for (const clip of fixture.clips) test(`production backpressure stock matches native clip: ${clip.name}`, () => {
     const copy = structuredClone(config);
     copy.overrides = {...copy.overrides, backed_up_belts: true};
     const input = copy.inserters.find(i => i.source.type === "belt")!;
@@ -59,15 +59,15 @@ for (const clip of fixture.clips) test(`production backed-up stock matches nativ
         if (collecting && (state.held_item?.quantity ?? 0) < clip.stack_size) pickup.pickup();
         expect(state.held_item?.quantity ?? 0, `held at ${tick}`).toBe(actual);
         lanes.forEach((lane, laneIndex) => {
-            expect(lane).toBeInstanceOf(BackedUpPickupLane);
-            expect((lane as BackedUpPickupLane).snapshot(tick), `lane ${laneIndex + 1} at ${tick}`).toEqual(stock[laneIndex]);
+            expect(lane).toBeInstanceOf(BackpressurePickupLane);
+            expect((lane as BackpressurePickupLane).snapshot(tick), `lane ${laneIndex + 1} at ${tick}`).toEqual(stock[laneIndex]);
         });
     }
 });
 
 test("refill after a long pause is equivalent to advancing each tick and does not grow the stored train", () => {
-    const skipped = new BackedUpPickupLane(BeltSpeed.TRANSPORT_BELT, 0.5, 4);
-    const stepped = new BackedUpPickupLane(BeltSpeed.TRANSPORT_BELT, 0.5, 4);
+    const skipped = new BackpressurePickupLane(BeltSpeed.TRANSPORT_BELT, 0.5, 4);
+    const stepped = new BackpressurePickupLane(BeltSpeed.TRANSPORT_BELT, 0.5, 4);
     for (const lane of [skipped, stepped]) {
         expect([0, 1, 2, 3].map(tick => lane.take(tick, 4))).toEqual([4, 4, 4, 0]);
     }
@@ -78,7 +78,7 @@ test("refill after a long pause is equivalent to advancing each tick and does no
 });
 
 test("partial stacks remain until consumed and one lane cannot give two stacks in the same tick", () => {
-    const lane = new BackedUpPickupLane(BeltSpeed.TRANSPORT_BELT, 0.5, 4);
+    const lane = new BackpressurePickupLane(BeltSpeed.TRANSPORT_BELT, 0.5, 4);
     expect(lane.take(0, 2)).toBe(2);
     expect(lane.snapshot(0)).toEqual([[0, 4], [64, 2]]);
     expect(lane.take(0, 4)).toBe(0);
@@ -87,7 +87,7 @@ test("partial stacks remain until consumed and one lane cannot give two stacks i
     expect(() => lane.snapshot(1)).toThrow("backwards in time");
 });
 
-// The first hands recorded from backed-up lanes at rest in Factorio 2.1.21, 16-item hands on four-item belt stacks
+// The first hands recorded from lanes under backpressure at rest in Factorio 2.1.21, 16-item hands on four-item belt stacks
 // (docs/belt-pickup/experiments.md, tick-pattern matrix): a stack a tick while the pickup exposes enough of them, then as
 // fast as the belt brings them into reach.
 const TIERS = [
@@ -96,16 +96,16 @@ const TIERS = [
 ] as const;
 const one_lane = (length_tiles: number) => [{length_tiles, stack_size: 4}];
 test.each(TIERS)("a hand fills from a straight belt at rest a stack a tick at %s", (_, speed) => {
-    expect(backedUpHandGrabTicks(speed, one_lane(1), 16)).toEqual([0, 1, 2, 3]);
+    expect(backpressureHandGrabTicks(speed, one_lane(1), 16)).toEqual([0, 1, 2, 3]);
 });
 test.each([...TIERS.map(([name, speed]) => [name, speed, {turbo: [0, 1, 2, 3], express: [0, 1, 2, 3], fast: [0, 1, 2, 5], normal: [0, 1, 2, 9]}[name]] as const)])(
     "a hand fills from the half tile of an underground end at rest, the item on one lane, at %s", (_, speed, grabs) => {
-        expect(backedUpHandGrabTicks(speed, one_lane(0.5), 16)).toEqual(grabs);
+        expect(backpressureHandGrabTicks(speed, one_lane(0.5), 16)).toEqual(grabs);
     });
 test.each(TIERS)("the other lane with the same item fills the hand a stack a tick at %s", (_, speed) => {
-    expect(backedUpHandGrabTicks(speed, [...one_lane(0.5), ...one_lane(0.5)], 16)).toEqual([0, 1, 2, 3]);
+    expect(backpressureHandGrabTicks(speed, [...one_lane(0.5), ...one_lane(0.5)], 16)).toEqual([0, 1, 2, 3]);
 });
 test("a hand of no stacks, or with no lane of its item, has no grabs", () => {
-    expect(backedUpHandGrabTicks(BeltSpeed.TRANSPORT_BELT, one_lane(0.5), 0)).toEqual([]);
-    expect(backedUpHandGrabTicks(BeltSpeed.TRANSPORT_BELT, [], 16)).toEqual([]);
+    expect(backpressureHandGrabTicks(BeltSpeed.TRANSPORT_BELT, one_lane(0.5), 0)).toEqual([]);
+    expect(backpressureHandGrabTicks(BeltSpeed.TRANSPORT_BELT, [], 16)).toEqual([]);
 });
