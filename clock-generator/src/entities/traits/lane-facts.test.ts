@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Config, ConfigSchema } from "../../config/schema";
-import { beltLanes, beltLanesOfFacts, supplyOfLaneEnd } from "./lane";
+import { beltLanesOfFacts, supplyOfLaneEnd } from "./lane";
 import { everyInputLaneIsDeadEnd, isDeadEnd, laneFactsOf } from "./lane-facts";
 
 type Parts = Partial<Pick<Config, "machines" | "inserters" | "belts" | "chests" | "overrides">>;
@@ -79,12 +79,12 @@ describe("the question about every input lane", () => {
 });
 
 describe("the lane traits of the facts", () => {
-    it("carry the supply of each lane's end and match the single-supply form", () => {
+    it("carry the supply of each lane's end", () => {
         for (const backed_up_belts of [true, false]) {
             const config = configOf({ belts, overrides: { backed_up_belts } });
             const supply = backed_up_belts ? "backed_up" : "moving";
             for (const belt of config.belts) {
-                expect(beltLanesOfFacts(belt, laneFactsOf(config))).toEqual(beltLanes(belt, supply));
+                expect(beltLanesOfFacts(belt, laneFactsOf(config)).map(lane => lane.supply)).toEqual([supply, supply]);
             }
         }
     });

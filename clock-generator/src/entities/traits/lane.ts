@@ -44,11 +44,6 @@ export function beltLanesOfFacts(config: BeltConfig, facts: LaneFactsOfBuild): L
     return lanesOfBelt(config, lane => supplyOfLaneEnd(facts.of(config.id, lane).lane_end));
 }
 
-/** Both lanes of a belt of the config, the second side of a belt that lists one included, all of one supply */
-export function beltLanes(config: BeltConfig, supply: LaneTrait["supply"]): LaneTrait[] {
-    return lanesOfBelt(config, () => supply);
-}
-
 function lanesOfBelt(config: BeltConfig, supplyOf: (lane: 1 | 2) => LaneTrait["supply"]): LaneTrait[] {
     const tiles_per_tick = FactorioDataService.findTransportBeltOrThrow(config.type).speed;
     const belt_speed = beltSpeedOf(config.type);
