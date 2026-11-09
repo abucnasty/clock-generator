@@ -1,4 +1,4 @@
-import type { AlwaysOnReason } from "./always-on-reasons";
+import type { AlwaysOnReason } from "./enable-control-router";
 import type { ClockStrategy, StrategyId } from "./clock-strategy";
 
 /**

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { generateClockForConfig, generateClockAlternatives, validateConfig, type ClockAlternative, type ConfigValidation, type SerializableClockWindows } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
-import { alwaysOnReasonProblems, alwaysOnReasonProblemsOf, quiet, withSearches } from "./generate-blueprint-test-helpers";
+import { entityRouteProblems, entityRouteProblemsOf, quiet, withSearches } from "./generate-blueprint-test-helpers";
 
 // The samples of generate-blueprint.test.ts whose generation takes longest: the clock alternatives of iron bacteria
 // and a build whose single generation runs the long checks.
@@ -40,7 +40,7 @@ describe("generateClockForConfig", () => {
         });
 
         it("names why every inserter and drill a clock leaves always on is", () => {
-            expect(alwaysOnReasonProblemsOf(config, { alternatives })).toEqual([]);
+            expect(entityRouteProblemsOf(config, { alternatives })).toEqual([]);
         });
 
         it("validates with the hands a machine gives up a cycle, over both of its output inserters", () => {
@@ -104,7 +104,7 @@ describe("generateClockForConfig", () => {
         it("planned windows fail the clock-only check", () => {
             const result = generateClockForConfig(config, { verify_as_built: true });
             expect(result.stability_check.as_built?.holds).toBe(false);
-            expect(alwaysOnReasonProblems(config, result, "planned")).toEqual([]);
+            expect(entityRouteProblems(config, result, "planned")).toEqual([]);
         });
 
         // From the staged start (empty machines, the clock at its tick 0) every padding tried passes, so the search
@@ -118,7 +118,7 @@ describe("generateClockForConfig", () => {
             expect(result.derived_clock_windows).toMatchObject({ succeeded: true, kept_planned_windows: false, end_padding_ticks: 1 });
             expect(result.stability_check.holds).toBe(true);
             expect(result.search).toMatchObject({ kind: "padding", picked: { row: 1, setting: 1 } });
-            expect(alwaysOnReasonProblems(config, result, "derived")).toEqual([]);
+            expect(entityRouteProblems(config, result, "derived")).toEqual([]);
             expect(result.search!.candidates.find(candidate => candidate.setting === 0)!.holds).toBe(true);
             expect(result.search!.candidates.find(candidate => candidate.setting === 2)!.holds).toBe(true);
         });

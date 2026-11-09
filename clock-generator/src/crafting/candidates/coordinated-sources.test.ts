@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { partGroups, sourceControlsOf, tiledWindows, upstreamOrder, type GroupedInserter } from "./coordinated-sources";
+import { EntityRouteError } from "../enable-control-router";
 import { collectingParts, offerPart, partKey, partsWanted, coordinatedSourcesInputOf, type CoordinatedSourcesPart } from "./coordinated-sources-parts";
 import type { ClockStrategy } from "../clock-strategy";
 
@@ -119,15 +120,18 @@ describe("what the router gave each entity", () => {
             .toEqual({ "inserter:1": { kind: "always_on", reason: { kind: "loop" } } });
     });
 
-    it("leaves out an inserter with no reason known or a part with no strategy, and says so in the log, never refusing", () => {
+    it("leaves out an inserter with no reason known, and says so in the log", () => {
         const bare = partGroups(CHAIN, [recommended, { ...other, always_on: undefined }], 20);
         const sources = sourceControlsOf(bare, new Map([["machine:2", 0], ["machine:1", 0], ["belt:1", 1]]), {}, logger, "gear");
         expect(sources[2].entities).toEqual({});
         expect(logged).toEqual(["Coordinated Sources, gear: inserter:1 left out of the sources, it is always enabled with no reason known"]);
         logged.length = 0;
+    });
+
+    it("throws an internal error for an inserter given windows by a part with no strategy, naming the inserter", () => {
         const unknown = partGroups(CHAIN, [{ ...recommended, strategy: undefined }], 20);
-        expect(sourceControlsOf(unknown, new Map([["machine:2", 0], ["machine:1", 0], ["belt:1", 0]]), {}, logger, "gear").flatMap(it => Object.keys(it.entities))).toEqual([]);
-        expect(logged).toHaveLength(4);
+        expect(() => sourceControlsOf(unknown, new Map([["machine:2", 0], ["machine:1", 0], ["belt:1", 0]]), {}, logger, "gear"))
+            .toThrow(new EntityRouteError("Internal error: Coordinated Sources, gear: inserter:4 has enable windows from the clock recommended, which has no strategy"));
     });
 });
 

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import { withJellyHandsOf15 } from "../../tests/configs/rocket-fuel-hands";
-import { alwaysOnReasonProblemsOf, rocketFuelSample, type RocketFuelSample } from "./generate-blueprint-test-helpers";
+import { entityRouteProblemsOf, rocketFuelSample, type RocketFuelSample } from "./generate-blueprint-test-helpers";
 
 // The other build of this suite is in rocket-fuel.generation.test.ts.
 describe("generateClockForConfig", () => {
@@ -24,7 +24,7 @@ describe("generateClockForConfig", () => {
         });
 
         it("names why every inserter and drill a clock leaves always on is", () => {
-            expect(alwaysOnReasonProblemsOf(sample.config, sample)).toEqual([]);
+            expect(entityRouteProblemsOf(sample.config, sample)).toEqual([]);
         });
 
         it("sets the jelly inserters to 15 a hand", () => {

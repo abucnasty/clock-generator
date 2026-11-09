@@ -17,7 +17,7 @@ import { DisturbanceTrialVerdict } from "./disturbance-trial";
 import { SharedItemDeadlockRisk, sharedItemDeadlockRisks } from "./deadlock-risk";
 import { disturbanceTrialInsight, beltPickupNotTestedInsights, chestDrillInsights, ClockInsight, clockInsights, deadlockRiskInsight, dropSpacingInsights, lanesExactlyFullInsights, sideLoadedDropInsights, startDependenceInsight, withWakeUpsFromStarts } from "./insights";
 import { chestDrillFallbackConfig, ChestDrillClock, hasPlannedChestDrill } from "./chest-drill-windows";
-import { chestDrillReasons } from "./always-on-reasons";
+import { chestDrillReasons, EntityRouteError, entityRoutesOf } from "./enable-control-router";
 import { ClockBelt, clockBeltLabel, fuelHandRoomTicks } from "./clock";
 import { timeDivisionWindowsClock } from "./candidates/time-division-windows";
 import { pitchPickupsClock } from "./candidates/pitch-pickups";
@@ -31,7 +31,7 @@ import { MAX_OBSERVED_WINDOWS_WINDOW_CYCLE_TICKS, swingCountsListed } from "./pl
 import { SecondaryPlanningInvariantError, secondaryPlanningCountOf, verificationPlanningConfigOf, withSecondaryPlanningProvenance, type SecondaryPlanningCount } from "./round-robin-polling-primitive-policy";
 import { collectingParts, coordinatedSourcesInputOf, type CoordinatedSourcesInput, type CoordinatedSourcesPart } from "./candidates/coordinated-sources-parts";
 import { coordinatedSourcesClock } from "./candidates/coordinated-sources";
-import { BlueprintGenerationResult, GenerateClockOptions, SimulationStabilityCheck, fractionalStartOf, fractionalSwingsOf } from "./plan/unclocked-run";
+import { BlueprintGenerationResult, clockedByConfig, GenerateClockOptions, SimulationStabilityCheck, fractionalStartOf, fractionalSwingsOf } from "./plan/unclocked-run";
 import { EntityTransferCountMap } from "./sequence/cycle/swing-counts";
 import { withRunMemo } from "./plan/run-memo";
 import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, ROUNDED_CLOCK_MAX_FAST, RoundedClock, roundedRateAllowed, searchesToRun, searchesAreNeeded } from "./rank";
@@ -39,7 +39,7 @@ import { TargetProductionRate } from "./target-production-rate";
 import { loopStockBoundOf } from "./candidates/loop-stock-bound";
 import { AsBuiltStabilityCheck, DisturbanceTrialAssessment, disturbanceTrialVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf, clockVerificationSignature, FREE_RUNNING_CHECK_TICKS, fractionalSwingsChangeChecksOf, LOOP_WINDOW_CHECK_TICKS, roundedClockTrial, startDependenceVerdictOf, wakeUpsFromStartsOf, withSettledOutput } from "./trial";
 import { WakeUpsFromStarts } from "./wake-ups-from-starts";
-import { alternativeIdOf, ChestDrillFallbackKind, ClockStrategy, DefinitionSettings, DefinitionStrategyId, ListingSettings, StrategyId, strategyListedAs, strategyOf } from "./clock-strategy";
+import { alternativeIdOf, ChestDrillFallbackKind, ClockStrategy, DefinitionSettings, DefinitionStrategyId, ListingSettings, StrategyId, StrategyRef, strategyListedAs, strategyOf } from "./clock-strategy";
 import { catalogRowOf, fixedTuningMethodOf, routerRowOf, settingChipsOf, strategyRowOf } from "./strategy-catalog";
 import { signalsPerMinuteOf } from "./clock-signals";
 import { START_DEPENDENCE_NOT_CHECKED, StartDependence, startDependenceNote } from "./start-dependence";
@@ -174,6 +174,12 @@ export interface ClockAlternativesPlan {
 const SMALL_BATCHES_OPTIONS: GenerateClockOptions = { verify_as_built: true, belt_pickup_slack: "always" };
 
 
+/**
+ * An error of the generator itself, which fails the generation: not a clock that could not be made, so no maker's fallback
+ * passes over it
+ */
+const isInternalError = (error: unknown): boolean => error instanceof SecondaryPlanningInvariantError || error instanceof EntityRouteError;
+
 interface AlternativeDefinition {
     id: string;
     label: string;
@@ -182,6 +188,11 @@ interface AlternativeDefinition {
     strategy: DefinitionStrategyId;
     /** What it sets on its clock beyond what the result shows */
     settings?: DefinitionSettings;
+    /**
+     * Coordinated Sources: the strategy of the windows its clock keeps beside its sources' (the recommended clock's, which the
+     * drills keep), for the router to name them
+     */
+    beside_sources?: StrategyRef;
     /** It offers another output count than the plan's: its clock's id says which (`_swings_N`) */
     offers_output_count?: true;
     run: () => BlueprintGenerationResult;
@@ -330,7 +341,7 @@ function withFuelHandRoomWhereNeeded(
         const with_room = withFuelHandRoom();
         return with_room !== undefined && Object.keys(with_room.fuel_hand_room_ticks).length > 0 && holds(with_room) ? with_room : result;
     } catch (error) {
-        if (error instanceof SecondaryPlanningInvariantError) throw error;
+        if (isInternalError(error)) throw error;
         return result;
     }
 }
@@ -826,7 +837,7 @@ function sharedRun(
     try {
         shared_definition = definition.shared_windows();
     } catch (error) {
-        if (error instanceof SecondaryPlanningInvariantError) throw error;
+        if (isInternalError(error)) throw error;
         logger.log(`Clock "${definition.label}" with shared enable windows could not be generated: ${error instanceof Error ? error.message : String(error)}`);
         return run;
     }
@@ -872,7 +883,7 @@ function runAlternativeOf(
     try {
         result = definition.run();
     } catch (error) {
-        if (error instanceof SecondaryPlanningInvariantError) throw error;
+        if (isInternalError(error)) throw error;
         const reason = error instanceof Error ? error.message : String(error);
         logger.log(`Clock "${definition.label}" could not be generated: ${reason}`);
         on_not_made?.({ id: definition.id, label: definition.label, reason });
@@ -918,7 +929,7 @@ function runAlternativeOf(
                 logger.log(`Clock "${definition.label}": ${remake.what} did not give a stable clock; ${remake.left}: holds=${held} stable=${loss.disturbance_trial?.survives ?? "not tried"}`);
             }
         } catch (error) {
-            if (error instanceof SecondaryPlanningInvariantError) throw error;
+            if (isInternalError(error)) throw error;
             logger.log(`Clock "${definition.label}" with ${remake.left === "always enabled" ? "the inserters out of its loop always enabled" : remake.left} could not be generated: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
@@ -934,7 +945,7 @@ function runAlternativeOf(
             if (fallback === undefined) continue;
             made = fallback.run();
         } catch (error) {
-            if (error instanceof SecondaryPlanningInvariantError) throw error;
+            if (isInternalError(error)) throw error;
             logger.log(`Clock "${definition.label}" with its drill enable windows ${index === 0 ? "a tick longer" : "always enabled"} could not be generated: ${error instanceof Error ? error.message : String(error)}`);
             continue;
         }
@@ -955,6 +966,9 @@ function runAlternativeOf(
     const { disturbance_trial } = loss;
     const strategy = strategyOf(definition.strategy, result, { chest_drill_fallback, destroyed_target: config.setpoint.counts === "destroyed",
         ...(definition.settings !== undefined && { definition_settings: definition.settings }) });
+    // phase 2 of the router: every inserter and drill has exactly one route, its windowed ones named by the strategy; the routes stay
+    // inside the engine (enable-control-router.ts), so nothing listed below reads them
+    entityRoutesOf(entity_registry, result, clockedByConfig(used.planned_on ?? config), strategy, definition.beside_sources);
     const label = withOutputSwings(definition, strategy, result.used_terminal_swing_count, config.setpoint.counts);
     const inserter_window_count = entity_registry.getAll().filter(Entity.isInserter)
         .reduce((sum, inserter) => sum + (result.clock_windows[inserter.entity_id.id]?.length ?? 0), 0);
@@ -1121,7 +1135,7 @@ function runAlternativeOf(
             const tried = roundedClockTrial(used.planned_on ?? config, result, rounded_ticks, logger, report);
             return { result: tried.result, held: tried.holds, loss: tried.loss, start_dependence: tried.start_dependence, clock_window_cycle: rounded_ticks };
         } catch (error) {
-            if (error instanceof SecondaryPlanningInvariantError) throw error;
+            if (isInternalError(error)) throw error;
             not_tried_on_its_window_cycle = error instanceof Error ? error.message : String(error);
             logger.log(`Clock "${label}" rounded to ${rounded_ticks} ticks could not be tried on its own window cycle: ${not_tried_on_its_window_cycle}`);
             return null;
@@ -1310,8 +1324,9 @@ export function runCoordinatedSourcesTask(
     return withRunMemo(() => {
         const logger = options.logger ?? defaultLogger;
         const quiet = quietOptions(options, logger, options.on_progress_detail);
+        const beside_sources = input.parts.find(part => part.alternative_id === input.recommended_id)?.strategy;
         const run = runAlternativeOf({ id: COORDINATED_SOURCES_MAKER, label: COORDINATED_SOURCES_LABEL, description: COORDINATED_SOURCES_DESCRIPTION, strategy: "coordinated_sources",
-            run: () => coordinatedSourcesClock(config, input, { ...quiet, logger }) }, config, logger, options.on_progress_detail, new Set(assessed_signatures), undefined, undefined, false);
+            ...(beside_sources !== undefined && { beside_sources }), run: () => coordinatedSourcesClock(config, input, { ...quiet, logger }) }, config, logger, options.on_progress_detail, new Set(assessed_signatures), undefined, undefined, false);
         const listed = run?.alternatives.filter(it => it.verdict === "stable") ?? [];
         return run === null || listed.length === 0 ? null : { ...run, alternatives: listed };
     });

@@ -2,7 +2,7 @@ import type { Config } from "../../config";
 import { defaultLogger, Logger } from "../../common/logger";
 import { OpenRange } from "../../data-types";
 import { Entity } from "../../entities";
-import type { AlwaysOnReason, AlwaysOnReasons } from "../always-on-reasons";
+import { EntityRouteError, type AlwaysOnReason, type AlwaysOnReasons } from "../enable-control-router";
 import type { SerializableClockWindows } from "../clock";
 import { sharedItemDeadlockRisks } from "../deadlock-risk";
 import { BlueprintGenerationResult, completedClockCheck, GenerateClockOptions, UnclockedRun, unclockedRun } from "../plan/unclocked-run";
@@ -114,8 +114,8 @@ export function partGroups(inserters: readonly GroupedInserter[], parts: readonl
 /**
  * What the router gave each entity of the groups, source by source in the order the groups were taken: the strategy of the part the
  * group took, or, for an inserter the part leaves without windows, the reason it stays always enabled (the part's own, else the clock's:
- * `always_on_reasons`). It never refuses: an inserter whose reason is not known, or whose part has no strategy, is left out of its
- * source's entities and named in a debug line of the log.
+ * `always_on_reasons`). An inserter whose reason is not known (a fuel inserter on a clock of its own) is left out of its source's
+ * entities and named in a debug line of the log. An inserter given windows by a part with no strategy is an internal error.
  */
 export function sourceControlsOf(
     groups: readonly PartGroup[],
@@ -130,7 +130,7 @@ export function sourceControlsOf(
         const entities: Record<string, EnableControl> = {};
         for (const id of group.inserters) {
             if (choice.windows[id] !== null && choice.windows[id] !== undefined) {
-                if (part.strategy === undefined) { logger.debug(`Coordinated Sources, ${build}: ${id} left out of the sources, the clock ${partName(part)} has no strategy`); continue; }
+                if (part.strategy === undefined) throw new EntityRouteError(`Internal error: Coordinated Sources, ${build}: ${id} has enable windows from the clock ${partName(part)}, which has no strategy`);
                 entities[id] = { kind: "strategy", id: part.strategy.id, tuning_method: part.strategy.tuning_method };
                 continue;
             }
