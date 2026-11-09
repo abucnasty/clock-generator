@@ -1,4 +1,5 @@
 import { describe, test, expect, vi } from "vitest"
+import { laneFactsOfBeltEndingIn } from "./belt-lane-facts.fixture";
 import { mock } from 'vitest-mock-extended';
 import { EntityState, InserterState, InserterStatus, MachineState } from "../../state"
 import { InserterArchetype } from "../archetypes/inserter"
@@ -78,7 +79,7 @@ describe("an inserter's Hand (belt to machine)", () => {
         // These transition tests start with a fully backed-up ordinary belt.
         if (EntityId.isBelt(source.entity_id)) {
             inserter.pickup_length = 1;
-            inserter.belt_supply = "backed_up";
+            inserter.belt_lane_facts = laneFactsOfBeltEndingIn("dead_end");
         }
         return inserter;
     }

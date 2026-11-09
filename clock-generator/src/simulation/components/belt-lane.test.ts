@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import { BeltStrategy } from "../../common/entity-types";
 import { EntityId } from "../../entities";
 import { Belt, BeltSpeed } from "../../entities/belt";
-import { BackedUpPickupLane } from "../../state/backed-up-pickup-lane";
+import { BackpressurePickupLane } from "../../state/backpressure-pickup-lane";
 import { BeltPickupLane } from "../../state/belt-pickup-lane";
 import { BeltPickupStock } from "../../state/belt-pickup-stock";
 import { LaneTraffic } from "../../state/lane-traffic";
@@ -46,7 +46,7 @@ describe("BeltLane", () => {
 
     test("a seeded stock reaches the slot a built hand holds, and one stack a tick is taken from it", () => {
         const lane = new BeltLane({ ingredient_name: "iron-plate", stack_size: 4 }, SPEED);
-        const pickup = lane.addPickup("inserter:1", new BackedUpPickupLane(SPEED, 1, 4));
+        const pickup = lane.addPickup("inserter:1", new BackpressurePickupLane(SPEED, 1, 4));
         const seeded = new BeltPickupLane(SPEED, 1, 4, 3);
         lane.seedPickup("inserter:1", seeded);
         expect(lane.pickupOf("inserter:1")).toBe(pickup);

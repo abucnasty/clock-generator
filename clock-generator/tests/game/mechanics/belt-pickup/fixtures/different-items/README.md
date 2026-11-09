@@ -36,7 +36,7 @@ Ten short [native clips](jammed-pickup-clips.json) retain all four speeds and fu
 same-item fallback. They run offline with:
 
 ```bash
-npm test -- src/state/backed-up-pickup-lane.test.ts tests/game/mechanics/belt-pickup/jammed-pickup-replay.test.ts
+npm test -- src/state/backpressure-pickup-lane.test.ts tests/game/mechanics/belt-pickup/jammed-pickup-replay.test.ts
 ```
 
 The earlier three manual ingredient-demand controls are now automated at all four speeds. All 12 pass:

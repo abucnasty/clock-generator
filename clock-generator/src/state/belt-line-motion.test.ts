@@ -45,7 +45,7 @@ describe("BeltLineMotion", () => {
 });
 
 /**
- * The two lines of the backed-up turbo belt of the sample metallurgic science build, recorded in Factorio 2.1.24
+ * The two lines of the turbo belt under backpressure of the sample metallurgic science build, recorded in Factorio 2.1.24
  * (crafting/fixtures/wake-ups-capture-metallurgic-science-2.1.24.json): the ticks the game moved each, against the takes of
  * the inserters that take from it, read off their hands (stacks of four: a rise of four is a stack emptied)
  */

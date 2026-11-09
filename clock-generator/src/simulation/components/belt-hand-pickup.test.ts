@@ -196,4 +196,13 @@ describe("physical belt lane fallback", () => {
             expect([0, 1, 2, 3].map(input.take)).toEqual([4, 4, 4, 4]);
         }
     });
+
+    it("keeps the facts of both lanes of the source belt on the inserter, by lane", () => {
+        for (const backed_up_belts of [false, true]) {
+            const config = copy();
+            config.overrides = { backed_up_belts };
+            const facts = pickup(config).state.inserter.belt_lane_facts!;
+            expect(facts.map(lane => lane.lane_end.kind)).toEqual(backed_up_belts ? ["dead_end", "dead_end"] : ["outlet", "outlet"]);
+        }
+    });
 });

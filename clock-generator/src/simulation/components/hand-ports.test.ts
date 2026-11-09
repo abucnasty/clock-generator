@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { laneFactsOfBeltEndingIn } from "./belt-lane-facts.fixture";
 import "../../data/factorio-data-file";
 import { GameFixturePaths } from "../../../tests/game/helpers/fixture-paths";
 import { AssertionError } from "../../common/assert";
@@ -25,6 +26,8 @@ import { CarriedItems, dropFromHand, HandScratch, takeIntoHand } from "./hand";
 import { bindHandPorts } from "./hand-ports";
 import { MachineHandDrop } from "./machine-hand-drop";
 import { MachineHandPickup } from "./machine-hand-pickup";
+import { BackpressurePickupLane } from "../../state/backpressure-pickup-lane";
+import { BeltPickupLane } from "../../state/belt-pickup-lane";
 
 const gears = () => MachineState.forMachine(Machine.createMachine(1, {
     crafting_speed: 1,
@@ -51,7 +54,7 @@ function handOf(source: EntityState, sink: EntityState, items: ItemName[], stack
     };
     if (EntityId.isBelt(source.entity_id)) {
         inserter.pickup_length = 1;
-        inserter.belt_supply = "backed_up";
+        inserter.belt_lane_facts = laneFactsOfBeltEndingIn("dead_end");
     }
     return InserterState.createIdle(inserter);
 }
@@ -74,6 +77,21 @@ describe("a hand's ports", () => {
             expect(ports.pickup).toBeInstanceOf(pickup);
             expect(ports.drop).toBeInstanceOf(drop);
         }
+    });
+
+    it("give each lane of a belt the stock its own lane end asks for", () => {
+        const source = TransportBelt.create({ entity_id: EntityId.forBelt(1), belt_speed: BeltSpeed.TURBO_TRANSPORT_BELT,
+            strategy: BeltStrategy.NORMAL, lanes: [{ ingredient_name: "iron-plate", stack_size: 4 }, { ingredient_name: "copper-plate", stack_size: 4 }] });
+        const state = handOf(source, gears(), ["iron-plate"]);
+        const [first, second] = state.inserter.belt_lane_facts!;
+        state.inserter.belt_lane_facts = [
+            { ...first, lane_end: { kind: "dead_end" } },
+            { ...second, lane_end: { kind: "outlet", outlet_rate: second.supply_rate } },
+        ];
+        bind(state, source, gears());
+        const stocks = source.pickupsOf(state.entity_id.id)!;
+        expect(stocks[0]).toBeInstanceOf(BackpressurePickupLane);
+        expect(stocks[1]).toBeInstanceOf(BeltPickupLane);
     });
 
     it("refuse a source or a sink no archetype has a port for, the source first", () => {

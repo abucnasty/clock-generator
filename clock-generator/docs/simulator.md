@@ -127,7 +127,7 @@ front-entrance moving/backed-up controls and front-exit backed-up controls at tu
 speeds. Normal moving front-entrance controls use a paired compact destination to respect underground range.
 The historical timing examples above describe turbo fixtures.
 
-The production [backed-up queue](../src/state/backed-up-pickup-lane.ts) matches held quantities and exposed stock
+The production [backed-up queue](../src/state/backpressure-pickup-lane.ts) matches held quantities and exposed stock
 in all 48 ordinary backed-up captures, including both physical near sides, after a single full-stock seed.
 That comparison is given the game's arm arrival and drop; run from placement with neither, the whole simulation
 reproduces those captures too (see [Starting on supplied belts](#starting-on-supplied-belts)). The legendary stack inserter also retains
@@ -158,7 +158,7 @@ an underground end holds three stacks in reach and the fourth comes 8 ticks late
 read off the planning run is as long as the hand there took, which is shorter where that hand had started before the
 window or had waited for its machine while the belt refilled; a hand that starts in it from another start is cut. So
 on backed-up belts every belt-fed window lasts at least as long as a hand takes from the lanes at rest
-(`backedUpHandTicks`, the same queue), where that is slower than a stack a tick (#456): the normal side underground
+(`backpressureHandTicks`, the same queue), where that is slower than a stack a tick (#456): the normal side underground
 entrance and exit and the front exit get a stable clock for backed-up belts. Until 0.23.0 they got one planned with the
 belts moving (recorded exact then); the new clocks hold in the game as well, exact in baseline and after every cut (#479).
 

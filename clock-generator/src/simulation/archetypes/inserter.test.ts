@@ -1,4 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
+import { laneFactsOfBeltEndingIn } from "../components/belt-lane-facts.fixture";
 import { GameFixturePaths } from "../../../tests/game/helpers/fixture-paths";
 import { InserterAnimationOverrideConfig } from "../../config/schema";
 import { loadConfigFromFile } from "../../config/loader";
@@ -40,7 +41,7 @@ function inserterOf(source: EntityState, sink: EntityState, item: string, id: nu
     };
     if (EntityId.isBelt(source.entity_id)) {
         inserter.pickup_length = 1;
-        inserter.belt_supply = "moving";
+        inserter.belt_lane_facts = laneFactsOfBeltEndingIn("outlet");
     }
     return inserter;
 }

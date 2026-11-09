@@ -1,5 +1,5 @@
 import {BeltSpeed} from "../../../../src/entities/belt";
-import {BackedUpPickupLane} from "../../../../src/state/backed-up-pickup-lane";
+import {BackpressurePickupLane} from "../../../../src/state/backpressure-pickup-lane";
 interface ObservedStack {at: number; count: number; item: string}
 interface ObservedLane {length: number; stacks: ObservedStack[] | Record<string, never>}
 interface JammedSample {tick: number; held: number; held_item?: string; lanes: ObservedLane[]}
@@ -28,7 +28,7 @@ export function replayJammedPickups(report: JammedPickupReport, seedTick = 64, p
             throw new Error("Replay assumes one item per lane in full four-item stacks");
         }
         laneItems.push(stock[0].item);
-        return new BackedUpPickupLane(speed, lane.length, 4);
+        return new BackpressurePickupLane(speed, lane.length, 4);
     });
     const visible = (lane: number, tick: number) => queues[lane].snapshot(tick)
         .map(([position, count]) => [position, count, laneItems[lane]]);

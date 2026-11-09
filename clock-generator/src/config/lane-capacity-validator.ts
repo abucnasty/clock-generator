@@ -1,6 +1,7 @@
 import Fraction, { fraction } from '../data-types/fraction';
 import { Entity, handSizeFor } from '../entities';
-import { beltLanes, LaneTrait } from '../entities/traits/lane';
+import { beltLanesOfFacts, LaneTrait } from '../entities/traits/lane';
+import { laneFactsOf } from '../entities/traits/lane-facts';
 import { fractionOf } from '../entities/traits/ratio';
 import type { Logger } from '../common/logger';
 import { OutputCyclePlan } from '../crafting/sequence/cycle/output-cycle';
@@ -96,13 +97,13 @@ export function laneLoads(config: Config): LaneLoad[] {
         const key = `${flow.belt_id}|${flow.kind}`;
         groups.set(key, [...(groups.get(key) ?? []), flow]);
     }
-    const supply = config.overrides?.backed_up_belts === true ? 'backed_up' : 'moving';
+    const lane_facts = laneFactsOf(config);
     for (const group of groups.values()) {
         const { belt_id, kind } = group[0];
         const belt = config.belts.find(it => it.id === belt_id)!;
         // what each lane carries, by the Lane traits of this belt of the config (a belt that lists one lane has the second
         // at the same stack size, for the drops that land on it)
-        const lanes_of_belt: readonly LaneTrait[] = beltLanes(belt, supply);
+        const lanes_of_belt: readonly LaneTrait[] = beltLanesOfFacts(belt, lane_facts);
         const sets = new Map(group.map(flow => [flow.lanes.join(','), flow.lanes] as const));
         const all = [...new Set(group.flatMap(flow => flow.lanes))].sort((a, b) => a - b);
         sets.set(all.join(','), all);

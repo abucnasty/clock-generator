@@ -4,7 +4,7 @@ import {Config} from "../config";
 import {loadConfigFromFile} from "../config/loader";
 import {OpenRange} from "../data-types";
 import {SimulationContext} from "./sequence/simulation-context";
-import {backedUpHandTicks, withWindowsAtLeast} from "./clock";
+import {backpressureHandTicks, withWindowsAtLeast} from "./clock";
 import {GameFixturePaths} from "../../tests/game/helpers/fixture-paths";
 
 // The front underground exit's electromagnetic plant: its input inserter takes accumulators and supercapacitors, each
@@ -18,10 +18,10 @@ function handTicksAt(prefix: "" | "fast-" | "express-" | "turbo-", backed_up_bel
     copy.overrides = {...copy.overrides, backed_up_belts};
     const input = copy.inserters.find(inserter => inserter.source.type === "belt")!;
     if (layout && input.source.type === "belt") Object.assign(input.source, layout);
-    return backedUpHandTicks(SimulationContext.fromConfig(copy).entity_registry);
+    return backpressureHandTicks(SimulationContext.fromConfig(copy).entity_registry);
 }
 
-test("a backed-up belt slower than a stack a tick names the ticks a hand takes from the lanes at rest", () => {
+test("a belt with backpressure slower than a stack a tick names the ticks a hand takes from the lanes at rest", () => {
     expect(handTicksAt("", true)).toEqual(new Map([["inserter:2", 10]]));
     expect(handTicksAt("fast-", true)).toEqual(new Map([["inserter:2", 6]]));
 });

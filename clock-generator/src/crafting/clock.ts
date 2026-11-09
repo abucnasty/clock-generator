@@ -2,7 +2,7 @@ import { EnableControlRange } from "../config/schema";
 import { OpenRange } from "../data-types";
 import { Entity, handSizeFor, ReadableEntityRegistry } from "../entities";
 import { pickupLaneLength } from "../common/belt-pickup-layout";
-import { backedUpHandGrabTicks } from "../state/backed-up-pickup-lane";
+import { backpressureHandGrabTicks } from "../state/backpressure-pickup-lane";
 import { CIRCUIT_LATENCY_TICKS } from "../common/rule-constants";
 import { stacksOf } from "../entities/traits/timing";
 
@@ -98,14 +98,14 @@ export function beltPickupSlackTicks(entity_registry: ReadableEntityRegistry): M
 
 
 /**
- * The ticks a hand off a backed-up belt takes to fill from the lanes at rest, by belt-fed inserter id, where the belt
+ * The ticks a hand off a lane with backpressure takes to fill from the lanes at rest, by belt-fed inserter id, where the belt
  * refills its pickup slower than a lane stack a tick: the pickup exposes fewer stacks than a hand takes, and the belt
- * brings the rest into reach at its speed (`backedUpHandGrabTicks`). A window read off the planning run is as long as
+ * brings the rest into reach at its speed (`backpressureHandGrabTicks`). A window read off the planning run is as long as
  * the hand took there, which is shorter where that hand had started before the window or had waited for its machine
- * while the belt refilled. Absent for moving supply and where the belt gives a stack a tick (turbo and express on an
+ * while the belt refilled. Absent for a moving supply and where the belt gives a stack a tick (turbo and express on an
  * underground end, every tier on a straight belt with four-item stacks).
  */
-export function backedUpHandTicks(entity_registry: ReadableEntityRegistry): Map<string, number> {
+export function backpressureHandTicks(entity_registry: ReadableEntityRegistry): Map<string, number> {
     const hand_ticks = new Map<string, number>();
     for (const entity of entity_registry.getAll()) {
         if (!Entity.isInserter(entity) || entity.belt_supply !== "backed_up") {
@@ -123,7 +123,7 @@ export function backedUpHandTicks(entity_registry: ReadableEntityRegistry): Map<
                 length_tiles: pickupLaneLength(layout, index + 1, entity.pickup_length ?? 1),
                 stack_size: source.lanes[index].stack_size,
             }));
-            const grabs = backedUpHandGrabTicks(source.belt_speed, lanes, handSizeFor(entity, item));
+            const grabs = backpressureHandGrabTicks(source.belt_speed, lanes, handSizeFor(entity, item));
             const fill_ticks = grabs.length === 0 ? 0 : grabs[grabs.length - 1] + 1;
             if (fill_ticks > grabs.length) {
                 ticks = Math.max(ticks, fill_ticks);
@@ -200,8 +200,8 @@ export function shiftRangesForCircuitLatency(ranges: OpenRange[], window_cycle_t
 }
 
 /**
- * The belt supply a clock is designed for. Moving pickups time reachable stacks; backed-up supply refills reachable
- * stacks at belt speed, and its windows last as long as a hand takes from the lanes at rest (see backedUpHandTicks).
+ * The belt supply a clock is designed for. Moving pickups time reachable stacks; supply with backpressure refills reachable
+ * stacks at belt speed, and its windows last as long as a hand takes from the lanes at rest (see backpressureHandTicks).
  * Moving clocks add slack for late pickups (see "Wake-ups, the measure for goal 2" in GOALS.md).
  */
 export type ClockBelt =
@@ -210,7 +210,7 @@ export type ClockBelt =
      * `inside`, the windows stay open these ticks after their last pickup already and none were added (slackInsideWindows)
      */
     | { kind: "moving"; slack_ticks: number[]; inside?: true }
-    /** Its belt-fed inserters have the windows they need on a backed-up belt */
+    /** Its belt-fed inserters have the windows they need on a belt with backpressure */
     | { kind: "backed_up" };
 
 /** "moving (+4 ticks)" or "backed-up"; empty when no inserter with windows picks up from a belt */

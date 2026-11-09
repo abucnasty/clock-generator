@@ -15,6 +15,7 @@ import assert from "../../common/assert";
 import { BeltPickupLane } from "../../state/belt-pickup-lane";
 import { pickupLaneLength } from "../../common/belt-pickup-layout";
 import { itemsPutInto, PutIntoView } from "../../entities/chest/items-put-into";
+import { laneFactsOf } from "../../entities/traits/lane-facts";
 import { ContainerStorage } from "../../simulation/components/container-storage";
 import { MiningDrillArchetype } from "../../simulation/archetypes/mining-drill";
 import { ACTIVATION_ORDER, InserterDispatch } from "../../simulation/dispatch";
@@ -83,7 +84,7 @@ export class SimulationContext {
             assert(control !== undefined, `Cannot initialize pickup phases for unknown ${id}`);
             const inserter = control.inserter_state.inserter;
             const source = this.state_registry.getStateByEntityIdOrThrow(inserter.source.entity_id);
-            assert(EntityState.isBelt(source) && inserter.belt_supply === "moving",
+            assert(EntityState.isBelt(source) && inserter.belt_lane_facts?.every(facts => facts.lane_end.kind === "outlet") === true,
                 `Pickup phases need independent moving lanes: ${id}`);
             const length = inserter.pickup_length;
             assert(length !== undefined, `Pickup phases need pickup geometry: ${id}`);
@@ -130,8 +131,7 @@ export class SimulationContext {
 export function createEntityRegistryFromConfig(config: Config): EntityRegistry {
     const entity_registry = new EntityRegistry();
 
-    const belt_supply = config.overrides?.backed_up_belts === true ? "backed_up" : "moving";
-    const inserter_factory = new InserterFactory(entity_registry, belt_supply);
+    const inserter_factory = new InserterFactory(entity_registry, laneFactsOf(config));
 
     config.belts.forEach(beltConfig => {
         entity_registry.add(Belt.fromConfig(beltConfig));
