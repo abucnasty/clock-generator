@@ -3,6 +3,7 @@ import assert from "../../common/assert";
 import { BeltPickupLayout, pickupLaneLength, pickupTargetRadius } from "../../common/belt-pickup-layout";
 import type { TickProvider } from "../current-tick-provider";
 import { FactorioDataService, ItemName } from "../../data";
+import { isDeadEnd } from "../../entities/traits/lane-facts";
 import { beltPickupCalibrated } from "../../entities/inserter/metadata/inserter-spec";
 import { BackpressurePickupLane } from "../../state/backpressure-pickup-lane";
 import { BeltPickupArm } from "../../state/belt-pickup-arm";
@@ -57,7 +58,8 @@ export class BeltHandPickup implements HandPickupPort {
         this.sink_wakes = sink_wakes;
         const pickup_length = inserter.pickup_length;
         assert(pickup_length !== undefined, "Belt pickups need pickup geometry");
-        assert(inserter.belt_supply !== undefined, "Belt pickups need a supply setting");
+        const lane_facts = inserter.belt_lane_facts;
+        assert(lane_facts !== undefined, "Belt pickups need the facts of the lanes");
         assert(tick_provider !== undefined, "Belt pickups need the simulation tick provider");
 
         // The lane gaps and partial stacks are the inserter's: a second bind of it (a pickup bound alone beside its
@@ -67,7 +69,7 @@ export class BeltHandPickup implements HandPickupPort {
         this.lanes = source.lanes;
         const stockOf = (lane: BeltLane, index: number) => {
             const length = pickupLaneLength(inserter.pickup_layout ?? "side-straight", index + 1, pickup_length);
-            return inserter.belt_supply === "backed_up"
+            return isDeadEnd(lane_facts[index])
                 ? new BackpressurePickupLane(belt.belt_speed, length, lane.stack_size)
                 : new BeltPickupLane(belt.belt_speed, length, lane.stack_size, 0);
         };
