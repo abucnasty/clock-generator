@@ -389,6 +389,85 @@ export class LaneCapacityError extends Error {
     }
 }
 
+/** A rate a lane of the config states above what the lane can carry */
+export interface LaneRateIssue {
+    belt_id: number;
+    lane: number;
+    fact: 'supply rate' | 'outlet rate';
+    items_per_second: number;
+    /** Items a second the lane can carry: half the belt's speed times the lane's stack size */
+    capacity_per_second: number;
+}
+
+/** "Lane 1 of belt 2 states a supply rate of 130 a second. The lane can carry 120 a second." */
+export function describeLaneRate(issue: LaneRateIssue): string {
+    return `Lane ${issue.lane} of belt ${issue.belt_id} states ${issue.fact === 'supply rate' ? 'a supply rate' : 'an outlet rate'} of `
+        + `${formatRate(issue.items_per_second, issue.capacity_per_second)} a second. The lane can carry ${formatRate(issue.capacity_per_second)} a second.`;
+}
+
+/** A lane of the config states a supply rate or an outlet rate that the lane cannot carry */
+export class LaneRateError extends Error {
+    public readonly issues: LaneRateIssue[];
+
+    constructor(issues: LaneRateIssue[]) {
+        super(`${issues.map(describeLaneRate).join(' ')} Lower the rate, or remove it to use what the lane can carry.`);
+        this.name = 'LaneRateError';
+        this.issues = issues;
+    }
+}
+
+/** A set of lanes of a belt the copies take more from, summed, than the lanes get */
+export interface SharedLaneSupplyIssue {
+    belt_id: number;
+    lanes: number[];
+    /** The inserters of one unit that take from only these lanes */
+    inserter_ids: number[];
+    copies: number;
+    /** Whether every lane of the set is one per copy: then one copy's takes are held against one copy's lanes */
+    one_per_copy: boolean;
+    /** Items a second those inserters take at the target, in one unit */
+    items_per_second: number;
+    /** Items a second the lanes get: for the copies together, or for one copy where the lanes are one per copy */
+    supply_per_second: number;
+}
+
+/** Whether the takes of the copies add up on the lanes: they share them, and there is more than one copy */
+const summedOverCopies = (issue: SharedLaneSupplyIssue): boolean => !issue.one_per_copy && issue.copies > 1;
+
+/**
+ * "Lane 1 of belt 2 is shared by the 5 copies. Together they take 5 × 60 = 300 a second from it, and its supply rate is
+ * 120 a second."
+ */
+export function describeSharedLaneSupply(issue: SharedLaneSupplyIssue): string {
+    const one = issue.lanes.length === 1;
+    const lanes = describeLanes(issue);
+    const Lanes = `${lanes.charAt(0).toUpperCase()}${lanes.slice(1)}`;
+    if (!summedOverCopies(issue)) {
+        return issue.one_per_copy && issue.copies > 1
+            ? `${Lanes} ${one ? 'is' : 'are'} one per copy. Each copy takes ${formatRate(issue.items_per_second, issue.supply_per_second)} a second from ${one ? 'its lane' : 'its lanes'}, `
+                + `and the supply rate of ${one ? 'the lane' : 'the lanes'} is ${formatRate(issue.supply_per_second)} a second.`
+            : `The build takes ${formatRate(issue.items_per_second, issue.supply_per_second)} a second from ${lanes}, `
+                + `and ${one ? 'its' : 'their'} supply rate is ${formatRate(issue.supply_per_second)} a second.`;
+    }
+    const summed = issue.items_per_second * issue.copies;
+    return `${Lanes} ${one ? 'is' : 'are'} shared by the ${issue.copies} copies. Together they take ${issue.copies} × `
+        + `${formatRate(issue.items_per_second)} = ${formatRate(summed, issue.supply_per_second)} a second from ${one ? 'it' : 'them'}, `
+        + `and ${one ? 'its' : 'their'} supply rate is ${formatRate(issue.supply_per_second)} a second.`;
+}
+
+/** The copies take more from lanes they share than the lanes get, so no clock can hold the target */
+export class SharedLaneSupplyError extends Error {
+    public readonly issues: SharedLaneSupplyIssue[];
+
+    constructor(issues: SharedLaneSupplyIssue[]) {
+        super(`${issues.map(describeSharedLaneSupply).join(' ')} `
+            + (issues.some(summedOverCopies) ? 'If each copy has a lane of its own, set the lane to one per copy. Else use fewer copies.'
+                : 'Raise the supply rate, or lower the target.'));
+        this.name = 'SharedLaneSupplyError';
+        this.issues = issues;
+    }
+}
+
 // ============================================================================
 // Feasibility (crafting/feasibility/): a build no clock can carry
 // ============================================================================

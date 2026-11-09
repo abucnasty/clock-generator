@@ -78,6 +78,10 @@ export {
     InserterFixOption,
     LaneCapacityError,
     LaneCapacityIssue,
+    LaneRateError,
+    LaneRateIssue,
+    SharedLaneSupplyError,
+    SharedLaneSupplyIssue,
 } from './config/errors';
 
 export { validateCopies, findRepeatedUnits } from './config/copies-validator';
