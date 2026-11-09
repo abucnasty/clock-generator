@@ -27,7 +27,7 @@ const alternative = (e: Edit = {}) => ({
 /** What the property module writes into a job file of a result it found nothing wrong with */
 const clean = () => ({
     module_sha256: moduleSha256(), seconds: 0.5, problems: [] as { property: string; alternative: string; message: string }[],
-    checked: { 'always-on-reasons-named': 2, 'decider-build-order': 2, 'stable-holds-and-survives-loss': 2, 'counters-add-up': 1, 'fuel-never-dry': 0, 'strategy-and-signals': 2 },
+    checked: { 'entity-routes-total': 2, 'decider-build-order': 2, 'stable-holds-and-survives-loss': 2, 'counters-add-up': 1, 'fuel-never-dry': 0, 'strategy-and-signals': 2 },
 });
 /** What the per-job checks module writes into a job file of a result it found nothing wrong with */
 const cleanChecks = () => ({ module_sha256: checksSha256(), seconds: 0.25, ran: ['says what it must', 'and the other'], failures: [] as { check: string; message: string; expected?: string; actual?: string }[] });
