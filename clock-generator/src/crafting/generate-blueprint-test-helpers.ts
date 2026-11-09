@@ -1,6 +1,6 @@
 import { loadConfigFromFile } from "../config/loader";
 import type { Config } from "../config/schema";
-import { Entity, EntityId } from "../entities";
+import { EntityId } from "../entities";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { routesOfResult } from "./enable-control-router";
 import { clockedByConfig } from "./plan/unclocked-run";
