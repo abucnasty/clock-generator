@@ -56,9 +56,10 @@ describe("lane facts in the configuration", () => {
         }
     });
 
-    it("keeps the facts of an export lane beside its consumption", () => {
-        const lane = { consumption_per_second: 5, lane_end: { kind: "outlet", outlet_rate: 5 }, sharing: "one_per_copy" };
+    it("keeps the facts of an export lane beside its consumption, and refuses a lane end there: the consumption is its outlet rate", () => {
+        const lane = { consumption_per_second: 5, supply_rate: 100, sharing: "one_per_copy" };
         expect(ConfigSchema.parse(configWith(lane, "export")).belts[0].lanes[0]).toEqual({ ingredient: "iron-plate", stack_size: 4, ...lane });
+        expect(ConfigSchema.safeParse(configWith({ ...lane, lane_end: { kind: "outlet", outlet_rate: 5 } }, "export")).success).toBe(false);
     });
 
     it("adds no lane fact to a lane that states none", () => {

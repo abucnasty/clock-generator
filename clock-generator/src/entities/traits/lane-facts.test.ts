@@ -122,10 +122,10 @@ describe("the lane facts a config states", () => {
 
     it("reads the facts of an export lane beside its consumption", () => {
         const belt = { id: 3, type: "turbo-transport-belt", strategy: "export",
-            lanes: [{ ingredient: "iron-plate", stack_size: 4, consumption_per_second: 5, lane_end: { kind: "outlet", outlet_rate: 5 } }] };
+            lanes: [{ ingredient: "iron-plate", stack_size: 4, consumption_per_second: 5, supply_rate: 100, sharing: "one_per_copy" }] };
         const config = configOf({ belts: [belt] as Config["belts"] });
         expect(config.belts[0].lanes[0]).toHaveProperty("consumption_per_second", 5);
-        expect(laneFactsOf(config).of(3, 1).lane_end).toEqual({ kind: "outlet", outlet_rate: { numerator: 5, denominator: 1 } });
+        expect(laneFactsOf(config).of(3, 1)).toMatchObject({ supply_rate: { numerator: 100, denominator: 1 }, sharing: "one_per_copy" });
     });
 
     it("gives the lane traits the supply of a stated end", () => {
