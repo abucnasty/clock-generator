@@ -38,3 +38,18 @@ backed-up supply. Record any lost stable clock, recovery guarantee, throughput, 
 advantage. Retain game-backed examples as regression controls. No strategy has been removed by this audit.
 
 The trial transcripts and local benchmark tables behind this audit (#257) were not kept in the repository.
+
+## Shipped and explored strategies
+
+`STRATEGY_STATUS` in `src/crafting/explore.ts` lists every strategy the alternatives can run, each as `shipped` or `explored`. A shipped
+strategy runs in every generation and can make the selected clock. An explored strategy is a strategy that is not proven yet. It does not
+run, and it never makes the selected clock. The option `explore_strategies` of the generator (an argument of the engine API; it is not in
+the configuration, not in a share link and not on the site) makes the explored strategies run after the shipped ones. The result then has
+`explored`: the clocks of the explored strategies, the best of them by the ranking that selects, and whether that clock beats the selected
+one. Without the option the generator does what it does when every strategy is shipped, and the result has no `explored`.
+
+To promote a strategy, change its value in `STRATEGY_STATUS` to `shipped`. To demote it, change the value to `explored`. Nothing else
+changes. The strategies of the primary clock (Takt Batches, Round-Robin Polling, exhaust) are always shipped.
+
+`blast.sh run --explore` runs the blast with the option. Its cache entry is separate from the normal one, and `blast.sh explore <jobs>`
+lists for each job the shipped pick, the best explored clock and which of them wins.

@@ -13,6 +13,14 @@
 #   blast.sh run <worktree> <out> [-n N] [--no-store] [--no-build] [--full] [--base K]
 #                                           generates into <out> (resumable: done jobs stay, stale claims are freed);
 #                                           a complete run of a clean worktree is also stored in the cache
+#   blast.sh run <worktree> <out> --explore [-n N] [--no-store] [--no-build]
+#                                           the explore mode (CLOCK_EXPLORE=1, which works on every command that generates): the engine is asked for the explored
+#                                           strategies as well (`explore_strategies`), and each job file also holds `explored`: the selected clock and the best
+#                                           explored one with the strategy, verdict and wake-ups a minute of each, and whether the explored one beats the selected
+#                                           one. The selection is the shipped strategies' either way. The key holds the setting, so the run has a cache entry of its
+#                                           own and carries nothing from a normal one (a first run generates every job)
+#   blast.sh explore <jobs>                 the jobs of an explore run (a folder or a cache entry) listed by explore.py: per job the shipped pick, the best explored
+#                                           clock (strategy, wakeups a minute, verdict) and which wins; exits 1 on a folder that was not made with --explore
 #   blast.sh run <worktree> <out> --shard I/N [-n N] [--no-store] [--no-build]
 #                                           generates only shard I of N of the jobs (1-based; shard.py: the job list dealt out by each job's
 #                                           measured CI seconds, ci/record-durations.json, so that the shards finish together), the way CI
@@ -85,7 +93,7 @@
 # stores a base meant for later selective runs, e.g. after an engine merge); recording makes a full generation about 1.5
 # times as long in CPU time.
 #
-# The key also holds the environment variables that change what the engine generates (key.py ENV_KEYED, none today), by
+# The key also holds the environment variables that change what a blast generates (key.py ENV_KEYED: CLOCK_EXPLORE), by
 # name and value, "unset" apart from any value: a run under such a setting has a key of its own, is stored and reused like any
 # other, and never carries jobs from an entry made under another setting. With none set the key is what it always was. Every
 # command that runs or stores refuses, naming the variable, when the environment holds a CLOCK_* variable that key.py has on no list.
@@ -258,6 +266,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     -n) N=$2; NSLOW=$2; shift ;;
     --no-store) STORE=0 ;;
+    --explore) export CLOCK_EXPLORE=1 ;;
     --shard) [ $# -ge 2 ] || die "--shard takes I/N"; SHARD=$2; shift ;;
     --allow-unchecked) ALLOW=1 ;;
     --no-build) BUILD=0 ;;
@@ -354,6 +363,9 @@ case "$cmd" in
     [ ${#ARGS[@]} -eq 2 ] || die "record $sub <jobs folder or cache entry>"
     jobs=$(entry_arg "${ARGS[1]}") || exit 1
     python3 "$HERE/record.py" "$sub" ${MAP:+--map "$MAP"} ${RDIR:+--dir "$RDIR"} ${SUMMARY:+--summary "$SUMMARY"} ${ALLOW:+--allow-unchecked} "$jobs" ;;
+  explore) [ ${#ARGS[@]} -eq 1 ] || die "explore <jobs folder or cache entry>"
+    jobs=$(entry_arg "${ARGS[0]}") || exit 1
+    python3 "$HERE/explore.py" "$jobs" ;;
   list) python3 "$HERE/cache.py" list "$CACHE" ;;
   *) sed -n '2,/^set -u/{/^#/p}' "$0"; exit 2 ;;
 esac
