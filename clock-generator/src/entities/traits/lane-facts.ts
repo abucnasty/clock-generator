@@ -17,12 +17,20 @@ export type LaneEnd =
 /** Whether every copy of the unit takes from the same lane, or each copy has a lane of its own */
 export type LaneSharing = "shared_by_copies" | "one_per_copy";
 
+/** A map direction as a unit step, x east and y south: the way a lane's items move */
+export interface FlowDirection {
+    readonly x: number;
+    readonly y: number;
+}
+
 /** The facts about one lane of one belt that decide how its items reach a hand */
 export interface LaneFacts {
     /** Items a second entering the lane at its upstream end */
     readonly supply_rate: Ratio;
     readonly lane_end: LaneEnd;
     readonly sharing: LaneSharing;
+    /** The way its items move, where the config states it; null where it does not */
+    readonly flow_direction: FlowDirection | null;
 }
 
 /** The facts of every lane of every belt of one build */
@@ -39,22 +47,9 @@ export function isDeadEnd(facts: LaneFacts): boolean {
     return facts.lane_end.kind === "dead_end";
 }
 
-/**
- * The ends under which the shared-lane model (crafting/shared-lane-verdict.ts) runs a lane with every copy's takers on
- * it; the one place that says which lanes it decides. A dead end is run as it is, and an unknown end as a dead end. An
- * outlet is not run: on a flowing lane the model is harsher than the game (three copies on ore lanes into loaders lose
- * swings in the model under clocks that hold in the game), so a lane with an outlet keeps the check of one copy and the
- * guard of the windows by arithmetic (crafting/plan/shared-lane-guard.ts). The run of one copy reads an unknown end as
- * a free outlet, so a lane of unknown end is checked under both ends.
- */
-export function sharedLaneModelEnds(lane_end: LaneEnd): readonly LaneEnd[] {
-    return lane_end.kind === "outlet" ? [] : [{ kind: "dead_end" }];
-}
-
-/** Whether the shared-lane model checks the lane under every end it can have, so that nothing else has to */
-export function decidedBySharedLaneModel(lane_end: LaneEnd): boolean {
-    const ends = sharedLaneModelEnds(lane_end).map(end => end.kind);
-    return lane_end.kind === "unknown" ? ends.includes("dead_end") && ends.includes("outlet") : ends.includes(lane_end.kind);
+/** A cardinal direction of the game (0 north, 4 east, 8 south, 12 west) as a map step */
+function flowOf(direction: 0 | 4 | 8 | 12): FlowDirection {
+    return direction === 0 ? { x: 0, y: -1 } : direction === 4 ? { x: 1, y: 0 } : direction === 8 ? { x: 0, y: 1 } : { x: -1, y: 0 };
 }
 
 /** Whether the config's lanes all end in a dead end: the one place the config's switch is read */
@@ -92,6 +87,7 @@ export function laneFactsOf(config: LaneFactsConfig): LaneFactsOfBuild {
                 lane_end: stated?.lane_end !== undefined ? laneEndOf(stated.lane_end, capacity)
                     : dead_end ? { kind: "dead_end" } : { kind: "outlet", outlet_rate: capacity },
                 sharing: stated?.sharing ?? "shared_by_copies",
+                flow_direction: stated?.flow_direction === undefined ? null : flowOf(stated.flow_direction),
             });
         }
     }

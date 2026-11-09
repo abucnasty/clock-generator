@@ -13,7 +13,6 @@ import { LONG_RUN_SETTLE_SHARE } from "./long-run";
 import { beltPickupSlackTicks } from "./clock";
 import type { AsBuiltRun } from "./trial";
 import { ArithmeticWindowsNotApplicable, batchedSwingsWindowsByArithmetic } from "./plan/batched-arithmetic";
-import { sharedLaneShortened } from "./plan/shared-lane-guard";
 import { estimatedOutputSwings } from "./plan/output-swing-estimate";
 import { disturbanceTrialVerdictOf } from "./trial";
 import { OpenRange } from "../data-types";
@@ -90,8 +89,7 @@ export function generateClockForConfig(
 
 /**
  * The batched-swings windows of the plan made by arithmetic (batched-arithmetic.ts), where the arithmetic has a rule for
- * the build, they are not the planning run's own and the copies do not share a belt they shorten (shared-lane-guard.ts);
- * null elsewhere, the reason logged
+ * the build and they are not the planning run's own; null elsewhere, the reason logged
  */
 function arithmeticWindowsOf(plan: UnclockedRun): Map<string, OpenRange[]> | null {
     const { run } = plan;
@@ -101,11 +99,6 @@ function arithmeticWindowsOf(plan: UnclockedRun): Map<string, OpenRange[]> | nul
             always_enabled_by_config: run.always_enabled_by_config });
         if (sameWindows(windows, plan.unslacked_windows)) {
             plan.logger.log("Enable windows by arithmetic: the unclocked run's own");
-            return null;
-        }
-        const shared = sharedLaneShortened(plan.config, windows, plan.unslacked_windows);
-        if (shared !== null) {
-            plan.logger.log(`Enable windows by arithmetic: not used, ${shared}`);
             return null;
         }
         return windows;

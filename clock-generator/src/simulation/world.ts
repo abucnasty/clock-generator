@@ -9,8 +9,8 @@ import { TransportBelt } from "./archetypes/transport-belt";
 import { MiningDrillArchetype } from "./archetypes/mining-drill";
 import type { InserterScheduling } from "./inserter-scheduling";
 
-/** One tick of something that runs after the inserters: a taker of another copy on a shared lane */
-export interface CopyTakerTick {
+/** One tick of something that runs after the inserters: a reader of what they did in the tick */
+export interface AfterInsertersTick {
     tick(): void;
 }
 
@@ -46,11 +46,8 @@ export class World {
         public readonly containers: readonly ContainerStorage[],
         /** The update list (simulation/dispatch.ts) */
         public readonly scheduling: InserterScheduling,
-        /**
-         * What runs after the inserters in every tick, in the order given: the takers of the other copies on a shared lane
-         * (`SimulationContext.copy_takers`); empty for a build of one copy
-         */
-        public readonly copy_takers: readonly CopyTakerTick[],
+        /** What runs after the inserters in every tick, in the order given (`SimulationContext.after_inserters`); mostly empty */
+        public readonly after_inserters: readonly AfterInsertersTick[],
     ) {}
 
     public static of(context: SimulationContext): World {
@@ -63,7 +60,7 @@ export class World {
             states.filter(EntityState.isBelt),
             states.filter(ContainerStorage.is),
             context.inserterScheduling(),
-            [...context.copy_takers],
+            [...context.after_inserters],
         );
     }
 }

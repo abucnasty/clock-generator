@@ -163,7 +163,7 @@ export class RunMemo {
         return options.debug === undefined && options.debug_steps === undefined && options.timeline_recording === undefined
             && options.machine_stock !== true && options.fuel_levels !== true
             // a run something is put into is its own
-            && options.on_context === undefined;
+            && options.on_context === undefined && options.build_copies === undefined;
     }
 
     /** The run of this config and these options: the one kept, or the one `simulate` makes (kept when it is long enough) */

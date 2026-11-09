@@ -152,8 +152,8 @@ export function runTick(world: World, tracer: TickTracer | null): void {
     runDrills(world.drills, tracer);
     const scheduling = world.scheduling;
     runListedInserters(world.inserters, scheduling, tracer);
-    const copy_takers = world.copy_takers;
-    for (let index = 0; index < copy_takers.length; index++) copy_takers[index].tick();
+    const after_inserters = world.after_inserters;
+    for (let index = 0; index < after_inserters.length; index++) after_inserters[index].tick();
     runMachines(world.machines, tracer);
     // a window that opens next tick puts its inserter at the front now, after the machines (simulation/dispatch.ts)
     scheduling.finishControls();

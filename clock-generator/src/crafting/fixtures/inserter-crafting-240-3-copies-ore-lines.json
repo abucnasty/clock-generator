@@ -1,0 +1,330 @@
+{
+  "setpoint": {
+    "recipe": "inserter",
+    "items_per_second": 240,
+    "copies": 3,
+    "copy_offset": {
+      "x": 9,
+      "y": 0
+    }
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "inserter",
+      "productivity": 0,
+      "crafting_speed": 73.984375,
+      "prototype": "assembling-machine-3"
+    },
+    {
+      "id": 2,
+      "recipe": "iron-plate",
+      "productivity": 50,
+      "crafting_speed": 86.1655,
+      "prototype": "electric-furnace"
+    },
+    {
+      "id": 3,
+      "recipe": "iron-plate",
+      "productivity": 50,
+      "crafting_speed": 86.1655,
+      "prototype": "electric-furnace"
+    },
+    {
+      "id": 4,
+      "recipe": "iron-gear-wheel",
+      "productivity": 100,
+      "crafting_speed": 40.3125,
+      "prototype": "assembling-machine-3"
+    },
+    {
+      "id": 5,
+      "recipe": "iron-plate",
+      "productivity": 50,
+      "crafting_speed": 86.1655,
+      "prototype": "electric-furnace"
+    },
+    {
+      "id": 6,
+      "recipe": "iron-plate",
+      "productivity": 50,
+      "crafting_speed": 91.875,
+      "prototype": "electric-furnace"
+    }
+  ],
+  "inserters": [
+    {
+      "source": {
+        "type": "belt",
+        "id": 1,
+        "near_lane": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "stack_size": 16,
+      "filters": [
+        "iron-ore"
+      ],
+      "position": {
+        "x": 399.5,
+        "y": -7.5
+      }
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 1,
+        "near_lane": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 3
+      },
+      "stack_size": 16,
+      "filters": [
+        "iron-ore"
+      ],
+      "position": {
+        "x": 400.5,
+        "y": -7.5
+      }
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 4,
+        "near_lane": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 5
+      },
+      "stack_size": 16,
+      "filters": [
+        "iron-ore"
+      ],
+      "position": {
+        "x": 400.5,
+        "y": 8.5
+      }
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 4,
+        "near_lane": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 6
+      },
+      "stack_size": 16,
+      "filters": [
+        "iron-ore"
+      ],
+      "position": {
+        "x": 399.5,
+        "y": 8.5
+      }
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 4
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "iron-gear-wheel"
+      ],
+      "position": {
+        "x": 400.5,
+        "y": 0.5
+      }
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "iron-plate"
+      ],
+      "position": {
+        "x": 399.5,
+        "y": -3.5
+      }
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "iron-plate"
+      ],
+      "position": {
+        "x": 400.5,
+        "y": -3.5
+      }
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 2,
+        "near_lane": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "electronic-circuit"
+      ],
+      "position": {
+        "x": 398.5,
+        "y": -1.5
+      }
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "belt",
+        "id": 3
+      },
+      "stack_size": 16,
+      "filters": [
+        "inserter"
+      ],
+      "position": {
+        "x": 401.5,
+        "y": 0.5
+      }
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 5
+      },
+      "sink": {
+        "type": "machine",
+        "id": 4
+      },
+      "stack_size": 16,
+      "filters": [
+        "iron-plate"
+      ],
+      "position": {
+        "x": 400.5,
+        "y": 4.5
+      }
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 6
+      },
+      "sink": {
+        "type": "machine",
+        "id": 4
+      },
+      "stack_size": 16,
+      "filters": [
+        "iron-plate"
+      ],
+      "position": {
+        "x": 399.5,
+        "y": 4.5
+      }
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "iron-ore",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "outlet"
+          },
+          "flow_direction": 4
+        },
+        {
+          "ingredient": "iron-ore",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "outlet"
+          },
+          "flow_direction": 4
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "electronic-circuit",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "electronic-circuit",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "inserter",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "iron-ore",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "outlet"
+          },
+          "flow_direction": 4
+        },
+        {
+          "ingredient": "iron-ore",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "outlet"
+          },
+          "flow_direction": 4
+        }
+      ]
+    }
+  ]
+}

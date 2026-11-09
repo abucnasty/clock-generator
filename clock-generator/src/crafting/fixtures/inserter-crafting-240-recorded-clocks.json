@@ -1,0 +1,67 @@
+{
+  "takt_batches_swings_6": { "window_cycle_ticks": 216, "windows": {
+    "inserter:1": [{"start": 0, "end": 17}, {"start": 36, "end": 65}, {"start": 72, "end": 89}, {"start": 144, "end": 176}],
+    "inserter:2": [{"start": 0, "end": 17}, {"start": 36, "end": 65}, {"start": 72, "end": 89}, {"start": 144, "end": 176}],
+    "inserter:3": [{"start": 0, "end": 17}, {"start": 36, "end": 65}, {"start": 72, "end": 89}, {"start": 144, "end": 176}],
+    "inserter:4": [{"start": 0, "end": 17}, {"start": 36, "end": 65}, {"start": 72, "end": 89}, {"start": 144, "end": 176}],
+    "inserter:5": [{"start": 0, "end": 113}, {"start": 144, "end": 208}],
+    "inserter:6": [{"start": 0, "end": 17}, {"start": 36, "end": 65}, {"start": 72, "end": 89}, {"start": 144, "end": 176}],
+    "inserter:7": [{"start": 0, "end": 17}, {"start": 36, "end": 65}, {"start": 72, "end": 89}, {"start": 144, "end": 176}],
+    "inserter:8": [{"start": 0, "end": 60}, {"start": 72, "end": 132}, {"start": 144, "end": 204}],
+    "inserter:9": [{"start": 0, "end": 215}],
+    "inserter:10": [{"start": 0, "end": 17}, {"start": 36, "end": 65}, {"start": 72, "end": 89}, {"start": 144, "end": 176}],
+    "inserter:11": [{"start": 0, "end": 17}, {"start": 36, "end": 65}, {"start": 72, "end": 89}, {"start": 144, "end": 176}]
+  } },
+  "coordinated_sources": { "window_cycle_ticks": 216, "windows": {
+    "inserter:1": [{"start": 0, "end": 69}, {"start": 72, "end": 106}, {"start": 109, "end": 178}, {"start": 181, "end": 213}],
+    "inserter:2": [{"start": 0, "end": 69}, {"start": 72, "end": 106}, {"start": 109, "end": 178}, {"start": 181, "end": 213}],
+    "inserter:3": [{"start": 0, "end": 69}, {"start": 72, "end": 106}, {"start": 109, "end": 178}, {"start": 181, "end": 213}],
+    "inserter:4": [{"start": 0, "end": 69}, {"start": 72, "end": 106}, {"start": 109, "end": 178}, {"start": 181, "end": 213}],
+    "inserter:5": [{"start": 0, "end": 96}, {"start": 120, "end": 215}],
+    "inserter:6": [{"start": 0, "end": 69}, {"start": 72, "end": 106}, {"start": 109, "end": 178}, {"start": 181, "end": 213}],
+    "inserter:7": [{"start": 0, "end": 69}, {"start": 72, "end": 106}, {"start": 109, "end": 178}, {"start": 181, "end": 213}],
+    "inserter:8": [{"start": 0, "end": 17}, {"start": 23, "end": 28}, {"start": 30, "end": 64}, {"start": 66, "end": 89}, {"start": 95, "end": 100}, {"start": 102, "end": 136}, {"start": 138, "end": 161}, {"start": 167, "end": 172}, {"start": 174, "end": 208}, {"start": 210, "end": 215}],
+    "inserter:9": [{"start": 0, "end": 215}],
+    "inserter:10": [{"start": 0, "end": 69}, {"start": 72, "end": 106}, {"start": 109, "end": 178}, {"start": 181, "end": 213}],
+    "inserter:11": [{"start": 0, "end": 69}, {"start": 72, "end": 106}, {"start": 109, "end": 178}, {"start": 181, "end": 213}]
+  } },
+  "takt_batches_swings_2": { "window_cycle_ticks": 216, "windows": {
+    "inserter:1": [{"start": 0, "end": 5}, {"start": 24, "end": 56}, {"start": 72, "end": 77}, {"start": 96, "end": 97}, {"start": 120, "end": 125}, {"start": 132, "end": 161}, {"start": 168, "end": 169}, {"start": 192, "end": 197}],
+    "inserter:2": [{"start": 0, "end": 5}, {"start": 24, "end": 56}, {"start": 72, "end": 77}, {"start": 96, "end": 97}, {"start": 120, "end": 125}, {"start": 132, "end": 161}, {"start": 168, "end": 169}, {"start": 192, "end": 197}],
+    "inserter:3": [{"start": 0, "end": 5}, {"start": 24, "end": 56}, {"start": 72, "end": 77}, {"start": 96, "end": 97}, {"start": 120, "end": 125}, {"start": 132, "end": 161}, {"start": 168, "end": 169}, {"start": 192, "end": 197}],
+    "inserter:4": [{"start": 0, "end": 5}, {"start": 24, "end": 56}, {"start": 72, "end": 77}, {"start": 96, "end": 97}, {"start": 120, "end": 125}, {"start": 132, "end": 161}, {"start": 168, "end": 169}, {"start": 192, "end": 197}],
+    "inserter:5": [{"start": 0, "end": 9}, {"start": 24, "end": 88}, {"start": 96, "end": 105}, {"start": 120, "end": 129}, {"start": 132, "end": 201}],
+    "inserter:6": [{"start": 0, "end": 5}, {"start": 24, "end": 56}, {"start": 72, "end": 77}, {"start": 96, "end": 97}, {"start": 120, "end": 125}, {"start": 132, "end": 161}, {"start": 168, "end": 169}, {"start": 192, "end": 197}],
+    "inserter:7": [{"start": 0, "end": 5}, {"start": 24, "end": 56}, {"start": 72, "end": 77}, {"start": 96, "end": 97}, {"start": 120, "end": 125}, {"start": 132, "end": 161}, {"start": 168, "end": 169}, {"start": 192, "end": 197}],
+    "inserter:8": [{"start": 0, "end": 16}, {"start": 24, "end": 40}, {"start": 48, "end": 64}, {"start": 72, "end": 88}, {"start": 96, "end": 112}, {"start": 120, "end": 136}, {"start": 144, "end": 160}, {"start": 168, "end": 184}, {"start": 192, "end": 208}],
+    "inserter:9": [{"start": 0, "end": 215}],
+    "inserter:10": [{"start": 0, "end": 5}, {"start": 24, "end": 56}, {"start": 72, "end": 77}, {"start": 96, "end": 97}, {"start": 120, "end": 125}, {"start": 132, "end": 161}, {"start": 168, "end": 169}, {"start": 192, "end": 197}],
+    "inserter:11": [{"start": 0, "end": 5}, {"start": 24, "end": 56}, {"start": 72, "end": 77}, {"start": 96, "end": 97}, {"start": 120, "end": 125}, {"start": 132, "end": 161}, {"start": 168, "end": 169}, {"start": 192, "end": 197}]
+  } },
+  "takt_batches_observed_swings_2": { "window_cycle_ticks": 216, "windows": {
+    "inserter:1": [{"start": 0, "end": 11}, {"start": 18, "end": 68}, {"start": 72, "end": 83}, {"start": 90, "end": 131}, {"start": 144, "end": 203}],
+    "inserter:2": [{"start": 0, "end": 11}, {"start": 18, "end": 68}, {"start": 72, "end": 83}, {"start": 90, "end": 131}, {"start": 144, "end": 203}],
+    "inserter:3": [{"start": 0, "end": 11}, {"start": 18, "end": 68}, {"start": 72, "end": 83}, {"start": 90, "end": 131}, {"start": 144, "end": 203}],
+    "inserter:4": [{"start": 0, "end": 11}, {"start": 18, "end": 68}, {"start": 72, "end": 83}, {"start": 90, "end": 131}, {"start": 144, "end": 203}],
+    "inserter:5": [{"start": 0, "end": 15}, {"start": 23, "end": 111}, {"start": 119, "end": 135}, {"start": 143, "end": 208}, {"start": 215, "end": 215}],
+    "inserter:6": [{"start": 0, "end": 11}, {"start": 18, "end": 68}, {"start": 72, "end": 83}, {"start": 90, "end": 131}, {"start": 144, "end": 203}],
+    "inserter:7": [{"start": 0, "end": 11}, {"start": 18, "end": 68}, {"start": 72, "end": 83}, {"start": 90, "end": 131}, {"start": 144, "end": 203}],
+    "inserter:8": [{"start": 0, "end": 16}, {"start": 18, "end": 30}, {"start": 38, "end": 88}, {"start": 90, "end": 102}, {"start": 110, "end": 160}, {"start": 162, "end": 174}, {"start": 182, "end": 215}],
+    "inserter:9": [{"start": 0, "end": 24}, {"start": 27, "end": 96}, {"start": 99, "end": 168}, {"start": 171, "end": 215}],
+    "inserter:10": [{"start": 0, "end": 11}, {"start": 18, "end": 68}, {"start": 72, "end": 83}, {"start": 90, "end": 131}, {"start": 144, "end": 203}],
+    "inserter:11": [{"start": 0, "end": 11}, {"start": 18, "end": 68}, {"start": 72, "end": 83}, {"start": 90, "end": 131}, {"start": 144, "end": 203}]
+  } },
+  "takt_batches_observed_swings_6": { "window_cycle_ticks": 216, "windows": {
+    "inserter:1": [{"start": 0, "end": 20}, {"start": 23, "end": 92}, {"start": 95, "end": 131}, {"start": 144, "end": 203}],
+    "inserter:2": [{"start": 0, "end": 20}, {"start": 23, "end": 92}, {"start": 95, "end": 131}, {"start": 144, "end": 203}],
+    "inserter:3": [{"start": 0, "end": 20}, {"start": 23, "end": 92}, {"start": 95, "end": 131}, {"start": 144, "end": 203}],
+    "inserter:4": [{"start": 0, "end": 20}, {"start": 23, "end": 92}, {"start": 95, "end": 131}, {"start": 144, "end": 203}],
+    "inserter:5": [{"start": 0, "end": 119}, {"start": 143, "end": 215}],
+    "inserter:6": [{"start": 0, "end": 20}, {"start": 23, "end": 92}, {"start": 95, "end": 131}, {"start": 144, "end": 203}],
+    "inserter:7": [{"start": 0, "end": 20}, {"start": 23, "end": 92}, {"start": 95, "end": 131}, {"start": 144, "end": 203}],
+    "inserter:8": [{"start": 0, "end": 15}, {"start": 17, "end": 40}, {"start": 46, "end": 51}, {"start": 53, "end": 87}, {"start": 89, "end": 112}, {"start": 118, "end": 123}, {"start": 125, "end": 159}, {"start": 161, "end": 184}, {"start": 190, "end": 195}, {"start": 197, "end": 215}],
+    "inserter:9": [{"start": 0, "end": 215}],
+    "inserter:10": [{"start": 0, "end": 20}, {"start": 23, "end": 92}, {"start": 95, "end": 131}, {"start": 144, "end": 203}],
+    "inserter:11": [{"start": 0, "end": 20}, {"start": 23, "end": 92}, {"start": 95, "end": 131}, {"start": 144, "end": 203}]
+  } }
+}

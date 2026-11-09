@@ -3,64 +3,69 @@ import { Logger } from "../common/logger";
 import { OpenRange } from "../data-types";
 import Fraction, { fraction } from "../data-types/fraction";
 import { FactorioDataService } from "../data";
-import { LaneEnd, laneFactsOf, sharedLaneModelEnds } from "../entities/traits/lane-facts";
+import { FlowDirection, LaneEnd, laneFactsOf } from "../entities/traits/lane-facts";
 import { fractionOf } from "../entities/traits/ratio";
 import { SerializableClockWindows } from "./clock";
-import { DropRecorder, FlowDirection, LaneRow, laneRowsOf, recordInserters, runOnSharedLanes } from "./shared-lane-model";
+import { DropRecorder, HandDropped, LaidOutLane, LaneRow, recordInserters, runOnSharedLanes, SharedLaneLayout, sharedLaneLayoutOf } from "./shared-lane-model";
 import { longRunWindowCyclesOf, runClockOnBuild } from "./trial";
-import type { HandDropped } from "../simulation/copy-taker";
 
 /**
- * Whether a clock holds on the lanes its copies share (rulings: the other copies' pickup inserters are simulated on each
- * shared lane, and a copy that loses swings fails the clock; a lane of unknown end must hold under each end).
+ * Whether a clock holds on the lanes its copies share. One run holds every copy of the build, each with its own machines
+ * and inserters, `copy_offset` apart along the lanes they share; each such lane runs tick by tick with every copy's
+ * takers on it, whatever its end (crafting/shared-lane-model.ts). A copy that loses swings there fails the clock.
  *
- * The lanes judged are the ones `sharedLaneModelEnds` runs, under each end it gives, where the model checks something
- * the run of one copy does not: a lane the copies share (more than one copy), or a lane whose end that run does not read
- * (an unknown end, which it reads as a free outlet). A lane the build drops onto is left out: its entry would be the
- * drops, which the model does not run. So is a lane one of whose takers puts into something other than a machine: the
- * model runs a taker of another copy into a machine only.
+ * The lanes judged: every lane a belt pickup takes from that the copies share (`sharing`, more than one copy), under its
+ * end; a lane of unknown end is run as a dead end and as a free outlet in turn, and the clock has to hold under both. A
+ * lane of unknown end that the copies do not share is run with the takers of one copy on it as a dead end (the run of one
+ * copy reads it as a free outlet). A belt the build drops onto is left out: its entry would be the drops, which the
+ * model does not run (`droppedOntoSharedLanes`).
  *
- * The config does not say which way a lane the build takes from flows, so the model runs it both ways along the row of
- * copies, and the clock has to hold both ways.
+ * A lane that states its `flow_direction` is run with its items moving that way; a lane that does not is run with them
+ * moving each way along the copies in turn, and the clock has to hold both ways. A run whose rows are those of a run
+ * made already is not made again: the same rows give the same run.
  *
- * The refill arithmetic of the lane (`refillsInTime`) is worked out on the run of the clock with one copy and reported
- * beside the verdict, but it does not skip the model: on the samples with their input lanes read as dead ends it said
- * every lane refills in time for clocks under which the model has a copy lose swings, so it proves nothing yet. The
- * arithmetic never fails a clock alone.
+ * The refill arithmetic of the lane (`refillsInTime`) is worked out on the run of one copy and reported beside the
+ * verdict, but it skips nothing: on the samples with their input lanes read as dead ends it said every lane refills in
+ * time for clocks under which the model has a copy lose swings, so it proves nothing yet. It never fails a clock alone.
  *
- * Each copy's takers are judged on the second half of a long run against the run of one copy: a taker that puts down a
- * whole hand fewer of the lane's item than the same inserter does with no other copy on the lane loses swings. What each
- * copy's taker got is read through one function, `copyLaneTakes`, and nowhere else.
+ * Each copy's takers are judged over the whole window cycles of the clock in the second half of a long run: a taker that
+ * puts down fewer items of the lane's item than the same inserter does in a run of one copy alone, with a stock of each
+ * lane of its own, loses swings. What each copy's taker got is read through one function, `copyLaneTakes`, and nowhere
+ * else.
  */
 
-/** What one taker of one copy put down of a lane's item in the judged part of a run of the copies on their shared lanes */
+/** What one taker of one copy put down of a lane's item in a run of the copies on their shared lanes */
 export interface CopyLaneTake {
     belt_id: number;
     lane: 1 | 2;
     item: string;
-    /** The copy, counted from the lane's entry: 0 is the one simulated in full */
+    /** The copy, counted from the lane's entry: 0 is the config's own */
     copy: number;
+    /** The config's inserter that the copy's taker is a copy of */
     inserter_id: string;
-    items: number;
+    /** Its hands of the lane's item, at the ticks of the run */
+    hands: readonly HandDropped[];
 }
 
 /**
- * What each copy's pickup inserter got on each shared lane: the items of the lane's item each taker of each copy put down
- * from `from` to the end of a run of the clock with the copies on the rows' lanes. The verdict reads the copies' figures
- * here alone, so that where they come from can change in this function only.
+ * What each copy's pickup inserter got on each shared lane: the hands of the lane's item each taker of each copy put down
+ * in a run of the clock with every copy of the layout built and the rows' lanes shared, and the run's last tick. The
+ * verdict reads the copies' figures here alone, so that where they come from can change in this function only.
  */
-export function copyLaneTakes(config: Config, windows: Map<string, OpenRange[]>, window_cycle_ticks: number, rows: readonly LaneRow[],
-    window_cycles: number, from: number, logger: Logger): CopyLaneTake[] {
-    const model = runOnSharedLanes(config, windows, window_cycle_ticks, rows, window_cycles, logger);
-    return rows.flatMap(row => {
+export function copyLaneTakes(config: Config, windows: Map<string, OpenRange[]>, window_cycle_ticks: number, layout: SharedLaneLayout,
+    window_cycles: number, logger: Logger): { takes: CopyLaneTake[]; last_tick: number } {
+    const model = runOnSharedLanes(config, windows, window_cycle_ticks, layout, window_cycles, logger);
+    let last_tick = 0;
+    const takes = layout.rows.flatMap(row => {
         const item = config.belts.find(belt => belt.id === row.belt_id)!.lanes[row.lane - 1].ingredient;
         return row.takers.flatMap(taker => {
             const record = model.takers.find(it => it.copy === taker.copy && it.inserter_id === taker.inserter_id);
             if (record === undefined) return [];
-            const items = record.hands.filter(hand => hand.item === item && hand.tick >= from).reduce((sum, hand) => sum + hand.items, 0);
-            return [{ belt_id: row.belt_id, lane: row.lane, item, copy: taker.copy, inserter_id: taker.inserter_id, items }];
+            last_tick = Math.max(last_tick, record.last_tick);
+            return [{ belt_id: row.belt_id, lane: row.lane, item, copy: taker.copy, inserter_id: taker.inserter_id, hands: record.hands.filter(hand => hand.item === item) }];
         });
     });
+    return { takes, last_tick };
 }
 
 /** One taker of one copy that loses swings on a lane the copies share */
@@ -69,15 +74,17 @@ export interface SharedLaneLoss {
     /** The lane, 1 or 2 */
     lane: number;
     lane_end: LaneEnd["kind"];
+    /** The end the lane was run under, for a lane of unknown end: a dead end or an outlet */
+    run_as: "dead_end" | "outlet";
     item: string;
-    /** Copies that take from the lane, as the config counts them (5.5); one on a lane that is one per copy */
+    /** Copies that take from the lane, as the config counts them (5.5); one on a lane only one copy takes from */
     copies: number;
-    /** The copy, counted from the lane's entry: 1 is the one simulated in full */
+    /** The copy, counted from the lane's entry: 1 is the config's own */
     copy: number;
     inserter_id: number;
     /** Items of the lane's item the taker put down in the judged window cycles */
     items: number;
-    /** What the inserter put down in them with no other copy on the lane */
+    /** What the inserter put down in them in a run of one copy alone */
     alone_items: number;
     window_cycles: number;
     /** The way the items flow, as a map direction */
@@ -93,59 +100,89 @@ export interface SharedLaneJudgement {
     fast_check_passes: boolean;
     /** Whether the model ran */
     simulated: boolean;
-    /** Lanes the model would run, by "belt/lane" */
+    /** Lanes the model runs, by "belt/lane" */
     lanes: string[];
 }
 
-/** A lane the model runs, and the end it runs it under */
+/** A lane the model runs: whether the copies share it, its end, and the way its items move where the config states it */
 interface ModelLane {
     belt_id: number;
     lane: 1 | 2;
+    shared: boolean;
     stated: LaneEnd;
-    ends: readonly LaneEnd[];
+    flow: FlowDirection | null;
 }
 
-/** The lanes the model judges, with the ends it runs each under (see the module's description) */
-function modelLanesOf(config: Config, logger: Logger): ModelLane[] {
+/** The belts an inserter of the config drops onto */
+function droppedOnto(config: Config): Set<number> {
+    return new Set(config.inserters.flatMap(inserter => inserter.sink.type === "belt" ? [inserter.sink.id] : []));
+}
+
+/** The lanes a belt pickup of the config takes an item from: each belt's lanes with an item and a taker of it */
+function takenLanesOf(config: Config): { belt_id: number; lane: 1 | 2 }[] {
+    return config.belts.flatMap(belt => ([1, 2] as const).flatMap(lane => {
+        const item = belt.lanes[lane - 1]?.ingredient;
+        if (item === undefined || item === "") return [];
+        const taken = config.inserters.some(inserter => inserter.source.type === "belt" && inserter.source.id === belt.id
+            && (inserter.filters === undefined || inserter.filters.length === 0
+                || (inserter.filter_mode === "blacklist" ? !inserter.filters.includes(item) : inserter.filters.includes(item))));
+        return taken ? [{ belt_id: belt.id, lane }] : [];
+    }));
+}
+
+/** The lanes the model judges (see the module's description) */
+function modelLanesOf(config: Config): ModelLane[] {
     const facts = laneFactsOf(config);
-    const copies = config.setpoint.copies;
-    const dropped_onto = new Set(config.inserters.flatMap(inserter => inserter.sink.type === "belt" ? [inserter.sink.id] : []));
-    const lanes: ModelLane[] = [];
-    for (const belt of config.belts) {
-        if (dropped_onto.has(belt.id)) continue;
-        for (const lane of [1, 2] as const) {
-            const item = belt.lanes[lane - 1]?.ingredient;
-            if (item === undefined || item === "") continue;
-            const takers = config.inserters.filter(inserter => inserter.source.type === "belt" && inserter.source.id === belt.id
-                && (inserter.filters === undefined || inserter.filters.length === 0
-                    || (inserter.filter_mode === "blacklist" ? !inserter.filters.includes(item) : inserter.filters.includes(item))));
-            if (takers.length === 0) continue;
-            const lane_facts = facts.of(belt.id, lane);
-            const shared = lane_facts.sharing === "shared_by_copies" && copies > 1;
-            // the run of one copy reads a dead end as one and every other end as a free outlet
-            const read_alone = lane_facts.lane_end.kind === "dead_end" ? "dead_end" : "outlet";
-            const ends = sharedLaneModelEnds(lane_facts.lane_end).filter(end => shared || end.kind !== read_alone);
-            if (ends.length === 0) continue;
-            if (takers.some(inserter => inserter.sink.type !== "machine")) {
-                logger.log(`The shared lanes: lane ${lane} of belt ${belt.id} is not checked, as a taker of it puts into something other than a machine`);
-                continue;
-            }
-            lanes.push({ belt_id: belt.id, lane, stated: lane_facts.lane_end, ends });
-        }
-    }
-    return lanes;
+    const dropped = droppedOnto(config);
+    return takenLanesOf(config).flatMap(({ belt_id, lane }) => {
+        if (dropped.has(belt_id)) return [];
+        const lane_facts = facts.of(belt_id, lane);
+        const shared = lane_facts.sharing === "shared_by_copies" && config.setpoint.copies > 1;
+        if (!shared && lane_facts.lane_end.kind !== "unknown") return [];
+        return [{ belt_id, lane, shared, stated: lane_facts.lane_end, flow: lane_facts.flow_direction }];
+    });
 }
 
-/** The config with each lane's end as one reading has it: the `reading`-th end of each lane, or its last */
+/**
+ * The lanes the copies share that the model leaves out because the build drops onto their belt, for the result to name
+ * as not checked
+ */
+export function droppedOntoSharedLanes(config: Config): { belt_id: number; lane: 1 | 2 }[] {
+    if (!(config.setpoint.copies > 1)) return [];
+    const facts = laneFactsOf(config);
+    const dropped = droppedOnto(config);
+    return takenLanesOf(config).filter(({ belt_id, lane }) => dropped.has(belt_id) && facts.of(belt_id, lane).sharing === "shared_by_copies");
+}
+
+/**
+ * The spacing the check of the shared lanes puts the copies at on each lane they share, where the config does not give
+ * `copy_offset`: the copy's length from its positions, or a tile for each taker (`sharedLaneLayoutOf`). Empty where the
+ * config gives it, or no lane is shared.
+ */
+export function assumedCopySpacings(config: Config): { belt_id: number; lane: 1 | 2; tiles: number }[] {
+    if (config.setpoint.copy_offset !== undefined) return [];
+    const lanes = modelLanesOf(config).filter(lane => lane.shared);
+    if (lanes.length === 0) return [];
+    try {
+        return sharedLaneLayoutOf(config, laidOutLanesOf(config, lanes)[0]).rows.map(row => ({ belt_id: row.belt_id, lane: row.lane, tiles: row.step_tiles }));
+    } catch {
+        return [];
+    }
+}
+
+/**
+ * The config with each lane of unknown end as one reading has it: a dead end in reading 0, a free outlet in reading 1.
+ * A lane of known end is run as it is.
+ */
 function configUnder(config: Config, lanes: readonly ModelLane[], reading: number): Config {
     return { ...config, belts: config.belts.map(belt => {
-        const of_belt = lanes.filter(lane => lane.belt_id === belt.id);
-        if (of_belt.length === 0) return belt;
+        const unknown = lanes.filter(lane => lane.belt_id === belt.id && lane.stated.kind === "unknown");
+        if (unknown.length === 0) return belt;
         return { ...belt, lanes: belt.lanes.map((lane, index) => {
-            const model = of_belt.find(it => it.lane === index + 1);
+            const model = unknown.find(it => it.lane === index + 1);
             if (model === undefined) return lane;
-            const end = model.ends[Math.min(reading, model.ends.length - 1)];
-            return { ...lane, lane_end: end.kind === "outlet" ? { kind: "outlet", outlet_rate: fractionOf(end.outlet_rate).toDecimal() } : { kind: end.kind } };
+            // a lane the copies do not share is run as a dead end only: the run of one copy reads it as a free outlet
+            return { ...lane, lane_end: reading === 1 && model.shared ? { kind: "outlet" } : { kind: "dead_end" } };
         }) as typeof belt.lanes };
     }) };
 }
@@ -159,6 +196,16 @@ function rowAxisOf(config: Config): FlowDirection {
     const positions = config.inserters.flatMap(inserter => inserter.source.type === "belt" && inserter.position !== undefined ? [inserter.position] : []);
     const spread = (values: number[]) => values.length === 0 ? 0 : Math.max(...values) - Math.min(...values);
     return spread(positions.map(it => it.y)) > spread(positions.map(it => it.x)) ? { x: 0, y: 1 } : { x: 1, y: 0 };
+}
+
+/**
+ * The lanes laid out for each way the run has the items move: a lane that states its flow direction keeps it, and every
+ * other lane has its items move along the copies' axis, then against it
+ */
+function laidOutLanesOf(config: Config, lanes: readonly ModelLane[]): LaidOutLane[][] {
+    const axis = rowAxisOf(config);
+    const ways = lanes.every(lane => lane.flow !== null) ? [axis] : [axis, { x: -axis.x, y: -axis.y }];
+    return ways.map(way => lanes.map(({ belt_id, lane, shared, flow }) => ({ belt_id, lane, shared, flow: flow ?? way })));
 }
 
 /** The ticks from one enable window of the lane's takers opening to the next, and the window each tick belongs to */
@@ -193,7 +240,7 @@ function windowAt(windows: readonly LaneWindow[], position: number): number {
 }
 
 /**
- * The refill arithmetic of the lanes that carry one item of one belt (the parked rule after #725): in each opening of an
+ * The refill arithmetic of the lanes that carry one item of one belt (the rule #725 was found with): in each opening of an
  * enable window of their takers, every taker of every copy takes what the same inserter took in that opening in the run of
  * one copy; the lanes bring those items back at their supply rate. Whether they are back before the next window opens,
  * after every opening of the judged half; a refill exactly as long as the gap passes.
@@ -239,45 +286,54 @@ const counted = (value: number) => value.toLocaleString("en-US");
  * from the lane." The game's names of items have no plural.
  */
 function describeSharedLaneLoss(loss: Omit<SharedLaneLoss, "text">): string {
-    const end = loss.lane_end === "dead_end" ? "ends in a dead end" : "has an unknown end, which is checked as a dead end";
+    const run_as = loss.run_as === "dead_end" ? "a dead end" : "an outlet";
+    const end = loss.lane_end === "unknown" ? `has an unknown end, which is checked as ${run_as}` : `ends in ${run_as}`;
     const item = FactorioDataService.isAvailable() ? FactorioDataService.itemNameInSentence(loss.item) : loss.item;
+    const counts = `takes ${counted(loss.items)} in ${loss.window_cycles} window cycles, and ${counted(loss.alone_items)}`;
+    if (loss.copies === 1) {
+        return `Lane ${loss.lane} of belt ${loss.belt_id} ${end}, and the build takes ${item} from it. `
+            + `When the items move ${directionWord(loss.flow)}, its inserter ${loss.inserter_id} gets too few. `
+            + `It ${counts} when no other inserter takes from the lane.`;
+    }
     return `Lane ${loss.lane} of belt ${loss.belt_id} ${end}, and ${loss.copies} copies take ${item} from it. `
         + `When the items move ${directionWord(loss.flow)}, copy ${loss.copy} from the entry of the lane gets too few. `
-        + `Its inserter ${loss.inserter_id} takes ${counted(loss.items)} in ${loss.window_cycles} window cycles, `
-        + `and ${counted(loss.alone_items)} when no other copy takes from the lane.`;
+        + `Its inserter ${loss.inserter_id} ${counts} when no other copy takes from the lane.`;
 }
+
+/** The tick window cycle `k` of the clock starts in: the clock stands at 0 in the run's first tick */
+const cycleStart = (k: number, window_cycle_ticks: number) => Math.ceil(k * window_cycle_ticks - 1e-9);
+
+/** Items of the hands put down from tick `from` up to, not including, tick `to` */
+const itemsIn = (hands: readonly HandDropped[], from: number, to: number) =>
+    hands.reduce((sum, hand) => hand.tick >= from && hand.tick < to ? sum + hand.items : sum, 0);
 
 /** Judges a clock on the lanes its copies share (see the module's description) */
 export function judgeSharedLanes(config: Config, clock_windows: SerializableClockWindows, window_cycle_ticks: number, logger: Logger): SharedLaneJudgement {
-    const lanes = modelLanesOf(config, logger);
+    const lanes = modelLanesOf(config);
     const keys = lanes.map(lane => `${lane.belt_id}/${lane.lane}`);
     if (lanes.length === 0) return { losses: [], fast_check_passes: true, simulated: false, lanes: keys };
     const windows = new Map(Object.entries(clock_windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     const window_cycles = longRunWindowCyclesOf(window_cycle_ticks);
-    const readings = Math.max(...lanes.map(lane => lane.ends.length));
-    const axis = rowAxisOf(config);
-    const flows: FlowDirection[] = [axis, { x: -axis.x, y: -axis.y }];
+    const readings = lanes.some(lane => lane.stated.kind === "unknown" && lane.shared) ? 2 : 1;
     const losses: SharedLaneLoss[] = [];
-    let fast_check_passes = true, simulated = false;
+    let fast_check_passes = true;
     for (let reading = 0; reading < readings; reading++) {
         const under = configUnder(config, lanes, reading);
-        const named = lanes.map(({ belt_id, lane }) => ({ belt_id, lane }));
         const facts = laneFactsOf(under);
-        // the run of one copy: what each taker takes and puts down with no other copy on the lane
-        const rows_one_way = laneRowsOf(under, flows[0], named);
-        const taker_ids = [...new Set(rows_one_way.flatMap(row => row.takers.map(taker => taker.inserter_id)))];
+        const layouts = laidOutLanesOf(under, lanes).map(laid => sharedLaneLayoutOf(under, laid));
+        // the run of one copy: what each taker takes and puts down with a stock of each lane of its own
+        const taker_ids = [...new Set(layouts[0].rows.flatMap(row => row.takers.map(taker => taker.inserter_id)))];
         let recorders = new Map<string, DropRecorder>();
         runClockOnBuild({ ...under, overrides: { ...under.overrides, derive_clock_windows: false } }, windows, window_cycle_ticks, logger, {
             simulate_window_cycles: window_cycles, record_histories: false, factorio_states: false,
             on_context: context => { recorders = recordInserters(context, taker_ids); },
         });
-        const last_tick = Math.max(0, ...[...recorders.values()].map(recorder => recorder.last_tick));
-        const from = Math.floor(last_tick / 2);
-        const judged_cycles = Math.floor((last_tick - from) / window_cycle_ticks);
-        const pickups = new Map([...recorders].map(([id, recorder]) => [id, recorder.pickups]));
+        const alone_last = Math.max(0, ...[...recorders.values()].map(recorder => recorder.last_tick));
         // the fast check, for each item of each belt: the lanes that carry it, their supply summed
+        const pickups = new Map([...recorders].map(([id, recorder]) => [id, recorder.pickups]));
+        const from_tick = cycleStart(Math.ceil(alone_last / 2 / window_cycle_ticks), window_cycle_ticks);
         const groups = new Map<string, { rows: LaneRow[]; supply: Fraction; item: string }>();
-        for (const row of rows_one_way) {
+        for (const row of layouts[0].rows) {
             const item = under.belts.find(belt => belt.id === row.belt_id)!.lanes[row.lane - 1].ingredient;
             const key = `${row.belt_id}/${item}`;
             const group = groups.get(key) ?? { rows: [], supply: fraction(0), item };
@@ -285,27 +341,34 @@ export function judgeSharedLanes(config: Config, clock_windows: SerializableCloc
             group.supply = group.supply.add(fractionOf(facts.of(row.belt_id, row.lane).supply_rate));
             groups.set(key, group);
         }
-        fast_check_passes &&= [...groups.values()].every(group => refillsInTime(group.rows, group.supply, pickups, group.item, clock_windows, window_cycle_ticks, from, last_tick));
-        simulated = true;
-        const alone = (inserter_id: string, item: string) => {
-            const hands = (recorders.get(inserter_id)?.hands ?? []).filter(hand => hand.item === item);
-            return { items: hands.filter(hand => hand.tick >= from).reduce((sum, hand) => sum + hand.items, 0), hand: Math.max(1, ...hands.map(hand => hand.items)) };
-        };
-        for (const flow of flows) {
-            const rows = flow === flows[0] ? rows_one_way : laneRowsOf(under, flow, named);
-            for (const take of copyLaneTakes(under, windows, window_cycle_ticks, rows, window_cycles, from, logger)) {
-                const reference = alone(take.inserter_id, take.item);
-                if (reference.items - take.items < reference.hand) continue;
+        fast_check_passes &&= [...groups.values()].every(group => refillsInTime(group.rows, group.supply, pickups, group.item, clock_windows, window_cycle_ticks, from_tick, alone_last));
+        const run_rows = new Set<string>();
+        for (const layout of layouts) {
+            const rows_key = JSON.stringify(layout);
+            if (run_rows.has(rows_key)) continue;
+            run_rows.add(rows_key);
+            const { takes, last_tick } = copyLaneTakes(under, windows, window_cycle_ticks, layout, window_cycles, logger);
+            // whole window cycles of the clock in the second half of both runs
+            const last = Math.min(alone_last, last_tick);
+            const first_cycle = Math.ceil(last / 2 / window_cycle_ticks), end_cycle = Math.floor((last + 1) / window_cycle_ticks + 1e-9);
+            if (end_cycle <= first_cycle) continue;
+            const from = cycleStart(first_cycle, window_cycle_ticks), to = cycleStart(end_cycle, window_cycle_ticks);
+            for (const take of takes) {
+                const alone_items = itemsIn((recorders.get(take.inserter_id)?.hands ?? []).filter(hand => hand.item === take.item), from, to);
+                const items = itemsIn(take.hands, from, to);
+                if (items >= alone_items) continue;
                 const lane = lanes.find(it => it.belt_id === take.belt_id && it.lane === take.lane)!;
-                const copies = facts.of(take.belt_id, take.lane).sharing === "one_per_copy" ? 1 : under.setpoint.copies;
-                const loss = { belt_id: take.belt_id, lane: take.lane, lane_end: lane.stated.kind, item: take.item, copies, copy: take.copy + 1,
-                    inserter_id: Number(take.inserter_id.slice("inserter:".length)), items: take.items, alone_items: reference.items,
-                    window_cycles: judged_cycles, flow };
+                const row = layout.rows.find(it => it.belt_id === take.belt_id && it.lane === take.lane)!;
+                const run_as = facts.of(take.belt_id, take.lane).lane_end.kind === "dead_end" ? "dead_end" as const : "outlet" as const;
+                const loss = { belt_id: take.belt_id, lane: take.lane, lane_end: lane.stated.kind, run_as, item: take.item,
+                    copies: lane.shared ? under.setpoint.copies : 1, copy: take.copy + 1,
+                    inserter_id: Number(take.inserter_id.slice("inserter:".length)), items, alone_items,
+                    window_cycles: end_cycle - first_cycle, flow: row.flow };
                 losses.push({ ...loss, text: describeSharedLaneLoss(loss) });
             }
         }
     }
     // the worst first: the most items short of the run of one copy
     losses.sort((a, b) => (b.alone_items - b.items) - (a.alone_items - a.items));
-    return { losses, fast_check_passes, simulated, lanes: keys };
+    return { losses, fast_check_passes, simulated: true, lanes: keys };
 }

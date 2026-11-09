@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Config, ConfigSchema } from "../../config/schema";
 import { beltLanesOfFacts, supplyOfLaneEnd } from "./lane";
-import { fraction } from "../../data-types/fraction";
-import { ratioOf } from "./ratio";
-import { decidedBySharedLaneModel, everyInputLaneIsDeadEnd, isDeadEnd, laneFactsOf, sharedLaneModelEnds } from "./lane-facts";
+import { everyInputLaneIsDeadEnd, isDeadEnd, laneFactsOf } from "./lane-facts";
 
 type Parts = Partial<Pick<Config, "machines" | "inserters" | "belts" | "chests" | "overrides">>;
 
@@ -172,16 +170,13 @@ describe("the lane traits of the facts", () => {
     });
 });
 
-describe("the lanes the shared-lane model decides", () => {
-    it("runs a dead end as it is and an unknown end as a dead end, and no outlet", () => {
-        expect(sharedLaneModelEnds({ kind: "dead_end" })).toEqual([{ kind: "dead_end" }]);
-        expect(sharedLaneModelEnds({ kind: "unknown" })).toEqual([{ kind: "dead_end" }]);
-        expect(sharedLaneModelEnds({ kind: "outlet", outlet_rate: ratioOf(fraction(120)) })).toEqual([]);
-    });
-
-    it("decides a dead end alone: an unknown end is also checked as a free outlet by the run of one copy", () => {
-        expect(decidedBySharedLaneModel({ kind: "dead_end" })).toBe(true);
-        expect(decidedBySharedLaneModel({ kind: "unknown" })).toBe(false);
-        expect(decidedBySharedLaneModel({ kind: "outlet", outlet_rate: ratioOf(fraction(120)) })).toBe(false);
+describe("the flow direction a lane states", () => {
+    it("reads a cardinal direction of the game as a map step, and none where the lane states none", () => {
+        const belts = [{ id: 1, type: "turbo-transport-belt", lanes: [
+            { ingredient: "iron-ore", stack_size: 4, flow_direction: 4 }, { ingredient: "iron-ore", stack_size: 4, flow_direction: 0 }] },
+        { id: 2, type: "turbo-transport-belt", lanes: [{ ingredient: "copper-ore", stack_size: 4, flow_direction: 12 }, { ingredient: "copper-ore", stack_size: 4 }] }];
+        const facts = laneFactsOf({ belts } as never);
+        expect([facts.of(1, 1), facts.of(1, 2), facts.of(2, 1), facts.of(2, 2)].map(it => it.flow_direction))
+            .toEqual([{ x: 1, y: 0 }, { x: 0, y: -1 }, { x: -1, y: 0 }, null]);
     });
 });

@@ -20,7 +20,8 @@ import { ContainerStorage } from "../../simulation/components/container-storage"
 import { MiningDrillArchetype } from "../../simulation/archetypes/mining-drill";
 import { ACTIVATION_ORDER, InserterDispatch } from "../../simulation/dispatch";
 import { InserterScheduling } from "../../simulation/inserter-scheduling";
-import type { CopyTakerTick } from "../../simulation/world";
+import type { AfterInsertersTick } from "../../simulation/world";
+import { BuildCopies, copyEntriesOf, twinOf } from "./build-copies";
 
 /** Initial moving-lane phases by inserter id, in the pickup model's public 1/32-tile units. */
 export type MovingPickupPhases = ReadonlyMap<string, readonly [number, number]>;
@@ -42,10 +43,10 @@ export class SimulationContext {
     /** The open points of the update list (simulation/dispatch.ts); set before the first World */
     public inserter_dispatch: InserterDispatch = ACTIVATION_ORDER;
     /**
-     * What a World of this context runs after the inserters in every tick (`World.copy_takers`): the takers of the other
-     * copies on a shared lane, put in before the context's first World
+     * What a World of this context runs after the inserters in every tick (`World.after_inserters`): a reader of what the
+     * inserters did in the tick, put in before the context's first World
      */
-    public readonly copy_takers: CopyTakerTick[] = [];
+    public readonly after_inserters: AfterInsertersTick[] = [];
     private inserter_scheduling: InserterScheduling | null = null;
 
     constructor(
@@ -133,11 +134,15 @@ export class SimulationContext {
     }
 }
 
-/** The entities of a config: belts, machines, chests, inserters and drills, without any state */
-export function createEntityRegistryFromConfig(config: Config): EntityRegistry {
+/**
+ * The entities of a config: belts, machines, chests, inserters and drills, without any state; with `copies`, each later
+ * copy's entities after the config's own (build-copies.ts)
+ */
+export function createEntityRegistryFromConfig(config: Config, copies?: BuildCopies): EntityRegistry {
     const entity_registry = new EntityRegistry();
 
-    const inserter_factory = new InserterFactory(entity_registry, laneFactsOf(config));
+    const facts = laneFactsOf(config);
+    const inserter_factory = new InserterFactory(entity_registry, facts);
 
     config.belts.forEach(beltConfig => {
         entity_registry.add(Belt.fromConfig(beltConfig));
@@ -166,6 +171,18 @@ export function createEntityRegistryFromConfig(config: Config): EntityRegistry {
             entity_registry.add(MiningDrill.fromConfig(drill_config))
         })
     }
+
+    // a later copy's belt has the lane facts of the config's belt it copies
+    const copy_factory = new InserterFactory(entity_registry, { of: (belt_id, lane) => facts.of(twinOf(EntityId.forBelt(belt_id)).number, lane) });
+    copies?.later.forEach((holds, index) => {
+        const entries = copyEntriesOf(config, index + 1, holds);
+        entries.belts.forEach(belt => entity_registry.add(Belt.fromConfig(belt)));
+        entries.machines.forEach(machine => entity_registry.add(Machine.fromConfig(machine)));
+        entries.chests.forEach(chest => entity_registry.add(Chest.fromConfig(chest,
+            itemsPutInto(config, twinOf(EntityId.forChest(chest.id)).number, registryPutIntoView(entity_registry)))));
+        entries.inserters.forEach(({ id, entry }) => entity_registry.add(copy_factory.fromConfig(id, entry)));
+        entries.drills.forEach(drill => entity_registry.add(MiningDrill.fromConfig(drill)));
+    });
 
     for (const source of entity_registry.getAll().filter(Entity.isMachine)) {
         const target = source.result_target === undefined ? null : entity_registry.getEntityById(source.result_target);
@@ -197,8 +214,8 @@ function registryPutIntoView(entity_registry: EntityRegistry): PutIntoView {
     };
 }
 
-function createSimulationContextFromConfig(config: Config): SimulationContext {
-    const entity_registry = createEntityRegistryFromConfig(config);
+function createSimulationContextFromConfig(config: Config, copies?: BuildCopies): SimulationContext {
+    const entity_registry = createEntityRegistryFromConfig(config, copies);
 
     const state_factory = new EntityStateFactory(entity_registry);
 

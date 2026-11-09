@@ -1,3 +1,4 @@
+import { BuildCopies, twinOf } from "../sequence/build-copies";
 import { ClockWindowCycleLimitError, SIMULATION_BUDGET_TICKS, type SwingWindowCyclePruning } from "./clock-window-cycle-limit";
 import { assertOutputTransferGenerationSupported } from "../../config/output-transfer-generation";
 import assert from "../../common/assert";
@@ -507,10 +508,15 @@ export interface RunOptions {
     moving_pickup_phases?: MovingPickupPhases;
     /**
      * Called with the context of a run from a cold start (`cold_start`), once it is built and before its first tick, and
-     * not with the context the plan is made on: for a reader that puts something into the run (the takers of the other
-     * copies on a shared lane, `installSharedLanes`)
+     * not with the context the plan is made on: for a reader that puts something into the run (the lanes the copies
+     * share, `installSharedLanes`, or a recorder of what the inserters did)
      */
     on_context?: (context: SimulationContext) => void;
+    /**
+     * The copies of the build a run from a cold start (`cold_start`) holds besides the config's own (build-copies.ts): the
+     * plan is made on the config, and each copy's inserters and drills run on the controls of the config's own
+     */
+    build_copies?: BuildCopies;
     /**
      * After the run, cut one supply of the build and give it back, several times over, and count what the build makes
      * once it is back (see disturbance-trial.ts). For a run on clock windows alone; nothing is cut in any other run.
@@ -764,7 +770,7 @@ function detachHistoryObservers(build: RecordedBuild, ...contexts: SimulationCon
 }
 
 /** The simulation of a config, with the debug, transfer and state observers on every entity; nothing is recorded yet */
-function recordedBuildOf(config: Config, options: RunOptions, debug: MutableDebugSettingsProvider, logger: Logger): RecordedBuild {
+function recordedBuildOf(config: Config, options: RunOptions, debug: MutableDebugSettingsProvider, logger: Logger, copies?: BuildCopies): RecordedBuild {
     // Validate inserter coverage before building the entity graph.
     // Throws InserterCoverageError if any machine ingredient or output lacks an inserter.
     assertOutputTransferGenerationSupported(config);
@@ -775,7 +781,7 @@ function recordedBuildOf(config: Config, options: RunOptions, debug: MutableDebu
     assertFeasible(config);
 
     // Initialize simulation context
-    const simulation_context = SimulationContext.fromConfig(config);
+    const simulation_context = SimulationContext.fromConfig(config, copies);
     simulation_context.competing_takers_order = options.competing_takers_order ?? DEFAULT_TAKER_ORDER;
     if (options.moving_pickup_phases) simulation_context.initializeMovingPickupPhases(options.moving_pickup_phases);
 
@@ -807,7 +813,7 @@ function recordedBuildOf(config: Config, options: RunOptions, debug: MutableDebu
  * makes its own ingredient is given `overrides.kick_start_items` of it once (see `kickStartLoopingRecipes`).
  */
 function coldBuildOf(config: Config, options: RunOptions, debug: MutableDebugSettingsProvider, logger: Logger): RecordedBuild {
-    const build = recordedBuildOf(config, options, debug, logger);
+    const build = recordedBuildOf(config, options, debug, logger, options.build_copies);
     kickStartLoopingRecipes(build.simulation_context, config.overrides?.kick_start_items ?? DEFAULT_KICK_START_ITEMS);
     options.on_context?.(build.simulation_context);
     return build;
@@ -995,22 +1001,26 @@ function withEnableControls(
 
     // Swap the controls of the build's context, in place
     // Route to configurable factory if override mode is not AUTO, otherwise use automatic factory
+    // a later copy's inserter or drill runs on the control of the config's own (build-copies.ts); a condition reads the
+    // copy's own entities
     simulation_context.useControls({
         drill: (drill_state) => {
-            if (configurable_enable_control_factory.hasOverride(drill_state.entity_id)) {
-                const override_mode = configurable_enable_control_factory.getOverrideOrThrow(drill_state.entity_id).mode;
+            const entity_id = twinOf(drill_state.entity_id);
+            if (configurable_enable_control_factory.hasOverride(entity_id)) {
+                const override_mode = configurable_enable_control_factory.getOverrideOrThrow(entity_id).mode;
                 logger.log(`Using configurable override for drill ${drill_state.entity_id.id} with mode ${override_mode}`);
-                return configurable_enable_control_factory.createForEntityId(drill_state.entity_id);
+                return configurable_enable_control_factory.createForEntityId(entity_id);
             }
-            return enable_control_factory.createForEntityId(drill_state.entity_id);
+            return enable_control_factory.createForEntityId(entity_id);
         },
         inserter: (inserter_state) => {
-            if (configurable_enable_control_factory.hasOverride(inserter_state.entity_id)) {
-                const override_mode = configurable_enable_control_factory.getOverrideOrThrow(inserter_state.entity_id).mode;
+            const entity_id = twinOf(inserter_state.entity_id);
+            if (configurable_enable_control_factory.hasOverride(entity_id)) {
+                const override_mode = configurable_enable_control_factory.getOverrideOrThrow(entity_id).mode;
                 logger.log(`Using configurable override for inserter ${inserter_state.entity_id.id} with mode ${override_mode}`);
-                return configurable_enable_control_factory.createForEntityId(inserter_state.entity_id, inserter_state.inserter);
+                return configurable_enable_control_factory.createForEntityId(entity_id, inserter_state.inserter);
             }
-            return enable_control_factory.createForEntityId(inserter_state.entity_id);
+            return enable_control_factory.createForEntityId(entity_id);
         }
     });
 
