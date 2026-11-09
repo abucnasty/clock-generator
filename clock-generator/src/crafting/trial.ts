@@ -330,7 +330,6 @@ export function otherTakerOrdersOf(config: Config, windows: Map<string, OpenRang
     as_built.inserters.forEach((inserter, index) => {
         const id = EntityId.forInserter(inserter.id ?? index + 1).id;
         const control = inserter.overrides?.enable_control;
-        if (control?.mode === "NEVER") { enabled_at.set(id, new Uint8Array(ticks)); return; }
         if (control?.mode !== "CLOCKED" || (control.window_cycle_ticks !== undefined && control.window_cycle_ticks !== window_cycle_ticks)) {
             // always enabled, or on a clock of its own modulus: it can meet the others at any tick
             enabled_at.set(id, null);
@@ -1702,7 +1701,7 @@ export function beltPickupSlackTrial(
 /**
  * Rewrites the config so every inserter and drill is controlled the way the generated blueprint
  * controls it in game: entities with a decider window get a CLOCKED window shifted by the circuit latency,
- * everything else is left unwired (ALWAYS), except explicit NEVER overrides.
+ * everything else is left unwired (ALWAYS).
  * Internal pure composition seam; not part of the package/browser exports.
  */
 export function buildAsBuiltConfig(
@@ -1734,7 +1733,7 @@ export function buildAsBuiltConfig(
     const built = deciderBuildOrder(clocked, entity_registry, settled);
     const decider_build_order = decider_order === "reversed" ? reversedDeciderOrder(built) : built;
 
-    const asBuiltControl = (entity_key: string, current: EnableControlOverrideConfig | undefined): EnableControlOverrideConfig => {
+    const asBuiltControl = (entity_key: string): EnableControlOverrideConfig => {
         // a fuel inserter is on a clock of its own, which the run makes for it from the plan like the blueprint does
         if (inserter_clocks.get(entity_key)?.own_clock) {
             const fuel_clock = fuel_clocks?.get(entity_key);
@@ -1752,7 +1751,7 @@ export function buildAsBuiltConfig(
             return { mode: "CLOCKED", ranges, window_cycle_ticks: window_cycle_ticks, decider_build_order: decider_build_order.get(entity_key),
                 latency_ticks: CIRCUIT_LATENCY_TICKS };
         }
-        return current?.mode === "NEVER" ? current : { mode: "ALWAYS" };
+        return { mode: "ALWAYS" };
     };
 
     return {
@@ -1761,7 +1760,7 @@ export function buildAsBuiltConfig(
             ...inserter,
             overrides: {
                 ...inserter.overrides,
-                enable_control: asBuiltControl(EntityId.forInserter(inserter.id ?? index + 1).id, inserter.overrides?.enable_control),
+                enable_control: asBuiltControl(EntityId.forInserter(inserter.id ?? index + 1).id),
             },
         })),
         drills: config.drills === undefined ? undefined : {
@@ -1770,7 +1769,7 @@ export function buildAsBuiltConfig(
                 ...drill,
                 overrides: {
                     ...drill.overrides,
-                    enable_control: asBuiltControl(EntityId.forDrill(drill.id).id, drill.overrides?.enable_control),
+                    enable_control: asBuiltControl(EntityId.forDrill(drill.id).id),
                 },
             })),
         },
@@ -1985,7 +1984,7 @@ function verificationConfigOf(config: Config, result: BlueprintGenerationResult)
 
 /**
  * Whether planning a clock's runs with fractional swings can change them: at a forced whole swing count, fractional mode
- * changes only the AUTO swing distribution, which clocked, always and never controls do not use, so it can where the
+ * changes only the AUTO swing distribution, which clocked and always controls do not use, so it can where the
  * count is not whole or an own-clock fuel inserter still needs AUTO. `verification_config` is the clock built as built.
  */
 function fractionalSwingsChangeChecksOn(verification_config: Config, result: BlueprintGenerationResult): boolean {

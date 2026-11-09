@@ -113,14 +113,16 @@ describe('the config of a drill into a chest', () => {
         expect(parse({ type: 'chest', id: 1 }, { extra_window_ticks: 1 }).success).toBe(true);
     });
 
-    it('refuses CONDITIONAL and NEVER on it', () => {
-        const conditional = { mode: 'CONDITIONAL', rule_set: { operator: 'AND', rules: [{ left: { type: 'CONSTANT', value: 1 }, operator: '>', right: { type: 'CONSTANT', value: 0 } }] } };
-        for (const enable_control of [conditional, { mode: 'NEVER' }]) {
-            const parsed = parse({ type: 'chest', id: 1 }, { enable_control });
-            expect(parsed.success, enable_control.mode).toBe(false);
-            expect(parsed.error!.issues.map(issue => issue.message)).toContain(
-                `Drill 1 drops into a chest; its override can be AUTO, CLOCKED or ALWAYS, not ${enable_control.mode}`);
-        }
+    it('refuses CONDITIONAL on it', () => {
+        const enable_control = { mode: 'CONDITIONAL', rule_set: { operator: 'AND', rules: [{ left: { type: 'CONSTANT', value: 1 }, operator: '>', right: { type: 'CONSTANT', value: 0 } }] } };
+        const parsed = parse({ type: 'chest', id: 1 }, { enable_control });
+        expect(parsed.success).toBe(false);
+        expect(parsed.error!.issues.map(issue => issue.message)).toContain(
+            'Drill 1 drops into a chest; its override can be AUTO, CLOCKED or ALWAYS, not CONDITIONAL');
+    });
+
+    it('reads the former NEVER as AUTO', () => {
+        expect(parse({ type: 'chest', id: 1 }, { enable_control: { mode: 'NEVER' } }).success).toBe(true);
     });
 });
 

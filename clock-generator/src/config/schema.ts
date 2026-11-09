@@ -17,6 +17,7 @@ import { migrateBeltSupplyOverrides } from "./migrate-belt-supply";
 import { dropFractionalSwingsOverride } from "./migrate-fractional-swings";
 import { renameLoopSeedItemsToKickStart } from "./migrate-kick-start";
 import { renameTargetOutputToSetpoint } from "./migrate-setpoint";
+import { readNeverOverrideAsAuto } from "./migrate-never-override";
 import { renameClockedPeriodToWindowCycle } from "./migrate-window-cycle";
 import { migrateBlockedSlotFilter } from "./migrate-blocked-slots";
 import { migrateMiningProductivityLevelStep } from "./migrate-mining-productivity";
@@ -188,10 +189,6 @@ const EnableControlOverrideAlwaysSchema = z.object({
     mode: z.literal(EnableControlMode.ALWAYS).describe("ALWAYS: the entity is always enabled.")
 });
 
-const EnableControlOverrideNeverSchema = z.object({
-    mode: z.literal(EnableControlMode.NEVER).describe("NEVER: the entity is never enabled.")
-});
-
 const EnableControlOverrideClockedSchema = z.object({
     mode: z.literal(EnableControlMode.CLOCKED).describe("CLOCKED: the entity is enabled during the enable windows that you give."),
     ranges: z.array(EnableControlRangeSchema).min(1).describe("The enable windows of the entity, as tick ranges of the window cycle."),
@@ -334,13 +331,12 @@ const EnableControlOverrideConditionalSchema = z.object({
 
 export type EnableControlOverrideConditional = z.infer<typeof EnableControlOverrideConditionalSchema>;
 
-export const EnableControlOverrideConfigSchema = z.preprocess(renameClockedPeriodToWindowCycle, z.discriminatedUnion("mode", [
+export const EnableControlOverrideConfigSchema = z.preprocess(readNeverOverrideAsAuto, z.preprocess(renameClockedPeriodToWindowCycle, z.discriminatedUnion("mode", [
     EnableControlOverrideAutoSchema,
     EnableControlOverrideAlwaysSchema,
-    EnableControlOverrideNeverSchema,
     EnableControlOverrideClockedSchema,
     EnableControlOverrideConditionalSchema
-]));
+])));
 
 export type EnableControlOverrideConfig = z.infer<typeof EnableControlOverrideConfigSchema>;
 
@@ -924,9 +920,9 @@ export const ConfigSchema = z.preprocess(renameTargetOutputToSetpoint, z.preproc
                 message: `Drill ${drill.id} drops into chest ${chest_id}, which is not in the configuration` });
         }
         // a drill into a chest is on the windows the generator makes for it (AUTO), on its own (CLOCKED) or always on;
-        // a condition needs an inserter's hand to read, and a drill that never runs fills nothing
+        // a condition needs an inserter's hand to read
         const mode = drill.overrides?.enable_control?.mode;
-        if (mode === EnableControlMode.CONDITIONAL || mode === EnableControlMode.NEVER) {
+        if (mode === EnableControlMode.CONDITIONAL) {
             context.addIssue({ code: "custom", path: ["drills", "configs", index, "overrides", "enable_control"],
                 message: `Drill ${drill.id} drops into a chest; its override can be AUTO, CLOCKED or ALWAYS, not ${mode}` });
         }

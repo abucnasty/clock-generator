@@ -68,7 +68,7 @@ after the engine reads the file: a field with a default is required, but a confi
 | `drills.configs[].target{type=machine}.id` | integer > 0 | yes | The id of the machine. |
 | `drills.configs[].target{type=chest}.id` | integer > 0 | yes | The id of the chest. |
 | `drills.configs[].overrides` | object | no | Settings that replace what the generator chooses for this drill. |
-| `drills.configs[].overrides.enable_control` | one of 5 objects, by `mode`: `AUTO`, `ALWAYS`, `NEVER`, `CLOCKED`, `CONDITIONAL` | no | The Enable Control Strategy override of the drill. |
+| `drills.configs[].overrides.enable_control` | one of 4 objects, by `mode`: `AUTO`, `ALWAYS`, `CLOCKED`, `CONDITIONAL` | no | The Enable Control Strategy override of the drill. |
 | `drills.configs[].overrides.enable_control{mode=CLOCKED}.ranges` | array (at least 1) of objects | yes | The enable windows of the entity, as tick ranges of the window cycle. |
 | `drills.configs[].overrides.enable_control{mode=CLOCKED}.ranges[].start` | integer ≥ 0 | yes | The tick of the window cycle at which the enable window starts. |
 | `drills.configs[].overrides.enable_control{mode=CLOCKED}.ranges[].end` | integer > 0 | yes | The tick of the window cycle at which the enable window ends. |
@@ -161,7 +161,7 @@ after the engine reads the file: a field with a default is required, but a confi
 | `inserters[].overrides` | object | no | Settings that replace what the generator chooses for this inserter. |
 | `inserters[].overrides.animation` | object | no | Settings that replace the movement times of the inserter. |
 | `inserters[].overrides.animation.pickup_duration_ticks` | integer > 0 | no | The number of ticks that the inserter takes to pick up items. |
-| `inserters[].overrides.enable_control` | one of 5 objects, by `mode`: `AUTO`, `ALWAYS`, `NEVER`, `CLOCKED`, `CONDITIONAL` | no | The Enable Control Strategy override of the inserter. |
+| `inserters[].overrides.enable_control` | one of 4 objects, by `mode`: `AUTO`, `ALWAYS`, `CLOCKED`, `CONDITIONAL` | no | The Enable Control Strategy override of the inserter. |
 | `inserters[].overrides.enable_control{mode=CLOCKED}.ranges` | array (at least 1) of objects | yes | The enable windows of the entity, as tick ranges of the window cycle. |
 | `inserters[].overrides.enable_control{mode=CLOCKED}.ranges[].start` | integer ≥ 0 | yes | The tick of the window cycle at which the enable window starts. |
 | `inserters[].overrides.enable_control{mode=CLOCKED}.ranges[].end` | integer > 0 | yes | The tick of the window cycle at which the enable window ends. |

@@ -3,7 +3,6 @@ import { EntityType } from "../entities/entity-type";
 export const EnableControlMode = {
     AUTO: "AUTO",
     ALWAYS: "ALWAYS",
-    NEVER: "NEVER",
     CLOCKED: "CLOCKED",
     CONDITIONAL: "CONDITIONAL",
 } as const;

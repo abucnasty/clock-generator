@@ -80,6 +80,7 @@ describe("the light entry", () => {
             "config/migrate-fractional-swings.ts",
             "config/migrate-kick-start.ts",
             "config/migrate-mining-productivity.ts",
+            "config/migrate-never-override.ts",
             "config/migrate-setpoint.ts",
             "config/migrate-window-cycle.ts",
             "crafting/candidates/coordinated-sources-parts.ts",
