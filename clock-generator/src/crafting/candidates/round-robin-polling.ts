@@ -1,5 +1,6 @@
 import { OpenRange } from "../../data-types";
 import { Entity, EntityId, handSizeFor, Inserter, isNeverBlockingSink, Machine, MiningDrill, miningDrillMaxInsertion, ReadableEntityRegistry } from "../../entities";
+import { everyInputLaneIsDeadEnd } from "../../entities/traits/lane-facts";
 import { DRILL_ITEMS_PER_SWING } from "../planner/balance";
 import { EntityTransferCountMap, type OutputPath } from "../sequence/cycle/swing-counts";
 import { SwingDistribution } from "../sequence/cycle/swing-distribution";
@@ -357,7 +358,7 @@ export function roundRobinPollingWindows(
     swing_counts: EntityTransferCountMap,
     recipe_lcm: number,
     window_cycle_ticks: number,
-    /** Whether a window that picks up from a belt has the belt pickup slack (a clock for a moving belt); not on backed-up belts */
+    /** Whether a window that picks up from a belt has the belt pickup slack (a clock for a moving belt); not on belts with backpressure */
     with_belt_slack: boolean = true,
     options: RoundRobinPollingOptions = DEFAULT_OPTIONS,
     /** Where the output inserters stand on a shared belt: among groupings that serve the sources equally, the one whose hands fit on the belt */
@@ -823,7 +824,7 @@ export function finishedClock(
     const exported = clockOfPlan(made, { ...options, belt_pickup_slack: "always" });
     const slack = beltPickupSlackTicks(made.run.simulation_context.entity_registry);
     const belt_fed = Array.from(windows.keys()).filter(id => slack.has(id));
-    const moving = made.config.overrides?.backed_up_belts !== true;
+    const moving = !everyInputLaneIsDeadEnd(made.config);
     const belt: ClockBelt | null = belt_fed.length === 0 ? null
         : moving ? { kind: "moving", slack_ticks: Array.from(new Set(belt_fed.map(id => slack.get(id)!))).sort((a, b) => a - b) } : { kind: "backed_up" };
     const named = { ...exported, ...(constructed === undefined ? {} : { random_margins: constructed.random_margins }),

@@ -1,6 +1,7 @@
 import { FactorioBlueprint } from "../blueprints/blueprint";
 import { Config } from "../config";
 import { Entity, EntityId, handSizeFor, Inserter } from "../entities";
+import { isDeadEnd, laneFactsOf } from "../entities/traits/lane-facts";
 import { FactorioInserterState } from "../state/factorio-entity-state";
 import { StockRecording } from "./machine-stock";
 import { beltLinesOf } from "./belt-lines";
@@ -34,7 +35,7 @@ export interface InserterCount {
     inserter_id: string;
     /** What it takes from: the type of its source entity */
     pickup_kind: EndKind;
-    /** For a pickup from a belt: whether the config's belts move (`overrides.backed_up_belts` not set) or are backed up */
+    /** For a pickup from a belt: whether the lanes of that belt move or have backpressure at the pickup */
     belt_supply?: "moving" | "backed-up";
     /** What it puts into: the type of its sink entity */
     drop_kind: EndKind;
@@ -127,6 +128,8 @@ export interface CountedInserter extends InserterEnds {
     drop_kind: EndKind;
     /** Items in a full hand: the largest of the items it carries */
     hand_size: number;
+    /** For a pickup from a belt: whether every lane of that belt ends in a dead end, so the pickup has backpressure; absent for any other pickup */
+    pickup_has_backpressure?: boolean;
 }
 
 /** The machines at the ends of every inserter of the config, and what is at each of their ends */
@@ -138,6 +141,7 @@ export function countedInserters(config: Config): CountedInserter[] {
         machine.result_target === undefined ? [] : [[machine.result_target.id, machine.entity_id.id] as const]));
     // a hand of the largest size of the items it carries: the stock does not record which item is in the hand
     const belt_lines = beltLinesOf(registry);
+    const lane_facts = laneFactsOf(config);
     const handSize = (inserter: Inserter) => inserter.filtered_items.size === 0 ? inserter.metadata.stack_size
         : Math.max(...Array.from(inserter.filtered_items, item_name => handSizeFor(inserter, item_name)));
     return registry.getAll().filter(Entity.isInserter).map(inserter => ({
@@ -149,6 +153,8 @@ export function countedInserters(config: Config): CountedInserter[] {
         hand_size_of: (item_name: string) => handSizeFor(inserter, item_name),
         ...(belt_lines.has(inserter.entity_id.id) && { belt_lines: belt_lines.get(inserter.entity_id.id)! }),
         pickup_kind: endKindOf(inserter.source.entity_id),
+        ...(EntityId.isBelt(inserter.source.entity_id) && { pickup_has_backpressure:
+            ([1, 2] as const).every(lane => isDeadEnd(lane_facts.of(inserter.source.entity_id.number, lane))) }),
         drop_kind: endKindOf(inserter.sink.entity_id),
         hand_size: handSize(inserter),
     }));
@@ -156,18 +162,17 @@ export function countedInserters(config: Config): CountedInserter[] {
 
 /** The machines at the ends of every inserter of the config (the wake-ups read these) */
 export function inserterEnds(config: Config): InserterEnds[] {
-    return countedInserters(config).map(({ pickup_kind, drop_kind, hand_size, ...ends }) => ends);
+    return countedInserters(config).map(({ pickup_kind, drop_kind, hand_size, pickup_has_backpressure, ...ends }) => ends);
 }
 
 /** The wake-ups and the counters of a simulated run, from the tick `from_tick` to its end, of the clock's build */
 export function wakeUpsAndCountersOfStock(stock: StockRecording, config: Config, from_tick: number): { wake_ups: WakeUps; counters: InserterCounters } {
-    return countersOfStock(stock, countedInserters(config), from_tick,
-        { copies: config.setpoint.copies ?? 1, backed_up_belts: config.overrides?.backed_up_belts === true });
+    return countersOfStock(stock, countedInserters(config), from_tick, { copies: config.setpoint.copies ?? 1 });
 }
 
 /** `wakeUpsAndCountersOfStock` for inserters already read from the config */
 export function countersOfStock(stock: StockRecording, counted: readonly CountedInserter[], from_tick: number,
-    build: { copies: number; backed_up_belts: boolean }): { wake_ups: WakeUps; counters: InserterCounters } {
+    build: { copies: number }): { wake_ups: WakeUps; counters: InserterCounters } {
     const recorded = new Map(stock.inserters.map(series => [series.inserter_id, series]));
     const machines = new Map(stock.machines.map(machine => [machine.machine_id, machine]));
     const by_id = new Map(counted.map(inserter => [inserter.inserter_id, inserter]));
@@ -194,7 +199,6 @@ export function countersOfStock(stock: StockRecording, counted: readonly Counted
     const woken = new Map(wake_ups.inserters.map(it => [it.inserter_id, it]));
     const ticks = wake_ups.ticks;
     const per_minute = (count: number) => ticks === 0 ? 0 : count * TICKS_PER_MINUTE / ticks;
-    const backed_up = build.backed_up_belts;
 
     const inserters: InserterCount[] = counted.flatMap(inserter => {
         const series = recorded.get(inserter.inserter_id);
@@ -260,7 +264,7 @@ export function countersOfStock(stock: StockRecording, counted: readonly Counted
         return [{
             inserter_id: inserter.inserter_id,
             pickup_kind: inserter.pickup_kind,
-            ...(inserter.pickup_kind === "belt" && { belt_supply: backed_up ? "backed-up" as const : "moving" as const }),
+            ...(inserter.pickup_kind === "belt" && { belt_supply: inserter.pickup_has_backpressure === true ? "backed-up" as const : "moving" as const }),
             drop_kind: inserter.drop_kind,
             input_wake_ups_per_minute: wakes.input_wake_ups_per_minute,
             output_wake_ups_per_minute: wakes.output_wake_ups_per_minute,
