@@ -292,6 +292,16 @@ export function laneRateIssues(config: Pick<Config, 'belts'>): LaneRateIssue[] {
     return issues;
 }
 
+/** What a set of lanes gets for every copy together: each lane's supply rate, once for each copy on a lane that is one per copy */
+export function sharedLaneSupplyOf(config: Config, load: LaneLoad): Fraction {
+    const copies = fraction(config.setpoint.copies);
+    const facts = laneFactsOf(config);
+    return load.lanes.reduce((sum, lane) => {
+        const lane_facts = facts.of(load.belt_id, lane as 1 | 2);
+        return sum.add(fractionOf(lane_facts.supply_rate).multiply(lane_facts.sharing === 'one_per_copy' ? copies : fraction(1)));
+    }, fraction(0));
+}
+
 /**
  * The lanes the copies take more from, summed, than the lanes get: their supply rate, once for a lane the copies share
  * and once for each copy on a lane that is one per copy. A set of lanes whose excess a smaller set already shows is left
@@ -303,10 +313,7 @@ export function sharedLaneSupplyIssues(config: Config): SharedLaneSupplyIssue[] 
     const found: SharedLaneSupplyIssue[] = [];
     const shown: LaneLoad[] = [];
     for (const load of laneLoads(config).filter(load => load.kind === 'take')) {
-        const supply = load.lanes.reduce((sum, lane) => {
-            const lane_facts = facts.of(load.belt_id, lane as 1 | 2);
-            return sum.add(fractionOf(lane_facts.supply_rate).multiply(lane_facts.sharing === 'one_per_copy' ? copies : fraction(1)));
-        }, fraction(0));
+        const supply = sharedLaneSupplyOf(config, load);
         const inside = (other: LaneLoad) => other.belt_id === load.belt_id && other.lanes.every(lane => load.lanes.includes(lane));
         if (!above(load.items_per_second.multiply(copies), supply) || shown.some(inside)) continue;
         shown.push(load);
