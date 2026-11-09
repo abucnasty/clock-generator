@@ -1,5 +1,6 @@
 import { FactorioDataService } from "../data/factorio-data-service";
-import { Option } from "../data-types/option";
+import { pipe } from "fp-ts/function";
+import * as O from "fp-ts/Option";
 import { ImportInput, ImportedMachine, ImportPipeline, ImportStep } from "./import-pipeline";
 import { MachineType } from "../entities/machine/machine-type";
 import { machinePlacesResults, machineRuleOf } from "./machine-prototype";
@@ -58,9 +59,9 @@ export interface SidecarFeature {
 export function sidecarFeatureStep(feature: SidecarFeature): ImportStep {
     return input => {
         if (!isOlderThan(input.sidecar_version, feature.since) || !feature.appliesTo(input)) {
-            return Option.none();
+            return O.none;
         }
-        return Option.some(feature.missing(input));
+        return O.some(feature.missing(input));
     };
 }
 
@@ -132,16 +133,16 @@ const NOTHING_MISSING_MESSAGE = "Nothing is missing from this import.";
 /** Tells that there is a newer sidecar when nothing more specific was said about what an older one lacks */
 export const newerSidecarStep: ImportStep = input =>
     isOlderThan(input.sidecar_version, LATEST_SIDECAR_VERSION)
-        ? Option.some(NOTHING_MISSING_MESSAGE)
-        : Option.none();
+        ? O.some(NOTHING_MISSING_MESSAGE)
+        : O.none;
 
 /** What is checked on data pasted from the sidecar mod: what an older mod lacks, else that there is a newer one */
 const pickupCaptureDeclarationStep: ImportStep = input => (input.inserters ?? []).some(inserter =>
     typeof inserter === "object" && inserter !== null && "source" in inserter
     && typeof inserter.source === "object" && inserter.source !== null && "type" in inserter.source
     && inserter.source.type === "belt" && !("pickup_capture" in inserter.source))
-    ? Option.some("Belt pickup classification was not captured. Update Sidecar and recapture these inputs before generation. Updating the mod alone does not update a saved capture.")
-    : Option.none();
+    ? O.some("Belt pickup classification was not captured. Update Sidecar and recapture these inputs before generation. Updating the mod alone does not update a saved capture.")
+    : O.none;
 
 const pickupLayoutDeclarationStep: ImportStep = input => (input.inserters ?? []).some(inserter => {
     if (typeof inserter !== "object" || inserter === null || !("source" in inserter)) return false;
@@ -151,7 +152,7 @@ const pickupLayoutDeclarationStep: ImportStep = input => (input.inserters ?? [])
     return typeof capture === "object" && capture !== null && "status" in capture && capture.status === "supported"
         && "entity_type" in capture && capture.entity_type === "underground-belt"
         && (!("model_version" in capture) || capture.model_version === 1 || !("pickup_layout" in source));
-}) ? Option.some("Underground pickup layout was not captured. Update Sidecar and recapture these inputs before generation; half-tile reach cannot identify the approach.") : Option.none();
+}) ? O.some("Underground pickup layout was not captured. Update Sidecar and recapture these inputs before generation; half-tile reach cannot identify the approach.") : O.none;
 
 /**
  * A Sidecar export whose inserters have no prototype: every inserter ran as a legendary stack inserter, a blacklist as
@@ -160,10 +161,10 @@ const pickupLayoutDeclarationStep: ImportStep = input => (input.inserters ?? [])
  */
 const inserterIdentityDeclarationStep: ImportStep = input => (input.inserters ?? []).some(inserter =>
     typeof inserter === "object" && inserter !== null && !("prototype" in inserter))
-    ? Option.some("Inserter kind, quality and filter mode were not exported, so every inserter is read as a legendary "
+    ? O.some("Inserter kind, quality and filter mode were not exported, so every inserter is read as a legendary "
         + "stack inserter and its filters as the items it moves. Update Sidecar and recapture these inputs; updating the "
         + "mod alone does not update a saved capture.")
-    : Option.none();
+    : O.none;
 
 export const SIDECAR_IMPORT_PIPELINE: ImportPipeline = ImportPipeline
     .of(...SIDECAR_FEATURES.map(sidecarFeatureStep), pickupCaptureDeclarationStep, pickupLayoutDeclarationStep,
@@ -182,15 +183,15 @@ export function checkSidecarImport(
     chests: readonly unknown[] = [],
     inserters: readonly unknown[] = [],
     drills: readonly unknown[] = [],
-): Option<string> {
+): O.Option<string> {
     const version = sidecarVersionOf(sidecar_version);
-    return Option.map(
+    return pipe(
         pipeline.run({ sidecar_version: version, machines, chests, inserters, drills }),
-        missing => {
+        O.map(missing => {
             const update = missing === NOTHING_MISSING_MESSAGE
                 ? `You can update the mod to ${LATEST_SIDECAR_VERSION} when you like.`
                 : `Update the mod to ${LATEST_SIDECAR_VERSION} to import everything automatically.`;
             return `This was exported by ${exportedBy(version)}. ${missing} ${update}`;
-        },
+        }),
     );
 }

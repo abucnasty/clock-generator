@@ -3,6 +3,7 @@ import type { Config } from 'clock-generator/browser';
 import { askEngine } from '../worker/engineClient';
 import { decodeShareLink, readShareHash, shareInvalidMessage, SHARE_PROBLEM_MESSAGES, type SharedBuild } from '../utils/shareLink';
 import { readConfigFile } from './usePersistedConfigForm';
+import { neverOverrideNoteOfConfig } from '../utils/neverOverrideNote';
 import { useNotify } from './useMessages';
 
 interface QueuedLink {
@@ -74,7 +75,7 @@ export function useSharedBuildLink(ready: boolean) {
                 return;
             }
             // a second link while one waits takes its place
-            if (alive) setPending({ name: decoded.name, config });
+            if (alive) setPending({ name: decoded.name, config, never_note: neverOverrideNoteOfConfig(decoded.config) });
         })().finally(() => {
             if (alive) setQueued((current) => (current?.id === queued.id ? null : current));
         });

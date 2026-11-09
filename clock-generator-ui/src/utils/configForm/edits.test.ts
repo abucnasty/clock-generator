@@ -336,7 +336,6 @@ describe('overrides', () => {
     it.each<EnableControlOverride>([
         { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }], window_cycle_ticks: 60 },
         { mode: 'CONDITIONAL', rule_set: { operator: 'AND', rules: [] } },
-        { mode: 'NEVER' },
         { mode: 'ALWAYS' },
     ])('leaves the $mode rule the player set alone when its items are excluded and included again', (rule) => {
         const config = form({ 0: { overrides: { enable_control: rule } } });
@@ -364,8 +363,8 @@ describe('overrides', () => {
     });
 
     it('drops the flag but keeps the rule of a flagged inserter whose rule is not ALWAYS', () => {
-        const config = form({ 0: { overrides: { enable_control: { mode: 'NEVER' } }, _forced_always: true } });
-        expectUnforced(edits.updateIgnoredIngredients(config, [], ironPlan).inserters[0], { enable_control: { mode: 'NEVER' } });
+        const config = form({ 0: { overrides: { enable_control: { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }] } }, _forced_always: true } });
+        expectUnforced(edits.updateIgnoredIngredients(config, [], ironPlan).inserters[0], { enable_control: { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }] } });
     });
 
     it('unflags an inserter whose rule is replaced, and keeps the flag through other edits', () => {
@@ -453,15 +452,15 @@ describe('updateInserters', () => {
     it('merges rules with each row’s own other overrides and removes the forced flag', () => {
         const before = form({ 0: { overrides: { animation: { pickup_duration_ticks: 4 }, enable_control: { mode: 'ALWAYS' } }, _forced_always: true },
             2: { overrides: { animation: { pickup_duration_ticks: 8 } } } });
-        const after = edits.updateInserters(before, before.inserters.map(row => row._uuid), { overrides: { enable_control: { mode: 'NEVER' } } });
-        expect(after.inserters[0].overrides).toEqual({ animation: { pickup_duration_ticks: 4 }, enable_control: { mode: 'NEVER' } });
-        expect(after.inserters[2].overrides).toEqual({ animation: { pickup_duration_ticks: 8 }, enable_control: { mode: 'NEVER' } });
+        const after = edits.updateInserters(before, before.inserters.map(row => row._uuid), { overrides: { enable_control: { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }] } } });
+        expect(after.inserters[0].overrides).toEqual({ animation: { pickup_duration_ticks: 4 }, enable_control: { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }] } });
+        expect(after.inserters[2].overrides).toEqual({ animation: { pickup_duration_ticks: 8 }, enable_control: { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }] } });
         expect(after.inserters[0]).not.toHaveProperty('_forced_always');
         expect(before.inserters[0]._forced_always).toBe(true);
     });
     it('applies Auto to mixed rules and clears only selected forced flags', () => {
         const before = form({ 0: { overrides: { animation: { pickup_duration_ticks: 4 }, enable_control: { mode: 'ALWAYS' } }, _forced_always: true },
-            1: { overrides: { enable_control: { mode: 'NEVER' } } }, 2: { overrides: { enable_control: { mode: 'ALWAYS' } }, _forced_always: true } });
+            1: { overrides: { enable_control: { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }] } } }, 2: { overrides: { enable_control: { mode: 'ALWAYS' } }, _forced_always: true } });
         const after = edits.updateInserters(before, before.inserters.slice(0, 2).map(row => row._uuid), { overrides: { enable_control: undefined } });
         expect(after.inserters.slice(0, 2).every(row => row.overrides?.enable_control === undefined && row._forced_always === undefined)).toBe(true);
         expect(after.inserters[0].overrides?.animation).toEqual({ pickup_duration_ticks: 4 });

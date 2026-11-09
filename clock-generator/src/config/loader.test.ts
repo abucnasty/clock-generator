@@ -334,7 +334,7 @@ describe("parseConfig", () => {
             expect(config.inserters[0].overrides?.enable_control?.mode).toBe("ALWAYS");
         });
 
-        it("should parse inserter enable_control override with NEVER mode", async () => {
+        it("should load the former NEVER mode of an inserter enable_control override as AUTO", async () => {
             const json = `{
                 "belts": [],
                 "inserters": [
@@ -365,7 +365,7 @@ describe("parseConfig", () => {
 
             const config = await parseConfig(json);
 
-            expect(config.inserters[0].overrides?.enable_control?.mode).toBe("NEVER");
+            expect(config.inserters[0].overrides?.enable_control).toEqual({ mode: "AUTO" });
         });
 
         it("should parse inserter enable_control override with CLOCKED mode", async () => {

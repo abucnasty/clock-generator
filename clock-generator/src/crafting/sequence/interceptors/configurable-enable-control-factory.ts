@@ -18,7 +18,7 @@ export type EntityEnableControlOverrideMap = Map<string, EnableControlOverrideCo
 /**
  * Factory for creating EnableControl instances from user-specified configuration overrides.
  * 
- * This factory handles explicit user overrides for enable control logic (ALWAYS, NEVER, CLOCKED).
+ * This factory handles explicit user overrides for enable control logic (ALWAYS, CLOCKED, CONDITIONAL).
  * For AUTO mode, the EnableControlFactory should be used instead.
  * 
  * The factory will assert if called for an entity without a configured override.
@@ -86,9 +86,6 @@ export class ConfigurableEnableControlFactory {
         switch (override.mode) {
             case "ALWAYS":
                 return AlwaysEnabledControl;
-
-            case "NEVER":
-                return EnableControl.never;
 
             case "CLOCKED":
                 return this.createClockedControl(entity_id, override);

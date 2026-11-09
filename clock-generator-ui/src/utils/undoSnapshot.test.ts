@@ -92,7 +92,7 @@ describe('Undo', () => {
 
     it('puts back the form from before an atomic paste, including retained categories', () => {
         const original = form();
-        const incoming = { ...otherConfig, chests: [], drills: [], guidance: Option.none(), suggested_target: Option.none() };
+        const incoming = { ...otherConfig, chests: [], drills: [], guidance: Option.none, suggested_target: Option.none };
         const selections = { target: true, machines: true, drills: true, inserters: true, belts: true, chests: true };
         const { after, entry } = act(original, config => applyPaste(config, incoming, selections, otherConfig.setpoint));
         expect(after.setpoint).toEqual(otherConfig.setpoint);
@@ -128,7 +128,7 @@ describe('Undo', () => {
         before.inserters[0].prototype = 'fast-inserter';
         before.inserters[0].quality = 'epic';
         const serialized = JSON.stringify(before);
-        const { entry } = act(before, config => edits.updateInserters(config, before.inserters.map(row => row._uuid), { stack_size: 12, filters: ['iron-plate'], overrides: { enable_control: { mode: 'NEVER' } } }));
+        const { entry } = act(before, config => edits.updateInserters(config, before.inserters.map(row => row._uuid), { stack_size: 12, filters: ['iron-plate'], overrides: { enable_control: { mode: 'ALWAYS' } } }));
         expect(JSON.stringify(undoOutcome(entry)!.form)).toBe(serialized);
     });
 

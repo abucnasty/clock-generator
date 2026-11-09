@@ -35,7 +35,6 @@ const nested = ruleSet(condition(), condition(), ruleSet(condition(), condition(
 /** Each rule with the chip and the summary it reads as */
 const DESCRIBED: [string, EnableControlOverride, string, string][] = [
     ['names ALWAYS as Always on', { mode: EnableControlMode.ALWAYS }, 'Enable: Always on', 'Always on'],
-    ['names NEVER as Never on', { mode: EnableControlMode.NEVER }, 'Enable: Never on', 'Never on'],
     ['prints one CLOCKED range without a period', clocked([[0, 7]]), 'Clocked 0–7', 'Clocked 0–7 ticks'],
     ['prints one CLOCKED range with its period', clocked([[1, 2]], 168), 'Clocked 1–2 of 168', 'Clocked 1–2 of 168 ticks'],
     ['prints two ranges with the period, as the production science sample has them', clocked([[20, 45], [74, 89]], 112),

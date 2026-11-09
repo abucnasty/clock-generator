@@ -72,7 +72,7 @@ values. The six properties:
 
 | Property | It says |
 | --- | --- |
-| `always-on-reasons-named` | every inserter and drill a clock leaves always on says why, and nothing that has a window has a reason |
+| `entity-routes-total` | every inserter and drill of a clock has exactly one route: a reason it stays always on exactly when it has no window and no clock of its own, and the clock's reasons are exactly those |
 | `decider-build-order` | the order the check gives the window deciders is the order the exported blueprint builds them in |
 | `stable-holds-and-survives-loss` | a clock gets the disturbance trials when it is not unstable; it is stable only when it has recovery after every disturbance trial; a clock that meets the setpoint is stable |
 | `counters-add-up` | the per-inserter counters add up to the wakeups, and the clock-level figures agree with the clock |

@@ -31,6 +31,7 @@
     "@mui/material": "^7.3.6",
     "@xyflow/react": "^12.10.2",
     "clock-generator": "file:../clock-generator",
+    "fp-ts": "2.16.11",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "zod": "^4.2.1"

@@ -34,6 +34,7 @@ export type GlossaryId =
     | 'unclocked_run'
     | 'window-cycle-time'
     | 'enable-window'
+    | 'full-duty-cycle'
     | 'wakeup'
     | 'start-point'
     | 'copies'
@@ -114,6 +115,13 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
         insteadOf: 'wake window, window, clock window, inserter window, enable range',
     },
     {
+        id: 'full-duty-cycle',
+        term: 'full duty cycle',
+        definition: 'An inserter or drill whose swings take the whole window cycle, or all of it but its window\'s offset. Its '
+            + 'enable windows would have a duty cycle of 1, so the clock leaves it always enabled.',
+        insteadOf: 'busy',
+    },
+    {
         id: 'wakeup',
         term: 'wakeup',
         definition: WAKEUP_DEFINITION,
@@ -180,8 +188,8 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
         id: 'enable-rule',
         term: 'Enable Control Strategy override ("override" for short)',
         definition: 'The setting that overrides the Enable Control Strategy of one inserter or drill. Auto lets the generator '
-            + 'choose the strategy. Always on, Never on, Clocked and Conditional decide the control instead.',
-        insteadOf: 'enable rule, rule, enable control, AUTO, ALWAYS, NEVER, CLOCKED, CONDITIONAL',
+            + 'choose the strategy. Always on, Clocked and Conditional decide the control instead.',
+        insteadOf: 'enable rule, rule, enable control, AUTO, ALWAYS, CLOCKED, CONDITIONAL',
     },
     {
         id: 'assembling-machine',

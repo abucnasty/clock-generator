@@ -221,12 +221,12 @@ describe('buildWakeWindowRows', () => {
     it('carries the engine\'s reason on a row the clock leaves always on, and on no other', () => {
         const rows = rowsOf({
             clockWindows: { 'inserter:1': spans([0, 9]) },
-            alwaysOnReasons: { 'inserter:2': { kind: 'busy', window_cycle_ticks: 24 }, 'inserter:1': { kind: 'loop' } },
+            alwaysOnReasons: { 'inserter:2': { kind: 'full-duty-cycle', window_cycle_ticks: 24 }, 'inserter:1': { kind: 'loop' } },
             entities: ['inserter:1', 'inserter:2', 'inserter:3'],
         });
         expect(rows.map(row => [row.id, row.mode, row.alwaysOnReason])).toEqual([
             ['inserter:1', 'windows', undefined],
-            ['inserter:2', 'always-on', { kind: 'busy', window_cycle_ticks: 24 }],
+            ['inserter:2', 'always-on', { kind: 'full-duty-cycle', window_cycle_ticks: 24 }],
             ['inserter:3', 'always-on', undefined],
         ]);
     });

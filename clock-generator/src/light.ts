@@ -1,6 +1,6 @@
 /**
  * The values of the browser exports that need neither the simulation, the game data nor zod: the enum-like
- * constants, the status categories, the clock ranking and Option.
+ * constants, the status categories, the clock ranking and fp-ts's Option.
  *
  * A page that runs the generator in a web worker can take its values on the main thread from here, and only types
  * from `browser.ts`, so the generator itself is bundled once, in the worker. The "light entry" test in
@@ -42,7 +42,7 @@ export { coordinatedSourcesInputOf } from "./crafting/candidates/coordinated-sou
 
 export { whyNotStable, whyNotStableClockOf } from "./crafting/why-not-stable";
 
-export { Option } from "./data-types/option";
+export * as Option from "fp-ts/Option";
 
 export { COPIES_DECIMAL_ERROR, isShortDecimalCopies } from "./config/copies-value";
 export { fraction } from "./data-types/fraction";
@@ -50,6 +50,7 @@ export { migrateBeltSupplyOverrides } from "./config/migrate-belt-supply";
 export { dropFractionalSwingsOverride } from "./config/migrate-fractional-swings";
 export { renameLoopSeedItemsToKickStart } from "./config/migrate-kick-start";
 export { renameTargetOutputToSetpoint } from "./config/migrate-setpoint";
+export { neverOverrideEntitiesOf, readNeverOverridesInConfig, type NeverOverrideEntity } from "./config/migrate-never-override";
 export { renameClockedPeriodInConfig } from "./config/migrate-window-cycle";
 export { BLOCKED_SLOT_MARKERS } from "./config/migrate-blocked-slots";
 export { migrateMiningProductivityLevel, PRODUCTIVITY_PER_MINING_LEVEL } from "./config/migrate-mining-productivity";

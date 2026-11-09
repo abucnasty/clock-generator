@@ -70,7 +70,7 @@ describe('the property module', () => {
         delete bare.result.schedule;
         const report = check(bare);
         expect(report.problems).toEqual([]);
-        expect(report.checked).toMatchObject({ 'always-on-reasons-named': 1, 'decider-build-order': 0, 'stable-holds-and-survives-loss': 1, 'counters-add-up': 0, 'fuel-never-dry': 0, 'strategy-and-signals': 1 });
+        expect(report.checked).toMatchObject({ 'entity-routes-total': 1, 'decider-build-order': 0, 'stable-holds-and-survives-loss': 1, 'counters-add-up': 0, 'fuel-never-dry': 0, 'strategy-and-signals': 1 });
     });
 
     describe('a result with one field broken fails the property that reads it, naming the alternative and the values', () => {
@@ -79,11 +79,18 @@ describe('the property module', () => {
             return report.problems[0];
         };
 
-        it('always-on-reasons-named: an inserter left always on with no reason', () => {
+        it('entity-routes-total: an inserter left always on with no reason has no route', () => {
             const reasons = made().result.always_on_reasons;
             delete reasons[always_on[0]];
             const problem = only(check(made({ 'result.always_on_reasons': reasons })));
-            expect(problem).toEqual({ property: 'always-on-reasons-named', alternative: 'time_division_windows', message: `time_division_windows: ${always_on[0]} is always on with no reason` });
+            expect(problem).toEqual({ property: 'entity-routes-total', alternative: 'time_division_windows', message: `time_division_windows: ${always_on[0]} is always on with no reason` });
+        });
+
+        it('entity-routes-total: an inserter with a window and a reason, a reason for an entity the build does not have', () => {
+            const with_window = only(check(made({ 'result.clock_windows': { [always_on[0]]: [{ start: 0, end: 4 }] } })));
+            expect(with_window).toEqual({ property: 'entity-routes-total', alternative: 'time_division_windows', message: `time_division_windows: ${always_on[0]} has a reason and is not always on` });
+            const stranger = only(check(made({ 'result.always_on_reasons': { ...made().result.always_on_reasons, 'inserter:99': 'a reason' } })));
+            expect(stranger.message).toBe('time_division_windows: inserter:99 has a reason and is not an inserter or drill of the build');
         });
 
         it('decider-build-order: a decider built in the other order than the check gives it', () => {

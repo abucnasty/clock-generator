@@ -12,9 +12,9 @@ interface DrillTargetOption extends EntityOption {
 
 /**
  * The modes a drill that drops into a container cannot have (the config schema's rule): a condition reads an inserter's
- * hand, and a drill that never runs fills nothing
+ * hand
  */
-const NOT_INTO_A_CONTAINER: readonly EnableControlMode[] = [EnableControlMode.CONDITIONAL, EnableControlMode.NEVER];
+const NOT_INTO_A_CONTAINER: readonly EnableControlMode[] = [EnableControlMode.CONDITIONAL];
 
 /** Why a container cannot be picked for a drill with this rule */
 const CONTAINER_NEEDS = (mode: EnableControlMode) => `Its rule is ${ENABLE_MODE_LABELS[mode]}; a drill into a container needs ${

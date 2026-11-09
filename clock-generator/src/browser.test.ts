@@ -66,7 +66,7 @@ describe("the browser entry", () => {
 });
 
 describe("the light entry", () => {
-    it("reaches only a few small modules and no package", () => {
+    it("reaches only a few small modules and no package but fp-ts/Option", () => {
         const files = new Set(importsReachedFrom(path.join(__dirname, "light.ts")).map(({ file, specifier }) =>
             specifier.startsWith(".") ? path.relative(__dirname, resolveSource(path.join(__dirname, file), specifier)) : specifier));
         expect([...files].sort()).toEqual([
@@ -80,6 +80,7 @@ describe("the light entry", () => {
             "config/migrate-fractional-swings.ts",
             "config/migrate-kick-start.ts",
             "config/migrate-mining-productivity.ts",
+            "config/migrate-never-override.ts",
             "config/migrate-setpoint.ts",
             "config/migrate-window-cycle.ts",
             "crafting/candidates/coordinated-sources-parts.ts",
@@ -89,11 +90,11 @@ describe("the light entry", () => {
             "crafting/why-not-stable.ts",
             "data-types/fraction.ts",
             "data-types/map-extended.ts",
-            "data-types/option.ts",
             "entities/entity-type.ts",
             "entities/machine/machine-rule.ts",
             "entities/machine/machine-type.ts",
             "entities/traits/prototype-traits.ts",
+            "fp-ts/Option",
             "state/entity-status.ts",
             "state/factorio-state-names.ts",
             "state/reason-table.ts",

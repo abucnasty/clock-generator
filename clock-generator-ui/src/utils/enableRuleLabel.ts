@@ -15,7 +15,6 @@ export const CONDITIONAL_CHIP_MAX_CHARS = 36;
 const ENABLE_CHIP_PREFIX = 'Enable: ';
 const MODE_AUTO = 'Auto';
 const MODE_ALWAYS = 'Always on';
-const MODE_NEVER = 'Never on';
 const MODE_CLOCKED = 'Clocked';
 const MODE_CONDITIONAL = 'Conditional';
 
@@ -23,7 +22,6 @@ const MODE_CONDITIONAL = 'Conditional';
 export const ENABLE_MODE_LABELS: Record<EnableControlMode, string> = {
     [EnableControlMode.AUTO]: MODE_AUTO,
     [EnableControlMode.ALWAYS]: MODE_ALWAYS,
-    [EnableControlMode.NEVER]: MODE_NEVER,
     [EnableControlMode.CLOCKED]: MODE_CLOCKED,
     [EnableControlMode.CONDITIONAL]: MODE_CONDITIONAL,
 };
@@ -94,8 +92,6 @@ export function describeEnableRule(
     switch (override?.mode) {
         case EnableControlMode.ALWAYS:
             return named(MODE_ALWAYS, options?.forcedAlways ? `${MODE_ALWAYS}${FORCED_ALWAYS_NOTE}` : MODE_ALWAYS);
-        case EnableControlMode.NEVER:
-            return named(MODE_NEVER);
         case EnableControlMode.CLOCKED: {
             if (override.ranges.length === 0) {
                 const text = `${MODE_CLOCKED}${NO_RANGES}`;

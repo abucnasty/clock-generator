@@ -68,7 +68,7 @@ import { ClockBelt, SerializableClockWindows, backedUpHandTicks, beltPickupSlack
 import { ChestDrillClock, chestDrillClockLine, chestDrillWindows } from "../chest-drill-windows";
 import type { TurnGroup } from "../turn-groups";
 import type { SourceControl } from "../strategy-catalog";
-import { AlwaysOnReason, AlwaysOnReasons, alwaysOnReasons } from "../always-on-reasons";
+import { AlwaysOnReason, AlwaysOnReasons, alwaysOnReasonsOf, classifyEntities } from "../enable-control-router";
 import { RunMemo, currentRunMemo } from "./run-memo";
 import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, beltPickupSlackTrial, completedAsBuiltCheck, runAsBuiltCheck, runClockOnBuild, trialWithLoopWindows } from "../trial";
 
@@ -1705,16 +1705,16 @@ export function exportClock(
     const { inserter_clocks, fuel_plan, fuel_consumption_view } = settledFuelClocks(plan, windows, options);
 
     const clock_windows = withInserterClocks(windows, inserter_clocks, duration.ticks);
-    const always_on_reasons = alwaysOnReasons(
-        simulation_context.entity_registry,
-        id => clock_windows.has(id) || inserter_clocks.get(id)?.own_clock === true,
-        {
-            override: plan.run.always_enabled_by_config,
-            left_open: extras.left_open ?? new Map(),
-            chest_drills: chest_drill_clock.drills,
-            swung: new Set(Array.from(final_history.entries()).filter(([, transfers]) => transfers.length > 0).map(([entity_id]) => entity_id.id)),
-        },
-    );
+    // phase 1 of the router: the route of every inserter and drill, whose Lefts are the clock's reasons (enable-control-router.ts)
+    const always_on_reasons = alwaysOnReasonsOf(classifyEntities(simulation_context.entity_registry, {
+        has_windows: id => clock_windows.has(id),
+        inserter_clock: id => inserter_clocks.get(id),
+        chest_drills: chest_drill_clock.drills,
+        clocked_by_config: clockedByConfig(plan.config),
+        override: plan.run.always_enabled_by_config,
+        left_open: extras.left_open ?? new Map(),
+        swung: new Set(Array.from(final_history.entries()).filter(([, transfers]) => transfers.length > 0).map(([entity_id]) => entity_id.id)),
+    }));
 
     const blueprintForWindows = (all_windows: Map<string, OpenRange[]>, subtick_clock?: SubtickClock, use_modulo = false): SignalPerInserterBlueprint => {
         const clocked = withInserterClocks(all_windows, inserter_clocks, duration.ticks);
@@ -2287,17 +2287,17 @@ function exportedLanesShortOfConsumption(
 }
 
 /**
- * Every inserter and drill runs on a fixed clock of a whole-tick window cycle (or always/never), as in a clock-only
+ * Every inserter and drill runs on a fixed clock of a whole-tick window cycle (or always on), as in a clock-only
  * check, so the simulation is deterministic with that window cycle and a repeated state repeats forever.
  */
 function isPurelyClocked(config: Config, window_cycle_ticks: number): boolean {
     return Number.isInteger(window_cycle_ticks) && isClockedThroughout(config, window_cycle_ticks);
 }
 
-/** Every inserter and drill is always or never enabled, or on windows of a clock of this window cycle, whole ticks or not */
+/** Every inserter and drill is always enabled, or on windows of a clock of this window cycle, whole ticks or not */
 function isClockedThroughout(config: Config, window_cycle_ticks: number): boolean {
     const fixed = (control: EnableControlOverrideConfig | undefined) => control !== undefined && (
-        control.mode === "ALWAYS" || control.mode === "NEVER"
+        control.mode === "ALWAYS"
         || (control.mode === "CLOCKED" && control.window_cycle_ticks === window_cycle_ticks)
     );
     return config.inserters.every(inserter => fixed(inserter.overrides?.enable_control))
@@ -2306,7 +2306,7 @@ function isClockedThroughout(config: Config, window_cycle_ticks: number): boolea
 
 /**
  * The bin at whose boundaries equal simulation states repeat forever: every control of the build is a fixed clock
- * (always, never, or windows of a stated window cycle), so the next tick is a function of the entity states and of where
+ * (always on, or windows of a stated window cycle), so the next tick is a function of the entity states and of where
  * each clock stands, and at boundaries of this bin every clock stands where it stood at the last one. The bin is the
  * window cycle for a build clocked throughout on whole ticks, the whole-tick repeat of a fractional window cycle, and their
  * merge with the moduli of the clocks inserters have of their own (fuel), as one combinator would count them
@@ -2319,7 +2319,7 @@ export function provenRepeatBin(config: Config, window_cycle_ticks: number): { t
         if (control === undefined) {
             return false;
         }
-        if (control.mode === "ALWAYS" || control.mode === "NEVER") {
+        if (control.mode === "ALWAYS") {
             return true;
         }
         if (control.mode !== "CLOCKED" || control.window_cycle_ticks === undefined) {
@@ -2479,6 +2479,13 @@ export function withInserterClocks(
 export function alwaysEnabledByConfig(config: Config): Set<string> {
     return new Set(Array.from(buildEnableControlOverrideMap(config))
         .filter(([, override]) => override.mode === "ALWAYS")
+        .map(([entity_id]) => entity_id));
+}
+
+/** The inserters and drills the config sets to Clocked: their windows are the build's */
+export function clockedByConfig(config: Config): Set<string> {
+    return new Set(Array.from(buildEnableControlOverrideMap(config))
+        .filter(([, override]) => override.mode === "CLOCKED")
         .map(([entity_id]) => entity_id));
 }
 

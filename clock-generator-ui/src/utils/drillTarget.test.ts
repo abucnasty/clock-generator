@@ -52,15 +52,15 @@ describe('the drill Target picker', () => {
         expect(car).toMatchObject({ sublabel: '<iron-ore>', ingredientIcons: ['iron-ore'] });
     });
 
-    it.each(['NEVER', 'CONDITIONAL'] as const)('does not offer a container to a drill whose rule is %s, but keeps its own target', mode => {
+    it('does not offer a container to a drill whose rule is CONDITIONAL, but keeps its own target', () => {
         const form = configToFormData(config);
-        const drill: DrillFormData = { ...form.drills!.configs[0], overrides: { enable_control: mode === 'NEVER' ? { mode } : { mode, rules: { operator: 'AND', rules: [] } } } as DrillFormData['overrides'] };
+        const drill: DrillFormData = { ...form.drills!.configs[0], overrides: { enable_control: { mode: 'CONDITIONAL', rule_set: { operator: 'AND', rules: [] } } } as DrillFormData['overrides'] };
         expect(ruleAllowsContainer(drill)).toBe(false);
         const options = optionsFor(form, drill);
         expect(options.filter(option => option.disabledReason).map(option => option.id)).toEqual([1, 3, 4, 5, 6]);
         expect(options.find(option => option.type === 'machine')?.disabledReason).toBeUndefined();
         expect(options.find(option => option.type === 'chest' && option.id === 3)?.disabledReason)
-            .toBe(`Its rule is ${mode === 'NEVER' ? 'Never on' : 'Conditional'}; a drill into a container needs Auto, Clocked, Always on`);
+            .toBe('Its rule is Conditional; a drill into a container needs Auto, Clocked, Always on');
     });
 
     it.each(['AUTO', 'CLOCKED', 'ALWAYS', undefined] as const)('offers every container to a drill whose rule is %s', mode => {

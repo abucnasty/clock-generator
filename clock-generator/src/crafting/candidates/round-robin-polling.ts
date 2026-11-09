@@ -9,7 +9,7 @@ import { ClockBelt, beltPickupSlackTicks } from "../clock";
 import { disturbanceTrialVerdictOf, runClockOnBuild } from "../trial";
 import { DropTieBreak, dropTieBreak } from "../../config/drop-spacing";
 import { TurnGroup } from "../turn-groups";
-import type { AlwaysOnReason } from "../always-on-reasons";
+import type { AlwaysOnReason } from "../enable-control-router";
 import { sharedItemDeadlockRisks } from "../deadlock-risk";
 import { rankingWindowCount } from "../rank";
 import { turnOffsets } from "./taker-turns";
@@ -884,7 +884,7 @@ export function roundRobinPollingClock(
                 continue;
             }
             const { windows, turns, busy } = planned;
-            const left_open = new Map<string, AlwaysOnReason>(busy.map(id => [id, { kind: "busy", window_cycle_ticks: duration.ticks }]));
+            const left_open = new Map<string, AlwaysOnReason>(busy.map(id => [id, { kind: "full-duty-cycle", window_cycle_ticks: duration.ticks }]));
             const key = JSON.stringify(Array.from(windows, ([id, ranges]) => [id, ranges.map(range => [range.start_inclusive, range.end_inclusive])]));
             if (tried.has(key)) continue;
             tried.add(key);

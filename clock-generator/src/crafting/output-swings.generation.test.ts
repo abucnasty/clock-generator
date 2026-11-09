@@ -4,7 +4,7 @@ import { loadConfigFromFile, parseConfig } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { EntityId } from "../entities";
 import { OpenRange } from "../data-types";
-import { alwaysOnReasonProblems, productionScienceSharedPickup, withSearches } from "./generate-blueprint-test-helpers";
+import { entityRouteProblems, productionScienceSharedPickup, withSearches } from "./generate-blueprint-test-helpers";
 import { transitionsOf } from "./sequence/compact-history";
 
 describe("generateClockForConfig", () => {
@@ -59,7 +59,7 @@ describe("generateClockForConfig", () => {
             });
 
             it("names why every inserter and drill the clock leaves always on is", () => {
-                expect(alwaysOnReasonProblems(config, result, "planned")).toEqual([]);
+                expect(entityRouteProblems(config, result, "planned")).toEqual([]);
             });
 
             // two other range sets, now in the git history, were also confirmed in the game with this configuration.

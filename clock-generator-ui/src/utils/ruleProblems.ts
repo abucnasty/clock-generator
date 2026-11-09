@@ -28,7 +28,6 @@ export const PROBLEM_TEXT = {
     repeat: 'Enter a whole number of ticks, 1 or more, or leave it empty.',
     pickItem: 'Pick an item.',
     drillConditional: "Mining drills can't use a Conditional rule. Pick another mode.",
-    drillNeverIntoContainer: "A drill into a container can't be Never on: it would fill nothing. Pick another mode.",
 } as const;
 
 /** The non-blocking warning of a "Repeat every" that the window cycle is not a whole number of */
@@ -63,8 +62,6 @@ interface ProblemContext {
     timing: RuleTiming;
     /** The prefix of the form's field ids */
     idPrefix: string;
-    /** A drill that drops into a container (the config schema refuses Never on for it) */
-    intoContainer?: boolean;
 }
 
 /**
@@ -114,11 +111,8 @@ function itemProblems(ruleSet: RuleSet, path: string, idPrefix: string): RulePro
 }
 
 /** Every problem of the picked mode's fields, in reading order */
-export function ruleProblemsOf(draft: EnableControlDraft, { entityType, timing, idPrefix, intoContainer = false }: ProblemContext): RuleProblem[] {
+export function ruleProblemsOf(draft: EnableControlDraft, { entityType, timing, idPrefix }: ProblemContext): RuleProblem[] {
     const problems: RuleProblem[] = [];
-    if (draft.mode === EnableControlMode.NEVER && entityType === 'drill' && intoContainer) {
-        problems.push({ fieldId: modeFieldId(idPrefix, EnableControlMode.NEVER), field: 'Mode', text: PROBLEM_TEXT.drillNeverIntoContainer });
-    }
     if (draft.mode === EnableControlMode.CLOCKED) {
         const window_cycle_ticks = ruleWindowCycleOf(draft, timing);
         draft.ranges.forEach((window, index) => {

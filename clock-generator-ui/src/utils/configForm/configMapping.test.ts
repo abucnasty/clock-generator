@@ -35,7 +35,7 @@ const imported = {
     drills: {
         configs: [{
             id: 1, type: 'electric-mining-drill', mined_item_name: 'iron-ore', speed_bonus: 0, productivity: 20, target: { type: 'machine', id: 1 },
-            overrides: { enable_control: { mode: 'NEVER' } },
+            overrides: { enable_control: { mode: 'ALWAYS' } },
         }],
     },
     overrides: { lcm: 60 },
@@ -98,7 +98,7 @@ describe('configToFormData', () => {
             animation: undefined,
             enable_control: { mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }], window_cycle_ticks: 60 },
         });
-        expect(form.drills!.configs[0].overrides).toEqual({ enable_control: { mode: 'NEVER' } });
+        expect(form.drills!.configs[0].overrides).toEqual({ enable_control: { mode: 'ALWAYS' } });
     });
 
     it('fills in an empty rule set for a conditional override without one', () => {

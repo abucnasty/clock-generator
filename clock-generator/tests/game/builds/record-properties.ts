@@ -13,11 +13,11 @@ import { OpenRange } from '../../../src/data-types';
 import { EntityId } from '../../../src/entities';
 import { deciderBuildOrder } from '../../../src/crafting/decider-order';
 import type { ClockAlternativesResult } from '../../../src/crafting/generate-blueprint';
-import { alwaysOnReasonProblems } from '../../../src/crafting/generate-blueprint-test-helpers';
+import { entityRouteProblems } from '../../../src/crafting/generate-blueprint-test-helpers';
 import { createEntityRegistryFromConfig } from '../../../src/crafting/sequence/simulation-context';
 
 export const PROPERTIES = [
-    'always-on-reasons-named',
+    'entity-routes-total',
     'decider-build-order',
     'stable-holds-and-survives-loss',
     'counters-add-up',
@@ -66,9 +66,13 @@ type Alternative = ClockAlternativesResult['alternatives'][number];
 
 const close = (a: number, b: number, digits: number) => Math.abs(a - b) < Math.pow(10, -digits) / 2;
 
-/** Every inserter and drill a clock leaves always on names why (the engine's helper; its string is the problem) */
-function alwaysOnReasons(config: Config, alternative: Alternative): string[] {
-    return alwaysOnReasonProblems(config, alternative.result, alternative.id);
+/**
+ * Every inserter and drill of the clock has exactly one route: a Left (the reason it stays always enabled) exactly when it has no
+ * window and no clock of its own, and the clock's reasons are its Lefts (the router reads them back, `routesOfResult`; each
+ * string is a problem)
+ */
+function entityRoutesTotal(config: Config, alternative: Alternative): string[] {
+    return entityRouteProblems(config, alternative.result, alternative.id);
 }
 
 /**
@@ -226,7 +230,7 @@ export function checkProperties(job: string, config: Config, generated: Pick<Clo
     };
     const ids_before = new Set<string>();
     for (const alternative of generated.alternatives) {
-        note('always-on-reasons-named', alternative, alwaysOnReasons(config, alternative));
+        note('entity-routes-total', alternative, entityRoutesTotal(config, alternative));
         note('decider-build-order', alternative, deciderOrder(registry, alternative));
         note('stable-holds-and-survives-loss', alternative, stableMeans(alternative));
         note('counters-add-up', alternative, countersAddUp(alternative, copies));

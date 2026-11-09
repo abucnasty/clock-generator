@@ -141,7 +141,7 @@ The router that gives every inserter and mining drill of the clock the one chose
 The router that gives the inserters of each source the enable windows of another clock of the build. A source is a machine, belt or chest that inserters take from. All sources use the window cycle of the recommended clock. The generator sets the sources one at a time, from the output upstream. It keeps the setting with the smallest number of wakeups for the full clock. It is a router, not a strategy.
 
 **Enable Control Strategy override** (short form: **override**):
-The setting that overrides the Enable Control Strategy of one inserter or drill (the configuration's `overrides.enable_control`). Auto lets the generator choose the strategy. Always on, Never on, Clocked and Conditional decide the control instead: the router then gives no strategy.
+The setting that overrides the Enable Control Strategy of one inserter or drill (the configuration's `overrides.enable_control`). Auto lets the generator choose the strategy. Always on, Clocked and Conditional decide the control instead: the router then gives no strategy.
 _Avoid_: enable rule, enable control
 
 **Tuning method**:
@@ -225,6 +225,11 @@ Control theory: pulse-width modulation (Wikipedia); Janert's split-time controll
 **Duty cycle**:
 The share of the window cycle during which the clock enables an inserter: the sum of its enable windows, divided by the
 window cycle time. Not the utilization of a machine group.
+
+**Full duty cycle**:
+An inserter or drill whose swings take the whole window cycle, or all of it but its window's offset. Its enable windows
+would have a duty cycle of 1, so the clock leaves it always enabled.
+_Avoid_: busy
 
 **Oscillation**:
 An unintended swing of the output or of a stock. The PWM pattern of the clock does not cause it: it repeats with a

@@ -46,7 +46,7 @@ const circuitExportBackedUp: JobCheck[] = [
         name: 'Selection: the 4 inserters with no window are the circuits into the processing unit machines, which the remake leaves unguarded',
         run: ({ generated }) => {
             expect(byMaker(generated, 'planned-belt-slack-per-hand').result.always_on_reasons).toEqual(Object.fromEntries([3, 4, 7, 8]
-                .map(number => [`inserter:${number}`, { kind: 'busy', window_cycle_ticks: 24 }])));
+                .map(number => [`inserter:${number}`, { kind: 'full-duty-cycle', window_cycle_ticks: 24 }])));
         },
     },
 ];
