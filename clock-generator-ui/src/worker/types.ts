@@ -422,9 +422,9 @@ export interface PastedEntities {
     belts: BeltConfiguration[];
     chests: ChestConfiguration[];
     /** Guidance for the user from the import pipeline, e.g. that the sidecar mod is too old to export something */
-    guidance: Option<string>;
+    guidance: Option.Option<string>;
     /** The target output the paste suggests: the mod's own, else worked out from the machines */
-    suggested_target: Option<SuggestedTarget>;
+    suggested_target: Option.Option<SuggestedTarget>;
     /** The ids of the machines an older Sidecar named only by kind, which got a machine picked for their recipe */
     picked_machines?: number[];
 }

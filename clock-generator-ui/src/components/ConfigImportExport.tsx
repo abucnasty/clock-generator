@@ -697,10 +697,10 @@ export function ConfigImportExport({
                     Choose what to import. Selected parts replace those in your current build; unselected parts stay as they are.
                 </Typography>
                 
-                {pendingImport?.guidance && Option.match(pendingImport.guidance, {
-                    none: () => null,
-                    some: (message) => <Alert severity="warning" sx={{ mb: 2 }}>{message}</Alert>,
-                })}
+                {pendingImport?.guidance && Option.match(
+                    () => null,
+                    (message: string) => <Alert severity="warning" sx={{ mb: 2 }}>{message}</Alert>,
+                )(pendingImport.guidance)}
 
                 {pendingImport && <ImportSimplification config={simplificationConfig} applied={pendingImport.reduction}
                     onRepeated={sourceKey => {

@@ -7,7 +7,7 @@ import { applyPaste, pastePreview, type ImportSelections, type PasteCategory } f
 
 const none: ImportSelections = { target: false, machines: false, drills: false, inserters: false, belts: false, chests: false };
 const all: ImportSelections = { target: true, machines: true, drills: true, inserters: true, belts: true, chests: true };
-const empty = (): PastedEntities => ({ machines: [], drills: [], inserters: [], belts: [], chests: [], guidance: Option.none(), suggested_target: Option.none() });
+const empty = (): PastedEntities => ({ machines: [], drills: [], inserters: [], belts: [], chests: [], guidance: Option.none, suggested_target: Option.none });
 const current = (): ConfigFormData => ({ ...createDefaultConfig(), machines: [], inserters: [], chests: [], belts: [] });
 // pasted rows, which have no `_uuid` yet
 const machine = (id: number) => ({ id, recipe: '', productivity: 0, crafting_speed: 1 });
