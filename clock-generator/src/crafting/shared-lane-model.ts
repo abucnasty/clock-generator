@@ -56,6 +56,8 @@ const ENTRY_TILES = 1;
  * The copies stand downstream of each other in the order they are numbered, the copy of the config first and simulated
  * in full; the part copy stands last, with the takers of it that stand furthest upstream.
  *
+ * A lane that is one per copy holds the takers of one copy only.
+ *
  * A config without the positions of a lane's takers gets the least spacing: the takers of a copy a tile apart in the
  * config's order, and the copies end to end, unless `copy_offset` says how far apart they stand.
  *
@@ -64,8 +66,6 @@ const ENTRY_TILES = 1;
  * not run yet, and a supply rate at its entry alone would feed it what the drops do not.
  */
 export function laneRowsOf(config: Config, flow: FlowDirection, lanes?: readonly { belt_id: number; lane: 1 | 2 }[]): LaneRow[] {
-    const copies = config.setpoint.copies;
-    const whole = Math.floor(copies), part = copies - whole;
     const facts = laneFactsOf(config);
     const along = (position: { x: number; y: number }) => position.x * flow.x + position.y * flow.y;
     const positions = [...config.machines, ...config.inserters, ...(config.chests ?? []), ...(config.drills?.configs ?? [])]
@@ -101,6 +101,9 @@ export function laneRowsOf(config: Config, flow: FlowDirection, lanes?: readonly
                 : positioned ? Math.max(...positions) - Math.min(...positions) + 1 : takers.length;
             assert(takers.length === 0 || step > 0, `The copies on lane ${lane} of belt ${belt.id} need copy_offset along the lane`);
             if (takers.length === 0) continue;
+            // a lane that is one per copy holds one copy's takers
+            const copies = facts.of(belt.id, lane).sharing === "one_per_copy" ? 1 : config.setpoint.copies;
+            const whole = Math.floor(copies), part = copies - whole;
             const in_part = Math.ceil(part * takers.length - 1e-9);
             const by_place = [...takers].sort((a, b) => a.at - b.at);
             const copy_count = whole + (in_part > 0 ? 1 : 0);
@@ -139,25 +142,53 @@ export interface SharedLaneRun {
     readonly need_machine_state: readonly string[];
 }
 
-/** Records the hands an inserter of the simulated copy puts down, from what it has dropped */
-class DropRecorder implements CopyTakerTick {
+/**
+ * Records the hands an inserter of the simulated copy puts down, from what it has dropped, and the items it picks up,
+ * from what its hand holds
+ */
+export class DropRecorder implements CopyTakerTick {
     public readonly hands: HandDropped[] = [];
+    /** Each rise of what the hand holds: the items picked up in a tick */
+    public readonly pickups: HandDropped[] = [];
     private dropped: number;
     /** The item the hand held after the last tick: what a drop in this tick put down */
     private held: string | null;
+    private quantity: number;
+    /** The last tick recorded: the run's length */
+    public last_tick = 0;
 
     constructor(private readonly inserter: InserterArchetype, private readonly now: () => number) {
         this.dropped = inserter.inserter_state.items_dropped;
         this.held = inserter.inserter_state.held_item?.item_name ?? null;
+        this.quantity = inserter.inserter_state.held_item?.quantity ?? 0;
     }
 
     public tick(): void {
         const state = this.inserter.inserter_state;
+        const tick = this.now();
+        this.last_tick = tick;
         const dropped = state.items_dropped;
-        if (dropped > this.dropped) this.hands.push({ tick: this.now(), item: this.held ?? "", items: dropped - this.dropped });
+        if (dropped > this.dropped) this.hands.push({ tick, item: this.held ?? "", items: dropped - this.dropped });
         this.dropped = dropped;
+        const quantity = state.held_item?.quantity ?? 0;
+        if (state.held_item !== null && quantity > this.quantity) this.pickups.push({ tick, item: state.held_item.item_name, items: quantity - this.quantity });
+        this.quantity = quantity;
         this.held = state.held_item?.item_name ?? this.held;
     }
+}
+
+/** Puts a recorder on each of the inserters named into a context before its first tick: for a run without the model */
+export function recordInserters(context: SimulationContext, inserter_ids: readonly string[]): Map<string, DropRecorder> {
+    assert(context.tick_provider.getCurrentTick() === 0, "The recorders go in before the first tick");
+    const now = () => context.tick_provider.getCurrentTick();
+    const recorders = new Map<string, DropRecorder>();
+    for (const inserter of context.inserters) {
+        if (!inserter_ids.includes(inserter.entity_id.id)) continue;
+        const recorder = new DropRecorder(inserter, now);
+        context.copy_takers.push(recorder);
+        recorders.set(inserter.entity_id.id, recorder);
+    }
+    return recorders;
 }
 
 /** A pickup stock of a lane the model does not run, as the hand's port makes one */

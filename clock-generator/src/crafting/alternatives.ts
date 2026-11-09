@@ -47,6 +47,7 @@ import { signalsPerMinuteOf } from "./clock-signals";
 import { START_DEPENDENCE_NOT_CHECKED, StartDependence, startDependenceNote } from "./start-dependence";
 import { NotMadeClock, notTriedSentence, WhyNotStable, whyNotStable, whyNotStableClockOf } from "./why-not-stable";
 import { DEFAULT_KICK_START_ITEMS } from "./runner/cold-start";
+import { judgeSharedLanes, SharedLaneLoss } from "./shared-lane-verdict";
 
 
 export interface ClockAlternative {
@@ -1052,6 +1053,26 @@ function runAlternativeOf(
         }
         return from_starts_of.get(trial)!;
     };
+    /**
+     * The takers of the copies that lose swings on a lane they share (see shared-lane-verdict.ts), made once per trial, of
+     * the clock it runs and on the config it is verified on: only of a clock that holds its expected output, which alone
+     * the lanes can keep from being stable
+     */
+    const shared_lane_losses_of = new Map<Trial, SharedLaneLoss[]>();
+    const sharedLaneLosses = (trial: Trial): SharedLaneLoss[] => {
+        if (!trial.held) return [];
+        if (!shared_lane_losses_of.has(trial)) {
+            const on = used.planned_on ?? config;
+            const judged = judgeSharedLanes({ ...on, overrides: { ...on.overrides, terminal_swing_count: trial.result.used_terminal_swing_count } },
+                trial.result.clock_windows, trial.clock_window_cycle, logger);
+            if (judged.lanes.length > 0) {
+                logger.log(`Clock "${label}": the shared lanes ${judged.lanes.join(", ")}: ${judged.simulated ? "simulated with every copy" : "refill in time"}, `
+                    + `${judged.losses.length === 0 ? "no copy loses swings" : `${judged.losses.length} takers lose swings`}`);
+            }
+            shared_lane_losses_of.set(trial, judged.losses);
+        }
+        return shared_lane_losses_of.get(trial)!;
+    };
     /** The trial of a clock rounded down to whole ticks on its own window cycle, where one is made (below) */
     let rounded_trial: Trial | null = null;
     /** The alternative for a trial of the clock: its notes, insights, assessment and ranking */
@@ -1059,6 +1080,7 @@ function runAlternativeOf(
         /** What this listing of the clock adds to the settings of its strategy: a subtick clock, a clock rounded down */
         listing?: ListingSettings }): ClockAlternative => {
         const tried_as = trial;
+        const shared_lane_losses = sharedLaneLosses(trial);
         // a clock that fails its first check is listed by the mean of its long run, not the one window cycle measured
         const settled_check = (settle_unstable ?? !held) ? settledStability(trial) : trial.result.stability_check;
         // the counters of its inserters learn which decider switches each from the blueprint it is listed with
@@ -1071,7 +1093,7 @@ function runAlternativeOf(
         const start_dependence_note = trial.start_dependence === null ? null
             : startDependenceNote(trial.start_dependence, items => itemsPerSecondOverCopies(items, trial.clock_window_cycle, copies));
         const description = withResolvedName(definition, definition.description, strategy) + moved_note + shifted_note + belt_note + planning_note + asBuiltNotes(as_built, expected_output_items)
-            + disturbanceTrialNote(disturbance_trial, disturbance_trial_not_tried)
+            + disturbanceTrialNote(disturbance_trial, disturbance_trial_not_tried) + sharedLaneLossNote(shared_lane_losses)
             + (start_dependence_note === null ? "" : ` ${start_dependence_note[0].toUpperCase()}${start_dependence_note.slice(1)}`) + row.description_suffix;
         // what a clock that holds says about the build is read from it, whether it gets back from a loss or not
         const insights = [
@@ -1091,7 +1113,8 @@ function runAlternativeOf(
             items_per_second: itemsPerSecondOverCopies(achieved_output_items, trial.clock_window_cycle, copies),
             wake_ups_per_minute: as_built?.wake_ups?.wake_ups_per_minute ?? null,
             signals_per_minute: as_built?.wake_ups === undefined ? null : signalsPerMinuteOf(as_built.counters, row.result.blueprint, row.result.chest_drills, trial.clock_window_cycle),
-            start_dependence: trial.start_dependence, ...loopStockBoundOf(config, row.result, trial.clock_window_cycle) };
+            start_dependence: trial.start_dependence, ...(shared_lane_losses.length > 0 && { shared_lane_losses }),
+            ...loopStockBoundOf(config, row.result, trial.clock_window_cycle) };
         const listed_strategy = strategyListedAs(strategy, row.listing ?? {});
         const clock = { id: alternativeIdOf(listed_strategy, definition), maker: row.id, label: row.label, description, result: row.result, ...(row.rounded && { rounded: row.rounded }),
             inserter_window_count, deciders: windowDeciderCount(row.result.blueprint), ranking_window_count, assessment, verdict: clockVerdictOf(assessment), deadlock_risks, belt, insights,
@@ -1172,6 +1195,11 @@ function runAlternativeOf(
         result: rounded_trial?.result ?? result,
         rounded,
     })] };
+}
+
+/** The sentence for a clock under which a copy loses swings on a lane the copies share, with a space before it; empty for any other */
+function sharedLaneLossNote(losses: readonly SharedLaneLoss[]): string {
+    return losses.length === 0 ? "" : ` It is not stable on a lane its copies share. ${losses[0].text}`;
 }
 
 /** A share as a percentage the labels print: "0.02%", "1.14%", "under 0.01%" */

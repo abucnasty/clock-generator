@@ -1,0 +1,50 @@
+{
+  "coordinated_sources": { "window_cycle_ticks": 352, "windows": {
+    "inserter:1": [{"start": 0, "end": 24}, {"start": 176, "end": 200}],
+    "inserter:2": [{"start": 0, "end": 24}, {"start": 176, "end": 200}],
+    "inserter:3": [{"start": 13, "end": 22}, {"start": 201, "end": 229}],
+    "inserter:6": [{"start": 13, "end": 22}, {"start": 201, "end": 229}],
+    "inserter:4": [{"start": 26, "end": 33}, {"start": 202, "end": 209}],
+    "inserter:5": [{"start": 26, "end": 33}, {"start": 202, "end": 209}],
+    "inserter:7": [{"start": 26, "end": 46}],
+    "inserter:10": [{"start": 26, "end": 46}],
+    "inserter:8": [{"start": 27, "end": 32}, {"start": 58, "end": 63}],
+    "inserter:9": [{"start": 27, "end": 32}, {"start": 58, "end": 63}]
+  } },
+  "takt_batches_observed": { "window_cycle_ticks": 352, "windows": {
+    "inserter:2": [{"start": 1, "end": 25}, {"start": 177, "end": 201}],
+    "inserter:1": [{"start": 1, "end": 25}, {"start": 177, "end": 201}],
+    "inserter:3": [{"start": 13, "end": 22}, {"start": 201, "end": 229}],
+    "inserter:6": [{"start": 13, "end": 22}, {"start": 201, "end": 229}],
+    "inserter:5": [{"start": 26, "end": 33}, {"start": 202, "end": 209}],
+    "inserter:4": [{"start": 26, "end": 33}, {"start": 202, "end": 209}],
+    "inserter:8": [{"start": 27, "end": 32}, {"start": 58, "end": 63}],
+    "inserter:9": [{"start": 27, "end": 32}, {"start": 58, "end": 63}],
+    "inserter:7": [{"start": 26, "end": 46}],
+    "inserter:10": [{"start": 26, "end": 46}]
+  } },
+  "time_study_windows": { "window_cycle_ticks": 352, "windows": {
+    "inserter:2": [{"start": 1, "end": 25}, {"start": 177, "end": 201}],
+    "inserter:1": [{"start": 1, "end": 25}, {"start": 177, "end": 201}],
+    "inserter:10": [{"start": 191, "end": 222}],
+    "inserter:3": [{"start": 14, "end": 45}, {"start": 190, "end": 221}],
+    "inserter:4": [{"start": 14, "end": 27}, {"start": 190, "end": 203}],
+    "inserter:5": [{"start": 14, "end": 27}, {"start": 190, "end": 203}],
+    "inserter:6": [{"start": 14, "end": 45}, {"start": 190, "end": 221}],
+    "inserter:7": [{"start": 191, "end": 222}],
+    "inserter:8": [{"start": 191, "end": 204}, {"start": 222, "end": 235}],
+    "inserter:9": [{"start": 191, "end": 204}, {"start": 222, "end": 235}]
+  } },
+  "euclidean_swings": { "window_cycle_ticks": 176, "windows": {
+    "inserter:1": [{"start": 0, "end": 24}],
+    "inserter:2": [{"start": 0, "end": 24}],
+    "inserter:3": [{"start": 14, "end": 52}],
+    "inserter:6": [{"start": 14, "end": 52}],
+    "inserter:4": [{"start": 53, "end": 62}],
+    "inserter:5": [{"start": 53, "end": 62}],
+    "inserter:7": [{"start": 69, "end": 96}],
+    "inserter:8": [{"start": 69, "end": 78}],
+    "inserter:9": [{"start": 69, "end": 78}],
+    "inserter:10": [{"start": 69, "end": 96}]
+  } }
+}

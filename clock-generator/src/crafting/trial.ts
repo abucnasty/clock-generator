@@ -37,6 +37,7 @@ import { TakerOrder, takerOrderName, independentTakerOrdersToCheck } from "../si
 import { verificationPlanningConfigOf, verificationTerminalCountOf } from "./round-robin-polling-primitive-policy";
 import { CIRCUIT_LATENCY_TICKS } from "../common/rule-constants";
 import { WakeUpsFromStarts, hasStockTheClockDoesNotSet, wakeUpsFromStarts } from "./wake-ups-from-starts";
+import type { SharedLaneLoss } from "./shared-lane-verdict";
 
 /**
  * Number of clock start offsets the as-built check tries. Depending on how the clock lines up with the
@@ -101,6 +102,12 @@ export interface ClockAssessment {
      */
     start_dependence: StartDependence | null;
     /**
+     * On a build whose copies share a belt lane the shared-lane model decides (shared-lane-verdict.ts): the takers of the
+     * copies that lose swings on it, the worst first. A clock with any is unstable. Absent where there are none: no such
+     * lane, or a clock that does not hold its expected output.
+     */
+    shared_lane_losses?: SharedLaneLoss[];
+    /**
      * #516's two-hop bound on the windows of a clock with windows for a loop of machines (`loop_windows` of its result): the
      * margins of what the loop's sources leave for its inserters and of the stock its machines hold over the longest gap
      * between its windows (see loop-stock-bound.ts). A report: no clock is kept, dropped or ranked by it. Absent on any other
@@ -113,7 +120,8 @@ export interface ClockAssessment {
  * The one word for a clock (GOALS.md, "Backpressure Loss"): stable when it holds its expected output and gets back to
  * it by itself after every backpressure loss of its build (and, when the start dependence was checked, reaches it from every
  * start); no recovery when it holds and does not get back from some
- * loss; unstable when it does not hold or fails the sampled-start check. A clock the losses could not be tried on keeps
+ * loss; unstable when it does not hold, fails the sampled-start check, or a copy loses swings on a lane the copies share
+ * (`shared_lane_losses`). A clock the losses could not be tried on keeps
  * the word of what it holds, stable, and `disturbance_trial_not_tried` says why they were not: it ranks below every
  * clock tried and getting back, and above every clock tried and not (`recoveryUntried`, rank.ts).
  */
@@ -122,7 +130,8 @@ export type ClockVerdict = "stable" | "no recovery" | "unstable";
 export function clockVerdictOf(assessment: ClockAssessment): ClockVerdict {
     // a clock that reaches its target from some starts only is not one to rely on: it is listed as unstable here, and
     // named start-dependent by `start_dependence`
-    if (!assessment.holds || (assessment.start_dependence !== null && assessment.start_dependence.verdict !== "stable")) {
+    if (!assessment.holds || (assessment.start_dependence !== null && assessment.start_dependence.verdict !== "stable")
+        || (assessment.shared_lane_losses?.length ?? 0) > 0) {
         return "unstable";
     }
     return assessment.disturbance_trial?.survives === false ? "no recovery" : "stable";

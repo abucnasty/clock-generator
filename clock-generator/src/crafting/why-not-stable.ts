@@ -1,6 +1,6 @@
 /**
  * Why the selected clock does not meet goal 1 (GOALS.md: hold the target rate and get back to it after a loss), in one
- * of five causes, each told from what the alternatives already carry: no search is added and nothing is generated
+ * of the causes below, each told from what the alternatives already carry: no search is added and nothing is generated
  * again.
  *
  * - **Moving lane phases:** the clock is made for a moving belt and holds from the modeled start, but falls short from
@@ -13,6 +13,8 @@
  *   clock ended the chest had no room left for it: the same chest the web form warns can fill up.
  * - **Export belt short:** the clock moves the target, and a belt with a consumption rate gets less than its consumers
  *   take; the same words name the belt, the item and both rates.
+ * - **Shared lane short:** it holds the rate on one copy, and a copy loses swings on a lane the copies share
+ *   (`assessment.shared_lane_losses`).
  * - **No recovery:** it holds the rate, and does not get back to it after the losses it names.
  * - **Nothing holds:** it does not hold the rate; the nearest clock is selected, and the clocks that could not be made
  *   are listed with their reasons.
@@ -28,7 +30,7 @@ import type { ClockInsight } from "./insights";
 import type { ClockRanking } from "./rank";
 import type { AsBuiltStabilityCheck, ClockAssessment, ClockVerdict } from "./trial";
 
-export type WhyNotStableCause = "taker order" | "moving lane phases" | "output chest full" | "export belt short" | "results not taken out" | "no recovery" | "nothing holds";
+export type WhyNotStableCause = "taker order" | "moving lane phases" | "output chest full" | "export belt short" | "results not taken out" | "shared lane short" | "no recovery" | "nothing holds";
 
 export interface WhyNotStable {
     cause: WhyNotStableCause;
@@ -62,7 +64,7 @@ export interface WhyNotStableClock {
     meets_target_rate: boolean;
     /** Stable over the target rate, which the selection picks where none meets goal 1 (`ClockRanking.stable_above_target`) */
     stable_above_target?: boolean;
-    assessment: Pick<ClockAssessment, "holds" | "items_per_second"> & {
+    assessment: Pick<ClockAssessment, "holds" | "items_per_second" | "shared_lane_losses"> & {
         disturbance_trial: Pick<DisturbanceTrialVerdict, "survives" | "broken_by" | "broken_at_other_lane_phases" | "broken_under_other_taker_orders" | "not_tried"> | null;
     };
     /** Whether the clock is made for a moving belt (its belt pickups have belt pickup slack) */
@@ -370,6 +372,22 @@ function resultsNotTaken(clock: WhyNotStableClock, at_target: boolean): WhyNotSt
 }
 
 /**
+ * The clock holds the setpoint on one copy, and a copy loses swings on a lane the copies share: that copy gets too few
+ * items, whatever the run of one copy says
+ */
+function sharedLaneShort(clock: WhyNotStableClock): WhyNotStable | null {
+    const loss = clock.assessment.shared_lane_losses?.[0];
+    if (clock.verdict !== "unstable" || loss === undefined) {
+        return null;
+    }
+    return {
+        cause: "shared lane short",
+        message: `The recommended clock (${clock.label}) holds the setpoint on one copy, but not on a lane its copies share. ${loss.text} `
+            + "A clock needs enable windows that give the lane more time, or each copy needs a lane of its own.",
+    };
+}
+
+/**
  * Why the selected clock does not meet goal 1; null when it does. A stable clock off the target rate (one with a
  * rounded window cycle, or a build the plan cannot run at the target) is told as nothing holding the target.
  */
@@ -383,6 +401,7 @@ export function whyNotStable(clocks: readonly WhyNotStableClock[], selected_inde
     return outputChestFull(clock, build)
         ?? exportBeltShort(clock, at_target)
         ?? resultsNotTaken(clock, at_target)
+        ?? sharedLaneShort(clock)
         ?? takerOrder(clock)
         ?? movingLanePhases(clock, build)
         ?? (clock.verdict === "no recovery" && at_target ? noRecovery(clock) : nothingHolds(clock, build));
