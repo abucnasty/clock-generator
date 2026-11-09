@@ -141,7 +141,7 @@ The router that gives every inserter and mining drill of the clock the one chose
 The router that gives the inserters of each source the enable windows of another clock of the build. A source is a machine, belt or chest that inserters take from. All sources use the window cycle of the recommended clock. The generator sets the sources one at a time, from the output upstream. It keeps the setting with the smallest number of wakeups for the full clock. It is a router, not a strategy.
 
 **Enable Control Strategy override** (short form: **override**):
-The setting that overrides the Enable Control Strategy of one inserter or drill (the configuration's `overrides.enable_control`). Auto lets the generator choose the strategy. Always on, Never on, Clocked and Conditional decide the control instead: the router then gives no strategy.
+The setting that overrides the Enable Control Strategy of one inserter or drill (the configuration's `overrides.enable_control`). Auto lets the generator choose the strategy. Always on, Clocked and Conditional decide the control instead: the router then gives no strategy.
 _Avoid_: enable rule, enable control
 
 **Tuning method**:

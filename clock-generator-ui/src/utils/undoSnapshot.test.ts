@@ -128,7 +128,7 @@ describe('Undo', () => {
         before.inserters[0].prototype = 'fast-inserter';
         before.inserters[0].quality = 'epic';
         const serialized = JSON.stringify(before);
-        const { entry } = act(before, config => edits.updateInserters(config, before.inserters.map(row => row._uuid), { stack_size: 12, filters: ['iron-plate'], overrides: { enable_control: { mode: 'NEVER' } } }));
+        const { entry } = act(before, config => edits.updateInserters(config, before.inserters.map(row => row._uuid), { stack_size: 12, filters: ['iron-plate'], overrides: { enable_control: { mode: 'ALWAYS' } } }));
         expect(JSON.stringify(undoOutcome(entry)!.form)).toBe(serialized);
     });
 

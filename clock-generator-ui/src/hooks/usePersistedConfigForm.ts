@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
-import { ChestType, dropFractionalSwingsOverride, migrateBeltSupplyOverrides, migrateMiningProductivityLevel, renameClockedPeriodInConfig, renameLoopSeedItemsToKickStart, renameTargetOutputToSetpoint } from 'clock-generator/light';
+import { ChestType, dropFractionalSwingsOverride, migrateBeltSupplyOverrides, migrateMiningProductivityLevel, readNeverOverridesInConfig, renameClockedPeriodInConfig, renameLoopSeedItemsToKickStart, renameTargetOutputToSetpoint } from 'clock-generator/light';
 import { askEngine } from '../worker/engineClient';
 import {
     backupKey,
@@ -41,6 +41,7 @@ import {
     type MachineFormData,
 } from '../utils/configForm/formData';
 import { formSlotFilters } from '../utils/containerSlotFilters';
+import { neverOverrideNoteOfText } from '../utils/neverOverrideNote';
 
 /** Migrate legacy inserter data to include id field */
 function migrateInserters(inserters: unknown[]): InserterFormData[] {
@@ -82,13 +83,14 @@ function migrateChests(chests: unknown[]): ChestFormData[] {
 
 /**
  * A config with the names it had before: the setpoint was `target_output`, the kick start `loop_seed_items` of the overrides, and the
- * window cycle time of a Clocked override `period_duration_ticks` (the schema reads them too)
+ * window cycle time of a Clocked override `period_duration_ticks`; and without the Never on override, which is read as Auto (the
+ * schema reads them too)
  */
 // a file or saved form is read by the shape it has, before any check: no type holds all the shapes it had
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function readFormerNames(parsed: unknown): any {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const config = renameClockedPeriodInConfig(renameTargetOutputToSetpoint(parsed)) as any;
+    const config = readNeverOverridesInConfig(renameClockedPeriodInConfig(renameTargetOutputToSetpoint(parsed))) as any;
     return typeof config?.overrides === 'object' && config.overrides !== null
         ? { ...config, overrides: renameLoopSeedItemsToKickStart(config.overrides) } : config;
 }
@@ -307,6 +309,14 @@ export function usePersistedConfigForm() {
         return backUpSavedConfig(pageLocal, stored.text, backupKey(opened.activeId));
     });
     const [conflict, setConflictState] = useState<ConflictState>(NO_CONFLICT);
+    // a saved build that held the Never on override, which is removed: its entities load with Auto, and the user is told once
+    const [neverNote] = useState(() => (stored ? neverOverrideNoteOfText(stored.text) : null));
+    const neverNoteShownRef = useRef(false);
+    useEffect(() => {
+        if (neverNote === null || neverNoteShownRef.current) return;
+        neverNoteShownRef.current = true;
+        notify({ severity: 'info', text: neverNote, durationMs: null });
+    }, [neverNote, notify]);
 
     // read by the handlers and the storage listener, which may run after an await; the id is set with the state
     const idRef = useRef(opened.activeId);
@@ -562,8 +572,11 @@ export function usePersistedConfigForm() {
             setLoadNotice(backUpSavedConfig(pageLocal, text, backupKey(id)));
             return null;
         }
+        // the build is saved with Auto from its next save on, so the note shows once
+        const neverNote = neverOverrideNoteOfText(text);
+        if (neverNote !== null) notify({ severity: 'info', text: neverNote, durationMs: null });
         return { form, text };
-    }, []);
+    }, [notify]);
 
     const ownMeta = useCallback((): BuildMeta => {
         const id = idRef.current;

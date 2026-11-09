@@ -1,0 +1,30 @@
+{
+  "setpoint": { "recipe": "iron-gear-wheel", "items_per_second": 1, "copies": 1 },
+  "machines": [{ "id": 1, "recipe": "iron-gear-wheel", "productivity": 0, "crafting_speed": 1.25, "prototype": "assembling-machine-3" }],
+  "inserters": [
+    {
+      "source": { "type": "machine", "id": 1 },
+      "sink": { "type": "chest", "id": 1 },
+      "stack_size": 16,
+      "overrides": { "enable_control": { "mode": "NEVER" } }
+    }
+  ],
+  "belts": [],
+  "chests": [
+    { "type": "buffer-chest", "id": 1, "storage_size": 2, "item_filter": "iron-gear-wheel" },
+    { "type": "buffer-chest", "id": 2, "storage_size": 2, "item_filter": "iron-ore" }
+  ],
+  "drills": {
+    "configs": [
+      {
+        "id": 1,
+        "type": "electric-mining-drill",
+        "mined_item_name": "iron-ore",
+        "speed_bonus": 0.5,
+        "productivity": 0,
+        "target": { "type": "chest", "id": 2 },
+        "overrides": { "enable_control": { "mode": "NEVER" } }
+      }
+    ]
+  }
+}

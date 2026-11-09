@@ -2287,17 +2287,17 @@ function exportedLanesShortOfConsumption(
 }
 
 /**
- * Every inserter and drill runs on a fixed clock of a whole-tick window cycle (or always/never), as in a clock-only
+ * Every inserter and drill runs on a fixed clock of a whole-tick window cycle (or always on), as in a clock-only
  * check, so the simulation is deterministic with that window cycle and a repeated state repeats forever.
  */
 function isPurelyClocked(config: Config, window_cycle_ticks: number): boolean {
     return Number.isInteger(window_cycle_ticks) && isClockedThroughout(config, window_cycle_ticks);
 }
 
-/** Every inserter and drill is always or never enabled, or on windows of a clock of this window cycle, whole ticks or not */
+/** Every inserter and drill is always enabled, or on windows of a clock of this window cycle, whole ticks or not */
 function isClockedThroughout(config: Config, window_cycle_ticks: number): boolean {
     const fixed = (control: EnableControlOverrideConfig | undefined) => control !== undefined && (
-        control.mode === "ALWAYS" || control.mode === "NEVER"
+        control.mode === "ALWAYS"
         || (control.mode === "CLOCKED" && control.window_cycle_ticks === window_cycle_ticks)
     );
     return config.inserters.every(inserter => fixed(inserter.overrides?.enable_control))
@@ -2306,7 +2306,7 @@ function isClockedThroughout(config: Config, window_cycle_ticks: number): boolea
 
 /**
  * The bin at whose boundaries equal simulation states repeat forever: every control of the build is a fixed clock
- * (always, never, or windows of a stated window cycle), so the next tick is a function of the entity states and of where
+ * (always on, or windows of a stated window cycle), so the next tick is a function of the entity states and of where
  * each clock stands, and at boundaries of this bin every clock stands where it stood at the last one. The bin is the
  * window cycle for a build clocked throughout on whole ticks, the whole-tick repeat of a fractional window cycle, and their
  * merge with the moduli of the clocks inserters have of their own (fuel), as one combinator would count them
@@ -2319,7 +2319,7 @@ export function provenRepeatBin(config: Config, window_cycle_ticks: number): { t
         if (control === undefined) {
             return false;
         }
-        if (control.mode === "ALWAYS" || control.mode === "NEVER") {
+        if (control.mode === "ALWAYS") {
             return true;
         }
         if (control.mode !== "CLOCKED" || control.window_cycle_ticks === undefined) {

@@ -398,7 +398,6 @@ You can override the automatic enable control logic for individual inserters and
 |------|-------------|
 | `AUTO` | Use automatic control logic (default behavior) |
 | `ALWAYS` | Entity is always enabled, and gets no combinator in the blueprint |
-| `NEVER` | Entity is never enabled |
 | `CLOCKED` | Entity is enabled during specified tick ranges |
 | `CONDITIONAL` | Entity is enabled while a rule set (`rule_set`, with an optional `latch`) holds |
 
@@ -448,8 +447,6 @@ Both overrides are optional; `window_cycle_ticks` defaults to the output cycle d
 **AUTO (default)**: The simulation determines optimal enable windows automatically. This is the recommended mode for most setups.
 
 **ALWAYS**: The entity is always enabled. Use this when you want the entity to operate freely without clock control. It gets no clock windows and no combinator in the blueprint, also when it only fills a fuel slot or takes a by-product away, and every clock is checked with it always enabled. An always-enabled inserter is woken at every craft of the machine it waits on, which shows in the wakeups of the clock.
-
-**NEVER**: The entity is never enabled. Useful for debugging or temporarily disabling an entity.
 
 **CLOCKED**: The entity is enabled only during specified tick ranges within the window cycle. Each range has:
 - `start`: The tick when the entity becomes enabled (inclusive)

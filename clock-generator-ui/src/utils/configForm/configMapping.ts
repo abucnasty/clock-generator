@@ -27,8 +27,6 @@ function mapEnableControlOverride(ec: {
             return { mode: 'AUTO' };
         case 'ALWAYS':
             return { mode: 'ALWAYS' };
-        case 'NEVER':
-            return { mode: 'NEVER' };
         case 'CLOCKED':
             return {
                 mode: 'CLOCKED',

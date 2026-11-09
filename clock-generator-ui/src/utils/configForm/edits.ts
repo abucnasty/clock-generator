@@ -461,7 +461,7 @@ export function updateOverrides(
 /**
  * Sets the ingredients left out of the LCM. An inserter whose items are now all excluded and that has no rule of its
  * own (AUTO) is forced to ALWAYS, and flagged so; including one of its items again takes away only that forced ALWAYS.
- * A rule the player set (ALWAYS, NEVER, CLOCKED or CONDITIONAL) is never replaced or removed.
+ * A rule the player set (ALWAYS, CLOCKED or CONDITIONAL) is never replaced or removed.
  */
 export function updateIgnoredIngredients(
     prev: ConfigFormData,
