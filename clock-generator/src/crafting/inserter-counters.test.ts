@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { CountedInserter, countersOfStock, withNetwork } from "./inserter-counters";
+import path from "path";
+import { loadConfigFromFile } from "../config/loader";
+import { GameFixturePaths } from "../../tests/game/helpers/fixture-paths";
+import { CountedInserter, countedInserters, countersOfStock, withNetwork } from "./inserter-counters";
 import { StockRecording } from "./machine-stock";
 import { FactorioBlueprint } from "../blueprints/blueprint";
 
@@ -27,7 +30,7 @@ function inserter(ends: Partial<CountedInserter> = {}): CountedInserter {
         pickup_kind: "machine", drop_kind: "belt", hand_size: 4, hand_size_of: () => 4, ...ends };
 }
 
-const BUILD = { copies: 1, backed_up_belts: false };
+const BUILD = { copies: 1 };
 const of = (stock: StockRecording, ends?: Partial<CountedInserter>, build = BUILD) => countersOfStock(stock, [inserter(ends)], 0, build);
 /** Counts a minute for a count over `ticks` ticks */
 const perMinute = (count: number, ticks: number) => count * 3600 / ticks;
@@ -114,7 +117,7 @@ describe("inserter counters", () => {
 
     it("keys the waits by the end they wait at and what is there, and reports no merged crafts for a belt pickup", () => {
         const states = [WORKING, SOURCE, SOURCE, SPACE, WORKING];
-        const { counters } = of(stockOf(states, [0, 0, 0, 1, 1]), { pickup_kind: "belt", drop_kind: "chest", source_machine_id: null }, { copies: 2, backed_up_belts: true });
+        const { counters } = of(stockOf(states, [0, 0, 0, 1, 1]), { pickup_kind: "belt", drop_kind: "chest", source_machine_id: null, pickup_has_backpressure: true }, { copies: 2 });
         const count = counters.inserters[0];
         expect(count.waiting_for_items).toEqual({ end: "source", kind: "belt", ticks_per_minute: perMinute(2, 4) });
         expect(count.waiting_for_space).toEqual({ end: "sink", kind: "chest", ticks_per_minute: perMinute(1, 4) });
@@ -122,6 +125,11 @@ describe("inserter counters", () => {
         expect(count.belt_supply).toBe("backed-up");
         expect(count.merged_crafts_per_minute).toBeUndefined();
         expect(counters.copies).toBe(2);
+    });
+
+    it("reports a pickup from a belt as moving where no backpressure is given", () => {
+        const { counters } = of(stockOf([WORKING, SOURCE], [0, 0]), { pickup_kind: "belt", drop_kind: "chest", source_machine_id: null });
+        expect(counters.inserters[0].belt_supply).toBe("moving");
     });
 
     it("splits the wake-ups by the list that woke the inserter, and the parts add up to the wake-ups", () => {
@@ -142,13 +150,27 @@ describe("inserter counters", () => {
     });
 });
 
+describe("countedInserters", () => {
+    it("asks the lanes of a belt pickup whether they have backpressure, and leaves other pickups out", async () => {
+        const config = await loadConfigFromFile(path.join(GameFixturePaths.FRONT_UNDERGROUND_EXIT, "config.json"));
+        const pickups = (backed_up_belts: boolean) => countedInserters({ ...config, overrides: { ...config.overrides, backed_up_belts } })
+            .map(inserter => [inserter.pickup_kind, inserter.pickup_has_backpressure] as const);
+        const moving = pickups(false);
+        const backed_up = pickups(true);
+        expect(moving.some(([kind]) => kind === "belt")).toBe(true);
+        expect(moving.filter(([kind]) => kind === "belt").every(([, backpressure]) => backpressure === false)).toBe(true);
+        expect(backed_up.filter(([kind]) => kind === "belt").every(([, backpressure]) => backpressure === true)).toBe(true);
+        expect([...moving, ...backed_up].filter(([kind]) => kind !== "belt").every(([, backpressure]) => backpressure === undefined)).toBe(true);
+    });
+});
+
 describe("withNetwork", () => {
     const decider = (inserters: number[]) => ({ name: "decider-combinator", tags: { clock_generator: { inserters } } });
     const blueprint = { entities: [decider([1, 2, 3]), decider([3]), { name: "decider-combinator" }, { name: "inserter" }] } as unknown as FactorioBlueprint;
 
     it("gives each wired inserter the width of its widest decider times the copies, and leaves the original as it was", () => {
         const stock = stockOf([OFF, WORKING, OFF, WORKING], [0, 0, 0, 0], [], "inserter:3");
-        const { counters } = of(stock, { inserter_id: "inserter:3" }, { copies: 2, backed_up_belts: false });
+        const { counters } = of(stock, { inserter_id: "inserter:3" }, { copies: 2 });
         const filled = withNetwork(counters, blueprint, 2);
         expect(filled.deciders).toBe(2);
         expect(filled.inserters[0].network_width).toBe(3 * 2);
