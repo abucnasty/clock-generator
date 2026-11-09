@@ -4,7 +4,7 @@ import { formDataToConfig } from '../utils/configForm/configMapping';
 import * as edits from '../utils/configForm/edits';
 import { createDefaultConfig, type ConfigFormData } from '../utils/configForm/formData';
 import { backupKey } from '../utils/buildLibrary';
-import { backUpSavedConfig, readSavedConfig, serializeConfig } from './usePersistedConfigForm';
+import { backUpSavedConfig, readConfigFile, readSavedConfig, serializeConfig } from './usePersistedConfigForm';
 
 afterEach(() => {
     vi.restoreAllMocks();
@@ -63,6 +63,23 @@ describe('readSavedConfig', () => {
         expect(edits.addInserter(config).inserters.at(-1)!.id).toBe(5);
         expect('next_ids' in formDataToConfig(config)).toBe(false);
         expect(serializeConfig(config)).not.toContain('next_ids');
+    });
+
+    it('reads the Never on override of an inserter and a drill, which is removed, as Auto', () => {
+        const drill = { id: 1, type: 'electric-mining-drill', mined_item_name: 'iron-ore', speed_bonus: 0, productivity: 0, target: { type: 'machine', id: 1 }, overrides: { enable_control: { mode: 'NEVER' } } };
+        const saved = JSON.stringify({
+            setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+            machines: [{ id: 1, recipe: 'iron-gear-wheel', productivity: 0, crafting_speed: 1 }],
+            inserters: [{ id: 3, source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 1 }, stack_size: 16, overrides: { enable_control: { mode: 'NEVER' } } }],
+            chests: [{ id: 1, storage_size: 2, item_filter: 'iron-gear-wheel' }],
+            drills: { configs: [drill] },
+        });
+        const form = readSavedConfig(saved)!;
+        expect(form.inserters[0].overrides?.enable_control).toEqual({ mode: 'AUTO' });
+        expect(form.drills?.configs[0].overrides?.enable_control).toEqual({ mode: 'AUTO' });
+        expect(serializeConfig(form)).not.toContain('NEVER');
+        const file = readConfigFile(saved) as { inserters: { overrides: { enable_control: unknown } }[] };
+        expect(file.inserters[0].overrides.enable_control).toEqual({ mode: 'AUTO' });
     });
 
     it('gives null for what is not the form state', () => {
