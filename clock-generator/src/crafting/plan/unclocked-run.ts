@@ -55,6 +55,7 @@ import { DisturbanceTrialOptions, LossOutcome, runLossTrials } from "../disturba
 import { SerializableTransferHistory, serializeTransferHistory } from "../sequence/transfer-history-serializer";
 import { StateTransitionHistory } from "../sequence/state-transition-history";
 import { MachineFactsEntry } from "../insights";
+import { everyInputLaneIsDeadEnd } from "../../entities/traits/lane-facts";
 import { machineFactsOfEntity } from "../../entities/traits/machine-facts-of";
 import { CompactStateTransitionHistory } from "../sequence/compact-history";
 import { StateTransitionTracker } from "../../simulation/observers/state-transition-tracker";
@@ -64,7 +65,7 @@ import { CraftingStatus, drillStatusOf, InserterPhase, inserterStatusOf, machine
 import { factorioInserterState, factorioMachineState } from "../../state/factorio-entity-state";
 import type { TimeStudyWindowsReport } from "../candidates/time-study-windows";
 import type { SearchReport } from "../candidates/search";
-import { ClockBelt, SerializableClockWindows, backedUpHandTicks, beltPickupSlackTicks, fuelHandRoomTicks, subtickClockForWindowCycle, withBeltPickupSlack, withWindowsAtLeast } from "../clock";
+import { ClockBelt, SerializableClockWindows, backpressureHandTicks, beltPickupSlackTicks, fuelHandRoomTicks, subtickClockForWindowCycle, withBeltPickupSlack, withWindowsAtLeast } from "../clock";
 import { ChestDrillClock, chestDrillClockLine, chestDrillWindows } from "../chest-drill-windows";
 import type { TurnGroup } from "../turn-groups";
 import type { SourceControl } from "../strategy-catalog";
@@ -1623,11 +1624,11 @@ export function clockOfWindows(
     // the slack decision already checked the slacked windows: hand its run over, with the exact map it ran on
     // (with the slack in use the fuel hand room is empty, so these are the windows the clock gets)
     const verified = use_belt_pickup_slack ? slack_trial?.verified ?? null : null;
-    // on backed-up belts every belt-fed window lasts as long as a hand takes from the lanes at rest at the belt's speed
-    const backed_up_hand_ticks = backed_up_belts ? backedUpHandTicks(simulation_context.entity_registry) : new Map<string, number>();
+    // where a lane has backpressure every window of an inserter that takes from it lasts as long as a hand takes from the lanes at rest at the belt's speed
+    const backpressure_hand_ticks = backpressureHandTicks(simulation_context.entity_registry);
     const windows = verified !== null ? verified.windows
         : withWindowsAtLeast(withBeltPickupSlack(unslacked_windows, new Map([...fuel_hand_room, ...belt_pickup_slack]), duration.ticks),
-            backed_up_hand_ticks, duration.ticks);
+            backpressure_hand_ticks, duration.ticks);
     // the windows that carry a result that comes by chance get room for its spread (a target that counts an item destroyed)
     const room = withRoomForRandomAmounts(plan, windows);
     return { windows: room.windows, belt, belt_pickup_slack, applied_belt_pickup_slack, belt_pickup_slack_left_out, fuel_hand_room,
@@ -2559,18 +2560,18 @@ function serializeClockWindows(windows: Map<string, OpenRange[]>): SerializableC
 }
 
 /**
- * The crafts of each machine, by id, in the prepare step of the build with its belts backed up; null where the prepare
- * step that was run counts them: the belts are backed up already, no inserter takes from a belt, the config sets the
+ * The crafts of each machine, by id, in the prepare step of the build with backpressure at its pickups; null where the prepare
+ * step that was run counts them: the lanes have backpressure already, no inserter takes from a belt, the config sets the
  * output swings, or the plan takes fractional swings, whose swings per cycle are the build's own count, not a cap.
  *
  * Whole output swings each output cycle are at most what a machine makes from the hands it gets before its output blocks, and
  * the swing backoff only lowers them. On moving belts the prepare step's machines start empty and get their first
  * hands as fast as the belt brings them: on the express moving half-tile pickups the electromagnetic plant gets one
- * hand of each ingredient before its output blocks where backed-up belts give it two, so the plan had 2 output swings,
+ * hand of each ingredient before its output blocks where backpressure gives it two, so the plan had 2 output swings,
  * a window cycle of part ticks that no moving clock can be made for, and never reached 3, where observed windows hold.
  */
-function craftsWithBeltsBackedUp(config: Config, fractional_swings: boolean): Map<string, number> | null {
-    if (config.overrides?.backed_up_belts === true || config.overrides?.terminal_swing_count !== undefined
+function craftsWithBackpressure(config: Config, fractional_swings: boolean): Map<string, number> | null {
+    if (everyInputLaneIsDeadEnd(config) || config.overrides?.terminal_swing_count !== undefined
         || fractional_swings || !config.inserters.some(inserter => inserter.source.type === "belt")) {
         return null;
     }
@@ -2582,8 +2583,8 @@ function craftsWithBeltsBackedUp(config: Config, fractional_swings: boolean): Ma
 /**
  * The output swings a cycle each output machine can make before its output blocks, the fewest of them: what the prepare
  * step crafted over the output inserter's hand. This function assumes all machines have finished crafting while not
- * having any items pulled out of their inventories. Where the belts move, whole swings are counted with them backed up
- * (see craftsWithBeltsBackedUp). A count the config forces is the count.
+ * having any items pulled out of their inventories. Where the belts move, whole swings are counted with backpressure
+ * (see craftsWithBackpressure). A count the config forces is the count.
  */
 function maxSwingsPossibleOf(
     output_machine_states: MachineState[],
@@ -2597,8 +2598,8 @@ function maxSwingsPossibleOf(
         `Mismatch between output machines (${output_machine_states.length}) and output inserters (${output_inserters.length})`
     );
 
-    const crafts_with_belts_backed_up = craftsWithBeltsBackedUp(config, fractional_swings);
-    let max_swings_possible: Fraction | null = swingsMadeOf(output_machine_states, output_inserters, crafts_with_belts_backed_up, logger);
+    const crafts_with_backpressure = craftsWithBackpressure(config, fractional_swings);
+    let max_swings_possible: Fraction | null = swingsMadeOf(output_machine_states, output_inserters, crafts_with_backpressure, logger);
 
     if (config.overrides?.terminal_swing_count !== undefined) {
         max_swings_possible = fraction(config.overrides.terminal_swing_count);
@@ -2609,13 +2610,13 @@ function maxSwingsPossibleOf(
 
 /**
  * The output swings a cycle the output machines make before they block, the fewest of them: what each crafted over its
- * output inserter's hand, by the crafts with the belts backed up where they are given (`craftsWithBeltsBackedUp`), else
+ * output inserter's hand, by the crafts with backpressure where they are given (`craftsWithBackpressure`), else
  * by what the prepare step crafted. Logged where a logger is given.
  */
 function swingsMadeOf(
     output_machine_states: MachineState[],
     output_inserters: Inserter[],
-    crafts_with_belts_backed_up: Map<string, number> | null,
+    crafts_with_backpressure: Map<string, number> | null,
     logger?: Logger,
 ): Fraction {
     const output_item_name = output_machine_states[0].machine.output.item_name;
@@ -2624,10 +2625,10 @@ function swingsMadeOf(
         const machine_state = output_machine_states[i];
         const inserter = output_inserters[i];
         const output_machine = machine_state.machine;
-        const crafts = crafts_with_belts_backed_up?.get(output_machine.entity_id.id) ?? machine_state.craftCount;
+        const crafts = crafts_with_backpressure?.get(output_machine.entity_id.id) ?? machine_state.craftCount;
         const output_crafted = crafts * output_machine.output.amount_per_craft.toDecimal();
         logger?.log(`Output machine ${output_machine.entity_id.id} crafted ${output_crafted} ${output_item_name}`
-            + (crafts_with_belts_backed_up === null ? "" : " with its belts backed up"));
+            + (crafts_with_backpressure === null ? "" : " with its belts backed up"));
 
         const machine_max_swings = fraction(output_crafted).divide(handSizeFor(inserter, output_item_name));
 
