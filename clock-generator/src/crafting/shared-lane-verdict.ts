@@ -23,13 +23,45 @@ import type { HandDropped } from "../simulation/copy-taker";
  * The config does not say which way a lane the build takes from flows, so the model runs it both ways along the row of
  * copies, and the clock has to hold both ways.
  *
- * First a fast check: the refill arithmetic of the lane (`refillsInTime`), on a run of the clock with one copy. Where it
- * proves that every lane refills in time after every enable window, no copy is short and the model does not run. Where it
- * does not, the model runs, and its verdict stands: the arithmetic never fails a clock alone.
+ * The refill arithmetic of the lane (`refillsInTime`) is worked out on the run of the clock with one copy and reported
+ * beside the verdict, but it does not skip the model: on the samples with their input lanes read as dead ends it said
+ * every lane refills in time for clocks under which the model has a copy lose swings, so it proves nothing yet. The
+ * arithmetic never fails a clock alone.
  *
  * Each copy's takers are judged on the second half of a long run against the run of one copy: a taker that puts down a
- * whole hand fewer of the lane's item than the same inserter does with no other copy on the lane loses swings.
+ * whole hand fewer of the lane's item than the same inserter does with no other copy on the lane loses swings. What each
+ * copy's taker got is read through one function, `copyLaneTakes`, and nowhere else.
  */
+
+/** What one taker of one copy put down of a lane's item in the judged part of a run of the copies on their shared lanes */
+export interface CopyLaneTake {
+    belt_id: number;
+    lane: 1 | 2;
+    item: string;
+    /** The copy, counted from the lane's entry: 0 is the one simulated in full */
+    copy: number;
+    inserter_id: string;
+    items: number;
+}
+
+/**
+ * What each copy's pickup inserter got on each shared lane: the items of the lane's item each taker of each copy put down
+ * from `from` to the end of a run of the clock with the copies on the rows' lanes. The verdict reads the copies' figures
+ * here alone, so that where they come from can change in this function only.
+ */
+export function copyLaneTakes(config: Config, windows: Map<string, OpenRange[]>, window_cycle_ticks: number, rows: readonly LaneRow[],
+    window_cycles: number, from: number, logger: Logger): CopyLaneTake[] {
+    const model = runOnSharedLanes(config, windows, window_cycle_ticks, rows, window_cycles, logger);
+    return rows.flatMap(row => {
+        const item = config.belts.find(belt => belt.id === row.belt_id)!.lanes[row.lane - 1].ingredient;
+        return row.takers.flatMap(taker => {
+            const record = model.takers.find(it => it.copy === taker.copy && it.inserter_id === taker.inserter_id);
+            if (record === undefined) return [];
+            const items = record.hands.filter(hand => hand.item === item && hand.tick >= from).reduce((sum, hand) => sum + hand.items, 0);
+            return [{ belt_id: row.belt_id, lane: row.lane, item, copy: taker.copy, inserter_id: taker.inserter_id, items }];
+        });
+    });
+}
 
 /** One taker of one copy that loses swings on a lane the copies share */
 export interface SharedLaneLoss {
@@ -57,7 +89,7 @@ export interface SharedLaneLoss {
 /** What the fast check and the model said of one clock, for a comparison of the two */
 export interface SharedLaneJudgement {
     losses: SharedLaneLoss[];
-    /** Whether the refill arithmetic proved that no copy is short, so that the model did not have to run */
+    /** Whether the refill arithmetic says every lane refills in time after every enable window (reported; it skips nothing) */
     fast_check_passes: boolean;
     /** Whether the model ran */
     simulated: boolean;
@@ -215,12 +247,8 @@ function describeSharedLaneLoss(loss: Omit<SharedLaneLoss, "text">): string {
         + `and ${counted(loss.alone_items)} when no other copy takes from the lane.`;
 }
 
-/**
- * Judges a clock on the lanes its copies share (see the module's description). `simulate_always` runs the model also
- * where the fast check passes, for a comparison of the two; it never changes the verdict.
- */
-export function judgeSharedLanes(config: Config, clock_windows: SerializableClockWindows, window_cycle_ticks: number, logger: Logger,
-    options: { simulate_always?: boolean } = {}): SharedLaneJudgement {
+/** Judges a clock on the lanes its copies share (see the module's description) */
+export function judgeSharedLanes(config: Config, clock_windows: SerializableClockWindows, window_cycle_ticks: number, logger: Logger): SharedLaneJudgement {
     const lanes = modelLanesOf(config, logger);
     const keys = lanes.map(lane => `${lane.belt_id}/${lane.lane}`);
     if (lanes.length === 0) return { losses: [], fast_check_passes: true, simulated: false, lanes: keys };
@@ -257,9 +285,7 @@ export function judgeSharedLanes(config: Config, clock_windows: SerializableCloc
             group.supply = group.supply.add(fractionOf(facts.of(row.belt_id, row.lane).supply_rate));
             groups.set(key, group);
         }
-        const passes = [...groups.values()].every(group => refillsInTime(group.rows, group.supply, pickups, group.item, clock_windows, window_cycle_ticks, from, last_tick));
-        fast_check_passes &&= passes;
-        if (passes && options.simulate_always !== true) continue;
+        fast_check_passes &&= [...groups.values()].every(group => refillsInTime(group.rows, group.supply, pickups, group.item, clock_windows, window_cycle_ticks, from, last_tick));
         simulated = true;
         const alone = (inserter_id: string, item: string) => {
             const hands = (recorders.get(inserter_id)?.hands ?? []).filter(hand => hand.item === item);
@@ -267,21 +293,15 @@ export function judgeSharedLanes(config: Config, clock_windows: SerializableCloc
         };
         for (const flow of flows) {
             const rows = flow === flows[0] ? rows_one_way : laneRowsOf(under, flow, named);
-            const model = runOnSharedLanes(under, windows, window_cycle_ticks, rows, window_cycles, logger);
-            for (const row of rows) {
-                const item = under.belts.find(belt => belt.id === row.belt_id)!.lanes[row.lane - 1].ingredient;
-                const lane = lanes.find(it => it.belt_id === row.belt_id && it.lane === row.lane)!;
-                for (const taker of row.takers) {
-                    const record = model.takers.find(it => it.copy === taker.copy && it.inserter_id === taker.inserter_id);
-                    if (record === undefined) continue;
-                    const items = record.hands.filter(hand => hand.item === item && hand.tick >= from).reduce((sum, hand) => sum + hand.items, 0);
-                    const reference = alone(taker.inserter_id, item);
-                    if (reference.items - items < reference.hand) continue;
-                    const copies = facts.of(row.belt_id, row.lane).sharing === "one_per_copy" ? 1 : under.setpoint.copies;
-                    const loss = { belt_id: row.belt_id, lane: row.lane, lane_end: lane.stated.kind, item, copies, copy: taker.copy + 1,
-                        inserter_id: Number(taker.inserter_id.slice("inserter:".length)), items, alone_items: reference.items, window_cycles: judged_cycles, flow };
-                    losses.push({ ...loss, text: describeSharedLaneLoss(loss) });
-                }
+            for (const take of copyLaneTakes(under, windows, window_cycle_ticks, rows, window_cycles, from, logger)) {
+                const reference = alone(take.inserter_id, take.item);
+                if (reference.items - take.items < reference.hand) continue;
+                const lane = lanes.find(it => it.belt_id === take.belt_id && it.lane === take.lane)!;
+                const copies = facts.of(take.belt_id, take.lane).sharing === "one_per_copy" ? 1 : under.setpoint.copies;
+                const loss = { belt_id: take.belt_id, lane: take.lane, lane_end: lane.stated.kind, item: take.item, copies, copy: take.copy + 1,
+                    inserter_id: Number(take.inserter_id.slice("inserter:".length)), items: take.items, alone_items: reference.items,
+                    window_cycles: judged_cycles, flow };
+                losses.push({ ...loss, text: describeSharedLaneLoss(loss) });
             }
         }
     }

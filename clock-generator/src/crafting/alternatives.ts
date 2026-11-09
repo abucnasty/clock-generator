@@ -1066,8 +1066,8 @@ function runAlternativeOf(
             const judged = judgeSharedLanes({ ...on, overrides: { ...on.overrides, terminal_swing_count: trial.result.used_terminal_swing_count } },
                 trial.result.clock_windows, trial.clock_window_cycle, logger);
             if (judged.lanes.length > 0) {
-                logger.log(`Clock "${label}": the shared lanes ${judged.lanes.join(", ")}: ${judged.simulated ? "simulated with every copy" : "refill in time"}, `
-                    + `${judged.losses.length === 0 ? "no copy loses swings" : `${judged.losses.length} takers lose swings`}`);
+                logger.log(`Clock "${label}": the shared lanes ${judged.lanes.join(", ")}: the refill arithmetic says ${judged.fast_check_passes ? "they refill in time" : "they may run short"}; `
+                    + `with every copy on them, ${judged.losses.length === 0 ? "no copy loses swings" : `${judged.losses.length} takers lose swings`}`);
             }
             shared_lane_losses_of.set(trial, judged.losses);
         }

@@ -36,8 +36,8 @@ describe("the clocks recorded on the chemical science build whose copies share a
             + "copy 2 from the entry of the lane gets too few. Its inserter 3 takes 1,792 in 56 window cycles, and 2,688 when no other copy takes from the lane.");
     });
 
-    it.each(["time_study_windows", "euclidean_swings"])("holds %s, which the refill arithmetic proves without the model", id => {
-        expect(judged(id)).toMatchObject({ losses: [], fast_check_passes: true, simulated: false, lanes: ["2/1"] });
+    it.each(["time_study_windows", "euclidean_swings"])("holds %s, and the refill arithmetic agrees", id => {
+        expect(judged(id)).toMatchObject({ losses: [], fast_check_passes: true, simulated: true, lanes: ["2/1"] });
     });
 
     it("checks an unknown end as a dead end, and leaves an outlet to the run of one copy", () => {
