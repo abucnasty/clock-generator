@@ -72,7 +72,7 @@ describe('where a machine came from', () => {
 
     it("is Sidecar's for a paste, and picked for its recipe where an older Sidecar named only its kind", () => {
         const selections = { target: false, machines: true, drills: false, inserters: false, belts: false, chests: false };
-        const incoming = { machines: imported.machines, drills: [], inserters: [], belts: [], chests: [], guidance: Option.none(), suggested_target: Option.none() };
+        const incoming = { machines: imported.machines, drills: [], inserters: [], belts: [], chests: [], guidance: Option.none, suggested_target: Option.none };
         expect(applyPaste(createDefaultConfig(), incoming, selections).machines.map(machine => machine._prototype_source)).toEqual(['sidecar', undefined]);
         expect(applyPaste(createDefaultConfig(), { ...incoming, picked_machines: [1] }, selections).machines[0]._prototype_source).toBe('recipe');
     });

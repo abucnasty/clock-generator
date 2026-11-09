@@ -1,4 +1,5 @@
-import { Option } from "../data-types/option";
+import { pipe } from "fp-ts/function";
+import * as O from "fp-ts/Option";
 import { RecipeMetadata } from "../entities/machine/recipe/recipe-metadata";
 import { computeMachineFacts } from "../entities/traits/machine-facts-of";
 import { MachineConfiguration, TargetProductionRateConfig, TargetProductionRateConfigSchema } from "./schema";
@@ -19,9 +20,9 @@ const SuggestedTargetSchema = TargetProductionRateConfigSchema.extend({
 });
 
 /** The `suggested_target` of a sidecar export, None when it is missing or not a valid target. Never throws. */
-export function parseSuggestedTarget(raw: unknown): Option<TargetProductionRateConfig> {
+export function parseSuggestedTarget(raw: unknown): O.Option<TargetProductionRateConfig> {
     const result = SuggestedTargetSchema.safeParse(raw);
-    return result.success ? Option.some(result.data) : Option.none();
+    return result.success ? O.some(result.data) : O.none;
 }
 
 /** One recipe of the selection: its main product, what its machines make of it per second and what it consumes */
@@ -81,7 +82,7 @@ function recipeGroupOf(recipe: string, machines: readonly MachineConfiguration[]
  *    name sorts first, then the one whose recipe name does.
  * 6. Its rate is the sum of the output rates of its machines, as the machine facts give them; copies is 1.
  */
-export function inferSuggestedTarget(machines: readonly MachineConfiguration[]): Option<TargetProductionRateConfig> {
+export function inferSuggestedTarget(machines: readonly MachineConfiguration[]): O.Option<TargetProductionRateConfig> {
     const by_recipe = new Map<string, MachineConfiguration[]>();
     for (const machine of machines) {
         by_recipe.set(machine.recipe, [...(by_recipe.get(machine.recipe) ?? []), machine]);
@@ -94,7 +95,7 @@ export function inferSuggestedTarget(machines: readonly MachineConfiguration[]):
         !groups.some(other => other.recipe !== group.recipe && other.ingredients.has(group.product)),
     );
     if (final.length === 0) {
-        return Option.none();
+        return O.none;
     }
     const best = final.reduce((best, group) => {
         if (group.items_per_second !== best.items_per_second) {
@@ -105,16 +106,20 @@ export function inferSuggestedTarget(machines: readonly MachineConfiguration[]):
         }
         return group.recipe < best.recipe ? group : best;
     });
-    return Option.some({ recipe: best.product, items_per_second: best.items_per_second, copies: 1 });
+    return O.some({ recipe: best.product, items_per_second: best.items_per_second, copies: 1 });
 }
 
 /**
  * The target output to suggest for a paste from the sidecar mod: the export's own `suggested_target` when it is valid,
  * else the one worked out from the machines (an export from a mod before 0.8.0), else None.
  */
-export function suggestedTargetOf(raw: unknown, machines: readonly MachineConfiguration[]): Option<SuggestedTarget> {
-    return Option.orElse(
-        Option.map(parseSuggestedTarget(raw), (target): SuggestedTarget => ({ target, source: "mod" })),
-        () => Option.map(inferSuggestedTarget(machines), (target): SuggestedTarget => ({ target, source: "inferred" })),
+export function suggestedTargetOf(raw: unknown, machines: readonly MachineConfiguration[]): O.Option<SuggestedTarget> {
+    return pipe(
+        parseSuggestedTarget(raw),
+        O.map((target): SuggestedTarget => ({ target, source: "mod" })),
+        O.alt(() => pipe(
+            inferSuggestedTarget(machines),
+            O.map((target): SuggestedTarget => ({ target, source: "inferred" })),
+        )),
     );
 }

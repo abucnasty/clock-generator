@@ -1,4 +1,7 @@
-import { Option } from "../data-types/option";
+import * as A from "fp-ts/Array";
+import { pipe } from "fp-ts/function";
+import * as NEA from "fp-ts/NonEmptyArray";
+import * as O from "fp-ts/Option";
 
 /**
  * Checks of data imported from outside the clock generator (the sidecar mod) that guide the user.
@@ -7,7 +10,7 @@ import { Option } from "../data-types/option";
  * (Some). A pipeline runs its steps and folds the messages they have into one, so the user gets a single piece of
  * guidance that grows with every feature their version of the mod lacks:
  *
- *     ImportPipeline.of(stepA).then(stepB).run(input)  // Option<string>
+ *     ImportPipeline.of(stepA).then(stepB).run(input)  // O.Option<string>
  */
 
 export interface ImportedMachine {
@@ -27,7 +30,7 @@ export interface ImportInput {
     drills?: readonly unknown[];
 }
 
-export type ImportStep = (input: ImportInput) => Option<string>;
+export type ImportStep = (input: ImportInput) => O.Option<string>;
 
 export class ImportPipeline {
     public static readonly of = (...steps: ImportStep[]) => new ImportPipeline(steps);
@@ -54,9 +57,14 @@ export class ImportPipeline {
     }
 
     /** The messages of the steps folded into one, in the order of the steps; None when no step had anything to say */
-    public run(input: ImportInput, combine: (accumulated: string, next: string) => string = joinSentences): Option<string> {
-        const messages = Option.fold(this.steps.map(step => step(input)), combine);
-        return Option.orElse(messages, () => this.fallback?.(input) ?? Option.none());
+    public run(input: ImportInput, combine: (accumulated: string, next: string) => string = joinSentences): O.Option<string> {
+        return pipe(
+            this.steps.map(step => step(input)),
+            A.compact,
+            NEA.fromArray,
+            O.map(messages => messages.reduce(combine)),
+            O.alt(() => this.fallback?.(input) ?? O.none),
+        );
     }
 }
 

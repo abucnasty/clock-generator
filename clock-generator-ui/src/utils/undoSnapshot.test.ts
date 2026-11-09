@@ -92,7 +92,7 @@ describe('Undo', () => {
 
     it('puts back the form from before an atomic paste, including retained categories', () => {
         const original = form();
-        const incoming = { ...otherConfig, chests: [], drills: [], guidance: Option.none(), suggested_target: Option.none() };
+        const incoming = { ...otherConfig, chests: [], drills: [], guidance: Option.none, suggested_target: Option.none };
         const selections = { target: true, machines: true, drills: true, inserters: true, belts: true, chests: true };
         const { after, entry } = act(original, config => applyPaste(config, incoming, selections, otherConfig.setpoint));
         expect(after.setpoint).toEqual(otherConfig.setpoint);
