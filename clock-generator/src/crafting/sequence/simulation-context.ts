@@ -90,7 +90,7 @@ export class SimulationContext {
             assert(control !== undefined, `Cannot initialize pickup phases for unknown ${id}`);
             const inserter = control.inserter_state.inserter;
             const source = this.state_registry.getStateByEntityIdOrThrow(inserter.source.entity_id);
-            assert(EntityState.isBelt(source) && inserter.belt_lane_facts?.every(facts => facts.lane_end.kind === "outlet") === true,
+            assert(EntityState.isBelt(source) && inserter.belt_lane_facts?.every(facts => facts.lane_end.kind !== "dead_end") === true,
                 `Pickup phases need independent moving lanes: ${id}`);
             const length = inserter.pickup_length;
             assert(length !== undefined, `Pickup phases need pickup geometry: ${id}`);
