@@ -281,7 +281,8 @@ describe('shared builds through the real file and worker boundary', () => {
             { ingredient: 'iron-plate', stack_size: 4, supply_rate: 120.7, lane_end: { kind: 'dead_end' }, sharing: 'one_per_copy' },
             { ingredient: 'copper-plate', stack_size: 4, lane_end: { kind: 'outlet', outlet_rate: 88 } },
         ];
-        const exportLane = { ingredient: 'iron-plate', stack_size: 4, consumption_per_second: 5, lane_end: { kind: 'unknown' }, sharing: 'shared_by_copies' };
+        // an export lane's outlet rate is its consumption: it states no lane end beside it
+        const exportLane = { ingredient: 'iron-plate', stack_size: 4, consumption_per_second: 5, sharing: 'shared_by_copies' };
         const build = smallBuild();
         const config = { ...build, inserters: [{ source: { type: 'belt', id: 1 }, sink: { type: 'machine', id: 1 }, stack_size: 16 }, ...build.inserters],
             belts: [

@@ -4,7 +4,7 @@ import type { SxProps, Theme } from '@mui/material/styles';
 import type { ReactNode } from 'react';
 import type { ChestType } from 'clock-generator/light';
 import { useGameNames } from '../hooks/useGameNames';
-import { BELT_FORM_DEFAULT_STACK_SIZE, BELT_STRATEGIES, LANE_CONSUMPTION_TOOLTIP, beltStrategyUpdate, isBufferChest, isContainerChest, isInfinityChest,
+import { BELT_FORM_DEFAULT_STACK_SIZE, BELT_STRATEGIES, LANE_CONSUMPTION_TOOLTIP, beltStrategyUpdate, isBufferChest, isContainerChest, isInfinityChest, laneFieldUpdate,
     type BeltFormData, type BeltLaneFormData, type BeltStrategyFormValue, type ChestFormData, type MachineFormData } from '../hooks/useConfigForm';
 import { SELECT_NAMES, deleteLaneName } from '../utils/a11yLabels';
 import { entityLabel } from '../utils/entityLabel';
@@ -85,7 +85,7 @@ export function BeltLaneFields({ belt, itemNames, readOnly, onChange, dialog = f
     const { itemLabel } = useGameNames();
     const updateLane = (index: number, field: keyof BeltLaneFormData, value: string | number | undefined) => {
         const lanes = [...belt.lanes] as BeltFormData['lanes'];
-        lanes[index] = { ...lanes[index], [field]: value };
+        lanes[index] = laneFieldUpdate(lanes[index], field, value);
         onChange({ lanes });
     };
     const add = () => onChange({ lanes: [belt.lanes[0], { ingredient: '', stack_size: BELT_FORM_DEFAULT_STACK_SIZE }] });

@@ -120,6 +120,18 @@ export const BELT_STRATEGIES: { value: BeltStrategyFormValue; label: string; des
 export const LANE_CONSUMPTION_TOOLTIP =
     'Items per second taken off this lane by machines outside this configuration. Inserters filling the lane are planned for this rate.';
 
+/**
+ * A lane with one field set. A consumption rate is the outlet rate of an export lane, so a lane that gets one drops its
+ * lane end, which the config may not state beside it
+ */
+export function laneFieldUpdate(lane: BeltLaneFormData, field: keyof BeltLaneFormData, value: string | number | undefined): BeltLaneFormData {
+    const updated = { ...lane, [field]: value };
+    if (field !== 'consumption_per_second' || value === undefined) return updated;
+    const { lane_end: _end, ...rest } = updated;
+    void _end;
+    return rest;
+}
+
 /** Switching a belt to normal drops the lane consumption rates only export belts have, and keeps every other lane field */
 export function beltStrategyUpdate(belt: BeltFormData, strategy: BeltStrategyFormValue): Partial<BeltFormData> {
     if (strategy === 'export') {

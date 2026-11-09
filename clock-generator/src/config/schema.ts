@@ -957,6 +957,15 @@ export const ConfigSchema = z.preprocess(renameTargetOutputToSetpoint, z.preproc
                 message: `Drill ${drill.id} drops into a chest; its override can be AUTO, CLOCKED or ALWAYS, not ${mode}` });
         }
     });
+    // an export lane's outlet rate is its consumption: a lane end beside it would say the same twice, or two things
+    config.belts.forEach((belt, belt_index) => {
+        (belt.lanes as readonly { consumption_per_second?: number; lane_end?: unknown }[]).forEach((lane, lane_index) => {
+            if (lane.consumption_per_second === undefined || lane.lane_end === undefined) return;
+            context.addIssue({ code: "custom", path: ["belts", belt_index, "lanes", lane_index, "lane_end"],
+                message: `Lane ${lane_index + 1} of belt ${belt.id} states a consumption rate and a lane end. The consumption rate `
+                    + "is the outlet rate of the lane. Remove the lane end." });
+        });
+    });
     // a drop spot is all or none per belt: the lane rule needs every stack on it
     const dropping = config.inserters.flatMap((inserter, index) =>
         inserter.sink.type === TargetType.BELT ? [{ inserter, index, sink: inserter.sink }] : []);

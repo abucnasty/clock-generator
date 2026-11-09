@@ -4,7 +4,7 @@ import { ChestType } from 'clock-generator/light';
 import { build, inserter } from '../../test/fixtures';
 import { parseFormConfig } from '../../worker/formConfig';
 import { configToFormData, formDataToConfig } from './configMapping';
-import { machineIconName, type ConfigFormData } from './formData';
+import { laneFieldUpdate, machineIconName, type ConfigFormData } from './formData';
 import { applyRepeatedUnitConversion } from './repeatedUnitConversion';
 
 const imported = {
@@ -192,7 +192,7 @@ describe('what goes through the form and back as the config gave it', () => {
                     { ingredient: 'copper-plate', stack_size: 4, lane_end: { kind: 'unknown' } },
                 ] },
                 { id: 2, type: 'turbo-transport-belt', strategy: 'export', lanes: [
-                    { ingredient: 'electronic-circuit', stack_size: 4, consumption_per_second: 5, lane_end: { kind: 'outlet', outlet_rate: 5 }, sharing: 'shared_by_copies' },
+                    { ingredient: 'electronic-circuit', stack_size: 4, consumption_per_second: 5, sharing: 'shared_by_copies' },
                 ] },
             ],
         }, c => c.belts.map(belt => belt.lanes), true],
@@ -208,6 +208,15 @@ describe('what goes through the form and back as the config gave it', () => {
         const config = importedWith(fields), expected = structuredClone(kept(config)), form = configToFormData(config);
         if (inForm) expect(kept(form)).toEqual(expected);
         expect(kept(formDataToConfig(form))).toEqual(expected);
+    });
+});
+
+describe('a lane edited in the form', () => {
+    it('drops its lane end when it gets a consumption rate, which is the outlet rate of an export lane', () => {
+        const lane = { ingredient: 'iron-plate', stack_size: 4, lane_end: { kind: 'dead_end' as const }, sharing: 'one_per_copy' as const };
+        expect(laneFieldUpdate(lane, 'consumption_per_second', 5)).toEqual({ ingredient: 'iron-plate', stack_size: 4, sharing: 'one_per_copy', consumption_per_second: 5 });
+        expect(laneFieldUpdate(lane, 'consumption_per_second', undefined)).toEqual({ ...lane, consumption_per_second: undefined });
+        expect(laneFieldUpdate(lane, 'stack_size', 2)).toEqual({ ...lane, stack_size: 2 });
     });
 });
 
