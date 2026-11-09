@@ -1,3 +1,4 @@
+import { assumedCopySpacings, droppedOntoSharedLanes } from "./shared-lane-verdict";
 import { SerializableMachineFacts } from "../data-types/machine-facts";
 import { InserterStatus, MachineStatus } from "../state";
 import { MAX_RECOVERY_WINDOW_CYCLES, type DisturbanceTrialVerdict } from "./disturbance-trial";
@@ -500,6 +501,41 @@ export function lanesExactlyFullInsights(config: Config): ClockInsight[] {
     const lanes = issues.map(issue => issue.lanes.length === 1 ? `lane ${issue.lanes[0]} of belt ${issue.belt_id}` : `both lanes of belt ${issue.belt_id}`).join(" and ");
     const title = `${lanes.charAt(0).toUpperCase()}${lanes.slice(1)} ${issues.length === 1 && issues[0].lanes.length === 1 ? "is" : "are"} exactly full`;
     return [{ id: "lanes-exactly-full", scope: "build", title, what: note, why: "", explanation: "" }];
+}
+
+/** "lane 1 of belt 2", "lanes 1 and 2 of belt 2", for lanes of one belt */
+function lanesOfBelt(belt_id: number, lanes: readonly number[]): string {
+    return lanes.length === 1 ? `lane ${lanes[0]} of belt ${belt_id}` : `lanes ${lanes.join(" and ")} of belt ${belt_id}`;
+}
+
+/**
+ * That the copies were checked on the lanes they share at a spacing the config does not give (no `copy_offset`): a
+ * warning with the spacing assumed, as the result of the check depends on it. None where the config gives it.
+ */
+export function assumedCopySpacingInsights(config: Config): ClockInsight[] {
+    const spacings = assumedCopySpacings(config);
+    if (spacings.length === 0) return [];
+    const by_tiles = new Map<number, Map<number, number[]>>();
+    for (const { belt_id, lane, tiles } of spacings) {
+        const of_tiles = by_tiles.get(tiles) ?? new Map<number, number[]>();
+        of_tiles.set(belt_id, [...(of_tiles.get(belt_id) ?? []), lane]);
+        by_tiles.set(tiles, of_tiles);
+    }
+    const places = [...by_tiles].map(([tiles, belts]) => `${Number.isInteger(tiles) ? tiles : tiles.toFixed(1)} ${tiles === 1 ? "tile" : "tiles"} apart on `
+        + [...belts].map(([belt_id, lanes]) => lanesOfBelt(belt_id, lanes)).join(" and "));
+    return [{ id: "assumed-copy-spacing", scope: "build", title: "The copies are checked at a spacing the configuration does not give",
+        what: `The configuration has no copy_offset. The check of the shared lanes puts the copies ${places.join(", and ")}. `
+            + "Set copy_offset to the distance from one copy to the next.",
+        why: "", explanation: "" }];
+}
+
+/** That the check of the shared lanes leaves out each lane the copies share on a belt the build drops onto */
+export function droppedOntoSharedLaneInsights(config: Config): ClockInsight[] {
+    return droppedOntoSharedLanes(config).map(({ belt_id, lane }) => ({ id: `shared-lane-not-checked-${belt_id}-${lane}`, scope: "build" as const,
+        title: `Lane ${lane} of belt ${belt_id} is not checked with every copy on it`,
+        what: `Lane ${lane} of belt ${belt_id} is not checked with every copy on it. The build drops items onto this belt, and the check of a `
+            + "shared lane does not run those drops yet.",
+        why: "", explanation: "" }));
 }
 
 /** The supply rate each copy's lane needs, for every lane that is one per copy */
