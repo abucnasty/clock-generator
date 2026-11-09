@@ -3,7 +3,7 @@ import { defaultLogger } from "../../common/logger";
 import type { Config } from "../../config";
 import { OpenRange } from "../../data-types";
 import { Entity } from "../../entities";
-import type { AlwaysOnReason } from "../always-on-reasons";
+import type { AlwaysOnReason } from "../enable-control-router";
 import { ClockWindowCycleLimitError } from "../plan/clock-window-cycle-limit";
 import { unclockedRun, withInserterClocks, withRoomForRandomAmounts, type BlueprintGenerationResult, type GenerateClockOptions } from "../plan/unclocked-run";
 import type { PrimitiveRoundRobinPollingAttemptReport, PrimitiveRoundRobinPollingPolicy } from "../round-robin-polling-primitive-policy";

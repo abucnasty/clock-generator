@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { ConfigPaths } from "../config/config-paths";
-import { alwaysOnReasonProblemsOf, rocketFuelSample, type RocketFuelSample } from "./generate-blueprint-test-helpers";
+import { entityRouteProblemsOf, rocketFuelSample, type RocketFuelSample } from "./generate-blueprint-test-helpers";
 
 // The two builds of this suite (the sample, and the same with the jelly inserters at a hand of 15) are in files of their own
 // (rocket-fuel-jelly-stack-15.generation.test.ts is the other), so that a shard of the generation tests does not wait on both.
@@ -19,7 +19,7 @@ describe("generateClockForConfig", () => {
         });
 
         it("names why every inserter and drill a clock leaves always on is", () => {
-            expect(alwaysOnReasonProblemsOf(sample.config, sample)).toEqual([]);
+            expect(entityRouteProblemsOf(sample.config, sample)).toEqual([]);
         });
 
         it.each(["planned-belt-slack", "fractional", "derived", "shifted-swings"])("%s is stable as built", (id) => {

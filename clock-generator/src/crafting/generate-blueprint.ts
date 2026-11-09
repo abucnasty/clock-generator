@@ -14,4 +14,4 @@ export { ClockRanking, rankingOf, rankingWindowCount, combineClockAlternativeRun
 export { ClockAlternative, ClockAlternativesResult, ClockAlternativeRun, ClockAlternativeContext, ClockAlternativeTask, ClockAlternativesPlan, planClockAlternatives, runClockAlternativeTask, runCoordinatedSourcesTask, COORDINATED_SOURCES_MAKER, generateClockAlternatives } from "./alternatives";
 export { coordinatedSourcesInputOf, CoordinatedSourcesInput, CoordinatedSourcesPart } from "./candidates/coordinated-sources-parts";
 export { blueprintFileFor } from "./blueprint-export";
-export type { AlwaysOnReason, AlwaysOnReasons } from "./always-on-reasons";
+export type { AlwaysOnReason, AlwaysOnReasons } from "./enable-control-router";

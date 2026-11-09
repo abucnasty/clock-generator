@@ -1,6 +1,6 @@
 // Per-job checks of the fixture jobs (belt pickup, front pickup): what the generation tests of these builds checked on the result and the record
 // does not hold: the model's lane-phase evidence of the selection and the cause given where it is not stable, set against the pin beside the
-// in-game recording. That every inserter and drill a clock leaves always on says why is a property of the record (`always-on-reasons-named`),
+// in-game recording. That every inserter and drill of a clock has exactly one route, an always-on one with its reason, is a property of the record (`entity-routes-total`),
 // run on every alternative of every job, so the over-the-hood fixtures have no check of their own.
 import { expect } from 'vitest';
 import type { JobCheck } from '../record-job-checks';

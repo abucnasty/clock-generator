@@ -9,7 +9,7 @@ import { ClockBelt, beltPickupSlackTicks } from "../clock";
 import { disturbanceTrialVerdictOf, runClockOnBuild } from "../trial";
 import { DropTieBreak, dropTieBreak } from "../../config/drop-spacing";
 import { TurnGroup } from "../turn-groups";
-import type { AlwaysOnReason } from "../always-on-reasons";
+import type { AlwaysOnReason } from "../enable-control-router";
 import { sharedItemDeadlockRisks } from "../deadlock-risk";
 import { rankingWindowCount } from "../rank";
 import { turnOffsets } from "./taker-turns";

@@ -3,6 +3,7 @@
  * glossary.ts; only its switched-off case is provisional.
  */
 import type { AlwaysOnReason } from 'clock-generator/browser';
+import { absurd } from 'fp-ts/function';
 import { WAKEUP_DEFINITION } from './glossary';
 import { formatNumberText } from './numberText';
 import type { OwnClock, WakeWindow, WakeWindowRow } from './wakeWindows';
@@ -159,6 +160,8 @@ function alwaysOnText(reason: AlwaysOnReason | undefined): string {
             return 'Always on: it made no swing in the run the enable windows are read from, so the clock has no window for it';
         case 'chest-drill':
             return `Always on: ${chestDrillWhyText(reason.why)}`;
+        default:
+            return absurd(reason);
     }
 }
 

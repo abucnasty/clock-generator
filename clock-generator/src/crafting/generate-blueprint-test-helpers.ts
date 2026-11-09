@@ -1,7 +1,9 @@
 import { loadConfigFromFile } from "../config/loader";
 import type { Config } from "../config/schema";
-import { Entity, EntityId } from "../entities";
+import { EntityId } from "../entities";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
+import { routesOfResult } from "./enable-control-router";
+import { clockedByConfig } from "./plan/unclocked-run";
 import { generateClockAlternatives, type BlueprintGenerationResult, type ClockAlternative, type ClockAlternativesResult } from "./generate-blueprint";
 import { OutputCyclePlan } from "./sequence/cycle/output-cycle";
 import { TargetProductionRate } from "./target-production-rate";
@@ -91,19 +93,15 @@ export const rocketFuelSample = async (source: string | Config): Promise<RocketF
 };
 
 /**
- * Where the clock's inserters and drills are always on and the result says nothing of why, or says why for one that has
- * windows (or a clock of its own): "swings-2: inserter:2", "planned: drill:1 has windows". Empty when every one that is on
- * all the time names its reason.
+ * Where the routes of the clock's inserters and drills break (see routesOfResult): one always on with no reason has no route, one
+ * that has windows (or a clock of its own) has a reason too, a reason names an entity the build does not have:
+ * "swings-2: inserter:2 is always on with no reason", "planned: drill:1 has a reason and is not always on". Empty when every
+ * inserter and drill has exactly one route and the clock's reasons are its Lefts.
  */
-export function alwaysOnReasonProblems(config: Config, result: BlueprintGenerationResult, label: string): string[] {
-    const ids = createEntityRegistryFromConfig(config).getAll().filter(it => Entity.isInserter(it) || Entity.isDrill(it)).map(it => it.entity_id.id);
-    const on = (id: string) => result.clock_windows[id] === undefined && result.unplanned_inserter_clocks?.[id]?.own_clock !== true;
-    return [
-        ...ids.filter(id => on(id) && result.always_on_reasons?.[id] === undefined).map(id => `${label}: ${id} is always on with no reason`),
-        ...Object.keys(result.always_on_reasons ?? {}).filter(id => !ids.includes(id) || !on(id)).map(id => `${label}: ${id} has a reason and is not always on`),
-    ];
+export function entityRouteProblems(config: Config, result: BlueprintGenerationResult, label: string): string[] {
+    return routesOfResult(createEntityRegistryFromConfig(config), result, clockedByConfig(config)).problems.map(problem => `${label}: ${problem}`);
 }
 
-/** The problems of every alternative of a generation (see alwaysOnReasonProblems) */
-export const alwaysOnReasonProblemsOf = (config: Config, generated: Pick<ClockAlternativesResult, "alternatives">): string[] =>
-    generated.alternatives.flatMap(alternative => alwaysOnReasonProblems(config, alternative.result, alternative.id));
+/** The problems of every alternative of a generation (see entityRouteProblems) */
+export const entityRouteProblemsOf = (config: Config, generated: Pick<ClockAlternativesResult, "alternatives">): string[] =>
+    generated.alternatives.flatMap(alternative => entityRouteProblems(config, alternative.result, alternative.id));

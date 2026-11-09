@@ -1,4 +1,4 @@
-import type { AlwaysOnReasons } from "../always-on-reasons";
+import type { AlwaysOnReasons } from "../enable-control-router";
 import type { SerializableClockWindows } from "../clock";
 import type { ClockStrategy, StrategyRef } from "../clock-strategy";
 
