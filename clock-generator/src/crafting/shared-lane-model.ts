@@ -56,8 +56,12 @@ const ENTRY_TILES = 1;
  * The copies stand downstream of each other in the order they are numbered, the copy of the config first and simulated
  * in full; the part copy stands last, with the takers of it that stand furthest upstream.
  *
- * Only the lanes `lanes` names are laid out (default: every lane a belt pickup takes from that the copies share), and
- * every taker on them needs a position.
+ * A config without the positions of a lane's takers gets the least spacing: the takers of a copy a tile apart in the
+ * config's order, and the copies end to end, unless `copy_offset` says how far apart they stand.
+ *
+ * Only the lanes `lanes` names are laid out. By default that is every lane a belt pickup takes from that the copies
+ * share and that the build drops nothing onto: a lane the build drops onto is fed by those drops, which the model does
+ * not run yet, and a supply rate at its entry alone would feed it what the drops do not.
  */
 export function laneRowsOf(config: Config, flow: FlowDirection, lanes?: readonly { belt_id: number; lane: 1 | 2 }[]): LaneRow[] {
     const copies = config.setpoint.copies;
@@ -66,30 +70,36 @@ export function laneRowsOf(config: Config, flow: FlowDirection, lanes?: readonly
     const along = (position: { x: number; y: number }) => position.x * flow.x + position.y * flow.y;
     const positions = [...config.machines, ...config.inserters, ...(config.chests ?? []), ...(config.drills?.configs ?? [])]
         .flatMap(entity => "position" in entity && entity.position !== undefined ? [along(entity.position)] : []);
-    // one copy to the next, along the flow: copy_offset where it is given, else the copy's own length from its positions
     const offset = config.setpoint.copy_offset;
-    const step = offset !== undefined ? Math.abs(along(offset))
-        : positions.length === 0 ? 0 : Math.max(...positions) - Math.min(...positions) + 1;
-    assert(step > 0, "The copies stand in a row only with copy_offset along the lane, or positions to lay one copy out by");
+    const dropped_onto = new Set(config.inserters.flatMap(inserter => inserter.sink.type === "belt" ? [inserter.sink.id] : []));
 
     const rows: LaneRow[] = [];
     for (const belt of config.belts) {
         for (const lane of [1, 2] as const) {
             const named = lanes === undefined
-                ? facts.of(belt.id, lane).sharing === "shared_by_copies"
+                ? facts.of(belt.id, lane).sharing === "shared_by_copies" && !dropped_onto.has(belt.id)
                 : lanes.some(it => it.belt_id === belt.id && it.lane === lane);
             const item = belt.lanes[lane - 1]?.ingredient;
             if (!named || item === undefined) continue;
-            const takers = config.inserters.flatMap((inserter, index) => {
+            const of_lane = config.inserters.flatMap((inserter, index) => {
                 const source = inserter.source;
                 if (source.type !== "belt" || source.id !== belt.id) return [];
                 const takes = inserter.filters === undefined || inserter.filters.length === 0
                     || (inserter.filter_mode === "blacklist" ? !inserter.filters.includes(item) : inserter.filters.includes(item));
-                if (!takes) return [];
-                assert(inserter.position !== undefined, `Inserter ${inserter.id ?? index + 1} takes from belt ${belt.id} and has no position`);
-                const length = pickupLaneLength(source.pickup_layout ?? "side-straight", lane, source.pickup_length ?? 1);
-                return [{ inserter_id: EntityId.forInserter(inserter.id ?? index + 1).id, at: along(inserter.position), length }];
+                return takes ? [{ inserter, index }] : [];
             });
+            const positioned = of_lane.every(({ inserter }) => inserter.position !== undefined);
+            const takers = of_lane.map(({ inserter, index }, order) => ({
+                inserter_id: EntityId.forInserter(inserter.id ?? index + 1).id,
+                at: positioned ? along(inserter.position!) : order,
+                length: inserter.source.type === "belt"
+                    ? pickupLaneLength(inserter.source.pickup_layout ?? "side-straight", lane, inserter.source.pickup_length ?? 1) : 1,
+            }));
+            // one copy to the next, along the flow: copy_offset where it is given, else the copy's own length from its
+            // positions, else a tile for each of its takers
+            const step = offset !== undefined ? Math.abs(along(offset))
+                : positioned ? Math.max(...positions) - Math.min(...positions) + 1 : takers.length;
+            assert(takers.length === 0 || step > 0, `The copies on lane ${lane} of belt ${belt.id} need copy_offset along the lane`);
             if (takers.length === 0) continue;
             const in_part = Math.ceil(part * takers.length - 1e-9);
             const by_place = [...takers].sort((a, b) => a.at - b.at);

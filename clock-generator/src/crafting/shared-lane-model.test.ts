@@ -53,6 +53,21 @@ describe("the lanes the copies share, laid out as rows", () => {
         expect(row.takers.filter(taker => taker.copy === 1).map(taker => taker.edge_tiles)).toEqual([15, 27]);
     });
 
+    it("stands the takers of a config without positions a tile apart, and the copies end to end", () => {
+        const config = rowConfig({ copies: 2 });
+        const [row] = laneRowsOf({ ...config, inserters: config.inserters.map(({ position: _p, ...inserter }) => inserter) }, { x: 1, y: 0 });
+        expect(row.takers.map(taker => [taker.copy, taker.inserter_id, taker.edge_tiles])).toEqual([
+            [0, "inserter:1", 2], [0, "inserter:2", 3], [1, "inserter:1", 4], [1, "inserter:2", 5],
+        ]);
+    });
+
+    it("lays out no lane the build drops onto, unless it is named", () => {
+        const config = rowConfig({ copies: 2, copy_offset: { x: 18, y: 0 } });
+        const dropping = { ...config, inserters: [...config.inserters, { id: 3, source: { type: "machine", id: 1 }, sink: { type: "belt", id: 1 } }] } as Config;
+        expect(laneRowsOf(dropping, { x: 1, y: 0 })).toEqual([]);
+        expect(laneRowsOf(dropping, { x: 1, y: 0 }, [{ belt_id: 1, lane: 1 }])).toHaveLength(1);
+    });
+
     it("lays out no lane each copy has to itself", () => {
         expect(laneRowsOf(rowConfig({ copies: 3, copy_offset: { x: 18, y: 0 } }, { sharing: "one_per_copy" }), { x: 1, y: 0 })).toEqual([]);
     });
