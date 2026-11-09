@@ -15,7 +15,7 @@ import { describeSideLoadedDrop, SIDE_LOADED_DROP_ADVICE, SIDE_LOADED_DROP_TITLE
 import { chestName } from "../common/entity-types";
 import { chestDrillBecause } from "./chest-drill-windows";
 import { describeDropSpacing, dropSpacing, dropSpacingTable } from "../config/drop-spacing";
-import { lanesExactlyFull, lanesExactlyFullNote } from "../config/lane-capacity-validator";
+import { describeOnePerCopyFeed, lanesExactlyFull, lanesExactlyFullNote, onePerCopyFeeds } from "../config/lane-capacity-validator";
 
 /** Facts of one machine of the build, for explaining what its limits allow */
 export interface MachineFactsEntry {
@@ -500,6 +500,19 @@ export function lanesExactlyFullInsights(config: Config): ClockInsight[] {
     const lanes = issues.map(issue => issue.lanes.length === 1 ? `lane ${issue.lanes[0]} of belt ${issue.belt_id}` : `both lanes of belt ${issue.belt_id}`).join(" and ");
     const title = `${lanes.charAt(0).toUpperCase()}${lanes.slice(1)} ${issues.length === 1 && issues[0].lanes.length === 1 ? "is" : "are"} exactly full`;
     return [{ id: "lanes-exactly-full", scope: "build", title, what: note, why: "", explanation: "" }];
+}
+
+/** The supply rate each copy's lane needs, for every lane that is one per copy */
+export function onePerCopyFeedInsights(config: Config): ClockInsight[] {
+    let feeds;
+    try {
+        feeds = onePerCopyFeeds(config);
+    } catch {
+        return [];
+    }
+    return feeds.map(feed => ({ id: `one-per-copy-feed-${feed.belt_id}-${feed.lanes.join("-")}`, scope: "build" as const,
+        title: `The supply rate each copy's ${feed.lanes.length === 1 ? `lane ${feed.lanes[0]}` : "lanes"} of belt ${feed.belt_id} needs`,
+        what: describeOnePerCopyFeed(feed), why: "", explanation: "" }));
 }
 
 export function clockInsights(result: BlueprintGenerationResult, holds: boolean, kick_start_items = DEFAULT_KICK_START_ITEMS): ClockInsight[] {

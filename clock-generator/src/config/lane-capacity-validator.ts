@@ -244,6 +244,36 @@ export function warnLanesSharedByCopies(config: Config, logger: Logger): void {
     }
 }
 
+/** A lane, or both lanes of a belt that carry one item, that is one per copy, and what one copy takes from it */
+export interface OnePerCopyFeed {
+    belt_id: number;
+    lanes: number[];
+    inserter_ids: number[];
+    /** Items a second the inserters of one copy take from it at the target: the supply rate each copy's lane needs */
+    items_per_second: number;
+}
+
+/**
+ * The lanes that are one per copy, each with the supply rate it needs: what the inserters of one copy take from it at the
+ * target. A set of both lanes of a belt is listed only where both carry the same item, so that a take can use either.
+ */
+export function onePerCopyFeeds(config: Config): OnePerCopyFeed[] {
+    const facts = laneFactsOf(config);
+    return laneLoads(config).filter(load => load.kind === 'take' && onePerCopy(facts, load)).filter(load => {
+        if (load.lanes.length === 1) return true;
+        const items = config.belts.find(belt => belt.id === load.belt_id)!.lanes.map(lane => lane.ingredient);
+        return items.length === 2 && items[0] === items[1];
+    }).map(load => ({ belt_id: load.belt_id, lanes: load.lanes, inserter_ids: load.inserter_ids, items_per_second: load.items_per_second.toDecimal() }));
+}
+
+/** "Lane 1 of belt 1 is one per copy. The lane of each copy needs a supply rate of at least 36 a second, which the inserters of one copy take from it." */
+export function describeOnePerCopyFeed(feed: OnePerCopyFeed): string {
+    const one = feed.lanes.length === 1;
+    const lanes = describeLanes(feed);
+    return `${lanes.charAt(0).toUpperCase()}${lanes.slice(1)} ${one ? 'is' : 'are'} one per copy. ${one ? 'The lane' : 'The lanes'} of each copy `
+        + `${one ? 'needs' : 'need'} a supply rate of at least ${formatRate(feed.items_per_second)} a second, which the inserters of one copy take from ${one ? 'it' : 'them'}.`;
+}
+
 /** The lanes whose stated supply rate or outlet rate is above what the lane can carry */
 export function laneRateIssues(config: Pick<Config, 'belts'>): LaneRateIssue[] {
     const issues: LaneRateIssue[] = [];

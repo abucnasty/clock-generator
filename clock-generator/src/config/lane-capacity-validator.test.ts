@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { assertLaneCapacity, laneCapacityIssues, laneLoads, laneRateIssues, lanesExactlyFull, lanesExactlyFullWarning, lanesSharedByCopies, laneSharedByCopiesWarning, sharedLaneSupplyIssues, warnLanesSharedByCopies } from './lane-capacity-validator';
+import { assertLaneCapacity, describeOnePerCopyFeed, laneCapacityIssues, onePerCopyFeeds, laneLoads, laneRateIssues, lanesExactlyFull, lanesExactlyFullWarning, lanesSharedByCopies, laneSharedByCopiesWarning, sharedLaneSupplyIssues, warnLanesSharedByCopies } from './lane-capacity-validator';
 import { FeasibilityError, LaneCapacityError, LaneRateError, SharedLaneSupplyError } from './errors';
 import { Config, ConfigSchema } from './schema';
 import { validateConfig } from '../crafting/plan/validate-config';
@@ -289,6 +289,17 @@ describe('where it runs', () => {
         expect(sharedLaneSupplyIssues(await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250)).map(issue => [issue.belt_id, issue.lanes, issue.items_per_second * issue.copies, issue.supply_per_second]))
             .toEqual([[1, [1], 180, 120]]);
         expect(laneSharedByCopiesWarning(await loadConfigFromFile(ConfigPaths.ADVANCED_CIRCUIT_240))).toBeNull();
+    });
+});
+
+describe('the feed of a lane that is one per copy', () => {
+    it('is what the inserters of one copy take from it, and none is told for a lane the copies share', () => {
+        const config = gears({ items_per_second: 3 * 48, copies: 3 });
+        const own = { ...config, belts: config.belts.map(it => it.id !== 1 ? it : { ...it, lanes: [{ ...it.lanes[0], sharing: 'one_per_copy' as const }] }) } as Config;
+        expect(onePerCopyFeeds(config)).toEqual([]);
+        expect(onePerCopyFeeds(own)).toEqual([{ belt_id: 1, lanes: [1], inserter_ids: [1], items_per_second: 96 }]);
+        expect(describeOnePerCopyFeed(onePerCopyFeeds(own)[0])).toBe('Lane 1 of belt 1 is one per copy. The lane of each copy needs a supply rate '
+            + 'of at least 96 a second, which the inserters of one copy take from it.');
     });
 });
 

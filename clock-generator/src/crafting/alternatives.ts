@@ -16,7 +16,7 @@ import { machinesInOrder, traitsOf } from "../entities/traits/traits-of";
 import { Logger, defaultLogger } from "../common/logger";
 import { DisturbanceTrialVerdict } from "./disturbance-trial";
 import { SharedItemDeadlockRisk, sharedItemDeadlockRisks } from "./deadlock-risk";
-import { disturbanceTrialInsight, beltPickupNotTestedInsights, chestDrillInsights, ClockInsight, clockInsights, deadlockRiskInsight, dropSpacingInsights, lanesExactlyFullInsights, sideLoadedDropInsights, startDependenceInsight, withWakeUpsFromStarts } from "./insights";
+import { disturbanceTrialInsight, beltPickupNotTestedInsights, chestDrillInsights, ClockInsight, clockInsights, deadlockRiskInsight, dropSpacingInsights, lanesExactlyFullInsights, onePerCopyFeedInsights, sideLoadedDropInsights, startDependenceInsight, withWakeUpsFromStarts } from "./insights";
 import { chestDrillFallbackConfig, ChestDrillClock, hasPlannedChestDrill } from "./chest-drill-windows";
 import { chestDrillReasons, EntityRouteError, entityRoutesOf } from "./enable-control-router";
 import { ClockBelt, clockBeltLabel, fuelHandRoomTicks } from "./clock";
@@ -1103,6 +1103,7 @@ function runAlternativeOf(
             ...beltPickupNotTestedInsights(config),
             ...sideLoadedDropInsights(config),
             ...lanesExactlyFullInsights(config),
+            ...onePerCopyFeedInsights(config),
             ...dropSpacingInsights(trial.result, config),
             ...(start_dependence_note !== null && trial.start_dependence !== null ? [startDependenceInsight(start_dependence_note, trial.start_dependence)] : []),
             ...chestDrillInsights(trial.result),
