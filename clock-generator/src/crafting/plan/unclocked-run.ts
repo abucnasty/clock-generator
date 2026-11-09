@@ -506,6 +506,12 @@ export interface RunOptions {
     /** Initial lane phases for a simulation trial; transient stock state, separate from saved config geometry. */
     moving_pickup_phases?: MovingPickupPhases;
     /**
+     * Called with the context of a run from a cold start (`cold_start`), once it is built and before its first tick, and
+     * not with the context the plan is made on: for a reader that puts something into the run (the takers of the other
+     * copies on a shared lane, `installSharedLanes`)
+     */
+    on_context?: (context: SimulationContext) => void;
+    /**
      * After the run, cut one supply of the build and give it back, several times over, and count what the build makes
      * once it is back (see disturbance-trial.ts). For a run on clock windows alone; nothing is cut in any other run.
      */
@@ -803,6 +809,7 @@ function recordedBuildOf(config: Config, options: RunOptions, debug: MutableDebu
 function coldBuildOf(config: Config, options: RunOptions, debug: MutableDebugSettingsProvider, logger: Logger): RecordedBuild {
     const build = recordedBuildOf(config, options, debug, logger);
     kickStartLoopingRecipes(build.simulation_context, config.overrides?.kick_start_items ?? DEFAULT_KICK_START_ITEMS);
+    options.on_context?.(build.simulation_context);
     return build;
 }
 

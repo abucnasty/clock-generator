@@ -20,6 +20,7 @@ import { ContainerStorage } from "../../simulation/components/container-storage"
 import { MiningDrillArchetype } from "../../simulation/archetypes/mining-drill";
 import { ACTIVATION_ORDER, InserterDispatch } from "../../simulation/dispatch";
 import { InserterScheduling } from "../../simulation/inserter-scheduling";
+import type { CopyTakerTick } from "../../simulation/world";
 
 /** Initial moving-lane phases by inserter id, in the pickup model's public 1/32-tile units. */
 export type MovingPickupPhases = ReadonlyMap<string, readonly [number, number]>;
@@ -40,6 +41,11 @@ export class SimulationContext {
 
     /** The open points of the update list (simulation/dispatch.ts); set before the first World */
     public inserter_dispatch: InserterDispatch = ACTIVATION_ORDER;
+    /**
+     * What a World of this context runs after the inserters in every tick (`World.copy_takers`): the takers of the other
+     * copies on a shared lane, put in before the context's first World
+     */
+    public readonly copy_takers: CopyTakerTick[] = [];
     private inserter_scheduling: InserterScheduling | null = null;
 
     constructor(

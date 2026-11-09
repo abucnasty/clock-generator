@@ -9,6 +9,11 @@ import { TransportBelt } from "./archetypes/transport-belt";
 import { MiningDrillArchetype } from "./archetypes/mining-drill";
 import type { InserterScheduling } from "./inserter-scheduling";
 
+/** One tick of something that runs after the inserters: a taker of another copy on a shared lane */
+export interface CopyTakerTick {
+    tick(): void;
+}
+
 /**
  * The entities a tick runs, one array for each archetype, each in the order the phase table runs it
  * (simulation/tick-phases.ts), so that a phase's loop calls into one class only. A plain class with typed fields, not
@@ -41,6 +46,11 @@ export class World {
         public readonly containers: readonly ContainerStorage[],
         /** The update list (simulation/dispatch.ts) */
         public readonly scheduling: InserterScheduling,
+        /**
+         * What runs after the inserters in every tick, in the order given: the takers of the other copies on a shared lane
+         * (`SimulationContext.copy_takers`); empty for a build of one copy
+         */
+        public readonly copy_takers: readonly CopyTakerTick[],
     ) {}
 
     public static of(context: SimulationContext): World {
@@ -53,6 +63,7 @@ export class World {
             states.filter(EntityState.isBelt),
             states.filter(ContainerStorage.is),
             context.inserterScheduling(),
+            [...context.copy_takers],
         );
     }
 }
