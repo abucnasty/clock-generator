@@ -188,7 +188,7 @@ describe('what goes through the form and back as the config gave it', () => {
         ['the lane facts of a normal and an export belt', {
             belts: [
                 { id: 1, type: 'turbo-transport-belt', lanes: [
-                    { ingredient: 'iron-plate', stack_size: 4, supply_rate: 88, lane_end: { kind: 'dead_end' }, sharing: 'one_per_copy' },
+                    { ingredient: 'iron-plate', stack_size: 4, supply_rate: 88, lane_end: { kind: 'dead_end' }, sharing: 'one_per_copy', flow_direction: 4 },
                     { ingredient: 'copper-plate', stack_size: 4, lane_end: { kind: 'unknown' } },
                 ] },
                 { id: 2, type: 'turbo-transport-belt', strategy: 'export', lanes: [

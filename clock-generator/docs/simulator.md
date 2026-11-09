@@ -277,6 +277,27 @@ merge, and the belt is taken to run straight past the inserters.
 
 The result also lists the spacings of the copies (from the width of a copy for one loop of the tiles the belt moves in a window cycle, and the same list at any of these plus a loop; where no spacing can fit, because the hands of a lane outnumber those tiles, it says so instead) and the distances between a copy's two inserters at which the hands fit, and the editor says it before Generate for the time one output hand takes at the setpoint (`src/crafting/drop-room-note.ts`). The idea, the arithmetic of pitches and offsets and the evidence are in [drop spacing](../tests/game/mechanics/drop-spacing/README.md).
 
+### Copies that take from one lane
+
+A clock is made on one copy of the build. Where the copies take from the same lane (a lane's `sharing`, default
+`shared_by_copies`), each clock that holds is run once more with every copy built, each with its own machines, chests,
+drills and inserters on the clock of the config's own (`src/crafting/shared-lane-model.ts`). The copies stand in a row,
+`setpoint.copy_offset` apart along each lane they share; without it a copy's length comes from its positions, or a tile
+for each taker, and the result says the spacing it assumed. Each shared lane runs tick by tick with every copy's takers
+on it (`src/state/shared-lane.ts`): stacks come on at the lane's `supply_rate`, move at the belt's speed and leave at its
+end (`lane_end`: a dead end holds them, an outlet takes them at its `outlet_rate`; an unknown end is run both ways). A
+part copy holds its share of each shared lane's takers, rounded up for each, the ones furthest upstream, with what their
+machines need. A lane that states `flow_direction` runs that way; one that does not runs each way along the copies. A copy
+whose taker puts down fewer of the lane's items over the whole window cycles of the second half of the run than a copy
+alone makes the clock unstable (`src/crafting/shared-lane-verdict.ts`).
+
+Standing: on the clocks recorded on #660 (three copies on ore lanes that flow into loaders) and #725 (5.5 copies on
+dead-ended lanes) and on logistic science 240 (11 copies) the run gives the game's verdict on every copy. The size of a
+loss can differ (#660, Takt Batches with 6 swings: copy 3 about 5 of 6 hands an inserter against 4.9 in the game).
+Limits: the row is straight, so a row folded back on itself or mirrored is run as if it were straight; a belt the build
+drops onto is not run with every copy on it (the result names its lanes); side-loads, merges and splitters on a shared
+line are not modelled; each copy's machines are its own, so machines two copies share in the game are not.
+
 ### Two inserters that bring the same item
 
 When two inserters bring the same item to a machine, one of them can be left holding it. If it starts picking the item up after the other has already put it in, the item is at its insertion limit by the time its hand is ready, and it holds the hand until the machine has used enough for it to drop.

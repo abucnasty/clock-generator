@@ -278,7 +278,7 @@ describe('shared builds through the real file and worker boundary', () => {
 
     it('keeps the lane facts when the build is opened, edited elsewhere, saved and shared again', async () => {
         const lanes = [
-            { ingredient: 'iron-plate', stack_size: 4, supply_rate: 120.7, lane_end: { kind: 'dead_end' }, sharing: 'one_per_copy' },
+            { ingredient: 'iron-plate', stack_size: 4, supply_rate: 120.7, lane_end: { kind: 'dead_end' }, sharing: 'one_per_copy', flow_direction: 12 },
             { ingredient: 'copper-plate', stack_size: 4, lane_end: { kind: 'outlet', outlet_rate: 88 } },
         ];
         // an export lane's outlet rate is its consumption: it states no lane end beside it

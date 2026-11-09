@@ -89,7 +89,7 @@ export interface InserterFormData {
 }
 
 /** The lane facts a lane of the config may state; the form keeps them as the config gives them and has no field for them yet */
-type LaneFactsFormData = Pick<Config['belts'][number]['lanes'][number], 'supply_rate' | 'lane_end' | 'sharing'>;
+type LaneFactsFormData = Pick<Config['belts'][number]['lanes'][number], 'supply_rate' | 'lane_end' | 'sharing' | 'flow_direction'>;
 
 export interface BeltLaneFormData extends LaneFactsFormData {
     ingredient: string;
