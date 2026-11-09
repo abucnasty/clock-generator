@@ -9,7 +9,9 @@ name: Test
 # The two heavy suites, the generation shards and the record shards, do not run on a draft pull request (GitHub's free plan runs
 # 20 jobs at once, and a pull request starts about 22): the checks "Gen summary" and "Rec summary" run and fail there, with the
 # way to run them, rather than pass or skip, which a required check counts as passing. Marking the pull request ready runs everything.
-# release.yml calls this workflow and does nothing unless it passes; a release runs the generation tests too.
+# release.yml calls this workflow and does nothing unless it passes; a release runs the generation tests too. It skips the
+# call when a pull request of this repository already passed this workflow on the same tree: the `changes` job records the
+# tree of each pull request as an artifact for that (see release.yml).
 # publish-sidecar.yml does not call it: the tests of the release cover the sidecar.
 on:
   pull_request:
@@ -171,6 +173,29 @@ jobs:
             echo "generation=false" >> "$GITHUB_OUTPUT"
             echo "The generation tests are skipped: the pull request changes documentation only ($(wc -l < changed.txt) file(s))." >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      # The tree this run tests, for release.yml: when a push to master or to hotfix/ has a tree that a run of this
+      # workflow on a pull request tested and passed, the push run skips its tests (.github/scripts/tested-tree.sh).
+      # Only a pull request records it: a called run or a run by hand is not a pull request, and the lookup would not
+      # trust it. The artifact is one small file, and the name carries the tree.
+      - name: Record the tested tree
+        if: github.event_name == 'pull_request'
+        run: |
+          set -eu
+          TREE=$(git rev-parse 'HEAD^{tree}')
+          echo "tree=$TREE" >> "$GITHUB_ENV"
+          echo "$TREE" > tested-tree.txt
+          echo "The tree of the merge commit under test is ${TREE:0:7}." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the tested tree
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tested-tree-${{ env.tree }}
+          path: tested-tree.txt
+          retention-days: 14
+          # a re-run of the same run uploads it again
+          overwrite: true
 
   # The generation tests, in shards: the sequencer of clock-generator/ci/duration-sequencer.ts (set in vitest.config.ts)
   # deals the files out to the shards by their measured durations (ci/generation-durations.json), longest first, and
