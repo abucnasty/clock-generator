@@ -404,6 +404,12 @@ export interface GenerateClockOptions {
      * OutputCyclePlan). Never planned without being asked for; absent, never false, so it is not in a run's key.
      */
     fractional_swings?: true;
+    /**
+     * Also run the strategies that are explored, not shipped (`STRATEGY_STATUS`), and report the best of their clocks beside the selection (`explored` of
+     * ClockAlternativesResult). Read by the alternatives only, never by a clock maker; the selection is the shipped strategies' either way. Absent, never
+     * false.
+     */
+    explore_strategies?: true;
 }
 
 /** What a machine holds when a run starts: see GenerateClockOptions.start_stock */

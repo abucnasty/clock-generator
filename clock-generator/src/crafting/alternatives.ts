@@ -41,6 +41,7 @@ import { AsBuiltStabilityCheck, DisturbanceTrialAssessment, disturbanceTrialVerd
 import { WakeUpsFromStarts } from "./wake-ups-from-starts";
 import { alternativeIdOf, ChestDrillFallbackKind, ClockStrategy, DefinitionSettings, DefinitionStrategyId, ListingSettings, StrategyId, StrategyRef, strategyListedAs, strategyOf } from "./clock-strategy";
 import { catalogRowOf, fixedTuningMethodOf, routerRowOf, settingChipsOf, strategyRowOf } from "./strategy-catalog";
+import { type ExploredClocks, exploredClocksOf, isExplored } from "./explore";
 import { signalsPerMinuteOf } from "./clock-signals";
 import { START_DEPENDENCE_NOT_CHECKED, StartDependence, startDependenceNote } from "./start-dependence";
 import { NotMadeClock, notTriedSentence, WhyNotStable, whyNotStable, whyNotStableClockOf } from "./why-not-stable";
@@ -107,6 +108,8 @@ export interface ClockAlternativesResult {
     not_made: NotMadeClock[];
     /** Why the selected clock does not meet goal 1, in one of three causes (see whyNotStable); null when it is stable */
     why_not_stable: WhyNotStable | null;
+    /** The clocks of the explored strategies and whether the best of them beats the selected clock; set only when `explore_strategies` asks for it */
+    explored?: ExploredClocks;
 }
 
 /** The alternatives one generation run exports (a subtick and a rounded clock for a fractional window cycle) */
@@ -160,6 +163,8 @@ export interface ClockAlternativeTask {
      * (`coordinatedSourcesInputOf`), by `runCoordinatedSourcesTask`, not by `runClockAlternativeTask`. It is not a search and not a fallback.
      */
     coordinated_sources?: true;
+    /** The strategy it runs is explored, not shipped (`STRATEGY_STATUS`): its clock is reported beside the selection and never selected */
+    explored?: true;
 }
 
 
@@ -240,6 +245,11 @@ interface AlternativeDefinition {
 /** Whether a search, or a fallback, waits until it is known that no clock made without one can be selected as stable */
 function onlyWhenNeeded(definition: AlternativeDefinition, config: Config): boolean {
     return definition.fallback === true || (definition.search === true && config.overrides?.search_for_fewer_wake_ups !== true);
+}
+
+/** The definitions a generation may run: the explored ones only where `explore_strategies` asks for them */
+function runnable(definitions: AlternativeDefinition[], options: GenerateClockOptions): AlternativeDefinition[] {
+    return options.explore_strategies === true ? definitions : definitions.filter(definition => !isExplored(definition.strategy));
 }
 
 
@@ -1227,11 +1237,15 @@ function planPrimaryAndTasks(
         ...(result.exhaust !== undefined && { exhaust: true }),
         ...(fractionalMakesThePrimary(config, definition, result) && { fractional_is_primary: true as const }),
     };
-    const tasks: ClockAlternativeTask[] = [...alternativeDefinitions(config, context, {})
+    const tasks: ClockAlternativeTask[] = [...runnable(alternativeDefinitions(config, context, {}), options)
         .map(definition => ({
             id: definition.id, label: definition.label, only_when_needed: onlyWhenNeeded(definition, config),
             ...(definition.fallback === true ? { fallback: true } : {}),
-        })), { id: COORDINATED_SOURCES_MAKER, label: COORDINATED_SOURCES_LABEL, only_when_needed: false, coordinated_sources: true }];
+            ...(isExplored(definition.strategy) && { explored: true as const }),
+        })), ...(options.explore_strategies === true || !isExplored("coordinated_sources") ? [{
+            id: COORDINATED_SOURCES_MAKER, label: COORDINATED_SOURCES_LABEL, only_when_needed: false, coordinated_sources: true as const,
+            ...(isExplored("coordinated_sources") && { explored: true as const }),
+        }] : [])];
     on_tasks?.(context, tasks, clockVerificationSignature(config, result));
     const primary_run = runAlternative(primary, config, logger, options.on_progress_detail, undefined, undefined, options.on_not_made);
     return { primary: primary_run === null ? null : withParts(primary_run, config, primary_ways), context, tasks };
@@ -1297,7 +1311,7 @@ function runTask(
     assessed_signatures: readonly string[],
 ): ClockAlternativeRun | null {
     const logger = options.logger ?? defaultLogger;
-    const definition = alternativeDefinitions(config, context, quietOptions(options, logger, options.on_progress_detail))
+    const definition = runnable(alternativeDefinitions(config, context, quietOptions(options, logger, options.on_progress_detail)), options)
         .find(it => it.id === task_id);
     assert(definition !== undefined, `Unknown clock task "${task_id}"`);
     return runAlternative(definition, config, logger, options.on_progress_detail, new Set(assessed_signatures), undefined, options.on_not_made, !context.primary_stable);
@@ -1406,7 +1420,9 @@ function generateAllAlternatives(config: Config, options: GenerateClockOptions):
         verification_cache.set(plan.primary.signature, {disturbance_trial, disturbance_trial_not_tried, start_dependence});
     }
     const known_stable = (id: string) => stable_by_id.get(id);
-    const definitions = alternativeDefinitions(config, plan.context, quietOptions(options, logger, report), known_stable);
+    const all_definitions = runnable(alternativeDefinitions(config, plan.context, quietOptions(options, logger, report), known_stable), options);
+    // the explored ones are made after every shipped one and take no part in choosing what is made or selected (see exploredRuns)
+    const definitions = all_definitions.filter(definition => !isExplored(definition.strategy));
     // listed in the order of the definitions, whichever are made first
     const runs: (ClockAlternativeRun | null)[] = [plan.primary, ...definitions.map(() => null)];
     const generate = (made: AlternativeDefinition[]) => {
@@ -1445,13 +1461,17 @@ function generateAllAlternatives(config: Config, options: GenerateClockOptions):
     // and after every other clock, the per-branch clock, composed from their parts on the window cycle of the one they recommend
     const so_far = combineClockAlternativeRuns(runs, it => it.ranking);
     const recommended = so_far.alternatives[so_far.selected_index];
-    if (recommended !== undefined) {
+    if (recommended !== undefined && !isExplored("coordinated_sources")) {
         current_step = COORDINATED_SOURCES_LABEL;
         total++;
         report();
         runs.push(runCoordinatedSourcesTask(config, coordinatedSourcesInputOf(runs, recommended.id), { ...options, on_progress_detail: report }, signaturesOf(runs)));
         completed++;
     }
+
+    // the explored strategies last, from the same runs: the selection below is of the shipped runs only
+    const explored = options.explore_strategies !== true ? undefined : exploredRuns({ config, logger, report, definitions: all_definitions.filter(it => isExplored(it.strategy)),
+        shipped: runs, recommended_id: recommended?.id, verification_cache, settle_unstable: !plan.context.primary_stable, options });
 
     current_step = "Done";
     report();
@@ -1462,7 +1482,48 @@ function generateAllAlternatives(config: Config, options: GenerateClockOptions):
         ...startDependenceSummary(config, combined.alternatives),
         not_made,
         why_not_stable: whyNotStableOf(config, combined.alternatives, combined.selected_index, not_made),
+        ...(explored !== undefined && { explored: exploredClocksOf(combined.alternatives[combined.selected_index], explored.runs, explored.same_as_shipped) }),
     };
+}
+
+/**
+ * Makes the clocks of the explored strategies (`STRATEGY_STATUS`), each one whether or not a shipped run would have waited for it: an
+ * explore generation is asked for to see them. They are made after every shipped run and read what those made, so that nothing they make
+ * reaches a shipped run; a clock a shipped run made too is not assessed again.
+ */
+function exploredRuns(input: {
+    config: Config;
+    logger: Logger;
+    report: (detail?: string) => void;
+    definitions: AlternativeDefinition[];
+    shipped: (ClockAlternativeRun | null)[];
+    /** The clock the shipped runs recommend, which Coordinated Sources composes from when it is explored */
+    recommended_id: string | undefined;
+    verification_cache: Map<string, VerificationAssessment>;
+    settle_unstable: boolean;
+    options: GenerateClockOptions;
+}): { runs: (ClockAlternativeRun | null)[]; same_as_shipped: string[] } {
+    const { config, logger, report, options } = input;
+    // a copy: what an explored run learns about a clock is not looked up by a shipped run
+    const verification_cache = new Map(input.verification_cache);
+    const shipped_signatures = signaturesOf(input.shipped);
+    const same_as_shipped: string[] = [];
+    const runs: (ClockAlternativeRun | null)[] = [];
+    const made = (id: string, run: ClockAlternativeRun | null) => {
+        if (run !== null && run.alternatives.length === 0) same_as_shipped.push(id);
+        runs.push(run);
+    };
+    for (const definition of input.definitions) {
+        report(definition.label);
+        // not_made is the shipped runs' list, which says why the selected clock is not stable
+        made(definition.id, runAlternative(definition, config, logger, report, new Set(shipped_signatures), verification_cache, undefined, input.settle_unstable));
+    }
+    if (isExplored("coordinated_sources") && input.recommended_id !== undefined) {
+        report(COORDINATED_SOURCES_LABEL);
+        made(COORDINATED_SOURCES_MAKER, runCoordinatedSourcesTask(config, coordinatedSourcesInputOf(input.shipped, input.recommended_id),
+            { ...options, on_progress_detail: report }, shipped_signatures));
+    }
+    return { runs, same_as_shipped };
 }
 
 /** Why the selected clock of a generation does not meet goal 1, from its alternatives (see whyNotStable) */
