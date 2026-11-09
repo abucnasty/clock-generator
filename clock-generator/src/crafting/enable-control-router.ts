@@ -27,10 +27,10 @@ export interface LoopReason { kind: "loop" }
 /** It takes from a machine of a loop to a machine outside it, which the clock leaves running too */
 export interface FromLoopReason { kind: "from-loop" }
 /**
- * Its swings take the whole window cycle (or all of it but the offset of its window), so a wake window would only put gaps
- * between swings that follow each other
+ * A full duty cycle: its swings take the whole window cycle, or all of it but its window's offset. Its enable windows would
+ * have a duty cycle of 1, so the clock leaves it always enabled
  */
-export interface BusyReason { kind: "busy"; window_cycle_ticks: number }
+export interface FullDutyCycleReason { kind: "full-duty-cycle"; window_cycle_ticks: number }
 /** The run of the build that the windows are read from recorded no swing of it, so there is nothing to read a window from */
 export interface NoSwingReason { kind: "no-swing" }
 /** A drill into a chest that nothing can time (see `ChestDrillWhy`) */
@@ -41,7 +41,7 @@ export interface ChestDrillReason { kind: "chest-drill"; why: Exclude<ChestDrill
  * each with its own data. A new reason is a new variant; every switch over the reasons ends in `absurd`, so it is a compile
  * error wherever it must be handled.
  */
-export type AlwaysOnReason = OverrideReason | LoopReason | FromLoopReason | BusyReason | NoSwingReason | ChestDrillReason;
+export type AlwaysOnReason = OverrideReason | LoopReason | FromLoopReason | FullDutyCycleReason | NoSwingReason | ChestDrillReason;
 
 /** The reason each inserter and drill is always on, by entity id ("inserter:3", "drill:1"); none for one that has windows */
 export type AlwaysOnReasons = Record<string, AlwaysOnReason>;

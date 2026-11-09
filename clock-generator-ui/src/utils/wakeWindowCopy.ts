@@ -154,7 +154,7 @@ function alwaysOnText(reason: AlwaysOnReason | undefined): string {
             return 'Always on: it moves items between machines that feed each other in a loop, which the clock leaves running';
         case 'from-loop':
             return 'Always on: it takes from a machine in a loop, which the clock leaves running';
-        case 'busy':
+        case 'full-duty-cycle':
             return `Always on: its swings fill the whole window cycle (${ticksText(reason.window_cycle_ticks)}), so an enable window would never switch it off`;
         case 'no-swing':
             return 'Always on: it made no swing in the run the enable windows are read from, so the clock has no window for it';

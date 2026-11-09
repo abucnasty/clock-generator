@@ -104,7 +104,7 @@ export function verifiedPrimitiveRoundRobinPollingClock(
         const margin = holdsWithMargin(made, windows, construction.window_cycle_ticks);
         if (margin !== null) { event.reason = margin; continue; }
         event.stage = "as-built";
-        const left_open = new Map<string, AlwaysOnReason>(built.busy.map(id => [id, { kind: "busy", window_cycle_ticks: construction.window_cycle_ticks }]));
+        const left_open = new Map<string, AlwaysOnReason>(built.busy.map(id => [id, { kind: "full-duty-cycle", window_cycle_ticks: construction.window_cycle_ticks }]));
         let result = finishedClock(made, windows, grouped.turns, { ...options, loop_windows: false }, left_open, room);
         offerWay(`primitive ${attempt.options.feeder_offset === 1 ? "compact" : "staged"}${attempt.options.surplus_guard === true ? " with the surplus guard" : ""}`, result, grouped.guarded);
         const policy: PrimitiveRoundRobinPollingPolicy = { strategy: "primitive-grouped", trigger,
@@ -115,9 +115,9 @@ export function verifiedPrimitiveRoundRobinPollingClock(
         assert(canonicalVerificationJson(result.unplanned_inserter_clocks ?? {}) === canonicalVerificationJson(construction.retained_clocks), "primitive blueprint by-product controls changed");
         for (const inserter of construction.inserters) assert(result.clock_windows[inserter.id]?.length
             || result.unplanned_inserter_clocks?.[inserter.id] !== undefined
-            || (built.busy.includes(inserter.id) && result.always_on_reasons?.[inserter.id]?.kind === "busy"), `primitive control missing: ${inserter.id}`);
+            || (built.busy.includes(inserter.id) && result.always_on_reasons?.[inserter.id]?.kind === "full-duty-cycle"), `primitive control missing: ${inserter.id}`);
         for (const drill of registry.getAll().filter(Entity.isDrill)) assert(result.clock_windows[drill.entity_id.id]?.length
-            || (built.busy.includes(drill.entity_id.id) && result.always_on_reasons?.[drill.entity_id.id]?.kind === "busy"), `primitive drill control missing: ${drill.entity_id.id}`);
+            || (built.busy.includes(drill.entity_id.id) && result.always_on_reasons?.[drill.entity_id.id]?.kind === "full-duty-cycle"), `primitive drill control missing: ${drill.entity_id.id}`);
         if (!result.stability_check.as_built?.holds || !result.stability_check.holds) { event.reason = "the as-built check did not hold"; continue; }
         if (result.stability_check.as_built.long_run_proven === undefined) { event.reason = "the as-built long-run check was unavailable"; continue; }
         event.stage = "recovery";

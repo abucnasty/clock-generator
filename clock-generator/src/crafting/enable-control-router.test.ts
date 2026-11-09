@@ -49,9 +49,9 @@ describe("phase 1: the route of each inserter and drill", () => {
         expect(Array.from(classify([]).keys())).toEqual(everything);
     });
 
-    it("left open by the maker: Left busy", () => {
-        const routes = classify(["inserter:3"], { left_open: new Map([["inserter:3", { kind: "busy", window_cycle_ticks: 24 }]]) });
-        expect(routes.get("inserter:3")).toEqual(E.left({ kind: "busy", window_cycle_ticks: 24 }));
+    it("left open by the maker: Left full duty cycle", () => {
+        const routes = classify(["inserter:3"], { left_open: new Map([["inserter:3", { kind: "full-duty-cycle", window_cycle_ticks: 24 }]]) });
+        expect(routes.get("inserter:3")).toEqual(E.left({ kind: "full-duty-cycle", window_cycle_ticks: 24 }));
     });
 
     it("a drill into a chest that nothing can time: Left chest-drill, with its why", () => {
@@ -120,13 +120,13 @@ describe("phase 1: the route of each inserter and drill", () => {
 
     it("takes the first reason known: the maker's before the build's Always on, which comes before a loop and no swing", () => {
         const routes = classify(["inserter:1", "inserter:2"], {
-            left_open: new Map([["inserter:1", { kind: "busy", window_cycle_ticks: 24 }]]),
+            left_open: new Map([["inserter:1", { kind: "full-duty-cycle", window_cycle_ticks: 24 }]]),
             override: new Set(["inserter:1", "inserter:2"]),
             swung: new Set(),
         });
-        expect(routes.get("inserter:1")).toEqual(E.left({ kind: "busy", window_cycle_ticks: 24 }));
+        expect(routes.get("inserter:1")).toEqual(E.left({ kind: "full-duty-cycle", window_cycle_ticks: 24 }));
         expect(routes.get("inserter:2")).toEqual(E.left({ kind: "override" }));
-        expect(alwaysOnReasonsOf(routes)).toEqual({ "inserter:1": { kind: "busy", window_cycle_ticks: 24 }, "inserter:2": { kind: "override" } });
+        expect(alwaysOnReasonsOf(routes)).toEqual({ "inserter:1": { kind: "full-duty-cycle", window_cycle_ticks: 24 }, "inserter:2": { kind: "override" } });
     });
 });
 
@@ -139,7 +139,7 @@ describe("phase 2: the routes of an alternative's clock, read back from its resu
     const result = {
         clock_windows: { "inserter:1": window, "inserter:2": window, "drill:1": window },
         unplanned_inserter_clocks: { "inserter:4": { kind: "fuel" as const, modulus: 600, own_clock: true, window: { start: 0, end: 4 } } },
-        always_on_reasons: { "inserter:3": { kind: "busy" as const, window_cycle_ticks: 24 } },
+        always_on_reasons: { "inserter:3": { kind: "full-duty-cycle" as const, window_cycle_ticks: 24 } },
     };
     const strategy = (routing: ClockStrategy["routing"]): ClockStrategy => routing.router === "direct"
         ? { id: "takt_batches", tuning_method: "calculated", settings: { output_count: { kind: "output_swings", count: 1 }, window_cycle: [], belt_pickups: [] }, output_swings: 1, routing }
@@ -150,7 +150,7 @@ describe("phase 2: the routes of an alternative's clock, read back from its resu
         expect(Object.fromEntries(routes)).toEqual({
             "inserter:1": E.right({ kind: "catalog", id: "takt_batches", tuning_method: "calculated" }),
             "inserter:2": E.right({ kind: "catalog", id: "takt_batches", tuning_method: "calculated" }),
-            "inserter:3": E.left({ kind: "busy", window_cycle_ticks: 24 }),
+            "inserter:3": E.left({ kind: "full-duty-cycle", window_cycle_ticks: 24 }),
             "inserter:4": E.right({ kind: "own_fuel_clock" }),
             "drill:1": E.right({ kind: "catalog", id: "takt_batches", tuning_method: "calculated" }),
         });
@@ -160,7 +160,7 @@ describe("phase 2: the routes of an alternative's clock, read back from its resu
         const routing: ClockStrategy["routing"] = { router: "coordinated_sources", sources: [
             { source: "chest:1", entities: { "inserter:1": { kind: "strategy", id: "round_robin_polling", tuning_method: "calculated" },
                 "inserter:2": { kind: "strategy", id: "takt_batches", tuning_method: "observed" } } },
-            { source: "machine:1", entities: { "inserter:3": { kind: "always_on", reason: { kind: "busy", window_cycle_ticks: 24 } } } },
+            { source: "machine:1", entities: { "inserter:3": { kind: "always_on", reason: { kind: "full-duty-cycle", window_cycle_ticks: 24 } } } },
         ] };
         const routes = entityRoutesOf(registry, result, new Set(), strategy(routing), { id: "euclidean_swings", tuning_method: "calculated" });
         expect(routes.get("inserter:1")).toEqual(E.right({ kind: "catalog", id: "round_robin_polling", tuning_method: "calculated" }));

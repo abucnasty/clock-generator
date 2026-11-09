@@ -34,6 +34,7 @@ export type GlossaryId =
     | 'unclocked_run'
     | 'window-cycle-time'
     | 'enable-window'
+    | 'full-duty-cycle'
     | 'wakeup'
     | 'start-point'
     | 'copies'
@@ -112,6 +113,13 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
         definition: 'The ticks of the window cycle in which the clock makes the Enable if condition of an inserter true. '
             + 'The inserter is then switched on. A stretch that runs over the end of the window cycle is one enable window.',
         insteadOf: 'wake window, window, clock window, inserter window, enable range',
+    },
+    {
+        id: 'full-duty-cycle',
+        term: 'full duty cycle',
+        definition: 'An inserter or drill whose swings take the whole window cycle, or all of it but its window\'s offset. Its '
+            + 'enable windows would have a duty cycle of 1, so the clock leaves it always enabled.',
+        insteadOf: 'busy',
     },
     {
         id: 'wakeup',

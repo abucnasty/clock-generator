@@ -226,6 +226,11 @@ Control theory: pulse-width modulation (Wikipedia); Janert's split-time controll
 The share of the window cycle during which the clock enables an inserter: the sum of its enable windows, divided by the
 window cycle time. Not the utilization of a machine group.
 
+**Full duty cycle**:
+An inserter or drill whose swings take the whole window cycle, or all of it but its window's offset. Its enable windows
+would have a duty cycle of 1, so the clock leaves it always enabled.
+_Avoid_: busy
+
 **Oscillation**:
 An unintended swing of the output or of a stock. The PWM pattern of the clock does not cause it: it repeats with a
 different period, or it grows. Control theory: Åström and Murray 1.5; Janert p.42.
