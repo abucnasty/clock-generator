@@ -16,7 +16,7 @@ import { BeltDropMetadata } from "./metadata/animation";
 import { assertSupportedInserterKind, bendRightUpstreamCalibrated, configuredHandSize } from "./metadata/inserter-spec";
 import { DEFAULT_INSERTER_QUALITY, InserterType } from "./metadata/inserter-type";
 import { machineRecipeSelection } from "../machine/machine";
-import { isDeadEnd, LaneFacts, LaneFactsOfBuild } from "../traits/lane-facts";
+import { LaneFacts, LaneFactsOfBuild } from "../traits/lane-facts";
 
 export interface InserterTarget {
     item_names: Set<ItemName>;
@@ -42,11 +42,6 @@ export interface Inserter extends Entity {
      * pickup stock is. Belt availability is independent of geometry; absent only for non-belt sources.
      */
     belt_lane_facts?: readonly [LaneFacts, LaneFacts];
-    /**
-     * The lanes as a whole, for a reader that has no lane in reach: "backed_up" when every lane ends in a dead end.
-     * Set from `belt_lane_facts`, which a reader that has a lane asks instead.
-     */
-    belt_supply?: "moving" | "backed_up";
     /** Physical input lane to try first, including when both lanes carry the same item. */
     near_lane?: 1 | 2;
 }
@@ -225,7 +220,6 @@ export class InserterFactory {
             inserter.pickup_length = source.pickup_length ?? pickupLengthForLayout(inserter.pickup_layout);
             const lane_facts: readonly [LaneFacts, LaneFacts] = [this.lane_facts.of(source.id, 1), this.lane_facts.of(source.id, 2)];
             inserter.belt_lane_facts = lane_facts;
-            inserter.belt_supply = lane_facts.every(isDeadEnd) ? "backed_up" : "moving";
         }
 
         if (drop_spot !== undefined) {

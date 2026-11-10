@@ -7,6 +7,7 @@ import { outputPerWindowCycle, recipesMaking } from "../harness/recording-output
 import { SimulationContext } from "./sequence/simulation-context";
 import { AlwaysEnabledControl } from "../simulation/controls/enable-control";
 import { EntityState } from "../state";
+import { isDeadEnd } from "../entities/traits/lane-facts";
 
 const SAMPLE = GameFixturePaths.DIFFERENT_ITEMS_CONFIG;
 // The old default from 0.17.0: measured at 480–528 instead of 528 per window cycle on both moving underground endpoints.
@@ -60,6 +61,6 @@ describe("moving pickup affects the verdict of the old default clock", () => {
         expect(outputCounts(omitted)).toEqual(outputCounts(straight));
         const input = SimulationContext.fromConfig(omitted).inserters.find(i => i.inserter_state.inserter.source.entity_id.type === "belt")!;
         expect(input.inserter_state.inserter.pickup_length).toBe(1);
-        expect(input.inserter_state.inserter.belt_supply).toBe("moving");
+        expect(input.inserter_state.inserter.belt_lane_facts!.every(isDeadEnd)).toBe(false);
     });
 });

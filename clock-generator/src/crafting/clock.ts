@@ -5,6 +5,7 @@ import { pickupLaneLength } from "../common/belt-pickup-layout";
 import { backpressureHandGrabTicks } from "../state/backpressure-pickup-lane";
 import { CIRCUIT_LATENCY_TICKS } from "../common/rule-constants";
 import { stacksOf } from "../entities/traits/timing";
+import { isDeadEnd } from "../entities/traits/lane-facts";
 
 
 
@@ -78,7 +79,8 @@ export function fuelHandRoomTicks(entity_registry: ReadableEntityRegistry): Map<
 export function backpressureHandTicks(entity_registry: ReadableEntityRegistry): Map<string, number> {
     const hand_ticks = new Map<string, number>();
     for (const entity of entity_registry.getAll()) {
-        if (!Entity.isInserter(entity) || entity.belt_supply !== "backed_up") {
+        // a hand waits at rest only where every lane it may take from ends in a dead end
+        if (!Entity.isInserter(entity) || entity.belt_lane_facts?.every(isDeadEnd) !== true) {
             continue;
         }
         const source = entity_registry.getEntityByIdOrThrow(entity.source.entity_id);

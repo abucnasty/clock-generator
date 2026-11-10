@@ -7,6 +7,7 @@ import { SimulationContext } from "../../crafting/sequence/simulation-context";
 import { EntityState } from "../../state";
 import { BeltHandPickup } from "./belt-hand-pickup";
 import { bindHandPorts } from "./hand-ports";
+import { isDeadEnd } from "../../entities/traits/lane-facts";
 
 let sample: Config;
 beforeAll(async () => { sample = await loadConfigFromFile(GameFixturePaths.SAME_ITEM_CONFIG); });
@@ -43,7 +44,7 @@ describe("physical belt lane fallback", () => {
         if (source.type !== "belt") throw new Error("expected belt input");
         source.near_lane = preferred;
         const input = pickup(config);
-        expect(input.state.inserter.belt_supply).toBe("backed_up");
+        expect(input.state.inserter.belt_lane_facts!.every(isDeadEnd)).toBe(true);
         expect([0, 1, 2, 3].map(input.take)).toEqual([4, 4, 4, 4]);
         expect(input.state.held_item).toEqual({ item_name: "accumulator", quantity: 16 });
     });
@@ -55,7 +56,7 @@ describe("physical belt lane fallback", () => {
         if (source.type !== "belt") throw new Error("expected belt input");
         source.near_lane = preferred;
         const input = pickup(config);
-        expect(input.state.inserter.belt_supply).toBe("backed_up");
+        expect(input.state.inserter.belt_lane_facts!.every(isDeadEnd)).toBe(true);
         expect(input.state.inserter.pickup_length).toBe(0.5);
         expect([...input.source.lanes[0].pickupIds()].length).toBe(1);
         expect([0, 1, 2, 3].map(input.take)).toEqual([4, 4, 4, 4]);
@@ -179,7 +180,7 @@ describe("physical belt lane fallback", () => {
         config.inserters[1].source = { type: "belt", id: 1, near_lane: 1 };
         const input = pickup(config);
         expect(input.state.inserter.pickup_length).toBe(1);
-        expect(input.state.inserter.belt_supply).toBe("moving");
+        expect(input.state.inserter.belt_lane_facts!.every(isDeadEnd)).toBe(false);
         expect([...input.source.lanes[0].pickupIds()].length).toBe(1);
         expect([0, 1, 2, 3].map(input.take)).toEqual([4, 4, 4, 4]);
     });
@@ -191,7 +192,7 @@ describe("physical belt lane fallback", () => {
             config.inserters[1].source = { type: "belt", id: 1, near_lane: 1, pickup_length: length, pickup_layout: length === 1 ? "side-straight" : "side-entrance" };
             const input = pickup(config);
             expect(input.state.inserter.pickup_length).toBe(length);
-            expect(input.state.inserter.belt_supply).toBe("backed_up");
+            expect(input.state.inserter.belt_lane_facts!.every(isDeadEnd)).toBe(true);
             expect([...input.source.lanes[0].pickupIds()].length).toBe(1);
             expect([0, 1, 2, 3].map(input.take)).toEqual([4, 4, 4, 4]);
         }

@@ -10,6 +10,7 @@ import { recordInFactorio } from "../../../../src/harness/factorio-harness";
 import { GameFixturePaths } from "../../helpers/fixture-paths";
 import { composeProbeSource } from "../../helpers/probe-source";
 import { flipFrontUndergroundInput, swapElectromagneticIngredientFeeds, useAccumulatorsOnBothLanes } from "./belt-pickup-fixtures";
+import { isDeadEnd } from "../../../../src/entities/traits/lane-facts";
 
 interface Sample {
     tick: number;
@@ -120,7 +121,7 @@ for (const speed of BELT_SPEEDS) for (const { label, swapped, sameItem, mirrored
             const input = simulation.inserters.find(i => i.entity_id.number === 2)!.inserter_state;
             expect(input.inserter.near_lane).toBe(preferred);
             expect(input.inserter.pickup_length).toBe(0.5);
-            expect(input.inserter.belt_supply).toBe("backed_up");
+            expect(input.inserter.belt_lane_facts!.every(isDeadEnd)).toBe(true);
             const pickup = bindHandPorts({
                 inserterState: input, sourceState: simulation.state_registry.getStateByEntityIdOrThrow(input.inserter.source.entity_id),
                 sinkState: simulation.state_registry.getStateByEntityIdOrThrow(input.inserter.sink.entity_id),
