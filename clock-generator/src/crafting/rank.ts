@@ -6,7 +6,7 @@ import { BlueprintGenerationResult } from "./plan/unclocked-run";
 
 /**
  * What the selection compares between two alternatives, in this order (see `combineClockAlternativeRuns`), worked out
- * from a clock's assessment, its belt, and the build's deadlock risks by `rankingOf`.
+ * from a clock's assessment and the build's deadlock risks by `rankingOf`.
  */
 export interface ClockRanking {
     /**
@@ -51,13 +51,6 @@ export interface ClockRanking {
      * fails to get back from a loss is nearer to goal 1 than one that drifts from a clean start (GOALS.md, "Wake-ups").
      */
     holds_expected_output: boolean;
-    /**
-     * False when the clock is not made for the belt the config asks for; such a clock is only selected when no other
-     * meets the target rate. It is a clock whose belt-fed inserters go without belt pickup slack though the config
-     * does not say the input belts are backed up: its windows omit the extra margin for late moving pickups. True for every clock when the config says the input belts are backed up (`overrides.backed_up_belts`),
-     * and for a clock with a window cycle that is not a whole number of ticks, which never gets the slack.
-     */
-    matches_belt_choice: boolean;
     /** Null when they were not counted, which ranks after any count */
     wake_ups_per_minute: number | null;
     /**
@@ -102,7 +95,7 @@ export function roundedRateAllowed(rounded: Pick<RoundedClock, "runs_fast" | "wi
     return rounded.within_machines && rounded.runs_fast > 0 && rounded.runs_fast <= ROUNDED_CLOCK_MAX_FAST + 1e-12;
 }
 
-/** How a clock ranks, from its assessment and verdict, the belt it is made for, and the deadlock risks of its build */
+/** How a clock ranks, from its assessment and verdict, and the deadlock risks of its build */
 export function rankingOf(clock: Omit<ClockAlternative, "ranking">, config: Config): ClockRanking {
     const target = config.setpoint.items_per_second;
     const rate_off_target = clock.assessment.items_per_second - target;
@@ -125,8 +118,6 @@ export function rankingOf(clock: Omit<ClockAlternative, "ranking">, config: Conf
         ...(stable_above_target && { stable_above_target }),
         rate_off_target,
         holds_expected_output: clock.verdict !== "unstable",
-        // with backed-up belts every clock goes without the slack, which is the choice
-        matches_belt_choice: config.overrides?.backed_up_belts === true || !clock.result.belt_pickup_slack_left_out,
         wake_ups_per_minute: clock.assessment.wake_ups_per_minute,
         recovery_window_cycles: clock.assessment.disturbance_trial?.recovered_after_window_cycles ?? null,
         window_count: clock.ranking_window_count,
@@ -139,13 +130,12 @@ export function recoveryUntried(assessment: Pick<ClockAssessment, "holds" | "dis
 }
 
 /**
- * A clock the selection can end on as stable: it meets goal 1 at exactly the target rate, its recovery was tried, and
- * it is made for the belt the config asks for. Such a clock comes before every clock that is not (see
+ * A clock the selection can end on as stable: it meets goal 1 at exactly the target rate, and its recovery was tried. Such a clock comes before every clock that is not (see
  * `combineClockAlternativeRuns`), so once one is on offer the selected clock is one of them, whatever else is made. A
  * clock rounded down that meets goal 1 is not one: the searches still look for an exact one.
  */
 export function selectableAsStable(ranking: ClockRanking): boolean {
-    return ranking.meets_target_rate && !ranking.recovery_untried && ranking.runs_fast === undefined && ranking.matches_belt_choice;
+    return ranking.meets_target_rate && !ranking.recovery_untried && ranking.runs_fast === undefined;
 }
 
 /**
@@ -249,14 +239,13 @@ export function rankingWindowCount(
 /**
  * Lists runs in order, skipping duplicates, and selects one. The alternatives that meet the target rate (goal 1) come
  * first: those at exactly the target rate and tried, then those rounded down to whole ticks that run at most 0.1% fast
- * and were tried, then those whose recovery could not be tried; among them those made for the belt the
- * config asks for, so that the count of wake-ups never drops belt pickup slack on its own; then the fewest wake-ups a
+ * and were tried, then those whose recovery could not be tried; then the fewest wake-ups a
  * minute (goal 2); then the fewest window cycles to get back from a loss; then the fewest windows. Of equals the first listed
  * is selected.
  *
  * Where none meets the target rate, those stable above it come first (`stable_above_target`), the nearest to it
  * first: the build then runs at least at what was asked, on a clock that holds and recovers. Where none is either, the
- * one whose rate is nearest to the target comes first, above or below, whatever belt it is made for: the build then
+ * one whose rate is nearest to the target comes first, above or below: the build then
  * runs as near to what was asked as any clock on offer gets it. Of two equally near, the one that holds its expected
  * output from the generator's start comes before one that does not. The rest of the order only parts clocks at the
  * same rate.
@@ -286,7 +275,6 @@ export function combineClockAlternativeRuns<T>(
             // to a thousandth of an item a second, as the wake-ups below
             ranking.meets_target_rate ? 0 : Math.round(Math.abs(ranking.rate_off_target) * 1000),
             ranking.meets_target_rate || ranking.holds_expected_output ? 0 : 1,
-            ranking.matches_belt_choice ? 0 : 1,
             // to a thousandth: less than that is the rounding of a division, not a difference between two clocks
             costKey(ranking),
             // of equals on cost, the one that gets back from a loss sooner

@@ -20,7 +20,6 @@ export const SUMMARY_COPY = {
     recoveryUnavailable: 'Recovery unavailable',
     unstable: 'Does not hold its rate',
     startDependent: 'Depends on how it is started',
-    noBeltSlack: 'No belt slack',
     fewestWakeUps: 'Fewest wakeups',
     fewestDeciders: 'Fewest deciders',
     // the card's tiles
@@ -60,14 +59,12 @@ export const SUMMARY_COPY = {
     differsRate: (rate: string, target: string, counts?: TargetCounts) => `This one ${rateVerbs(counts).third} ${rate}/s, not ${target}/s.`,
     differsMoreWakeUps: (n: number) => `It wakes inserters ${n} more ${n === 1 ? 'time' : 'times'} a minute than the recommended clock.`,
     differsFewerWakeUps: (n: number) => `It wakes inserters ${n} fewer ${n === 1 ? 'time' : 'times'} a minute than the recommended clock.`,
-    differsBelt: 'It has no belt slack.',
     differsNoRecovery: 'It does not go back to its rate after a supply stop or an output blockage.',
     differsUnstable: 'It does not hold its rate.',
     differsNothing: 'It is not the recommended clock.',
     // the compare table
     foldedMakes: (count: number, rate: string, counts?: TargetCounts) => `All ${count} clocks ${rateVerbs(counts).base} ${rate}/s.`,
     worksYes: 'Yes',
-    worksBackedUpBelts: 'No belt slack',
     worksOffTarget: (rate: string) => `Misses the rate (${rate}/s)`,
     worksNoRecovery: 'No recovery',
     worksUnstable: 'Unstable',
@@ -89,8 +86,8 @@ const isOffTarget = (clock: Pick<SummaryClock, 'ranking'>) => Math.abs(clock.ran
 /** Wake-ups as the selection compares them: to a thousandth */
 const wakeUpsKey = (wakeUps: number | null) => wakeUps === null ? null : Math.round(wakeUps * 1000);
 
-/** A clock the chips compare: it meets the target rate (by the selection's rule) and is made for the belt asked for */
-const isContender = (clock: SummaryClock) => clock.ranking.meets_target_rate && clock.ranking.matches_belt_choice;
+/** A clock the chips compare: it meets the target rate (by the selection's rule) */
+const isContender = (clock: SummaryClock) => clock.ranking.meets_target_rate;
 
 /** A chip beside a clock's name: its status, or what it has fewest of */
 export interface ClockBadge {
@@ -100,7 +97,7 @@ export interface ClockBadge {
 
 /**
  * The status chip of a clock, the first that matches: it depends on how it is started; it is off the setpoint (its rate);
- * it has no recovery, or does not hold its rate; it has no belt slack. Null for a clock with none of these.
+ * it has no recovery, or does not hold its rate. Null for a clock with none of these.
  */
 function statusOf(clock: SummaryClock): string | null {
     if (isStartDependent(clock)) return SUMMARY_COPY.startDependent;
@@ -111,7 +108,6 @@ function statusOf(clock: SummaryClock): string | null {
         return recoversOf(clock).kind === 'no' ? SUMMARY_COPY.worksNoRecovery : SUMMARY_COPY.recoveryUnavailable;
     }
     if (clock.verdict === 'unstable') return SUMMARY_COPY.unstable;
-    if (!clock.ranking.matches_belt_choice) return SUMMARY_COPY.noBeltSlack;
     return null;
 }
 
@@ -312,9 +308,6 @@ export function differenceFromRecommended(selected: SummaryClock, recommended: S
             sentences.push(SUMMARY_COPY.differsFewerWakeUps(-more));
         }
     }
-    if (!selected.ranking.matches_belt_choice && recommended.ranking.matches_belt_choice) {
-        sentences.push(SUMMARY_COPY.differsBelt);
-    }
     const selectedRecovery = recoversOf(selected);
     const recommendedRecovery = recoversOf(recommended);
     if (selectedRecovery.kind === 'no' && recommendedRecovery.kind !== 'no') {
@@ -358,9 +351,6 @@ export function worksOf(clock: Pick<SummaryClock, 'verdict' | 'ranking' | 'asses
     }
     if (clock.verdict === 'no recovery') {
         return { kind: 'caution', text: recoversOf(clock).kind === 'no' ? SUMMARY_COPY.worksNoRecovery : SUMMARY_COPY.recoveryUnavailable };
-    }
-    if (!clock.ranking.matches_belt_choice) {
-        return { kind: 'caution', text: SUMMARY_COPY.worksBackedUpBelts };
     }
     return recoversOf(clock).kind === 'not-tested'
         ? { kind: 'caution', text: SUMMARY_COPY.recoveryUnavailable }

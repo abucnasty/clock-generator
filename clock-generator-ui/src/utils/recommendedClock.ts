@@ -79,14 +79,6 @@ export const RECOMMENDED_COPY = {
         ` ${othersText(others, kind)} on wakeups and enable windows, so the first one in the list is shown.`,
     tieKindMoving: ' for a moving belt',
     recoveryDoesNotDecide: ' The recovery trials do not decide on this build.',
-    noneForMovingBelt: (rate: string, deadlock: boolean) => deadlock
-        ? `No clock with belt slack holds ${rate}/s.`
-        : `No clock with belt slack holds ${rate}/s and has recovery.`,
-    backedUpOnly: ' This one, without belt slack, does.',
-    backedUpFewestWakeUps: ' Of those without belt slack, this one has the fewest wakeups.',
-    backedUpWakeUpsNotCounted: ' Of those without belt slack, this one has the fewest enable windows. Wakeups '
-        + 'could not be counted for them.',
-    mayFailOnMovingBelt: ' A pickup that comes late on a moving belt may not finish.',
     noneHolds: (rate: string, deadlock: boolean) => deadlock ? `No clock holds ${rate}/s.` : `No clock holds ${rate}/s and has recovery.`,
     atRateHolds: (rate: string, fewest: boolean) =>
         ` This one holds ${rate}/s from the modeled cold start${fewest ? ' with the fewest wakeups' : ''}.`,
@@ -188,18 +180,9 @@ function reasonOf(alternatives: PickableClock[], pick: PickableClock, rule: Pick
         return nearestReason(alternatives, pick, rate, deadlock);
     }
     const recovery = pick.verdict === 'no recovery' ? RECOMMENDED_COPY.recoveryDoesNotDecide : '';
-    if (!ranking.matches_belt_choice) {
-        // only picked when no clock made for the belt meets the rate, so it beat the others made without the slack
-        const others = alternatives.filter(other => other !== pick && other.ranking.meets_target_rate);
-        const contest = others.length === 0 ? RECOMMENDED_COPY.backedUpOnly
-            : ranking.wake_ups_per_minute === null ? RECOMMENDED_COPY.backedUpWakeUpsNotCounted
-                : RECOMMENDED_COPY.backedUpFewestWakeUps + tieOf(pick, others, '');
-        return RECOMMENDED_COPY.noneForMovingBelt(rate, deadlock) + contest + RECOMMENDED_COPY.mayFailOnMovingBelt + recovery;
-    }
     const moving = isOnMovingBelt(pick, rule);
     const belt = beltWordsOf(pick, rule);
-    const others = alternatives.filter(other => other !== pick
-        && other.ranking.meets_target_rate && other.ranking.matches_belt_choice);
+    const others = alternatives.filter(other => other !== pick && other.ranking.meets_target_rate);
     if (others.length === 0) {
         return RECOMMENDED_COPY.onlyContender(rate, belt, deadlock) + recovery;
     }
@@ -317,17 +300,3 @@ export function partitionClockRows<T extends Pick<ClockAlternativeView, 'id' | '
     };
 }
 
-export interface BeltClockGroups<T> {
-    matches: ClockRow<T>[];
-    requiresChange: ClockRow<T>[];
-}
-
-/** Group eligible, globally indexed rows without changing their order or eligibility. */
-export function groupClockRowsByBelt<T extends Pick<ClockAlternativeView, 'ranking'>>(
-    rows: readonly ClockRow<T>[],
-): BeltClockGroups<T> {
-    return {
-        matches: rows.filter(({ alternative }) => alternative.ranking.matches_belt_choice),
-        requiresChange: rows.filter(({ alternative }) => !alternative.ranking.matches_belt_choice),
-    };
-}

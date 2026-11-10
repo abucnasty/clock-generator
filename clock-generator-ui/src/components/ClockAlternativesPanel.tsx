@@ -36,7 +36,7 @@ import { RecommendedChip } from './RecommendedChip';
 import { HANDS_TEXT } from '../utils/targetCounts';
 import { TermsList } from './TermsPopover';
 import { OUTPUT_PER_WINDOW_CYCLE_HEADER, SIGNALS_HEADER, WAKE_UPS_HEADER, formatNumberText, makesHeader, rateHeader } from '../utils/numberText';
-import { RECOMMENDED_COPY, disclosureRunLine, groupClockRowsByBelt, partitionClockRows, type BeltClockGroups, type ClockRow, type PickRule } from '../utils/recommendedClock';
+import { RECOMMENDED_COPY, disclosureRunLine, partitionClockRows, type ClockRow, type PickRule } from '../utils/recommendedClock';
 
 // fractional (subtick) window cycles are shown to 3 decimals
 /** The header of the column that counts a clock's decider combinators */
@@ -198,8 +198,6 @@ export function ClockAlternativesPanel({
         // under the pointer
         { selectedIndex, recommendedIndex, showUnstable, pinnedIds, recommendedFirst: !isGenerating },
     );
-    const stableBelts: BeltClockGroups<ClockAlternativeView> = groupClockRowsByBelt(stable);
-    const otherBelts: BeltClockGroups<ClockAlternativeView> = groupClockRowsByBelt(unstable);
     const anyHolds = alternatives.some(alternative => alternative.assessment.holds);
     // of the build, so every clock has the same
     const deadlockRisk = alternatives.find(alternative => alternative.deadlockRisk !== null)?.deadlockRisk ?? null;
@@ -407,21 +405,11 @@ export function ClockAlternativesPanel({
                             )}
                         </TableRow>
                     </TableHead>
-                    {(['matches', 'requiresChange'] as const).map(group => {
-                        const stableRows = stableBelts[group];
-                        const otherRows = otherBelts[group];
-                        if (!stableRows.length && !otherRows.length) return null;
-                        const headingId = `${tableId}-belt-${group}`;
-                        return <TableBody key={group} aria-labelledby={headingId}>
-                            <TableRow><TableCell id={headingId} component="th" role="rowheader" scope="rowgroup" colSpan={columnCount}
-                                sx={{ fontWeight: 700, bgcolor: 'background.default' }}>
-                                {group === 'matches' ? 'Matches your belt setting' : SUMMARY_COPY.noBeltSlack}
-                            </TableCell></TableRow>
-                            {stableRows.map(renderRow)}
-                            {stableRows.length > 0 && otherRows.length > 0 && <TableRow><TableCell colSpan={columnCount} sx={{ color: 'text.secondary' }}>{RECOMMENDED_COPY.unstableDivider}</TableCell></TableRow>}
-                            {otherRows.map(renderRow)}
-                        </TableBody>;
-                    })}
+                    {(stable.length > 0 || unstable.length > 0) && <TableBody>
+                        {stable.map(renderRow)}
+                        {stable.length > 0 && unstable.length > 0 && <TableRow><TableCell colSpan={columnCount} sx={{ color: 'text.secondary' }}>{RECOMMENDED_COPY.unstableDivider}</TableCell></TableRow>}
+                        {unstable.map(renderRow)}
+                    </TableBody>}
                     <TableBody>
                         {pending.map(label => (
                             <TableRow key={`pending-${label}`}>

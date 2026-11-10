@@ -11,7 +11,6 @@ const clock = (id: string, ranking: Partial<ClockRanking> = {}): Ranked => ({
     meets_target_rate: true,
     rate_off_target: 0,
     holds_expected_output: true,
-    matches_belt_choice: true,
     wake_ups_per_minute: 100,
     window_count: 10,
     ...ranking,
@@ -60,18 +59,15 @@ describe("combineClockAlternativeRuns", () => {
         ])).toBe("more-windows");
     });
 
-    it("selects a clock that keeps belt pickup slack over one with fewer wake-ups that leaves it out", () => {
-        expect(selectedOf([
-            clock("slack", { wake_ups_per_minute: 80 }),
-            clock("no-slack", { wake_ups_per_minute: 30, matches_belt_choice: false }),
-        ])).toBe("slack");
-    });
-
-    it("selects a clock without belt pickup slack when no clock with it meets the target rate", () => {
-        expect(selectedOf([
-            clock("slack", { meets_target_rate: false }),
-            clock("no-slack", { matches_belt_choice: false }),
-        ])).toBe("no-slack");
+    // the time a pickup from a flowing lane takes is the simulation's, so no clock ranks behind another for the belt it takes from
+    it("gives a clock's ranking no key for the belt its windows take from", () => {
+        const ranking = (verdict: "stable" | "unstable", belt: "moving" | "backed_up") => rankingOf({ verdict, deadlock_risks: [],
+            assessment: { items_per_second: 10, wake_ups_per_minute: 30, holds: verdict === "stable", disturbance_trial: {} },
+            ranking_window_count: 4, belt: { kind: belt } } as unknown as Omit<ClockAlternative, "ranking">,
+            { setpoint: { items_per_second: 10 } } as Config);
+        expect(ranking("stable", "moving")).toEqual(ranking("stable", "backed_up"));
+        expect(Object.keys(ranking("stable", "moving")).sort()).toEqual(["holds_expected_output", "meets_target_rate", "rate_off_target",
+            "recovery_untried", "recovery_window_cycles", "wake_ups_per_minute", "window_count"]);
     });
 
     it("selects the fewest windows among clocks with the same wake-ups, and the first listed among equals", () => {
@@ -101,7 +97,7 @@ describe("combineClockAlternativeRuns", () => {
     it("selects the clock nearest to the target rate when none meets it, whatever its windows and its belt", () => {
         expect(selectedOf([
             clock("fewest-windows", { meets_target_rate: false, rate_off_target: -21.64, window_count: 5 }),
-            clock("nearest", { meets_target_rate: false, rate_off_target: -5.69, window_count: 40, matches_belt_choice: false }),
+            clock("nearest", { meets_target_rate: false, rate_off_target: -5.69, window_count: 40 }),
             clock("between", { meets_target_rate: false, rate_off_target: -8.57, window_count: 60 }),
         ])).toBe("nearest");
     });
@@ -212,7 +208,7 @@ describe("a clock whose recovery could not be tried", () => {
     const ranked = (overrides: Partial<ClockAssessment>, deadlock = false): ClockRanking => {
         const clock_assessment = assessment(overrides);
         return rankingOf({ assessment: clock_assessment, verdict: clockVerdictOf(clock_assessment), ranking_window_count: 4,
-            deadlock_risks: deadlock ? [{}] : [], result: { belt_pickup_slack_left_out: false } } as unknown as Omit<ClockAlternative, "ranking">, config);
+            deadlock_risks: deadlock ? [{}] : [] } as unknown as Omit<ClockAlternative, "ranking">, config);
     };
     const NOT_TRIED = "A clock of 47.537 ticks does not repeat in whole ticks, so its output cannot be counted by the period";
 
@@ -299,7 +295,7 @@ describe("searchesAreNeeded", () => {
     const needed = (clocks: (Ranked | null)[]): boolean =>
         searchesAreNeeded(clocks.map(it => it && { signature: it.id, alternatives: [it] }), it => it);
 
-    it("is not, once a clock made without a search meets the target rate for the belt asked", () => {
+    it("is not, once a clock made without a search meets the target rate", () => {
         expect(needed([clock("unstable", { meets_target_rate: false }), null, clock("stable", { wake_ups_per_minute: 900 })])).toBe(false);
     });
 
@@ -307,10 +303,6 @@ describe("searchesAreNeeded", () => {
         expect(needed([clock("unstable", { meets_target_rate: false }), clock("no-recovery", { meets_target_rate: false })])).toBe(true);
     });
 
-    // military science: its one stable clock leaves belt pickup slack out, on a config that does not say the input belts are backed up
-    it("is, when the only clock that meets the target rate is not made for the belt asked", () => {
-        expect(needed([clock("slack", { meets_target_rate: false }), clock("no-slack", { matches_belt_choice: false })])).toBe(true);
-    });
 
     it("is, when every clock made without a search failed", () => {
         expect(needed([null, null])).toBe(true);

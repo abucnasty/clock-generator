@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { ClockRanking } from 'clock-generator/browser';
 import { belt, build, inserter } from '../test/fixtures';
 import { formDataToConfig } from './configForm/configMapping';
 import * as edits from './configForm/edits';
 import type { ConfigFormData } from './configForm/formData';
-import { BELT_COPY, beltQuestionOf, beltResultsLine, backedUpBeltsFor, otherAnswer, backedUpBeltsHint, withBeltAnswer, type BeltAnswer } from './beltQuestion';
+import { BELT_COPY, beltQuestionOf, beltResultsLine, backedUpBeltsFor, otherAnswer, withBeltAnswer, type BeltAnswer } from './beltQuestion';
 import { configKeyOf, generatedForOf, isStale } from './resultsStaleness';
 
 /** Belt 1 feeds inserter 1, which puts into machine 1 */
@@ -107,35 +106,5 @@ describe('generatedForOf and the belt answer', () => {
         expect(configKeyOf(moving)).not.toBe(configKeyOf(backedUp));
         expect(isStale(generatedForOf(moving), configKeyOf(backedUp))).toBe(true);
         expect(isStale(generatedForOf(moving), configKeyOf(moving))).toBe(false);
-    });
-});
-
-describe('backedUpBeltsHint', () => {
-    /** A clock at the target rate made for a moving belt, with 4 windows, unless told otherwise */
-    const clock = (wake_ups_per_minute: number | null, ranking: Partial<ClockRanking> = {}) => ({
-        ranking: { meets_target_rate: true, rate_off_target: 0, holds_expected_output: true, matches_belt_choice: true, wake_ups_per_minute, window_count: 4, ...ranking },
-    });
-    const backedUp = (wakeUps: number | null, ranking: Partial<ClockRanking> = {}) => clock(wakeUps, { matches_belt_choice: false, ...ranking });
-    const clocks = [clock(177), backedUp(0)];
-
-    it.each([
-        ['says how few wakeups the build may do with on backed-up belts', 177, 0, BELT_COPY.hint(0, 177)],
-        ['prints the numbers rounded, as the table does', 176.6, 3.2, BELT_COPY.hint(3, 177)],
-    ])('%s', (_, pickWakeUps, backedUpWakeUps, hint) => {
-        expect(backedUpBeltsHint([clock(pickWakeUps), backedUp(backedUpWakeUps)], 0, 'moving')).toBe(hint);
-    });
-
-    it.each<[string, ReturnType<typeof clock>[], number | null, BeltAnswer]>([
-        ['on a backed-up belt result', clocks, 0, 'backed_up'],
-        ['with no pick', clocks, null, 'moving'],
-        ['with no clocks', [], 0, 'moving'],
-        ['when the clock for backed-up belts has as many wakeups, to a thousandth', [clock(12), backedUp(12.0004)], 0, 'moving'],
-        ['when the clock for backed-up belts has more wakeups', [clock(12), backedUp(30)], 0, 'moving'],
-        ['when the best clock for backed-up belts does not meet the rate', [clock(177), backedUp(0, { meets_target_rate: false, rate_off_target: -10 })], 0, 'moving'],
-        ['when the pick\'s wakeup count is missing', [clock(null), backedUp(0)], 0, 'moving'],
-        ['when the backed-up clock\'s wakeup count is missing', [clock(177), backedUp(null)], 0, 'moving'],
-        ['when the difference rounds away', [clock(176.7), backedUp(176.6)], 0, 'moving'],
-    ])('says nothing %s', (_, alternatives, pick, used) => {
-        expect(backedUpBeltsHint(alternatives, pick, used)).toBeNull();
     });
 });

@@ -82,7 +82,6 @@ describe("generateClockForConfig", () => {
             expect(alternatives.length).toBeGreaterThan(0);
             expect(alternatives.map(a => a.belt)).toEqual(alternatives.map(() => ({ kind: "backed_up" })));
             expect(alternatives.some(a => a.id.endsWith("_subtick"))).toBe(true);
-            expect(alternatives.every(a => a.ranking.matches_belt_choice)).toBe(true);
             expect(alternatives[0].description).toContain("The belt slack is not given to a clock whose window cycle time is not a whole number of ticks");
         });
     });

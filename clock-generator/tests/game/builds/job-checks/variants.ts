@@ -21,7 +21,6 @@ const agriculturalBackedUp: JobCheck[] = [{
     run: ({ generated }) => {
         const batched = byMaker(generated, 'planned-belt-slack');
         expect(batched.label).toBe('Takt Batches: 5 output swings each output cycle');
-        expect(batched.ranking.matches_belt_choice).toBe(true);
         expect(batched.result.belt_pickup_slack_ticks).toEqual({});
         expect(batched.result.fuel_hand_room_ticks).toEqual({ 'inserter:1': 4, 'inserter:2': 4, 'inserter:11': 4 });
         expect(batched.description).toContain('Inserters 1, 2 and 11 take fuel off the belt as well as an ingredient and stay enabled 4 more ticks');

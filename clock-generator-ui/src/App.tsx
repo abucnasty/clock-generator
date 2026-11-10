@@ -75,7 +75,7 @@ import { configKeyOf, isStale } from './utils/resultsStaleness';
 import { withDeeperSearch } from './utils/deeperSearch';
 import { familyCopyOf, fullClockName } from './utils/strategyNames';
 import { ANNOUNCEMENTS } from './utils/workflowAnnouncement';
-import { BELT_COPY, beltQuestionOf, backedUpBeltsFor, backedUpBeltsHint, withBeltAnswer, type BeltAnswer } from './utils/beltQuestion';
+import { BELT_COPY, beltQuestionOf, backedUpBeltsFor, withBeltAnswer, type BeltAnswer } from './utils/beltQuestion';
 import { PickupGeometrySummary } from './components/PickupGeometrySummary';
 import { PROGRESS_NAMES } from './utils/a11yLabels';
 import { chestLabel, entityLabel } from './utils/entityLabel';
@@ -783,10 +783,6 @@ function App() {
     }, [busy, runChecked, handleBeltAnswer, runSimulation, runDebugSteps, runStreamLogs, setView]);
     // the clocks on screen, read for backed-up belts; nothing while they may still change
     const beltAssumption = generatedFor?.beltQuestion ?? null;
-    const beltHint = useMemo(
-        () => busy || beltAssumption === null ? null : backedUpBeltsHint(alternatives, recommendedIndex, beltAssumption.answer),
-        [busy, beltAssumption, alternatives, recommendedIndex]
-    );
 
     // the actions that throw part of the build away offer Undo, just before they are applied
     const undoable = useMemo(() => {
@@ -1464,7 +1460,7 @@ function App() {
                                 beltAction={beltAssumption?.ask ? (
                                     <BeltAssumptionLine
                                         assumption={beltAssumption}
-                                        hint={beltHint}
+                                        hint={null}
                                         busy={busy}
                                         onSwitch={handleSwitchBelts}
                                     />

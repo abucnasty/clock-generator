@@ -43,7 +43,6 @@ function clock(id: string, options: ClockOptions = {}): SummaryClock {
         meets_target_rate: true,
         rate_off_target: 0,
         holds_expected_output: true,
-        matches_belt_choice: true,
         wake_ups_per_minute: 10,
         window_count: 4,
         ...ranking,
@@ -124,9 +123,6 @@ describe('clockBadges', () => {
             clock('b', { wake_ups_per_minute: 12, window_count: 6, deciders: 4 }),
             clock('c', { wake_ups_per_minute: 15, window_count: 6, deciders: 4 }),
         ], { b: [fewestDeciders], c: [fewestDeciders] }],
-        ['says No belt slack for a clock that does not match the belt, even with the fewest wakeups',
-            [clock('a', { wake_ups_per_minute: 12 }), clock('b', { wake_ups_per_minute: 2, matches_belt_choice: false, beltLabel: 'backed-up' })],
-            { b: [SUMMARY_COPY.noBeltSlack], a: [] }],
         ['says a clock that has no recovery, or does not hold its rate, so', [
             clock('a'),
             clock('b', { verdict: 'no recovery', meets_target_rate: false }),
@@ -319,7 +315,7 @@ describe('differenceFromRecommended', () => {
         ['says the rate first', clock('s', offRate), `${SUMMARY_COPY.differsRate('192', '240')} ${wakes('20 more times')}`],
         // one time, not one times
         ['says one more wakeup', clock('s', { wake_ups_per_minute: 11 }), wakes('1 more time')],
-        ['says fewer wakeups, then the belt', clock('s', { wake_ups_per_minute: 4, matches_belt_choice: false }), `${wakes('6 fewer times')} ${SUMMARY_COPY.differsBelt}`],
+        ['says fewer wakeups', clock('s', { wake_ups_per_minute: 4 }), wakes('6 fewer times')],
         ['says nothing of wakeups that round to the same', clock('s', { wake_ups_per_minute: 10.2 }), SUMMARY_COPY.differsNothing],
         ['says nothing of uncounted wakeups', clock('s', { wake_ups_per_minute: null }), SUMMARY_COPY.differsNothing],
         ['says when it does not recover', clock('s', { verdict: 'no recovery' }), SUMMARY_COPY.differsNoRecovery],
@@ -328,7 +324,7 @@ describe('differenceFromRecommended', () => {
     });
 
     it('keeps to two sentences', () => {
-        const selected = clock('s', { ...offRate, matches_belt_choice: false });
+        const selected = clock('s', { ...offRate, verdict: 'no recovery' });
         expect(differenceFromRecommended(selected, recommended).match(/\./g)?.length).toBe(2);
     });
 });
@@ -364,14 +360,13 @@ describe('foldedMakes', () => {
 describe('worksOf', () => {
     it.each<[string, SummaryClock, ReturnType<typeof worksOf>]>([
         ['says yes for a clock that holds the rate and recovers, made for the belt asked for', clock('a'), { kind: 'yes', text: SUMMARY_COPY.worksYes }],
-        ['says a clock for backed-up belts is only for them', clock('a', { matches_belt_choice: false }), { kind: 'caution', text: SUMMARY_COPY.worksBackedUpBelts }],
         ['names the rate a clock that holds a rate misses, before whether it recovers',
             clock('a', { verdict: 'no recovery', meets_target_rate: false, rate_off_target: -48 }), { kind: 'no', text: SUMMARY_COPY.worksOffTarget('192') }],
         ['calls a clock that does not hold its rate unstable, whatever rate it runs at',
             clock('a', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48 }), { kind: 'no', text: SUMMARY_COPY.worksUnstable }],
         ['calls a clock that does not hold its rate unstable at the target rate too', clock('b', { verdict: 'unstable' }), { kind: 'no', text: SUMMARY_COPY.worksUnstable }],
-        ['says a clock that does not recover so, before its belt',
-            clock('a', { verdict: 'no recovery', matches_belt_choice: false }), { kind: 'caution', text: SUMMARY_COPY.worksNoRecovery }],
+        ['says a clock that does not recover so',
+            clock('a', { verdict: 'no recovery' }), { kind: 'caution', text: SUMMARY_COPY.worksNoRecovery }],
     ])('%s', (_, result, expected) => {
         expect(worksOf(result)).toEqual(expected);
     });

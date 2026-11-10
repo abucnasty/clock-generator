@@ -1,6 +1,4 @@
 import type { Config } from 'clock-generator/browser';
-import type { ClockAlternativeView } from '../worker/types';
-import { recommendedIndexOf } from './recommendedClock';
 
 /** What the player says of the belts their inserters pick up from */
 export type BeltAnswer = 'moving' | 'backed_up';
@@ -27,8 +25,6 @@ export const BELT_COPY = {
     actionMoving: 'My belts are backed up. Generate again',
     resultsBackedUp: 'This run used your Backed up belt setting.',
     actionBackedUp: 'My belts move. Generate again',
-    hint: (backedUp: number, moving: number) =>
-        `Your belts may be backed up. This build may then do with ${backedUp} wakeups a minute, not ${moving}. Fewer is better: each wakeup costs some UPS.`,
 } as const;
 
 /** The parts of a build the question is asked of: the form, or the config a generation ran with */
@@ -84,34 +80,3 @@ export function beltResultsLine(answer: BeltAnswer): { text: string; actionLabel
         : { text: BELT_COPY.resultsBackedUp, actionLabel: BELT_COPY.actionBackedUp, switchTo: otherAnswer(answer) };
 }
 
-/** Wake-ups as the selection compares them: to a thousandth */
-const wakeUpsKey = (wakeUps: number) => Math.round(wakeUps * 1000);
-
-/**
- * On a moving-belt result, what the pick would be on backed-up belts, worked out from the clocks on screen: a
- * run for backed-up belts counts every clock as made for the belt. The sentence only when that clock holds the target rate
- * with fewer wake-ups than the pick. "May": a run for backed-up belts can make its clocks slightly differently.
- */
-export function backedUpBeltsHint(
-    alternatives: Pick<ClockAlternativeView, 'ranking'>[],
-    recommendedIndex: number | null,
-    used: BeltAnswer,
-): string | null {
-    const pick = recommendedIndex === null ? undefined : alternatives[recommendedIndex];
-    if (used !== 'moving' || !pick) {
-        return null;
-    }
-    const backedUpIndex = recommendedIndexOf(alternatives.map(clock => ({ ranking: { ...clock.ranking, matches_belt_choice: true } })));
-    const backedUp = backedUpIndex === null ? undefined : alternatives[backedUpIndex];
-    if (!backedUp || !backedUp.ranking.meets_target_rate) {
-        return null;
-    }
-    const backedUpWakeUps = backedUp.ranking.wake_ups_per_minute;
-    const pickWakeUps = pick.ranking.wake_ups_per_minute;
-    if (backedUpWakeUps === null || pickWakeUps === null || wakeUpsKey(backedUpWakeUps) >= wakeUpsKey(pickWakeUps)) {
-        return null;
-    }
-    // printed as the table prints them; a difference that rounds away is not worth a sentence
-    const [fewer, more] = [Math.round(backedUpWakeUps), Math.round(pickWakeUps)];
-    return fewer < more ? BELT_COPY.hint(fewer, more) : null;
-}

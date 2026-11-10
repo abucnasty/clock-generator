@@ -6,7 +6,7 @@ import { whyNotStableOf, WHY_NOT_STABLE_TITLE } from './whyNotStable';
 function view(overrides: Partial<ClockAlternativeView> = {}): ClockAlternativeView {
     return {
         id: 'swings-1', label: '1 output swing per cycle', verdict: 'unstable',
-        ranking: { meets_target_rate: false, rate_off_target: 0, holds_expected_output: false, matches_belt_choice: true, wake_ups_per_minute: null, window_count: 4 },
+        ranking: { meets_target_rate: false, rate_off_target: 0, holds_expected_output: false, wake_ups_per_minute: null, window_count: 4 },
         assessment: { holds: false, items_per_second: 7.5, wake_ups_per_minute: null, disturbance_trial: null, start_dependence: null },
         belt: { kind: 'moving', slack_ticks: [4] },
         asBuilt: { holds: false, actual_output_items: 176, start_phases_checked: 1, failed_start_offset: 0,
