@@ -156,7 +156,7 @@ export function droppedOntoSharedLanes(config: Config): { belt_id: number; lane:
 
 /**
  * The spacing the check of the shared lanes puts the copies at on each lane they share, where the config does not give
- * `copy_offset`: the copy's length from its positions, or a tile for each taker (`sharedLaneLayoutOf`). Empty where the
+ * `copy_offset`: the copy's length from its positions, or the width of a copy (`sharedLaneLayoutOf`). Empty where the
  * config gives it, or no lane is shared.
  */
 export function assumedCopySpacings(config: Config): { belt_id: number; lane: 1 | 2; tiles: number }[] {

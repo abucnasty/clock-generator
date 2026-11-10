@@ -59,11 +59,26 @@ describe("the lanes the copies share, laid out as rows", () => {
         expect(row.takers.filter(taker => taker.copy === 1).map(taker => taker.edge_tiles)).toEqual([15, 27]);
     });
 
-    it("stands the takers of a config without positions a tile apart, and the copies end to end", () => {
-        const config = rowConfig({ copies: 2 });
-        const [row] = rowsOf({ ...config, inserters: config.inserters.map(({ position: _p, ...inserter }) => inserter) }, { x: 1, y: 0 }).rows;
-        expect(row.takers.map(taker => [taker.copy, taker.inserter_id, taker.edge_tiles])).toEqual([
-            [0, "inserter:1", 2], [0, "inserter:2", 3], [1, "inserter:1", 4], [1, "inserter:2", 5],
+    /** The config without the positions of its inserters, its machines of the prototypes given (none: no prototype) */
+    const unplaced = (config: Config, prototypes: (string | undefined)[] = []): Config => ({ ...config,
+        machines: config.machines.map((machine, index) => prototypes[index] === undefined ? machine : { ...machine, prototype: prototypes[index] }),
+        inserters: config.inserters.map(({ position: _p, ...inserter }) => inserter) });
+    const placed = (config: Config) => rowsOf(config, { x: 1, y: 0 }).rows[0].takers.map(taker => [taker.copy, taker.inserter_id, taker.edge_tiles]);
+
+    it("stands the takers of a config without positions a tile apart, and the copies the longer side of its widest machine apart", () => {
+        // an assembling machine 3 is 3 tiles across, an electromagnetic plant 4
+        expect(placed(unplaced(rowConfig({ copies: 2 }), ["assembling-machine-3", "electromagnetic-plant"]))).toEqual([
+            [0, "inserter:1", 2], [0, "inserter:2", 3], [1, "inserter:1", 6], [1, "inserter:2", 7],
+        ]);
+    });
+
+    it("stands the copies the smallest machine of the game data apart where no machine has a known size, and never under a tile a taker", () => {
+        const config = unplaced(rowConfig({ copies: 2 }));
+        // a stone furnace and a burner mining drill are 2 tiles across
+        expect(placed({ ...config, inserters: config.inserters.slice(0, 1) })).toEqual([[0, "inserter:1", 2], [1, "inserter:1", 4]]);
+        const third = { id: 3, source: { type: "belt" as const, id: 1 }, sink: { type: "machine" as const, id: 2 } };
+        expect(placed({ ...config, inserters: [...config.inserters, third] })).toEqual([
+            [0, "inserter:1", 2], [0, "inserter:2", 3], [0, "inserter:3", 4], [1, "inserter:1", 5], [1, "inserter:2", 6], [1, "inserter:3", 7],
         ]);
     });
 

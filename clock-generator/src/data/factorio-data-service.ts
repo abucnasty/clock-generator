@@ -191,6 +191,11 @@ export class FactorioDataService {
         return typeof spoil_ticks === "number" && spoil_ticks > 0 ? spoil_ticks : null;
     }
 
+    /** Every mining drill prototype of the data, in its order */
+    public static getAllMiningDrills(): MiningDrillSpec[] {
+        return Object.values(this.getData()["mining-drill"]);
+    }
+
     public static getMiningDrillSpec(type: MiningDrillType): MiningDrillSpec {
         const spec = this.getData()["mining-drill"][type];
         assert(spec, `Mining drill spec for type ${type} was not found`);

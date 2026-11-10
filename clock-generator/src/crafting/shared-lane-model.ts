@@ -6,7 +6,8 @@ import { laneFactsOf } from "../entities/traits/lane-facts";
 import { BeltPickupStock } from "../state/belt-pickup-stock";
 import { EntityState } from "../state/entity-state";
 import { SharedLane } from "../state/shared-lane";
-import { ItemName } from "../data";
+import { FactorioDataService, ItemName } from "../data";
+import type { TileSize } from "../data/factorio-data-types";
 import type { InserterArchetype } from "../simulation/archetypes/inserter";
 import type { AfterInsertersTick } from "../simulation/world";
 import { BuildCopies, copyNumberOf } from "./sequence/build-copies";
@@ -73,6 +74,25 @@ export interface SharedLaneLayout {
 /** The lane between the entry and the first reach, in tiles: the entry stands a tile upstream of the row */
 const ENTRY_TILES = 1;
 
+/** The longer side of an entity in tiles: the config does not say which way a machine is turned */
+const longerSide = (size: TileSize) => Math.max(size.tile_width, size.tile_height);
+
+/**
+ * The tiles one copy takes along a belt, for a config that gives no spacing and no positions: the longer side of its
+ * widest machine or drill, as the game data gives their sizes (a machine that names no prototype has no size). A copy
+ * with no machine or drill of known size gets the smallest that the game data has, the nearest that copies can stand.
+ */
+function copyWidthTiles(config: Config): number {
+    const machines = config.machines.flatMap(machine => {
+        const prototype = machine.prototype === undefined ? null : FactorioDataService.findCraftingMachine(machine.prototype);
+        return prototype === null ? [] : [longerSide(prototype)];
+    });
+    const drills = (config.drills?.configs ?? []).map(drill => longerSide(FactorioDataService.getMiningDrillSpec(drill.type)));
+    const known = [...machines, ...drills];
+    if (known.length > 0) return Math.max(...known);
+    return Math.min(...[...FactorioDataService.getAllCraftingMachines(), ...FactorioDataService.getAllMiningDrills()].map(longerSide));
+}
+
 /** Whether an inserter that takes from a belt takes the lane's item, by its filters */
 function takesItem(inserter: Config["inserters"][number], item: string): boolean {
     return inserter.filters === undefined || inserter.filters.length === 0
@@ -118,7 +138,8 @@ function partCopyOf(config: Config, chosen: ReadonlySet<string>, lane_takers: Re
 
 /**
  * The lanes `lanes` names laid out as rows, and the copies a run of them holds: copies stand in a row along every lane
- * they share, `copy_offset` apart, or end to end from the config's positions when it is unset; a part copy
+ * they share, `copy_offset` apart, or end to end from the config's positions when it is unset, else one copy's width
+ * apart; a part copy
  * holds that part of a copy's takers on each lane, rounded up for each taker, with the machines they feed.
  *
  * Where along the lane a taker reaches is its position on the map along the way the lane flows: an inserter at the side
@@ -129,14 +150,16 @@ function partCopyOf(config: Config, chosen: ReadonlySet<string>, lane_takers: Re
  *
  * A lane one copy alone takes from (one per copy, or a build of one copy) holds the takers of the config's copy only.
  *
- * A config without the positions of a lane's takers gets the least spacing: the takers of a copy a tile apart in the
- * config's order, and the copies end to end, unless `copy_offset` says how far apart they stand.
+ * A config without the positions of a lane's takers has the takers of a copy a tile apart in the config's order, and the
+ * copies one copy's width apart (`copyWidthTiles`), unless `copy_offset` says how far apart they stand. The width is
+ * never less than a tile for each taker, so that the takers of two copies never stand on one tile.
  */
 export function sharedLaneLayoutOf(config: Config, lanes: readonly LaidOutLane[]): SharedLaneLayout {
     const offset = config.setpoint.copy_offset;
     const copies = config.setpoint.copies;
     const whole = Math.floor(copies), part = copies - whole;
 
+    const copy_width = offset === undefined ? copyWidthTiles(config) : 0;
     const laid = lanes.flatMap(({ belt_id, lane, flow, shared }) => {
         const belt = config.belts.find(it => it.id === belt_id);
         const item = belt?.lanes[lane - 1]?.ingredient;
@@ -155,9 +178,9 @@ export function sharedLaneLayoutOf(config: Config, lanes: readonly LaidOutLane[]
         const positions = [...config.machines, ...config.inserters, ...(config.chests ?? []), ...(config.drills?.configs ?? [])]
             .flatMap(entity => "position" in entity && entity.position !== undefined ? [along(entity.position)] : []);
         // one copy to the next, along the flow: copy_offset where it is given, else the copy's own length from its
-        // positions, else a tile for each of its takers
+        // positions, else the width of a copy
         const step = offset !== undefined ? Math.abs(along(offset))
-            : positioned ? Math.max(...positions) - Math.min(...positions) + 1 : takers.length;
+            : positioned ? Math.max(...positions) - Math.min(...positions) + 1 : Math.max(copy_width, takers.length);
         assert(step > 0, `The copies on lane ${lane} of belt ${belt_id} need copy_offset along the lane`);
         return [{ belt_id, lane, flow, shared, takers, step, item }];
     });

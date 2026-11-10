@@ -122,6 +122,18 @@ function checkEveryManifestClassHasASection() {
     }
 }
 
+/**
+ * The tiles an entity takes on the map, across and down as it stands unturned: the prototype's `tile_width` and
+ * `tile_height` where it sets them, else its collision box rounded up to whole tiles, as the game works them out
+ */
+function tileSize(prototype) {
+    const [[left, top], [right, bottom]] = prototype.collision_box ?? [[0, 0], [0, 0]];
+    return {
+        tile_width: prototype.tile_width ?? Math.ceil(right - left),
+        tile_height: prototype.tile_height ?? Math.ceil(bottom - top),
+    };
+}
+
 /** Every prototype of a raw section with only the manifest's properties of its class */
 function manifestSection(raw_section, class_name) {
     sectioned_classes.add(class_name);
@@ -215,6 +227,10 @@ function mapRawDataToFilteredFactorioData(rawData) {
     filtered["recipe"] = rawData.recipe;
     sectioned_classes.add("RecipePrototype");
     filtered["mining-drill"] = manifestSection(rawData["mining-drill"], "MiningDrillPrototype");
+    // a drill's tiles on the map (tileSize), after the manifest's fields
+    for (const [name, drill] of Object.entries(filtered["mining-drill"])) {
+        Object.assign(drill, tileSize(rawData["mining-drill"][name]));
+    }
     // the resources whole: a drill carries its resource into the transfer plan a generation hands back, so what is kept
     // of one is part of the results (the engine itself reads its `minable` only)
     filtered["resource"] = rawData.resource;
@@ -288,7 +304,8 @@ function mapRawDataToFilteredFactorioData(rawData) {
     // 1 when the prototype sets none) picks the machine for an older config's type (src/config/migrate-machine-type.ts).
     // A machine that places its results itself into what stands at a spot beside it (the recycler) has that spot as its
     // `vector_to_place_result`, kept where the prototype has one as a pair of numbers. The rocket silo is in
-    // `rocket_silo`. The manifest's other fields follow (the energy source and usage, the modules, the effects).
+    // `rocket_silo`. Its tiles on the map (tileSize) say how much room a copy of a build takes along a belt where the
+    // config gives no spacing. The manifest's other fields follow (the energy source and usage, the modules, the effects).
     filtered["crafting_machine"] = {};
     for (const [category, class_name] of [["assembling-machine", "AssemblingMachinePrototype"], ["furnace", "FurnacePrototype"]]) {
         for (const [name, machine] of Object.entries(rawData[category] ?? {})) {
@@ -303,6 +320,7 @@ function mapRawDataToFilteredFactorioData(rawData) {
                 burner_fuel_categories: fuel_categories,
                 crafting_speed: machine.crafting_speed ?? 1,
                 ...(Array.isArray(machine.vector_to_place_result) && { vector_to_place_result: machine.vector_to_place_result }),
+                ...tileSize(machine),
             }, machine, class_name, ["vector_to_place_result"]);
         }
     }

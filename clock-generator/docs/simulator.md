@@ -282,10 +282,11 @@ The result also lists the spacings of the copies (from the width of a copy for o
 A clock is made on one copy of the build. Where the copies take from the same lane (a lane's `sharing`, default
 `shared_by_copies`), each clock that holds is run once more with every copy built, each with its own machines, chests,
 drills and inserters on the clock of the config's own (`src/crafting/shared-lane-model.ts`). The copies stand in a row,
-`setpoint.copy_offset` apart along each lane they share; without it a copy's length comes from its positions, or a tile
-for each taker, and the result says the spacing it assumed. Each shared lane runs tick by tick with every copy's takers
-on it (`src/state/shared-lane.ts`): stacks come on at the lane's `supply_rate`, move at the belt's speed and leave at its
-end (`lane_end`: a dead end holds them, an outlet takes them at its `outlet_rate`; an unknown end is run both ways). A
+`setpoint.copy_offset` apart along each lane they share. Without it, a copy's length comes from its positions. Without
+positions, its length is the longer side of its widest machine or drill. The result says the spacing it assumed. Each
+shared lane runs tick by tick with every copy's takers on it (`src/state/shared-lane.ts`): stacks come on at the
+lane's `supply_rate`, move at the belt's speed and leave at its end (`lane_end`: a dead end holds them, an outlet
+takes them at its `outlet_rate`; an unknown end is run both ways). A
 part copy holds its share of each shared lane's takers, rounded up for each, the ones furthest upstream, with what their
 machines need. The items on a lane move in the direction of the belt (`flow_direction`). Without it, the check runs
 the items in each direction along the copies. A copy whose taker puts down fewer of the lane's items over the whole
