@@ -1352,7 +1352,8 @@ const COORDINATED_SOURCES_DESCRIPTION = "The inserters of each source use the en
 /**
  * Makes the per-branch clock (candidates/coordinated-sources.ts) from the parts of the runs before it and the clock they recommend
  * (`coordinatedSourcesInputOf`), checked as every alternative is; listed only where it is stable and another clock than those runs'
- * (`assessed_signatures`). Null where there is nothing to compose: it is not a clock that could not be made.
+ * (`assessed_signatures`). A clock made that is not stable is not listed: it goes to `options.on_not_made` with what its check
+ * found, and the task gives null. Null also where there is nothing to compose.
  */
 export function runCoordinatedSourcesTask(
     config: Config,
@@ -1367,8 +1368,22 @@ export function runCoordinatedSourcesTask(
         const run = runAlternativeOf({ id: COORDINATED_SOURCES_MAKER, label: COORDINATED_SOURCES_LABEL, description: COORDINATED_SOURCES_DESCRIPTION, strategy: "coordinated_sources",
             ...(beside_sources !== undefined && { beside_sources }), run: () => coordinatedSourcesClock(config, input, { ...quiet, logger }) }, config, logger, options.on_progress_detail, new Set(assessed_signatures), undefined, undefined, false);
         const listed = run?.alternatives.filter(it => it.verdict === "stable") ?? [];
+        if (run !== null && run.alternatives.length > 0 && listed.length === 0) {
+            options.on_not_made?.({ id: COORDINATED_SOURCES_MAKER, label: COORDINATED_SOURCES_LABEL, reason: notStableReason(run.alternatives) });
+        }
         return run === null || listed.length === 0 ? null : { ...run, alternatives: listed };
     });
+}
+
+/** What the check found of a clock made that is not stable, for its entry in `not_made`: each alternative made, on its window cycle */
+function notStableReason(alternatives: readonly ClockAlternative[]): string {
+    return alternatives.map(({ id, result, assessment }) => {
+        const found = (assessment.holds ? "" : " It does not reach its expected output.")
+            + (assessment.start_dependence !== null && assessment.start_dependence.verdict !== "stable" ? " It does not reach it from every start." : "")
+            + sharedLaneLossNote(assessment.shared_lane_losses ?? [])
+            + (assessment.disturbance_trial?.survives === false ? " It does not get back from a loss." : "");
+        return `${alternatives.length > 1 ? `${id}: m` : "M"}ade on ${Number(result.simulation_duration.ticks.toFixed(3))} ticks and not stable.${found}`;
+    }).join(" ");
 }
 
 /** The signatures of every run and the runs listed after it, for a run that must not make one of their clocks again */
@@ -1490,7 +1505,7 @@ function generateAllAlternatives(config: Config, options: GenerateClockOptions):
         current_step = COORDINATED_SOURCES_LABEL;
         total++;
         report();
-        runs.push(runCoordinatedSourcesTask(config, coordinatedSourcesInputOf(runs, recommended.id), { ...options, on_progress_detail: report }, signaturesOf(runs)));
+        runs.push(runCoordinatedSourcesTask(config, coordinatedSourcesInputOf(runs, recommended.id), { ...options, on_progress_detail: report, on_not_made }, signaturesOf(runs)));
         completed++;
     }
 
@@ -1546,7 +1561,7 @@ function exploredRuns(input: {
     if (isExplored("coordinated_sources") && input.recommended_id !== undefined) {
         report(COORDINATED_SOURCES_LABEL);
         made(COORDINATED_SOURCES_MAKER, runCoordinatedSourcesTask(config, coordinatedSourcesInputOf(input.shipped, input.recommended_id),
-            { ...options, on_progress_detail: report }, shipped_signatures));
+            { ...options, on_progress_detail: report, on_not_made: undefined }, shipped_signatures));
     }
     return { runs, same_as_shipped };
 }

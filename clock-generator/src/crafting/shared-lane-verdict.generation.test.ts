@@ -58,3 +58,16 @@ describe("the logistic science build with its feed lanes stated as dead ends", (
         expect(selected.assessment.shared_lane_losses).toBeUndefined();
     });
 });
+
+// CHEMICAL_SCIENCE_240_SHARED_FOUNDRY: Coordinated Sources is composed on 352 ticks from the clocks made before it, and on
+// the advanced-circuit lane its copies share copy 5 takes half of what one copy alone takes. A clock made that is not stable
+// is not listed; it is in not_made, with what its check found, as a clock no maker could make is.
+describe("a composed clock made and not stable on a lane the copies share", () => {
+    it("is in not_made with what the check found, and not listed", async () => {
+        const generated = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.CHEMICAL_SCIENCE_240_SHARED_FOUNDRY), { logger: quiet });
+        expect(generated.alternatives.some(it => it.maker === "per-branch")).toBe(false);
+        const composed = generated.not_made.find(it => it.id === "per-branch");
+        expect(composed).toMatchObject({ label: "Coordinated Sources" });
+        expect(composed!.reason).toMatch(/^Made on 352 ticks and not stable\. It is not stable on a lane its copies share\. Lane 1 of belt 1 ends in an outlet\. The 5\.5 copies take advanced circuit from it\./);
+    }, 300_000);
+});

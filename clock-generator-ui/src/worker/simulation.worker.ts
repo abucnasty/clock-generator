@@ -493,9 +493,10 @@ function handleTask(
         requireValidConfig(config);
         const notMade: NotMadeClock[] = [];
         // the per-branch clock is made from the parts of the runs before it, not from the context
+        const onNotMade = (clock: NotMadeClock) => notMade.push(clock);
         const run = coordinatedSources !== undefined
-            ? clockGenerator.runCoordinatedSourcesTask(config, coordinatedSources, options, assessedSignatures)
-            : clockGenerator.runClockAlternativeTask(config, context, taskId, { ...options, on_not_made: clock => notMade.push(clock) }, assessedSignatures);
+            ? clockGenerator.runCoordinatedSourcesTask(config, coordinatedSources, { ...options, on_not_made: onNotMade }, assessedSignatures)
+            : clockGenerator.runClockAlternativeTask(config, context, taskId, { ...options, on_not_made: onNotMade }, assessedSignatures);
         return { type: 'task-completed', runId, taskId, run: toRunView(run, config), notMade };
     });
 }
