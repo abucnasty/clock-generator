@@ -93,6 +93,32 @@ describe("the clocks recorded on the inserter build whose copies share flowing o
     it.each(["coordinated_sources", "takt_batches_swings_2", "takt_batches_observed_swings_2", "takt_batches_observed_swings_6"])("holds %s on every copy", id => {
         expect(judged(id)).toMatchObject({ losses: [], simulated: true });
     });
+
+    it("runs takt_batches_swings_6 no longer: its copy 3 is short by more than one hand", () => {
+        const { losses, longer_run } = judged("takt_batches_swings_6");
+        expect(longer_run).toBe(false);
+        expect(losses.some(loss => loss.alone_items - loss.items > 16)).toBe(true);
+    });
+
+    it.each(["coordinated_sources", "takt_batches_swings_2", "takt_batches_observed_swings_2", "takt_batches_observed_swings_6"])("runs %s no longer: no copy is short", id => {
+        expect(judged(id).longer_run).toBe(false);
+    });
+});
+
+// Two clocks the generator made for INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK (Round-Robin Polling with 2 swings on 24
+// ticks, and Coordinated Sources composed on 48): in the run of the three copies, copy 3's ore inserters put each hand down
+// up to 10 ticks after the run of one copy alone, and that lag does not grow. In the judged window cycles copy 3 is short
+// by the one hand still being filled at their end (688 against 704 on 24 ticks; 1,392 against 1,408 and 1,376 against
+// 1,392 on 48): in a run twice as long it is short by no more than that.
+describe("the clocks whose third copy puts its last ore hand down a few ticks after one copy alone", async () => {
+    const config = await loadConfigFromFile(ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK);
+    const clocks: Record<string, { window_cycle_ticks: number; windows: SerializableClockWindows }> =
+        JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "inserter-crafting-240-generated-clocks-copy-3-one-hand-late.json"), "utf8"));
+
+    it.each(["round_robin_polling_swings_2", "coordinated_sources"])("holds %s on every copy, after a run twice as long", id => {
+        expect(judgeSharedLanes(config, clocks[id].windows, clocks[id].window_cycle_ticks, quiet))
+            .toMatchObject({ losses: [], simulated: true, longer_run: true });
+    });
 });
 
 // LOGISTIC_SCIENCE_240 in the game: one row of the build is 11 copies 6 tiles apart, whose feed belt carries transport belts

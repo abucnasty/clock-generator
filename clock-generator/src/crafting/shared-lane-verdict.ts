@@ -3,6 +3,7 @@ import { Logger } from "../common/logger";
 import { OpenRange } from "../data-types";
 import Fraction, { fraction } from "../data-types/fraction";
 import { FactorioDataService } from "../data";
+import { handSizeFor, Inserter } from "../entities";
 import { FlowDirection, LaneEnd, laneFactsOf } from "../entities/traits/lane-facts";
 import { fractionOf } from "../entities/traits/ratio";
 import { SerializableClockWindows } from "./clock";
@@ -28,10 +29,20 @@ import { longRunWindowCyclesOf, runClockOnBuild } from "./trial";
  * verdict, but it skips nothing: on the samples with their input lanes read as dead ends it said every lane refills in
  * time for clocks under which the model has a copy lose swings, so it proves nothing yet. It never fails a clock alone.
  *
- * Each copy's takers are judged over the whole window cycles of the clock in the second half of a long run: a taker that
- * puts down fewer items of the lane's item than the same inserter does in a run of one copy alone, with a stock of each
- * lane of its own, loses swings. What each copy's taker got is read through one function, `copyLaneTakes`, and nowhere
- * else.
+ * Each copy's takers are judged over the whole window cycles of the clock in the second half of a long run, against the
+ * same inserter in a run of one copy alone, with a stock of each lane of its own. A taker that puts down fewer items of the
+ * lane's item there is short; a shortfall is a loss only when it grows with the run length. A copy whose hands come a few
+ * ticks after those of the copy alone has one hand unfinished at the end of the judged span: that is a lag, not a loss.
+ * Measured on the inserter build of three copies (INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK): a clock the game holds is
+ * short by one hand or none at 1, 2 and 4 times the run (16, 0 and 16 items); a clock the game fails is short by 1,024,
+ * 2,000 and 3,920. So:
+ * - no taker short: no loss, and no other run;
+ * - a taker short by more than one hand of its own for the lane's item, which the end of the span does not make: a loss,
+ *   and no other run;
+ * - every taker short by at most one hand: the runs with a shortfall are made again for twice the window cycles, and a
+ *   taker whose shortfall there is larger than in the first run is a loss.
+ * A drift too slow to grow by a hand from one run to the other passes. What each copy's taker got is read through one
+ * function, `copyLaneTakes`, and nowhere else.
  */
 
 /** What one taker of one copy put down of a lane's item in a run of the copies on their shared lanes */
@@ -100,6 +111,11 @@ export interface SharedLaneJudgement {
     fast_check_passes: boolean;
     /** Whether the model ran */
     simulated: boolean;
+    /**
+     * Whether the copies were run again for twice the window cycles: only where some taker was short in the first run, and
+     * none by more than one hand
+     */
+    longer_run: boolean;
     /** Lanes the model runs, by "belt/lane" */
     lanes: string[];
 }
@@ -307,31 +323,88 @@ const cycleStart = (k: number, window_cycle_ticks: number) => Math.ceil(k * wind
 const itemsIn = (hands: readonly HandDropped[], from: number, to: number) =>
     hands.reduce((sum, hand) => hand.tick >= from && hand.tick < to ? sum + hand.items : sum, 0);
 
+/** What one taker of one copy put down short of the run of one copy, over the judged window cycles of one run of the copies */
+interface Shortfall {
+    /** The taker on its lane: belt, lane, copy and inserter */
+    key: string;
+    /** Items short of the run of one copy */
+    short: number;
+    /** One hand of the taker for the lane's item */
+    hand: number;
+    loss: Omit<SharedLaneLoss, "text">;
+}
+
+/** The run of one copy alone: what each taker put down, the run's last tick, and the hand of each taker for an item */
+interface AloneRun {
+    recorders: Map<string, DropRecorder>;
+    last_tick: number;
+    handOf: (inserter_id: string, item: string) => number;
+}
+
+/** Runs one copy alone, with a stock of each lane of its own, recording the takers named */
+function runAlone(under: Config, taker_ids: readonly string[], windows: Map<string, OpenRange[]>, window_cycle_ticks: number,
+    window_cycles: number, logger: Logger): AloneRun {
+    let recorders = new Map<string, DropRecorder>();
+    let takers = new Map<string, Inserter>();
+    runClockOnBuild({ ...under, overrides: { ...under.overrides, derive_clock_windows: false } }, windows, window_cycle_ticks, logger, {
+        simulate_window_cycles: window_cycles, record_histories: false, factorio_states: false,
+        on_context: context => {
+            recorders = recordInserters(context, taker_ids);
+            takers = new Map(context.inserters.filter(it => taker_ids.includes(it.entity_id.id)).map(it => [it.entity_id.id, it.inserter_state.inserter]));
+        },
+    });
+    const last_tick = Math.max(0, ...[...recorders.values()].map(recorder => recorder.last_tick));
+    return { recorders, last_tick, handOf: (inserter_id, item) => handSizeFor(takers.get(inserter_id)!, item) };
+}
+
+/**
+ * The takers of the copies that put down fewer items of their lane's item than the run of one copy alone, over the whole
+ * window cycles of the clock in the second half of both runs
+ */
+function shortfallsOf(under: Config, lanes: readonly ModelLane[], layout: SharedLaneLayout, alone: AloneRun, windows: Map<string, OpenRange[]>,
+    window_cycle_ticks: number, window_cycles: number, logger: Logger): Shortfall[] {
+    const facts = laneFactsOf(under);
+    const { takes, last_tick } = copyLaneTakes(under, windows, window_cycle_ticks, layout, window_cycles, logger);
+    const last = Math.min(alone.last_tick, last_tick);
+    const first_cycle = Math.ceil(last / 2 / window_cycle_ticks), end_cycle = Math.floor((last + 1) / window_cycle_ticks + 1e-9);
+    if (end_cycle <= first_cycle) return [];
+    const from = cycleStart(first_cycle, window_cycle_ticks), to = cycleStart(end_cycle, window_cycle_ticks);
+    return takes.flatMap(take => {
+        const alone_items = itemsIn((alone.recorders.get(take.inserter_id)?.hands ?? []).filter(hand => hand.item === take.item), from, to);
+        const items = itemsIn(take.hands, from, to);
+        if (items >= alone_items) return [];
+        const lane = lanes.find(it => it.belt_id === take.belt_id && it.lane === take.lane)!;
+        const row = layout.rows.find(it => it.belt_id === take.belt_id && it.lane === take.lane)!;
+        const run_as = facts.of(take.belt_id, take.lane).lane_end.kind === "dead_end" ? "dead_end" as const : "outlet" as const;
+        const loss = { belt_id: take.belt_id, lane: take.lane, lane_end: lane.stated.kind, run_as, item: take.item,
+            copies: lane.shared ? under.setpoint.copies : 1, copy: take.copy + 1,
+            inserter_id: Number(take.inserter_id.slice("inserter:".length)), items, alone_items,
+            window_cycles: end_cycle - first_cycle, flow: row.flow };
+        return [{ key: `${take.belt_id}/${take.lane}/${take.copy}/${take.inserter_id}`, short: alone_items - items, hand: alone.handOf(take.inserter_id, take.item), loss }];
+    });
+}
+
 /** Judges a clock on the lanes its copies share (see the module's description) */
 export function judgeSharedLanes(config: Config, clock_windows: SerializableClockWindows, window_cycle_ticks: number, logger: Logger): SharedLaneJudgement {
     const lanes = modelLanesOf(config);
     const keys = lanes.map(lane => `${lane.belt_id}/${lane.lane}`);
-    if (lanes.length === 0) return { losses: [], fast_check_passes: true, simulated: false, lanes: keys };
+    if (lanes.length === 0) return { losses: [], fast_check_passes: true, simulated: false, longer_run: false, lanes: keys };
     const windows = new Map(Object.entries(clock_windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     const window_cycles = longRunWindowCyclesOf(window_cycle_ticks);
     const readings = lanes.some(lane => lane.stated.kind === "unknown" && lane.shared) ? 2 : 1;
-    const losses: SharedLaneLoss[] = [];
+    // the first run of each reading: the run of one copy, and the copies on each layout of the lanes, with their shortfalls
+    const first: { under: Config; taker_ids: string[]; runs: { layout: SharedLaneLayout; shortfalls: Shortfall[] }[] }[] = [];
     let fast_check_passes = true;
     for (let reading = 0; reading < readings; reading++) {
         const under = configUnder(config, lanes, reading);
         const facts = laneFactsOf(under);
-        const layouts = laidOutLanesOf(under, lanes).map(laid => sharedLaneLayoutOf(under, laid));
-        // the run of one copy: what each taker takes and puts down with a stock of each lane of its own
+        // a layout whose rows are those of one run already is not run again: the same rows give the same run
+        const layouts = [...new Map(laidOutLanesOf(under, lanes).map(laid => sharedLaneLayoutOf(under, laid)).map(layout => [JSON.stringify(layout), layout])).values()];
         const taker_ids = [...new Set(layouts[0].rows.flatMap(row => row.takers.map(taker => taker.inserter_id)))];
-        let recorders = new Map<string, DropRecorder>();
-        runClockOnBuild({ ...under, overrides: { ...under.overrides, derive_clock_windows: false } }, windows, window_cycle_ticks, logger, {
-            simulate_window_cycles: window_cycles, record_histories: false, factorio_states: false,
-            on_context: context => { recorders = recordInserters(context, taker_ids); },
-        });
-        const alone_last = Math.max(0, ...[...recorders.values()].map(recorder => recorder.last_tick));
+        const alone = runAlone(under, taker_ids, windows, window_cycle_ticks, window_cycles, logger);
         // the fast check, for each item of each belt: the lanes that carry it, their supply summed
-        const pickups = new Map([...recorders].map(([id, recorder]) => [id, recorder.pickups]));
-        const from_tick = cycleStart(Math.ceil(alone_last / 2 / window_cycle_ticks), window_cycle_ticks);
+        const pickups = new Map([...alone.recorders].map(([id, recorder]) => [id, recorder.pickups]));
+        const from_tick = cycleStart(Math.ceil(alone.last_tick / 2 / window_cycle_ticks), window_cycle_ticks);
         const groups = new Map<string, { rows: LaneRow[]; supply: Fraction; item: string }>();
         for (const row of layouts[0].rows) {
             const item = under.belts.find(belt => belt.id === row.belt_id)!.lanes[row.lane - 1].ingredient;
@@ -341,34 +414,29 @@ export function judgeSharedLanes(config: Config, clock_windows: SerializableCloc
             group.supply = group.supply.add(fractionOf(facts.of(row.belt_id, row.lane).supply_rate));
             groups.set(key, group);
         }
-        fast_check_passes &&= [...groups.values()].every(group => refillsInTime(group.rows, group.supply, pickups, group.item, clock_windows, window_cycle_ticks, from_tick, alone_last));
-        const run_rows = new Set<string>();
-        for (const layout of layouts) {
-            const rows_key = JSON.stringify(layout);
-            if (run_rows.has(rows_key)) continue;
-            run_rows.add(rows_key);
-            const { takes, last_tick } = copyLaneTakes(under, windows, window_cycle_ticks, layout, window_cycles, logger);
-            // whole window cycles of the clock in the second half of both runs
-            const last = Math.min(alone_last, last_tick);
-            const first_cycle = Math.ceil(last / 2 / window_cycle_ticks), end_cycle = Math.floor((last + 1) / window_cycle_ticks + 1e-9);
-            if (end_cycle <= first_cycle) continue;
-            const from = cycleStart(first_cycle, window_cycle_ticks), to = cycleStart(end_cycle, window_cycle_ticks);
-            for (const take of takes) {
-                const alone_items = itemsIn((recorders.get(take.inserter_id)?.hands ?? []).filter(hand => hand.item === take.item), from, to);
-                const items = itemsIn(take.hands, from, to);
-                if (items >= alone_items) continue;
-                const lane = lanes.find(it => it.belt_id === take.belt_id && it.lane === take.lane)!;
-                const row = layout.rows.find(it => it.belt_id === take.belt_id && it.lane === take.lane)!;
-                const run_as = facts.of(take.belt_id, take.lane).lane_end.kind === "dead_end" ? "dead_end" as const : "outlet" as const;
-                const loss = { belt_id: take.belt_id, lane: take.lane, lane_end: lane.stated.kind, run_as, item: take.item,
-                    copies: lane.shared ? under.setpoint.copies : 1, copy: take.copy + 1,
-                    inserter_id: Number(take.inserter_id.slice("inserter:".length)), items, alone_items,
-                    window_cycles: end_cycle - first_cycle, flow: row.flow };
-                losses.push({ ...loss, text: describeSharedLaneLoss(loss) });
+        fast_check_passes &&= [...groups.values()].every(group => refillsInTime(group.rows, group.supply, pickups, group.item, clock_windows, window_cycle_ticks, from_tick, alone.last_tick));
+        first.push({ under, taker_ids, runs: layouts.map(layout => ({ layout, shortfalls: shortfallsOf(under, lanes, layout, alone, windows, window_cycle_ticks, window_cycles, logger) })) });
+    }
+    const shortfalls = first.flatMap(it => it.runs.flatMap(run => run.shortfalls));
+    const judged = (losses: Omit<SharedLaneLoss, "text">[], longer_run: boolean): SharedLaneJudgement => ({
+        // the worst first: the most items short of the run of one copy
+        losses: losses.map(loss => ({ ...loss, text: describeSharedLaneLoss(loss) })).sort((a, b) => (b.alone_items - b.items) - (a.alone_items - a.items)),
+        fast_check_passes, simulated: true, longer_run, lanes: keys,
+    });
+    // no taker short, or one short by more than a hand, which the end of the judged span does not make: judged as it is
+    if (shortfalls.length === 0 || shortfalls.some(it => it.short > it.hand)) return judged(shortfalls.map(it => it.loss), false);
+    // every taker short by at most one hand: the runs with a shortfall again, twice as long, and a loss where it grew
+    const losses: Omit<SharedLaneLoss, "text">[] = [];
+    for (const { under, taker_ids, runs } of first) {
+        const short_runs = runs.filter(run => run.shortfalls.length > 0);
+        if (short_runs.length === 0) continue;
+        const alone = runAlone(under, taker_ids, windows, window_cycle_ticks, 2 * window_cycles, logger);
+        for (const run of short_runs) {
+            const before = new Map(run.shortfalls.map(it => [it.key, it.short]));
+            for (const longer of shortfallsOf(under, lanes, run.layout, alone, windows, window_cycle_ticks, 2 * window_cycles, logger)) {
+                if (longer.short > (before.get(longer.key) ?? 0)) losses.push(longer.loss);
             }
         }
     }
-    // the worst first: the most items short of the run of one copy
-    losses.sort((a, b) => (b.alone_items - b.items) - (a.alone_items - a.items));
-    return { losses, fast_check_passes, simulated: true, lanes: keys };
+    return judged(losses, true);
 }
