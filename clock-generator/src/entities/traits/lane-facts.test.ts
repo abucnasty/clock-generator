@@ -81,12 +81,12 @@ describe("the lane facts a config states", () => {
         expect(sharing).toEqual({ ...today, sharing: "one_per_copy" });
     });
 
-    it.each([[true], [false]])("reads all three facts together, whatever the switch (%s)", backed_up_belts => {
+    it.each([[true], [false]])("reads every fact together, whatever the switch (%s)", backed_up_belts => {
         const facts = laneFactsOf(configOf({
-            belts: stating({ supply_rate: 120.7, lane_end: { kind: "dead_end" }, sharing: "one_per_copy" }), overrides: { backed_up_belts },
+            belts: stating({ supply_rate: 120.7, lane_end: { kind: "dead_end" }, sharing: "one_per_copy", flow_direction: 8 }), overrides: { backed_up_belts },
         }));
         expect(facts.of(1, 1)).toEqual({
-            supply_rate: { numerator: 1207, denominator: 10 }, lane_end: { kind: "dead_end" }, sharing: "one_per_copy",
+            supply_rate: { numerator: 1207, denominator: 10 }, lane_end: { kind: "dead_end" }, sharing: "one_per_copy", flow_direction: { x: 0, y: 1 },
         });
     });
 
