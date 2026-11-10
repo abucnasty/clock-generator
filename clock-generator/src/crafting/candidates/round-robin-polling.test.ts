@@ -366,7 +366,7 @@ describe("takers of one machine that it cannot serve together", () => {
         const science = registry.getEntityByIdOrThrow(EntityId.forMachine(2)) as Machine;
         // 0.41 packs a tick (89.625 / 600 x 2.75); it takes no ingredients from 12 packs, so a turn needs it under 11
         expect(science.output.outputBlock.ingredients_blocked_at).toBe(12);
-        // machine 2's turn opens at 39, its hand out (3) started at 20: 19 ticks, 7.80 packs
+        // a turn of machine 2 that opens at 39 (it opens at 35 in this sample's clock), its hand out (3) started at 20: 19 ticks, 7.80 packs
         expect(heldAtTurn(science, 39, [20], 40)).toBeCloseTo(7.8048, 3);
         expect(roomAtTurn(science, heldAtTurn(science, 39, [20], 40))).toBe(true);
         // left at 0 with machine 1's, the hand out would have started 39 ticks before the turn: 16.02 packs, the plant at its block
