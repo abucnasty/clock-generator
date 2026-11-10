@@ -77,10 +77,12 @@ export { sharedItemDeadlockRisks } from "./crafting/deadlock-risk";
 
 /**
  * 10. A pickup from a belt (docs/simulator.md): the stock the hand reaches on each lane, taken one belt stack a tick at
- * most, from the lane nearest the inserter first. How long a pickup from a moving lane takes is this run's: a window gets
- * no ticks for a late pickup beyond those of the plan. Cases: `simulation/components/belt-hand-pickup.test.ts`.
+ * most, from the lane nearest the inserter first. Cases: `simulation/components/belt-hand-pickup.test.ts`. A window of
+ * an inserter that picks up from a lane that is not a dead end gets room for one more hand: the ticks that hand takes at
+ * one lane stack a tick (docs/wake-ups.md). Cases: `rules-of-the-game.test.ts`.
  */
 export { BeltHandPickup } from "./simulation/components/belt-hand-pickup";
+export { laneHandRoomTicks } from "./crafting/clock";
 
 /**
  * 11. Room for a hand of fuel (GOALS.md "Wake-up Lists"): the ticks one hand of the fuel takes at one belt stack a tick,

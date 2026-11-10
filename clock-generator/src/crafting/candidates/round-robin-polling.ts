@@ -6,6 +6,7 @@ import { SwingDistribution } from "../sequence/cycle/swing-distribution";
 import { BlueprintGenerationResult, GenerateClockOptions, GuardedTaker, UnclockedRun, checkedClock, clockBeltOf, clockOfPlan, fractionalSwingsOf, unclockedRun } from "../plan/unclocked-run";
 import { alwaysEnabledInserters, isByProductOnlyInserter, unplannedInserterClocks, type InserterClock } from "../sequence/unplanned-inserter-clock";
 import { disturbanceTrialVerdictOf, runClockOnBuild } from "../trial";
+import { laneHandRoomTicks } from "../clock";
 import { DropTieBreak, dropTieBreak } from "../../config/drop-spacing";
 import { TurnGroup } from "../turn-groups";
 import type { AlwaysOnReason } from "../enable-control-router";
@@ -318,7 +319,8 @@ export function roundRobinPollingCycles(entity_registry: ReadableEntityRegistry,
  *   takes a hand while it holds less than its insertion limit, so an inserter whose `h` hands a window cycle follow each
  *   other without reaching the limit (`computeMaxSwingsPerSubCycle`) moves them all in one window that opens at the tick
  *   its first hand starts. The window is long enough to start every hand the machine can take, `S` of them, and no
- *   longer: `(S - 1) x cycle + 2` ticks (the last hand starts inside it, and a combinator takes a tick). `S` is `h + 1` where the machine's limit refuses another hand after
+ *   longer: `(S - 1) x cycle + 2` ticks (the last hand starts inside it, and a combinator takes a tick), and the room for
+ *   one more hand more where it picks up from a lane that is not a dead end (laneHandRoomTicks). `S` is `h + 1` where the machine's limit refuses another hand after
  *   `h` (room for at most `h + 1`), and `h` where it would take it (more room than that: another hand is a surplus) and
  *   the surplus guard is on for it: for every such inserter that takes from a machine or a chest (`surplus_guard`), or only
  *   for those the extra start would leave busy all the time (`per_taker_guard`);
@@ -409,6 +411,7 @@ export function roundRobinPollingPlan(
         }
     }
     const inserters = entities.filter(Entity.isInserter).filter(it => !composition?.retained_clocks.has(it.entity_id.id));
+    const lane_hand_room = laneHandRoomTicks(entity_registry);
 
     const outputHands = (inserter: Inserter): number => {
         const transfer = transfers.get(inserter.entity_id.id);
@@ -479,13 +482,14 @@ export function roundRobinPollingPlan(
                 items += hands * hand;
                 items_of.set(item.item_name, (items_of.get(item.item_name) ?? 0) + hands * hand);
             }
+            const room = EntityId.isBelt(source.entity_id) ? lane_hand_room.get(inserter.entity_id.id) ?? 0 : 0;
             const surplus_kept = more_room_than_a_hand_over && !EntityId.isBelt(source.entity_id);
             // per taker, the guard is for a taker the extra start would leave busy all window cycle (`open_all_window_cycle`, below)
-            const busy_with_extra_start = count * cycle + WINDOW_MARGIN_TICKS + INPUT_OFFSET_TICKS >= window_cycle_ticks;
+            const busy_with_extra_start = count * cycle + WINDOW_MARGIN_TICKS + room + INPUT_OFFSET_TICKS >= window_cycle_ticks;
             const guarded = surplus_kept && (options.surplus_guard
                 || (options.per_taker_guard === true && busy_with_extra_start && options.unguarded_sinks?.has(sink.entity_id.id) !== true));
             const starts = guarded ? count : count + 1;
-            takers.push({ inserter, source: source.entity_id, sink: sink.entity_id, items, items_of, window_ticks: (starts - 1) * cycle + WINDOW_MARGIN_TICKS,
+            takers.push({ inserter, source: source.entity_id, sink: sink.entity_id, items, items_of, window_ticks: (starts - 1) * cycle + WINDOW_MARGIN_TICKS + room,
                 ...(guarded && { guarded_hands: count }) });
         } else if (EntityId.isMachine(source.entity_id) && EntityId.isChest(sink.entity_id) && chests_taken_from.has(sink.entity_id.id)) {
             // it takes what the machine made, and the chest takes every hand: one swing more than the hands, and the draw is not tested
@@ -812,8 +816,8 @@ export function finishedClock(
     /** How far the clock-only check goes, and who is given it (see checkedClock); the whole check by default */
     check: Pick<NonNullable<Parameters<typeof checkedClock>[4]>, "through" | "on_as_built"> = {},
 ): BlueprintGenerationResult {
-    // the clock names the belt its windows are made for
-    const exported = clockOfPlan(made, options);
+    // the windows carry the room for one hand themselves (see roundRobinPollingWindows); the clock names the belt they are made for
+    const exported = clockOfPlan(made, { ...options, lane_hand_room: "always" });
     const belt = clockBeltOf(made.config, made.run.simulation_context.entity_registry, windows);
     const named = { ...exported, ...(constructed === undefined ? {} : { random_margins: constructed.random_margins }), belt, turns };
     const result = checkedClock(made, named, windows, { ...options, verify_as_built: true }, { left_open, ...check });

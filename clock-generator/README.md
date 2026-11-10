@@ -486,7 +486,7 @@ The simulator assumes saturated input supply. Moving supply times the stacks wit
 
 Every clock names the belt it is made for:
 
-- **moving**: some input lane of the build is not a dead end. The simulator times each pickup from the stacks the hand reaches on the moving lane. A window gets no extra ticks for a late pickup.
+- **moving**: some input lane of the build is not a dead end. The simulator times each pickup from the stacks the hand reaches on the moving lane. Each window of an inserter that picks up from a lane that is not a dead end gets room for one more hand. The room is the ticks that hand takes at one lane stack a tick (`+4 ticks` for a hand of 16 from stacks of 4).
 - **backed-up belt**: every input lane is a dead end. The belt inserters get the windows they need with backpressure at the pickup.
 
 The belt a clock is made for does not change how it ranks. Set `backed_up_belts: true` (the Belts section's "Backed up" answer in the UI) when your belts are backed up: each input lane that states no `lane_end` is then a dead end. A clock that does not hold the expected output is first made again with room for a hand of fuel: each window of an inserter that takes fuel off the belt as well as an ingredient stays open the ticks a hand of fuel takes to fill (`+4 ticks` for a hand of 16 from stacks of 4), because the fuel slot asks for a hand at any tick, ahead of the hands the window is planned for. Its description names the inserters. A clock that does not hold with the room either, or has no such inserter, is listed as unstable.
