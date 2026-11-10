@@ -32,7 +32,7 @@ of this blueprint, with only the setpoint's rate and copies set and the copies' 
 next, the four input belts moving east, each lane they take from ending in a dead end): no inserter is set to Always enabled, and no
 swing count or LCM is fixed. Generate picks the clock for all twelve inserters. It is a 40-tick clock in which the two
 arms that carry supercapacitors to the science plants take turns (each science plant's drain into its steel buffer moves
-with that plant's turn), 1,820.3 wakeups a minute, no inserter left always on, and it has recovery after every disturbance
+with that plant's turn), 2,004.8 wakeups a minute, no inserter left always on, and it has recovery after every disturbance
 trial that the check tries.
 
 The supercapacitor plants run at 99.56% of their capacity at this rate, so the margin is thin: the clock keeps both

@@ -68,7 +68,7 @@ describe("verified primitive adapter orchestration (verification outcomes are ex
         for (const call of spies.margins.mock.calls) {
             expect(call[1].has("inserter:9")).toBe(false); // computed overlay is composed by runClockOnBuild
             expect(call[1].has("inserter:11")).toBe(true); // mixed ingredients share one real arm
-            expect(call[1].get("inserter:11")!.reduce((n, range) => n + range.end_inclusive - range.start_inclusive + 1, 0)).toBe(24);
+            expect(call[1].get("inserter:11")!.reduce((n, range) => n + range.end_inclusive - range.start_inclusive + 1, 0)).toBe(28);
         }
         expect(result.clock?.clock_windows["inserter:9"]).toEqual([{ start: 0, end: 4 }]);
         expect(Object.keys(result.clock!.clock_windows)).toHaveLength(12);

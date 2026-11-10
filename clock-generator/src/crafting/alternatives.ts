@@ -327,7 +327,7 @@ const BATCHED_SWINGS_DESCRIPTION = "The swing schedule the generator plans for t
 
 /**
  * True when an inserter of the build takes fuel for its machine off a belt as well as an ingredient, and its windows get
- * no room for one more hand (it takes from dead ends only): the room for one hand holds the fuel's hand already
+ * no room for one more hand (a side pickup of an item both lanes carry): the room for one hand holds the fuel's hand already
  */
 function takesFuelOffABelt(config: Config): boolean {
     const registry = createEntityRegistryFromConfig(config);
