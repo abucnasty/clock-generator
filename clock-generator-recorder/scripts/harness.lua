@@ -452,6 +452,52 @@ local function clock_counter(combinators)
     error("the main counter of the clock has no circuit network to read")
 end
 
+---Cut the circuit wires the inserters a clock schedules came with, so the generated clock is the only thing they hear: a wire left
+---from the base (its own clock, or a chain from one scheduled inserter to the next) would join the clock's network to the base's
+---and to the other groups', and each inserter would open on the union of all their signals. Both colours go, and every wire of
+---a connector, including one that ends at another scheduled inserter (which loses it at both ends) or at a pole. An inserter that
+---sets its filters from the circuit keeps its wires: they carry the filters. An inserter that puts its hand on the wire is told
+---to stop: its hand would be a signal on the clock's wire.
+---Every inserter is looked at before any is cut, so the counts of a wire between two scheduled inserters show at both.
+---@param inserters LuaEntity[] the distinct scheduled inserters
+---@return table<uint, {red: uint, green: uint, kept: boolean, hand_read_off: boolean}> by unit number
+local function cut_circuit_wires(inserters)
+    local colours = { red = defines.wire_connector_id.circuit_red, green = defines.wire_connector_id.circuit_green }
+    local cut = {}
+    for _, inserter in ipairs(inserters) do
+        local behavior = inserter.get_control_behavior()
+        local entry = { red = 0, green = 0, kept = false, hand_read_off = false }
+        if behavior and behavior.circuit_set_filters then
+            entry.kept = true
+        end
+        for colour, id in pairs(colours) do
+            local connector = inserter.get_wire_connector(id, false)
+            entry[colour] = connector and connector.connection_count or 0
+        end
+        cut[inserter.unit_number] = entry
+    end
+    for _, inserter in ipairs(inserters) do
+        local entry = cut[inserter.unit_number]
+        if not entry.kept then
+            for _, id in pairs(colours) do
+                local connector = inserter.get_wire_connector(id, false)
+                if connector then
+                    connector.disconnect_all()
+                    if connector.connection_count > 0 then
+                        error("could not cut the circuit wires of inserter " .. inserter.unit_number)
+                    end
+                end
+            end
+            local behavior = inserter.get_control_behavior()
+            if behavior and behavior.circuit_read_hand_contents then
+                behavior.circuit_read_hand_contents = false
+                entry.hand_read_off = true
+            end
+        end
+    end
+    return cut
+end
+
 ---Wire the schedule combinators of a clock already built (build_clock) to the inserters their tags name; nothing of the clock is
 ---built again or changed
 ---@param state table storage.harness
@@ -477,6 +523,30 @@ local function attach_clock(state, combinators, tags, clock)
 
     local report = { wired = {}, wired_drills = {}, not_wired = {}, running_free = {} }
     local wired_units = {}
+
+    -- the inserters the clock schedules lose their wires before any of them is wired to the clock: cut afterwards, the clock's own
+    -- wire would go with the rest
+    local scheduled, scheduled_units = {}, {}
+    for _, combinator in pairs(combinators) do
+        local ids = tags[combinator.unit_number] and tags[combinator.unit_number][INSERTERS_TAG]
+        if ids and not (tags[combinator.unit_number] and tags[combinator.unit_number][DRILLS_TAG]) then
+            for _, id in ipairs(ids) do
+                local units = clock.inserters[tostring(id)]
+                if type(units) ~= "table" then
+                    units = { units or -1 }
+                end
+                for _, unit_number in ipairs(units) do
+                    local inserter = by_unit_number[unit_number]
+                    if inserter and not scheduled_units[unit_number] then
+                        scheduled_units[unit_number] = true
+                        table.insert(scheduled, inserter)
+                    end
+                end
+            end
+        end
+    end
+    local cut = cut_circuit_wires(scheduled)
+
     for _, combinator in pairs(combinators) do
         local ids = tags[combinator.unit_number] and tags[combinator.unit_number][INSERTERS_TAG]
         local drill_ids = tags[combinator.unit_number] and tags[combinator.unit_number][DRILLS_TAG]
@@ -535,7 +605,12 @@ local function attach_clock(state, combinators, tags, clock)
                         behavior.circuit_condition = ANYTHING_POSITIVE
                     end
                     wired_units[inserter.unit_number] = true
-                    table.insert(report.wired, { inserter = id, unit_number = inserter.unit_number })
+                    local had = cut[inserter.unit_number]
+                    local none = { red = 0, green = 0 }
+                    table.insert(report.wired, { inserter = id, unit_number = inserter.unit_number,
+                        wires_cut = had.kept and none or { red = had.red, green = had.green },
+                        wires_kept = had.kept and { red = had.red, green = had.green } or none,
+                        hand_read_off = had.hand_read_off })
                 end
             end
         else
@@ -554,6 +629,8 @@ local function attach_clock(state, combinators, tags, clock)
             table.insert(report.running_free, unit_number)
         end
     end
+    -- the report stays with the recording: the log line the host prints counts the inserters only
+    helpers.write_file("clock-wires.json", helpers.table_to_json(report), false)
     return report
 end
 
