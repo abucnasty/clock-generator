@@ -25,7 +25,7 @@ export interface VerifiedPrimitiveRoundRobinPollingResult {
 /** Only the reviewed default policy: explicit caller alternatives keep their established semantics. */
 export function primitiveRoundRobinPollingOptionsSupported(config: Config, options: GenerateClockOptions): boolean {
     return options.verify_as_built === true && options.shared_windows !== true
-        && options.fuel_hand_room !== true
+        && options.lane_hand_room !== "never" && options.fuel_hand_room !== true
         && config.overrides?.derive_clock_windows !== true && config.overrides?.lcm === undefined
         && config.overrides?.terminal_swing_count === undefined && options.fractional_swings !== true
         && config.setpoint.counts !== "destroyed";

@@ -19,7 +19,7 @@ import { SharedItemDeadlockRisk, sharedItemDeadlockRisks } from "./deadlock-risk
 import { disturbanceTrialInsight, beltPickupNotTestedInsights, chestDrillInsights, ClockInsight, clockInsights, deadlockRiskInsight, dropSpacingInsights, lanesExactlyFullInsights, onePerCopyFeedInsights, assumedCopySpacingInsights, droppedOntoSharedLaneInsights, sideLoadedDropInsights, startDependenceInsight, withWakeUpsFromStarts } from "./insights";
 import { chestDrillFallbackConfig, ChestDrillClock, hasPlannedChestDrill } from "./chest-drill-windows";
 import { chestDrillReasons, EntityRouteError, entityRoutesOf } from "./enable-control-router";
-import { ClockBelt, clockBeltLabel, fuelHandRoomTicks } from "./clock";
+import { ClockBelt, clockBeltLabel, fuelHandRoomTicks, laneHandRoomTicks } from "./clock";
 import { timeDivisionWindowsClock } from "./candidates/time-division-windows";
 import { pitchPickupsClock } from "./candidates/pitch-pickups";
 import { perHandWindowsClock } from "./candidates/round-robin-polling";
@@ -178,7 +178,7 @@ export interface ClockAlternativesPlan {
 }
 
 /** The options Round-Robin Polling with a shorter window cycle is verified with, as the primary alternative's (see primaryDefinition) */
-const SMALL_BATCHES_OPTIONS: GenerateClockOptions = { verify_as_built: true };
+const SMALL_BATCHES_OPTIONS: GenerateClockOptions = { verify_as_built: true, lane_hand_room: "always" };
 
 
 /**
@@ -325,9 +325,14 @@ const BATCHED_SWINGS_DESCRIPTION = "The swing schedule the generator plans for t
     + "inserter waiting on its machine's inventory, and each inserter's enable windows are the ticks it moved items. Swings are "
     + "grouped into batches that match the output cycle.";
 
-/** True when an inserter of the build takes fuel for its machine off a belt as well as an ingredient */
+/**
+ * True when an inserter of the build takes fuel for its machine off a belt as well as an ingredient, and its windows get
+ * no room for one more hand (it takes from dead ends only): the room for one hand holds the fuel's hand already
+ */
 function takesFuelOffABelt(config: Config): boolean {
-    return fuelHandRoomTicks(createEntityRegistryFromConfig(config)).size > 0;
+    const registry = createEntityRegistryFromConfig(config);
+    const lane_hand_room = laneHandRoomTicks(registry);
+    return Array.from(fuelHandRoomTicks(registry).keys()).some(id => !lane_hand_room.has(id));
 }
 
 /**
@@ -358,7 +363,7 @@ function withFuelHandRoomWhereNeeded(
 function primaryDefinition(config: Config, options: GenerateClockOptions, report?: (detail: string) => void): AlternativeDefinition {
     const generate = (belt_config: Config, fuel_hand_room: boolean = false) => generateClockWithSwingBackoff(
         { ...belt_config, overrides: { ...belt_config.overrides, derive_clock_windows: false } },
-        { ...options, verify_as_built: true, fuel_hand_room, on_progress_detail: report });
+        { ...options, verify_as_built: true, lane_hand_room: "always", fuel_hand_room, on_progress_detail: report });
     const result = withFuelHandRoomWhereNeeded(() => generate(config), () => takesFuelOffABelt(config) ? generate(config, true) : undefined);
     if (result.exhaust !== undefined) {
         return { id: RESULTS_IN_TURN_ID, label: nameOf("exhaust"), description: RESULTS_IN_TURN_DESCRIPTION, strategy: "exhaust", run: () => result };
@@ -585,7 +590,7 @@ function alternativeDefinitionsFor(
                 + "and a shift passes.",
             run: () => {
                 // one search at the planned swing count, like uneven output swings
-                const result = phaseShiftedBatchClock(base_config, quiet);
+                const result = phaseShiftedBatchClock(base_config, { ...quiet, lane_hand_room: "always" });
                 assert(result.search?.kind === "shifted cycle" && result.search.picked !== null, `no ${nameOf("phase_shifted_batch")} passes the clock-only check`);
                 return result;
             },
@@ -624,7 +629,7 @@ function alternativeDefinitionsFor(
                 + `surplus. Other inserters keep the enable windows of ${TAKT_BATCHES}.`,
             run: () => {
                 // input windows come from the first planned run whose clock passes, most batched first
-                const full_hand: GenerateClockOptions = quiet;
+                const full_hand: GenerateClockOptions = { ...quiet, lane_hand_room: "always" };
                 if (context.primary_stable) {
                     return generateClockWithSwingBackoff(base_config, full_hand, pitchPickupsClock);
                 }
@@ -1276,8 +1281,11 @@ function planPrimaryAndTasks(
  * add: its first plan starts where the machines' crafts put it, at the primary's own count, whole, with every inserter's
  * hands a cycle whole, so that it is the primary's plan; the primary held on that first plan, with nothing tried after
  * it (no lower count, no window cycle limit, no room for fuel, no loop windows, no chest drill windows to fall back from), so
- * the alternative's run makes the same clock; and its checks are those of the primary's, which planning them with
- * fractional swings does not change. Then its clock is the primary's, and is merged into it.
+ * the alternative's run, which keeps the room for one hand where the clock holds with it, makes the same clock; and its
+ * checks are those of the primary's, which planning them with fractional swings does not change. Then its clock is the
+ * primary's, and is merged into it. Where the primary keeps the room inside its windows (`withHandRoomInside`), the
+ * alternative's run makes the same windows with the room added after them, which the primary beats on wake-ups: it is
+ * left out as well.
  */
 function fractionalMakesThePrimary(config: Config, primary: AlternativeDefinition, result: BlueprintGenerationResult): boolean {
     const start = fractionalStartOf(result.output_cycle_plan)?.toDecimal();

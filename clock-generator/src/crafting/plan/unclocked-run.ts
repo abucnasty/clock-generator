@@ -66,13 +66,13 @@ import { CraftingStatus, drillStatusOf, InserterPhase, inserterStatusOf, machine
 import { factorioInserterState, factorioMachineState } from "../../state/factorio-entity-state";
 import type { TimeStudyWindowsReport } from "../candidates/time-study-windows";
 import type { SearchReport } from "../candidates/search";
-import { ClockBelt, SerializableClockWindows, backpressureHandTicks, fuelHandRoomTicks, subtickClockForWindowCycle, withWindowsAtLeast, withWindowsLengthened } from "../clock";
+import { ClockBelt, SerializableClockWindows, backpressureHandTicks, fuelHandRoomTicks, laneHandRoomTicks, subtickClockForWindowCycle, withWindowsAtLeast, withWindowsLengthened } from "../clock";
 import { ChestDrillClock, chestDrillClockLine, chestDrillWindows } from "../chest-drill-windows";
 import type { TurnGroup } from "../turn-groups";
 import type { SourceControl } from "../strategy-catalog";
 import { AlwaysOnReason, AlwaysOnReasons, alwaysOnReasonsOf, classifyEntities } from "../enable-control-router";
 import { RunMemo, currentRunMemo } from "./run-memo";
-import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, completedAsBuiltCheck, runAsBuiltCheck, runClockOnBuild, trialWithLoopWindows } from "../trial";
+import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, completedAsBuiltCheck, laneHandRoomTrial, runAsBuiltCheck, runClockOnBuild, trialWithLoopWindows } from "../trial";
 
 export { SIMULATION_BUDGET_TICKS };
 
@@ -355,9 +355,17 @@ export interface GenerateClockOptions {
     /** Re-simulate with only the exported clock windows and require that to be stable too (default false) */
     verify_as_built?: boolean;
     /**
+     * The room for one more hand in the windows of an inserter that picks up from a lane that is not a dead end (see
+     * laneHandRoomTicks). "trial" gives it unless the clock-only check holds without it and not with it, or lands further
+     * from the expected output with it (default; it costs a check); "always" gives it; "never" gives none, for windows
+     * that are built as they are; "inside" gives none to the planning run's windows, which stay open the room's ticks
+     * after their last pickup already (`handRoomInsideWindows`). Set by the generator, not by a config.
+     */
+    lane_hand_room?: "trial" | "always" | "never" | "inside";
+    /**
      * Lengthen the windows of an inserter that takes fuel off a belt as well as an ingredient by the fill of a hand of
-     * fuel (see fuelHandRoomTicks). Asked for when a clock does not hold the expected output without it (see
-     * withFuelHandRoomWhereNeeded).
+     * fuel (see fuelHandRoomTicks), where its windows get no room for one more hand. Asked for when a clock does not hold
+     * the expected output without it (see withFuelHandRoomWhereNeeded).
      */
     fuel_hand_room?: boolean;
     /** Also run the exported clock for several window cycles to show the fuel being consumed (default true; internal check runs never do) */
@@ -1523,9 +1531,15 @@ export interface PlannedClock {
     windows: Map<string, OpenRange[]>;
     /** The belt the clock is made for; null when no inserter with windows picks up from a belt */
     belt: ClockBelt | null;
+    /**
+     * The room for one more hand of every inserter that picks up from a lane that is not a dead end (see
+     * laneHandRoomTicks), added after its windows or inside them already, and given to windows made anew from a run of
+     * the build (observed windows); empty when the clock goes without
+     */
+    lane_hand_room: Map<string, number>;
     /** Ticks added to each window of an inserter that takes fuel off a belt as well as an ingredient (see fuelHandRoomTicks) */
     fuel_hand_room: Map<string, number>;
-    /** A clock-only check already run on exactly `windows`, which checkedClock reuses */
+    /** A clock-only check already run on exactly `windows` (by the room's trial), which checkedClock reuses */
     as_built_run: AsBuiltRun | null;
     /** The groups that take turns in the windows, which the blueprint lays its combinators out by; absent where the windows are not in groups */
     turns?: TurnGroup[];
@@ -1534,12 +1548,47 @@ export interface PlannedClock {
 }
 
 /**
- * The windows of the plan with the room a clock gets: room for a hand of fuel where asked for, and on a lane with
- * backpressure as long as a hand takes. How long a pickup from a moving lane takes is the simulation's: the windows get
- * no ticks for it. The belt the clock is made for is read off the config's lanes.
+ * The windows of the plan with the room a clock gets: room for one more hand on a lane that is not a dead end as the
+ * option asks (`lane_hand_room`: the trial keeps it unless the clock-only check gets worse with it, which costs a check),
+ * room for a hand of fuel where asked for, and on a lane with backpressure as long as a hand takes. The belt the clock
+ * is made for is read off the config's lanes.
  */
-export function clockOfPlan(plan: UnclockedRun, options: Pick<GenerateClockOptions, "fuel_hand_room"> = {}): PlannedClock {
+export function clockOfPlan(plan: UnclockedRun, options: Pick<GenerateClockOptions, "lane_hand_room" | "fuel_hand_room"> = {}): PlannedClock {
     return clockOfWindows(plan, plan.unslacked_windows, options);
+}
+
+/**
+ * The room for one more hand of each inserter with windows that picks up from a lane that is not a dead end, where
+ * every one of its windows read off the planning run stays open at least the room's ticks after the last pickup in it
+ * ends: the late hand the room is there for then fills inside the window, and the ticks added after it would only let
+ * the arm, back from its last drop, start a hand the plan does not have. Null where a window does not.
+ *
+ * A belt-fed window ends a rotation before its last hand's arm is back at the belt (`windowsFromHistory`), and the hand
+ * took its last stack a rotation, a drop and a tick before that: the window stays open its rotation, its drop and a tick
+ * after its last pickup, whatever the pickup took. A window none of whose hands start in it holds nothing known.
+ */
+export function handRoomInsideWindows(plan: UnclockedRun): Map<string, number> | null {
+    const { run: { simulation_context: { entity_registry }, final_history }, unslacked_windows } = plan;
+    const room = laneHandRoomTicks(entity_registry);
+    const transfers = new Map(Array.from(final_history.entries(), ([id, it]) => [id.id, it] as const));
+    const inside = new Map<string, number>();
+    for (const [id, ranges] of unslacked_windows) {
+        const ticks = room.get(id) ?? 0;
+        if (ranges.length === 0 || ticks === 0) continue;
+        const inserter = entity_registry.getAll().find(entity => entity.entity_id.id === id);
+        if (inserter === undefined || !Entity.isInserter(inserter)) return null;
+        const rotation = inserter.animation.rotation.ticks, drop = inserter.animation.drop.ticks;
+        const hands = transfers.get(id) ?? [];
+        for (const range of ranges) {
+            const own = hands.filter(hand => hand.pickup_tick_before_run === undefined
+                && hand.tick_range.start_inclusive >= range.start_inclusive && hand.tick_range.start_inclusive <= range.end_inclusive);
+            if (own.length === 0) return null;
+            const last_pickup = Math.max(...own.map(hand => hand.tick_range.end_inclusive - 2 * rotation - drop - 1));
+            if (range.end_inclusive - last_pickup < ticks) return null;
+        }
+        inside.set(id, ticks);
+    }
+    return inside.size > 0 ? inside : null;
 }
 
 /**
@@ -1549,19 +1598,42 @@ export function clockOfPlan(plan: UnclockedRun, options: Pick<GenerateClockOptio
 export function clockOfWindows(
     plan: UnclockedRun,
     unslacked_windows: Map<string, OpenRange[]>,
-    options: Pick<GenerateClockOptions, "fuel_hand_room"> = {},
+    options: Pick<GenerateClockOptions, "lane_hand_room" | "fuel_hand_room"> = {},
 ): PlannedClock {
-    const { config, run: { simulation_context, duration } } = plan;
+    const { config, logger, run: { simulation_context, duration, total_expected_output } } = plan;
+    const full_lane_hand_room = laneHandRoomTicks(simulation_context.entity_registry);
+    const mode = options.lane_hand_room ?? "trial";
+    // the room the planning run's windows hold already, after the last pickup of each: none is added to them
+    const inside = mode === "inside" && unslacked_windows === plan.unslacked_windows ? handRoomInsideWindows(plan) : null;
+    if (mode === "inside" && inside === null) {
+        throw new Error("room for one hand inside the enable windows is only for the unclocked run's enable windows that hold it");
+    }
+    // the room for one hand is as long as the room for a hand of fuel or longer: an inserter that gets it has the fuel's room
     const fuel_hand_room = options.fuel_hand_room && Number.isInteger(duration.ticks)
-        ? new Map(Array.from(fuelHandRoomTicks(simulation_context.entity_registry)).filter(([key]) => (unslacked_windows.get(key)?.length ?? 0) > 0))
+        ? new Map(Array.from(fuelHandRoomTicks(simulation_context.entity_registry))
+            .filter(([key]) => (unslacked_windows.get(key)?.length ?? 0) > 0 && !full_lane_hand_room.has(key)))
         : new Map<string, number>();
-    const belt = clockBeltOf(config, simulation_context.entity_registry, unslacked_windows);
-    // where a lane has backpressure every window of an inserter that takes from it lasts as long as a hand takes from the lanes at rest at the belt's speed
+    // where a lane has backpressure every window of an inserter that takes from it lasts as long as a hand takes from the
+    // lanes at rest at the belt's speed. Such an inserter takes from dead ends only, so it gets no room for one more hand,
+    // and the room is added last.
     const backpressure_hand_ticks = backpressureHandTicks(simulation_context.entity_registry);
-    const windows = withWindowsAtLeast(withWindowsLengthened(unslacked_windows, fuel_hand_room, duration.ticks), backpressure_hand_ticks, duration.ticks);
+    const base_windows = withWindowsAtLeast(withWindowsLengthened(unslacked_windows, fuel_hand_room, duration.ticks), backpressure_hand_ticks, duration.ticks);
+    const trial = mode === "trial"
+        ? laneHandRoomTrial(config, base_windows, full_lane_hand_room, duration.ticks, total_expected_output, logger,
+            fractionalSwingsOf(plan.run.output_cycle_plan))
+        : null;
+    const use_lane_hand_room = mode === "always" || (trial !== null && trial.helps);
+    const added = use_lane_hand_room ? full_lane_hand_room : new Map<string, number>();
+    const belt = clockBeltOf(config, simulation_context.entity_registry, unslacked_windows);
+    // the trial already checked the windows with the room: its run is handed over, with the exact map it ran on
+    const verified = use_lane_hand_room ? trial?.verified ?? null : null;
+    const windows = verified !== null ? verified.windows : withWindowsLengthened(base_windows, added, duration.ticks);
+    // the room the windows have, added after them or inside them already
+    const lane_hand_room = inside ?? added;
     // the windows that carry a result that comes by chance get room for its spread (a target that counts an item destroyed)
     const room = withRoomForRandomAmounts(plan, windows);
-    return { windows: room.windows, belt, fuel_hand_room, as_built_run: null,
+    return { windows: room.windows, belt, lane_hand_room, fuel_hand_room,
+        as_built_run: room.windows === windows ? verified?.run ?? null : null,
         ...(room.random_margins !== undefined && { random_margins: room.random_margins }) };
 }
 
@@ -1864,7 +1936,7 @@ export function checkedClock(
     let loop_windows: BlueprintGenerationResult["loop_windows"];
     let item_names: ReadonlyMap<string, string> | undefined;
     if (options.verify_as_built ?? false) {
-        // the identical check may have run for the slack decision on exactly these windows (see clockOfPlan)
+        // the identical check may have run for the room's trial on exactly these windows (see clockOfPlan)
         const as_built_run = clock.as_built_run !== null && windows === clock.windows ? clock.as_built_run
             : runAsBuiltCheck(config, windows, duration.ticks, logger, AS_BUILT_START_PHASES,
                 (n, total) => options.on_progress_detail?.(`Checking clock-only output, clock start ${n}/${total}`),

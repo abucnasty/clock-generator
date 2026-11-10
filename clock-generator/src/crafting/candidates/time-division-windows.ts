@@ -138,7 +138,7 @@ export function timeDivisionWindowsClock(config: Config, options: GenerateClockO
     const room = withRoomForRandomAmounts(plan, timeDivisionWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks,
         line => plan.logger.log(`Time-Division Windows: ${line}`)));
     const windows = room.windows;
-    const planned = clockOfPlan(plan, options);
+    const planned = clockOfPlan(plan, { ...options, lane_hand_room: "never" });
     const clock = { ...planned, random_margins: room.random_margins };
     const result = checkedClock(plan, clock, windows, { ...options, verify_as_built: true });
     // the planning run's windows are not this clock's: it holds when its own windows hold
