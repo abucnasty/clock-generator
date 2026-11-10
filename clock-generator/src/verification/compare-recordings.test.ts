@@ -14,7 +14,7 @@ import { matchOfSimulatedRecording, recordingOfStock, SIMULATED_TICK_TO_CLOCK_PO
 import { quiet } from "../crafting/generate-blueprint-test-helpers";
 
 /**
- * Automation science on its full-hand output swings clock (the clock selected for it with the belt-choice rule): a belt inserter into one machine
+ * Automation science on its full-hand output swings clock: a belt inserter into one machine
  * and an output inserter onto a belt, on a clock of 72 ticks
  */
 const WINDOW_CYCLES = 60;
