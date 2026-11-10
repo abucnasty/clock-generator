@@ -25,7 +25,7 @@ export interface GhostWindow {
  * Read off the run of the clock (`stock`, with the ghost wakeups of its judged part): an inserter whose last enabled
  * update is in tick c (it shows disabled from c on) and went to sleep in tick s (or took its hand in tick q) needs its
  * last enabled update in tick s - 1 (q - 1), so its window closes c - s + 1 (c - q + 1) ticks earlier. Not for the
- * inserters in `fixed` (the windows of a moving belt's slack, of a loop), for a hand taken before its window opened, or
+ * inserters in `fixed` (the windows with room for a hand of fuel, of a loop), for a hand taken before its window opened, or
  * where the run's switch-offs do not line up with the windows. Null where no window changes.
  */
 export function windowsWithoutGhostWakeUps(
