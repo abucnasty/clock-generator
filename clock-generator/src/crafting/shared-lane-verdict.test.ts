@@ -69,11 +69,10 @@ describe("the clocks recorded on the chemical science build whose copies share d
 });
 
 // #660: INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK in the game, three copies 9 tiles apart on two ore belts that run east into
-// loaders, both lanes of each a free outlet that never stands (recorded), and an electronic-circuit belt whose line ends
-// in a merge into the loader of the output line, which the config cannot state: it is stated a dead end here. The game ran
-// the five clocks with these enable windows (read off the recording, a window cycle of 216 ticks): under Takt Batches with
-// 6 swings copy 3 made about 4,000 of 4,800 a minute, its two ore inserters 82 swings against 99; under the other four
-// every copy made 4,800.
+// loaders, both lanes of each a free outlet that never stands (recorded), and an electronic-circuit belt that ends in a
+// dead end: its last tile faces nothing, and no item leaves it past the last taker (recorded). The game ran the five clocks
+// with these enable windows (read off the recording, a window cycle of 216 ticks): under Takt Batches with 6 swings copy 3
+// made about 4,000 of 4,800 a minute, its two ore inserters 82 swings against 99; under the other four every copy made 4,800.
 describe("the clocks recorded on the inserter build whose copies share flowing ore lanes", async () => {
     const config = withFacts(await loadConfigFromFile(path.join(__dirname, "fixtures", "inserter-crafting-240-3-copies-ore-lines.json")),
         { "2/1": dead_end, "2/2": dead_end });
