@@ -17,6 +17,14 @@
     {
       "vertex": "belt:1/lane:2#nutrients",
       "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:2/lane:1#bioflux",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:2/lane:2#nutrients",
+      "kind": "nothing-drops-on"
     }
   ],
   "groups": [

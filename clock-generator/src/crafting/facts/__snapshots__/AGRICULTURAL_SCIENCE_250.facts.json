@@ -78,6 +78,72 @@
       }
     },
     {
+      "key": "belt:2/lane:1",
+      "kind": "lane",
+      "entity": "belt:2",
+      "lane": {
+        "key": "belt:2/lane:1",
+        "belt": "belt:2",
+        "lane": 1,
+        "listed": true,
+        "item": "bioflux",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "moving",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [
+          {
+            "item": "bioflux",
+            "spoil_ticks": 432000,
+            "quality_affects_spoil_ticks": true,
+            "spoil_result": "spoilage"
+          }
+        ],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "belt:2/lane:2",
+      "kind": "lane",
+      "entity": "belt:2",
+      "lane": {
+        "key": "belt:2/lane:2",
+        "belt": "belt:2",
+        "lane": 2,
+        "listed": true,
+        "item": "nutrients",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "moving",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [
+          {
+            "item": "nutrients",
+            "spoil_ticks": 18000,
+            "quality_affects_spoil_ticks": true,
+            "spoil_result": "spoilage"
+          }
+        ],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
       "key": "machine:1",
       "kind": "machine",
       "entity": "machine:1",
@@ -1509,10 +1575,10 @@
       "entity": "inserter:11",
       "group": "inserter:11",
       "item": "bioflux",
-      "from": "belt:1/lane:1",
+      "from": "belt:2/lane:1",
       "to": "machine:5",
       "from_lanes": [
-        "belt:1/lane:1"
+        "belt:2/lane:1"
       ],
       "lands_in": "ingredients",
       "hand": {
@@ -1567,10 +1633,10 @@
       "entity": "inserter:11",
       "group": "inserter:11",
       "item": "nutrients",
-      "from": "belt:1/lane:2",
+      "from": "belt:2/lane:2",
       "to": "machine:5",
       "from_lanes": [
-        "belt:1/lane:2"
+        "belt:2/lane:2"
       ],
       "lands_in": "fuel",
       "hand": {

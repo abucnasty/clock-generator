@@ -286,13 +286,14 @@ describe('where it runs', () => {
         for (const sample of [ConfigPaths.LDS_240, ConfigPaths.MILITARY_SCIENCE_240, ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK]) {
             expect(laneCapacityIssues(await loadConfigFromFile(sample))).toEqual([]);
         }
-        // agricultural science 250 gives each copy a bioflux lane of its own: shared, its five copies would take 180 of 120
+        // agricultural science 250 gives each copy a bioflux lane of its own on each of its two belts: shared, its five copies
+        // would take 80 of 120 on belt 1 and 100 of 120 on belt 2, so neither is over its supply
         const agricultural = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250);
         expect(sharedLaneSupplyIssues(agricultural)).toEqual([]);
-        const shared = { ...agricultural, belts: agricultural.belts.map(belt => belt.id !== 1 ? belt
-            : { ...belt, lanes: belt.lanes.map(({ sharing: _sharing, ...lane }) => lane) as typeof belt.lanes }) } as Config;
+        const shared = { ...agricultural, belts: agricultural.belts.map(belt => ({ ...belt,
+            lanes: belt.lanes.map(({ sharing: _sharing, ...lane }) => lane) as typeof belt.lanes })) } as Config;
         expect(sharedLaneSupplyIssues(shared).map(issue => [issue.belt_id, issue.lanes, issue.items_per_second * issue.copies, issue.supply_per_second]))
-            .toEqual([[1, [1], 180, 120]]);
+            .toEqual([]);
         expect(laneSharedByCopiesWarning(await loadConfigFromFile(ConfigPaths.ADVANCED_CIRCUIT_240))).toBeNull();
     });
 });
