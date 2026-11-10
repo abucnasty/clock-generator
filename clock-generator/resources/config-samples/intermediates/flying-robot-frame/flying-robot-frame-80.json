@@ -1,8 +1,12 @@
 {
   "setpoint": {
     "recipe": "flying-robot-frame",
-    "items_per_second": 160,
-    "copies": 24
+    "items_per_second": 80,
+    "copies": 12,
+    "copy_offset": {
+      "x": 6,
+      "y": 0
+    }
   },
   "machines": [
     {
@@ -33,7 +37,7 @@
       "source": {
         "type": "belt",
         "id": 2,
-        "near_lane": 1
+        "near_lane": 2
       },
       "sink": {
         "type": "machine",
@@ -50,7 +54,7 @@
       "source": {
         "type": "belt",
         "id": 5,
-        "near_lane": 2
+        "near_lane": 1
       },
       "sink": {
         "type": "machine",
@@ -85,11 +89,17 @@
       "lanes": [
         {
           "ingredient": "steel-plate",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         },
         {
           "ingredient": "electric-engine-unit",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         }
       ]
     },
@@ -99,11 +109,17 @@
       "lanes": [
         {
           "ingredient": "electronic-circuit",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         },
         {
           "ingredient": "battery",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         }
       ]
     }

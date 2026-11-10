@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "FLYING_ROBOT_FRAME_160",
+  "sample": "FLYING_ROBOT_FRAME_80",
   "target": {
     "item": "flying-robot-frame",
     "counts": "made",
@@ -36,10 +36,10 @@
       ],
       "edges": [
         "inserter:1/flying-robot-frame",
-        "inserter:2/steel-plate",
         "inserter:2/electric-engine-unit",
-        "inserter:3/battery",
-        "inserter:3/electronic-circuit"
+        "inserter:2/steel-plate",
+        "inserter:3/electronic-circuit",
+        "inserter:3/battery"
       ],
       "window_cycles": [
         {"swings":1,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":144,"denominator":1},"cycles":2,"window_cycle_ticks":288,"kept":true},

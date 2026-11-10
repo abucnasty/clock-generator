@@ -76,7 +76,7 @@ was recorded in the game for each build, its credit, source and issues are in th
 | ADVANCED_CIRCUIT_230 | `intermediates/advanced-circuit/advanced-circuit-230` | `advanced-circuit` 230/s over 3 copies | Game: the first clock of this sample that holds (found by the one search of 2026-10-11); the only `ignored_lcm_ingredients` case | ADVANCED_CIRCUIT_230 (unchanged) |
 | ADVANCED_CIRCUIT_240 | `intermediates/advanced-circuit/advanced-circuit-240` | `advanced-circuit` 240/s over 3 copies | Game; small-batches fallback variant job (belts backed up); rules-of-the-game and rule-calls | ADVANCED_CIRCUIT (the same build; the key now carries the rate) |
 | ELECTRIC_FURNACE_20 | `intermediates/electric-furnace/electric-furnace-20` | `electric-furnace` 20/s over 2 copies | Game (`scaffold-recordings`, on abucnasty's build); units: stone-brick furnaces fed by drills (utilization, steady-state, wakeups from starts). Origin: the furnace supply of a production science design, rated to fit 120/s of production science (240/s with more copies) | ELECTRIC_FURNACE |
-| FLYING_ROBOT_FRAME_160 | `intermediates/flying-robot-frame/flying-robot-frame-160` | `flying-robot-frame` 160/s over 24 copies | Game (`scaffold-recordings`, on abucnasty's build); output-swings clock-only check (on the lanes before the build's own, set inline: with them the planned clock is unstable); rocket-fuel and feasibility units | FLYING_ROBOT_FRAME |
+| FLYING_ROBOT_FRAME_80 | `intermediates/flying-robot-frame/flying-robot-frame-80` | `flying-robot-frame` 80/s over 12 copies | Game (`scaffold-recordings`, on abucnasty's build of 12 copies on one set of lanes); output-swings clock-only check (on the lanes before the build's own, set inline: with them the planned clock is unstable); rocket-fuel and feasibility units | FLYING_ROBOT_FRAME_160 (the same machine, 24 copies at 160/s, on a one-copy scaffold), and before it FLYING_ROBOT_FRAME |
 | GRENADE_240_FILLS_BELT_EXACTLY | `intermediates/grenade/grenade-240-fills-belt-exactly` | `grenade` 240/s over 7 copies | Purpose: output inserters dropping onto the same lanes of one belt, which the simulator must model so the belt fills exactly. Game: one copy and the full build of 7, hand-made and generated clock; the rule for hands in groups; drop-spacing | REAL_OWNER_GRENADE |
 | INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK | `intermediates/inserter-crafting/inserter-crafting-240-shared-signal-clock` | `inserter` 240/s over 3 copies | Purpose: how the furnaces' inputs are clocked; its hand-made clock shares one signal between several inserters. Game both ways plus its own game test (three copies, hand-made and generated clock); open gaps #586 and G2 | LOGISTIC_SCIENCE_INSERTER_CRAFTING |
 | LDS_240 | `intermediates/lds/lds-240` | `low-density-structure` 240/s over 1 copy | Game: recommended clock with 6 output swings; start-hands and cold-start units | LOW_DENSITY_STRUCTURE |
@@ -106,10 +106,12 @@ No build is left on the list.
 
 Not on the list any more: **LOGISTIC_SCIENCE_240** (2026-11-04). Its scaffold is abucnasty's whole build, 22 assemblers, not one copy;
 the test names the copies (`copies: 22`).
+The scaffold of **FLYING_ROBOT_FRAME_80** (2026-11-09) is also a whole build and not one copy: 12 assemblers. The test names
+the copies (`copies: 12`).
 
 Also not on the list any more (2026-11-04, abucnasty's builds): **ROCKET_FUEL_60** and **STONE_BRICK_120_DRILL_DIRECT_INSERT**, each with
 abucnasty's scaffold and a game check of the recommended clock; and (2026-11-05) **PRODUCTION_SCIENCE_120_TWO_BELTS**, **PROCESSING_UNIT_15_CHEST_FED**,
-**MILITARY_SCIENCE_120**, **FLYING_ROBOT_FRAME_160** and **ELECTRIC_FURNACE_20**, all five in `test:game` holding their target;
+**MILITARY_SCIENCE_120**, **FLYING_ROBOT_FRAME_160** (now FLYING_ROBOT_FRAME_80) and **ELECTRIC_FURNACE_20**, all five in `test:game` holding their target;
 PROCESSING_UNIT_15_CHEST_FED since 0.27.2, when the simulator took the infinity chest's items in the game's order (see its README, #617).
 
 ## Disturbance trials

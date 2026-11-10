@@ -57,7 +57,7 @@ describe("the main-period choices of a build", () => {
     });
 
     it("an alternative's count whose cycle the cycle plan refuses is listed with its reason, as its run fails today", async () => {
-        const { plan } = await planOfSample(ConfigPaths.FLYING_ROBOT_FRAME_160);
+        const { plan } = await planOfSample(ConfigPaths.FLYING_ROBOT_FRAME_80);
         const fractional = plan.groups[0].window_cycles.find(choice => choice.listed_as === "fractional")!;
         expect(fractional).toMatchObject({ swings: null, fractional: true, pruned: { rule: "cycle-refused" } });
         expect("pruned" in fractional && fractional.pruned.rule === "cycle-refused" && fractional.pruned.terms.reason)

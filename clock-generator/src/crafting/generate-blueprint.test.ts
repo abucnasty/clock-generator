@@ -241,7 +241,7 @@ describe("generateClockForConfig", () => {
 
     describe("validateConfig", () => {
         it("returns the transfer plan a generation uses, without generating", async () => {
-            const config = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME_160);
+            const config = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME_80);
             const validation = validateConfig(config);
             const generated = generateClockForConfig(config);
 
@@ -265,7 +265,7 @@ describe("generateClockForConfig", () => {
         });
 
         it("uses the forced output swings and LCM of the config", async () => {
-            const config = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME_160);
+            const config = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME_80);
             const validation = validateConfig({ ...config, overrides: { ...config.overrides, terminal_swing_count: 2 } });
             expect(validation).toMatchObject({ output_swings_per_cycle: 2, cycle_ticks: 288 });
         });
@@ -276,11 +276,11 @@ describe("generateClockForConfig", () => {
         });
 
         it("throws when the machines cannot reach the target rate: the feasibility pass first, the planner's assert behind it", async () => {
-            const config = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME_160);
-            const over = { ...config, setpoint: { ...config.setpoint, items_per_second: 1600 } };
+            const config = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME_80);
+            const over = { ...config, setpoint: { ...config.setpoint, items_per_second: 800 } };
             expect(() => validateConfig(over)).toThrow(FeasibilityError);
-            // the figures are for one of the 24 copies, and the message says so: 1600 / 24 = 66.67 frames a second a copy
-            expect(() => validateConfig(over)).toThrow("No clock can hold this build's setpoint of 1600 a second over 24 copies (every figure here is "
+            // the figures are for one of the 12 copies, and the message says so: 800 / 12 = 66.67 frames a second a copy
+            expect(() => validateConfig(over)).toThrow("No clock can hold this build's setpoint of 800 a second over 12 copies (every figure here is "
                 + "for one copy): Machine 1 (flying robot frame) crafts at most 3.44 a second. The target needs 33.33 crafts a second of it (66.67 a "
                 + "second of flying robot frame at 2 a craft).");
             const quiet = { log: () => { }, warn: () => { }, error: () => { }, debug: () => { } };

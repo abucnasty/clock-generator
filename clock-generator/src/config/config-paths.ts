@@ -40,7 +40,7 @@ export const ConfigPaths = {
     /** Two foundries casting gears and copper onto one belt, which feeds an assembler making the packs */
     AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER: path.join(CONFIG_SAMPLES_DIR, 'science', 'automation', 'automation-120-foundries-feed-belt-to-assembler.json'),
     PRODUCTION_SCIENCE_120_TWO_BELTS: path.join(CONFIG_SAMPLES_DIR, 'science', 'production', 'production-120-two-belts.json'),
-    FLYING_ROBOT_FRAME_160: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'flying-robot-frame', 'flying-robot-frame-160.json'),
+    FLYING_ROBOT_FRAME_80: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'flying-robot-frame', 'flying-robot-frame-80.json'),
     LOGISTIC_SCIENCE_240_DIRECT_INSERT: path.join(CONFIG_SAMPLES_DIR, 'science', 'logistic', 'logistic-240-direct-insert.json'),
     ROCKET_FUEL_60: path.join(CONFIG_SAMPLES_DIR, 'gleba', 'rocket-fuel', 'rocket-fuel-60.json'),
     AGRICULTURAL_SCIENCE_250: path.join(CONFIG_SAMPLES_DIR, 'science', 'agricultural', 'agricultural-250.json'),

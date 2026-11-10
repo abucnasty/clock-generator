@@ -453,14 +453,18 @@ const BUILDS: Record<string, ScaffoldBuild> = {
             + "(inserters 4 and 6) are not woken in the game, which leaves 22.5 a minute of each uncounted as an arm away, and 45.3 a minute "
             + "each in the simulator; the other four inserters count 22.5 against 22.6 (2026-11-05), with the production the same",
     },
-    // The owner's flying robot frame build (2026-11-05): one assembler (legendary, 68.8906) taking engine units and steel from one
-    // backed-up turbo belt and batteries and circuits from another, four infinity chests in all; the frames go onto a moving belt
-    // into a void chest. 6.67 a second from one copy, 160 over twenty-four.
-    "flying robot frames": {
-        scaffold: path.join(SAMPLES, "intermediates", "flying-robot-frame", "flying-robot-frame-160.scaffold"),
-        config: ConfigPaths.FLYING_ROBOT_FRAME_160,
+    // abucnasty's flying robot frame build (2026-11-09): 12 legendary assemblers (68.8906) in two rows of 6, 6 tiles apart. Each
+    // input belt is one line that runs past one row, turns, runs back past the other row and ends in a dead end: steel and
+    // engine units on one, circuits and batteries on the other, from stack inserters at infinity chests. 8 of the 12 copies take
+    // steel and engine units from an underground belt's half tile. Each row puts its frames onto a belt of its own into a void
+    // chest. The config is the whole build: 80 a second over 12 copies, 6.67 a copy. The full design is two of these builds,
+    // mirrored, 160 a second.
+    "flying robot frames (12 assemblers in two rows)": {
+        scaffold: path.join(SAMPLES, "intermediates", "flying-robot-frame", "flying-robot-frame-80.scaffold"),
+        config: ConfigPaths.FLYING_ROBOT_FRAME_80,
         seed: [],
         warmup_ticks: 3600,
+        copies: 12,
     },
     // The owner's electric furnace build (2026-11-05): an electric furnace assembler (57.8125) taking steel from a foundry (185),
     // stone bricks from three furnaces (80.0375) that each have a drill of their own dropping stone into them (speed bonuses 15.3075,

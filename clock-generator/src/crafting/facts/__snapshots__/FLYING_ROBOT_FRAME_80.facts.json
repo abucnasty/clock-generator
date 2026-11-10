@@ -3,8 +3,8 @@
   "target": {
     "item": "flying-robot-frame",
     "counts": "made",
-    "items_per_second": 160,
-    "copies": 24,
+    "items_per_second": 80,
+    "copies": 12,
     "per_copy": {
       "numerator": 20,
       "denominator": 3
@@ -81,7 +81,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -107,7 +107,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -133,7 +133,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -159,7 +159,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -354,64 +354,6 @@
       "enable_latency_ticks": 2
     },
     {
-      "key": "inserter:2/steel-plate",
-      "via": "inserter",
-      "entity": "inserter:2",
-      "group": "inserter:2",
-      "item": "steel-plate",
-      "from": "belt:2/lane:1",
-      "to": "machine:1",
-      "from_lanes": [
-        "belt:2/lane:1"
-      ],
-      "lands_in": "ingredients",
-      "hand": {
-        "prototype": "stack-inserter",
-        "quality": "legendary",
-        "by_item": 16,
-        "nominal": 16,
-        "research": 16,
-        "items": [
-          "steel-plate",
-          "electric-engine-unit"
-        ],
-        "full_hand": {
-          "at_placing_source": true,
-          "elsewhere": true
-        },
-        "wait_for_full_hand": true,
-        "grab_less_to_match_belt_stack": true,
-        "max_belt_stack_size": 4
-      },
-      "rotation_ticks": 3,
-      "planned": {
-        "pickup": 4,
-        "drop": 1,
-        "cycle": 11,
-        "pickup_to_drop": 8,
-        "per_second": {
-          "numerator": 960,
-          "denominator": 11
-        }
-      },
-      "floor": {
-        "pickup": 4,
-        "drop": 1,
-        "cycle": 11
-      },
-      "floor_standing": {
-        "pickup": "measured",
-        "drop": "measured",
-        "cycle": "measured"
-      },
-      "ceiling": {
-        "numerator": 960,
-        "denominator": 11
-      },
-      "belt_pickup_calibrated": true,
-      "enable_latency_ticks": 2
-    },
-    {
       "key": "inserter:2/electric-engine-unit",
       "via": "inserter",
       "entity": "inserter:2",
@@ -430,8 +372,8 @@
         "nominal": 16,
         "research": 16,
         "items": [
-          "steel-plate",
-          "electric-engine-unit"
+          "electric-engine-unit",
+          "steel-plate"
         ],
         "full_hand": {
           "at_placing_source": true,
@@ -470,15 +412,15 @@
       "enable_latency_ticks": 2
     },
     {
-      "key": "inserter:3/battery",
+      "key": "inserter:2/steel-plate",
       "via": "inserter",
-      "entity": "inserter:3",
-      "group": "inserter:3",
-      "item": "battery",
-      "from": "belt:5/lane:2",
+      "entity": "inserter:2",
+      "group": "inserter:2",
+      "item": "steel-plate",
+      "from": "belt:2/lane:1",
       "to": "machine:1",
       "from_lanes": [
-        "belt:5/lane:2"
+        "belt:2/lane:1"
       ],
       "lands_in": "ingredients",
       "hand": {
@@ -488,8 +430,8 @@
         "nominal": 16,
         "research": 16,
         "items": [
-          "battery",
-          "electronic-circuit"
+          "electric-engine-unit",
+          "steel-plate"
         ],
         "full_hand": {
           "at_placing_source": true,
@@ -546,8 +488,66 @@
         "nominal": 16,
         "research": 16,
         "items": [
-          "battery",
-          "electronic-circuit"
+          "electronic-circuit",
+          "battery"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11,
+        "pickup_to_drop": 8,
+        "per_second": {
+          "numerator": 960,
+          "denominator": 11
+        }
+      },
+      "floor": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:3/battery",
+      "via": "inserter",
+      "entity": "inserter:3",
+      "group": "inserter:3",
+      "item": "battery",
+      "from": "belt:5/lane:2",
+      "to": "machine:1",
+      "from_lanes": [
+        "belt:5/lane:2"
+      ],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "electronic-circuit",
+          "battery"
         ],
         "full_hand": {
           "at_placing_source": true,
@@ -602,14 +602,14 @@
       "group": "inserter:2",
       "edges": [
         {
-          "edge": "inserter:2/steel-plate",
-          "item": "steel-plate",
+          "edge": "inserter:2/electric-engine-unit",
+          "item": "electric-engine-unit",
           "hand": 16,
           "floor_cycle": 11
         },
         {
-          "edge": "inserter:2/electric-engine-unit",
-          "item": "electric-engine-unit",
+          "edge": "inserter:2/steel-plate",
+          "item": "steel-plate",
           "hand": 16,
           "floor_cycle": 11
         }
@@ -619,14 +619,14 @@
       "group": "inserter:3",
       "edges": [
         {
-          "edge": "inserter:3/battery",
-          "item": "battery",
+          "edge": "inserter:3/electronic-circuit",
+          "item": "electronic-circuit",
           "hand": 16,
           "floor_cycle": 11
         },
         {
-          "edge": "inserter:3/electronic-circuit",
-          "item": "electronic-circuit",
+          "edge": "inserter:3/battery",
+          "item": "battery",
           "hand": 16,
           "floor_cycle": 11
         }
