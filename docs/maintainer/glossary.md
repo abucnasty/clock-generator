@@ -90,7 +90,6 @@ A lane is the game's transport line: each belt has two. The facts of a lane are 
 The items per second that come onto an input lane where it starts. The configuration's `supply_rate`. Without it,
 the supply rate is the capacity of the lane: on a turbo belt with stacks of 4, 120 items per second. STE: SUPPLY (n)
 and RATE (n), approved.
-_Avoid_: entry rate
 
 **Lane end**:
 What the items do at the downstream end of a lane: a **dead end**, an **outlet**, or an **unknown end**. A
@@ -102,8 +101,8 @@ A lane end that stops the items. They stay on the lane until a hand takes them, 
 configuration: `"lane_end": {"kind": "dead_end"}`. A project technical noun (STE rule 1.6).
 
 **Outlet**:
-A lane end that lets the items move on. The items that no hand takes leave the lane at its outlet rate. A **free
-outlet** takes as many items as the lane carries. In the configuration: `"lane_end": {"kind": "outlet"}`. A
+A lane end that lets the items move on. The items that no hand takes leave the lane at its outlet rate. A
+**free outlet** takes as many items as the lane carries. In the configuration: `"lane_end": {"kind": "outlet"}`. A
 project technical noun (STE rule 1.6): STE has no entry for outlet.
 
 **Outlet rate**:

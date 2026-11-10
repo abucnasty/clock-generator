@@ -56,7 +56,7 @@ onto B. The two lanes of A then have different ends:
 
 - The lane of A at the hood stops, because the hood blocks it. It is a dead end.
 - The lane of A at the opening continues onto B. It is an outlet. Its outlet rate is the rate at which the
-  inserters on B after the side-load take the items.
+  entities on B after the side-load take the items.
 - B can already carry items on that lane from upstream. Then state the lane of A as unknown. B has priority at a
   side-load. The items of A go only into the empty spaces on that lane of B. The generator does not model this.
 
@@ -76,6 +76,6 @@ take ore for two furnaces.
 | 1 | 2 | dead end | outlet at 53 1/3 items per second |
 | 4 | 1 | dead end | outlet at 53 1/3 items per second |
 
-Each ore belt side-loads into an underground end. The hood blocks the near lane, so it is a dead end. The far lane
-continues to two furnaces after the third copy, outside the configuration. They take 53 1/3 iron ore per second. That
-is the outlet rate of the far lane. In the game, the near lane stops and the far lane moves on after the side-load.
+The sample is cut from a larger build. In that build, each ore belt side-loads into an underground exit after the
+third copy. The hood blocks the near lane, so it is a dead end. The far lane continues to two furnaces outside the
+configuration. They take 53 1/3 iron ore per second. That is the outlet rate of the far lane.
