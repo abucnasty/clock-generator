@@ -228,18 +228,27 @@ function export.to_table(result, options)
     end
     
     -- Format belts for clock-generator
+    -- A belt an inserter picks up from has the end of each lane (unknown where the export cannot tell which line a lane
+    -- is) and, where every pickup gives one, the way its items move
     for i, belt in ipairs(result.belts) do
         local lanes = {}
-        for _, lane in ipairs(belt.lanes) do
+        for index, lane in ipairs(belt.lanes) do
+            local line = belt.lane_lines and belt.lane_lines[index]
+            local lane_end = nil
+            if belt.line_ends then
+                lane_end = line and belt.line_ends[line] or { kind = "unknown" }
+            end
             table.insert(lanes, {
                 ingredient = lane.ingredient or "",
-                stack_size = lane.stack_size
+                stack_size = lane.stack_size,
+                lane_end = lane_end and { kind = lane_end.kind } or nil
             })
         end
-        
+
         table.insert(output.belts, {
             id = i,
             type = belt.belt_type,
+            flow_direction = belt.flow_direction or nil,
             lanes = lanes
         })
     end

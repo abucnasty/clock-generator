@@ -852,20 +852,49 @@ function extraction.extract_all_entities(entities, force)
             end
             local signature = table.concat(ingredients, "|") .. "#" .. (lane_ingredient[1] or "") .. "|" .. (lane_ingredient[2] or "")
             local existing = ingredient_signature_to_belt[signature]
-            local id
+            local id, data
             if existing then
-                id = existing.belt_id
+                id, data = existing.belt_id, existing.data
             else
                 belt_id = belt_id + 1
                 id = belt_id
+                -- the transport line each listed lane is; nil when the lanes are items of splitter or loader lines
+                local lane_lines = nil
+                if lane_ingredient[1] then
+                    lane_lines = { 1, 2 }
+                elseif lane_ingredient[2] then
+                    lane_lines = { 2 }
+                end
                 ---@type BeltData
-                local data = {
+                data = {
                     belt_type = helpers.belt_type_of_pieces(belt_pieces),
                     unit_number = belt_pieces[1].unit_number,
-                    lanes = lanes
+                    lanes = lanes,
+                    lane_lines = lane_lines,
                 }
                 ingredient_signature_to_belt[signature] = { belt_id = id, data = data }
                 table.insert(result.belts, data)
+            end
+            -- The end of each lane and the way the items move, from every piece an inserter picks up from: one end or
+            -- way that all of them give, else unknown (lines of the same items are one belt, and may end apart)
+            for _, piece in ipairs(belt_pieces) do
+                if pickup_pieces[piece.unit_number] then
+                    local ends = drop_merge.lane_ends(piece, pieces, selected_unit_numbers)
+                    data.line_ends = data.line_ends or { ends[1], ends[2] }
+                    for line = 1, 2 do
+                        if data.line_ends[line].kind ~= ends[line].kind then
+                            data.line_ends[line] = { kind = "unknown" }
+                        end
+                    end
+                    -- a curve turns its items, so it gives no one way
+                    local way = (piece.type == "underground-belt"
+                        or (piece.type == "transport-belt" and piece.belt_shape == "straight")) and piece.direction or false
+                    if data.flow_direction == nil then
+                        data.flow_direction = way
+                    elseif data.flow_direction ~= way then
+                        data.flow_direction = false
+                    end
+                end
             end
             for _, piece in ipairs(belt_pieces) do
                 result.belt_unit_number_to_id[piece.unit_number] = id
