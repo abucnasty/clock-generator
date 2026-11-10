@@ -6,6 +6,7 @@ import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import { SerializableClockWindows } from "./clock";
 import { judgeSharedLanes } from "./shared-lane-verdict";
+import { withoutSharedLaneFacts } from "./generate-blueprint-test-helpers";
 
 const quiet = { log: () => {}, warn: () => {}, error: () => {}, debug: () => {} };
 
@@ -130,11 +131,15 @@ describe("the clocks recorded on the inserter build whose copies share flowing o
 
 // ADVANCED_CIRCUIT_240, three copies, every lane a free outlet: a clock the generator made for it (Euclidean Swings on 24
 // ticks) has copy 3 short by one hand (16 items) on the electronic circuits of belts 1 and 4 and on the coal of belt 3 in the
-// judged window cycles, and in the run twice as long by 32 on belt 1 and 112 on belt 4.
+// judged window cycles, and in the run twice as long by 32 on belt 1 and 112 on belt 4. Measured on the sample as it was
+// before it stated the spacing of its copies and the way its belts move, with the four lanes a free outlet. The sample now
+// states that those lanes end in a dead end, and this test is of lanes that flow on: it takes the sample without those
+// facts.
 describe("a clock whose copy is short by more than one hand in the run twice as long", () => {
     it("fails it on that copy", async () => {
         const outlet = { lane_end: { kind: "outlet" } };
-        const config = withFacts(await loadConfigFromFile(ConfigPaths.ADVANCED_CIRCUIT_240), { "1/1": outlet, "3/1": outlet, "3/2": outlet, "4/1": outlet });
+        const config = withFacts(withoutSharedLaneFacts(await loadConfigFromFile(ConfigPaths.ADVANCED_CIRCUIT_240)),
+            { "1/1": outlet, "3/1": outlet, "3/2": outlet, "4/1": outlet });
         const windows = {
             "inserter:1": [{ start: 2, end: 18 }], "inserter:2": [{ start: 0, end: 0 }], "inserter:3": [{ start: 2, end: 19 }],
             "inserter:4": [{ start: 20, end: 23 }, { start: 0, end: 5 }], "inserter:5": [{ start: 12, end: 23 }, { start: 0, end: 0 }],
