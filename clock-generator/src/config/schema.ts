@@ -143,7 +143,10 @@ export const TargetProductionRateConfigSchema = z.object({
     items_per_second: z.number().positive().describe("The rate of the setpoint for all copies together, in items per second."),
     copies: z.number().positive().refine(isShortDecimalCopies, {
         message: COPIES_DECIMAL_ERROR,
-    }).describe("The number of identical builds in the game, which can be partial, for example 2.25."),
+    }).describe("The number of identical builds in the game, which can be partial, for example 2.25. "
+        + "The fraction is a part copy: on each lane that the copies share, it holds that fraction of a copy's inserters, with the machines that they feed. "
+        + "In the check of the shared lanes, a machine of the part copy is held to its share of a whole copy's target "
+        + "([stability](../../clock-generator/docs/stability.md#copies-that-share-a-lane))."),
     /**
      * Where the next copy stands from this one, in tiles and in the coordinates of the exported positions. It lets the
      * result check whether the copies' drops onto a shared belt fit between each other (config/drop-spacing.ts); nothing
