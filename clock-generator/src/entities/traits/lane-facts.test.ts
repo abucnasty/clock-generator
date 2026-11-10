@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Config, ConfigSchema } from "../../config/schema";
+import { BeltConfigSchema, Config, ConfigSchema } from "../../config/schema";
 import { beltLanesOfFacts, supplyOfLaneEnd } from "./lane";
 import { everyInputLaneIsDeadEnd, isDeadEnd, laneFactsOf } from "./lane-facts";
 
@@ -82,9 +82,8 @@ describe("the lane facts a config states", () => {
     });
 
     it.each([[true], [false]])("reads every fact together, whatever the switch (%s)", backed_up_belts => {
-        const facts = laneFactsOf(configOf({
-            belts: stating({ supply_rate: 120.7, lane_end: { kind: "dead_end" }, sharing: "one_per_copy", flow_direction: 8 }), overrides: { backed_up_belts },
-        }));
+        const [first, second] = stating({ supply_rate: 120.7, lane_end: { kind: "dead_end" }, sharing: "one_per_copy" });
+        const facts = laneFactsOf(configOf({ belts: [{ ...first, flow_direction: 8 }, second] as Config["belts"], overrides: { backed_up_belts } }));
         expect(facts.of(1, 1)).toEqual({
             supply_rate: { numerator: 1207, denominator: 10 }, lane_end: { kind: "dead_end" }, sharing: "one_per_copy", flow_direction: { x: 0, y: 1 },
         });
@@ -170,13 +169,21 @@ describe("the lane traits of the facts", () => {
     });
 });
 
-describe("the flow direction a lane states", () => {
-    it("reads a cardinal direction of the game as a map step, and none where the lane states none", () => {
-        const belts = [{ id: 1, type: "turbo-transport-belt", lanes: [
-            { ingredient: "iron-ore", stack_size: 4, flow_direction: 4 }, { ingredient: "iron-ore", stack_size: 4, flow_direction: 0 }] },
-        { id: 2, type: "turbo-transport-belt", lanes: [{ ingredient: "copper-ore", stack_size: 4, flow_direction: 12 }, { ingredient: "copper-ore", stack_size: 4 }] }];
+describe("the flow direction a belt states", () => {
+    it("gives both lanes of a belt its cardinal direction of the game as a map step, and none where the belt states none", () => {
+        const belts = [
+            { id: 1, type: "turbo-transport-belt", flow_direction: 4, lanes: [{ ingredient: "iron-ore", stack_size: 4 }, { ingredient: "iron-ore", stack_size: 4 }] },
+            { id: 2, type: "turbo-transport-belt", flow_direction: 12, lanes: [{ ingredient: "copper-ore", stack_size: 4 }] },
+            { id: 3, type: "turbo-transport-belt", lanes: [{ ingredient: "coal", stack_size: 4 }, { ingredient: "coal", stack_size: 4 }] }];
         const facts = laneFactsOf({ belts } as never);
-        expect([facts.of(1, 1), facts.of(1, 2), facts.of(2, 1), facts.of(2, 2)].map(it => it.flow_direction))
-            .toEqual([{ x: 1, y: 0 }, { x: 0, y: -1 }, { x: -1, y: 0 }, null]);
+        expect([facts.of(1, 1), facts.of(1, 2), facts.of(2, 1), facts.of(2, 2), facts.of(3, 1), facts.of(3, 2)].map(it => it.flow_direction))
+            .toEqual([{ x: 1, y: 0 }, { x: 1, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 0 }, null, null]);
+    });
+
+    it("is read from the belt alone: the schema drops it from a lane", () => {
+        const lane = { ingredient: "iron-ore", stack_size: 4, flow_direction: 4 };
+        const parsed = BeltConfigSchema.parse({ id: 1, type: "turbo-transport-belt", lanes: [lane] });
+        expect(parsed.lanes[0]).not.toHaveProperty("flow_direction");
+        expect(laneFactsOf({ belts: [parsed] } as never).of(1, 1).flow_direction).toBeNull();
     });
 });

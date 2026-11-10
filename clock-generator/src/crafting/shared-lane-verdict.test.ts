@@ -15,6 +15,11 @@ function withFacts(config: Config, facts: Record<string, Record<string, unknown>
         lanes: belt.lanes.map((lane, index) => ({ ...lane, ...(facts[`${belt.id}/${index + 1}`] ?? {}) })) as typeof belt.lanes })) };
 }
 
+/** The config with the belts it names stating the way their items move */
+function flowing(config: Config, belt_ids: number[], flow_direction: 0 | 4 | 8 | 12): Config {
+    return { ...config, belts: config.belts.map(belt => belt_ids.includes(belt.id) ? { ...belt, flow_direction } : belt) };
+}
+
 const dead_end = { lane_end: { kind: "dead_end" } };
 
 // abucnasty's chemical science build (#725): 5.5 copies 18 tiles apart. Its two input belts run east and each ends in an
@@ -27,8 +32,7 @@ describe("the clocks recorded on the chemical science build whose copies share d
     const config = await loadConfigFromFile(path.join(__dirname, "fixtures", "chemical-science-120-5.5-copies-one-circuit-lane.json"));
     const clocks: Record<string, { window_cycle_ticks: number; windows: SerializableClockWindows }> =
         JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "chemical-science-120-recorded-clocks.json"), "utf8"));
-    const east = { ...dead_end, flow_direction: 4 };
-    const stated = withFacts(config, { "1/1": east, "1/2": east, "2/1": east, "2/2": east });
+    const stated = flowing(withFacts(config, { "1/1": dead_end, "1/2": dead_end, "2/1": dead_end, "2/2": dead_end }), [1, 2], 4);
     const judged = (id: string, on: Config = stated) => judgeSharedLanes(on, clocks[id].windows, clocks[id].window_cycle_ticks, quiet);
 
     it.each(["coordinated_sources", "takt_batches_observed"])("fails %s on the second copy alone, its first circuit taker short the most", id => {

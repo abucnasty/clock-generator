@@ -6,10 +6,12 @@ import { ConfigPaths } from "../config/config-paths";
 import { Config } from "../config/schema";
 import { quiet } from "./generate-blueprint-test-helpers";
 
-/** The config with the lanes it names (by "belt/lane") stated as dead ends whose items move east */
+/** The config with the lanes it names (by "belt/lane") stated as dead ends, and their belts stating that their items move east */
 function deadEnded(config: Config, lanes: string[], flow_direction?: 4): Config {
-    return { ...config, belts: config.belts.map(belt => ({ ...belt, lanes: belt.lanes.map((lane, index) => lanes.includes(`${belt.id}/${index + 1}`)
-        ? { ...lane, lane_end: { kind: "dead_end" }, ...(flow_direction !== undefined && { flow_direction }) } : lane) as typeof belt.lanes })) };
+    const named = (belt_id: number, lane: number) => lanes.includes(`${belt_id}/${lane}`);
+    return { ...config, belts: config.belts.map(belt => ({ ...belt,
+        ...(flow_direction !== undefined && belt.lanes.some((_, index) => named(belt.id, index + 1)) && { flow_direction }),
+        lanes: belt.lanes.map((lane, index) => named(belt.id, index + 1) ? { ...lane, lane_end: { kind: "dead_end" } } : lane) as typeof belt.lanes })) };
 }
 
 // abucnasty's chemical science build (#725): 5.5 copies on two input belts that run east and end in an underground entrance

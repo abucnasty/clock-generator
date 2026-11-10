@@ -20,8 +20,8 @@ import { longRunWindowCyclesOf, runClockOnBuild } from "./trial";
  * copy reads it as a free outlet). A belt the build drops onto is left out: its entry would be the drops, which the
  * model does not run (`droppedOntoSharedLanes`).
  *
- * A lane that states its `flow_direction` is run with its items moving that way; a lane that does not is run with them
- * moving each way along the copies in turn, and the clock has to hold both ways. A run whose rows are those of a run
+ * A lane whose belt states its `flow_direction` is run with its items moving that way; a lane whose belt does not is run
+ * with them moving each way along the copies in turn, and the clock has to hold both ways. A run whose rows are those of a run
  * made already is not made again: the same rows give the same run.
  *
  * The refill arithmetic of the lane (`refillsInTime`) is worked out on the run of one copy and reported beside the
@@ -199,8 +199,8 @@ function rowAxisOf(config: Config): FlowDirection {
 }
 
 /**
- * The lanes laid out for each way the run has the items move: a lane that states its flow direction keeps it, and every
- * other lane has its items move along the copies' axis, then against it
+ * The lanes laid out for each way the run has the items move: a lane whose belt states its flow direction keeps it, and
+ * every other lane has its items move along the copies' axis, then against it
  */
 function laidOutLanesOf(config: Config, lanes: readonly ModelLane[]): LaidOutLane[][] {
     const axis = rowAxisOf(config);

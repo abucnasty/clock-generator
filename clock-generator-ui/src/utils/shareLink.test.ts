@@ -276,9 +276,9 @@ describe('shared builds through the real file and worker boundary', () => {
         expect(JSON.stringify(config)).toBe(original);
     });
 
-    it('keeps the lane facts when the build is opened, edited elsewhere, saved and shared again', async () => {
+    it('keeps the lane facts and the way a belt moves when the build is opened, edited elsewhere, saved and shared again', async () => {
         const lanes = [
-            { ingredient: 'iron-plate', stack_size: 4, supply_rate: 120.7, lane_end: { kind: 'dead_end' }, sharing: 'one_per_copy', flow_direction: 12 },
+            { ingredient: 'iron-plate', stack_size: 4, supply_rate: 120.7, lane_end: { kind: 'dead_end' }, sharing: 'one_per_copy' },
             { ingredient: 'copper-plate', stack_size: 4, lane_end: { kind: 'outlet', outlet_rate: 88 } },
         ];
         // an export lane's outlet rate is its consumption: it states no lane end beside it
@@ -286,7 +286,7 @@ describe('shared builds through the real file and worker boundary', () => {
         const build = smallBuild();
         const config = { ...build, inserters: [{ source: { type: 'belt', id: 1 }, sink: { type: 'machine', id: 1 }, stack_size: 16 }, ...build.inserters],
             belts: [
-                { id: 1, type: 'turbo-transport-belt', lanes },
+                { id: 1, type: 'turbo-transport-belt', flow_direction: 12, lanes },
                 { id: 2, type: 'turbo-transport-belt', strategy: 'export', lanes: [exportLane] },
             ] } as unknown as Config;
         /** The form of a link as the site opens it: decoded, read as a file, checked against the config schema at the worker boundary */
@@ -309,6 +309,7 @@ describe('shared builds through the real file and worker boundary', () => {
         const { consumption_per_second: _c, ...normalLane } = exportLane;
         void _c;
         expect(reopened.belts.map(belt => belt.lanes)).toEqual([lanes, [normalLane]]);
+        expect(reopened.belts.map(belt => belt.flow_direction)).toEqual([12, undefined]);
         expect(reopened.machines.every(machine => machine.crafting_speed === 3)).toBe(true);
     });
 

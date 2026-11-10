@@ -185,17 +185,17 @@ describe('what goes through the form and back as the config gave it', () => {
             inserters: [{ id: 1, source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 1, belt_direction: 12 }, stack_size: 16,
                 position: { x: 1.5, y: 2.5 }, direction: 8 }],
         }, c => [c.setpoint.copy_offset, c.inserters[0].sink], true],
-        ['the lane facts of a normal and an export belt', {
+        ['the lane facts of a normal and an export belt, and the way a belt moves', {
             belts: [
-                { id: 1, type: 'turbo-transport-belt', lanes: [
-                    { ingredient: 'iron-plate', stack_size: 4, supply_rate: 88, lane_end: { kind: 'dead_end' }, sharing: 'one_per_copy', flow_direction: 4 },
+                { id: 1, type: 'turbo-transport-belt', flow_direction: 4, lanes: [
+                    { ingredient: 'iron-plate', stack_size: 4, supply_rate: 88, lane_end: { kind: 'dead_end' }, sharing: 'one_per_copy' },
                     { ingredient: 'copper-plate', stack_size: 4, lane_end: { kind: 'unknown' } },
                 ] },
                 { id: 2, type: 'turbo-transport-belt', strategy: 'export', lanes: [
                     { ingredient: 'electronic-circuit', stack_size: 4, consumption_per_second: 5, sharing: 'shared_by_copies' },
                 ] },
             ],
-        }, c => c.belts.map(belt => belt.lanes), true],
+        }, c => c.belts.map(belt => [belt.flow_direction, belt.lanes]), true],
         ['cars, tanks, cargo wagons and rocket silos', {
             chests: [
                 { id: 1, type: ChestType.CAR, slot_filters: [{ slot: 1, item: 'iron-plate' }], contents: [{ slot: 2, item: 'coal', count: 50 }] },

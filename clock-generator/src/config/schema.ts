@@ -588,15 +588,16 @@ const LaneEndConfigSchema = z.discriminatedUnion("kind", [
     }),
 ]);
 
-/** The way the items on a lane move, as a cardinal direction of the game (DirectionSchema): 0 north, 4 east, 8 south, 12 west */
-const LaneFlowDirectionConfigSchema = z.union([z.literal(0), z.literal(4), z.literal(8), z.literal(12)]);
+/** The way the items on a belt move, as a cardinal direction of the game (DirectionSchema): 0 north, 4 east, 8 south, 12 west */
+const BeltFlowDirectionConfigSchema = z.union([z.literal(0), z.literal(4), z.literal(8), z.literal(12)]);
 
 /** Whether every copy of the unit takes from the same lane, or each copy has a lane of its own (`LaneSharing`) */
 const LaneSharingConfigSchema = z.enum(["shared_by_copies", "one_per_copy"]);
 
 /**
- * One lane of a belt. The lane facts (`supply_rate`, `lane_end`, `sharing`, `flow_direction`) are optional, and each one is read alone:
- * a fact that the lane does not state is derived as entities/traits/lane-facts.ts `laneFactsOf` says. A field without a
+ * One lane of a belt. The lane facts (`supply_rate`, `lane_end`, `sharing`) are optional, and each one is read alone:
+ * a fact that the lane does not state is derived as entities/traits/lane-facts.ts `laneFactsOf` says. The way the items
+ * move is the belt's `flow_direction`: both lanes of a belt move the same way. A field without a
  * default, so that a config that states none is written back without them.
  */
 const BeltLaneConfigSchema = z.object({
@@ -605,7 +606,6 @@ const BeltLaneConfigSchema = z.object({
     supply_rate: z.number().positive().optional().describe("The items per second that come onto the lane where it starts. The default is the lane's capacity."),
     lane_end: LaneEndConfigSchema.optional().describe("The end of the lane. Without it, backed_up_belts sets the end."),
     sharing: LaneSharingConfigSchema.optional().describe("shared_by_copies (default): all copies take from this lane. one_per_copy: each copy has a lane of its own."),
-    flow_direction: LaneFlowDirectionConfigSchema.optional().describe("The direction of the items on the lane: 0 north, 4 east, 8 south, 12 west. Without it, the check runs the items in the two directions along the copies."),
 });
 
 const ExportBeltLaneConfigSchema = BeltLaneConfigSchema.extend({
@@ -617,6 +617,7 @@ const NormalBeltConfigSchema = z.object({
     id: z.number().int().positive().describe("The number that identifies the belt in the configuration."),
     type: BeltTypeSchema.describe("The prototype name of the belt."),
     strategy: z.literal(BeltStrategy.NORMAL).optional().describe("normal (default): only the build takes items off the belt."),
+    flow_direction: BeltFlowDirectionConfigSchema.optional().describe("The direction in which the items on the belt move: 0 north, 4 east, 8 south, 12 west. Without it, the check runs the items in the two directions along the copies."),
     lanes: z.union([
         z.tuple([BeltLaneConfigSchema]),
         z.tuple([BeltLaneConfigSchema, BeltLaneConfigSchema])
@@ -627,6 +628,7 @@ const ExportBeltConfigSchema = z.object({
     id: z.number().int().positive().describe("The number that identifies the belt in the configuration."),
     type: BeltTypeSchema.describe("The prototype name of the belt."),
     strategy: z.literal(BeltStrategy.EXPORT).describe("export: entities outside the configuration also take items off the belt."),
+    flow_direction: BeltFlowDirectionConfigSchema.optional().describe("The direction in which the items on the belt move: 0 north, 4 east, 8 south, 12 west. Without it, the check runs the items in the two directions along the copies."),
     lanes: z.union([
         z.tuple([ExportBeltLaneConfigSchema]),
         z.tuple([ExportBeltLaneConfigSchema, ExportBeltLaneConfigSchema])

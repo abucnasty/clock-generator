@@ -287,9 +287,10 @@ for each taker, and the result says the spacing it assumed. Each shared lane run
 on it (`src/state/shared-lane.ts`): stacks come on at the lane's `supply_rate`, move at the belt's speed and leave at its
 end (`lane_end`: a dead end holds them, an outlet takes them at its `outlet_rate`; an unknown end is run both ways). A
 part copy holds its share of each shared lane's takers, rounded up for each, the ones furthest upstream, with what their
-machines need. A lane that states `flow_direction` runs that way; one that does not runs each way along the copies. A copy
-whose taker puts down fewer of the lane's items over the whole window cycles of the second half of the run than a copy
-alone makes the clock unstable (`src/crafting/shared-lane-verdict.ts`).
+machines need. The items on a lane move in the direction of the belt (`flow_direction`). Without it, the check runs
+the items in each direction along the copies. A copy whose taker puts down fewer of the lane's items over the whole
+window cycles of the second half of the run than a copy alone makes the clock unstable
+(`src/crafting/shared-lane-verdict.ts`).
 
 Standing: on the clocks recorded on #660 (three copies on ore lanes that flow into loaders) and #725 (5.5 copies on
 dead-ended lanes) and on logistic science 240 (11 copies) the run gives the game's verdict on every copy. The size of a

@@ -89,7 +89,7 @@ export interface InserterFormData {
 }
 
 /** The lane facts a lane of the config may state; the form keeps them as the config gives them and has no field for them yet */
-type LaneFactsFormData = Pick<Config['belts'][number]['lanes'][number], 'supply_rate' | 'lane_end' | 'sharing' | 'flow_direction'>;
+type LaneFactsFormData = Pick<Config['belts'][number]['lanes'][number], 'supply_rate' | 'lane_end' | 'sharing'>;
 
 export interface BeltLaneFormData extends LaneFactsFormData {
     ingredient: string;
@@ -106,6 +106,8 @@ export interface BeltFormData {
     _uuid: string;
     type: 'transport-belt' | 'fast-transport-belt' | 'express-transport-belt' | 'turbo-transport-belt';
     strategy?: BeltStrategyFormValue;
+    /** The way the items on both lanes move; the form keeps it as the config gives it and has no field for it yet */
+    flow_direction?: Config['belts'][number]['flow_direction'];
     lanes: [BeltLaneFormData] | [BeltLaneFormData, BeltLaneFormData];
 }
 

@@ -29,7 +29,7 @@ export interface LaneFacts {
     readonly supply_rate: Ratio;
     readonly lane_end: LaneEnd;
     readonly sharing: LaneSharing;
-    /** The way its items move, where the config states it; null where it does not */
+    /** The way its items move, where the config states it on the belt; null where it does not */
     readonly flow_direction: FlowDirection | null;
 }
 
@@ -72,6 +72,7 @@ function laneEndOf(stated: NonNullable<LaneConfig["lane_end"]>, capacity: Ratio)
  * it the lane has a free outlet that carries away as much as the lane carries. A supply rate that is not stated is the
  * lane's capacity (half the belt's speed times the lane's stack size), and the copies share a lane that does not say
  * otherwise. The second side of a belt that lists one lane has no entry in the config, so all of its facts are derived.
+ * Both lanes of a belt move the way the belt states (`flow_direction`), and no way where it states none.
  */
 export function laneFactsOf(config: LaneFactsConfig): LaneFactsOfBuild {
     const dead_end = configDeadEnds(config);
@@ -87,7 +88,7 @@ export function laneFactsOf(config: LaneFactsConfig): LaneFactsOfBuild {
                 lane_end: stated?.lane_end !== undefined ? laneEndOf(stated.lane_end, capacity)
                     : dead_end ? { kind: "dead_end" } : { kind: "outlet", outlet_rate: capacity },
                 sharing: stated?.sharing ?? "shared_by_copies",
-                flow_direction: stated?.flow_direction === undefined ? null : flowOf(stated.flow_direction),
+                flow_direction: belt.flow_direction === undefined ? null : flowOf(belt.flow_direction),
             });
         }
     }

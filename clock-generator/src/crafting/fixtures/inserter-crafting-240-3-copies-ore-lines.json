@@ -261,22 +261,21 @@
     {
       "id": 1,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
           "ingredient": "iron-ore",
           "stack_size": 4,
           "lane_end": {
             "kind": "outlet"
-          },
-          "flow_direction": 4
+          }
         },
         {
           "ingredient": "iron-ore",
           "stack_size": 4,
           "lane_end": {
             "kind": "outlet"
-          },
-          "flow_direction": 4
+          }
         }
       ]
     },
@@ -307,22 +306,21 @@
     {
       "id": 4,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
           "ingredient": "iron-ore",
           "stack_size": 4,
           "lane_end": {
             "kind": "outlet"
-          },
-          "flow_direction": 4
+          }
         },
         {
           "ingredient": "iron-ore",
           "stack_size": 4,
           "lane_end": {
             "kind": "outlet"
-          },
-          "flow_direction": 4
+          }
         }
       ]
     }
