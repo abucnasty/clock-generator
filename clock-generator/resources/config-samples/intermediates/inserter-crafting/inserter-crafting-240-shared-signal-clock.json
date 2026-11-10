@@ -220,11 +220,18 @@
       "lanes": [
         {
           "ingredient": "iron-ore",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "outlet",
+            "outlet_rate": 53.333333333333336
+          }
         },
         {
           "ingredient": "iron-ore",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         }
       ]
     },
@@ -264,11 +271,18 @@
       "lanes": [
         {
           "ingredient": "iron-ore",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         },
         {
           "ingredient": "iron-ore",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "outlet",
+            "outlet_rate": 53.333333333333336
+          }
         }
       ]
     }

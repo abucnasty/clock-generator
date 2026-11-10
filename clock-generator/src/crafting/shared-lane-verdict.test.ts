@@ -141,9 +141,12 @@ describe("a clock whose copy is short by more than one hand in the run twice as 
 // ticks, and Coordinated Sources composed on 48): in the run of the three copies, copy 3's ore inserters put each hand down
 // up to 10 ticks after the run of one copy alone, and that lag does not grow. In the judged window cycles copy 3 is short
 // by the one hand still being filled at their end (688 against 704 on 24 ticks; 1,392 against 1,408 and 1,376 against
-// 1,392 on 48): in a run twice as long it is short by no more than that.
+// 1,392 on 48): in a run twice as long it is short by no more than that. Measured with both lanes of each ore belt a free
+// outlet, which the sample stated before it stated the ends the build has; the test keeps those ends.
 describe("the clocks whose third copy puts its last ore hand down a few ticks after one copy alone", async () => {
-    const config = await loadConfigFromFile(ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK);
+    const free_outlet = { lane_end: { kind: "outlet" } };
+    const config = withFacts(await loadConfigFromFile(ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK),
+        { "1/1": free_outlet, "1/2": free_outlet, "4/1": free_outlet, "4/2": free_outlet });
     const clocks: Record<string, { window_cycle_ticks: number; windows: SerializableClockWindows }> =
         JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "inserter-crafting-240-generated-clocks-copy-3-one-hand-late.json"), "utf8"));
 
