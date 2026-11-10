@@ -332,37 +332,37 @@
         "recipe_or_resource": "military-science-pack",
         "prototype": null,
         "prototype_type": null,
-        "speed": 63.013236,
+        "speed": 63.0078125,
         "energy_required": 10,
-        "ticks_per_craft": 9.521809037072783,
-        "crafts_per_tick": 0.10502206,
+        "ticks_per_craft": 9.522628642281463,
+        "crafts_per_tick": 0.10501302083333333,
         "productivity": 100,
         "bonus_per_craft": 1,
-        "ticks_per_bonus": 9.521809037072783,
+        "ticks_per_bonus": 9.522628642281463,
         "inputs": [
           {
             "item": "piercing-rounds-magazine",
             "per_craft": 1,
-            "per_second": 6.3013236,
-            "per_tick": 0.10502206
+            "per_second": 6.30078125,
+            "per_tick": 0.10501302083333333
           },
           {
             "item": "grenade",
             "per_craft": 1,
-            "per_second": 6.3013236,
-            "per_tick": 0.10502206
+            "per_second": 6.30078125,
+            "per_tick": 0.10501302083333333
           },
           {
             "item": "stone-wall",
             "per_craft": 2,
-            "per_second": 12.6026472,
-            "per_tick": 0.21004412
+            "per_second": 12.6015625,
+            "per_tick": 0.21002604166666666
           }
         ],
-        "insertion_duration_ticks": 21.42407033341376,
+        "insertion_duration_ticks": 21.42591444513329,
         "crafts_per_second": {
-          "numerator": 15753309,
-          "denominator": 2500000
+          "numerator": 1613,
+          "denominator": 256
         }
       },
       "yield": {
@@ -379,8 +379,8 @@
               "denominator": 1
             },
             "per_second": {
-              "numerator": 15753309,
-              "denominator": 625000
+              "numerator": 1613,
+              "denominator": 64
             },
             "main": true,
             "stochastic": false
@@ -450,37 +450,37 @@
         "recipe_or_resource": "military-science-pack",
         "prototype": null,
         "prototype_type": null,
-        "speed": 63.013236,
+        "speed": 63.0078125,
         "energy_required": 10,
-        "ticks_per_craft": 9.521809037072783,
-        "crafts_per_tick": 0.10502206,
+        "ticks_per_craft": 9.522628642281463,
+        "crafts_per_tick": 0.10501302083333333,
         "productivity": 100,
         "bonus_per_craft": 1,
-        "ticks_per_bonus": 9.521809037072783,
+        "ticks_per_bonus": 9.522628642281463,
         "inputs": [
           {
             "item": "piercing-rounds-magazine",
             "per_craft": 1,
-            "per_second": 6.3013236,
-            "per_tick": 0.10502206
+            "per_second": 6.30078125,
+            "per_tick": 0.10501302083333333
           },
           {
             "item": "grenade",
             "per_craft": 1,
-            "per_second": 6.3013236,
-            "per_tick": 0.10502206
+            "per_second": 6.30078125,
+            "per_tick": 0.10501302083333333
           },
           {
             "item": "stone-wall",
             "per_craft": 2,
-            "per_second": 12.6026472,
-            "per_tick": 0.21004412
+            "per_second": 12.6015625,
+            "per_tick": 0.21002604166666666
           }
         ],
-        "insertion_duration_ticks": 21.42407033341376,
+        "insertion_duration_ticks": 21.42591444513329,
         "crafts_per_second": {
-          "numerator": 15753309,
-          "denominator": 2500000
+          "numerator": 1613,
+          "denominator": 256
         }
       },
       "yield": {
@@ -497,8 +497,8 @@
               "denominator": 1
             },
             "per_second": {
-              "numerator": 15753309,
-              "denominator": 625000
+              "numerator": 1613,
+              "denominator": 64
             },
             "main": true,
             "stochastic": false
@@ -568,10 +568,10 @@
         "recipe_or_resource": "grenade",
         "prototype": null,
         "prototype_type": null,
-        "speed": 52.579117,
+        "speed": 52.57625,
         "energy_required": 8,
-        "ticks_per_craft": 9.129099676588332,
-        "crafts_per_tick": 0.10953982708333332,
+        "ticks_per_craft": 9.129597489360691,
+        "crafts_per_tick": 0.10953385416666667,
         "productivity": 0,
         "bonus_per_craft": 0,
         "ticks_per_bonus": 0,
@@ -579,20 +579,20 @@
           {
             "item": "iron-plate",
             "per_craft": 5,
-            "per_second": 32.86194812499999,
-            "per_tick": 0.5476991354166666
+            "per_second": 32.86015625,
+            "per_tick": 0.5476692708333334
           },
           {
             "item": "coal",
             "per_craft": 10,
-            "per_second": 65.72389624999998,
-            "per_tick": 1.0953982708333332
+            "per_second": 65.7203125,
+            "per_tick": 1.0953385416666668
           }
         ],
-        "insertion_duration_ticks": 82.16189708929498,
+        "insertion_duration_ticks": 82.16637740424622,
         "crafts_per_second": {
-          "numerator": 5257911699999999,
-          "denominator": 800000000000000
+          "numerator": 42061,
+          "denominator": 6400
         }
       },
       "yield": {
@@ -609,8 +609,8 @@
               "denominator": 1
             },
             "per_second": {
-              "numerator": 6572389624999999,
-              "denominator": 1000000000000000
+              "numerator": 42061,
+              "denominator": 6400
             },
             "main": true,
             "stochastic": false
@@ -675,10 +675,10 @@
         "recipe_or_resource": "grenade",
         "prototype": null,
         "prototype_type": null,
-        "speed": 52.579117,
+        "speed": 52.57625,
         "energy_required": 8,
-        "ticks_per_craft": 9.129099676588332,
-        "crafts_per_tick": 0.10953982708333332,
+        "ticks_per_craft": 9.129597489360691,
+        "crafts_per_tick": 0.10953385416666667,
         "productivity": 0,
         "bonus_per_craft": 0,
         "ticks_per_bonus": 0,
@@ -686,20 +686,20 @@
           {
             "item": "iron-plate",
             "per_craft": 5,
-            "per_second": 32.86194812499999,
-            "per_tick": 0.5476991354166666
+            "per_second": 32.86015625,
+            "per_tick": 0.5476692708333334
           },
           {
             "item": "coal",
             "per_craft": 10,
-            "per_second": 65.72389624999998,
-            "per_tick": 1.0953982708333332
+            "per_second": 65.7203125,
+            "per_tick": 1.0953385416666668
           }
         ],
-        "insertion_duration_ticks": 82.16189708929498,
+        "insertion_duration_ticks": 82.16637740424622,
         "crafts_per_second": {
-          "numerator": 5257911699999999,
-          "denominator": 800000000000000
+          "numerator": 42061,
+          "denominator": 6400
         }
       },
       "yield": {
@@ -716,8 +716,8 @@
               "denominator": 1
             },
             "per_second": {
-              "numerator": 6572389624999999,
-              "denominator": 1000000000000000
+              "numerator": 42061,
+              "denominator": 6400
             },
             "main": true,
             "stochastic": false

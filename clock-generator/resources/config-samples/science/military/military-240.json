@@ -13,25 +13,25 @@
       "id": 1,
       "recipe": "military-science-pack",
       "productivity": 100,
-      "crafting_speed": 63.013236
+      "crafting_speed": 63.0078125
     },
     {
       "id": 2,
       "recipe": "military-science-pack",
       "productivity": 100,
-      "crafting_speed": 63.013236
+      "crafting_speed": 63.0078125
     },
     {
       "id": 3,
       "recipe": "grenade",
       "productivity": 0,
-      "crafting_speed": 52.579117
+      "crafting_speed": 52.57625
     },
     {
       "id": 4,
       "recipe": "grenade",
       "productivity": 0,
-      "crafting_speed": 52.579117
+      "crafting_speed": 52.57625
     },
     {
       "id": 5,
