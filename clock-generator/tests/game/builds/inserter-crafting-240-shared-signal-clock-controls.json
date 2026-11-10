@@ -70,10 +70,10 @@
     "generated-three-copies": {
       "recorded": {
         "pr": 0,
-        "commit": "57c76634",
-        "frozen_head": "57c76634",
-        "note": "recorded under the protocol in game ticks on the engine of this head; pr is set when the PR is opened",
-        "clock_sha256": "2dd0a096b14293a595477fe6d94fb319d3f65126aafebbbf7c4892a2e2d00a27",
+        "commit": "787d7b53",
+        "frozen_head": "787d7b53",
+        "note": "recorded under the protocol in game ticks on the engine of this head, on the scaffold whose ore lines end as the build's do; pr is set when the PR is opened",
+        "clock_sha256": "ba4e269d004a2525eabe45b0e06bab818c593af5d55c9a789e966f07bd7ec7ee",
         "clock_basis": "capture"
       },
       "native": {
@@ -96,8 +96,8 @@
             "ticks": 3600,
             "items": 14400,
             "expected": 14400,
-            "stock_start": 0,
-            "stock_end": 0,
+            "stock_start": 68,
+            "stock_end": 68,
             "net": 14400
           }
         },
@@ -105,48 +105,44 @@
           {
             "kind": "cut iron-ore",
             "start": 10800,
-            "drop": 11018,
-            "release": 11018,
-            "recovered": 14866
+            "drop": 11012,
+            "release": 11012,
+            "recovered": 15586
           },
           {
             "kind": "block output",
-            "start": 14866,
-            "drop": 14886,
-            "release": 14886,
-            "recovered": 14896
+            "start": 15586,
+            "drop": 15693,
+            "release": 15693,
+            "recovered": 15763
           },
           {
             "kind": "cut electronic-circuit",
-            "start": 14896,
-            "drop": 14976,
-            "release": 14976,
-            "recovered": 18929
+            "start": 15763,
+            "drop": 15765,
+            "release": 15765,
+            "recovered": 15835
           }
         ],
         "stock": {
-          "lowest": 0,
-          "end": 0,
+          "lowest": 32,
+          "end": 48,
           "holds": true
         },
         "result": "holds",
-        "ended": 18929
+        "ended": 15835
       },
       "generation": {
         "period": 72,
         "expected": 288,
         "verdict": "stable",
         "selection": {
-          "id": "takt_batches_observed_swings_6",
+          "id": "coordinated_sources",
           "holds": true,
           "rate": 240,
           "supply": "moving"
         },
-        "clock_sha256": "2dd0a096b14293a595477fe6d94fb319d3f65126aafebbbf7c4892a2e2d00a27"
-      },
-      "previous": {
-        "id": "takt_batches_observed_swings_2",
-        "clock_sha256": "be80e121bbde8bc96db94cd4714b4b259e38e77a0ff7ec429cfc032a0c6e6b99"
+        "clock_sha256": "ba4e269d004a2525eabe45b0e06bab818c593af5d55c9a789e966f07bd7ec7ee"
       }
     },
     "generated-backed-up-one-copy": {

@@ -69,12 +69,13 @@ export function handMadeClockHash(): string {
 export const COPIES = 3;
 
 /**
- * The clock recorded on the three copies (`swings-6`, 6 output swings): the generator's selected clock until the default dispatch changed, still
- * made; with the belts backed up it is the selected clock now
+ * The clock recorded on the three copies: the generator's selected clock for the config, the per-branch clock
+ * (`coordinated_sources`, a window cycle of 72 ticks), on the build's own ore-line ends. Its wake-ups are not pinned: the
+ * scaffold recordings hold this sample's open
  */
-export const GENERATED_ALTERNATIVE = "takt_batches_observed_swings_6";
+export const GENERATED_ALTERNATIVE = "coordinated_sources";
 
-/** The same clock with the belts backed up: the strategy and tuning method the backed-up build gets for it */
+/** The clock recorded on the one copy with the belts backed up (6 output swings): the strategy and tuning method the backed-up build gets for it */
 export const BACKED_UP_ALTERNATIVE = "round_robin_polling_swings_6";
 
 /**
