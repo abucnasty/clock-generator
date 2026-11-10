@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import type { Config } from "../config/schema";
-import { combineClockAlternativeRuns, generateClockAlternatives, COORDINATED_SOURCES_MAKER, simulateClockOnly, type BlueprintGenerationResult } from "../crafting/generate-blueprint";
+import { generateClockAlternatives, COORDINATED_SOURCES_MAKER, simulateClockOnly, type BlueprintGenerationResult } from "../crafting/generate-blueprint";
 import type { StockRecording } from "../crafting/machine-stock";
 import { returnTicksOf, wakeUpsOfStock } from "../crafting/wake-ups";
 import { createEntityRegistryFromConfig } from "../crafting/sequence/simulation-context";
@@ -14,7 +14,7 @@ import { matchOfSimulatedRecording, recordingOfStock, SIMULATED_TICK_TO_CLOCK_PO
 import { quiet } from "../crafting/generate-blueprint-test-helpers";
 
 /**
- * Automation science on the clock that is selected for it (full-hand output swings): a belt inserter into one machine
+ * Automation science on its full-hand output swings clock (the clock selected for it with the belt-choice rule): a belt inserter into one machine
  * and an output inserter onto a belt, on a clock of 72 ticks
  */
 const WINDOW_CYCLES = 60;
@@ -29,13 +29,11 @@ beforeAll(async () => {
     // the recording these tests read is of the clock with one output swing a cycle; the sample is automatic, so it is forced on this copy
     const sample = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
     config = { ...sample, overrides: { ...sample.overrides, terminal_swing_count: 1 } };
-    // the clock the generator recommends from today's makers: the per-branch clock composed from them wakes none of these inserters
+    // the full-hand clock, which these tests count wake-ups and states on: the per-branch clock composed from today's makers wakes
+    // none of these inserters, and Euclidean Swings, which holds without the room for one more hand, wakes none either
     const made = generateClockAlternatives(config, { logger: quiet }).alternatives.filter(it => it.maker !== COORDINATED_SOURCES_MAKER);
-    result = made[combineClockAlternativeRuns([{ signature: "", alternatives: made }], it => it.ranking).selected_index].result;
+    result = made.find(it => it.id === "pitch_pickups")!.result;
     window_cycle_ticks = result.simulation_duration.ticks;
-    // the input window 4 ticks longer than the selected clock's: the hand it lets in waits at the machine, which these tests count
-    const input = result.clock_windows["inserter:1"];
-    result = { ...result, clock_windows: { ...result.clock_windows, "inserter:1": input.map(range => ({ ...range, end: range.end + 4 })) } };
     stock = simulateClockOnly(config, result.clock_windows, window_cycle_ticks, WINDOW_CYCLES, quiet);
     simulated = recordingOfStock(stock, config, window_cycle_ticks);
 });
