@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import path from "node:path";
 import { loadConfigFromFile } from "../config/loader";
 import { generateClockWithSwingBackoff } from "./generate-clock";
+import { quiet } from "./generate-blueprint-test-helpers";
 
 // The agricultural science sample with its egg biochambers at speed 80 and the feeders' hands at 8. In a planned clock of
 // 5 output swings (480 ticks), a ghost wakeup comes after every window of inserters 1 and 2, which take bioflux and
@@ -13,7 +14,9 @@ describe("ghost-wakeup shaping on a build where it would leave an inserter no wi
     const config = await loadConfigFromFile(CONFIG);
     const messages: string[] = [];
     const logger = { log: (m: string) => messages.push(m), info() { }, warn() { }, error() { }, debug() { } };
-    const result = generateClockWithSwingBackoff({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, { verify_as_built: true, logger: logger as never });
+    const unclocked = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
+    // without the room for one more hand: inserters 1 and 2 would get it, and shaping leaves windows with the room as they are
+    const result = generateClockWithSwingBackoff(unclocked, { verify_as_built: true, lane_hand_room: "never", logger: logger as never });
 
     it("leaves every window of inserters 1 and 2 as planned", () => {
         expect(messages.some(it => it.includes("inserter:1: shaping would leave it no enable window"))).toBe(true);
@@ -21,6 +24,15 @@ describe("ghost-wakeup shaping on a build where it would leave an inserter no wi
         const shaped = (result.ghost_wakeup_windows ?? []).map(it => it.inserter_id);
         expect(shaped).not.toContain("inserter:1");
         expect(shaped).not.toContain("inserter:2");
+    });
+
+    it("on the default options, makes the clock and leaves every clocked inserter an enable window", () => {
+        const made = generateClockWithSwingBackoff(unclocked, { verify_as_built: true, logger: quiet });
+        const windows = Object.entries(made.clock_windows);
+        expect(windows.length).toBeGreaterThan(0);
+        for (const [id, ranges] of windows) {
+            expect(ranges.length, id).toBeGreaterThan(0);
+        }
     });
 
     it("gives every inserter that swings an enable window", () => {
