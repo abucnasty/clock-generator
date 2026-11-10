@@ -31,18 +31,18 @@ import { longRunWindowCyclesOf, runClockOnBuild } from "./trial";
  *
  * Each copy's takers are judged over the whole window cycles of the clock in the second half of a long run, against the
  * same inserter in a run of one copy alone, with a stock of each lane of its own. A taker that puts down fewer items of the
- * lane's item there is short; a shortfall is a loss only when it grows with the run length. A copy whose hands come a few
- * ticks after those of the copy alone has one hand unfinished at the end of the judged span: that is a lag, not a loss.
- * Measured on the inserter build of three copies (INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK): a clock the game holds is
- * short by one hand or none at 1, 2 and 4 times the run (16, 0 and 16 items); a clock the game fails is short by 1,024,
- * 2,000 and 3,920. So:
+ * lane's item there is short. A copy whose hands come a few ticks after those of the copy alone has one hand unfinished at
+ * the end of the judged span: that is a lag, not a loss. In a longer run that hand can fall on another inserter of the
+ * copy. Measured on the inserter build of three copies (INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK): a clock the game
+ * holds is short by one hand or none at 1, 2 and 4 times the run (16, 0 and 16 items); a clock the game fails is short by
+ * 1,024, 2,000 and 3,920. So:
  * - no taker short: no loss, and no other run;
  * - a taker short by more than one hand of its own for the lane's item, which the end of the span does not make: a loss,
  *   and no other run;
- * - every taker short by at most one hand: the runs with a shortfall are made again for twice the window cycles, and a
- *   taker whose shortfall there is larger than in the first run is a loss.
- * A drift too slow to grow by a hand from one run to the other passes. What each copy's taker got is read through one
- * function, `copyLaneTakes`, and nowhere else.
+ * - every taker short by at most one hand: the runs with a shortfall are made again for twice the window cycles. A taker
+ *   short there by more than one hand of its own is a loss; a taker short there by at most one hand is a lag.
+ * A drift too slow to make a taker short by more than one hand in twice the run passes. What each copy's taker got is
+ * read through one function, `copyLaneTakes`, and nowhere else.
  */
 
 /** What one taker of one copy put down of a lane's item in a run of the copies on their shared lanes */
@@ -325,8 +325,6 @@ const itemsIn = (hands: readonly HandDropped[], from: number, to: number) =>
 
 /** What one taker of one copy put down short of the run of one copy, over the judged window cycles of one run of the copies */
 interface Shortfall {
-    /** The taker on its lane: belt, lane, copy and inserter */
-    key: string;
     /** Items short of the run of one copy */
     short: number;
     /** One hand of the taker for the lane's item */
@@ -380,7 +378,7 @@ function shortfallsOf(under: Config, lanes: readonly ModelLane[], layout: Shared
             copies: lane.shared ? under.setpoint.copies : 1, copy: take.copy + 1,
             inserter_id: Number(take.inserter_id.slice("inserter:".length)), items, alone_items,
             window_cycles: end_cycle - first_cycle, flow: row.flow };
-        return [{ key: `${take.belt_id}/${take.lane}/${take.copy}/${take.inserter_id}`, short: alone_items - items, hand: alone.handOf(take.inserter_id, take.item), loss }];
+        return [{ short: alone_items - items, hand: alone.handOf(take.inserter_id, take.item), loss }];
     });
 }
 
@@ -425,16 +423,16 @@ export function judgeSharedLanes(config: Config, clock_windows: SerializableCloc
     });
     // no taker short, or one short by more than a hand, which the end of the judged span does not make: judged as it is
     if (shortfalls.length === 0 || shortfalls.some(it => it.short > it.hand)) return judged(shortfalls.map(it => it.loss), false);
-    // every taker short by at most one hand: the runs with a shortfall again, twice as long, and a loss where it grew
+    // every taker short by at most one hand: the runs with a shortfall again, twice as long, and a loss where a taker is
+    // short there by more than one hand of its own (the unfinished hand at the span's end can fall on another taker)
     const losses: Omit<SharedLaneLoss, "text">[] = [];
     for (const { under, taker_ids, runs } of first) {
         const short_runs = runs.filter(run => run.shortfalls.length > 0);
         if (short_runs.length === 0) continue;
         const alone = runAlone(under, taker_ids, windows, window_cycle_ticks, 2 * window_cycles, logger);
         for (const run of short_runs) {
-            const before = new Map(run.shortfalls.map(it => [it.key, it.short]));
             for (const longer of shortfallsOf(under, lanes, run.layout, alone, windows, window_cycle_ticks, 2 * window_cycles, logger)) {
-                if (longer.short > (before.get(longer.key) ?? 0)) losses.push(longer.loss);
+                if (longer.short > longer.hand) losses.push(longer.loss);
             }
         }
     }

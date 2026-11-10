@@ -103,6 +103,38 @@ describe("the clocks recorded on the inserter build whose copies share flowing o
     it.each(["coordinated_sources", "takt_batches_swings_2", "takt_batches_observed_swings_2", "takt_batches_observed_swings_6"])("runs %s no longer: no copy is short", id => {
         expect(judged(id).longer_run).toBe(false);
     });
+
+    // A clock the generator composed for this build (Coordinated Sources on 48 ticks). In the judged window cycles copy 3 is
+    // short by one hand (16 items) on inserters 1 and 3 and by none on inserter 4; in the run twice as long it is short by
+    // one hand on inserter 4 alone. The hand still being filled at the end of the span falls on another inserter: a lag.
+    it("holds a clock whose unfinished hand falls on another inserter in the run twice as long", () => {
+        const composed: Record<string, { window_cycle_ticks: number; windows: SerializableClockWindows }> = JSON.parse(fs.readFileSync(
+            path.join(__dirname, "fixtures", "inserter-crafting-240-ore-lines-composed-clock-last-hand-on-another-inserter.json"), "utf8"));
+        const { windows, window_cycle_ticks } = composed.coordinated_sources;
+        expect(judgeSharedLanes(config, windows, window_cycle_ticks, quiet)).toMatchObject({ losses: [], simulated: true, longer_run: true });
+    });
+});
+
+// ADVANCED_CIRCUIT_240, three copies, every lane a free outlet: a clock the generator made for it (Euclidean Swings on 24
+// ticks) has copy 3 short by one hand (16 items) on the electronic circuits of belts 1 and 4 and on the coal of belt 3 in the
+// judged window cycles, and in the run twice as long by 32 on belt 1 and 112 on belt 4.
+describe("a clock whose copy is short by more than one hand in the run twice as long", () => {
+    it("fails it on that copy", async () => {
+        const outlet = { lane_end: { kind: "outlet" } };
+        const config = withFacts(await loadConfigFromFile(ConfigPaths.ADVANCED_CIRCUIT_240), { "1/1": outlet, "3/1": outlet, "3/2": outlet, "4/1": outlet });
+        const windows = {
+            "inserter:1": [{ start: 2, end: 18 }], "inserter:2": [{ start: 0, end: 0 }], "inserter:3": [{ start: 2, end: 19 }],
+            "inserter:4": [{ start: 20, end: 23 }, { start: 0, end: 5 }], "inserter:5": [{ start: 12, end: 23 }, { start: 0, end: 0 }],
+            "inserter:6": [{ start: 20, end: 23 }, { start: 0, end: 5 }], "inserter:7": [{ start: 2, end: 19 }], "inserter:8": [{ start: 2, end: 18 }],
+            "inserter:9": [{ start: 0, end: 0 }],
+        };
+        const { losses, longer_run } = judgeSharedLanes(config, windows, 24, quiet);
+        expect(longer_run).toBe(true);
+        expect(losses.length).toBeGreaterThan(0);
+        expect(new Set(losses.map(loss => loss.copy))).toEqual(new Set([3]));
+        expect(losses.every(loss => loss.alone_items - loss.items > 16)).toBe(true);
+        expect(losses.some(loss => loss.belt_id === 4 && loss.alone_items - loss.items === 112)).toBe(true);
+    });
 });
 
 // Two clocks the generator made for INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK (Round-Robin Polling with 2 swings on 24
