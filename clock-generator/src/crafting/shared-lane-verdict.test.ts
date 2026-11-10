@@ -5,7 +5,7 @@ import { Config } from "../config/schema";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import { SerializableClockWindows } from "./clock";
-import { judgeSharedLanes } from "./shared-lane-verdict";
+import { behindTargetIn, CopyMade, judgeSharedLanes, RunOfCopies, TargetRates } from "./shared-lane-verdict";
 import { withoutSharedLaneFacts } from "./generate-blueprint-test-helpers";
 
 const quiet = { log: () => {}, warn: () => {}, error: () => {}, debug: () => {} };
@@ -194,6 +194,41 @@ describe("a clock whose copy takes less from a shared lane than one copy alone w
         };
         const judged = judgeSharedLanes({ ...config, overrides: { ...config.overrides, terminal_swing_count: 3 } }, windows, 72, quiet);
         expect(judged).toMatchObject({ losses: [], simulated: true, longer_run: false });
+    });
+});
+
+// The machines and output inserters behind their target in one run of the copies. A build of 3.5 copies over 10 seconds
+// (600 ticks): machine 7 of a whole copy makes 2 crafts a second, 20 in the span, and four inserters take from it with
+// one hand each an output cycle. The part copy (copy 4) holds machine 7 and two of its four takers, inserter 1 and
+// inserter 9, so it is held to half of 20. Inserter 9 is also an output inserter, with its own target of 4 items a
+// second (40 in the span) and a hand of 4.
+describe("the target a machine or an output inserter of a copy is held to", () => {
+    const rates: TargetRates = {
+        crafts_per_second: new Map([[7, 2]]),
+        output_inserters: new Map([[9, { items_per_second: 4, hand: 4 }]]),
+        takers: new Map([[7, ["inserter:1", "inserter:2", "inserter:3", "inserter:9"].map(inserter_id => ({ inserter_id, transfers: 1 }))]]),
+    };
+    const part_copy = new Set(["machine:7", "inserter:1", "inserter:9"]);
+    const run = (made: CopyMade[]): RunOfCopies => ({ shortfalls: [], made, from: 0, to: 600, holds: ["whole", "whole", part_copy] });
+    const machine = (copy: number, crafts: number): CopyMade => ({ copy, kind: "machine", id: 7, counts: [{ tick: 300, amount: crafts }] });
+
+    it("holds a part copy's machine with half of its takers to half of a whole copy's target: making half, it is not behind", () => {
+        expect(behindTargetIn(run([machine(3, 10)]), rates)).toEqual([]);
+    });
+
+    it("finds a part copy's machine behind when it makes less than its share by more than one craft, against the share's target", () => {
+        expect(behindTargetIn(run([machine(3, 7)]), rates)).toEqual([{ copy: 4, kind: "machine", id: 7, made: 7, target: 10, behind: 3 }]);
+    });
+
+    it("holds a whole copy's machine to the whole target", () => {
+        expect(behindTargetIn(run([machine(1, 10)]), rates)).toEqual([{ copy: 2, kind: "machine", id: 7, made: 10, target: 20, behind: 10 }]);
+        expect(behindTargetIn(run([machine(0, 20), machine(2, 19)]), rates)).toEqual([]);
+    });
+
+    it("holds a part copy's output inserter to its own target", () => {
+        const output: CopyMade = { copy: 3, kind: "output_inserter", id: 9, counts: [{ tick: 300, amount: 32 }] };
+        expect(behindTargetIn(run([output]), rates)).toEqual([{ copy: 4, kind: "output_inserter", id: 9, made: 32, target: 40, behind: 2 }]);
+        expect(behindTargetIn(run([{ ...output, counts: [{ tick: 300, amount: 40 }] }]), rates)).toEqual([]);
     });
 });
 
