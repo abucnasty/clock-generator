@@ -281,23 +281,23 @@ function directionWord(flow: FlowDirection): string {
 const counted = (value: number) => value.toLocaleString("en-US");
 
 /**
- * "Lane 1 of belt 2 ends in a dead end, and 6 copies take advanced circuit from it. When the items move east, copy 3 from
- * the entry of the lane gets too few. Its inserter 3 takes 2,240 in 50 window cycles, and 3,360 when no other copy takes
- * from the lane." The game's names of items have no plural.
+ * "Lane 1 of belt 2 ends in a dead end. The 6 copies take advanced circuit from it. When the items move east, copy 3 from
+ * the entry does not get sufficient items. Its inserter 3 takes 2,240 in 50 window cycles. With no other copy on the lane, it
+ * takes 3,360." One fact a sentence; the game's names of items have no plural.
  */
 function describeSharedLaneLoss(loss: Omit<SharedLaneLoss, "text">): string {
     const run_as = loss.run_as === "dead_end" ? "a dead end" : "an outlet";
-    const end = loss.lane_end === "unknown" ? `has an unknown end, which is checked as ${run_as}` : `ends in ${run_as}`;
+    const end = loss.lane_end === "unknown" ? `has an unknown end. It is checked as ${run_as}.` : `ends in ${run_as}.`;
     const item = FactorioDataService.isAvailable() ? FactorioDataService.itemNameInSentence(loss.item) : loss.item;
-    const counts = `takes ${counted(loss.items)} in ${loss.window_cycles} window cycles, and ${counted(loss.alone_items)}`;
+    const counts = `takes ${counted(loss.items)} in ${loss.window_cycles} window cycles.`;
     if (loss.copies === 1) {
-        return `Lane ${loss.lane} of belt ${loss.belt_id} ${end}, and the build takes ${item} from it. `
-            + `When the items move ${directionWord(loss.flow)}, its inserter ${loss.inserter_id} gets too few. `
-            + `It ${counts} when no other inserter takes from the lane.`;
+        return `Lane ${loss.lane} of belt ${loss.belt_id} ${end} The build takes ${item} from it. `
+            + `When the items move ${directionWord(loss.flow)}, inserter ${loss.inserter_id} does not get sufficient items. `
+            + `It ${counts} With no other inserter on the lane, it takes ${counted(loss.alone_items)}.`;
     }
-    return `Lane ${loss.lane} of belt ${loss.belt_id} ${end}, and ${loss.copies} copies take ${item} from it. `
-        + `When the items move ${directionWord(loss.flow)}, copy ${loss.copy} from the entry of the lane gets too few. `
-        + `Its inserter ${loss.inserter_id} ${counts} when no other copy takes from the lane.`;
+    return `Lane ${loss.lane} of belt ${loss.belt_id} ${end} The ${loss.copies} copies take ${item} from it. `
+        + `When the items move ${directionWord(loss.flow)}, copy ${loss.copy} from the entry does not get sufficient items. `
+        + `Its inserter ${loss.inserter_id} ${counts} With no other copy on the lane, it takes ${counted(loss.alone_items)}.`;
 }
 
 /** The tick window cycle `k` of the clock starts in: the clock stands at 0 in the run's first tick */

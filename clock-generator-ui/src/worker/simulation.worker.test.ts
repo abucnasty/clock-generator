@@ -378,8 +378,8 @@ describe('live advice on a gear assembler, which does not block', () => {
         const config = gears({ items_per_second: 75, copies: 100 });
         expect(await coverageOf(config)).toEqual(nothingLive);
         expect(await send({ type: 'validate', requestId: 62, config })).toMatchObject({ type: 'validation-failed',
-            message: expect.stringContaining('Lane 1 of belt 1 is shared by the 100 copies. Together they take 100 × 1.5 = 150 a second from it, '
-                + 'and its supply rate is 120 a second. If each copy has a lane of its own, set the lane to one per copy. Else use fewer copies.') });
+            message: expect.stringContaining('The 100 copies share lane 1 of belt 1. Together they take 100 × 1.5 = 150 a second from it. '
+                + 'Its supply rate is 120 a second. Set the lane to one per copy if the copies do not share it. If they share it, use a smaller number of copies.') });
     });
 
     it('says nothing of a pickup from 4-item belt stacks, and notes a drop the Sidecar marked as side-loading', async () => {

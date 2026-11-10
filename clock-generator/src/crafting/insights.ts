@@ -521,10 +521,10 @@ export function assumedCopySpacingInsights(config: Config): ClockInsight[] {
         of_tiles.set(belt_id, [...(of_tiles.get(belt_id) ?? []), lane]);
         by_tiles.set(tiles, of_tiles);
     }
-    const places = [...by_tiles].map(([tiles, belts]) => `${Number.isInteger(tiles) ? tiles : tiles.toFixed(1)} ${tiles === 1 ? "tile" : "tiles"} apart on `
-        + [...belts].map(([belt_id, lanes]) => lanesOfBelt(belt_id, lanes)).join(" and "));
+    const places = [...by_tiles].map(([tiles, belts]) => `The check puts the copies ${Number.isInteger(tiles) ? tiles : tiles.toFixed(1)} `
+        + `${tiles === 1 ? "tile" : "tiles"} apart on ${[...belts].map(([belt_id, lanes]) => lanesOfBelt(belt_id, lanes)).join(" and ")}.`);
     return [{ id: "assumed-copy-spacing", scope: "build", title: "The copies are checked at a spacing the configuration does not give",
-        what: `The configuration has no copy_offset. The check of the shared lanes puts the copies ${places.join(", and ")}. `
+        what: `The configuration has no copy_offset. ${places.join(" ")} `
             + "Set copy_offset to the distance from one copy to the next.",
         why: "", explanation: "" }];
 }

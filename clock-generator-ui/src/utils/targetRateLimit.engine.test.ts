@@ -46,7 +46,7 @@ describe('the most the field allows knows the copies\' takes from a lane they sh
         const max = targetRateMaxOf(config)!;
         expect(max.cut).toBe('shared lane');
         expect(max.per_copy_per_second * copies).toBeCloseTo(15, 9);
-        expect(max.limit).toMatch(/^Lane 1 of belt 1 is shared by the/);
+        expect(max.limit).toMatch(/^The [0-9.]+ copies share lane 1 of belt 1\./);
         const at = (rate: number) => refusalOf(build(copies, rate, 5, 'shared_by_copies'));
         expect(at(15)).toBeUndefined();
         expect(at(15.001)).toBeInstanceOf(SharedLaneSupplyError);

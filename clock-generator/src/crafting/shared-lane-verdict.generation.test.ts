@@ -28,8 +28,8 @@ describe("the copies of a build that share dead-ended lanes", () => {
         expect(takt.verdict).toBe("unstable");
         expect(new Set(takt.assessment.shared_lane_losses?.map(loss => loss.copy))).toEqual(new Set([2]));
         expect(takt.assessment.shared_lane_losses?.slice(0, 1).map(loss => [loss.belt_id, loss.lane, loss.copy, loss.inserter_id])).toEqual([[2, 1, 2, 3]]);
-        expect(takt.description).toContain("It is not stable on a lane its copies share. Lane 1 of belt 2 ends in a dead end, and 5.5 copies take "
-            + "advanced circuit from it. When the items move east, copy 2 from the entry of the lane gets too few.");
+        expect(takt.description).toContain("It is not stable on a lane its copies share. Lane 1 of belt 2 ends in a dead end. The 5.5 copies take "
+            + "advanced circuit from it. When the items move east, copy 2 from the entry does not get sufficient items.");
     });
 
     it("keep the clocks that held on the build in the game, and select a stable one", () => {

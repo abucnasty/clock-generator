@@ -191,7 +191,7 @@ after the engine reads the file: a field with a default is required, but a confi
 | `belts[]{strategy=normal}.lanes[0].lane_end` | one of 3 objects, by `kind`: `dead_end`, `outlet`, `unknown` | no | The end of the lane. Without it, backed_up_belts sets the end. |
 | `belts[]{strategy=normal}.lanes[0].lane_end{kind=outlet}.outlet_rate` | number > 0 | no | The items per second that move off the end of the lane. The default is the lane's capacity. |
 | `belts[]{strategy=normal}.lanes[0].sharing` | one of `shared_by_copies`, `one_per_copy` | no | shared_by_copies (default): all copies take from this lane. one_per_copy: each copy has a lane of its own. |
-| `belts[]{strategy=normal}.lanes[0].flow_direction` | `0` or `4` or `8` or `12` | no | The direction in which the items on the lane move: 0 north, 4 east, 8 south, 12 west. Without it, the copies are checked with the items moving in each of the two directions along the copies. |
+| `belts[]{strategy=normal}.lanes[0].flow_direction` | `0` or `4` or `8` or `12` | no | The direction of the items on the lane: 0 north, 4 east, 8 south, 12 west. Without it, the check runs the items in the two directions along the copies. |
 | `belts[]{strategy=normal}.lanes[1]` | object | yes |  |
 | `belts[]{strategy=normal}.lanes[1].ingredient` | string | yes | The name of the item on the lane. |
 | `belts[]{strategy=normal}.lanes[1].stack_size` | integer > 0 | yes | The number of items in each stack on the lane. |
@@ -199,7 +199,7 @@ after the engine reads the file: a field with a default is required, but a confi
 | `belts[]{strategy=normal}.lanes[1].lane_end` | one of 3 objects, by `kind`: `dead_end`, `outlet`, `unknown` | no | The end of the lane. Without it, backed_up_belts sets the end. |
 | `belts[]{strategy=normal}.lanes[1].lane_end{kind=outlet}.outlet_rate` | number > 0 | no | The items per second that move off the end of the lane. The default is the lane's capacity. |
 | `belts[]{strategy=normal}.lanes[1].sharing` | one of `shared_by_copies`, `one_per_copy` | no | shared_by_copies (default): all copies take from this lane. one_per_copy: each copy has a lane of its own. |
-| `belts[]{strategy=normal}.lanes[1].flow_direction` | `0` or `4` or `8` or `12` | no | The direction in which the items on the lane move: 0 north, 4 east, 8 south, 12 west. Without it, the copies are checked with the items moving in each of the two directions along the copies. |
+| `belts[]{strategy=normal}.lanes[1].flow_direction` | `0` or `4` or `8` or `12` | no | The direction of the items on the lane: 0 north, 4 east, 8 south, 12 west. Without it, the check runs the items in the two directions along the copies. |
 | `belts[]{strategy=export}.id` | integer > 0 | yes | The number that identifies the belt in the configuration. |
 | `belts[]{strategy=export}.type` | one of `transport-belt`, `fast-transport-belt`, `express-transport-belt`, `turbo-transport-belt` | yes | The prototype name of the belt. |
 | `belts[]{strategy=export}.lanes` | array of exactly 1 or array of exactly 2 | yes | The lanes of the belt, one or two, the left lane in the direction of travel first. |
@@ -210,7 +210,7 @@ after the engine reads the file: a field with a default is required, but a confi
 | `belts[]{strategy=export}.lanes[0].lane_end` | one of 3 objects, by `kind`: `dead_end`, `outlet`, `unknown` | no | The end of the lane. Without it, backed_up_belts sets the end. |
 | `belts[]{strategy=export}.lanes[0].lane_end{kind=outlet}.outlet_rate` | number > 0 | no | The items per second that move off the end of the lane. The default is the lane's capacity. |
 | `belts[]{strategy=export}.lanes[0].sharing` | one of `shared_by_copies`, `one_per_copy` | no | shared_by_copies (default): all copies take from this lane. one_per_copy: each copy has a lane of its own. |
-| `belts[]{strategy=export}.lanes[0].flow_direction` | `0` or `4` or `8` or `12` | no | The direction in which the items on the lane move: 0 north, 4 east, 8 south, 12 west. Without it, the copies are checked with the items moving in each of the two directions along the copies. |
+| `belts[]{strategy=export}.lanes[0].flow_direction` | `0` or `4` or `8` or `12` | no | The direction of the items on the lane: 0 north, 4 east, 8 south, 12 west. Without it, the check runs the items in the two directions along the copies. |
 | `belts[]{strategy=export}.lanes[0].consumption_per_second` | number > 0 | no | The items per second that entities outside the configuration take off this lane. |
 | `belts[]{strategy=export}.lanes[1]` | object | yes |  |
 | `belts[]{strategy=export}.lanes[1].ingredient` | string | yes | The name of the item on the lane. |
@@ -219,7 +219,7 @@ after the engine reads the file: a field with a default is required, but a confi
 | `belts[]{strategy=export}.lanes[1].lane_end` | one of 3 objects, by `kind`: `dead_end`, `outlet`, `unknown` | no | The end of the lane. Without it, backed_up_belts sets the end. |
 | `belts[]{strategy=export}.lanes[1].lane_end{kind=outlet}.outlet_rate` | number > 0 | no | The items per second that move off the end of the lane. The default is the lane's capacity. |
 | `belts[]{strategy=export}.lanes[1].sharing` | one of `shared_by_copies`, `one_per_copy` | no | shared_by_copies (default): all copies take from this lane. one_per_copy: each copy has a lane of its own. |
-| `belts[]{strategy=export}.lanes[1].flow_direction` | `0` or `4` or `8` or `12` | no | The direction in which the items on the lane move: 0 north, 4 east, 8 south, 12 west. Without it, the copies are checked with the items moving in each of the two directions along the copies. |
+| `belts[]{strategy=export}.lanes[1].flow_direction` | `0` or `4` or `8` or `12` | no | The direction of the items on the lane: 0 north, 4 east, 8 south, 12 west. Without it, the check runs the items in the two directions along the copies. |
 | `belts[]{strategy=export}.lanes[1].consumption_per_second` | number > 0 | no | The items per second that entities outside the configuration take off this lane. |
 
 ## chests

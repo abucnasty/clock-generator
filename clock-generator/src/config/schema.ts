@@ -605,7 +605,7 @@ const BeltLaneConfigSchema = z.object({
     supply_rate: z.number().positive().optional().describe("The items per second that come onto the lane where it starts. The default is the lane's capacity."),
     lane_end: LaneEndConfigSchema.optional().describe("The end of the lane. Without it, backed_up_belts sets the end."),
     sharing: LaneSharingConfigSchema.optional().describe("shared_by_copies (default): all copies take from this lane. one_per_copy: each copy has a lane of its own."),
-    flow_direction: LaneFlowDirectionConfigSchema.optional().describe("The direction in which the items on the lane move: 0 north, 4 east, 8 south, 12 west. Without it, the copies are checked with the items moving in each of the two directions along the copies."),
+    flow_direction: LaneFlowDirectionConfigSchema.optional().describe("The direction of the items on the lane: 0 north, 4 east, 8 south, 12 west. Without it, the check runs the items in the two directions along the copies."),
 });
 
 const ExportBeltLaneConfigSchema = BeltLaneConfigSchema.extend({

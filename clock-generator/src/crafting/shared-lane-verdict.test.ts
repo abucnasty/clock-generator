@@ -38,9 +38,9 @@ describe("the clocks recorded on the chemical science build whose copies share d
         expect([losses[0].belt_id, losses[0].lane, losses[0].copy, losses[0].inserter_id, losses[0].flow.x]).toEqual([2, 1, 2, 3, 1]);
         // the game's machine made 19 of 30 hands
         expect(losses[0].items / losses[0].alone_items).toBeCloseTo(2 / 3, 1);
-        expect(losses[0].text).toBe(`Lane 1 of belt 2 ends in a dead end, and 5.5 copies take advanced circuit from it. When the items move east, `
-            + `copy 2 from the entry of the lane gets too few. Its inserter 3 takes ${losses[0].items.toLocaleString("en-US")} in ${losses[0].window_cycles} window cycles, `
-            + `and ${losses[0].alone_items.toLocaleString("en-US")} when no other copy takes from the lane.`);
+        expect(losses[0].text).toBe(`Lane 1 of belt 2 ends in a dead end. The 5.5 copies take advanced circuit from it. When the items move east, `
+            + `copy 2 from the entry does not get sufficient items. Its inserter 3 takes ${losses[0].items.toLocaleString("en-US")} in ${losses[0].window_cycles} window cycles. `
+            + `With no other copy on the lane, it takes ${losses[0].alone_items.toLocaleString("en-US")}.`);
     });
 
     it.each(["time_study_windows", "euclidean_swings"])("holds %s on every copy", id => {
@@ -58,7 +58,7 @@ describe("the clocks recorded on the chemical science build whose copies share d
         const losses = judged("takt_batches_observed", unknown).losses.filter(loss => loss.belt_id === 2 && loss.lane === 1);
         expect(losses.some(loss => loss.run_as === "dead_end" && loss.copy === 2 && loss.inserter_id === 3)).toBe(true);
         expect(losses.find(loss => loss.run_as === "dead_end")!.text)
-            .toContain("Lane 1 of belt 2 has an unknown end, which is checked as a dead end, and 5.5 copies take advanced circuit from it.");
+            .toContain("Lane 1 of belt 2 has an unknown end. It is checked as a dead end. The 5.5 copies take advanced circuit from it.");
     });
 
     it("leaves lanes that are one per copy to the run of one copy when they end in a dead end", () => {

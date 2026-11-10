@@ -181,8 +181,8 @@ describe('copies', () => {
             { belt_id: 1, lanes: [1], inserter_ids: [1], copies: 3, one_per_copy: false, items_per_second: 96, supply_per_second: 120 },
         ]);
         expect(() => assertLaneCapacity(config)).toThrow(SharedLaneSupplyError);
-        expect(() => assertLaneCapacity(config)).toThrow('Lane 1 of belt 1 is shared by the 3 copies. Together they take 3 × 96 = 288 a second '
-            + 'from it, and its supply rate is 120 a second. If each copy has a lane of its own, set the lane to one per copy. Else use fewer copies.');
+        expect(() => assertLaneCapacity(config)).toThrow('The 3 copies share lane 1 of belt 1. Together they take 3 × 96 = 288 a second '
+            + 'from it. Its supply rate is 120 a second. Set the lane to one per copy if the copies do not share it. If they share it, use a smaller number of copies.');
     });
 
     it('holds the takes against a stated supply rate, and the takes of one copy against a lane that is one per copy', () => {
@@ -201,7 +201,7 @@ describe('copies', () => {
     it('refuses nothing at the supply rate summed, with fractional copies, or with one copy', () => {
         // 2.5 copies of a unit taking 48 plates a second: 120, the lane's capacity
         expect(() => assertLaneCapacity(gears({ items_per_second: 60, copies: 2.5 }))).not.toThrow();
-        expect(() => assertLaneCapacity(gears({ items_per_second: 60.5, copies: 2.5 }))).toThrow('Together they take 2.5 × 48.4 = 121 a second from it, and its supply rate is 120 a second.');
+        expect(() => assertLaneCapacity(gears({ items_per_second: 60.5, copies: 2.5 }))).toThrow('Together they take 2.5 × 48.4 = 121 a second from it. Its supply rate is 120 a second.');
         expect(() => assertLaneCapacity(gears({ items_per_second: 60, copies: 1 }))).not.toThrow();
     });
 

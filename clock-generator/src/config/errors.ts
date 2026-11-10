@@ -434,10 +434,7 @@ export interface SharedLaneSupplyIssue {
 /** Whether the takes of the copies add up on the lanes: they share them, and there is more than one copy */
 const summedOverCopies = (issue: SharedLaneSupplyIssue): boolean => !issue.one_per_copy && issue.copies > 1;
 
-/**
- * "Lane 1 of belt 2 is shared by the 5 copies. Together they take 5 × 60 = 300 a second from it, and its supply rate is
- * 120 a second."
- */
+/** "The 5 copies share lane 1 of belt 2. Together they take 5 × 60 = 300 a second from it. Its supply rate is 120 a second." */
 export function describeSharedLaneSupply(issue: SharedLaneSupplyIssue): string {
     const one = issue.lanes.length === 1;
     const lanes = describeLanes(issue);
@@ -450,9 +447,9 @@ export function describeSharedLaneSupply(issue: SharedLaneSupplyIssue): string {
                 + `and ${one ? 'its' : 'their'} supply rate is ${formatRate(issue.supply_per_second)} a second.`;
     }
     const summed = issue.items_per_second * issue.copies;
-    return `${Lanes} ${one ? 'is' : 'are'} shared by the ${issue.copies} copies. Together they take ${issue.copies} × `
-        + `${formatRate(issue.items_per_second)} = ${formatRate(summed, issue.supply_per_second)} a second from ${one ? 'it' : 'them'}, `
-        + `and ${one ? 'its' : 'their'} supply rate is ${formatRate(issue.supply_per_second)} a second.`;
+    return `The ${issue.copies} copies share ${lanes}. Together they take ${issue.copies} × `
+        + `${formatRate(issue.items_per_second)} = ${formatRate(summed, issue.supply_per_second)} a second from ${one ? 'it' : 'them'}. `
+        + `${one ? 'Its' : 'Their'} supply rate is ${formatRate(issue.supply_per_second)} a second.`;
 }
 
 /** The copies take more from lanes they share than the lanes get, so no clock can hold the target */
@@ -461,7 +458,7 @@ export class SharedLaneSupplyError extends Error {
 
     constructor(issues: SharedLaneSupplyIssue[]) {
         super(`${issues.map(describeSharedLaneSupply).join(' ')} `
-            + (issues.some(summedOverCopies) ? 'If each copy has a lane of its own, set the lane to one per copy. Else use fewer copies.'
+            + (issues.some(summedOverCopies) ? 'Set the lane to one per copy if the copies do not share it. If they share it, use a smaller number of copies.'
                 : 'Raise the supply rate, or lower the target.'));
         this.name = 'SharedLaneSupplyError';
         this.issues = issues;
