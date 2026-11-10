@@ -338,12 +338,12 @@ describe("takers of one machine that it cannot serve together", () => {
                 { surplus_guard: false, feeder_offset, share_windows: false });
             // both fill a science plant whose output (4, 3) swings at 0, so the chain would open them in the same ticks; the one into machine 1 keeps
             // its place and the one into machine 2 opens 20 ticks after it
-            expect(ranges(windows, "inserter:7")).toEqual([[19, 28]]);
-            expect(ranges(windows, "inserter:6")).toEqual([[39, 39], [0, 8]]);
+            expect(ranges(windows, "inserter:7")).toEqual([[15, 24]]);
+            expect(ranges(windows, "inserter:6")).toEqual([[35, 39], [0, 4]]);
             // the hand out of each science plant keeps its place in its plant's turn: machine 2's (3) swings 20 ticks after machine 1's (4)
             expect(ranges(windows, "inserter:4")).toEqual([[0, 0]]);
             expect(ranges(windows, "inserter:3")).toEqual([[20, 20]]);
-            for (const id of [5, 8]) expect(ranges(windows, `inserter:${id}`)).toEqual([[2, 18]]);
+            for (const id of [5, 8]) expect(ranges(windows, `inserter:${id}`)).toEqual([[2, 14]]);
         }
     });
 
@@ -377,15 +377,15 @@ describe("takers of one machine that it cannot serve together", () => {
         expect(roomAtTurn(science, 10.99)).toBe(true);
     });
 
-    it("does not offer a way whose turns open while their plants hold their block: at 300% productivity 19 ticks make 11.35 packs", () => {
-        const faster = { ...config, machines: config.machines.map(it => it.recipe === "electromagnetic-science-pack" ? { ...it, productivity: 300 } : it) };
+    it("does not offer a way whose turns open while their plants hold their block: at 400% productivity 15 ticks make 11.2 packs", () => {
+        const faster = { ...config, machines: config.machines.map(it => it.recipe === "electromagnetic-science-pack" ? { ...it, productivity: 400 } : it) };
         const plan = unclockedRun({ ...faster, overrides: { ...faster.overrides, derive_clock_windows: false } }, { logger: quiet });
         const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
         for (const feeder_offset of [16, 1]) {
             const made = () => roundRobinPollingWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks,
                 { surplus_guard: false, feeder_offset, share_windows: false });
             expect(made).toThrow(TurnWithoutRoom);
-            expect(made).toThrow("machine:2 would still hold about 11.4 electromagnetic-science-pack when its turn to take supercapacitor "
+            expect(made).toThrow("machine:2 would still hold about 11.2 electromagnetic-science-pack when its turn to take supercapacitor "
                 + "from machine:3 begins, and it takes no ingredients from 12 electromagnetic-science-pack: that turn would bring it nothing");
         }
     });

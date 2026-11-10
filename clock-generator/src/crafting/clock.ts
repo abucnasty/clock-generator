@@ -76,6 +76,11 @@ export function fuelHandRoomTicks(entity_registry: ReadableEntityRegistry): Map<
  * whose fill takes longest sets the ticks. A lane that is a dead end gives none: there the hand fills from the lane at
  * rest, and its windows last as long as that takes (see backpressureHandTicks). A lane with an unknown end gives the
  * room, as a lane that is not a dead end. Absent for an inserter that takes from a dead end only, or not from a belt.
+ *
+ * Absent as well for a side pickup (a pickup with no layout named is one, on a straight belt) that takes an item both
+ * lanes of its belt carry: its hand takes from the lane nearest it first and from the far lane when the near one gives
+ * nothing (BeltHandPickup), so the far lane gives the hand what a gap on the near lane withholds. A pickup of any other
+ * layout, and a side pickup of an item on one lane only, keeps the room.
  */
 export function laneHandRoomTicks(entity_registry: ReadableEntityRegistry): Map<string, number> {
     const room = new Map<string, number>();
@@ -89,6 +94,10 @@ export function laneHandRoomTicks(entity_registry: ReadableEntityRegistry): Map<
         }
         const facts = entity.belt_lane_facts;
         const taken = source.lanes.filter(lane => entity.filtered_items.has(lane.ingredient_name));
+        const side_pickup = (entity.pickup_layout ?? "side-straight").startsWith("side-");
+        if (side_pickup && taken.length === 2 && taken[0].ingredient_name === taken[1].ingredient_name) {
+            continue;
+        }
         // the lanes of the items it takes; of a belt none of whose items it takes, every lane (its nominal hand)
         const lanes = (taken.length > 0 ? taken : source.lanes)
             .filter(lane => !isDeadEnd(facts[source.lanes.indexOf(lane)]));

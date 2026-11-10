@@ -137,6 +137,45 @@ describe("the rules of the game", () => {
         it("is given on a lane whose end is unknown", () => {
             expect(roomOf({ iron_stack: 4, iron_end: { kind: "unknown" }, cable_end: { kind: "unknown" } }, 16, true)).toBe(4);
         });
+
+        describe("of a side pickup that takes an item both lanes carry", () => {
+            // one inserter of a hand of 16 that takes off a turbo belt of stacks of 4 into a machine making iron gear
+            // wheels (it takes iron plates only); a pickup with no layout named is a side pickup on a straight belt
+            const roomOfLanes = (lanes: [string, string], pickup: { pickup_layout?: "front-exit"; pickup_length?: 0.5 } = {},
+                lane_end?: LaneEnd) => laneHandRoomTicks(createEntityRegistryFromConfig(ConfigSchema.parse({
+                setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+                machines: [{ id: 1, recipe: "iron-gear-wheel", crafting_speed: 1, productivity: 0 }],
+                inserters: [
+                    { id: 1, source: { type: "belt", id: 1, ...pickup }, sink: { type: "machine", id: 1 }, stack_size: 16 },
+                    { id: 2, source: { type: "machine", id: 1 }, sink: { type: "chest", id: 1 }, stack_size: 16 },
+                ],
+                belts: [{ id: 1, type: "turbo-transport-belt", lanes: lanes.map(ingredient =>
+                    ({ ingredient, stack_size: 4, ...(lane_end !== undefined && { lane_end }) })) }],
+                chests: [{ id: 1, type: "infinity-chest", item_filter: [], remove_unfiltered_items: true }],
+            }))).get("inserter:1");
+
+            it("is none: the far lane gives the hand what a gap on the near lane withholds", () => {
+                expect(roomOfLanes(["iron-plate", "iron-plate"])).toBeUndefined();
+            });
+
+            it("is given where the item is on one lane only", () => {
+                expect(roomOfLanes(["iron-plate", "coal"])).toBe(4);
+                expect(roomOfLanes(["coal", "iron-plate"])).toBe(4);
+            });
+
+            it("is given where it takes two items, one on each lane", () => {
+                expect(roomOf({ iron_stack: 4 })).toBe(4);
+            });
+
+            it("is given at a pickup that is not a side pickup, an underground exit picked up from the front", () => {
+                expect(roomOfLanes(["iron-plate", "iron-plate"], { pickup_layout: "front-exit", pickup_length: 0.5 })).toBe(4);
+            });
+
+            it("is none where both lanes are dead ends, as for any pickup", () => {
+                expect(roomOfLanes(["iron-plate", "iron-plate"], {}, { kind: "dead_end" })).toBeUndefined();
+                expect(roomOfLanes(["iron-plate", "iron-plate"], { pickup_layout: "front-exit", pickup_length: 0.5 }, { kind: "dead_end" })).toBeUndefined();
+            });
+        });
     });
 
     describe("room for a hand of fuel", () => {
