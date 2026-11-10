@@ -98,6 +98,24 @@ A recycler's results come by chance, so no window cycle of its clock in the game
 
 Recorded on the ore voider's two cells (`tests/game/builds/iron-ore-voider-400-clock.game.test.ts`, Factorio 2.1.21), each on its recommended clock (even hands, 144 ticks): an hour of 1,500 window cycles brought 960 ore into the recycler in every window cycle, and it destroyed 400.009 a second at exact speed and 399.997 overbeaconed against 400 ± 0.5; 0.24999 of the crafts gave the ore back (0.25 ± 0.0009); the car held at most 74 and 66 ore of 4,000 and the recycler never waited for room in it. With the ore cut for 20 window cycles, both were back at 960 the first window cycle after. With 2,000 ore put into the car at once, it was back under its highest of the hour in 46 window cycles at exact speed, where the recycler's input was full a hand short every other window cycle while it drained, and in 43 overbeaconed with no hand lost; at 960 in every window cycle after. The game repeats a run from the same save tick for tick, so its figures are one draw of the returns, judged on the ranges above.
 
+### Copies that share a lane
+
+Where the copies of a build take from one lane, each clock that holds on one copy is run again with every copy on that lane ([simulator](simulator.md#copies-that-take-from-one-lane)). The verdict of that run has two checks (`clock-generator/src/crafting/shared-lane-verdict.ts`):
+
+1. **The takers.** Each inserter of each copy that takes from a shared lane is compared with the same inserter in a run of one copy alone, over the whole window cycles of the second half of the run. An inserter that puts down fewer of the lane's items than in the run of one copy is short.
+2. **The machines and the output inserters.** A shortfall is a loss only where a machine or an output inserter of a copy is behind its target in the same run, over the same window cycles: a machine by more than one craft, an output inserter by more than one hand. A machine's target is the crafts that one copy needs from it for the setpoint. An output inserter's target is the items of the product that it puts down in the output cycle. Where no machine and no output inserter is behind, the shortfall is stock that moved between the two runs, and the clock holds.
+
+A part copy is the fraction of `setpoint.copies` after the whole copies: 3.5 copies are three whole copies and one part copy. On each shared lane, the part copy holds that fraction of a copy's takers, rounded up, with the machines that they feed and what those machines need. So a machine of a part copy can have fewer takers than the same machine of a whole copy, and it makes only what its takers take. If it is held to the target of a whole copy, it is always behind, and each shortfall of a taker on the lane is a loss.
+
+So a machine of a part copy is held to the target of a whole copy times the share of the machine's takers' transfers that the part copy holds. A transfer is one hand that an inserter moves in the output cycle. A machine that no inserter takes from, or whose takers move nothing, keeps the target of a whole copy. The machines of a whole copy keep their targets.
+
+An example: in a whole copy, a machine has four takers, and each moves one hand in the output cycle. In the judged window cycles, the machine must make 100 crafts. The part copy holds two of the four takers, so it holds 2 of 4 hands, and its machine is held to 50 crafts. If it makes 50, it is not behind. If it makes 45, it is 5 crafts behind, and a taker's shortfall on the lane is a loss.
+
+- A machine of a part copy that makes less than its share by more than one craft is behind, and the loss stands.
+- An output inserter of a part copy is held to its own target, the same as an output inserter of a whole copy.
+
+Not shown: no part copy has been recorded in the game. The rule comes from the model only.
+
 ### What a stable verdict proves
 
 A clock called stable is proven only where its check reports `long_run_proven` or `start_phases_proven` (#258), and then only under the simulator's mechanics. Everywhere else the verdict rests on a sample. The lane phases, the loss grid and the start-dependence starts described above are samples too.

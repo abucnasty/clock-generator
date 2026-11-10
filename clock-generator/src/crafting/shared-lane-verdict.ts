@@ -59,9 +59,11 @@ import { longRunWindowCyclesOf, runClockOnBuild } from "./trial";
  * clock is held to is that each machine meets its target rate, to supply its sink or the output inserters the setpoint
  * counts at. So a loss stands only where, in the same run of the copies and over the same judged window cycles, a machine
  * of a copy is behind its target rate by more than one craft, or an output inserter of a copy by more than one hand
- * (`behindTargetIn`); a part copy's machine is held to the same target as a whole copy's. Where none is, the shortfall is
- * stock moved between the runs, and the clock holds. The condition reads only the runs made above: it adds no run, and a
- * clock that no taker's shortfall fails holds whatever its rates. Where the targets cannot be worked out, the loss stands.
+ * (`behindTargetIn`). A part copy's machine can have fewer takers than a whole copy's, and makes only what they take: it
+ * is held to the whole copy's target times the share of the machine's takers' transfers that the part copy holds. A part
+ * copy's output inserter is held to its own target. Where none is behind, the shortfall is stock moved between the runs,
+ * and the clock holds. The condition reads only the runs made above: it adds no run, and a clock that no taker's
+ * shortfall fails holds whatever its rates. Where the targets cannot be worked out, the loss stands.
  *
  * What each copy's taker got, and what each copy's machines and output inserters made, is read through one function,
  * `copyLaneTakes`, and nowhere else.
@@ -467,12 +469,14 @@ function runAlone(under: Config, taker_ids: readonly string[], windows: Map<stri
 }
 
 /** One run of the copies, read over its judged window cycles: the takers short of the run of one copy, and what each copy made */
-interface RunOfCopies {
+export interface RunOfCopies {
     shortfalls: Shortfall[];
     made: CopyMade[];
     /** The judged window cycles, from the tick `from` up to, not including, the tick `to` */
     from: number;
     to: number;
+    /** What each copy after the config's own holds, in order: every entity, or the ids of the entities a part copy holds */
+    holds: SharedLaneLayout["copies"]["later"];
 }
 
 /**
@@ -486,7 +490,8 @@ function shortfallsOf(under: Config, lanes: readonly ModelLane[], layout: Shared
     const last = Math.min(alone.last_tick, last_tick);
     const first_cycle = Math.ceil(last / 2 / window_cycle_ticks), end_cycle = Math.floor((last + 1) / window_cycle_ticks + 1e-9);
     const from = cycleStart(first_cycle, window_cycle_ticks), to = cycleStart(end_cycle, window_cycle_ticks);
-    if (end_cycle <= first_cycle) return { shortfalls: [], made, from, to };
+    const holds = layout.copies.later;
+    if (end_cycle <= first_cycle) return { shortfalls: [], made, from, to, holds };
     const shortfalls = takes.flatMap(take => {
         const alone_items = itemsIn((alone.recorders.get(take.inserter_id)?.hands ?? []).filter(hand => hand.item === take.item), from, to);
         const items = itemsIn(take.hands, from, to);
@@ -500,7 +505,7 @@ function shortfallsOf(under: Config, lanes: readonly ModelLane[], layout: Shared
             window_cycles: end_cycle - first_cycle, flow: row.flow };
         return [{ short: alone_items - items, hand: alone.handOf(take.inserter_id, take.item), loss }];
     });
-    return { shortfalls, made, from, to };
+    return { shortfalls, made, from, to, holds };
 }
 
 /** The output inserters of a config and the item of its target (target-ends.ts); null where they cannot be worked out */
@@ -515,10 +520,21 @@ function outputEndsOf(config: Config): OutputEnds | null {
     }
 }
 
-/** The target rates of one copy: crafts a second of each machine, and items of the target a second of each output inserter, with its hand */
-interface TargetRates {
+/** One inserter that takes from a machine, and the hands it moves in one output cycle of one copy */
+interface MachineTaker {
+    inserter_id: string;
+    transfers: number;
+}
+
+/**
+ * The target rates of one copy: crafts a second of each machine, and items of the target a second of each output inserter,
+ * with its hand; and the takers of each machine, with their transfers
+ */
+export interface TargetRates {
     crafts_per_second: ReadonlyMap<number, number>;
     output_inserters: ReadonlyMap<number, { items_per_second: number; hand: number }>;
+    /** The inserters that take from each machine, by the config's machine number */
+    takers: ReadonlyMap<number, readonly MachineTaker[]>;
 }
 
 /**
@@ -535,15 +551,24 @@ function targetRatesOf(config: Config, ends: OutputEnds): TargetRates | null {
         const cycle = OutputCyclePlan.create(TargetProductionRate.fromConfig(config.setpoint), registry, config, fraction(1));
         const seconds = cycle.total_duration_ticks.divide(60);
         const output_inserters = new Map<number, { items_per_second: number; hand: number }>();
+        // the machine each inserter of the config takes from, by the inserter's id
+        const source_machines = new Map(config.inserters.flatMap((inserter, index) => inserter.source.type === "machine"
+            ? [[EntityId.forInserter(inserter.id ?? index + 1).id, inserter.source.id] as const] : []));
+        const takers = new Map<number, MachineTaker[]>();
         for (const transfer of cycle.entity_transfer_map.values()) {
             const number = transfer.entity.entity_id.number;
-            if (!Entity.isInserter(transfer.entity) || !ends.inserter_ids.has(number)) continue;
+            if (!Entity.isInserter(transfer.entity)) continue;
+            const machine = source_machines.get(transfer.entity.entity_id.id);
+            if (machine !== undefined) {
+                takers.set(machine, [...takers.get(machine) ?? [], { inserter_id: transfer.entity.entity_id.id, transfers: transfer.total_transfer_count.toDecimal() }]);
+            }
+            if (!ends.inserter_ids.has(number)) continue;
             const of_target = transfer.item_transfers.find(it => it.item_name === ends.item);
             if (of_target === undefined) continue;
             const hand = handOfItem(traits, transfer.entity.entity_id.id, ends.item);
             output_inserters.set(number, { items_per_second: of_target.transfer_count.multiply(hand).divide(seconds).toDecimal(), hand });
         }
-        return { crafts_per_second, output_inserters };
+        return { crafts_per_second, output_inserters, takers };
     } catch {
         return null;
     }
@@ -553,18 +578,32 @@ function targetRatesOf(config: Config, ends: OutputEnds): TargetRates | null {
 const ROUNDING = 1e-9;
 
 /**
+ * The share of a whole copy's target that a machine of a copy is held to: all of it for a whole copy; for a part copy, the
+ * share of the machine's takers' transfers that the part copy holds. A machine that no inserter takes from, or whose
+ * takers move nothing in the output cycle, is held to all of it.
+ */
+function machineShareOf(holds: "whole" | ReadonlySet<string>, takers: readonly MachineTaker[] | undefined): number {
+    if (holds === "whole" || takers === undefined) return 1;
+    const all = takers.reduce((sum, taker) => sum + taker.transfers, 0);
+    if (!(all > 0)) return 1;
+    return takers.reduce((sum, taker) => holds.has(taker.inserter_id) ? sum + taker.transfers : sum, 0) / all;
+}
+
+/**
  * The machines of every copy behind their target rate by more than one craft, and the output inserters of every copy
  * behind theirs by more than one hand, over the judged window cycles of one run of the copies; the furthest behind first.
- * A part copy's machine is held to the same target as a whole copy's.
+ * A part copy's machine is held to the whole copy's target times the share of the machine's takers' transfers that the
+ * part copy holds (`machineShareOf`): a machine of which it holds two of four equal takers is held to half. An output
+ * inserter of a part copy is held to its own target, as one of a whole copy.
  */
-function behindTargetIn(run: RunOfCopies, rates: TargetRates): BehindTarget[] {
+export function behindTargetIn(run: RunOfCopies, rates: TargetRates): BehindTarget[] {
     const seconds = (run.to - run.from) / 60;
     return run.made.flatMap(({ copy, kind, id, counts }): BehindTarget[] => {
         const made = counts.reduce((sum, it) => it.tick >= run.from && it.tick < run.to ? sum + it.amount : sum, 0);
         if (kind === "machine") {
             const rate = rates.crafts_per_second.get(id);
             if (rate === undefined) return [];
-            const target = rate * seconds;
+            const target = rate * seconds * machineShareOf(copy === 0 ? "whole" : run.holds[copy - 1] ?? "whole", rates.takers.get(id));
             return target - made > 1 + ROUNDING ? [{ copy: copy + 1, kind, id, made, target, behind: target - made }] : [];
         }
         const output = rates.output_inserters.get(id);
