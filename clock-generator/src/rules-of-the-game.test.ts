@@ -5,7 +5,7 @@ import { loadConfigFromFile } from "./config/loader";
 import { Entity, ReadableEntityRegistry } from "./entities";
 import { Lane } from "./entities/belt/belt";
 import { createEntityRegistryFromConfig } from "./crafting/sequence/simulation-context";
-import { actsInTheTickTheBlockIsLifted, fuelHandRoomTicks, miningDrillMaxInsertion, nearestLaneFirst } from "./rules-of-the-game";
+import { actsInTheTickTheBlockIsLifted, fuelHandRoomTicks, laneHandRoomTicks, miningDrillMaxInsertion, nearestLaneFirst } from "./rules-of-the-game";
 
 /**
  * The tables of recorded cases of the rules of the game that have no table elsewhere (see rules-of-the-game.ts for
@@ -92,6 +92,50 @@ describe("the rules of the game", () => {
 
         it("keeps the order of the filters when the near lane has nothing it takes", () => {
             expect(Array.from(nearestLaneFirst(new Set(["processing-unit"]), lanes, 1))).toEqual(["processing-unit"]);
+        });
+    });
+
+    describe("room for one more hand", () => {
+        type LaneEnd = { kind: "dead_end" } | { kind: "unknown" } | { kind: "outlet" };
+        // one inserter of a hand of `hand` that takes iron plates off lane 1 and copper cable off lane 2 of a turbo belt
+        const roomOf = (lanes: { iron_stack: number; iron_end?: LaneEnd; cable_stack?: number; cable_end?: LaneEnd },
+            hand = 16, backed_up_belts = false) => laneHandRoomTicks(createEntityRegistryFromConfig(ConfigSchema.parse({
+            setpoint: { recipe: "electronic-circuit", items_per_second: 1, copies: 1 },
+            machines: [{ id: 1, recipe: "electronic-circuit", crafting_speed: 1, productivity: 0 }],
+            inserters: [
+                { id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 }, stack_size: hand },
+                { id: 2, source: { type: "machine", id: 1 }, sink: { type: "chest", id: 1 }, stack_size: 16 },
+            ],
+            belts: [{ id: 1, type: "turbo-transport-belt", lanes: [
+                { ingredient: "iron-plate", stack_size: lanes.iron_stack, ...(lanes.iron_end !== undefined && { lane_end: lanes.iron_end }) },
+                { ingredient: "copper-cable", stack_size: lanes.cable_stack ?? lanes.iron_stack, ...(lanes.cable_end !== undefined && { lane_end: lanes.cable_end }) },
+            ] }],
+            chests: [{ id: 1, type: "infinity-chest", item_filter: [], remove_unfiltered_items: true }],
+            overrides: { backed_up_belts },
+        }))).get("inserter:1");
+
+        it("is the ticks one more hand takes at one lane stack a tick: 4 for a hand of 16 from stacks of 4", () => {
+            expect(roomOf({ iron_stack: 4 })).toBe(4);
+        });
+
+        it("is sized by the hand and the lane's stack, not a fixed count: 3 for a hand of 12 from stacks of 4, 16 for a hand of 16 from stacks of 1", () => {
+            expect(roomOf({ iron_stack: 4 }, 12)).toBe(3);
+            expect(roomOf({ iron_stack: 1 })).toBe(16);
+        });
+
+        it("is none on a lane that is a dead end, stated or set by backed_up_belts", () => {
+            expect(roomOf({ iron_stack: 4, iron_end: { kind: "dead_end" }, cable_end: { kind: "dead_end" } })).toBeUndefined();
+            expect(roomOf({ iron_stack: 4 }, 16, true)).toBeUndefined();
+        });
+
+        it("is set by the lanes that are not dead ends, the slowest fill of those", () => {
+            expect(roomOf({ iron_stack: 4, iron_end: { kind: "dead_end" }, cable_stack: 1 })).toBe(16);
+            expect(roomOf({ iron_stack: 4, cable_stack: 1, cable_end: { kind: "dead_end" } })).toBe(4);
+        });
+
+        // the end is not known, so the lane can move: the room is given as on a lane that is not a dead end
+        it("is given on a lane whose end is unknown", () => {
+            expect(roomOf({ iron_stack: 4, iron_end: { kind: "unknown" }, cable_end: { kind: "unknown" } }, 16, true)).toBe(4);
         });
     });
 
