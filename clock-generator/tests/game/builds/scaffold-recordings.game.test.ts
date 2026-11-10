@@ -497,6 +497,15 @@ interface SteadyReport {
 
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 
+/**
+ * What a row of output inserters of a build of copies moves at the least in a window cycle: one copy's output times the
+ * row's output inserters over the output inserters of one copy. A copy with one output inserter gives its row the whole
+ * of its output; a copy with an output inserter in each of two rows gives each row half of it.
+ */
+function rowTarget(copy_output: number, row_output_inserters: number, copy_output_inserters: number): number {
+    return Math.round(copy_output * row_output_inserters / copy_output_inserters * 1e6) / 1e6;
+}
+
 let scratch: string | null = null;
 /** The one game the builds are watched in, each built in the place of the one before it */
 let session: HarnessSession | null = null;
@@ -700,8 +709,11 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                 // 100% or more of the target, each row on its own (copies of the row at one height) and the whole build; recorded raw
                 const per_row = config.setpoint.copies;
                 expect(rows.length, `the output inserters of the build stand in rows (heights: ${row_ys.join(", ")})`).toBeGreaterThan(1);
+                const copy_output_inserters = output_unit_numbers.length / copies;
+                expect(Number.isInteger(copy_output_inserters),
+                    `the build's ${output_unit_numbers.length} output inserters are the same number in each of its ${copies} copies`).toBe(true);
                 for (const row of rows) {
-                    const row_expected = Math.round(expected_per_copy * (output_unit_numbers.filter(unit => row_of.get(unit) === row.y).length) * 1e6) / 1e6;
+                    const row_expected = rowTarget(expected_per_copy, row.output_inserters, copy_output_inserters);
                     const row_checked = row.per_window_cycle.length > 1 ? row.per_window_cycle.slice(1) : row.per_window_cycle;
                     expect(row_checked.map(it => ({ start: it.start, items: it.items })).filter(it => it.items < row_expected - 1e-6),
                         `every one of the ${row_checked.length} periods checked of the row at y=${row.y} (${row.output_inserters} output inserters, ${per_row} copies wanted) moves ${row_expected} items of ${config.setpoint.recipe} or more`).toEqual([]);
