@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.10.1
+Date: 2026-11-10
+  Bugfixes:
+    - An inserter the build's own clock held that the generated clock does not schedule loses its circuit wires (both colours) as well as running free, so nothing of the build's wiring is left on it; the clock's network is followed through constant combinators that put no signal on their wires, so an inserter wired to a scheduled one through such a relay is one of them
+  Features:
+    - The wires cut on each inserter that runs free are in the report of the clock (free_wires_cut)
+    - The report of the clock lists every inserter of the build the clock is not wired to, with the circuit wires left on it after the cut (not_clocked)
+---------------------------------------------------------------------------------------------------
 Version: 0.10.0
 Date: 2026-11-09
   Bugfixes:

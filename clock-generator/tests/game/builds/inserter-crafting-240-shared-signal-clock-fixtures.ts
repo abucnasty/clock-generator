@@ -30,7 +30,8 @@ import {assertFeedBacksUp, PickupClockScenario} from "./pickup-clock-capture";
  * inserters are not wired.
  *
  * Two clocks run on the one blueprint: the hand-made one, and the generator's selected clock for the config, wired to the same
- * inserters of each copy with the hand-made clock's three combinators taken out.
+ * inserters of each copy with the hand-made clock's three combinators taken out. Under the generated clock the foundry's part
+ * is the build's own, not the config's: its inserters lose their circuit wires (the one behind the relay too) and run free.
  *
  * A third run is the sample's own scaffold, one copy with its ore lines and circuit belts closed (they back up, in the game), under the
  * clock the generator selects for the config with `backed_up_belts` on (#442).

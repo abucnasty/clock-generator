@@ -1,6 +1,7 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
+import zlib from "zlib";
 import { afterAll, describe, expect, test } from "vitest";
 import { encodeBlueprintFile } from "../../../../src/blueprints/serde";
 import { ConfigPaths } from "../../../../src/config/config-paths";
@@ -62,9 +63,19 @@ describe("the harness wires the clock to the build", () => {
         });
 
         const report = JSON.parse(fs.readFileSync(path.join(work_dir, "script-output", "clock-wires.json"), "utf8")) as
-            { wired: { inserter: number; unit_number: number; wires_cut: { red: number; green: number } }[] };
+            { wired: { inserter: number; unit_number: number; wires_cut: { red: number; green: number } }[];
+                not_clocked: { unit_number: number; red: number; green: number }[] | Record<string, never> };
         const cut = report.wired.reduce((sum, it) => sum + it.wires_cut.red + it.wires_cut.green, 0);
         expect(cut, "the build's wires are cut: the report lists them").toBeGreaterThan(0);
+
+        // every inserter of the build that is no inserter of the config is left without circuit wires, whatever it was wired to
+        // in the base: the base's clock on either colour, or a scheduled inserter through a combinator that only relays
+        const not_clocked = Array.isArray(report.not_clocked) ? report.not_clocked : [];
+        const text = fs.readFileSync(WIRED_BUILD, "utf8").trim();
+        const entities: { name: string }[] = JSON.parse(zlib.inflateSync(Buffer.from(text.slice(1), "base64")).toString("utf-8")).blueprint.entities;
+        expect(report.wired.length + not_clocked.length, "the report lists every inserter of the build")
+            .toBe(entities.filter(entity => entity.name.endsWith("inserter")).length);
+        expect(not_clocked.filter(it => it.red + it.green > 0), "the inserters the clock is not wired to that keep circuit wires").toEqual([]);
 
         const windows = (id: number) => {
             const ticks = new Set<number>();

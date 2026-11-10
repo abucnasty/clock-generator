@@ -361,8 +361,32 @@ local function bounding_box(entities)
     return { left_top = { x = left, y = top }, right_bottom = { x = right, y = bottom } }
 end
 
+---A constant combinator that puts no signal on its wires (switched off, or no section holds a signal): it only joins the red
+---wires on it into one network and the green ones into another, as a pole does
+---@param entity LuaEntity
+---@return boolean
+local function only_relays(entity)
+    if entity.type ~= "constant-combinator" then
+        return false
+    end
+    local behavior = entity.get_control_behavior()
+    if not behavior or not behavior.enabled then
+        return true
+    end
+    for _, section in pairs(behavior.sections) do
+        if section.active ~= false then
+            for _, filter in pairs(section.filters) do
+                if filter.value then
+                    return false
+                end
+            end
+        end
+    end
+    return true
+end
+
 ---The clock a build came with: the combinator labelled by the blueprint generator and the combinators chained to it,
----and the inserters that read them
+---and the inserters that read them, over either colour and through poles, inserters and constant combinators that only relay
 ---@param entities LuaEntity[]
 ---@return LuaEntity[] combinators, table<uint, LuaEntity> inserters by unit number
 local function find_clock_network(entities)
@@ -381,7 +405,7 @@ local function find_clock_network(entities)
         table.insert(combinators, entity)
     end
     local inserters = {}
-    for unit_number, entity in pairs(reachable(combinators, function(it) return not COMBINATOR_TYPES[it.type] end)) do
+    for unit_number, entity in pairs(reachable(combinators, function(it) return not COMBINATOR_TYPES[it.type] or only_relays(it) end)) do
         if entity.type == "inserter" then
             inserters[unit_number] = entity
         end
@@ -622,11 +646,30 @@ local function attach_clock(state, combinators, tags, clock)
         end
     end
 
-    -- an inserter the removed clock held and the new one does not name would never be enabled again
+    -- an inserter the removed clock held and the new one does not name would never be enabled again: it runs free, and its
+    -- circuit wires go (both colours), so nothing of the build's own wiring is left on it
+    report.free_wires_cut = {}
+    local free = {}
     for unit_number, inserter in pairs(state.clocked_inserters or {}) do
         if inserter.valid and not wired_units[unit_number] then
-            run_without_circuit(inserter)
-            table.insert(report.running_free, unit_number)
+            table.insert(free, inserter)
+        end
+    end
+    local free_cut = cut_circuit_wires(free)
+    for _, inserter in ipairs(free) do
+        run_without_circuit(inserter)
+        table.insert(report.running_free, inserter.unit_number)
+        local had = free_cut[inserter.unit_number]
+        table.insert(report.free_wires_cut, { unit_number = inserter.unit_number, red = had.red, green = had.green, kept = had.kept })
+    end
+    -- every inserter of the build that the clock is not wired to, with the circuit wires left on it
+    report.not_clocked = {}
+    for _, entity in pairs(state.entities) do
+        if entity.valid and entity.type == "inserter" and not wired_units[entity.unit_number] then
+            local red = entity.get_wire_connector(defines.wire_connector_id.circuit_red, false)
+            local green = entity.get_wire_connector(defines.wire_connector_id.circuit_green, false)
+            table.insert(report.not_clocked, { unit_number = entity.unit_number,
+                red = red and red.connection_count or 0, green = green and green.connection_count or 0 })
         end
     end
     -- the report stays with the recording: the log line the host prints counts the inserters only
