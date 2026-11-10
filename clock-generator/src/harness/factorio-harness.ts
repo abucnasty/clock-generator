@@ -696,6 +696,11 @@ const BELT_ENTITY_TYPES = new Set(["transport-belt", "underground-belt", "splitt
  * - a loader on a machine of the config, which moves items like an inserter that is always enabled.
  * Inserters between belts and chests only, such as the ones that feed a scaffold's belt, and machines with other
  * recipes are the scaffold's own and not the config's business.
+ * So is a group of machines outside the config that inserters join to each other, when it holds a machine with a recipe
+ * the config does not have and no inserter joins it to a machine of the config: it makes something else beside the copies
+ * (furnaces and a gear assembler that feed a foundry, say), and nothing of it moves items of the config's machines. A group
+ * of the config's recipes alone, a whole copy more than the config has among them, cannot be told from a copy that no clock
+ * holds, and is refused.
  */
 export function buildPartsMissingFromConfig(described: any, config: Config, named_copies?: number): BuildPartMissingFromConfig[] {
     if (described.movers === undefined) {
@@ -735,8 +740,9 @@ export function buildPartsMissingFromConfig(described: any, config: Config, name
 
     const missing: BuildPartMissingFromConfig[] = [];
     const config_recipes = new Set(config.machines.map(machine => machine.recipe));
+    const builds_own = machinesOfBuildOwnGroups(Object.values<any>(described.movers.inserters ?? {}), config_machines, other_machines, config_recipes);
     for (const machine of as_recording.machines) {
-        if (!match.machines.has(machine.id) && config_recipes.has(machine.recipe)) {
+        if (!match.machines.has(machine.id) && config_recipes.has(machine.recipe) && !(machine.unit_number !== undefined && builds_own.has(machine.unit_number))) {
             const configured = config.machines.filter(it => it.recipe === machine.recipe).length;
             missing.push({
                 kind: "machine",
@@ -768,6 +774,46 @@ export function buildPartsMissingFromConfig(described: any, config: Config, name
         }
     }
     return missing;
+}
+
+/**
+ * Unit numbers of the machines outside the config that are the build's own (see buildPartsMissingFromConfig): the groups of
+ * them that inserters join machine to machine, where a group holds a recipe the config does not have and no inserter joins
+ * one of its machines to a machine of the config
+ */
+function machinesOfBuildOwnGroups(
+    inserters: { pickup?: { unit_number?: number }; drop?: { unit_number?: number } }[],
+    config_machines: Map<number, number>,
+    other_machines: Map<number, string>,
+    config_recipes: Set<string>,
+): Set<number> {
+    const group_of = new Map<number, number>(Array.from(other_machines.keys()).map(unit_number => [unit_number, unit_number]));
+    const root = (unit_number: number): number => {
+        let at = unit_number;
+        while (group_of.get(at) !== at) at = group_of.get(at)!;
+        return at;
+    };
+    const joined_to_config = new Set<number>();
+    for (const { pickup, drop } of inserters) {
+        const ends = [pickup?.unit_number, drop?.unit_number];
+        const [a, b] = ends.map(unit_number => unit_number !== undefined && other_machines.has(unit_number) ? unit_number : undefined);
+        if (a !== undefined && b !== undefined) {
+            group_of.set(root(a), root(b));
+        }
+        const to_config = ends.some(unit_number => unit_number !== undefined && config_machines.has(unit_number));
+        for (const end of [a, b]) {
+            if (end !== undefined && to_config) joined_to_config.add(end);
+        }
+    }
+    const groups = new Map<number, { machines: number[]; own_recipe: boolean; joined: boolean }>();
+    for (const [unit_number, recipe] of other_machines) {
+        const group = groups.get(root(unit_number)) ?? { machines: [], own_recipe: false, joined: false };
+        group.machines.push(unit_number);
+        group.own_recipe ||= recipe !== undefined && recipe !== "" && !config_recipes.has(recipe);
+        group.joined ||= joined_to_config.has(unit_number);
+        groups.set(root(unit_number), group);
+    }
+    return new Set(Array.from(groups.values()).filter(group => group.own_recipe && !group.joined).flatMap(group => group.machines));
 }
 
 /** The error for a build with parts the config does not have */

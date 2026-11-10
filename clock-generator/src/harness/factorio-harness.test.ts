@@ -422,6 +422,45 @@ describe("a build that holds the config more than once", () => {
         expect(() => buildPartsMissingFromConfig(described(), config, 3)).toThrow("the build holds it 2");
     });
 
+    describe("machines beyond the copies", () => {
+        // machine ids 5 on, unit numbers as the copies' machines have them (50 for machine 1), and inserters 7 on
+        const machine = (id: number, recipe: string) => ({ id, unit_number: 49 + id, name: "assembling-machine-3", recipe });
+        const inserter = (id: number, source: [string, number], sink: [string, number]) =>
+            ({ id, unit_number: 99 + id, name: "inserter", stack_size: 1, source: { type: source[0], id: source[1] }, sink: { type: sink[0], id: sink[1] } });
+        const build = (extra_machines: ReturnType<typeof machine>[], extra_inserters: ReturnType<typeof inserter>[]) =>
+            ({ ...described([...inserters, ...extra_inserters]), machines: [...machines, ...extra_machines] });
+
+        it("leaves to the build a group with a recipe the config does not have that no inserter joins to a machine of the config", () => {
+            // a gear machine fed from the copies' belt hands to a transport belt machine, as a build's own part does
+            const own = build([machine(5, "iron-gear-wheel"), machine(6, "transport-belt")],
+                [inserter(7, ["belt", 1], ["machine", 5]), inserter(8, ["machine", 5], ["machine", 6])]);
+            expect(buildPartsMissingFromConfig(own, config, 2)).toEqual([]);
+            expect(matchBuiltCopies(own, config, 2)).toEqual(matchBuiltCopies(described(), config, 2));
+        });
+
+        it("refuses a whole copy more than the count, as it holds only recipes of the config", () => {
+            const third = build([machine(5, "iron-gear-wheel"), machine(6, "inserter")],
+                [inserter(7, ["belt", 1], ["machine", 5]), inserter(8, ["machine", 5], ["machine", 6]), inserter(9, ["machine", 6], ["belt", 2])]);
+            expect(() => buildPartsMissingFromConfig(third, config, 2)).toThrow("the build holds it 3");
+        });
+
+        it("refuses a machine with a recipe of the config that no inserter joins to anything: it holds no recipe of its own", () => {
+            const lone = build([machine(5, "iron-gear-wheel")], []);
+            expect(buildPartsMissingFromConfig(lone, config, 2).map(it => `${it.kind}: ${it.description}`)).toEqual([
+                "machine: assembling-machine-3 making iron-gear-wheel (unit 54), beyond the 1 in each of its 2 copies the config has of that recipe",
+            ]);
+        });
+
+        it("refuses a group with a recipe the config does not have that an inserter joins to a machine of the config", () => {
+            const joined = build([machine(5, "iron-gear-wheel"), machine(6, "transport-belt")],
+                [inserter(7, ["belt", 1], ["machine", 5]), inserter(8, ["machine", 5], ["machine", 6]), inserter(9, ["machine", 5], ["machine", 2])]);
+            expect(buildPartsMissingFromConfig(joined, config, 2).map(it => `${it.kind}: ${it.description}`)).toEqual([
+                "machine: assembling-machine-3 making iron-gear-wheel (unit 54), beyond the 1 in each of its 2 copies the config has of that recipe",
+                "inserter: inserter assembling-machine-3 making iron-gear-wheel, which is no machine of the config -> machine 2 (inserter) (unit 108)",
+            ]);
+        });
+    });
+
     it("is matched as one copy without the count, as it was: the second copy is a machine beyond the config and refused", () => {
         // the first copy's machines match; the second copy's are machines and inserters the config does not have
         const missing = buildPartsMissingFromConfig(described(), config);
