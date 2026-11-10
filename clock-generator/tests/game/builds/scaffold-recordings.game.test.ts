@@ -440,19 +440,17 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [],
         warmup_ticks: 3600,
     },
-    // The owner's military science build (2026-11-05): a science assembler (66.0253) fed grenades by a grenade assembler (57.8125)
-    // that takes iron from a foundry (112.244) and coal from a belt of its own (both lanes, six infinity chests); stone walls and
-    // piercing rounds come on one backed-up belt, one lane each. The packs go onto a moving belt into a void chest. 24 a second from
-    // one copy, 120 over five. The config is now abucnasty's later build (2026-11-09): five mirrored pairs at 240 a second. This
-    // scaffold is still one copy of the earlier build, so the two do not match until a scaffold of the later build is recorded.
-    "military science with grenades": {
-        scaffold: path.join(SAMPLES, "science", "military", "military-120.scaffold"),
+    // abucnasty's military science build (2026-11-09), the whole of it: five copies 9 tiles apart, each a mirrored pair around one
+    // foundry (a military science assembler fed grenades by a grenade assembler above the foundry, and the same below it), 48 a second
+    // a copy, 240 over the five. Each half has a belt of stone walls and piercing rounds and a coal belt from stack inserters at
+    // infinity chests, both ending in a dead end, and a packs belt into a void chest. Each half's coal comes on two belts that three
+    // priority splitters join, which the config does not model: it gives each copy coal lanes of its own.
+    "military science with grenades (five mirrored pairs)": {
+        scaffold: path.join(SAMPLES, "science", "military", "military-240.scaffold"),
         config: ConfigPaths.MILITARY_SCIENCE_240,
         seed: [],
         warmup_ticks: 3600,
-        wake_ups_open: "the game counts 90.0 wake-ups a minute and the simulator 181.1: the two coal inserters into the grenade assembler "
-            + "(inserters 4 and 6) are not woken in the game, which leaves 22.5 a minute of each uncounted as an arm away, and 45.3 a minute "
-            + "each in the simulator; the other four inserters count 22.5 against 22.6 (2026-11-05), with the production the same",
+        copies: 5,
     },
     // abucnasty's flying robot frame build (2026-11-09): 12 legendary assemblers (68.8906) in two rows of 6, 6 tiles apart. Each
     // input belt is one line that runs past one row, turns, runs back past the other row and ends in a dead end: steel and
