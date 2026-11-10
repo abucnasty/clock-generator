@@ -320,7 +320,7 @@ export function roundRobinPollingCycles(entity_registry: ReadableEntityRegistry,
  *   other without reaching the limit (`computeMaxSwingsPerSubCycle`) moves them all in one window that opens at the tick
  *   its first hand starts. The window is long enough to start every hand the machine can take, `S` of them, and no
  *   longer: `(S - 1) x cycle + 2` ticks (the last hand starts inside it, and a combinator takes a tick), and the room for
- *   one more hand more where it picks up from a lane that is not a dead end (laneHandRoomTicks). `S` is `h + 1` where the machine's limit refuses another hand after
+ *   one more hand more where it picks up from a belt (laneHandRoomTicks). `S` is `h + 1` where the machine's limit refuses another hand after
  *   `h` (room for at most `h + 1`), and `h` where it would take it (more room than that: another hand is a surplus) and
  *   the surplus guard is on for it: for every such inserter that takes from a machine or a chest (`surplus_guard`), or only
  *   for those the extra start would leave busy all the time (`per_taker_guard`);

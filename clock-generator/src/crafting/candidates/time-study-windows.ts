@@ -105,7 +105,7 @@ export function deriveTimeStudyWindows(
     output_windows: Map<string, OpenRange[]>,
     drill_windows: Map<string, OpenRange[]>,
     output_inserter_ids: Set<string>,
-    /** The room for one more hand of each inserter that picks up from a lane that is not a dead end, added to its windows */
+    /** The room for one more hand of each inserter that picks up from a belt (laneHandRoomTicks), added to its windows */
     lane_hand_room: Map<string, number>,
     window_cycle_ticks: number,
     label: string,

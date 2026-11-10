@@ -355,9 +355,9 @@ export interface GenerateClockOptions {
     /** Re-simulate with only the exported clock windows and require that to be stable too (default false) */
     verify_as_built?: boolean;
     /**
-     * The room for one more hand in the windows of an inserter that picks up from a lane that is not a dead end (see
-     * laneHandRoomTicks). "trial" gives it unless the clock-only check holds without it and not with it, or lands further
-     * from the expected output with it (default; it costs a check); "always" gives it; "never" gives none, for windows
+     * The room for one more hand in the windows of an inserter that picks up from a belt (see laneHandRoomTicks).
+     * "trial" gives it unless the clock-only check holds without it and not with it, or lands further from the
+     * expected output with it (default; it costs a check); "always" gives it; "never" gives none, for windows
      * that are built as they are; "inside" gives none to the planning run's windows, which stay open the room's ticks
      * after their last pickup already (`handRoomInsideWindows`). Set by the generator, not by a config.
      */
@@ -1532,9 +1532,9 @@ export interface PlannedClock {
     /** The belt the clock is made for; null when no inserter with windows picks up from a belt */
     belt: ClockBelt | null;
     /**
-     * The room for one more hand of every inserter that picks up from a lane that is not a dead end (see
-     * laneHandRoomTicks), added after its windows or inside them already, and given to windows made anew from a run of
-     * the build (observed windows); empty when the clock goes without
+     * The room for one more hand of every inserter that picks up from a belt (see laneHandRoomTicks), added after its
+     * windows or inside them already, and given to windows made anew from a run of the build (observed windows);
+     * empty when the clock goes without
      */
     lane_hand_room: Map<string, number>;
     /** Ticks added to each window of an inserter that takes fuel off a belt as well as an ingredient (see fuelHandRoomTicks) */
@@ -1548,9 +1548,9 @@ export interface PlannedClock {
 }
 
 /**
- * The windows of the plan with the room a clock gets: room for one more hand on a lane that is not a dead end as the
- * option asks (`lane_hand_room`: the trial keeps it unless the clock-only check gets worse with it, which costs a check),
- * room for a hand of fuel where asked for, and on a lane with backpressure as long as a hand takes. The belt the clock
+ * The windows of the plan with the room a clock gets: room for one more hand on a belt as the option asks
+ * (`lane_hand_room`: the trial keeps it unless the clock-only check gets worse with it, which costs a check), room for
+ * a hand of fuel where asked for, and on a lane with backpressure as long as a hand takes. The belt the clock
  * is made for is read off the config's lanes.
  */
 export function clockOfPlan(plan: UnclockedRun, options: Pick<GenerateClockOptions, "lane_hand_room" | "fuel_hand_room"> = {}): PlannedClock {
@@ -1558,10 +1558,10 @@ export function clockOfPlan(plan: UnclockedRun, options: Pick<GenerateClockOptio
 }
 
 /**
- * The room for one more hand of each inserter with windows that picks up from a lane that is not a dead end, where
- * every one of its windows read off the planning run stays open at least the room's ticks after the last pickup in it
- * ends: the late hand the room is there for then fills inside the window, and the ticks added after it would only let
- * the arm, back from its last drop, start a hand the plan does not have. Null where a window does not.
+ * The room for one more hand of each inserter with windows that picks up from a belt, where every one of its windows
+ * read off the planning run stays open at least the room's ticks after the last pickup in it ends: the late hand the
+ * room is there for then fills inside the window, and the ticks added after it would only let the arm, back from its
+ * last drop, start a hand the plan does not have. Null where a window does not.
  *
  * A belt-fed window ends a rotation before its last hand's arm is back at the belt (`windowsFromHistory`), and the hand
  * took its last stack a rotation, a drop and a tick before that: the window stays open its rotation, its drop and a tick
@@ -1614,8 +1614,7 @@ export function clockOfWindows(
             .filter(([key]) => (unslacked_windows.get(key)?.length ?? 0) > 0 && !full_lane_hand_room.has(key)))
         : new Map<string, number>();
     // where a lane has backpressure every window of an inserter that takes from it lasts as long as a hand takes from the
-    // lanes at rest at the belt's speed. Such an inserter takes from dead ends only, so it gets no room for one more hand,
-    // and the room is added last.
+    // lanes at rest at the belt's speed, and the room for one more hand is added after that.
     const backpressure_hand_ticks = backpressureHandTicks(simulation_context.entity_registry);
     const base_windows = withWindowsAtLeast(withWindowsLengthened(unslacked_windows, fuel_hand_room, duration.ticks), backpressure_hand_ticks, duration.ticks);
     const trial = mode === "trial"

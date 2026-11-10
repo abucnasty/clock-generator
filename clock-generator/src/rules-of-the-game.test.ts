@@ -123,14 +123,30 @@ describe("the rules of the game", () => {
             expect(roomOf({ iron_stack: 1 })).toBe(16);
         });
 
-        it("is none on a lane that is a dead end, stated or set by backed_up_belts", () => {
-            expect(roomOf({ iron_stack: 4, iron_end: { kind: "dead_end" }, cable_end: { kind: "dead_end" } })).toBeUndefined();
-            expect(roomOf({ iron_stack: 4 }, 16, true)).toBeUndefined();
+        it("is given on a lane that is a dead end, stated or set by backed_up_belts", () => {
+            expect(roomOf({ iron_stack: 4, iron_end: { kind: "dead_end" }, cable_end: { kind: "dead_end" } })).toBe(4);
+            expect(roomOf({ iron_stack: 4 }, 16, true)).toBe(4);
         });
 
-        it("is set by the lanes that are not dead ends, the slowest fill of those", () => {
+        it("is set by every lane it takes from, a dead end or not, the slowest fill of those", () => {
             expect(roomOf({ iron_stack: 4, iron_end: { kind: "dead_end" }, cable_stack: 1 })).toBe(16);
-            expect(roomOf({ iron_stack: 4, cable_stack: 1, cable_end: { kind: "dead_end" } })).toBe(4);
+            expect(roomOf({ iron_stack: 4, cable_stack: 1, cable_end: { kind: "dead_end" } })).toBe(16);
+        });
+
+        // a hand on a dead end can start later than in the planning run as well (it waits for its machine, or a hand
+        // upstream empties the lane before it), so the end of the lane changes nothing of the room
+        describe("of a pickup from a dead end, as of a pickup from a lane that flows on", () => {
+            const dead_end: LaneEnd = { kind: "dead_end" }, outlet: LaneEnd = { kind: "outlet" };
+            it.each<[string, { iron_stack: number; cable_stack?: number }, number]>([
+                ["two items, one on each lane", { iron_stack: 4 }, 16],
+                ["a hand of 12", { iron_stack: 4 }, 12],
+                ["stacks of 1", { iron_stack: 1 }, 16],
+                ["the slower lane sets it", { iron_stack: 4, cable_stack: 1 }, 16],
+            ])("is the same: %s", (_, lanes, hand) => {
+                const room = roomOf({ ...lanes, iron_end: dead_end, cable_end: dead_end }, hand);
+                expect(room).toBe(roomOf({ ...lanes, iron_end: outlet, cable_end: outlet }, hand));
+                expect(room).toBeDefined();
+            });
         });
 
         // the end is not known, so the lane can move: the room is given as on a lane that is not a dead end
@@ -171,9 +187,10 @@ describe("the rules of the game", () => {
                 expect(roomOfLanes(["iron-plate", "iron-plate"], { pickup_layout: "front-exit", pickup_length: 0.5 })).toBe(4);
             });
 
-            it("is none where both lanes are dead ends, as for any pickup", () => {
+            it("is as on a lane that flows on where both lanes are dead ends: none at a side pickup, given at any other", () => {
                 expect(roomOfLanes(["iron-plate", "iron-plate"], {}, { kind: "dead_end" })).toBeUndefined();
-                expect(roomOfLanes(["iron-plate", "iron-plate"], { pickup_layout: "front-exit", pickup_length: 0.5 }, { kind: "dead_end" })).toBeUndefined();
+                expect(roomOfLanes(["iron-plate", "iron-plate"], { pickup_layout: "front-exit", pickup_length: 0.5 }, { kind: "dead_end" })).toBe(4);
+                expect(roomOfLanes(["iron-plate", "coal"], {}, { kind: "dead_end" })).toBe(4);
             });
         });
     });
