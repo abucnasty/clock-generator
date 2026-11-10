@@ -42,9 +42,14 @@ describe("the clocks recorded on the chemical science build whose copies share d
         expect([losses[0].belt_id, losses[0].lane, losses[0].copy, losses[0].inserter_id, losses[0].flow.x]).toEqual([2, 1, 2, 3, 1]);
         // the game's machine made 19 of 30 hands
         expect(losses[0].items / losses[0].alone_items).toBeCloseTo(2 / 3, 1);
+        // a machine of the second copy makes fewer crafts than its target rate in the same run
+        const behind = losses[0].behind!;
+        expect([behind.copy, behind.kind]).toEqual([2, "machine"]);
+        expect(behind.behind).toBeGreaterThan(1);
         expect(losses[0].text).toBe(`Lane 1 of belt 2 ends in a dead end. The 5.5 copies take advanced circuit from it. When the items move east, `
             + `copy 2 from the entry does not get sufficient items. Its inserter 3 takes ${losses[0].items.toLocaleString("en-US")} in ${losses[0].window_cycles} window cycles. `
-            + `With no other copy on the lane, it takes ${losses[0].alone_items.toLocaleString("en-US")}.`);
+            + `With no other copy on the lane, it takes ${losses[0].alone_items.toLocaleString("en-US")}. `
+            + `In the same run, machine ${behind.id} of copy 2 is ${behind.behind.toLocaleString("en-US", { maximumFractionDigits: 1 })} crafts behind its target rate.`);
     });
 
     it.each(["time_study_windows", "euclidean_swings"])("holds %s on every copy", id => {
@@ -88,6 +93,14 @@ describe("the clocks recorded on the inserter build whose copies share flowing o
         const { losses } = judged("takt_batches_swings_6");
         expect(new Set(losses.map(loss => loss.copy))).toEqual(new Set([3]));
         expect(losses.some(loss => loss.belt_id === 1 && loss.item === "iron-ore")).toBe(true);
+    });
+
+    it("names the machine of copy 3 that falls more than a thousand crafts behind its target rate under takt_batches_swings_6", () => {
+        const { losses } = judged("takt_batches_swings_6");
+        const behind = losses[0].behind!;
+        expect([behind.copy, behind.kind]).toEqual([3, "machine"]);
+        expect(behind.behind).toBeGreaterThan(1000);
+        expect(losses[0].text).toContain(`In the same run, machine ${behind.id} of copy 3 is `);
     });
 
     it.each(["coordinated_sources", "takt_batches_swings_2", "takt_batches_observed_swings_2", "takt_batches_observed_swings_6"])("holds %s on every copy", id => {
@@ -153,6 +166,29 @@ describe("the clocks whose third copy puts its last ore hand down a few ticks af
     it.each(["round_robin_polling_swings_2", "coordinated_sources"])("holds %s on every copy, after a run twice as long", id => {
         expect(judgeSharedLanes(config, clocks[id].windows, clocks[id].window_cycle_ticks, quiet))
             .toMatchObject({ losses: [], simulated: true, longer_run: true });
+    });
+});
+
+// A clock the generator makes for INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK with its ore lanes' ends as the sample states
+// them (Time-Study Windows on 72 ticks, 3 output swings): in the judged window cycles copy 3's inserter 4 puts down 48 iron
+// ore (3 hands) fewer than one copy alone, but every machine and every output inserter of every copy keeps its target rate.
+// The copy alone is still filling a furnace's plate stock there; copy 3 filled it earlier. The game holds the clock.
+describe("a clock whose copy takes less from a shared lane than one copy alone while every machine keeps its target rate", () => {
+    it("holds it, with no other run", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK);
+        const windows = {
+            "inserter:1": [{ start: 0, end: 8 }, { start: 33, end: 44 }, { start: 69, end: 71 }],
+            "inserter:2": [{ start: 0, end: 8 }, { start: 33, end: 44 }, { start: 69, end: 71 }],
+            "inserter:3": [{ start: 0, end: 8 }, { start: 33, end: 44 }, { start: 69, end: 71 }],
+            "inserter:4": [{ start: 16, end: 27 }, { start: 49, end: 60 }],
+            "inserter:5": [{ start: 0, end: 3 }, { start: 5, end: 48 }, { start: 50, end: 71 }],
+            "inserter:6": [{ start: 0, end: 71 }], "inserter:7": [{ start: 0, end: 71 }],
+            "inserter:8": [{ start: 0, end: 31 }, { start: 33, end: 55 }, { start: 58, end: 71 }],
+            "inserter:9": [{ start: 1, end: 59 }, { start: 62, end: 72 }],
+            "inserter:10": [{ start: 0, end: 71 }], "inserter:11": [{ start: 0, end: 71 }],
+        };
+        const judged = judgeSharedLanes({ ...config, overrides: { ...config.overrides, terminal_swing_count: 3 } }, windows, 72, quiet);
+        expect(judged).toMatchObject({ losses: [], simulated: true, longer_run: false });
     });
 });
 

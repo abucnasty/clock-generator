@@ -329,7 +329,7 @@ export function installSharedLanes(context: SimulationContext, config: Config, r
  * Runs a build on the windows of a clock from a cold start, as `runClockOnBuild` does, with every copy of the layout
  * built (each with its own machines) and the rows' lanes shared by them (`installSharedLanes`). It judges nothing: it
  * gives what each taker of each copy put down, at the ticks of the run (the clock stands at 0 in its first tick), for a
- * reader to compare.
+ * reader to compare. `on_context` lets the reader put recorders of its own into the run's context before its first tick.
  */
 export function runOnSharedLanes(
     config: Config,
@@ -338,11 +338,15 @@ export function runOnSharedLanes(
     layout: SharedLaneLayout,
     window_cycles: number,
     logger: Logger,
+    on_context?: (context: SimulationContext) => void,
 ): SharedLaneRun {
     let model: SharedLaneRun | undefined;
     runClockOnBuild({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, windows, window_cycle_ticks, logger, {
         simulate_window_cycles: window_cycles, record_histories: false, factorio_states: false, build_copies: layout.copies,
-        on_context: context => { model = installSharedLanes(context, config, layout.rows); },
+        on_context: context => {
+            model = installSharedLanes(context, config, layout.rows);
+            on_context?.(context);
+        },
     });
     assert(model !== undefined, "The run made no context");
     return model;
