@@ -12,7 +12,7 @@ import { WakeUps, wakeUpsOfStock } from "./wake-ups";
 import { InserterCounters, inserterEnds, wakeUpsAndCountersOfStock } from "./inserter-counters";
 import { judgeCounterSpan, judgeLongRun, judgeProvenCycle, LONG_RUN_MAX_TICKS, LONG_RUN_SETTLE_SHARE, longRunWindowCycles, wholeOutputRepeats } from "./long-run";
 import { DisturbanceTrial, DisturbanceTrialOptions, DisturbanceTrialReport, DisturbanceTrialVerdict, disturbanceTrialsOf, ExcessLoss, LATE_AFTER_WINDOW_CYCLES, LossOutcome, lossLimitOf, MAX_RECOVERY_WINDOW_CYCLES, reportOf, verdictOf } from "./disturbance-trial";
-import { SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForWindowCycle, withBeltPickupSlack } from "./clock";
+import { SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForWindowCycle } from "./clock";
 import type { SubtickWindowCycle } from "../common/subtick-window-cycle";
 import { canonicalKey, currentRunMemo } from "./plan/run-memo";
 import { wholeCounterOf } from "./plan/clock-window-cycle-limit";
@@ -657,9 +657,8 @@ export function clockFromWindows(
     swings: FractionalSwings = {},
 ): BlueprintGenerationResult {
     const plan = unclockedRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, { logger, ...swings });
-    // the windows are built as they are: nothing is added to them, so the clock goes without belt pickup slack, and the
-    // inserters of a loop without windows stay always enabled
-    const clock = clockOfPlan(plan, { belt_pickup_slack: "never" });
+    // the windows are built as they are: nothing is added to them, and the inserters of a loop without windows stay always enabled
+    const clock = clockOfPlan(plan);
     const windows = new Map(Object.entries(clock_windows).map(([entity_id, ranges]) =>
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     const result = checkedClock(plan, clock, windows, { logger, verify_as_built: true, loop_windows: false });
@@ -1660,53 +1659,6 @@ export interface AsBuiltRun {
     stock?: StockRecording;
 }
 
-export interface BeltPickupSlackDecision {
-    helps: boolean;
-    /**
-     * The check that decided for the slack, with the exact windows it ran on: a caller checking the same windows
-     * reuses it instead of running the identical check again (see checkedClock). Null when no check ran, or when
-     * the slack is left out.
-     */
-    verified: { windows: Map<string, OpenRange[]>; run: AsBuiltRun } | null;
-}
-
-/**
- * Slack lets a belt-fed inserter finish a late pickup, but in a short window cycle it can also leave time for an
- * extra swing when the machine is not at its insertion limit. `helps` is false only when the clock-only check
- * passes without the slack but not with it, or lands further from the expected output with it. The config is
- * checked with `derive_clock_windows` off, which only `generateClockForConfig` reads: the run is the same as
- * on the config as given.
- */
-export function beltPickupSlackTrial(
-    config: Config,
-    windows: Map<string, OpenRange[]>,
-    slack: Map<string, number>,
-    window_cycle_ticks: number,
-    expected_output: number,
-    logger: Logger,
-    /** How the clock's runs plan, as the clock was planned (`fractionalSwingsOf`) */
-    swings: FractionalSwings = {},
-): BeltPickupSlackDecision {
-    if (Array.from(slack.values()).every(ticks => ticks === 0) || !Number.isInteger(window_cycle_ticks)) {
-        return { helps: true, verified: null };
-    }
-    const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
-    const slacked = withBeltPickupSlack(windows, slack, window_cycle_ticks);
-    const check = (checked: Map<string, OpenRange[]>) => runAsBuiltCheck(base_config, checked, window_cycle_ticks, logger, AS_BUILT_START_PHASES, undefined,
-        FREE_RUNNING_CHECK_TICKS, undefined, false, "loop-windows", swings);
-    const with_slack = check(slacked);
-    if (with_slack.check.holds) {
-        return { helps: true, verified: { windows: slacked, run: with_slack } };
-    }
-    const without_slack = check(windows).check;
-    logger.log(`Belt slack: clock-only actual with=${with_slack.check.actual_output_items} without=${without_slack.actual_output_items} expected=${expected_output}`);
-    if (without_slack.holds) {
-        return { helps: false, verified: null };
-    }
-    const helps = Math.abs(with_slack.check.actual_output_items - expected_output) <= Math.abs(without_slack.actual_output_items - expected_output);
-    return { helps, verified: helps ? { windows: slacked, run: with_slack } : null };
-}
-
 /**
  * Rewrites the config so every inserter and drill is controlled the way the generated blueprint
  * controls it in game: entities with a decider window get a CLOCKED window shifted by the circuit latency,
@@ -2015,7 +1967,7 @@ export function fractionalSwingsChangeChecksOf(planned_on: Config, result: Bluep
 export function clockVerificationSignature(config: Config, result: BlueprintGenerationResult): string {
     const verification = verificationConfigOf(config, result);
     return canonicalVerificationJson({ config: verification.config, fractional_swings: verification.fractional_swings, window_cycle_ticks: result.simulation_duration.ticks, windows: result.clock_windows,
-        belt_kind: result.belt?.kind ?? null, belt_pickup_slack_left_out: result.belt_pickup_slack_left_out,
+        belt_kind: result.belt?.kind ?? null,
         expected_output: result.stability_check.expected_output_items,
         base_cycle_ticks: result.output_cycle_plan.total_duration.ticks,
         transfer_plan: result.serializable_transfer_plan,

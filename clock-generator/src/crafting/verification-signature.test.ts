@@ -49,7 +49,6 @@ describe("candidate verification identity", () => {
             expected_output_items: result.stability_check.expected_output_items + 1}})).not.toBe(original);
         expect(signature(config, {...result, unplanned_inserter_clocks: {"inserter:1": {
             kind: "fuel", modulus: 19, own_clock: true, window: {start: 0, end: 1}}}})).not.toBe(original);
-        expect(signature(config, {...result, belt_pickup_slack_left_out: !result.belt_pickup_slack_left_out})).not.toBe(original);
         expect(signature(config, {...result, stability_check: {...result.stability_check,
             as_built: {holds: false, actual_output_items: 0, start_phases_checked: 2, failed_start_offset: 17}}})).not.toBe(original);
         const check = {holds: false, actual_output_items: 0, start_phases_checked: 1};
@@ -89,14 +88,14 @@ describe("request-local duplicate verification", () => {
         const generated = generateClockAlternatives(logistic, {logger: quiet});
         const keys = recovery.mock.calls.map(([config, result]) => signature(config, result));
         expect(keys.length).toBeGreaterThan(1);
-        // the clocks of the windows made by arithmetic, of the planned windows with the belt pickup slack inside them and of
-        // the windows shaped against ghost wakeups are tried while the primary windows are chosen (generate-clock.ts), before
-        // the alternative is assessed; the run memo serves the second ask, so theirs are the keys asked twice
+        // the clocks of the windows made by arithmetic and of the windows shaped against ghost wakeups are tried while the primary
+        // windows are chosen (generate-clock.ts), before the alternative is assessed; the run memo serves the second ask, so the one
+        // of them this sample makes is the key asked twice
         const repeated = keys.filter((key, index) => keys.indexOf(key) !== index);
         const chosen = recovery.mock.calls.filter(([, result]) => result.window_maker === "arithmetic"
-            || (result.belt?.kind === "moving" && result.belt.inside === true) || result.ghost_wakeup_windows !== undefined)
+            || result.ghost_wakeup_windows !== undefined)
             .map(([config, result]) => signature(config, result));
-        expect(repeated).toHaveLength(3);
+        expect(repeated).toHaveLength(1);
         expect(chosen).toEqual(expect.arrayContaining(repeated));
         // Both clocks are stable; batched swings is selected on its fewer wake-ups although swings-1 recovers in 2 window cycles
         // rather than 3. Sharing the verification must preserve that choice.

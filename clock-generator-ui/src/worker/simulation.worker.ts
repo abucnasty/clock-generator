@@ -158,7 +158,8 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         fuelView: fuelViewOf(result),
         clockWindows: result.clock_windows,
         alwaysOnReasons: result.always_on_reasons ?? {},
-        beltPickupSlackTicks: result.belt_pickup_slack_ticks,
+        // the engine adds no ticks to a window for a late pickup: the site's belt slack marks stay empty
+        beltPickupSlackTicks: {},
         insights: alternative.insights,
         shiftOptions: shiftOptionsOf(result),
         simulationDurationTicks: result.simulation_duration.ticks,

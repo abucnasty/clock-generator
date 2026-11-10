@@ -120,12 +120,12 @@ const agriculturalScience: JobCheck[] = [
 // The processing unit circuit export (PROCESSING_UNIT_80_CIRCUIT_EXPORT), a real cell (#189) at 80 processing units a second.
 const circuitExport: JobCheck[] = [
     {
-        name: 'Behavior: the explicit one-cycle plan is offered, in 24 ticks with 32 items, on a moving belt with 4 ticks of slack',
+        name: 'Behavior: the explicit one-cycle plan is offered, in 24 ticks with 32 items, on a moving belt',
         run: ({ generated }) => {
             const plan = byMaker(generated, 'planned-belt-slack');
             expect(plan, 'the explicit behavior plan is offered, independently of the selector').toBeDefined();
             expect(plan.result.stability_check.as_built).toMatchObject({ holds: true, actual_output_items: 32 });
-            expect(plan.belt).toEqual({ kind: 'moving', slack_ticks: [4] });
+            expect(plan.belt).toEqual({ kind: 'moving' });
         },
     },
     {
@@ -428,20 +428,19 @@ const utility120: JobCheck[] = [
 // The logistic science sample (LOGISTIC_SCIENCE_240): its belts move, so every clock is made for a moving belt, none for a backed-up belt
 const logistic: JobCheck[] = [
     {
-        name: 'makes batched swings for a moving belt, with 4 ticks of belt pickup slack inside its windows',
+        name: 'makes batched swings for a moving belt',
         run: ({ generated }) => {
             const batched = byMaker(generated, 'planned-belt-slack');
             expect(batched.label).toBe('Takt Batches: 4 output swings each output cycle');
-            // its two pickup windows a window cycle stay open 5 ticks after their last pickup: none are added (#595)
-            expect(batched.belt).toEqual({ kind: 'moving', slack_ticks: [4], inside: true });
-            expect(batched.description).toContain('Made for a moving belt. After its last pickup from the belt, an inserter stays enabled for 4 more ticks. These ticks are the belt slack.');
+            expect(batched.belt).toEqual({ kind: 'moving' });
+            expect(batched.description).toContain('Made for a moving belt. The pickup geometry times each pickup from the belt');
         },
     },
     {
-        name: 'the clocks that hold the slack are made for a moving belt with 4 ticks',
+        name: 'the 2-swing and the derived clocks are made for a moving belt',
         run: ({ generated }) => {
-            expect(byMaker(generated, 'swings-2').belt).toEqual({ kind: 'moving', slack_ticks: [4] });
-            expect(byMaker(generated, 'derived').belt).toEqual({ kind: 'moving', slack_ticks: [4] });
+            expect(byMaker(generated, 'swings-2').belt).toEqual({ kind: 'moving' });
+            expect(byMaker(generated, 'derived').belt).toEqual({ kind: 'moving' });
         },
     },
     {

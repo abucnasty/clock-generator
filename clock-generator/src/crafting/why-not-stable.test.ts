@@ -291,7 +291,7 @@ describe("what the summary reads of a clock", () => {
         const assessment = { holds: false, items_per_second: 7.5, disturbance_trial: null };
         expect(whyNotStableClockOf({
             label: "Takt Batches: 1 output swing each output cycle", verdict: "unstable", ranking: { meets_target_rate: false }, assessment,
-            belt: { kind: "moving", slack_ticks: [4] },
+            belt: { kind: "moving" },
             as_built: { holds: false, actual_output_items: 176, start_phases_checked: 1, failed_start_offset: 0,
                 failed_pickup_phases: { "inserter:2": [3, 0] }, repeat_window_cycles: 6, repeat_output_items: 880 },
             expected_output_items: 176,

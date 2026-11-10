@@ -814,14 +814,12 @@ export const ConfigOverridesSchema = z.preprocess(renameLoopSeedItemsToKickStart
      * speed, so a hand takes the stacks in reach a tick each and then waits for the belt to bring the rest. Geometry is
      * retained independently of this rule.
      *
-     * A clock is made for a moving belt by default: each window of an inserter that picks up from a belt stays open
-     * a few ticks longer (belt pickup slack), and a clock without it is only selected when no clock with it holds the
-     * target rate. When enabled, a clock is made without the slack and the one with the fewest wake-ups is selected.
-     * A clock that does not hold the expected output without the slack is listed as unstable.
+     * When enabled, every input lane that states no lane end is a dead end; else such a lane is an outlet. The
+     * simulation times each pickup from the lane as it is.
      *
      * @default false
      */
-    backed_up_belts: z.boolean().optional().describe("Whether the input belts are backed up at the pickup, so that the clocks have no belt slack."),
+    backed_up_belts: z.boolean().optional().describe("Whether the input belts are backed up at the pickup. Then each input lane without a lane_end is a dead end."),
     /**
      * Run the four searches for every build: observed windows, uneven output swings, shifted swings and full-hand
      * output swings. They take most of the time of a generation.

@@ -76,14 +76,15 @@ export { loopInserters, alwaysEnabledInserters } from "./crafting/sequence/unpla
 export { sharedItemDeadlockRisks } from "./crafting/deadlock-risk";
 
 /**
- * 10. Belt pickup slack (GOALS.md "Wake-up Lists"): the ticks one more full hand of the item on the lane takes at one
- * belt stack a tick (the code caps them at 16). A rule of thumb for a moving belt. Cases: `rules-of-the-game.test.ts`.
+ * 10. A pickup from a belt (docs/simulator.md): the stock the hand reaches on each lane, taken one belt stack a tick at
+ * most, from the lane nearest the inserter first. How long a pickup from a moving lane takes is this run's: a window gets
+ * no ticks for a late pickup beyond those of the plan. Cases: `simulation/components/belt-hand-pickup.test.ts`.
  */
-export { beltPickupSlackTicks } from "./crafting/clock";
+export { BeltHandPickup } from "./simulation/components/belt-hand-pickup";
 
 /**
- * 11. Room for a hand of fuel (GOALS.md "Wake-up Lists"): the same ticks, for an inserter that takes fuel off a belt
- * as well as an ingredient, on a backed-up belt. Cases: `rules-of-the-game.test.ts` (agricultural science,
+ * 11. Room for a hand of fuel (GOALS.md "Wake-up Lists"): the ticks one hand of the fuel takes at one belt stack a tick,
+ * for an inserter that takes fuel off a belt as well as an ingredient. Cases: `rules-of-the-game.test.ts` (agricultural science,
  * 377 of 400 a window cycle without it).
  */
 export { fuelHandRoomTicks } from "./crafting/clock";

@@ -67,7 +67,7 @@ export interface WhyNotStableClock {
     assessment: Pick<ClockAssessment, "holds" | "items_per_second" | "shared_lane_losses"> & {
         disturbance_trial: Pick<DisturbanceTrialVerdict, "survives" | "broken_by" | "broken_at_other_lane_phases" | "broken_under_other_taker_orders" | "not_tried"> | null;
     };
-    /** Whether the clock is made for a moving belt (its belt pickups have belt pickup slack) */
+    /** Whether the clock is made for a moving belt (some input lane is not a dead end) */
     moving_belt: boolean;
     /** The lane phases, by inserter, of the first lane-phase start that fell short after the modeled start held */
     failed_pickup_phases?: Record<string, readonly [number, number]>;

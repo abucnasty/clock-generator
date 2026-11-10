@@ -77,7 +77,7 @@ describe("planned windows", () => {
  */
 test("a clock whose window from the take fails is made with the pickup from its entry", () => {
     const made = underDispatch(ACTIVATION_ORDER, () => generateClockForConfig(ELECTROMAGNETIC_TURBO_BACKED,
-        { logger: quiet, verify_as_built: true, belt_pickup_slack: "always" }));
+        { logger: quiet, verify_as_built: true }));
     expect(made.stability_check.as_built?.holds).toBe(true);
     expect(made.clock_windows["inserter:2"]?.map(range => `${range.start}-${range.end}`)).toContain("314-333");
 });

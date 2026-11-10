@@ -49,9 +49,8 @@ config is a new object and gets its own): the output capacity of the machines th
 its main product's exact rate), the machines' rates at the target (`yield`, `production`, `placement` and the takers'
 `hand`), the sinks whose terminal outputs are judged as a rate or get room for one more output swing
 (`storage.never_refuses`). The lane check reads what a
-lane carries off the Lane traits of the belt it checks, and the belt slack and the room for a hand of fuel count
-a hand as the timing floor does, one belt stack a tick, each with the hand it reads (the nominal one and the hand of the
-fuel). The cycle plan's transfers are the balance equations over the facts and the graph (`planner/balance.ts`): what a
+lane carries off the Lane traits of the belt it checks, and the room for a hand of fuel counts
+a hand as the timing floor does, one belt stack a tick, with the hand of the fuel it reads. The cycle plan's transfers are the balance equations over the facts and the graph (`planner/balance.ts`): what a
 craft takes and makes of each item (`production.inputs`, the exact `yield.results[].per_craft`), the hands of the edges,
 the fuel by edge and the lanes' exports. The target's own edges, which seed it, are found on the registry made from the
 same config (`sequence/cycle/cycle-transfers.ts`).

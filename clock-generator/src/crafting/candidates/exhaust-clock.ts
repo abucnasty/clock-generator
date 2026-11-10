@@ -37,7 +37,7 @@ export function exhaustClockOfPlan(plan: UnclockedRun, options: GenerateClockOpt
     // the windows' room for the spread of each result, as every destroyed target's clock reports it (it adds none here:
     // each window is made for the result's count at that share)
     const room = withRoomForRandomAmounts(plan, windows);
-    const clock = { ...clockOfPlan(plan, { ...options, belt_pickup_slack: "never" }), random_margins: room.random_margins };
+    const clock = { ...clockOfPlan(plan, options), random_margins: room.random_margins };
     const result = checkedClock(plan, clock, room.windows, { ...options, verify_as_built: true });
     const holds = plans.every(it => it.container.headroom !== null && it.container.headroom >= 0);
     // the planning run's windows are not this clock's: it holds where its own windows hold in the simulator and the arithmetic holds

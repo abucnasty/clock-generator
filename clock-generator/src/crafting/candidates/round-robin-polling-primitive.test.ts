@@ -207,9 +207,9 @@ describe("pure primitive grouped construction", () => {
         const composition: RoundRobinPollingComposition = { retained_clocks: clocks, output_paths: paths, direct_sources: new Map([["machine:3", ["machine:4"]]]) };
         const overloaded = EntityTransferCountMap.fromEntries([...cycle.entity_transfer_map].map(([id, transfer]): [typeof id, typeof transfer] => [id,
             id.number === 11 && EntityId.isInserter(id) ? { ...transfer, item_transfers: transfer.item_transfers.map(item => ({ ...item, transfer_count: fraction(100) })) } : transfer]));
-        expect(() => roundRobinPollingPlan(registry, overloaded, 1, 40, true, undefined, null, composition)).toThrow(/do not follow each other under the limit/);
+        expect(() => roundRobinPollingPlan(registry, overloaded, 1, 40, undefined, null, composition)).toThrow(/do not follow each other under the limit/);
         const forged = new Map([["inserter:10", { ...clocks.get("inserter:9")!, inserter_id: EntityId.forInserter(10) }]]);
-        expect(() => roundRobinPollingPlan(registry, cycle.entity_transfer_map, 1, 40, true, undefined, null,
+        expect(() => roundRobinPollingPlan(registry, cycle.entity_transfer_map, 1, 40, undefined, null,
             { ...composition, retained_clocks: forged })).toThrow(/not a retained/);
     });
 
@@ -228,7 +228,7 @@ describe("pure primitive grouped construction", () => {
         const cycle = OutputCyclePlan.create(target, registry, auto, fraction(1));
         const artifact = constructPrimitiveRoundRobinPolling(auto);
         for (const attempt of artifact.attempts) if (attempt.result.kind === "constructed") {
-            const old = roundRobinPollingPlan(registry, cycle.entity_transfer_map, artifact.grouped_cycles, artifact.window_cycle_ticks, true, attempt.options);
+            const old = roundRobinPollingPlan(registry, cycle.entity_transfer_map, artifact.grouped_cycles, artifact.window_cycle_ticks, attempt.options);
             expect(attempt.result.planned_windows).toEqual(Object.fromEntries([...old.windows].map(([id, ranges]) => [id,
                 ranges.map(range => ({ start: range.start_inclusive, end: range.end_inclusive }))])));
             expect(attempt.result.busy).toEqual(old.busy);

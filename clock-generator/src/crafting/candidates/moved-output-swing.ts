@@ -80,7 +80,6 @@ export function movedOutputSwingWindows(
     config: Config,
     planned_history: InventoryTransferHistory,
     output_inserter_ids: Set<string>,
-    belt_pickup_slack: Map<string, number>,
     window_cycle_ticks: number,
     step_ticks: number,
     logger: Logger,
@@ -99,7 +98,7 @@ export function movedOutputSwingWindows(
         // each position gets its own observed windows, with the padding search and its pick taken on the quick trial
         quick: (candidate, index) => {
             const derived = deriveTimeStudyWindows(base_config, candidate.output_windows, drill_windows, output_inserter_ids,
-                belt_pickup_slack, window_cycle_ticks, describe(candidate), logger,
+                window_cycle_ticks, describe(candidate), logger,
                 report && (detail => report(`Position ${index + 1}/${candidates.length}: ${detail}`)), false);
             // only the windows that pass are read again; the runs of a position that does not are let go
             return derived.windows === null

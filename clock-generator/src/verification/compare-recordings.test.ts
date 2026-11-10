@@ -33,6 +33,9 @@ beforeAll(async () => {
     const made = generateClockAlternatives(config, { logger: quiet }).alternatives.filter(it => it.maker !== COORDINATED_SOURCES_MAKER);
     result = made[combineClockAlternativeRuns([{ signature: "", alternatives: made }], it => it.ranking).selected_index].result;
     window_cycle_ticks = result.simulation_duration.ticks;
+    // the input window 4 ticks longer than the selected clock's: the hand it lets in waits at the machine, which these tests count
+    const input = result.clock_windows["inserter:1"];
+    result = { ...result, clock_windows: { ...result.clock_windows, "inserter:1": input.map(range => ({ ...range, end: range.end + 4 })) } };
     stock = simulateClockOnly(config, result.clock_windows, window_cycle_ticks, WINDOW_CYCLES, quiet);
     simulated = recordingOfStock(stock, config, window_cycle_ticks);
 });

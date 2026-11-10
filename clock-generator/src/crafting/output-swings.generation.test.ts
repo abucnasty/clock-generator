@@ -344,11 +344,7 @@ describe("generateClockForConfig", () => {
             it("keeps the planned windows of the first cycle and the planned window lengths", () => {
                 const lengths = (windows: typeof shifted.result.clock_windows) => Object.fromEntries(
                     Object.entries(windows).map(([key, ranges]) => [key, ranges.map(range => range.end - range.start)]));
-                // the primary keeps the belt pickup slack inside its windows (#595); the shifted clock adds it after them
-                expect(primary.result.belt).toEqual({ kind: "moving", slack_ticks: [4], inside: true });
-                const added = (key: string) => shifted.result.belt_pickup_slack_ticks[key] ?? 0;
-                expect(lengths(shifted.result.clock_windows)).toEqual(Object.fromEntries(Object.entries(lengths(primary.result.clock_windows))
-                    .map(([key, ranges]) => [key, ranges.map(length => length + added(key))])));
+                expect(lengths(shifted.result.clock_windows)).toEqual(lengths(primary.result.clock_windows));
                 expect(shifted.inserter_window_count).toBe(primary.inserter_window_count);
             });
         });

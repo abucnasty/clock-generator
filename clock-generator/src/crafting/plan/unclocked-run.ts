@@ -66,13 +66,13 @@ import { CraftingStatus, drillStatusOf, InserterPhase, inserterStatusOf, machine
 import { factorioInserterState, factorioMachineState } from "../../state/factorio-entity-state";
 import type { TimeStudyWindowsReport } from "../candidates/time-study-windows";
 import type { SearchReport } from "../candidates/search";
-import { ClockBelt, SerializableClockWindows, backpressureHandTicks, beltPickupSlackTicks, fuelHandRoomTicks, subtickClockForWindowCycle, withBeltPickupSlack, withWindowsAtLeast } from "../clock";
+import { ClockBelt, SerializableClockWindows, backpressureHandTicks, fuelHandRoomTicks, subtickClockForWindowCycle, withWindowsAtLeast, withWindowsLengthened } from "../clock";
 import { ChestDrillClock, chestDrillClockLine, chestDrillWindows } from "../chest-drill-windows";
 import type { TurnGroup } from "../turn-groups";
 import type { SourceControl } from "../strategy-catalog";
 import { AlwaysOnReason, AlwaysOnReasons, alwaysOnReasonsOf, classifyEntities } from "../enable-control-router";
 import { RunMemo, currentRunMemo } from "./run-memo";
-import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, beltPickupSlackTrial, completedAsBuiltCheck, runAsBuiltCheck, runClockOnBuild, trialWithLoopWindows } from "../trial";
+import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, completedAsBuiltCheck, runAsBuiltCheck, runClockOnBuild, trialWithLoopWindows } from "../trial";
 
 export { SIMULATION_BUDGET_TICKS };
 
@@ -230,13 +230,6 @@ export interface BlueprintGenerationResult {
     schedule: ClockSchedule;
     /** Decider windows exported in the blueprint, per entity id (before circuit latency) */
     clock_windows: SerializableClockWindows;
-    /** Ticks of belt pickup slack added to each belt-fed inserter's windows; empty when none was applied */
-    belt_pickup_slack_ticks: Record<string, number>;
-    /**
-     * The windows of a belt-fed inserter go without the slack that would have lengthened them. False when the config
-     * says the input belts are backed up (`overrides.backed_up_belts`): then a clock is meant to go without it.
-     */
-    belt_pickup_slack_left_out: boolean;
     /**
      * Ticks added to each window of an inserter that takes fuel off a belt as well as an ingredient, so that a hand of
      * fuel fits ahead of the hands the window is planned for (see fuelHandRoomTicks); empty when the clock has none.
@@ -362,15 +355,9 @@ export interface GenerateClockOptions {
     /** Re-simulate with only the exported clock windows and require that to be stable too (default false) */
     verify_as_built?: boolean;
     /**
-     * Belt pickup slack on belt-fed windows: "auto" keeps it unless a clock-only check gets worse (default "auto");
-     * "inside" adds none to the planning run's windows, which stay open the slack's ticks after their last pickup
-     * already (`slackInsideWindows`): a clock for a moving belt all the same
-     */
-    belt_pickup_slack?: "auto" | "always" | "never" | "inside";
-    /**
      * Lengthen the windows of an inserter that takes fuel off a belt as well as an ingredient by the fill of a hand of
-     * fuel (see fuelHandRoomTicks), where the clock goes without belt pickup slack. Asked for when a clock for belts
-     * that do not move does not hold the expected output without it (see withFuelHandRoomWhereNeeded).
+     * fuel (see fuelHandRoomTicks). Asked for when a clock does not hold the expected output without it (see
+     * withFuelHandRoomWhereNeeded).
      */
     fuel_hand_room?: boolean;
     /** Also run the exported clock for several window cycles to show the fuel being consumed (default true; internal check runs never do) */
@@ -1536,14 +1523,9 @@ export interface PlannedClock {
     windows: Map<string, OpenRange[]>;
     /** The belt the clock is made for; null when no inserter with windows picks up from a belt */
     belt: ClockBelt | null;
-    /** The belt pickup slack of every belt-fed inserter, for windows made anew from a run of the build (observed windows); empty when the clock goes without */
-    belt_pickup_slack: Map<string, number>;
-    /** Ticks of belt pickup slack added to each belt-fed inserter's windows; empty when none was applied */
-    applied_belt_pickup_slack: Record<string, number>;
-    belt_pickup_slack_left_out: boolean;
     /** Ticks added to each window of an inserter that takes fuel off a belt as well as an ingredient (see fuelHandRoomTicks) */
     fuel_hand_room: Map<string, number>;
-    /** The clock-only check the slack decision already ran on exactly `windows`, which checkedClock reuses */
+    /** A clock-only check already run on exactly `windows`, which checkedClock reuses */
     as_built_run: AsBuiltRun | null;
     /** The groups that take turns in the windows, which the blueprint lays its combinators out by; absent where the windows are not in groups */
     turns?: TurnGroup[];
@@ -1552,46 +1534,12 @@ export interface PlannedClock {
 }
 
 /**
- * The windows of the plan with the room a clock gets: belt pickup slack as the option asks ("auto" keeps it unless a
- * clock-only check gets worse, which costs trials; never on backed-up belts), or room for a hand of fuel where
- * asked for. The belt the clock is made for is read off that.
+ * The windows of the plan with the room a clock gets: room for a hand of fuel where asked for, and on a lane with
+ * backpressure as long as a hand takes. How long a pickup from a moving lane takes is the simulation's: the windows get
+ * no ticks for it. The belt the clock is made for is read off the config's lanes.
  */
-export function clockOfPlan(plan: UnclockedRun, options: Pick<GenerateClockOptions, "belt_pickup_slack" | "fuel_hand_room"> = {}): PlannedClock {
+export function clockOfPlan(plan: UnclockedRun, options: Pick<GenerateClockOptions, "fuel_hand_room"> = {}): PlannedClock {
     return clockOfWindows(plan, plan.unslacked_windows, options);
-}
-
-/**
- * The belt pickup slack of each belt-fed inserter with windows, where every one of its windows read off the planning run
- * stays open at least that slack after the last pickup in it ends: the late pickup the slack is there for (one more full
- * hand at one belt stack a tick, `beltPickupSlackTicks`) then finishes inside the window, and the slack added after it
- * would only let the arm, back from its last drop, start a hand the plan does not have. Null where a window does not.
- *
- * A belt-fed window ends a rotation before its last hand's arm is back at the belt (`windowsFromHistory`), and the hand
- * took its last stack a rotation, a drop and a tick before that: the window stays open its rotation, its drop and a tick
- * after its last pickup, whatever the pickup took. A window none of whose hands start in it holds nothing known.
- */
-export function slackInsideWindows(plan: UnclockedRun): Map<string, number> | null {
-    const { run: { simulation_context: { entity_registry }, final_history }, unslacked_windows } = plan;
-    const slack = beltPickupSlackTicks(entity_registry);
-    const transfers = new Map(Array.from(final_history.entries(), ([id, it]) => [id.id, it] as const));
-    const inside = new Map<string, number>();
-    for (const [id, ranges] of unslacked_windows) {
-        const ticks = slack.get(id) ?? 0;
-        if (ranges.length === 0 || ticks === 0) continue;
-        const inserter = entity_registry.getAll().find(entity => entity.entity_id.id === id);
-        if (inserter === undefined || !Entity.isInserter(inserter)) return null;
-        const rotation = inserter.animation.rotation.ticks, drop = inserter.animation.drop.ticks;
-        const hands = transfers.get(id) ?? [];
-        for (const range of ranges) {
-            const own = hands.filter(hand => hand.pickup_tick_before_run === undefined
-                && hand.tick_range.start_inclusive >= range.start_inclusive && hand.tick_range.start_inclusive <= range.end_inclusive);
-            if (own.length === 0) return null;
-            const last_pickup = Math.max(...own.map(hand => hand.tick_range.end_inclusive - 2 * rotation - drop - 1));
-            if (range.end_inclusive - last_pickup < ticks) return null;
-        }
-        inside.set(id, ticks);
-    }
-    return inside.size > 0 ? inside : null;
 }
 
 /**
@@ -1601,57 +1549,32 @@ export function slackInsideWindows(plan: UnclockedRun): Map<string, number> | nu
 export function clockOfWindows(
     plan: UnclockedRun,
     unslacked_windows: Map<string, OpenRange[]>,
-    options: Pick<GenerateClockOptions, "belt_pickup_slack" | "fuel_hand_room"> = {},
+    options: Pick<GenerateClockOptions, "fuel_hand_room"> = {},
 ): PlannedClock {
-    const { config, logger, run: { simulation_context, duration, total_expected_output } } = plan;
-    const full_belt_pickup_slack = beltPickupSlackTicks(simulation_context.entity_registry);
-    // on backed-up belts a clock is made without the slack, whatever the alternative asks for
-    const backed_up_belts = config.overrides?.backed_up_belts === true;
-    const belt_pickup_slack_mode = backed_up_belts ? "never" : options.belt_pickup_slack ?? "auto";
-    // the slack the planning run's windows hold already, after the last pickup of each: none is added to them
-    const slack_inside = belt_pickup_slack_mode === "inside" && unslacked_windows === plan.unslacked_windows
-        ? slackInsideWindows(plan) : null;
-    if (belt_pickup_slack_mode === "inside" && slack_inside === null) {
-        throw new Error("belt slack inside the enable windows is only for the unclocked run's enable windows that hold it");
-    }
-    const slack_trial = belt_pickup_slack_mode === "auto"
-        ? beltPickupSlackTrial(config, unslacked_windows, full_belt_pickup_slack, duration.ticks, total_expected_output, logger,
-            fractionalSwingsOf(plan.run.output_cycle_plan))
-        : null;
-    const use_belt_pickup_slack = belt_pickup_slack_mode === "always" || (slack_trial !== null && slack_trial.helps);
-    const belt_pickup_slack = use_belt_pickup_slack ? full_belt_pickup_slack : new Map<string, number>();
-    // the slack only lengthens a window there is, and only in a window cycle of whole ticks (see withBeltPickupSlack)
-    const belt_fed_with_windows = Array.from(unslacked_windows)
-        .filter(([key, ranges]) => ranges.length > 0 && (full_belt_pickup_slack.get(key) ?? 0) > 0)
-        .map(([key]) => key);
-    const applied_belt_pickup_slack = Object.fromEntries(Number.isInteger(duration.ticks)
-        ? belt_fed_with_windows.filter(key => belt_pickup_slack.has(key)).map(key => [key, belt_pickup_slack.get(key)!])
-        : []);
-    // the slack is as long as the room for a hand of fuel, so a clock with the slack has the room
-    const fuel_hand_room = options.fuel_hand_room && !use_belt_pickup_slack && slack_inside === null && Number.isInteger(duration.ticks)
+    const { config, run: { simulation_context, duration } } = plan;
+    const fuel_hand_room = options.fuel_hand_room && Number.isInteger(duration.ticks)
         ? new Map(Array.from(fuelHandRoomTicks(simulation_context.entity_registry)).filter(([key]) => (unslacked_windows.get(key)?.length ?? 0) > 0))
         : new Map<string, number>();
-    const belt_pickup_slack_left_out = !backed_up_belts && !use_belt_pickup_slack && slack_inside === null && Number.isInteger(duration.ticks)
-        && belt_fed_with_windows.length > 0;
-    const slack_ticks = Array.from(new Set(Object.values(applied_belt_pickup_slack))).sort((a, b) => a - b);
-    const inside_ticks = slack_inside === null ? [] : Array.from(new Set(slack_inside.values())).sort((a, b) => a - b);
-    const belt: ClockBelt | null = belt_fed_with_windows.length === 0 ? null
-        : slack_ticks.length > 0 ? { kind: "moving", slack_ticks }
-        : inside_ticks.length > 0 ? { kind: "moving", slack_ticks: inside_ticks, inside: true } : { kind: "backed_up" };
-    // the slack decision already checked the slacked windows: hand its run over, with the exact map it ran on
-    // (with the slack in use the fuel hand room is empty, so these are the windows the clock gets)
-    const verified = use_belt_pickup_slack ? slack_trial?.verified ?? null : null;
+    const belt = clockBeltOf(config, simulation_context.entity_registry, unslacked_windows);
     // where a lane has backpressure every window of an inserter that takes from it lasts as long as a hand takes from the lanes at rest at the belt's speed
     const backpressure_hand_ticks = backpressureHandTicks(simulation_context.entity_registry);
-    const windows = verified !== null ? verified.windows
-        : withWindowsAtLeast(withBeltPickupSlack(unslacked_windows, new Map([...fuel_hand_room, ...belt_pickup_slack]), duration.ticks),
-            backpressure_hand_ticks, duration.ticks);
+    const windows = withWindowsAtLeast(withWindowsLengthened(unslacked_windows, fuel_hand_room, duration.ticks), backpressure_hand_ticks, duration.ticks);
     // the windows that carry a result that comes by chance get room for its spread (a target that counts an item destroyed)
     const room = withRoomForRandomAmounts(plan, windows);
-    return { windows: room.windows, belt, belt_pickup_slack, applied_belt_pickup_slack, belt_pickup_slack_left_out, fuel_hand_room,
-        as_built_run: room.windows === windows ? verified?.run ?? null : null,
+    return { windows: room.windows, belt, fuel_hand_room, as_built_run: null,
         ...(room.random_margins !== undefined && { random_margins: room.random_margins }) };
 }
+
+/**
+ * The belt a clock of the config is made for: backed up where every input lane is a dead end, else moving; null when no
+ * inserter with windows picks up from a belt
+ */
+export function clockBeltOf(config: Config, entity_registry: ReadableEntityRegistry, windows: ReadonlyMap<string, OpenRange[]>): ClockBelt | null {
+    const belt_fed = entity_registry.getAll().some(entity => Entity.isInserter(entity) && (windows.get(entity.entity_id.id)?.length ?? 0) > 0
+        && Entity.isBelt(entity_registry.getEntityByIdOrThrow(entity.source.entity_id)));
+    return !belt_fed ? null : everyInputLaneIsDeadEnd(config) ? { kind: "backed_up" } : { kind: "moving" };
+}
+
 
 /**
  * A clock's windows with room for the spread of the results that come by chance (see randomAmountMargins): the windows
@@ -1795,8 +1718,6 @@ export function exportClock(
         modulo_schedule: modulo?.schedule,
         subtick: subtickClockFor(windows),
         clock_windows: serializeClockWindows(clock_windows),
-        belt_pickup_slack_ticks: clock.applied_belt_pickup_slack,
-        belt_pickup_slack_left_out: clock.belt_pickup_slack_left_out,
         fuel_hand_room_ticks: extras.fuel_hand_room_ticks ?? Object.fromEntries(clock.fuel_hand_room),
         ...(clock.random_margins !== undefined && { random_margins: clock.random_margins }),
         belt: clock.belt,

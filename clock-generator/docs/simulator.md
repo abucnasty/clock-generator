@@ -64,10 +64,10 @@ rejected. Sidecar exports layout with model format 2; older underground captures
 
 Supply is a separate choice: **Moving** by default, or **Backed up** with `overrides.backed_up_belts: true`.
 The simulator retains the pickup length in both cases. Moving supply models reachable stacks, holes and partial
-stacks; ordinary backed-up supply additionally stops and compresses stacks at its closed endpoint. Choosing **Backed up** also omits moving-belt clock slack.
+stacks; ordinary backed-up supply additionally stops and compresses stacks at its closed endpoint.
 Older `non_moving_belts` config settings migrate to `backed_up_belts` on import. New configs and exports use only
 `backed_up_belts`; if both keys are present, the new key takes precedence. Saved results retain their run's assumptions. Older manual underground configs must choose a layout;
-physical approach cannot be recovered from half-tile reach alone. Belt slack remains extra margin for late starts and supply gaps.
+physical approach cannot be recovered from half-tile reach alone.
 
 The [lane model](../src/state/belt-pickup-lane.ts) stores only holes and partial stacks in an otherwise evenly spaced
 supply. The [belt's pickup port](../src/simulation/components/belt-hand-pickup.ts) chooses the physical lane. No whole-belt

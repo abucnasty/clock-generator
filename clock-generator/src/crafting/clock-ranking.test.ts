@@ -257,7 +257,6 @@ describe("a clock rounded down to whole ticks", () => {
         const assessment: ClockAssessment = { holds: true, items_per_second, wake_ups_per_minute: 13.4, start_dependence: null,
             disturbance_trial: { survives: true, broken_by: [], recovered_after_window_cycles: 2 } };
         return rankingOf({ assessment, verdict: clockVerdictOf(assessment), ranking_window_count: 4, deadlock_risks: [],
-            result: { belt_pickup_slack_left_out: false },
             ...(rounded_clock && { rounded: { window_cycle_ticks: 2888, runs_fast: items_per_second / 9.97 - 1, within_machines: true, tried_on_its_window_cycle: true, ...rounded_clock } }),
         } as unknown as Omit<ClockAlternative, "ranking">, config);
     };

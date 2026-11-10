@@ -8,9 +8,9 @@ import { quiet } from "./generate-blueprint-test-helpers";
 // long run instead, and a clock that holds, or fails later, by what the check found
 describe("the output a clock that fails its first check is listed by", () => {
     it("is the mean items a period of its long run, and the rate and the check say so", async () => {
-        // a build with a clock that fails its first check: the single output swing a cycle, forced on this copy of the sample
-        const sample = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
-        const config = { ...sample, overrides: { ...sample.overrides, terminal_swing_count: 1 } };
+        // a build with a clock that fails its first check: two output swings a cycle, forced on this copy of the sample
+        const sample = await loadConfigFromFile(ConfigPaths.ELECTRIC_FURNACE_20);
+        const config = { ...sample, overrides: { ...sample.overrides, terminal_swing_count: 2 } };
         const generated = generateClockAlternatives(config, { logger: quiet });
         const failed = generated.alternatives.filter(it => it.result.stability_check.as_built?.first_check_failed === true);
         expect(failed.length).toBeGreaterThan(0);

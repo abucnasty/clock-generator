@@ -25,7 +25,7 @@ export interface VerifiedPrimitiveRoundRobinPollingResult {
 /** Only the reviewed default policy: explicit caller alternatives keep their established semantics. */
 export function primitiveRoundRobinPollingOptionsSupported(config: Config, options: GenerateClockOptions): boolean {
     return options.verify_as_built === true && options.shared_windows !== true
-        && options.belt_pickup_slack !== "never" && options.fuel_hand_room !== true
+        && options.fuel_hand_room !== true
         && config.overrides?.derive_clock_windows !== true && config.overrides?.lcm === undefined
         && config.overrides?.terminal_swing_count === undefined && options.fractional_swings !== true
         && config.setpoint.counts !== "destroyed";
@@ -88,7 +88,7 @@ export function verifiedPrimitiveRoundRobinPollingClock(
         }
         const built = attempt.result;
         const grouped = roundRobinPollingPlan(registry, run.swing_counts, run.recipe_lcm, run.duration.ticks,
-            config.overrides?.backed_up_belts !== true, attempt.options, null, { output_paths, direct_sources, retained_clocks: clocks });
+            attempt.options, null, { output_paths, direct_sources, retained_clocks: clocks });
         const serialize = (windows: Map<string, OpenRange[]>) => Object.fromEntries([...windows].map(([id, ranges]) =>
             [id, ranges.map(range => ({ start: range.start_inclusive, end: range.end_inclusive }))]));
         assert(canonicalVerificationJson(serialize(grouped.windows)) === canonicalVerificationJson(built.planned_windows), "primitive reconstructed enable windows changed");

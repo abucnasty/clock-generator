@@ -43,7 +43,7 @@ export { subtickClockForWindowCycle as subtickClockForWindowCycle } from "../com
  * (agricultural science in the game: 377 of 400 a window cycle).
  *
  * It is not given to every such inserter: the ticks can also let a hand in that the plan does not have. A clock gets
- * it when it does not hold the expected output without (see withFuelHandRoomWhereNeeded). Belt pickup slack is as long.
+ * it when it does not hold the expected output without (see withFuelHandRoomWhereNeeded).
  */
 export function fuelHandRoomTicks(entity_registry: ReadableEntityRegistry): Map<string, number> {
     const room = new Map<string, number>();
@@ -66,36 +66,6 @@ export function fuelHandRoomTicks(entity_registry: ReadableEntityRegistry): Map<
     }
     return room;
 }
-
-/**
- * Ticks added to the end of each belt-fed inserter's window. In game, a grab from a full belt can stall while a
- * gap left by an upstream inserter passes the pickup point, so the window must outlast a late pickup or the
- * inserter is disabled holding a partial hand. Sized as one more full-hand pickup (one lane stack per tick) of the hand
- * it moves of the item on the lane.
- */
-const MAX_BELT_PICKUP_SLACK_TICKS = 16;
-
-
-export function beltPickupSlackTicks(entity_registry: ReadableEntityRegistry): Map<string, number> {
-    const slack = new Map<string, number>();
-    for (const entity of entity_registry.getAll()) {
-        if (!Entity.isInserter(entity)) {
-            continue;
-        }
-        const source = entity_registry.getEntityByIdOrThrow(entity.source.entity_id);
-        if (!Entity.isBelt(source)) {
-            continue;
-        }
-        const lanes = source.lanes.filter(lane => entity.filtered_items.has(lane.ingredient_name));
-        // the timing floor's count (one belt stack a tick) of its hand of each item it takes (its Hand trait's `by_item`,
-        // as handSizeFor reads it: its nominal hand for an item it does not carry), the slowest lane's fill
-        const ticks = Math.max(...(lanes.length > 0 ? lanes : source.lanes)
-            .map(lane => stacksOf(handSizeFor(entity, lane.ingredient_name), lane.stack_size)));
-        slack.set(entity.entity_id.id, Math.min(ticks, MAX_BELT_PICKUP_SLACK_TICKS));
-    }
-    return slack;
-}
-
 
 /**
  * The ticks a hand off a lane with backpressure takes to fill from the lanes at rest, by belt-fed inserter id, where the belt
@@ -158,14 +128,15 @@ export function withWindowsAtLeast(
     return result;
 }
 
-export function withBeltPickupSlack(
+/** Windows lengthened at their end by the ticks given, by key (whole-tick window cycles only) */
+export function withWindowsLengthened(
     windows: Map<string, OpenRange[]>,
-    slack: Map<string, number>,
+    ticks_by_key: ReadonlyMap<string, number>,
     window_cycle_ticks: number,
 ): Map<string, OpenRange[]> {
     const result = new Map<string, OpenRange[]>();
     for (const [key, ranges] of windows) {
-        const ticks = slack.get(key) ?? 0;
+        const ticks = ticks_by_key.get(key) ?? 0;
         if (ticks === 0 || !Number.isInteger(window_cycle_ticks)) {
             result.set(key, ranges);
             continue;
@@ -202,26 +173,18 @@ export function shiftRangesForCircuitLatency(ranges: OpenRange[], window_cycle_t
 /**
  * The belt supply a clock is designed for. Moving pickups time reachable stacks; supply with backpressure refills reachable
  * stacks at belt speed, and its windows last as long as a hand takes from the lanes at rest (see backpressureHandTicks).
- * Moving clocks add slack for late pickups (see "Wake-ups, the measure for goal 2" in GOALS.md).
+ * How long a pickup from a moving lane takes is the simulation's: a window gets no ticks beyond those of the plan.
  */
 export type ClockBelt =
-    /**
-     * Belt pickup slack lengthened the windows of its belt-fed inserters, by these ticks (each value once, ascending); with
-     * `inside`, the windows stay open these ticks after their last pickup already and none were added (slackInsideWindows)
-     */
-    | { kind: "moving"; slack_ticks: number[]; inside?: true }
-    /** Its belt-fed inserters have the windows they need on a belt with backpressure */
+    /** Some input lane of the build is not a dead end */
+    | { kind: "moving" }
+    /** Every input lane is a dead end: its belt-fed inserters have the windows they need on a belt with backpressure */
     | { kind: "backed_up" };
 
-/** "moving (+4 ticks)" or "backed-up"; empty when no inserter with windows picks up from a belt */
+/** "moving" or "backed-up"; empty when no inserter with windows picks up from a belt */
 export function clockBeltLabel(belt: ClockBelt | null): string {
     if (belt === null) {
         return "";
     }
-    if (belt.kind === "backed_up") {
-        return "backed-up";
-    }
-    const [first, last] = [belt.slack_ticks[0], belt.slack_ticks[belt.slack_ticks.length - 1]];
-    // a clock with the slack inside its windows shows the same: the ticks it stays enabled after its last pickup
-    return `moving (+${first === last ? first : `${first}–${last}`} tick${last === 1 ? "" : "s"})`;
+    return belt.kind === "backed_up" ? "backed-up" : "moving";
 }

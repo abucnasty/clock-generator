@@ -5,7 +5,7 @@ import { loadConfigFromFile } from "./config/loader";
 import { Entity, ReadableEntityRegistry } from "./entities";
 import { Lane } from "./entities/belt/belt";
 import { createEntityRegistryFromConfig } from "./crafting/sequence/simulation-context";
-import { actsInTheTickTheBlockIsLifted, beltPickupSlackTicks, fuelHandRoomTicks, miningDrillMaxInsertion, nearestLaneFirst } from "./rules-of-the-game";
+import { actsInTheTickTheBlockIsLifted, fuelHandRoomTicks, miningDrillMaxInsertion, nearestLaneFirst } from "./rules-of-the-game";
 
 /**
  * The tables of recorded cases of the rules of the game that have no table elsewhere (see rules-of-the-game.ts for
@@ -92,28 +92,6 @@ describe("the rules of the game", () => {
 
         it("keeps the order of the filters when the near lane has nothing it takes", () => {
             expect(Array.from(nearestLaneFirst(new Set(["processing-unit"]), lanes, 1))).toEqual(["processing-unit"]);
-        });
-    });
-
-    describe("belt pickup slack", () => {
-        // one more full hand at one belt stack a tick: 4 for a hand of 16 from stacks of 4
-        it("is the ticks one more full hand takes, for every inserter that picks up from a belt", async () => {
-            const registry = await registryOf(ConfigPaths.LOGISTIC_SCIENCE_240);
-            const slack = beltPickupSlackTicks(registry);
-            const belt_fed = registry.getAll().filter(Entity.isInserter).filter(it => Entity.isBelt(registry.getEntityByIdOrThrow(it.source.entity_id)));
-            expect(belt_fed.length).toBeGreaterThan(0);
-            expect(Array.from(slack.keys()).sort()).toEqual(belt_fed.map(it => it.entity_id.id).sort());
-            expect(new Set(slack.values())).toEqual(new Set([4]));
-        });
-
-        // the hand it moves of the item on the lane, not its nominal hand: an item that stacks under the nominal hand, or a
-        // hand rounded to whole stacks of a belt it drops on, fills in fewer ticks
-        it("is the ticks of its hand of the item on the lane: 2 for a hand of 8 from stacks of 4", async () => {
-            const registry = await registryOf(ConfigPaths.LOGISTIC_SCIENCE_240);
-            const inserter = registry.getAll().filter(Entity.isInserter).find(it => Entity.isBelt(registry.getEntityByIdOrThrow(it.source.entity_id)))!;
-            expect(inserter.metadata.stack_size).toBe(16);
-            inserter.hand_sizes = new Map(Array.from(inserter.filtered_items, item => [item, 8]));
-            expect(beltPickupSlackTicks(registry).get(inserter.entity_id.id)).toBe(2);
         });
     });
 
