@@ -289,9 +289,12 @@ lane's `supply_rate`, move at the belt's speed and leave at its end (`lane_end`:
 takes them at its `outlet_rate`; an unknown end is run both ways). A
 part copy holds its share of each shared lane's takers, rounded up for each, the ones furthest upstream, with what their
 machines need. The items on a lane move in the direction of the belt (`flow_direction`). Without it, the check runs
-the items in each direction along the copies. A copy whose taker puts down fewer of the lane's items over the whole
-window cycles of the second half of the run than a copy alone makes the clock unstable
-(`src/crafting/shared-lane-verdict.ts`).
+the items in each direction along the copies. The verdict has two checks (`src/crafting/shared-lane-verdict.ts`). First,
+a taker that puts down fewer of the lane's items over the whole window cycles of the second half of the run than in a
+run of one copy alone is short. Second, a shortfall makes the clock unstable only where a machine or an output inserter
+of a copy is behind its target over the same window cycles; a machine of a part copy is held to its share of a whole
+copy's target. Where nothing is behind, the shortfall is stock that moved between the two runs, and the clock holds
+([stability](stability.md#copies-that-share-a-lane)).
 
 Standing: on the clocks recorded on #660 (three copies on ore lanes that flow into loaders) and #725 (5.5 copies on
 dead-ended lanes) and on logistic science 240 (11 copies) the run gives the game's verdict on every copy. The size of a
