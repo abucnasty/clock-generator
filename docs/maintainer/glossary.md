@@ -54,7 +54,8 @@ _Avoid_: target output, target rate, goal, control frequency (that is the window
 **Secondary setpoint**:
 The rate at which entities outside the configuration take items off an export lane, in items per second. The
 configuration's `consumption_per_second` on the lane. It is the outlet rate of the lane, so the lane states no lane end.
-A project technical noun beside **Setpoint** (STE rule 1.6): STE approves SECONDARY (adj), and has no entry for setpoint.
+A project technical noun, related to **Setpoint** (STE rule 1.6): STE approves SECONDARY (adj), and has no entry for
+setpoint.
 _Avoid_: export rate, consumption
 
 **Copies**:
@@ -92,43 +93,43 @@ and RATE (n), approved.
 _Avoid_: entry rate
 
 **Lane end**:
-What happens to the items at the downstream end of a lane: a **dead end**, an **outlet**, or an **unknown end**. A
+What the items do at the downstream end of a lane: a **dead end**, an **outlet**, or an **unknown end**. A
 fact of the build: it does not change while the build runs. The configuration's `lane_end`, by its `kind`. A project
 technical noun (STE rule 1.6): STE approves END (n), and has no entry for lane.
 
 **Dead end**:
-A lane end that stops the items. They stay on the lane until a hand takes them, so the lane is a standing queue. The
-`lane_end` kind `dead_end`. A project technical noun (STE rule 1.6).
+A lane end that stops the items. They stay on the lane until a hand takes them, so the lane is a standing queue. In the
+configuration: `"lane_end": {"kind": "dead_end"}`. A project technical noun (STE rule 1.6).
 
 **Outlet**:
 A lane end that lets the items move on. The items that no hand takes leave the lane at its outlet rate. A **free
-outlet** takes as many items as the lane carries. The `lane_end` kind `outlet`. A project technical noun (STE rule
-1.6): STE has no entry for outlet.
+outlet** takes as many items as the lane carries. In the configuration: `"lane_end": {"kind": "outlet"}`. A
+project technical noun (STE rule 1.6): STE has no entry for outlet.
 
 **Outlet rate**:
 The items per second that leave a lane at its outlet. The configuration's `lane_end.outlet_rate`. Without it, the
 outlet is a free outlet: its rate is the capacity of the lane. A project technical noun (STE rule 1.6).
 
 **Unknown end**:
-The lane end of a lane whose end the configuration does not know: the `lane_end` kind `unknown`. The generator checks
-the clock under both ends, as a dead end and as a free outlet, and the clock must hold under both. STE: UNKNOWN (adj)
-and END (n), approved.
+The lane end of a lane when the configuration does not know its end. In the configuration:
+`"lane_end": {"kind": "unknown"}`. The generator checks the clock as a dead end and as a free outlet. The clock must
+hold under both. STE: UNKNOWN (adj) and END (n), approved.
 
 **Lane sharing**:
-Whether all copies take from one lane, or each copy has a lane of its own. **Shared by copies**: the takers of every
-copy are on the lane. This is the default. **One per copy**: each copy has its own lane, and the generator checks the
-takers of one copy on it. The configuration's `sharing`: `shared_by_copies` or `one_per_copy`. A project technical noun
-(STE rule 1.6).
+Whether all copies take from one lane, or each copy has a lane of its own. **Shared by copies**: the inserters of
+every copy take from the lane. This is the default. **One per copy**: each copy has its own lane. The generator checks
+the inserters of one copy on it. The configuration's `sharing`: `shared_by_copies` or `one_per_copy`. A project
+technical noun (STE rule 1.6).
 
 **Flow direction**:
 The direction in which the items on a belt move. Both lanes of a belt move in the same direction. The configuration's
 `flow_direction` on the belt: 0 north, 4 east, 8 south, 12 west. Without it, the generator checks the items moving in
-each direction along the copies, and the clock must hold in both. STE: FLOW (n) and DIRECTION (n), approved.
+each direction along the copies. The clock must hold in both. STE: FLOW (n) and DIRECTION (n), approved.
 
 **Near lane**:
 The lane, 1 or 2, from which an inserter takes first, when its sink takes items from both lanes. At a side pickup
-(the inserter stands beside the belt), it is the lane nearest the inserter. At a front pickup of an underground end,
-neither lane is nearer: the mirroring of the inserter selects the lane. Where both lanes carry the item that the
+(the inserter is adjacent to the belt), it is the lane nearest the inserter. At a front pickup of an underground end,
+no lane is nearer: the mirroring of the inserter selects the lane. Where both lanes carry the item that the
 inserter takes, the near lane gives it first. The far lane gives it only when the near lane has none in reach. The
 configuration's `source.near_lane`. A project technical noun (STE rule 1.6): STE approves NEAR (adj), and has no
 entry for lane.
@@ -225,12 +226,12 @@ inserter.
 _Avoid_: wake window, active window, window (bare), enable range
 
 **Room for one more hand**:
-The ticks that the generator adds at the end of each enable window of an inserter that takes from a lane that is not a
-dead end. They are the ticks that one more hand takes to fill at one lane stack a tick: 4 ticks for a hand of 16 from
-stacks of 4. On such a lane, a gap or a take upstream can start a hand later than the generator planned. Without the
-room, the window closes on a hand that is not full. A lane with an unknown end gets the room. A side pickup of an item
-that both lanes of its belt carry gets no room: its far lane gives what a gap on its near lane does not. A project
-term, as the code says it (`laneHandRoomTicks`).
+Ticks that the generator adds at the end of each enable window of an inserter. It adds them where the inserter takes
+from a lane that is not a dead end. They are the ticks that one more hand takes to fill at one lane stack a tick: 4
+ticks for a hand of 16 from stacks of 4. On such a lane, an empty space or a take upstream can start a hand later than
+the generator planned. Without the room, the window closes on a hand that is not full. A lane with an unknown end gets
+the room. A side pickup of an item on both lanes of its belt gets no room. Its far lane gives what an empty space on
+its near lane does not give. A project term, as the code says it (`laneHandRoomTicks`).
 _Avoid_: belt slack, belt pickup slack, pickup slack, slack (bare)
 
 **Window cycle**:
@@ -339,7 +340,7 @@ verb)
 **Backpressure**, at a belt pickup:
 The state of one lane at one tick: the lane in reach of the inserter is fully saturated and does not move. A lane
 that is moving at that tick has no backpressure: the inserter waits for items to arrive. The two lanes of a belt can
-be in different states, and a lane can change its state from one tick to the next. A lane end is not a state: it is a
+be in different states. A lane can change its state from one tick to the next. A lane end is not a state: it is a
 fact of the build.
 _Avoid_: backed-up, backed up
 
