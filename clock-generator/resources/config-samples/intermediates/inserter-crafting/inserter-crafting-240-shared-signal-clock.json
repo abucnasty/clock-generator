@@ -2,7 +2,11 @@
   "setpoint": {
     "recipe": "inserter",
     "items_per_second": 240,
-    "copies": 3
+    "copies": 3,
+    "copy_offset": {
+      "x": 9,
+      "y": 0
+    }
   },
   "machines": [
     {
@@ -230,11 +234,17 @@
       "lanes": [
         {
           "ingredient": "electronic-circuit",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         },
         {
           "ingredient": "electronic-circuit",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         }
       ]
     },
