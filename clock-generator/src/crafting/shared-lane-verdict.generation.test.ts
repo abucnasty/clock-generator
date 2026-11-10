@@ -4,7 +4,7 @@ import { ClockAlternativesResult, generateClockAlternatives } from "./generate-b
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { Config } from "../config/schema";
-import { quiet } from "./generate-blueprint-test-helpers";
+import { quiet, withoutSharedLaneFacts } from "./generate-blueprint-test-helpers";
 
 /** The config with the lanes it names (by "belt/lane") stated as dead ends, and their belts stating that their items move east */
 function deadEnded(config: Config, lanes: string[], flow_direction?: 4): Config {
@@ -61,10 +61,13 @@ describe("the logistic science build with its feed lanes stated as dead ends", (
 
 // CHEMICAL_SCIENCE_240_SHARED_FOUNDRY: Coordinated Sources is composed on 352 ticks from the clocks made before it, and on
 // the advanced-circuit lane its copies share copy 5 takes half of what one copy alone takes. A clock made that is not stable
-// is not listed; it is in not_made, with what its check found, as a clock no maker could make is.
+// is not listed; it is in not_made, with what its check found, as a clock no maker could make is. Measured on the sample as
+// it was before it stated the spacing of its copies, the way its belts move and the ends of its lanes, where the lane is a
+// free outlet. The sample now states that its input lanes end in a dead end, and this test is of a lane that flows on: it
+// takes the sample without those facts.
 describe("a composed clock made and not stable on a lane the copies share", () => {
     it("is in not_made with what the check found, and not listed", async () => {
-        const generated = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.CHEMICAL_SCIENCE_240_SHARED_FOUNDRY), { logger: quiet });
+        const generated = generateClockAlternatives(withoutSharedLaneFacts(await loadConfigFromFile(ConfigPaths.CHEMICAL_SCIENCE_240_SHARED_FOUNDRY)), { logger: quiet });
         expect(generated.alternatives.some(it => it.maker === "per-branch")).toBe(false);
         const composed = generated.not_made.find(it => it.id === "per-branch");
         expect(composed).toMatchObject({ label: "Coordinated Sources" });
