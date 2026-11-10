@@ -29,7 +29,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -55,7 +55,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -81,7 +81,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -185,7 +185,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -211,7 +211,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -237,7 +237,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
