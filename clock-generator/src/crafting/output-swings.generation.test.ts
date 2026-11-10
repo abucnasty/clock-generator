@@ -4,7 +4,8 @@ import { loadConfigFromFile, parseConfig } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { EntityId } from "../entities";
 import { OpenRange } from "../data-types";
-import { entityRouteProblems, productionScienceSharedPickup, withSearches } from "./generate-blueprint-test-helpers";
+import { entityRouteProblems, productionScienceSharedPickup, quiet, withSearches } from "./generate-blueprint-test-helpers";
+import { clockOfPlan, unclockedRun } from "./plan/unclocked-run";
 import { transitionsOf } from "./sequence/compact-history";
 
 describe("generateClockForConfig", () => {
@@ -349,10 +350,16 @@ describe("generateClockForConfig", () => {
                 });
             });
 
-            it("keeps the planned windows of the first cycle and the planned window lengths", () => {
+            // the search shifts the plan's windows with the room for one more hand added after them; the primary may
+            // be a variant with the room inside its windows, which are shorter by that room
+            it("keeps the planned windows of the first cycle and the window lengths of the plan it shifts", () => {
                 const lengths = (windows: typeof shifted.result.clock_windows) => Object.fromEntries(
                     Object.entries(windows).map(([key, ranges]) => [key, ranges.map(range => range.end - range.start)]));
-                expect(lengths(shifted.result.clock_windows)).toEqual(lengths(primary.result.clock_windows));
+                const options = { logger: quiet, lane_hand_room: "always" as const };
+                const plan = unclockedRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, options);
+                const shifted_plan = Object.fromEntries(Array.from(clockOfPlan(plan, options).windows,
+                    ([key, ranges]) => [key, ranges.map(range => ({ start: range.start_inclusive, end: range.end_inclusive }))]));
+                expect(lengths(shifted.result.clock_windows)).toEqual(lengths(shifted_plan));
                 expect(shifted.inserter_window_count).toBe(primary.inserter_window_count);
             });
         });
