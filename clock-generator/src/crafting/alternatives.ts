@@ -35,7 +35,7 @@ import { coordinatedSourcesClock } from "./candidates/coordinated-sources";
 import { BlueprintGenerationResult, clockedByConfig, GenerateClockOptions, SimulationStabilityCheck, fractionalStartOf, fractionalSwingsOf } from "./plan/unclocked-run";
 import { EntityTransferCountMap } from "./sequence/cycle/swing-counts";
 import { withRunMemo } from "./plan/run-memo";
-import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, ROUNDED_CLOCK_MAX_FAST, RoundedClock, roundedRateAllowed, searchesToRun, searchesAreNeeded } from "./rank";
+import { clockCost, ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, ROUNDED_CLOCK_MAX_FAST, RoundedClock, roundedRateAllowed, searchesToRun, searchesAreNeeded } from "./rank";
 import { TargetProductionRate } from "./target-production-rate";
 import { loopStockBoundOf } from "./candidates/loop-stock-bound";
 import { AsBuiltStabilityCheck, DisturbanceTrialAssessment, disturbanceTrialVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf, clockVerificationSignature, FREE_RUNNING_CHECK_TICKS, fractionalSwingsChangeChecksOf, LOOP_WINDOW_CHECK_TICKS, roundedClockTrial, startDependenceVerdictOf, wakeUpsFromStartsOf, withSettledOutput } from "./trial";
@@ -766,7 +766,7 @@ function alternativePart(config: Config, alternative: ClockAlternative): Coordin
     const { result } = alternative;
     const { overrides } = verificationPlanningConfigOf(config, result);
     return {
-        name: alternative.id, alternative_id: alternative.id, verdict: alternative.verdict,
+        name: alternative.id, alternative_id: alternative.id, verdict: alternative.verdict, wake_ups_per_minute: clockCost(alternative.ranking),
         window_cycle_ticks: result.simulation_duration.ticks, windows: result.clock_windows,
         counted: result.stability_check.as_built?.wake_ups !== undefined,
         ...(result.always_on_reasons !== undefined && { always_on: result.always_on_reasons }),

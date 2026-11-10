@@ -11,6 +11,7 @@ import type { DisturbanceTrialVerdict } from "../disturbance-trial";
 import { finishedClock, holdsWithMargin } from "./round-robin-polling";
 import { partKey, type CoordinatedSourcesInput, type CoordinatedSourcesPart } from "./coordinated-sources-parts";
 import type { EnableControl, SourceControl } from "../strategy-catalog";
+import { costKey } from "../rank";
 
 /**
  * The per-branch clock (DESIGN D7, PR 18): each part of the build gets the windows of the clock that fits it, all on one shared
@@ -27,6 +28,9 @@ import type { EnableControl, SourceControl } from "../strategy-catalog";
  *   nothing changes. The clocks that hold are ranked by fewest wakeups (to a thousandth), the current choice first on a tie, and
  *   the backpressure losses are tried in that order: the first that gets back from every loss is taken (`bestHolding` of
  *   round-robin-polling.ts). No product over the groups is searched, and nothing is ranked by a prediction.
+ * - **The starts:** the local choice also starts from each stable clock among the parts whose wakeups a minute tie the recommended
+ *   clock's as the selection compares them (`costKey`), every group on that clock's windows (`localChoiceStarts`). The clock is the
+ *   result with the fewest wakeups, of equals the recommended clock's start's (`localChoiceFromStarts`).
  * - **The clock** is then checked as a whole: the one-tick margin here (`holdsWithMargin`), and the checks of every alternative
  *   where it is listed (as built from every start, every loss).
  *
@@ -287,52 +291,158 @@ export function coordinatedSourcesClock(config: Config, input: CoordinatedSource
         return trial.margin;
     };
 
-    // from the recommended clock: every group at the choice its windows are
-    const current = new Map<string, number>(groups.map(group => [group.source, 0]));
+    const recommended_key = partKey({ window_cycle_ticks: shared_ticks, windows: tiledWindows(recommended.windows, recommended.window_cycle_ticks, shared_ticks) });
+    const judge: LocalChoiceJudge = {
+        wakeUpsOf: choice => {
+            const trial = trialOfChoice(choice);
+            return trial.holds_to_long_run ? trial.wake_ups : null;
+        },
+        // the current choice where it holds as a whole; another where it also holds a tick either way and gets back from every loss (on a
+        // build with a deadlock risk the losses do not decide), else where its losses could not be tried
+        takes: (choice, current) => {
+            const trial = trialOfChoice(choice);
+            if (!holdsOf(trial)) return "passed";
+            if (current) return "taken";
+            if (marginOf(trial) !== null) return "passed";
+            const loss = deadlock_risk ? undefined : lossOf(trial);
+            if (deadlock_risk || loss?.survives === true) return "taken";
+            return loss === null ? "untried" : "passed";
+        },
+        refusal: choice => {
+            const { windows, left_open } = compose(choice);
+            if (partKey({ window_cycle_ticks: shared_ticks, windows }) === recommended_key) return "the local choice keeps the recommended clock";
+            const margin = marginOf(trialOf(windows, left_open));
+            return margin === null ? null : `the composed clock: ${margin}`;
+        },
+    };
+    const starts = localChoiceStarts(inserters, groups, recommended, candidates, shared_ticks);
+    const { start, choice: current } = localChoiceFromStarts(groups, starts, judge, logger);
+    const { windows, left_open } = compose(current);
+    const map = new Map(Object.entries(windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
+    logger.log(`Coordinated Sources: ${starts.length > 1 ? `from ${partName(start.part)}, ` : ""}`
+        + `${groups.map(group => `${group.source} from ${partName(group.choices[current.get(group.source)!].parts[0])}`).join(", ")}; `
+        + `${trials.size} clocks simulated`);
+    const result = finishedClock(made, map, [], { ...options, loop_windows: false }, left_open);
+    return { ...result, coordinated_sources: { parts: Object.fromEntries(groups.map(group => [group.source, partName(group.choices[current.get(group.source)!].parts[0])])),
+        sources: sourceControlsOf(groups, current, result.always_on_reasons ?? {}, logger, config.setpoint.recipe) } };
+}
+
+/** A start of the local choice: the clock it starts from, and the choice of each group that has that clock's windows */
+export interface LocalChoiceStart {
+    part: CoordinatedSourcesPart;
+    choice: ReadonlyMap<string, number>;
+}
+
+/** What the local choice reads of a composed clock, by the choice of each group */
+export interface LocalChoiceJudge {
+    /** Its wakeups a minute where it holds up to the long run (the check that counts them), else null */
+    wakeUpsOf(choice: ReadonlyMap<string, number>): number | null;
+    /**
+     * Where its turn comes in the ranking, whether a group's choice is taken: "untried" where it would be taken but its losses could
+     * not be tried (taken where no other is), "passed" where it is not taken
+     */
+    takes(choice: ReadonlyMap<string, number>, current: boolean): "taken" | "untried" | "passed";
+    /** Why the clock a start ends on is not the per-branch clock (it is the recommended clock, or fails the margin), else null */
+    refusal(choice: ReadonlyMap<string, number>): string | null;
+}
+
+/**
+ * The starts of the local choice: the recommended clock (every group at its first choice), then each stable part whose wakeups a
+ * minute tie the recommended clock's as the selection compares them (`costKey`), in the order of the parts, where every group has
+ * its windows and it is another start than those before it
+ */
+export function localChoiceStarts(
+    inserters: readonly GroupedInserter[],
+    groups: readonly PartGroup[],
+    recommended: CoordinatedSourcesPart,
+    parts: readonly CoordinatedSourcesPart[],
+    shared_ticks: number,
+): LocalChoiceStart[] {
+    const starts: LocalChoiceStart[] = [{ part: recommended, choice: new Map(groups.map(group => [group.source, 0])) }];
+    const wake_ups = recommended.wake_ups_per_minute;
+    if (wake_ups === undefined || wake_ups === null) return starts;
+    const keys = new Set([JSON.stringify([...starts[0].choice])]);
+    for (const part of parts) {
+        const own_wake_ups = part.wake_ups_per_minute;
+        if (part === recommended || part.alternative_id === undefined || part.verdict !== "stable" || own_wake_ups === undefined
+            || own_wake_ups === null || costKey({ wake_ups_per_minute: own_wake_ups }) !== costKey({ wake_ups_per_minute: wake_ups })) continue;
+        const own = partGroups(inserters, [part], shared_ticks);
+        const choice = new Map(groups.map((group, index) => [group.source,
+            group.choices.findIndex(it => JSON.stringify(it.windows) === JSON.stringify(own[index].choices[0].windows))]));
+        const key = JSON.stringify([...choice]);
+        if ([...choice.values()].includes(-1) || keys.has(key)) continue;
+        keys.add(key);
+        starts.push({ part, choice });
+    }
+    return starts;
+}
+
+/**
+ * The local choice from one start: the groups in turn, each with every choice it has and the other groups as they are, ranked by
+ * the wakeups of the whole clock (to a thousandth), the current choice first on a tie; passes until nothing changes
+ */
+function localChoice(choosing: readonly PartGroup[], start: LocalChoiceStart, judge: LocalChoiceJudge, logger: Logger, from: string): Map<string, number> {
+    const current = new Map(start.choice);
     for (let pass = 0; pass < COORDINATED_SOURCES_MAX_PASSES; pass++) {
         let changed = false;
         for (const group of choosing) {
             const at = current.get(group.source)!;
-            const tried = group.choices.map((_, index) => ({ index, trial: trialOfChoice(new Map(current).set(group.source, index)) }));
+            const choiceOf = (index: number) => new Map(current).set(group.source, index);
+            const tried = group.choices.map((_, index) => ({ index, wake_ups: judge.wakeUpsOf(choiceOf(index)) }));
             // ranked by the check up to the long run; one that does not hold its whole check is passed over where its turn comes,
             // so the clocks read are those that hold, in the same order, and no clock ranked after the one taken is checked further
-            const ranked = tried.filter(it => it.trial.holds_to_long_run && it.trial.wake_ups !== null)
-                .sort((a, b) => Math.round(a.trial.wake_ups! * 1000) - Math.round(b.trial.wake_ups! * 1000)
+            const ranked = tried.filter(it => it.wake_ups !== null)
+                .sort((a, b) => Math.round(a.wake_ups! * 1000) - Math.round(b.wake_ups! * 1000)
                     || (a.index === at ? -1 : b.index === at ? 1 : 0) || a.index - b.index);
-            // the current choice stays where it ranks first; another is taken when it holds a tick either way and gets back from every
-            // loss (on a build with a deadlock risk the losses do not decide), else one whose losses could not be tried
+            // the current choice stays where it ranks first
             let taken: number | undefined;
             let untried: number | undefined;
             for (const it of ranked) {
-                if (!holdsOf(it.trial)) continue;
-                if (it.index === at) { taken = at; break; }
-                if (marginOf(it.trial) !== null) continue;
-                const loss = deadlock_risk ? undefined : lossOf(it.trial);
-                if (deadlock_risk || loss?.survives === true) { taken = it.index; break; }
-                if (loss === null) untried ??= it.index;
+                const verdict = judge.takes(choiceOf(it.index), it.index === at);
+                if (verdict === "taken") { taken = it.index; break; }
+                if (verdict === "untried") untried ??= it.index;
             }
             taken ??= untried;
             if (taken !== undefined && taken !== at) {
                 current.set(group.source, taken);
                 changed = true;
-                logger.log(`Coordinated Sources, pass ${pass + 1}: ${group.source} takes ${partName(group.choices[taken].parts[0])} `
-                    + `(${tried[taken].trial.wake_ups} wakeups a minute)`);
+                logger.log(`Coordinated Sources${from}, pass ${pass + 1}: ${group.source} takes ${partName(group.choices[taken].parts[0])} `
+                    + `(${tried[taken].wake_ups} wakeups a minute)`);
             }
         }
         if (!changed) break;
     }
-    const { windows, left_open } = compose(current);
-    if (partKey({ window_cycle_ticks: shared_ticks, windows }) === partKey({ window_cycle_ticks: shared_ticks, windows: tiledWindows(recommended.windows, recommended.window_cycle_ticks, shared_ticks) })) {
-        refuse("the local choice keeps the recommended clock");
+    return current;
+}
+
+/**
+ * The local choice from every start (`localChoiceStarts`): the clock is the result with the fewest wakeups a minute (`costKey`),
+ * of equals the one of the start listed first (the recommended clock's). A start other than the recommended clock's gives no result
+ * where it takes no move; a result the judge refuses gives none. Throws CoordinatedSourcesNotApplicable where no start gives one,
+ * with the recommended clock's start's reason.
+ */
+export function localChoiceFromStarts(
+    groups: readonly PartGroup[],
+    starts: readonly LocalChoiceStart[],
+    judge: LocalChoiceJudge,
+    logger: Logger,
+): { start: LocalChoiceStart; choice: Map<string, number> } {
+    const choosing = groups.filter(group => group.choices.length > 1);
+    let best: { start: LocalChoiceStart; choice: Map<string, number>; cost: number } | undefined;
+    let reason: string | undefined;
+    for (const start of starts) {
+        if (start !== starts[0]) {
+            logger.log(`Coordinated Sources: also from ${partName(start.part)}, whose wakeups a minute tie the recommended clock's (${start.part.wake_ups_per_minute})`);
+        }
+        const choice = localChoice(choosing, start, judge, logger, starts.length > 1 ? `, from ${partName(start.part)}` : "");
+        if (start !== starts[0] && [...choice].every(([source, index]) => start.choice.get(source) === index)) continue;
+        const refusal = judge.refusal(choice);
+        if (refusal !== null) { reason ??= refusal; continue; }
+        const cost = costKey({ wake_ups_per_minute: judge.wakeUpsOf(choice) });
+        if (best === undefined || cost < best.cost) best = { start, choice, cost };
     }
-    const margin = marginOf(trialOf(windows, left_open));
-    if (margin !== null) refuse(`the composed clock: ${margin}`);
-    const map = new Map(Object.entries(windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
-    logger.log(`Coordinated Sources: ${groups.map(group => `${group.source} from ${partName(group.choices[current.get(group.source)!].parts[0])}`).join(", ")}; `
-        + `${trials.size} clocks simulated`);
-    const result = finishedClock(made, map, [], { ...options, loop_windows: false }, left_open);
-    return { ...result, coordinated_sources: { parts: Object.fromEntries(groups.map(group => [group.source, partName(group.choices[current.get(group.source)!].parts[0])])),
-        sources: sourceControlsOf(groups, current, result.always_on_reasons ?? {}, logger, config.setpoint.recipe) } };
+    if (best === undefined) refuse(reason ?? "the local choice keeps the recommended clock");
+    return { start: best.start, choice: best.choice };
 }
 
 /** The inserters a part leaves always enabled, with its reasons */

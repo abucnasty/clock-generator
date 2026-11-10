@@ -15,6 +15,11 @@ export interface CoordinatedSourcesPart {
     /** The alternative's verdict; absent for a way */
     verdict?: "stable" | "no recovery" | "unstable";
     /**
+     * The wakeups a minute the selection ranks the alternative by (`ClockRanking.wake_ups_per_minute`; null where they were not
+     * counted); absent for a way, and for a part carried from before it was set
+     */
+    wake_ups_per_minute?: number | null;
+    /**
      * The strategy of its clock (family and construction): set for an alternative by `coordinatedSourcesInputOf`, from the alternatives of the
      * runs; a way of the grouped hands rule has none and is Round-Robin Polling by the grouped hands construction
      */

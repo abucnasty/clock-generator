@@ -162,7 +162,7 @@ export function clockCost(ranking: Pick<ClockRanking, "wake_ups_per_minute">): n
 }
 
 /** A cost as the selection compares it: to a thousandth, less than that being the rounding of a division */
-function costKey(ranking: Pick<ClockRanking, "wake_ups_per_minute">): number {
+export function costKey(ranking: Pick<ClockRanking, "wake_ups_per_minute">): number {
     const cost = clockCost(ranking);
     return cost === null ? Infinity : Math.round(cost * 1000);
 }

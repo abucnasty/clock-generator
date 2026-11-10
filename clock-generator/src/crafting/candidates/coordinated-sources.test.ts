@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { partGroups, sourceControlsOf, tiledWindows, upstreamOrder, type GroupedInserter } from "./coordinated-sources";
+import { CoordinatedSourcesNotApplicable, localChoiceFromStarts, localChoiceStarts, partGroups, sourceControlsOf, tiledWindows, upstreamOrder,
+    type GroupedInserter, type LocalChoiceJudge } from "./coordinated-sources";
 import { EntityRouteError } from "../enable-control-router";
 import { collectingParts, offerPart, partKey, partsWanted, coordinatedSourcesInputOf, type CoordinatedSourcesPart } from "./coordinated-sources-parts";
 import type { ClockStrategy } from "../clock-strategy";
@@ -45,6 +46,69 @@ describe("the groups of the local choice", () => {
         expect(groups[1].choices[1].windows).toEqual({ "inserter:2": [window(5, 6), window(15, 16)], "inserter:3": [window(5, 6), window(15, 16)] });
         // an inserter a part leaves without windows is always enabled in that choice
         expect(groups[2].choices[1].windows).toEqual({ "inserter:1": null });
+    });
+});
+
+describe("the starts of the local choice", () => {
+    // inserter 1 has the same windows in every part: only machine:2 (inserter 4) and machine:1 (inserters 2 and 3) have a choice
+    const clock = (id: string, wake_ups_per_minute: number, at: number) => part(id, 20, { "inserter:1": [window(0, 4)], "inserter:2": [window(at, at + 1)],
+        "inserter:3": [window(at, at + 1)], "inserter:4": [window(at - 5, at - 5)] }, { alternative_id: id, verdict: "stable", wake_ups_per_minute });
+    const recommended = clock("recommended", 40, 5);
+    const tied = clock("tied", 40, 7);
+    const other = clock("other", 90, 9);
+    const groups = (parts: CoordinatedSourcesPart[]) => partGroups(CHAIN, [recommended, ...parts], 20);
+    /** A composed clock's wakeups by the choice of machine:2 and of machine:1 ("2,1"); one not in the table does not hold */
+    const judge = (wake_ups: Record<string, number>): LocalChoiceJudge => {
+        const of = (choice: ReadonlyMap<string, number>) => wake_ups[`${choice.get("machine:2")},${choice.get("machine:1")}`] ?? null;
+        return {
+            wakeUpsOf: of,
+            takes: choice => of(choice) === null ? "passed" : "taken",
+            refusal: choice => [...choice.values()].every(it => it === 0) ? "the local choice keeps the recommended clock" : null,
+        };
+    };
+    const logged: string[] = [];
+    const logger = { log: (message: string) => { logged.push(message); }, warn: () => { }, error: () => { }, debug: () => { } };
+    // from the recommended clock no move is cheaper; from the tied one, machine:2 taking the other clock is
+    const only_from_tied = { "0,0": 40, "1,0": 50, "2,0": 60, "0,1": 45, "0,2": 70, "1,1": 40, "2,1": 30, "2,2": 35 };
+
+    it("are the recommended clock and every stable clock whose wakeups tie it, each with every group on its windows", () => {
+        const all = groups([tied, other]);
+        const starts = localChoiceStarts(CHAIN, all, recommended, [tied, other], 20);
+        expect(starts.map(start => [start.part.name, Object.fromEntries(start.choice)]))
+            .toEqual([["recommended", { "machine:2": 0, "machine:1": 0, "belt:1": 0 }], ["tied", { "machine:2": 1, "machine:1": 1, "belt:1": 0 }]]);
+    });
+
+    it("find the cheaper clock that only the tied clock's start reaches, and say which start it came from", () => {
+        const all = groups([tied, other]);
+        const found = localChoiceFromStarts(all, localChoiceStarts(CHAIN, all, recommended, [tied, other], 20), judge(only_from_tied), logger);
+        expect(found.start.part.name).toBe("tied");
+        expect(Object.fromEntries(found.choice)).toEqual({ "machine:2": 2, "machine:1": 1, "belt:1": 0 });
+        expect(logged).toEqual([
+            "Coordinated Sources: also from tied, whose wakeups a minute tie the recommended clock's (40)",
+            "Coordinated Sources, from tied, pass 1: machine:2 takes other (30 wakeups a minute)",
+        ]);
+        logged.length = 0;
+    });
+
+    it("are the recommended clock alone where no clock ties it, which keeps today's choice", () => {
+        const not_tied = { ...tied, wake_ups_per_minute: 40.001 };
+        const all = groups([not_tied, other]);
+        const starts = localChoiceStarts(CHAIN, all, recommended, [not_tied, other], 20);
+        expect(starts.map(start => start.part.name)).toEqual(["recommended"]);
+        expect(() => localChoiceFromStarts(all, starts, judge(only_from_tied), logger))
+            .toThrow(new CoordinatedSourcesNotApplicable("the local choice keeps the recommended clock"));
+        expect(logged).toEqual([]);
+    });
+
+    it("keep the recommended clock's start's result where another start gives the same", () => {
+        const all = groups([tied, other]);
+        // from the recommended clock: machine:2 takes the other clock (35), then machine:1 the tied one (30); from the tied
+        // clock: machine:2 takes the other clock (30), and machine:1 keeps the tied one on a tie
+        const same = { ...only_from_tied, "2,0": 35, "2,1": 30, "2,2": 30 };
+        const found = localChoiceFromStarts(all, localChoiceStarts(CHAIN, all, recommended, [tied, other], 20), judge(same), logger);
+        expect(found.start.part.name).toBe("recommended");
+        expect(Object.fromEntries(found.choice)).toEqual({ "machine:2": 2, "machine:1": 1, "belt:1": 0 });
+        logged.length = 0;
     });
 });
 
