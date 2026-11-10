@@ -202,7 +202,8 @@
       "lanes": [
         {
           "ingredient": "bioflux",
-          "stack_size": 4
+          "stack_size": 4,
+          "sharing": "one_per_copy"
         },
         {
           "ingredient": "nutrients",
