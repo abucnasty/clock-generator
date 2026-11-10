@@ -136,11 +136,19 @@ describe("generateClockForConfig", () => {
     // One machine, two output hands and nine input hands per 288 ticks. Clocks for it are easy to get to the
     // expected output in one simulated window cycle without the build actually repeating that window cycle.
     describe("FLYING_ROBOT_FRAME_80 clock-only check", async () => {
-        // The sample as it was before it took the lanes of the build (2026-11-05): no near lane on the belt inserters, the
-        // output belt's lanes the processing unit and the frame. With the build's own lanes the planned clock is unstable
-        // (the selected clock, the observed windows, is not), and the checks below, which need a stable planned clock to
-        // shift and to cut, would have nothing to look at.
-        const config = structuredClone(await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME_80));
+        // One copy of the sample at its rate per copy. No lane end is stated and the belt inserters have no near lane.
+        // The output belt's lanes carry the processing unit and the frame. The checks below test the window cycle of one
+        // machine, not lanes that copies share. They need a stable planned clock to shift and to cut.
+        const sample = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME_80);
+        const config = structuredClone(sample);
+        config.setpoint.items_per_second = sample.setpoint.items_per_second / sample.setpoint.copies;
+        config.setpoint.copies = 1;
+        delete config.setpoint.copy_offset;
+        for (const belt of config.belts) {
+            for (const lane of belt.lanes) {
+                delete lane.lane_end;
+            }
+        }
         for (const inserter of config.inserters) {
             if (inserter.source.type === "belt") {
                 delete inserter.source.near_lane;
