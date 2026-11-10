@@ -96,11 +96,17 @@
       "lanes": [
         {
           "ingredient": "transport-belt",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         },
         {
           "ingredient": "inserter",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         }
       ]
     }
