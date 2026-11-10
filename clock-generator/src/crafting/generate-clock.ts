@@ -176,7 +176,8 @@ function checkedAndKept(made: MadeClocks, plan: UnclockedRun, clock: PlannedCloc
  * whose switch-off left its inserter asleep on a machine's list in the primary's clock-only run closes before the
  * inserter went to sleep or took the hand it held, or is dropped where that leaves it nothing. The clock made so where it
  * holds as built, wakes its inserters fewer times a minute than the primary and gets back from every backpressure loss
- * the primary gets back from. The windows with room for a hand of fuel, and the windows of a loop, are left as they are.
+ * the primary gets back from. The windows with room for a hand of fuel, the windows of a loop, and the windows of an
+ * inserter that would keep none, are left as they are.
  */
 function withoutGhostWakeUps(made: MadeClocks, primary: BlueprintGenerationResult, options: GenerateClockOptions): BlueprintGenerationResult {
     const kept = made.get(primary);
