@@ -1,6 +1,6 @@
 import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
 import grenadeSample from '../../../clock-generator/resources/config-samples/intermediates/grenade/grenade-240-fills-belt-exactly.json?raw';
-import militarySample from '../../../clock-generator/resources/config-samples/science/military/military-120.json?raw';
+import militarySample from '../../../clock-generator/resources/config-samples/science/military/military-240.json?raw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LATEST_SIDECAR_VERSION, type Config, type DebugSteps } from 'clock-generator/browser';
 import type { EngineAnswers, EngineQuery, LiveCoverage, PastedEntities, PrimaryCompletedResponse, ValidationFailedResponse, WorkerRequest, WorkerResponse } from './types';

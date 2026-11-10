@@ -116,7 +116,7 @@ describe("request-local duplicate verification", () => {
     it("lets the worker API skip recovery of a matching primary without changing its completed assessment", async () => {
         // military science: logistic science's primary keeps the belt pickup slack inside its windows, which a run of
         // fractional swings does not make (alternatives.ts, fractionalMakesThePrimary)
-        const military = await loadConfigFromFile(ConfigPaths.MILITARY_SCIENCE_120);
+        const military = await loadConfigFromFile(ConfigPaths.MILITARY_SCIENCE_240);
         const plan = planClockAlternatives(military, {logger: quiet});
         const recovery = vi.spyOn(trial, "disturbanceTrialVerdictOf");
         // the plan leaves the fractional task out here, as one that makes the primary clock again: made anyway, it is that duplicate

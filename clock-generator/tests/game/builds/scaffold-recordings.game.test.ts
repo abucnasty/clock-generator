@@ -443,10 +443,11 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     // The owner's military science build (2026-11-05): a science assembler (66.0253) fed grenades by a grenade assembler (57.8125)
     // that takes iron from a foundry (112.244) and coal from a belt of its own (both lanes, six infinity chests); stone walls and
     // piercing rounds come on one backed-up belt, one lane each. The packs go onto a moving belt into a void chest. 24 a second from
-    // one copy, 120 over five.
+    // one copy, 120 over five. The config is now abucnasty's later build (2026-11-09): five mirrored pairs at 240 a second. This
+    // scaffold is still one copy of the earlier build, so the two do not match until a scaffold of the later build is recorded.
     "military science with grenades": {
         scaffold: path.join(SAMPLES, "science", "military", "military-120.scaffold"),
-        config: ConfigPaths.MILITARY_SCIENCE_120,
+        config: ConfigPaths.MILITARY_SCIENCE_240,
         seed: [],
         warmup_ticks: 3600,
         wake_ups_open: "the game counts 90.0 wake-ups a minute and the simulator 181.1: the two coal inserters into the grenade assembler "

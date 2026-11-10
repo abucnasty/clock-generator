@@ -283,7 +283,7 @@ describe('where it runs', () => {
     });
 
     it('refuses no sample with a lane over capacity in one unit', async () => {
-        for (const sample of [ConfigPaths.LDS_240, ConfigPaths.MILITARY_SCIENCE_120, ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK]) {
+        for (const sample of [ConfigPaths.LDS_240, ConfigPaths.MILITARY_SCIENCE_240, ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK]) {
             expect(laneCapacityIssues(await loadConfigFromFile(sample))).toEqual([]);
         }
         // agricultural science 250 gives each copy a bioflux lane of its own: shared, its five copies would take 180 of 120

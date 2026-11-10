@@ -67,7 +67,7 @@ was recorded in the game for each build, its credit, source and issues are in th
 | LOGISTIC_SCIENCE_240 | `science/logistic/logistic-240` | `logistic-science-pack` 240/s over 11 copies | Default example and default sample; game (`scaffold-recordings`, on abucnasty's whole build: 22 assemblers in two rows of 11, each row judged against 240/s and the build against 480/s, the bottom row a mirror of the top); the feasibility refusal at hand size 2 (`why-not-stable`); unit pins of the recommended clock (rule count, verification signature, traits, rules of the game) | LOGISTIC_SCIENCE, which once named the old three-inserter config (this build replaced it). Also replaced LOGISTIC_SCIENCE_SHARED_INSERTER and SAMPLE_CONFIG, both dropped |
 | LOGISTIC_SCIENCE_240_DIRECT_INSERT | `science/logistic/logistic-240-direct-insert` | `logistic-science-pack` 240/s over 6 copies | Game both ways; output-swings forced-count generation | LOGISTIC_SCIENCE_DI |
 | METALLURGIC_SCIENCE_45 | `science/metallurgic/metallurgic-45` | `metallurgic-science-pack` 45/s over 1 copy | Not in `test:game` (the game moves a hand more in about 1 window cycle in 11); generation and wake-capture units; UI example | METALLURGIC_SCIENCE_PACK |
-| MILITARY_SCIENCE_120 | `science/military/military-120` | `military-science-pack` 120/s over 5 copies | Game (`scaffold-recordings`, on abucnasty's build); the shared-windows generation file (on the speeds before the build's own, the recommended clock is `planned-belt-slack-shared`, set inline; on its own it is `planned-belt-slack`); UI example | MILITARY_SCIENCE |
+| MILITARY_SCIENCE_240 | `science/military/military-240` | `military-science-pack` 240/s over 5 copies | Not in `test:game` for this build: the `scaffold-recordings` case still has one copy of the earlier build as its scaffold. The shared-windows generation file (on the earlier build's speeds); UI example; a unit file of its own (its lanes, and its selected clock stable) | MILITARY_SCIENCE_120 (the earlier build: one military science assembler and one grenade assembler a copy, 120/s over 5 copies, on a one-copy scaffold), and before it MILITARY_SCIENCE |
 | PRODUCTION_SCIENCE_120_TWO_BELTS | `science/production/production-120-two-belts` | `production-science-pack` 120/s over 7 copies | Game (`scaffold-recordings`, on abucnasty's build); UI example; derived clock windows generation; inline, one inserter picking two items (from the merged shared-pickup config): fractional per-item swing counts in output-swings generation and window cycles (figures recomputed on 2.1) | PRODUCTION_SCIENCE_JSON. It absorbed PRODUCTION_SCIENCE_SHARED_JSON, the same build with fractional swings |
 | UTILITY_SCIENCE_120 | `science/utility/utility-120` | `utility-science-pack` 120/s over 7 copies | Game both ways; generation; belt-near-lane and deadlock-risk units; UI example | UTILITY_SCIENCE |
 | UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT | `science/utility/utility-120-processing-unit-and-lds-on-one-belt` | `utility-science-pack` 120/s over 7 copies | Game both ways; output-swings generation; 2 output swings is stable without a search | UTILITY_SCIENCE_BELTED_COMBINED_BLUE_AND_LDS |
@@ -102,7 +102,8 @@ Builds without a scaffold have labels and selections that only the simulator vou
 label is trusted. One copy each, in the build's item folder, named `<stem>.scaffold`; then add it to
 `tests/game/builds/scaffold-recordings.game.test.ts` with its kick start, if any, and the warm-up and settle it needs.
 
-No build is left on the list.
+On the list: **MILITARY_SCIENCE_240** (2026-11-10). Its config is abucnasty's later build of five mirrored pairs; the scaffold of its
+`scaffold-recordings` case is still one copy of the earlier build.
 
 Not on the list any more: **LOGISTIC_SCIENCE_240** (2026-11-04). Its scaffold is abucnasty's whole build, 22 assemblers, not one copy;
 the test names the copies (`copies: 22`).
@@ -111,7 +112,7 @@ the copies (`copies: 12`).
 
 Also not on the list any more (2026-11-04, abucnasty's builds): **ROCKET_FUEL_60** and **STONE_BRICK_120_DRILL_DIRECT_INSERT**, each with
 abucnasty's scaffold and a game check of the recommended clock; and (2026-11-05) **PRODUCTION_SCIENCE_120_TWO_BELTS**, **PROCESSING_UNIT_15_CHEST_FED**,
-**MILITARY_SCIENCE_120**, **FLYING_ROBOT_FRAME_160** (now FLYING_ROBOT_FRAME_80) and **ELECTRIC_FURNACE_20**, all five in `test:game` holding their target;
+**MILITARY_SCIENCE_120** (now MILITARY_SCIENCE_240, a later build that is not recorded yet), **FLYING_ROBOT_FRAME_160** (now FLYING_ROBOT_FRAME_80) and **ELECTRIC_FURNACE_20**, all five in `test:game` holding their target;
 PROCESSING_UNIT_15_CHEST_FED since 0.27.2, when the simulator took the infinity chest's items in the game's order (see its README, #617).
 
 ## Disturbance trials

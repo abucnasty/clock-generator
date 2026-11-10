@@ -1,3 +1,5 @@
 # Blast job renames of 0.29.0: old job name, new job name, one pair a line; '#' starts a comment. FLYING_ROBOT_FRAME_160 -> FLYING_ROBOT_FRAME_80 is the same machine on its build's lanes: 12 copies at 80 a second, not 24 at 160 (its selected clock moves).
+# MILITARY_SCIENCE_120 -> MILITARY_SCIENCE_240 is abucnasty's later build: five copies of a mirrored pair at 240 a second, not five of one half at 120 (its config and its selected clock move).
 # Use: blast.sh compare --map scripts/blast/maps/0.29.0-renames.txt <before> <after>
 config-FLYING_ROBOT_FRAME_160 config-FLYING_ROBOT_FRAME_80
+config-MILITARY_SCIENCE_120 config-MILITARY_SCIENCE_240

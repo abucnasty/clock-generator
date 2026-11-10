@@ -26,7 +26,7 @@ describe("the output swing counts listed beside the main clock", () => {
 
 describe("the main-period choices of a build", () => {
     it("military science: 4 swings of 160 ticks a cycle, every hand whole; the counts around it from today's cycle plan", async () => {
-        const { plan } = await planOfSample(ConfigPaths.MILITARY_SCIENCE_120);
+        const { plan } = await planOfSample(ConfigPaths.MILITARY_SCIENCE_240);
         expect(plan.groups[0].window_cycles.map(brief)).toEqual([
             [4, "main", 160, "kept"],
             [5, "higher", 800, "kept"],
