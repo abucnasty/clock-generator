@@ -586,14 +586,19 @@ BELT_SPEED_CAPTURE_DIR=.scratch/steel-wagon-new BELT_CLOCK_CALIBRATE=1 \
 `inserter-crafting-240-shared-signal-clock.game.test.ts` records the inserter build (`INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK`, 240 a second over three
 copies of 80, [inserter-crafting-240-shared-signal-clock-three-copies.scaffold](inserter-crafting-240-shared-signal-clock-three-copies.scaffold)) twice, with the protocol of the
 families above: 63 untouched window cycles, the ore cut at window cycles 66-68, the output blocked at 84-88, the circuits cut at
-104-106, the first 6 window cycles after a release not judged. The three copies stand in a row; the ore lines run on past the last
-copy into loaders and void chests (drained and moving); the copies are not alike (the first two have a gear assembler at
-44.92, the first a fourth furnace at 91.875), and the config is the third.
+104-106, the first 6 window cycles after a release not judged. The three copies stand in a row; the ore lines end as the build's
+do: past the last copy each side-loads into an underground exit, the near lane stops there and the far lane goes on to two
+furnaces of the build's transport belt foundry (with one more gear assembler), whose drain is held to one belt (240 a second),
+so the furnaces take the config's 53 1/3 ore a second off each far lane; the product leaves on two lines into loaders and
+void chests, and the output block removes both. The copies are not alike (the first two have a gear assembler at 44.92, the
+first a fourth furnace at 91.875), and the config is the third.
 
 - `hand-made-clock-three-copies`: the hand-made clock, kept. It is one clock for the three copies: a counter of the clock signal
   that counts 0 to 215 (a window cycle time of 216 ticks), an iron plate window on ticks 1-33 and 109-138 for the 12 ore and 12 plate
   inserters, an iron gear wheel window on ticks 1-65 and 109-173 for the 3 gear inserters; the circuit and output inserters
-  are not wired. The test names the clock to the harness (`built_clock`: the counter's entity number in the blueprint, its
+  are not wired. abucnasty wired 9 of the foundry part's 12 inserters to it: 8 on the iron plate window through the poles,
+  and the one from its gear assembler into the foundry on the gear window, through an empty constant combinator to the third
+  copy's gear inserter; the foundry's three output inserters are not wired. The test names the clock to the harness (`built_clock`: the counter's entity number in the blueprint, its
   wraparound value and the value it starts at), and the harness records it as it records a generated one, cut at its wraps. The
   recorder schema reads a clock that counts from 0 only when the recording names its wraparound value (the harness writes it), and then
   checks every sample against the clock's count, so a missing signal is still refused.
@@ -602,7 +607,9 @@ copy into loaders and void chests (drained and moving); the copies are not alike
   copies (`copies: 3`; without it a build is one copy and a machine beyond the config is refused), and the harness finds them
   from the build's machines and inserters (machines that inserters move items between are one copy; belts, which the copies
   share, do not join them) and matches each to the config by itself. The inserters the hand-made clock held run free while
-  the build warms up, as an unclocked build's do, so the furnaces have their recipes when the build is matched.
+  the build warms up, as an unclocked build's do, so the furnaces have their recipes when the build is matched. On this
+  scaffold the harness refuses the run before it wires the clock: the foundry part's four furnaces (iron plate) and its gear
+  assembler have recipes of the config and are in no copy, so they count as machines beyond the config.
 
 [inserter-crafting-240-shared-signal-clock-controls.json](inserter-crafting-240-shared-signal-clock-controls.json) holds the 2 native summaries, recorded on Factorio 2.1.21 at commit
 `e1c0aadb`. **The hand-made clock gives 864 (288 a copy) in each of 63 window cycles, as a separate probe measured it, and the

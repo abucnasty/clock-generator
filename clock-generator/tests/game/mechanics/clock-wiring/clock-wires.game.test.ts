@@ -17,7 +17,7 @@ const WHY_SKIPPED = !FACTORIO ? "FACTORIO_PATH is not set to a Factorio executab
     : !fs.existsSync(SAVE) ? `the save FACTORIO_HARNESS_SAVE names does not exist: ${SAVE}`
     : null;
 
-/** Three copies of a unit whose inserters are wired to each other in the base, each to its neighbours (27 of the 45 carry wires) */
+/** Three copies of a unit whose inserters are wired to each other in the base, each to its neighbours, and the build's foundry part (36 of the 57 inserters carry wires) */
 const WIRED_BUILD = path.join(__dirname, "..", "..", "builds", "inserter-crafting-240-shared-signal-clock-three-copies.scaffold");
 const RECORDED_TICKS = 1_200;
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
