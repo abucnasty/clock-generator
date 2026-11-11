@@ -59,6 +59,8 @@ export class SharedLane {
     private supply_bank = 0;
     private outlet_bank = 0;
     private tick = 0;
+    /** Whether the entry is closed: nothing comes onto the lane, and its bank stays as it was at the close */
+    private entry_closed = false;
     /** Items on the lane at the start */
     public readonly initial: number;
     /** Items the entry put on and the outlet took off, from the start */
@@ -96,6 +98,22 @@ export class SharedLane {
         }
     }
 
+    /**
+     * Closes the entry from the next tick the lane runs: nothing more comes onto the lane, whose stacks go on moving and
+     * being taken, so that it drains. What the entry's bank held stays, and it puts its next stack on when it is opened
+     * and there is room, as before the close. The lane is brought up to `tick` first: the close takes effect after it.
+     */
+    public closeEntry(tick: number): void {
+        this.advanceTo(tick);
+        this.entry_closed = true;
+    }
+
+    /** Opens the entry again from the tick after `tick` (see closeEntry) */
+    public openEntry(tick: number): void {
+        this.advanceTo(tick);
+        this.entry_closed = false;
+    }
+
     /** One tick: the outlet takes the head where it may, every stack moves, then the entry puts a stack on where there is room */
     private step(): void {
         const stacks = this.stacks;
@@ -118,6 +136,7 @@ export class SharedLane {
             const limit = index === 0 ? this.end : stacks[index - 1].x - STACK_SPACING;
             stack.x = Math.max(stack.x, Math.min(stack.x + speed, limit));
         }
+        if (this.entry_closed) return;
         const unit = 60 * this.supply.denominator, full = this.stack_size * unit;
         this.supply_bank = Math.min(this.supply_bank + this.supply.numerator, full);
         const tail = stacks[stacks.length - 1];
@@ -165,7 +184,7 @@ export class SharedLane {
 
     /** Everything a later tick of the lane reads, for the state key */
     public key(): string {
-        return `${this.supply_bank};${this.outlet_bank};${this.stacks.map(stack => `${stack.x}:${stack.count}`).join(",")}`;
+        return `${this.entry_closed ? "closed;" : ""}${this.supply_bank};${this.outlet_bank};${this.stacks.map(stack => `${stack.x}:${stack.count}`).join(",")}`;
     }
 
     /** The items on the lane now */

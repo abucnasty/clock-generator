@@ -615,6 +615,23 @@ export function behindTargetIn(run: RunOfCopies, rates: TargetRates): BehindTarg
 }
 
 /**
+ * The runs of the copies the verdict makes, before any is made: the lanes it judges (`modelLanesOf`), and for each reading of
+ * the lanes of unknown end (a dead end, then a free outlet, where one the copies share has an unknown end) the config under
+ * it and its layouts, one for each way the items move, those with the same rows once.
+ */
+export function sharedLaneRunsOf(config: Config): { lanes: { belt_id: number; lane: 1 | 2; shared: boolean }[]; readings: { under: Config; layouts: SharedLaneLayout[] }[] } {
+    const lanes = modelLanesOf(config);
+    if (lanes.length === 0) return { lanes, readings: [] };
+    const readings = lanes.some(lane => lane.stated.kind === "unknown" && lane.shared) ? 2 : 1;
+    return { lanes, readings: Array.from({ length: readings }, (_, reading) => {
+        const under = configUnder(config, lanes, reading);
+        // a layout whose rows are those of one run already is not run again: the same rows give the same run
+        const layouts = [...new Map(laidOutLanesOf(under, lanes).map(laid => sharedLaneLayoutOf(under, laid)).map(layout => [JSON.stringify(layout), layout])).values()];
+        return { under, layouts };
+    }) };
+}
+
+/**
  * Judges a clock on the lanes its copies share (see the module's description). The runs it makes are decided by the
  * takers' shortfalls alone; a loss they find stands only where a machine or an output inserter of a copy is behind its
  * target rate in the same run (`standing`).
@@ -625,7 +642,6 @@ export function judgeSharedLanes(config: Config, clock_windows: SerializableCloc
     if (lanes.length === 0) return { losses: [], fast_check_passes: true, simulated: false, longer_run: false, lanes: keys };
     const windows = new Map(Object.entries(clock_windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     const window_cycles = longRunWindowCyclesOf(window_cycle_ticks);
-    const readings = lanes.some(lane => lane.stated.kind === "unknown" && lane.shared) ? 2 : 1;
     const ends = outputEndsOf(config);
     // the target rates, worked out once and only where a taker's shortfall is a loss
     let rates: TargetRates | null | undefined;
@@ -645,11 +661,8 @@ export function judgeSharedLanes(config: Config, clock_windows: SerializableCloc
     // the first run of each reading: the run of one copy, and the copies on each layout of the lanes, with their shortfalls
     const first: { under: Config; taker_ids: string[]; runs: { layout: SharedLaneLayout; run: RunOfCopies }[] }[] = [];
     let fast_check_passes = true;
-    for (let reading = 0; reading < readings; reading++) {
-        const under = configUnder(config, lanes, reading);
+    for (const { under, layouts } of sharedLaneRunsOf(config).readings) {
         const facts = laneFactsOf(under);
-        // a layout whose rows are those of one run already is not run again: the same rows give the same run
-        const layouts = [...new Map(laidOutLanesOf(under, lanes).map(laid => sharedLaneLayoutOf(under, laid)).map(layout => [JSON.stringify(layout), layout])).values()];
         const taker_ids = [...new Set(layouts[0].rows.flatMap(row => row.takers.map(taker => taker.inserter_id)))];
         const alone = runAlone(under, taker_ids, windows, window_cycle_ticks, window_cycles, logger);
         // the fast check, for each item of each belt: the lanes that carry it, their supply summed

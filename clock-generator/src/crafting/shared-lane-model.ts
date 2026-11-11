@@ -15,6 +15,7 @@ import { Logger } from "../common/logger";
 import { OpenRange } from "../data-types";
 import { SimulationContext } from "./sequence/simulation-context";
 import { runClockOnBuild } from "./trial";
+import type { CopiesOnSharedLanes, DisturbanceTrialOptions, LossOutcome } from "./disturbance-trial";
 
 /** A hand that an inserter put down, at the tick it did */
 export interface HandDropped {
@@ -227,6 +228,8 @@ export interface SharedLaneRun {
     readonly rows: readonly LaneRow[];
     readonly lanes: readonly SharedLane[];
     readonly takers: readonly CopyTakerRecord[];
+    /** With a disturbance trial asked for (`runOnSharedLanes`): what the copies made after each trial of the loss */
+    readonly disturbance_trial?: LossOutcome;
 }
 
 /**
@@ -330,6 +333,9 @@ export function installSharedLanes(context: SimulationContext, config: Config, r
  * built (each with its own machines) and the rows' lanes shared by them (`installSharedLanes`). It judges nothing: it
  * gives what each taker of each copy put down, at the ticks of the run (the clock stands at 0 in its first tick), for a
  * reader to compare. `on_context` lets the reader put recorders of its own into the run's context before its first tick.
+ *
+ * With `disturbance_trial`, the trials of its loss follow the run (disturbance-trial.ts), on the copies: a supply stop
+ * closes the entry of each lane of the rows that carries the item, and each copy's output is judged on its own.
  */
 export function runOnSharedLanes(
     config: Config,
@@ -339,15 +345,20 @@ export function runOnSharedLanes(
     window_cycles: number,
     logger: Logger,
     on_context?: (context: SimulationContext) => void,
+    disturbance_trial?: DisturbanceTrialOptions,
 ): SharedLaneRun {
     let model: SharedLaneRun | undefined;
-    runClockOnBuild({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, windows, window_cycle_ticks, logger, {
+    const copies: CopiesOnSharedLanes = { lanes: [] };
+    const run = runClockOnBuild({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, windows, window_cycle_ticks, logger, {
         simulate_window_cycles: window_cycles, record_histories: false, factorio_states: false, build_copies: layout.copies,
+        ...(disturbance_trial !== undefined && { disturbance_trial: { ...disturbance_trial, copies } }),
         on_context: context => {
             model = installSharedLanes(context, config, layout.rows);
+            copies.lanes = model.rows.map((row, index) => ({ belt_entity_id: EntityId.forBelt(row.belt_id).id,
+                item: config.belts.find(belt => belt.id === row.belt_id)!.lanes[row.lane - 1].ingredient, lane: model!.lanes[index] }));
             on_context?.(context);
         },
     });
     assert(model !== undefined, "The run made no context");
-    return model;
+    return run.disturbance_trial === undefined ? model : { ...model, disturbance_trial: run.disturbance_trial };
 }
