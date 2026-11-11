@@ -4,9 +4,9 @@ The staged-start test uses the agricultural-science sample to check that ingredi
 inserters of the build are put down in a single tick. It checks ascending and descending construction order, unit-number
 order, empty machines, and the configured kick start of the loop. It does not infer startup timing from a screenshot.
 
-The test builds the scaffold of the [agricultural science 250 build](../../../../resources/config-samples/science/agricultural/agricultural-250.scaffold).
-
-That scaffold remains a shared general clock sample.
+The test builds one copy of the agricultural science build, its own fixture
+([fixtures/agricultural-science-one-copy.scaffold](fixtures/agricultural-science-one-copy.scaffold)): the sample's scaffold
+until the sample moved to abucnasty's build of five copies (2026-11-11). The taker-order test builds the same copy.
 
 From `clock-generator/`:
 

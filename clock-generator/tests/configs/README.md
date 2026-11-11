@@ -27,3 +27,10 @@ take them. `paths.ts` names the ones unit tests load by sample-style keys (`Test
   the nutrients on the lane nearest to inserter 11 as well as to inserters 1 and 2: each takes a hand of fuel whenever its
   biochamber's fuel slot has room, ahead of its bioflux. `src/rules-of-the-game.test.ts` sizes the room for the hand the
   fuel delays on it, and `src/crafting/fuel-on-near-lane.generation.test.ts` makes a clock again with that room.
+- `agricultural-science-250-bioflux-on-near-lane.json` (`AGRICULTURAL_SCIENCE_250_BIOFLUX_ON_NEAR_LANE`): the agricultural
+  science sample's config as it was before it stated abucnasty's build of five copies (2026-11-11), unchanged: inserter 11
+  has the bioflux on its near lane and inserters 1 and 2 the nutrients, no copy spacing and no lane ends. The rules that
+  showed on the sample and no longer show on its five-copy config are kept on it: the room for the hand a hand of fuel
+  delays, none where the ingredient is on the near lane (`src/rules-of-the-game.test.ts`, `src/crafting/fuel-on-near-lane.generation.test.ts`),
+  and the windows of the egg loop on its 5-swing clock (`src/crafting/agricultural-science-loop-windows.generation.test.ts`,
+  `src/crafting/agricultural-science-loop-windows-ranking.generation.test.ts`).
