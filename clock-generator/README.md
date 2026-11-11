@@ -55,9 +55,10 @@ The package has three entries (`exports` in `package.json`):
 - `clock-generator/browser` (`src/browser.ts`): the config schema and parsers, the generator, the blueprint encoding and
   the types, without Node built-ins. It does not read the game data: call `FactorioDataService.initialize(data)` with
   the contents of `data-filtered.json` (the UI fetches it) before generating.
-- `clock-generator/light` (`src/light.ts`): the constants, status categories, clock ranking and `Option`, without the
-  simulation, the game data or zod. The UI's main thread takes its values from here and only types from `browser`, so
-  the generator is bundled once, in its web worker.
+- `clock-generator/light` (`src/light.ts`): the constants, status categories, clock ranking, the lane facts a config's
+    own fields decide (whether every input lane is a dead end) and `Option`, without the simulation, the game data or
+  zod. The UI's main thread takes its values from here and only types from `browser`, so the generator is bundled
+  once, in its web worker.
 
 A file of your own under `src/` that imports modules directly, not through `index.ts`, imports
 `./data/factorio-data-file` itself, as `verify-recording.ts` and `record-in-factorio.ts` do.
@@ -532,7 +533,7 @@ A search can still find a stable clock with fewer wakeups than the one selected.
 src/
 ├── index.ts          # Node entry: the browser entry plus the game data from resources/
 ├── browser.ts        # Browser entry
-├── light.ts          # Light entry: constants, status categories, clock ranking
+├── light.ts          # Light entry: constants, status categories, clock ranking, lane ends
 ├── record-in-factorio.ts # npm run record
 ├── verify-recording.ts   # npm run verify
 ├── common/           # Shared constants (entity types, enable control types), logger
