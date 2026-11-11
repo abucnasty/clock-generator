@@ -72,6 +72,8 @@ export {
     FeasibilityError,
     FeasibilityIssue,
     FeasibilityRule,
+    FlowAcrossCopySpacingError,
+    FlowAcrossCopySpacingIssue,
     InserterCoverageError,
     InserterCoverageIssue,
     InserterCoverageIssueKind,

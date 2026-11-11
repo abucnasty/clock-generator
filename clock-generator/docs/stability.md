@@ -118,6 +118,12 @@ An example: in a whole copy, a machine has four takers, and each moves one hand 
 
 Not shown: no part copy has been recorded in the game. The rule comes from the model only.
 
+#### When the shared lanes cannot be checked
+
+The check puts the copies one after another along each lane that they share, `copy_offset` apart in the direction in which the items of the lane move. A belt can state a `flow_direction` across the copy spacing: for example, the copies stand along x and the belt moves its items south. Then the copies stand at the same place on the lane, and the check cannot put them on it. The generator refuses such a config before it makes a clock. The message names the belt, its flow direction and the axis of the copies. To correct the config, state the direction in which the items move along the row of copies, or remove the flow direction from the belt (`clock-generator/src/crafting/shared-lane-lanes.ts`).
+
+The check can stop with an error for another reason. Then the clock does not pass the check: it gets a shared-lane loss that says that the lanes could not be checked, with the message of the error, and its verdict is unstable. The result shows this loss in the description of the clock ("It is not counted as stable. The lanes its copies share could not be checked: ...") and in `assessment.shared_lane_losses`. When it is the recommended clock, the note that tells why no clock is stable gives the same reason. The disturbance trials on the copies are not made for such a clock. An error of the generator itself stops the generation.
+
 #### The disturbance trials on the copies
 
 The disturbance trials of one copy (see "How a clock is tried for it") are made again on the copies together. They are made for a clock that gets back from every loss on one copy and has no loss on the shared lanes. The run is the run of the copies that the check above makes, from the same cold start, with the same losses, places and lengths as on one copy (`clock-generator/src/crafting/shared-lane-trial.ts`).

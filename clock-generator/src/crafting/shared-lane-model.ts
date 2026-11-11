@@ -15,6 +15,7 @@ import { Logger } from "../common/logger";
 import { OpenRange } from "../data-types";
 import { SimulationContext } from "./sequence/simulation-context";
 import { runClockOnBuild } from "./trial";
+import { alongFlow } from "./shared-lane-lanes";
 import type { CopiesOnSharedLanes, DisturbanceTrialOptions, LossOutcome } from "./disturbance-trial";
 
 /** A hand that an inserter put down, at the tick it did */
@@ -150,6 +151,7 @@ function partCopyOf(config: Config, chosen: ReadonlySet<string>, lane_takers: Re
  * back on itself or mirrored is not expressed, and is run as if it were straight.
  *
  * A lane one copy alone takes from (one per copy, or a build of one copy) holds the takers of the config's copy only.
+ * It needs no spacing along it, and may run across `copy_offset`; a lane that more than one copy shares needs one.
  *
  * A config without the positions of a lane's takers has the takers of a copy a tile apart in the config's order, and the
  * copies one copy's width apart (`copyWidthTiles`), unless `copy_offset` says how far apart they stand. The width is
@@ -165,7 +167,7 @@ export function sharedLaneLayoutOf(config: Config, lanes: readonly LaidOutLane[]
         const belt = config.belts.find(it => it.id === belt_id);
         const item = belt?.lanes[lane - 1]?.ingredient;
         if (belt === undefined || item === undefined || item === "") return [];
-        const along = (position: { x: number; y: number }) => position.x * flow.x + position.y * flow.y;
+        const along = (position: { x: number; y: number }) => alongFlow(position, flow);
         const of_lane = config.inserters.flatMap((inserter, index) => inserter.source.type === "belt" && inserter.source.id === belt_id && takesItem(inserter, item)
             ? [{ inserter, index }] : []);
         if (of_lane.length === 0) return [];
@@ -182,7 +184,9 @@ export function sharedLaneLayoutOf(config: Config, lanes: readonly LaidOutLane[]
         // positions, else the width of a copy
         const step = offset !== undefined ? Math.abs(along(offset))
             : positioned ? Math.max(...positions) - Math.min(...positions) + 1 : Math.max(copy_width, takers.length);
-        assert(step > 0, `The copies on lane ${lane} of belt ${belt_id} need copy_offset along the lane`);
+        // the step places the copies after the first, so only a lane that more than one copy shares needs it: a lane one copy
+        // alone takes from may run any way, across copy_offset too
+        assert(step > 0 || !(shared && copies > 1), `The copies on lane ${lane} of belt ${belt_id} need copy_offset along the lane`);
         return [{ belt_id, lane, flow, shared, takers, step, item }];
     });
 

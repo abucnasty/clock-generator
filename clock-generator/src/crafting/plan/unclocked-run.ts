@@ -7,6 +7,7 @@ import { Config } from "../../config";
 import { EnableControlOverrideConfig } from "../../config/schema";
 import { assertInserterCoverage } from "../../config/inserter-coverage-validator";
 import { validateCopies } from "../../config/copies-validator";
+import { assertFlowAlongCopySpacing } from "../shared-lane-lanes";
 import { assertFeasible } from "../feasibility/assert-feasible";
 import { ignoredLcmItemsOf } from "../planner/composition";
 import { buildPlanOfConfig } from "../planner/plan-build";
@@ -773,6 +774,8 @@ function recordedBuildOf(config: Config, options: RunOptions, debug: MutableDebu
     assertInserterCoverage(config);
     // Throws CopiesError if the config holds several identical units where it should describe one and set copies.
     validateCopies(config);
+    // Throws FlowAcrossCopySpacingError if a belt states that its items move across the copy spacing, on a lane the copies share.
+    assertFlowAlongCopySpacing(config);
     // Throws FeasibilityError if no clock can carry the target (crafting/feasibility/), before any simulation.
     assertFeasible(config);
 

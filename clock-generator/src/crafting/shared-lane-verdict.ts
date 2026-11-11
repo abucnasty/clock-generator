@@ -15,6 +15,7 @@ import { COPY_NUMBER_STRIDE } from "./sequence/build-copies";
 import { OutputCyclePlan } from "./sequence/cycle/output-cycle";
 import { targetInsertersOf, targetItemOf, targetMachinesOf } from "./sequence/cycle/target-ends";
 import { createEntityRegistryFromConfig, SimulationContext } from "./sequence/simulation-context";
+import { droppedOnto, ModelLane, modelLanesOf, takenLanesOf } from "./shared-lane-lanes";
 import { DropRecorder, HandDropped, LaidOutLane, LaneRow, recordInserters, runOnSharedLanes, SharedLaneLayout, sharedLaneLayoutOf } from "./shared-lane-model";
 import { TargetProductionRate } from "./target-production-rate";
 import { longRunWindowCyclesOf, runClockOnBuild } from "./trial";
@@ -204,6 +205,31 @@ export interface BehindTarget {
     behind: number;
 }
 
+/**
+ * The lanes the copies share could not be checked: the check stopped with an error (a config it cannot lay out the
+ * copies of, for one). A clock is never taken to hold on lanes that were not checked, so this is a loss of its own.
+ */
+export interface SharedLanesNotChecked {
+    kind: "not_checked";
+    /** The message of the error the check stopped with */
+    reason: string;
+    /** The sentence the result shows */
+    text: string;
+}
+
+/** What keeps a clock from being stable on the lanes its copies share: a taker that loses swings, or lanes that could not be checked */
+export type ClockSharedLaneLoss = SharedLaneLoss | SharedLanesNotChecked;
+
+/** The loss of a clock whose shared lanes could not be checked, for the reason given */
+export function sharedLanesNotChecked(reason: string): SharedLanesNotChecked {
+    return { kind: "not_checked", reason, text: `The lanes its copies share could not be checked: ${reason}${/[.!?]$/.test(reason) ? "" : "."}` };
+}
+
+/** Whether the loss is that the lanes could not be checked, not a taker that loses swings */
+export function isNotChecked(loss: ClockSharedLaneLoss): loss is SharedLanesNotChecked {
+    return "kind" in loss && loss.kind === "not_checked";
+}
+
 /** What the fast check and the model said of one clock, for a comparison of the two */
 export interface SharedLaneJudgement {
     losses: SharedLaneLoss[];
@@ -218,45 +244,6 @@ export interface SharedLaneJudgement {
     longer_run: boolean;
     /** Lanes the model runs, by "belt/lane" */
     lanes: string[];
-}
-
-/** A lane the model runs: whether the copies share it, its end, and the way its items move where the config states it */
-interface ModelLane {
-    belt_id: number;
-    lane: 1 | 2;
-    shared: boolean;
-    stated: LaneEnd;
-    flow: FlowDirection | null;
-}
-
-/** The belts an inserter of the config drops onto */
-function droppedOnto(config: Config): Set<number> {
-    return new Set(config.inserters.flatMap(inserter => inserter.sink.type === "belt" ? [inserter.sink.id] : []));
-}
-
-/** The lanes a belt pickup of the config takes an item from: each belt's lanes with an item and a taker of it */
-function takenLanesOf(config: Config): { belt_id: number; lane: 1 | 2 }[] {
-    return config.belts.flatMap(belt => ([1, 2] as const).flatMap(lane => {
-        const item = belt.lanes[lane - 1]?.ingredient;
-        if (item === undefined || item === "") return [];
-        const taken = config.inserters.some(inserter => inserter.source.type === "belt" && inserter.source.id === belt.id
-            && (inserter.filters === undefined || inserter.filters.length === 0
-                || (inserter.filter_mode === "blacklist" ? !inserter.filters.includes(item) : inserter.filters.includes(item))));
-        return taken ? [{ belt_id: belt.id, lane }] : [];
-    }));
-}
-
-/** The lanes the model judges (see the module's description) */
-function modelLanesOf(config: Config): ModelLane[] {
-    const facts = laneFactsOf(config);
-    const dropped = droppedOnto(config);
-    return takenLanesOf(config).flatMap(({ belt_id, lane }) => {
-        if (dropped.has(belt_id)) return [];
-        const lane_facts = facts.of(belt_id, lane);
-        const shared = lane_facts.sharing === "shared_by_copies" && config.setpoint.copies > 1;
-        if (!shared && lane_facts.lane_end.kind !== "unknown") return [];
-        return [{ belt_id, lane, shared, stated: lane_facts.lane_end, flow: lane_facts.flow_direction }];
-    });
 }
 
 /**
