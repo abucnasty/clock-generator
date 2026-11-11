@@ -111,7 +111,10 @@ for (const speed of BELT_SPEEDS) for (const { label, swapped, sameItem, mirrored
                 expect(grabs.map(s => s.hand.x < report.initial.belt_position.x ? 1 : 2)).toEqual(speed.units >= 3 ? Array(4).fill(preferred) : [preferred, preferred, preferred, 3 - preferred]);
                 if (speed.units >= 3) expect(hand.every(s => JSON.stringify(s.lanes[2 - preferred]) === JSON.stringify(first.lanes[2 - preferred]))).toBe(true);
                 const exportedBelt = result.recording.config.belts.find(belt => belt.id === exported.source.id)!;
-                expect(exportedBelt.lanes).toEqual(config.belts.find(belt => belt.id === 2)!.lanes);
+                // the export gives the config's lanes back, each with the end the game shows: the inserter stands on the
+                // exit's output tile, so the line ends there and both lanes are dead ends
+                expect(exportedBelt.lanes).toEqual(config.belts.find(belt => belt.id === 2)!.lanes
+                    .map(lane => ({...lane, lane_end: {kind: "dead_end"}})));
             }
             // The first grab removes the selected lane's upstream stack; the other lane stays untouched.
             expect(grabs[0].lanes[2 - preferred]).toEqual(first.lanes[2 - preferred]);
