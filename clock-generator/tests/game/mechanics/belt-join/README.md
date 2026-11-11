@@ -56,8 +56,8 @@ splitter with "none" for a priority.
    of that output shut. The first stack onto the other output came at tick 140, after one at 127 at tick 138.
 4. **When an output takes a stack.** The spot is 64 behind the output's last stack, or the head's own spot if that is
    further on. The output takes the stack at a spot on the line (127 at most), however far behind the head's own spot.
-   A spot past the back end moves to the back end, 127. That occurs only when the head's own spot is at most 64 before
-   127 and 127 is behind the last stack. Else the output does not take the stack. Read: the copies with both inputs
+   A spot past the back end moves to the back end, 127, for the head of the input with the priority, when 127 is behind
+   the last stack (see below for each part). Else the output does not take the stack. Read: the copies with both inputs
    full (127 behind a stack at 63). The shut-output copies (64 behind 0; 127 behind 64). The loop copy whose loader was
    removed at tick 40 (taken at 64, 80, 112 and 127; not taken past the back end from a spot of 48). The smoke of this
    family's run changed this rule before the full run: in `splitter-one-output` at tick 402, a head at 0 (its own spot
@@ -86,7 +86,7 @@ splitter with "none" for a priority.
    second follow-up run and the splitter copies of the 600-tick recording, 16,262 rows). With the back end behind the stack ahead, the 2,112 heads of the input with the priority all went to 127,
    with their own spots from 45 to 71 and the stack ahead at 64 or 96. The 2,578 heads of the other input went onto the
    other output (1,970) or stood (608), the stack ahead at 64, 95 or 96. With the stack ahead at 127, no head went to
-   the back end.
+   the back end. Checked: the third follow-up run, 24 of 24 held-out copies.
 5. **Input priority.** On each lane, the head of the input that has the priority goes first. The other input's head
    comes after it, behind it. Read: the copies with both inputs full, tick 70.
 6. **Both inputs full, both outputs free: each input keeps its own output.** This follows from 4 and 5. After the
@@ -175,6 +175,23 @@ fed on one lane at four phases, for each output and lane.
 - **Kept now: 33 copies, 101,660 bytes** as `.json.zst` (zstd level 19 through Node's `zlib`): the 31 above and the
   two loops. The offline replay of all of them takes about 0.3 seconds.
 
+## The third follow-up run of 2026-11-11: the back end whatever the head's own spot
+
+The clause (splitter rule 4, its last part) was read from a table of the recordings that existed, written, and the
+model changed before this run. Under it, the offline replay of every earlier copy agreed as before (66 of 67, with the
+16 queue copies now among them), and the rows of every copy were stored. Before the run, each of the 24 held-out
+copies was shown to be decided by the clause: the rule before it, or the back end for both inputs, gives other rows
+from tick 262. 91 copies, 720 ticks after the build: the smoke (2 read-from queue copies) 2.3 seconds, the full run
+31.7 seconds.
+
+- **Held out: 24 of 24 agree** in every tick: both priorities left and the two mixed pairs, each lane, insert spots
+  251 and 243 (own spots 59 and 51), from the input with the priority or from the other one, the end opened at 400
+  (a stack ahead at 96). They also equal the stored prediction.
+- **Read-from: the 16 queue copies agree.** The 67 copies of the earlier runs give the same rows, put-ons and end
+  changes; 66 agree, and `loop-shut-end` still differs at its cut.
+- **Kept now: 34 copies, 104,239 bytes** as `.json.zst`: the 33 above and `splitter-back-end-right-left-priority-input-lane-2-spot-243`
+  (an own spot 51 to the back end). The offline replay of all of them takes about a third of a second.
+
 ## Limits
 
 - **Two sender lanes onto one lane of a straight belt** are not modelled away from the loop's shape. In the second
@@ -187,8 +204,8 @@ fed on one lane at four phases, for each output and lane.
   bound of about 90 ticks is not established.
 - **The boundary run** measured the straight belt from both sides (67 and 68; 188 and 189) and the exit from one side
   (67 and below). Not measured: a line stack from 68 to 70 onto an exit, and any contest onto an entrance.
-- **The splitter's back end:** a head of the input with the priority whose own spot is more than 64 before the back
-  end (the queue copies at spots 247 and 239, above). The model refuses a splitter with "none" for a priority.
+- **The splitter** is recorded with a turbo belt or a turned belt after its outputs, and with ends shut and opened
+  behind them. The model refuses a splitter with "none" for a priority.
 - Turbo belts with stacks of 4 only. The model has no loader that is removed or built while the run goes.
 
 ## Run it again
