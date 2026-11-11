@@ -2,7 +2,11 @@
   "setpoint": {
     "recipe": "logistic-science-pack",
     "items_per_second": 240,
-    "copies": 6
+    "copies": 6,
+    "copy_offset": {
+      "x": 12,
+      "y": 0
+    }
   },
   "machines": [
     {
@@ -181,10 +185,14 @@
     {
       "id": 3,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
           "ingredient": "inserter",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         },
         {
           "ingredient": "",
@@ -195,14 +203,18 @@
     {
       "id": 4,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
-        {
-          "ingredient": "inserter",
-          "stack_size": 4
-        },
         {
           "ingredient": "",
           "stack_size": 4
+        },
+        {
+          "ingredient": "inserter",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         }
       ]
     }
