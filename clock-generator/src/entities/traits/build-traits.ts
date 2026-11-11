@@ -173,7 +173,7 @@ function inserterTraitsOf(
         sink_lane_of,
         ...(hands.belt_drop === undefined || sink.type !== EntityType.BELT ? {} : {
             belt_drop: {
-                // the belt's speed from its prototype in the game data
+                // the belt's speed from its prototype (belt-speed.ts)
                 belt_speed: sink_lane_traits[0].belt_speed as BeltSpeed,
                 belt_stack_size: hands.belt_drop.belt_stack_size as BeltStackSize,
                 inserter_stack_size: hands.belt_drop.inserter_stack_size,
@@ -196,8 +196,8 @@ function inserterTraitsOf(
  * entities (simulation-context.ts): belts, machines, chests, inserters, drills. Each figure comes from the function the
  * entity computes it with. Where a figure follows the prototype's kind (the output block rule, the fuel, the belt speed,
  * the full-hand rule, the belt pickup calibration), the entity reads it from the trait's own function, by the
- * prototype's class and data fields (machine.ts, belt.ts, inserter.ts, and the inserter's pickup transition and belt
- * pickup logic), and the equivalence test holds both to the figures the name and kind branches gave before they were
+ * prototype's class and data fields (machine.ts, belt-speed.ts, inserter.ts, and the inserter's pickup transition and
+ * belt pickup logic), and the equivalence test holds both to the figures the name and kind branches gave before they were
  * removed.
  *
  * The registry (simulation-context.ts) does not call this: it is built on every trial, from a config made for that

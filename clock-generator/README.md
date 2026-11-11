@@ -58,8 +58,9 @@ The package has three entries (`exports` in `package.json`):
 - `clock-generator/light` (`src/light.ts`): the constants, status categories, clock ranking, the lane facts of a config
   (each lane's supply rate, capacity, end and sharing and its belt's flow direction, `beltLaneFactsOf`; whether every
   input lane is a dead end) and `Option`, without the simulation, the game data or zod. A lane's capacity comes from
-  the engine's belt speeds (`src/entities/belt/belt-speed.ts`), which a test ties to the game data. The UI's main thread takes its values from here and only types from `browser`, so the generator is bundled
-  once, in its web worker.
+  the engine's belt speeds (`src/entities/belt/belt-speed.ts`), which a test ties to the game data. The UI's main
+  thread takes its values from here and only types from `browser`, so the generator is bundled once, in its web
+  worker.
 
 A file of your own under `src/` that imports modules directly, not through `index.ts`, imports
 `./data/factorio-data-file` itself, as `verify-recording.ts` and `record-in-factorio.ts` do.
