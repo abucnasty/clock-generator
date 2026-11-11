@@ -5,7 +5,8 @@ import { loadConfigFromFile } from "./config/loader";
 import { Entity, ReadableEntityRegistry } from "./entities";
 import { Lane } from "./entities/belt/belt";
 import { createEntityRegistryFromConfig } from "./crafting/sequence/simulation-context";
-import { actsInTheTickTheBlockIsLifted, fuelHandRoomTicks, laneHandRoomTicks, miningDrillMaxInsertion, nearestLaneFirst } from "./rules-of-the-game";
+import { actsInTheTickTheBlockIsLifted, delayedHandRoomTicks, fuelHandRoomTicks, fuelRoomTicks, laneHandRoomTicks, miningDrillMaxInsertion, nearestLaneFirst } from "./rules-of-the-game";
+import { TestConfigPaths } from "../tests/configs/paths";
 
 /**
  * The tables of recorded cases of the rules of the game that have no table elsewhere (see rules-of-the-game.ts for
@@ -201,6 +202,50 @@ describe("the rules of the game", () => {
         it("is the ticks a hand of fuel takes to fill, for an inserter that takes fuel off a belt as well as an ingredient", async () => {
             const registry = await registryOf(ConfigPaths.AGRICULTURAL_SCIENCE_250);
             expect(Object.fromEntries(fuelHandRoomTicks(registry))).toEqual({ "inserter:1": 4, "inserter:2": 4, "inserter:11": 4 });
+        });
+    });
+
+    describe("room for the hand a hand of fuel delays", () => {
+        // agricultural science with the nutrients on the near lane, the game and the simulator alike: a hand of nutrients
+        // filled at 228-231, swung, dropped at 235 and was back at 238; the bioflux hand planned for 228-231 would have
+        // filled at 239-242, and the window, 1 tick after the planned hand was full and 4 of room for one more hand, closed at 236
+        it("is the hand cycle less the tick after the planned last hand is full, less the room for one more hand: 6 of 11", async () => {
+            const registry = await registryOf(TestConfigPaths.AGRICULTURAL_SCIENCE_50_FUEL_ON_NEAR_LANE);
+            const lane_room = laneHandRoomTicks(registry);
+            const room = delayedHandRoomTicks(registry);
+            expect(Object.fromEntries(room)).toEqual({ "inserter:1": 6, "inserter:2": 6, "inserter:11": 6 });
+            for (const [id, ticks] of room) {
+                const inserter = registry.getAll().filter(Entity.isInserter).find(it => it.entity_id.id === id)!;
+                const { pickup, rotation, drop, total } = inserter.animation;
+                expect([pickup.ticks, rotation.ticks, drop.ticks, total.ticks]).toEqual([4, 3, 1, 11]);
+                expect(ticks).toBe(total.ticks - 1 - lane_room.get(id)!);
+                // the window ends a hand cycle after the planned last hand is full: no further hand can begin in it
+                expect(ticks).toBeLessThan(total.ticks);
+                expect(1 + lane_room.get(id)! + ticks).toBe(total.ticks);
+            }
+            // a clock made again for its fuel gets it in place of the room for a hand of fuel, which the room for one more hand holds
+            expect(Object.fromEntries(fuelRoomTicks(registry))).toEqual(Object.fromEntries(room));
+        });
+
+        it("is none where the ingredient is on the near lane: the hand of fuel waits behind the planned hands", async () => {
+            // the sample's inserter 11 takes bioflux off its near lane; inserters 1 and 2 have the nutrients there
+            expect(Object.fromEntries(delayedHandRoomTicks(await registryOf(ConfigPaths.AGRICULTURAL_SCIENCE_250)))).toEqual({ "inserter:1": 6, "inserter:2": 6 });
+            const iron_bacteria = await registryOf(ConfigPaths.IRON_BACTERIA_380_CULTIVATION);
+            expect(Object.fromEntries(fuelHandRoomTicks(iron_bacteria))).toEqual({ "inserter:9": 4, "inserter:10": 4 });
+            expect(delayedHandRoomTicks(iron_bacteria).size).toBe(0);
+            expect(fuelRoomTicks(iron_bacteria).size).toBe(0);
+        });
+
+        it("is none for an inserter that takes two ingredients off one belt, whatever its near lane", async () => {
+            // utility science: inserter 2 takes processing units and low density structures off belt 2, neither a fuel
+            for (const near_lane of [1, 2] as const) {
+                const config = structuredClone(await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_120));
+                config.inserters[1].source = { ...config.inserters[1].source as Extract<typeof config.inserters[1]["source"], { type: "belt" }>, near_lane };
+                const registry = createEntityRegistryFromConfig(config);
+                expect(laneHandRoomTicks(registry).get("inserter:2")).toBe(4);
+                expect(delayedHandRoomTicks(registry).size).toBe(0);
+                expect(fuelRoomTicks(registry).size).toBe(0);
+            }
         });
     });
 });

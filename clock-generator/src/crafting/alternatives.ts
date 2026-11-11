@@ -19,7 +19,7 @@ import { SharedItemDeadlockRisk, sharedItemDeadlockRisks } from "./deadlock-risk
 import { disturbanceTrialInsight, beltPickupNotTestedInsights, chestDrillInsights, ClockInsight, clockInsights, deadlockRiskInsight, dropSpacingInsights, lanesExactlyFullInsights, onePerCopyFeedInsights, assumedCopySpacingInsights, droppedOntoSharedLaneInsights, sideLoadedDropInsights, startDependenceInsight, withWakeUpsFromStarts } from "./insights";
 import { chestDrillFallbackConfig, ChestDrillClock, hasPlannedChestDrill } from "./chest-drill-windows";
 import { chestDrillReasons, EntityRouteError, entityRoutesOf } from "./enable-control-router";
-import { ClockBelt, clockBeltLabel, fuelHandRoomTicks, laneHandRoomTicks } from "./clock";
+import { ClockBelt, clockBeltLabel, delayedHandRoomTicks, fuelRoomTicks } from "./clock";
 import { timeDivisionWindowsClock } from "./candidates/time-division-windows";
 import { pitchPickupsClock } from "./candidates/pitch-pickups";
 import { perHandWindowsClock } from "./candidates/round-robin-polling";
@@ -327,22 +327,21 @@ const BATCHED_SWINGS_DESCRIPTION = "The swing schedule the generator plans for t
     + "grouped into batches that match the output cycle.";
 
 /**
- * True when an inserter of the build takes fuel for its machine off a belt as well as an ingredient, and its windows get
- * no room for one more hand (a side pickup of an item both lanes carry): the room for one hand holds the fuel's hand already
+ * True when an inserter of the build takes fuel for its machine off a belt as well as an ingredient and a clock made again
+ * gives it room (fuelRoomTicks): where its windows get no room for one more hand (a side pickup of an item both lanes
+ * carry), or where they do and the fuel is on its near lane
  */
 function takesFuelOffABelt(config: Config): boolean {
-    const registry = createEntityRegistryFromConfig(config);
-    const lane_hand_room = laneHandRoomTicks(registry);
-    return Array.from(fuelHandRoomTicks(registry).keys()).some(id => !lane_hand_room.has(id));
+    return fuelRoomTicks(createEntityRegistryFromConfig(config)).size > 0;
 }
 
 /**
- * A clock that does not hold the expected output is made again with room for a hand of fuel in the windows of the
- * inserters that take fuel off a belt as well as an ingredient (`withFuelHandRoom`, which gives nothing for a build
- * without one), and that one is kept when it holds. The fuel slot asks for a hand in any window, whatever the lane does.
- * A clock that does not hold either way is offered as it is.
+ * A clock that does not hold the expected output is made again with room for its fuel in the windows of the inserters
+ * that take fuel off a belt as well as an ingredient (`withFuelHandRoom`, which gives nothing for a build without one,
+ * see fuelRoomTicks), and that one is kept when it holds. The fuel slot asks for a hand in any window, whatever the lane
+ * does. A clock that does not hold either way is offered as it is.
  */
-function withFuelHandRoomWhereNeeded(
+export function withFuelHandRoomWhereNeeded(
     withoutRoom: () => BlueprintGenerationResult,
     withFuelHandRoom: () => BlueprintGenerationResult | undefined,
 ): BlueprintGenerationResult {
@@ -397,12 +396,20 @@ function beltNote(config: Config, result: BlueprintGenerationResult): string {
     const room = Object.entries(result.fuel_hand_room_ticks);
     const config_ids = config.inserters.map((inserter, index) => inserter.id ?? index + 1);
     const inserter_ids = new Map(config_ids.map(id => [EntityId.forInserter(id).id, id]));
-    const ids = room.map(([key]) => inserter_ids.get(key));
-    const fuel = room.length === 0 ? ""
-        : ` ${ids.length === 1 ? `Inserter ${ids[0]} takes` : `Inserters ${ids.slice(0, -1).join(", ")} and ${ids[ids.length - 1]} take`} fuel off the belt as `
-        + `well as an ingredient and stay${ids.length === 1 ? "s" : ""} enabled ${room[0][1]} more ticks after each enable window, the ticks a hand of fuel takes to fill: `
-        + "the fuel slot asks for a hand in any enable window, ahead of the hands the enable window is planned for, and this clock did not hold "
-        + "the expected output without the room for it.";
+    // the inserters with the fuel on their near lane get room for the hand it delays, the others for a hand of fuel
+    const delayed = room.length === 0 ? new Map<string, number>() : delayedHandRoomTicks(createEntityRegistryFromConfig(config));
+    const sentence = (entries: [string, number][], why: string) => {
+        if (entries.length === 0) return "";
+        const ids = entries.map(([key]) => inserter_ids.get(key));
+        return ` ${ids.length === 1 ? `Inserter ${ids[0]} takes` : `Inserters ${ids.slice(0, -1).join(", ")} and ${ids[ids.length - 1]} take`} fuel off the belt as `
+            + `well as an ingredient and stay${ids.length === 1 ? "s" : ""} enabled ${entries[0][1]} more ticks after each enable window, ${why}, `
+            + "and this clock did not hold the expected output without the room for it.";
+    };
+    const fuel = sentence(room.filter(([key]) => !delayed.has(key)), "the ticks a hand of fuel takes to fill: the fuel slot asks for a hand in any "
+        + "enable window, ahead of the hands the enable window is planned for")
+        + sentence(room.filter(([key]) => delayed.has(key)), "on top of the room for one more hand: the fuel is on the lane nearest to "
+        + `${room.filter(([key]) => delayed.has(key)).length === 1 ? "it" : "them"}, so a hand of fuel comes whenever the fuel slot has room, and the hand `
+        + "the enable window is planned for comes a hand cycle later");
     return made_for + fuel;
 }
 

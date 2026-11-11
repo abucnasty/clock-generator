@@ -22,3 +22,8 @@ take them. `paths.ts` names the ones unit tests load by sample-style keys (`Test
   `feasibility-samples`, `alternative-tasks`, `always-enabled-override`, `always-on-reasons`, `main-clock-phase`,
   `plan/run-memo`, `rocket-fuel`, `sequence/unplanned-inserter-clock`, `timeline-recording`, `verification-signature`,
   `verification/compare-unplanned`).
+- `agricultural-science-50-fuel-on-near-lane.json` (`AGRICULTURAL_SCIENCE_50_FUEL_ON_NEAR_LANE`): one copy of the
+  agricultural science sample (`resources/config-samples/science/agricultural/agricultural-250.json`, 50 a second) with
+  the nutrients on the lane nearest to inserter 11 as well as to inserters 1 and 2: each takes a hand of fuel whenever its
+  biochamber's fuel slot has room, ahead of its bioflux. `src/rules-of-the-game.test.ts` sizes the room for the hand the
+  fuel delays on it, and `src/crafting/fuel-on-near-lane.generation.test.ts` makes a clock again with that room.

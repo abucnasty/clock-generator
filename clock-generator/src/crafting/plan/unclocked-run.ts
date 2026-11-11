@@ -66,7 +66,7 @@ import { CraftingStatus, drillStatusOf, InserterPhase, inserterStatusOf, machine
 import { factorioInserterState, factorioMachineState } from "../../state/factorio-entity-state";
 import type { TimeStudyWindowsReport } from "../candidates/time-study-windows";
 import type { SearchReport } from "../candidates/search";
-import { ClockBelt, SerializableClockWindows, backpressureHandTicks, fuelHandRoomTicks, laneHandRoomTicks, subtickClockForWindowCycle, withWindowsAtLeast, withWindowsLengthened } from "../clock";
+import { ClockBelt, SerializableClockWindows, backpressureHandTicks, fuelHandRoomTicks, fuelRoomTicks, laneHandRoomTicks, subtickClockForWindowCycle, withWindowsAtLeast, withWindowsLengthened } from "../clock";
 import { ChestDrillClock, chestDrillClockLine, chestDrillWindows } from "../chest-drill-windows";
 import type { TurnGroup } from "../turn-groups";
 import type { SourceControl } from "../strategy-catalog";
@@ -232,7 +232,7 @@ export interface BlueprintGenerationResult {
     clock_windows: SerializableClockWindows;
     /**
      * Ticks added to each window of an inserter that takes fuel off a belt as well as an ingredient, so that a hand of
-     * fuel fits ahead of the hands the window is planned for (see fuelHandRoomTicks); empty when the clock has none.
+     * fuel fits ahead of the hands the window is planned for (see fuelRoomTicks); empty when the clock has none.
      */
     fuel_hand_room_ticks: Record<string, number>;
     /** The belt the clock is made for; null when no inserter with windows picks up from a belt */
@@ -363,9 +363,10 @@ export interface GenerateClockOptions {
      */
     lane_hand_room?: "trial" | "always" | "never" | "inside";
     /**
-     * Lengthen the windows of an inserter that takes fuel off a belt as well as an ingredient by the fill of a hand of
-     * fuel (see fuelHandRoomTicks), where its windows get no room for one more hand. Asked for when a clock does not hold
-     * the expected output without it (see withFuelHandRoomWhereNeeded).
+     * Lengthen the windows of an inserter that takes fuel off a belt as well as an ingredient (see fuelRoomTicks): by the
+     * fill of a hand of fuel where its windows get no room for one more hand, and by the room for the hand the fuel delays
+     * where they do and the fuel is on its near lane. Asked for when a clock does not hold the expected output without it
+     * (see withFuelHandRoomWhereNeeded).
      */
     fuel_hand_room?: boolean;
     /** Also run the exported clock for several window cycles to show the fuel being consumed (default true; internal check runs never do) */
@@ -1537,7 +1538,7 @@ export interface PlannedClock {
      * empty when the clock goes without
      */
     lane_hand_room: Map<string, number>;
-    /** Ticks added to each window of an inserter that takes fuel off a belt as well as an ingredient (see fuelHandRoomTicks) */
+    /** Ticks added to each window of an inserter that takes fuel off a belt as well as an ingredient (see fuelRoomTicks) */
     fuel_hand_room: Map<string, number>;
     /** A clock-only check already run on exactly `windows` (by the room's trial), which checkedClock reuses */
     as_built_run: AsBuiltRun | null;
@@ -1608,10 +1609,11 @@ export function clockOfWindows(
     if (mode === "inside" && inside === null) {
         throw new Error("room for one hand inside the enable windows is only for the unclocked run's enable windows that hold it");
     }
-    // the room for one hand is as long as the room for a hand of fuel or longer: an inserter that gets it has the fuel's room
+    // the room a clock made again for its fuel gets (fuelRoomTicks): a hand of fuel's, or the delayed hand's on top of
+    // the room for one hand
     const fuel_hand_room = options.fuel_hand_room && Number.isInteger(duration.ticks)
-        ? new Map(Array.from(fuelHandRoomTicks(simulation_context.entity_registry))
-            .filter(([key]) => (unslacked_windows.get(key)?.length ?? 0) > 0 && !full_lane_hand_room.has(key)))
+        ? new Map(Array.from(fuelRoomTicks(simulation_context.entity_registry))
+            .filter(([key]) => (unslacked_windows.get(key)?.length ?? 0) > 0))
         : new Map<string, number>();
     // where a lane has backpressure every window of an inserter that takes from it lasts as long as a hand takes from the
     // lanes at rest at the belt's speed, and the room for one more hand is added after that.
