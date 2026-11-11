@@ -7,7 +7,7 @@ import { encodeBlueprintFile } from "../../../src/blueprints/serde";
 import { ConfigPaths } from "../../../src/config/config-paths";
 import { loadConfigFromFile } from "../../../src/config/loader";
 import { generateClockAlternatives } from "../../../src/crafting/generate-blueprint";
-import { HarnessOptions, HarnessResult, HarnessSession, recordInFactorio, Seed } from "../../../src/harness/factorio-harness";
+import { builtCopies, clockWindowCycleTicks, HarnessOptions, HarnessResult, HarnessSession, partCopiesOf, recordInFactorio, Seed } from "../../../src/harness/factorio-harness";
 import { outputInserters, outputPerWindowCycle, recipesMaking } from "../../../src/harness/recording-output";
 import { composeProbeSource } from "../helpers/probe-source";
 import { clockHash, readControls } from "./clock-controls";
@@ -46,6 +46,8 @@ const WHY_SKIPPED = !FACTORIO ? "FACTORIO_PATH is not set to a Factorio executab
     : null;
 
 const SAMPLES = path.join(SAMPLE_BUILDS_DIR);
+/** abucnasty's whole chemical science build, both sides, with the clock it came with (a blueprint string, as he gave it) */
+const CHEMICAL_SCIENCE_WHOLE_BUILD = path.join(__dirname, "chemical-science-240-shared-foundry-full-build.blueprint");
 /**
  * The game tests' protocol, timed in game ticks (tests/game/helpers/lua/steady.lua; scaffold-recordings-probe.lua): a build
  * settles until its final machines have made the target over the trailing minute and no less than one clock cycle earlier
@@ -115,11 +117,20 @@ interface ScaffoldBuild {
     /**
      * How many times the scaffold holds the config (default 1): a build of several copies that share belts. The harness is told
      * (`HarnessOptions.copies`) and wires the clock to every copy; what the build has to make in a window cycle and in the settle's
-     * window is that of one copy times this, and every row of copies (output inserters at one height) is judged on its own too,
-     * the whole build against the target times the copies over the config's copies. The simulator's entity-by-entity comparison and
+     * window is that of one copy times this, and every row of copies (output inserters at one height) and every copy (found as the
+     * harness finds them to wire the clock) is judged on its own too, the whole build against the target times the copies over the
+     * config's copies. The simulator's entity-by-entity comparison and
      * the wake-ups are of one copy and are not made for such a build.
      */
     copies?: number;
+    /**
+     * The build's own clock, kept as the blueprint has it (a clock described "Clock for ...", which the recorder cuts the
+     * recording by), in place of the clock the generator selects; with the copies it leaves short in the game, by number as
+     * the copies are found (the order of their lowest machine ids), and why. An expected shortfall: it shows that the check of
+     * each copy sees a copy the others starve, where the build's total hides it. Nothing is asserted of steady state or of the
+     * total; every other copy is held to its target.
+     */
+    own_clock?: { short_copies: number[]; why: string };
     /**
      * The build is recorded from the staged start of the harness, as the simulator runs it: the belts are saturated first,
      * then every inserter of the cell and the clock are placed in one tick, with the machines empty but for the egg loop,
@@ -314,6 +325,37 @@ const BUILDS: Record<string, ScaffoldBuild> = {
                 + "are matched to the other lane and read as nearest to sulfur or gears; the config matches the scaffold, and every "
                 + "inserter moves the same items in the game and the simulator",
         },
+    },
+    // abucnasty's whole chemical science build (#725, 2026-11-09), as he gave it: both mirrored sides, 22 science and 22 engine
+    // machines and 6 pipe foundries on the centre line 18 tiles apart, 5 whole blocks of the config and a half block at the east
+    // end (a pipe foundry, the engine machine above and below it and the science machine each feeds), and two foundries at the
+    // west end that cast the gears and the steel of both engine lines. Every input line ends in an underground entrance with
+    // nothing beyond; the packs of both sides go onto one belt into a void chest. The config's 5.5 copies: 5 whole copies and
+    // the part copy the generator lays out on the shared lanes (the first taker of each lane, with what it needs: half a block),
+    // held to its share, half a copy's packs. The half block's pipe foundry has 5 beacons where the others have 8 (199.75 against
+    // 236.78, computed from the blueprint); the config does not say it. Engine line 3 holds gears on the lane taken first,
+    // where the config states steel: a difference not yet confirmed, and the config is as committed.
+    "chemical science with a shared foundry (abucnasty's whole build, 5.5 copies)": {
+        scaffold: CHEMICAL_SCIENCE_WHOLE_BUILD,
+        config: ConfigPaths.CHEMICAL_SCIENCE_240_SHARED_FOUNDRY,
+        seed: [],
+        warmup_ticks: 3600,
+        copies: 5.5,
+    },
+    // The same build on the clock it came with (made for one side of the build by the generator of 0.28.1, Coordinated Sources,
+    // 352 ticks): it opens the advanced circuit takers of all the copies of a side together, and the dead-ended circuit lane
+    // refills too late for the copy where the refill's edge stands, which makes too few packs (#725, measured in the game then:
+    // 22, 12 and 30 of 32 in turn). Recorded 2026-11-11 at Factorio 2.1.24: the third science machine of each side from the
+    // west moves 464 of 704 over the recording, and its copy, the second, 224, 192, 224 of its 256 in turn; every other copy
+    // its target, the part copy 128, the build 1,376 or 1,344 of 1,408. An expected shortfall, kept as the proof that the check
+    // of each copy sees it.
+    "chemical science with a shared foundry (abucnasty's whole build on the clock it came with)": {
+        scaffold: CHEMICAL_SCIENCE_WHOLE_BUILD,
+        config: ConfigPaths.CHEMICAL_SCIENCE_240_SHARED_FOUNDRY,
+        seed: [],
+        warmup_ticks: 3600,
+        copies: 5.5,
+        own_clock: { short_copies: [2], why: "the circuit lane refills too late for one copy on each side (#725)" },
     },
     // One electromagnetic plant (legendary, five legendary productivity modules, 12 legendary beacons) on accumulators and
     // supercapacitors from one belt, its fluids from infinity pipes: 11 copies of it make 330 a second. A fully automatic config
@@ -575,7 +617,10 @@ test("every build with a pinned clock is a build of this file", () => {
 // one build at a time: each test waits for its own recording before the next starts
 describe.sequential("the selected clock holds the target rate in Factorio", () => {
     for (const [name, build] of Object.entries(BUILDS)) {
-        test(`one copy of the ${name} build moves the expected output every clock period`, async context => {
+        const title = build.own_clock
+            ? `the ${name} build leaves copy ${build.own_clock.short_copies.join(", ")} short, as it is known to, and every other copy at its target`
+            : `one copy of the ${name} build moves the expected output every clock period`;
+        test(title, async context => {
             context.skip(WHY_SKIPPED !== null, WHY_SKIPPED ?? undefined);
             if (KEEP) {
                 fs.mkdirSync(KEEP, { recursive: true });
@@ -585,8 +630,11 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
 
             const loaded = await loadConfigFromFile(build.config);
             const config = build.backed_up_belts ? { ...loaded, overrides: { ...loaded.overrides, backed_up_belts: true } } : loaded;
-            const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
-            const selected = alternatives[selected_index];
+            const blueprint = fs.readFileSync(build.scaffold, "utf-8").trim();
+            // the build's own clock is kept and nothing is generated; else the clock the generator selects
+            const generated = build.own_clock ? null : generateClockAlternatives(config, { logger: quiet });
+            const selected = generated?.alternatives[generated.selected_index];
+            if (selected) {
             if (build.backed_up_belts) {
                 expect(selected.belt, `the selected clock (${selected.label}) is made without belt pickup slack`).toEqual({ kind: "backed_up" });
             }
@@ -597,32 +645,43 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             // a clock of fractional swings can leave the rate a hair off the whole number (240 reads 239.99999999999997)
             expect(selected.assessment.items_per_second, `the selected clock (${selected.label}) reaches the target rate in the simulator`)
                 .toBeCloseTo(config.setpoint.items_per_second, 6);
+            }
 
             // A fractional window cycle is built as a subtick clock, which counts the whole ticks after which the window cycle
             // repeats (1728 for 19 window cycles of 90.947): that is the window cycle the recording is cut into, and what it has
             // to move is what that many ticks ask for.
-            const subtick = selected.result.subtick;
-            const window_cycle_ticks = subtick?.clock.window_cycle_ticks ?? selected.result.simulation_duration.ticks;
+            const subtick = selected?.result.subtick;
+            const window_cycle_ticks = selected ? subtick?.clock.window_cycle_ticks ?? selected.result.simulation_duration.ticks : clockWindowCycleTicks(blueprint);
+            expect(window_cycle_ticks, "the build's own clock is a clock the recorder reads (\"Clock for ...\")").not.toBeNull();
+            if (window_cycle_ticks === null) return;
             context.skip(!build.staged_start && window_cycle_ticks > MAX_RECORDED_WINDOW_CYCLE,
                 `the selected clock counts ${window_cycle_ticks} ticks, over the ${MAX_RECORDED_WINDOW_CYCLE} ticks one period of a recording may take`);
             // a subtick clock's repeat and a rate per copy can leave a float a hair off the whole number of items
             const copies = build.copies ?? 1;
+            const recipes = [...recipesMaking(config, config.setpoint.recipe)];
+            const finals_per_copy = config.machines.filter(machine => recipes.includes(machine.recipe)).length;
+            // a count with a fraction is whole copies and one part copy, held to its share of a copy's output (partCopiesOf, the
+            // generator's part copy); the build's output and its final machines are the whole copies' and the part copy's
+            const whole_copies = Math.floor(copies + 1e-9);
+            const part = copies - whole_copies > 1e-9 ? partCopiesOf(config)[0] : undefined;
+            expect(part !== undefined || copies === whole_copies, `the config has a part copy for the ${copies - whole_copies} of a copy the build holds`).toBe(true);
+            const counted_copies = whole_copies + (part?.share ?? 0);
+            const part_finals = part ? config.machines.filter(machine => recipes.includes(machine.recipe) && part.ids.has(`machine:${machine.id}`)).length : 0;
             const expected_per_copy = Math.round(config.setpoint.items_per_second / config.setpoint.copies * window_cycle_ticks / 60 * 1e6) / 1e6;
-            const expected = Math.round(expected_per_copy * copies * 1e6) / 1e6;
+            const expected = Math.round(expected_per_copy * counted_copies * 1e6) / 1e6;
             // what the machines that make the target item have to finish over the trailing minute for steady state
-            const expected_per_window = Math.round(config.setpoint.items_per_second / config.setpoint.copies * copies * WINDOW_TICKS / 60 * 1e6) / 1e6;
+            const expected_per_window = Math.round(config.setpoint.items_per_second / config.setpoint.copies * counted_copies * WINDOW_TICKS / 60 * 1e6) / 1e6;
             // the clock with its schedule as the generator made it, which the harness wires without reading descriptions
-            const exported = subtick ?? selected.result;
+            const exported = selected ? subtick ?? selected.result : null;
             // the dips and issues this build expects were seen on one clock: on another they say nothing
-            if (clockPins[name]) {
-                expect(clockHash(exported), `the selected clock (${selected.label}) is not the one the values of ${name} were recorded on (scaffold-recordings-clock-pins.json)`)
+            if (clockPins[name] && exported) {
+                expect(clockHash(exported), `the selected clock (${selected!.label}) is not the one the values of ${name} were recorded on (scaffold-recordings-clock-pins.json)`)
                     .toBe(clockPins[name].clock_sha256);
             }
-            const clock = { blueprint: encodeBlueprintFile({ blueprint: exported.blueprint }), schedule: exported.schedule };
+            const clock = exported ? { blueprint: encodeBlueprintFile({ blueprint: exported.blueprint }), schedule: exported.schedule } : undefined;
             // the probe ends the settle at steady state (a staged start: cuts the recording a minute after it); it writes its
             // report into the game's script-output, which the build has a folder of its own for (all builds share the one game
             // watched)
-            const recipes = [...recipesMaking(config, config.setpoint.recipe)];
             const probe = composeProbeSource(path.join(__dirname, "scaffold-recordings-probe.lua"), {
                 window: WINDOW_TICKS, expected: expected_per_window, recipes, item: config.setpoint.recipe, cap: SETTLE_CAP_TICKS,
                 output: STEADY_REPORT, staged: !!build.staged_start, ticks: SETTLE_CAP_TICKS,
@@ -635,7 +694,7 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                 result = await record({
                     factorio: FACTORIO!,
                     save: SAVE!,
-                    blueprint: fs.readFileSync(build.scaffold, "utf-8").trim(),
+                    blueprint,
                     out: `${base}.json`,
                     // a clock longer than a minute: a tick more than its window cycle, so the recorder holds a whole window cycle between two wraps
                     ticks: build.staged_start ? SETTLE_CAP_TICKS : Math.max(RECORDED_TICKS, window_cycle_ticks + 1),
@@ -645,7 +704,8 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                     staged_start: build.staged_start ? {} : undefined,
                     clock,
                     config,
-                    copies: build.copies,
+                    // the copies are named to wire a generated clock to each; the build's own clock is wired as it came
+                    copies: clock ? build.copies : undefined,
                     unclocked: false,
                     game_speed: UNWATCHED_SPEED,
                     watch: WATCH,
@@ -674,8 +734,9 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             // recording and judged on what follows its first third, moves what the game moved through every inserter
             // and finishes what it finished in every machine (asserted below, once the evidence is kept)
             // (a build of copies has no run of one copy to compare entity by entity)
-            const simulated_run = simulateRecording(config, selected.result.clock_windows, selected.result.simulation_duration.ticks, result.recording.sample_count * 1.5, window_cycle_ticks);
-            const compared = copies > 1 ? null : compareRecordings(
+            const simulated_run = selected && copies === 1
+                ? simulateRecording(config, selected.result.clock_windows, selected.result.simulation_duration.ticks, result.recording.sample_count * 1.5, window_cycle_ticks) : null;
+            const compared = simulated_run === null ? null : compareRecordings(
                 {
                     recording: result.recording,
                     match: matchRecordingToConfig(result.recording, config),
@@ -690,54 +751,90 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             const row_of = new Map(inserter_positions.map(it => [it.unit_number, it.y]));
             const output_unit_numbers = outputInserters(result.recording, recipesMaking(config, config.setpoint.recipe)).map(it => it.unit_number!);
             const row_ys = Array.from(new Set(output_unit_numbers.map(unit => row_of.get(unit)))).filter((y): y is number => y !== undefined).sort((a, b) => a - b);
+            const outputs = outputInserters(result.recording, recipesMaking(config, config.setpoint.recipe));
+            /** What the given output inserters moved in each window cycle, as the game recorded their hands */
+            const movedPerWindowCycle = (members: typeof outputs) => window_cycles.map(window_cycle => ({ start: window_cycle.start, end: window_cycle.end, items: members.reduce((sum, inserter) => {
+                const held = inserter.samples.held_count;
+                let moved = 0;
+                for (let i = Math.max(window_cycle.start, 1); i < window_cycle.end; i++) {
+                    if (held[i] < held[i - 1]) moved += held[i - 1] - held[i];
+                }
+                return sum + moved;
+            }, 0) }));
             const rows = copies > 1 ? row_ys.map(y => {
-                const members = outputInserters(result.recording, recipesMaking(config, config.setpoint.recipe)).filter(it => row_of.get(it.unit_number!) === y);
-                return {
-                    y, output_inserters: members.length,
-                    per_window_cycle: window_cycles.map(window_cycle => ({ start: window_cycle.start, end: window_cycle.end, items: members.reduce((sum, inserter) => {
-                        const held = inserter.samples.held_count;
-                        let moved = 0;
-                        for (let i = Math.max(window_cycle.start, 1); i < window_cycle.end; i++) {
-                            if (held[i] < held[i - 1]) moved += held[i - 1] - held[i];
-                        }
-                        return sum + moved;
-                    }, 0) })),
-                };
+                const members = outputs.filter(it => row_of.get(it.unit_number!) === y);
+                return { y, output_inserters: members.length, per_window_cycle: movedPerWindowCycle(members) };
             }) : [];
+            // a build of copies: what each copy moved in each window cycle, the copies found as the harness found them to wire the
+            // clock (machines that inserters join, matched to the config one by one), in the order of their lowest machine ids, and
+            // the part copy last, with its share of a copy's output as its target
+            const found = copies > 1 ? builtCopies({
+                config: result.recording.config,
+                inserters: Object.fromEntries(result.recording.inserters.map(row => [row.id, row])),
+                machines: Object.fromEntries(result.recording.machines.map(row => [row.id, row])),
+            }, config, copies) : null;
+            const per_copy = (found?.inserters ?? []).map((unit_numbers, index) => {
+                const units = new Set(unit_numbers.values());
+                const members = outputs.filter(it => units.has(it.unit_number!));
+                const is_part = found!.part?.index === index;
+                const target = Math.round(expected_per_copy * (is_part ? found!.part!.share : 1) * 1e6) / 1e6;
+                return { copy: index + 1, part: is_part, target, output_inserters: members.length, per_window_cycle: movedPerWindowCycle(members) };
+            });
             if (KEEP) {
-                fs.writeFileSync(`${base}.simulated.json`, JSON.stringify(simulated_run));
+                if (simulated_run) fs.writeFileSync(`${base}.simulated.json`, JSON.stringify(simulated_run));
                 fs.writeFileSync(`${base}.meta.json`, JSON.stringify({
-                    name, label: selected.label, verdict: selected.verdict, period: window_cycle_ticks, expected, clock_windows: selected.result.clock_windows,
-                    simulation_ticks: selected.result.simulation_duration.ticks, backed_up_belts: !!build.backed_up_belts,
+                    name, label: selected?.label ?? "the build's own clock", verdict: selected?.verdict ?? null, period: window_cycle_ticks, expected,
+                    clock_windows: selected?.result.clock_windows ?? null, simulation_ticks: selected?.result.simulation_duration.ticks ?? null, backed_up_belts: !!build.backed_up_belts,
                     staged_start: !!build.staged_start, issues: compared?.issues ?? [], config, harness_build: result.build,
-                    harness_start: result.start, periods: window_cycles, steady, copies, expected_per_copy, rows,
+                    harness_start: result.start, periods: window_cycles, steady, copies, expected_per_copy, rows, per_copy,
                 }, null, 1));
             }
-            // the build reached steady state in the game, within the ticks it may take
+            // the build reached steady state in the game, within the ticks it may take (the build's own clock that leaves a copy short need not)
             expect(steady.error, "the probe failed in the game").toBeUndefined();
-            expect(steady.steady, `the build did not reach steady state within ${SETTLE_CAP_TICKS} ticks (${steady.result ?? "the game ended first"})`).toBeDefined();
-            // the machines the probe counted are those of the config that make the target item (one copy)
+            if (!build.own_clock) {
+                expect(steady.steady, `the build did not reach steady state within ${SETTLE_CAP_TICKS} ticks (${steady.result ?? "the game ended first"})`).toBeDefined();
+            }
+            // the machines the probe counted are those of the config that make the target item, in every whole copy and the part copy
             expect(Array.isArray(steady.finals) ? steady.finals : [], "the final machines the probe counts")
-                .toHaveLength(config.machines.filter(machine => recipes.includes(machine.recipe)).length * copies);
+                .toHaveLength(finals_per_copy * whole_copies + part_finals);
             expect(window_cycles.length, `the recording of ${result.recording.sample_count} ticks holds a whole clock period`).toBeGreaterThan(0);
             // the first window cycle is left out: the build may still be settling into the clock. A clock that counts over a minute is
             // recorded over one window cycle, which is checked whole: the settle ended at steady state
             const checked = window_cycles.length > 1 ? window_cycles.slice(1) : window_cycles;
             const wrong_length = checked.filter(it => it.end - it.start !== window_cycle_ticks);
-            expect(wrong_length, `every one of the ${checked.length} periods checked lasts ${window_cycle_ticks} ticks, as the generated clock does`).toEqual([]);
+            expect(wrong_length, `every one of the ${checked.length} periods checked lasts ${window_cycle_ticks} ticks, as the clock does`).toEqual([]);
+            /** The window cycles checked of a copy in which it moved less than its target */
+            const shortOf = (copy: typeof per_copy[number]) => (copy.per_window_cycle.length > 1 ? copy.per_window_cycle.slice(1) : copy.per_window_cycle)
+                .filter(it => it.items < copy.target - 1e-6).map(it => ({ start: it.start, items: it.items }));
+            if (build.own_clock) {
+                // the copies the build's own clock leaves short, and no other: the check of each copy sees what the total hides
+                expect(per_copy.length, `the build holds ${copies} copies`).toBe(Math.ceil(copies - 1e-9));
+                expect(per_copy.filter(copy => shortOf(copy).length > 0).map(copy => copy.copy),
+                    `the copies short of their target in a window cycle checked (${per_copy.map(copy => `${copy.copy}: ${shortOf(copy).map(it => it.items).join("/") || "none"}`).join("; ")})`)
+                    .toEqual(build.own_clock.short_copies);
+                return;
+            }
             if (copies > 1) {
                 // 100% or more of the target, each row on its own (copies of the row at one height) and the whole build; recorded raw.
                 // A build whose copies all stand in one row is one row, whose share is the whole build's output.
                 const per_row = config.setpoint.copies;
                 expect(rows.length, `the output inserters of the build stand in one row or more (heights: ${row_ys.join(", ")})`).toBeGreaterThanOrEqual(1);
-                const copy_output_inserters = output_unit_numbers.length / copies;
-                expect(Number.isInteger(copy_output_inserters),
-                    `the build's ${output_unit_numbers.length} output inserters are the same number in each of its ${copies} copies`).toBe(true);
+                const wholes = per_copy.filter(copy => !copy.part);
+                const copy_output_inserters = wholes[0]?.output_inserters ?? 0;
+                expect(wholes.map(copy => copy.output_inserters),
+                    `the build's ${output_unit_numbers.length} output inserters are the same number in each of its ${wholes.length} whole copies`).toEqual(wholes.map(() => copy_output_inserters));
+                expect(copy_output_inserters).toBeGreaterThan(0);
                 for (const row of rows) {
                     const row_expected = rowTarget(expected_per_copy, row.output_inserters, copy_output_inserters);
                     const row_checked = row.per_window_cycle.length > 1 ? row.per_window_cycle.slice(1) : row.per_window_cycle;
                     expect(row_checked.map(it => ({ start: it.start, items: it.items })).filter(it => it.items < row_expected - 1e-6),
                         `every one of the ${row_checked.length} periods checked of the row at y=${row.y} (${row.output_inserters} output inserters, ${per_row} copies wanted) moves ${row_expected} items of ${config.setpoint.recipe} or more`).toEqual([]);
+                }
+                // each copy on its own: a copy the others starve on a lane they share is short here, whatever the rows and the build make;
+                // the part copy against its share
+                expect(per_copy.length, `the build holds ${copies} copies`).toBe(Math.ceil(copies - 1e-9));
+                for (const copy of per_copy) {
+                    expect(shortOf(copy), `every period checked of ${copy.part ? "the part copy" : "copy"} ${copy.copy} of ${copies} moves ${copy.target} items of ${config.setpoint.recipe} or more`).toEqual([]);
                 }
                 expect(checked.filter(it => it.items < expected - 1e-6).map(it => ({ start: it.start, items: it.items })),
                     `every one of the ${checked.length} periods checked moves ${expected} items of ${config.setpoint.recipe} or more over the ${copies} copies`).toEqual([]);
@@ -748,7 +845,8 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                 `every one of the ${checked.length} periods checked moves ${expected} items of ${config.setpoint.recipe}`
                 + (build.staged_start ? ", but those the game was short in after the staged start" : "")).toEqual(build.staged_start?.dips ?? []);
 
-            // goal 2: the long run of the selected clock counts the wake-ups the game shows
+            // goal 2: the long run of the selected clock counts the wake-ups the game shows (a build of one copy, on a generated clock)
+            if (!selected || !compared) throw new Error("a build of one copy is recorded on the selected clock");
             const simulated = selected.result.stability_check.as_built?.wake_ups?.wake_ups_per_minute;
             const recorded = wakeUpsOfRecording(result.recording, matchRecordingToConfig(result.recording, config), 0, result.recording.sample_count, config).wake_ups_per_minute;
             expect(simulated, `the long run of the selected clock (${selected.label}) counted its wake-ups`).toBeDefined();

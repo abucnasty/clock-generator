@@ -11,7 +11,8 @@ import {Recording} from "../../../src/verification/recording";
 import {FixtureBeltSpeed, speedCapture} from "../helpers/belt-speed-fixtures";
 import {composeProbeSource} from "../helpers/probe-source";
 import {assertPickupClockHardware} from "./pickup-clock-speed-hardware";
-import {judgeBaseline, RunRecord} from "../helpers/run-judgement";
+import {judgeBaseline, judgeBaselineOfFinals, RunRecord} from "../helpers/run-judgement";
+import {matchCopies} from "../../../src/verification/entity-copies";
 import {clockHash, clockToRun, expectedNativeSummary, NativeRunSummary} from "./clock-controls";
 
 /** One lane of a belt tile an inserter picks up from, as a probe read it: its stacks by item and the unique ids of the stacks with their places */
@@ -163,6 +164,22 @@ export function runSummary(run: RunReport, clock: {generationVerdict: string; ta
         stock, result: run.result!, ended: run.ended!};
 }
 
+/**
+ * The baseline of each copy of a build of several: the final machines the probe counted, put in the copies the build holds as the
+ * harness finds them (machines that inserters join, matched to the config one by one; in the order of their lowest machine ids),
+ * and each copy's baseline judged by itself against its share of the target. A copy the others starve on a lane they share falls
+ * short here even where the build's total does not.
+ */
+function copyBaselines(run: RunReport, recording: Recording, config: Config, copyTarget: number) {
+    const unitOf = new Map(recording.machines.map(machine => [machine.id, machine.unit_number]));
+    const finals = Array.isArray(run.finals) ? run.finals : [];
+    return matchCopies(recording, config).copies.map((match, index) => {
+        const units = new Set(Array.from(match.machines.keys()).map(id => unitOf.get(id)));
+        const indices = finals.flatMap((final, k) => units.has(final.unit_number) ? [k] : []);
+        return {copy: index + 1, finals: indices.map(k => finals[k].unit_number), baseline: judgeBaselineOfFinals(run, copyTarget, indices)};
+    });
+}
+
 /** One run of a clock under the protocol: steady state, the baseline, and each disturbance with its recovery */
 export async function capturePickupClockScenario(scenario: PickupClockScenario) {
     const capture = speedCapture(scenario.name);
@@ -229,8 +246,17 @@ export async function capturePickupClockScenario(scenario: PickupClockScenario) 
         expect(Array.isArray(run.finals) ? run.finals : [], "the final machines the probe counts").toHaveLength(finals);
         const summary = runSummary(run, {generationVerdict: prepared.generationVerdict, target: Math.round(target * 1e6) / 1e6, period}, target);
         fs.writeFileSync(path.join(capture.directory, "summary.json"), JSON.stringify(summary) + "\n");
+        // a build of several copies: each copy's baseline, judged by itself, kept before it is asserted
+        const perCopy = buildCopies > 1 ? copyBaselines(run, recording, config, target / buildCopies) : [];
+        if (buildCopies > 1) fs.writeFileSync(path.join(capture.directory, "per-copy.json"), JSON.stringify(perCopy) + "\n");
         if (process.env.BELT_CLOCK_CALIBRATE !== "1") {
             expect(summary).toEqual(expectedNativeSummary(scenario.controls, scenario.name));
+        }
+        if (buildCopies > 1) {
+            expect(perCopy.map(copy => copy.finals.length), `each of the ${buildCopies} copies has ${finals / buildCopies} final machines of its own`)
+                .toEqual(Array.from({length: buildCopies}, () => finals / buildCopies));
+            expect(perCopy.filter(copy => !copy.baseline?.meets), `every one of the ${buildCopies} copies makes its share (${target / buildCopies} a second) over the baseline's whole clock cycles`)
+                .toEqual([]);
         }
     } finally {capture.cleanup();}
 }

@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import path from "path";
 import { encodeBlueprintFile } from "../blueprints/serde";
 import {
-    assertClockAttached, assertClockPriming, assertRecordableTicks, buildPartsMissingFromConfig, stagedBuildOrder, clockOfBlueprintString, clockWindowCycleTicks, matchBuiltCopies, matchBuiltDrills, matchBuiltInserters, MAX_RECORDED_TICKS,
-    factorioDataDir, missingFromConfigMessage, recordedTicks, recordInFactorio, scheduledDrillIds, scheduledInserterIds,
+    assertClockAttached, assertClockPriming, assertRecordableTicks, buildPartsMissingFromConfig, builtCopies, clockInserters, stagedBuildOrder, clockOfBlueprintString, clockWindowCycleTicks, matchBuiltCopies, matchBuiltDrills, matchBuiltInserters, MAX_RECORDED_TICKS,
+    factorioDataDir, missingFromConfigMessage, partCopiesOf, recordedTicks, recordInFactorio, scheduledDrillIds, scheduledInserterIds,
     drillResourceOf,
 } from "./factorio-harness";
+import { ConfigPaths } from "../config/config-paths";
+import { loadConfigFromFile } from "../config/loader";
 
 describe("factorioDataDir", () => {
     it("finds data inside the app bundle for a macOS executable", () => {
@@ -548,7 +550,7 @@ describe("a clock the build came with", () => {
     it("is told the copies of the config only with a clock to wire to them", async () => {
         const swapped = { blueprint: "0", schedule: { counted_ticks: 100, inserter_combinators: [] } };
         await expect(run({ copies: 3 })).rejects.toThrow("it needs a clock");
-        await expect(run({ copies: 0, clock: swapped, config: {} })).rejects.toThrow("whole number of copies");
+        await expect(run({ copies: 0, clock: swapped, config: {} })).rejects.toThrow("at least one copy");
         await expect(run({ copies: 3, clock: swapped, config: {} })).rejects.toThrow("Factorio not found");
         // a staged start builds the inserters of every copy
         await expect(run({ copies: 2, clock: swapped, config: {}, staged_start: { build_order: "ascending" } })).rejects.toThrow("Factorio not found");
@@ -647,5 +649,98 @@ describe("a clock placed first in a staged start", () => {
         }
         await expect(run({ clock: swapped, config: {}, copies: 2, staged_start: { build_order: "descending", clock_phase: 13 } })).rejects.toThrow("Factorio not found");
         await expect(run({ clock: swapped, config: {}, staged_start: { clock_phase: 0 } })).rejects.toThrow("Factorio not found");
+    });
+});
+
+describe("a build that holds the config a fraction of times: whole copies and one part copy", async () => {
+    // the chemical science sample, 5.5 copies of a block of four science machines (1-4), four engine machines (5-8) and a
+    // pipe foundry (9); its part copy, as the generator lays it out on the shared lanes, is the upstream taker of each lane
+    // with what it needs: machines 1, 3, 5, 7 and 9 and inserters 1, 3, 5, 7, 9, 11, 13, 15, 17 and 19
+    const config = await loadConfigFromFile(ConfigPaths.CHEMICAL_SCIENCE_240_SHARED_FOUNDRY);
+    const PART_MACHINES = [1, 3, 5, 7, 9];
+    const PART_INSERTERS = [1, 3, 5, 7, 9, 11, 13, 15, 17, 19];
+    const ids = (machines: number[]) => ({
+        machines,
+        inserters: config.inserters.flatMap((inserter, index) => {
+            const at = (end: { type: string; id: number }) => end.type !== "machine" || machines.includes(end.id);
+            return at(inserter.source) && at(inserter.sink) ? [index + 1] : [];
+        }),
+    });
+    /** Blocks of the config, each the machines and inserters given (by config id), numbered one after the other as a recorder would */
+    const described = (blocks: { machines: number[]; inserters: number[] }[]) => {
+        const machines: { id: number; unit_number: number; name: string; recipe: string }[] = [];
+        const inserters: { id: number; unit_number: number; name: string; stack_size: number; source: object; sink: object }[] = [];
+        blocks.forEach((block, b) => {
+            const machine_id = (config_id: number) => 100 * b + config_id;
+            for (const id of block.machines) {
+                const configured = config.machines.find(machine => machine.id === id)!;
+                machines.push({ id: machine_id(id), unit_number: 1000 + machine_id(id), name: configured.recipe === "casting-pipe" ? "foundry" : "assembling-machine-3", recipe: configured.recipe });
+            }
+            for (const id of block.inserters) {
+                const configured = config.inserters[id - 1];
+                const end = (it: { type: string; id: number }) => it.type === "machine" ? { type: "machine", id: machine_id(it.id) } : { ...it };
+                inserters.push({ id: 100 * b + id, unit_number: 5000 + 100 * b + id, name: "stack-inserter", stack_size: 16, source: end(configured.source), sink: end(configured.sink) });
+            }
+        });
+        const unit = new Map(machines.map(machine => [machine.id, machine.unit_number]));
+        const mover = (end: { type: string; id: number }) => end.type === "machine"
+            ? { unit_number: unit.get(end.id), type: "assembling-machine", name: "assembling-machine-3" } : { unit_number: 9000 + end.id, type: "transport-belt", name: "turbo-transport-belt" };
+        return {
+            config: { inserters: inserters.map(({ source, sink }) => ({ source, sink })), belts: config.belts },
+            machines, inserters,
+            movers: { loaders: [], inserters: inserters.map(it => ({ unit_number: it.unit_number, name: it.name, pickup: mover(it.source as never), drop: mover(it.sink as never) })) },
+        };
+    };
+    const whole = ids(config.machines.map(machine => machine.id));
+    const half = ids(PART_MACHINES);
+    const five_and_a_half = described([whole, whole, whole, whole, whole, half]);
+
+    it("is the generator's part copy: the upstream taker of each shared lane and what it needs, half of the output", () => {
+        const parts = partCopiesOf(config);
+        expect(parts).toHaveLength(1);
+        expect(half.inserters).toEqual(PART_INSERTERS);
+        expect([...parts[0].ids].filter(id => id.startsWith("machine:")).sort()).toEqual(PART_MACHINES.map(id => `machine:${id}`).sort());
+        expect([...parts[0].ids].filter(id => id.startsWith("inserter:")).sort()).toEqual(PART_INSERTERS.map(id => `inserter:${id}`).sort());
+        // two of the copy's four science machines, each held to its whole target (its one output inserter is in the part copy)
+        expect(parts[0].share).toBe(0.5);
+    });
+
+    it("takes five whole copies and the part copy, and wires the clock to the part copy's inserters as to the same inserters of a whole copy", () => {
+        const found = builtCopies(five_and_a_half, config, 5.5);
+        expect(found.inserters).toHaveLength(6);
+        expect(found.inserters.slice(0, 5).map(copy => copy.size)).toEqual([20, 20, 20, 20, 20]);
+        expect([...found.inserters[5].keys()].sort((a, b) => a - b)).toEqual(PART_INSERTERS);
+        expect(found.part).toMatchObject({ index: 5, share: 0.5 });
+        expect(buildPartsMissingFromConfig(five_and_a_half, config, 5.5)).toEqual([]);
+        // the mod is told each config inserter's built inserters: six for an inserter of the part copy, five for the rest
+        const wired = clockInserters(found.inserters);
+        expect((wired["5"] as number[])).toEqual([5005, 5105, 5205, 5305, 5405, 5505]);
+        expect((wired["6"] as number[])).toEqual([5006, 5106, 5206, 5306, 5406]);
+        expect(matchBuiltCopies(five_and_a_half, config, 5.5)).toEqual(found.inserters);
+    });
+
+    it("refuses a group that is neither a whole copy nor the part copy, and says what it found", () => {
+        // the half block without its second engine machine (7) and the inserters on it
+        const short = described([whole, whole, whole, whole, whole, ids([1, 3, 5, 9])]);
+        // without it the half block is two groups: the foundry, one engine machine and the science machine it feeds; the other science machine
+        expect(() => builtCopies(short, config, 5.5)).toThrow("The test says the build holds the config 5.5 times: 5 whole copies and one part copy "
+            + "(machines 1, 3, 5, 7, 9; inserters 1, 3, 5, 7, 9, 11, 13, 15, 17, 19). It found 5 whole copies and no part copy, and 2 groups of the config's "
+            + "recipes that are neither: 3 machines: casting-pipe, chemical-science-pack, engine-unit; 1 machines: chemical-science-pack");
+        expect(() => buildPartsMissingFromConfig(short, config, 5.5)).toThrow("no part copy");
+    });
+
+    it("refuses a part copy where the test says a whole number of copies", () => {
+        const missing = buildPartsMissingFromConfig(five_and_a_half, config, 5);
+        expect(missing.map(it => it.description).join(" ")).toContain("beyond the 4 in each of its 5 copies the config has of that recipe");
+        expect(() => builtCopies(five_and_a_half, config, 6)).toThrow("holds the config 6 times, and the build holds it 5");
+    });
+
+    it("refuses two part copies", () => {
+        const two = described([whole, whole, whole, whole, half, half]);
+        expect(() => builtCopies(two, config, 4.5)).toThrow(/found 4 whole copies and 2 part copies/);
+    });
+
+    it("refuses a fraction that is not the config's", () => {
+        expect(() => builtCopies(five_and_a_half, config, 5.25)).toThrow("the config's copies are 5.5");
     });
 });
