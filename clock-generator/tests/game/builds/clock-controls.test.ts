@@ -217,8 +217,7 @@ const RECORD_LINKS: Record<string, RecordLink & {runs?: boolean}> = {
     "steel-plate-26-wagon-chest-clock-controls.json": {
         jobOf: name => name === "steel-wagon-iron-ore-out-of-period" ? variant("STEEL_PLATE_26_WAGON_CHEST_IRON_ORE_OUT_OF_PERIOD") : "config-STEEL_PLATE_26_WAGON_CHEST", runs: true,
         offered: ["steel-wagon-belt-slack", "steel-wagon-belt-slack-fill-last", "steel-wagon-iron-ore-out-of-period"]},
-    // its game test records the grouped hands clock, selected until the per-branch clock took the coal's windows from a part one source at a time
-    "utility-science-480-lds-foundry-chain-clock-controls.json": {jobOf: config("UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN"), offered: ["generated-one-copy"]},
+    "utility-science-480-lds-foundry-chain-clock-controls.json": {jobOf: config("UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN")},
 };
 
 /**
