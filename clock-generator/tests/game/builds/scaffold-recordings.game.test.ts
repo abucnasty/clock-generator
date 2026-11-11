@@ -140,8 +140,13 @@ interface ScaffoldBuild {
      * is compared with the simulator on what follows the first third of each.
      */
     staged_start?: {
-        /** The window cycles of the recording that move less than the expected output, as the game showed them (the first is left out): where each starts, and the items it moved */
-        dips: { start: number; items: number }[];
+        /**
+         * The window cycles of the recording that move less than the expected output, as the game showed them (the first is left
+         * out): where each starts, and the items it moved. In a build of copies each names its copy (as the copies are found:
+         * the order of their lowest machine ids) and the items that copy moved; its row and the whole build are then short by
+         * as much in that window cycle.
+         */
+        dips: { start: number; items: number; copy?: number }[];
         /** What the game and the simulator still differ in after the first third of each, as the comparison words it */
         open_issues: string[];
     };
@@ -169,23 +174,32 @@ const LOGISTIC_INSERTER_CRAFTING_WAKE_UPS_OPEN = "the wake-ups of the inserter c
     + "with the game's order of service and the production the same (#586, an accepted 0.27.0 gap)";
 
 const BUILDS: Record<string, ScaffoldBuild> = {
+    // abucnasty's build of five copies (2026-11-10), 10 tiles apart in one row. Two input lines run east past the copies,
+    // bioflux on the left lane and nutrients on the right: the upper one feeds the nutrient biochambers, the lower one the
+    // science biochambers, weaving north and south between them, so the science biochamber's pickup has the nutrients on its
+    // near lane in the second and fourth copy from the west and the bioflux in the others; the config states one near lane,
+    // the nutrients (lane 2). Each line ends at a splitter into timed belts and void chests; the config states its lanes as
+    // dead ends. Each copy puts its packs into a void chest. 50 a second a copy, 250 over five.
     "agricultural science": {
         scaffold: path.join(SAMPLES, "science", "agricultural", "agricultural-250.scaffold"),
         config: ConfigPaths.AGRICULTURAL_SCIENCE_250,
         // the egg loop cannot start itself, so the egg machines are given eggs to begin with
         seed: [{ target: { recipe: "pentapod-egg" }, item: "pentapod-egg", count: 200 }],
         warmup_ticks: 300,
-        // Recorded 2026-10-24 on batched swings (Takt Batches: 5 output swings each output cycle) with windows on the two inserters that take eggs
-        // out of the loop into the science biochamber (ticks 23 to 46 of every 96) and on the two of the loop itself (31 to 80
-        // and 79 to 128 of every 96): 400 in every one of 74 window cycles after the staged start, and the simulator moves what the
-        // game moved through every inserter and machine; so did the family cuts (64 window cycles, then back at 400 from the
-        // first or second window cycle after each cut). The same that day with only the first two on windows, and with all four
-        // always on. The 2-swing clock selected before (recorded 2026-10-16) was one hand short in window cycles 8 and 9 of the
-        // settling after the staged start. Since 0.27.0 it selects shifted swings (Takt Batches: 5 output swings each output cycle), recorded
-        // 2026-11-03 from the staged start to steady state and a minute more: one window cycle of the settling short (320 at tick
-        // 1,440), 400 in every other.
+        copies: 5,
+        // Recorded 2026-11-11 at Factorio 2.1.24 on Time-Study Windows (1 output swing each output cycle, a window cycle of 480
+        // ticks, clock 8de16d68), twice, from the staged start to steady state and a minute more (22 window cycles): both
+        // recordings short in the same window cycles of the settling, on the same copies, by the same items. Copies by x from the
+        // west, as the copies are found: copies 1, 3 and 5 have the bioflux on the pickup's near lane, copies 2 and 4 the
+        // nutrients. Every copy moves 400 in every window cycle from tick 2,880 on (16 window cycles), and the machines run at the
+        // config's speed and productivity. Before the build of five copies the sample's one copy was recorded from the staged
+        // start on other clocks (2026-10-24, 2026-11-03); those values belong to the one-copy build.
         staged_start: {
-            dips: [{ start: 1440, items: 320 }],
+            dips: [
+                { start: 480, items: 368, copy: 2 }, { start: 480, items: 368, copy: 4 }, { start: 480, items: 368, copy: 5 },
+                { start: 960, items: 368, copy: 1 }, { start: 960, items: 368, copy: 3 },
+                { start: 2400, items: 384, copy: 2 }, { start: 2400, items: 384, copy: 4 },
+            ],
             open_issues: [],
         },
         wake_ups_open: AGRICULTURAL_SCIENCE_WAKE_UPS_OPEN,
@@ -195,13 +209,17 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     // selected, the same clock as with belts that move (recorded 2026-10-24: 400 in every one of 74 window cycles, no
     // difference between the game and the simulator); the 2-swing clock was while a loss of nutrients broke batched
     // swings (2026-10-10 to 2026-10-14), and again while its nutrients trials dipped a hand late in their 40 window cycles,
-    // until such a trial ran on (2026-10-24)
+    // until such a trial ran on (2026-10-24). That was the one-copy build. On the five copies the lanes are dead ends, the
+    // clocks are made for backed-up belts either way, and the same clock is selected as with belts that move (Time-Study
+    // Windows, clock 8de16d68): recorded 2026-11-11 at Factorio 2.1.24, 400 on each of the five copies in each of the 7
+    // window cycles checked
     "agricultural science (belts are backed up)": {
         scaffold: path.join(SAMPLES, "science", "agricultural", "agricultural-250.scaffold"),
         config: ConfigPaths.AGRICULTURAL_SCIENCE_250,
         seed: [{ target: { recipe: "pentapod-egg" }, item: "pentapod-egg", count: 200 }],
         warmup_ticks: 300,
         backed_up_belts: true,
+        copies: 5,
         wake_ups_open: AGRICULTURAL_SCIENCE_WAKE_UPS_OPEN,
     },
     // abucnasty's build of nine copies (2026-11-11), 9 tiles apart in one row on one input belt whose two lanes are dead
@@ -815,6 +833,18 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                 return;
             }
             if (copies > 1) {
+                // the dips a staged start of this build was recorded with, each of one copy: that copy, its row and the whole build are
+                // short by as much in that window cycle, and in no other
+                const dips = build.staged_start?.dips ?? [];
+                const row_of_copy = (found?.inserters ?? []).map(unit_numbers => {
+                    const units = new Set(unit_numbers.values());
+                    return outputs.filter(it => units.has(it.unit_number!)).map(it => row_of.get(it.unit_number!))[0];
+                });
+                /** The window cycles a set of copies is short in, by the dips of those copies, against what they move in all */
+                const shortBy = (copy_numbers: number[], full: number) => Array.from(new Set(dips.filter(dip => copy_numbers.includes(dip.copy!)).map(dip => dip.start)))
+                    .sort((a, b) => a - b)
+                    .map(start => ({ start, items: dips.filter(dip => dip.start === start && copy_numbers.includes(dip.copy!))
+                        .reduce((items, dip) => items - (expected_per_copy - dip.items), full) }));
                 // 100% or more of the target, each row on its own (copies of the row at one height) and the whole build; recorded raw.
                 // A build whose copies all stand in one row is one row, whose share is the whole build's output.
                 const per_row = config.setpoint.copies;
@@ -827,17 +857,22 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                 for (const row of rows) {
                     const row_expected = rowTarget(expected_per_copy, row.output_inserters, copy_output_inserters);
                     const row_checked = row.per_window_cycle.length > 1 ? row.per_window_cycle.slice(1) : row.per_window_cycle;
+                    const row_copies = row_of_copy.flatMap((y, index) => y === row.y ? [index + 1] : []);
                     expect(row_checked.map(it => ({ start: it.start, items: it.items })).filter(it => it.items < row_expected - 1e-6),
-                        `every one of the ${row_checked.length} periods checked of the row at y=${row.y} (${row.output_inserters} output inserters, ${per_row} copies wanted) moves ${row_expected} items of ${config.setpoint.recipe} or more`).toEqual([]);
+                        `every one of the ${row_checked.length} periods checked of the row at y=${row.y} (${row.output_inserters} output inserters, ${per_row} copies wanted) moves ${row_expected} items of ${config.setpoint.recipe} or more`
+                        + (dips.length > 0 ? ", but those its copies were short in after the staged start" : "")).toEqual(shortBy(row_copies, row_expected));
                 }
                 // each copy on its own: a copy the others starve on a lane they share is short here, whatever the rows and the build make;
                 // the part copy against its share
                 expect(per_copy.length, `the build holds ${copies} copies`).toBe(Math.ceil(copies - 1e-9));
                 for (const copy of per_copy) {
-                    expect(shortOf(copy), `every period checked of ${copy.part ? "the part copy" : "copy"} ${copy.copy} of ${copies} moves ${copy.target} items of ${config.setpoint.recipe} or more`).toEqual([]);
+                    expect(shortOf(copy), `every period checked of ${copy.part ? "the part copy" : "copy"} ${copy.copy} of ${copies} moves ${copy.target} items of ${config.setpoint.recipe} or more`
+                        + (dips.length > 0 ? ", but those it was short in after the staged start" : ""))
+                        .toEqual(dips.filter(dip => dip.copy === copy.copy).map(dip => ({ start: dip.start, items: dip.items })));
                 }
                 expect(checked.filter(it => it.items < expected - 1e-6).map(it => ({ start: it.start, items: it.items })),
-                    `every one of the ${checked.length} periods checked moves ${expected} items of ${config.setpoint.recipe} or more over the ${copies} copies`).toEqual([]);
+                    `every one of the ${checked.length} periods checked moves ${expected} items of ${config.setpoint.recipe} or more over the ${copies} copies`
+                    + (dips.length > 0 ? ", but those its copies were short in after the staged start" : "")).toEqual(shortBy(per_copy.map(copy => copy.copy), expected));
                 return;
             }
             const short = checked.filter(it => it.items !== expected);

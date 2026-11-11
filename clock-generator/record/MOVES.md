@@ -8,6 +8,9 @@ a line that names the reason and lists the jobs. A pull request that moves no re
 CI checks this file: the "Record check" fails when a selected clock got worse than in the base and its job key is not in the lines the pull
 request adds to this file.
 
+## The agricultural science sample states its lanes as its build of five copies has them (feature/shared-lane-model-row-11b)
+- config-AGRICULTURAL_SCIENCE_250, variants-AGRICULTURAL_SCIENCE_250_BACKED_UP: the config states abucnasty's build of five copies (10 tiles apart, both input belts flowing east past them, their four lanes dead ends, the bioflux shared by the copies) and the science biochamber's pickup with the nutrients on its near lane, as copies 2 and 4 of the build have it. Every clock moved. Both jobs select Time-Study Windows (clock 8de16d68, 5,268.15 wake-ups a minute) where they selected Coordinated Sources (3f3fc285, 2,603.94); the record held Phase-Shifted Batch and Takt Batches, older than that. More wake-ups, accepted: the clock with fewer leaves copies 2 and 4 short in the game, and 8de16d68 held each of the five copies at 400 in 200 window cycles of 200 in the game
+
 ## The accumulator sample is abucnasty's nine-copy build, named for its 320 a second (feature/shared-lane-model-row-16)
 - config-ACCUMULATOR_640 -> config-ACCUMULATOR_320: the target is the nine-copy build's, 320 a second over 9 copies (35.56 a copy, as before), so the rate of every clock halves with it; the selected clock (coordinated_sources, clock b43dfd7b1bc7), its windows and wake-ups are the same
 

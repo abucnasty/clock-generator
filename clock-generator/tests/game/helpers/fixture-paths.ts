@@ -26,4 +26,6 @@ export const GameFixturePaths = {
     TURBO_BELT_DROP: path.join(ENGINE_ROOT, "tests/game/mechanics/belt-drop/fixtures/turbo-stacks"),
     SPLITTER: path.join(PICKUP, "splitter"),
     SPLITTER_TWO_INSERTERS: path.join(PICKUP, "splitter-two-inserters"),
+    /** One copy of the agricultural science build, the staged-start tests' own build (the sample's scaffold until it became five copies) */
+    AGRICULTURAL_SCIENCE_ONE_COPY: path.join(ENGINE_ROOT, "tests/game/mechanics/staged-start/fixtures/agricultural-science-one-copy.scaffold"),
 };
