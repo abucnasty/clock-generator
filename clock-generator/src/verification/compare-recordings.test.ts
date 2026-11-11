@@ -281,7 +281,7 @@ describe("a recorded build that is not the build of the config", () => {
     const differences = (recording: Recording, of: Config = config) => buildDifferences(recording, matchOfSimulatedRecording(recording), of);
 
     it("finds nothing where the build is as the config says", () => {
-        expect(differences(recordedWith({ near_lane: 1 }))).toEqual([]);
+        expect(differences(recordedWith({ near_lane: 2 }))).toEqual([]);
     });
 
     it("finds nothing in a recording that does not name the nearest lane, as those of an older recorder", () => {
@@ -289,13 +289,13 @@ describe("a recorded build that is not the build of the config", () => {
     });
 
     it("reports an inserter with another stack size than the config gives it", () => {
-        expect(differences(recordedWith({ stack_size: 12, near_lane: 1 }))).toEqual([
+        expect(differences(recordedWith({ stack_size: 12, near_lane: 2 }))).toEqual([
             "Inserter 1 (belt 1 -> machine 1) has a stack size of 12 in the recorded build and 16 in the config.",
         ]);
     });
 
     it("reports an inserter that is nearest to the lane of the item the config has it take second", () => {
-        expect(differences(recordedWith({ near_lane: 2 }))).toEqual([
+        expect(differences(recordedWith({ near_lane: 1 }))).toEqual([
             "Inserter 1 (belt 1 -> machine 1) is nearest to the lane of iron-gear-wheel in the recorded build and takes it before copper-plate; "
             + "the config has it take copper-plate first. Set near_lane on its source to the lane of iron-gear-wheel.",
         ]);
@@ -304,12 +304,12 @@ describe("a recorded build that is not the build of the config", () => {
     it("goes by the order of the filters for a config that names no nearest lane", () => {
         const unnamed: Config = structuredClone(config);
         unnamed.inserters[0].source = { type: "belt", id: 1 };
-        expect(differences(recordedWith({ near_lane: 1 }), unnamed)).toEqual([]);
-        expect(differences(recordedWith({ near_lane: 2 }), unnamed)).toHaveLength(1);
+        expect(differences(recordedWith({ near_lane: 2 }), unnamed)).toEqual([]);
+        expect(differences(recordedWith({ near_lane: 1 }), unnamed)).toHaveLength(1);
     });
 
     it("is the first thing a comparison reports", () => {
-        const recording = recordedWith({ stack_size: 12, near_lane: 1 });
+        const recording = recordedWith({ stack_size: 12, near_lane: 2 });
         const report = compareRecordings(compared(recording), compared(simulated), config);
         expect(report.issues[0]).toBe("The config does not describe the recorded build. Inserter 1 (belt 1 -> machine 1) has a stack size of 12 in the recorded build and 16 in the config.");
     });

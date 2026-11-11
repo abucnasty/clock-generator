@@ -333,9 +333,12 @@ hash is `builtClockIdentity` of the build's blueprint, recomputed by `clock-cont
   `clock_sha256` (checked by `pickup-clock-cold-start-mechanics.test.ts` against the clock the stored windows build and the fixture's
   pin, and for the runs started at the window cycle's beginning by `clock-controls.test.ts` against the record's selection)
   and `recorded_clock_sha256` (checked by the game test).
-- Three scaffold-recordings builds expect values that belong to one clock (agricultural science having no dip and no
-  difference after its staged start, agricultural science with backed-up belts having no difference, and the moved
-  inserters of chemical science with a shared foundry): `scaffold-recordings-clock-pins.json`.
+- Eight scaffold-recordings builds expect values that belong to one clock (agricultural science having no dip and no
+  difference after its staged start, agricultural science with backed-up belts having no difference, what each of the
+  nine copies of automation science moves, the moved inserters of chemical science with a shared foundry, what the one
+  copy of electromagnetic science moves, what each row of military science with grenades moves, what the one copy of
+  production science with a drill into the rail assembler moves, and what each of the two copies of utility science with
+  processing units and low density structures on one belt moves): `scaffold-recordings-clock-pins.json`.
 - The agricultural science scaffold's control on the 2-swing clock keeps one line: inserter 11 moves 371.33 a window cycle in the
   game and 370.16 in the simulator. Since #333 the simulator runs a clock of whole ticks by its own window cycle time (960 ticks for
   this one, where the plan has 480), so the run the test compares is twice as long, and its two one-hand dips fall before

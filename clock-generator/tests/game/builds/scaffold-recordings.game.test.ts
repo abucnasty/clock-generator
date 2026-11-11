@@ -204,11 +204,16 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         backed_up_belts: true,
         wake_ups_open: AGRICULTURAL_SCIENCE_WAKE_UPS_OPEN,
     },
+    // abucnasty's build of nine copies (2026-11-11), 9 tiles apart in one row on one input belt whose two lanes are dead
+    // ends (gears left, copper right). The copies' packs go onto one shared line into a loader and a void chest: copies 1-4
+    // and 6-8 side-load from short stubs, copy 5 drops onto the line, and copy 9 joins it through a splitter. 26.67 a second
+    // a copy, 240 over nine. The scaffold before was one copy.
     "automation science": {
         scaffold: path.join(SAMPLES, "science", "automation", "automation-240.scaffold"),
         config: ConfigPaths.AUTOMATION_SCIENCE_240,
         seed: [],
         warmup_ticks: 3600,
+        copies: 9,
     },
     // its selected clock has no belt pickup slack: full-hand output swings, which the simulator holds stable without it
     "automation science (belts are backed up)": {
@@ -217,6 +222,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [],
         warmup_ticks: 3600,
         backed_up_belts: true,
+        copies: 9,
     },
     "automation science with a belted buffer": {
         scaffold: path.join(SAMPLES, "science", "automation", "automation-120-foundries-feed-belt-to-assembler.scaffold"),
@@ -597,7 +603,7 @@ afterAll(async () => {
     }
 }, 60_000);
 
-/** The clocks the values of seven builds belong to (scaffold-recordings-clock-pins.json); clock-controls.test.ts checks the selection against the record, and clock-belt.generation.test.ts the build with backed-up belts */
+/** The clocks the values of eight builds belong to (scaffold-recordings-clock-pins.json); clock-controls.test.ts checks the selection against the record, and clock-belt.generation.test.ts the build with backed-up belts */
 const clockPins = readControls<{ cases: Record<string, { config: string; backed_up_belts: boolean; clock_sha256: string }> }>("scaffold-recordings-clock-pins.json").cases;
 
 test("every build with a pinned clock is a build of this file", () => {
