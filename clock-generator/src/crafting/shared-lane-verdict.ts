@@ -72,8 +72,11 @@ import { longRunWindowCyclesOf, runClockOnBuild } from "./trial";
  *
  * Where the config states its output belt, each copy's output inserter puts its stacks onto it (output-belt-run.ts). A
  * copy whose side belt is full at its join onto the output belt holds its hand: its machines fill up and its takers take
- * less from the lanes. Where such a copy's output inserter held a hand in the judged window cycles, its loss says that
- * its join is full (`join_full`), not that the lane gives it too few items.
+ * less from the lanes. Where such a copy's output inserter held a hand in the judged window cycles, the run is made once
+ * more with each output inserter on a tile of its own (the run before the output belt). Where the output belt makes the
+ * entity the loss names further behind by more than one craft or hand, the loss says that its join is full
+ * (`join_full`), not that the lane gives it too few items; else it names the lane, and gives the held hands beside it
+ * (`side_belt_waits`).
  */
 
 /** What one taker of one copy put down of a lane's item in a run of the copies on their shared lanes */
@@ -193,10 +196,14 @@ export interface SharedLaneLoss {
      */
     behind?: BehindTarget;
     /**
-     * Where the config states its output belt and the copy's output inserter held hands in the judged window cycles: its
-     * side belt is full at its join onto the output belt. That makes the copy short, not the lane.
+     * Where the config states its output belt and the copy's output inserter held hands in the judged window cycles, and
+     * the output belt is the cause: its side belt is full at its join onto the output belt. That makes the copy short, not
+     * the lane. The output belt is the cause where the copy's machine or output inserter that the loss names is further
+     * behind by more than one craft or hand than in the same run with each output inserter on a tile of its own.
      */
     join_full?: JoinFull;
+    /** The hands the copy's side belt held where the output belt is not the cause: a fact beside the lane's shortfall */
+    side_belt_waits?: JoinFull;
     /** The sentence the result shows */
     text: string;
 }
@@ -430,7 +437,9 @@ function describeSharedLaneLoss(loss: Omit<SharedLaneLoss, "text">): string {
     const end = loss.lane_end === "unknown" ? `has an unknown end. It is checked as ${run_as}.` : `ends in ${run_as}.`;
     const item = FactorioDataService.isAvailable() ? FactorioDataService.itemNameInSentence(loss.item) : loss.item;
     const counts = `takes ${counted(loss.items)} in ${loss.window_cycles} window cycles.`;
-    const behind = loss.behind === undefined ? "" : ` ${describeBehind(loss.behind, loss.copies)}`;
+    const waits = loss.side_belt_waits === undefined ? ""
+        : ` Its output inserter also waits for room on its side belt in ${counted(loss.side_belt_waits.held_hands)} of its ${counted(loss.side_belt_waits.hands)} hands.`;
+    const behind = `${waits}${loss.behind === undefined ? "" : ` ${describeBehind(loss.behind, loss.copies)}`}`;
     if (loss.copies === 1) {
         return `Lane ${loss.lane} of belt ${loss.belt_id} ${end} The build takes ${item} from it. `
             + `When the items move ${directionWord(loss.flow)}, inserter ${loss.inserter_id} does not get sufficient items. `
@@ -521,6 +530,12 @@ function shortfallsOf(under: Config, lanes: readonly ModelLane[], layout: Shared
         return [{ short: alone_items - items, hand: alone.handOf(take.inserter_id, take.item), loss }];
     });
     return { shortfalls, made, from, to, holds, ...(join_full !== undefined && { join_full }) };
+}
+
+/** The config with each output inserter dropping on a tile of its own: the run of the copies as it was before the output belt */
+function withoutOutputBelt(config: Config): Config {
+    const { output_belt: _output_belt, ...without } = config;
+    return without;
 }
 
 /** The copies whose side belt held a hand of their output inserter from tick `from` up to, not including, `to` */
@@ -623,6 +638,11 @@ function machineShareOf(holds: "whole" | ReadonlySet<string>, takers: readonly M
  * inserter of a part copy is held to its own target, as one of a whole copy.
  */
 export function behindTargetIn(run: RunOfCopies, rates: TargetRates): BehindTarget[] {
+    return howFarBehind(run, rates).filter(it => it.behind > 1 + ROUNDING).sort((a, b) => b.behind - a.behind);
+}
+
+/** How far each machine and output inserter of every copy is behind its target over the judged window cycles, ahead or not */
+function howFarBehind(run: RunOfCopies, rates: TargetRates): BehindTarget[] {
     const seconds = (run.to - run.from) / 60;
     return run.made.flatMap(({ copy, kind, id, counts }): BehindTarget[] => {
         const made = counts.reduce((sum, it) => it.tick >= run.from && it.tick < run.to ? sum + it.amount : sum, 0);
@@ -630,14 +650,22 @@ export function behindTargetIn(run: RunOfCopies, rates: TargetRates): BehindTarg
             const rate = rates.crafts_per_second.get(id);
             if (rate === undefined) return [];
             const target = rate * seconds * machineShareOf(copy === 0 ? "whole" : run.holds[copy - 1] ?? "whole", rates.takers.get(id));
-            return target - made > 1 + ROUNDING ? [{ copy: copy + 1, kind, id, made, target, behind: target - made }] : [];
+            return [{ copy: copy + 1, kind, id, made, target, behind: target - made }];
         }
         const output = rates.output_inserters.get(id);
         if (output === undefined) return [];
         const target = output.items_per_second * seconds;
-        const behind = (target - made) / output.hand;
-        return behind > 1 + ROUNDING ? [{ copy: copy + 1, kind, id, made, target, behind }] : [];
-    }).sort((a, b) => b.behind - a.behind);
+        return [{ copy: copy + 1, kind, id, made, target, behind: (target - made) / output.hand }];
+    });
+}
+
+/**
+ * Whether the output belt makes a copy's entity further behind: by more than one craft or hand (the measure of
+ * behindTargetIn) against the same run with each output inserter dropping on a tile of its own (`reference`)
+ */
+function joinIsTheCause(behind: BehindTarget, reference: RunOfCopies, rates: TargetRates): boolean {
+    const there = howFarBehind(reference, rates).find(it => it.copy === behind.copy && it.kind === behind.kind && it.id === behind.id);
+    return there === undefined || behind.behind - there.behind > 1 + ROUNDING;
 }
 
 /**
@@ -677,18 +705,23 @@ export function judgeSharedLanes(config: Config, clock_windows: SerializableCloc
      * (stock moved between the runs, not output lost). Where the target rates cannot be worked out, every loss stands as
      * the takers make it.
      */
-    const standing = (run: RunOfCopies, losses: Omit<SharedLaneLoss, "text">[]): Omit<SharedLaneLoss, "text">[] => {
+    const standing = (run: RunOfCopies, losses: Omit<SharedLaneLoss, "text">[], reference: () => RunOfCopies): Omit<SharedLaneLoss, "text">[] => {
         if (losses.length === 0) return [];
         if (rates === undefined) rates = ends === null ? null : targetRatesOf(config, ends);
         if (rates === null) return losses;
         const behind = behindTargetIn(run, rates);
+        // the run with each output inserter on a tile of its own, made only where a copy's side belt held a hand
+        let without: RunOfCopies | undefined;
         return behind.length === 0 ? [] : losses.map(loss => {
-            const join_full = run.join_full?.get(loss.copy);
-            return { ...loss, behind: behind.find(it => it.copy === loss.copy) ?? behind[0], ...(join_full !== undefined && { join_full }) };
+            const of_copy = behind.find(it => it.copy === loss.copy) ?? behind[0];
+            const held = run.join_full?.get(loss.copy);
+            if (held === undefined) return { ...loss, behind: of_copy };
+            without ??= reference();
+            return joinIsTheCause(of_copy, without, rates!) ? { ...loss, behind: of_copy, join_full: held } : { ...loss, behind: of_copy, side_belt_waits: held };
         });
     };
     // the first run of each reading: the run of one copy, and the copies on each layout of the lanes, with their shortfalls
-    const first: { under: Config; taker_ids: string[]; runs: { layout: SharedLaneLayout; run: RunOfCopies }[] }[] = [];
+    const first: { under: Config; taker_ids: string[]; alone: AloneRun; runs: { layout: SharedLaneLayout; run: RunOfCopies }[] }[] = [];
     let fast_check_passes = true;
     for (const { under, layouts } of sharedLaneRunsOf(config).readings) {
         const facts = laneFactsOf(under);
@@ -707,7 +740,7 @@ export function judgeSharedLanes(config: Config, clock_windows: SerializableCloc
             groups.set(key, group);
         }
         fast_check_passes &&= [...groups.values()].every(group => refillsInTime(group.rows, group.supply, pickups, group.item, clock_windows, window_cycle_ticks, from_tick, alone.last_tick));
-        first.push({ under, taker_ids, runs: layouts.map(layout => ({ layout, run: shortfallsOf(under, lanes, layout, alone, windows, window_cycle_ticks, window_cycles, logger, ends) })) });
+        first.push({ under, taker_ids, alone, runs: layouts.map(layout => ({ layout, run: shortfallsOf(under, lanes, layout, alone, windows, window_cycle_ticks, window_cycles, logger, ends) })) });
     }
     const shortfalls = first.flatMap(it => it.runs.flatMap(({ run }) => run.shortfalls));
     const judged = (losses: Omit<SharedLaneLoss, "text">[], longer_run: boolean): SharedLaneJudgement => ({
@@ -718,7 +751,8 @@ export function judgeSharedLanes(config: Config, clock_windows: SerializableCloc
     // no taker short, or one short by more than a hand, which the end of the judged span does not make: judged as it is,
     // each run's losses standing where a machine or an output inserter of that run is behind its target
     if (shortfalls.length === 0 || shortfalls.some(it => it.short > it.hand)) {
-        return judged(first.flatMap(it => it.runs.flatMap(({ run }) => standing(run, run.shortfalls.map(shortfall => shortfall.loss)))), false);
+        return judged(first.flatMap(it => it.runs.flatMap(({ layout, run }) => standing(run, run.shortfalls.map(shortfall => shortfall.loss),
+            () => shortfallsOf(withoutOutputBelt(it.under), lanes, layout, it.alone, windows, window_cycle_ticks, window_cycles, logger, ends)))), false);
     }
     // every taker short by at most one hand: the runs with a shortfall again, twice as long, and a loss where a taker is
     // short there by more than one hand of its own (the unfinished hand at the span's end can fall on another taker) and a
@@ -730,7 +764,8 @@ export function judgeSharedLanes(config: Config, clock_windows: SerializableCloc
         const alone = runAlone(under, taker_ids, windows, window_cycle_ticks, 2 * window_cycles, logger);
         for (const { layout } of short_runs) {
             const longer = shortfallsOf(under, lanes, layout, alone, windows, window_cycle_ticks, 2 * window_cycles, logger, ends);
-            losses.push(...standing(longer, longer.shortfalls.filter(shortfall => shortfall.short > shortfall.hand).map(shortfall => shortfall.loss)));
+            losses.push(...standing(longer, longer.shortfalls.filter(shortfall => shortfall.short > shortfall.hand).map(shortfall => shortfall.loss),
+                () => shortfallsOf(withoutOutputBelt(under), lanes, layout, alone, windows, window_cycle_ticks, 2 * window_cycles, logger, ends)));
         }
     }
     return judged(losses, true);
