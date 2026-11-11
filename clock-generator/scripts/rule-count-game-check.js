@@ -23,7 +23,7 @@ const SAMPLE = process.env.SAMPLE ?? "ADVANCED_CIRCUIT_240";
 const SCAFFOLDS = {
     ADVANCED_CIRCUIT_240: { scaffold: "intermediates/advanced-circuit/advanced-circuit.scaffold", warmup: 3600 },
     AUTOMATION_SCIENCE_240: { scaffold: "science/automation/automation-240.scaffold", warmup: 300 },
-    ACCUMULATOR_640: { scaffold: "intermediates/accumulator/accumulator-640.scaffold", warmup: 3600 },
+    ACCUMULATOR_320: { scaffold: "intermediates/accumulator/accumulator-320.scaffold", warmup: 3600 },
     LDS_240: { scaffold: "intermediates/lds/lds-240.scaffold", warmup: 3600 },
     // the egg loop cannot start itself, so the egg machines are given eggs to begin with, as the game tests do
     AGRICULTURAL_SCIENCE_250: {

@@ -370,8 +370,8 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     // nine. The scaffold before was the build of issue 152 (one copy of 18 at 640 a second), where the clock 0.9.0 selected
     // made 512 to 544 of its 576 a window cycle.
     "accumulator": {
-        scaffold: path.join(SAMPLES, "intermediates", "accumulator", "accumulator-640.scaffold"),
-        config: ConfigPaths.ACCUMULATOR_640,
+        scaffold: path.join(SAMPLES, "intermediates", "accumulator", "accumulator-320.scaffold"),
+        config: ConfigPaths.ACCUMULATOR_320,
         seed: [],
         warmup_ticks: 3600,
         copies: 9,

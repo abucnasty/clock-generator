@@ -60,7 +60,7 @@ const BUILDS = {
     "advanced-circuit": { scaffold: "intermediates/advanced-circuit/advanced-circuit.scaffold", config: "ADVANCED_CIRCUIT_240", seed: [], warmup_ticks: 3600 },
     "utility-science": { scaffold: "science/utility/utility-120.scaffold", config: "UTILITY_SCIENCE_120", seed: [], warmup_ticks: 3600 },
     "utility-science-belted-blue-and-lds": { scaffold: "science/utility/utility-120-processing-unit-and-lds-on-one-belt.scaffold", config: "UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT", seed: [], warmup_ticks: 3600 },
-    "accumulator": { scaffold: "intermediates/accumulator/accumulator-640.scaffold", config: "ACCUMULATOR_640", seed: [], warmup_ticks: 3600 },
+    "accumulator": { scaffold: "intermediates/accumulator/accumulator-320.scaffold", config: "ACCUMULATOR_320", seed: [], warmup_ticks: 3600 },
     "productivity-module-80-chest-chain-clock": { scaffold: "intermediates/productivity-module/productivity-module-80-chest-chain.scaffold", config: "PRODUCTIVITY_MODULE_80_CHEST_CHAIN", seed: [], warmup_ticks: 3600 },
     "iron-bacteria": { scaffold: "gleba/iron-bacteria/iron-bacteria-380-cultivation.scaffold", config: "IRON_BACTERIA_380_CULTIVATION", seed: [{ target: { recipe: "iron-bacteria-cultivation" }, item: "iron-bacteria", count: 50 }], warmup_ticks: 300 },
 };

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "ACCUMULATOR_640",
+  "sample": "ACCUMULATOR_320",
   "target": {
     "item": "accumulator",
     "counts": "made",

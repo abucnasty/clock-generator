@@ -123,7 +123,7 @@ describe("hands in groups", () => {
     });
 
     it("does not apply to a build of machines that hand products on by several hands a period", async () => {
-        const accumulator = await loadConfigFromFile(ConfigPaths.ACCUMULATOR_640);
+        const accumulator = await loadConfigFromFile(ConfigPaths.ACCUMULATOR_320);
         expect(windowsOf(accumulator)).toThrow(RoundRobinPollingNotApplicable);
     });
 });
@@ -391,12 +391,12 @@ describe("takers of one machine that it cannot serve together", () => {
     });
 });
 
-// The accumulator build (ACCUMULATOR_640): the iron foundry (3) fills the accumulator plants (1, 2) through inserters 3 and 4 and the
+// The accumulator build (ACCUMULATOR_320): the iron foundry (3) fills the accumulator plants (1, 2) through inserters 3 and 4 and the
 // battery plants (4, 5) through inserters 5 and 7, a hand of 16 each. In its batched swings clock of 54 ticks each pair has a window
 // of 18 ticks a window cycle.
 describe("the takers of a machine into machines of other recipes", () => {
     it("are reported beside the turn decision, which they do not change", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.ACCUMULATOR_640);
+        const config = await loadConfigFromFile(ConfigPaths.ACCUMULATOR_320);
         const plan = unclockedRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, { logger: quiet });
         const registry = plan.run.simulation_context.entity_registry;
         const foundry = registry.getEntityByIdOrThrow(EntityId.forMachine(3)) as Machine;
