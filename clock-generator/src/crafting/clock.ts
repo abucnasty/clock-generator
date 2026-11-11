@@ -69,13 +69,13 @@ export function fuelHandRoomTicks(entity_registry: ReadableEntityRegistry): Map<
 }
 
 /**
- * Ticks added to the end of each window of an inserter that picks up from a lane that is not a dead end: room for one
- * more hand, the ticks that hand takes to fill at one lane stack a tick (4 for a hand of 16 from stacks of 4). On such a
- * lane a takeover upstream or a gap passing the pickup can start a hand later than in the planning run, and a window
- * without the room closes on a partly filled hand. The hand is the one it moves of each item it takes, and the lane
- * whose fill takes longest sets the ticks. A lane that is a dead end gives none: there the hand fills from the lane at
- * rest, and its windows last as long as that takes (see backpressureHandTicks). A lane with an unknown end gives the
- * room, as a lane that is not a dead end. Absent for an inserter that takes from a dead end only, or not from a belt.
+ * Ticks added to the end of each window of an inserter that picks up from a belt: room for one more hand, the ticks that
+ * hand takes to fill at one lane stack a tick (4 for a hand of 16 from stacks of 4). A takeover upstream or a gap passing
+ * the pickup can start a hand later than in the planning run, and a window without the room closes on a partly filled
+ * hand. The hand is the one it moves of each item it takes, and the lane whose fill takes longest sets the ticks. The
+ * end of the lane changes nothing: a dead end gets the room as a lane that flows on does (on a lane with backpressure it
+ * comes after the ticks a hand takes from the lanes at rest, see backpressureHandTicks). Absent for an inserter that
+ * does not take from a belt.
  *
  * Absent as well for a side pickup (a pickup with no layout named is one, on a straight belt) that takes an item both
  * lanes of its belt carry: its hand takes from the lane nearest it first and from the far lane when the near one gives
@@ -92,18 +92,13 @@ export function laneHandRoomTicks(entity_registry: ReadableEntityRegistry): Map<
         if (!Entity.isBelt(source)) {
             continue;
         }
-        const facts = entity.belt_lane_facts;
         const taken = source.lanes.filter(lane => entity.filtered_items.has(lane.ingredient_name));
         const side_pickup = (entity.pickup_layout ?? "side-straight").startsWith("side-");
         if (side_pickup && taken.length === 2 && taken[0].ingredient_name === taken[1].ingredient_name) {
             continue;
         }
         // the lanes of the items it takes; of a belt none of whose items it takes, every lane (its nominal hand)
-        const lanes = (taken.length > 0 ? taken : source.lanes)
-            .filter(lane => !isDeadEnd(facts[source.lanes.indexOf(lane)]));
-        if (lanes.length === 0) {
-            continue;
-        }
+        const lanes = taken.length > 0 ? taken : source.lanes;
         room.set(entity.entity_id.id, Math.max(...lanes.map(lane => stacksOf(handSizeFor(entity, lane.ingredient_name), lane.stack_size))));
     }
     return room;

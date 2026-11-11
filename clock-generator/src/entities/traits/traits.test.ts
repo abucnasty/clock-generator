@@ -143,7 +143,7 @@ describe("the automated insertion limits (rule 2, mechanics/machines.md section 
     });
 
     it("are 32 for the iron of the accumulator plant", async () => {
-        const plant = (await sampleTraits(ConfigPaths.ACCUMULATOR_640))["machine:1"] as MachineTraits;
+        const plant = (await sampleTraits(ConfigPaths.ACCUMULATOR_320))["machine:1"] as MachineTraits;
         expect(plant.input_limits.limits.find(limit => limit.item === "iron-plate")?.limit).toBe(32);
     });
 });

@@ -123,7 +123,7 @@ describe("hands in groups", () => {
     });
 
     it("does not apply to a build of machines that hand products on by several hands a period", async () => {
-        const accumulator = await loadConfigFromFile(ConfigPaths.ACCUMULATOR_640);
+        const accumulator = await loadConfigFromFile(ConfigPaths.ACCUMULATOR_320);
         expect(windowsOf(accumulator)).toThrow(RoundRobinPollingNotApplicable);
     });
 });
@@ -153,12 +153,13 @@ describe("hands in a chain of machines", () => {
             { surplus_guard: true, feeder_offset: 1, share_windows: false });
         // three hands of 12 ticks onto the belt; then, as the last of them starts, the units and frames (two hands of 11, a third start the
         // limit refuses, and the room for one more hand, 4); the low density structure behind them (two hands of 8 and a third start); the plastic
-        // a tick after it (four hands of 8: no more than four) and the coal after that (two hands of 11 and a third start, and the room for one more hand)
+        // a tick after it (four hands of 8: no more than four) and the coal after that (two hands of 11 and a third start; coal comes on both
+        // lanes, so the far lane fills what the near one withholds and the window has no room for one more hand)
         for (const id of [3, 4, 9, 13, 18, 21, 24, 27]) expect(ranges(windows, `inserter:${id}`)).toEqual([[0, 36]]);
         for (const id of [1, 2, 14, 15, 16, 17, 28, 29]) expect(ranges(windows, `inserter:${id}`)).toEqual([[26, 53]]);
         for (const id of [5, 6, 7, 8, 22, 23, 25, 26]) expect(ranges(windows, `inserter:${id}`)).toEqual([[54, 71]]);
         for (const id of [10, 12, 19, 20]) expect(ranges(windows, `inserter:${id}`)).toEqual([[55, 80]]);
-        expect(ranges(windows, "inserter:11")).toEqual([[56, 83]]);
+        expect(ranges(windows, "inserter:11")).toEqual([[56, 79]]);
     });
 
     it("has no groups that take turns: one group serves the chain", () => {
@@ -391,12 +392,12 @@ describe("takers of one machine that it cannot serve together", () => {
     });
 });
 
-// The accumulator build (ACCUMULATOR_640): the iron foundry (3) fills the accumulator plants (1, 2) through inserters 3 and 4 and the
+// The accumulator build (ACCUMULATOR_320): the iron foundry (3) fills the accumulator plants (1, 2) through inserters 3 and 4 and the
 // battery plants (4, 5) through inserters 5 and 7, a hand of 16 each. In its batched swings clock of 54 ticks each pair has a window
 // of 18 ticks a window cycle.
 describe("the takers of a machine into machines of other recipes", () => {
     it("are reported beside the turn decision, which they do not change", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.ACCUMULATOR_640);
+        const config = await loadConfigFromFile(ConfigPaths.ACCUMULATOR_320);
         const plan = unclockedRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, { logger: quiet });
         const registry = plan.run.simulation_context.entity_registry;
         const foundry = registry.getEntityByIdOrThrow(EntityId.forMachine(3)) as Machine;

@@ -7,9 +7,13 @@ import {generateClockForConfig} from "./generate-clock";
 import {generateClockAlternatives, planClockAlternatives, runClockAlternativeTask} from "./alternatives";
 import {plannedFractionally, quiet} from "./generate-blueprint-test-helpers";
 import * as trial from "./trial";
+import * as planning from "./plan/unclocked-run";
 
 const options = {logger: quiet, verify_as_built: false, fuel_consumption_view: false, factorio_states: false, modulo_blueprint: false};
 const signature = trial.clockVerificationSignature;
+/** Windows by inserter, in one text whatever the order of the inserters */
+const windowsKey = (windows: Record<string, { start: number; end: number }[]>) =>
+    JSON.stringify(Object.entries(windows).sort(([a], [b]) => a.localeCompare(b)).map(([id, ranges]) => [id, ranges.map(range => [range.start, range.end])]));
 let config: Config;
 let result: ReturnType<typeof generateClockForConfig>;
 beforeAll(async () => {
@@ -85,17 +89,28 @@ describe("request-local duplicate verification", () => {
     it("assesses a matching primary only once and still supplies a valid run for dependency checks", async () => {
         const logistic = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240);
         const recovery = vi.spyOn(trial, "disturbanceTrialVerdictOf");
+        const planned = vi.spyOn(planning, "clockOfPlan");
         const generated = generateClockAlternatives(logistic, {logger: quiet});
         const keys = recovery.mock.calls.map(([config, result]) => signature(config, result));
         expect(keys.length).toBeGreaterThan(1);
-        // the clocks of the windows made by arithmetic and of the windows shaped against ghost wakeups are tried while the primary
-        // windows are chosen (generate-clock.ts), before the alternative is assessed; the run memo serves the second ask, so the one
-        // of them this sample makes is the key asked twice
+        // the clocks of the windows made by arithmetic, of the planning run's windows with the room for one hand they hold
+        // already (laneHandRoomTicks gives each belt pickup of the sample the room, so its windows are tried with the room
+        // inside them as well as added after them) and of the windows shaped against ghost wakeups are tried while the primary
+        // windows are chosen (generate-clock.ts), before the alternative is assessed; the run memo serves the second ask, so
+        // theirs are the keys asked twice
         const repeated = keys.filter((key, index) => keys.indexOf(key) !== index);
+        // the windows of the clocks made with the room inside them (clockOfPlan, lane_hand_room "inside")
+        const inside = new Set(planned.mock.calls.flatMap(([, room], index) => {
+            if (room?.lane_hand_room !== "inside") return [];
+            const made: planning.PlannedClock = planned.mock.results[index].value;
+            return [windowsKey(Object.fromEntries(Array.from(made.windows, ([id, ranges]) =>
+                [id, ranges.map(range => ({start: range.start_inclusive, end: range.end_inclusive}))])))];
+        }));
+        expect(inside.size).toBeGreaterThan(0);
         const chosen = recovery.mock.calls.filter(([, result]) => result.window_maker === "arithmetic"
-            || result.ghost_wakeup_windows !== undefined)
+            || inside.has(windowsKey(result.clock_windows)) || result.ghost_wakeup_windows !== undefined)
             .map(([config, result]) => signature(config, result));
-        expect(repeated).toHaveLength(1);
+        expect(repeated).toHaveLength(3);
         expect(chosen).toEqual(expect.arrayContaining(repeated));
         // Both clocks are stable; batched swings is selected on its fewer wake-ups although swings-1 recovers in 2 window cycles
         // rather than 3. Sharing the verification must preserve that choice.
@@ -116,7 +131,7 @@ describe("request-local duplicate verification", () => {
     it("lets the worker API skip recovery of a matching primary without changing its completed assessment", async () => {
         // military science: logistic science's primary keeps the belt pickup slack inside its windows, which a run of
         // fractional swings does not make (alternatives.ts, fractionalMakesThePrimary)
-        const military = await loadConfigFromFile(ConfigPaths.MILITARY_SCIENCE_120);
+        const military = await loadConfigFromFile(ConfigPaths.MILITARY_SCIENCE_240);
         const plan = planClockAlternatives(military, {logger: quiet});
         const recovery = vi.spyOn(trial, "disturbanceTrialVerdictOf");
         // the plan leaves the fractional task out here, as one that makes the primary clock again: made anyway, it is that duplicate

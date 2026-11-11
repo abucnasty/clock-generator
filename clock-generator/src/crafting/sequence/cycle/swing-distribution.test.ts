@@ -36,7 +36,7 @@ describe('computeMaxSwingsPerSubCycle', () => {
 
     // Factorio 2.1.21 (factorio-benchmarks docs/mechanics, machines.md rules 1 and 3 and section 5, "A swung hand is
     // inserted whole"): a machine takes an ingredient while it is under its insertion limit, and a hand goes in whole.
-    // The accumulator plant of the ACCUMULATOR_640 sample: iron limit 32, 24.925 iron a second, hands of 16 in a cycle
+    // The accumulator plant of the ACCUMULATOR_320 sample: iron limit 32, 24.925 iron a second, hands of 16 in a cycle
     // of 8 ticks. The third hand finds 2 * (16 - 3.32) = 25.4 under the limit and goes in; the fourth would find 38.
     // Counted with the limit as a cap on the stock after the drop it was 2, and the plan of 8/3 hands a cycle could
     // not be spread (3 in two of every three cycles).

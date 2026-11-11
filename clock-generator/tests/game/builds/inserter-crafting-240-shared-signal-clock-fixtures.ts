@@ -17,8 +17,8 @@ import {assertFeedBacksUp, PickupClockScenario} from "./pickup-clock-capture";
  * near lane stops there, and the far lane goes on to two more electric furnaces and ends. Those four furnaces feed the
  * build's transport belt foundry, the outer line's two straight into it and the inner line's two through one more gear
  * assembler; the foundry's three output lines join into one belt that ends in a loader and a void chest, so its drain is
- * held to one belt, 240 a second, and the four furnaces to 40 plates a second each (the config's outlet of 53 1/3 ore a
- * second on the far lane of each ore line).
+ * held to one belt, 240 a second, and the four furnaces to 40 plates a second each (53 1/3 ore a second off the far lane of
+ * each ore line). The config states the ore lanes as dead ends past the third copy, as the sample's scaffold has them.
  *
  * The hand-made clock is in it, one for the three copies: a counter of the clock signal that counts 0 to 215 (a window cycle of
  * 216 ticks), and two window combinators, an iron plate signal on ticks 1-33 and 109-138 for the 12 ore and 12 plate
@@ -54,7 +54,7 @@ export function inserterCraftingClockCases(): InserterCraftingClockCase[] {
 }
 
 const SCAFFOLD = path.join(__dirname, "inserter-crafting-240-shared-signal-clock-three-copies.scaffold");
-/** The sample's scaffold: one copy of the unit, the ore lines and the circuit belts ending at the last inserter that takes from them */
+/** The sample's scaffold: the first copy of the build, its ore lines and circuit belt ending at an underground entrance with nothing beyond */
 const ONE_COPY_SCAFFOLD = path.join(path.dirname(ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK), "inserter-crafting-240-shared-signal-clock.scaffold");
 
 /** The counter of the hand-made clock (entity 36 of the blueprint): 0 to 215 */
@@ -79,16 +79,16 @@ export const GENERATED_ALTERNATIVE = "coordinated_sources";
 export const BACKED_UP_ALTERNATIVE = "round_robin_polling_swings_6";
 
 /**
- * The copies are not alike, as they were built, and the config is the third (the eastern copy, with no overrides): the
- * first two have a gear assembler at 44.921875 where the third has 40.3125, and the first has a fourth furnace at 91.875 in
- * place of the config's machine 5 (86.1655). All three make 80 a second unclocked.
+ * The copies are not alike, as they were built, and the config is the first (the western copy, the sample's scaffold): the
+ * first two have a gear assembler at 44.921875 where the third has 40.3125, and the first has a fourth furnace at 91.875
+ * where the other two have 86.1655 as machine 5. All three make 80 a second unclocked.
  */
 function machinesOfCopies(config: Config): string[] {
     const row = (machine: Config["machines"][number], speed = machine.crafting_speed) => `${machine.recipe} ${speed.toFixed(4)} ${machine.productivity}`;
     const copy = (gear_speed: number | null, fifth_speed: number | null) => config.machines.map(machine =>
         machine.recipe === "iron-gear-wheel" && gear_speed !== null ? row(machine, gear_speed)
             : machine.id === 5 && fifth_speed !== null ? row(machine, fifth_speed) : row(machine));
-    return [...copy(44.921875, 91.875), ...copy(44.921875, null), ...copy(null, null)];
+    return [...copy(null, null), ...copy(null, 86.1655), ...copy(40.3125, 86.1655)];
 }
 
 /**

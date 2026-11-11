@@ -67,12 +67,12 @@ was recorded in the game for each build, its credit, source and issues are in th
 | LOGISTIC_SCIENCE_240 | `science/logistic/logistic-240` | `logistic-science-pack` 240/s over 11 copies | Default example and default sample; game (`scaffold-recordings`, on abucnasty's whole build: 22 assemblers in two rows of 11, each row judged against 240/s and the build against 480/s, the bottom row a mirror of the top); the feasibility refusal at hand size 2 (`why-not-stable`); unit pins of the recommended clock (rule count, verification signature, traits, rules of the game) | LOGISTIC_SCIENCE, which once named the old three-inserter config (this build replaced it). Also replaced LOGISTIC_SCIENCE_SHARED_INSERTER and SAMPLE_CONFIG, both dropped |
 | LOGISTIC_SCIENCE_240_DIRECT_INSERT | `science/logistic/logistic-240-direct-insert` | `logistic-science-pack` 240/s over 6 copies | Game both ways; output-swings forced-count generation | LOGISTIC_SCIENCE_DI |
 | METALLURGIC_SCIENCE_45 | `science/metallurgic/metallurgic-45` | `metallurgic-science-pack` 45/s over 1 copy | Not in `test:game` (the game moves a hand more in about 1 window cycle in 11); generation and wake-capture units; UI example | METALLURGIC_SCIENCE_PACK |
-| MILITARY_SCIENCE_120 | `science/military/military-120` | `military-science-pack` 120/s over 5 copies | Game (`scaffold-recordings`, on abucnasty's build); the shared-windows generation file (on the speeds before the build's own, the recommended clock is `planned-belt-slack-shared`, set inline; on its own it is `planned-belt-slack`); UI example | MILITARY_SCIENCE |
+| MILITARY_SCIENCE_240 | `science/military/military-240` | `military-science-pack` 240/s over 5 copies | Game (`scaffold-recordings`, on abucnasty's whole build of five mirrored pairs, `copies: 5`): the case fails on the test's rule for rows of output inserters (see below). The shared-windows generation file (on the earlier build's speeds); UI example; a unit file of its own (its lanes, and its selected clock stable) | MILITARY_SCIENCE_120 (the earlier build: one military science assembler and one grenade assembler a copy, 120/s over 5 copies, on a one-copy scaffold), and before it MILITARY_SCIENCE |
 | PRODUCTION_SCIENCE_120_TWO_BELTS | `science/production/production-120-two-belts` | `production-science-pack` 120/s over 7 copies | Game (`scaffold-recordings`, on abucnasty's build); UI example; derived clock windows generation; inline, one inserter picking two items (from the merged shared-pickup config): fractional per-item swing counts in output-swings generation and window cycles (figures recomputed on 2.1) | PRODUCTION_SCIENCE_JSON. It absorbed PRODUCTION_SCIENCE_SHARED_JSON, the same build with fractional swings |
 | UTILITY_SCIENCE_120 | `science/utility/utility-120` | `utility-science-pack` 120/s over 7 copies | Game both ways; generation; belt-near-lane and deadlock-risk units; UI example | UTILITY_SCIENCE |
 | UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT | `science/utility/utility-120-processing-unit-and-lds-on-one-belt` | `utility-science-pack` 120/s over 7 copies | Game both ways; output-swings generation; 2 output swings is stable without a search | UTILITY_SCIENCE_BELTED_COMBINED_BLUE_AND_LDS |
 | UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN | `science/utility/utility-480-lds-foundry-chain` | `utility-science-pack` 480/s over 3.5 copies | Game (3.5 copies, losses of coal, outputs and units); the 15/8-hand coal inserter; source-order and near-lane mechanics; blast SLOW job | REAL_THAELN_CELL09 |
-| ACCUMULATOR_640 | `intermediates/accumulator/accumulator-640` | `accumulator` 640/s over 18 copies | Game: the build where the observed-windows clock first held 576 a window cycle; decider order checked by the record's property module; even-hands and swing-distribution units | ACCUMULATOR_640 (unchanged) |
+| ACCUMULATOR_320 | `intermediates/accumulator/accumulator-320` | `accumulator` 320/s over 9 copies | Game (`scaffold-recordings`, on abucnasty's build of nine copies, `copies: 9`); on the earlier scaffold of issue 152 (640/s over 18 copies), the build where the observed-windows clock first held 576 a window cycle; decider order checked by the record's property module; even-hands and swing-distribution units | ACCUMULATOR_640 (the build of issue 152: 640/s over 18 copies, on a one-copy scaffold) |
 | ADVANCED_CIRCUIT_230 | `intermediates/advanced-circuit/advanced-circuit-230` | `advanced-circuit` 230/s over 3 copies | Game: the first clock of this sample that holds (found by the one search of 2026-10-11); the only `ignored_lcm_ingredients` case | ADVANCED_CIRCUIT_230 (unchanged) |
 | ADVANCED_CIRCUIT_240 | `intermediates/advanced-circuit/advanced-circuit-240` | `advanced-circuit` 240/s over 3 copies | Game; small-batches fallback variant job (belts backed up); rules-of-the-game and rule-calls | ADVANCED_CIRCUIT (the same build; the key now carries the rate) |
 | ELECTRIC_FURNACE_20 | `intermediates/electric-furnace/electric-furnace-20` | `electric-furnace` 20/s over 2 copies | Game (`scaffold-recordings`, on abucnasty's build); units: stone-brick furnaces fed by drills (utilization, steady-state, wakeups from starts). Origin: the furnace supply of a production science design, rated to fit 120/s of production science (240/s with more copies) | ELECTRIC_FURNACE |
@@ -102,7 +102,10 @@ Builds without a scaffold have labels and selections that only the simulator vou
 label is trusted. One copy each, in the build's item folder, named `<stem>.scaffold`; then add it to
 `tests/game/builds/scaffold-recordings.game.test.ts` with its kick start, if any, and the warm-up and settle it needs.
 
-No build is left on the list.
+On the list: **MILITARY_SCIENCE_240** (2026-11-10). Its scaffold is abucnasty's whole build of five mirrored pairs, not one copy; the
+test names the copies (`copies: 5`). Its `scaffold-recordings` case fails: the test asks each row of output inserters for one copy's
+output for each inserter in the row, and each copy of this build has two output inserters, one in each row. In the game each copy
+moved 48 a second, 100% (the recommended clock, recorded outside the test).
 
 Not on the list any more: **LOGISTIC_SCIENCE_240** (2026-11-04). Its scaffold is abucnasty's whole build, 22 assemblers, not one copy;
 the test names the copies (`copies: 22`).
@@ -111,7 +114,7 @@ the copies (`copies: 12`).
 
 Also not on the list any more (2026-11-04, abucnasty's builds): **ROCKET_FUEL_60** and **STONE_BRICK_120_DRILL_DIRECT_INSERT**, each with
 abucnasty's scaffold and a game check of the recommended clock; and (2026-11-05) **PRODUCTION_SCIENCE_120_TWO_BELTS**, **PROCESSING_UNIT_15_CHEST_FED**,
-**MILITARY_SCIENCE_120**, **FLYING_ROBOT_FRAME_160** (now FLYING_ROBOT_FRAME_80) and **ELECTRIC_FURNACE_20**, all five in `test:game` holding their target;
+**MILITARY_SCIENCE_120** (now MILITARY_SCIENCE_240, a later build; see above), **FLYING_ROBOT_FRAME_160** (now FLYING_ROBOT_FRAME_80) and **ELECTRIC_FURNACE_20**, all five in `test:game` holding their target;
 PROCESSING_UNIT_15_CHEST_FED since 0.27.2, when the simulator took the infinity chest's items in the game's order (see its README, #617).
 
 ## Disturbance trials
@@ -290,11 +293,21 @@ Open:
 
 ## Accumulator
 
-The build of [issue 152](https://github.com/abucnasty/clock-generator/issues/152), 640 accumulators a second over 18
-copies: two electromagnetic plants make accumulators (50% productivity), two cryogenic plants batteries (200%), and two
-foundries cast the iron and the copper (150%), all from infinity pipes. The config is `accumulator-640.json`
-(`ACCUMULATOR_640`) and the scaffold `accumulator-640.scaffold`, both as the issue gives them; the issue's config
-also has "Search for fewer wake-ups" on, which selects the same clock, since no clock made without a search is stable.
+abucnasty's build of nine copies (2026-11-10), 320 accumulators a second, 16 tiles from one copy to the next: in each
+copy two electromagnetic plants make accumulators (50% productivity), two cryogenic plants batteries (200%), and two
+foundries cast the iron and the copper (150%), all from infinity pipes. The upper plants drop onto one line and the
+lower plants onto another; on each line the drops of the first four copies are side-loaded onto the other lane before
+the last five drop, and the line ends in a loader into a void chest. The config states the copies' spacing
+(`copy_offset`) and a belt for each line; the lane change is not stated, as drops onto a lane that copies share are not
+modelled. The config is `accumulator-320.json` (`ACCUMULATOR_320`) and the scaffold `accumulator-320.scaffold`, the
+build as given. Recorded on it in Factorio 2.1.24 (`scaffold-recordings`, `copies: 9`):
+each copy moved its 576 a window cycle of 972 ticks (35.56 a second) in each of the 3 window cycles checked, each line
+2,592, with the machines at the config's speeds and productivity. The game test does not compare a build of copies with
+the simulator entity by entity, and does not count its wake-ups.
+
+Before it the sample was the build of [issue 152](https://github.com/abucnasty/clock-generator/issues/152), 640 a
+second over 18 copies, with the same machines, modules and inserters in each copy and the two plants side by side; the
+issue's config also has "Search for fewer wake-ups" on. What follows was recorded on that scaffold.
 
 The clock 0.9.0 selected (observed windows, 2 output swings per cycle) was stable in the simulator and made 528, 544,
 544, 544, 544, 528 and 512 of its 576 a window cycle in the game, that cycle over and over. Started in the state the game

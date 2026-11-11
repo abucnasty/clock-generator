@@ -3,11 +3,20 @@ import { Logger } from "../common/logger";
 import { OpenRange } from "../data-types";
 import Fraction, { fraction } from "../data-types/fraction";
 import { FactorioDataService } from "../data";
-import { handSizeFor, Inserter } from "../entities";
+import { Entity, EntityId, handSizeFor, Inserter } from "../entities";
 import { FlowDirection, LaneEnd, laneFactsOf } from "../entities/traits/lane-facts";
 import { fractionOf } from "../entities/traits/ratio";
+import { handOfItem, traitsOf, traitsOfMachine } from "../entities/traits/traits-of";
+import type { AfterInsertersTick } from "../simulation/world";
+import type { MachineState } from "../state/machine-state";
 import { SerializableClockWindows } from "./clock";
+import { computeMachineTargetRates } from "./machine-target-rates";
+import { COPY_NUMBER_STRIDE } from "./sequence/build-copies";
+import { OutputCyclePlan } from "./sequence/cycle/output-cycle";
+import { targetInsertersOf, targetItemOf, targetMachinesOf } from "./sequence/cycle/target-ends";
+import { createEntityRegistryFromConfig, SimulationContext } from "./sequence/simulation-context";
 import { DropRecorder, HandDropped, LaidOutLane, LaneRow, recordInserters, runOnSharedLanes, SharedLaneLayout, sharedLaneLayoutOf } from "./shared-lane-model";
+import { TargetProductionRate } from "./target-production-rate";
 import { longRunWindowCyclesOf, runClockOnBuild } from "./trial";
 
 /**
@@ -41,8 +50,23 @@ import { longRunWindowCyclesOf, runClockOnBuild } from "./trial";
  *   and no other run;
  * - every taker short by at most one hand: the runs with a shortfall are made again for twice the window cycles. A taker
  *   short there by more than one hand of its own is a loss; a taker short there by at most one hand is a lag.
- * A drift too slow to make a taker short by more than one hand in twice the run passes. What each copy's taker got is
- * read through one function, `copyLaneTakes`, and nowhere else.
+ * A drift too slow to make a taker short by more than one hand in twice the run passes.
+ *
+ * A taker short of the run of one copy is not by itself output lost: the copy alone can still be filling a machine's stock
+ * in the judged span, and take more there than its steady rate, while a copy on the shared lanes filled it earlier and
+ * takes less. Measured on the inserter build (Time-Study Windows on 72 ticks): copy 3's ore inserter is short by 48 items
+ * (3 hands), every machine and output inserter of every copy keeps its target rate, and the game holds the clock. What a
+ * clock is held to is that each machine meets its target rate, to supply its sink or the output inserters the setpoint
+ * counts at. So a loss stands only where, in the same run of the copies and over the same judged window cycles, a machine
+ * of a copy is behind its target rate by more than one craft, or an output inserter of a copy by more than one hand
+ * (`behindTargetIn`). A part copy's machine can have fewer takers than a whole copy's, and makes only what they take: it
+ * is held to the whole copy's target times the share of the machine's takers' transfers that the part copy holds. A part
+ * copy's output inserter is held to its own target. Where none is behind, the shortfall is stock moved between the runs,
+ * and the clock holds. The condition reads only the runs made above: it adds no run, and a clock that no taker's
+ * shortfall fails holds whatever its rates. Where the targets cannot be worked out, the loss stands.
+ *
+ * What each copy's taker got, and what each copy's machines and output inserters made, is read through one function,
+ * `copyLaneTakes`, and nowhere else.
  */
 
 /** What one taker of one copy put down of a lane's item in a run of the copies on their shared lanes */
@@ -58,14 +82,70 @@ export interface CopyLaneTake {
     hands: readonly HandDropped[];
 }
 
+/** What one machine of one copy made, or one output inserter of one copy put down of the target's item, in a run of the copies */
+export interface CopyMade {
+    /** The copy, counted from the lane's entry: 0 is the config's own */
+    copy: number;
+    kind: "machine" | "output_inserter";
+    /** The config's machine or inserter that the copy's is a copy of */
+    id: number;
+    /** The crafts it finished, or the items it put down, at the ticks of the run */
+    counts: readonly { tick: number; amount: number }[];
+}
+
+/** The output inserters of a config, by number, and the item of its target: where a copy's output is counted */
+interface OutputEnds {
+    item: string;
+    inserter_ids: ReadonlySet<number>;
+}
+
+/** Records the crafts a machine finishes, at the ticks it finishes them */
+class CraftRecorder implements AfterInsertersTick {
+    public readonly counts: { tick: number; amount: number }[] = [];
+    private crafts: number;
+
+    constructor(private readonly machine: MachineState, private readonly now: () => number) {
+        this.crafts = machine.craftCount;
+    }
+
+    public tick(): void {
+        const crafts = this.machine.craftCount;
+        if (crafts > this.crafts) this.counts.push({ tick: this.now(), amount: crafts - this.crafts });
+        this.crafts = crafts;
+    }
+}
+
+/** Puts a recorder on every machine of every copy, and on every output inserter of every copy, before the run's first tick */
+function recordCopiesMade(context: SimulationContext, ends: OutputEnds | null): () => CopyMade[] {
+    const now = () => context.tick_provider.getCurrentTick();
+    const made: { copy: number; kind: CopyMade["kind"]; id: number; counts: () => readonly { tick: number; amount: number }[] }[] = [];
+    for (const { machine_state } of context.machines) {
+        const recorder = new CraftRecorder(machine_state, now);
+        context.after_inserters.push(recorder);
+        const number = machine_state.machine.entity_id.number;
+        made.push({ copy: Math.floor(number / COPY_NUMBER_STRIDE), kind: "machine", id: number % COPY_NUMBER_STRIDE, counts: () => recorder.counts });
+    }
+    for (const inserter of context.inserters) {
+        const number = inserter.entity_id.number;
+        if (ends === null || !ends.inserter_ids.has(number % COPY_NUMBER_STRIDE)) continue;
+        const recorder = new DropRecorder(inserter, now);
+        context.after_inserters.push(recorder);
+        made.push({ copy: Math.floor(number / COPY_NUMBER_STRIDE), kind: "output_inserter", id: number % COPY_NUMBER_STRIDE,
+            counts: () => recorder.hands.filter(hand => hand.item === ends.item).map(hand => ({ tick: hand.tick, amount: hand.items })) });
+    }
+    return () => made.map(({ counts, ...it }) => ({ ...it, counts: counts() }));
+}
+
 /**
  * What each copy's pickup inserter got on each shared lane: the hands of the lane's item each taker of each copy put down
- * in a run of the clock with every copy of the layout built and the rows' lanes shared, and the run's last tick. The
- * verdict reads the copies' figures here alone, so that where they come from can change in this function only.
+ * in a run of the clock with every copy of the layout built and the rows' lanes shared, and the run's last tick; and, in
+ * the same run, the crafts of each copy's machines and the items of the target each copy's output inserters put down
+ * (`made`). The verdict reads the copies' figures here alone, so that where they come from can change in this function only.
  */
 export function copyLaneTakes(config: Config, windows: Map<string, OpenRange[]>, window_cycle_ticks: number, layout: SharedLaneLayout,
-    window_cycles: number, logger: Logger): { takes: CopyLaneTake[]; last_tick: number } {
-    const model = runOnSharedLanes(config, windows, window_cycle_ticks, layout, window_cycles, logger);
+    window_cycles: number, logger: Logger, ends: OutputEnds | null = null): { takes: CopyLaneTake[]; made: CopyMade[]; last_tick: number } {
+    let madeOf = (): CopyMade[] => [];
+    const model = runOnSharedLanes(config, windows, window_cycle_ticks, layout, window_cycles, logger, context => { madeOf = recordCopiesMade(context, ends); });
     let last_tick = 0;
     const takes = layout.rows.flatMap(row => {
         const item = config.belts.find(belt => belt.id === row.belt_id)!.lanes[row.lane - 1].ingredient;
@@ -76,7 +156,7 @@ export function copyLaneTakes(config: Config, windows: Map<string, OpenRange[]>,
             return [{ belt_id: row.belt_id, lane: row.lane, item, copy: taker.copy, inserter_id: taker.inserter_id, hands: record.hands.filter(hand => hand.item === item) }];
         });
     });
-    return { takes, last_tick };
+    return { takes, made: madeOf(), last_tick };
 }
 
 /** One taker of one copy that loses swings on a lane the copies share */
@@ -100,8 +180,28 @@ export interface SharedLaneLoss {
     window_cycles: number;
     /** The way the items flow, as a map direction */
     flow: FlowDirection;
+    /**
+     * The machine or output inserter furthest behind its target rate in the same run of the copies, which makes the
+     * shortfall a loss; absent only where the targets could not be worked out
+     */
+    behind?: BehindTarget;
     /** The sentence the result shows */
     text: string;
+}
+
+/** A machine or an output inserter of a copy behind its target rate over the judged window cycles of a run of the copies */
+export interface BehindTarget {
+    /** The copy, counted from the lane's entry: 1 is the config's own */
+    copy: number;
+    kind: "machine" | "output_inserter";
+    /** The config's machine or inserter */
+    id: number;
+    /** Crafts it finished, or items of the target it put down, in the judged window cycles */
+    made: number;
+    /** What its target rate makes or puts down in them */
+    target: number;
+    /** Crafts behind for a machine, hands behind for an output inserter: more than one */
+    behind: number;
 }
 
 /** What the fast check and the model said of one clock, for a comparison of the two */
@@ -297,23 +397,36 @@ function directionWord(flow: FlowDirection): string {
 const counted = (value: number) => value.toLocaleString("en-US");
 
 /**
+ * "In the same run, machine 2 of copy 3 is 1,536 crafts behind its target rate." The copy is named where the lane's
+ * copies are, or where the copy is not the config's own.
+ */
+function describeBehind(behind: BehindTarget, copies: number): string {
+    const entity = behind.kind === "machine" ? `machine ${behind.id}` : `output inserter ${behind.id}`;
+    const of_copy = copies === 1 && behind.copy === 1 ? "" : ` of copy ${behind.copy}`;
+    const amount = behind.behind.toLocaleString("en-US", { maximumFractionDigits: 1 });
+    return `In the same run, ${entity}${of_copy} is ${amount} ${behind.kind === "machine" ? "crafts" : "hands"} behind its target rate.`;
+}
+
+/**
  * "Lane 1 of belt 2 ends in a dead end. The 6 copies take advanced circuit from it. When the items move east, copy 3 from
  * the entry does not get sufficient items. Its inserter 3 takes 2,240 in 50 window cycles. With no other copy on the lane, it
- * takes 3,360." One fact a sentence; the game's names of items have no plural.
+ * takes 3,360. In the same run, machine 2 of copy 3 is 1,536 crafts behind its target rate." One fact a sentence; the
+ * game's names of items have no plural.
  */
 function describeSharedLaneLoss(loss: Omit<SharedLaneLoss, "text">): string {
     const run_as = loss.run_as === "dead_end" ? "a dead end" : "an outlet";
     const end = loss.lane_end === "unknown" ? `has an unknown end. It is checked as ${run_as}.` : `ends in ${run_as}.`;
     const item = FactorioDataService.isAvailable() ? FactorioDataService.itemNameInSentence(loss.item) : loss.item;
     const counts = `takes ${counted(loss.items)} in ${loss.window_cycles} window cycles.`;
+    const behind = loss.behind === undefined ? "" : ` ${describeBehind(loss.behind, loss.copies)}`;
     if (loss.copies === 1) {
         return `Lane ${loss.lane} of belt ${loss.belt_id} ${end} The build takes ${item} from it. `
             + `When the items move ${directionWord(loss.flow)}, inserter ${loss.inserter_id} does not get sufficient items. `
-            + `It ${counts} With no other inserter on the lane, it takes ${counted(loss.alone_items)}.`;
+            + `It ${counts} With no other inserter on the lane, it takes ${counted(loss.alone_items)}.${behind}`;
     }
     return `Lane ${loss.lane} of belt ${loss.belt_id} ${end} The ${loss.copies} copies take ${item} from it. `
         + `When the items move ${directionWord(loss.flow)}, copy ${loss.copy} from the entry does not get sufficient items. `
-        + `Its inserter ${loss.inserter_id} ${counts} With no other copy on the lane, it takes ${counted(loss.alone_items)}.`;
+        + `Its inserter ${loss.inserter_id} ${counts} With no other copy on the lane, it takes ${counted(loss.alone_items)}.${behind}`;
 }
 
 /** The tick window cycle `k` of the clock starts in: the clock stands at 0 in the run's first tick */
@@ -355,19 +468,31 @@ function runAlone(under: Config, taker_ids: readonly string[], windows: Map<stri
     return { recorders, last_tick, handOf: (inserter_id, item) => handSizeFor(takers.get(inserter_id)!, item) };
 }
 
+/** One run of the copies, read over its judged window cycles: the takers short of the run of one copy, and what each copy made */
+export interface RunOfCopies {
+    shortfalls: Shortfall[];
+    made: CopyMade[];
+    /** The judged window cycles, from the tick `from` up to, not including, the tick `to` */
+    from: number;
+    to: number;
+    /** What each copy after the config's own holds, in order: every entity, or the ids of the entities a part copy holds */
+    holds: SharedLaneLayout["copies"]["later"];
+}
+
 /**
  * The takers of the copies that put down fewer items of their lane's item than the run of one copy alone, over the whole
- * window cycles of the clock in the second half of both runs
+ * window cycles of the clock in the second half of both runs, and what each copy's machines and output inserters made
  */
 function shortfallsOf(under: Config, lanes: readonly ModelLane[], layout: SharedLaneLayout, alone: AloneRun, windows: Map<string, OpenRange[]>,
-    window_cycle_ticks: number, window_cycles: number, logger: Logger): Shortfall[] {
+    window_cycle_ticks: number, window_cycles: number, logger: Logger, ends: OutputEnds | null): RunOfCopies {
     const facts = laneFactsOf(under);
-    const { takes, last_tick } = copyLaneTakes(under, windows, window_cycle_ticks, layout, window_cycles, logger);
+    const { takes, made, last_tick } = copyLaneTakes(under, windows, window_cycle_ticks, layout, window_cycles, logger, ends);
     const last = Math.min(alone.last_tick, last_tick);
     const first_cycle = Math.ceil(last / 2 / window_cycle_ticks), end_cycle = Math.floor((last + 1) / window_cycle_ticks + 1e-9);
-    if (end_cycle <= first_cycle) return [];
     const from = cycleStart(first_cycle, window_cycle_ticks), to = cycleStart(end_cycle, window_cycle_ticks);
-    return takes.flatMap(take => {
+    const holds = layout.copies.later;
+    if (end_cycle <= first_cycle) return { shortfalls: [], made, from, to, holds };
+    const shortfalls = takes.flatMap(take => {
         const alone_items = itemsIn((alone.recorders.get(take.inserter_id)?.hands ?? []).filter(hand => hand.item === take.item), from, to);
         const items = itemsIn(take.hands, from, to);
         if (items >= alone_items) return [];
@@ -380,24 +505,164 @@ function shortfallsOf(under: Config, lanes: readonly ModelLane[], layout: Shared
             window_cycles: end_cycle - first_cycle, flow: row.flow };
         return [{ short: alone_items - items, hand: alone.handOf(take.inserter_id, take.item), loss }];
     });
+    return { shortfalls, made, from, to, holds };
 }
 
-/** Judges a clock on the lanes its copies share (see the module's description) */
+/** The output inserters of a config and the item of its target (target-ends.ts); null where they cannot be worked out */
+function outputEndsOf(config: Config): OutputEnds | null {
+    try {
+        const registry = createEntityRegistryFromConfig(config);
+        const target = targetItemOf(config.setpoint);
+        const inserter_ids = new Set(targetMachinesOf(target, registry).flatMap(machine => targetInsertersOf(machine, target, registry).map(inserter => inserter.entity_id.number)));
+        return { item: target.item, inserter_ids };
+    } catch {
+        return null;
+    }
+}
+
+/** One inserter that takes from a machine, and the hands it moves in one output cycle of one copy */
+interface MachineTaker {
+    inserter_id: string;
+    transfers: number;
+}
+
+/**
+ * The target rates of one copy: crafts a second of each machine, and items of the target a second of each output inserter,
+ * with its hand; and the takers of each machine, with their transfers
+ */
+export interface TargetRates {
+    crafts_per_second: ReadonlyMap<number, number>;
+    output_inserters: ReadonlyMap<number, { items_per_second: number; hand: number }>;
+    /** The inserters that take from each machine, by the config's machine number */
+    takers: ReadonlyMap<number, readonly MachineTaker[]>;
+}
+
+/**
+ * The target rates of one copy of the config: each machine's from the planner's at-target rates (`computeMachineTargetRates`)
+ * over what one of its crafts makes of its main product, and each output inserter's from the output cycle's transfers of the
+ * target's item. Null where the planner cannot work them out.
+ */
+function targetRatesOf(config: Config, ends: OutputEnds): TargetRates | null {
+    try {
+        const traits = traitsOf(config);
+        const crafts_per_second = new Map(computeMachineTargetRates(config).map(rate => [rate.machine_id,
+            rate.output_rate_per_second / traitsOfMachine(traits, EntityId.forMachine(rate.machine_id).id).yield.results[0].expected_per_craft]));
+        const registry = createEntityRegistryFromConfig(config);
+        const cycle = OutputCyclePlan.create(TargetProductionRate.fromConfig(config.setpoint), registry, config, fraction(1));
+        const seconds = cycle.total_duration_ticks.divide(60);
+        const output_inserters = new Map<number, { items_per_second: number; hand: number }>();
+        // the machine each inserter of the config takes from, by the inserter's id
+        const source_machines = new Map(config.inserters.flatMap((inserter, index) => inserter.source.type === "machine"
+            ? [[EntityId.forInserter(inserter.id ?? index + 1).id, inserter.source.id] as const] : []));
+        const takers = new Map<number, MachineTaker[]>();
+        for (const transfer of cycle.entity_transfer_map.values()) {
+            const number = transfer.entity.entity_id.number;
+            if (!Entity.isInserter(transfer.entity)) continue;
+            const machine = source_machines.get(transfer.entity.entity_id.id);
+            if (machine !== undefined) {
+                takers.set(machine, [...takers.get(machine) ?? [], { inserter_id: transfer.entity.entity_id.id, transfers: transfer.total_transfer_count.toDecimal() }]);
+            }
+            if (!ends.inserter_ids.has(number)) continue;
+            const of_target = transfer.item_transfers.find(it => it.item_name === ends.item);
+            if (of_target === undefined) continue;
+            const hand = handOfItem(traits, transfer.entity.entity_id.id, ends.item);
+            output_inserters.set(number, { items_per_second: of_target.transfer_count.multiply(hand).divide(seconds).toDecimal(), hand });
+        }
+        return { crafts_per_second, output_inserters, takers };
+    } catch {
+        return null;
+    }
+}
+
+/** The rounding of a float rate times a span, below which a figure counts as on its target: not an allowance */
+const ROUNDING = 1e-9;
+
+/**
+ * The share of a whole copy's target that a machine of a copy is held to: all of it for a whole copy; for a part copy, the
+ * share of the machine's takers' transfers that the part copy holds. A machine that no inserter takes from, or whose
+ * takers move nothing in the output cycle, is held to all of it.
+ */
+function machineShareOf(holds: "whole" | ReadonlySet<string>, takers: readonly MachineTaker[] | undefined): number {
+    if (holds === "whole" || takers === undefined) return 1;
+    const all = takers.reduce((sum, taker) => sum + taker.transfers, 0);
+    if (!(all > 0)) return 1;
+    return takers.reduce((sum, taker) => holds.has(taker.inserter_id) ? sum + taker.transfers : sum, 0) / all;
+}
+
+/**
+ * The machines of every copy behind their target rate by more than one craft, and the output inserters of every copy
+ * behind theirs by more than one hand, over the judged window cycles of one run of the copies; the furthest behind first.
+ * A part copy's machine is held to the whole copy's target times the share of the machine's takers' transfers that the
+ * part copy holds (`machineShareOf`): a machine of which it holds two of four equal takers is held to half. An output
+ * inserter of a part copy is held to its own target, as one of a whole copy.
+ */
+export function behindTargetIn(run: RunOfCopies, rates: TargetRates): BehindTarget[] {
+    const seconds = (run.to - run.from) / 60;
+    return run.made.flatMap(({ copy, kind, id, counts }): BehindTarget[] => {
+        const made = counts.reduce((sum, it) => it.tick >= run.from && it.tick < run.to ? sum + it.amount : sum, 0);
+        if (kind === "machine") {
+            const rate = rates.crafts_per_second.get(id);
+            if (rate === undefined) return [];
+            const target = rate * seconds * machineShareOf(copy === 0 ? "whole" : run.holds[copy - 1] ?? "whole", rates.takers.get(id));
+            return target - made > 1 + ROUNDING ? [{ copy: copy + 1, kind, id, made, target, behind: target - made }] : [];
+        }
+        const output = rates.output_inserters.get(id);
+        if (output === undefined) return [];
+        const target = output.items_per_second * seconds;
+        const behind = (target - made) / output.hand;
+        return behind > 1 + ROUNDING ? [{ copy: copy + 1, kind, id, made, target, behind }] : [];
+    }).sort((a, b) => b.behind - a.behind);
+}
+
+/**
+ * The runs of the copies the verdict makes, before any is made: the lanes it judges (`modelLanesOf`), and for each reading of
+ * the lanes of unknown end (a dead end, then a free outlet, where one the copies share has an unknown end) the config under
+ * it and its layouts, one for each way the items move, those with the same rows once.
+ */
+export function sharedLaneRunsOf(config: Config): { lanes: { belt_id: number; lane: 1 | 2; shared: boolean }[]; readings: { under: Config; layouts: SharedLaneLayout[] }[] } {
+    const lanes = modelLanesOf(config);
+    if (lanes.length === 0) return { lanes, readings: [] };
+    const readings = lanes.some(lane => lane.stated.kind === "unknown" && lane.shared) ? 2 : 1;
+    return { lanes, readings: Array.from({ length: readings }, (_, reading) => {
+        const under = configUnder(config, lanes, reading);
+        // a layout whose rows are those of one run already is not run again: the same rows give the same run
+        const layouts = [...new Map(laidOutLanesOf(under, lanes).map(laid => sharedLaneLayoutOf(under, laid)).map(layout => [JSON.stringify(layout), layout])).values()];
+        return { under, layouts };
+    }) };
+}
+
+/**
+ * Judges a clock on the lanes its copies share (see the module's description). The runs it makes are decided by the
+ * takers' shortfalls alone; a loss they find stands only where a machine or an output inserter of a copy is behind its
+ * target rate in the same run (`standing`).
+ */
 export function judgeSharedLanes(config: Config, clock_windows: SerializableClockWindows, window_cycle_ticks: number, logger: Logger): SharedLaneJudgement {
     const lanes = modelLanesOf(config);
     const keys = lanes.map(lane => `${lane.belt_id}/${lane.lane}`);
     if (lanes.length === 0) return { losses: [], fast_check_passes: true, simulated: false, longer_run: false, lanes: keys };
     const windows = new Map(Object.entries(clock_windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     const window_cycles = longRunWindowCyclesOf(window_cycle_ticks);
-    const readings = lanes.some(lane => lane.stated.kind === "unknown" && lane.shared) ? 2 : 1;
+    const ends = outputEndsOf(config);
+    // the target rates, worked out once and only where a taker's shortfall is a loss
+    let rates: TargetRates | null | undefined;
+    /**
+     * The losses the takers of one run of the copies make that stand: each with the machine or output inserter furthest
+     * behind its target in that run, of the loss's own copy where one of it is behind, and none where none is behind
+     * (stock moved between the runs, not output lost). Where the target rates cannot be worked out, every loss stands as
+     * the takers make it.
+     */
+    const standing = (run: RunOfCopies, losses: Omit<SharedLaneLoss, "text">[]): Omit<SharedLaneLoss, "text">[] => {
+        if (losses.length === 0) return [];
+        if (rates === undefined) rates = ends === null ? null : targetRatesOf(config, ends);
+        if (rates === null) return losses;
+        const behind = behindTargetIn(run, rates);
+        return behind.length === 0 ? [] : losses.map(loss => ({ ...loss, behind: behind.find(it => it.copy === loss.copy) ?? behind[0] }));
+    };
     // the first run of each reading: the run of one copy, and the copies on each layout of the lanes, with their shortfalls
-    const first: { under: Config; taker_ids: string[]; runs: { layout: SharedLaneLayout; shortfalls: Shortfall[] }[] }[] = [];
+    const first: { under: Config; taker_ids: string[]; runs: { layout: SharedLaneLayout; run: RunOfCopies }[] }[] = [];
     let fast_check_passes = true;
-    for (let reading = 0; reading < readings; reading++) {
-        const under = configUnder(config, lanes, reading);
+    for (const { under, layouts } of sharedLaneRunsOf(config).readings) {
         const facts = laneFactsOf(under);
-        // a layout whose rows are those of one run already is not run again: the same rows give the same run
-        const layouts = [...new Map(laidOutLanesOf(under, lanes).map(laid => sharedLaneLayoutOf(under, laid)).map(layout => [JSON.stringify(layout), layout])).values()];
         const taker_ids = [...new Set(layouts[0].rows.flatMap(row => row.takers.map(taker => taker.inserter_id)))];
         const alone = runAlone(under, taker_ids, windows, window_cycle_ticks, window_cycles, logger);
         // the fast check, for each item of each belt: the lanes that carry it, their supply summed
@@ -413,27 +678,30 @@ export function judgeSharedLanes(config: Config, clock_windows: SerializableCloc
             groups.set(key, group);
         }
         fast_check_passes &&= [...groups.values()].every(group => refillsInTime(group.rows, group.supply, pickups, group.item, clock_windows, window_cycle_ticks, from_tick, alone.last_tick));
-        first.push({ under, taker_ids, runs: layouts.map(layout => ({ layout, shortfalls: shortfallsOf(under, lanes, layout, alone, windows, window_cycle_ticks, window_cycles, logger) })) });
+        first.push({ under, taker_ids, runs: layouts.map(layout => ({ layout, run: shortfallsOf(under, lanes, layout, alone, windows, window_cycle_ticks, window_cycles, logger, ends) })) });
     }
-    const shortfalls = first.flatMap(it => it.runs.flatMap(run => run.shortfalls));
+    const shortfalls = first.flatMap(it => it.runs.flatMap(({ run }) => run.shortfalls));
     const judged = (losses: Omit<SharedLaneLoss, "text">[], longer_run: boolean): SharedLaneJudgement => ({
         // the worst first: the most items short of the run of one copy
         losses: losses.map(loss => ({ ...loss, text: describeSharedLaneLoss(loss) })).sort((a, b) => (b.alone_items - b.items) - (a.alone_items - a.items)),
         fast_check_passes, simulated: true, longer_run, lanes: keys,
     });
-    // no taker short, or one short by more than a hand, which the end of the judged span does not make: judged as it is
-    if (shortfalls.length === 0 || shortfalls.some(it => it.short > it.hand)) return judged(shortfalls.map(it => it.loss), false);
+    // no taker short, or one short by more than a hand, which the end of the judged span does not make: judged as it is,
+    // each run's losses standing where a machine or an output inserter of that run is behind its target
+    if (shortfalls.length === 0 || shortfalls.some(it => it.short > it.hand)) {
+        return judged(first.flatMap(it => it.runs.flatMap(({ run }) => standing(run, run.shortfalls.map(shortfall => shortfall.loss)))), false);
+    }
     // every taker short by at most one hand: the runs with a shortfall again, twice as long, and a loss where a taker is
-    // short there by more than one hand of its own (the unfinished hand at the span's end can fall on another taker)
+    // short there by more than one hand of its own (the unfinished hand at the span's end can fall on another taker) and a
+    // machine or an output inserter of the longer run is behind its target
     const losses: Omit<SharedLaneLoss, "text">[] = [];
     for (const { under, taker_ids, runs } of first) {
-        const short_runs = runs.filter(run => run.shortfalls.length > 0);
+        const short_runs = runs.filter(({ run }) => run.shortfalls.length > 0);
         if (short_runs.length === 0) continue;
         const alone = runAlone(under, taker_ids, windows, window_cycle_ticks, 2 * window_cycles, logger);
-        for (const run of short_runs) {
-            for (const longer of shortfallsOf(under, lanes, run.layout, alone, windows, window_cycle_ticks, 2 * window_cycles, logger)) {
-                if (longer.short > longer.hand) losses.push(longer.loss);
-            }
+        for (const { layout } of short_runs) {
+            const longer = shortfallsOf(under, lanes, layout, alone, windows, window_cycle_ticks, 2 * window_cycles, logger, ends);
+            losses.push(...standing(longer, longer.shortfalls.filter(shortfall => shortfall.short > shortfall.hand).map(shortfall => shortfall.loss)));
         }
     }
     return judged(losses, true);

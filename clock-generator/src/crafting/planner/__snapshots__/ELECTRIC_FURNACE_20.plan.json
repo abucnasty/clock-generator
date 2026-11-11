@@ -13,10 +13,6 @@
     {
       "vertex": "belt:1/lane:1#advanced-circuit",
       "kind": "nothing-drops-on"
-    },
-    {
-      "vertex": "belt:1/lane:2#advanced-circuit",
-      "kind": "nothing-drops-on"
     }
   ],
   "groups": [

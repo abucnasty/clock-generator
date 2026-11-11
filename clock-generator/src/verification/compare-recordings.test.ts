@@ -11,7 +11,7 @@ import { buildDifferences, compareRecordings, formatRecordingComparison } from "
 import { expandChangeList, type Recording } from "./recording";
 import { wakeUpsOfRecording } from "./recording-wake-ups";
 import { matchOfSimulatedRecording, recordingOfStock, SIMULATED_TICK_TO_CLOCK_POSITION, simulateRecording } from "./simulated-recording";
-import { quiet } from "../crafting/generate-blueprint-test-helpers";
+import { quiet, withoutSharedLaneFacts } from "../crafting/generate-blueprint-test-helpers";
 
 /**
  * Automation science on its full-hand output swings clock: a belt inserter into one machine
@@ -27,7 +27,10 @@ let simulated: Recording;
 
 beforeAll(async () => {
     // the recording these tests read is of the clock with one output swing a cycle; the sample is automatic, so it is forced on this copy
-    const sample = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
+    // The sample states that both lanes of its input belt end in a dead end. On such a lane the full-hand clock gives the input
+    // inserter no room for one more hand, so the inserter never waits with a part hand on its machine's list. These tests count
+    // the wake-ups of that wait, so this copy keeps a lane that flows on, as the sample had before it stated its ends.
+    const sample = withoutSharedLaneFacts(await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240));
     config = { ...sample, overrides: { ...sample.overrides, terminal_swing_count: 1 } };
     // the full-hand clock, which these tests count wake-ups and states on: the per-branch clock composed from today's makers wakes
     // none of these inserters, and Euclidean Swings, which holds without the room for one more hand, wakes none either

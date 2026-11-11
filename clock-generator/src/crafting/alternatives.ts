@@ -48,6 +48,7 @@ import { START_DEPENDENCE_NOT_CHECKED, StartDependence, startDependenceNote } fr
 import { NotMadeClock, notTriedSentence, WhyNotStable, whyNotStable, whyNotStableClockOf } from "./why-not-stable";
 import { DEFAULT_KICK_START_ITEMS } from "./runner/cold-start";
 import { judgeSharedLanes, SharedLaneLoss } from "./shared-lane-verdict";
+import { copiesDisturbanceTrial, CopiesTrialVerdict } from "./shared-lane-trial";
 
 
 export interface ClockAlternative {
@@ -327,7 +328,7 @@ const BATCHED_SWINGS_DESCRIPTION = "The swing schedule the generator plans for t
 
 /**
  * True when an inserter of the build takes fuel for its machine off a belt as well as an ingredient, and its windows get
- * no room for one more hand (it takes from dead ends only): the room for one hand holds the fuel's hand already
+ * no room for one more hand (a side pickup of an item both lanes carry): the room for one hand holds the fuel's hand already
  */
 function takesFuelOffABelt(config: Config): boolean {
     const registry = createEntityRegistryFromConfig(config);
@@ -675,6 +676,18 @@ function asBuiltNotes(as_built: AsBuiltStabilityCheck | undefined, expected_outp
     return notes;
 }
 
+/**
+ * The verdict of the disturbance trials of a clock with those on the copies that share a lane: a new verdict, the one of the
+ * trials of one copy unchanged (a memo keeps it). A loss after which a copy is not back makes it one the clock does not get
+ * back from.
+ */
+function withCopiesTrial(verdict: DisturbanceTrialVerdict | null, copies: CopiesTrialVerdict | null): DisturbanceTrialVerdict | null {
+    if (verdict === null || copies === null) return verdict;
+    // the window cycles to be back stay those of one copy, which the ranking reads; the copies' are in `on_copies`
+    if (copies.survives) return { ...verdict, on_copies: copies };
+    return { ...verdict, survives: false, broken_by: [...verdict.broken_by, `${copies.broken_by} on the copies that share a lane`], recovered_after_window_cycles: null, on_copies: copies };
+}
+
 /** A sentence for an alternative's description about the losses its clock does not get back from, or why none was tried */
 function disturbanceTrialNote(verdict: DisturbanceTrialVerdict | null, not_tried: string | undefined): string {
     if (verdict === null) {
@@ -684,7 +697,8 @@ function disturbanceTrialNote(verdict: DisturbanceTrialVerdict | null, not_tried
         return "";
     }
     return verdict.broken_by.length === 0 ? " It was off its expected output in the run used for the loss trials, so it is not counted as stable."
-        : ` It is not stable: the build does not go back to its expected output by itself under this clock after ${verdict.broken_by.join(", or after ")}.${notTriedSentence(verdict.not_tried)}`;
+        : ` It is not stable: the build does not go back to its expected output by itself under this clock after ${verdict.broken_by.join(", or after ")}.${notTriedSentence(verdict.not_tried)}`
+            + (verdict.on_copies?.text === undefined ? "" : ` ${verdict.on_copies.text}`);
 }
 
 
@@ -1066,6 +1080,32 @@ function runAlternativeOf(
         }
         return shared_lane_losses_of.get(trial)!;
     };
+    /**
+     * The disturbance trials on the copies that share a lane (see shared-lane-trial.ts), made once per trial: only of a clock
+     * that holds, gets back from every loss on one copy and loses no swings on the shared lanes, unless the config switches
+     * them off (`overrides.disturbance_trials_on_copies`); null where they are not made
+     */
+    const copies_trials_of = new Map<Trial, CopiesTrialVerdict | null>();
+    const copiesTrial = (trial: Trial, shared_lane_losses: readonly SharedLaneLoss[]): CopiesTrialVerdict | null => {
+        if (config.overrides?.disturbance_trials_on_copies === false || !trial.held || shared_lane_losses.length > 0
+            || trial.loss.disturbance_trial?.survives !== true) return null;
+        if (!copies_trials_of.has(trial)) {
+            const on = used.planned_on ?? config;
+            let tried: CopiesTrialVerdict | null;
+            try {
+                tried = copiesDisturbanceTrial({ ...on, overrides: { ...on.overrides, terminal_swing_count: trial.result.used_terminal_swing_count } },
+                    trial.result.clock_windows, trial.clock_window_cycle, trial.result.stability_check.expected_output_items, logger);
+            } catch (error) {
+                if (isInternalError(error)) throw error;
+                const reason = error instanceof Error ? error.message : String(error);
+                logger.warn(`Clock "${label}": the disturbance trials on the copies that share a lane could not be made: ${reason}`);
+                // the clock keeps the verdict of one copy, and the result says why the copies were not tried
+                tried = { survives: true, lanes: [], expected_output_items: trial.result.stability_check.expected_output_items, recovered_after_window_cycles: null, not_tried: reason };
+            }
+            copies_trials_of.set(trial, tried);
+        }
+        return copies_trials_of.get(trial)!;
+    };
     /** The trial of a clock rounded down to whole ticks on its own window cycle, where one is made (below) */
     let rounded_trial: Trial | null = null;
     /** The alternative for a trial of the clock: its notes, insights, assessment and ranking */
@@ -1074,6 +1114,7 @@ function runAlternativeOf(
         listing?: ListingSettings }): ClockAlternative => {
         const tried_as = trial;
         const shared_lane_losses = sharedLaneLosses(trial);
+        const copies_trial = copiesTrial(trial, shared_lane_losses);
         // a clock that fails its first check is listed by the mean of its long run, not the one window cycle measured
         const settled_check = (settle_unstable ?? !held) ? settledStability(trial) : trial.result.stability_check;
         // the counters of its inserters learn which decider switches each from the blueprint it is listed with
@@ -1082,7 +1123,8 @@ function runAlternativeOf(
         trial = { ...trial, result: { ...trial.result, stability_check: settled } };
         row = { ...row, result: { ...row.result, stability_check: settled } };
         const { as_built } = trial.result.stability_check;
-        const { disturbance_trial, disturbance_trial_not_tried } = trial.loss;
+        const { disturbance_trial_not_tried } = trial.loss;
+        const disturbance_trial = withCopiesTrial(trial.loss.disturbance_trial, copies_trial);
         const start_dependence_note = trial.start_dependence === null ? null
             : startDependenceNote(trial.start_dependence, items => itemsPerSecondOverCopies(items, trial.clock_window_cycle, copies));
         const description = withResolvedName(definition, definition.description, strategy) + moved_note + shifted_note + belt_note + planning_note + asBuiltNotes(as_built, expected_output_items)

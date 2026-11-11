@@ -29,7 +29,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -45,8 +45,8 @@
         "key": "belt:1/lane:2",
         "belt": "belt:1",
         "lane": 2,
-        "listed": true,
-        "item": "advanced-circuit",
+        "listed": false,
+        "item": null,
         "stack": 4,
         "belt_prototype": "turbo-transport-belt",
         "tiles_per_tick": 0.125,
@@ -837,8 +837,7 @@
       "from": "belt:1/lane:1",
       "to": "machine:1",
       "from_lanes": [
-        "belt:1/lane:1",
-        "belt:1/lane:2"
+        "belt:1/lane:1"
       ],
       "lands_in": "ingredients",
       "hand": {

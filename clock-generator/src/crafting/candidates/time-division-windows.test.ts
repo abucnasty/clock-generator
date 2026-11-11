@@ -17,7 +17,7 @@ import { timeDivisionWindowsClock, timeDivisionWindows } from "./time-division-w
 describe("even hands", () => {
     let config: Config;
     beforeAll(async () => {
-        config = await loadConfigFromFile(ConfigPaths.ACCUMULATOR_640);
+        config = await loadConfigFromFile(ConfigPaths.ACCUMULATOR_320);
     });
 
     it("gives every inserter one window a hand, spread evenly, and the two halves the same windows", () => {

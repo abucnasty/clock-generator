@@ -2,7 +2,11 @@
   "setpoint": {
     "recipe": "electromagnetic-science-pack",
     "items_per_second": 240,
-    "copies": 5
+    "copies": 5,
+    "copy_offset": {
+      "x": 13,
+      "y": 0
+    }
   },
   "machines": [
     {
@@ -358,24 +362,35 @@
     {
       "id": 1,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
           "ingredient": "accumulator",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         },
         {
           "ingredient": "accumulator",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         }
       ]
     },
     {
       "id": 2,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
           "ingredient": "processing-unit",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         },
         {
           "ingredient": "",
@@ -396,24 +411,35 @@
     {
       "id": 4,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
           "ingredient": "superconductor",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         },
         {
           "ingredient": "holmium-plate",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         }
       ]
     },
     {
       "id": 5,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
           "ingredient": "battery",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         },
         {
           "ingredient": "",

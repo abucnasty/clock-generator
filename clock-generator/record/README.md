@@ -14,7 +14,7 @@ A field's name and meaning do not change; a new field or a changed meaning is a 
 | Field | Meaning |
 | --- | --- |
 | `format` | `clock-record-2` |
-| `job`, `group`, `name` | the blast's job key (`config-ACCUMULATOR_640`), its group and its name |
+| `job`, `group`, `name` | the blast's job key (`config-ACCUMULATOR_320`), its group and its name |
 | `config_sha256` | the hash of the job's config as the blast loads it: it says whether a moved result comes with a moved config |
 | `job_results_sha256` | the digest of what belongs to the job and to no single clock: why it is not stable, the selected index, the clocks' ids |
 | `selected` | the id of the selected clock (one of `alternatives`) |

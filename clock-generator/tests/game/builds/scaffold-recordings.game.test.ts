@@ -250,10 +250,11 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     },
     // An accepted 0.27.0 gap (#586): the game serves the inserters in the simulator's order and the production is exact; the
     // wake-ups differ
-    // One of the three copies of the inserter build given 2026-10-21, 240 inserters a second over the three: an
-    // inserter assembler (4 speed modules, 8 beacons) fed plates by two furnaces and gears by a gear assembler, which two
-    // more furnaces feed, all legendary. Each pair of furnaces takes its ore from a line of its own; the ore, so the
-    // plates, gears and the circuits from infinity chests, is uncommon. The output inserter runs all the time.
+    // The first of the three copies of the inserter build, 240 inserters a second over the three, as abucnasty gave it
+    // (2026-11-10): an inserter assembler (4 speed modules, 8 beacons) fed plates by two furnaces and gears by a gear
+    // assembler (5 beacons), which two more furnaces feed, all legendary. Each pair of furnaces takes its ore from a line
+    // of its own; the ore and the circuits come from infinity chests, normal. The ore lines and the circuit belt end at an
+    // underground entrance with nothing beyond; the product goes into a void chest. The output inserter runs all the time.
     "logistic science with inserter crafting": {
         scaffold: path.join(SAMPLES, "intermediates", "inserter-crafting", "inserter-crafting-240-shared-signal-clock.scaffold"),
         config: ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK,
@@ -337,11 +338,17 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         warmup_ticks: 3600,
         backed_up_belts: true,
     },
+    // abucnasty's two copies of the build (2026-11-10), 9 tiles apart in one row: each a legendary utility science assembler (4
+    // legendary productivity modules, 10 legendary beacons: 63.0078) taking flying robot frames from one turbo belt and low density
+    // structures and processing units (one lane each) from another; both belts come from stack inserters at infinity chests, run
+    // east past the two copies and end at an underground entrance with nothing beyond. The packs go onto a belt into a void chest.
+    // 17.14 a second a copy, 120 over seven.
     "utility science with processing units and low density structures on one belt": {
         scaffold: path.join(SAMPLES, "science", "utility", "utility-120-processing-unit-and-lds-on-one-belt.scaffold"),
         config: ConfigPaths.UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT,
         seed: [],
         warmup_ticks: 3600,
+        copies: 2,
     },
     "utility science with processing units and low density structures on one belt (belts are backed up)": {
         scaffold: path.join(SAMPLES, "science", "utility", "utility-120-processing-unit-and-lds-on-one-belt.scaffold"),
@@ -349,6 +356,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [],
         warmup_ticks: 3600,
         backed_up_belts: true,
+        copies: 2,
     },
     "low density structure": {
         scaffold: path.join(SAMPLES, "intermediates", "lds", "lds-240.scaffold"),
@@ -356,13 +364,18 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [],
         warmup_ticks: 3600,
     },
-    // The build of issue 152: two electromagnetic plants, two cryogenic plants and two foundries, 640 a second over 18
-    // copies, all of it from machine to machine. The clock 0.9.0 selected made 512 to 544 of its 576 a window cycle here.
+    // abucnasty's build of nine copies (2026-11-10), 16 tiles apart in one row: each copy is two electromagnetic plants, two
+    // cryogenic plants and two foundries, all of it from machine to machine, the fluids from infinity pipes. The upper plants
+    // drop onto one line and the lower plants onto another; on each line the drops of the first four copies are side-loaded onto
+    // the other lane before the last five drop, and the line ends in a loader into a void chest. 35.56 a second a copy, 320 over
+    // nine. The scaffold before was the build of issue 152 (one copy of 18 at 640 a second), where the clock 0.9.0 selected
+    // made 512 to 544 of its 576 a window cycle.
     "accumulator": {
-        scaffold: path.join(SAMPLES, "intermediates", "accumulator", "accumulator-640.scaffold"),
-        config: ConfigPaths.ACCUMULATOR_640,
+        scaffold: path.join(SAMPLES, "intermediates", "accumulator", "accumulator-320.scaffold"),
+        config: ConfigPaths.ACCUMULATOR_320,
         seed: [],
         warmup_ticks: 3600,
+        copies: 9,
     },
     // The lithium plate build: two cryogenic plants fill a rocket silo taken as a chest, and six furnaces empty it;
     // 80 a second from one copy. The warm-up fills the silo, which the config exports empty.
@@ -419,11 +432,12 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [],
         warmup_ticks: 3600,
     },
-    // The owner's production science build (2026-11-05): one science assembler (legendary, 63.0078) fed rails by a rail assembler
-    // (5 beacons, 46.7969), whose steel comes from one foundry and whose iron sticks come from another, both on molten iron from
-    // infinity pipes; a drill drops stone straight into the rail assembler. Electric furnaces and productivity modules come on one
-    // backed-up turbo belt (one lane each) from two infinity chests and one inserter takes both; the packs go onto a moving belt
-    // into a void chest. 17.14 a second from one copy, 120 over seven.
+    // abucnasty's production science build (2026-11-05), one copy of it as abucnasty gave it (2026-11-10): one science assembler
+    // (legendary, 63.0078) fed rails by a rail assembler (four legendary speed modules, 2 beacons: 46.3713), whose steel comes from
+    // one foundry and whose iron sticks come from another, both on molten iron from infinity pipes; a drill drops stone straight
+    // into the rail assembler. Electric furnaces and productivity modules come on one turbo belt (one lane each) from two infinity
+    // chests; it ends at an underground entrance with nothing beyond, and one inserter takes both. The packs go onto a belt that
+    // runs through an underground belt to a loader into a void chest. 17.14 a second from one copy, 120 over seven, 10 tiles apart.
     "production science with a drill into the rail assembler": {
         scaffold: path.join(SAMPLES, "science", "production", "production-120-two-belts.scaffold"),
         config: ConfigPaths.PRODUCTION_SCIENCE_120_TWO_BELTS,
@@ -440,18 +454,17 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [],
         warmup_ticks: 3600,
     },
-    // The owner's military science build (2026-11-05): a science assembler (66.0253) fed grenades by a grenade assembler (57.8125)
-    // that takes iron from a foundry (112.244) and coal from a belt of its own (both lanes, six infinity chests); stone walls and
-    // piercing rounds come on one backed-up belt, one lane each. The packs go onto a moving belt into a void chest. 24 a second from
-    // one copy, 120 over five.
-    "military science with grenades": {
-        scaffold: path.join(SAMPLES, "science", "military", "military-120.scaffold"),
-        config: ConfigPaths.MILITARY_SCIENCE_120,
+    // abucnasty's military science build (2026-11-09), the whole of it: five copies 9 tiles apart, each a mirrored pair around one
+    // foundry (a military science assembler fed grenades by a grenade assembler above the foundry, and the same below it), 48 a second
+    // a copy, 240 over the five. Each half has a belt of stone walls and piercing rounds and a coal belt from stack inserters at
+    // infinity chests, both ending in a dead end, and a packs belt into a void chest. Each half's coal comes on two belts that three
+    // priority splitters join, which the config does not model: it gives each copy coal lanes of its own.
+    "military science with grenades (five mirrored pairs)": {
+        scaffold: path.join(SAMPLES, "science", "military", "military-240.scaffold"),
+        config: ConfigPaths.MILITARY_SCIENCE_240,
         seed: [],
         warmup_ticks: 3600,
-        wake_ups_open: "the game counts 90.0 wake-ups a minute and the simulator 181.1: the two coal inserters into the grenade assembler "
-            + "(inserters 4 and 6) are not woken in the game, which leaves 22.5 a minute of each uncounted as an arm away, and 45.3 a minute "
-            + "each in the simulator; the other four inserters count 22.5 against 22.6 (2026-11-05), with the production the same",
+        copies: 5,
     },
     // abucnasty's flying robot frame build (2026-11-09): 12 legendary assemblers (68.8906) in two rows of 6, 6 tiles apart. Each
     // input belt is one line that runs past one row, turns, runs back past the other row and ends in a dead end: steel and
@@ -498,6 +511,15 @@ interface SteadyReport {
 
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 
+/**
+ * What a row of output inserters of a build of copies moves at the least in a window cycle: one copy's output times the
+ * row's output inserters over the output inserters of one copy. A copy with one output inserter gives its row the whole
+ * of its output; a copy with an output inserter in each of two rows gives each row half of it.
+ */
+function rowTarget(copy_output: number, row_output_inserters: number, copy_output_inserters: number): number {
+    return Math.round(copy_output * row_output_inserters / copy_output_inserters * 1e6) / 1e6;
+}
+
 let scratch: string | null = null;
 /** The one game the builds are watched in, each built in the place of the one before it */
 let session: HarnessSession | null = null;
@@ -533,7 +555,7 @@ afterAll(async () => {
     }
 }, 60_000);
 
-/** The clocks the values of three builds belong to (scaffold-recordings-clock-pins.json); clock-controls.test.ts checks the selection against the record, and clock-belt.generation.test.ts the build with backed-up belts */
+/** The clocks the values of six builds belong to (scaffold-recordings-clock-pins.json); clock-controls.test.ts checks the selection against the record, and clock-belt.generation.test.ts the build with backed-up belts */
 const clockPins = readControls<{ cases: Record<string, { config: string; backed_up_belts: boolean; clock_sha256: string }> }>("scaffold-recordings-clock-pins.json").cases;
 
 test("every build with a pinned clock is a build of this file", () => {
@@ -698,11 +720,15 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             const wrong_length = checked.filter(it => it.end - it.start !== window_cycle_ticks);
             expect(wrong_length, `every one of the ${checked.length} periods checked lasts ${window_cycle_ticks} ticks, as the generated clock does`).toEqual([]);
             if (copies > 1) {
-                // 100% or more of the target, each row on its own (copies of the row at one height) and the whole build; recorded raw
+                // 100% or more of the target, each row on its own (copies of the row at one height) and the whole build; recorded raw.
+                // A build whose copies all stand in one row is one row, whose share is the whole build's output.
                 const per_row = config.setpoint.copies;
-                expect(rows.length, `the output inserters of the build stand in rows (heights: ${row_ys.join(", ")})`).toBeGreaterThan(1);
+                expect(rows.length, `the output inserters of the build stand in one row or more (heights: ${row_ys.join(", ")})`).toBeGreaterThanOrEqual(1);
+                const copy_output_inserters = output_unit_numbers.length / copies;
+                expect(Number.isInteger(copy_output_inserters),
+                    `the build's ${output_unit_numbers.length} output inserters are the same number in each of its ${copies} copies`).toBe(true);
                 for (const row of rows) {
-                    const row_expected = Math.round(expected_per_copy * (output_unit_numbers.filter(unit => row_of.get(unit) === row.y).length) * 1e6) / 1e6;
+                    const row_expected = rowTarget(expected_per_copy, row.output_inserters, copy_output_inserters);
                     const row_checked = row.per_window_cycle.length > 1 ? row.per_window_cycle.slice(1) : row.per_window_cycle;
                     expect(row_checked.map(it => ({ start: it.start, items: it.items })).filter(it => it.items < row_expected - 1e-6),
                         `every one of the ${row_checked.length} periods checked of the row at y=${row.y} (${row.output_inserters} output inserters, ${per_row} copies wanted) moves ${row_expected} items of ${config.setpoint.recipe} or more`).toEqual([]);

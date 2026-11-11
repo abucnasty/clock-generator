@@ -13,6 +13,7 @@ with the modules on one lane. Every machine is legendary, with beacons. Most mac
 over the 13.33 a copy must make.
 
 - `productivity-module-80-chest-chain.json`: the config of the build as the paste reads it, one copy, target 80 a second over 6 copies.
+  The coal lane is one per copy and a dead end: each copy takes its coal from a belt of its own that stops at the pickup.
 - `productivity-module-80-chest-chain.scaffold`: the blueprint of one copy with its 23 beacons and no clock (95 entities): the coal in an
   infinity chest with its inserter, infinity pipes for the petroleum gas, the molten copper and the molten iron, the three
   steel chests, and a turbo loader at the end of the output belt that empties it into an infinity chest.

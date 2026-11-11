@@ -25,6 +25,24 @@ export const withSearches = (config: Config): Config =>
     ({ ...config, overrides: { ...config.overrides, search_for_fewer_wake_ups: true } });
 
 /**
+ * The config without what it states about the lanes its copies share: no `setpoint.copy_offset`, no belt's
+ * `flow_direction` and no lane's `lane_end`. The engine then takes a spacing of its own, lanes that flow on past the
+ * copies, and items that move either way along them. For a test whose case is a lane that flows on, on a sample that
+ * states its lanes end.
+ */
+export function withoutSharedLaneFacts(config: Config): Config {
+    const { copy_offset: _copy_offset, ...setpoint } = config.setpoint;
+    return {
+        ...config,
+        setpoint,
+        belts: config.belts.map(({ flow_direction: _flow_direction, ...belt }) => ({
+            ...belt,
+            lanes: belt.lanes.map(({ lane_end: _lane_end, ...lane }) => lane) as typeof belt.lanes,
+        })),
+    };
+}
+
+/**
  * The clock as the "Euclidean Swings" alternative would have made it: its cycle plan made again at its output swings
  * a cycle with fractional swings asked for, which the checks of the clock read (`fractionalSwingsOf`)
  */

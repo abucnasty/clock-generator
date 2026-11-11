@@ -29,7 +29,7 @@ describe("the balance equations of accumulator 640", () => {
     // per copy 320/9 accumulators a second from two electromagnetic plants; iron from one foundry into both plants and both
     // battery plants, copper from another into the battery plants, batteries from each battery plant into one plant
     it("give the smallest period of whole hands: 486 ticks, 288 accumulators, hands of 9, 12, 30, 10 and 10", async () => {
-        const { ticks, balance } = await balanceAt(ConfigPaths.ACCUMULATOR_640, 1);
+        const { ticks, balance } = await balanceAt(ConfigPaths.ACCUMULATOR_320, 1);
         expect(ticks.toString()).toBe("54");
         const cycles = windowCycleCyclesOf(balance.transfers);
         expect(ticks.multiply(cycles).toString()).toBe("486");

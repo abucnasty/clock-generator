@@ -140,7 +140,7 @@
           "id": "coordinated_sources",
           "holds": true,
           "rate": 240,
-          "supply": "moving"
+          "supply": "backed_up"
         },
         "clock_sha256": "ba4e269d004a2525eabe45b0e06bab818c593af5d55c9a789e966f07bd7ec7ee"
       }
@@ -148,9 +148,9 @@
     "generated-backed-up-one-copy": {
       "recorded": {
         "pr": 0,
-        "commit": "052a4129bb7dc2bb1ee24bd3d0a092cd36ba6891",
-        "frozen_head": "052a4129bb7dc2bb1ee24bd3d0a092cd36ba6891",
-        "note": "recorded under the protocol in game ticks on the engine of this head with the tests of the branch that added it; pr is set when the PR is opened",
+        "commit": "d966a840",
+        "frozen_head": "d966a840",
+        "note": "recorded under the protocol in game ticks on the engine of this head, on the sample's scaffold of the build's first copy (2026-11-10); pr is set when the PR is opened",
         "clock_sha256": "c3709dc06e8c411a8e7aa067785cd6fc0e676b37a06554f25e91fd63b5f561b3",
         "clock_basis": "capture"
       },
@@ -174,8 +174,8 @@
             "ticks": 3600,
             "items": 4800,
             "expected": 4800,
-            "stock_start": 0,
-            "stock_end": 0,
+            "stock_start": 12,
+            "stock_end": 12,
             "net": 4800
           }
         },
@@ -190,25 +190,25 @@
           {
             "kind": "block output",
             "start": 14794,
-            "drop": 14842,
-            "release": 14842,
-            "recovered": 14888
+            "drop": 14855,
+            "release": 14855,
+            "recovered": 14878
           },
           {
             "kind": "cut electronic-circuit",
-            "start": 14888,
-            "drop": 14914,
-            "release": 14914,
-            "recovered": 14960
+            "start": 14878,
+            "drop": 14920,
+            "release": 14920,
+            "recovered": 15475
           }
         ],
         "stock": {
           "lowest": 0,
-          "end": 0,
+          "end": 48,
           "holds": true
         },
         "result": "holds",
-        "ended": 14960
+        "ended": 15475
       },
       "generation": {
         "period": 72,

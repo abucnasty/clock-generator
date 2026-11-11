@@ -1,13 +1,13 @@
 {
   "schema": 1,
   "target": {
-    "item": "accumulator",
+    "item": "military-science-pack",
     "counts": "made",
-    "items_per_second": 640,
-    "copies": 18,
+    "items_per_second": 240,
+    "copies": 5,
     "per_copy": {
-      "numerator": 320,
-      "denominator": 9
+      "numerator": 48,
+      "denominator": 1
     }
   },
   "nodes": [
@@ -20,7 +20,7 @@
         "belt": "belt:1",
         "lane": 1,
         "listed": true,
-        "item": "accumulator",
+        "item": "military-science-pack",
         "stack": 4,
         "belt_prototype": "turbo-transport-belt",
         "tiles_per_tick": 0.125,
@@ -64,57 +64,323 @@
       }
     },
     {
+      "key": "belt:2/lane:1",
+      "kind": "lane",
+      "entity": "belt:2",
+      "lane": {
+        "key": "belt:2/lane:1",
+        "belt": "belt:2",
+        "lane": 1,
+        "listed": true,
+        "item": "military-science-pack",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "moving",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "belt:2/lane:2",
+      "kind": "lane",
+      "entity": "belt:2",
+      "lane": {
+        "key": "belt:2/lane:2",
+        "belt": "belt:2",
+        "lane": 2,
+        "listed": false,
+        "item": null,
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "moving",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "belt:3/lane:1",
+      "kind": "lane",
+      "entity": "belt:3",
+      "lane": {
+        "key": "belt:3/lane:1",
+        "belt": "belt:3",
+        "lane": 1,
+        "listed": true,
+        "item": "stone-wall",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "backed_up",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "belt:3/lane:2",
+      "kind": "lane",
+      "entity": "belt:3",
+      "lane": {
+        "key": "belt:3/lane:2",
+        "belt": "belt:3",
+        "lane": 2,
+        "listed": true,
+        "item": "piercing-rounds-magazine",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "backed_up",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "belt:4/lane:1",
+      "kind": "lane",
+      "entity": "belt:4",
+      "lane": {
+        "key": "belt:4/lane:1",
+        "belt": "belt:4",
+        "lane": 1,
+        "listed": true,
+        "item": "piercing-rounds-magazine",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "backed_up",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "belt:4/lane:2",
+      "kind": "lane",
+      "entity": "belt:4",
+      "lane": {
+        "key": "belt:4/lane:2",
+        "belt": "belt:4",
+        "lane": 2,
+        "listed": true,
+        "item": "stone-wall",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "backed_up",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "belt:5/lane:1",
+      "kind": "lane",
+      "entity": "belt:5",
+      "lane": {
+        "key": "belt:5/lane:1",
+        "belt": "belt:5",
+        "lane": 1,
+        "listed": true,
+        "item": "coal",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "backed_up",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "belt:5/lane:2",
+      "kind": "lane",
+      "entity": "belt:5",
+      "lane": {
+        "key": "belt:5/lane:2",
+        "belt": "belt:5",
+        "lane": 2,
+        "listed": true,
+        "item": "coal",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "backed_up",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "belt:6/lane:1",
+      "kind": "lane",
+      "entity": "belt:6",
+      "lane": {
+        "key": "belt:6/lane:1",
+        "belt": "belt:6",
+        "lane": 1,
+        "listed": true,
+        "item": "coal",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "backed_up",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "belt:6/lane:2",
+      "kind": "lane",
+      "entity": "belt:6",
+      "lane": {
+        "key": "belt:6/lane:2",
+        "belt": "belt:6",
+        "lane": 2,
+        "listed": true,
+        "item": "coal",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "backed_up",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
       "key": "machine:1",
       "kind": "machine",
       "entity": "machine:1",
       "production": {
         "kind": "recipe",
-        "recipe_or_resource": "accumulator",
-        "prototype": "electromagnetic-plant",
-        "prototype_type": "assembling-machine",
-        "speed": 124.625,
+        "recipe_or_resource": "military-science-pack",
+        "prototype": null,
+        "prototype_type": null,
+        "speed": 63.0078125,
         "energy_required": 10,
-        "ticks_per_craft": 4.81444332998997,
-        "crafts_per_tick": 0.20770833333333333,
-        "productivity": 50,
-        "bonus_per_craft": 0.5,
-        "ticks_per_bonus": 2.407221664994985,
+        "ticks_per_craft": 9.522628642281463,
+        "crafts_per_tick": 0.10501302083333333,
+        "productivity": 100,
+        "bonus_per_craft": 1,
+        "ticks_per_bonus": 9.522628642281463,
         "inputs": [
           {
-            "item": "iron-plate",
-            "per_craft": 2,
-            "per_second": 24.925,
-            "per_tick": 0.41541666666666666
+            "item": "piercing-rounds-magazine",
+            "per_craft": 1,
+            "per_second": 6.30078125,
+            "per_tick": 0.10501302083333333
           },
           {
-            "item": "battery",
-            "per_craft": 5,
-            "per_second": 62.3125,
-            "per_tick": 1.0385416666666667
+            "item": "grenade",
+            "per_craft": 1,
+            "per_second": 6.30078125,
+            "per_tick": 0.10501302083333333
+          },
+          {
+            "item": "stone-wall",
+            "per_craft": 2,
+            "per_second": 12.6015625,
+            "per_tick": 0.21002604166666666
           }
         ],
-        "insertion_duration_ticks": 51.35406218655968,
+        "insertion_duration_ticks": 21.42591444513329,
         "crafts_per_second": {
-          "numerator": 997,
-          "denominator": 80
+          "numerator": 1613,
+          "denominator": 256
         }
       },
       "yield": {
         "results": [
           {
-            "item": "accumulator",
-            "amount": 1,
+            "item": "military-science-pack",
+            "amount": 2,
             "probability": 1,
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
-            "expected_per_craft": 1.5,
+            "expected_per_craft": 4,
             "per_craft": {
-              "numerator": 3,
-              "denominator": 2
+              "numerator": 4,
+              "denominator": 1
             },
             "per_second": {
-              "numerator": 2991,
-              "denominator": 160
+              "numerator": 1613,
+              "denominator": 64
             },
             "main": true,
             "stochastic": false
@@ -124,16 +390,21 @@
         "payouts_count_as_finishes": true
       },
       "input_limits": {
-        "overload_multiplier": 16,
+        "overload_multiplier": 9,
         "limits": [
           {
-            "item": "iron-plate",
-            "limit": 32,
+            "item": "piercing-rounds-magazine",
+            "limit": 9,
             "kind": "ingredient"
           },
           {
-            "item": "battery",
-            "limit": 80,
+            "item": "grenade",
+            "limit": 9,
+            "kind": "ingredient"
+          },
+          {
+            "item": "stone-wall",
+            "limit": 18,
             "kind": "ingredient"
           }
         ]
@@ -142,19 +413,19 @@
         "rule": "overload",
         "per_result": [
           {
-            "item": "accumulator",
+            "item": "military-science-pack",
             "rule": "overload",
-            "ingredients_blocked_at": 16,
-            "held_limit": 16,
-            "stack": 50
+            "ingredients_blocked_at": 18,
+            "held_limit": 18,
+            "stack": 200
           }
         ]
       },
       "recipe_selection": "fixed",
       "placement": null,
       "energy": {
-        "source": "electric",
-        "energy_usage_kw": 2000,
+        "source": null,
+        "energy_usage_kw": null,
         "energy_bonus": 0,
         "burner": null,
         "fuel_modelled": false,
@@ -176,52 +447,58 @@
       "entity": "machine:2",
       "production": {
         "kind": "recipe",
-        "recipe_or_resource": "accumulator",
-        "prototype": "electromagnetic-plant",
-        "prototype_type": "assembling-machine",
-        "speed": 124.625,
+        "recipe_or_resource": "military-science-pack",
+        "prototype": null,
+        "prototype_type": null,
+        "speed": 63.0078125,
         "energy_required": 10,
-        "ticks_per_craft": 4.81444332998997,
-        "crafts_per_tick": 0.20770833333333333,
-        "productivity": 50,
-        "bonus_per_craft": 0.5,
-        "ticks_per_bonus": 2.407221664994985,
+        "ticks_per_craft": 9.522628642281463,
+        "crafts_per_tick": 0.10501302083333333,
+        "productivity": 100,
+        "bonus_per_craft": 1,
+        "ticks_per_bonus": 9.522628642281463,
         "inputs": [
           {
-            "item": "iron-plate",
-            "per_craft": 2,
-            "per_second": 24.925,
-            "per_tick": 0.41541666666666666
+            "item": "piercing-rounds-magazine",
+            "per_craft": 1,
+            "per_second": 6.30078125,
+            "per_tick": 0.10501302083333333
           },
           {
-            "item": "battery",
-            "per_craft": 5,
-            "per_second": 62.3125,
-            "per_tick": 1.0385416666666667
+            "item": "grenade",
+            "per_craft": 1,
+            "per_second": 6.30078125,
+            "per_tick": 0.10501302083333333
+          },
+          {
+            "item": "stone-wall",
+            "per_craft": 2,
+            "per_second": 12.6015625,
+            "per_tick": 0.21002604166666666
           }
         ],
-        "insertion_duration_ticks": 51.35406218655968,
+        "insertion_duration_ticks": 21.42591444513329,
         "crafts_per_second": {
-          "numerator": 997,
-          "denominator": 80
+          "numerator": 1613,
+          "denominator": 256
         }
       },
       "yield": {
         "results": [
           {
-            "item": "accumulator",
-            "amount": 1,
+            "item": "military-science-pack",
+            "amount": 2,
             "probability": 1,
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
-            "expected_per_craft": 1.5,
+            "expected_per_craft": 4,
             "per_craft": {
-              "numerator": 3,
-              "denominator": 2
+              "numerator": 4,
+              "denominator": 1
             },
             "per_second": {
-              "numerator": 2991,
-              "denominator": 160
+              "numerator": 1613,
+              "denominator": 64
             },
             "main": true,
             "stochastic": false
@@ -231,16 +508,21 @@
         "payouts_count_as_finishes": true
       },
       "input_limits": {
-        "overload_multiplier": 16,
+        "overload_multiplier": 9,
         "limits": [
           {
-            "item": "iron-plate",
-            "limit": 32,
+            "item": "piercing-rounds-magazine",
+            "limit": 9,
             "kind": "ingredient"
           },
           {
-            "item": "battery",
-            "limit": 80,
+            "item": "grenade",
+            "limit": 9,
+            "kind": "ingredient"
+          },
+          {
+            "item": "stone-wall",
+            "limit": 18,
             "kind": "ingredient"
           }
         ]
@@ -249,19 +531,19 @@
         "rule": "overload",
         "per_result": [
           {
-            "item": "accumulator",
+            "item": "military-science-pack",
             "rule": "overload",
-            "ingredients_blocked_at": 16,
-            "held_limit": 16,
-            "stack": 50
+            "ingredients_blocked_at": 18,
+            "held_limit": 18,
+            "stack": 200
           }
         ]
       },
       "recipe_selection": "fixed",
       "placement": null,
       "energy": {
-        "source": "electric",
-        "energy_usage_kw": 2000,
+        "source": null,
+        "energy_usage_kw": null,
         "energy_bonus": 0,
         "burner": null,
         "fuel_modelled": false,
@@ -283,39 +565,52 @@
       "entity": "machine:3",
       "production": {
         "kind": "recipe",
-        "recipe_or_resource": "casting-iron",
-        "prototype": "foundry",
-        "prototype_type": "assembling-machine",
-        "speed": 66.5,
-        "energy_required": 3.2,
-        "ticks_per_craft": 2.887218045112782,
-        "crafts_per_tick": 0.3463541666666667,
-        "productivity": 150,
-        "bonus_per_craft": 1.5,
-        "ticks_per_bonus": 4.330827067669173,
-        "inputs": [],
-        "insertion_duration_ticks": 15.013533834586466,
+        "recipe_or_resource": "grenade",
+        "prototype": null,
+        "prototype_type": null,
+        "speed": 52.57625,
+        "energy_required": 8,
+        "ticks_per_craft": 9.129597489360691,
+        "crafts_per_tick": 0.10953385416666667,
+        "productivity": 0,
+        "bonus_per_craft": 0,
+        "ticks_per_bonus": 0,
+        "inputs": [
+          {
+            "item": "iron-plate",
+            "per_craft": 5,
+            "per_second": 32.86015625,
+            "per_tick": 0.5476692708333334
+          },
+          {
+            "item": "coal",
+            "per_craft": 10,
+            "per_second": 65.7203125,
+            "per_tick": 1.0953385416666668
+          }
+        ],
+        "insertion_duration_ticks": 82.16637740424622,
         "crafts_per_second": {
-          "numerator": 665,
-          "denominator": 32
+          "numerator": 42061,
+          "denominator": 6400
         }
       },
       "yield": {
         "results": [
           {
-            "item": "iron-plate",
-            "amount": 2,
+            "item": "grenade",
+            "amount": 1,
             "probability": 1,
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
-            "expected_per_craft": 5,
+            "expected_per_craft": 1,
             "per_craft": {
-              "numerator": 5,
+              "numerator": 1,
               "denominator": 1
             },
             "per_second": {
-              "numerator": 3325,
-              "denominator": 32
+              "numerator": 42061,
+              "denominator": 6400
             },
             "main": true,
             "stochastic": false
@@ -325,17 +620,28 @@
         "payouts_count_as_finishes": true
       },
       "input_limits": {
-        "overload_multiplier": 26,
-        "limits": []
+        "overload_multiplier": 9,
+        "limits": [
+          {
+            "item": "iron-plate",
+            "limit": 45,
+            "kind": "ingredient"
+          },
+          {
+            "item": "coal",
+            "limit": 90,
+            "kind": "ingredient"
+          }
+        ]
       },
       "output_block": {
         "rule": "overload",
         "per_result": [
           {
-            "item": "iron-plate",
+            "item": "grenade",
             "rule": "overload",
-            "ingredients_blocked_at": 100,
-            "held_limit": 100,
+            "ingredients_blocked_at": 9,
+            "held_limit": 9,
             "stack": 100
           }
         ]
@@ -343,8 +649,8 @@
       "recipe_selection": "fixed",
       "placement": null,
       "energy": {
-        "source": "electric",
-        "energy_usage_kw": 2500,
+        "source": null,
+        "energy_usage_kw": null,
         "energy_bonus": 0,
         "burner": null,
         "fuel_modelled": false,
@@ -366,52 +672,52 @@
       "entity": "machine:4",
       "production": {
         "kind": "recipe",
-        "recipe_or_resource": "battery",
-        "prototype": "cryogenic-plant",
-        "prototype_type": "assembling-machine",
-        "speed": 87.375,
-        "energy_required": 4,
-        "ticks_per_craft": 2.7467811158798283,
-        "crafts_per_tick": 0.3640625,
-        "productivity": 200,
-        "bonus_per_craft": 2,
-        "ticks_per_bonus": 5.493562231759657,
+        "recipe_or_resource": "grenade",
+        "prototype": null,
+        "prototype_type": null,
+        "speed": 52.57625,
+        "energy_required": 8,
+        "ticks_per_craft": 9.129597489360691,
+        "crafts_per_tick": 0.10953385416666667,
+        "productivity": 0,
+        "bonus_per_craft": 0,
+        "ticks_per_bonus": 0,
         "inputs": [
           {
             "item": "iron-plate",
-            "per_craft": 1,
-            "per_second": 21.84375,
-            "per_tick": 0.3640625
+            "per_craft": 5,
+            "per_second": 32.86015625,
+            "per_tick": 0.5476692708333334
           },
           {
-            "item": "copper-plate",
-            "per_craft": 1,
-            "per_second": 21.84375,
-            "per_tick": 0.3640625
+            "item": "coal",
+            "per_craft": 10,
+            "per_second": 65.7203125,
+            "per_tick": 1.0953385416666668
           }
         ],
-        "insertion_duration_ticks": 24.721030042918454,
+        "insertion_duration_ticks": 82.16637740424622,
         "crafts_per_second": {
-          "numerator": 699,
-          "denominator": 32
+          "numerator": 42061,
+          "denominator": 6400
         }
       },
       "yield": {
         "results": [
           {
-            "item": "battery",
+            "item": "grenade",
             "amount": 1,
             "probability": 1,
             "extra_count_fraction": 0,
             "ignored_by_productivity": 0,
-            "expected_per_craft": 3,
+            "expected_per_craft": 1,
             "per_craft": {
-              "numerator": 3,
+              "numerator": 1,
               "denominator": 1
             },
             "per_second": {
-              "numerator": 2097,
-              "denominator": 32
+              "numerator": 42061,
+              "denominator": 6400
             },
             "main": true,
             "stochastic": false
@@ -421,16 +727,16 @@
         "payouts_count_as_finishes": true
       },
       "input_limits": {
-        "overload_multiplier": 27,
+        "overload_multiplier": 9,
         "limits": [
           {
             "item": "iron-plate",
-            "limit": 27,
+            "limit": 45,
             "kind": "ingredient"
           },
           {
-            "item": "copper-plate",
-            "limit": 27,
+            "item": "coal",
+            "limit": 90,
             "kind": "ingredient"
           }
         ]
@@ -439,19 +745,19 @@
         "rule": "overload",
         "per_result": [
           {
-            "item": "battery",
+            "item": "grenade",
             "rule": "overload",
-            "ingredients_blocked_at": 27,
-            "held_limit": 27,
-            "stack": 200
+            "ingredients_blocked_at": 9,
+            "held_limit": 9,
+            "stack": 100
           }
         ]
       },
       "recipe_selection": "fixed",
       "placement": null,
       "energy": {
-        "source": "electric",
-        "energy_usage_kw": 1500,
+        "source": null,
+        "energy_usage_kw": null,
         "energy_bonus": 0,
         "burner": null,
         "fuel_modelled": false,
@@ -473,134 +779,27 @@
       "entity": "machine:5",
       "production": {
         "kind": "recipe",
-        "recipe_or_resource": "battery",
-        "prototype": "cryogenic-plant",
-        "prototype_type": "assembling-machine",
-        "speed": 87.375,
-        "energy_required": 4,
-        "ticks_per_craft": 2.7467811158798283,
-        "crafts_per_tick": 0.3640625,
-        "productivity": 200,
-        "bonus_per_craft": 2,
-        "ticks_per_bonus": 5.493562231759657,
-        "inputs": [
-          {
-            "item": "iron-plate",
-            "per_craft": 1,
-            "per_second": 21.84375,
-            "per_tick": 0.3640625
-          },
-          {
-            "item": "copper-plate",
-            "per_craft": 1,
-            "per_second": 21.84375,
-            "per_tick": 0.3640625
-          }
-        ],
-        "insertion_duration_ticks": 24.721030042918454,
-        "crafts_per_second": {
-          "numerator": 699,
-          "denominator": 32
-        }
-      },
-      "yield": {
-        "results": [
-          {
-            "item": "battery",
-            "amount": 1,
-            "probability": 1,
-            "extra_count_fraction": 0,
-            "ignored_by_productivity": 0,
-            "expected_per_craft": 3,
-            "per_craft": {
-              "numerator": 3,
-              "denominator": 1
-            },
-            "per_second": {
-              "numerator": 2097,
-              "denominator": 32
-            },
-            "main": true,
-            "stochastic": false
-          }
-        ],
-        "carry": "expected-with-carry",
-        "payouts_count_as_finishes": true
-      },
-      "input_limits": {
-        "overload_multiplier": 27,
-        "limits": [
-          {
-            "item": "iron-plate",
-            "limit": 27,
-            "kind": "ingredient"
-          },
-          {
-            "item": "copper-plate",
-            "limit": 27,
-            "kind": "ingredient"
-          }
-        ]
-      },
-      "output_block": {
-        "rule": "overload",
-        "per_result": [
-          {
-            "item": "battery",
-            "rule": "overload",
-            "ingredients_blocked_at": 27,
-            "held_limit": 27,
-            "stack": 200
-          }
-        ]
-      },
-      "recipe_selection": "fixed",
-      "placement": null,
-      "energy": {
-        "source": "electric",
-        "energy_usage_kw": 1500,
-        "energy_bonus": 0,
-        "burner": null,
-        "fuel_modelled": false,
-        "fuel": null
-      },
-      "spoilage": {
-        "items": [],
-        "loss_limit_share": 0.75
-      },
-      "loop": {
-        "self_ingredients": [],
-        "looping_ingredients": [],
-        "seeded": false
-      }
-    },
-    {
-      "key": "machine:6",
-      "kind": "machine",
-      "entity": "machine:6",
-      "production": {
-        "kind": "recipe",
-        "recipe_or_resource": "casting-copper",
-        "prototype": "foundry",
-        "prototype_type": "assembling-machine",
-        "speed": 112.244,
+        "recipe_or_resource": "casting-iron",
+        "prototype": null,
+        "prototype_type": null,
+        "speed": 129,
         "energy_required": 3.2,
-        "ticks_per_craft": 1.7105591390185664,
-        "crafts_per_tick": 0.5846041666666668,
+        "ticks_per_craft": 1.4883720930232558,
+        "crafts_per_tick": 0.671875,
         "productivity": 150,
         "bonus_per_craft": 1.5,
-        "ticks_per_bonus": 2.5658387085278496,
+        "ticks_per_bonus": 2.2325581395348837,
         "inputs": [],
-        "insertion_duration_ticks": 14.368696767755958,
+        "insertion_duration_ticks": 14.586046511627908,
         "crafts_per_second": {
-          "numerator": 5612200000000001,
-          "denominator": 160000000000000
+          "numerator": 645,
+          "denominator": 16
         }
       },
       "yield": {
         "results": [
           {
-            "item": "copper-plate",
+            "item": "iron-plate",
             "amount": 2,
             "probability": 1,
             "extra_count_fraction": 0,
@@ -611,8 +810,8 @@
               "denominator": 1
             },
             "per_second": {
-              "numerator": 7015250000000001,
-              "denominator": 40000000000000
+              "numerator": 3225,
+              "denominator": 16
             },
             "main": true,
             "stochastic": false
@@ -622,14 +821,14 @@
         "payouts_count_as_finishes": true
       },
       "input_limits": {
-        "overload_multiplier": 42,
+        "overload_multiplier": 49,
         "limits": []
       },
       "output_block": {
         "rule": "overload",
         "per_result": [
           {
-            "item": "copper-plate",
+            "item": "iron-plate",
             "rule": "overload",
             "ingredients_blocked_at": 100,
             "held_limit": 100,
@@ -640,8 +839,8 @@
       "recipe_selection": "fixed",
       "placement": null,
       "energy": {
-        "source": "electric",
-        "energy_usage_kw": 2500,
+        "source": null,
+        "energy_usage_kw": null,
         "energy_bonus": 0,
         "burner": null,
         "fuel_modelled": false,
@@ -660,11 +859,11 @@
   ],
   "edges": [
     {
-      "key": "inserter:1/accumulator",
+      "key": "inserter:1/military-science-pack",
       "via": "inserter",
       "entity": "inserter:1",
       "group": "inserter:1",
-      "item": "accumulator",
+      "item": "military-science-pack",
       "from": "machine:1",
       "to": "belt:1/lane:1",
       "from_lanes": [],
@@ -676,7 +875,7 @@
         "nominal": 16,
         "research": 16,
         "items": [
-          "accumulator"
+          "military-science-pack"
         ],
         "full_hand": {
           "at_placing_source": true,
@@ -715,13 +914,13 @@
       "enable_latency_ticks": 2
     },
     {
-      "key": "inserter:2/accumulator",
+      "key": "inserter:2/military-science-pack",
       "via": "inserter",
       "entity": "inserter:2",
       "group": "inserter:2",
-      "item": "accumulator",
+      "item": "military-science-pack",
       "from": "machine:2",
-      "to": "belt:1/lane:1",
+      "to": "belt:2/lane:1",
       "from_lanes": [],
       "lands_in": "lane",
       "hand": {
@@ -731,7 +930,7 @@
         "nominal": 16,
         "research": 16,
         "items": [
-          "accumulator"
+          "military-science-pack"
         ],
         "full_hand": {
           "at_placing_source": true,
@@ -770,11 +969,11 @@
       "enable_latency_ticks": 2
     },
     {
-      "key": "inserter:3/iron-plate",
+      "key": "inserter:3/grenade",
       "via": "inserter",
       "entity": "inserter:3",
       "group": "inserter:3",
-      "item": "iron-plate",
+      "item": "grenade",
       "from": "machine:3",
       "to": "machine:1",
       "from_lanes": [],
@@ -786,7 +985,7 @@
         "nominal": 16,
         "research": 16,
         "items": [
-          "iron-plate"
+          "grenade"
         ],
         "full_hand": {
           "at_placing_source": true,
@@ -825,12 +1024,12 @@
       "enable_latency_ticks": 2
     },
     {
-      "key": "inserter:4/iron-plate",
+      "key": "inserter:4/grenade",
       "via": "inserter",
       "entity": "inserter:4",
       "group": "inserter:4",
-      "item": "iron-plate",
-      "from": "machine:3",
+      "item": "grenade",
+      "from": "machine:4",
       "to": "machine:2",
       "from_lanes": [],
       "lands_in": "ingredients",
@@ -841,7 +1040,7 @@
         "nominal": 16,
         "research": 16,
         "items": [
-          "iron-plate"
+          "grenade"
         ],
         "full_hand": {
           "at_placing_source": true,
@@ -880,14 +1079,16 @@
       "enable_latency_ticks": 2
     },
     {
-      "key": "inserter:5/iron-plate",
+      "key": "inserter:5/stone-wall",
       "via": "inserter",
       "entity": "inserter:5",
       "group": "inserter:5",
-      "item": "iron-plate",
-      "from": "machine:3",
-      "to": "machine:4",
-      "from_lanes": [],
+      "item": "stone-wall",
+      "from": "belt:3/lane:1",
+      "to": "machine:1",
+      "from_lanes": [
+        "belt:3/lane:1"
+      ],
       "lands_in": "ingredients",
       "hand": {
         "prototype": "stack-inserter",
@@ -896,7 +1097,8 @@
         "nominal": 16,
         "research": 16,
         "items": [
-          "iron-plate"
+          "stone-wall",
+          "piercing-rounds-magazine"
         ],
         "full_hand": {
           "at_placing_source": true,
@@ -908,19 +1110,19 @@
       },
       "rotation_ticks": 3,
       "planned": {
-        "pickup": 1,
+        "pickup": 4,
         "drop": 1,
-        "cycle": 8,
-        "pickup_to_drop": 5,
+        "cycle": 11,
+        "pickup_to_drop": 8,
         "per_second": {
-          "numerator": 120,
-          "denominator": 1
+          "numerator": 960,
+          "denominator": 11
         }
       },
       "floor": {
-        "pickup": 1,
+        "pickup": 4,
         "drop": 1,
-        "cycle": 8
+        "cycle": 11
       },
       "floor_standing": {
         "pickup": "measured",
@@ -928,21 +1130,81 @@
         "cycle": "measured"
       },
       "ceiling": {
-        "numerator": 120,
-        "denominator": 1
+        "numerator": 960,
+        "denominator": 11
       },
       "belt_pickup_calibrated": true,
       "enable_latency_ticks": 2
     },
     {
-      "key": "inserter:6/battery",
+      "key": "inserter:5/piercing-rounds-magazine",
+      "via": "inserter",
+      "entity": "inserter:5",
+      "group": "inserter:5",
+      "item": "piercing-rounds-magazine",
+      "from": "belt:3/lane:2",
+      "to": "machine:1",
+      "from_lanes": [
+        "belt:3/lane:2"
+      ],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "stone-wall",
+          "piercing-rounds-magazine"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11,
+        "pickup_to_drop": 8,
+        "per_second": {
+          "numerator": 960,
+          "denominator": 11
+        }
+      },
+      "floor": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:6/stone-wall",
       "via": "inserter",
       "entity": "inserter:6",
       "group": "inserter:6",
-      "item": "battery",
-      "from": "machine:4",
-      "to": "machine:1",
-      "from_lanes": [],
+      "item": "stone-wall",
+      "from": "belt:4/lane:2",
+      "to": "machine:2",
+      "from_lanes": [
+        "belt:4/lane:2"
+      ],
       "lands_in": "ingredients",
       "hand": {
         "prototype": "stack-inserter",
@@ -951,7 +1213,8 @@
         "nominal": 16,
         "research": 16,
         "items": [
-          "battery"
+          "stone-wall",
+          "piercing-rounds-magazine"
         ],
         "full_hand": {
           "at_placing_source": true,
@@ -963,19 +1226,19 @@
       },
       "rotation_ticks": 3,
       "planned": {
-        "pickup": 1,
+        "pickup": 4,
         "drop": 1,
-        "cycle": 8,
-        "pickup_to_drop": 5,
+        "cycle": 11,
+        "pickup_to_drop": 8,
         "per_second": {
-          "numerator": 120,
-          "denominator": 1
+          "numerator": 960,
+          "denominator": 11
         }
       },
       "floor": {
-        "pickup": 1,
+        "pickup": 4,
         "drop": 1,
-        "cycle": 8
+        "cycle": 11
       },
       "floor_standing": {
         "pickup": "measured",
@@ -983,20 +1246,194 @@
         "cycle": "measured"
       },
       "ceiling": {
-        "numerator": 120,
-        "denominator": 1
+        "numerator": 960,
+        "denominator": 11
       },
       "belt_pickup_calibrated": true,
       "enable_latency_ticks": 2
     },
     {
-      "key": "inserter:7/iron-plate",
+      "key": "inserter:6/piercing-rounds-magazine",
+      "via": "inserter",
+      "entity": "inserter:6",
+      "group": "inserter:6",
+      "item": "piercing-rounds-magazine",
+      "from": "belt:4/lane:1",
+      "to": "machine:2",
+      "from_lanes": [
+        "belt:4/lane:1"
+      ],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "stone-wall",
+          "piercing-rounds-magazine"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11,
+        "pickup_to_drop": 8,
+        "per_second": {
+          "numerator": 960,
+          "denominator": 11
+        }
+      },
+      "floor": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:7/coal",
       "via": "inserter",
       "entity": "inserter:7",
       "group": "inserter:7",
+      "item": "coal",
+      "from": "belt:5/lane:1",
+      "to": "machine:3",
+      "from_lanes": [
+        "belt:5/lane:1",
+        "belt:5/lane:2"
+      ],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "coal"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11,
+        "pickup_to_drop": 8,
+        "per_second": {
+          "numerator": 960,
+          "denominator": 11
+        }
+      },
+      "floor": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:8/coal",
+      "via": "inserter",
+      "entity": "inserter:8",
+      "group": "inserter:8",
+      "item": "coal",
+      "from": "belt:6/lane:2",
+      "to": "machine:4",
+      "from_lanes": [
+        "belt:6/lane:1",
+        "belt:6/lane:2"
+      ],
+      "lands_in": "ingredients",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "coal"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11,
+        "pickup_to_drop": 8,
+        "per_second": {
+          "numerator": 960,
+          "denominator": 11
+        }
+      },
+      "floor": {
+        "pickup": 4,
+        "drop": 1,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:9/iron-plate",
+      "via": "inserter",
+      "entity": "inserter:9",
+      "group": "inserter:9",
       "item": "iron-plate",
-      "from": "machine:3",
-      "to": "machine:5",
+      "from": "machine:5",
+      "to": "machine:3",
       "from_lanes": [],
       "lands_in": "ingredients",
       "hand": {
@@ -1045,67 +1482,12 @@
       "enable_latency_ticks": 2
     },
     {
-      "key": "inserter:8/battery",
+      "key": "inserter:10/iron-plate",
       "via": "inserter",
-      "entity": "inserter:8",
-      "group": "inserter:8",
-      "item": "battery",
+      "entity": "inserter:10",
+      "group": "inserter:10",
+      "item": "iron-plate",
       "from": "machine:5",
-      "to": "machine:2",
-      "from_lanes": [],
-      "lands_in": "ingredients",
-      "hand": {
-        "prototype": "stack-inserter",
-        "quality": "legendary",
-        "by_item": 16,
-        "nominal": 16,
-        "research": 16,
-        "items": [
-          "battery"
-        ],
-        "full_hand": {
-          "at_placing_source": true,
-          "elsewhere": true
-        },
-        "wait_for_full_hand": true,
-        "grab_less_to_match_belt_stack": true,
-        "max_belt_stack_size": 4
-      },
-      "rotation_ticks": 3,
-      "planned": {
-        "pickup": 1,
-        "drop": 1,
-        "cycle": 8,
-        "pickup_to_drop": 5,
-        "per_second": {
-          "numerator": 120,
-          "denominator": 1
-        }
-      },
-      "floor": {
-        "pickup": 1,
-        "drop": 1,
-        "cycle": 8
-      },
-      "floor_standing": {
-        "pickup": "measured",
-        "drop": "measured",
-        "cycle": "measured"
-      },
-      "ceiling": {
-        "numerator": 120,
-        "denominator": 1
-      },
-      "belt_pickup_calibrated": true,
-      "enable_latency_ticks": 2
-    },
-    {
-      "key": "inserter:9/copper-plate",
-      "via": "inserter",
-      "entity": "inserter:9",
-      "group": "inserter:9",
-      "item": "copper-plate",
-      "from": "machine:6",
       "to": "machine:4",
       "from_lanes": [],
       "lands_in": "ingredients",
@@ -1116,62 +1498,7 @@
         "nominal": 16,
         "research": 16,
         "items": [
-          "copper-plate"
-        ],
-        "full_hand": {
-          "at_placing_source": true,
-          "elsewhere": true
-        },
-        "wait_for_full_hand": true,
-        "grab_less_to_match_belt_stack": true,
-        "max_belt_stack_size": 4
-      },
-      "rotation_ticks": 3,
-      "planned": {
-        "pickup": 1,
-        "drop": 1,
-        "cycle": 8,
-        "pickup_to_drop": 5,
-        "per_second": {
-          "numerator": 120,
-          "denominator": 1
-        }
-      },
-      "floor": {
-        "pickup": 1,
-        "drop": 1,
-        "cycle": 8
-      },
-      "floor_standing": {
-        "pickup": "measured",
-        "drop": "measured",
-        "cycle": "measured"
-      },
-      "ceiling": {
-        "numerator": 120,
-        "denominator": 1
-      },
-      "belt_pickup_calibrated": true,
-      "enable_latency_ticks": 2
-    },
-    {
-      "key": "inserter:10/copper-plate",
-      "via": "inserter",
-      "entity": "inserter:10",
-      "group": "inserter:10",
-      "item": "copper-plate",
-      "from": "machine:6",
-      "to": "machine:5",
-      "from_lanes": [],
-      "lands_in": "ingredients",
-      "hand": {
-        "prototype": "stack-inserter",
-        "quality": "legendary",
-        "by_item": 16,
-        "nominal": 16,
-        "research": 16,
-        "items": [
-          "copper-plate"
+          "iron-plate"
         ],
         "full_hand": {
           "at_placing_source": true,
@@ -1215,8 +1542,8 @@
       "group": "inserter:1",
       "edges": [
         {
-          "edge": "inserter:1/accumulator",
-          "item": "accumulator",
+          "edge": "inserter:1/military-science-pack",
+          "item": "military-science-pack",
           "hand": 16,
           "floor_cycle": 11
         }
@@ -1226,8 +1553,8 @@
       "group": "inserter:2",
       "edges": [
         {
-          "edge": "inserter:2/accumulator",
-          "item": "accumulator",
+          "edge": "inserter:2/military-science-pack",
+          "item": "military-science-pack",
           "hand": 16,
           "floor_cycle": 11
         }
@@ -1237,8 +1564,8 @@
       "group": "inserter:3",
       "edges": [
         {
-          "edge": "inserter:3/iron-plate",
-          "item": "iron-plate",
+          "edge": "inserter:3/grenade",
+          "item": "grenade",
           "hand": 16,
           "floor_cycle": 8
         }
@@ -1248,8 +1575,8 @@
       "group": "inserter:4",
       "edges": [
         {
-          "edge": "inserter:4/iron-plate",
-          "item": "iron-plate",
+          "edge": "inserter:4/grenade",
+          "item": "grenade",
           "hand": 16,
           "floor_cycle": 8
         }
@@ -1259,10 +1586,16 @@
       "group": "inserter:5",
       "edges": [
         {
-          "edge": "inserter:5/iron-plate",
-          "item": "iron-plate",
+          "edge": "inserter:5/stone-wall",
+          "item": "stone-wall",
           "hand": 16,
-          "floor_cycle": 8
+          "floor_cycle": 11
+        },
+        {
+          "edge": "inserter:5/piercing-rounds-magazine",
+          "item": "piercing-rounds-magazine",
+          "hand": 16,
+          "floor_cycle": 11
         }
       ]
     },
@@ -1270,10 +1603,16 @@
       "group": "inserter:6",
       "edges": [
         {
-          "edge": "inserter:6/battery",
-          "item": "battery",
+          "edge": "inserter:6/stone-wall",
+          "item": "stone-wall",
           "hand": 16,
-          "floor_cycle": 8
+          "floor_cycle": 11
+        },
+        {
+          "edge": "inserter:6/piercing-rounds-magazine",
+          "item": "piercing-rounds-magazine",
+          "hand": 16,
+          "floor_cycle": 11
         }
       ]
     },
@@ -1281,10 +1620,10 @@
       "group": "inserter:7",
       "edges": [
         {
-          "edge": "inserter:7/iron-plate",
-          "item": "iron-plate",
+          "edge": "inserter:7/coal",
+          "item": "coal",
           "hand": 16,
-          "floor_cycle": 8
+          "floor_cycle": 11
         }
       ]
     },
@@ -1292,10 +1631,10 @@
       "group": "inserter:8",
       "edges": [
         {
-          "edge": "inserter:8/battery",
-          "item": "battery",
+          "edge": "inserter:8/coal",
+          "item": "coal",
           "hand": 16,
-          "floor_cycle": 8
+          "floor_cycle": 11
         }
       ]
     },
@@ -1303,8 +1642,8 @@
       "group": "inserter:9",
       "edges": [
         {
-          "edge": "inserter:9/copper-plate",
-          "item": "copper-plate",
+          "edge": "inserter:9/iron-plate",
+          "item": "iron-plate",
           "hand": 16,
           "floor_cycle": 8
         }
@@ -1314,8 +1653,8 @@
       "group": "inserter:10",
       "edges": [
         {
-          "edge": "inserter:10/copper-plate",
-          "item": "copper-plate",
+          "edge": "inserter:10/iron-plate",
+          "item": "iron-plate",
           "hand": 16,
           "floor_cycle": 8
         }

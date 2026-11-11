@@ -28,10 +28,11 @@ files marked unsupported bend must be captured again, since changing a saved war
 ## The config is automatic
 
 `electromagnetic-240-recycler-belt-fed.json` is what the clock generator's own import makes of a fresh Sidecar export of the left copy
-of this blueprint, with only Target Output's rate and copies set: no inserter is set to Always enabled, and no
+of this blueprint, with only the setpoint's rate and copies set and the copies' lanes stated (13 tiles from one copy to the
+next, the four input belts moving east, each lane they take from ending in a dead end): no inserter is set to Always enabled, and no
 swing count or LCM is fixed. Generate picks the clock for all twelve inserters. It is a 40-tick clock in which the two
 arms that carry supercapacitors to the science plants take turns (each science plant's drain into its steel buffer moves
-with that plant's turn), 1,040.6 wakeups a minute, no inserter left always on, and it has recovery after every disturbance
+with that plant's turn), 2,004.8 wakeups a minute, no inserter left always on, and it has recovery after every disturbance
 trial that the check tries.
 
 The supercapacitor plants run at 99.56% of their capacity at this rate, so the margin is thin: the clock keeps both

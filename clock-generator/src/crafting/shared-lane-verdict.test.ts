@@ -5,7 +5,8 @@ import { Config } from "../config/schema";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import { SerializableClockWindows } from "./clock";
-import { judgeSharedLanes } from "./shared-lane-verdict";
+import { behindTargetIn, CopyMade, judgeSharedLanes, RunOfCopies, TargetRates } from "./shared-lane-verdict";
+import { withoutSharedLaneFacts } from "./generate-blueprint-test-helpers";
 
 const quiet = { log: () => {}, warn: () => {}, error: () => {}, debug: () => {} };
 
@@ -20,7 +21,15 @@ function flowing(config: Config, belt_ids: number[], flow_direction: 0 | 4 | 8 |
     return { ...config, belts: config.belts.map(belt => belt_ids.includes(belt.id) ? { ...belt, flow_direction } : belt) };
 }
 
+/** The config with the machines it names at a crafting speed of their own, by machine id */
+function atSpeeds(config: Config, speeds: Record<number, number>): Config {
+    return { ...config, machines: config.machines.map(machine => speeds[machine.id] === undefined ? machine : { ...machine, crafting_speed: speeds[machine.id] }) };
+}
+
 const dead_end = { lane_end: { kind: "dead_end" } };
+
+// The scenario's speeds, the inserter build's third copy: the inserter crafting cases below were measured at them, and their hands' timing follows them
+const THIRD_COPY_SPEEDS = { 4: 40.3125, 5: 86.1655 };
 
 // abucnasty's chemical science build (#725): 5.5 copies 18 tiles apart. Its two input belts run east and each ends in an
 // underground entrance with no exit, so all four input lanes are dead ends: the advanced circuits and the sulfur on belt 2,
@@ -42,9 +51,14 @@ describe("the clocks recorded on the chemical science build whose copies share d
         expect([losses[0].belt_id, losses[0].lane, losses[0].copy, losses[0].inserter_id, losses[0].flow.x]).toEqual([2, 1, 2, 3, 1]);
         // the game's machine made 19 of 30 hands
         expect(losses[0].items / losses[0].alone_items).toBeCloseTo(2 / 3, 1);
+        // a machine of the second copy makes fewer crafts than its target rate in the same run
+        const behind = losses[0].behind!;
+        expect([behind.copy, behind.kind]).toEqual([2, "machine"]);
+        expect(behind.behind).toBeGreaterThan(1);
         expect(losses[0].text).toBe(`Lane 1 of belt 2 ends in a dead end. The 5.5 copies take advanced circuit from it. When the items move east, `
             + `copy 2 from the entry does not get sufficient items. Its inserter 3 takes ${losses[0].items.toLocaleString("en-US")} in ${losses[0].window_cycles} window cycles. `
-            + `With no other copy on the lane, it takes ${losses[0].alone_items.toLocaleString("en-US")}.`);
+            + `With no other copy on the lane, it takes ${losses[0].alone_items.toLocaleString("en-US")}. `
+            + `In the same run, machine ${behind.id} of copy 2 is ${behind.behind.toLocaleString("en-US", { maximumFractionDigits: 1 })} crafts behind its target rate.`);
     });
 
     it.each(["time_study_windows", "euclidean_swings"])("holds %s on every copy", id => {
@@ -90,6 +104,14 @@ describe("the clocks recorded on the inserter build whose copies share flowing o
         expect(losses.some(loss => loss.belt_id === 1 && loss.item === "iron-ore")).toBe(true);
     });
 
+    it("names the machine of copy 3 that falls more than a thousand crafts behind its target rate under takt_batches_swings_6", () => {
+        const { losses } = judged("takt_batches_swings_6");
+        const behind = losses[0].behind!;
+        expect([behind.copy, behind.kind]).toEqual([3, "machine"]);
+        expect(behind.behind).toBeGreaterThan(1000);
+        expect(losses[0].text).toContain(`In the same run, machine ${behind.id} of copy 3 is `);
+    });
+
     it.each(["coordinated_sources", "takt_batches_swings_2", "takt_batches_observed_swings_2", "takt_batches_observed_swings_6"])("holds %s on every copy", id => {
         expect(judged(id)).toMatchObject({ losses: [], simulated: true });
     });
@@ -117,11 +139,15 @@ describe("the clocks recorded on the inserter build whose copies share flowing o
 
 // ADVANCED_CIRCUIT_240, three copies, every lane a free outlet: a clock the generator made for it (Euclidean Swings on 24
 // ticks) has copy 3 short by one hand (16 items) on the electronic circuits of belts 1 and 4 and on the coal of belt 3 in the
-// judged window cycles, and in the run twice as long by 32 on belt 1 and 112 on belt 4.
+// judged window cycles, and in the run twice as long by 32 on belt 1 and 112 on belt 4. Measured on the sample as it was
+// before it stated the spacing of its copies and the way its belts move, with the four lanes a free outlet. The sample now
+// states that those lanes end in a dead end, and this test is of lanes that flow on: it takes the sample without those
+// facts.
 describe("a clock whose copy is short by more than one hand in the run twice as long", () => {
     it("fails it on that copy", async () => {
         const outlet = { lane_end: { kind: "outlet" } };
-        const config = withFacts(await loadConfigFromFile(ConfigPaths.ADVANCED_CIRCUIT_240), { "1/1": outlet, "3/1": outlet, "3/2": outlet, "4/1": outlet });
+        const config = withFacts(withoutSharedLaneFacts(await loadConfigFromFile(ConfigPaths.ADVANCED_CIRCUIT_240)),
+            { "1/1": outlet, "3/1": outlet, "3/2": outlet, "4/1": outlet });
         const windows = {
             "inserter:1": [{ start: 2, end: 18 }], "inserter:2": [{ start: 0, end: 0 }], "inserter:3": [{ start: 2, end: 19 }],
             "inserter:4": [{ start: 20, end: 23 }, { start: 0, end: 5 }], "inserter:5": [{ start: 12, end: 23 }, { start: 0, end: 0 }],
@@ -145,7 +171,7 @@ describe("a clock whose copy is short by more than one hand in the run twice as 
 // outlet, which the sample stated before it stated the ends the build has; the test keeps those ends.
 describe("the clocks whose third copy puts its last ore hand down a few ticks after one copy alone", async () => {
     const free_outlet = { lane_end: { kind: "outlet" } };
-    const config = withFacts(await loadConfigFromFile(ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK),
+    const config = withFacts(atSpeeds(await loadConfigFromFile(ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK), THIRD_COPY_SPEEDS),
         { "1/1": free_outlet, "1/2": free_outlet, "4/1": free_outlet, "4/2": free_outlet });
     const clocks: Record<string, { window_cycle_ticks: number; windows: SerializableClockWindows }> =
         JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "inserter-crafting-240-generated-clocks-copy-3-one-hand-late.json"), "utf8"));
@@ -153,6 +179,64 @@ describe("the clocks whose third copy puts its last ore hand down a few ticks af
     it.each(["round_robin_polling_swings_2", "coordinated_sources"])("holds %s on every copy, after a run twice as long", id => {
         expect(judgeSharedLanes(config, clocks[id].windows, clocks[id].window_cycle_ticks, quiet))
             .toMatchObject({ losses: [], simulated: true, longer_run: true });
+    });
+});
+
+// A clock the generator makes for INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK with its ore lanes' ends as the sample states
+// them (Time-Study Windows on 72 ticks, 3 output swings): in the judged window cycles copy 3's inserter 4 puts down 48 iron
+// ore (3 hands) fewer than one copy alone, but every machine and every output inserter of every copy keeps its target rate.
+// The copy alone is still filling a furnace's plate stock there; copy 3 filled it earlier. The game holds the clock.
+describe("a clock whose copy takes less from a shared lane than one copy alone while every machine keeps its target rate", () => {
+    it("holds it, with no other run", async () => {
+        const config = atSpeeds(await loadConfigFromFile(ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK), THIRD_COPY_SPEEDS);
+        const windows = {
+            "inserter:1": [{ start: 0, end: 8 }, { start: 33, end: 44 }, { start: 69, end: 71 }],
+            "inserter:2": [{ start: 0, end: 8 }, { start: 33, end: 44 }, { start: 69, end: 71 }],
+            "inserter:3": [{ start: 0, end: 8 }, { start: 33, end: 44 }, { start: 69, end: 71 }],
+            "inserter:4": [{ start: 16, end: 27 }, { start: 49, end: 60 }],
+            "inserter:5": [{ start: 0, end: 3 }, { start: 5, end: 48 }, { start: 50, end: 71 }],
+            "inserter:6": [{ start: 0, end: 71 }], "inserter:7": [{ start: 0, end: 71 }],
+            "inserter:8": [{ start: 0, end: 31 }, { start: 33, end: 55 }, { start: 58, end: 71 }],
+            "inserter:9": [{ start: 1, end: 59 }, { start: 62, end: 72 }],
+            "inserter:10": [{ start: 0, end: 71 }], "inserter:11": [{ start: 0, end: 71 }],
+        };
+        const judged = judgeSharedLanes({ ...config, overrides: { ...config.overrides, terminal_swing_count: 3 } }, windows, 72, quiet);
+        expect(judged).toMatchObject({ losses: [], simulated: true, longer_run: false });
+    });
+});
+
+// The machines and output inserters behind their target in one run of the copies. A build of 3.5 copies over 10 seconds
+// (600 ticks): machine 7 of a whole copy makes 2 crafts a second, 20 in the span, and four inserters take from it with
+// one hand each an output cycle. The part copy (copy 4) holds machine 7 and two of its four takers, inserter 1 and
+// inserter 9, so it is held to half of 20. Inserter 9 is also an output inserter, with its own target of 4 items a
+// second (40 in the span) and a hand of 4.
+describe("the target a machine or an output inserter of a copy is held to", () => {
+    const rates: TargetRates = {
+        crafts_per_second: new Map([[7, 2]]),
+        output_inserters: new Map([[9, { items_per_second: 4, hand: 4 }]]),
+        takers: new Map([[7, ["inserter:1", "inserter:2", "inserter:3", "inserter:9"].map(inserter_id => ({ inserter_id, transfers: 1 }))]]),
+    };
+    const part_copy = new Set(["machine:7", "inserter:1", "inserter:9"]);
+    const run = (made: CopyMade[]): RunOfCopies => ({ shortfalls: [], made, from: 0, to: 600, holds: ["whole", "whole", part_copy] });
+    const machine = (copy: number, crafts: number): CopyMade => ({ copy, kind: "machine", id: 7, counts: [{ tick: 300, amount: crafts }] });
+
+    it("holds a part copy's machine with half of its takers to half of a whole copy's target: making half, it is not behind", () => {
+        expect(behindTargetIn(run([machine(3, 10)]), rates)).toEqual([]);
+    });
+
+    it("finds a part copy's machine behind when it makes less than its share by more than one craft, against the share's target", () => {
+        expect(behindTargetIn(run([machine(3, 7)]), rates)).toEqual([{ copy: 4, kind: "machine", id: 7, made: 7, target: 10, behind: 3 }]);
+    });
+
+    it("holds a whole copy's machine to the whole target", () => {
+        expect(behindTargetIn(run([machine(1, 10)]), rates)).toEqual([{ copy: 2, kind: "machine", id: 7, made: 10, target: 20, behind: 10 }]);
+        expect(behindTargetIn(run([machine(0, 20), machine(2, 19)]), rates)).toEqual([]);
+    });
+
+    it("holds a part copy's output inserter to its own target", () => {
+        const output: CopyMade = { copy: 3, kind: "output_inserter", id: 9, counts: [{ tick: 300, amount: 32 }] };
+        expect(behindTargetIn(run([output]), rates)).toEqual([{ copy: 4, kind: "output_inserter", id: 9, made: 32, target: 40, behind: 2 }]);
+        expect(behindTargetIn(run([{ ...output, counts: [{ tick: 300, amount: 40 }] }]), rates)).toEqual([]);
     });
 });
 

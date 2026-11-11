@@ -30,12 +30,13 @@ export const ConfigPaths = {
     INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'inserter-crafting', 'inserter-crafting-240-shared-signal-clock.json'),
     STONE_BRICK_120_DRILL_DIRECT_INSERT: path.join(CONFIG_SAMPLES_DIR, 'smelting', 'stone-brick', 'stone-brick-120-drill-direct-insert.json'),
     UTILITY_SCIENCE_120: path.join(CONFIG_SAMPLES_DIR, 'science', 'utility', 'utility-120.json'),
-    MILITARY_SCIENCE_120: path.join(CONFIG_SAMPLES_DIR, 'science', 'military', 'military-120.json'),
+    /** Five mirrored pairs, each two military science assemblers fed by two grenade assemblers around one foundry; 240 a second */
+    MILITARY_SCIENCE_240: path.join(CONFIG_SAMPLES_DIR, 'science', 'military', 'military-240.json'),
     LDS_240: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'lds', 'lds-240.json'),
     METALLURGIC_SCIENCE_45: path.join(CONFIG_SAMPLES_DIR, 'science', 'metallurgic', 'metallurgic-45.json'),
     UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT: path.join(CONFIG_SAMPLES_DIR, 'science', 'utility', 'utility-120-processing-unit-and-lds-on-one-belt.json'),
     PROCESSING_UNIT_15_CHEST_FED: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'processing-unit', 'processing-unit-15-chest-fed.json'),
-    ACCUMULATOR_640: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'accumulator', 'accumulator-640.json'),
+    ACCUMULATOR_320: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'accumulator', 'accumulator-320.json'),
     AUTOMATION_SCIENCE_240: path.join(CONFIG_SAMPLES_DIR, 'science', 'automation', 'automation-240.json'),
     /** Two foundries casting gears and copper onto one belt, which feeds an assembler making the packs */
     AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER: path.join(CONFIG_SAMPLES_DIR, 'science', 'automation', 'automation-120-foundries-feed-belt-to-assembler.json'),

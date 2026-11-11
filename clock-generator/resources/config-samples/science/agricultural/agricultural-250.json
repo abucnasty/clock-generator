@@ -173,7 +173,7 @@
       "id": 11,
       "source": {
         "type": "belt",
-        "id": 1,
+        "id": 2,
         "near_lane": 1
       },
       "sink": {
@@ -198,6 +198,21 @@
   "belts": [
     {
       "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "bioflux",
+          "stack_size": 4,
+          "sharing": "one_per_copy"
+        },
+        {
+          "ingredient": "nutrients",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 2,
       "type": "turbo-transport-belt",
       "lanes": [
         {

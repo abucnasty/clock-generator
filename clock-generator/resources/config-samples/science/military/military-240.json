@@ -1,0 +1,279 @@
+{
+  "setpoint": {
+    "recipe": "military-science-pack",
+    "items_per_second": 240,
+    "copies": 5,
+    "copy_offset": {
+      "x": 9,
+      "y": 0
+    }
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "military-science-pack",
+      "productivity": 100,
+      "crafting_speed": 63.0078125
+    },
+    {
+      "id": 2,
+      "recipe": "military-science-pack",
+      "productivity": 100,
+      "crafting_speed": 63.0078125
+    },
+    {
+      "id": 3,
+      "recipe": "grenade",
+      "productivity": 0,
+      "crafting_speed": 52.57625
+    },
+    {
+      "id": 4,
+      "recipe": "grenade",
+      "productivity": 0,
+      "crafting_speed": 52.57625
+    },
+    {
+      "id": 5,
+      "recipe": "casting-iron",
+      "productivity": 150,
+      "crafting_speed": 129.0
+    }
+  ],
+  "inserters": [
+    {
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1
+      },
+      "stack_size": 16
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 2
+      },
+      "sink": {
+        "type": "belt",
+        "id": 2
+      },
+      "stack_size": 16
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 4
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "stack_size": 16
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 3,
+        "near_lane": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 4,
+        "near_lane": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "stack_size": 16
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 5,
+        "near_lane": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 3
+      },
+      "stack_size": 16
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 6,
+        "near_lane": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 4
+      },
+      "stack_size": 16
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 5
+      },
+      "sink": {
+        "type": "machine",
+        "id": 3
+      },
+      "stack_size": 16
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 5
+      },
+      "sink": {
+        "type": "machine",
+        "id": 4
+      },
+      "stack_size": 16
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "military-science-pack",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "outlet"
+          }
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "military-science-pack",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "outlet"
+          }
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "turbo-transport-belt",
+      "flow_direction": 4,
+      "lanes": [
+        {
+          "ingredient": "stone-wall",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          },
+          "sharing": "shared_by_copies"
+        },
+        {
+          "ingredient": "piercing-rounds-magazine",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          },
+          "sharing": "shared_by_copies"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "turbo-transport-belt",
+      "flow_direction": 4,
+      "lanes": [
+        {
+          "ingredient": "piercing-rounds-magazine",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          },
+          "sharing": "shared_by_copies"
+        },
+        {
+          "ingredient": "stone-wall",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          },
+          "sharing": "shared_by_copies"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "turbo-transport-belt",
+      "flow_direction": 4,
+      "lanes": [
+        {
+          "ingredient": "coal",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          },
+          "sharing": "one_per_copy"
+        },
+        {
+          "ingredient": "coal",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          },
+          "sharing": "one_per_copy"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "turbo-transport-belt",
+      "flow_direction": 4,
+      "lanes": [
+        {
+          "ingredient": "coal",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          },
+          "sharing": "one_per_copy"
+        },
+        {
+          "ingredient": "coal",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          },
+          "sharing": "one_per_copy"
+        }
+      ]
+    }
+  ]
+}

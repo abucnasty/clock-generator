@@ -26,7 +26,7 @@ after the engine reads the file: a field with a default is required, but a confi
 | `setpoint` | object | yes | The setpoint: the product that the build must make, and the rate it must hold. The clock never changes it. |
 | `setpoint.recipe` | string | yes | The name of the item that the setpoint counts. |
 | `setpoint.items_per_second` | number > 0 | yes | The rate of the setpoint for all copies together, in items per second. |
-| `setpoint.copies` | number > 0 | yes | The number of identical builds in the game, which can be partial, for example 2.25. |
+| `setpoint.copies` | number > 0 | yes | The number of identical builds in the game, which can be partial, for example 2.25. The fraction is a part copy: on each lane that the copies share, it holds that fraction of a copy's inserters, with the machines that they feed. In the check of the shared lanes, a machine of the part copy is held to its share of a whole copy's target ([stability](../../clock-generator/docs/stability.md#copies-that-share-a-lane)). |
 | `setpoint.copy_offset` | object | no | The distance from this build to the next copy, in tiles. |
 | `setpoint.copy_offset.x` | number | yes | The x coordinate, in tiles. |
 | `setpoint.copy_offset.y` | number | yes | The y coordinate, in tiles. |
@@ -311,6 +311,7 @@ after the engine reads the file: a field with a default is required, but a confi
 | `overrides.backed_up_belts` | boolean | no | Whether the input belts are backed up at the pickup. Then each input lane without a lane_end is a dead end. |
 | `overrides.search_for_fewer_wake_ups` | boolean | no | Whether the generator always does the four searches, to find a clock with fewer wakeups. |
 | `overrides.check_start_dependence` | boolean | no | Whether the generator tests each clock from more starts than the cold start. |
+| `overrides.disturbance_trials_on_copies` | boolean | no | Whether the generator makes the disturbance trials again on the copies that share a lane. |
 | `overrides.kick_start_items` | integer ≥ 0 | no | The kick start: the number of its own product that a machine gets before its clock starts, when its recipe uses that product. |
 | `overrides.disable_swing_backoff` | boolean | no | Not used: set terminal_swing_count to give the number of output swings. |
 | `overrides.derive_clock_windows` | boolean | no | Whether the generator finds the enable windows of other inserters from a run in which only the output inserters have a clock. |
