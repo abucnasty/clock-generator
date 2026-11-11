@@ -135,8 +135,8 @@ entry for lane.
 
 **Output belt**:
 The belts from the output inserters of the copies to the outlet. The configuration's `output_belt`: a side belt, and
-stretches of belt in tiles. The generator does not use it yet. A project technical noun (STE rule 1.6): STE approves
-OUTPUT (n), and has no entry for belt.
+stretches of belt in tiles. The run of the copies moves the stacks on it, and an output blockage shuts its outlet. A
+project technical noun (STE rule 1.6): STE approves OUTPUT (n), and has no entry for belt.
 _Avoid_: output line (the game's `output_lines` are transport lines)
 
 **Side belt**:

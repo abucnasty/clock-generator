@@ -908,11 +908,11 @@ export const ConfigSchema = z.preprocess(renameTargetOutputToSetpoint, z.preproc
     chests: z.array(ChestConfigSchema).optional().describe("The chests of the build, and the cars, tanks, cargo wagons and rocket silos that it uses as chests."),
     overrides: ConfigOverridesSchema.optional().describe("Settings that replace what the generator chooses for the configuration."),
     /**
-     * The belts from the copies' output inserters to the outlet, in tiles (config/output-belt.ts). The generator does not
-     * read it yet: it is checked, and its geometry derived, for the model of the joins that comes next.
+     * The belts from the copies' output inserters to the outlet, in tiles (config/output-belt.ts). The run of the copies
+     * moves the output on it (crafting/output-belt-run.ts).
      */
     output_belt: OutputBeltSchema.optional().describe("The output belt: the side belt that each copy's output inserter drops on, and the stretches "
-        + "of belt from the copies to the outlet, in tiles. The generator checks it and does not use it yet."),
+        + "of belt from the copies to the outlet, in tiles. The run of the copies moves the output on it, and an output blockage shuts its outlet."),
 }).superRefine((config, context) => {
     if (config.output_belt !== undefined) {
         for (const problem of outputBeltProblems(config.output_belt, config.setpoint.copy_offset)) {

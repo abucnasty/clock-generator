@@ -51,7 +51,7 @@ Conventions:
   beacon bonuses differently from 2.0).
 - A config can state its output belt in `output_belt`: the belt that each copy's output inserter drops on, and the
   stretches of belt from the copies to the outlet, in tiles ([Output belt](../../README.md#output-belt)). The tiles are
-  read on the scaffold in the game. Only `automation-240` states it. The generator checks it and does not use it yet.
+  read on the scaffold in the game. Only `automation-240` states it. The run of the copies moves the output on it.
 
 ## Development glossary
 

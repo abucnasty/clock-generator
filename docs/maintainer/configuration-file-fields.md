@@ -321,7 +321,7 @@ after the engine reads the file: a field with a default is required, but a confi
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `output_belt` | object | no | The output belt: the side belt that each copy's output inserter drops on, and the stretches of belt from the copies to the outlet, in tiles. The generator checks it and does not use it yet. |
+| `output_belt` | object | no | The output belt: the side belt that each copy's output inserter drops on, and the stretches of belt from the copies to the outlet, in tiles. The run of the copies moves the output on it, and an output blockage shuts its outlet. |
 | `output_belt.side_belt` | object | no | The side belt that each copy's output inserter drops on, the same for every copy that has one. |
 | `output_belt.side_belt.lane` | one of `left`, `right` | yes | The lane of the side belt that the output inserter drops on: "left" or "right" in the direction of travel. |
 | `output_belt.side_belt.tiles` | integer > 0 | yes | The steps from the drop tile to the tile that the side belt side-loads onto, as the sidecar's walk counts them. This is the number that `drop_capture.tiles` holds. On a drop tile and one curve, it is 2. |

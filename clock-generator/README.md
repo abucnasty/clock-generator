@@ -391,9 +391,13 @@ ingredients when it has none.
 
 ### Output belt
 
-`output_belt` states the belts from the output inserters of the copies to the outlet, in tiles. The generator checks
-the section, but it does not use it yet. The section is for a model of the joins. A join is a belt lane that goes onto
-another belt. It is a side load or the splitter.
+`output_belt` states the belts from the output inserters of the copies to the outlet, in tiles. A join is a belt lane
+that goes onto another belt. It is a side load or the splitter. Where a config states the section, the run of the
+copies moves the output stacks on it in each tick. The stacks go from each copy's side belt through the joins to the
+outlet. When a copy's side belt is full at its join, the copy holds its hand. An output blockage shuts the outlet: the
+belt lane is blocked from draining to the belt it joins, and every lane upstream backs up from there. The engine
+calculates each tick from the tiles ([simulator](docs/simulator.md#the-output-belt-of-the-copies)). A config without the
+section runs as before.
 
 - `side_belt`: the belt that the output inserter of each copy drops on. All the copies that have a side belt have the
   same one. `lane` is the lane that the inserter drops on. `tiles` is the steps from the drop tile to the side load.

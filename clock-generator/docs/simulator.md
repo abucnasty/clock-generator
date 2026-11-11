@@ -301,7 +301,70 @@ dead-ended lanes) and on logistic science 240 (11 copies) the run gives the game
 loss can differ (#660, Takt Batches with 6 swings: copy 3 about 5 of 6 hands an inserter against 4.9 in the game).
 Limits: the row is straight, so a row folded back on itself or mirrored is run as if it were straight; a belt the build
 drops onto is not run with every copy on it (the result names its lanes); side-loads, merges and splitters on a shared
-line are not modelled; each copy's machines are its own, so machines two copies share in the game are not.
+line are not modelled, except on an output belt that the config states (below). Each copy's machines are its own, so
+machines two copies share in the game are not.
+
+### The output belt of the copies
+
+Where a config states its output belt (`output_belt`), the run of the copies moves every stack on it in each tick
+(`src/crafting/output-belt-run.ts`). The stacks go from the output inserters of the copies to the outlet. The config
+states tiles. The engine makes the lines of each lane from them (`src/config/output-belt.ts`,
+`src/entities/belt/join/output-belt-join.ts`). The join model moves the stacks on the lines in each tick
+([belt join](../tests/game/mechanics/belt-join/README.md)). It has each side belt and its join, and the joins of the
+copies in order. It has the lane change onto an underground entrance and a copy's drop onto a stretch. It has the
+splitter with its loop, and the outlet. The outlet is a loader at the end of the last stretch. A config without the
+section runs as before: each output inserter drops on a tile of its own.
+
+An output inserter puts its stacks on the middle of its drop tile, with the rule above. A stack goes one step past the
+middle, or 64 behind the stack ahead. It must be less than 64 behind the middle. On a free side belt, a hand's stacks go
+down 0, 1, 2 and 4 ticks after it comes. A stack stays in the hand only when the side belt is full to its drop tile. On
+the automation science 240 build, that is 8 stacks, as in the game. In the game, that build's drops show the stacks at
+96, 128, 160 and 160 from the end of the drop tile. Behind a full side belt, they are at 153 and 185.
+
+An output blockage of the product shuts the outlet: the belt lane is blocked from draining to the belt it joins. Every
+lane upstream backs up from there. A hand is held only when its side belt is full. The blockage does not refuse the
+product at every drop. The end changes from the tick after the next. In the game, an end that a script changes acts
+from the next tick. The state of a repeat holds every stack on the output belt, by its line and position.
+
+Recorded on AUTOMATION_SCIENCE_240, nine copies (Factorio 2.1.24, 2026-11-11):
+
+- The tiles alone give the travel that the recordings show. A drop takes 13 ticks to its join, and 2 more to leave the
+  exit's line. Copy 4's stacks take 414 ticks from its join to the splitter, through the lane change. Copy 8's take 120.
+  Copy 9's take 122 from its drop. Copy 5's take 84 from its drop tile to copy 6's join.
+- The lane change gives 414 only when the side load lands on the entrance's own line, the upstream half of its tile.
+- Two clocks leave copies short in the game: 4cc378b0763b and 73f5b0448482. On both, copies 4 and 8 are short, and the
+  other copies hold. The output inserters of copies 4 and 8 take 5 ticks or more in 80 of 320 hands. The game has 15 of
+  61 and 14 of 60. On the selected clock (b1490c9f2c49) every copy holds, as in the game.
+- The outlet was shut at clock value 54 for 864 ticks on the selected clock. The engine gave the game's packs in every
+  window cycle on copies 1, 2, 4 and 6. On each other copy, 2 or 3 window cycles are different by 4 to 16 packs. The packs lost
+  are the game's on all nine copies. Copy 5 stops 613 ticks after the cut, the game 608. Copy 9 stops at 493, the game
+  at 496.
+
+What the join model does not establish ([belt join](../tests/game/mechanics/belt-join/README.md#limits)), and how often
+the runs of this build reach it:
+
+- Two sender lanes onto one lane of a straight belt agree with the game only in the shape of the loop. This build's loop
+  has that shape.
+- In the ticks after a build, the game can put a stack one step (32) off at a cut between two of its lines. The run of the
+  copies starts with no build. So this is a limit of the recordings, not of the run.
+- Not measured: a stack of the receiving lane at 68 to 70 at a join onto an underground exit. Not measured: a contest
+  onto an underground entrance. The generation of this build makes 968,144 landings onto an exit and 230,539 onto the
+  entrance, the trials included. No landing onto an exit has a stack at 68 to 70, in the generation or in the blockage.
+- 6,756 landings onto the entrance in the generation have a stack of the receiving lane behind the side head's own spot.
+  So do 806 in the blockage. No line feeds the entrance's lane from upstream. So each such stack is an earlier stack of
+  the same lane change, in a lane that is full.
+- The splitter: "none" for a priority is refused. An output looks at the stack ahead on the next line. One held-out copy
+  shows this, and no hand-over of this build's runs needs it. The back end takes only the head of the input with the
+  priority (24 of 24 held-out copies). 105,273 hand-overs of the generation go to the back end.
+- Two side belts onto one tile are refused only with a `copy_offset` of zero. The outlet's loader and a lone underground
+  exit's line (128) come from the module's lengths and the recording of the build. A side head that lands past the end
+  of a lone exit's line stays on that line. No landing of this build's runs does this.
+- The model shuts the outlet's loader. The game test removes the loader. So the model's loader line holds two more
+  stacks a lane while it is shut.
+- The recordings of the whole build were replayed through the model. The model holds the game's stacks on every
+  recorded line, with one exception: the last stack of the loop's first line in a standing queue. The game keeps it at
+  the back of the curve's inner lane, 81 behind the stack ahead. The model keeps it 64 behind. The number of stacks is
+  the game's.
 
 ### Two inserters that bring the same item
 
