@@ -1,3 +1,4 @@
+import { isWindowCycleClock, type WindowCycleClock } from "./enable-control";
 import { Resettable } from "./resettable";
 
 /**
@@ -20,6 +21,11 @@ export class ResettableRegistry {
      */
     public resetAll(starts_clock: boolean = false): void {
         this.resettables.forEach(r => r.reset(starts_clock));
+    }
+
+    /** The clocks of window cycles among the registered objects */
+    public clocks(): WindowCycleClock[] {
+        return this.resettables.filter((it): it is Resettable & WindowCycleClock => isWindowCycleClock(it));
     }
 
     /** Whether none of the registered objects starts again when a later step of a run starts (`Resettable.runs_through_steps`) */

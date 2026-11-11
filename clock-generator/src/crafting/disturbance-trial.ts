@@ -36,6 +36,7 @@ import { DropBy } from "../simulation/components/ports";
 import type { SharedLane } from "../state/shared-lane";
 import type { CopiesTrialVerdict } from "./shared-lane-trial";
 import { COPY_NUMBER_STRIDE, twinOf } from "./sequence/build-copies";
+import type { WindowCycleClock } from "../simulation/controls/enable-control";
 
 export type DisturbanceTrial =
     /** Nothing is cut: the run as it is, counted as the runs with a loss are */
@@ -287,14 +288,25 @@ export interface LossTrial {
     stopped_after_ticks: number | null;
     /** What the output inserters dropped in each bin after the item was back, the first bin starting in that tick */
     output_per_bin: number[];
-    /** The build is back at its expected output, exactly or at the rate of every branch, and stays there (see judgeRecovery) */
+    /**
+     * The build is back at its expected output, exactly or at the rate of every branch, and stays there (see judgeRecovery);
+     * where its state repeats, in the bins or in the window cycles of the repeat counted on the clock (see judgedOnTheClock)
+     */
     recovers: boolean;
-    /** Bins after the item was back before the first from which it is at the rate; null when it does not recover */
+    /**
+     * Bins after the item was back before the first from which it is at the rate; for a trial back only on the clock, the
+     * bin its repeat begins at; null when it does not recover
+     */
     recovered_after_bins: number | null;
     /** The state of the build repeated, so what it did in its last bins it does for good; without it the verdict is of the bins run */
     proven: boolean;
     /** The bins the build ended in: those that repeat when `proven`, or the last ones it was held to */
     ends_in: number[];
+    /**
+     * In a run of one copy, the window cycles of the repeat counted on the clock, where its bins are not at the rate (see
+     * judgedOnTheClock); absent where they are, where no state repeated, and in a run with nothing cut
+     */
+    ends_in_on_the_clock?: number[];
     /** Bins run past the recovery window, as a trial short late in it runs on; absent when it did not */
     ran_on_bins?: number;
     /** What the container held of the watched items (DisturbanceTrialOptions.watched_backlog) after each bin; absent where none are watched */
@@ -482,18 +494,89 @@ export function judgeRecovery(
  * on an export has not recovered.
  */
 export function judgedWithExports(
-    judged: Pick<LossTrial, "recovers" | "recovered_after_bins" | "proven" | "ends_in">,
+    judged: JudgedRecovery,
     watched: readonly WatchedExport[],
     export_per_bin: readonly (readonly number[])[],
     bin_ticks: number,
     repeats_from: number | null,
     hold_bins: number,
-): Pick<LossTrial, "recovers" | "recovered_after_bins" | "proven" | "ends_in" | "export_shortfalls"> {
+): JudgedRecovery & Pick<LossTrial, "export_shortfalls"> {
     const short = watched.flatMap((it, at) => {
         const bins = repeats_from !== null ? export_per_bin[at].slice(repeats_from) : export_per_bin[at].slice(-hold_bins);
         return bins.length === 0 ? [] : exportShortfallOfBins(it.exported, bins, bin_ticks, judged.proven) ?? [];
     });
     return short.length === 0 ? judged : { ...judged, recovers: false, recovered_after_bins: null, export_shortfalls: short };
+}
+
+/** What a trial's output is judged to have done: its recovery, and where counted, its repeat on the clock */
+export type JudgedRecovery = Pick<LossTrial, "recovers" | "recovered_after_bins" | "proven" | "ends_in" | "ends_in_on_the_clock">;
+
+/**
+ * Whether a trial's repeat is counted again on the clock where its bins are not at the rate: in the trials of a loss, on
+ * one copy and on the copies. The run with nothing cut is the check of what the clock holds, and the runs from the other
+ * lane phases are that check too: they are judged in their bins only.
+ */
+export function countedOnTheClock(loss: DisturbanceTrial): boolean {
+    return loss.kind !== "none";
+}
+
+/**
+ * The tick of the run at which the clock of the window cycle counts 1, as one of the ticks `bin_ticks` apart that do: from
+ * the clocks of the game of that window cycle (the windows of the clock) where the run has them, else from any clock of it.
+ * The bins are whole ticks: the window cycle, or the whole ticks a subtick clock repeats in, which its count also starts
+ * again at. Null where the run has no such clock or its clocks do not agree.
+ */
+export function clockCountsOneAt(clocks: readonly WindowCycleClock[], window_cycle_ticks: number, bin_ticks: number, now: number): number | null {
+    const of_the_cycle = clocks.filter(clock => Math.abs(clock.windowCycleDuration.ticks - window_cycle_ticks) < 1e-9);
+    const game = of_the_cycle.filter(clock => clock.is_game_clock);
+    const starts = new Set((game.length > 0 ? game : of_the_cycle).map(clock => ((now - clock.clockTick()) % bin_ticks + bin_ticks) % bin_ticks));
+    return starts.size === 1 ? [...starts][0] : null;
+}
+
+/**
+ * The window cycles of a repeat counted on the clock, from the running total of a branch's items at the start of each bin
+ * (and at the end of the last: one more value than `marks`) and at the tick the clock counts 1 in each bin. A repeated state
+ * does for good what it did since, so the window cycle that runs from the last bin's mark over the end of the repeat goes on
+ * from the repeat's start to the first bin's mark: the repeat is as many whole window cycles on the clock as it has bins.
+ */
+export function repeatOnTheClock(starts: readonly number[], marks: readonly number[], repeats_from: number): number[] {
+    const bins = marks.length;
+    const window_cycles: number[] = [];
+    for (let bin = repeats_from; bin < bins - 1; bin++) window_cycles.push(marks[bin + 1] - marks[bin]);
+    window_cycles.push(starts[bins] - marks[bins - 1] + marks[repeats_from] - starts[repeats_from]);
+    return window_cycles;
+}
+
+/**
+ * A repeat whose bins are not at the rate, judged again by its window cycles counted on the clock (`on_the_clock`: each
+ * branch's, see repeatOnTheClock): where every window cycle is at the rate by the judgement of a repeat's bins
+ * (cycleAtRate), the trial is back from the bin the repeat begins at. A hand that drops on one side of a bin's edge or the
+ * other moves items between bins, not between the window cycles of the clock. A trial that is back in its bins stays as it
+ * is judged; so does one with no repeat.
+ */
+export function judgedOnTheClock(judged: JudgedRecovery, on_the_clock: readonly BranchBins[], repeats_from: number | null): JudgedRecovery {
+    if (judged.recovers || repeats_from === null || !judged.proven) return judged;
+    const window_cycles = on_the_clock[0].bins.map((_items, at) => on_the_clock.reduce((sum, branch) => sum + branch.bins[at], 0));
+    return cycleAtRate(on_the_clock)
+        ? { ...judged, recovers: true, recovered_after_bins: repeats_from, ends_in_on_the_clock: window_cycles }
+        : { ...judged, ends_in_on_the_clock: window_cycles };
+}
+
+/**
+ * A trial of the copies, each copy judged on its own (`each`): back where every copy is, after the most bins a copy took.
+ * With one copy, as that copy is.
+ *
+ * @param output_per_bin the output of the copies together, whose bins the trial ends in are those of the repeat, or the last `hold_bins`
+ */
+export function judgedTogether(each: readonly JudgedRecovery[], output_per_bin: readonly number[], repeats_from: number | null, hold_bins: number): JudgedRecovery {
+    if (each.length === 1) return each[0];
+    const recovers = each.every(it => it.recovers);
+    return {
+        recovers,
+        recovered_after_bins: recovers ? Math.max(...each.map(it => it.recovered_after_bins!)) : null,
+        proven: repeats_from !== null,
+        ends_in: repeats_from !== null ? output_per_bin.slice(repeats_from) : output_per_bin.slice(-hold_bins),
+    };
 }
 
 /**
@@ -550,6 +633,11 @@ export function runLossTrials(
      * (terminal-rate.ts); without them the output inserters as one branch with no hand to spare: exact in every bin
      */
     terminal_branches?: readonly TerminalBranch[],
+    /**
+     * A tick of the run at which the clock counts 1 (clockCountsOneAt): a trial of a loss whose repeat is not at the rate
+     * in its bins has its repeat counted again on the clock (judgedOnTheClock). Null: judged in the bins only.
+     */
+    clock_counts_one_at: number | null = null,
 ): LossOutcome {
     const { loss } = options;
     const expected_per_bin = options.expected_output_items * bin.window_cycles;
@@ -713,6 +801,10 @@ export function runLossTrials(
         const output_per_bin: number[] = [];
         const group_bins: number[][] = groups.map(() => []);
         const group_branch_bins: BranchBins[][] = groups.map(() => branches.map(branch => ({ bins: [], share_per_bin: branch.share_per_window_cycle * bin.window_cycles, hand: branch.hand, takes_surplus })));
+        // each branch's running total at each bin's start and at the tick the clock counts 1 in it, where a repeat is counted on the clock
+        const on_the_clock = clock_counts_one_at !== null && countedOnTheClock(loss);
+        const group_branch_starts: number[][][] = groups.map(() => []);
+        const group_branch_marks: number[][][] = groups.map(() => []);
         const backlog_per_bin: number[] = [];
         const export_per_bin: number[][] = watched_exports.map(() => []);
         const bin_by_state = new Map<string, number>();
@@ -726,7 +818,11 @@ export function runLossTrials(
             const before = groups.map((_group, at) => groupDropped(at));
             const branch_before = groups.map((_group, at) => branchDropped(at));
             const exported_before = watched_exports.map(it => it.fillers.reduce((sum, state) => sum + state.items_dropped, 0));
+            // a step from tick t runs tick t + 1: the clock counts 1 in the step `mark` of the bin
+            const mark = on_the_clock ? (((clock_counts_one_at - now() - 1) % bin.ticks) + bin.ticks) % bin.ticks : -1;
+            if (on_the_clock) branch_before.forEach((before, at) => group_branch_starts[at].push(before));
             for (let tick = 0; tick < bin.ticks; tick++) {
+                if (tick === mark) groups.forEach((_group, at) => group_branch_marks[at].push(branchDropped(at)));
                 step();
             }
             const items = groups.map((_group, at) => groupDropped(at) - before[at]);
@@ -751,16 +847,19 @@ export function runLossTrials(
             runBin();
         }
         let judged_hold_bins = hold_bins;
-        // each copy judged on its own; the trial is back where every copy is (with one copy, as that copy is)
-        const judgedGroups = (hold: number) => groups.map((_group, at) => judgeRecovery(group_bins[at], expected_per_bin, repeats_from, hold, group_branch_bins[at]));
-        const judgedTogether = (each: ReturnType<typeof judgedGroups>): ReturnType<typeof judgeRecovery> => each.length === 1 ? each[0] : {
-            recovers: each.every(it => it.recovers),
-            recovered_after_bins: each.every(it => it.recovers) ? Math.max(...each.map(it => it.recovered_after_bins!)) : null,
-            proven: repeats_from !== null,
-            ends_in: repeats_from !== null ? output_per_bin.slice(repeats_from) : output_per_bin.slice(-judged_hold_bins),
-        };
+        // each copy judged on its own, its repeat counted again on the clock where its bins are not at the rate; the trial is
+        // back where every copy is (with one copy, as that copy is)
+        const judgedGroups = (hold: number): JudgedRecovery[] => groups.map((_group, at) => {
+            const judged = judgeRecovery(group_bins[at], expected_per_bin, repeats_from, hold, group_branch_bins[at]);
+            if (!on_the_clock || judged.recovers || repeats_from === null) return judged;
+            const end = branchDropped(at);
+            const counted = group_branch_bins[at].map((branch, index) => ({ ...branch,
+                bins: repeatOnTheClock([...group_branch_starts[at].map(it => it[index]), end[index]], group_branch_marks[at].map(it => it[index]), repeats_from!) }));
+            return judgedOnTheClock(judged, counted, repeats_from);
+        });
+        const together = (each: JudgedRecovery[]) => judgedTogether(each, output_per_bin, repeats_from, judged_hold_bins);
         let each = judgedGroups(hold_bins);
-        let judged = judgedTogether(each);
+        let judged = together(each);
         const window_bins = output_per_bin.length;
         // a trial short late in its window runs on where every copy that is not back is short late (one copy: as it is)
         if (!judged.recovers && window_bins < max_run_on_bins
@@ -770,7 +869,7 @@ export function runLossTrials(
             }
             judged_hold_bins = run_on_bins;
             each = judgedGroups(run_on_bins);
-            judged = judgedTogether(each);
+            judged = together(each);
         }
         // in a run of the copies, a trial a copy is not back from runs on until the lanes have settled: until the state of
         // the run, the lanes included, repeats, at most MAX_RUN_ON_WINDOW_CYCLES after the item is back; with no repeat by
@@ -781,7 +880,7 @@ export function runLossTrials(
             }
             if (repeats_from === null) judged_hold_bins = run_on_bins;
             each = judgedGroups(judged_hold_bins);
-            judged = judgedTogether(each);
+            judged = together(each);
         }
         const ran_on_bins = output_per_bin.length - window_bins;
         // an excess has to cost the build nothing: it is at its expected output from the first window cycle on
