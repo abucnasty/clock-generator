@@ -419,22 +419,23 @@ const utility120: JobCheck[] = [
     },
 ];
 
-// The logistic science sample (LOGISTIC_SCIENCE_240): its belts move, so every clock is made for a moving belt, none for a backed-up belt
+// The logistic science sample (LOGISTIC_SCIENCE_240): both lanes of its feed belt are dead ends, so every clock is made for a backed-up belt,
+// none for a moving belt
 const logistic: JobCheck[] = [
     {
-        name: 'makes batched swings for a moving belt',
+        name: 'makes batched swings for a backed-up belt',
         run: ({ generated }) => {
             const batched = byMaker(generated, 'planned-belt-slack');
             expect(batched.label).toBe('Takt Batches: 4 output swings each output cycle');
-            expect(batched.belt).toEqual({ kind: 'moving' });
-            expect(batched.description).toContain('Made for a moving belt. The pickup geometry times each pickup from the belt');
+            expect(batched.belt).toEqual({ kind: 'backed_up' });
+            expect(batched.description).toContain('Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup.');
         },
     },
     {
-        name: 'the 2-swing and the derived clocks are made for a moving belt',
+        name: 'the 2-swing and the derived clocks are made for a backed-up belt',
         run: ({ generated }) => {
-            expect(byMaker(generated, 'swings-2').belt).toEqual({ kind: 'moving' });
-            expect(byMaker(generated, 'derived').belt).toEqual({ kind: 'moving' });
+            expect(byMaker(generated, 'swings-2').belt).toEqual({ kind: 'backed_up' });
+            expect(byMaker(generated, 'derived').belt).toEqual({ kind: 'backed_up' });
         },
     },
     {
