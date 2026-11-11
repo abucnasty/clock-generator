@@ -15,8 +15,8 @@ import {assertFeedDrains, PickupClockScenario} from "./pickup-clock-capture";
  * past the plant into a loader and a void chest, so the supply moves; the sample's own scaffold closes the line. Two infinity chests
  * on each lane put the items onto the belt through a stack inserter each, and two stack inserters put the packs into void chests.
  *
- * The generator's selected clock for the config as it is (moving belts) runs on it, wired to the copy, with no loss: steady state and the
- * baseline, 100% or more of the target.
+ * The generator's selected clock for the config as it is runs on it, wired to the copy, with no loss: steady state and the baseline, 100%
+ * or more of the target. The config states its two lanes as dead ends, so the clock is made for backed-up lanes; here they drain.
  */
 export interface ElectromagneticDrainedEndClockCase {
     name: string;
@@ -61,7 +61,7 @@ export async function electromagneticDrainedEndClockScenario(variant: Electromag
         probe: {family: "electromagnetic-science-330-drained-end", stackSize: 4},
         controls: path.join(__dirname, "electromagnetic-science-330-drained-end-clock-controls.json"),
         assertHardware: recording => assertDrainedEndHardware(recording, config),
-        // the clock is made for moving belts, and the input line is drained into a loader: the lanes move
+        // the input line is drained into a loader: the lanes move
         validateReport: assertFeedDrains,
     };
 }
