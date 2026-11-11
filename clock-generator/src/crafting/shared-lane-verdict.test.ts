@@ -275,7 +275,29 @@ describe("a copy short because its side belt is full at its join onto the output
         }
     });
 
+    it("says the join is full on the clock moved by four ticks too, which the game leaves short at copies 4 and 8", () => {
+        const moved = { ...clocks.takt_batches_observed, "inserter:1": [{ start: 17, end: 42 }, { start: 46, end: 69 }, { start: 137, end: 158 }, { start: 185, end: 197 }] };
+        const { losses } = judgeSharedLanes(config, moved, 216, quiet);
+        expect([...new Set(losses.map(loss => loss.copy))].sort()).toEqual([4, 8]);
+        expect(losses.every(loss => loss.join_full !== undefined && loss.side_belt_waits === undefined)).toBe(true);
+    });
+
     it("finds no copy short under the clock that holds every copy", () => {
         expect(judgeSharedLanes(config, clocks.time_study_windows, 216, quiet).losses).toEqual([]);
+    });
+
+    // With one output swing a cycle, Time-Study Windows leaves copy 4 short on the input lanes with or without the output
+    // belt (inserter 1 takes 1,024 where it takes 1,040 alone; machine 1 is 10 crafts behind either way). Its side belt
+    // holds 2 of its 128 hands, which is not the cause.
+    it("names the input lane where the output belt does not make the copy further behind, with the held hands as a fact", () => {
+        const one_swing = { ...config, overrides: { ...config.overrides, terminal_swing_count: 1 } };
+        const windows = { "inserter:1": [{ start: 1, end: 20 }], "inserter:2": [{ start: 2, end: 21 }, { start: 38, end: 56 }] };
+        const copy4 = judgeSharedLanes(one_swing, windows, 72, quiet).losses.filter(loss => loss.copy === 4);
+        expect(copy4.length).toBe(2);
+        for (const loss of copy4) {
+            expect(loss.join_full).toBeUndefined();
+            expect(loss.side_belt_waits).toEqual({ held_hands: 2, hands: 128 });
+            expect(loss.text).toMatch(/^Lane [12] of belt 1 ends in a dead end\. The 9 copies take (iron gear wheel|copper plate) from it\. When the items move east, copy 4 from the entry does not get sufficient items\. Its inserter 1 takes 1,024 in 65 window cycles\. With no other copy on the lane, it takes 1,040\. Its output inserter also waits for room on its side belt in 2 of its 128 hands\. In the same run, machine 1 of copy 4 is 10 crafts behind its target rate\.$/);
+        }
     });
 });
