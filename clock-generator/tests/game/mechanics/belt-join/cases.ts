@@ -248,7 +248,25 @@ const PATH: JoinCopy[] = [
     })))),
 ];
 
-export const COPIES: JoinCopy[] = [...KEPT, ...SPLITTER, ...BOUNDARY, ...SHUT_OUTPUT, ...PATH];
+/**
+ * The back end for the head of the input with the priority whatever its own spot, the other input's never. Held out:
+ * the output with the priority shut from the build and opened at 400, one lane of one input fed at insert spots 251 or
+ * 243 (own spots 59 and 51 at the splitter), for both priorities left and the two mixed pairs, on each lane, from the
+ * input with the priority or from the other one. After the end opens, a head meets a stack ahead at 96.
+ */
+const BACK_END: JoinCopy[] = ([["left", "left"], ["right", "left"], ["left", "right"]] as const).flatMap(([input, output]) =>
+    (["priority", "other"] as const).flatMap(fed => [1, 2].flatMap(lane => [251, 243].map((spot): JoinCopy => {
+        const side: SplitterSide = fed === "priority" ? input : input === "left" ? "right" : "left";
+        const chest: [number, number] = [19, output === "left" ? 0 : 1];
+        return {
+            name: `splitter-back-end-${input}-${output}-${fed}-input-lane-${lane}-spot-${spot}`, shape: "splitter", kept: false,
+            priority: [input, output], about: `the ${output} output (with the priority) shut and opened at 400; lane ${lane} of the ${side} input fed at ${spot}`,
+            streams: [stream(`0,${side === "left" ? 0 : 1}/${lane}`, 121, 2, 200, spot)],
+            ends: [{ t: 0, action: "block", chests: [chest] }, { t: 400, action: "release", chests: [chest] }],
+        };
+    }))));
+
+export const COPIES: JoinCopy[] = [...KEPT, ...SPLITTER, ...BOUNDARY, ...SHUT_OUTPUT, ...PATH, ...BACK_END];
 
 /** The ticks of a stream's inserts */
 export const streamTicks = (s: Stream): number[] => Array.from({ length: s.count }, (_, i) => s.first + i * s.every);
