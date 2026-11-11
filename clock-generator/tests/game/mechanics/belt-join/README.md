@@ -82,8 +82,8 @@ splitter with "none" for a priority.
    before its third; it takes the place of "at most 64 before 127" above, which was read only from heads of the input
    without the priority). The head of the input that has the priority goes to the back end whenever the spot 64 behind
    the stack ahead is past it and the back end is behind that stack; the head of the other input never does. Read: a
-   table of every such hand-over in the recordings that exist (made outside the repository; the 67 copies of the second follow-up run and the splitter copies of the 600-tick recording, 16,262
-   rows). With the back end behind the stack ahead, the 2,112 heads of the input with the priority all went to 127,
+   table of every such hand-over in the recordings that exist (made outside the repository; the 67 copies of the
+   second follow-up run and the splitter copies of the 600-tick recording, 16,262 rows). With the back end behind the stack ahead, the 2,112 heads of the input with the priority all went to 127,
    with their own spots from 45 to 71 and the stack ahead at 64 or 96. The 2,578 heads of the other input went onto the
    other output (1,970) or stood (608), the stack ahead at 64, 95 or 96. With the stack ahead at 127, no head went to
    the back end.

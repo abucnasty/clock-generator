@@ -365,7 +365,7 @@ export class JoinModel {
      * spot). An output takes it GAP behind the stack ahead on its path (the output's last stack, or one on the lines after
      * the output line) when its natural spot is nearer than that, if that is on the
      * output line; past the output's back end, at the back end only for the head of the input with the input priority,
-     * when its natural spot is at most GAP before the back end and the back end is behind the last stack.
+     * and only when the back end is behind that stack.
      */
     private handOver(input: Line, stack: Stack): boolean {
         const { splitter, lane } = input.splitter_input!;
@@ -377,7 +377,7 @@ export class JoinModel {
             // the stack ahead on the head's path: the output's last stack, or one on the lines after it (rule 1)
             const last = output.stacks.length ? output.stacks[output.stacks.length - 1].position : this.aheadOnPath(output);
             let spot: number | null = last === null ? natural : Math.max(natural, last + GAP);
-            if (spot > back) spot = priority && natural + GAP >= back && last! < back ? back : null;
+            if (spot > back) spot = priority && last! < back ? back : null;
             if (spot !== null) {
                 insert(output, { id: stack.id, position: spot });
                 return true;
