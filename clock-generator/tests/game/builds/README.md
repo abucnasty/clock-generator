@@ -41,7 +41,7 @@ suite; it is not a generic visual mode for every mechanic test.
 
 ## Builds of several copies
 
-A build that holds the config more than once names the copies it holds (`copies`). The harness finds them by structure: the
+A build that holds the config more than once names the copies it holds (`copies`). The harness finds them by their inserters: the
 machines that inserters move items between are one group, and belts, which the copies share, join none. A group with a machine
 for every machine of the config is a whole copy; the count has to be the one named, and the generated clock is wired to the
 inserters of each copy. A machine of the config's recipes in no copy is refused.
