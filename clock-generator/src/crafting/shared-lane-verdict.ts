@@ -204,6 +204,31 @@ export interface BehindTarget {
     behind: number;
 }
 
+/**
+ * The lanes the copies share could not be checked: the check stopped with an error (a config it cannot lay out the
+ * copies of, for one). A clock is never taken to hold on lanes that were not checked, so this is a loss of its own.
+ */
+export interface SharedLanesNotChecked {
+    kind: "not_checked";
+    /** The message of the error the check stopped with */
+    reason: string;
+    /** The sentence the result shows */
+    text: string;
+}
+
+/** What keeps a clock from being stable on the lanes its copies share: a taker that loses swings, or lanes that could not be checked */
+export type ClockSharedLaneLoss = SharedLaneLoss | SharedLanesNotChecked;
+
+/** The loss of a clock whose shared lanes could not be checked, for the reason given */
+export function sharedLanesNotChecked(reason: string): SharedLanesNotChecked {
+    return { kind: "not_checked", reason, text: `The lanes its copies share could not be checked: ${reason}${/[.!?]$/.test(reason) ? "" : "."}` };
+}
+
+/** Whether the loss is that the lanes could not be checked, not a taker that loses swings */
+export function isNotChecked(loss: ClockSharedLaneLoss): loss is SharedLanesNotChecked {
+    return "kind" in loss && loss.kind === "not_checked";
+}
+
 /** What the fast check and the model said of one clock, for a comparison of the two */
 export interface SharedLaneJudgement {
     losses: SharedLaneLoss[];

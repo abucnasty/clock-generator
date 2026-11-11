@@ -37,7 +37,7 @@ import { TakerOrder, takerOrderName, independentTakerOrdersToCheck } from "../si
 import { verificationPlanningConfigOf, verificationTerminalCountOf } from "./round-robin-polling-primitive-policy";
 import { CIRCUIT_LATENCY_TICKS } from "../common/rule-constants";
 import { WakeUpsFromStarts, hasStockTheClockDoesNotSet, wakeUpsFromStarts } from "./wake-ups-from-starts";
-import type { SharedLaneLoss } from "./shared-lane-verdict";
+import type { ClockSharedLaneLoss } from "./shared-lane-verdict";
 
 /**
  * Number of clock start offsets the as-built check tries. Depending on how the clock lines up with the
@@ -103,10 +103,11 @@ export interface ClockAssessment {
     start_dependence: StartDependence | null;
     /**
      * On a build whose copies share a belt lane the shared-lane model decides (shared-lane-verdict.ts): the takers of the
-     * copies that lose swings on it, the worst first. A clock with any is unstable. Absent where there are none: no such
+     * copies that lose swings on it, the worst first; or, where the check could not run, one loss that says the lanes could
+     * not be checked and why (`SharedLanesNotChecked`). A clock with any is unstable. Absent where there are none: no such
      * lane, or a clock that does not hold its expected output.
      */
-    shared_lane_losses?: SharedLaneLoss[];
+    shared_lane_losses?: ClockSharedLaneLoss[];
     /**
      * #516's two-hop bound on the windows of a clock with windows for a loop of machines (`loop_windows` of its result): the
      * margins of what the loop's sources leave for its inserters and of the stock its machines hold over the longest gap

@@ -14,7 +14,7 @@
  * - **Export belt short:** the clock moves the target, and a belt with a consumption rate gets less than its consumers
  *   take; the same words name the belt, the item and both rates.
  * - **Shared lane short:** it holds the rate on one copy, and a copy loses swings on a lane the copies share
- *   (`assessment.shared_lane_losses`).
+ *   (`assessment.shared_lane_losses`), or those lanes could not be checked: the message then says so, and why.
  * - **No recovery:** it holds the rate, and does not get back to it after the losses it names.
  * - **Nothing holds:** it does not hold the rate; the nearest clock is selected, and the clocks that could not be made
  *   are listed with their reasons.
@@ -379,6 +379,13 @@ function sharedLaneShort(clock: WhyNotStableClock): WhyNotStable | null {
     const loss = clock.assessment.shared_lane_losses?.[0];
     if (clock.verdict !== "unstable" || loss === undefined) {
         return null;
+    }
+    // read here without the check's module, which the light entry does not load
+    if ("kind" in loss && loss.kind === "not_checked") {
+        return {
+            cause: "shared lane short",
+            message: `The recommended clock (${clock.label}) holds the setpoint on one copy, but it is not counted as stable: ${loss.text[0].toLowerCase()}${loss.text.slice(1)}`,
+        };
     }
     return {
         cause: "shared lane short",
