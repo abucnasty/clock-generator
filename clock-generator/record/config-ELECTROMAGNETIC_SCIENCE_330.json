@@ -3,7 +3,7 @@
   "job": "config-ELECTROMAGNETIC_SCIENCE_330",
   "group": "config",
   "name": "ELECTROMAGNETIC_SCIENCE_330",
-  "config_sha256": "c16adc59fdc2df8be016dbe100d8444668aec4c47531b517620ed52d0f296482",
+  "config_sha256": "d8abf92d432941e30c0d6fdf552f693a631bfc1233a99d497ca5569ce2f2e340",
   "job_results_sha256": "dc89adc278218cf11a8c58813829428a48175475d547cc40ea38ea859bb69b00",
   "selected": "takt_batches_observed",
   "selected_windows": {
