@@ -591,7 +591,11 @@ const LaneEndConfigSchema = z.discriminatedUnion("kind", [
     }),
 ]);
 
-/** The way the items on a belt move, as a cardinal direction of the game (DirectionSchema): 0 north, 4 east, 8 south, 12 west */
+/**
+ * The way the items on a belt move along the row of copies, as a cardinal direction of the game (DirectionSchema): 0 north,
+ * 4 east, 8 south, 12 west. Where the belt turns at a pickup, it is the way of the run past the copies, not of the pickup
+ * piece.
+ */
 const BeltFlowDirectionConfigSchema = z.union([z.literal(0), z.literal(4), z.literal(8), z.literal(12)]);
 
 /** Whether every copy of the unit takes from the same lane, or each copy has a lane of its own (`LaneSharing`) */
@@ -620,7 +624,7 @@ const NormalBeltConfigSchema = z.object({
     id: z.number().int().positive().describe("The number that identifies the belt in the configuration."),
     type: BeltTypeSchema.describe("The prototype name of the belt."),
     strategy: z.literal(BeltStrategy.NORMAL).optional().describe("normal (default): only the build takes items off the belt."),
-    flow_direction: BeltFlowDirectionConfigSchema.optional().describe("The direction in which the items on the belt move: 0 north, 4 east, 8 south, 12 west. Without it, the check runs the items in the two directions along the copies."),
+    flow_direction: BeltFlowDirectionConfigSchema.optional().describe("The direction in which the items on the belt move along the row of copies: 0 north, 4 east, 8 south, 12 west. Without it, the check runs the items in the two directions along the copies."),
     lanes: z.union([
         z.tuple([BeltLaneConfigSchema]),
         z.tuple([BeltLaneConfigSchema, BeltLaneConfigSchema])
@@ -631,7 +635,7 @@ const ExportBeltConfigSchema = z.object({
     id: z.number().int().positive().describe("The number that identifies the belt in the configuration."),
     type: BeltTypeSchema.describe("The prototype name of the belt."),
     strategy: z.literal(BeltStrategy.EXPORT).describe("export: entities outside the configuration also take items off the belt."),
-    flow_direction: BeltFlowDirectionConfigSchema.optional().describe("The direction in which the items on the belt move: 0 north, 4 east, 8 south, 12 west. Without it, the check runs the items in the two directions along the copies."),
+    flow_direction: BeltFlowDirectionConfigSchema.optional().describe("The direction in which the items on the belt move along the row of copies: 0 north, 4 east, 8 south, 12 west. Without it, the check runs the items in the two directions along the copies."),
     lanes: z.union([
         z.tuple([ExportBeltLaneConfigSchema]),
         z.tuple([ExportBeltLaneConfigSchema, ExportBeltLaneConfigSchema])

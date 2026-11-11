@@ -110,10 +110,19 @@ ends are different, the export gives `unknown`.
 
 ### Flow direction
 
-For each belt from which an inserter removes items, the export gives the direction in which the items move
-(`flow_direction`): 0 north, 4 east, 8 south or 12 west. The sidecar reads the direction at each belt tile from which an
-inserter removes items. The export gives no direction if the directions are different, or if one of these tiles is a
-belt bend.
+For each belt from which an inserter removes items, the export gives the direction in which the items move along the row
+of copies (`flow_direction`): 0 north, 4 east, 8 south or 12 west.
+
+- If the export gives a copy spacing, the flow direction is the direction of the copy spacing.
+- If the export gives no copy spacing, the sidecar reads the direction at each belt tile from which an inserter removes
+  items. It uses that direction only if the belt does not turn between that tile and the last belt tile in your
+  selection.
+
+The export gives no flow direction in these conditions:
+
+- The export gives no copy spacing, and the belt turns after one of these tiles, or one of these tiles is a belt bend.
+- The export gives no copy spacing, and these tiles have different directions.
+- The copy spacing is not along a north, east, south or west direction.
 
 A belt from which no inserter removes items has no lane ends and no flow direction.
 
