@@ -87,9 +87,12 @@ export { laneHandRoomTicks } from "./crafting/clock";
 /**
  * 11. Room for a hand of fuel (GOALS.md "Wake-up Lists"): the ticks one hand of the fuel takes at one belt stack a tick,
  * for an inserter that takes fuel off a belt as well as an ingredient. Cases: `rules-of-the-game.test.ts` (agricultural science,
- * 377 of 400 a window cycle without it).
+ * 377 of 400 a window cycle without it). Where such an inserter has the fuel on its near lane (docs/simulator.md, what an
+ * inserter takes off a belt first), a hand of fuel comes whenever the fuel slot has room and the planned hand a hand cycle later:
+ * the room for the hand it delays is the hand cycle, less the tick after the planned last hand is full, less the room
+ * for one more hand, 6 of 11. Cases: `rules-of-the-game.test.ts`, `crafting/fuel-on-near-lane.generation.test.ts`.
  */
-export { fuelHandRoomTicks } from "./crafting/clock";
+export { delayedHandRoomTicks, fuelHandRoomTicks, fuelRoomTicks } from "./crafting/clock";
 
 /**
  * 12. Wake-ups (GOALS.md "Wake-ups, the measure for goal 2"): a machine wakes the enabled inserters asleep on its
