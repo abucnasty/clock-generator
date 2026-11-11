@@ -208,7 +208,12 @@ function export.to_table(result, options)
         -- nil, which leaves the key out, when the selection has no final product
         suggested_target = export.suggested_target(result)
     }
-    
+    -- The copy spacing goes in the suggested target, which a paste makes the setpoint: an export with a setpoint of its
+    -- own is taken for a build file of the site and refused. Without a suggested target it is not exported.
+    if output.suggested_target and result.copy_offset then
+        output.suggested_target.copy_offset = { x = result.copy_offset.x, y = result.copy_offset.y }
+    end
+
     -- Format machines for clock-generator
     for i, machine in ipairs(result.machines) do
         table.insert(output.machines, {
@@ -228,18 +233,40 @@ function export.to_table(result, options)
     end
     
     -- Format belts for clock-generator
+    -- A belt an inserter picks up from has the end of each lane (unknown where the export cannot tell which line a lane
+    -- is) and the way its items pass the copies: the way of the copy spacing where the export states one, else the way
+    -- every pickup piece gives where the line does not turn after it
+    local spacing = output.suggested_target and output.suggested_target.copy_offset
+    local spacing_way = nil
+    if spacing then
+        if spacing.y == 0 then
+            spacing_way = spacing.x > 0 and defines.direction.east or defines.direction.west
+        elseif spacing.x == 0 then
+            spacing_way = spacing.y > 0 and defines.direction.south or defines.direction.north
+        end
+    end
     for i, belt in ipairs(result.belts) do
         local lanes = {}
-        for _, lane in ipairs(belt.lanes) do
+        for index, lane in ipairs(belt.lanes) do
+            local line = belt.lane_lines and belt.lane_lines[index]
+            local lane_end = nil
+            if belt.line_ends then
+                lane_end = line and belt.line_ends[line] or { kind = "unknown" }
+            end
             table.insert(lanes, {
                 ingredient = lane.ingredient or "",
-                stack_size = lane.stack_size
+                stack_size = lane.stack_size,
+                lane_end = lane_end and { kind = lane_end.kind } or nil
             })
         end
-        
+
+        -- a copy spacing that is not along one axis gives no way
+        local flow = belt.flow_direction or nil
+        if spacing and belt.line_ends then flow = spacing_way end
         table.insert(output.belts, {
             id = i,
             type = belt.belt_type,
+            flow_direction = flow,
             lanes = lanes
         })
     end

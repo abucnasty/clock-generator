@@ -27,6 +27,9 @@
 ---@field belt_type string The belt type (e.g., "transport-belt", "express-transport-belt")
 ---@field unit_number number The unit number of the belt entity
 ---@field lanes BeltLaneData[] Data for each lane (1 = left, 2 = right, as get_transport_line numbers them)
+---@field lane_lines number[]|nil The transport line (1 left, 2 right) each listed lane is; nil when the lanes are items of splitter or loader lines
+---@field line_ends {kind: "dead_end"|"outlet"|"unknown"}[]|nil The end of transport lines 1 and 2 (drop-merge.lua lane_ends); nil when no inserter picks up from the belt
+---@field flow_direction defines.direction|false|nil The way the items move at the pieces inserters pick up from; false when they do not all give one way, nil when no inserter picks up from the belt
 
 ---@class InserterTargetRef
 ---@field type "machine"|"belt"|"chest" The target type
@@ -77,6 +80,7 @@
 ---@field recipe string The item name of the main product that leaves the selection (not necessarily the recipe's name)
 ---@field items_per_second number What the selected machines of that recipe make of it together at their maximum
 ---@field copies number Always 1
+---@field copy_offset {x: number, y: number}|nil Where the next copy stands from a copy, where the selection shows copies at one spacing (export.to_table)
 
 ---@class PlayerData
 ---@field machines MachineData[] Extracted machine data
@@ -92,5 +96,6 @@
 ---@field unit_number_to_id table<number, number> Maps entity unit_number to machine ID
 ---@field belt_unit_number_to_id table<number, number> Maps belt unit_number to belt ID
 ---@field chest_unit_number_to_id table<number, number> Maps chest unit_number to chest ID
+---@field copy_offset {x: number, y: number}|nil Where the next copy stands from a copy (drop-merge.lua copy_offset); nil where the selection does not show copies at one spacing
 
 return {}
