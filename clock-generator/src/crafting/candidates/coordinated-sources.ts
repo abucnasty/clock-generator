@@ -173,6 +173,31 @@ interface Trial {
 /** How a part is shown in the log */
 const partName = (part: CoordinatedSourcesPart): string => part.alternative_id ?? part.name;
 
+/** A part whose windows the per-branch clock does not take, and why */
+export interface NotAdmittedPart {
+    part: string;
+    why: string;
+}
+
+/** A reason a per-branch clock is not listed, with the parts not taken after it, where a part was not */
+export function withNotAdmitted(reason: string, not_admitted: readonly NotAdmittedPart[]): string {
+    return not_admitted.length === 0 ? reason : `${reason.replace(/\.$/, "")}. ${notAdmittedNote(not_admitted)}`;
+}
+
+function notAdmittedNote(not_admitted: readonly NotAdmittedPart[]): string {
+    return `Not taken: ${not_admitted.map(it => `${it.part} (${it.why})`).join("; ")}.`;
+}
+
+/** Why a clock that was checked up to its long run does not hold there: "does not hold its first window cycle on 168 ticks: 320 of 384 items" */
+function notHeldOf(trial: Trial, shared_ticks: number): string {
+    const as_built = trial.result.stability_check.as_built;
+    if (as_built === undefined) return `was not checked as built on ${shared_ticks} ticks`;
+    const items = `${Number(as_built.actual_output_items.toFixed(3))} of ${trial.result.stability_check.expected_output_items} items`;
+    if (as_built.first_check_failed === true) return `does not hold its first window cycle on ${shared_ticks} ticks: ${items}`;
+    if (as_built.failed_pickup_phases !== undefined) return `does not hold from another pickup phase on ${shared_ticks} ticks: ${items}`;
+    return `does not hold to the long run on ${shared_ticks} ticks: ${items}`;
+}
+
 /**
  * The plan the composed clocks run on: the config with the recommended clock's output swings, cycles and fractional swings; where its
  * window cycle is not the shared one, planned again with the cycles that make it so
@@ -194,7 +219,13 @@ function sharedPlan(config: Config, recommended: CoordinatedSourcesPart): Uncloc
 }
 
 /** The per-branch clock of a build from its parts (see CoordinatedSourcesNotApplicable above) */
-export function coordinatedSourcesClock(config: Config, input: CoordinatedSourcesInput, options: GenerateClockOptions = {}): BlueprintGenerationResult {
+export function coordinatedSourcesClock(
+    config: Config,
+    input: CoordinatedSourcesInput,
+    options: GenerateClockOptions = {},
+    /** Given the parts whose windows are not taken, and why, once that is known: before the clock is composed or refused */
+    on_admission?: (not_admitted: readonly NotAdmittedPart[]) => void,
+): BlueprintGenerationResult {
     const logger = options.logger ?? defaultLogger;
     const recommended = input.parts.find(part => part.alternative_id === input.recommended_id);
     if (recommended === undefined) refuse(`the recommended clock ${input.recommended_id} is not among the clocks made for the build`);
@@ -234,7 +265,17 @@ export function coordinatedSourcesClock(config: Config, input: CoordinatedSource
     };
     const fits = (part: CoordinatedSourcesPart) => Number.isInteger(part.window_cycle_ticks) && Number.isInteger(shared_ticks / part.window_cycle_ticks)
         && (part === recommended || part.alternative_id === undefined || part.verdict === "stable");
-    const candidates = input.parts.filter(part => part !== recommended && fits(part) && part.counted !== false);
+    // the parts whose windows are not taken, with why, in the order of the parts
+    const refused = new Map<CoordinatedSourcesPart, string>();
+    const candidates = input.parts.filter(part => {
+        if (part === recommended) return false;
+        const why = !Number.isInteger(part.window_cycle_ticks) || !Number.isInteger(shared_ticks / part.window_cycle_ticks)
+            ? `its window cycle of ${part.window_cycle_ticks} ticks does not divide the shared one of ${shared_ticks}`
+            : !fits(part) ? `it is ${part.verdict}`
+                : part.counted === false ? "the long run of its own clock was not counted" : undefined;
+        if (why !== undefined) refused.set(part, why);
+        return why === undefined;
+    });
     // a part gives windows where its own clock on the shared window cycle was counted as built: one of that window cycle counted already (its own
     // check), any other counted here, once, where it gives a group a choice the parts before it do not
     const given = new Set(partGroups(inserters, [recommended], shared_ticks).map(group => `${group.source}|${JSON.stringify(group.choices[0].windows)}`));
@@ -246,11 +287,16 @@ export function coordinatedSourcesClock(config: Config, input: CoordinatedSource
         if (!counted) {
             counted_here++;
             const windows = tiledWindows(part.windows, part.window_cycle_ticks, shared_ticks);
-            counted = trialOf(windows, leftOpenOf(part, inserters, windows)).result.stability_check.as_built?.wake_ups !== undefined;
+            const trial = trialOf(windows, leftOpenOf(part, inserters, windows));
+            counted = trial.result.stability_check.as_built?.wake_ups !== undefined;
+            if (!counted) refused.set(part, `its clock ${notHeldOf(trial, shared_ticks)}`);
         }
         if (counted) own.forEach(key => given.add(key));
         return counted;
     });
+    const not_admitted = input.parts.filter(part => refused.has(part)).map(part => ({ part: partName(part), why: refused.get(part)! }));
+    on_admission?.(not_admitted);
+    if (not_admitted.length > 0) logger.log(`Coordinated Sources: ${notAdmittedNote(not_admitted)}`);
     const groups = partGroups(inserters, [recommended, ...admitted], shared_ticks);
     const choosing = groups.filter(group => group.choices.length > 1);
     logger.log(`Coordinated Sources: the clocks ${[recommended, ...admitted].map(part => `${partName(part)} (${part.window_cycle_ticks} ticks)`).join(", ")}`);

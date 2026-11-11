@@ -31,7 +31,7 @@ import { primitiveRoundRobinPollingConfigSupported } from "./candidates/round-ro
 import { MAX_OBSERVED_WINDOWS_WINDOW_CYCLE_TICKS, swingCountsListed } from "./planner/window-cycles";
 import { SecondaryPlanningInvariantError, secondaryPlanningCountOf, verificationPlanningConfigOf, withSecondaryPlanningProvenance, type SecondaryPlanningCount } from "./round-robin-polling-primitive-policy";
 import { collectingParts, coordinatedSourcesInputOf, type CoordinatedSourcesInput, type CoordinatedSourcesPart } from "./candidates/coordinated-sources-parts";
-import { coordinatedSourcesClock } from "./candidates/coordinated-sources";
+import { coordinatedSourcesClock, withNotAdmitted, type NotAdmittedPart } from "./candidates/coordinated-sources";
 import { BlueprintGenerationResult, clockedByConfig, GenerateClockOptions, SimulationStabilityCheck, fractionalStartOf, fractionalSwingsOf } from "./plan/unclocked-run";
 import { EntityTransferCountMap } from "./sequence/cycle/swing-counts";
 import { withRunMemo } from "./plan/run-memo";
@@ -1402,7 +1402,8 @@ const COORDINATED_SOURCES_DESCRIPTION = "The inserters of each source use the en
  * Makes the per-branch clock (candidates/coordinated-sources.ts) from the parts of the runs before it and the clock they recommend
  * (`coordinatedSourcesInputOf`), checked as every alternative is; listed only where it is stable and another clock than those runs'
  * (`assessed_signatures`). A clock made that is not stable is not listed: it goes to `options.on_not_made` with what its check
- * found, and the task gives null. Null also where there is nothing to compose.
+ * found, and the task gives null. Null also where there is nothing to compose, and where the clock composed is one of those runs':
+ * each goes to `options.on_not_made` too, with the parts whose windows were not taken and why.
  */
 export function runCoordinatedSourcesTask(
     config: Config,
@@ -1414,9 +1415,16 @@ export function runCoordinatedSourcesTask(
         const logger = options.logger ?? defaultLogger;
         const quiet = quietOptions(options, logger, options.on_progress_detail);
         const beside_sources = input.parts.find(part => part.alternative_id === input.recommended_id)?.strategy;
+        let not_admitted: readonly NotAdmittedPart[] = [];
+        const on_not_made = options.on_not_made === undefined ? undefined
+            : (clock: NotMadeClock) => options.on_not_made!({ ...clock, reason: withNotAdmitted(clock.reason, not_admitted) });
         const run = runAlternativeOf({ id: COORDINATED_SOURCES_MAKER, label: COORDINATED_SOURCES_LABEL, description: COORDINATED_SOURCES_DESCRIPTION, strategy: "coordinated_sources",
-            ...(beside_sources !== undefined && { beside_sources }), run: () => coordinatedSourcesClock(config, input, { ...quiet, logger }) }, config, logger, options.on_progress_detail, new Set(assessed_signatures), undefined, undefined, false);
+            ...(beside_sources !== undefined && { beside_sources }), run: () => coordinatedSourcesClock(config, input, { ...quiet, logger }, it => { not_admitted = it; }) },
+            config, logger, options.on_progress_detail, new Set(assessed_signatures), undefined, on_not_made, false);
         const listed = run?.alternatives.filter(it => it.verdict === "stable") ?? [];
+        if (run !== null && run.alternatives.length === 0) {
+            on_not_made?.({ id: COORDINATED_SOURCES_MAKER, label: COORDINATED_SOURCES_LABEL, reason: "Made, and the same clock as one made before it, which is listed." });
+        }
         if (run !== null && run.alternatives.length > 0 && listed.length === 0) {
             options.on_not_made?.({ id: COORDINATED_SOURCES_MAKER, label: COORDINATED_SOURCES_LABEL, reason: notStableReason(run.alternatives) });
         }
