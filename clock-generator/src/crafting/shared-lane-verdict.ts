@@ -17,6 +17,7 @@ import { targetInsertersOf, targetItemOf, targetMachinesOf } from "./sequence/cy
 import { createEntityRegistryFromConfig, SimulationContext } from "./sequence/simulation-context";
 import { droppedOnto, ModelLane, modelLanesOf, takenLanesOf } from "./shared-lane-lanes";
 import { DropRecorder, HandDropped, LaidOutLane, LaneRow, recordInserters, runOnSharedLanes, SharedLaneLayout, sharedLaneLayoutOf } from "./shared-lane-model";
+import type { OutputBeltRun } from "./output-belt-run";
 import { TargetProductionRate } from "./target-production-rate";
 import { longRunWindowCyclesOf, runClockOnBuild } from "./trial";
 
@@ -68,6 +69,11 @@ import { longRunWindowCyclesOf, runClockOnBuild } from "./trial";
  *
  * What each copy's taker got, and what each copy's machines and output inserters made, is read through one function,
  * `copyLaneTakes`, and nowhere else.
+ *
+ * Where the config states its output belt, each copy's output inserter puts its stacks onto it (output-belt-run.ts). A
+ * copy whose side belt is full at its join onto the output belt holds its hand: its machines fill up and its takers take
+ * less from the lanes. Where such a copy's output inserter held a hand in the judged window cycles, its loss says that
+ * its join is full (`join_full`), not that the lane gives it too few items.
  */
 
 /** What one taker of one copy put down of a lane's item in a run of the copies on their shared lanes */
@@ -144,7 +150,7 @@ function recordCopiesMade(context: SimulationContext, ends: OutputEnds | null): 
  * (`made`). The verdict reads the copies' figures here alone, so that where they come from can change in this function only.
  */
 export function copyLaneTakes(config: Config, windows: Map<string, OpenRange[]>, window_cycle_ticks: number, layout: SharedLaneLayout,
-    window_cycles: number, logger: Logger, ends: OutputEnds | null = null): { takes: CopyLaneTake[]; made: CopyMade[]; last_tick: number } {
+    window_cycles: number, logger: Logger, ends: OutputEnds | null = null): { takes: CopyLaneTake[]; made: CopyMade[]; last_tick: number; output_belt?: OutputBeltRun } {
     let madeOf = (): CopyMade[] => [];
     const model = runOnSharedLanes(config, windows, window_cycle_ticks, layout, window_cycles, logger, context => { madeOf = recordCopiesMade(context, ends); });
     let last_tick = 0;
@@ -157,7 +163,7 @@ export function copyLaneTakes(config: Config, windows: Map<string, OpenRange[]>,
             return [{ belt_id: row.belt_id, lane: row.lane, item, copy: taker.copy, inserter_id: taker.inserter_id, hands: record.hands.filter(hand => hand.item === item) }];
         });
     });
-    return { takes, made: madeOf(), last_tick };
+    return { takes, made: madeOf(), last_tick, ...(model.output_belt !== undefined && { output_belt: model.output_belt }) };
 }
 
 /** One taker of one copy that loses swings on a lane the copies share */
@@ -186,8 +192,21 @@ export interface SharedLaneLoss {
      * shortfall a loss; absent only where the targets could not be worked out
      */
     behind?: BehindTarget;
+    /**
+     * Where the config states its output belt and the copy's output inserter held hands in the judged window cycles: its
+     * side belt is full at its join onto the output belt. That makes the copy short, not the lane.
+     */
+    join_full?: JoinFull;
     /** The sentence the result shows */
     text: string;
+}
+
+/** The hands of a copy's output inserter that its side belt held, as it was full at its join onto the output belt */
+export interface JoinFull {
+    /** Hands held in the judged window cycles: their stacks went down later than on a free side belt */
+    held_hands: number;
+    /** Hands of the output inserter in them */
+    hands: number;
 }
 
 /** A machine or an output inserter of a copy behind its target rate over the judged window cycles of a run of the copies */
@@ -401,6 +420,12 @@ function describeBehind(behind: BehindTarget, copies: number): string {
  * game's names of items have no plural.
  */
 function describeSharedLaneLoss(loss: Omit<SharedLaneLoss, "text">): string {
+    if (loss.join_full !== undefined) {
+        const behind = loss.behind === undefined ? "" : ` ${describeBehind(loss.behind, loss.copies)}`;
+        return `The side belt of copy ${loss.copy} from the entry is full at its join onto the output belt. `
+            + `Its output inserter waits for room in ${counted(loss.join_full.held_hands)} of its ${counted(loss.join_full.hands)} hands `
+            + `in ${loss.window_cycles} window cycles.${behind}`;
+    }
     const run_as = loss.run_as === "dead_end" ? "a dead end" : "an outlet";
     const end = loss.lane_end === "unknown" ? `has an unknown end. It is checked as ${run_as}.` : `ends in ${run_as}.`;
     const item = FactorioDataService.isAvailable() ? FactorioDataService.itemNameInSentence(loss.item) : loss.item;
@@ -464,6 +489,8 @@ export interface RunOfCopies {
     to: number;
     /** What each copy after the config's own holds, in order: every entity, or the ids of the entities a part copy holds */
     holds: SharedLaneLayout["copies"]["later"];
+    /** Where the config states its output belt: by the copy (1 the config's own), the hands its side belt held in the span */
+    join_full?: ReadonlyMap<number, JoinFull>;
 }
 
 /**
@@ -473,12 +500,13 @@ export interface RunOfCopies {
 function shortfallsOf(under: Config, lanes: readonly ModelLane[], layout: SharedLaneLayout, alone: AloneRun, windows: Map<string, OpenRange[]>,
     window_cycle_ticks: number, window_cycles: number, logger: Logger, ends: OutputEnds | null): RunOfCopies {
     const facts = laneFactsOf(under);
-    const { takes, made, last_tick } = copyLaneTakes(under, windows, window_cycle_ticks, layout, window_cycles, logger, ends);
+    const { takes, made, last_tick, output_belt } = copyLaneTakes(under, windows, window_cycle_ticks, layout, window_cycles, logger, ends);
     const last = Math.min(alone.last_tick, last_tick);
     const first_cycle = Math.ceil(last / 2 / window_cycle_ticks), end_cycle = Math.floor((last + 1) / window_cycle_ticks + 1e-9);
     const from = cycleStart(first_cycle, window_cycle_ticks), to = cycleStart(end_cycle, window_cycle_ticks);
     const holds = layout.copies.later;
-    if (end_cycle <= first_cycle) return { shortfalls: [], made, from, to, holds };
+    const join_full = output_belt === undefined ? undefined : joinFullOf(output_belt, from, to);
+    if (end_cycle <= first_cycle) return { shortfalls: [], made, from, to, holds, ...(join_full !== undefined && { join_full }) };
     const shortfalls = takes.flatMap(take => {
         const alone_items = itemsIn((alone.recorders.get(take.inserter_id)?.hands ?? []).filter(hand => hand.item === take.item), from, to);
         const items = itemsIn(take.hands, from, to);
@@ -492,7 +520,18 @@ function shortfallsOf(under: Config, lanes: readonly ModelLane[], layout: Shared
             window_cycles: end_cycle - first_cycle, flow: row.flow };
         return [{ short: alone_items - items, hand: alone.handOf(take.inserter_id, take.item), loss }];
     });
-    return { shortfalls, made, from, to, holds };
+    return { shortfalls, made, from, to, holds, ...(join_full !== undefined && { join_full }) };
+}
+
+/** The copies whose side belt held a hand of their output inserter from tick `from` up to, not including, `to` */
+function joinFullOf(output_belt: OutputBeltRun, from: number, to: number): Map<number, JoinFull> {
+    const full = new Map<number, JoinFull>();
+    for (const [copy, hands] of output_belt.hands) {
+        const in_span = hands.filter(hand => hand.arrival >= from && hand.arrival < to);
+        const held_hands = in_span.filter(hand => output_belt.held(hand)).length;
+        if (held_hands > 0) full.set(copy, { held_hands, hands: in_span.length });
+    }
+    return full;
 }
 
 /** The output inserters of a config and the item of its target (target-ends.ts); null where they cannot be worked out */
@@ -643,7 +682,10 @@ export function judgeSharedLanes(config: Config, clock_windows: SerializableCloc
         if (rates === undefined) rates = ends === null ? null : targetRatesOf(config, ends);
         if (rates === null) return losses;
         const behind = behindTargetIn(run, rates);
-        return behind.length === 0 ? [] : losses.map(loss => ({ ...loss, behind: behind.find(it => it.copy === loss.copy) ?? behind[0] }));
+        return behind.length === 0 ? [] : losses.map(loss => {
+            const join_full = run.join_full?.get(loss.copy);
+            return { ...loss, behind: behind.find(it => it.copy === loss.copy) ?? behind[0], ...(join_full !== undefined && { join_full }) };
+        });
     };
     // the first run of each reading: the run of one copy, and the copies on each layout of the lanes, with their shortfalls
     const first: { under: Config; taker_ids: string[]; runs: { layout: SharedLaneLayout; run: RunOfCopies }[] }[] = [];

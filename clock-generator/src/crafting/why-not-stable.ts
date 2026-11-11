@@ -30,7 +30,7 @@ import type { ClockInsight } from "./insights";
 import type { ClockRanking } from "./rank";
 import type { AsBuiltStabilityCheck, ClockAssessment, ClockVerdict } from "./trial";
 
-export type WhyNotStableCause = "taker order" | "moving lane phases" | "output chest full" | "export belt short" | "results not taken out" | "shared lane short" | "no recovery" | "nothing holds";
+export type WhyNotStableCause = "taker order" | "moving lane phases" | "output chest full" | "export belt short" | "results not taken out" | "shared lane short" | "join full" | "no recovery" | "nothing holds";
 
 export interface WhyNotStable {
     cause: WhyNotStableCause;
@@ -385,6 +385,13 @@ function sharedLaneShort(clock: WhyNotStableClock): WhyNotStable | null {
         return {
             cause: "shared lane short",
             message: `The recommended clock (${clock.label}) holds the setpoint on one copy, but it is not counted as stable: ${loss.text[0].toLowerCase()}${loss.text.slice(1)}`,
+        };
+    }
+    if ("join_full" in loss && loss.join_full !== undefined) {
+        return {
+            cause: "join full",
+            message: `The recommended clock (${clock.label}) holds the setpoint on one copy, but not on its output belt. ${loss.text} `
+                + "A clock needs output swings that the side belt takes in time, or the side belt needs more room before its join.",
         };
     }
     return {
