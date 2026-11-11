@@ -198,10 +198,10 @@ describe("a splitter", () => {
         expect(rows[1]).toEqual([["out-left1", 63], ["out-right1", 0], ["out-right1", 64]]);
     });
 
-    test("past its back end, an output takes a stack at the back end only when the stack's natural spot is at most 64 before it", () => {
+    test("past its back end, an output takes the head of the input with the priority at the back end however far that is behind its own spot", () => {
         const rows = run(new JoinModel(splitterLayout("right", "right", { right: true })), 1,
             { 0: { put_ons: [...standing("out-right1", [0, 64]), before("in-right1", 35)] } });
-        expect(rows[1]).toEqual([["out-left1", 48], ["out-right1", 0], ["out-right1", 64]]);
+        expect(rows[1]).toEqual([["out-right1", 0], ["out-right1", 64], ["out-right1", 127]]);
     });
 
     test("an output takes a stack 64 behind its last stack when that is on the output line, however far behind its natural spot", () => {
