@@ -17,6 +17,7 @@ import { SimulationContext } from "./sequence/simulation-context";
 import { runClockOnBuild } from "./trial";
 import { alongFlow } from "./shared-lane-lanes";
 import type { CopiesOnSharedLanes, DisturbanceTrialOptions, LossOutcome } from "./disturbance-trial";
+import { installOutputBelt, OutputBeltRun } from "./output-belt-run";
 
 /** A hand that an inserter put down, at the tick it did */
 export interface HandDropped {
@@ -232,6 +233,8 @@ export interface SharedLaneRun {
     readonly rows: readonly LaneRow[];
     readonly lanes: readonly SharedLane[];
     readonly takers: readonly CopyTakerRecord[];
+    /** Where the config states its output belt: the belt from the copies' output inserters to the outlet, as it ran */
+    readonly output_belt?: OutputBeltRun;
     /** With a disturbance trial asked for (`runOnSharedLanes`): what the copies made after each trial of the loss */
     readonly disturbance_trial?: LossOutcome;
 }
@@ -288,7 +291,8 @@ export function recordInserters(context: SimulationContext, inserter_ids: readon
 /**
  * Puts the model into a context of the copies (build-copies.ts) before its first tick: each row's lane runs as one
  * `SharedLane`, and each taker of each copy reaches it in place of a stock of its own, its hands recorded. A lane of
- * unknown end is not run here: it is run under each end in turn by the caller.
+ * unknown end is not run here: it is run under each end in turn by the caller. Where the config states its output belt,
+ * each copy's output inserter puts its stacks onto it (output-belt-run.ts); else each puts them on a tile of its own.
  */
 export function installSharedLanes(context: SimulationContext, config: Config, rows: readonly LaneRow[]): SharedLaneRun {
     assert(context.tick_provider.getCurrentTick() === 0, "The shared lanes go in before the first tick");
@@ -329,7 +333,8 @@ export function installSharedLanes(context: SimulationContext, config: Config, r
         context.after_inserters.push(recorder);
         takers.push({ copy, inserter_id, hands: recorder.hands, get last_tick() { return recorder.last_tick; } });
     }
-    return { rows, lanes, takers };
+    const output_belt = installOutputBelt(context, config);
+    return output_belt === null ? { rows, lanes, takers } : { rows, lanes, takers, output_belt };
 }
 
 /**
@@ -360,6 +365,7 @@ export function runOnSharedLanes(
             model = installSharedLanes(context, config, layout.rows);
             copies.lanes = model.rows.map((row, index) => ({ belt_entity_id: EntityId.forBelt(row.belt_id).id,
                 item: config.belts.find(belt => belt.id === row.belt_id)!.lanes[row.lane - 1].ingredient, lane: model!.lanes[index] }));
+            if (model.output_belt !== undefined) copies.output_belt = { item: config.setpoint.recipe, belt: model.output_belt };
             on_context?.(context);
         },
     });
