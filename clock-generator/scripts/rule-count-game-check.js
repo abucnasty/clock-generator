@@ -14,6 +14,10 @@
 // that build runs), and then each recording holds at least TICKS=<n> ticks (3,600 by default; the clocked one in whole clock
 // window cycles, the unclocked one as many ticks as the clocked one). A request over 36,000 ticks, or a clocked recording that would
 // be, is refused unless `--long <reason>` (or LONG_RUN=<reason>) says why; the reason is printed.
+//
+// A scaffold of several copies of the config names their number (`copies`, as the game test's entry of the build does): the
+// harness wires the clock to every copy, the steady state is judged on the whole build's target, and the comparison counts the
+// first copy, as the simulator runs one.
 const fs = require("fs");
 const path = require("path");
 const { dist, quiet } = require("./lib");
@@ -23,7 +27,7 @@ const SAMPLE = process.env.SAMPLE ?? "ADVANCED_CIRCUIT_240";
 const SCAFFOLDS = {
     ADVANCED_CIRCUIT_240: { scaffold: "intermediates/advanced-circuit/advanced-circuit.scaffold", warmup: 3600 },
     AUTOMATION_SCIENCE_240: { scaffold: "science/automation/automation-240.scaffold", warmup: 300 },
-    ACCUMULATOR_320: { scaffold: "intermediates/accumulator/accumulator-320.scaffold", warmup: 3600 },
+    ACCUMULATOR_320: { scaffold: "intermediates/accumulator/accumulator-320.scaffold", warmup: 3600, copies: 9 },
     LDS_240: { scaffold: "intermediates/lds/lds-240.scaffold", warmup: 3600 },
     // the egg loop cannot start itself, so the egg machines are given eggs to begin with, as the game tests do
     AGRICULTURAL_SCIENCE_250: {
@@ -66,7 +70,8 @@ const TICKS = Number(process.env.TICKS ?? GAME_RUN.baseline);
         const ticks = recordedTicks(TICKS, clock_ticks);
         assertWithinRun(TICKS, long, "TICKS");
         assertWithinRun(ticks, long, `the recording of whole periods of ${clock_ticks} ticks`);
-        const target_per_second = selected.result.stability_check.expected_output_items * 60 / window_cycle_ticks;
+        // the generator expects the output of one copy, which a scaffold of several copies makes as many times
+        const target_per_second = selected.result.stability_check.expected_output_items * (build.copies ?? 1) * 60 / window_cycle_ticks;
         const recipes = recipesMaking(config, config.setpoint.recipe);
         for (const unclocked of [true, false]) {
             const name = unclocked ? "unclocked" : "clocked";
@@ -78,7 +83,7 @@ const TICKS = Number(process.env.TICKS ?? GAME_RUN.baseline);
                     out: path.join(out, `${SAMPLE}-${name}.json`), ticks: unclocked ? ticks : TICKS,
                     warmup_ticks: build.warmup, settle_ticks: GAME_RUN.cap + 1, seed: build.seed ?? [],
                     lua: steadyProbeSource(target_per_second, config.setpoint.recipe, recipes, "rule-count-steady.json"), work_dir,
-                    clock: unclocked ? undefined : clock, config: unclocked ? undefined : config, unclocked,
+                    clock: unclocked ? undefined : clock, config: unclocked ? undefined : config, copies: unclocked ? undefined : build.copies, unclocked,
                     game_speed: 1000, timeout_seconds: 900, log: () => { }, cache: false,
                 });
                 const run = readSteadyReport(work_dir, "rule-count-steady.json");
@@ -94,6 +99,7 @@ const TICKS = Number(process.env.TICKS ?? GAME_RUN.baseline);
 
     const { parseRecording } = dist("verification/recording.js");
     const { matchRecordingToConfig } = dist("verification/entity-matching.js");
+    const { matchCopies } = dist("verification/entity-copies.js");
     const { ruleCountInputOfRecording } = dist("verification/recording-rule-count.js");
     const { ruleCount } = dist("crafting/rule-count.js");
     const { removedBetween } = dist("crafting/rule-call.js");
@@ -102,7 +108,8 @@ const TICKS = Number(process.env.TICKS ?? GAME_RUN.baseline);
     const game = {};
     for (const name of ["unclocked", "clocked"]) {
         const recording = parseRecording(JSON.parse(fs.readFileSync(path.join(out, `${SAMPLE}-${name}.json`), "utf8")));
-        const match = matchRecordingToConfig(recording, config);
+        // a scaffold of several copies: the first copy, as the simulator runs one
+        const match = (SCAFFOLDS[SAMPLE]?.copies ?? 1) > 1 ? matchCopies(recording, config).copies[0] : matchRecordingToConfig(recording, config);
         const input = ruleCountInputOfRecording(recording, id => name === "clocked" && (windows[id]?.length ?? 0) > 0, match);
         game[name] = ruleCount(input.inserters, input.machines, window_cycle_ticks, recording.sample_count);
     }

@@ -16,6 +16,11 @@
 // [{"target": {"recipe": "pentapod-egg"}, "item": "pentapod-egg", "count": 200}]. The alternative may be any id of the
 // generator (the UI and export-clock.js name them), or `selected`.
 //
+// A scaffold of several copies of the config is recorded as the game test records it: the copy count is the `copies` of the
+// build's entry in tests/game/builds/scaffold-recordings.game.test.ts (COPIES=<n> sets it, 1 otherwise), the harness wires the
+// clock to every copy, and the target is one copy's times the copies. A build of copies is not laid against the simulator
+// entity by entity and its wake-ups are not counted, as in the game test: the simulator runs one copy.
+//
 // To try a variant without touching the samples: SCAFFOLD=<blueprint file> records on that scaffold, CONFIG=<config
 // json> generates for that config, and TAG=<word> goes into the name of the recording so that it is kept apart.
 //
@@ -76,7 +81,7 @@ const TESTS = path.join(ROOT, "tests", "game", "builds", "scaffold-recordings.ga
 function buildOfConfig(arg) {
     const config_path = ConfigPaths[arg] ?? path.resolve(arg);
     const key = Object.keys(ConfigPaths).find(it => ConfigPaths[it] === config_path);
-    const block = fs.existsSync(TESTS) && key ? fs.readFileSync(TESTS, "utf-8").split(/^    \},?$/m).find(it => it.includes(`config: ConfigPaths.${key},`)) : undefined;
+    const block = testBlockOf(key);
     const ticks = field => Number(new RegExp(`${field}: ([\\d_]+)`).exec(block ?? "")?.[1].replace(/_/g, ""));
     const scaffold = scaffold_arg ?? scaffoldOf(config_path);
     if (!fs.existsSync(scaffold)) {
@@ -87,8 +92,20 @@ function buildOfConfig(arg) {
     }
     return {
         scaffold, config: arg, seed: process.env.SEED ? JSON.parse(process.env.SEED) : [],
-        warmup_ticks: Number(process.env.WARMUP_TICKS ?? (ticks("warmup_ticks") || 3600)),
+        warmup_ticks: Number(process.env.WARMUP_TICKS ?? (ticks("warmup_ticks") || 3600)), copies: copiesOf(key),
     };
+}
+
+/** The entry of the build with this sample key in the game test, as its text */
+function testBlockOf(key) {
+    return fs.existsSync(TESTS) && key ? fs.readFileSync(TESTS, "utf-8").split(/^    \},?$/m).find(it => it.includes(`config: ConfigPaths.${key},`)) : undefined;
+}
+
+/** How many times the scaffold holds the config: COPIES=<n>, else the `copies` of the build's entry in the game test, else 1 */
+function copiesOf(key) {
+    const copies = Number(process.env.COPIES ?? /copies: (\d+),/.exec(testBlockOf(key) ?? "")?.[1] ?? 1);
+    if (!Number.isInteger(copies) || copies < 1) throw new Error(`COPIES is a whole number of 1 or more, not ${process.env.COPIES}`);
+    return copies;
 }
 
 (async () => {
@@ -97,7 +114,8 @@ function buildOfConfig(arg) {
     }
     if (!Number.isInteger(RECORDED_TICKS) || RECORDED_TICKS <= 0) throw new Error(`TICKS is a whole number of ticks above 0, not ${process.env.TICKS}`);
     assertWithinRun(RECORDED_TICKS, long, "TICKS");
-    const build = BUILDS[name] ? { ...BUILDS[name], scaffold: path.join(SAMPLES, BUILDS[name].scaffold) } : buildOfConfig(name);
+    const build = BUILDS[name] ? { ...BUILDS[name], scaffold: path.join(SAMPLES, BUILDS[name].scaffold), copies: copiesOf(BUILDS[name].config) } : buildOfConfig(name);
+    const copies = build.copies;
     const scaffold = scaffold_arg || build.scaffold;
     const config = await loadSample(process.env.CONFIG ?? build.config, belts === "on");
     let selected;
@@ -122,8 +140,10 @@ function buildOfConfig(arg) {
     console.log(`${name} (backed-up belts: ${belts}): ${selected.id} "${selected.label}", belt ${selected.belt ? clockBeltLabel(selected.belt) : "-"}, `
         + `${selected.verdict} in the simulator, period ${window_cycle_ticks}, clock counts ${clock_ticks}`);
 
-    // what the scaffold makes a second: the config's target is for all its copies, a scaffold holds the one the generator expects output of
-    const target_per_second = result.stability_check.expected_output_items * 60 / window_cycle_ticks;
+    // what the scaffold makes a second: the config's target is for all its copies; the generator expects the output of one, which a
+    // scaffold of several copies makes as many times
+    const target_per_second = result.stability_check.expected_output_items * copies * 60 / window_cycle_ticks;
+    if (copies > 1) console.log(`  the scaffold holds ${copies} copies of the config`);
     const tag = process.env.TAG ? `-${process.env.TAG}` : "";
     const file = path.join(out_dir, `${path.basename(name, ".json")}${tag}-${selected.id}-${belts}.json`);
     const steady_file = file.replace(/\.json$/, ".steady.json");
@@ -145,7 +165,7 @@ function buildOfConfig(arg) {
                 ticks: RECORDED_TICKS, warmup_ticks: build.warmup_ticks, settle_ticks: GAME_RUN.cap + 1, seed: build.seed,
                 lua: steadyProbeSource(target_per_second, config.setpoint.recipe, recipesMaking(config, config.setpoint.recipe), "record-clock-steady.json"), work_dir,
                 clock: { blueprint: encodeBlueprintFile({ blueprint: exported.blueprint }), schedule: exported.schedule }, config,
-                unclocked: false, game_speed: 1000, timeout_seconds: 900, log: () => { }, cache: false,
+                copies: copies > 1 ? copies : undefined, unclocked: false, game_speed: 1000, timeout_seconds: 900, log: () => { }, cache: false,
             })).recording;
             run = readSteadyReport(work_dir, "record-clock-steady.json");
             fs.writeFileSync(steady_file, JSON.stringify(run) + "\n");
@@ -156,12 +176,30 @@ function buildOfConfig(arg) {
     }
 
     // a subtick clock's repeat can leave a float a hair off the whole number of items
-    const expected = Math.round(result.stability_check.expected_output_items * clock_ticks / window_cycle_ticks * 1e6) / 1e6;
+    const expected = Math.round(result.stability_check.expected_output_items * copies * clock_ticks / window_cycle_ticks * 1e6) / 1e6;
     // the first window cycle is cut where the recording starts
     const window_cycles = outputPerWindowCycle(recording, recipesMaking(config, config.setpoint.recipe)).slice(1);
     const tally = {};
     window_cycles.forEach(p => tally[p.items] = (tally[p.items] ?? 0) + 1);
     console.log(`  game: ${window_cycles.length} periods, expected ${expected} a period, moved`, JSON.stringify(tally));
+    if (copies > 1) {
+        console.log(`  a build of ${copies} copies: not laid against the simulator entity by entity, its wake-ups not counted (the simulator runs one copy)`);
+    } else {
+        await compareWithSimulator(config, build, result, recording, window_cycle_ticks, clock_ticks, expected);
+    }
+    // production is judged by the game tests' rule over the final machines, not by the window cycles tallied above
+    if (run === undefined) {
+        console.log("  protocol: no steady-state report beside this recording (it was made before the minute protocol)");
+    } else {
+        const verdict = describeRun(run, target_per_second);
+        for (const line of verdict.lines) console.log(`  protocol: ${line}`);
+        console.log(`  protocol: ${verdict.holds ? "holds" : "DOES NOT HOLD"}`);
+        if (!verdict.holds) process.exitCode = 1;
+    }
+})().catch(e => { console.error(e); process.exit(1); });
+
+/** The wake-ups of the simulator and the game, and the simulator laid against the game entity by entity, for a build of one copy */
+async function compareWithSimulator(config, build, result, recording, window_cycle_ticks, clock_ticks, expected) {
     const match = matchRecordingToConfig(recording, config);
     const simulated = simulateRecording(config, result.clock_windows, window_cycle_ticks, recording.sample_count * 1.5, clock_ticks);
     const simulated_match = matchOfSimulatedRecording(simulated);
@@ -183,13 +221,4 @@ function buildOfConfig(arg) {
         { recording: simulated, match: simulated_match, from_sample: Math.floor(simulated.sample_count / 3) },
         config, { expected_output_per_window_cycle: expected });
     console.log("  simulator against game, issues:", JSON.stringify(compared.issues).slice(0, 1500));
-    // production is judged by the game tests' rule over the final machines, not by the window cycles tallied above
-    if (run === undefined) {
-        console.log("  protocol: no steady-state report beside this recording (it was made before the minute protocol)");
-    } else {
-        const verdict = describeRun(run, target_per_second);
-        for (const line of verdict.lines) console.log(`  protocol: ${line}`);
-        console.log(`  protocol: ${verdict.holds ? "holds" : "DOES NOT HOLD"}`);
-        if (!verdict.holds) process.exitCode = 1;
-    }
-})().catch(e => { console.error(e); process.exit(1); });
+}
