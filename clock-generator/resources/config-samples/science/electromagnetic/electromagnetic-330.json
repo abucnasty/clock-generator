@@ -2,7 +2,11 @@
   "setpoint": {
     "recipe": "electromagnetic-science-pack",
     "items_per_second": 330,
-    "copies": 11
+    "copies": 11,
+    "copy_offset": {
+      "x": 10,
+      "y": 0
+    }
   },
   "machines": [
     {
@@ -55,14 +59,21 @@
     {
       "id": 1,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
           "ingredient": "accumulator",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         },
         {
           "ingredient": "supercapacitor",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         }
       ]
     }
