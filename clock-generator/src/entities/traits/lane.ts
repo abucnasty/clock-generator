@@ -39,9 +39,14 @@ export function supplyOfLaneEnd(lane_end: LaneEnd): LaneTrait["supply"] {
     return lane_end.kind === "dead_end" ? "backed_up" : "moving";
 }
 
-/** Both lanes of a belt of the config, the second side of a belt that lists one included, supplied by each lane's own facts */
+/**
+ * Both sides of a belt of the config, each lane it states supplied by that lane's own facts. A belt that states one lane
+ * has one lane: its other side is kept only for what is dropped on it, carries no item and has no lane facts, and its
+ * supply is the belt's, that of the lane the belt states.
+ */
 export function beltLanesOfFacts(config: BeltConfig, facts: LaneFactsOfBuild): LaneTrait[] {
-    return lanesOfBelt(config, lane => supplyOfLaneEnd(facts.of(config.id, lane).lane_end));
+    const stated = facts.lanesOf(config.id);
+    return lanesOfBelt(config, lane => supplyOfLaneEnd((stated[lane - 1] ?? stated[0]).lane_end));
 }
 
 function lanesOfBelt(config: BeltConfig, supplyOf: (lane: 1 | 2) => LaneTrait["supply"]): LaneTrait[] {

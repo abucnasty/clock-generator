@@ -36,8 +36,10 @@ export interface LaneFacts {
 
 /** The facts of every lane of every belt of one build */
 export interface LaneFactsOfBuild {
-    /** The facts of lane 1 or 2 of a belt of the config; a belt that lists one lane has both sides (the second carries no item) */
+    /** The facts of lane 1 or 2 of a belt of the config; a lane the belt does not state is refused */
     of(belt_id: number, lane: 1 | 2): LaneFacts;
+    /** The facts of the lanes a belt of the config states, in its order: one for a belt that states one lane */
+    lanesOf(belt_id: number): readonly LaneFacts[];
 }
 
 /** The part of a config the facts are derived from */
@@ -67,33 +69,39 @@ function laneEndOf(stated: NonNullable<LaneConfig["lane_end"]>, capacity: Ratio)
  * not state is derived from the config's `backed_up_belts` switch: with the switch set the lane is a dead end, without
  * it the lane has a free outlet that carries away as much as the lane carries. A supply rate that is not stated is the
  * lane's capacity (half the belt's speed times the lane's stack size), and the copies share a lane that does not say
- * otherwise. The second side of a belt that lists one lane has no entry in the config, so all of its facts are derived.
- * Both lanes of a belt move the way the belt states (`flow_direction`), and no way where it states none.
+ * otherwise. A belt that states one lane has one lane: there is no fact of a lane it does not state, so nothing reads
+ * that lane's end, supply or sharing. Both lanes of a belt move the way the belt states (`flow_direction`), and no way
+ * where it states none.
  */
 export function laneFactsOf(config: LaneFactsConfig): LaneFactsOfBuild {
     const dead_end = configDeadEnds(config);
-    const by_lane = new Map<string, LaneFacts>();
+    const by_belt = new Map<number, readonly LaneFacts[]>();
     for (const belt of config.belts) {
         const belt_speed = beltSpeedOf(belt.type);
         const listed: readonly LaneConfig[] = belt.lanes;
-        for (const lane of [1, 2] as const) {
-            const stated = listed[lane - 1];
-            const capacity = ratioOf(laneItemsPerSecond(belt_speed, laneStackFor(belt, lane)));
-            by_lane.set(`${belt.id}/${lane}`, {
-                supply_rate: stated?.supply_rate === undefined ? capacity : ratioOf(fraction(stated.supply_rate)),
-                lane_end: stated?.lane_end !== undefined ? laneEndOf(stated.lane_end, capacity)
+        by_belt.set(belt.id, listed.map((stated, index) => {
+            const capacity = ratioOf(laneItemsPerSecond(belt_speed, laneStackFor(belt, index + 1)));
+            return {
+                supply_rate: stated.supply_rate === undefined ? capacity : ratioOf(fraction(stated.supply_rate)),
+                lane_end: stated.lane_end !== undefined ? laneEndOf(stated.lane_end, capacity)
                     : dead_end ? { kind: "dead_end" } : { kind: "outlet", outlet_rate: capacity },
-                sharing: stated?.sharing ?? "shared_by_copies",
+                sharing: stated.sharing ?? "shared_by_copies",
                 flow_direction: belt.flow_direction === undefined ? null : flowOf(belt.flow_direction),
-            });
-        }
+            };
+        }));
     }
+    const lanesOf = (belt_id: number) => {
+        const lanes = by_belt.get(belt_id);
+        assert(lanes !== undefined, `Belt ${belt_id} is not in the config`);
+        return lanes;
+    };
     return {
         of(belt_id, lane) {
-            const facts = by_lane.get(`${belt_id}/${lane}`);
+            const facts = by_belt.get(belt_id)?.[lane - 1];
             assert(facts !== undefined, `Lane ${lane} of belt ${belt_id} is not in the config`);
             return facts;
         },
+        lanesOf,
     };
 }
 

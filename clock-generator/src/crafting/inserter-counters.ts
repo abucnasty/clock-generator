@@ -154,7 +154,7 @@ export function countedInserters(config: Config): CountedInserter[] {
         ...(belt_lines.has(inserter.entity_id.id) && { belt_lines: belt_lines.get(inserter.entity_id.id)! }),
         pickup_kind: endKindOf(inserter.source.entity_id),
         ...(EntityId.isBelt(inserter.source.entity_id) && { pickup_has_backpressure:
-            ([1, 2] as const).every(lane => isDeadEnd(lane_facts.of(inserter.source.entity_id.number, lane))) }),
+            lane_facts.lanesOf(inserter.source.entity_id.number).every(isDeadEnd) }),
         drop_kind: endKindOf(inserter.sink.entity_id),
         hand_size: handSize(inserter),
     }));

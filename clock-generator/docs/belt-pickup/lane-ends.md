@@ -40,6 +40,21 @@ To find the end, follow the lane downstream from the last inserter of the config
   at which those entities take the items.
 - Where you cannot see what the items do, the end is unknown.
 
+## A belt with one lane stated
+
+A belt that states one lane in `belts[].lanes` has one lane. The generator has no facts for the other lane: no
+supply rate, no lane end and no sharing. Thus only the stated lane tells if all the lanes of the belt are dead ends:
+
+- If the stated lane is a dead end, all the lanes of the belt are dead ends. Where all the input lanes of the
+  configuration are dead ends, the generator makes the clock for pickups with backpressure.
+- If the stated lane is an outlet or an unknown end, the belt has a lane that is not a dead end.
+
+`overrides.backed_up_belts` gives a lane end only to a lane that the belt states. A lane with `"ingredient": ""` is a
+stated lane. It carries no item, and its end is the end that it states, or the end that `backed_up_belts` gives.
+
+An inserter can drop items onto the two sides of a belt with one lane stated. The generator keeps the other side only
+for these items.
+
 ## A side pickup takes from its near lane first
 
 At a side pickup, the inserter is adjacent to the belt ([pickup layouts](glossary.md#side-pickups)). Both lanes can

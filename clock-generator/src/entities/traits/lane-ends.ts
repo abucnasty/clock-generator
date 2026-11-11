@@ -15,14 +15,14 @@ export function configDeadEnds(config: Pick<Config, "overrides">): boolean {
 }
 
 /** Whether a lane of the config is a dead end: the end it states, and without one the config's switch */
-function laneIsDeadEnd(stated: LaneConfig | undefined, config: Pick<Config, "overrides">): boolean {
-    return stated?.lane_end !== undefined ? stated.lane_end.kind === "dead_end" : configDeadEnds(config);
+function laneIsDeadEnd(stated: LaneConfig, config: Pick<Config, "overrides">): boolean {
+    return stated.lane_end !== undefined ? stated.lane_end.kind === "dead_end" : configDeadEnds(config);
 }
 
 /**
- * Whether every input lane (both sides of each belt an inserter takes from) is a dead end, for a reader that has no
- * lane of its own, such as a label about the whole build. A build with no input lane answers as its lanes would if it
- * had one.
+ * Whether every input lane (each lane a belt an inserter takes from states) is a dead end, for a reader that has no
+ * lane of its own, such as a label about the whole build. A belt that states one lane has one lane, so its one lane
+ * decides. A build with no input lane answers as its lanes would if it had one.
  */
 export function everyInputLaneIsDeadEnd(config: Pick<Config, "belts" | "overrides" | "inserters">): boolean {
     const belt_ids = new Set(config.belts.map(belt => belt.id));
@@ -33,6 +33,6 @@ export function everyInputLaneIsDeadEnd(config: Pick<Config, "belts" | "override
     if (input_belts.size === 0) return configDeadEnds(config);
     return config.belts.filter(belt => input_belts.has(belt.id)).every(belt => {
         const listed: readonly LaneConfig[] = belt.lanes;
-        return ([1, 2] as const).every(lane => laneIsDeadEnd(listed[lane - 1], config));
+        return listed.every(lane => laneIsDeadEnd(lane, config));
     });
 }
