@@ -49,6 +49,9 @@ Conventions:
   it is not a clock for the build.
 - Crafting speeds and productivity come from the sidecar mod in the Factorio version the scaffold is for (2.1 rounds
   beacon bonuses differently from 2.0).
+- A config can state its output belt in `output_belt`: the belt that each copy's output inserter drops on, and the
+  stretches of belt from the copies to the outlet, in tiles ([Output belt](../../README.md#output-belt)). The tiles are
+  read on the scaffold in the game. Only `automation-240` states it. The generator checks it and does not use it yet.
 
 ## Development glossary
 
