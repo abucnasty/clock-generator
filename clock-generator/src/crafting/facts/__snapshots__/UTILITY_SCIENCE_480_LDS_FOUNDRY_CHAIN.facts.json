@@ -29,7 +29,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -55,7 +55,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -81,7 +81,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -107,7 +107,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -237,7 +237,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -253,8 +253,8 @@
         "key": "belt:5/lane:2",
         "belt": "belt:5",
         "lane": 2,
-        "listed": false,
-        "item": null,
+        "listed": true,
+        "item": "coal",
         "stack": 4,
         "belt_prototype": "turbo-transport-belt",
         "tiles_per_tick": 0.125,
@@ -263,7 +263,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -2378,7 +2378,8 @@
       "from": "belt:5/lane:1",
       "to": "machine:7",
       "from_lanes": [
-        "belt:5/lane:1"
+        "belt:5/lane:1",
+        "belt:5/lane:2"
       ],
       "lands_in": "ingredients",
       "hand": {

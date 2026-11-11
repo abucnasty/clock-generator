@@ -72,7 +72,9 @@
     {
       "key": "belt:5/lane:2",
       "kind": "lane",
-      "ports": []
+      "ports": [
+        "belt:5/lane:2#coal"
+      ]
     },
     {
       "key": "machine:1",
@@ -394,7 +396,8 @@
       "item": "coal",
       "from": "belt:5/lane:1#coal",
       "from_ports": [
-        "belt:5/lane:1#coal"
+        "belt:5/lane:1#coal",
+        "belt:5/lane:2#coal"
       ],
       "to": "machine:7",
       "lands_in": "ingredients",
@@ -894,6 +897,7 @@
     "belt:2/lane:1#flying-robot-frame",
     "belt:2/lane:2#processing-unit",
     "belt:5/lane:1#coal",
+    "belt:5/lane:2#coal",
     "machine:7",
     "machine:3",
     "machine:1",

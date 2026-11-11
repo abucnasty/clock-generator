@@ -153,12 +153,13 @@ describe("hands in a chain of machines", () => {
             { surplus_guard: true, feeder_offset: 1, share_windows: false });
         // three hands of 12 ticks onto the belt; then, as the last of them starts, the units and frames (two hands of 11, a third start the
         // limit refuses, and the room for one more hand, 4); the low density structure behind them (two hands of 8 and a third start); the plastic
-        // a tick after it (four hands of 8: no more than four) and the coal after that (two hands of 11 and a third start, and the room for one more hand)
+        // a tick after it (four hands of 8: no more than four) and the coal after that (two hands of 11 and a third start; coal comes on both
+        // lanes, so the far lane fills what the near one withholds and the window has no room for one more hand)
         for (const id of [3, 4, 9, 13, 18, 21, 24, 27]) expect(ranges(windows, `inserter:${id}`)).toEqual([[0, 36]]);
         for (const id of [1, 2, 14, 15, 16, 17, 28, 29]) expect(ranges(windows, `inserter:${id}`)).toEqual([[26, 53]]);
         for (const id of [5, 6, 7, 8, 22, 23, 25, 26]) expect(ranges(windows, `inserter:${id}`)).toEqual([[54, 71]]);
         for (const id of [10, 12, 19, 20]) expect(ranges(windows, `inserter:${id}`)).toEqual([[55, 80]]);
-        expect(ranges(windows, "inserter:11")).toEqual([[56, 83]]);
+        expect(ranges(windows, "inserter:11")).toEqual([[56, 79]]);
     });
 
     it("has no groups that take turns: one group serves the chain", () => {
