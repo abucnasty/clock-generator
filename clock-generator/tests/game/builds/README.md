@@ -713,9 +713,11 @@ over 3.5 copies; the scaffold is one copy, 137.14 a second, 384 packs in a windo
 the per-branch clock (`coordinated_sources`, 168 ticks, 450.34 wakeups a minute): the windows of Round-Robin Polling
 (`src/crafting/candidates/round-robin-polling.ts`: hands rounded up where they are fractional, the order of the chain of machines),
 with the coal inserter's windows taken from a part one source at a time. The harness wires it to the inserters of the build. The protocol is the
-family's with the losses the build has: 63 whole window cycles, then the coal cut for 6 window cycles (the build holds about two window cycles of it),
-the two output loaders taken away for 4 window cycles and rebuilt, and the processing units cut for 2. The probe counts the drops of the
-eight output inserters per window cycle.
+family's, timed in game ticks (`tests/game/helpers/lua/steady.lua`): steady state, then a baseline of 3,600 ticks, judged by the net
+output of its whole clock cycles. Then the build has three losses in turn: the coal taken off every belt, the two output loaders taken
+away and rebuilt, and the processing units taken off every belt. Each loss lasts until the trailing minute falls below the baseline's
+lowest; recovery is the steady-state test met again after it. The probe records the packs that each of the eight assembling machines
+finishes and its output stock.
 
 [utility-science-480-lds-foundry-chain-clock-controls.json](utility-science-480-lds-foundry-chain-clock-controls.json) holds the native summary and the pin of the clock
 (`clock-controls.test.ts` checks the pin, `game-runs-hold.test.ts` the run). Recorded on 2026-11-11 in Factorio 2.1.24 on the
