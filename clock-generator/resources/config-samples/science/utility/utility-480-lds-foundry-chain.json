@@ -2,7 +2,11 @@
  "setpoint": {
   "recipe": "utility-science-pack",
   "items_per_second": 480,
-  "copies": 3.5
+  "copies": 3.5,
+  "copy_offset": {
+   "x": 25,
+   "y": 0
+  }
  },
  "machines": [
   {
@@ -582,28 +586,42 @@
   {
    "id": 1,
    "type": "turbo-transport-belt",
+   "flow_direction": 4,
    "lanes": [
     {
      "ingredient": "processing-unit",
-     "stack_size": 4
+     "stack_size": 4,
+     "lane_end": {
+      "kind": "dead_end"
+     }
     },
     {
      "ingredient": "flying-robot-frame",
-     "stack_size": 4
+     "stack_size": 4,
+     "lane_end": {
+      "kind": "dead_end"
+     }
     }
    ]
   },
   {
    "id": 2,
    "type": "turbo-transport-belt",
+   "flow_direction": 4,
    "lanes": [
     {
      "ingredient": "flying-robot-frame",
-     "stack_size": 4
+     "stack_size": 4,
+     "lane_end": {
+      "kind": "dead_end"
+     }
     },
     {
      "ingredient": "processing-unit",
-     "stack_size": 4
+     "stack_size": 4,
+     "lane_end": {
+      "kind": "dead_end"
+     }
     }
    ]
   },
@@ -630,10 +648,14 @@
   {
    "id": 5,
    "type": "turbo-transport-belt",
+   "flow_direction": 4,
    "lanes": [
     {
      "ingredient": "coal",
-     "stack_size": 4
+     "stack_size": 4,
+     "lane_end": {
+      "kind": "dead_end"
+     }
     }
    ]
   }
