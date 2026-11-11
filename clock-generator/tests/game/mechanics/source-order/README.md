@@ -5,10 +5,7 @@ three machine sources exhaust their stock in different local orders. It reuses t
 [the utility science 480 build config](../../../../resources/config-samples/science/utility/utility-480-lds-foundry-chain.json) and
 [scaffold](../../../../resources/config-samples/science/utility/utility-480-lds-foundry-chain.scaffold); no new scaffold is added.
 
-![Existing native layout of the utility science 480 build](../images/utility-science-480-lds-foundry-chain.jpg)
-
-The existing screenshot/catalog/provenance entry `utility-science-480-lds-foundry-chain` shows the shared layout after warm-up,
-not the fixture's captured state. See the [screenshot guide](../../README.md#scaffold-screenshots).
+The layout is the scaffold of the [utility science 480 build](../../../../resources/config-samples/science/utility/utility-480-lds-foundry-chain.scaffold).
 
 ## Recorded observation
 

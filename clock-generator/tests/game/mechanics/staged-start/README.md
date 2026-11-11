@@ -4,11 +4,9 @@ The staged-start test uses the agricultural-science sample to check that ingredi
 inserters of the build are put down in a single tick. It checks ascending and descending construction order, unit-number
 order, empty machines, and the configured kick start of the loop. It does not infer startup timing from a screenshot.
 
-![Agricultural-science scaffold used by the staged-start construction test](../images/agriculture-science.jpg)
+The test builds the scaffold of the [agricultural science 250 build](../../../../resources/config-samples/science/agricultural/agricultural-250.scaffold).
 
-The [source blueprint](../../../../resources/config-samples/science/agricultural/agricultural-250.scaffold)
-remains a shared general clock sample. This native screenshot shows it running freely after warm-up, rather than
-the staged test's initial state. See the [screenshot guide](../../README.md#scaffold-screenshots).
+That scaffold remains a shared general clock sample.
 
 From `clock-generator/`:
 
