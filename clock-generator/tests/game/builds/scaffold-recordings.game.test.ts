@@ -707,9 +707,10 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             const wrong_length = checked.filter(it => it.end - it.start !== window_cycle_ticks);
             expect(wrong_length, `every one of the ${checked.length} periods checked lasts ${window_cycle_ticks} ticks, as the generated clock does`).toEqual([]);
             if (copies > 1) {
-                // 100% or more of the target, each row on its own (copies of the row at one height) and the whole build; recorded raw
+                // 100% or more of the target, each row on its own (copies of the row at one height) and the whole build; recorded raw.
+                // A build whose copies all stand in one row is one row, whose share is the whole build's output.
                 const per_row = config.setpoint.copies;
-                expect(rows.length, `the output inserters of the build stand in rows (heights: ${row_ys.join(", ")})`).toBeGreaterThan(1);
+                expect(rows.length, `the output inserters of the build stand in one row or more (heights: ${row_ys.join(", ")})`).toBeGreaterThanOrEqual(1);
                 const copy_output_inserters = output_unit_numbers.length / copies;
                 expect(Number.isInteger(copy_output_inserters),
                     `the build's ${output_unit_numbers.length} output inserters are the same number in each of its ${copies} copies`).toBe(true);
