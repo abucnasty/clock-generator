@@ -339,3 +339,19 @@ describe("results that are not all taken out of the container a machine places t
         expect(whyNotStable([taken({ results_taken: [{ machine_id: "machine:1", waiting_ticks: 0, takers: [] }] })], 0, build)?.cause).toBe("nothing holds");
     });
 });
+
+describe("why the selected clock does not meet goal 1 where a copy's side belt is full at its join", () => {
+    it("names the full join, not a lane the copies share", () => {
+        const text = "The side belt of copy 4 from the entry is full at its join onto the output belt. Its output inserter waits for room in "
+            + "80 of its 320 hands in 60 window cycles. In the same run, machine 1 of copy 4 is 300 crafts behind its target rate.";
+        const loss = { belt_id: 1, lane: 1, lane_end: "dead_end" as const, run_as: "dead_end" as const, item: "iron-gear-wheel", copies: 9, copy: 4,
+            inserter_id: 1, items: 2688, alone_items: 3024, window_cycles: 60, flow: { x: 1, y: 0 }, join_full: { held_hands: 80, hands: 320 }, text };
+        const unstable = clock({ verdict: "unstable", meets_target_rate: false,
+            assessment: { holds: true, items_per_second: 7.5, disturbance_trial: null, shared_lane_losses: [loss] } });
+        expect(whyNotStable([unstable], 0, moving)).toEqual({
+            cause: "join full",
+            message: `The recommended clock (Takt Batches: 2 output swings each output cycle) holds the setpoint on one copy, but not on its output belt. ${text} `
+                + "A clock needs output swings that the side belt takes in time, or the side belt needs more room before its join.",
+        });
+    });
+});

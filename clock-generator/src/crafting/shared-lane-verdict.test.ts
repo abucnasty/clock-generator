@@ -251,3 +251,31 @@ describe("the logistic science build of 11 copies on two dead-ended lanes", () =
         expect(judged).toMatchObject({ losses: [], simulated: true, lanes: ["2/1", "2/2"] });
     });
 });
+
+// The automation science 240 build states its output belt. In the game (three recordings of the whole build) the clock
+// takt_batches_observed of the build (4cc378b0763b) leaves copies 4 and 8 short: their side belts fill at their joins onto
+// the output belt, and their output inserters wait. Time-Study Windows (b1490c9f2c49) keeps every copy at its rate.
+describe("a copy short because its side belt is full at its join onto the output belt", async () => {
+    const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
+    const output = [{ start: 1, end: 37 }, { start: 109, end: 145 }];
+    const clocks: Record<string, SerializableClockWindows> = {
+        takt_batches_observed: { "inserter:2": output, "inserter:1": [{ start: 13, end: 38 }, { start: 42, end: 65 }, { start: 133, end: 154 }, { start: 181, end: 193 }] },
+        time_study_windows: { "inserter:2": output, "inserter:1": [{ start: 0, end: 50 }, { start: 122, end: 149 }, { start: 159, end: 186 }, { start: 215, end: 215 }] },
+    };
+
+    it("says that the copy's join is full, not that the lane gives it too few items", () => {
+        const { losses } = judgeSharedLanes(config, clocks.takt_batches_observed, 216, quiet);
+        expect(losses.length).toBeGreaterThan(0);
+        expect([...new Set(losses.map(loss => loss.copy))].sort()).toEqual([4, 8]);
+        for (const loss of losses) {
+            expect(loss.join_full).toBeDefined();
+            expect(loss.text).toMatch(new RegExp(`^The side belt of copy ${loss.copy} from the entry is full at its join onto the output belt\\. `
+                + "Its output inserter waits for room in \\d+ of its \\d+ hands in \\d+ window cycles\\. In the same run, "));
+            expect(loss.text).not.toMatch(/does not get sufficient items/);
+        }
+    });
+
+    it("finds no copy short under the clock that holds every copy", () => {
+        expect(judgeSharedLanes(config, clocks.time_study_windows, 216, quiet).losses).toEqual([]);
+    });
+});
