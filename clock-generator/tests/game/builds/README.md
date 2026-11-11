@@ -198,6 +198,12 @@ recording with the generator's "unstable" verdict for the same clock (#266). The
 [pickup-clock-history-controls.json](pickup-clock-history-controls.json) as the historical evidence of the clocks they
 recorded.
 
+Six turbo entries were recorded again on 2026-11-11 in Factorio 2.1.24 (frozen head `bb1598e8`), on the clocks the
+selection makes for them now. The three `-backed` electromagnetic entries run `takt_batches_swings_1` (352 ticks,
+`c9c84d5975c4`) in place of `takt_batches_observed` at 1056 ticks (`0d084222cf32`). The three moving same-item entries
+run `takt_batches_observed` (160 ticks, `67586738fd72`) in place of `takt_batches` (`4f119c4e514f`), which the generator
+no longer makes. All six hold their target and have recovery after each of the three disturbances.
+
 | Result | Cases | Interpretation |
 | --- | --- | --- |
 | Stable, exact baseline and recovery | 44 | The recommended clock works under its configured supply. This includes turbo straight moving, whose earlier clock over-produced in two early window cycles from the coverage protocol's calibration state; the clock since #266 runs exact from the first window cycle. It also includes the normal backed-up underground entrance/exit (#275): their backed-up belts refill the pickup slower than a stack a tick, every clock planned for backed-up supply misses (the subtick clock before moved 96, 128, 128 against 176 natively, matching its holds false), and the clock for backed-up belts whose belt-fed windows last as long as a hand takes from the lanes at rest holds (#456, #479); the cold-start controls below still check the simulator against the measured starts with fixed windows |
@@ -275,6 +281,10 @@ belt: the game's own lane phase at placement, read off the pickup tile. The four
 exit, near lanes 1 and 2) were recorded again on the clock #456 selects for them (#479, frozen head `99fb9812`: swings-1,
 every belt-fed window as long as a hand takes from the lanes at rest); the game follows the simulator tick for tick from
 placement on it, as it did on the two clocks before (the subtick clock, then the one planned with the belts moving).
+The six turbo `-backed` side runs started at the window cycle's beginning (straight belt, underground entrance and exit,
+near lanes 1 and 2) were recorded again on 2026-11-11 in Factorio 2.1.24 (frozen head `bb1598e8`) on the clock the
+selection makes for them now (`takt_batches_swings_1`, 352 ticks, `c9c84d5975c4`), in place of `0d084222cf32`; the
+simulator follows the game tick for tick on it from placement.
 
 - **The matrix, 48:** every electromagnetic side pickup fixture at 4 tiers × straight belt, underground entrance and
   exit × moving and backed-up supply, on the generator's recommended clock, at near lane 1 and at near lane 2. Near lane 2
@@ -377,6 +387,11 @@ turbo's third recovery overshoots one window cycle and pauses four before holdin
 five are correctly rejected, with native baseline misses behind each holds-false pick (fast mirrored at both
 supplies, fast unmirrored moving, normal mirrored at both supplies), and the copied mirrored moving express
 keeps its no-recovery counterexample.
+Three turbo `-backed` entries were recorded again on 2026-11-11 in Factorio 2.1.24 (frozen head `bb1598e8`), on the
+clocks the selection makes for them now. Mirrored mixed-item runs `takt_batches_observed_swings_6` (960 ticks,
+`4a0f87000064`) in place of `takt_batches_observed` at 1120 ticks (`81526c4c472c`), which the generator no longer
+makes. Both same-item entries run `takt_batches_observed` again, with a new clock (`c87993796a6a` in place of
+`67c0b278f860`). All three hold their target and have recovery after each of the three disturbances.
 
 These compact builds can keep producing through the ordinary runner's short outages using stored stock.
 Their three successive disturbances therefore last 24 window cycles, with machine inventories and clock state
@@ -477,6 +492,14 @@ takes from the lanes at rest, which moves 176 in every window cycle (the clock p
 longer made; it is the moving config's). All eight moving-config exit clocks hold exactly and have recovery on the backed-up exit, including
 the express ones the generator calls "no recovery" and the normal ones it calls "unstable": both verdicts come
 from moving lane-phase starts ([1,5] or [5,1]; [0,3]) that this exit cannot have.
+
+Five turbo `-backed` entries were recorded again on 2026-11-11 in Factorio 2.1.24 (frozen head `bb1598e8`), on the
+clocks the selection makes for them now. The mirrored mixed-item entrance runs `takt_batches_observed_swings_6` (960
+ticks, `4a0f87000064`) in place of `takt_batches_observed` at 1120 ticks (`81526c4c472c`), which the generator no longer
+makes. Both same-item entrances run `takt_batches_observed` again, with a new clock (`c87993796a6a` in place of
+`67c0b278f860`). Both exits run `takt_batches_swings_1` (352 ticks; mirrored `fbc4f307ca61`, unmirrored `c9c84d5975c4`)
+in place of `takt_batches_observed` at 1056 ticks (`3baa1bc39202`, `0d084222cf32`). All five hold their target and
+have recovery after each of the three disturbances.
 
 The portable record (`front-*` jobs, checked by `clock-controls.test.ts`, with the per-job checks of `job-checks/fixtures.ts`) pins each selection and its exact exported clock (each entry's
 `generation`) for the nine fixtures of `front-clock-cases.ts`, each the only one to take its path through the generator,
