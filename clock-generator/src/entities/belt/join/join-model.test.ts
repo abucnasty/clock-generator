@@ -75,7 +75,7 @@ describe("movement", () => {
     });
 });
 
-/** A sender line onto a receiving line `r` that runs into a loader; `piece` and `lane` say which side-load point */
+/** A sender line onto a receiving line `r` that runs into a loader; `entity` and `lane` say which side-load point */
 function sideLoaded(piece: "belt" | "underground-exit" | "underground-entrance", lane: "downstream" | "upstream", receiving = STRAIGHT_LINE_LENGTH): JoinLayout {
     return {
         lines: [
@@ -84,7 +84,7 @@ function sideLoaded(piece: "belt" | "underground-exit" | "underground-entrance",
             { id: "loader", length: LOADER_LINE_LENGTH, end: "loader" },
             { id: "s", length: STRAIGHT_LINE_LENGTH },
         ],
-        side_loads: [{ sender: "s", receiver: "r", lane, piece }],
+        side_loads: [{ sender: "s", receiver: "r", lane, entity: piece }],
     };
 }
 

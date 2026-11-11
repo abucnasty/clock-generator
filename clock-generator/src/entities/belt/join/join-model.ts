@@ -1,4 +1,4 @@
-import { GAP, LOADER_TAKE_POSITION, ReceivingPiece, SIDE_LOAD_POINT, SideLoadLane, SPLITTER_LANE_LENGTH, STEP } from "./join-rules";
+import { GAP, LOADER_TAKE_POSITION, ReceivingEntity, SIDE_LOAD_POINT, SideLoadLane, SPLITTER_LANE_LENGTH, STEP } from "./join-rules";
 
 /**
  * A per-tick model of the belt lines at a join: belt lanes that go onto another belt by a side load or by a splitter.
@@ -7,7 +7,7 @@ import { GAP, LOADER_TAKE_POSITION, ReceivingPiece, SIDE_LOAD_POINT, SideLoadLan
  * downstream end of the stack's line. The rules and the recordings they are read from:
  * tests/game/mechanics/belt-join/README.md. The numbers: join-rules.ts.
  *
- * A line is one transport line of one piece (a belt, an underground end or its tunnel, a splitter's input or output, a
+ * A line is one transport line of one entity (a belt, an underground end or its tunnel, a splitter's input or output, a
  * loader), as the game has them: each belt has two, one for each lane.
  */
 
@@ -27,10 +27,10 @@ export interface JoinLine {
 /** A sender lane that goes onto a receiving lane from the side; the sender line is the last line of the sender lane */
 export interface SideLoad {
     sender: string;
-    /** The line of the receiving lane on the piece that the sender lane goes onto */
+    /** The line of the receiving lane on the entity that the sender lane goes onto */
     receiver: string;
     lane: SideLoadLane;
-    piece: ReceivingPiece;
+    entity: ReceivingEntity;
 }
 
 export type SplitterSide = "left" | "right";
@@ -152,7 +152,7 @@ export class JoinModel {
         for (const load of layout.side_loads ?? []) {
             const sender = this.line(load.sender), receiver = this.line(load.receiver);
             if (sender.feeds || sender.end) throw new Error(`line ${load.sender} is a sender of a side load and has a way on of its own`);
-            const point = SIDE_LOAD_POINT[load.piece][load.lane];
+            const point = SIDE_LOAD_POINT[load.entity][load.lane];
             // the hood shuts the other lane onto an underground end: it stands at its line's end
             if (point === null) sender.end = "shut";
             else sender.side = { receiver, point };
