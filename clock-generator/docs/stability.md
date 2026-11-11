@@ -141,7 +141,7 @@ The run with nothing cut is judged first, in the same way, but in its bins only.
 
 Recorded on ELECTROMAGNETIC_SCIENCE_330, with 11 copies 11 tiles apart on two dead-ended lanes and a clock of 704 ticks (2026-11-10): in the game, after the accumulator supply stopped for 2,010 ticks, copy 3 stayed at 25 packs a second (272 to 304 a window cycle) and the other ten copies went back to 30. The trials on one copy and the check of the shared lanes found no loss for this clock. The trials on the copies find that copy 3 ends at 304, 272 and 304 a window cycle after the accumulator stops, where one copy makes 352, and the other copies at 352.
 
-Trials on the copies start with full lanes fed at the entry, not as in the game, so other stops can keep copies short. Recorded on AUTOMATION_SCIENCE_240, with nine copies and the `pitch_pickups` clock of 72 ticks (Factorio 2.1.24, 2026-11-11): the trials on the copies find no recovery after a copper supply stop. In the game, after one copper stop, copy 2 was short in 2 of every 20 window cycles.
+A trial on the copies starts with all the lanes full and supplied at the entry. A build in the game does not start in that condition. Thus the stops that keep a copy short in the trials can be different from those in the game. Recorded on AUTOMATION_SCIENCE_240, with nine copies and the `pitch_pickups` clock of 72 ticks (Factorio 2.1.24, 2026-11-11): the trials on the copies find no recovery after a copper supply stop. In the game, after one copper stop, copy 2 was short in 2 of every 20 window cycles.
 
 ### What a stable verdict proves
 
