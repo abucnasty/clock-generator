@@ -38,10 +38,11 @@ export interface Inserter extends Entity {
     pickup_length?: 0.5 | 1;
     pickup_layout?: BeltPickupLayout;
     /**
-     * The facts of each lane of the source belt, by lane (the first entry is lane 1): the end of a lane decides what its
-     * pickup stock is. Belt availability is independent of geometry; absent only for non-belt sources.
+     * The facts of each lane the source belt states, by lane (the first entry is lane 1; a belt that states one lane has
+     * one entry): the end of a lane decides what its pickup stock is. Belt availability is independent of geometry;
+     * absent only for non-belt sources.
      */
-    belt_lane_facts?: readonly [LaneFacts, LaneFacts];
+    belt_lane_facts?: readonly LaneFacts[];
     /** Physical input lane to try first, including when both lanes carry the same item. */
     near_lane?: 1 | 2;
 }
@@ -218,8 +219,7 @@ export class InserterFactory {
             assert(layout_problem === null, layout_problem ?? "Invalid pickup layout");
             inserter.pickup_layout = source.pickup_layout ?? "side-straight";
             inserter.pickup_length = source.pickup_length ?? pickupLengthForLayout(inserter.pickup_layout);
-            const lane_facts: readonly [LaneFacts, LaneFacts] = [this.lane_facts.of(source.id, 1), this.lane_facts.of(source.id, 2)];
-            inserter.belt_lane_facts = lane_facts;
+            inserter.belt_lane_facts = this.lane_facts.lanesOf(source.id);
         }
 
         if (drop_spot !== undefined) {

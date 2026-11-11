@@ -173,7 +173,11 @@ export function createEntityRegistryFromConfig(config: Config, copies?: BuildCop
     }
 
     // a later copy's belt has the lane facts of the config's belt it copies
-    const copy_factory = new InserterFactory(entity_registry, { of: (belt_id, lane) => facts.of(twinOf(EntityId.forBelt(belt_id)).number, lane) });
+    const twin = (belt_id: number) => twinOf(EntityId.forBelt(belt_id)).number;
+    const copy_factory = new InserterFactory(entity_registry, {
+        of: (belt_id, lane) => facts.of(twin(belt_id), lane),
+        lanesOf: belt_id => facts.lanesOf(twin(belt_id)),
+    });
     copies?.later.forEach((holds, index) => {
         const entries = copyEntriesOf(config, index + 1, holds);
         entries.belts.forEach(belt => entity_registry.add(Belt.fromConfig(belt)));

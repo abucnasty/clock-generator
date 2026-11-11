@@ -218,6 +218,15 @@ describe('copies', () => {
         expect(laneSharedByCopiesWarning(own)).toBeNull();
     });
 
+    it('warns of the drops of the copies onto a belt that states one lane, one per copy: nothing says its other side is', () => {
+        // 3 copies of a unit that drops 100 gears a second onto belt 2, whose drops can land on both sides, of 240
+        const config = gears({ items_per_second: 3 * 100, copies: 3, input: 'chest' });
+        const own = { ...config, belts: config.belts.map(it => it.id !== 2 ? it : { ...it, lanes: [{ ...it.lanes[0], sharing: 'one_per_copy' as const }] }) } as Config;
+        for (const build of [config, own]) {
+            expect(lanesSharedByCopies(build).map(issue => [issue.kind, issue.belt_id, issue.lanes, issue.items_per_second])).toEqual([['drop', 2, [1, 2], 100]]);
+        }
+    });
+
     it('gives no warning for a config whose plan cannot be made', () => {
         expect(laneSharedByCopiesWarning({ ...gears({ items_per_second: 60, copies: 3 }), inserters: [] })).toBeNull();
     });

@@ -149,9 +149,12 @@ export function laneCapacityIssues(config: Config): LaneCapacityIssue[] {
     return overCapacity(laneLoads(config), fraction(1)).map(load => asIssue(load, config.setpoint.copies));
 }
 
-/** Whether every lane of a set is one per copy, so that the copies do not add up on it */
+/**
+ * Whether every lane of a set is one per copy, so that the copies do not add up on it. The side a belt that states one
+ * lane does not state has no facts, so nothing says it is one per copy: the copies' drops that land there add up.
+ */
 const onePerCopy = (facts: LaneFactsOfBuild, load: Pick<LaneLoad, 'belt_id' | 'lanes'>): boolean =>
-    load.lanes.every(lane => facts.of(load.belt_id, lane as 1 | 2).sharing === 'one_per_copy');
+    load.lanes.every(lane => facts.lanesOf(load.belt_id)[lane - 1]?.sharing === 'one_per_copy');
 
 /**
  * The drops within capacity in one unit that are over it once every copy drops onto the lanes, which is only a warning;
