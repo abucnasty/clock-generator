@@ -11,11 +11,11 @@
   },
   "unbounded_sources": [
     {
-      "vertex": "belt:1/lane:1#copper-plate",
+      "vertex": "belt:1/lane:1#iron-gear-wheel",
       "kind": "nothing-drops-on"
     },
     {
-      "vertex": "belt:1/lane:2#iron-gear-wheel",
+      "vertex": "belt:1/lane:2#copper-plate",
       "kind": "nothing-drops-on"
     }
   ],

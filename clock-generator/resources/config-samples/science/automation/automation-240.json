@@ -22,7 +22,7 @@
       "source": {
         "type": "belt",
         "id": 1,
-        "near_lane": 1
+        "near_lane": 2
       },
       "sink": {
         "type": "machine",
@@ -57,14 +57,14 @@
       "flow_direction": 4,
       "lanes": [
         {
-          "ingredient": "copper-plate",
+          "ingredient": "iron-gear-wheel",
           "stack_size": 4,
           "lane_end": {
             "kind": "dead_end"
           }
         },
         {
-          "ingredient": "iron-gear-wheel",
+          "ingredient": "copper-plate",
           "stack_size": 4,
           "lane_end": {
             "kind": "dead_end"
