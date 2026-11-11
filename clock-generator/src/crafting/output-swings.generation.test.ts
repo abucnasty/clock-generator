@@ -122,11 +122,13 @@ describe("generateClockForConfig", () => {
                 });
 
                 // the windows follow the settled state of the run from the staged start (empty machines): one window
-                // for inserter 1 and two for inserter 3; the prepared build gave 53-69 and four windows
+                // for inserter 1 and two for inserter 3; the prepared build gave 53-69 and four windows. Inserter 3's
+                // windows hold the room for one more hand; inserter 1 takes from the side the frames both lanes of its
+                // belt carry, so its window gets no such room and closes 4 ticks sooner
                 it("observed windows follow each inserter's activity", () => {
                     expect(windowsOf("derived")).toEqual({
                         "inserter:2": [{ start: 1, end: 49 }, { start: 169, end: 209 }],
-                        "inserter:1": [{ start: 194, end: 209 }],
+                        "inserter:1": [{ start: 194, end: 205 }],
                         "inserter:3": [{ start: 26, end: 63 }, { start: 194, end: 220 }],
                     });
                 });
