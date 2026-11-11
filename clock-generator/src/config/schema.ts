@@ -620,7 +620,7 @@ const NormalBeltConfigSchema = z.object({
     id: z.number().int().positive().describe("The number that identifies the belt in the configuration."),
     type: BeltTypeSchema.describe("The prototype name of the belt."),
     strategy: z.literal(BeltStrategy.NORMAL).optional().describe("normal (default): only the build takes items off the belt."),
-    flow_direction: BeltFlowDirectionConfigSchema.optional().describe("The direction in which the items on the belt move: 0 north, 4 east, 8 south, 12 west. Without it, the check runs the items in the two directions along the copies."),
+    flow_direction: BeltFlowDirectionConfigSchema.optional().describe("The direction in which the items on the belt move: 0 north, 4 east, 8 south, 12 west. Without it, the check runs the items in the two directions along the copies. A direction across copy_offset, on a lane that the copies share, is refused."),
     lanes: z.union([
         z.tuple([BeltLaneConfigSchema]),
         z.tuple([BeltLaneConfigSchema, BeltLaneConfigSchema])
@@ -631,7 +631,7 @@ const ExportBeltConfigSchema = z.object({
     id: z.number().int().positive().describe("The number that identifies the belt in the configuration."),
     type: BeltTypeSchema.describe("The prototype name of the belt."),
     strategy: z.literal(BeltStrategy.EXPORT).describe("export: entities outside the configuration also take items off the belt."),
-    flow_direction: BeltFlowDirectionConfigSchema.optional().describe("The direction in which the items on the belt move: 0 north, 4 east, 8 south, 12 west. Without it, the check runs the items in the two directions along the copies."),
+    flow_direction: BeltFlowDirectionConfigSchema.optional().describe("The direction in which the items on the belt move: 0 north, 4 east, 8 south, 12 west. Without it, the check runs the items in the two directions along the copies. A direction across copy_offset, on a lane that the copies share, is refused."),
     lanes: z.union([
         z.tuple([ExportBeltLaneConfigSchema]),
         z.tuple([ExportBeltLaneConfigSchema, ExportBeltLaneConfigSchema])

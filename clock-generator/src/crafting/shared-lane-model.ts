@@ -15,6 +15,7 @@ import { Logger } from "../common/logger";
 import { OpenRange } from "../data-types";
 import { SimulationContext } from "./sequence/simulation-context";
 import { runClockOnBuild } from "./trial";
+import { alongFlow } from "./shared-lane-lanes";
 import type { CopiesOnSharedLanes, DisturbanceTrialOptions, LossOutcome } from "./disturbance-trial";
 
 /** A hand that an inserter put down, at the tick it did */
@@ -165,7 +166,7 @@ export function sharedLaneLayoutOf(config: Config, lanes: readonly LaidOutLane[]
         const belt = config.belts.find(it => it.id === belt_id);
         const item = belt?.lanes[lane - 1]?.ingredient;
         if (belt === undefined || item === undefined || item === "") return [];
-        const along = (position: { x: number; y: number }) => position.x * flow.x + position.y * flow.y;
+        const along = (position: { x: number; y: number }) => alongFlow(position, flow);
         const of_lane = config.inserters.flatMap((inserter, index) => inserter.source.type === "belt" && inserter.source.id === belt_id && takesItem(inserter, item)
             ? [{ inserter, index }] : []);
         if (of_lane.length === 0) return [];

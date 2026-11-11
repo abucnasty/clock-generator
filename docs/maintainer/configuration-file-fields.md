@@ -183,7 +183,7 @@ after the engine reads the file: a field with a default is required, but a confi
 | `belts` | array of one of 2 objects, by `strategy`: `normal`, `export` | yes | The belts of the build. |
 | `belts[]{strategy=normal}.id` | integer > 0 | yes | The number that identifies the belt in the configuration. |
 | `belts[]{strategy=normal}.type` | one of `transport-belt`, `fast-transport-belt`, `express-transport-belt`, `turbo-transport-belt` | yes | The prototype name of the belt. |
-| `belts[]{strategy=normal}.flow_direction` | `0` or `4` or `8` or `12` | no | The direction in which the items on the belt move: 0 north, 4 east, 8 south, 12 west. Without it, the check runs the items in the two directions along the copies. |
+| `belts[]{strategy=normal}.flow_direction` | `0` or `4` or `8` or `12` | no | The direction in which the items on the belt move: 0 north, 4 east, 8 south, 12 west. Without it, the check runs the items in the two directions along the copies. A direction across copy_offset, on a lane that the copies share, is refused. |
 | `belts[]{strategy=normal}.lanes` | array of exactly 1 or array of exactly 2 | yes | The lanes of the belt, one or two, the left lane in the direction of travel first. |
 | `belts[]{strategy=normal}.lanes[0]` | object | yes |  |
 | `belts[]{strategy=normal}.lanes[0].ingredient` | string | yes | The name of the item on the lane. |
@@ -201,7 +201,7 @@ after the engine reads the file: a field with a default is required, but a confi
 | `belts[]{strategy=normal}.lanes[1].sharing` | one of `shared_by_copies`, `one_per_copy` | no | shared_by_copies (default): all copies take from this lane. one_per_copy: each copy has a lane of its own. |
 | `belts[]{strategy=export}.id` | integer > 0 | yes | The number that identifies the belt in the configuration. |
 | `belts[]{strategy=export}.type` | one of `transport-belt`, `fast-transport-belt`, `express-transport-belt`, `turbo-transport-belt` | yes | The prototype name of the belt. |
-| `belts[]{strategy=export}.flow_direction` | `0` or `4` or `8` or `12` | no | The direction in which the items on the belt move: 0 north, 4 east, 8 south, 12 west. Without it, the check runs the items in the two directions along the copies. |
+| `belts[]{strategy=export}.flow_direction` | `0` or `4` or `8` or `12` | no | The direction in which the items on the belt move: 0 north, 4 east, 8 south, 12 west. Without it, the check runs the items in the two directions along the copies. A direction across copy_offset, on a lane that the copies share, is refused. |
 | `belts[]{strategy=export}.lanes` | array of exactly 1 or array of exactly 2 | yes | The lanes of the belt, one or two, the left lane in the direction of travel first. |
 | `belts[]{strategy=export}.lanes[0]` | object | yes |  |
 | `belts[]{strategy=export}.lanes[0].ingredient` | string | yes | The name of the item on the lane. |
