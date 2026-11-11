@@ -72,7 +72,7 @@ was recorded in the game for each build, its credit, source and issues are in th
 | UTILITY_SCIENCE_120 | `science/utility/utility-120` | `utility-science-pack` 120/s over 7 copies | Game both ways; generation; belt-near-lane and deadlock-risk units; UI example | UTILITY_SCIENCE |
 | UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT | `science/utility/utility-120-processing-unit-and-lds-on-one-belt` | `utility-science-pack` 120/s over 7 copies | Game both ways; output-swings generation; 2 output swings is stable without a search | UTILITY_SCIENCE_BELTED_COMBINED_BLUE_AND_LDS |
 | UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN | `science/utility/utility-480-lds-foundry-chain` | `utility-science-pack` 480/s over 3.5 copies | Game (3.5 copies, losses of coal, outputs and units); the 15/8-hand coal inserter; source-order and near-lane mechanics; blast SLOW job | REAL_THAELN_CELL09 |
-| ACCUMULATOR_640 | `intermediates/accumulator/accumulator-640` | `accumulator` 640/s over 18 copies | Game: the build where the observed-windows clock first held 576 a window cycle; decider order checked by the record's property module; even-hands and swing-distribution units | ACCUMULATOR_640 (unchanged) |
+| ACCUMULATOR_640 | `intermediates/accumulator/accumulator-640` | `accumulator` 320/s over 9 copies | Game (`scaffold-recordings`, on abucnasty's build of nine copies, `copies: 9`); on the earlier scaffold of issue 152 (640/s over 18 copies), the build where the observed-windows clock first held 576 a window cycle; decider order checked by the record's property module; even-hands and swing-distribution units | ACCUMULATOR_640 (unchanged) |
 | ADVANCED_CIRCUIT_230 | `intermediates/advanced-circuit/advanced-circuit-230` | `advanced-circuit` 230/s over 3 copies | Game: the first clock of this sample that holds (found by the one search of 2026-10-11); the only `ignored_lcm_ingredients` case | ADVANCED_CIRCUIT_230 (unchanged) |
 | ADVANCED_CIRCUIT_240 | `intermediates/advanced-circuit/advanced-circuit-240` | `advanced-circuit` 240/s over 3 copies | Game; small-batches fallback variant job (belts backed up); rules-of-the-game and rule-calls | ADVANCED_CIRCUIT (the same build; the key now carries the rate) |
 | ELECTRIC_FURNACE_20 | `intermediates/electric-furnace/electric-furnace-20` | `electric-furnace` 20/s over 2 copies | Game (`scaffold-recordings`, on abucnasty's build); units: stone-brick furnaces fed by drills (utilization, steady-state, wakeups from starts). Origin: the furnace supply of a production science design, rated to fit 120/s of production science (240/s with more copies) | ELECTRIC_FURNACE |
@@ -293,11 +293,21 @@ Open:
 
 ## Accumulator
 
-The build of [issue 152](https://github.com/abucnasty/clock-generator/issues/152), 640 accumulators a second over 18
-copies: two electromagnetic plants make accumulators (50% productivity), two cryogenic plants batteries (200%), and two
-foundries cast the iron and the copper (150%), all from infinity pipes. The config is `accumulator-640.json`
-(`ACCUMULATOR_640`) and the scaffold `accumulator-640.scaffold`, both as the issue gives them; the issue's config
-also has "Search for fewer wake-ups" on, which selects the same clock, since no clock made without a search is stable.
+abucnasty's build of nine copies (2026-11-10), 320 accumulators a second, 16 tiles from one copy to the next: in each
+copy two electromagnetic plants make accumulators (50% productivity), two cryogenic plants batteries (200%), and two
+foundries cast the iron and the copper (150%), all from infinity pipes. The upper plants drop onto one line and the
+lower plants onto another; on each line the drops of the first four copies are side-loaded onto the other lane before
+the last five drop, and the line ends in a loader into a void chest. The config states the copies' spacing
+(`copy_offset`) and a belt for each line; the lane change is not stated, as drops onto a lane that copies share are not
+modelled. The config is `accumulator-640.json` (`ACCUMULATOR_640`, named for its target before) and the scaffold
+`accumulator-640.scaffold`, the build as given. Recorded on it in Factorio 2.1.24 (`scaffold-recordings`, `copies: 9`):
+each copy moved its 576 a window cycle of 972 ticks (35.56 a second) in each of the 3 window cycles checked, each line
+2,592, with the machines at the config's speeds and productivity. The game test does not compare a build of copies with
+the simulator entity by entity, and does not count its wake-ups.
+
+Before it the sample was the build of [issue 152](https://github.com/abucnasty/clock-generator/issues/152), 640 a
+second over 18 copies, with the same machines, modules and inserters in each copy and the two plants side by side; the
+issue's config also has "Search for fewer wake-ups" on. What follows was recorded on that scaffold.
 
 The clock 0.9.0 selected (observed windows, 2 output swings per cycle) was stable in the simulator and made 528, 544,
 544, 544, 544, 528 and 512 of its 576 a window cycle in the game, that cycle over and over. Started in the state the game

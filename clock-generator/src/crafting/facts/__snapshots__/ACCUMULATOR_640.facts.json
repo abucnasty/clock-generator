@@ -3,8 +3,8 @@
   "target": {
     "item": "accumulator",
     "counts": "made",
-    "items_per_second": 640,
-    "copies": 18,
+    "items_per_second": 320,
+    "copies": 9,
     "per_copy": {
       "numerator": 320,
       "denominator": 9
@@ -44,6 +44,58 @@
       "lane": {
         "key": "belt:1/lane:2",
         "belt": "belt:1",
+        "lane": 2,
+        "listed": false,
+        "item": null,
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "moving",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "belt:2/lane:1",
+      "kind": "lane",
+      "entity": "belt:2",
+      "lane": {
+        "key": "belt:2/lane:1",
+        "belt": "belt:2",
+        "lane": 1,
+        "listed": true,
+        "item": "accumulator",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "moving",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "belt:2/lane:2",
+      "kind": "lane",
+      "entity": "belt:2",
+      "lane": {
+        "key": "belt:2/lane:2",
+        "belt": "belt:2",
         "lane": 2,
         "listed": false,
         "item": null,
@@ -721,7 +773,7 @@
       "group": "inserter:2",
       "item": "accumulator",
       "from": "machine:2",
-      "to": "belt:1/lane:1",
+      "to": "belt:2/lane:1",
       "from_lanes": [],
       "lands_in": "lane",
       "hand": {

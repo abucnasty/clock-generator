@@ -1,8 +1,12 @@
 {
   "setpoint": {
     "recipe": "accumulator",
-    "items_per_second": 640,
-    "copies": 18
+    "items_per_second": 320,
+    "copies": 9,
+    "copy_offset": {
+      "x": 16,
+      "y": 0
+    }
   },
   "machines": [
     {
@@ -68,7 +72,7 @@
       },
       "sink": {
         "type": "belt",
-        "id": 1
+        "id": 2
       },
       "stack_size": 16,
       "id": 2
@@ -181,6 +185,16 @@
   "belts": [
     {
       "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "accumulator",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 2,
       "type": "turbo-transport-belt",
       "lanes": [
         {
