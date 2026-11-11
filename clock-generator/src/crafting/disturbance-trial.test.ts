@@ -1,9 +1,11 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import {
-    disturbanceTrialsOf, judgeRecovery, LATE_AFTER_WINDOW_CYCLES, LOSS_PLACES, LOSS_SHARES, lossId, lossLabel, lossLimitOf, lossTrialsPartOfTheWay,
+    clockCountsOneAt, countedOnTheClock, disturbanceTrialsOf, judgedCopies, judgedOnTheClock, judgedTogether, judgeRecovery, LATE_AFTER_WINDOW_CYCLES, LOSS_PLACES, LOSS_SHARES, lossId, lossLabel, lossLimitOf, lossTrialsPartOfTheWay,
     lossTrialsUntilStopped, LossOutcome, MAX_LOSS_WINDOW_CYCLES, MAX_RECOVERY_WINDOW_CYCLES, MAX_RUN_ON_WINDOW_CYCLES, reportOf, RUN_ON_EXACT_WINDOW_CYCLES,
-    runsOn, verdictOf,
+    repeatOnTheClock, runsOn, verdictOf,
 } from "./disturbance-trial";
+import { Duration } from "../data-types";
+import type { BranchBins } from "./terminal-rate";
 import { SPOIL_LIMIT_SHARE } from "../common/rule-constants";
 import { notTriedSentence } from "./why-not-stable";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
@@ -56,6 +58,117 @@ describe("judging what a build made after a loss", () => {
     it("holds it to its last periods where no state repeated, and takes fewer periods than that for no recovery", () => {
         expect(judgeRecovery([600, 704, 704, 704], 704, null, 3)).toEqual({ recovers: true, recovered_after_bins: 1, proven: false, ends_in: [704, 704, 704] });
         expect(judgeRecovery([704, 704], 704, null, 3).recovers).toBe(false);
+    });
+});
+
+describe("judging a repeated state on the clock", () => {
+    /** One branch with no hand and no surplus, its bins those of the repeat counted on the clock */
+    const exact = (bins: number[], share: number): BranchBins[] => [{ bins, share_per_bin: share, hand: 0, takes_surplus: false }];
+    /** The running totals at each bin's start (and at the end) of bins, and at the clock's count 1 in each, `before` into it */
+    const totals = (bins: number[], before: number[]) => {
+        const starts = bins.reduce((sums, items) => [...sums, sums[sums.length - 1] + items], [0]);
+        return { starts, marks: before.map((items, at) => starts[at] + items) };
+    };
+    // military science's time-study windows after piercing rounds stop for 130 ticks at phase 120: from bin 5 the state
+    // repeats every two bins of 400 and 368, and the clock counts 1 229 ticks into each bin; a hand drops on one side of the
+    // bin's edge or the other
+    const military = [336, 384, 368, 384, 368, 400, 368];
+    const military_marks = totals(military, [168, 200, 184, 200, 184, 200, 184]);
+
+    it("counts a repeat in whole window cycles from the clock's count 1, the window cycle over the repeat's end going on from its start", () => {
+        expect(repeatOnTheClock(military_marks.starts, military_marks.marks, 5)).toEqual([384, 384]);
+        // where the clock counts 1 as a bin starts, the window cycles are the bins
+        expect(repeatOnTheClock(totals([10, 12, 8], [0, 0, 0]).starts, [0, 10, 22], 1)).toEqual([12, 8]);
+    });
+
+    it("has a repeat back whose bins read 400 and 368 where every window cycle on the clock holds 384, from the bin it begins at", () => {
+        const judged = judgeRecovery(military, 384, 5, 8);
+        expect(judged.recovers).toBe(false);
+        expect(judgedOnTheClock(judged, exact(repeatOnTheClock(military_marks.starts, military_marks.marks, 5), 384), 5)).toEqual({
+            recovers: true, recovered_after_bins: 5, proven: true, ends_in: [400, 368], ends_in_on_the_clock: [384, 384],
+        });
+    });
+
+    it("does not have a repeat back that holds 48 and 16 on the clock where 32 is expected, though its sum is right", () => {
+        // automation science's 1-swing takt batches: 15 window cycles of 480, one of 48 and one of 16 on the clock
+        const on_the_clock = [32, 48, 32, 32, 16, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32];
+        const bins = [32, 32, 48, 32, 32, 16, 32, 32, 32, 32, 32, 32, 32, 32, 32];
+        expect(on_the_clock.reduce((sum, items) => sum + items, 0)).toBe(32 * 15);
+        const judged = judgedOnTheClock(judgeRecovery([0, ...bins], 32, 1, 8), exact(on_the_clock, 32), 1);
+        expect(judged).toMatchObject({ recovers: false, recovered_after_bins: null, ends_in_on_the_clock: on_the_clock });
+    });
+
+    it("does not have a repeat back that is short on the clock", () => {
+        expect(judgedOnTheClock(judgeRecovery([336, 400, 367], 384, 1, 8), exact([384, 383], 384), 1).recovers).toBe(false);
+        expect(judgedOnTheClock(judgeRecovery([336, 400, 368], 384, 1, 8), exact([392, 376], 384), 1).recovers).toBe(false);
+    });
+
+    it("holds every branch to its share in each window cycle on the clock, with its hand and surplus as in the bins", () => {
+        const branch = (bins: number[]): BranchBins => ({ bins, share_per_bin: 32, hand: 16, takes_surplus: true });
+        const judged = judgeRecovery([0, 96, 32], 64, 1, 8, [branch([0, 64, 0]), branch([0, 32, 32])]);
+        expect(judged.recovers).toBe(false);
+        expect(judgedOnTheClock(judged, [branch([32, 32]), branch([32, 32])], 1)).toMatchObject({ recovers: true, recovered_after_bins: 1 });
+        // one branch two hands behind in a window cycle on the clock: as in a bin, more than its hand
+        expect(judgedOnTheClock(judged, [branch([64, 0]), branch([32, 32])], 1).recovers).toBe(false);
+    });
+
+    it("never takes a recovery away, and leaves a trial with no repeat as it is", () => {
+        const today = judgeRecovery([640, 688, 704, 704], 704, 3, 8);
+        expect(judgedOnTheClock(today, exact([600], 704), 3)).toBe(today);
+        const unproven = judgeRecovery([600, 704, 704, 700], 704, null, 3);
+        expect(judgedOnTheClock(unproven, exact([704], 704), null)).toBe(unproven);
+    });
+
+    it("judges each copy of a run of the copies on the clock: one copy at 100 and 92 in its bins and 96 on the clock is back", () => {
+        const copies = [[80, 96, 96, 96], [72, 96, 100, 92]];
+        const together = copies[0].map((items, at) => items + copies[1][at]);
+        const second = totals(copies[1], [36, 48, 52, 48]);
+        const each = [judgeRecovery(copies[0], 96, 2, 8), judgedOnTheClock(judgeRecovery(copies[1], 96, 2, 8), exact(repeatOnTheClock(second.starts, second.marks, 2), 96), 2)];
+        expect(each[1]).toMatchObject({ recovers: true, recovered_after_bins: 2, ends_in_on_the_clock: [96, 96] });
+        expect(judgedTogether(each, together, 2, 8)).toEqual({ recovers: true, recovered_after_bins: 2, proven: true, ends_in: [196, 188] });
+        const short = [each[0], judgedOnTheClock(judgeRecovery([72, 96, 100, 90], 96, 2, 8), exact([96, 94], 96), 2)];
+        expect(judgedTogether(short, together, 2, 8)).toMatchObject({ recovers: false, recovered_after_bins: null });
+    });
+
+    it("judges a run of the copies as runLossTrials does: each copy recounted on its own, the trial back where every copy is", () => {
+        const one = (bins: number[]): BranchBins[] => [{ bins, share_per_bin: 96, hand: 0, takes_surplus: false }];
+        // the second copy's bins read 100 and 92 from bin 2, and the clock counts 1 48 and 52 items into bins 2 and 3: 96 and 96
+        const first = [80, 96, 96, 96], second = [72, 96, 100, 92];
+        const counts = totals(second, [36, 48, 52, 48]);
+        const copies = [
+            { bins: first, branches: one(first), on_the_clock: { starts: [totals(first, [0, 0, 0, 0]).starts], marks: [totals(first, [40, 48, 48, 48]).marks] } },
+            { bins: second, branches: one(second), on_the_clock: { starts: [counts.starts], marks: [counts.marks] } },
+        ];
+        const together = first.map((items, at) => items + second[at]);
+        const run = judgedCopies(copies, together, 96, 2, 8);
+        expect(run.each.map(it => [it.recovers, it.recovered_after_bins])).toEqual([[true, 1], [true, 2]]);
+        expect(run.judged).toEqual({ recovers: true, recovered_after_bins: 2, proven: true, ends_in: [196, 188] });
+        // without the totals of the clock (a run with nothing cut, or no clock found) the copy is judged in its bins
+        const in_bins = judgedCopies([copies[0], { bins: second, branches: one(second) }], together, 96, 2, 8);
+        expect(in_bins.judged).toMatchObject({ recovers: false, recovered_after_bins: null });
+        // one copy: the trial is as that copy is, with its window cycles on the clock
+        expect(judgedCopies([copies[1]], second, 96, 2, 8).judged).toEqual({ recovers: true, recovered_after_bins: 2, proven: true, ends_in: [100, 92], ends_in_on_the_clock: [96, 96] });
+    });
+
+    it("leaves the run with nothing cut to its bins: it is the check of what the clock holds", () => {
+        expect(countedOnTheClock({ kind: "none" })).toBe(false);
+        expect(countedOnTheClock({ kind: "supply", item: "copper-plate" })).toBe(true);
+        expect(countedOnTheClock({ kind: "output", item: "automation-science-pack" })).toBe(true);
+        // automation science's 1-swing takt batches with nothing cut: 48 and 16 in its bins, not back, as before
+        const nothing_cut = [32, 32, 48, 32, 32, 16, 32, 32, 32, 32, 32, 32, 32, 32, 32];
+        expect(judgeRecovery(nothing_cut, 32, 0, 8)).toEqual({ recovers: false, recovered_after_bins: null, proven: true, ends_in: nothing_cut });
+    });
+
+    it("finds where the clock counts 1 from the clocks of its window cycle, a subtick clock's in the whole ticks it repeats in", () => {
+        const clock = (ticks: number, clock_tick: number, is_game_clock = true) => ({ windowCycleDuration: Duration.ofTicks(ticks), is_game_clock, clockTick: () => clock_tick });
+        // now is tick 1000 of the run; a clock of 480 ticks that has counted 1,229 ticks since its start counts 1 at tick 251 and 480 apart
+        expect(clockCountsOneAt([clock(480, 1229), clock(37, 5)], 480, 480, 1000)).toBe(251);
+        // a fuel clock of another window cycle and a planning schedule do not count; clocks that do not agree give none
+        expect(clockCountsOneAt([clock(480, 1229), clock(480, 7, false)], 480, 480, 1000)).toBe(251);
+        expect(clockCountsOneAt([clock(480, 1229), clock(480, 1230)], 480, 480, 1000)).toBeNull();
+        expect(clockCountsOneAt([], 480, 480, 1000)).toBeNull();
+        // a window cycle of 12,672/23 ticks repeats in 12,672 whole ticks, 23 window cycles, where its count starts again
+        expect(clockCountsOneAt([clock(12672 / 23, 20000)], 12672 / 23, 12672, 30000)).toBe(10000);
     });
 });
 

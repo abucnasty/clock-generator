@@ -30,6 +30,19 @@ export interface EnableControl {
     toString?(): string;
 }
 
+/** A clock of a window cycle, as a run holds it: where it stands in its count */
+export interface WindowCycleClock {
+    readonly windowCycleDuration: Duration;
+    readonly is_game_clock: boolean;
+    /** Ticks since the clock's start, in the tick of the run now: its position in the window cycle is this modulo the window cycle */
+    clockTick(): number;
+}
+
+/** Whether a control (or anything a ResettableRegistry holds) is a clock of a window cycle */
+export function isWindowCycleClock(it: unknown): it is WindowCycleClock {
+    return it instanceof ClockedEnableControl;
+}
+
 export const AlwaysEnabledControl: EnableControl = {
     isEnabled(): boolean {
         return true;
@@ -232,7 +245,7 @@ class EnableControlLambda implements EnableControl {
     }
 }
 
-class ClockedEnableControl implements EnableControl, Resettable {
+class ClockedEnableControl implements EnableControl, Resettable, WindowCycleClock {
 
     public static create(args: {
         windowCycleDuration: Duration,
@@ -278,6 +291,10 @@ class ClockedEnableControl implements EnableControl, Resettable {
 
     public isEnabled(): boolean {
         return this.isEnabledIn(0);
+    }
+
+    public clockTick(): number {
+        return this.tickProvider.getCurrentTick() + this.offset;
     }
 
     public isEnabledIn(ticks: number): boolean {

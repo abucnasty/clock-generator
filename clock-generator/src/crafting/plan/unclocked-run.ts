@@ -53,7 +53,7 @@ import { Logger, defaultLogger } from "../../common/logger";
 import { FuelLevelRecorder, FuelLevelSeries, FuelPlan, fuelPlan } from "../fuel-view";
 import { StockDetail, StockRecorder, StockRecording } from "../machine-stock";
 import { TimelineRecorder, TimelineRecording, TimelineRecordingOptions } from "../timeline-recording";
-import { DisturbanceTrialOptions, LossOutcome, runLossTrials } from "../disturbance-trial";
+import { clockCountsOneAt, DisturbanceTrialOptions, LossOutcome, runLossTrials } from "../disturbance-trial";
 import { SerializableTransferHistory, serializeTransferHistory } from "../sequence/transfer-history-serializer";
 import { StateTransitionHistory } from "../sequence/state-transition-history";
 import { MachineFactsEntry } from "../insights";
@@ -1417,8 +1417,10 @@ function disturbanceTrialOf(
     const inserter_states = new Map(trial_context.inserters.map(it => [it.inserter_state.entity_id.id, it.inserter_state] as const));
     const watched_exports = exportedItemsOf(trial_context.entity_registry, new Set(simulated.output_inserter_states.map(state => state.entity_id.id)))
         .map(exported => ({ exported, fillers: exported.filler_ids.flatMap(id => inserter_states.get(id) ?? []) }));
+    // where the clock counts 1: a repeat that is not at the rate in its bins is counted again on the clock
+    const clock_counts_one_at = clockCountsOneAt(controlled.resettable_registry.clocks(), loss_window_cycle, bin.ticks, trial_context.tick_provider.getCurrentTick());
     const disturbance_trial = runLossTrials(trial_context, simulated.output_inserter_states, options.disturbance_trial, bin,
-        Math.max(bin.ticks, ...own_clock_ticks), proof_stride, watched_exports, terminal_branches);
+        Math.max(bin.ticks, ...own_clock_ticks), proof_stride, watched_exports, terminal_branches, clock_counts_one_at);
     logger.log(`Loss trial (${options.disturbance_trial.loss.kind}): back_to_rate=${disturbance_trial.recovers} over ${disturbance_trial.trials.length} trials`);
     return disturbance_trial;
 }
