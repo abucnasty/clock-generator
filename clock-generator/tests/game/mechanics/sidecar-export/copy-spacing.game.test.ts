@@ -46,6 +46,14 @@ const EXPECTED: Record<string, { copy_offset: { x: number; y: number } | null | 
     // the copies do not all have every inserter
     "two-copies-and-a-part-copy": { copy_offset: null, inserters: 5 },
     "two-copies-into-chests": { copy_offset: "no target", inserters: 2 },
+    // every belt that two or more inserters take from gives the step
+    "two-copies-4-apart-on-two-belts": { copy_offset: { x: 4, y: 0 }, inserters: 4 },
+    // the belts give no one step
+    "two-belts-whose-spacings-differ": { copy_offset: null, inserters: 4 },
+    // each belt gives the step to the copy downstream, and those are opposite
+    "two-copies-on-belts-running-opposite-ways": { copy_offset: null, inserters: 4 },
+    // the inserter on the second belt has none alike at the step: the two assemblers are one copy
+    "two-assemblers-alike-and-an-inserter-unlike-on-a-second-belt": { copy_offset: null, inserters: 3 },
 };
 
 test("Sidecar exports where the next copy stands, from the inserters along a belt line", async context => {

@@ -52,8 +52,9 @@ local function join(...)
 end
 
 local cases = {}
-local function case(name, selection, first)
-    table.insert(cases, {name = name, selection = selection, first = first})
+-- `first`: the first piece of the line, fed every tick; `also`: the first piece of a second line
+local function case(name, selection, first, also)
+    table.insert(cases, {name = name, selection = selection, first = first, also = also})
 end
 
 -- one build every 40 tiles in x, so none touches another
@@ -116,6 +117,32 @@ do local x, y = origin()  -- two copies 4 tiles apart that fill chests: no machi
     end
     case("two-copies-into-chests", join(a, all), a[1])
 end
+-- Builds of two belts: a second belt runs 6 tiles south of the first, below the assemblers
+do local x, y = origin()  -- two copies 4 tiles apart that take from both belts
+    local a, b = line(x, y, E, 10), line(x, y + 6, E, 10)
+    local one, two = copy(a[2], 0, 1), copy(a[6], 0, 1)
+    case("two-copies-4-apart-on-two-belts", join(a, b, one, two, {taker(b[2], 0, -1, one[2]), taker(b[6], 0, -1, two[2])}), a[1], b[1])
+end
+do local x, y = origin()  -- inserters alike 4 tiles apart on one belt and 6 tiles apart on the other, into chests
+    local a, b = line(x, y, E, 10), line(x, y + 8, E, 10)
+    local all = join(copy(a[2], 0, 1), copy(a[6], 0, 1))
+    for _, k in ipairs{2, 8} do
+        local chest = build("wooden-chest", b[k].position.x, b[k].position.y - 2)
+        all = join(all, {chest, taker(b[k], 0, -1, chest)})
+    end
+    case("two-belts-whose-spacings-differ", join(a, b, all), a[1], b[1])
+end
+do local x, y = origin()  -- two copies 4 tiles apart that take from two belts running opposite ways
+    local a, b = line(x, y, E, 10), line(x + 9, y + 6, W, 10)
+    local one, two = copy(a[2], 0, 1), copy(a[6], 0, 1)
+    -- b[9] is below the first assembler and b[5] below the second
+    case("two-copies-on-belts-running-opposite-ways", join(a, b, one, two, {taker(b[9], 0, -1, one[2]), taker(b[5], 0, -1, two[2])}), a[1], b[1])
+end
+do local x, y = origin()  -- two assemblers alike on one belt, and one inserter from the other belt into the first only
+    local a, b = line(x, y, E, 10), line(x, y + 6, E, 10)
+    local one, two = copy(a[2], 0, 1), copy(a[6], 0, 1)
+    case("two-assemblers-alike-and-an-inserter-unlike-on-a-second-belt", join(a, b, one, two, {taker(b[2], 0, -1, one[2])}), a[1], b[1])
+end
 
 local report = {samples = {}, cases = {}}
 
@@ -123,7 +150,10 @@ capture.each_tick({first_tick = options.ticks, last_tick = options.ticks, report
     sample = function() return {} end,
     after_tick = function(elapsed)
         if elapsed < options.ticks then
-            for _, c in ipairs(cases) do feed(c.first) end
+            for _, c in ipairs(cases) do
+                feed(c.first)
+                if c.also then feed(c.also) end
+            end
             return
         end
         for _, c in ipairs(cases) do
