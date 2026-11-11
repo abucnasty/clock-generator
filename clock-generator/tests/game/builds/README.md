@@ -604,14 +604,19 @@ first a fourth furnace at 91.875), and the config is the first.
   wraparound value and the value it starts at), and the harness records it as it records a generated one, cut at its wraps. The
   recorder schema reads a clock that counts from 0 only when the recording names its wraparound value (the harness writes it), and then
   checks every sample against the clock's count, so a missing signal is still refused.
-- `generated-three-copies`: the same blueprint with the hand-made clock's three combinators taken out and the generator's recommended clock
-  for the config (`swings-2`, 72 ticks, 2 output swings) wired to the inserters of each copy. The test says the build holds 3
+- `generated-three-copies`: the same blueprint with the hand-made clock's three combinators taken out and the generator's clock
+  for the config (`coordinated_sources`, 72 ticks) wired to the inserters of each copy. The test says the build holds 3
   copies (`copies: 3`; without it a build is one copy and a machine beyond the config is refused), and the harness finds them
   from the build's machines and inserters (machines that inserters move items between are one copy; belts, which the copies
   share, do not join them) and matches each to the config by itself. The inserters the hand-made clock held run free while
-  the build warms up, as an unclocked build's do, so the furnaces have their recipes when the build is matched. On this
-  scaffold the harness refuses the run before it wires the clock: the foundry part's four furnaces (iron plate) and its gear
-  assembler have recipes of the config and are in no copy, so they count as machines beyond the config.
+  the build warms up, as an unclocked build's do, so the furnaces have their recipes when the build is matched. The foundry
+  part's machines are in no copy and no inserter joins them to a machine of the config, so they are the build's own.
+
+Both runs also judge each copy by itself: the final machine of each copy, found as the harness finds the copies, makes its 80 a
+second over the baseline's whole clock cycles (its products less the change in its output stock), a copy that the others starve
+on the ore lines they share falls short there even where the build's total does not. Each copy's baseline is kept in
+`per-copy.json` beside the run's summary; it is not part of the native summary. In the game (2026-11-11, Factorio 2.1.24) every
+copy made 4,800 over 3,600 ticks with the generated clock and 4,608 over 3,456 ticks with the hand-made clock.
 
 [inserter-crafting-240-shared-signal-clock-controls.json](inserter-crafting-240-shared-signal-clock-controls.json) holds the 2 native summaries, recorded on Factorio 2.1.21 at commit
 `e1c0aadb`. **The hand-made clock gives 864 (288 a copy) in each of 63 window cycles, as a separate probe measured it, and the
@@ -645,6 +650,8 @@ ticks each waits for room on the belt.
 [grenade-clock-controls.json](grenade-clock-controls.json) holds the 4 native summaries; `clock-controls.test.ts`
 pins the generated clock, `game-runs-hold.test.ts` checks the runs, and `src/crafting/grenade-clock.generation.test.ts` checks the hand-made clock in the simulator. All four hold their target in every baseline window cycle
 (64 on a copy, 448 on seven) with no wait for the belt, and go back to it after every disturbance.
+On the full build each copy is judged by itself as well, as on the inserter build's three copies: each copy's four final machines
+make its 2,048 over the baseline's 3,584 ticks of whole clock cycles, with both clocks (2026-11-11, Factorio 2.1.24).
 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/grenade-new BELT_CLOCK_CALIBRATE=1 \
