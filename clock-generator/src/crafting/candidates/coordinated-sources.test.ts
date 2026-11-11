@@ -47,6 +47,17 @@ describe("the groups of the local choice", () => {
         // an inserter a part leaves without windows is always enabled in that choice
         expect(groups[2].choices[1].windows).toEqual({ "inserter:1": null });
     });
+
+    it("take a part's windows only for the sources it is taken for, one source at a time", () => {
+        const recommended = part("recommended", 20, { "inserter:1": [window(0, 4)], "inserter:2": [window(5, 6)], "inserter:3": [window(5, 6)], "inserter:4": [window(0, 0)] });
+        const other = part("other", 20, { "inserter:1": [window(1, 5)], "inserter:2": [window(7, 8)], "inserter:3": [window(7, 8)], "inserter:4": [window(2, 2)] });
+        const groups = partGroups(CHAIN, [recommended, other], 20, (it, source) => it === recommended || source === "machine:1");
+        expect(groups.map(group => [group.source, group.choices.map(choice => choice.parts.map(it => it.name))])).toEqual([
+            ["machine:2", [["recommended"]]],
+            ["machine:1", [["recommended"], ["other"]]],
+            ["belt:1", [["recommended"]]],
+        ]);
+    });
 });
 
 describe("the starts of the local choice", () => {

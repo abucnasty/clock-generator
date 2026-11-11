@@ -19,8 +19,10 @@ import { costKey } from "../rank";
  *
  * - **Parts:** every clock the other makers built for the build (`CoordinatedSourcesPart`): the stable alternatives, every way of the grouped
  *   hands construction (whether its clock holds as a whole or not), and the per-hand shape of every way that guards takers. A part
- *   gives windows where its window cycle divides the shared one (its windows repeated) and its own clock's long run was counted as built;
- *   a part with no count gives none.
+ *   gives windows where its window cycle divides the shared one (its windows repeated) and its own clock's long run was counted as built.
+ * - **One source at a time:** a part with no count gives the windows of one group where today's recommended clock with only that group's
+ *   windows taken from the part holds to the long run, the check that counts its wakeups (`trialOf`); each group is tried once, where
+ *   the part gives it windows no part before it gave. That is at most one long run for each group of each part without a count.
  * - **Groups:** the inserters that take from one source entity. A group takes the windows of all its inserters from one part, and
  *   an inserter that part leaves always enabled stays so. No window is made that no part makes.
  * - **The local choice:** from today's recommended clock, the groups in turn from the output upstream, each with every choice it
@@ -96,13 +98,22 @@ export function upstreamOrder(inserters: readonly GroupedInserter[]): string[] {
     return [...sinks.keys()].sort((a, b) => hopsOf(a, []) - hopsOf(b, []) || (a < b ? -1 : a > b ? 1 : 0));
 }
 
-/** The groups of the inserters by source, each with the distinct windows the parts give it, in the order of the parts */
-export function partGroups(inserters: readonly GroupedInserter[], parts: readonly CoordinatedSourcesPart[], shared_ticks: number): PartGroup[] {
+/**
+ * The groups of the inserters by source, each with the distinct windows the parts give it, in the order of the parts; where `takes`
+ * is given, a part gives windows only to the groups whose source it is taken for
+ */
+export function partGroups(
+    inserters: readonly GroupedInserter[],
+    parts: readonly CoordinatedSourcesPart[],
+    shared_ticks: number,
+    takes?: (part: CoordinatedSourcesPart, source: string) => boolean,
+): PartGroup[] {
     const groups = upstreamOrder(inserters).map(source => ({ source, inserters: inserters.filter(it => it.source === source).map(it => it.id),
         choices: [] as GroupChoice[], keys: new Map<string, GroupChoice>() }));
     for (const part of parts) {
         const windows = tiledWindows(part.windows, part.window_cycle_ticks, shared_ticks);
         for (const group of groups) {
+            if (takes !== undefined && !takes(part, group.source)) continue;
             const own = Object.fromEntries(group.inserters.map(id => [id, windows[id]?.length ? windows[id] : null]));
             const key = JSON.stringify(own);
             const known = group.keys.get(key);
@@ -173,6 +184,31 @@ interface Trial {
 /** How a part is shown in the log */
 const partName = (part: CoordinatedSourcesPart): string => part.alternative_id ?? part.name;
 
+/** A part whose windows the per-branch clock does not take, and why */
+export interface NotAdmittedPart {
+    part: string;
+    why: string;
+}
+
+/** A reason a per-branch clock is not listed, with the parts not taken after it, where a part was not */
+export function withNotAdmitted(reason: string, not_admitted: readonly NotAdmittedPart[]): string {
+    return not_admitted.length === 0 ? reason : `${reason.replace(/\.$/, "")}. ${notAdmittedNote(not_admitted)}`;
+}
+
+function notAdmittedNote(not_admitted: readonly NotAdmittedPart[]): string {
+    return `Not taken: ${not_admitted.map(it => `${it.part} (${it.why})`).join("; ")}.`;
+}
+
+/** Why a clock that was checked up to its long run does not hold there: "does not hold its first window cycle on 168 ticks: 320 of 384 items" */
+function notHeldOf(trial: Trial, shared_ticks: number): string {
+    const as_built = trial.result.stability_check.as_built;
+    if (as_built === undefined) return `was not checked as built on ${shared_ticks} ticks`;
+    const items = `${Number(as_built.actual_output_items.toFixed(3))} of ${trial.result.stability_check.expected_output_items} items`;
+    if (as_built.first_check_failed === true) return `does not hold its first window cycle on ${shared_ticks} ticks: ${items}`;
+    if (as_built.failed_pickup_phases !== undefined) return `does not hold from another pickup phase on ${shared_ticks} ticks: ${items}`;
+    return `does not hold to the long run on ${shared_ticks} ticks: ${items}`;
+}
+
 /**
  * The plan the composed clocks run on: the config with the recommended clock's output swings, cycles and fractional swings; where its
  * window cycle is not the shared one, planned again with the cycles that make it so
@@ -194,7 +230,13 @@ function sharedPlan(config: Config, recommended: CoordinatedSourcesPart): Uncloc
 }
 
 /** The per-branch clock of a build from its parts (see CoordinatedSourcesNotApplicable above) */
-export function coordinatedSourcesClock(config: Config, input: CoordinatedSourcesInput, options: GenerateClockOptions = {}): BlueprintGenerationResult {
+export function coordinatedSourcesClock(
+    config: Config,
+    input: CoordinatedSourcesInput,
+    options: GenerateClockOptions = {},
+    /** Given the parts whose windows are not taken, and why, once that is known: before the clock is composed or refused */
+    on_admission?: (not_admitted: readonly NotAdmittedPart[]) => void,
+): BlueprintGenerationResult {
     const logger = options.logger ?? defaultLogger;
     const recommended = input.parts.find(part => part.alternative_id === input.recommended_id);
     if (recommended === undefined) refuse(`the recommended clock ${input.recommended_id} is not among the clocks made for the build`);
@@ -234,37 +276,14 @@ export function coordinatedSourcesClock(config: Config, input: CoordinatedSource
     };
     const fits = (part: CoordinatedSourcesPart) => Number.isInteger(part.window_cycle_ticks) && Number.isInteger(shared_ticks / part.window_cycle_ticks)
         && (part === recommended || part.alternative_id === undefined || part.verdict === "stable");
-    const candidates = input.parts.filter(part => part !== recommended && fits(part) && part.counted !== false);
-    // a part gives windows where its own clock on the shared window cycle was counted as built: one of that window cycle counted already (its own
-    // check), any other counted here, once, where it gives a group a choice the parts before it do not
-    const given = new Set(partGroups(inserters, [recommended], shared_ticks).map(group => `${group.source}|${JSON.stringify(group.choices[0].windows)}`));
-    let counted_here = 0;
-    const admitted = candidates.filter(part => {
-        const own = partGroups(inserters, [part], shared_ticks).map(group => `${group.source}|${JSON.stringify(group.choices[0].windows)}`);
-        if (own.every(key => given.has(key))) return false;
-        let counted = part.counted === true && part.window_cycle_ticks === shared_ticks;
-        if (!counted) {
-            counted_here++;
-            const windows = tiledWindows(part.windows, part.window_cycle_ticks, shared_ticks);
-            counted = trialOf(windows, leftOpenOf(part, inserters, windows)).result.stability_check.as_built?.wake_ups !== undefined;
-        }
-        if (counted) own.forEach(key => given.add(key));
-        return counted;
-    });
-    const groups = partGroups(inserters, [recommended, ...admitted], shared_ticks);
-    const choosing = groups.filter(group => group.choices.length > 1);
-    logger.log(`Coordinated Sources: the clocks ${[recommended, ...admitted].map(part => `${partName(part)} (${part.window_cycle_ticks} ticks)`).join(", ")}`);
-    logger.log(`Coordinated Sources: ${admitted.length + 1} clocks on ${shared_ticks} ticks (${counted_here} counted here), ${groups.length} groups of inserters, `
-        + `${choosing.length} with a choice: ${choosing.map(group => `${group.source} ${group.choices.length}`).join(", ") || "none"}`);
-    if (choosing.length === 0) refuse("no source has another choice than the recommended clock's");
-
     // the windows the clock has beside its inserters' (drills), from the recommended clock
     const fixed = Object.fromEntries(Object.entries(tiledWindows(recommended.windows, recommended.window_cycle_ticks, shared_ticks))
         .filter(([id]) => !inserters.some(it => it.id === id)));
-    const compose = (choice: ReadonlyMap<string, number>): { windows: SerializableClockWindows; left_open: Map<string, AlwaysOnReason> } => {
+    // the clock of a choice of each group among the choices of the groups given
+    const composeOf = (of: readonly PartGroup[], choice: ReadonlyMap<string, number>): { windows: SerializableClockWindows; left_open: Map<string, AlwaysOnReason> } => {
         const windows: SerializableClockWindows = { ...fixed };
         const left_open = new Map<string, AlwaysOnReason>();
-        for (const group of groups) {
+        for (const group of of) {
             const chosen = group.choices[choice.get(group.source)!];
             for (const [id, ranges] of Object.entries(chosen.windows)) {
                 if (ranges !== null) { windows[id] = ranges; continue; }
@@ -274,6 +293,74 @@ export function coordinatedSourcesClock(config: Config, input: CoordinatedSource
         }
         return { windows, left_open };
     };
+
+    // the parts whose windows are not taken, with why, in the order of the parts
+    const refused = new Map<CoordinatedSourcesPart, string>();
+    const candidates = input.parts.filter(part => {
+        if (part === recommended) return false;
+        const why = !Number.isInteger(part.window_cycle_ticks) || !Number.isInteger(shared_ticks / part.window_cycle_ticks)
+            ? `its window cycle of ${part.window_cycle_ticks} ticks does not divide the shared one of ${shared_ticks}`
+            : !fits(part) ? `it is ${part.verdict}` : undefined;
+        if (why !== undefined) refused.set(part, why);
+        return why === undefined;
+    });
+    // a part gives windows where its own clock on the shared window cycle was counted as built: one of that window cycle counted already (its own
+    // check), any other counted here, once, where it gives a group a choice the parts before it do not
+    const given = new Set(partGroups(inserters, [recommended], shared_ticks).map(group => `${group.source}|${JSON.stringify(group.choices[0].windows)}`));
+    let counted_here = 0;
+    // a part without a count, one source at a time: the sources whose windows it gives
+    const taken_for = new Map<CoordinatedSourcesPart, string[]>();
+    let tried_alone = 0;
+    const admitted = candidates.filter(part => {
+        const own = partGroups(inserters, [part], shared_ticks).map(group => `${group.source}|${JSON.stringify(group.choices[0].windows)}`);
+        if (own.every(key => given.has(key))) return false;
+        let counted = part.counted === true && part.window_cycle_ticks === shared_ticks;
+        let why = "the long run of its own clock was not counted";
+        if (!counted && part.counted !== false) {
+            counted_here++;
+            const windows = tiledWindows(part.windows, part.window_cycle_ticks, shared_ticks);
+            const trial = trialOf(windows, leftOpenOf(part, inserters, windows));
+            counted = trial.result.stability_check.as_built?.wake_ups !== undefined;
+            why = `its clock ${notHeldOf(trial, shared_ticks)}`;
+        }
+        if (counted) {
+            own.forEach(key => given.add(key));
+            return true;
+        }
+        // each source it gives new windows, alone: today's recommended clock with only that source's windows taken from the part
+        const pair = partGroups(inserters, [recommended, part], shared_ticks);
+        const sources: string[] = [];
+        const failed: string[] = [];
+        for (const group of pair) {
+            const key = group.choices.length < 2 ? undefined : `${group.source}|${JSON.stringify(group.choices[1].windows)}`;
+            if (key === undefined || given.has(key)) continue;
+            tried_alone++;
+            const { windows, left_open } = composeOf(pair, new Map(pair.map(it => [it.source, it === group ? 1 : 0])));
+            const trial = trialOf(windows, left_open);
+            if (trial.holds_to_long_run) {
+                given.add(key);
+                sources.push(group.source);
+            } else {
+                failed.push(`with only its windows for ${group.source}, the recommended clock ${notHeldOf(trial, shared_ticks)}`);
+            }
+        }
+        if (sources.length > 0) taken_for.set(part, sources);
+        if (failed.length > 0) refused.set(part, [why, ...failed, ...(sources.length > 0 ? [`its windows are taken for ${sources.join(", ")}`] : [])].join("; "));
+        return false;
+    });
+    const not_admitted = input.parts.filter(part => refused.has(part)).map(part => ({ part: partName(part), why: refused.get(part)! }));
+    on_admission?.(not_admitted);
+    if (not_admitted.length > 0) logger.log(`Coordinated Sources: ${notAdmittedNote(not_admitted)}`);
+    const taking = candidates.filter(part => admitted.includes(part) || taken_for.has(part));
+    const groups = partGroups(inserters, [recommended, ...taking], shared_ticks, (part, source) => taken_for.get(part)?.includes(source) ?? true);
+    const choosing = groups.filter(group => group.choices.length > 1);
+    logger.log(`Coordinated Sources: the clocks ${[recommended, ...taking].map(part => `${partName(part)} (${part.window_cycle_ticks} ticks`
+        + `${taken_for.has(part) ? `, for ${taken_for.get(part)!.join(", ")} alone` : ""})`).join(", ")}`);
+    logger.log(`Coordinated Sources: ${taking.length + 1} clocks on ${shared_ticks} ticks (${counted_here} counted here, ${tried_alone} sources tried alone), `
+        + `${groups.length} groups of inserters, ${choosing.length} with a choice: ${choosing.map(group => `${group.source} ${group.choices.length}`).join(", ") || "none"}`);
+    if (choosing.length === 0) refuse("no source has another choice than the recommended clock's");
+
+    const compose = (choice: ReadonlyMap<string, number>) => composeOf(groups, choice);
     const trialOfChoice = (choice: ReadonlyMap<string, number>): Trial => {
         const { windows, left_open } = compose(choice);
         return trialOf(windows, left_open);
