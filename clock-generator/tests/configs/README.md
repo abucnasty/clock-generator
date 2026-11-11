@@ -39,4 +39,5 @@ take them. `paths.ts` names the ones unit tests load by sample-style keys (`Test
   assembler, one grenade assembler and one foundry a copy, 120 a second over 5 copies), with one change: its coal lane is
   stated as one per copy (`sharing: "one_per_copy"`). As the sample had it, the 5 copies took 300 coal a second from one
   lane that supplies 120, which generation refuses. On it the shared windows of the takers keep the rate where the separate
-  ones lose it (`src/crafting/shared-windows.generation.test.ts`).
+  ones lose it (`src/crafting/shared-windows.generation.test.ts`), and the fractional swings task is left out as it would
+  make the primary clock again (`src/crafting/alternative-tasks.test.ts`).
