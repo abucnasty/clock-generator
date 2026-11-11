@@ -1,4 +1,5 @@
 import { Config } from "../config";
+import { EntityId } from "../entities/entity-id";
 import { EntityMatch, matchRecordingToConfig } from "./entity-matching";
 import { Recording } from "./recording";
 
@@ -77,23 +78,70 @@ export interface CopiesMatch {
     copies: EntityMatch[];
     /** All the copies' matches in one: every recorded id is in one copy only, so the maps are their union */
     merged: EntityMatch;
+    /**
+     * Where a part copy was asked for: the groups that are the part copy (none, one, or more than one, which the caller
+     * refuses), each with the part it is, and the groups that are neither a whole copy nor a part copy. Their entities
+     * are in `merged` only for the one part copy, when there is exactly one.
+     */
+    parts?: { match: EntityMatch; ids: ReadonlySet<string> }[];
+    others?: Recording[];
+}
+
+/**
+ * The config cut down to the entities of a part copy (`ids`, as `EntityId` names them: "machine:1", "inserter:5"): its
+ * machines, inserters, chests and drills, each inserter with its id from the whole config, and every belt
+ */
+export function partConfigOf(config: Config, ids: ReadonlySet<string>): Config {
+    return {
+        ...config,
+        machines: config.machines.filter(machine => ids.has(EntityId.forMachine(machine.id).id)),
+        inserters: config.inserters.map((inserter, index) => ({ ...inserter, id: inserter.id ?? index + 1 }))
+            .filter(inserter => ids.has(EntityId.forInserter(inserter.id).id)),
+        ...(config.chests && { chests: config.chests.filter(chest => ids.has(EntityId.forChest(chest.id).id)) }),
+        ...(config.drills && { drills: { ...config.drills, configs: config.drills.configs.filter(drill => ids.has(EntityId.forDrill(drill.id).id)) } }),
+    };
+}
+
+/** Whether a group of the build is the part copy `part` of the config: every machine and inserter of it, and no machine more */
+function matchPart(group: Recording, part: Config): EntityMatch | null {
+    const match = matchRecordingToConfig(group, part);
+    return match.machines.size === part.machines.length && group.machines.length === part.machines.length
+        && match.unmatched_config_inserters.length === 0 ? match : null;
 }
 
 /**
  * Matches a build to a config that it may hold several times. A copy is a group of machines (see machineGroups) that
  * has a machine for every machine of the config; two or more of them are copies and each is matched to the config by
  * itself. Otherwise the build is matched as one, as it was before copies were found.
+ *
+ * With `parts` (the entities a part copy of the config holds, one set for each way the generator may lay it out), a
+ * group that is no whole copy is matched to each part in turn (`partConfigOf`): a group with every machine and inserter
+ * of a part and no machine more is a part copy. The whole copies are then counted as found, however few.
  */
-export function matchCopies(recording: Recording, config: Config): CopiesMatch {
+export function matchCopies(recording: Recording, config: Config, parts?: readonly ReadonlySet<string>[]): CopiesMatch {
     const wanted = config.machines.length;
-    const matches = machineGroups(recording).map(group => matchRecordingToConfig(group, config));
+    const groups = machineGroups(recording);
+    const matches = groups.map(group => matchRecordingToConfig(group, config));
     const copies = matches.filter(match => match.machines.size >= wanted);
-    if (copies.length < 2) {
+    // a part copy asked for (a build of whole copies and one part copy): each group that is no whole copy is the part copy or
+    // something else, and the whole copies are counted as they are, however few
+    const found_parts = parts === undefined ? undefined : groups.flatMap((group, index) => {
+        if (matches[index].machines.size >= wanted) return [];
+        for (const ids of parts) {
+            const match = matchPart(group, partConfigOf(config, ids));
+            if (match) return [{ match, ids, group }];
+        }
+        return [];
+    });
+    const others = parts === undefined ? undefined
+        : groups.filter((group, index) => matches[index].machines.size < wanted && !found_parts!.some(part => part.group === group));
+    if (parts === undefined && copies.length < 2) {
         const whole = matchRecordingToConfig(recording, config);
         return { copies: [whole], merged: whole };
     }
-    const machines = new Map(copies.flatMap(copy => Array.from(copy.machines)));
-    const inserters = new Map(copies.flatMap(copy => Array.from(copy.inserters)));
+    const counted = found_parts?.length === 1 ? [...copies, found_parts[0].match] : copies;
+    const machines = new Map(counted.flatMap(copy => Array.from(copy.machines)));
+    const inserters = new Map(counted.flatMap(copy => Array.from(copy.inserters)));
     const mapped_config_machines = new Set(machines.values());
     return {
         copies,
@@ -106,5 +154,6 @@ export function matchCopies(recording: Recording, config: Config): CopiesMatch {
             // a config inserter is unmatched when some copy lacks it
             unmatched_config_inserters: Array.from(new Set(copies.flatMap(copy => copy.unmatched_config_inserters))),
         },
+        ...(found_parts && { parts: found_parts.map(({ match, ids }) => ({ match, ids })), others }),
     };
 }

@@ -9,11 +9,14 @@ import { ClockGeneratorTags } from "../blueprints/components";
 import { encodeBlueprintFile } from "../blueprints/serde";
 import { Config } from "../config";
 import { ClockSchedule } from "../crafting/blueprint";
+import { sharedLaneRunsOf } from "../crafting/shared-lane-verdict";
+import { EntityId } from "../entities/entity-id";
 import { matchCopies } from "../verification/entity-copies";
 import { matchRecordingToConfig } from "../verification/entity-matching";
 import { BuiltClock, blueprintWithNamedClock, recordingOfBuiltClock } from "./built-clock";
 import { parseRecording, Recording } from "../verification/recording";
 import { RconClient } from "./rcon";
+import { recipesMaking } from "./recording-output";
 import {
     CacheEnvironment, RECORDING_CACHE_PROTOCOL, RecordingCacheKey, describedRecordingKey, recordingCacheDir, recordingCacheMode, restoreRecording,
     storeRecording,
@@ -537,10 +540,53 @@ export function scheduledDrillIds(blueprint: string): number[] {
     return Array.from(new Set(entities.flatMap(scheduledDrillIdsOf))).sort((a, b) => a - b);
 }
 
+/** A part copy of the config: the entities it holds (as `EntityId` names them) and the share of a whole copy's output it is held to */
+export interface PartCopy {
+    ids: ReadonlySet<string>;
+    share: number;
+}
+
+/**
+ * The part copies of the config, as the generator lays them out on the lanes its copies share (`sharedLaneRunsOf`, one for
+ * each way it lays them out that gives another part): where `copies` has a fraction, the upstream share of the takers of
+ * each shared lane, rounded up for each taker, with the machines they feed, the inserters that feed those and the
+ * inserters that take their results. None for a whole number of copies or a config whose copies share no lane.
+ *
+ * Its share is the generator's rule for a part copy's machine (shared-lane-verdict.ts, `machineShareOf`): a machine is held to
+ * its whole target times the share of its takers (the inserters that take from it) that the part copy holds; the part copy's
+ * output is that of its final machines (those making the target item), against all the final machines of a whole copy. Here a
+ * taker counts as one, where the generator weighs each by what it moves in the output cycle: the same where a final machine's
+ * takers move alike (one output inserter a machine, as in every build of copies recorded so far).
+ */
+export function partCopiesOf(config: Config): PartCopy[] {
+    const fraction = config.setpoint.copies - Math.floor(config.setpoint.copies);
+    if (fraction < FRACTION_EPSILON) return [];
+    const parts = new Map<string, ReadonlySet<string>>();
+    for (const reading of sharedLaneRunsOf(config).readings) {
+        for (const layout of reading.layouts) {
+            const part = layout.copies.later.find((later): later is ReadonlySet<string> => later !== "whole");
+            if (part) parts.set(JSON.stringify([...part].sort()), part);
+        }
+    }
+    const finals = config.machines.filter(machine => recipesMaking(config, config.setpoint.recipe).has(machine.recipe));
+    const inserter_ids = config.inserters.map((inserter, index) => ({ inserter, id: EntityId.forInserter(inserter.id ?? index + 1).id }));
+    return Array.from(parts.values()).map(ids => {
+        const held = finals.filter(machine => ids.has(EntityId.forMachine(machine.id).id)).map(machine => {
+            const takers = inserter_ids.filter(({ inserter }) => inserter.source.type === "machine" && inserter.source.id === machine.id);
+            return takers.length === 0 ? 1 : takers.filter(({ id }) => ids.has(id)).length / takers.length;
+        });
+        return { ids, share: held.reduce((sum, share) => sum + share, 0) / finals.length };
+    });
+}
+
+/** A fraction of copies smaller than this is none: `copies` is read as a float */
+const FRACTION_EPSILON = 1e-9;
+
 /**
  * The build as a recording without samples, matched to the config by structure, as a recording is: as one copy of the
  * config, whatever else the build holds, unless the test names the copies the build holds (see HarnessOptions.copies),
- * which are then found and counted
+ * which are then found and counted. A count with a fraction is that many whole copies and one part copy of the config
+ * (`partCopiesOf`), which comes last in `copies`.
  */
 function matchBuild(described: any, config: Config, named_copies?: number) {
     const as_recording = parseRecording({
@@ -560,14 +606,42 @@ function matchBuild(described: any, config: Config, named_copies?: number) {
     });
     if (named_copies === undefined) {
         const match = matchRecordingToConfig(as_recording, config);
-        return { as_recording, match, copies: [match] };
+        return { as_recording, match, copies: [match], part: null };
     }
-    const { copies, merged } = matchCopies(as_recording, config);
-    if (copies.length !== named_copies) {
-        throw new Error(`The test says the build holds the config ${named_copies} time${named_copies === 1 ? "" : "s"}, and the build holds it ${copies.length}: `
-            + "a copy is a group of machines that inserters move items between, with a machine for every machine of the config");
+    const whole = Math.floor(named_copies + FRACTION_EPSILON);
+    if (named_copies - whole < FRACTION_EPSILON) {
+        const { copies, merged } = matchCopies(as_recording, config);
+        if (copies.length !== named_copies) {
+            throw new Error(`The test says the build holds the config ${named_copies} time${named_copies === 1 ? "" : "s"}, and the build holds it ${copies.length}: `
+                + "a copy is a group of machines that inserters move items between, with a machine for every machine of the config");
+        }
+        return { as_recording, match: merged, copies, part: null };
     }
-    return { as_recording, match: merged, copies };
+    const configured = config.setpoint.copies;
+    if (Math.abs((named_copies - whole) - (configured - Math.floor(configured))) > FRACTION_EPSILON) {
+        throw new Error(`The test says the build holds the config ${named_copies} times, and the config's copies are ${configured}: `
+            + "a part copy is the fraction of a copy the config's copies have");
+    }
+    const parts = partCopiesOf(config);
+    if (parts.length === 0) {
+        throw new Error(`The test says the build holds the config ${named_copies} times, and the config has no part copy: its copies share no lane`);
+    }
+    const found = matchCopies(as_recording, config, parts.map(part => part.ids));
+    const recipes = new Set(config.machines.map(machine => machine.recipe));
+    const others = (found.others ?? []).filter(group => group.machines.some(machine => recipes.has(machine.recipe)));
+    const part_count = found.parts!.length;
+    if (found.copies.length !== whole || part_count !== 1) {
+        const numbers = (ids: ReadonlySet<string>, of: (id: number) => EntityId, count: number) =>
+            Array.from({ length: count }, (_, index) => index + 1).filter(id => ids.has(of(id).id)).join(", ");
+        const of_part = (ids: ReadonlySet<string>) => `machines ${numbers(ids, id => EntityId.forMachine(id), Math.max(0, ...config.machines.map(machine => machine.id)))}; `
+            + `inserters ${numbers(ids, id => EntityId.forInserter(id), config.inserters.length)}`;
+        throw new Error(`The test says the build holds the config ${named_copies} times: ${whole} whole copies and one part copy (${parts.map(part => of_part(part.ids)).join(" or ")}). `
+            + `It found ${found.copies.length} whole copies and ${part_count === 0 ? "no part copy" : `${part_count} part copies`}`
+            + (others.length > 0 ? `, and ${others.length} group${others.length === 1 ? "" : "s"} of the config's recipes that ${others.length === 1 ? "is" : "are"} neither: `
+                + others.map(group => `${group.machines.length} machines: ${group.machines.map(machine => machine.recipe).sort().join(", ")}`).join("; ") : ""));
+    }
+    const part = parts.find(it => it.ids === found.parts![0].ids)!;
+    return { as_recording, match: found.merged, copies: [...found.copies, found.parts![0].match], part: { index: whole, ...part } };
 }
 
 /**
@@ -610,8 +684,16 @@ export function matchBuiltInserters(described: any, config: Config): Map<number,
  * machine ids. Without the count the build is one copy and anything beyond the config is left for buildPartsMissingFromConfig.
  */
 export function matchBuiltCopies(described: any, config: Config, named_copies?: number): Map<number, number>[] {
-    const { as_recording, copies } = matchBuild(described, config, named_copies);
-    return copies.map(match => {
+    return builtCopies(described, config, named_copies).inserters;
+}
+
+/**
+ * The copies of the build as matchBuiltCopies finds them, and the part copy among them where the count has a fraction: its
+ * place (the last), the config entities it holds and the share of a whole copy's output it is held to (`partCopiesOf`)
+ */
+export function builtCopies(described: any, config: Config, named_copies?: number): { inserters: Map<number, number>[]; part: (PartCopy & { index: number }) | null } {
+    const { as_recording, copies, part } = matchBuild(described, config, named_copies);
+    return { part, inserters: copies.map(match => {
         const unit_numbers = new Map<number, number>();
         for (const inserter of as_recording.inserters) {
             const config_id = match.inserters.get(inserter.id);
@@ -620,7 +702,7 @@ export function matchBuiltCopies(described: any, config: Config, named_copies?: 
             }
         }
         return unit_numbers;
-    });
+    }) };
 }
 
 /**
@@ -666,8 +748,11 @@ function matchedChests(recording: Recording, config: Config, match: { inserters:
     return chests;
 }
 
-/** What the mod is told of the inserters a clock enables: per config id the unit number of its inserter, a list of them where the build has copies */
-function clockInserters(copies: Map<number, number>[]): Record<string, number | number[]> {
+/**
+ * What the mod is told of the inserters a clock enables: per config id the unit number of its inserter, a list of them where
+ * the build has copies; an inserter that a part copy does not hold is in the lists of the whole copies only
+ */
+export function clockInserters(copies: Map<number, number>[]): Record<string, number | number[]> {
     if (copies.length === 1) {
         return Object.fromEntries(copies[0]);
     }
@@ -940,8 +1025,9 @@ function assertBuildOptions(options: BuildOptions): void {
     if (options.clock && !options.config) {
         throw new Error("A clock needs the config it was generated from, to find the inserters its combinators name");
     }
-    if (options.copies !== undefined && (!Number.isInteger(options.copies) || options.copies < 1 || !options.clock)) {
-        throw new Error("`copies` is a whole number of copies of the config that a generated clock is wired to: it needs a clock");
+    if (options.copies !== undefined && (!(options.copies >= 1) || !options.clock)) {
+        throw new Error("`copies` is how many copies of the config a generated clock is wired to, at least one copy: a whole number, or whole "
+            + "copies and one part copy with the fraction of the config's copies: it needs a clock");
     }
     if (options.built_clock && (options.unclocked || options.staged_start)) {
         throw new Error("A named clock of the build is kept or replaced: it cannot be asked for with an unclocked run or a staged start");
@@ -1194,16 +1280,18 @@ export class HarnessSession {
         let clock: { blueprint: string; inserters: Record<string, number | number[]>; drills?: Record<string, number | number[]> } | undefined;
         if (options.clock && options.config) {
             const described = await this.call("harness_describe");
-            const copies = matchBuiltCopies(described, options.config, options.copies);
+            const { inserters: copies, part } = builtCopies(described, options.config, options.copies);
             const scheduled = scheduledInserterIds(options.clock.schedule);
-            const missing = copies.flatMap((unit_numbers, copy) => scheduled.filter(id => !unit_numbers.has(id)).map(id => ({ id, copy })));
+            // a part copy holds some of the config's inserters: the clock is wired to those of them it names
+            const of_copy = (copy: number) => part !== null && copy === part.index ? scheduled.filter(id => part.ids.has(EntityId.forInserter(id).id)) : scheduled;
+            const missing = copies.flatMap((unit_numbers, copy) => of_copy(copy).filter(id => !unit_numbers.has(id)).map(id => ({ id, copy })));
             if (missing.length > 0) {
                 throw new Error(`The clock names inserters ${Array.from(new Set(missing.map(it => it.id))).join(", ")} of the config, which match no inserter of the build`
                     + `${copies.length > 1 ? ` in copy ${Array.from(new Set(missing.map(it => it.copy + 1))).join(", ")} of ${copies.length}` : ""}. `
                     + "Belt inserters are matched by what lies on their belt, so a longer warm-up may help.");
             }
             if (copies.length > 1) {
-                options.log(`The build holds the config ${copies.length} times: the clock is wired to each copy`);
+                options.log(`The build holds the config ${options.copies} times: the clock is wired to each copy${part !== null ? ", and to the part copy's inserters" : ""}`);
             }
             const not_in_config = buildPartsMissingFromConfig(described, options.config, options.copies);
             if (not_in_config.length > 0) {
