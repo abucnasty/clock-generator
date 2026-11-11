@@ -9,10 +9,13 @@
  */
 import { ItemName } from "../data";
 import { Entity, EntityId, ReadableEntityRegistry } from "../entities";
+import { machineNameOf } from "./machine-name";
 
 /** Two inserters that bring the same item to a machine, at least one of which brings another item too */
 export interface SharedItemDeadlockRisk {
     machine_id: number;
+    /** The machine by its kind and recipe, in ids (machine-name.ts): "assembling-machine-3 that makes utility-science-pack" */
+    machine: string;
     /** The item both inserters bring */
     item: ItemName;
     /** The two inserters, by id, and whatever else each brings to the machine: at least one of them brings something */
@@ -32,6 +35,8 @@ export interface SharedItemInserter {
  */
 export function sharedItemDeadlockRisks(entity_registry: Pick<ReadableEntityRegistry, "getAll">): SharedItemDeadlockRisk[] {
     const feeders = entity_registry.getAll().filter(Entity.isInserter).filter(inserter => EntityId.isMachine(inserter.sink.entity_id));
+    const machines = entity_registry.getAll().filter(Entity.isMachine)
+        .map(machine => ({ id: machine.entity_id.number, prototype: machine.metadata.prototype, recipe: machine.metadata.recipe.name }));
     const risks: SharedItemDeadlockRisk[] = [];
     feeders.forEach((first, index) => {
         for (const second of feeders.slice(index + 1)) {
@@ -47,19 +52,23 @@ export function sharedItemDeadlockRisks(entity_registry: Pick<ReadableEntityRegi
                     other_items: Array.from(inserter.filtered_items).filter(other => other !== item),
                 });
                 const inserters = [sharing(first), sharing(second)].sort((a, b) => a.inserter_id - b.inserter_id) as [SharedItemInserter, SharedItemInserter];
-                risks.push({ machine_id: first.sink.entity_id.number, item, inserters });
+                const machine_id = first.sink.entity_id.number;
+                risks.push({ machine_id, machine: machineNameOf(machine_id, machines) ?? `machine ${machine_id}`, item, inserters });
             }
         }
     });
     return risks.sort((a, b) => a.machine_id - b.machine_id || a.inserters[0].inserter_id - b.inserters[0].inserter_id || a.item.localeCompare(b.item));
 }
 
-/** "Inserters 1 and 2 both bring low-density-structure to machine 1; inserter 1 also brings flying-robot-frame, inserter 2 processing-unit." */
+/**
+ * "Inserters 1 and 2 both bring low-density-structure to the assembling-machine-3 that makes utility-science-pack; inserter 1
+ * also brings flying-robot-frame, inserter 2 processing-unit."
+ */
 export function describeSharedItem(risk: SharedItemDeadlockRisk): string {
     const [first, second] = risk.inserters;
     const also = risk.inserters.filter(inserter => inserter.other_items.length > 0)
         .map((inserter, index) => `inserter ${inserter.inserter_id}${index === 0 ? " also brings" : ""} ${inserter.other_items.join(" and ")}`);
-    return `Inserters ${first.inserter_id} and ${second.inserter_id} both bring ${risk.item} to machine ${risk.machine_id}; ${also.join(", ")}.`;
+    return `Inserters ${first.inserter_id} and ${second.inserter_id} both bring ${risk.item} to the ${risk.machine}; ${also.join(", ")}.`;
 }
 
 /**
