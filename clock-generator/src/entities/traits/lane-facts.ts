@@ -2,6 +2,7 @@ import assert from "../../common/assert";
 import type { Config } from "../../config/schema";
 import { fraction } from "../../data-types/fraction";
 import { beltSpeedOf, laneItemsPerSecond, laneStackFor } from "../belt/belt";
+import { configDeadEnds } from "./lane-ends";
 import { Ratio, ratioOf } from "./ratio";
 
 /**
@@ -52,11 +53,6 @@ function flowOf(direction: 0 | 4 | 8 | 12): FlowDirection {
     return direction === 0 ? { x: 0, y: -1 } : direction === 4 ? { x: 1, y: 0 } : direction === 8 ? { x: 0, y: 1 } : { x: -1, y: 0 };
 }
 
-/** Whether the config's lanes all end in a dead end: the one place the config's switch is read */
-function configDeadEnds(config: Pick<Config, "overrides">): boolean {
-    return config.overrides?.backed_up_belts === true;
-}
-
 /** One lane of a belt as the config lists it, with the lane facts it states */
 type LaneConfig = Config["belts"][number]["lanes"][number];
 
@@ -101,18 +97,3 @@ export function laneFactsOf(config: LaneFactsConfig): LaneFactsOfBuild {
     };
 }
 
-/**
- * Whether every input lane (both sides of each belt an inserter takes from) is a dead end, for a reader that has no
- * lane of its own, such as a label about the whole build. A build with no input lane answers as its lanes would if it
- * had one.
- */
-export function everyInputLaneIsDeadEnd(config: LaneFactsConfig & Pick<Config, "inserters">): boolean {
-    const belt_ids = new Set(config.belts.map(belt => belt.id));
-    const input_belts = new Set<number>();
-    for (const inserter of config.inserters) {
-        if (inserter.source.type === "belt" && belt_ids.has(inserter.source.id)) input_belts.add(inserter.source.id);
-    }
-    if (input_belts.size === 0) return configDeadEnds(config);
-    const facts = laneFactsOf(config);
-    return [...input_belts].every(belt_id => ([1, 2] as const).every(lane => isDeadEnd(facts.of(belt_id, lane))));
-}
