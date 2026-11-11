@@ -18,6 +18,7 @@ import type {
     InserterCoverageIssue,
     MachineConfigurationSchema,
     MachinePrototypeIssue,
+    MachineToName,
     MiningDrillConfigSchema,
     Option,
     ClockAlternativeContext,
@@ -73,6 +74,8 @@ export interface FuelRunView {
 /** Fuel is outside the transfer plan: what the burner machines use, the fuel clocks exported for them, and a run of them */
 export interface FuelViewData {
     plan: FuelPlan;
+    /** The machines of the build, which the texts name by their kind and recipe; missing from views kept before they were carried */
+    machines?: MachineToName[];
     /** Null when the run was not made */
     run: FuelRunView | null;
 }
@@ -190,6 +193,8 @@ export interface ClockAlternativeView {
 }
 
 export interface ClockModelAssumptions {
+    /** The machines of the build, which the texts name by their kind and recipe; missing from views kept before they were carried */
+    machines?: MachineToName[];
     kickStarts: { machineId: string; item: string; items: number }[];
     outputDrops: { beltId: number; inserterIds: number[]; mode: 'shared-lanes' | 'free-lane' }[];
     overrides: Config['overrides'];

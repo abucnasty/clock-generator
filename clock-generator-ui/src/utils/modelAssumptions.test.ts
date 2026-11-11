@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { assumptionsText, freeLaneDropText, phaseChecksText } from './modelAssumptions';
+import type { ClockAlternativeView } from '../worker/types';
+import { assumptionsText, freeLaneDropText, modeledDetails, phaseChecksText } from './modelAssumptions';
 
 describe('assumptionsText', () => {
     const none = { count: 4, missingType: 0, missingQuality: 0, automatic: 0, unavailable: 0 };
@@ -24,5 +25,20 @@ describe('the model texts', () => {
     it('says how many other places in its window cycle the clock was tried from', () => {
         expect(phaseChecksText(12)).toBe('The clock was also tried from 12 other places in its window cycle. More starting states can be sampled separately.');
         expect(phaseChecksText(undefined)).toBe('How many other places in its window cycle the clock was tried from is unavailable.');
+    });
+
+    it('names a machine with a kick start or an imported fuel by its kind and its recipe', () => {
+        const machines = [{ id: 3, prototype: 'biochamber', recipe: 'pentapod-egg' }, { id: 4, prototype: 'biochamber', recipe: 'pentapod-egg' },
+            { id: 5, prototype: 'biochamber', recipe: 'agricultural-science-pack' }];
+        const assumptions = { machines, kickStarts: [{ machineId: 'machine:3', item: 'pentapod-egg', items: 84 }], outputDrops: [], overrides: undefined,
+            machineFuel: [{ machineId: 5, fuel: 'nutrients' }] };
+        const words = (id: string) => ({ biochamber: 'Biochamber', 'pentapod-egg': 'Pentapod egg', 'agricultural-science-pack': 'Agricultural science pack',
+            nutrients: 'Nutrients' } as Record<string, string>)[id] ?? id;
+        expect(modeledDetails({ assumptions } as unknown as ClockAlternativeView, words, words)).toEqual([
+            'The Biochamber (machine 3) that makes Pentapod egg gets a kick start of 84 Pentapod egg. Losing those items is a separate recovery question.',
+            'The Biochamber that makes Agricultural science pack: imported fuel Nutrients.',
+        ]);
+        const { machines: _kept, ...before } = assumptions;
+        expect(modeledDetails({ assumptions: before } as unknown as ClockAlternativeView, words, words)[0]).toMatch(/^Machine 3 gets a kick start/);
     });
 });
