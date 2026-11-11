@@ -56,7 +56,7 @@ import { DisturbanceTrialOptions, LossOutcome, runLossTrials } from "../disturba
 import { SerializableTransferHistory, serializeTransferHistory } from "../sequence/transfer-history-serializer";
 import { StateTransitionHistory } from "../sequence/state-transition-history";
 import { MachineFactsEntry } from "../insights";
-import { everyInputLaneIsDeadEnd } from "../../entities/traits/lane-facts";
+import { everyInputLaneIsDeadEnd } from "../../entities/traits/lane-ends";
 import { machineFactsOfEntity } from "../../entities/traits/machine-facts-of";
 import { CompactStateTransitionHistory } from "../sequence/compact-history";
 import { StateTransitionTracker } from "../../simulation/observers/state-transition-tracker";
