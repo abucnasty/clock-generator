@@ -9,6 +9,8 @@ import type { NotMadeClock } from "./why-not-stable";
 import { quiet } from "./generate-blueprint-test-helpers";
 
 const options = { logger: quiet };
+/** The strategy of a part that is not a listed clock, as the input gives a way of the grouped hands construction */
+const WAY = { id: "round_robin_polling", tuning_method: "calculated" } as const;
 
 /**
  * The input of the per-branch clock as a generation makes it, from the clocks made before it (the searches and the clocks for
@@ -68,5 +70,33 @@ describe("the per-branch clock of the military science build", () => {
         const ticks = recommended.window_cycle_ticks;
         expect(not_made[0].reason).toContain("no source has another choice than the recommended clock's. Not taken: "
             + `uneven (its window cycle of 7 ticks does not divide the shared one of ${ticks}); starved (its clock does not hold its first window cycle on ${ticks} ticks: `);
+    });
+
+    it("takes no source's windows from a part where the recommended clock with only those windows does not hold to the long run, and says so", () => {
+        const starved: CoordinatedSourcesPart = { name: "starved", window_cycle_ticks: recommended.window_cycle_ticks, counted: undefined,
+            windows: Object.fromEntries(Object.keys(recommended.windows).map(id => [id, [{ start: 0, end: 0 }]])) };
+        const { run, not_made } = composed(made.config, { ...made.input, parts: [recommended, starved] }, made.signatures);
+        expect(run).toBeNull();
+        const reason = not_made[0].reason;
+        // every source the starved part gives other windows is tried alone, and named with what its check found
+        const sources = [...reason.matchAll(/with only its windows for ([a-z]+:\d+), the recommended clock does not hold /g)].map(it => it[1]);
+        expect(sources.length).toBeGreaterThan(0);
+        expect(new Set(sources).size).toBe(sources.length);
+        expect(reason).not.toContain("taken for");
+    });
+
+    it("takes one source's windows from a part whose clock does not hold as a whole, where the recommended clock with only those windows holds", () => {
+        const listed = composed(made.config, made.input, made.signatures).run!.alternatives[0];
+        const { parts, sources } = listed.result.coordinated_sources!;
+        // a source the listed clock takes from another clock than the recommended one, with windows for each of its inserters
+        const source = sources.find(it => parts[it.source] !== made.input.recommended_id && Object.values(it.entities).every(entity => entity.kind === "strategy"))!;
+        const ids = Object.keys(source.entities);
+        // its windows from the listed clock, and windows of one tick a window cycle for every other inserter
+        const one_source: CoordinatedSourcesPart = { name: "one source", strategy: WAY, window_cycle_ticks: recommended.window_cycle_ticks, counted: undefined,
+            windows: Object.fromEntries(Object.keys(recommended.windows).map(id => [id, ids.includes(id) ? listed.result.clock_windows[id] : [{ start: 0, end: 0 }]])) };
+        const { run } = composed(made.config, { ...made.input, parts: [recommended, one_source] }, made.signatures);
+        expect(run?.alternatives.map(it => [it.id, it.verdict])).toEqual([["coordinated_sources", "stable"]]);
+        const taken = run!.alternatives[0].result.coordinated_sources!.parts;
+        expect(Object.entries(taken).filter(([, part]) => part === "one source").map(([it]) => it)).toEqual([source.source]);
     });
 });
