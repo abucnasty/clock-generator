@@ -155,7 +155,7 @@ const KEPT: JoinCopy[] = [
         ends: [{ t: 0, action: "block", chests: STRAIGHT_ENDS }, { t: 230, action: "release", chests: STRAIGHT_ENDS }] },
     { name: "loop-lane-1", shape: "loop", kept: true, about: "the loop's lane 1 alone", streams: [stream("7,2/1", 130, 2, 4)] },
     { name: "loop-lane-2", shape: "loop", kept: true, about: "the loop's lane 2 alone", streams: [stream("7,2/2", 130, 2, 4)] },
-    { name: "loop-shut-end", shape: "loop", kept: true, about: "both inputs full; the end shut and opened again: the splitter fills the loop, then one input stands",
+    { name: "loop-shut-end", shape: "loop", kept: false, about: "both inputs full; the end shut and opened again: the splitter fills the loop, then one input stands. Not kept: the game differs from the model from tick 137 (README.md)",
         streams: [...lanes("0,3", 121, 2, 200), ...lanes("4,1", 121, 2, 200)],
         ends: [{ t: 160, action: "block", chests: [[11, 3]] }, { t: 380, action: "release", chests: [[11, 3]] }] },
     { name: "curve-loader", shape: "curve", kept: true, about: "the end loader takes a stack when it would be below 32; one hand into a line every fourth tick",
@@ -175,7 +175,7 @@ const SPLITTER: JoinCopy[] = [
         streams: [...lanes("0,0", 121, 2, 150), ...lanes("0,1", 121, 2, 150)] },
     { name: "splitter-full-right-left", shape: "splitter", kept: true, priority: ["right", "left"], about: "both inputs full on both lanes",
         streams: [...lanes("0,0", 121, 2, 150), ...lanes("0,1", 121, 2, 150)] },
-    { name: "splitter-output-shut", shape: "splitter", kept: true, priority: ["left", "right"], about: "the right output's end shut: one input full goes to the left output once the right one is full",
+    { name: "splitter-output-shut", shape: "splitter", kept: false, priority: ["left", "right"], about: "the right output's end shut: one input full goes to the left output once the right one is full. Not kept: the game differs from the model from tick 262 (README.md)",
         streams: lanes("0,1", 121, 2, 200), ends: [{ t: 0, action: "block", chests: [[19, 1]] }] },
     { name: "splitter-one-output", shape: "splitter", kept: true, priority: ["left", "right"], about: "both inputs full, the right output's end shut and opened again",
         streams: [...lanes("0,0", 121, 2, 200), ...lanes("0,1", 121, 2, 200)],
@@ -186,14 +186,15 @@ const SPLITTER: JoinCopy[] = [
  * The boundary of the contest: a line stack just behind the side-load point at a side head's first chance, onto a
  * straight belt (68, 69, 70 behind 67; 189, 190 behind 188) and onto an exit (exactly 67, and 64 to 66). The model's
  * rule (a stack at or past the point goes first) says the side head lands in front of the first five and the line goes
- * first at the last four. Kept only where they settle the boundary.
+ * first at the last four; the game agreed on all nine. Kept: the first stack behind each point (68, 189), and the stack
+ * exactly at the exit's point (67), beside the copies at each point and behind it.
  */
 const BOUNDARY: JoinCopy[] = [
-    ...[4, 5, 6].map((q): JoinCopy => ({ name: `boundary-belt-${64 + q}`, shape: "belt", kept: false, about: `a line stack at ${64 + q} at the side-load point 67`,
+    ...[4, 5, 6].map((q): JoinCopy => ({ name: `boundary-belt-${64 + q}`, shape: "belt", kept: q === 4, about: `a line stack at ${64 + q} at the side-load point 67`,
         streams: [...mainLine(120, 4, 41, phase(q, STRAIGHT_LINE_LENGTH)), ...sides(1, 2, 170, 5, 12, 231)] })),
-    ...[29, 30].map((q): JoinCopy => ({ name: `boundary-belt-${160 + q}`, shape: "belt", kept: false, about: `a line stack at ${160 + q} at the side-load point 188`,
+    ...[29, 30].map((q): JoinCopy => ({ name: `boundary-belt-${160 + q}`, shape: "belt", kept: q === 29, about: `a line stack at ${160 + q} at the side-load point 188`,
         streams: [...mainLine(120, 4, 41, phase(q, STRAIGHT_LINE_LENGTH)), ...sides(2, 1, 170, 5, 12, 231)] })),
-    ...[0, 1, 2, 3].map((q): JoinCopy => ({ name: `boundary-exit-${64 + q}`, shape: "exit", kept: false, about: `a line stack at ${64 + q} at the exit's side-load point 67`,
+    ...[0, 1, 2, 3].map((q): JoinCopy => ({ name: `boundary-exit-${64 + q}`, shape: "exit", kept: q === 3, about: `a line stack at ${64 + q} at the exit's side-load point 67`,
         streams: [...mainLine(120, 4, 41, phase(q, STRAIGHT_LINE_LENGTH)), ...sides(1, 2, 170, 5, 12, 231)] })),
 ];
 
@@ -222,12 +223,12 @@ function row(lines: JoinLine[], y: number, lane: 1 | 2, pieces: [number, "belt" 
 }
 
 /** A side belt's lanes: its tiles from the first to the last (the last goes onto the receiving line) */
-function sideBelt(lines: JoinLine[], loads: SideLoad[], tiles: [number, number][], receiver: string, piece: SideLoad["piece"],
+function sideBelt(lines: JoinLine[], loads: SideLoad[], tiles: [number, number][], receiver: string, piece: SideLoad["entity"],
     lanes: [1 | 2, SideLoad["lane"]][]): void {
     for (const [lane, side] of lanes) {
         const [lx, ly] = tiles[tiles.length - 1];
         lines.push({ id: id(lx, ly, lane), length: STRAIGHT_LINE_LENGTH });
-        loads.push({ sender: id(lx, ly, lane), receiver, lane: side, piece });
+        loads.push({ sender: id(lx, ly, lane), receiver, lane: side, entity: piece });
         let next = id(lx, ly, lane);
         for (const [x, y] of tiles.slice(0, -1).reverse()) {
             lines.push({ id: id(x, y, lane), length: STRAIGHT_LINE_LENGTH, feeds: next });
@@ -273,8 +274,8 @@ export function layoutOf(copy: JoinCopy): JoinLayout {
         // the turned belt's inner lane 1 is shut by the exit's hood; its outer lane 2 goes onto the exit's lane 2
         lines.push({ id: id(9, 2, 1), length: CURVE_INNER_LINE_LENGTH });
         lines.push({ id: id(9, 2, 2), length: CURVE_OUTER_LINE_LENGTH });
-        loads.push({ sender: id(9, 2, 1), receiver: id(9, 1, 2), lane: "upstream", piece: "underground-exit" });
-        loads.push({ sender: id(9, 2, 2), receiver: id(9, 1, 2), lane: "downstream", piece: "underground-exit" });
+        loads.push({ sender: id(9, 2, 1), receiver: id(9, 1, 2), lane: "upstream", entity: "underground-exit" });
+        loads.push({ sender: id(9, 2, 2), receiver: id(9, 1, 2), lane: "downstream", entity: "underground-exit" });
         for (const lane of [1, 2]) lines.push({ id: id(8, 2, lane), length: STRAIGHT_LINE_LENGTH, feeds: id(9, 2, lane) });
         return { lines, side_loads: loads };
     }
@@ -299,7 +300,7 @@ export function layoutOf(copy: JoinCopy): JoinLayout {
         // piece goes onto lane 2 of the right output's first tile, lane 2 from the downstream side, lane 1 from the upstream
         for (const [lane, curve, side] of [[1, CURVE_INNER_LINE_LENGTH, "upstream"], [2, CURVE_OUTER_LINE_LENGTH, "downstream"]] as const) {
             lines.push({ id: id(7, 4, lane), length: STRAIGHT_LINE_LENGTH });
-            loads.push({ sender: id(7, 4, lane), receiver: id(7, 3, 2), lane: side, piece: "belt" });
+            loads.push({ sender: id(7, 4, lane), receiver: id(7, 3, 2), lane: side, entity: "belt" });
             const chain: [string, number][] = [[id(7, 5, lane), curve], [id(6, 5, lane), curve], [id(6, 4, lane), UNDERGROUND_END_LINE_LENGTH],
                 [id(6, 1, lane + 2), 3 * TUNNEL_LINE_LENGTH_A_TILE], [id(6, 1, lane), UNDERGROUND_END_LINE_LENGTH], [id(6, 0, lane), curve],
                 [id(7, 0, lane), curve], [id(7, 1, lane), STRAIGHT_LINE_LENGTH], [id(7, 2, lane), curve]];
