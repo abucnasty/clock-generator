@@ -206,7 +206,7 @@ describe("the rules of the game", () => {
     });
 
     describe("room for the hand a hand of fuel delays", () => {
-        // agricultural science with the nutrients on the near lane, the game and the simulator alike: a hand of nutrients
+        // agricultural science with the nutrients on the near lane, in the simulator (the game takes the same order): a hand of nutrients
         // filled at 228-231, swung, dropped at 235 and was back at 238; the bioflux hand planned for 228-231 would have
         // filled at 239-242, and the window, 1 tick after the planned hand was full and 4 of room for one more hand, closed at 236
         it("is the hand cycle less the tick after the planned last hand is full, less the room for one more hand: 6 of 11", async () => {
