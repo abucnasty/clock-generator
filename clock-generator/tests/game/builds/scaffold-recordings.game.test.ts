@@ -250,10 +250,11 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     },
     // An accepted 0.27.0 gap (#586): the game serves the inserters in the simulator's order and the production is exact; the
     // wake-ups differ
-    // One of the three copies of the inserter build given 2026-10-21, 240 inserters a second over the three: an
-    // inserter assembler (4 speed modules, 8 beacons) fed plates by two furnaces and gears by a gear assembler, which two
-    // more furnaces feed, all legendary. Each pair of furnaces takes its ore from a line of its own; the ore, so the
-    // plates, gears and the circuits from infinity chests, is uncommon. The output inserter runs all the time.
+    // The first of the three copies of the inserter build, 240 inserters a second over the three, as abucnasty gave it
+    // (2026-11-10): an inserter assembler (4 speed modules, 8 beacons) fed plates by two furnaces and gears by a gear
+    // assembler (5 beacons), which two more furnaces feed, all legendary. Each pair of furnaces takes its ore from a line
+    // of its own; the ore and the circuits come from infinity chests, normal. The ore lines and the circuit belt end at an
+    // underground entrance with nothing beyond; the product goes into a void chest. The output inserter runs all the time.
     "logistic science with inserter crafting": {
         scaffold: path.join(SAMPLES, "intermediates", "inserter-crafting", "inserter-crafting-240-shared-signal-clock.scaffold"),
         config: ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK,

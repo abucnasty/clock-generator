@@ -21,7 +21,15 @@ function flowing(config: Config, belt_ids: number[], flow_direction: 0 | 4 | 8 |
     return { ...config, belts: config.belts.map(belt => belt_ids.includes(belt.id) ? { ...belt, flow_direction } : belt) };
 }
 
+/** The config with the machines it names at a crafting speed of their own, by machine id */
+function atSpeeds(config: Config, speeds: Record<number, number>): Config {
+    return { ...config, machines: config.machines.map(machine => speeds[machine.id] === undefined ? machine : { ...machine, crafting_speed: speeds[machine.id] }) };
+}
+
 const dead_end = { lane_end: { kind: "dead_end" } };
+
+// The scenario's speeds, the inserter build's third copy: the inserter crafting cases below were measured at them, and their hands' timing follows them
+const THIRD_COPY_SPEEDS = { 4: 40.3125, 5: 86.1655 };
 
 // abucnasty's chemical science build (#725): 5.5 copies 18 tiles apart. Its two input belts run east and each ends in an
 // underground entrance with no exit, so all four input lanes are dead ends: the advanced circuits and the sulfur on belt 2,
@@ -163,7 +171,7 @@ describe("a clock whose copy is short by more than one hand in the run twice as 
 // outlet, which the sample stated before it stated the ends the build has; the test keeps those ends.
 describe("the clocks whose third copy puts its last ore hand down a few ticks after one copy alone", async () => {
     const free_outlet = { lane_end: { kind: "outlet" } };
-    const config = withFacts(await loadConfigFromFile(ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK),
+    const config = withFacts(atSpeeds(await loadConfigFromFile(ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK), THIRD_COPY_SPEEDS),
         { "1/1": free_outlet, "1/2": free_outlet, "4/1": free_outlet, "4/2": free_outlet });
     const clocks: Record<string, { window_cycle_ticks: number; windows: SerializableClockWindows }> =
         JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "inserter-crafting-240-generated-clocks-copy-3-one-hand-late.json"), "utf8"));
@@ -180,7 +188,7 @@ describe("the clocks whose third copy puts its last ore hand down a few ticks af
 // The copy alone is still filling a furnace's plate stock there; copy 3 filled it earlier. The game holds the clock.
 describe("a clock whose copy takes less from a shared lane than one copy alone while every machine keeps its target rate", () => {
     it("holds it, with no other run", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK);
+        const config = atSpeeds(await loadConfigFromFile(ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK), THIRD_COPY_SPEEDS);
         const windows = {
             "inserter:1": [{ start: 0, end: 8 }, { start: 33, end: 44 }, { start: 69, end: 71 }],
             "inserter:2": [{ start: 0, end: 8 }, { start: 33, end: 44 }, { start: 69, end: 71 }],

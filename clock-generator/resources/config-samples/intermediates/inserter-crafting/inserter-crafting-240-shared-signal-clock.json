@@ -34,14 +34,14 @@
       "id": 4,
       "recipe": "iron-gear-wheel",
       "productivity": 100,
-      "crafting_speed": 40.3125,
+      "crafting_speed": 44.921875,
       "prototype": "assembling-machine-3"
     },
     {
       "id": 5,
       "recipe": "iron-plate",
       "productivity": 50,
-      "crafting_speed": 86.1655,
+      "crafting_speed": 91.875,
       "prototype": "electric-furnace"
     },
     {
@@ -217,13 +217,13 @@
     {
       "id": 1,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
           "ingredient": "iron-ore",
           "stack_size": 4,
           "lane_end": {
-            "kind": "outlet",
-            "outlet_rate": 53.333333333333336
+            "kind": "dead_end"
           }
         },
         {
@@ -238,6 +238,7 @@
     {
       "id": 2,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
           "ingredient": "electronic-circuit",
@@ -268,6 +269,7 @@
     {
       "id": 4,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
           "ingredient": "iron-ore",
@@ -280,8 +282,7 @@
           "ingredient": "iron-ore",
           "stack_size": 4,
           "lane_end": {
-            "kind": "outlet",
-            "outlet_rate": 53.333333333333336
+            "kind": "dead_end"
           }
         }
       ]
