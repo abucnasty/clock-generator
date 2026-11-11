@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { ConfigPaths } from "../../config/config-paths";
 import { loadConfigFromFile } from "../../config/loader";
 import { BeltConfigSchema, Config, ConfigSchema } from "../../config/schema";
+import { beltLaneFactsOf } from "../../light";
+import { variantJobs } from "../../../tests/game/builds/variant-jobs";
 import { beltLanesOfFacts, supplyOfLaneEnd } from "./lane";
 import { everyInputLaneIsDeadEnd } from "./lane-ends";
 import { isDeadEnd, laneFactsOf } from "./lane-facts";
@@ -205,5 +207,51 @@ describe("the flow direction a belt states", () => {
         const parsed = BeltConfigSchema.parse({ id: 1, type: "turbo-transport-belt", lanes: [lane] });
         expect(parsed.lanes[0]).not.toHaveProperty("flow_direction");
         expect(laneFactsOf({ belts: [parsed] } as never).of(1, 1).flow_direction).toBeNull();
+    });
+});
+
+describe("the facts of every lane, as the light entry gives them", () => {
+    /** What laneFactsOf gives each lane the config states, with its belt, its number and the capacity of its lane traits */
+    function expectedOf(config: Config) {
+        const facts = laneFactsOf(config);
+        return config.belts.flatMap(belt => {
+            const traits = beltLanesOfFacts(belt, facts);
+            const listed: readonly Config["belts"][number]["lanes"][number][] = belt.lanes;
+            return listed.map((stated, index) => {
+                const lane = index + 1 as 1 | 2;
+                return {
+                    belt_id: belt.id, lane, ...facts.of(belt.id, lane),
+                    capacity: traits[index].items_per_second_ceiling, supply_rate_by_default: stated.supply_rate === undefined,
+                };
+            });
+        });
+    }
+
+    it("lists each lane a belt states, with its capacity, and says whether its supply rate is the capacity by default", () => {
+        const [first, second] = belts;
+        const config = configOf({ belts: [{ ...first, lanes: [{ ...first.lanes[0], supply_rate: 88 }, first.lanes[1]] }, second] as Config["belts"] });
+        expect(beltLaneFactsOf(config).map(({ belt_id, lane, capacity, supply_rate, supply_rate_by_default }) =>
+            ({ belt_id, lane, capacity, supply_rate, supply_rate_by_default }))).toEqual([
+            { belt_id: 1, lane: 1, capacity: { numerator: 120, denominator: 1 }, supply_rate: { numerator: 88, denominator: 1 }, supply_rate_by_default: false },
+            { belt_id: 1, lane: 2, capacity: { numerator: 60, denominator: 1 }, supply_rate: { numerator: 60, denominator: 1 }, supply_rate_by_default: true },
+            { belt_id: 2, lane: 1, capacity: { numerator: 15, denominator: 2 }, supply_rate: { numerator: 15, denominator: 2 }, supply_rate_by_default: true },
+        ]);
+    });
+
+    it("gives the facts laneFactsOf gives, on every sample with the switch either way", async () => {
+        for (const [key, file] of Object.entries(ConfigPaths)) {
+            const sample = await loadConfigFromFile(file) as Config;
+            for (const backed_up_belts of [sample.overrides?.backed_up_belts, true, false]) {
+                const config = { ...sample, overrides: { ...sample.overrides, backed_up_belts } };
+                expect(beltLaneFactsOf(config), `${key} with backed_up_belts ${backed_up_belts}`).toEqual(expectedOf(config));
+            }
+        }
+    });
+
+    it("gives the facts laneFactsOf gives, on the config of every variant job of the blast", async () => {
+        for (const job of variantJobs()) {
+            const config = await job.config();
+            expect(beltLaneFactsOf(config), job.name).toEqual(expectedOf(config));
+        }
     });
 });

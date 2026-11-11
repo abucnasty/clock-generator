@@ -34,6 +34,20 @@ export interface LaneFacts {
     readonly flow_direction: FlowDirection | null;
 }
 
+/**
+ * The facts of one lane a belt of a config states, for a reader that lists every lane, such as a page's form: the lane
+ * facts with the belt and the lane they are of, the lane's capacity, and whether the supply rate is that capacity
+ * because the lane states none
+ */
+export interface BeltLaneFacts extends LaneFacts {
+    readonly belt_id: number;
+    readonly lane: 1 | 2;
+    /** Items a second the lane carries: half the belt's speed times the lane's stack size */
+    readonly capacity: Ratio;
+    /** Whether the lane states no supply rate, so that its supply rate is its capacity */
+    readonly supply_rate_by_default: boolean;
+}
+
 /** The facts of every lane of every belt of one build */
 export interface LaneFactsOfBuild {
     /** The facts of lane 1 or 2 of a belt of the config; a lane the belt does not state is refused */
@@ -58,6 +72,11 @@ function flowOf(direction: 0 | 4 | 8 | 12): FlowDirection {
 /** One lane of a belt as the config lists it, with the lane facts it states */
 type LaneConfig = Config["belts"][number]["lanes"][number];
 
+/** Items a second a lane of a belt of the config carries: half the belt's speed times the lane's stack size */
+function laneCapacityOf(belt: Config["belts"][number], lane: number): Ratio {
+    return ratioOf(laneItemsPerSecond(beltSpeedOf(belt.type), laneStackFor(belt, lane)));
+}
+
 /** A lane end the config states, with the outlet's rate made exact: an outlet that states no rate is free, at the lane's capacity */
 function laneEndOf(stated: NonNullable<LaneConfig["lane_end"]>, capacity: Ratio): LaneEnd {
     if (stated.kind !== "outlet") return { kind: stated.kind };
@@ -77,10 +96,9 @@ export function laneFactsOf(config: LaneFactsConfig): LaneFactsOfBuild {
     const dead_end = configDeadEnds(config);
     const by_belt = new Map<number, readonly LaneFacts[]>();
     for (const belt of config.belts) {
-        const belt_speed = beltSpeedOf(belt.type);
         const listed: readonly LaneConfig[] = belt.lanes;
         by_belt.set(belt.id, listed.map((stated, index) => {
-            const capacity = ratioOf(laneItemsPerSecond(belt_speed, laneStackFor(belt, index + 1)));
+            const capacity = laneCapacityOf(belt, index + 1);
             return {
                 supply_rate: stated.supply_rate === undefined ? capacity : ratioOf(fraction(stated.supply_rate)),
                 lane_end: stated.lane_end !== undefined ? laneEndOf(stated.lane_end, capacity)
@@ -105,3 +123,23 @@ export function laneFactsOf(config: LaneFactsConfig): LaneFactsOfBuild {
     };
 }
 
+/**
+ * The facts of every lane the belts of a config state, belt by belt in the config's order and lane 1 before lane 2:
+ * laneFactsOf's facts of each lane, with its capacity and whether its supply rate is that capacity by default
+ */
+export function beltLaneFactsOf(config: LaneFactsConfig): BeltLaneFacts[] {
+    const facts = laneFactsOf(config);
+    return config.belts.flatMap(belt => {
+        const listed: readonly LaneConfig[] = belt.lanes;
+        return listed.map((stated, index) => {
+            const lane = index + 1 as 1 | 2;
+            return {
+                belt_id: belt.id,
+                lane,
+                ...facts.of(belt.id, lane),
+                capacity: laneCapacityOf(belt, lane),
+                supply_rate_by_default: stated.supply_rate === undefined,
+            };
+        });
+    });
+}

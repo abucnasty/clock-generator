@@ -55,9 +55,10 @@ The package has three entries (`exports` in `package.json`):
 - `clock-generator/browser` (`src/browser.ts`): the config schema and parsers, the generator, the blueprint encoding and
   the types, without Node built-ins. It does not read the game data: call `FactorioDataService.initialize(data)` with
   the contents of `data-filtered.json` (the UI fetches it) before generating.
-- `clock-generator/light` (`src/light.ts`): the constants, status categories, clock ranking, the lane facts a config's
-    own fields decide (whether every input lane is a dead end) and `Option`, without the simulation, the game data or
-  zod. The UI's main thread takes its values from here and only types from `browser`, so the generator is bundled
+- `clock-generator/light` (`src/light.ts`): the constants, status categories, clock ranking, the lane facts of a config
+  (each lane's supply rate, capacity, end and sharing and its belt's flow direction, `beltLaneFactsOf`; whether every
+  input lane is a dead end) and `Option`, without the simulation, the game data or zod. A lane's capacity comes from
+  the engine's belt speeds (`src/entities/belt/belt-speed.ts`), which a test ties to the game data. The UI's main thread takes its values from here and only types from `browser`, so the generator is bundled
   once, in its web worker.
 
 A file of your own under `src/` that imports modules directly, not through `index.ts`, imports
