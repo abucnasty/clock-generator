@@ -34,3 +34,10 @@ take them. `paths.ts` names the ones unit tests load by sample-style keys (`Test
   delays, none where the ingredient is on the near lane (`src/rules-of-the-game.test.ts`, `src/crafting/fuel-on-near-lane.generation.test.ts`),
   and the windows of the egg loop on its 5-swing clock (`src/crafting/agricultural-science-loop-windows.generation.test.ts`,
   `src/crafting/agricultural-science-loop-windows-ranking.generation.test.ts`).
+- `military-science-120-coal-lane-per-copy.json` (`MILITARY_SCIENCE_120_COAL_LANE_PER_COPY`): the military science
+  sample's config as it was before it stated abucnasty's build of five mirrored pairs (2026-11-10; one science
+  assembler, one grenade assembler and one foundry a copy, 120 a second over 5 copies), with one change: its coal lane is
+  stated as one per copy (`sharing: "one_per_copy"`). As the sample had it, the 5 copies took 300 coal a second from one
+  lane that supplies 120, which generation refuses. On it the shared windows of the takers keep the rate where the separate
+  ones lose it (`src/crafting/shared-windows.generation.test.ts`), and the fractional swings task is left out as it would
+  make the primary clock again (`src/crafting/alternative-tasks.test.ts`).
