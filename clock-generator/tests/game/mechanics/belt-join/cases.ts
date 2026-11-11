@@ -174,7 +174,7 @@ const SPLITTER: JoinCopy[] = [
         streams: [...lanes("0,0", 121, 2, 150), ...lanes("0,1", 121, 2, 150)] },
     { name: "splitter-full-right-left", shape: "splitter", kept: true, priority: ["right", "left"], about: "both inputs full on both lanes",
         streams: [...lanes("0,0", 121, 2, 150), ...lanes("0,1", 121, 2, 150)] },
-    { name: "splitter-output-shut", shape: "splitter", kept: false, priority: ["left", "right"], about: "the right output's end shut: one input full goes to the left output once the right one is full. Not kept: the game differs from the model from tick 262 (README.md)",
+    { name: "splitter-output-shut", shape: "splitter", kept: true, priority: ["left", "right"], about: "the right output's end shut: the input without the priority, full, goes to the left output once the right one cannot take its heads",
         streams: lanes("0,1", 121, 2, 200), ends: [{ t: 0, action: "block", chests: [[19, 1]] }] },
     { name: "splitter-one-output", shape: "splitter", kept: true, priority: ["left", "right"], about: "both inputs full, the right output's end shut and opened again",
         streams: [...lanes("0,0", 121, 2, 200), ...lanes("0,1", 121, 2, 200)],
@@ -201,7 +201,8 @@ const BOUNDARY: JoinCopy[] = [
  * The back end of a splitter's output only for the head of the input with the priority: the output with the priority
  * shut from the build, fed from the input with the priority, from the other input, or from both, for each pair of
  * priorities (input, output); and the loop with only its left input fed, the end of the right output shut and opened
- * again. Right and right is the pair the rule was read from; the other three are held out.
+ * again. Right and right is the pair the rule was read from; the other three are held out. Kept: the held-out copy
+ * with the input that has the priority (right and left); `splitter-output-shut` keeps the other input.
  */
 const SHUT_OUTPUT: JoinCopy[] = [
     ...([["right", "right"], ["left", "left"], ["right", "left"], ["left", "right"]] as const).flatMap(([input, output]) => {
@@ -213,11 +214,11 @@ const SHUT_OUTPUT: JoinCopy[] = [
             { name: `splitter-shut-${pair}-priority-input`, streams: lanes(row(input), 121, 2, 200), about: "only the input with the priority fed" },
             { name: `splitter-shut-${pair}-other-input`, streams: lanes(row(other), 121, 2, 200), about: "only the input without the priority fed" },
             { name: `splitter-shut-${pair}-both-inputs`, streams: [...lanes("0,0", 121, 2, 200), ...lanes("0,1", 121, 2, 200)], about: "both inputs fed" },
-        ].map((c): JoinCopy => ({ ...c, shape: "splitter", kept: false, priority: [input, output], ends,
+        ].map((c): JoinCopy => ({ ...c, shape: "splitter", kept: c.name === "splitter-shut-right-left-priority-input", priority: [input, output], ends,
             about: `the output with the priority shut from the build; ${c.about}` }));
     }),
     { name: "loop-left-input-shut-end", shape: "loop", kept: false, priority: ["right", "right"],
-        about: "only the left input fed (it has no priority); the right output's end shut from the build and opened at 400",
+        about: "only the left input fed (it has no priority); the right output's end shut from the build and opened at 400. Not kept: the game differs from the model from tick 263 (README.md)",
         streams: lanes("4,1", 121, 2, 200), ends: [{ t: 0, action: "block", chests: [[11, 3]] }, { t: 400, action: "release", chests: [[11, 3]] }] },
 ];
 

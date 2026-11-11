@@ -68,7 +68,7 @@ splitter with "none" for a priority.
    on its line. Read: `splitter-output-shut` at tick 262 (input priority left, output priority right, the right output
    shut, a right input's head at 18 went onto the left output at 63). The 600-tick recording's heads that moved to 127
    past the back end were all of the input with the priority: the shut-output copy with both priorities right (tick
-   138), and the loop copy (the right input, ticks 49, 54 and 56).
+   138), and the loop copy (the right input, ticks 49, 54 and 56). Checked: the follow-up run, 9 of 9 held-out copies.
 5. **Input priority.** On each lane, the head of the input that has the priority goes first. The other input's head
    comes after it, behind it. Read: the copies with both inputs full, tick 70.
 6. **Both inputs full, both outputs free: each input keeps its own output.** This follows from 4 and 5. After the
@@ -99,19 +99,41 @@ the game still gives an entrance's tunnel line one tile. The two logs are the sa
   (side-load point 188). Onto an exit, a line stack at 64, 65, 66 and 67 goes first. Each copy has 6 contests, all as the
   model gives them.
 - **The splitter's rules on copies they were not read from:** rules 1, 2, 5 and 6 agree on the four copies with the
-  other priorities, each lane and both inputs full. Rule 4's move to the back end is refuted for the input without the
-  priority (`splitter-output-shut`, below). Rules 7 and 8, and an end opened behind a splitter, rest on
+  other priorities, each lane and both inputs full. Rule 4's move to the back end was refuted for the input without the
+  priority (`splitter-output-shut`, below); the follow-up run settles it. Rules 7 and 8, and an end opened behind a splitter, rest on
   `splitter-one-output`, which the smoke read.
-- **`splitter-output-shut` differs from tick 262.** The right input has no priority; its head is at 18. The right
-  output has the priority and holds stacks at 0 and 64 behind its shut end. The model puts the head at the back end,
-  127, as the game did for the input with the priority in the 600-tick recording. The game puts it onto the left output
-  at 63. Not kept. Not established: whether the back end is only for the input with the priority.
+- **`splitter-output-shut` differed from tick 262.** The right input has no priority; its head is at 18. The right
+  output has the priority and holds stacks at 0 and 64 behind its shut end. The model put the head at the back end,
+  127, as the game did for the input with the priority in the 600-tick recording. The game put it onto the left output
+  at 63. The follow-up run below checks the rule written from this row.
 - **`loop-shut-end` differs from tick 137.** The first stack onto the splitter's left input, from the turned belt, is
   one step (32) further on than in the model, 137 ticks after the build. Not kept.
-- **Kept:** 29 copies, 87 KB as `.json.zst` (zstd level 19 through Node's `zlib`). They are 21 of the 22 copies of
-  the first group of cases.ts, the five other splitter copies, and three boundary copies: the first stack behind each point
-  (`boundary-belt-68`, `boundary-belt-189`) and the stack at the exit's point (`boundary-exit-67`). The offline replay
-  of all of them takes about a quarter of a second.
+- **Kept:** 21 of the 22 copies of the first group of cases.ts, the five other splitter copies of that run, and
+  three boundary copies: the first stack behind each point (`boundary-belt-68`, `boundary-belt-189`) and the stack at
+  the exit's point (`boundary-exit-67`).
+
+## The follow-up run of 2026-11-11: the back end only for the input with the priority
+
+The rule (splitter rule 4, its last part) was written and the model changed before this run, and the model's rows of
+every copy were stored. 50 copies, 720 ticks after the build: the smoke (3 read-from copies) 4.1 seconds, the full run
+20.5 seconds. 13 new copies: the output with the priority shut from the build, fed from the input with the priority,
+from the other input, or from both, for each pair of priorities; and the loop with only its left input fed.
+
+- **Read-from (both priorities right, and `splitter-output-shut`): 4 of 4 agree** in every tick.
+- **Held out (left and left, right and left, left and right): 9 of 9 agree** in every tick. One of them,
+  `splitter-shut-left-right-other-input`, has the same priorities, feed and shut end as `splitter-output-shut`.
+- **The clause decides these copies.** With the back end for both inputs, every copy fed from the input without the
+  priority differs from tick 262. With the back end for neither, every copy fed from the input with the priority, or
+  from both, differs from tick 260 or 262.
+- **The loop with only its left input fed (`loop-left-input-shut-end`) differs from tick 263.** A head of the left
+  input at 3 goes onto the left output, lane 2, at 61 in the game and at 48 (its own spot) in the model. The stack
+  ahead of it is on the loop's first line after the output line, at 292 of 295: the game holds the head 64 behind it,
+  and the model does not look past the output line. Not kept. Not established.
+- The 37 copies of the first run give the same rows, put-ons and end changes as before. With the rule, 36 of them
+  agree; `loop-shut-end` still differs at its cut.
+- **Kept now: 31 copies, 94,661 bytes** as `.json.zst` (zstd level 19 through Node's `zlib`): the 29 above,
+  `splitter-output-shut` (the input without the priority) and the held-out `splitter-shut-right-left-priority-input`
+  (the input with the priority). The offline replay of all of them takes about 0.3 seconds.
 
 ## Limits
 
@@ -125,8 +147,8 @@ the game still gives an entrance's tunnel line one tile. The two logs are the sa
   bound of about 90 ticks is not established.
 - **The boundary run** measured the straight belt from both sides (67 and 68; 188 and 189) and the exit from one side
   (67 and below). Not measured: a line stack from 68 to 70 onto an exit, and any contest onto an entrance.
-- **The splitter:** the shut output with the head of the input that has no priority (`splitter-output-shut`, above).
-  The model refuses a splitter with "none" for a priority.
+- **The splitter:** a head that goes onto an output is not held by a stack on the line after the output line
+  (`loop-left-input-shut-end`, above). The model refuses a splitter with "none" for a priority.
 - Turbo belts with stacks of 4 only. The model has no loader that is removed or built while the run goes.
 
 ## Run it again
