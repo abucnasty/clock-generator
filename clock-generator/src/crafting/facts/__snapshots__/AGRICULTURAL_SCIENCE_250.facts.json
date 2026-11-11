@@ -29,7 +29,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -62,7 +62,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -95,7 +95,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -128,7 +128,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -1570,17 +1570,17 @@
       "enable_latency_ticks": 2
     },
     {
-      "key": "inserter:11/bioflux",
+      "key": "inserter:11/nutrients",
       "via": "inserter",
       "entity": "inserter:11",
       "group": "inserter:11",
-      "item": "bioflux",
-      "from": "belt:2/lane:1",
+      "item": "nutrients",
+      "from": "belt:2/lane:2",
       "to": "machine:5",
       "from_lanes": [
-        "belt:2/lane:1"
+        "belt:2/lane:2"
       ],
-      "lands_in": "ingredients",
+      "lands_in": "fuel",
       "hand": {
         "prototype": "stack-inserter",
         "quality": "legendary",
@@ -1588,8 +1588,8 @@
         "nominal": 16,
         "research": 16,
         "items": [
-          "bioflux",
-          "nutrients"
+          "nutrients",
+          "bioflux"
         ],
         "full_hand": {
           "at_placing_source": true,
@@ -1628,17 +1628,17 @@
       "enable_latency_ticks": 2
     },
     {
-      "key": "inserter:11/nutrients",
+      "key": "inserter:11/bioflux",
       "via": "inserter",
       "entity": "inserter:11",
       "group": "inserter:11",
-      "item": "nutrients",
-      "from": "belt:2/lane:2",
+      "item": "bioflux",
+      "from": "belt:2/lane:1",
       "to": "machine:5",
       "from_lanes": [
-        "belt:2/lane:2"
+        "belt:2/lane:1"
       ],
-      "lands_in": "fuel",
+      "lands_in": "ingredients",
       "hand": {
         "prototype": "stack-inserter",
         "quality": "legendary",
@@ -1646,8 +1646,8 @@
         "nominal": 16,
         "research": 16,
         "items": [
-          "bioflux",
-          "nutrients"
+          "nutrients",
+          "bioflux"
         ],
         "full_hand": {
           "at_placing_source": true,
@@ -1868,14 +1868,14 @@
       "group": "inserter:11",
       "edges": [
         {
-          "edge": "inserter:11/bioflux",
-          "item": "bioflux",
+          "edge": "inserter:11/nutrients",
+          "item": "nutrients",
           "hand": 16,
           "floor_cycle": 11
         },
         {
-          "edge": "inserter:11/nutrients",
-          "item": "nutrients",
+          "edge": "inserter:11/bioflux",
+          "item": "bioflux",
           "hand": 16,
           "floor_cycle": 11
         }
