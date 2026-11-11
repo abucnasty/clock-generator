@@ -87,6 +87,17 @@ describe("the lanes the copies share, laid out as rows", () => {
         expect(layout.rows[0].takers.map(taker => taker.copy)).toEqual([0, 0]);
         expect(layout.copies.later).toEqual([]);
     });
+
+    it("needs no copy spacing along a lane the copies do not share, or with one copy: the lane may run across copy_offset", () => {
+        const south = { x: 0, y: 1 };
+        expect(rowsOf(rowConfig({ copies: 3, copy_offset: { x: 18, y: 0 } }), south, false).rows[0].takers.map(taker => taker.copy)).toEqual([0, 0]);
+        expect(rowsOf(rowConfig({ copies: 1, copy_offset: { x: 18, y: 0 } }), south, true).rows[0].takers.map(taker => taker.copy)).toEqual([0, 0]);
+    });
+
+    it("asks for the copy spacing along a lane that several copies share", () => {
+        expect(() => rowsOf(rowConfig({ copies: 3, copy_offset: { x: 18, y: 0 } }), { x: 0, y: 1 })).toThrow("The copies on lane 1 of belt 1 need copy_offset along the lane");
+        expect(() => rowsOf(rowConfig({ copies: 3, copy_offset: { x: 0, y: 0 } }), { x: 1, y: 0 })).toThrow("The copies on lane 1 of belt 1 need copy_offset along the lane");
+    });
 });
 
 /** One copy of a gear build: one taker of an iron plate lane into an assembler, its gears into a chest */

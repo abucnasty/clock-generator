@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { ConfigPaths } from "../../config/config-paths";
+import { loadConfigFromFile } from "../../config/loader";
 import { BeltConfigSchema, Config, ConfigSchema } from "../../config/schema";
 import { beltLanesOfFacts, supplyOfLaneEnd } from "./lane";
-import { everyInputLaneIsDeadEnd, isDeadEnd, laneFactsOf } from "./lane-facts";
+import { everyInputLaneIsDeadEnd } from "./lane-ends";
+import { isDeadEnd, laneFactsOf } from "./lane-facts";
 
 type Parts = Partial<Pick<Config, "machines" | "inserters" | "belts" | "chests" | "overrides">>;
 
@@ -20,7 +23,8 @@ const belts: Config["belts"] = [
 const machines = [{ id: 1, recipe: "iron-gear-wheel", crafting_speed: 1, productivity: 0 }];
 const take = (id: number, belt: number) => ({ id, source: { type: "belt" as const, id: belt }, sink: { type: "machine" as const, id: 1 } });
 const put = (id: number, belt: number) => ({ id, source: { type: "machine" as const, id: 1 }, sink: { type: "belt" as const, id: belt } });
-const every_lane = [[1, 1], [1, 2], [2, 1], [2, 2]] as const;
+// belt 2 states one lane, so it has one lane
+const every_lane = [[1, 1], [1, 2], [2, 1]] as const;
 
 describe("the lane facts of a config", () => {
     it("gives every lane a dead end when the config's belts are backed up", () => {
@@ -44,8 +48,6 @@ describe("the lane facts of a config", () => {
         expect(facts.of(1, 1).supply_rate).toEqual({ numerator: 120, denominator: 1 });
         expect(facts.of(1, 2).supply_rate).toEqual({ numerator: 60, denominator: 1 });
         expect(facts.of(2, 1).supply_rate).toEqual({ numerator: 15, denominator: 2 });
-        // the side of a belt that lists one lane is at the first lane's stack
-        expect(facts.of(2, 2).supply_rate).toEqual({ numerator: 15, denominator: 2 });
     });
 
     it("has every copy share the lane, and never says a lane's end is unknown, when no lane states a fact", () => {
@@ -110,11 +112,14 @@ describe("the lane facts a config states", () => {
         }
     });
 
-    it("derives every fact of the second side of a belt that lists one lane", () => {
+    it("holds no fact of the side a belt that states one lane does not state, whatever the switch", () => {
         const one_lane = { id: 2, type: "transport-belt", lanes: [{ ingredient: "iron-gear-wheel", stack_size: 1, lane_end: { kind: "dead_end" } }] };
-        const facts = laneFactsOf(configOf({ belts: [belts[0], one_lane] as Config["belts"] }));
-        expect(facts.of(2, 1).lane_end).toEqual({ kind: "dead_end" });
-        expect(facts.of(2, 2)).toEqual(derived(false).of(2, 2));
+        for (const backed_up_belts of [true, false]) {
+            const facts = laneFactsOf(configOf({ belts: [belts[0], one_lane] as Config["belts"], overrides: { backed_up_belts } }));
+            expect(facts.lanesOf(2).map(lane => lane.lane_end)).toEqual([{ kind: "dead_end" }]);
+            expect(() => facts.of(2, 2)).toThrow("Lane 2 of belt 2 is not in the config");
+            expect(facts.lanesOf(1)).toEqual([facts.of(1, 1), facts.of(1, 2)]);
+        }
     });
 
     it("reads the facts of an export lane beside its consumption", () => {
@@ -150,10 +155,25 @@ describe("the question about every input lane", () => {
         expect(everyInputLaneIsDeadEnd(configOf({ machines, belts, inserters: [put(1, 2)], overrides }))).toBe(backed_up_belts);
         expect(everyInputLaneIsDeadEnd(configOf({ overrides }))).toBe(backed_up_belts);
     });
+    // the question is answered from the config's own fields, without the game data the lane facts read for their rates:
+    // it gives the ends the lane facts give, on every sample as it is and with the switch either way
+    it("gives the answer of the lane facts of every input lane, on every sample", async () => {
+        for (const [key, file] of Object.entries(ConfigPaths)) {
+            const sample = await loadConfigFromFile(file) as Config;
+            for (const backed_up_belts of [sample.overrides?.backed_up_belts, true, false]) {
+                const config = { ...sample, overrides: { ...sample.overrides, backed_up_belts } };
+                const facts = laneFactsOf(config);
+                const input_belts = config.belts.filter(belt => config.inserters.some(inserter => inserter.source.type === "belt" && inserter.source.id === belt.id));
+                const expected = input_belts.length === 0 ? backed_up_belts === true
+                    : input_belts.every(belt => facts.lanesOf(belt.id).every(isDeadEnd));
+                expect(everyInputLaneIsDeadEnd(config), `${key} with backed_up_belts ${backed_up_belts}`).toBe(expected);
+            }
+        }
+    });
 });
 
 describe("the lane traits of the facts", () => {
-    it("carry the supply of each lane's end", () => {
+    it("carry the supply of each lane's end, and of the lane it states on the other side of a belt that states one", () => {
         for (const backed_up_belts of [true, false]) {
             const config = configOf({ belts, overrides: { backed_up_belts } });
             const supply = backed_up_belts ? "backed_up" : "moving";
@@ -176,8 +196,8 @@ describe("the flow direction a belt states", () => {
             { id: 2, type: "turbo-transport-belt", flow_direction: 12, lanes: [{ ingredient: "copper-ore", stack_size: 4 }] },
             { id: 3, type: "turbo-transport-belt", lanes: [{ ingredient: "coal", stack_size: 4 }, { ingredient: "coal", stack_size: 4 }] }];
         const facts = laneFactsOf({ belts } as never);
-        expect([facts.of(1, 1), facts.of(1, 2), facts.of(2, 1), facts.of(2, 2), facts.of(3, 1), facts.of(3, 2)].map(it => it.flow_direction))
-            .toEqual([{ x: 1, y: 0 }, { x: 1, y: 0 }, { x: -1, y: 0 }, { x: -1, y: 0 }, null, null]);
+        expect([facts.of(1, 1), facts.of(1, 2), facts.of(2, 1), facts.of(3, 1), facts.of(3, 2)].map(it => it.flow_direction))
+            .toEqual([{ x: 1, y: 0 }, { x: 1, y: 0 }, { x: -1, y: 0 }, null, null]);
     });
 
     it("is read from the belt alone: the schema drops it from a lane", () => {

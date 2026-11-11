@@ -7,6 +7,7 @@ import { Config } from "../../config";
 import { EnableControlOverrideConfig } from "../../config/schema";
 import { assertInserterCoverage } from "../../config/inserter-coverage-validator";
 import { validateCopies } from "../../config/copies-validator";
+import { assertFlowAlongCopySpacing } from "../shared-lane-lanes";
 import { assertFeasible } from "../feasibility/assert-feasible";
 import { ignoredLcmItemsOf } from "../planner/composition";
 import { buildPlanOfConfig } from "../planner/plan-build";
@@ -56,7 +57,7 @@ import { DisturbanceTrialOptions, LossOutcome, runLossTrials } from "../disturba
 import { SerializableTransferHistory, serializeTransferHistory } from "../sequence/transfer-history-serializer";
 import { StateTransitionHistory } from "../sequence/state-transition-history";
 import { MachineFactsEntry } from "../insights";
-import { everyInputLaneIsDeadEnd } from "../../entities/traits/lane-facts";
+import { everyInputLaneIsDeadEnd } from "../../entities/traits/lane-ends";
 import { machineFactsOfEntity } from "../../entities/traits/machine-facts-of";
 import { CompactStateTransitionHistory } from "../sequence/compact-history";
 import { StateTransitionTracker } from "../../simulation/observers/state-transition-tracker";
@@ -773,6 +774,8 @@ function recordedBuildOf(config: Config, options: RunOptions, debug: MutableDebu
     assertInserterCoverage(config);
     // Throws CopiesError if the config holds several identical units where it should describe one and set copies.
     validateCopies(config);
+    // Throws FlowAcrossCopySpacingError if a belt states that its items move across the copy spacing, on a lane the copies share.
+    assertFlowAlongCopySpacing(config);
     // Throws FeasibilityError if no clock can carry the target (crafting/feasibility/), before any simulation.
     assertFeasible(config);
 

@@ -318,26 +318,6 @@
       "terminal": null
     },
     {
-      "key": "inserter:11/bioflux",
-      "via": "inserter",
-      "entity": "inserter:11",
-      "group": "inserter:11",
-      "item": "bioflux",
-      "from": "belt:2/lane:1#bioflux",
-      "from_ports": [
-        "belt:2/lane:1#bioflux"
-      ],
-      "to": "machine:5",
-      "lands_in": "ingredients",
-      "hand": 16,
-      "floor_cycle": 11,
-      "ceiling": {
-        "numerator": 960,
-        "denominator": 11
-      },
-      "terminal": null
-    },
-    {
       "key": "inserter:11/nutrients",
       "via": "inserter",
       "entity": "inserter:11",
@@ -349,6 +329,26 @@
       ],
       "to": "machine:5",
       "lands_in": "fuel",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:11/bioflux",
+      "via": "inserter",
+      "entity": "inserter:11",
+      "group": "inserter:11",
+      "item": "bioflux",
+      "from": "belt:2/lane:1#bioflux",
+      "from_ports": [
+        "belt:2/lane:1#bioflux"
+      ],
+      "to": "machine:5",
+      "lands_in": "ingredients",
       "hand": 16,
       "floor_cycle": 11,
       "ceiling": {

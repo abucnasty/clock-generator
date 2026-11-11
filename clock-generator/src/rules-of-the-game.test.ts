@@ -228,8 +228,8 @@ describe("the rules of the game", () => {
         });
 
         it("is none where the ingredient is on the near lane: the hand of fuel waits behind the planned hands", async () => {
-            // the sample's inserter 11 takes bioflux off its near lane; inserters 1 and 2 have the nutrients there
-            expect(Object.fromEntries(delayedHandRoomTicks(await registryOf(ConfigPaths.AGRICULTURAL_SCIENCE_250)))).toEqual({ "inserter:1": 6, "inserter:2": 6 });
+            // the sample's config before its five copies: inserter 11 takes bioflux off its near lane; inserters 1 and 2 have the nutrients there
+            expect(Object.fromEntries(delayedHandRoomTicks(await registryOf(TestConfigPaths.AGRICULTURAL_SCIENCE_250_BIOFLUX_ON_NEAR_LANE)))).toEqual({ "inserter:1": 6, "inserter:2": 6 });
             const iron_bacteria = await registryOf(ConfigPaths.IRON_BACTERIA_380_CULTIVATION);
             expect(Object.fromEntries(fuelHandRoomTicks(iron_bacteria))).toEqual({ "inserter:9": 4, "inserter:10": 4 });
             expect(delayedHandRoomTicks(iron_bacteria).size).toBe(0);

@@ -4,7 +4,10 @@ These tests check throughput, startup and/or recovery of generated clocks. They 
 `resources/config-samples/` or the isolated pickup fixtures, without moving a general sample merely because a test
 uses it. Setup, selective execution and artifact retention are in the [game verification guide](../README.md).
 
-- `scaffold-recordings.game.test.ts`: the catalog of complete sample builds, including wakeup/recording comparisons.
+- `scaffold-recordings.game.test.ts`: the catalog of complete sample builds, including wakeup/recording comparisons. A build of
+  several copies (`copies`) is judged in every window cycle checked over the whole build, over each row of output inserters and over each
+  copy by itself, the copies found as the harness finds them to wire the clock. See "Builds of several copies" below for what such a
+  case needs.
 - `moving-pickup.game.test.ts`: different-item pickup geometry, moving/backed-up supply and recovery.
 - `same-item-pickup-clock.game.test.ts`: same-item lane fallback, throughput and recovery.
 - `over-hood-pickup-clock.game.test.ts`, `front-pickup-clock.game.test.ts`: the over-the-hood exit and the front
@@ -35,6 +38,50 @@ The original turbo moving/different-item matrix has 12 cases; the original same-
 window cycles and are deliberately separate from the short mechanic probes. Do not run them for prose or a probe-only
 refactor that does not change clock behavior. `npm run test:game:watch` currently watches the scaffold-recordings
 suite; it is not a generic visual mode for every mechanic test.
+
+## Builds of several copies
+
+A build that holds the config more than once names the copies it holds (`copies`). The harness finds them by their inserters: the
+machines that inserters move items between are one group, and belts, which the copies share, join none. A group with a machine
+for every machine of the config is a whole copy; the count has to be the one named, and the generated clock is wired to the
+inserters of each copy. A machine of the config's recipes in no copy is refused.
+
+`copies` may have a fraction, the fraction the config's own `copies` has (5.5 for a config of 5.5): that many whole copies and
+one part copy. The part copy is the one the generator lays out on the lanes the copies share (`partCopiesOf`): on each shared
+lane the takers furthest upstream, the fraction of the copy's takers there rounded up, with the machines they feed, the inserters
+that feed those machines and the inserters that take their results. A group of the build with every machine and inserter of it
+and no machine more is the part copy; the clock is wired to its inserters as to the same inserters of a whole copy. The part
+copy is held to its share of a copy's output, the generator's rule for a part copy's machine (a machine is held to its whole
+target times the share of the inserters that take from it that the part copy holds) counted over the final machines; the
+harness counts each such inserter as one, where the generator weighs it by what it moves, the same where a final machine has
+one output inserter. Refused: a group that is neither a whole copy nor the part copy (the message lists the groups), two part
+copies, another fraction than the config's, and a part copy where the count is a whole number (its machines are beyond the
+config). The harness takes what the build is: a part copy's machines may differ from a whole copy's (other beacons, another
+crafting speed) and are judged by what they make.
+
+Each copy is judged by itself: in the scaffold recordings, what its output inserters move in every window cycle checked against
+its target (the part copy against its share); in the families with a protocol (`pickup-clock-capture.ts`), each copy's final
+machines over the baseline's whole clock cycles. The simulator's entity-by-entity comparison and the wake-ups are of one copy and
+are not made for a build of copies.
+
+### The chemical science build of #725
+
+`chemical-science-240-shared-foundry-full-build.blueprint` is abucnasty's whole chemical science build as he gave it (#725, 869
+entities, the clock it came with in it): both mirrored sides, 22 science and 22 engine machines and 6 pipe foundries on the centre
+line 18 tiles apart, so 5 whole blocks of `CHEMICAL_SCIENCE_240_SHARED_FOUNDRY` and a half block at the east end, and two foundries at
+the west end that cast the gears and the steel of both engine lines. Every input line ends in an underground entrance with nothing
+beyond. The config is the sample as committed, `copies: 5.5`; its part copy is the half block (machines 1, 3, 5, 7 and 9), held to
+half a block's packs. The half block's pipe foundry has 5 beacons where the others have 8 (199.75 against 236.78, computed from the
+blueprint), and engine line 3 holds gears on the lane taken first where the config states steel (not confirmed); neither is in
+the config. Two cases in the scaffold recordings, each recorded twice on 2026-11-11 at Factorio 2.1.24:
+
+- **The generated clock** (Coordinated Sources, 1 output swing, 352 ticks): every whole copy moved 256 packs and the part copy 128
+  in each of the window cycles checked, 704 in each row and 1,408 over the build.
+- **The clock it came with** (made by the generator of 0.28.1 for one side of the build): it opens the advanced circuit takers of
+  every copy of a side together, and the dead-ended circuit lane refills too late for the third science machine of each side from
+  the west (#725). That machine moved 464 of 704 over the recording, and its copy, the second, 224, 192 and 224 of its 256 in turn;
+  every other copy, and the part copy, made its target. The case expects that copy short and no other: it shows that the check of
+  each copy sees a copy the others starve, where the build's total (1,376 or 1,344 of 1,408) only says the build is short.
 
 ## How a clock run is timed
 
@@ -605,14 +652,19 @@ first a fourth furnace at 91.875), and the config is the first.
   wraparound value and the value it starts at), and the harness records it as it records a generated one, cut at its wraps. The
   recorder schema reads a clock that counts from 0 only when the recording names its wraparound value (the harness writes it), and then
   checks every sample against the clock's count, so a missing signal is still refused.
-- `generated-three-copies`: the same blueprint with the hand-made clock's three combinators taken out and the generator's recommended clock
-  for the config (`swings-2`, 72 ticks, 2 output swings) wired to the inserters of each copy. The test says the build holds 3
+- `generated-three-copies`: the same blueprint with the hand-made clock's three combinators taken out and the generator's clock
+  for the config (`coordinated_sources`, 72 ticks) wired to the inserters of each copy. The test says the build holds 3
   copies (`copies: 3`; without it a build is one copy and a machine beyond the config is refused), and the harness finds them
   from the build's machines and inserters (machines that inserters move items between are one copy; belts, which the copies
   share, do not join them) and matches each to the config by itself. The inserters the hand-made clock held run free while
-  the build warms up, as an unclocked build's do, so the furnaces have their recipes when the build is matched. On this
-  scaffold the harness refuses the run before it wires the clock: the foundry part's four furnaces (iron plate) and its gear
-  assembler have recipes of the config and are in no copy, so they count as machines beyond the config.
+  the build warms up, as an unclocked build's do, so the furnaces have their recipes when the build is matched. The foundry
+  part's machines are in no copy and no inserter joins them to a machine of the config, so they are the build's own.
+
+Both runs also judge each copy by itself: the final machine of each copy, found as the harness finds the copies, makes its 80 a
+second over the baseline's whole clock cycles (its products less the change in its output stock), a copy that the others starve
+on the ore lines they share falls short there even where the build's total does not. Each copy's baseline is kept in
+`per-copy.json` beside the run's summary; it is not part of the native summary. In the game (2026-11-11, Factorio 2.1.24) every
+copy made 4,800 over 3,600 ticks with the generated clock and 4,608 over 3,456 ticks with the hand-made clock.
 
 [inserter-crafting-240-shared-signal-clock-controls.json](inserter-crafting-240-shared-signal-clock-controls.json) holds the 2 native summaries, recorded on Factorio 2.1.21 at commit
 `e1c0aadb`. **The hand-made clock gives 864 (288 a copy) in each of 63 window cycles, as a separate probe measured it, and the
@@ -646,6 +698,8 @@ ticks each waits for room on the belt.
 [grenade-clock-controls.json](grenade-clock-controls.json) holds the 4 native summaries; `clock-controls.test.ts`
 pins the generated clock, `game-runs-hold.test.ts` checks the runs, and `src/crafting/grenade-clock.generation.test.ts` checks the hand-made clock in the simulator. All four hold their target in every baseline window cycle
 (64 on a copy, 448 on seven) with no wait for the belt, and go back to it after every disturbance.
+On the full build each copy is judged by itself as well, as on the inserter build's three copies: each copy's four final machines
+make its 2,048 over the baseline's 3,584 ticks of whole clock cycles, with both clocks (2026-11-11, Factorio 2.1.24).
 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/grenade-new BELT_CLOCK_CALIBRATE=1 \

@@ -10,7 +10,7 @@ import { Entity, EntityId } from "../entities";
 import { FactorioBlueprint } from "../blueprints/blueprint";
 import { withNetwork } from "./inserter-counters";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
-import { everyInputLaneIsDeadEnd } from "../entities/traits/lane-facts";
+import { everyInputLaneIsDeadEnd } from "../entities/traits/lane-ends";
 import { decimalOf } from "../entities/traits/ratio";
 import { machinesInOrder, traitsOf } from "../entities/traits/traits-of";
 import { Logger, defaultLogger } from "../common/logger";
@@ -47,7 +47,7 @@ import { signalsPerMinuteOf } from "./clock-signals";
 import { START_DEPENDENCE_NOT_CHECKED, StartDependence, startDependenceNote } from "./start-dependence";
 import { NotMadeClock, notTriedSentence, WhyNotStable, whyNotStable, whyNotStableClockOf } from "./why-not-stable";
 import { DEFAULT_KICK_START_ITEMS } from "./runner/cold-start";
-import { judgeSharedLanes, SharedLaneLoss } from "./shared-lane-verdict";
+import { ClockSharedLaneLoss, isNotChecked, judgeSharedLanes, SharedLaneJudgement, sharedLanesNotChecked } from "./shared-lane-verdict";
 import { copiesDisturbanceTrial, CopiesTrialVerdict } from "./shared-lane-trial";
 
 
@@ -1062,28 +1062,15 @@ function runAlternativeOf(
     /**
      * The takers of the copies that lose swings on a lane they share (see shared-lane-verdict.ts), made once per trial, of
      * the clock it runs and on the config it is verified on: only of a clock that holds its expected output, which alone
-     * the lanes can keep from being stable
+     * the lanes can keep from being stable. Where the check cannot run, the loss that says so (`sharedLaneLossesOf`).
      */
-    const shared_lane_losses_of = new Map<Trial, SharedLaneLoss[]>();
-    const sharedLaneLosses = (trial: Trial): SharedLaneLoss[] => {
+    const shared_lane_losses_of = new Map<Trial, readonly ClockSharedLaneLoss[]>();
+    const sharedLaneLosses = (trial: Trial): readonly ClockSharedLaneLoss[] => {
         if (!trial.held) return [];
         if (!shared_lane_losses_of.has(trial)) {
             const on = used.planned_on ?? config;
-            let judged;
-            try {
-                judged = judgeSharedLanes({ ...on, overrides: { ...on.overrides, terminal_swing_count: trial.result.used_terminal_swing_count } },
-                    trial.result.clock_windows, trial.clock_window_cycle, logger);
-            } catch (error) {
-                if (isInternalError(error)) throw error;
-                logger.warn(`Clock "${label}": the lanes its copies share could not be checked: ${error instanceof Error ? error.message : String(error)}`);
-                shared_lane_losses_of.set(trial, []);
-                return [];
-            }
-            if (judged.lanes.length > 0) {
-                logger.log(`Clock "${label}": the shared lanes ${judged.lanes.join(", ")}: the refill arithmetic says ${judged.fast_check_passes ? "they refill in time" : "they may run short"}; `
-                    + `with every copy on them, ${judged.losses.length === 0 ? "no copy loses swings" : `${judged.losses.length} takers lose swings`}`);
-            }
-            shared_lane_losses_of.set(trial, judged.losses);
+            shared_lane_losses_of.set(trial, sharedLaneLossesOf(() => judgeSharedLanes({ ...on, overrides: { ...on.overrides, terminal_swing_count: trial.result.used_terminal_swing_count } },
+                trial.result.clock_windows, trial.clock_window_cycle, logger), label, logger));
         }
         return shared_lane_losses_of.get(trial)!;
     };
@@ -1093,7 +1080,7 @@ function runAlternativeOf(
      * them off (`overrides.disturbance_trials_on_copies`); null where they are not made
      */
     const copies_trials_of = new Map<Trial, CopiesTrialVerdict | null>();
-    const copiesTrial = (trial: Trial, shared_lane_losses: readonly SharedLaneLoss[]): CopiesTrialVerdict | null => {
+    const copiesTrial = (trial: Trial, shared_lane_losses: readonly ClockSharedLaneLoss[]): CopiesTrialVerdict | null => {
         if (config.overrides?.disturbance_trials_on_copies === false || !trial.held || shared_lane_losses.length > 0
             || trial.loss.disturbance_trial?.survives !== true) return null;
         if (!copies_trials_of.has(trial)) {
@@ -1158,7 +1145,7 @@ function runAlternativeOf(
             items_per_second: itemsPerSecondOverCopies(achieved_output_items, trial.clock_window_cycle, copies),
             wake_ups_per_minute: as_built?.wake_ups?.wake_ups_per_minute ?? null,
             signals_per_minute: as_built?.wake_ups === undefined ? null : signalsPerMinuteOf(as_built.counters, row.result.blueprint, row.result.chest_drills, trial.clock_window_cycle),
-            start_dependence: trial.start_dependence, ...(shared_lane_losses.length > 0 && { shared_lane_losses }),
+            start_dependence: trial.start_dependence, ...(shared_lane_losses.length > 0 && { shared_lane_losses: [...shared_lane_losses] }),
             ...loopStockBoundOf(config, row.result, trial.clock_window_cycle) };
         const listed_strategy = strategyListedAs(strategy, row.listing ?? {});
         const clock = { id: alternativeIdOf(listed_strategy, definition), maker: row.id, label: row.label, description, result: row.result, ...(row.rounded && { rounded: row.rounded }),
@@ -1242,9 +1229,35 @@ function runAlternativeOf(
     })] };
 }
 
-/** The sentence for a clock under which a copy loses swings on a lane the copies share, with a space before it; empty for any other */
-function sharedLaneLossNote(losses: readonly SharedLaneLoss[]): string {
-    return losses.length === 0 ? "" : ` It is not stable on a lane its copies share. ${losses[0].text}`;
+/**
+ * The sentence for a clock under which a copy loses swings on a lane the copies share, or whose shared lanes could not be
+ * checked, with a space before it; empty for any other
+ */
+function sharedLaneLossNote(losses: readonly ClockSharedLaneLoss[]): string {
+    if (losses.length === 0) return "";
+    return isNotChecked(losses[0]) ? ` It is not counted as stable. ${losses[0].text}` : ` It is not stable on a lane its copies share. ${losses[0].text}`;
+}
+
+/**
+ * The shared-lane losses of one clock as `judge` (the check of the lanes its copies share) finds them, the log line
+ * written. Where the check stops with an error, the clock is not taken to hold on those lanes: its one loss says that
+ * they could not be checked, and why. An internal error of the generator fails the generation.
+ */
+export function sharedLaneLossesOf(judge: () => SharedLaneJudgement, label: string, logger: Logger): readonly ClockSharedLaneLoss[] {
+    let judged: SharedLaneJudgement;
+    try {
+        judged = judge();
+    } catch (error) {
+        if (isInternalError(error)) throw error;
+        const reason = error instanceof Error ? error.message : String(error);
+        logger.warn(`Clock "${label}": the lanes its copies share could not be checked: ${reason}`);
+        return [sharedLanesNotChecked(reason)];
+    }
+    if (judged.lanes.length > 0) {
+        logger.log(`Clock "${label}": the shared lanes ${judged.lanes.join(", ")}: the refill arithmetic says ${judged.fast_check_passes ? "they refill in time" : "they may run short"}; `
+            + `with every copy on them, ${judged.losses.length === 0 ? "no copy loses swings" : `${judged.losses.length} takers lose swings`}`);
+    }
+    return judged.losses;
 }
 
 /** A share as a percentage the labels print: "0.02%", "1.14%", "under 0.01%" */

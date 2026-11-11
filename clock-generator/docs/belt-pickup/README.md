@@ -4,6 +4,7 @@
 - [Diagram glossary](glossary.md): side pickups, front approaches, through supply and test conditions.
 - [Experiment findings](experiments.md): coverage, measured patterns and simulator disagreements.
 - [Capture and configuration](capture.md): Sidecar provenance, supported models and saved-data handling.
+- [Lane ends](lane-ends.md): what happens to the items at the end of a lane, how to state it, and two layouts.
 
 The [simulator guide](../simulator.md#picking-up-from-moving-belts-and-underground-endpoints) describes implemented
 behavior. The [mechanics fixtures](../../tests/game/mechanics/belt-pickup/README.md) provide screenshots and

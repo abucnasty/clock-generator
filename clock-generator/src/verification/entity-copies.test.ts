@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { machineGroups, matchCopies } from "./entity-copies";
+import { machineGroups, matchCopies, partConfigOf } from "./entity-copies";
 import { parseRecording } from "./recording";
 import { Config } from "../config";
 
@@ -169,5 +169,42 @@ describe("matching a build that holds the config more than once", () => {
     test("a copy with a machine short is not counted a copy", () => {
         const result = matchCopies(build([...gears.slice(0, 2), [3, "gear"]], [...copy(1, 2), [belt(1), machine(3)]]), config);
         expect(result.copies).toHaveLength(1);
+    });
+
+    describe("with a part copy asked for", () => {
+        // a part copy of the config: the gear machine and the inserter that feeds it from the ore belt
+        const part = new Set(["machine:1", "inserter:1", "belt:1", "belt:2"]);
+
+        test("the config cut down to a part copy keeps its entities with their ids", () => {
+            const cut = partConfigOf(config, part);
+            expect(cut.machines.map(m => m.id)).toEqual([1]);
+            expect(cut.inserters.map(i => i.id)).toEqual([1]);
+            expect(cut.belts).toHaveLength(2);
+        });
+
+        test("finds the whole copies and a group that is the part copy, which joins the merged match", () => {
+            const recording = build([...gears.slice(0, 4), [5, "gear"]], [...copy(1, 2), ...copy(3, 4), [belt(1), machine(5)]]);
+            const result = matchCopies(recording, config, [part]);
+            expect(result.copies).toHaveLength(2);
+            expect(result.parts?.map(it => [...it.match.machines])).toEqual([[[5, 1]]]);
+            expect(result.others).toEqual([]);
+            expect(result.merged.unmatched_recorded_machines).toEqual([]);
+            expect(result.merged.unmatched_recorded_inserters).toEqual([]);
+        });
+
+        test("counts the whole copies however few, and lists a group that is neither", () => {
+            // one whole copy and a product machine alone: no part copy
+            const recording = build([...gears.slice(0, 2), [5, "product"]], [...copy(1, 2), [machine(5), belt(2)]]);
+            const result = matchCopies(recording, config, [part]);
+            expect(result.copies).toHaveLength(1);
+            expect(result.parts).toEqual([]);
+            expect(result.others?.map(group => group.machines.map(m => m.id))).toEqual([[5]]);
+            expect(result.merged.unmatched_recorded_machines).toEqual([5]);
+        });
+
+        test("finds two part copies where the build has two", () => {
+            const recording = build([...gears.slice(0, 4), [5, "gear"], [6, "gear"]], [...copy(1, 2), ...copy(3, 4), [belt(1), machine(5)], [belt(1), machine(6)]]);
+            expect(matchCopies(recording, config, [part]).parts).toHaveLength(2);
+        });
     });
 });

@@ -5,6 +5,7 @@ import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { Config } from "../config/schema";
 import { quiet, withoutSharedLaneFacts } from "./generate-blueprint-test-helpers";
+import { isNotChecked, SharedLaneLoss } from "./shared-lane-verdict";
 
 /** The config with the lanes it names (by "belt/lane") stated as dead ends, and their belts stating that their items move east */
 function deadEnded(config: Config, lanes: string[], flow_direction?: 4): Config {
@@ -28,8 +29,10 @@ describe("the copies of a build that share dead-ended lanes", () => {
     it("make a clock unstable under which a copy loses swings on the lane, naming the lane and the copy", () => {
         const takt = alternative("takt_batches_observed");
         expect(takt.verdict).toBe("unstable");
-        expect(new Set(takt.assessment.shared_lane_losses?.map(loss => loss.copy))).toEqual(new Set([2]));
-        expect(takt.assessment.shared_lane_losses?.slice(0, 1).map(loss => [loss.belt_id, loss.lane, loss.copy, loss.inserter_id])).toEqual([[2, 1, 2, 3]]);
+        const losses = (takt.assessment.shared_lane_losses ?? []).filter((loss): loss is SharedLaneLoss => !isNotChecked(loss));
+        expect(losses).toHaveLength(takt.assessment.shared_lane_losses?.length ?? 0);
+        expect(new Set(losses.map(loss => loss.copy))).toEqual(new Set([2]));
+        expect(losses.slice(0, 1).map(loss => [loss.belt_id, loss.lane, loss.copy, loss.inserter_id])).toEqual([[2, 1, 2, 3]]);
         expect(takt.description).toContain("It is not stable on a lane its copies share. Lane 1 of belt 2 ends in a dead end. The 5.5 copies take "
             + "advanced circuit from it. When the items move east, copy 2 from the entry does not get sufficient items.");
     });

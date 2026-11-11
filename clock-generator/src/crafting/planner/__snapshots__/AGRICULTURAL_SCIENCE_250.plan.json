@@ -49,8 +49,8 @@
         "inserter:8/pentapod-egg",
         "inserter:9/pentapod-egg",
         "inserter:10/pentapod-egg",
-        "inserter:11/bioflux",
         "inserter:11/nutrients",
+        "inserter:11/bioflux",
         "inserter:12/agricultural-science-pack"
       ],
       "window_cycles": [
@@ -61,7 +61,7 @@
         {"swings":3,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":288,"denominator":5},"cycles":25,"window_cycle_ticks":1440,"kept":true},
         {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":192,"denominator":5},"cycles":25,"window_cycle_ticks":960,"kept":true},
         {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":96,"denominator":5},"cycles":25,"window_cycle_ticks":480,"kept":true},
-        {"swings":5,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":96,"denominator":1},"cycles":5,"window_cycle_ticks":480,"kept":true}
+        {"swings":4,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":384,"denominator":5},"cycles":25,"window_cycle_ticks":1920,"kept":true}
       ],
       "utilization": [
         {

@@ -465,6 +465,40 @@ export class SharedLaneSupplyError extends Error {
     }
 }
 
+/** A belt whose stated flow direction is across the copy spacing, with the lanes of it that the copies share */
+export interface FlowAcrossCopySpacingIssue {
+    belt_id: number;
+    /** The belt's `flow_direction` as the config states it */
+    flow_direction: 0 | 4 | 8 | 12;
+    lanes: (1 | 2)[];
+}
+
+const DIRECTION_WORDS = { 0: 'north', 4: 'east', 8: 'south', 12: 'west' } as const;
+
+/**
+ * A belt states that its items move across the copy spacing, on a lane the copies share: the copies stand along one axis
+ * (`copy_offset`) and the belt runs along the other, so the copies cannot stand one after the other along its lanes.
+ */
+export class FlowAcrossCopySpacingError extends Error {
+    public readonly issues: FlowAcrossCopySpacingIssue[];
+
+    constructor(issues: FlowAcrossCopySpacingIssue[], copyOffset: { x: number; y: number }) {
+        super(FlowAcrossCopySpacingError.formatMessage(issues, copyOffset));
+        this.name = 'FlowAcrossCopySpacingError';
+        this.issues = issues;
+    }
+
+    private static formatMessage(issues: FlowAcrossCopySpacingIssue[], offset: { x: number; y: number }): string {
+        // across a cardinal flow, the offset has no part along it: it lies on the other axis
+        const axis = offset.y === 0 ? 'x' : 'y';
+        const along = axis === 'x' ? '4 (east) or 12 (west)' : '0 (north) or 8 (south)';
+        const belts = issues.map(issue => `Belt ${issue.belt_id} states flow_direction ${issue.flow_direction} (${DIRECTION_WORDS[issue.flow_direction]}), `
+            + `and the copies share ${describeLanes({ belt_id: issue.belt_id, lanes: issue.lanes })}.`);
+        return `${belts.join(' ')} That is across the copy spacing: copy_offset (${offset.x}, ${offset.y}) puts the copies along ${axis}. `
+            + `State the way the items move along the row of copies, ${along}, or remove flow_direction from the belt.`;
+    }
+}
+
 // ============================================================================
 // Feasibility (crafting/feasibility/): a build no clock can carry
 // ============================================================================

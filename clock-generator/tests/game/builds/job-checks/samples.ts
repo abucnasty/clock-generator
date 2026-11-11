@@ -91,14 +91,8 @@ const agriculturalScience: JobCheck[] = [
             expect(generated.alternatives.filter(a => /subtick|rounded/.test(a.label)).map(a => a.label)).toEqual([]);
         },
     },
-    {
-        name: 'the 5-swing clock leaves the inserters of the egg loop always on',
-        run: ({ generated }) => {
-            const five_swings = byMaker(generated, 'planned-belt-slack');
-            expect(five_swings.result.loop_windows?.inserter_ids.slice().sort()).toEqual(['inserter:10', 'inserter:9']);
-            expect(five_swings.result.loop_windows?.in_loop_ids).toBeUndefined();
-        },
-    },
+    // the 5-swing clock leaving the inserters of the egg loop always on is held on the sample's config before its five copies, where
+    // the loop's windows show: src/crafting/agricultural-science-loop-windows.generation.test.ts
     {
         name: 'can be run on its clock alone for a few periods, with what every machine and inserter holds after each tick',
         run: ({ config, generated }) => {

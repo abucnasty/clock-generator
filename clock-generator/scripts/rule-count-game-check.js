@@ -31,7 +31,7 @@ const SCAFFOLDS = {
     LDS_240: { scaffold: "intermediates/lds/lds-240.scaffold", warmup: 3600 },
     // the egg loop cannot start itself, so the egg machines are given eggs to begin with, as the game tests do
     AGRICULTURAL_SCIENCE_250: {
-        scaffold: "science/agricultural/agricultural-250.scaffold", warmup: 300,
+        scaffold: "science/agricultural/agricultural-250.scaffold", warmup: 300, copies: 5,
         seed: [{ target: { recipe: "pentapod-egg" }, item: "pentapod-egg", count: 200 }],
     },
 };
