@@ -128,7 +128,7 @@ function insert(line: Line, stack: Stack): void {
     line.stacks.splice(index, 0, stack);
 }
 
-/** The per-tick model of the lines of one layout. Nothing outside its tests calls it yet. */
+/** The per-tick model of the lines of one layout. The run of the copies moves an output belt with it (crafting/output-belt-run.ts). */
 export class JoinModel {
     private readonly lines = new Map<string, Line>();
     private readonly order: Line[];
@@ -216,6 +216,11 @@ export class JoinModel {
         const all: JoinStack[] = [];
         for (const line of this.lines.values()) for (const stack of line.stacks) all.push({ id: stack.id, line: line.id, position: stack.position });
         return all.sort((a, b) => a.id - b.id);
+    }
+
+    /** The positions of the stacks on one line, front first: what `stacks` gives for that line, without the others */
+    positionsOn(id: string): number[] {
+        return this.line(id).stacks.map(stack => stack.position);
     }
 
     private line(id: string): Line {

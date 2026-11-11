@@ -3,7 +3,8 @@ import { z } from "zod";
 /**
  * The output belt of a build: the belts from the copies' output inserters to the outlet, stated in tiles. A config states
  * it in `output_belt`; this file holds its schema, the checks that refuse what the generator does not model, and the
- * geometry derived from it. The generator does not read the section yet: nothing here changes a clock.
+ * geometry derived from it. The run of the copies moves the output on it (crafting/output-belt-run.ts), on the lines that
+ * entities/belt/join/output-belt-join.ts makes from this geometry.
  *
  * The section, in its words:
  * - The **side belt** is the belt that a copy's output inserter drops on. It side-loads onto the output belt. Every copy
@@ -189,6 +190,10 @@ export interface SideLoadGeometry {
     lanes: { sender_lane: BeltLane; passes: boolean; side_load_point?: number }[];
     /** Where the side load is stated */
     path: (string | number)[];
+    /** The line of the receiving lane whose tile takes the side load: it ends at the end of that tile */
+    receiver_line?: string;
+    /** The sender's last line on each lane: a side belt's line, or the line of the stretch to its side load */
+    sender_lines?: Record<BeltLane, string>;
 }
 
 export interface OutputBeltGeometry {
@@ -197,9 +202,11 @@ export interface OutputBeltGeometry {
     stretches: StretchGeometry[];
     lines: LaneLine[];
     side_loads: SideLoadGeometry[];
-    drops: { copy: number; stretch: number; lane: BeltLane; tile: number; end_at: Lanes }[];
+    /** Each drop onto a stretch, with the line that ends at the end of the drop's tile */
+    drops: { copy: number; stretch: number; lane: BeltLane; tile: number; end_at: Lanes; line?: string }[];
     splitter?: { input_priority: BeltLane; output_priority: BeltLane; inputs: { side: BeltLane; stretch: number }[]; outputs: { side: BeltLane; stretch: number }[] };
-    outlets: { stretch: number; tile: number; end_at: Lanes }[];
+    /** The outlet, with the line of each lane that ends at it */
+    outlets: { stretch: number; tile: number; end_at: Lanes; lines?: Record<BeltLane, string> }[];
 }
 
 /** The length of a stretch's first tile, which its first point is on */
@@ -394,11 +401,26 @@ export function outputBeltGeometry(belt: OutputBelt, copy_spacing: number): Outp
 
     const side_belt = belt.side_belt === undefined || sideBeltEnd === undefined ? undefined
         : { lane: belt.side_belt.lane, drop_tile_end: STRAIGHT_TILE, line_end: sideBeltEnd };
+    // the lines each join, drop and outlet is at, by the names above
+    const lastLineOf = (n: number, lane: BeltLane) => {
+        const places = stretches[n - 1].places;
+        return lineName(n, lane, places[places.length - 1].name, endName(n));
+    };
+    const byLane = (name: (lane: BeltLane) => string) => ({ left: name("left"), right: name("right") });
+    const named_loads = side_loads.map(load => ({
+        ...load,
+        receiver_line: receivingLine(load.sender)?.line,
+        sender_lines: byLane(lane => "side_belt_of_copy" in load.sender ? `side belt of copy ${load.sender.side_belt_of_copy} ${lane} lane`
+            : lastLineOf((load.sender as { stretch: number }).stretch, lane)),
+    }));
+    const named_drops = drops.map(drop => ({ ...drop,
+        line: lineAt(drop.stretch, drop.lane, stretches[drop.stretch - 1].places.findIndex(place => place.name === `drop of copy ${drop.copy}`)) }));
+    const named_outlets = outlets.map(outlet => ({ ...outlet, lines: byLane(lane => lastLineOf(outlet.stretch, lane)) }));
     return {
         ...(side_belt && { side_belt }),
-        stretches, lines, side_loads, drops,
+        stretches, lines, side_loads: named_loads, drops: named_drops,
         ...(belt.splitter && { splitter: { ...belt.splitter, inputs: splitterInputs, outputs: splitterOutputs } }),
-        outlets,
+        outlets: named_outlets,
     };
 }
 
