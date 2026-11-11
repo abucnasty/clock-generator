@@ -192,10 +192,16 @@ describe("a splitter", () => {
         expect(rows[1]).toEqual([["out-left1", 63], ["out-right1", 0], ["out-right1", 64], ["out-right1", 127]]);
     });
 
-    test("an output does not take a stack whose spot would be more than 64 behind its natural spot", () => {
+    test("past its back end, an output takes a stack at the back end only when the stack's natural spot is at most 64 before it", () => {
         const rows = run(new JoinModel(splitterLayout("right", "right", { right: true })), 1,
             { 0: { put_ons: [...standing("out-right1", [0, 64]), before("in-left1", 35)] } });
         expect(rows[1]).toEqual([["out-left1", 48], ["out-right1", 0], ["out-right1", 64]]);
+    });
+
+    test("an output takes a stack 64 behind its last stack when that is on the output line, however far behind its natural spot", () => {
+        const rows = run(new JoinModel(splitterLayout("right", "right")), 1, { 0: { put_ons: [after("out-right1", 95), before("in-left1", 32)] } });
+        expect(rows[0]).toEqual([["in-left1", 0], ["out-right1", 95]]);
+        expect(rows[1]).toEqual([["out-right1", 63], ["out-right1", 127]]);
     });
 
     test("a stack that no output takes stands at the end of its input line, and the stacks behind it keep 64 behind it", () => {
