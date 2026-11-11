@@ -26,7 +26,7 @@ export interface ShapeEntity {
     chest?: "end" | "inserter";
 }
 
-export type ShapeName = "belt" | "exit" | "entrance" | "curve" | "splitter" | "loop";
+export type ShapeName = "belt" | "exit" | "entrance" | "curve" | "splitter" | "loop" | "loop-mirrored";
 
 const belt = (x: number, y: number, direction?: number): ShapeEntity => ({ name: "turbo-transport-belt", x: x + 0.5, y: y + 0.5, direction });
 const underground = (x: number, y: number, type: "input" | "output", direction = 4): ShapeEntity =>
@@ -40,6 +40,10 @@ const range = (from: number, to: number) => Array.from({ length: to - from + 1 }
 
 /** The two side belts of the three straight shapes: from the north onto row 4 heading south, from the south onto row 9 heading north */
 const SIDE_BELTS: ShapeEntity[] = [...range(0, 3).map(y => belt(5, y, 8)), ...range(10, 13).map(y => belt(5, y, 0))];
+
+/** The loop's entities mirrored north to south (rows 0 to 5): its splitter's loop is on the right output */
+const mirrored = (entities: ShapeEntity[]): ShapeEntity[] => entities.map(e =>
+    ({ ...e, y: 6 - e.y, direction: e.direction === 0 ? 8 : e.direction === 8 ? 0 : e.direction }));
 
 /** The entities of each shape */
 export const SHAPES: Record<ShapeName, ShapeEntity[]> = {
@@ -64,7 +68,9 @@ export const SHAPES: Record<ShapeName, ShapeEntity[]> = {
         belt(5, 1, 8), belt(5, 2, 4), { name: "turbo-splitter", x: 6.5, y: 3, direction: 4 }, belt(7, 3, 4), belt(8, 3, 4),
         ...loaderAndChest(10, 3), belt(7, 2, 0), belt(7, 1, 0), belt(7, 0, 12), belt(6, 0, 8), underground(6, 1, "input", 8),
         underground(6, 4, "output", 8), belt(6, 5, 4), belt(7, 5, 0), belt(7, 4, 0)],
+    "loop-mirrored": [],
 };
+SHAPES["loop-mirrored"] = mirrored(SHAPES.loop);
 
 /** Script inserts of one stream: `count` stacks of 4, every `every` ticks from `first`, at `spot` on the line (default its length less 1) */
 export interface Stream {
@@ -218,11 +224,30 @@ const SHUT_OUTPUT: JoinCopy[] = [
             about: `the output with the priority shut from the build; ${c.about}` }));
     }),
     { name: "loop-left-input-shut-end", shape: "loop", kept: false, priority: ["right", "right"],
-        about: "only the left input fed (it has no priority); the right output's end shut from the build and opened at 400. Not kept: the game differs from the model from tick 263 (README.md)",
+        about: "only the left input fed (it has no priority); the right output's end shut from the build and opened at 400",
         streams: lanes("4,1", 121, 2, 200), ends: [{ t: 0, action: "block", chests: [[11, 3]] }, { t: 400, action: "release", chests: [[11, 3]] }] },
 ];
 
-export const COPIES: JoinCopy[] = [...KEPT, ...SPLITTER, ...BOUNDARY, ...SHUT_OUTPUT];
+/**
+ * The output puts a head behind the stack ahead on its path, also on the line after the output line. Read from
+ * `loop-left-input-shut-end`; held out: the loop mirrored (both priorities left, the loop on the right output, only
+ * the right input fed, the left output's end shut and opened at 400), and the plain splitter with the end of one output
+ * shut and opened at 400, fed on one lane of the input on that side (both priorities on that side) with its stacks at
+ * four phases (insert spots 255, 247, 239, 231).
+ */
+const PATH: JoinCopy[] = [
+    { name: "loop-mirrored-right-input-shut-end", shape: "loop-mirrored", kept: false, priority: ["left", "left"],
+        about: "the loop mirrored: only the right input fed (it has no priority); the left output's end shut from the build and opened at 400",
+        streams: lanes("4,4", 121, 2, 200), ends: [{ t: 0, action: "block", chests: [[11, 2]] }, { t: 400, action: "release", chests: [[11, 2]] }] },
+    ...(["left", "right"] as const).flatMap(side => [1, 2].flatMap(lane => [255, 247, 239, 231].map((spot): JoinCopy => ({
+        name: `splitter-queue-${side}-lane-${lane}-spot-${spot}`, shape: "splitter", kept: false, priority: [side, side],
+        about: `the ${side} output's end shut from the build and opened at 400; lane ${lane} of the ${side} input fed at ${spot}`,
+        streams: [stream(`0,${side === "left" ? 0 : 1}/${lane}`, 121, 2, 200, spot)],
+        ends: [{ t: 0, action: "block", chests: [[19, side === "left" ? 0 : 1]] }, { t: 400, action: "release", chests: [[19, side === "left" ? 0 : 1]] }],
+    })))),
+];
+
+export const COPIES: JoinCopy[] = [...KEPT, ...SPLITTER, ...BOUNDARY, ...SHUT_OUTPUT, ...PATH];
 
 /** The ticks of a stream's inserts */
 export const streamTicks = (s: Stream): number[] => Array.from({ length: s.count }, (_, i) => s.first + i * s.every);
@@ -313,6 +338,27 @@ export function layoutOf(copy: JoinCopy): JoinLayout {
             lines.push({ id: id(17, y, lane), length: LOADER_LINE_LENGTH, end: "loader" });
         }
         return { lines, splitters: [{ ...splitterLines(8, 0), input_priority: copy.priority![0], output_priority: copy.priority![1] }] };
+    }
+    case "loop-mirrored": {
+        // the loop's lines mirrored: a piece of one row at row 5 - y (the splitter, two rows high, keeps its rows), and
+        // its lanes swapped (lane 1 is the left lane: north on a belt heading east, and south once mirrored)
+        const loop = layoutOf({ ...copy, shape: "loop", priority: undefined });
+        const map = (line: string) => {
+            const [, x, y, n] = line.match(/^(\d+),(\d+)\/(\d+)$/)!.map(Number);
+            // the only piece at (6,2) is the splitter: its sides and lanes swap
+            if (x === 6 && y === 2) return id(x, y, [4, 3, 2, 1, 8, 7, 6, 5][n - 1]);
+            return id(x, 5 - y, n % 2 === 1 ? n + 1 : n - 1);
+        };
+        const sp = loop.splitters![0];
+        return {
+            lines: loop.lines.map(line => ({ ...line, id: map(line.id), feeds: line.feeds && map(line.feeds) })),
+            side_loads: loop.side_loads!.map(load => ({ ...load, sender: map(load.sender), receiver: map(load.receiver) })),
+            splitters: [{
+                inputs: { left: [map(sp.inputs.right[1]), map(sp.inputs.right[0])], right: [map(sp.inputs.left[1]), map(sp.inputs.left[0])] },
+                outputs: { left: [map(sp.outputs.right[1]), map(sp.outputs.right[0])], right: [map(sp.outputs.left[1]), map(sp.outputs.left[0])] },
+                input_priority: "left", output_priority: "left",
+            }],
+        };
     }
     case "loop": {
         for (const lane of [1, 2]) {
