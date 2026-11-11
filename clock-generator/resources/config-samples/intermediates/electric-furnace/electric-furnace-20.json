@@ -2,7 +2,11 @@
   "setpoint": {
     "recipe": "electric-furnace",
     "items_per_second": 20,
-    "copies": 2
+    "copies": 2,
+    "copy_offset": {
+      "x": 12,
+      "y": 0
+    }
   },
   "machines": [
     {
@@ -166,14 +170,14 @@
     {
       "id": 1,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
           "ingredient": "advanced-circuit",
-          "stack_size": 4
-        },
-        {
-          "ingredient": "advanced-circuit",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         }
       ]
     },
