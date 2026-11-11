@@ -69,6 +69,15 @@ splitter with "none" for a priority.
    shut, a right input's head at 18 went onto the left output at 63). The 600-tick recording's heads that moved to 127
    past the back end were all of the input with the priority: the shut-output copy with both priorities right (tick
    138), and the loop copy (the right input, ticks 49, 54 and 56). Checked: the follow-up run, 9 of 9 held-out copies.
+   **The last stack is the stack ahead on the head's path** (written after the follow-up run, before its second
+   follow-up run). As rule 1 says for every stack, the stack ahead may be on the line after the output line: its
+   position there less the output line's length. The head goes 64 behind it, or to its own spot if that is further on;
+   the rest of this rule stays. Read: `loop-left-input-shut-end` at tick 263. A head of the left input at 3 (its own spot
+   48) went onto the left output at 61, 64 behind a stack at 292 of 295 on the loop's first line. The other placements
+   of the model that look for the stack ahead: a stack that moves (rule 1) and a landing side head (rule 2) look past
+   their line's end, along the lines it feeds. A put-on is put where the game shows it, with no look at the stacks near
+   it. A loader's line has no line after it. A splitter's input line does not look at its outputs (rule 8, read from the
+   600-tick recording).
 5. **Input priority.** On each lane, the head of the input that has the priority goes first. The other input's head
    comes after it, behind it. Read: the copies with both inputs full, tick 70.
 6. **Both inputs full, both outputs free: each input keeps its own output.** This follows from 4 and 5. After the
