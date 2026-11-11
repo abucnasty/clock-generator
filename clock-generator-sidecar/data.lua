@@ -15,17 +15,19 @@ data:extend({
             border_color = { r = 0, g = 1, b = 0.5 },
             cursor_box_type = "copy",
             -- any-entity, kept to the types below: "buildable-type" takes buildings only, which leaves out cars, tanks
-            -- and cargo wagons (rolling stock and vehicles are not buildings)
+            -- and cargo wagons (rolling stock and vehicles are not buildings). Loaders are in it for a line that ends
+            -- in a loader: the export reads the end of the line from the loader and the chest it loads into.
             mode = { "any-entity", "same-force" },
-            entity_type_filters = { "assembling-machine", "furnace", "mining-drill", "lab", "inserter", "transport-belt", "underground-belt", "splitter", "linked-belt", "container", "logistic-container", "infinity-container", "linked-container", "car", "cargo-wagon", "rocket-silo" }
+            entity_type_filters = { "assembling-machine", "furnace", "mining-drill", "lab", "inserter", "transport-belt", "underground-belt", "splitter", "linked-belt", "loader", "loader-1x1", "container", "logistic-container", "infinity-container", "linked-container", "car", "cargo-wagon", "rocket-silo" }
         },
         alt_select = {
             border_color = { r = 1, g = 0.5, b = 0 },
             cursor_box_type = "copy",
             -- any-entity, kept to the types below: "buildable-type" takes buildings only, which leaves out cars, tanks
-            -- and cargo wagons (rolling stock and vehicles are not buildings)
+            -- and cargo wagons (rolling stock and vehicles are not buildings). Loaders are in it for a line that ends
+            -- in a loader: the export reads the end of the line from the loader and the chest it loads into.
             mode = { "any-entity", "same-force" },
-            entity_type_filters = { "assembling-machine", "furnace", "mining-drill", "lab", "inserter", "transport-belt", "underground-belt", "splitter", "linked-belt", "container", "logistic-container", "infinity-container", "linked-container", "car", "cargo-wagon", "rocket-silo" }
+            entity_type_filters = { "assembling-machine", "furnace", "mining-drill", "lab", "inserter", "transport-belt", "underground-belt", "splitter", "linked-belt", "loader", "loader-1x1", "container", "logistic-container", "infinity-container", "linked-container", "car", "cargo-wagon", "rocket-silo" }
         },
         flags = { "only-in-cursor", "spawnable" }
     },
