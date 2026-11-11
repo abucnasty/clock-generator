@@ -419,11 +419,12 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [],
         warmup_ticks: 3600,
     },
-    // The owner's production science build (2026-11-05): one science assembler (legendary, 63.0078) fed rails by a rail assembler
-    // (5 beacons, 46.7969), whose steel comes from one foundry and whose iron sticks come from another, both on molten iron from
-    // infinity pipes; a drill drops stone straight into the rail assembler. Electric furnaces and productivity modules come on one
-    // backed-up turbo belt (one lane each) from two infinity chests and one inserter takes both; the packs go onto a moving belt
-    // into a void chest. 17.14 a second from one copy, 120 over seven.
+    // abucnasty's production science build (2026-11-05), one copy of it as abucnasty gave it (2026-11-10): one science assembler
+    // (legendary, 63.0078) fed rails by a rail assembler (four legendary speed modules, 2 beacons: 46.3713), whose steel comes from
+    // one foundry and whose iron sticks come from another, both on molten iron from infinity pipes; a drill drops stone straight
+    // into the rail assembler. Electric furnaces and productivity modules come on one turbo belt (one lane each) from two infinity
+    // chests; it ends at an underground entrance with nothing beyond, and one inserter takes both. The packs go onto a belt that
+    // runs through an underground belt to a loader into a void chest. 17.14 a second from one copy, 120 over seven, 10 tiles apart.
     "production science with a drill into the rail assembler": {
         scaffold: path.join(SAMPLES, "science", "production", "production-120-two-belts.scaffold"),
         config: ConfigPaths.PRODUCTION_SCIENCE_120_TWO_BELTS,
@@ -541,7 +542,7 @@ afterAll(async () => {
     }
 }, 60_000);
 
-/** The clocks the values of four builds belong to (scaffold-recordings-clock-pins.json); clock-controls.test.ts checks the selection against the record, and clock-belt.generation.test.ts the build with backed-up belts */
+/** The clocks the values of five builds belong to (scaffold-recordings-clock-pins.json); clock-controls.test.ts checks the selection against the record, and clock-belt.generation.test.ts the build with backed-up belts */
 const clockPins = readControls<{ cases: Record<string, { config: string; backed_up_belts: boolean; clock_sha256: string }> }>("scaffold-recordings-clock-pins.json").cases;
 
 test("every build with a pinned clock is a build of this file", () => {

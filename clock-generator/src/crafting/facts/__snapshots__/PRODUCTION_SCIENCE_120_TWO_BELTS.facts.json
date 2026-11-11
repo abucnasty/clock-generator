@@ -81,7 +81,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -107,7 +107,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -242,10 +242,10 @@
         "recipe_or_resource": "rail",
         "prototype": "assembling-machine-3",
         "prototype_type": "assembling-machine",
-        "speed": 46.796875,
+        "speed": 46.37125,
         "energy_required": 0.5,
-        "ticks_per_craft": 0.6410684474123539,
-        "crafts_per_tick": 1.5598958333333333,
+        "ticks_per_craft": 0.6469525837668815,
+        "crafts_per_tick": 1.5457083333333332,
         "productivity": 0,
         "bonus_per_craft": 0,
         "ticks_per_bonus": 0,
@@ -253,26 +253,26 @@
           {
             "item": "stone",
             "per_craft": 1,
-            "per_second": 93.59375,
-            "per_tick": 1.5598958333333333
+            "per_second": 92.7425,
+            "per_tick": 1.5457083333333332
           },
           {
             "item": "iron-stick",
             "per_craft": 1,
-            "per_second": 93.59375,
-            "per_tick": 1.5598958333333333
+            "per_second": 92.7425,
+            "per_tick": 1.5457083333333332
           },
           {
             "item": "steel-plate",
             "per_craft": 1,
-            "per_second": 93.59375,
-            "per_tick": 1.5598958333333333
+            "per_second": 92.7425,
+            "per_tick": 1.5457083333333332
           }
         ],
-        "insertion_duration_ticks": 32.053422370617696,
+        "insertion_duration_ticks": 32.34762918834407,
         "crafts_per_second": {
-          "numerator": 2995,
-          "denominator": 32
+          "numerator": 37097,
+          "denominator": 400
         }
       },
       "yield": {
@@ -289,8 +289,8 @@
               "denominator": 1
             },
             "per_second": {
-              "numerator": 2995,
-              "denominator": 16
+              "numerator": 37097,
+              "denominator": 200
             },
             "main": true,
             "stochastic": false
