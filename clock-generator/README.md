@@ -389,6 +389,87 @@ The sidecar mod exports it for an inserter beside a straight belt, and the inser
 field for it. Without it the items are taken in the order of the inserter's `filters`, or of the machine's
 ingredients when it has none.
 
+### Output belt
+
+`output_belt` states the belts from the output inserters of the copies to the outlet, in tiles. The generator checks
+the section, but it does not use it yet. The section is for a model of the joins. A join is a belt lane that goes onto
+another belt. It is a side load or the splitter.
+
+- `side_belt`: the belt that the output inserter of each copy drops on. All the copies that have a side belt have the
+  same one. `lane` is the lane that the inserter drops on. `tiles` is the steps from the drop tile to the side load.
+  `left_curves` and `right_curves` are the curves after the drop tile.
+- `stretches`: each stretch is a run of belt. It starts where items come onto it. Its `points` are in the direction
+  of travel. Stretch 1 is the first in the list.
+- `splitter`: `input_priority` and `output_priority`, each `"left"` or `"right"`.
+
+A point is a tile where something occurs. It states one of these:
+
+- `side_load`: a list of the copies with a side belt onto this tile, or `{"stretch": n}` for a stretch onto it. State
+  each side load one time, at the point that takes it. Give `lane`, the lane that takes the items, and
+  `layout`: `side-straight` (a straight belt), `side-entrance` (an underground entrance) or `side-exit` (an underground
+  exit).
+- `drop`: the copy with an output inserter that drops onto this tile, with its `lane`.
+- `splitter_input`: the input of the splitter that the stretch ends in. `splitter_output`: the output that it starts at.
+- `lane_end: {"kind": "outlet"}`: the outlet, on the last point of its stretch.
+- Only `tiles` and curves: the last point of a stretch that side-loads onto another stretch. A `side_load` names it.
+
+`tiles` is the number of steps from the previous point to this point. Count the steps as the sidecar counts them for
+`drop_capture.tiles`:
+
+- One step for each belt entity: a belt, a curve or an end of an underground pair.
+- The tiles between the two ends of an underground pair.
+- One step for the tile that a stretch side-loads onto, one for the splitter and one for the outlet.
+
+After a list of copies, count from the last copy in the list. The copies of a list are `setpoint.copy_offset` apart
+along the stretch.
+`left_curves` and `right_curves` are the curves between the two points. The lanes are `"left"` and `"right"` in the
+direction of travel.
+
+The automation science sample of 240 per second (`AUTOMATION_SCIENCE_240`) states its output belt so:
+
+```json
+"output_belt": {
+  "side_belt": { "lane": "right", "tiles": 2, "left_curves": 1 },
+  "stretches": [
+    { "points": [
+      { "side_load": [1, 2, 3, 4], "lane": "right", "layout": "side-exit" },
+      { "tiles": 2, "right_curves": 1 } ] },
+    { "points": [
+      { "side_load": { "stretch": 1 }, "lane": "left", "layout": "side-entrance" },
+      { "tiles": 7, "drop": 5, "lane": "right" },
+      { "tiles": 11, "left_curves": 1, "right_curves": 1, "side_load": [6, 7, 8], "lane": "right", "layout": "side-exit" },
+      { "tiles": 16, "splitter_input": "right" } ] },
+    { "points": [
+      { "drop": 9, "lane": "left" },
+      { "tiles": 16, "left_curves": 1, "right_curves": 3, "splitter_input": "left" } ] },
+    { "points": [
+      { "splitter_output": "right" },
+      { "tiles": 1, "side_load": { "stretch": 5 }, "lane": "right", "layout": "side-straight" },
+      { "tiles": 2, "lane_end": { "kind": "outlet" } } ] },
+    { "points": [
+      { "splitter_output": "left" },
+      { "tiles": 12, "left_curves": 5 } ] }
+  ],
+  "splitter": { "input_priority": "right", "output_priority": "right" }
+}
+```
+
+Copies 1 to 4 side-load onto the underground exits of stretch 1, 9 tiles apart. Stretch 1 goes onto the left lane of
+stretch 2 at an underground entrance. Copy 5 drops onto stretch 2, and copies 6 to 8 side-load onto it. Copy 9 drops at
+the start of stretch 3. The two stretches go into the splitter. Stretch 4, the right output, goes to the outlet.
+Stretch 5, the left output, turns back. It side-loads onto the first tile of stretch 4.
+
+The generator does not accept these output belts. Each message tells what to state:
+
+- A stretch that starts with nothing that supplies it: a belt that comes onto the output belt from outside the build.
+- No outlet, or more than one.
+- Two side loads onto one tile.
+- A side load onto the lane that the hood of an underground closes. An exit lets the lane on the side of the items go
+  through. An entrance lets the other lane go through.
+- A last point with only its run when no `side_load` names its stretch.
+- A splitter with no priority, or with `"none"`.
+- A field that the section does not have.
+
 ### Enable Control Overrides
 
 You can override the automatic enable control logic for individual inserters and drills. This is useful when you want to manually specify when an entity should be enabled during the crafting cycle.

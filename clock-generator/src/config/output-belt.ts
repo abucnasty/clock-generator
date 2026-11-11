@@ -59,23 +59,24 @@ const SideBeltSchema = z.strictObject({
 });
 
 const PointSchema = z.strictObject({
-    tiles: z.number().int().positive().optional().describe("The steps from the previous point to this point, as the sidecar's walk counts them: "
-        + "one step for each belt piece, the tiles between the ends of an underground pair, and one step for the tile that a stretch side-loads "
-        + "onto, for the splitter and for the outlet. After a point that lists copies, count from the last copy of the list. "
-        + "The first point of a stretch has no tiles."),
+    tiles: z.number().int().positive().optional().describe("The steps from the previous point to this point, as the sidecar's walk counts them. "
+        + "Each belt entity is one step. An underground pair is the tiles between its ends. "
+        + "The tile that a stretch side-loads onto, the splitter and the outlet are one step each. "
+        + "After a point that lists copies, count from the last copy of the list. The first point of a stretch has no tiles."),
     left_curves: curvesSchema().optional().describe("The left curves between the previous point and this point."),
     right_curves: curvesSchema().optional().describe("The right curves between the previous point and this point."),
     side_load: z.union([
         z.array(z.number().int().positive()).min(1).describe("The copies whose side belts side-load onto this stretch, upstream first. "
             + "The first copy side-loads at this point, and each next copy `setpoint.copy_offset` further along the stretch."),
         z.strictObject({
-            stretch: z.number().int().positive().describe("The stretch, from 1, whose last point side-loads onto this point."),
+            stretch: z.number().int().positive().describe("The stretch, from 1, that side-loads onto this point from its last point."),
         }),
-    ]).optional().describe("What side-loads onto this point: a list of copies, or another stretch. A side load is stated once, at the point that takes it."),
+    ]).optional().describe("What side-loads onto this point: a list of copies, or another stretch. A side load is stated once, at the point that takes it. "
+        + "The first copy of a list side-loads at this point, and each next copy `setpoint.copy_offset` further along the stretch."),
     lane: laneSchema("The lane that takes the side load or the drop").optional(),
     layout: z.enum(SIDE_LOAD_LAYOUTS).optional().describe("The belt piece that takes the side load, as `pickup_layout` names it: "
         + "side-straight (a straight belt), side-entrance (an underground entrance) or side-exit (an underground exit)."),
-    drop: z.number().int().positive().describe("The copy, from 1, whose output inserter drops onto this point.").optional(),
+    drop: z.number().int().positive().describe("The copy, from 1, with the output inserter that drops onto this point.").optional(),
     splitter_input: laneSchema("The splitter's input that this stretch ends in").optional(),
     splitter_output: laneSchema("The splitter's output that this stretch starts at").optional(),
     lane_end: z.strictObject({
@@ -92,8 +93,8 @@ export const OutputBeltSchema = z.strictObject({
         points: z.array(PointSchema).min(1).describe("The points of the stretch, upstream first."),
     })).min(1).describe("The stretches of the output belt, each from where items first come onto it to where it ends. Stretch 1 is the first."),
     splitter: z.strictObject({
-        input_priority: PrioritySchema("input").describe("The input priority of the splitter: \"left\" or \"right\". \"none\" is refused."),
-        output_priority: PrioritySchema("output").describe("The output priority of the splitter: \"left\" or \"right\". \"none\" is refused."),
+        input_priority: PrioritySchema("input").describe("The input priority of the splitter: \"left\" or \"right\". The generator does not accept \"none\"."),
+        output_priority: PrioritySchema("output").describe("The output priority of the splitter: \"left\" or \"right\". The generator does not accept \"none\"."),
     }).optional().describe("The splitter of the output belt, with its priorities. Its inputs and outputs are the points that name them."),
 });
 
