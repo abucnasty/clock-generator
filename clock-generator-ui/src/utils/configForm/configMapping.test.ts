@@ -6,6 +6,8 @@ import { parseFormConfig } from '../../worker/formConfig';
 import { configToFormData, formDataToConfig } from './configMapping';
 import { laneFieldUpdate, machineIconName, type ConfigFormData } from './formData';
 import { applyRepeatedUnitConversion } from './repeatedUnitConversion';
+import { readSavedConfig } from '../../hooks/usePersistedConfigForm';
+import { decodeShareLink, encodeShareLink, readShareHash } from '../shareLink';
 
 const imported = {
     setpoint: { recipe: 'electronic-circuit', items_per_second: 10, copies: 1 },
@@ -81,6 +83,39 @@ describe('canonical repeated-unit form application', () => {
     });
 });
 
+describe('a config that states its output belt', () => {
+    // the site has no editor for the section: it keeps it as it was stated, as it keeps a car or a silo
+    const output_belt = {
+        side_belt: { lane: 'right', tiles: 2, left_curves: 1 },
+        stretches: [{ points: [{ side_load: [1], lane: 'right', layout: 'side-exit' }, { tiles: 3, lane_end: { kind: 'outlet' } }] }],
+    };
+    // the machines without the former `type`, which the schema reads only with the game data
+    const config = importedWith({ output_belt, machines: imported.machines.map(({ id, recipe, productivity, crafting_speed }) =>
+        ({ id, recipe, productivity, crafting_speed })) });
+
+    it('is checked by the engine as stated', () => {
+        const parsed = ConfigSchema.safeParse(config);
+        expect(parsed.error?.issues ?? []).toEqual([]);
+        expect(parsed.data!.output_belt).toEqual(output_belt);
+        expect(parseFormConfig(ConfigSchema, config).data!.output_belt).toEqual(output_belt);
+    });
+
+    it('keeps the section unchanged through the form, a saved build and a share link', async () => {
+        const form = configToFormData(config);
+        expect(form.output_belt).toEqual(output_belt);
+        expect(formDataToConfig(form).output_belt).toEqual(output_belt);
+        expect(formDataToConfig(readSavedConfig(JSON.stringify(form))!).output_belt).toEqual(output_belt);
+        const link = await encodeShareLink({ name: null, config: formDataToConfig(form) }, 'https://example.test/');
+        const shared = await decodeShareLink(readShareHash(link.slice(link.indexOf('#'))) as { version: string; data: string });
+        expect(shared.kind === 'build' && (shared.config as Config).output_belt).toEqual(output_belt);
+    });
+
+    it('leaves a config without it without it', () => {
+        expect('output_belt' in configToFormData(imported)).toBe(false);
+        expect('output_belt' in formDataToConfig(configToFormData(imported))).toBe(false);
+    });
+});
+
 describe('configToFormData', () => {
     it('gives every entity a uuid of its own', () => {
         const form = configToFormData(imported);
@@ -126,7 +161,7 @@ describe('configToFormData', () => {
         expect(strict.success).toBe(false);
         expect(!strict.success && strict.error.issues.some(issue => issue.code === 'custom' && issue.params?.editable_chest_settings === true)).toBe(true);
         const parsed = parseFormConfig(ConfigSchema, raw);
-        expect(parsed.success).toBe(true);
+        expect(parsed.error?.issues ?? []).toEqual([]);
         if (!parsed.success) return;
         expect(parsed.data.chests?.[0]).not.toHaveProperty('item_filter');
         const form = configToFormData(parsed.data);
