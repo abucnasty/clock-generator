@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import {
-    clockCountsOneAt, countedOnTheClock, disturbanceTrialsOf, judgedOnTheClock, judgedTogether, judgeRecovery, LATE_AFTER_WINDOW_CYCLES, LOSS_PLACES, LOSS_SHARES, lossId, lossLabel, lossLimitOf, lossTrialsPartOfTheWay,
+    clockCountsOneAt, countedOnTheClock, disturbanceTrialsOf, judgedCopies, judgedOnTheClock, judgedTogether, judgeRecovery, LATE_AFTER_WINDOW_CYCLES, LOSS_PLACES, LOSS_SHARES, lossId, lossLabel, lossLimitOf, lossTrialsPartOfTheWay,
     lossTrialsUntilStopped, LossOutcome, MAX_LOSS_WINDOW_CYCLES, MAX_RECOVERY_WINDOW_CYCLES, MAX_RUN_ON_WINDOW_CYCLES, reportOf, RUN_ON_EXACT_WINDOW_CYCLES,
     repeatOnTheClock, runsOn, verdictOf,
 } from "./disturbance-trial";
@@ -128,6 +128,26 @@ describe("judging a repeated state on the clock", () => {
         expect(judgedTogether(each, together, 2, 8)).toEqual({ recovers: true, recovered_after_bins: 2, proven: true, ends_in: [196, 188] });
         const short = [each[0], judgedOnTheClock(judgeRecovery([72, 96, 100, 90], 96, 2, 8), exact([96, 94], 96), 2)];
         expect(judgedTogether(short, together, 2, 8)).toMatchObject({ recovers: false, recovered_after_bins: null });
+    });
+
+    it("judges a run of the copies as runLossTrials does: each copy recounted on its own, the trial back where every copy is", () => {
+        const one = (bins: number[]): BranchBins[] => [{ bins, share_per_bin: 96, hand: 0, takes_surplus: false }];
+        // the second copy's bins read 100 and 92 from bin 2, and the clock counts 1 48 and 52 items into bins 2 and 3: 96 and 96
+        const first = [80, 96, 96, 96], second = [72, 96, 100, 92];
+        const counts = totals(second, [36, 48, 52, 48]);
+        const copies = [
+            { bins: first, branches: one(first), on_the_clock: { starts: [totals(first, [0, 0, 0, 0]).starts], marks: [totals(first, [40, 48, 48, 48]).marks] } },
+            { bins: second, branches: one(second), on_the_clock: { starts: [counts.starts], marks: [counts.marks] } },
+        ];
+        const together = first.map((items, at) => items + second[at]);
+        const run = judgedCopies(copies, together, 96, 2, 8);
+        expect(run.each.map(it => [it.recovers, it.recovered_after_bins])).toEqual([[true, 1], [true, 2]]);
+        expect(run.judged).toEqual({ recovers: true, recovered_after_bins: 2, proven: true, ends_in: [196, 188] });
+        // without the totals of the clock (a run with nothing cut, or no clock found) the copy is judged in its bins
+        const in_bins = judgedCopies([copies[0], { bins: second, branches: one(second) }], together, 96, 2, 8);
+        expect(in_bins.judged).toMatchObject({ recovers: false, recovered_after_bins: null });
+        // one copy: the trial is as that copy is, with its window cycles on the clock
+        expect(judgedCopies([copies[1]], second, 96, 2, 8).judged).toEqual({ recovers: true, recovered_after_bins: 2, proven: true, ends_in: [100, 92], ends_in_on_the_clock: [96, 96] });
     });
 
     it("leaves the run with nothing cut to its bins: it is the check of what the clock holds", () => {
