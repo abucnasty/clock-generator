@@ -710,14 +710,20 @@ BELT_SPEED_CAPTURE_DIR=.scratch/grenade-new BELT_CLOCK_CALIBRATE=1 \
 
 `utility-science-480-lds-foundry-chain-clock.game.test.ts` records the generator's recommended clock for `UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN` (480 utility science packs a second
 over 3.5 copies; the scaffold is one copy, 137.14 a second, 384 packs in a window cycle of 168 ticks) on the sample's scaffold. The clock is
-`planned-belt-slack`: the windows of `src/crafting/candidates/round-robin-polling.ts` (hands rounded up where they are fractional, the
-order of the chain of machines), made without a search. The harness wires it to the inserters of the build. The protocol is the
+the per-branch clock (`coordinated_sources`, 168 ticks, 450.34 wakeups a minute): the windows of Round-Robin Polling
+(`src/crafting/candidates/round-robin-polling.ts`: hands rounded up where they are fractional, the order of the chain of machines),
+with the coal inserter's windows taken from a part one source at a time. The harness wires it to the inserters of the build. The protocol is the
 family's with the losses the build has: 63 whole window cycles, then the coal cut for 6 window cycles (the build holds about two window cycles of it),
 the two output loaders taken away for 4 window cycles and rebuilt, and the processing units cut for 2. The probe counts the drops of the
 eight output inserters per window cycle.
 
 [utility-science-480-lds-foundry-chain-clock-controls.json](utility-science-480-lds-foundry-chain-clock-controls.json) holds the native summary and the pin of the clock
-(`clock-controls.test.ts` checks the pin, `game-runs-hold.test.ts` the run): 384 in all 63 baseline window cycles, and 384 again after each loss.
+(`clock-controls.test.ts` checks the pin, `game-runs-hold.test.ts` the run). Recorded on 2026-11-11 in Factorio 2.1.24 on the
+per-branch clock: steady at tick 7,131; over the baseline's 21 whole window cycles (3,528 ticks) the eight machines made 8,064 packs
+net, the target; the trailing minute stayed between 8,208 and 8,256 against 8,228.57; the run is back at the target after the coal
+cut, the output block and the units cut, and ends with an output stock of 240 against the baseline's lowest of 0. The entry's
+`previous` names Round-Robin Polling (493.22 wakeups a minute), which the generator still makes and which was selected before; its
+recording, made in the same way, is in the git history of the controls file.
 
 Thaeln's own clock for the build, given on 2026-10-23, was recorded on the same scaffold while the rule was written (it is a
 blueprint of five combinators with no wires to inserters, so the harness wired it): a counter of 0 to 335 (336 ticks, two cycles) and four
