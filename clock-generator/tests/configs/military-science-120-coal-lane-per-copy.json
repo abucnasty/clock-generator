@@ -1,0 +1,145 @@
+{
+  "setpoint": {
+    "recipe": "military-science-pack",
+    "items_per_second": 120,
+    "copies": 5
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "military-science-pack",
+      "productivity": 100,
+      "crafting_speed": 66.0253125
+    },
+    {
+      "id": 2,
+      "recipe": "grenade",
+      "productivity": 0,
+      "crafting_speed": 57.8125
+    },
+    {
+      "id": 3,
+      "recipe": "casting-iron",
+      "productivity": 150,
+      "crafting_speed": 112.244
+    }
+  ],
+  "inserters": [
+    {
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1
+      },
+      "stack_size": 16,
+      "overrides": {}
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "overrides": {}
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 3,
+        "near_lane": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "overrides": {}
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "stack_size": 16,
+      "filters": [
+        "coal"
+      ],
+      "overrides": {}
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "stack_size": 16,
+      "overrides": {}
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "stack_size": 16,
+      "filters": [
+        "coal"
+      ],
+      "overrides": {}
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "military-science-pack",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "coal",
+          "stack_size": 4,
+          "sharing": "one_per_copy"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "stone-wall",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "piercing-rounds-magazine",
+          "stack_size": 4
+        }
+      ]
+    }
+  ]
+}
