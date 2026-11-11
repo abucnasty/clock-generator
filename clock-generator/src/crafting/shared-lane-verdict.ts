@@ -10,6 +10,7 @@ import { handOfItem, traitsOf, traitsOfMachine } from "../entities/traits/traits
 import type { AfterInsertersTick } from "../simulation/world";
 import type { MachineState } from "../state/machine-state";
 import { SerializableClockWindows } from "./clock";
+import { machineNameOf, MACHINE_IDS, type MachineToName, type MachineWords } from "./machine-name";
 import { computeMachineTargetRates } from "./machine-target-rates";
 import { COPY_NUMBER_STRIDE } from "./sequence/build-copies";
 import { OutputCyclePlan } from "./sequence/cycle/output-cycle";
@@ -409,26 +410,37 @@ function directionWord(flow: FlowDirection): string {
 /** "1,234" */
 const counted = (value: number) => value.toLocaleString("en-US");
 
+/** How the loss texts write a machine's kind and recipe: by the game's names in a sentence, or by the ids without the game data */
+function machineWords(): MachineWords {
+    return FactorioDataService.isAvailable()
+        ? { kind: id => FactorioDataService.itemNameInSentence(id), recipe: id => FactorioDataService.recipeNameInSentence(id) }
+        : MACHINE_IDS;
+}
+
 /**
- * "In the same run, machine 2 of copy 3 is 1,536 crafts behind its target rate." The copy is named where the lane's
- * copies are, or where the copy is not the config's own.
+ * "In the same run, the electric furnace (machine 2) that makes iron plate in copy 3 is 1,536 crafts behind its target
+ * rate.", or "output inserter 4 of copy 3 ... hands behind": a machine by its kind and recipe (machine-name.ts) among
+ * the config's machines, an output inserter by its number. The copy is named where the lane's copies are, or where the
+ * copy is not the config's own.
  */
-function describeBehind(behind: BehindTarget, copies: number): string {
-    const entity = behind.kind === "machine" ? `machine ${behind.id}` : `output inserter ${behind.id}`;
-    const of_copy = copies === 1 && behind.copy === 1 ? "" : ` of copy ${behind.copy}`;
+function describeBehind(behind: BehindTarget, copies: number, machines: readonly MachineToName[]): string {
+    const named = copies === 1 && behind.copy === 1;
+    const machine = behind.kind === "machine" ? machineNameOf(behind.id, machines, machineWords()) : undefined;
+    const entity = machine !== undefined ? `the ${machine}${named ? "" : ` in copy ${behind.copy}`}`
+        : `${behind.kind === "machine" ? "machine" : "output inserter"} ${behind.id}${named ? "" : ` of copy ${behind.copy}`}`;
     const amount = behind.behind.toLocaleString("en-US", { maximumFractionDigits: 1 });
-    return `In the same run, ${entity}${of_copy} is ${amount} ${behind.kind === "machine" ? "crafts" : "hands"} behind its target rate.`;
+    return `In the same run, ${entity} is ${amount} ${behind.kind === "machine" ? "crafts" : "hands"} behind its target rate.`;
 }
 
 /**
  * "Lane 1 of belt 2 ends in a dead end. The 6 copies take advanced circuit from it. When the items move east, copy 3 from
  * the entry does not get sufficient items. Its inserter 3 takes 2,240 in 50 window cycles. With no other copy on the lane, it
- * takes 3,360. In the same run, machine 2 of copy 3 is 1,536 crafts behind its target rate." One fact a sentence; the
- * game's names of items have no plural.
+ * takes 3,360. In the same run, the electromagnetic plant (machine 2) that makes advanced circuit in copy 3 is 1,536 crafts
+ * behind its target rate." One fact a sentence; the game's names of items have no plural. `machines`: the config's.
  */
-function describeSharedLaneLoss(loss: Omit<SharedLaneLoss, "text">): string {
+function describeSharedLaneLoss(loss: Omit<SharedLaneLoss, "text">, machines: readonly MachineToName[]): string {
     if (loss.join_full !== undefined) {
-        const behind = loss.behind === undefined ? "" : ` ${describeBehind(loss.behind, loss.copies)}`;
+        const behind = loss.behind === undefined ? "" : ` ${describeBehind(loss.behind, loss.copies, machines)}`;
         return `The side belt of copy ${loss.copy} from the entry is full at its join onto the output belt. `
             + `Its output inserter waits for room in ${counted(loss.join_full.held_hands)} of its ${counted(loss.join_full.hands)} hands `
             + `in ${loss.window_cycles} window cycles.${behind}`;
@@ -439,7 +451,7 @@ function describeSharedLaneLoss(loss: Omit<SharedLaneLoss, "text">): string {
     const counts = `takes ${counted(loss.items)} in ${loss.window_cycles} window cycles.`;
     const waits = loss.side_belt_waits === undefined ? ""
         : ` Its output inserter also waits for room on its side belt in ${counted(loss.side_belt_waits.held_hands)} of its ${counted(loss.side_belt_waits.hands)} hands.`;
-    const behind = `${waits}${loss.behind === undefined ? "" : ` ${describeBehind(loss.behind, loss.copies)}`}`;
+    const behind = `${waits}${loss.behind === undefined ? "" : ` ${describeBehind(loss.behind, loss.copies, machines)}`}`;
     if (loss.copies === 1) {
         return `Lane ${loss.lane} of belt ${loss.belt_id} ${end} The build takes ${item} from it. `
             + `When the items move ${directionWord(loss.flow)}, inserter ${loss.inserter_id} does not get sufficient items. `
@@ -745,7 +757,7 @@ export function judgeSharedLanes(config: Config, clock_windows: SerializableCloc
     const shortfalls = first.flatMap(it => it.runs.flatMap(({ run }) => run.shortfalls));
     const judged = (losses: Omit<SharedLaneLoss, "text">[], longer_run: boolean): SharedLaneJudgement => ({
         // the worst first: the most items short of the run of one copy
-        losses: losses.map(loss => ({ ...loss, text: describeSharedLaneLoss(loss) })).sort((a, b) => (b.alone_items - b.items) - (a.alone_items - a.items)),
+        losses: losses.map(loss => ({ ...loss, text: describeSharedLaneLoss(loss, config.machines) })).sort((a, b) => (b.alone_items - b.items) - (a.alone_items - a.items)),
         fast_check_passes, simulated: true, longer_run, lanes: keys,
     });
     // no taker short, or one short by more than a hand, which the end of the judged span does not make: judged as it is,
