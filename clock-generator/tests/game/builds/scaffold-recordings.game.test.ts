@@ -360,13 +360,16 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     // One electromagnetic plant (legendary, five legendary productivity modules, 12 legendary beacons) on accumulators and
     // supercapacitors from one belt, its fluids from infinity pipes: 11 copies of it make 330 a second. A fully automatic config
     // (no override). The config's crafting speed is 109.475, what 12 beacons give in the game. The config states the copies 10 tiles
-    // apart and both lanes of the belt as dead ends, as the scaffold ends its belt. Recorded 2026-11-10 on the selected clock (window
-    // cycle 2,112): on this test's start (warm-up and settle) 1,056 in every window cycle checked.
+    // apart and both lanes of the belt as dead ends. The scaffold is abucnasty's two-copy blueprint at 10 tiles tiled to all 11
+    // copies (its shared beacon columns, underground belts and infinity pipes are that blueprint's own): one belt from two stack
+    // inserters a lane at infinity chests, running east past the 11 plants and ending in an underground entrance with nothing
+    // beyond. Before, the scaffold was one copy: 1,056 in every window cycle checked on the selected clock (window cycle 2,112).
     "electromagnetic science": {
         scaffold: path.join(SAMPLES, "science", "electromagnetic", "electromagnetic-330.scaffold"),
         config: ConfigPaths.ELECTROMAGNETIC_SCIENCE_330,
         seed: [],
         warmup_ticks: 3600,
+        copies: 11,
         wake_ups_open: "the game counts the first output inserter 0 wake-ups a minute, as it is never shown waiting, and the simulator 15.36, as it shows "
             + "both output inserters waiting on the machine in 1.56% of the ticks; the build moves its expected output in every period (recorded 2026-11-01: "
             + "25.6 a minute in all in the game, 41.0 in the simulator, 35.8 a minute of arm-away alarms on either side)",
