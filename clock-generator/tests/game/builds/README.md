@@ -4,7 +4,9 @@ These tests check throughput, startup and/or recovery of generated clocks. They 
 `resources/config-samples/` or the isolated pickup fixtures, without moving a general sample merely because a test
 uses it. Setup, selective execution and artifact retention are in the [game verification guide](../README.md).
 
-- `scaffold-recordings.game.test.ts`: the catalog of complete sample builds, including wakeup/recording comparisons.
+- `scaffold-recordings.game.test.ts`: the catalog of complete sample builds, including wakeup/recording comparisons. A build of
+  several copies (`copies`) is judged in every window cycle checked over the whole build, over each row of output inserters and over each
+  copy by itself, the copies found as the harness finds them to wire the clock.
 - `moving-pickup.game.test.ts`: different-item pickup geometry, moving/backed-up supply and recovery.
 - `same-item-pickup-clock.game.test.ts`: same-item lane fallback, throughput and recovery.
 - `over-hood-pickup-clock.game.test.ts`, `front-pickup-clock.game.test.ts`: the over-the-hood exit and the front

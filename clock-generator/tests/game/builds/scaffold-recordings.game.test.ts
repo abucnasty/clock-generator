@@ -7,7 +7,7 @@ import { encodeBlueprintFile } from "../../../src/blueprints/serde";
 import { ConfigPaths } from "../../../src/config/config-paths";
 import { loadConfigFromFile } from "../../../src/config/loader";
 import { generateClockAlternatives } from "../../../src/crafting/generate-blueprint";
-import { HarnessOptions, HarnessResult, HarnessSession, recordInFactorio, Seed } from "../../../src/harness/factorio-harness";
+import { HarnessOptions, HarnessResult, HarnessSession, matchBuiltCopies, recordInFactorio, Seed } from "../../../src/harness/factorio-harness";
 import { outputInserters, outputPerWindowCycle, recipesMaking } from "../../../src/harness/recording-output";
 import { composeProbeSource } from "../helpers/probe-source";
 import { clockHash, readControls } from "./clock-controls";
@@ -115,8 +115,9 @@ interface ScaffoldBuild {
     /**
      * How many times the scaffold holds the config (default 1): a build of several copies that share belts. The harness is told
      * (`HarnessOptions.copies`) and wires the clock to every copy; what the build has to make in a window cycle and in the settle's
-     * window is that of one copy times this, and every row of copies (output inserters at one height) is judged on its own too,
-     * the whole build against the target times the copies over the config's copies. The simulator's entity-by-entity comparison and
+     * window is that of one copy times this, and every row of copies (output inserters at one height) and every copy (found as the
+     * harness finds them to wire the clock) is judged on its own too, the whole build against the target times the copies over the
+     * config's copies. The simulator's entity-by-entity comparison and
      * the wake-ups are of one copy and are not made for such a build.
      */
     copies?: number;
@@ -684,19 +685,30 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             const row_of = new Map(inserter_positions.map(it => [it.unit_number, it.y]));
             const output_unit_numbers = outputInserters(result.recording, recipesMaking(config, config.setpoint.recipe)).map(it => it.unit_number!);
             const row_ys = Array.from(new Set(output_unit_numbers.map(unit => row_of.get(unit)))).filter((y): y is number => y !== undefined).sort((a, b) => a - b);
+            const outputs = outputInserters(result.recording, recipesMaking(config, config.setpoint.recipe));
+            /** What the given output inserters moved in each window cycle, as the game recorded their hands */
+            const movedPerWindowCycle = (members: typeof outputs) => window_cycles.map(window_cycle => ({ start: window_cycle.start, end: window_cycle.end, items: members.reduce((sum, inserter) => {
+                const held = inserter.samples.held_count;
+                let moved = 0;
+                for (let i = Math.max(window_cycle.start, 1); i < window_cycle.end; i++) {
+                    if (held[i] < held[i - 1]) moved += held[i - 1] - held[i];
+                }
+                return sum + moved;
+            }, 0) }));
             const rows = copies > 1 ? row_ys.map(y => {
-                const members = outputInserters(result.recording, recipesMaking(config, config.setpoint.recipe)).filter(it => row_of.get(it.unit_number!) === y);
-                return {
-                    y, output_inserters: members.length,
-                    per_window_cycle: window_cycles.map(window_cycle => ({ start: window_cycle.start, end: window_cycle.end, items: members.reduce((sum, inserter) => {
-                        const held = inserter.samples.held_count;
-                        let moved = 0;
-                        for (let i = Math.max(window_cycle.start, 1); i < window_cycle.end; i++) {
-                            if (held[i] < held[i - 1]) moved += held[i - 1] - held[i];
-                        }
-                        return sum + moved;
-                    }, 0) })),
-                };
+                const members = outputs.filter(it => row_of.get(it.unit_number!) === y);
+                return { y, output_inserters: members.length, per_window_cycle: movedPerWindowCycle(members) };
+            }) : [];
+            // a build of copies: what each copy moved in each window cycle, the copies found as the harness found them to wire the
+            // clock (machines that inserters join, matched to the config one by one), in the order of their lowest machine ids
+            const per_copy = copies > 1 ? matchBuiltCopies({
+                config: result.recording.config,
+                inserters: Object.fromEntries(result.recording.inserters.map(row => [row.id, row])),
+                machines: Object.fromEntries(result.recording.machines.map(row => [row.id, row])),
+            }, config, copies).map((unit_numbers, index) => {
+                const units = new Set(unit_numbers.values());
+                const members = outputs.filter(it => units.has(it.unit_number!));
+                return { copy: index + 1, output_inserters: members.length, per_window_cycle: movedPerWindowCycle(members) };
             }) : [];
             if (KEEP) {
                 fs.writeFileSync(`${base}.simulated.json`, JSON.stringify(simulated_run));
@@ -704,7 +716,7 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                     name, label: selected.label, verdict: selected.verdict, period: window_cycle_ticks, expected, clock_windows: selected.result.clock_windows,
                     simulation_ticks: selected.result.simulation_duration.ticks, backed_up_belts: !!build.backed_up_belts,
                     staged_start: !!build.staged_start, issues: compared?.issues ?? [], config, harness_build: result.build,
-                    harness_start: result.start, periods: window_cycles, steady, copies, expected_per_copy, rows,
+                    harness_start: result.start, periods: window_cycles, steady, copies, expected_per_copy, rows, per_copy,
                 }, null, 1));
             }
             // the build reached steady state in the game, within the ticks it may take
@@ -732,6 +744,14 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                     const row_checked = row.per_window_cycle.length > 1 ? row.per_window_cycle.slice(1) : row.per_window_cycle;
                     expect(row_checked.map(it => ({ start: it.start, items: it.items })).filter(it => it.items < row_expected - 1e-6),
                         `every one of the ${row_checked.length} periods checked of the row at y=${row.y} (${row.output_inserters} output inserters, ${per_row} copies wanted) moves ${row_expected} items of ${config.setpoint.recipe} or more`).toEqual([]);
+                }
+                // each copy on its own: a copy the others starve on a lane they share is short here, whatever the rows and the build make
+                expect(per_copy.map(it => it.output_inserters), `each of the ${copies} copies has ${copy_output_inserters} output inserters of its own`)
+                    .toEqual(per_copy.map(() => copy_output_inserters));
+                for (const copy of per_copy) {
+                    const copy_checked = copy.per_window_cycle.length > 1 ? copy.per_window_cycle.slice(1) : copy.per_window_cycle;
+                    expect(copy_checked.map(it => ({ start: it.start, items: it.items })).filter(it => it.items < expected_per_copy - 1e-6),
+                        `every one of the ${copy_checked.length} periods checked of copy ${copy.copy} of ${copies} moves ${expected_per_copy} items of ${config.setpoint.recipe} or more`).toEqual([]);
                 }
                 expect(checked.filter(it => it.items < expected - 1e-6).map(it => ({ start: it.start, items: it.items })),
                     `every one of the ${checked.length} periods checked moves ${expected} items of ${config.setpoint.recipe} or more over the ${copies} copies`).toEqual([]);
