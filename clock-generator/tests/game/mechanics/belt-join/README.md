@@ -78,6 +78,16 @@ splitter with "none" for a priority.
    their line's end, along the lines it feeds. A put-on is put where the game shows it, with no look at the stacks near
    it. A loader's line has no line after it. A splitter's input line does not look at its outputs (rule 8, read from the
    600-tick recording). Checked: the second follow-up run, the mirrored loop.
+   **The back end for the input with the priority, whatever its own spot** (written after the second follow-up run,
+   before its third; it takes the place of "at most 64 before 127" above, which was read only from heads of the input
+   without the priority). The head of the input that has the priority goes to the back end whenever the spot 64 behind
+   the stack ahead is past it and the back end is behind that stack; the head of the other input never does. Read: a
+   table of every such hand-over in the recordings that exist (build-kernel/out/back-end-table.txt outside the
+   repository; the 67 copies of the second follow-up run and the splitter copies of the 600-tick recording, 16,262
+   rows). With the back end behind the stack ahead, the 2,112 heads of the input with the priority all went to 127,
+   with their own spots from 45 to 71 and the stack ahead at 64 or 96. The 2,578 heads of the other input went onto the
+   other output (1,970) or stood (608), the stack ahead at 64, 95 or 96. With the stack ahead at 127, no head went to
+   the back end.
 5. **Input priority.** On each lane, the head of the input that has the priority goes first. The other input's head
    comes after it, behind it. Read: the copies with both inputs full, tick 70.
 6. **Both inputs full, both outputs free: each input keeps its own output.** This follows from 4 and 5. After the
