@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { ConfigPaths } from "../../config/config-paths";
+import { loadConfigFromFile } from "../../config/loader";
 import { BeltConfigSchema, Config, ConfigSchema } from "../../config/schema";
 import { beltLanesOfFacts, supplyOfLaneEnd } from "./lane";
-import { everyInputLaneIsDeadEnd, isDeadEnd, laneFactsOf } from "./lane-facts";
+import { everyInputLaneIsDeadEnd } from "./lane-ends";
+import { isDeadEnd, laneFactsOf } from "./lane-facts";
 
 type Parts = Partial<Pick<Config, "machines" | "inserters" | "belts" | "chests" | "overrides">>;
 
@@ -149,6 +152,21 @@ describe("the question about every input lane", () => {
         const overrides = { backed_up_belts };
         expect(everyInputLaneIsDeadEnd(configOf({ machines, belts, inserters: [put(1, 2)], overrides }))).toBe(backed_up_belts);
         expect(everyInputLaneIsDeadEnd(configOf({ overrides }))).toBe(backed_up_belts);
+    });
+    // the question is answered from the config's own fields, without the game data the lane facts read for their rates:
+    // it gives the ends the lane facts give, on every sample as it is and with the switch either way
+    it("gives the answer of the lane facts of every input lane, on every sample", async () => {
+        for (const [key, file] of Object.entries(ConfigPaths)) {
+            const sample = await loadConfigFromFile(file) as Config;
+            for (const backed_up_belts of [sample.overrides?.backed_up_belts, true, false]) {
+                const config = { ...sample, overrides: { ...sample.overrides, backed_up_belts } };
+                const facts = laneFactsOf(config);
+                const input_belts = config.belts.filter(belt => config.inserters.some(inserter => inserter.source.type === "belt" && inserter.source.id === belt.id));
+                const expected = input_belts.length === 0 ? backed_up_belts === true
+                    : input_belts.every(belt => ([1, 2] as const).every(lane => isDeadEnd(facts.of(belt.id, lane))));
+                expect(everyInputLaneIsDeadEnd(config), `${key} with backed_up_belts ${backed_up_belts}`).toBe(expected);
+            }
+        }
     });
 });
 

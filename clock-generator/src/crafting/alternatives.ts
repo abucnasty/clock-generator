@@ -10,7 +10,7 @@ import { Entity, EntityId } from "../entities";
 import { FactorioBlueprint } from "../blueprints/blueprint";
 import { withNetwork } from "./inserter-counters";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
-import { everyInputLaneIsDeadEnd } from "../entities/traits/lane-facts";
+import { everyInputLaneIsDeadEnd } from "../entities/traits/lane-ends";
 import { decimalOf } from "../entities/traits/ratio";
 import { machinesInOrder, traitsOf } from "../entities/traits/traits-of";
 import { Logger, defaultLogger } from "../common/logger";

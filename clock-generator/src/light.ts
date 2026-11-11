@@ -1,6 +1,6 @@
 /**
  * The values of the browser exports that need neither the simulation, the game data nor zod: the enum-like
- * constants, the status categories, the clock ranking and fp-ts's Option.
+ * constants, the status categories, the clock ranking, the lane facts a config's own fields decide and fp-ts's Option.
  *
  * A page that runs the generator in a web worker can take its values on the main thread from here, and only types
  * from `browser.ts`, so the generator itself is bundled once, in the worker. The "light entry" test in
@@ -41,6 +41,8 @@ export { combineClockAlternativeRuns, searchesAreNeeded, searchesToRun } from ".
 export { coordinatedSourcesInputOf } from "./crafting/candidates/coordinated-sources-parts";
 
 export { whyNotStable, whyNotStableClockOf } from "./crafting/why-not-stable";
+
+export { everyInputLaneIsDeadEnd } from "./entities/traits/lane-ends";
 
 export * as Option from "fp-ts/Option";
 
