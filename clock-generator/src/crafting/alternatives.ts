@@ -1230,12 +1230,14 @@ function runAlternativeOf(
 }
 
 /**
- * The sentence for a clock under which a copy loses swings on a lane the copies share, or whose shared lanes could not be
- * checked, with a space before it; empty for any other
+ * The sentence for a clock under which a copy loses swings on a lane the copies share, or is short as its side belt is full
+ * at its join onto the output belt, or whose shared lanes could not be checked, with a space before it; empty for any other
  */
 function sharedLaneLossNote(losses: readonly ClockSharedLaneLoss[]): string {
     if (losses.length === 0) return "";
-    return isNotChecked(losses[0]) ? ` It is not counted as stable. ${losses[0].text}` : ` It is not stable on a lane its copies share. ${losses[0].text}`;
+    const loss = losses[0];
+    if (isNotChecked(loss)) return ` It is not counted as stable. ${loss.text}`;
+    return loss.join_full !== undefined ? ` It is not stable on its output belt. ${loss.text}` : ` It is not stable on a lane its copies share. ${loss.text}`;
 }
 
 /**

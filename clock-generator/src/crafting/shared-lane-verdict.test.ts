@@ -251,3 +251,53 @@ describe("the logistic science build of 11 copies on two dead-ended lanes", () =
         expect(judged).toMatchObject({ losses: [], simulated: true, lanes: ["2/1", "2/2"] });
     });
 });
+
+// The automation science 240 build states its output belt. In the game (three recordings of the whole build) the clock
+// takt_batches_observed of the build (4cc378b0763b) leaves copies 4 and 8 short: their side belts fill at their joins onto
+// the output belt, and their output inserters wait. Time-Study Windows (b1490c9f2c49) keeps every copy at its rate.
+describe("a copy short because its side belt is full at its join onto the output belt", async () => {
+    const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
+    const output = [{ start: 1, end: 37 }, { start: 109, end: 145 }];
+    const clocks: Record<string, SerializableClockWindows> = {
+        takt_batches_observed: { "inserter:2": output, "inserter:1": [{ start: 13, end: 38 }, { start: 42, end: 65 }, { start: 133, end: 154 }, { start: 181, end: 193 }] },
+        time_study_windows: { "inserter:2": output, "inserter:1": [{ start: 0, end: 50 }, { start: 122, end: 149 }, { start: 159, end: 186 }, { start: 215, end: 215 }] },
+    };
+
+    it("says that the copy's join is full, not that the lane gives it too few items", () => {
+        const { losses } = judgeSharedLanes(config, clocks.takt_batches_observed, 216, quiet);
+        expect(losses.length).toBeGreaterThan(0);
+        expect([...new Set(losses.map(loss => loss.copy))].sort()).toEqual([4, 8]);
+        for (const loss of losses) {
+            expect(loss.join_full).toBeDefined();
+            expect(loss.text).toMatch(new RegExp(`^The side belt of copy ${loss.copy} from the entry is full at its join onto the output belt\\. `
+                + "Its output inserter waits for room in \\d+ of its \\d+ hands in \\d+ window cycles\\. In the same run, "));
+            expect(loss.text).not.toMatch(/does not get sufficient items/);
+        }
+    });
+
+    it("says the join is full on the clock moved by four ticks too, which the game leaves short at copies 4 and 8", () => {
+        const moved = { ...clocks.takt_batches_observed, "inserter:1": [{ start: 17, end: 42 }, { start: 46, end: 69 }, { start: 137, end: 158 }, { start: 185, end: 197 }] };
+        const { losses } = judgeSharedLanes(config, moved, 216, quiet);
+        expect([...new Set(losses.map(loss => loss.copy))].sort()).toEqual([4, 8]);
+        expect(losses.every(loss => loss.join_full !== undefined && loss.side_belt_waits === undefined)).toBe(true);
+    });
+
+    it("finds no copy short under the clock that holds every copy", () => {
+        expect(judgeSharedLanes(config, clocks.time_study_windows, 216, quiet).losses).toEqual([]);
+    });
+
+    // With one output swing a cycle, Time-Study Windows leaves copy 4 short on the input lanes with or without the output
+    // belt (inserter 1 takes 1,024 where it takes 1,040 alone; machine 1 is 10 crafts behind either way). Its side belt
+    // holds 2 of its 128 hands, which is not the cause.
+    it("names the input lane where the output belt does not make the copy further behind, with the held hands as a fact", () => {
+        const one_swing = { ...config, overrides: { ...config.overrides, terminal_swing_count: 1 } };
+        const windows = { "inserter:1": [{ start: 1, end: 20 }], "inserter:2": [{ start: 2, end: 21 }, { start: 38, end: 56 }] };
+        const copy4 = judgeSharedLanes(one_swing, windows, 72, quiet).losses.filter(loss => loss.copy === 4);
+        expect(copy4.length).toBe(2);
+        for (const loss of copy4) {
+            expect(loss.join_full).toBeUndefined();
+            expect(loss.side_belt_waits).toEqual({ held_hands: 2, hands: 128 });
+            expect(loss.text).toMatch(/^Lane [12] of belt 1 ends in a dead end\. The 9 copies take (iron gear wheel|copper plate) from it\. When the items move east, copy 4 from the entry does not get sufficient items\. Its inserter 1 takes 1,024 in 65 window cycles\. With no other copy on the lane, it takes 1,040\. Its output inserter also waits for room on its side belt in 2 of its 128 hands\. In the same run, machine 1 of copy 4 is 10 crafts behind its target rate\.$/);
+        }
+    });
+});

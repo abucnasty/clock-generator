@@ -24,6 +24,7 @@ import { migrateMiningProductivityLevelStep } from "./migrate-mining-productivit
 import { migrateMachineTypeStep } from "./migrate-machine-type";
 import { FactorioDataService } from "../data/factorio-data-service";
 import { machinePlacesResults } from "./machine-prototype";
+import { OutputBeltSchema, outputBeltProblems } from "./output-belt";
 
 /**
  * The results of a recipe that a rocket silo used as a machine's result target keeps in its input slots: those its fixed
@@ -905,8 +906,19 @@ export const ConfigSchema = z.preprocess(renameTargetOutputToSetpoint, z.preproc
     inserters: z.array(InserterConfigSchema).describe("The inserters of the build."),
     belts: z.array(BeltConfigSchema).describe("The belts of the build."),
     chests: z.array(ChestConfigSchema).optional().describe("The chests of the build, and the cars, tanks, cargo wagons and rocket silos that it uses as chests."),
-    overrides: ConfigOverridesSchema.optional().describe("Settings that replace what the generator chooses for the configuration.")
+    overrides: ConfigOverridesSchema.optional().describe("Settings that replace what the generator chooses for the configuration."),
+    /**
+     * The belts from the copies' output inserters to the outlet, in tiles (config/output-belt.ts). The run of the copies
+     * moves the output on it (crafting/output-belt-run.ts).
+     */
+    output_belt: OutputBeltSchema.optional().describe("The output belt: the side belt that each copy's output inserter drops on, and the stretches "
+        + "of belt from the copies to the outlet, in tiles. The run of the copies moves the output on it, and an output blockage shuts its outlet."),
 }).superRefine((config, context) => {
+    if (config.output_belt !== undefined) {
+        for (const problem of outputBeltProblems(config.output_belt, config.setpoint.copy_offset)) {
+            context.addIssue({ code: "custom", path: ["output_belt", ...problem.path], message: problem.message });
+        }
+    }
     config.inserters.forEach((inserter, index) => {
         if (inserter.source.type === TargetType.BELT && !inserter.source.pickup_capture) {
             const problem = pickupLayoutProblem(inserter.source);

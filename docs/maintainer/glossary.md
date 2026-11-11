@@ -133,6 +133,21 @@ inserter takes, the near lane gives it first. The far lane gives it only when th
 configuration's `source.near_lane`. A project technical noun (STE rule 1.6): STE approves NEAR (adj), and has no
 entry for lane.
 
+**Output belt**:
+The belts from the output inserters of the copies to the outlet. The configuration's `output_belt`: a side belt, and
+stretches of belt in tiles. The run of the copies moves the stacks on it, and an output blockage shuts its outlet. A
+project technical noun (STE rule 1.6): STE approves OUTPUT (n), and has no entry for belt.
+_Avoid_: output line (the game's `output_lines` are transport lines)
+
+**Side belt**:
+The belt that the output inserter of a copy drops on. It side-loads onto the output belt. The configuration's
+`output_belt.side_belt`. A project technical noun (STE rule 1.6): STE approves SIDE (n), and has no entry for belt.
+
+**Join**:
+A belt lane that goes onto another belt: a side load, or the splitter. At an output blockage, the belt lane is blocked
+from draining to the belt it joins. No configuration field has this name. A Factorio word, used as a technical noun
+(STE rule 1.6): the splitter "Splits and/or joins transport belts' cargo 1:1." STE does not approve join (v): BOND.
+
 ## Clocks
 
 **Clock**:
