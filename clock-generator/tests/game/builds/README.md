@@ -589,9 +589,9 @@ families above: 63 untouched window cycles, the ore cut at window cycles 66-68, 
 104-106, the first 6 window cycles after a release not judged. The three copies stand in a row; the ore lines end as the build's
 do: past the last copy each side-loads into an underground exit, the near lane stops there and the far lane goes on to two
 furnaces of the build's transport belt foundry (with one more gear assembler), whose drain is held to one belt (240 a second),
-so the furnaces take the config's 53 1/3 ore a second off each far lane; the product leaves on two lines into loaders and
+so the furnaces take 53 1/3 ore a second off each far lane (the config states the ore lanes as dead ends past the third copy); the product leaves on two lines into loaders and
 void chests, and the output block removes both. The copies are not alike (the first two have a gear assembler at 44.92, the
-first a fourth furnace at 91.875), and the config is the third.
+first a fourth furnace at 91.875), and the config is the first.
 
 - `hand-made-clock-three-copies`: the hand-made clock, kept. It is one clock for the three copies: a counter of the clock signal
   that counts 0 to 215 (a window cycle time of 216 ticks), an iron plate window on ticks 1-33 and 109-138 for the 12 ore and 12 plate

@@ -101,12 +101,12 @@
             "denominator": 3
           },
           "crafts_capacity": {
-            "numerator": 700743,
-            "denominator": 6400
+            "numerator": 356081,
+            "denominator": 3200
           },
           "utilization": {
-            "numerator": 2048000,
-            "denominator": 2102229
+            "numerator": 1024000,
+            "denominator": 1068243
           }
         },
         {
@@ -119,12 +119,12 @@
             "denominator": 1
           },
           "crafts_capacity": {
-            "numerator": 645,
-            "denominator": 8
+            "numerator": 2875,
+            "denominator": 32
           },
           "utilization": {
-            "numerator": 64,
-            "denominator": 129
+            "numerator": 256,
+            "denominator": 575
           }
         }
       ]
