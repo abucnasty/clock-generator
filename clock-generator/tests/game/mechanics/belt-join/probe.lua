@@ -10,7 +10,7 @@
 --
 -- Each tick, in this order: the chest actions and hands, the inserts, then the log. The log (script-output/belt-join/)
 -- has a row per copy and tick, "t,copy|piece,line,id,position;...", with a number for each stack's unique id in order of
--- first sight and its position in 1/256 tile; info.json has each copy's pieces (their tile and line lengths), each
+-- first sight and its position in 1/256 tile; info.json has each copy's pieces (their tile, and their line lengths at the end), each
 -- stream's done and failed insert ticks, the hand and chest actions, the force's belt stack size and the research.
 local entities, surface = ...
 local base
@@ -163,6 +163,10 @@ script.on_nth_tick(1, function()
     if t >= options.ticks then
         script.on_nth_tick(1, nil)
         for index, run in ipairs(runs) do
+            -- the line lengths at the end: in the tick of the build the game still gives an entrance's tunnel line one tile
+            for pi, piece in ipairs(run.pieces) do
+                for li = 1, #piece.lines do info.copies[index].pieces[pi].lines[li] = math.floor(piece.entity.get_transport_line(li).line_length * 256 + 0.5) end
+            end
             local streams = {}
             for _, s in ipairs(run.streams) do streams[#streams + 1] = {line = s.name, done = s.done, failed = s.failed} end
             info.copies[index].streams = streams
