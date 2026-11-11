@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sample": "ACCUMULATOR_640",
+  "sample": "ACCUMULATOR_320",
   "target": {
     "item": "accumulator",
     "counts": "made",
@@ -19,6 +19,18 @@
     },
     {
       "key": "belt:1/lane:2",
+      "kind": "lane",
+      "ports": []
+    },
+    {
+      "key": "belt:2/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:2/lane:1#accumulator"
+      ]
+    },
+    {
+      "key": "belt:2/lane:2",
       "kind": "lane",
       "ports": []
     },
@@ -89,7 +101,7 @@
       "from_ports": [
         "machine:2"
       ],
-      "to": "belt:1/lane:1#accumulator",
+      "to": "belt:2/lane:1#accumulator",
       "lands_in": "lane",
       "hand": 16,
       "floor_cycle": 11,
@@ -266,9 +278,10 @@
     "machine:6",
     "machine:4",
     "machine:1",
+    "belt:1/lane:1#accumulator",
     "machine:5",
     "machine:2",
-    "belt:1/lane:1#accumulator",
+    "belt:2/lane:1#accumulator",
     "sink"
   ],
   "shared": {
@@ -292,16 +305,7 @@
         ]
       }
     ],
-    "in": [
-      {
-        "at": "belt:1/lane:1#accumulator",
-        "item": "accumulator",
-        "edges": [
-          "inserter:1/accumulator",
-          "inserter:2/accumulator"
-        ]
-      }
-    ],
+    "in": [],
     "lanes": []
   },
   "terminal": [

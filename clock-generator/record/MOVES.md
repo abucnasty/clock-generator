@@ -8,6 +8,9 @@ a line that names the reason and lists the jobs. A pull request that moves no re
 CI checks this file: the "Record check" fails when a selected clock got worse than in the base and its job key is not in the lines the pull
 request adds to this file.
 
+## The accumulator sample is abucnasty's nine-copy build, named for its 320 a second (feature/shared-lane-model-row-16)
+- config-ACCUMULATOR_640 -> config-ACCUMULATOR_320: the target is the nine-copy build's, 320 a second over 9 copies (35.56 a copy, as before), so the rate of every clock halves with it; the selected clock (coordinated_sources, clock b43dfd7b1bc7), its windows and wake-ups are the same
+
 ## Release 0.28.1 (fix/ios-startup-hang)
 Every clock blueprint carries the engine's version, so the `text_sha256` of each clock moves with the bump from 0.28.0 to 0.28.1. No selection, rate, window or wakeup moved.
 - all 86 jobs: `text_sha256` of every clock, for the version in the blueprint text

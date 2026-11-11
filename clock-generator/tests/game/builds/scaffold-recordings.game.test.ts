@@ -364,13 +364,18 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [],
         warmup_ticks: 3600,
     },
-    // The build of issue 152: two electromagnetic plants, two cryogenic plants and two foundries, 640 a second over 18
-    // copies, all of it from machine to machine. The clock 0.9.0 selected made 512 to 544 of its 576 a window cycle here.
+    // abucnasty's build of nine copies (2026-11-10), 16 tiles apart in one row: each copy is two electromagnetic plants, two
+    // cryogenic plants and two foundries, all of it from machine to machine, the fluids from infinity pipes. The upper plants
+    // drop onto one line and the lower plants onto another; on each line the drops of the first four copies are side-loaded onto
+    // the other lane before the last five drop, and the line ends in a loader into a void chest. 35.56 a second a copy, 320 over
+    // nine. The scaffold before was the build of issue 152 (one copy of 18 at 640 a second), where the clock 0.9.0 selected
+    // made 512 to 544 of its 576 a window cycle.
     "accumulator": {
-        scaffold: path.join(SAMPLES, "intermediates", "accumulator", "accumulator-640.scaffold"),
-        config: ConfigPaths.ACCUMULATOR_640,
+        scaffold: path.join(SAMPLES, "intermediates", "accumulator", "accumulator-320.scaffold"),
+        config: ConfigPaths.ACCUMULATOR_320,
         seed: [],
         warmup_ticks: 3600,
+        copies: 9,
     },
     // The lithium plate build: two cryogenic plants fill a rocket silo taken as a chest, and six furnaces empty it;
     // 80 a second from one copy. The warm-up fills the silo, which the config exports empty.

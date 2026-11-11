@@ -61,6 +61,6 @@ describe("loopStockBound", () => {
     });
 
     it("is null for a build with no loop of machines", async () => {
-        expect(loopStockBound(await loadConfigFromFile(ConfigPaths.ACCUMULATOR_640), {}, 480)).toBeNull();
+        expect(loopStockBound(await loadConfigFromFile(ConfigPaths.ACCUMULATOR_320), {}, 480)).toBeNull();
     });
 });

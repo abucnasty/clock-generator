@@ -3,3 +3,4 @@
 # Use: blast.sh compare --map scripts/blast/maps/0.29.0-renames.txt <before> <after>
 config-FLYING_ROBOT_FRAME_160 config-FLYING_ROBOT_FRAME_80
 config-MILITARY_SCIENCE_120 config-MILITARY_SCIENCE_240
+config-ACCUMULATOR_640 config-ACCUMULATOR_320

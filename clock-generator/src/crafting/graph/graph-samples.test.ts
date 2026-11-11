@@ -49,7 +49,7 @@ const LOOPS: Readonly<Record<string, readonly (readonly string[])[]>> = {
  * "from outside: 4 edges").
  */
 const TERMINAL: Readonly<Record<string, number>> = {
-    ACCUMULATOR_640: 2,
+    ACCUMULATOR_320: 2,
     ADVANCED_CIRCUIT_240: 2,
     ADVANCED_CIRCUIT_230: 2,
     AGRICULTURAL_SCIENCE_250: 1,
