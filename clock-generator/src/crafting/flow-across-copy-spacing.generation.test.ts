@@ -39,3 +39,25 @@ describe("the advanced circuit build with the coal belt's flow direction", () =>
         });
     }
 });
+
+// the coal belt (belt 3) moving south, across the copies, with its end unknown: a lane that one copy alone takes from
+describe("the advanced circuit build with the coal belt moving across the copies and its end unknown", () => {
+    /** Belt 3 moving south, its lanes of unknown end and, where `one_per_copy`, a lane for each copy */
+    async function acrossAlone(copies: 1 | 3, one_per_copy: boolean): Promise<Config> {
+        const config = withBelt3Flow(await loadConfigFromFile(ConfigPaths.ADVANCED_CIRCUIT_240), 8);
+        return { ...config, setpoint: { ...config.setpoint, copies, items_per_second: 80 * copies },
+            belts: config.belts.map(belt => belt.id !== 3 ? belt : { ...belt, lanes: belt.lanes.map(lane => ({ ...lane, lane_end: { kind: "unknown" },
+                ...(one_per_copy && { sharing: "one_per_copy" }) })) as typeof belt.lanes }) };
+    }
+
+    for (const [name, copies, one_per_copy] of [["with one copy", 1, false], ["with a lane for each copy", 3, true]] as const) {
+        it(`${name} is not refused, checks its lanes and selects the clock it selected before`, async () => {
+            const { warnings, logger } = unchecked();
+            const generated = generateClockAlternatives(await acrossAlone(copies, one_per_copy), { logger });
+            const selected = generated.alternatives[generated.selected_index];
+            expect([selected.id, selected.verdict, selected.result.schedule.counted_ticks]).toEqual(["takt_batches_observed", "stable", 528]);
+            expect(selected.assessment.shared_lane_losses).toBeUndefined();
+            expect(warnings).toEqual([]);
+        });
+    }
+});

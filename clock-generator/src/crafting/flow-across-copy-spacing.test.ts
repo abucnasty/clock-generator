@@ -5,6 +5,7 @@ import { FlowAcrossCopySpacingError } from "../config/errors";
 import type { Config } from "../config/schema";
 import { validateConfig } from "./plan/validate-config";
 import { flowsAcrossCopySpacing } from "./shared-lane-lanes";
+import { sharedLaneRunsOf } from "./shared-lane-verdict";
 
 /** The config with belt 3 stating the flow direction given, or none, and its lanes changed as `lane` says */
 function withBelt3(config: Config, flow_direction: 0 | 4 | 8 | 12 | undefined, lane: Partial<Config["belts"][number]["lanes"][number]> = {}): Config {
@@ -49,5 +50,19 @@ describe("a belt whose stated flow direction is across the copy spacing", () => 
 
     it("is not refused on a lane each copy has of its own", () => {
         expect(flowsAcrossCopySpacing(withBelt3(config, 8, { sharing: "one_per_copy" }))).toEqual([]);
+    });
+
+    // a lane of unknown end that the copies do not share is laid out too, with the takers of one copy on it
+    it("lays out a lane of unknown end that one copy alone takes from, with one copy or a lane per copy", () => {
+        const unknown = { lane_end: { kind: "unknown" as const } };
+        for (const alone of [
+            { ...withBelt3(config, 8, unknown), setpoint: { ...config.setpoint, copies: 1, items_per_second: 80 } },
+            withBelt3(config, 8, { ...unknown, sharing: "one_per_copy" }),
+        ]) {
+            const runs = sharedLaneRunsOf(alone);
+            expect(runs.lanes.filter(lane => lane.belt_id === 3)).toEqual([{ belt_id: 3, lane: 1, shared: false, stated: { kind: "unknown" }, flow: { x: 0, y: 1 } },
+                { belt_id: 3, lane: 2, shared: false, stated: { kind: "unknown" }, flow: { x: 0, y: 1 } }]);
+            expect(runs.readings[0].layouts[0].rows.filter(row => row.belt_id === 3).map(row => row.copies)).toEqual([1, 1]);
+        }
     });
 });
