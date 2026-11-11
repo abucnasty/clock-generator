@@ -3,7 +3,7 @@ import { Entity, handSizeFor } from '../entities';
 import { beltLanesOfFacts, LaneTrait } from '../entities/traits/lane';
 import { LaneFactsOfBuild, laneFactsOf } from '../entities/traits/lane-facts';
 import { fractionOf } from '../entities/traits/ratio';
-import { beltSpeedOf, laneItemsPerSecond, laneStackFor } from '../entities/belt/belt';
+import { beltSpeedOf, laneItemsPerSecond, laneStackFor } from '../entities/belt/belt-speed';
 import type { Logger } from '../common/logger';
 import { OutputCyclePlan } from '../crafting/sequence/cycle/output-cycle';
 import { createEntityRegistryFromConfig } from '../crafting/sequence/simulation-context';

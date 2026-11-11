@@ -1,9 +1,9 @@
 import type { Config } from "../../config/schema";
 
 /**
- * The lane facts that a config's own fields decide, without the game data: whether a lane ends in a dead end. The
- * rates of a lane (lane-facts.ts) need the belt's speed, which only the game data gives; whether a lane is a dead end
- * does not, so a page can ask it on its main thread (the light entry).
+ * Whether a lane ends in a dead end, from the config's own fields alone: the end a lane states, and without one the
+ * config's switch. The lane facts (lane-facts.ts) read the ends from here, and a page can ask the question about every
+ * input lane on its main thread (the light entry).
  */
 
 /** One lane of a belt as the config lists it, with the lane facts it states */

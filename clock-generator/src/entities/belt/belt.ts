@@ -1,5 +1,5 @@
 import { BeltConfig } from "../../config";
-import { FactorioDataService, ItemName } from "../../data";
+import type { ItemName } from "../../data";
 import assert from "../../common/assert";
 import { BeltStackSize, isValidBeltStackSize } from "./belt-stack-size";
 import { EntityId } from "../entity-id";
@@ -7,6 +7,9 @@ import { Entity } from "../entity";
 import { Duration } from "../../data-types";
 import Fraction, { fraction } from "../../data-types/fraction";
 import { BeltStrategy } from "../../common/entity-types";
+import { BeltSpeed, beltSpeedOfPrototype } from "./belt-speed";
+
+export { BeltSpeed } from "./belt-speed";
 
 export interface Lane {
     ingredient_name: ItemName;
@@ -22,34 +25,6 @@ export interface Belt extends Entity{
     /** The belt's prototype name from the config ("turbo-transport-belt"), for labels; absent for a belt built in code */
     readonly prototype?: string
 }
-
-/**
- * The engine's belt speeds (items a second on both lanes) of the game's four belts, for the code that compares a speed
- * with one of them or counts in the transport belt's (lane speeds, tiles a second). A belt's own speed comes from its
- * prototype's `speed` in the game data (beltSpeedOf).
- */
-export const BeltSpeed = {
-    TRANSPORT_BELT: 15,
-    FAST_TRANSPORT_BELT: 30,
-    EXPRESS_TRANSPORT_BELT: 45,
-    TURBO_TRANSPORT_BELT: 60
-} as const;
-
-export type BeltSpeed = typeof BeltSpeed[keyof typeof BeltSpeed];
-
-/** The engine's belt speed (items a second on both lanes) of a speed in tiles a tick: 60 ticks a second, 8 items a tile */
-const BELT_SPEED_PER_TILE_A_TICK = 480;
-
-/** The engine's belt speed of a speed in tiles a tick, as the game data gives a belt prototype's (turbo: 0.125, 60) */
-function beltSpeedOfTilesPerTick(tiles_per_tick: number): BeltSpeed {
-    return tiles_per_tick * BELT_SPEED_PER_TILE_A_TICK as BeltSpeed;
-}
-
-/** The engine's speed of a belt prototype, from its `speed` in the game data; an unknown prototype is refused */
-export function beltSpeedOf(prototype: string): BeltSpeed {
-    return beltSpeedOfTilesPerTick(FactorioDataService.findTransportBeltOrThrow(prototype).speed);
-}
-
 
 function tilesPerSecond(belt_speed: BeltSpeed): Fraction {
     const ratio = fraction(belt_speed).divide(BeltSpeed.TRANSPORT_BELT)
@@ -225,30 +200,17 @@ export class BeltBuilder {
 function fromConfig(config: BeltConfig): Belt {
     const builder = new BeltBuilder().setId(config.id).setStrategy(config.strategy ?? BeltStrategy.NORMAL).setPrototype(config.type)
 
-    // its speed from its prototype in the game data (the Lane trait's, entities/traits/lane.ts); a belt the data does
-    // not hold has none, and is refused for that when it is built
-    const prototype = FactorioDataService.findTransportBelt(config.type);
-    if (prototype !== null) {
-        builder.setBeltSpeed(beltSpeedOfTilesPerTick(prototype.speed));
+    // its speed from its prototype (belt-speed.ts, the Lane trait's too, entities/traits/lane.ts); a prototype that is
+    // not a belt of the game has none, and is refused for that when it is built
+    const belt_speed = beltSpeedOfPrototype(config.type);
+    if (belt_speed !== undefined) {
+        builder.setBeltSpeed(belt_speed);
     }
 
     for (const lane of lanesOf(config)) {
         builder.addLane(lane.ingredient_name, lane.stack_size, lane.consumption_per_second);
     }
     return builder.build();
-}
-
-/** Items a second a lane carries: half the belt's speed times the lane's stack size (turbo, stack 4: 120) */
-export function laneItemsPerSecond(belt_speed: number, stack_size: number): Fraction {
-    return fraction(belt_speed).divide(2).multiply(stack_size);
-}
-
-/**
- * The stack size of a lane of a belt of the config, 1 or 2: a belt that lists one lane has the second at the same stack
- * size, for the drops that land on it
- */
-export function laneStackFor(config: BeltConfig, lane: number): number {
-    return config.lanes[Math.min(lane, config.lanes.length) - 1].stack_size;
 }
 
 /** The lanes of a belt of the config, each with its item, belt stack size and, on an export belt, what is taken off it */

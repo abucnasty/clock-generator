@@ -227,6 +227,11 @@ export class FactorioDataService {
         return Object.values(this.getData().inserter);
     }
 
+    /** Every transport belt prototype of the data, in the data's order */
+    public static getAllTransportBelts(): TransportBeltPrototype[] {
+        return Object.values(this.getData().transport_belt);
+    }
+
     /** The transport belt prototype of that name; an unknown name is refused (own keys only) */
     public static findTransportBeltOrThrow(name: string): TransportBeltPrototype {
         const belt = this.findTransportBelt(name);
