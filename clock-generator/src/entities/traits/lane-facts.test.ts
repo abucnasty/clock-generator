@@ -155,8 +155,8 @@ describe("the question about every input lane", () => {
         expect(everyInputLaneIsDeadEnd(configOf({ machines, belts, inserters: [put(1, 2)], overrides }))).toBe(backed_up_belts);
         expect(everyInputLaneIsDeadEnd(configOf({ overrides }))).toBe(backed_up_belts);
     });
-    // the question is answered from the config's own fields, without the game data the lane facts read for their rates:
-    // it gives the ends the lane facts give, on every sample as it is and with the switch either way
+    // the question is answered from the ends alone, without the rates of the lane facts: it gives the ends the lane
+    // facts give, on every sample as it is and with the switch either way
     it("gives the answer of the lane facts of every input lane, on every sample", async () => {
         for (const [key, file] of Object.entries(ConfigPaths)) {
             const sample = await loadConfigFromFile(file) as Config;

@@ -9,7 +9,7 @@ import { validateCopies } from "../config/copies-validator";
 import { Config } from "../config/schema";
 import Fraction, { fraction } from "../data-types/fraction";
 import { Belt, Entity, handSizeFor, isNeverBlockingSink, Machine, ReadableEntityRegistry } from "../entities";
-import { laneItemsPerSecond, laneStackFor } from "../entities/belt/belt";
+import { laneItemsPerSecond, laneStackFor } from "../entities/belt/belt-speed";
 import { ConfigTraits } from "../entities/traits/build-traits";
 import { beltLanesOfFacts } from "../entities/traits/lane";
 import { laneFactsOf } from "../entities/traits/lane-facts";

@@ -1,7 +1,7 @@
 import assert from "../../common/assert";
 import type { Config } from "../../config/schema";
 import { fraction } from "../../data-types/fraction";
-import { beltSpeedOf, laneItemsPerSecond, laneStackFor } from "../belt/belt";
+import { beltSpeedOf, laneItemsPerSecond, laneStackFor } from "../belt/belt-speed";
 import { configDeadEnds } from "./lane-ends";
 import { Ratio, ratioOf } from "./ratio";
 
