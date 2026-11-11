@@ -77,7 +77,7 @@ splitter with "none" for a priority.
    of the model that look for the stack ahead: a stack that moves (rule 1) and a landing side head (rule 2) look past
    their line's end, along the lines it feeds. A put-on is put where the game shows it, with no look at the stacks near
    it. A loader's line has no line after it. A splitter's input line does not look at its outputs (rule 8, read from the
-   600-tick recording).
+   600-tick recording). Checked: the second follow-up run, the mirrored loop.
 5. **Input priority.** On each lane, the head of the input that has the priority goes first. The other input's head
    comes after it, behind it. Read: the copies with both inputs full, tick 70.
 6. **Both inputs full, both outputs free: each input keeps its own output.** This follows from 4 and 5. After the
@@ -134,15 +134,37 @@ from the other input, or from both, for each pair of priorities; and the loop wi
 - **The clause decides these copies.** With the back end for both inputs, every copy fed from the input without the
   priority differs from tick 262. With the back end for neither, every copy fed from the input with the priority, or
   from both, differs from tick 260 or 262.
-- **The loop with only its left input fed (`loop-left-input-shut-end`) differs from tick 263.** A head of the left
-  input at 3 goes onto the left output, lane 2, at 61 in the game and at 48 (its own spot) in the model. The stack
-  ahead of it is on the loop's first line after the output line, at 292 of 295: the game holds the head 64 behind it,
-  and the model does not look past the output line. Not kept. Not established.
+- **The loop with only its left input fed (`loop-left-input-shut-end`) differed from tick 263.** A head of the left
+  input at 3 went onto the left output, lane 2, at 61 in the game and at 48 (its own spot) in the model. The stack
+  ahead of it was on the loop's first line after the output line, at 292 of 295. The second follow-up run checks the
+  rule written from this row.
 - The 37 copies of the first run give the same rows, put-ons and end changes as before. With the rule, 36 of them
   agree; `loop-shut-end` still differs at its cut.
-- **Kept now: 31 copies, 94,661 bytes** as `.json.zst` (zstd level 19 through Node's `zlib`): the 29 above,
-  `splitter-output-shut` (the input without the priority) and the held-out `splitter-shut-right-left-priority-input`
-  (the input with the priority). The offline replay of all of them takes about 0.3 seconds.
+- **Kept:** `splitter-output-shut` (the input without the priority) and the held-out
+  `splitter-shut-right-left-priority-input` (the input with the priority).
+
+## The second follow-up run of 2026-11-11: the stack ahead on the head's path
+
+The extension of splitter rule 4 was written and the model changed before this run, and the model's rows of every
+copy were stored. 67 copies, 720 ticks after the build: the smoke (2 read-from copies) 2.9 seconds, the full run 25.0
+seconds. 17 new copies: the loop mirrored, and the plain splitter with the end of one output shut and opened at 400,
+fed on one lane at four phases, for each output and lane.
+
+- **Read-from: `loop-left-input-shut-end` agrees** in every tick.
+- **Held out: the mirrored loop (`loop-mirrored-right-input-shut-end`) agrees** in every tick. The extension decides
+  both loops from tick 263: without it, the model differs there.
+- **The plain splitter's queue copies: 8 of 16 agree** (spots 255 and 231). The extension decides none of them. The
+  straight belt after the output holds its back stack at 192 at most in a standing queue, so 64 behind it is never
+  past a head's own spot. At spots 247 and 239 all 8 differ from tick 262, on another clause of rule 4. Example:
+  `splitter-queue-right-lane-1-spot-247`. The right input (with the priority) has its head at 10 (its own spot 55),
+  and the right output, shut, holds stacks at 0 and 64. The game puts the head at the back end, 127; the model puts it
+  onto the left output at 55, because its own spot is more than 64 before 127. Not kept. The clause "at most 64 before
+  the back end" was read only from heads of the input without the priority; for the input with the priority it is
+  refuted. Not established: the rule for the back end.
+- The 50 copies of the earlier runs give the same rows, put-ons and end changes as before. `loop-shut-end` still
+  differs at its cut.
+- **Kept now: 33 copies, 101,660 bytes** as `.json.zst` (zstd level 19 through Node's `zlib`): the 31 above and the
+  two loops. The offline replay of all of them takes about 0.3 seconds.
 
 ## Limits
 
@@ -156,8 +178,8 @@ from the other input, or from both, for each pair of priorities; and the loop wi
   bound of about 90 ticks is not established.
 - **The boundary run** measured the straight belt from both sides (67 and 68; 188 and 189) and the exit from one side
   (67 and below). Not measured: a line stack from 68 to 70 onto an exit, and any contest onto an entrance.
-- **The splitter:** a head that goes onto an output is not held by a stack on the line after the output line
-  (`loop-left-input-shut-end`, above). The model refuses a splitter with "none" for a priority.
+- **The splitter's back end:** a head of the input with the priority whose own spot is more than 64 before the back
+  end (the queue copies at spots 247 and 239, above). The model refuses a splitter with "none" for a priority.
 - Turbo belts with stacks of 4 only. The model has no loader that is removed or built while the run goes.
 
 ## Run it again

@@ -223,7 +223,7 @@ const SHUT_OUTPUT: JoinCopy[] = [
         ].map((c): JoinCopy => ({ ...c, shape: "splitter", kept: c.name === "splitter-shut-right-left-priority-input", priority: [input, output], ends,
             about: `the output with the priority shut from the build; ${c.about}` }));
     }),
-    { name: "loop-left-input-shut-end", shape: "loop", kept: false, priority: ["right", "right"],
+    { name: "loop-left-input-shut-end", shape: "loop", kept: true, priority: ["right", "right"],
         about: "only the left input fed (it has no priority); the right output's end shut from the build and opened at 400",
         streams: lanes("4,1", 121, 2, 200), ends: [{ t: 0, action: "block", chests: [[11, 3]] }, { t: 400, action: "release", chests: [[11, 3]] }] },
 ];
@@ -233,10 +233,11 @@ const SHUT_OUTPUT: JoinCopy[] = [
  * `loop-left-input-shut-end`; held out: the loop mirrored (both priorities left, the loop on the right output, only
  * the right input fed, the left output's end shut and opened at 400), and the plain splitter with the end of one output
  * shut and opened at 400, fed on one lane of the input on that side (both priorities on that side) with its stacks at
- * four phases (insert spots 255, 247, 239, 231).
+ * four phases (insert spots 255, 247, 239, 231). Kept: the two loops. The queue copies are not kept: the extension
+ * decides none of them, and at spots 247 and 239 the game differs from the model from tick 262 (README.md).
  */
 const PATH: JoinCopy[] = [
-    { name: "loop-mirrored-right-input-shut-end", shape: "loop-mirrored", kept: false, priority: ["left", "left"],
+    { name: "loop-mirrored-right-input-shut-end", shape: "loop-mirrored", kept: true, priority: ["left", "left"],
         about: "the loop mirrored: only the right input fed (it has no priority); the left output's end shut from the build and opened at 400",
         streams: lanes("4,4", 121, 2, 200), ends: [{ t: 0, action: "block", chests: [[11, 2]] }, { t: 400, action: "release", chests: [[11, 2]] }] },
     ...(["left", "right"] as const).flatMap(side => [1, 2].flatMap(lane => [255, 247, 239, 231].map((spot): JoinCopy => ({
