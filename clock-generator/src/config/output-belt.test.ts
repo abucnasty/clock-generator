@@ -324,12 +324,18 @@ describe("the geometry derived from the sample's output belt", () => {
             [{ stretch: 5 }, 4, "right", "side-straight", 1, [["left", 188], ["right", 67]]],
         ]);
         expect(geometry.drops).toEqual([
-            { copy: 5, stretch: 2, lane: "right", tile: 7, end_at: { left: 2048, right: 2048 } },
-            { copy: 9, stretch: 3, lane: "left", tile: 0, end_at: { left: 256, right: 256 } },
+            { copy: 5, stretch: 2, lane: "right", tile: 7, end_at: { left: 2048, right: 2048 }, line: "stretch 2 right lane: side load of stretch 1 to drop of copy 5" },
+            { copy: 9, stretch: 3, lane: "left", tile: 0, end_at: { left: 256, right: 256 }, line: "stretch 3 left lane: the tile of the drop of copy 9" },
         ]);
         expect(geometry.splitter).toEqual({ input_priority: "right", output_priority: "right",
             inputs: [{ side: "right", stretch: 2 }, { side: "left", stretch: 3 }], outputs: [{ side: "right", stretch: 4 }, { side: "left", stretch: 5 }] });
-        expect(geometry.outlets).toEqual([{ stretch: 4, tile: 3, end_at: { left: 512, right: 512 } }]);
+        expect(geometry.outlets).toEqual([{ stretch: 4, tile: 3, end_at: { left: 512, right: 512 },
+            lines: { left: "stretch 4 left lane: side load of stretch 5 to the outlet", right: "stretch 4 right lane: side load of stretch 5 to the outlet" } }]);
+        // the lines at each side load: the receiving lane's line that ends at the tile, and the sender's last line on each lane
+        expect(geometry.side_loads.map(load => [load.receiver_line, load.sender_lines])).toContainEqual(["stretch 2 left lane: the tile of the side load of stretch 1",
+            { left: "stretch 1 left lane: side load of copy 4 to its side load onto stretch 2", right: "stretch 1 right lane: side load of copy 4 to its side load onto stretch 2" }]);
+        expect(geometry.side_loads.map(load => [load.receiver_line, load.sender_lines])).toContainEqual(["stretch 1 right lane: side load of copy 3 to side load of copy 4",
+            { left: "side belt of copy 4 left lane", right: "side belt of copy 4 right lane" }]);
         expect(geometry.stretches.map(stretch => stretch.carried)).toEqual([["right"], ["left", "right"], ["left"], ["left", "right"], ["left", "right"]]);
     });
 });
