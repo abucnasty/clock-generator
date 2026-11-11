@@ -304,6 +304,8 @@ export interface ConfigFormData {
         configs: DrillFormData[];
     };
     overrides?: Config['overrides'];
+    /** The output belt as the config states it: the site keeps it and has no editor for it */
+    output_belt?: Config['output_belt'];
 }
 
 export const createDefaultConfig = (): ConfigFormData => ({
