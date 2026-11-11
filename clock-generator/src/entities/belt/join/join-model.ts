@@ -361,17 +361,21 @@ export class JoinModel {
 
     /**
      * A splitter's head whose step would take it past its input line's end goes onto the output with the output priority,
-     * else onto the other, on its own lane, at SPLITTER_LANE_LENGTH - input length less the rest of its step; an output
-     * takes it GAP behind its last stack, at most at its back end, only behind that stack and at most GAP behind that spot.
+     * else onto the other, on its own lane, at SPLITTER_LANE_LENGTH - input length less the rest of its step (its natural
+     * spot). An output takes it GAP behind its last stack when its natural spot is nearer than that, if that is on the
+     * output line; past the output's back end, at the back end only when the natural spot is at most GAP before it and
+     * the back end is behind the last stack.
      */
     private handOver(input: Line, stack: Stack): boolean {
         const { splitter, lane } = input.splitter_input!;
         const natural = SPLITTER_LANE_LENGTH - input.length + stack.position - STEP;
         for (const side of [splitter.output_priority, OTHER[splitter.output_priority]]) {
             const output = splitter.outputs[side][lane];
+            const back = output.length - 1;
             const last = output.stacks.length ? output.stacks[output.stacks.length - 1].position : null;
-            const spot = last === null ? natural : Math.min(output.length - 1, Math.max(natural, last + GAP));
-            if ((last === null || spot > last) && spot <= natural + GAP) {
+            let spot: number | null = last === null ? natural : Math.max(natural, last + GAP);
+            if (spot > back) spot = natural + GAP >= back && last! < back ? back : null;
+            if (spot !== null) {
                 insert(output, { id: stack.id, position: spot });
                 return true;
             }

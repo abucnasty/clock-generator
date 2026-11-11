@@ -50,11 +50,14 @@ and lane. A splitter with "none" for either priority is not modelled: the model 
 3. **The other output only when the one with the priority cannot take the stack.** Read: `s5-RR-pref-blocked` and
    `s5-LL-pref-blocked` (the first stack onto the other output at tick 140, after one at 127 at tick 138), `s6-loader-off`
    tick 43.
-4. **When an output takes a stack.** Its spot is 64 behind the output's last stack if its own spot is nearer than that,
-   at most the output's back end (127). The output takes it only when that spot is behind its last stack and at most 64
-   behind the head's own spot. Read: `s5-RR-both-full` tick 70 (127 behind a stack at 63), `s5-RR-pref-blocked` ticks 136
-   and 138 (64 behind 0; 127 behind 64), `s6-loader-off` ticks 41 to 56 (taken at 64, 80, 112 and 127; refused at 127,
-   79 behind a head's spot of 48).
+4. **When an output takes a stack.** Its spot is 64 behind the output's last stack if the head's own spot is nearer
+   than that. The output takes it there when that spot is on the output line (at most its back end, 127), however far
+   behind the head's own spot. A spot past the back end is moved to the back end only when the head's own spot is at most
+   64 before the back end and the back end is behind the last stack; else the output does not take it. Read:
+   `s5-RR-both-full` tick 70 (127 behind a stack at 63), `s5-RR-pref-blocked` ticks 136 and 138 (64 behind 0; 127 behind
+   64), `s6-loader-off` ticks 41 to 56 (taken at 64, 80, 112 and 127; refused past the back end with the head's own spot
+   at 48). The smoke of this family's run read one more row and changed this rule before the full run:
+   `splitter-one-output` tick 402, a head at 0 (its own spot 45) taken at 127 behind a stack at 63.
 5. **Input priority.** On each lane the input that has the priority moves first; the other input's head comes after it
    and is put behind it. Read: `s5-RR-both-full` and `s5-LL-both-full` tick 70.
 6. **Both inputs full, both outputs free: each input keeps its own output.** It follows from 4 and 5: after the first
