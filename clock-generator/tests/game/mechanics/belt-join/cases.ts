@@ -197,7 +197,31 @@ const BOUNDARY: JoinCopy[] = [
         streams: [...mainLine(120, 4, 41, phase(q, STRAIGHT_LINE_LENGTH)), ...sides(1, 2, 170, 5, 12, 231)] })),
 ];
 
-export const COPIES: JoinCopy[] = [...KEPT, ...SPLITTER, ...BOUNDARY];
+/**
+ * The back end of a splitter's output only for the head of the input with the priority: the output with the priority
+ * shut from the build, fed from the input with the priority, from the other input, or from both, for each pair of
+ * priorities (input, output); and the loop with only its left input fed, the end of the right output shut and opened
+ * again. Right and right is the pair the rule was read from; the other three are held out.
+ */
+const SHUT_OUTPUT: JoinCopy[] = [
+    ...([["right", "right"], ["left", "left"], ["right", "left"], ["left", "right"]] as const).flatMap(([input, output]) => {
+        const row = (side: SplitterSide) => (side === "left" ? "0,0" : "0,1");
+        const other: SplitterSide = input === "left" ? "right" : "left";
+        const ends: EndAction[] = [{ t: 0, action: "block", chests: [[19, output === "left" ? 0 : 1]] }];
+        const pair = `${input}-${output}`;
+        return [
+            { name: `splitter-shut-${pair}-priority-input`, streams: lanes(row(input), 121, 2, 200), about: "only the input with the priority fed" },
+            { name: `splitter-shut-${pair}-other-input`, streams: lanes(row(other), 121, 2, 200), about: "only the input without the priority fed" },
+            { name: `splitter-shut-${pair}-both-inputs`, streams: [...lanes("0,0", 121, 2, 200), ...lanes("0,1", 121, 2, 200)], about: "both inputs fed" },
+        ].map((c): JoinCopy => ({ ...c, shape: "splitter", kept: false, priority: [input, output], ends,
+            about: `the output with the priority shut from the build; ${c.about}` }));
+    }),
+    { name: "loop-left-input-shut-end", shape: "loop", kept: false, priority: ["right", "right"],
+        about: "only the left input fed (it has no priority); the right output's end shut from the build and opened at 400",
+        streams: lanes("4,1", 121, 2, 200), ends: [{ t: 0, action: "block", chests: [[11, 3]] }, { t: 400, action: "release", chests: [[11, 3]] }] },
+];
+
+export const COPIES: JoinCopy[] = [...KEPT, ...SPLITTER, ...BOUNDARY, ...SHUT_OUTPUT];
 
 /** The ticks of a stream's inserts */
 export const streamTicks = (s: Stream): number[] => Array.from({ length: s.count }, (_, i) => s.first + i * s.every);
