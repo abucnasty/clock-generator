@@ -333,8 +333,9 @@ Recorded on AUTOMATION_SCIENCE_240, nine copies (Factorio 2.1.24, 2026-11-11):
   Copy 9's take 122 from its drop. Copy 5's take 84 from its drop tile to copy 6's join.
 - The lane change gives 414 only when the side load lands on the entrance's own line, the upstream half of its tile.
 - Two clocks leave copies short in the game: 4cc378b0763b and 73f5b0448482. On both, copies 4 and 8 are short, and the
-  other copies hold. The output inserters of copies 4 and 8 take 5 ticks or more in 80 of 320 hands. The game has 15 of
-  61 and 14 of 60. On the selected clock (b1490c9f2c49) every copy holds, as in the game.
+  other copies hold. The output inserters of copies 4 and 8 take more than 5 ticks from the first stack to the last in
+  80 of 320 hands. The game has 15 of 61 and 14 of 60. Only the third hand of a window is held. On the selected clock
+  (b1490c9f2c49) every copy holds, as in the game.
 - The outlet was shut at clock value 54 for 864 ticks on the selected clock. The engine gave the game's packs in every
   window cycle on copies 1, 2, 4 and 6. On each other copy, 2 or 3 window cycles are different by 4 to 16 packs. The packs lost
   are the game's on all nine copies. Copy 5 stops 613 ticks after the cut, the game 608. Copy 9 stops at 493, the game
@@ -350,9 +351,9 @@ the runs of this build reach it:
 - Not measured: a stack of the receiving lane at 68 to 70 at a join onto an underground exit. Not measured: a contest
   onto an underground entrance. The generation of this build makes 968,144 landings onto an exit and 230,539 onto the
   entrance, the trials included. No landing onto an exit has a stack at 68 to 70, in the generation or in the blockage.
-- 6,756 landings onto the entrance in the generation have a stack of the receiving lane behind the side head's own spot.
-  So do 806 in the blockage. No line feeds the entrance's lane from upstream. So each such stack is an earlier stack of
-  the same lane change, in a lane that is full.
+- The runs reach a contest onto the entrance: 6,756 landings in the generation, and 806 in the blockage, have a stack of
+  the receiving lane behind the side head's own spot. The layout has no line that feeds the entrance's lane from
+  upstream. So each such stack is an earlier stack of the same lane change, in a lane that is full.
 - The splitter: "none" for a priority is refused. An output looks at the stack ahead on the next line. One held-out copy
   shows this, and no hand-over of this build's runs needs it. The back end takes only the head of the input with the
   priority (24 of 24 held-out copies). 105,273 hand-overs of the generation go to the back end.
@@ -361,10 +362,14 @@ the runs of this build reach it:
   of a lone exit's line stays on that line. No landing of this build's runs does this.
 - The model shuts the outlet's loader. The game test removes the loader. So the model's loader line holds two more
   stacks a lane while it is shut.
-- The recordings of the whole build were replayed through the model. The model holds the game's stacks on every
-  recorded line, with one exception: the last stack of the loop's first line in a standing queue. The game keeps it at
-  the back of the curve's inner lane, 81 behind the stack ahead. The model keeps it 64 behind. The number of stacks is
-  the game's.
+- The recording of the selected clock was replayed through the model, from its first row. From row 6,000, the model
+  holds the game's stacks on every recorded line, with one exception: the last stack of the loop's first line in a
+  standing queue. The game keeps it at the back of the curve's inner lane, 81 behind the stack ahead. The model keeps it
+  64 behind. The number of stacks is the game's. Why is not established.
+- The recordings of the two clocks that leave copies short start in the middle of a run, and the splitter's own lines
+  are not recorded. Their replays do not come to the game's stacks in their 3,200 rows, at the splitter's right output,
+  the loop and copy 9's stretch. The replay of the selected clock from the same row does not either. Whether the model
+  agrees with the game at the splitter on those clocks is not established.
 
 ### Two inserters that bring the same item
 
