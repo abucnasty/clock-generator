@@ -3,6 +3,13 @@ import { BeltSpeed } from "../entities/belt";
 import type { OutputBeltJoin } from "../entities/belt/join/output-belt-join";
 import { BeltLane } from "../simulation/components/belt-lane";
 import { OutputBeltDrop, OutputBeltRun } from "./output-belt-run";
+import { ConfigPaths } from "../config/config-paths";
+import { loadConfigFromFile } from "../config/loader";
+import { OpenRange } from "../data-types";
+import { simulationStateKey } from "./runner/steady-state";
+import type { SimulationContext } from "./sequence/simulation-context";
+import { runOnSharedLanes } from "./shared-lane-model";
+import { sharedLaneRunsOf } from "./shared-lane-verdict";
 
 // One copy's side belt (a drop tile and a turned belt, 551 long) side-loads onto an underground exit (128), which runs into
 // the outlet's loader: the automation science 240 build's copy 1, with its stretch cut short
@@ -84,5 +91,21 @@ describe("the output belt in the run of the copies", () => {
         expect(shut.key(5)).not.toBe(open.key(5));
         shut.openOutlet(6);
         expect(shut.key(8)).toBe(open.key(8));
+    });
+});
+
+describe("the output belt in the state of a run of the copies", () => {
+    it("is held once in the state that a repeat compares, on the automation science 240 build", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
+        const output = [OpenRange.from(1, 37), OpenRange.from(109, 145)];
+        const windows = new Map([["inserter:2", output], ["inserter:1", [OpenRange.from(0, 50), OpenRange.from(122, 149), OpenRange.from(159, 186), OpenRange.from(215, 215)]]]);
+        const { readings } = sharedLaneRunsOf(config);
+        let context: SimulationContext | undefined;
+        const quiet = { log: () => {}, warn: () => {}, error: () => {}, debug: () => {}, info: () => {} };
+        const run = runOnSharedLanes(readings[0].under, windows, 216, readings[0].layouts[0], 4, quiet, it => { context = it; });
+        const tick = context!.tick_provider.getCurrentTick();
+        const key = run.output_belt!.key(tick);
+        expect(run.output_belt!.stacks(tick).length).toBeGreaterThan(0);
+        expect(simulationStateKey(context!).split(key).length - 1).toBe(1);
     });
 });
