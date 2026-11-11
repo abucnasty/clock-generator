@@ -22,7 +22,7 @@ Use the sidecar mod to copy a build from Factorio to the clock generator site.
    The selection tool is in your hand.
 
 2. Drag to select an area that contains one copy of the build. Include all of its machines, inserters, belts, chests
-   and mining drills.
+   and mining drills. If a belt goes into a loader, include the loader and the chest that it fills.
 
    The **Clock Generator Sidecar** window opens. It shows the number of entities and the suggested target.
 

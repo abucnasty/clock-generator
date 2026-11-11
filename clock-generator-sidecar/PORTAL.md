@@ -19,7 +19,7 @@ Use the sidecar mod to copy a build from Factorio to the clock generator site.
    The selection tool is in your hand.
 
 2. Drag to select an area that contains one copy of the build. Include all of its machines, inserters, belts, chests
-   and mining drills.
+   and mining drills. If a belt goes into a loader, include the loader and the chest that it fills.
 
    The **Clock Generator Sidecar** window opens. It shows the number of entities and the suggested target.
 
@@ -94,7 +94,7 @@ items. It does not examine the belts that put items on it. The export gives each
 - `dead_end`: the lane stops. The belt has no belt after it, or it goes into an underground belt entrance that has no
   exit.
 - `outlet`, with no rate: the items move off the lane. The sidecar gives this end only when the belt goes into a loader
-  that fills an infinity chest that removes all items.
+  that fills an infinity chest that removes all items. The loader and the chest must be in your selection.
 - `unknown`: the sidecar cannot see the end of the lane.
 
 The sidecar gives `unknown` when the belt goes into a splitter, into a different loader, or out of your selection. It
