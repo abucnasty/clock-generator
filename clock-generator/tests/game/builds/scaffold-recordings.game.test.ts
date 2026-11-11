@@ -312,9 +312,9 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     },
     // One electromagnetic plant (legendary, five legendary productivity modules, 12 legendary beacons) on accumulators and
     // supercapacitors from one belt, its fluids from infinity pipes: 11 copies of it make 330 a second. A fully automatic config
-    // (no override). The config's crafting speed is 109.475, what 12 beacons give in the game. Recorded 2026-10-16 on the same
-    // batched swings clock (window cycle 704) with the output inserters on AUTO: from a staged start (empty machines) 288 in the first
-    // window cycle and 352 in each of the 50 after; on this test's start (warm-up and settle) 352 in every window cycle checked.
+    // (no override). The config's crafting speed is 109.475, what 12 beacons give in the game. The config states the copies 10 tiles
+    // apart and both lanes of the belt as dead ends, as the scaffold ends its belt. Recorded 2026-11-10 on the selected clock (window
+    // cycle 2,112): on this test's start (warm-up and settle) 1,056 in every window cycle checked.
     "electromagnetic science": {
         scaffold: path.join(SAMPLES, "science", "electromagnetic", "electromagnetic-330.scaffold"),
         config: ConfigPaths.ELECTROMAGNETIC_SCIENCE_330,
@@ -556,7 +556,7 @@ afterAll(async () => {
     }
 }, 60_000);
 
-/** The clocks the values of six builds belong to (scaffold-recordings-clock-pins.json); clock-controls.test.ts checks the selection against the record, and clock-belt.generation.test.ts the build with backed-up belts */
+/** The clocks the values of seven builds belong to (scaffold-recordings-clock-pins.json); clock-controls.test.ts checks the selection against the record, and clock-belt.generation.test.ts the build with backed-up belts */
 const clockPins = readControls<{ cases: Record<string, { config: string; backed_up_belts: boolean; clock_sha256: string }> }>("scaffold-recordings-clock-pins.json").cases;
 
 test("every build with a pinned clock is a build of this file", () => {

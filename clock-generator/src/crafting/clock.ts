@@ -69,6 +69,57 @@ export function fuelHandRoomTicks(entity_registry: ReadableEntityRegistry): Map<
 }
 
 /**
+ * Ticks added to the end of each window of an inserter that takes fuel for its machine off a belt as well as an
+ * ingredient, with the fuel on the lane nearest to it, on top of its room for one more hand (laneHandRoomTicks): room for
+ * the hand that a hand of fuel delays. Its hand cycle, less the tick a window stays open after its last planned hand is
+ * full, less the room for one more hand: 6 for a hand cycle of 11 and a room of 4.
+ *
+ * An empty hand takes the near lane's item whenever the machine takes it, so with the fuel there a hand of fuel comes
+ * whenever the fuel slot has room, and the planned hand comes a whole hand cycle later. A window that ends 1 tick after
+ * the planned last hand is full, plus the room for one more hand, closes on that hand before it fills. With this room
+ * such a window ends where the delayed hand is full, a hand cycle after the planned last hand, and closes before the
+ * arm is back for a hand after it. The ticks are the same on every window of the inserter, whatever its end already
+ * holds. Absent where the room for one more hand already fills the hand cycle, and for an inserter whose near
+ * lane carries the ingredient: its hand of fuel waits behind the planned hands.
+ */
+export function delayedHandRoomTicks(entity_registry: ReadableEntityRegistry): Map<string, number> {
+    const lane_hand_room = laneHandRoomTicks(entity_registry);
+    const room = new Map<string, number>();
+    for (const id of fuelHandRoomTicks(entity_registry).keys()) {
+        const lane_room = lane_hand_room.get(id);
+        const inserter = entity_registry.getAll().find(entity => entity.entity_id.id === id);
+        if (lane_room === undefined || inserter === undefined || !Entity.isInserter(inserter) || inserter.near_lane === undefined) {
+            continue;
+        }
+        const source = entity_registry.getEntityByIdOrThrow(inserter.source.entity_id);
+        const sink = entity_registry.getEntityByIdOrThrow(inserter.sink.entity_id);
+        if (!Entity.isBelt(source) || !Entity.isMachine(sink) || source.lanes[inserter.near_lane - 1]?.ingredient_name !== sink.fuel_slot?.fuel.item_name) {
+            continue;
+        }
+        const ticks = inserter.animation.total.ticks - 1 - lane_room;
+        if (ticks > 0) {
+            room.set(id, ticks);
+        }
+    }
+    return room;
+}
+
+/**
+ * The ticks added to each window of an inserter that takes fuel for its machine off a belt as well as an ingredient,
+ * where a clock is made again for its fuel (see withFuelHandRoomWhereNeeded): room for a hand of fuel where its windows
+ * get no room for one more hand (fuelHandRoomTicks), which holds the fuel's hand already where they do; and where they
+ * do and the fuel is on its near lane, room for the hand the fuel delays (delayedHandRoomTicks). Empty for a build with
+ * neither.
+ */
+export function fuelRoomTicks(entity_registry: ReadableEntityRegistry): Map<string, number> {
+    const lane_hand_room = laneHandRoomTicks(entity_registry);
+    return new Map([
+        ...Array.from(fuelHandRoomTicks(entity_registry)).filter(([id]) => !lane_hand_room.has(id)),
+        ...delayedHandRoomTicks(entity_registry),
+    ]);
+}
+
+/**
  * Ticks added to the end of each window of an inserter that picks up from a belt: room for one more hand, the ticks that
  * hand takes to fill at one lane stack a tick (4 for a hand of 16 from stacks of 4). A takeover upstream or a gap passing
  * the pickup can start a hand later than in the planning run, and a window without the room closes on a partly filled
