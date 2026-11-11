@@ -143,6 +143,52 @@ do local x, y = origin()  -- two assemblers alike on one belt, and one inserter 
     local one, two = copy(a[2], 0, 1), copy(a[6], 0, 1)
     case("two-assemblers-alike-and-an-inserter-unlike-on-a-second-belt", join(a, b, one, two, {taker(b[2], 0, -1, one[2])}), a[1], b[1])
 end
+-- A run of belt going `way` (east or west) that dips into a stub at each copy: at each offset of `at` along the run it
+-- turns south, an inserter picks up from the straight piece of the stub, which faces south, and the belt comes back up
+-- to the run. The inserter stands beside the stub on the side the run comes from, and fills an assembler behind it.
+local function stubs(x, y, way, at, length)
+    local sx = way == E and 1 or -1
+    local pieces, copies = {}, {}
+    local function put(i, dy, direction)
+        local piece = build("turbo-transport-belt", x + sx * i, y + dy, direction)
+        table.insert(pieces, piece)
+        return piece
+    end
+    local stub = {}
+    for _, k in ipairs(at) do stub[k] = true end
+    local i = 0
+    while i < length do
+        if stub[i] then
+            put(i, 0, S)
+            local pickup = put(i, 1, S)
+            put(i, 2, way); put(i + 1, 2, N); put(i + 1, 1, N); put(i + 1, 0, way)
+            local machine = build("assembling-machine-3", pickup.position.x - 3 * sx, pickup.position.y + 1, nil, {recipe = "iron-gear-wheel"})
+            copies = join(copies, {machine, taker(pickup, -sx, 0, machine)})
+            i = i + 2
+        else
+            put(i, 0, way)
+            i = i + 1
+        end
+    end
+    return pieces, copies
+end
+do local x, y = origin()  -- three copies 6 tiles apart on stubs across a run going east
+    local pieces, copies = stubs(x + 4, y, E, {4, 10, 16}, 20)
+    case("three-copies-on-stubs-across-a-run-going-east", join(pieces, copies), pieces[1])
+end
+do local x, y = origin()  -- the same mirrored: the run goes west
+    local pieces, copies = stubs(x + 30, y, W, {4, 10, 16}, 20)
+    case("three-copies-on-stubs-across-a-run-going-west", join(pieces, copies), pieces[1])
+end
+do local x, y = origin()  -- three copies on stubs 6 and then 7 tiles apart
+    local pieces, copies = stubs(x + 4, y, E, {4, 10, 17}, 21)
+    case("three-copies-unevenly-apart-on-stubs", join(pieces, copies), pieces[1])
+end
+do local x, y = origin()  -- one copy on a line that turns north past the pickup
+    local a = line(x, y, E, 4)
+    local up = line(x + 4, y, N, 3)
+    case("one-copy-on-a-line-that-turns", join(a, up, copy(a[2], 0, 1)), a[1])
+end
 
 local report = {samples = {}, cases = {}}
 
@@ -158,7 +204,9 @@ capture.each_tick({first_tick = options.ticks, last_tick = options.ticks, report
         end
         for _, c in ipairs(cases) do
             local exported = export.to_table(extraction.extract_all_entities(c.selection, force))
+            local flows = {}
+            for _, belt in ipairs(exported.belts) do table.insert(flows, belt.flow_direction or "none") end
             table.insert(report.cases, {name = c.name, suggested_target = exported.suggested_target or false,
-                setpoint = exported.setpoint ~= nil, inserters = #exported.inserters})
+                setpoint = exported.setpoint ~= nil, inserters = #exported.inserters, flows = flows})
         end
     end})

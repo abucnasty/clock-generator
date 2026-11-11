@@ -243,37 +243,57 @@ end
 ---@param pickup LuaEntity The belt piece an inserter picks up from
 ---@param selected table<number, LuaEntity> The belt pieces of the export by unit number
 ---@return table<number, number> along The tiles from `pickup` to each piece of the line, by unit number
+---@return LuaEntity[] pieces The pieces of the line in order, `pickup` first
 function merge.line_after(pickup, selected)
-    local along = {}
+    local along, order = {}, {}
     local piece, tiles = pickup, 0
     for _ = 1, merge.MAX_STEPS do
         along[piece.unit_number] = tiles
+        table.insert(order, piece)
         local next_piece, step
         if piece.type == "underground-belt" and piece.belt_to_ground_type == "input" then
             local ok, exit = pcall(function() return piece.underground_belt_neighbour end)
-            if not ok or not exit or not exit.valid then return along end
+            if not ok or not exit or not exit.valid then return along, order end
             next_piece = exit
             step = math.floor(math.abs(exit.position.x - piece.position.x) + math.abs(exit.position.y - piece.position.y) + 0.5)
         else
             local ok, neighbours = pcall(function() return piece.belt_neighbours end)
             local outputs = ok and type(neighbours) == "table" and neighbours.outputs or {}
-            if #outputs ~= 1 then return along end
+            if #outputs ~= 1 then return along, order end
             next_piece = outputs[1]
             step = 1
             -- a stream that does not come in the way the next piece takes its items in side-loads onto another belt
             if not next_piece.valid or (next_piece.type == "transport-belt" and incoming_direction(next_piece) ~= piece.direction)
                 or (next_piece.type == "underground-belt" and next_piece.direction ~= piece.direction) then
-                return along
+                return along, order
             end
         end
         if not next_piece.valid or not next_piece.unit_number or not selected[next_piece.unit_number]
             or not belt_piece(next_piece) or along[next_piece.unit_number] then
-            return along
+            return along, order
         end
         tiles = tiles + step
         piece = next_piece
     end
-    return along
+    return along, order
+end
+
+---The way the items move at the piece `pickup` (defines.direction), where the line does not turn from it to its last
+---selected piece (merge.line_after): every piece faces the way `pickup` does and none is a curve. False where it turns,
+---or where `pickup` is a curve, a splitter, a loader or a linked belt.
+---@param pickup LuaEntity The belt piece an inserter picks up from
+---@param selected table<number, LuaEntity> The belt pieces of the export by unit number
+---@return defines.direction|false
+function merge.pickup_way(pickup, selected)
+    local straight = function(piece)
+        return piece.type == "underground-belt" or (piece.type == "transport-belt" and piece.belt_shape == "straight")
+    end
+    if not straight(pickup) then return false end
+    local _, pieces = merge.line_after(pickup, selected)
+    for _, piece in ipairs(pieces) do
+        if piece.direction ~= pickup.direction or not straight(piece) then return false end
+    end
+    return pickup.direction
 end
 
 ---What an inserter that takes from a belt is, apart from where it stands: its prototype and quality, the way it faces,

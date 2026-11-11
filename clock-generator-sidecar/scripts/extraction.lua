@@ -886,9 +886,9 @@ function extraction.extract_all_entities(entities, force)
                             data.line_ends[line] = { kind = "unknown" }
                         end
                     end
-                    -- a curve turns its items, so it gives no one way
-                    local way = (piece.type == "underground-belt"
-                        or (piece.type == "transport-belt" and piece.belt_shape == "straight")) and piece.direction or false
+                    -- the pickup piece's way where the line does not turn after it (the export states the copy spacing's
+                    -- way instead where it has one)
+                    local way = drop_merge.pickup_way(piece, pieces)
                     if data.flow_direction == nil then
                         data.flow_direction = way
                     elseif data.flow_direction ~= way then
