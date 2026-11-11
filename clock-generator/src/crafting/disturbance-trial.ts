@@ -562,6 +562,35 @@ export function judgedOnTheClock(judged: JudgedRecovery, on_the_clock: readonly 
         : { ...judged, ends_in_on_the_clock: window_cycles };
 }
 
+/** What one copy of a trial put down after the item was back (with one copy, the build's output) */
+export interface CopyBins {
+    bins: readonly number[];
+    /** The bins of each of its branches (terminal-rate.ts) */
+    branches: readonly BranchBins[];
+    /**
+     * Where its repeat is counted on the clock: each branch's running total at the start of each bin and at the end of the
+     * last (`starts`), and at the tick the clock counts 1 in each bin (`marks`), as repeatOnTheClock takes them
+     */
+    on_the_clock?: { starts: readonly (readonly number[])[]; marks: readonly (readonly number[])[] };
+}
+
+/**
+ * A trial of one copy or of the copies: each copy judged on its own (judgeRecovery), its repeat counted again on the clock
+ * where its bins are not at the rate and it has the totals for it (judgedOnTheClock), and the trial back where every copy
+ * is (judgedTogether)
+ */
+export function judgedCopies(copies: readonly CopyBins[], output_per_bin: readonly number[], expected_per_bin: number, repeats_from: number | null,
+    hold_bins: number): { each: JudgedRecovery[]; judged: JudgedRecovery } {
+    const each = copies.map(copy => {
+        const judged = judgeRecovery(copy.bins, expected_per_bin, repeats_from, hold_bins, copy.branches);
+        const totals = copy.on_the_clock;
+        if (totals === undefined || judged.recovers || repeats_from === null) return judged;
+        const counted = copy.branches.map((branch, index) => ({ ...branch, bins: repeatOnTheClock(totals.starts[index], totals.marks[index], repeats_from) }));
+        return judgedOnTheClock(judged, counted, repeats_from);
+    });
+    return { each, judged: judgedTogether(each, output_per_bin, repeats_from, hold_bins) };
+}
+
 /**
  * A trial of the copies, each copy judged on its own (`each`): back where every copy is, after the most bins a copy took.
  * With one copy, as that copy is.
@@ -849,17 +878,14 @@ export function runLossTrials(
         let judged_hold_bins = hold_bins;
         // each copy judged on its own, its repeat counted again on the clock where its bins are not at the rate; the trial is
         // back where every copy is (with one copy, as that copy is)
-        const judgedGroups = (hold: number): JudgedRecovery[] => groups.map((_group, at) => {
-            const judged = judgeRecovery(group_bins[at], expected_per_bin, repeats_from, hold, group_branch_bins[at]);
-            if (!on_the_clock || judged.recovers || repeats_from === null) return judged;
+        const judgedRun = (hold: number) => judgedCopies(groups.map((_group, at) => {
             const end = branchDropped(at);
-            const counted = group_branch_bins[at].map((branch, index) => ({ ...branch,
-                bins: repeatOnTheClock([...group_branch_starts[at].map(it => it[index]), end[index]], group_branch_marks[at].map(it => it[index]), repeats_from!) }));
-            return judgedOnTheClock(judged, counted, repeats_from);
-        });
-        const together = (each: JudgedRecovery[]) => judgedTogether(each, output_per_bin, repeats_from, judged_hold_bins);
-        let each = judgedGroups(hold_bins);
-        let judged = together(each);
+            return { bins: group_bins[at], branches: group_branch_bins[at], ...(on_the_clock && { on_the_clock: {
+                starts: branches.map((_branch, index) => [...group_branch_starts[at].map(it => it[index]), end[index]]),
+                marks: branches.map((_branch, index) => group_branch_marks[at].map(it => it[index])),
+            } }) };
+        }), output_per_bin, expected_per_bin, repeats_from, hold);
+        let { each, judged } = judgedRun(hold_bins);
         const window_bins = output_per_bin.length;
         // a trial short late in its window runs on where every copy that is not back is short late (one copy: as it is)
         if (!judged.recovers && window_bins < max_run_on_bins
@@ -868,8 +894,7 @@ export function runLossTrials(
                 runBin();
             }
             judged_hold_bins = run_on_bins;
-            each = judgedGroups(run_on_bins);
-            judged = together(each);
+            ({ each, judged } = judgedRun(run_on_bins));
         }
         // in a run of the copies, a trial a copy is not back from runs on until the lanes have settled: until the state of
         // the run, the lanes included, repeats, at most MAX_RUN_ON_WINDOW_CYCLES after the item is back; with no repeat by
@@ -879,8 +904,7 @@ export function runLossTrials(
                 runBin();
             }
             if (repeats_from === null) judged_hold_bins = run_on_bins;
-            each = judgedGroups(judged_hold_bins);
-            judged = together(each);
+            ({ each, judged } = judgedRun(judged_hold_bins));
         }
         const ran_on_bins = output_per_bin.length - window_bins;
         // an excess has to cost the build nothing: it is at its expected output from the first window cycle on
