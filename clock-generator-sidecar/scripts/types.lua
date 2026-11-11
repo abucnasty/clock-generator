@@ -80,6 +80,7 @@
 ---@field recipe string The item name of the main product that leaves the selection (not necessarily the recipe's name)
 ---@field items_per_second number What the selected machines of that recipe make of it together at their maximum
 ---@field copies number Always 1
+---@field copy_offset {x: number, y: number}|nil Where the next copy stands from a copy, where the selection shows copies at one spacing (export.to_table)
 
 ---@class PlayerData
 ---@field machines MachineData[] Extracted machine data
@@ -95,5 +96,6 @@
 ---@field unit_number_to_id table<number, number> Maps entity unit_number to machine ID
 ---@field belt_unit_number_to_id table<number, number> Maps belt unit_number to belt ID
 ---@field chest_unit_number_to_id table<number, number> Maps chest unit_number to chest ID
+---@field copy_offset {x: number, y: number}|nil Where the next copy stands from a copy (drop-merge.lua copy_offset); nil where the selection does not show copies at one spacing
 
 return {}

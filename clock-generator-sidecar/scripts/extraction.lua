@@ -935,6 +935,13 @@ function extraction.extract_all_entities(entities, force)
         end
     end
 
+    -- Where the next copy stands from a copy, from the inserters along the lines they take from
+    local selected_inserters = {}
+    for _, entity in pairs(entities) do
+        if entity.valid and entity.type == "inserter" then table.insert(selected_inserters, entity) end
+    end
+    result.copy_offset = drop_merge.copy_offset(selected_inserters, pieces)
+
     -- Fifth pass: extract chests and build chest unit_number -> id mapping. A buffer chest that holds nothing at this
     -- instant has the item the inserters and drills around it say, if they say one.
     local known = {} -- chest unit_number -> set of the items it holds or filters for

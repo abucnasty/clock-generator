@@ -208,7 +208,12 @@ function export.to_table(result, options)
         -- nil, which leaves the key out, when the selection has no final product
         suggested_target = export.suggested_target(result)
     }
-    
+    -- The copy spacing goes in the suggested target, which a paste makes the setpoint: an export with a setpoint of its
+    -- own is taken for a build file of the site and refused. Without a suggested target it is not exported.
+    if output.suggested_target and result.copy_offset then
+        output.suggested_target.copy_offset = { x = result.copy_offset.x, y = result.copy_offset.y }
+    end
+
     -- Format machines for clock-generator
     for i, machine in ipairs(result.machines) do
         table.insert(output.machines, {
