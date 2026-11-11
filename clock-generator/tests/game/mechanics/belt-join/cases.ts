@@ -98,8 +98,6 @@ export interface JoinCopy {
     priority?: [SplitterSide, SplitterSide];
 }
 
-/** The first tick a stream may start: the pieces stand built for 120 ticks first */
-export const FIRST_STREAM_TICK = 120;
 /** The last tick logged */
 export const TICKS = 720;
 

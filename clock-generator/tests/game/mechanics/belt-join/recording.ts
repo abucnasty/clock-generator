@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import zlib from "zlib";
 import { JoinModel, PutOn, TickInput } from "../../../../src/entities/belt/join/join-model";
-import { COPIES, endLinesOf, JoinCopy, layoutOf, Stream, streamTicks } from "./cases";
+import { endLinesOf, JoinCopy, layoutOf, Stream } from "./cases";
 
 /** What probe.lua writes of the copies besides their rows (info.json) */
 export interface JoinInfo {
@@ -119,8 +119,6 @@ export const writeKept = (dir: string, kept: KeptCopy) =>
 export const loadKept = (name: string, dir = RECORDINGS_DIR): KeptCopy =>
     JSON.parse(zlib.zstdDecompressSync(fs.readFileSync(path.join(dir, `${name}.json.zst`))).toString("utf8")) as KeptCopy;
 
-export const copyNamed = (name: string): JoinCopy => COPIES.find(copy => copy.name === name)!;
-
 /** The model's inputs of a copy, tick by tick, from its put-ons and end changes */
 export function inputsOf(put_ons: KeptCopy["put_ons"], ends: KeptCopy["ends"]): Map<number, TickInput> {
     const inputs = new Map<number, TickInput>();
@@ -148,13 +146,3 @@ export function replay(copy: JoinCopy, kept: KeptCopy): { t: number; game: strin
     }
     return null;
 }
-
-/** The planned inputs of a copy before a run: every script insert done, no inserter drop (those are known only after it) */
-export function plannedPutOns(copy: JoinCopy): KeptCopy["put_ons"] {
-    const lengths = new Map(layoutOf(copy).lines.map(line => [line.id, line.length]));
-    return copy.streams.flatMap(s => streamTicks(s).map((t): [number, string, number, 0] => [t, s.line, s.spot ?? lengths.get(s.line)! - 1, 0]))
-        .sort((a, b) => a[0] - b[0]);
-}
-
-export const plannedEnds = (copy: JoinCopy): KeptCopy["ends"] => (copy.ends ?? []).flatMap(e => e.chests.flatMap(chest =>
-    endLinesOf(chest).map((line): [number, string, "shut" | "loader"] => [e.t, line, e.action === "block" ? "shut" : "loader"])));
