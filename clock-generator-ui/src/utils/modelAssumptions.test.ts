@@ -38,7 +38,7 @@ describe('the model texts', () => {
             'The Biochamber (machine 3) that makes Pentapod egg gets a kick start of 84 Pentapod egg. Losing those items is a separate recovery question.',
             'The Biochamber that makes Agricultural science pack: imported fuel Nutrients.',
         ]);
-        const { machines: _kept, ...before } = assumptions;
+        const before = { ...assumptions, machines: undefined };
         expect(modeledDetails({ assumptions: before } as unknown as ClockAlternativeView, words, words)[0]).toMatch(/^Machine 3 gets a kick start/);
     });
 });
