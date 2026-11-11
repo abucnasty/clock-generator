@@ -210,6 +210,16 @@ describe("a splitter", () => {
         expect(rows[1]).toEqual([["out-right1", 63], ["out-right1", 127]]);
     });
 
+    test("an output puts a head 64 behind the stack ahead on its path, also on the line after the output line", () => {
+        const layout = splitterLayout("right", "right");
+        // the right output's lane 1 runs into a long line whose stacks stand at its end; its back stack at 296 of 300
+        layout.lines = layout.lines.filter(line => !["out-belt-right1", "loader-right1"].includes(line.id))
+            .map(line => (line.id === "out-right1" ? { ...line, feeds: "after" } : line));
+        layout.lines.push({ id: "after", length: 300, end: "shut" });
+        const rows = run(new JoinModel(layout), 1, { 0: { put_ons: [...standing("after", [0, 64, 128, 192, 256, 296]), before("in-right1", 35)] } });
+        expect(rows[1].filter(([line]) => line === "out-right1")).toEqual([["out-right1", 296 - 300 + 64]]);
+    });
+
     test("a stack that no output takes stands at the end of its input line, and the stacks behind it keep 64 behind it", () => {
         const rows = run(new JoinModel(splitterLayout("right", "right", { left: true, right: true })), 3, { 0: { put_ons: [
             ...standing("out-right1", [0, 64, 127]), ...standing("out-left1", [0, 64, 127]), before("in-left1", 50), before("in-left1", 114)] } });
