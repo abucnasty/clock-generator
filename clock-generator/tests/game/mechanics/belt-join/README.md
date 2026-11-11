@@ -27,10 +27,10 @@ one transport line of one entity. Each belt has one line for each lane. The numb
    feed it in-line, then the senders that land on it. A stack moves 32 toward its line's end. It keeps 64 behind the
    stack ahead on its path, and it never moves back. Past the end it goes onto the next line, at that line's length
    less the rest of its step.
-2. **Landing.** A side head lands when its step takes it past its line's end. Its spot is S - 32 + p, with p its
-   position before the tick, or the first spot behind it that is 64 clear of the receiving lane's stacks. It lands only
-   if that spot is at most S + 63. Else it stands at its line's end, and the stacks behind it wait. A spot past the
-   receiving line's back end is on the line before it.
+2. **Landing.** A side head lands when its step takes it past its line's end. Its natural spot is S - 32 + p, with p
+   its position before the tick. It lands there, or at the first spot behind it that is 64 clear of the receiving
+   lane's stacks. It lands only if that spot is at most S + 63. Else it stands at its line's end, and the stacks behind
+   it wait. A spot past the receiving line's back end is on the line before it.
 3. **The side-load point S.** 67 onto a straight belt from its downstream side, and 188 from its upstream side. 67
    onto an underground exit from its downstream side. 60 onto an underground entrance from its upstream side.
 4. **The contest.** A stack of the receiving lane at or past S goes first, also when it is behind the head's spot.
@@ -58,7 +58,7 @@ splitter with "none" for a priority.
    further on. The output takes the stack at a spot on the line (127 at most), however far behind the head's own spot.
    A spot past the back end moves to the back end, 127. That occurs only when the head's own spot is at most 64 before
    127 and 127 is behind the last stack. Else the output does not take the stack. Read: the copies with both inputs
-   full (127 behind a stack at 63); the shut-output copies (64 behind 0; 127 behind 64); the loop copy whose loader was
+   full (127 behind a stack at 63). The shut-output copies (64 behind 0; 127 behind 64). The loop copy whose loader was
    removed at tick 40 (taken at 64, 80, 112 and 127; not taken past the back end from a spot of 48). The smoke of this
    family's run changed this rule before the full run: in `splitter-one-output` at tick 402, a head at 0 (its own spot
    45) went to 127, behind a stack at 63.
@@ -91,16 +91,18 @@ the game still gives an entrance's tunnel line one tile. The two logs are the sa
   68, 69 or 70 at a side head's first chance yields to the head (side-load point 67). So does one at 189 or 190
   (side-load point 188). Onto an exit, a line stack at 64, 65, 66 and 67 goes first. Each copy has 6 contests, all as the
   model gives them.
-- **The splitter's rules agree on 5 of the 6 splitter copies.** They are the other priorities, each lane, both inputs
-  full, and one usable output with its end opened again (`splitter-one-output`, read on the smoke).
+- **The splitter's rules on copies they were not read from:** rules 1, 2, 5 and 6 agree on the four copies with the
+  other priorities, each lane and both inputs full. Rule 4's move to the back end is refuted for the input without the
+  priority (`splitter-output-shut`, below). Rules 7 and 8, and an end opened behind a splitter, rest on
+  `splitter-one-output`, which the smoke read.
 - **`splitter-output-shut` differs from tick 262.** The right input has no priority; its head is at 18. The right
   output has the priority and holds stacks at 0 and 64 behind its shut end. The model puts the head at the back end,
   127, as the game did for the input with the priority in the 600-tick recording. The game puts it onto the left output
   at 63. Not kept. Not established: whether the back end is only for the input with the priority.
 - **`loop-shut-end` differs from tick 137.** The first stack onto the splitter's left input, from the turned belt, is
   one step (32) further on than in the model, 137 ticks after the build. Not kept.
-- **Kept:** 29 copies, 87 KB as `.json.zst` (zstd level 19 through Node's `zlib`). They are the first group of
-  cases.ts, the five other splitter copies, and three boundary copies: the first stack behind each point
+- **Kept:** 29 copies, 87 KB as `.json.zst` (zstd level 19 through Node's `zlib`). They are 21 of the 22 copies of
+  the first group of cases.ts, the five other splitter copies, and three boundary copies: the first stack behind each point
   (`boundary-belt-68`, `boundary-belt-189`) and the stack at the exit's point (`boundary-exit-67`). The offline replay
   of all of them takes about a quarter of a second.
 
@@ -112,7 +114,8 @@ the game still gives an entrance's tunnel line one tile. The two logs are the sa
 - **For up to about 90 ticks after a build**, the game can put a stack one step off at a cut between two of its lines.
   In the first scaffold run of 2026-11-11, 28 of 96 new held-out copies differ by one step at a cut or at a landing
   next to one. They come back to the model's rows within about 85 ticks. This family waits 120 ticks before any stream.
-  At the cut onto a splitter's input it was seen later: 64 and 137 ticks after the build (`loop-shut-end`).
+  At the cut onto a splitter's input it was seen later: 64 and 137 ticks after the build (`loop-shut-end`). So the
+  bound of about 90 ticks is not established.
 - **The boundary run** measured the straight belt from both sides (67 and 68; 188 and 189) and the exit from one side
   (67 and below). Not measured: a line stack from 68 to 70 onto an exit, and any contest onto an entrance.
 - **The splitter:** the shut output with the head of the input that has no priority (`splitter-output-shut`, above).

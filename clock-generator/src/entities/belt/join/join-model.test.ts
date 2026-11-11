@@ -180,9 +180,9 @@ describe("a splitter", () => {
         }
     });
 
-    test("an output takes a stack at most at its back end, 127, less than 64 behind its last stack when that is where the spot falls", () => {
+    test("an output takes the head of the input with the priority at its back end, 127, less than 64 behind its last stack when that is where the spot falls", () => {
         const rows = run(new JoinModel(splitterLayout("right", "right", { right: true })), 1,
-            { 0: { put_ons: [...standing("out-right1", [0, 64]), before("in-left1", 50)] } });
+            { 0: { put_ons: [...standing("out-right1", [0, 64]), before("in-right1", 50)] } });
         expect(rows[1]).toEqual([["out-right1", 0], ["out-right1", 64], ["out-right1", 127]]);
     });
 

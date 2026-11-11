@@ -117,7 +117,8 @@ const STRAIGHT_ENDS: [number, number][] = [[14, 4], [14, 9]];
 const phase = (q: number, length: number) => length - 32 + q;
 
 /**
- * The copies whose rows the reference model gave to the last tick, built again: the free landings, a landing behind a
+ * Copies of the earlier recordings of 2026-11-11 on which these rules gave the game's rows to the last tick, built
+ * again (their streams 120 ticks later where they started earlier): the free landings, a landing behind a
  * stack ahead, the contest onto an exit and onto a straight belt at both side-load points, the loop, the side belt held
  * by a shut end, a backed-up line released, the end loader.
  */
