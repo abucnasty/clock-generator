@@ -62,6 +62,13 @@ splitter with "none" for a priority.
    removed at tick 40 (taken at 64, 80, 112 and 127; not taken past the back end from a spot of 48). The smoke of this
    family's run changed this rule before the full run: in `splitter-one-output` at tick 402, a head at 0 (its own spot
    45) went to 127, behind a stack at 63.
+   **The back end is only for the input with the priority** (written after the run of 2026-11-11, before its follow-up
+   run). A spot past the back end moves to the back end only for the head of the input that has the input priority.
+   The head of the other input goes onto the other output when the output with the priority cannot take it at a spot
+   on its line. Read: `splitter-output-shut` at tick 262 (input priority left, output priority right, the right output
+   shut, a right input's head at 18 went onto the left output at 63). The 600-tick recording's heads that moved to 127
+   past the back end were all of the input with the priority: the shut-output copy with both priorities right (tick
+   138), and the loop copy (the right input, ticks 49, 54 and 56).
 5. **Input priority.** On each lane, the head of the input that has the priority goes first. The other input's head
    comes after it, behind it. Read: the copies with both inputs full, tick 70.
 6. **Both inputs full, both outputs free: each input keeps its own output.** This follows from 4 and 5. After the
