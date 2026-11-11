@@ -68,7 +68,7 @@
       "entity": "inserter:1",
       "group": "inserter:1",
       "item": "flying-robot-frame",
-      "from": "belt:1/lane:1#flying-robot-frame",
+      "from": "belt:1/lane:2#flying-robot-frame",
       "from_ports": [
         "belt:1/lane:1#flying-robot-frame",
         "belt:1/lane:2#flying-robot-frame"

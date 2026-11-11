@@ -337,11 +337,17 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         warmup_ticks: 3600,
         backed_up_belts: true,
     },
+    // abucnasty's two copies of the build (2026-11-10), 9 tiles apart in one row: each a legendary utility science assembler (4
+    // legendary productivity modules, 10 legendary beacons: 63.0078) taking flying robot frames from one turbo belt and low density
+    // structures and processing units (one lane each) from another; both belts come from stack inserters at infinity chests, run
+    // east past the two copies and end at an underground entrance with nothing beyond. The packs go onto a belt into a void chest.
+    // 17.14 a second a copy, 120 over seven.
     "utility science with processing units and low density structures on one belt": {
         scaffold: path.join(SAMPLES, "science", "utility", "utility-120-processing-unit-and-lds-on-one-belt.scaffold"),
         config: ConfigPaths.UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT,
         seed: [],
         warmup_ticks: 3600,
+        copies: 2,
     },
     "utility science with processing units and low density structures on one belt (belts are backed up)": {
         scaffold: path.join(SAMPLES, "science", "utility", "utility-120-processing-unit-and-lds-on-one-belt.scaffold"),
@@ -349,6 +355,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [],
         warmup_ticks: 3600,
         backed_up_belts: true,
+        copies: 2,
     },
     "low density structure": {
         scaffold: path.join(SAMPLES, "intermediates", "lds", "lds-240.scaffold"),
@@ -542,7 +549,7 @@ afterAll(async () => {
     }
 }, 60_000);
 
-/** The clocks the values of five builds belong to (scaffold-recordings-clock-pins.json); clock-controls.test.ts checks the selection against the record, and clock-belt.generation.test.ts the build with backed-up belts */
+/** The clocks the values of six builds belong to (scaffold-recordings-clock-pins.json); clock-controls.test.ts checks the selection against the record, and clock-belt.generation.test.ts the build with backed-up belts */
 const clockPins = readControls<{ cases: Record<string, { config: string; backed_up_belts: boolean; clock_sha256: string }> }>("scaffold-recordings-clock-pins.json").cases;
 
 test("every build with a pinned clock is a build of this file", () => {
