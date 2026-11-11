@@ -849,6 +849,15 @@ export const ConfigOverridesSchema = z.preprocess(renameLoopSeedItemsToKickStart
      */
     check_start_dependence: z.boolean().optional().describe("Whether the generator tests each clock from more starts than the cold start."),
     /**
+     * Make the disturbance trials again on the copies that share a lane, where the copies share one: a supply stop closes
+     * the entry of each shared lane that carries the item, so that the lane drains, and after each trial every copy has to
+     * be back at the expected output of one copy. Made for a clock that gets back from every loss on one copy and keeps
+     * every copy at its target on the shared lanes. Set false to try one copy only.
+     *
+     * @default true
+     */
+    disturbance_trials_on_copies: z.boolean().optional().describe("Whether the generator makes the disturbance trials again on the copies that share a lane."),
+    /**
      * Items of its own product a machine whose recipe makes its own ingredient (pentapod eggs) is given once when a clock
      * starts on the staged scaffold: the loop cannot start itself, so the scaffold's machines get their kick start by hand.
      *

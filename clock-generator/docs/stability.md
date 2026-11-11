@@ -76,6 +76,8 @@ pickup counter removed from repeat keys, the coal-loss trials can settle into a 
 window cycle, so the existing rule calls it **no recovery**. The regression records this outcome rather than changing
 the trial policy or restoring a counter that does not affect pickup behavior.
 
+Where the copies of a build share a lane, the trials are made again on the copies together, with the supply stopped at the entry of each shared lane (see "The disturbance trials on the copies" below).
+
 One kind of build is left out of this. Where a build has a deadlock risk (see "Two inserters that bring the same item"), its clocks are tried and their verdicts shown, and the verdict does not decide which is selected.
 
 This can cost wakeups: goal 1 comes first. The clock selected for agricultural science then had 3,950 a minute where the one before had 2,543. Since the rules of issue 152 (2026-10-14, "When a waiting inserter acts") batched swings gets back from every loss on that build and is selected again, at 3,651. Its trials of a loss of nutrients then fell a hand short in a late window cycle, and the 2-swing clock was selected, until such a trial ran on (above): batched swings is selected again, at 2,673.8.
@@ -115,6 +117,19 @@ An example: in a whole copy, a machine has four takers, and each moves one hand 
 - An output inserter of a part copy is held to its own target, the same as an output inserter of a whole copy.
 
 Not shown: no part copy has been recorded in the game. The rule comes from the model only.
+
+#### The disturbance trials on the copies
+
+The disturbance trials of one copy (see "How a clock is tried for it") are made again on the copies together. They are made for a clock that gets back from every loss on one copy and has no loss on the shared lanes. The run is the run of the copies that the check above makes, from the same cold start, with the same losses, places and lengths as on one copy (`clock-generator/src/crafting/shared-lane-trial.ts`).
+
+- **A supply stop.** The entry of each shared lane that carries the item is closed. The lane gets no more items, and the takers of the copies empty it from the entry downstream. The belt of the lane does not withhold the item, so a hand stops only when its reach of the lane is empty. Every other belt and infinity chest withholds the item, as on one copy. When the item comes back, the entry opens and the lane fills again from the entry.
+- **An output blockage.** The product is refused in the chests and on the belts of every copy, as on one copy.
+
+After each trial, each copy is judged on its own, by the rules of one copy. Its output has to be the expected output of one copy alone in every window cycle: from the window cycle at which the state of the run repeats, the lanes included, or in its last 8 window cycles where no state repeats. A trial that a copy is not back from runs on until the lanes settle: until the state of the run repeats, at most 200 window cycles after the item is back. Where no state repeats by then, the last 40 window cycles are judged. A copy that is not back makes the clock one with no recovery. The result names the loss, the shared lanes, the copies from the entry that are not back and the items a window cycle that each of them ends at (`disturbance_trial.on_copies`). The trials stop at the first loss after which a copy is not back.
+
+The run with nothing cut is judged first, in the same way. Where a copy is not at the expected output in every window cycle of it, the trials on the copies are not made, and `on_copies.not_tried` says why. A part copy that holds only some of the output inserters is not judged (`on_copies.copies_not_judged`). The other lane phases and the other orders of the takers are tried on one copy only. A build whose copies share no lane is not run on copies. `overrides.disturbance_trials_on_copies: false` makes the trials on one copy only.
+
+Recorded on ELECTROMAGNETIC_SCIENCE_330, with 11 copies 11 tiles apart on two dead-ended lanes and a clock of 704 ticks (2026-11-10): in the game, after the accumulator supply stopped for 2,010 ticks, copy 3 stayed at 25 packs a second (272 to 304 a window cycle) and the other ten copies went back to 30. The trials on one copy and the check of the shared lanes found no loss for this clock. The trials on the copies find that copy 3 ends at 304, 272 and 304 a window cycle after the accumulator stops, where one copy makes 352, and the other copies at 352.
 
 ### What a stable verdict proves
 

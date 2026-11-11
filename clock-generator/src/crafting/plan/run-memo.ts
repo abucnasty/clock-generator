@@ -1,6 +1,7 @@
 import type { BuildRun, RunOptions } from "./unclocked-run";
 import type { Config } from "../../config";
 import type { DisturbanceTrialAssessment } from "../trial";
+import type { CopiesTrialVerdict } from "../shared-lane-trial";
 
 /**
  * A run shorter than this is simulated again rather than kept. A run of 100,000 ticks takes seconds; a shorter one
@@ -118,6 +119,16 @@ export class RunMemo {
     /** Verdicts handed out again */
     loss_hits = 0;
 
+    /** What the trials on the copies that share a lane found about a clock (see `copiesTrial`), by what they are a function of */
+    private readonly copies_trials = new Map<string, CopiesTrialVerdict>();
+    /** Verdicts of the trials on the copies handed out again */
+    copies_trial_hits = 0;
+
+    /** Clocks the trials on the copies were made for */
+    get copies_trials_made(): number {
+        return this.copies_trials.size;
+    }
+
     /** What the checks of a set of windows found (see `judgement`), by what they are a function of */
     private readonly judgements = new Map<string, string | null>();
     /** Judgements handed out again */
@@ -152,6 +163,21 @@ export class RunMemo {
         if (verdict.disturbance_trial !== null) {
             this.losses.set(key, verdict);
         }
+        return verdict;
+    }
+
+    /**
+     * The verdict of the trials of a clock on the copies that share a lane (shared-lane-trial.ts): the one kept, or the one
+     * `tried` makes. The alternatives that list one clock more than once try it once.
+     */
+    copiesTrial(key: string, tried: () => CopiesTrialVerdict): CopiesTrialVerdict {
+        const kept = this.copies_trials.get(key);
+        if (kept !== undefined) {
+            this.copies_trial_hits++;
+            return kept;
+        }
+        const verdict = tried();
+        this.copies_trials.set(key, verdict);
         return verdict;
     }
 

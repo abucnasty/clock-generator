@@ -33,6 +33,9 @@ import { ExportShortfall, ExportedItem, exportShortfallOfBins } from "./export-d
 import { SPOIL_LIMIT_SHARE } from "../common/rule-constants";
 import { ContainerStorage } from "../simulation/components/container-storage";
 import { DropBy } from "../simulation/components/ports";
+import type { SharedLane } from "../state/shared-lane";
+import type { CopiesTrialVerdict } from "./shared-lane-trial";
+import { COPY_NUMBER_STRIDE, twinOf } from "./sequence/build-copies";
 
 export type DisturbanceTrial =
     /** Nothing is cut: the run as it is, counted as the runs with a loss are */
@@ -243,6 +246,28 @@ export interface DisturbanceTrialOptions {
      * holds no more of them than `limit` (the backlog the loss left has drained)
      */
     watched_backlog?: { container_id: string; items: readonly ItemName[]; limit: number };
+    /**
+     * The run holds every copy of the build on the lanes they share (shared-lane-trial.ts): a supply stop closes the entry of
+     * each of those lanes that carries the item, and the output of each copy is judged on its own
+     */
+    copies?: CopiesOnSharedLanes;
+}
+
+/**
+ * The lanes the copies of a build share, as a run of the copies holds them: filled when the run's context is made, before
+ * its first tick, and read by the trials after the run
+ */
+export interface CopiesOnSharedLanes {
+    lanes: { belt_entity_id: string; item: ItemName; lane: SharedLane }[];
+}
+
+/** What one copy put down after a trial of a run of the copies, and whether it was back at the expected output */
+export interface CopyAfterLoss {
+    /** The copy, counted from the lanes' entry: 1 is the config's own */
+    copy: number;
+    recovers: boolean;
+    /** The bins the copy ended in: those that repeat when the state did, or the last ones it was held to */
+    ends_in: number[];
 }
 
 export interface LossTrial {
@@ -274,6 +299,13 @@ export interface LossTrial {
     ran_on_bins?: number;
     /** What the container held of the watched items (DisturbanceTrialOptions.watched_backlog) after each bin; absent where none are watched */
     backlog_per_bin?: number[];
+    /**
+     * In a run of the copies (DisturbanceTrialOptions.copies): each copy whose output is judged, in order. Absent in a run of
+     * one copy. `output_per_bin` is then the output of those copies together.
+     */
+    copies?: CopyAfterLoss[];
+    /** In a run of the copies: the copies that hold only part of the output inserters, whose output is not judged */
+    copies_not_judged?: number[];
     /**
      * The export belts that received less than their consumers take in those bins; absent when none did. A build that
      * is at its expected output and shortchanges an export has not recovered.
@@ -355,17 +387,25 @@ export function itemsCarried(entity_registry: Pick<ReadableEntityRegistry, "getE
     return source !== null && Entity.isMachine(source) ? source.outputs.map(output => output.item_name) : [];
 }
 
-/** What a loss switches off, and on again when it is over */
-function switchOf(context: SimulationContext, loss: DisturbanceTrial): { cut(): void; restore(): void } {
+/**
+ * What a loss switches off, and on again when it is over. In a run of the copies on the lanes they share (`copies`), a
+ * supply stop closes the entry of each of those lanes that carries the item, so that the lane drains as its takers take
+ * from it; the belt of such a lane does not withhold the item, which would stop every hand on it at once. Every other belt
+ * and infinity chest withholds it as in a run of one copy.
+ */
+function switchOf(context: SimulationContext, loss: DisturbanceTrial, copies?: CopiesOnSharedLanes): { cut(): void; restore(): void } {
     if (loss.kind === "none" || loss.kind === "excess") {
         return { cut: () => { }, restore: () => { } };
     }
+    const now = () => context.tick_provider.getCurrentTick();
+    const entries = loss.kind === "supply" ? (copies?.lanes ?? []).filter(it => it.item === loss.item) : [];
+    const entry_belts = new Set(entries.map(it => it.belt_entity_id));
     // on every belt and chest that gives the item, or that the build puts it into
     const inserters = context.inserters.map(it => it.inserter_state.inserter);
     const sets: Set<ItemName>[] = [];
     for (const state of context.state_registry.getAllStates()) {
         if (EntityState.isBelt(state)) {
-            sets.push(loss.kind === "supply" ? state.supply.withheld : state.supply.refused);
+            if (!entry_belts.has(twinOf(state.entity_id).id)) sets.push(loss.kind === "supply" ? state.supply.withheld : state.supply.refused);
         } else if (ContainerStorage.isConstant(state) || ContainerStorage.isFinite(state)) {
             if (loss.kind === "supply" && ContainerStorage.isConstant(state)) {
                 sets.push(state.supply.withheld);
@@ -379,9 +419,32 @@ function switchOf(context: SimulationContext, loss: DisturbanceTrial): { cut(): 
         }
     }
     return {
-        cut: () => sets.forEach(set => set.add(loss.item)),
-        restore: () => sets.forEach(set => set.delete(loss.item)),
+        cut: () => {
+            sets.forEach(set => set.add(loss.item));
+            entries.forEach(it => it.lane.closeEntry(now()));
+        },
+        restore: () => {
+            sets.forEach(set => set.delete(loss.item));
+            entries.forEach(it => it.lane.openEntry(now()));
+        },
     };
+}
+
+/**
+ * The output inserters of each copy of a run of the copies, by the copy's number (0 the config's own), from those of the
+ * config's own copy: each copy's twins of them. A copy that holds only some of them (a part copy) is left out, and named.
+ */
+function outputsOfCopies(context: SimulationContext, output_inserters: readonly InserterState[]): { by_copy: Map<number, InserterState[]>; part: number[] } {
+    const own = new Set(output_inserters.map(state => state.entity_id.id));
+    const by_copy = new Map<number, InserterState[]>();
+    for (const { inserter_state } of context.inserters) {
+        if (!own.has(twinOf(inserter_state.entity_id).id)) continue;
+        const copy = Math.floor(inserter_state.entity_id.number / COPY_NUMBER_STRIDE);
+        by_copy.set(copy, [...by_copy.get(copy) ?? [], inserter_state]);
+    }
+    const part = [...by_copy].filter(([, states]) => states.length !== own.size).map(([copy]) => copy).sort((a, b) => a - b);
+    part.forEach(copy => by_copy.delete(copy));
+    return { by_copy: new Map([...by_copy].sort(([a], [b]) => a - b)), part };
 }
 
 /**
@@ -495,8 +558,16 @@ export function runLossTrials(
     const branches = !takes_surplus
         ? [{ source_id: "", inserter_ids: output_inserters.map(state => state.entity_id.id), share_per_window_cycle: options.expected_output_items, hand: 0 }]
         : branchesScaledTo(terminal_branches, options.expected_output_items);
-    const branch_states = branches.map(branch => output_inserters.filter(state => branch.inserter_ids.includes(state.entity_id.id)));
-    const branchDropped = () => branch_states.map(states => states.reduce((sum, state) => sum + state.items_dropped, 0));
+    // the output judged: the output inserters of the build, or in a run of the copies those of each copy, each copy's on
+    // its own (its twins of the branches), every copy at the expected output of one
+    const copies = options.copies;
+    const copy_outputs = copies === undefined ? null : outputsOfCopies(context, output_inserters);
+    const groups: { copy: number; states: InserterState[] }[] = copy_outputs === null ? [{ copy: 0, states: [...output_inserters] }]
+        : [...copy_outputs.by_copy].map(([copy, states]) => ({ copy, states }));
+    const group_branch_states = groups.map(group => branches.map(branch =>
+        group.states.filter(state => branch.inserter_ids.includes(copy_outputs === null ? state.entity_id.id : twinOf(state.entity_id).id))));
+    const groupDropped = (at: number) => groups[at].states.reduce((sum, state) => sum + state.items_dropped, 0);
+    const branchDropped = (at: number) => group_branch_states[at].map(states => states.reduce((sum, state) => sum + state.items_dropped, 0));
     // the most ticks a loss lasts: until the build has stopped, at most the window cycles of MAX_LOSS_WINDOW_CYCLES, and shorter
     // than the loss limit of a build whose items spoil
     const limit_ticks = options.loss_limit_ticks !== undefined ? Math.max(1, Math.ceil(options.loss_limit_ticks) - 1) : Infinity;
@@ -534,7 +605,10 @@ export function runLossTrials(
             step();
         }
     };
-    const dropped = () => output_inserters.reduce((sum, state) => sum + state.items_dropped, 0);
+    const dropped = () => groups.reduce((sum, _group, at) => sum + groupDropped(at), 0);
+    // the state a run's boundary is compared by: in a run of the copies, the lanes they share too, each brought up to now
+    const stateKey = copies === undefined ? () => simulationStateKey(context)
+        : () => [simulationStateKey(context), ...copies.lanes.map(it => { it.lane.advanceTo(now()); return it.lane.key(); })].join("\n");
 
     // What the build does: every item an inserter moves and every product a machine finishes is counted, and a
     // machine that crafts moves its bars. A drill puts into a machine without a count, which the stock shows; a drill
@@ -587,7 +661,7 @@ export function runLossTrials(
         return changed;
     };
 
-    const supply = switchOf(context, loss);
+    const supply = switchOf(context, loss, copies);
     const trials: LossTrial[] = [];
     for (let index = 0; index < plans.length; index++) {
         const plan = plans[index];
@@ -637,34 +711,38 @@ export function runLossTrials(
         const restore_at = (now() - start_tick) % bin.ticks;
 
         const output_per_bin: number[] = [];
-        const branch_bins: BranchBins[] = branches.map(branch => ({ bins: [], share_per_bin: branch.share_per_window_cycle * bin.window_cycles, hand: branch.hand, takes_surplus }));
+        const group_bins: number[][] = groups.map(() => []);
+        const group_branch_bins: BranchBins[][] = groups.map(() => branches.map(branch => ({ bins: [], share_per_bin: branch.share_per_window_cycle * bin.window_cycles, hand: branch.hand, takes_surplus })));
         const backlog_per_bin: number[] = [];
         const export_per_bin: number[][] = watched_exports.map(() => []);
         const bin_by_state = new Map<string, number>();
         let repeats_from: number | null = null;
         if (proof_stride !== null) {
-            bin_by_state.set(simulationStateKey(context), 0);
+            bin_by_state.set(stateKey(), 0);
         }
-        // bins at the rate at the end of the trial so far (see firstBinAtRate)
-        const binsAtRate = () => output_per_bin.length - firstBinAtRate(branch_bins);
+        // bins at the rate at the end of the trial so far (see firstBinAtRate), of the copy with the fewest
+        const binsAtRate = () => output_per_bin.length - Math.max(...group_branch_bins.map(branch_bins => firstBinAtRate(branch_bins)));
         const runBin = () => {
-            const before = dropped();
-            const branch_before = branchDropped();
+            const before = groups.map((_group, at) => groupDropped(at));
+            const branch_before = groups.map((_group, at) => branchDropped(at));
             const exported_before = watched_exports.map(it => it.fillers.reduce((sum, state) => sum + state.items_dropped, 0));
             for (let tick = 0; tick < bin.ticks; tick++) {
                 step();
             }
-            const items = dropped() - before;
-            output_per_bin.push(items);
-            const branch_after = branchDropped();
-            branch_bins.forEach((branch, at) => (branch.bins as number[]).push(branch_after[at] - branch_before[at]));
+            const items = groups.map((_group, at) => groupDropped(at) - before[at]);
+            output_per_bin.push(items.reduce((sum, it) => sum + it, 0));
+            items.forEach((it, at) => group_bins[at].push(it));
+            groups.forEach((_group, at) => {
+                const branch_after = branchDropped(at);
+                group_branch_bins[at].forEach((branch, index) => (branch.bins as number[]).push(branch_after[index] - branch_before[at][index]));
+            });
             if (watched_container !== undefined) {
                 backlog_per_bin.push(backlogNow());
             }
             watched_exports.forEach((it, at) => export_per_bin[at].push(it.fillers.reduce((sum, state) => sum + state.items_dropped, 0) - exported_before[at]));
             // only boundaries a whole stride apart have every clock standing at the same place, so only they compare
             if (proof_stride !== null && output_per_bin.length % proof_stride === 0) {
-                const key = simulationStateKey(context);
+                const key = stateKey();
                 repeats_from = bin_by_state.get(key) ?? null;
                 bin_by_state.set(key, output_per_bin.length);
             }
@@ -673,14 +751,37 @@ export function runLossTrials(
             runBin();
         }
         let judged_hold_bins = hold_bins;
-        let judged = judgeRecovery(output_per_bin, expected_per_bin, repeats_from, hold_bins, branch_bins);
+        // each copy judged on its own; the trial is back where every copy is (with one copy, as that copy is)
+        const judgedGroups = (hold: number) => groups.map((_group, at) => judgeRecovery(group_bins[at], expected_per_bin, repeats_from, hold, group_branch_bins[at]));
+        const judgedTogether = (each: ReturnType<typeof judgedGroups>): ReturnType<typeof judgeRecovery> => each.length === 1 ? each[0] : {
+            recovers: each.every(it => it.recovers),
+            recovered_after_bins: each.every(it => it.recovers) ? Math.max(...each.map(it => it.recovered_after_bins!)) : null,
+            proven: repeats_from !== null,
+            ends_in: repeats_from !== null ? output_per_bin.slice(repeats_from) : output_per_bin.slice(-judged_hold_bins),
+        };
+        let each = judgedGroups(hold_bins);
+        let judged = judgedTogether(each);
         const window_bins = output_per_bin.length;
-        if (!judged.recovers && window_bins < max_run_on_bins && runsOn(output_per_bin, expected_per_bin, repeats_from, late_after_bins, hold_bins, branch_bins)) {
+        // a trial short late in its window runs on where every copy that is not back is short late (one copy: as it is)
+        if (!judged.recovers && window_bins < max_run_on_bins
+            && groups.every((_group, at) => each[at].recovers || runsOn(group_bins[at], expected_per_bin, repeats_from, late_after_bins, hold_bins, group_branch_bins[at]))) {
             while (output_per_bin.length < max_run_on_bins && repeats_from === null && binsAtRate() < run_on_bins) {
                 runBin();
             }
             judged_hold_bins = run_on_bins;
-            judged = judgeRecovery(output_per_bin, expected_per_bin, repeats_from, run_on_bins, branch_bins);
+            each = judgedGroups(run_on_bins);
+            judged = judgedTogether(each);
+        }
+        // in a run of the copies, a trial a copy is not back from runs on until the lanes have settled: until the state of
+        // the run, the lanes included, repeats, at most MAX_RUN_ON_WINDOW_CYCLES after the item is back; with no repeat by
+        // then, it is judged on the last RUN_ON_EXACT_WINDOW_CYCLES (a lane still filling can take longer than the window)
+        if (copies !== undefined && !judged.recovers && repeats_from === null && output_per_bin.length < max_run_on_bins) {
+            while (output_per_bin.length < max_run_on_bins && repeats_from === null) {
+                runBin();
+            }
+            if (repeats_from === null) judged_hold_bins = run_on_bins;
+            each = judgedGroups(judged_hold_bins);
+            judged = judgedTogether(each);
         }
         const ran_on_bins = output_per_bin.length - window_bins;
         // an excess has to cost the build nothing: it is at its expected output from the first window cycle on
@@ -703,6 +804,8 @@ export function runLossTrials(
             ...judgedWithExports(judged, watched_exports, export_per_bin, bin.ticks, repeats_from, judged_hold_bins),
             ...(ran_on_bins > 0 && { ran_on_bins }),
             ...(watched_container !== undefined && { backlog_per_bin }),
+            ...(copy_outputs !== null && { copies: groups.map((group, at) => ({ copy: group.copy + 1, recovers: each[at].recovers, ends_in: each[at].ends_in })) }),
+            ...(copy_outputs !== null && copy_outputs.part.length > 0 && { copies_not_judged: copy_outputs.part.map(copy => copy + 1) }),
         });
         if (!trials[trials.length - 1].recovers) {
             break;
@@ -802,6 +905,12 @@ export interface DisturbanceTrialVerdict {
     recovered_after_window_cycles: number | null;
     /** For a build whose items spoil: the losses were shorter than this (lossLimitOf); absent for any other build */
     loss_limit?: LossLimit;
+    /**
+     * The trials on the copies that share a lane (shared-lane-trial.ts), where the copies share one and the clock gets back
+     * from every loss on one copy: a loss after which a copy is not back is in `broken_by` too. Absent where they were not
+     * made.
+     */
+    on_copies?: CopiesTrialVerdict;
 }
 
 export function verdictOf(report: DisturbanceTrialReport): DisturbanceTrialVerdict {
