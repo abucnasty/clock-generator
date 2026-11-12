@@ -15,8 +15,6 @@ import { entityLabel, settingsSlotId } from '../utils/entityLabel';
 import { SELECT_NAMES } from '../utils/a11yLabels';
 import { useGameNames } from '../hooks/useGameNames';
 import { BELT_TYPES, entityTypeLabel } from './entityTypes';
-import { BeltAssumption } from './BeltAssumption';
-import type { BeltAnswer, BeltQuestion } from '../utils/beltQuestion';
 import { DROP_BELT_READ_ONLY } from '../utils/inserterMetadata';
 import type { Config } from 'clock-generator/browser';
 import { LANE_FACT_COPY, beltRoleLine, inputLaneEnds, inputLanesText, outputBeltSummary, type FormLaneFacts } from '../utils/laneFacts';
@@ -31,9 +29,6 @@ interface BeltsFormProps {
     onRemove: (index: number) => void;
     onReorder: (fromIndex: number, toIndex: number) => void;
     onDuplicate: (index: number) => void;
-    /** Asked when an inserter takes from one of these belts */
-    beltQuestion: BeltQuestion;
-    onBeltAnswer: (answer: BeltAnswer) => void;
     /** The lanes as the engine reads them; null while it cannot tell */
     laneFacts?: FormLaneFacts | null;
     /** The copies of the build */
@@ -51,8 +46,6 @@ function BeltsFormComponent({
     onRemove,
     onReorder,
     onDuplicate,
-    beltQuestion,
-    onBeltAnswer,
     laneFacts = null,
     copies = 1,
     outputBelt,
@@ -116,11 +109,6 @@ function BeltsFormComponent({
                         <Typography variant="body2" sx={{ mb: 1 }}><strong>{LANE_FACT_COPY.ends.dead_end}:</strong> The lane stops. The items stay on it until a hand takes them.</Typography>
                         <Typography variant="body2"><strong>{LANE_FACT_COPY.ends.infinite}:</strong> The lane continues. Every item that no hand takes moves on, as into an infinity chest.</Typography>
                     </HelpButton>
-                </Box>
-            )}
-            {beltQuestion.ask && (
-                <Box sx={{ mb: 1.5 }}>
-                    <BeltAssumption answer={beltQuestion.answer} onChange={onBeltAnswer} />
                 </Box>
             )}
 

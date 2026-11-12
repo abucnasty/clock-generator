@@ -65,7 +65,6 @@ describe('generatedForOf', () => {
             key,
             recipe: 'logistic-science-pack',
             itemsPerSecond: 240,
-            beltQuestion: { ask: false, answer: 'backed_up' },
             generatedAt: 1_000,
         });
         expect(keyOf(config)).not.toBe(key);
@@ -86,7 +85,7 @@ const NEXT_DAY = new Date(2026, 9, 13, 9, 0).getTime();
 
 /** Clocks made at 14:02 for 240 logistic science packs a second */
 const madeFor = (fields: Partial<GeneratedFor> = {}): GeneratedFor =>
-    ({ key: '', recipe: 'logistic-science-pack', itemsPerSecond: 240, beltQuestion: { ask: false, answer: 'moving' }, generatedAt: MADE, ...fields });
+    ({ key: '', recipe: 'logistic-science-pack', itemsPerSecond: 240, generatedAt: MADE, ...fields });
 
 describe('madeAtText', () => {
     it.each([

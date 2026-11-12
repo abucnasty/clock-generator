@@ -64,8 +64,6 @@ import { StaleCopyDialog } from './components/StaleCopyDialog';
 import { ManualBlueprintDialog } from './components/ManualBlueprintDialog';
 import { CheckErrorAlert } from './components/CheckErrorAlert';
 import { CheckPlanSection } from './components/CheckPlanSection';
-import { BeltAssumption } from './components/BeltAssumption';
-import { BeltAssumptionLine } from './components/BeltAssumptionLine';
 import { WorkflowBar, type WorkflowView } from './components/WorkflowBar';
 import { barNoteOf, focusBarNote, focusProblemTarget, needsListView, problemsOf, PROBLEM_TEXT, type FocusTarget, type Problem } from './utils/firstProblem';
 import { afterCheck, checkChipOf, checkKeyOf, checkStatusOf, decideCheckOnly, decideGenerate, startsRun } from './utils/checkThenGenerate';
@@ -75,7 +73,6 @@ import { configKeyOf, isStale } from './utils/resultsStaleness';
 import { withDeeperSearch } from './utils/deeperSearch';
 import { familyCopyOf, fullClockName } from './utils/strategyNames';
 import { ANNOUNCEMENTS } from './utils/workflowAnnouncement';
-import { BELT_COPY, beltQuestionOf, backedUpBeltsFor, withBeltAnswer, type BeltAnswer } from './utils/beltQuestion';
 import { PickupGeometrySummary } from './components/PickupGeometrySummary';
 import { useLaneFacts } from './hooks/useLaneFacts';
 import { draftLaneFactsOf, inputLaneEnds } from './utils/laneFacts';
@@ -438,11 +435,6 @@ function App() {
     // likewise a check, except that the switches only the clock search reads leave it current
     const checkKey = useMemo(() => checkKeyOf(engineConfig), [engineConfig]);
     const checkStatus = checkStatusOf(validation, checkKey);
-    // whether the belt setting can change a clock, and what the form says of it
-    const beltQuestion = useMemo(
-        () => beltQuestionOf({ inserters: config.inserters, belts: config.belts, overrides: config.overrides }),
-        [config.inserters, config.belts, config.overrides]
-    );
 
     // the selected clock as the bar, the card and the announcements name it
     const selectedClock = alternatives[selectedAlternativeIndex];
@@ -768,29 +760,6 @@ function App() {
         setView('results');
     }), [runChecked, runSimulation, runDebugSteps, runStreamLogs, setView]);
 
-    // Moving stores `backed_up_belts: false`, Backed up stores nothing
-    const handleBeltAnswer = useCallback(
-        (answer: BeltAnswer) => updateOverrides('backed_up_belts', backedUpBeltsFor(answer)),
-        [updateOverrides]
-    );
-    // Results' "Generate again": checked first as Generate is, then the answer is set on the form and the clocks are
-    // made for the build with it (a check is not changed by the answer, so one for the build as it was stays current)
-    const handleSwitchBelts = useCallback((answer: BeltAnswer) => {
-        if (busy) {
-            return;
-        }
-        runChecked((config) => {
-            if (beltQuestionOf(config).answer !== answer) {
-                handleBeltAnswer(answer);
-            }
-            runSimulation(withBeltAnswer(config, answer), runDebugSteps, runStreamLogs);
-            setView('results');
-        });
-    }, [busy, runChecked, handleBeltAnswer, runSimulation, runDebugSteps, runStreamLogs, setView]);
-    // the clocks on screen: asked as the run asked it, answered with the belt the engine made the selected clock for
-    const beltAssumption = generatedFor?.beltQuestion && selectedClock?.beltLabel
-        ? { ask: generatedFor.beltQuestion.ask, answer: selectedClock.beltLabel === 'backed-up' ? 'backed_up' as const : 'moving' as const }
-        : generatedFor?.beltQuestion ?? null;
 
     // the actions that throw part of the build away offer Undo, just before they are applied
     const undoable = useMemo(() => {
@@ -1314,8 +1283,6 @@ function App() {
                                                 onRemove={undoable.removeBelt}
                                                 onReorder={undoable.reorderBelts}
                                                 onDuplicate={duplicate.belts}
-                                                beltQuestion={beltQuestion}
-                                                onBeltAnswer={handleBeltAnswer}
                                                 laneFacts={laneFacts}
                                                 copies={config.setpoint.copies}
                                                 outputBelt={config.output_belt}
@@ -1359,12 +1326,6 @@ function App() {
                                             {...flowDiagramProps}
                                             onRequestFullscreen={openDiagramFullscreen}
                                         />
-                                        {/* the Belts section is not drawn here, so the belt question gets one of its own */}
-                                        {beltQuestion.ask && (
-                                            <PanelSection level={3} title={BELT_COPY.diagramHeading} sx={{ mt: 2 }} data-belt-question-diagram="">
-                                                <BeltAssumption answer={beltQuestion.answer} onChange={handleBeltAnswer} />
-                                            </PanelSection>
-                                        )}
                                     </Box>
                                 )}
 
@@ -1471,15 +1432,6 @@ function App() {
                                 pickGone={pickGone}
                                 copied={copy.copied}
                                 onCopy={() => { cancelRestore(); copy.request(); }}
-                                // only when the run asked the belt question; otherwise the card says the belt itself
-                                beltAction={beltAssumption?.ask ? (
-                                    <BeltAssumptionLine
-                                        assumption={beltAssumption}
-                                        hint={null}
-                                        busy={busy}
-                                        onSwitch={handleSwitchBelts}
-                                    />
-                                ) : undefined}
                             />
                         </Box>
                         </>

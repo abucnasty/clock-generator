@@ -22,7 +22,6 @@ import { applyPaste, pastePreview, type ImportSelections, type PasteReferenceWar
 import { InserterDetails } from './InserterDetails';
 import { Disclosure } from './Disclosure';
 import { chestTypesText } from '../utils/pasteText';
-import { pickupGeometryOf } from '../utils/pickupGeometry';
 import { entityLabel, nameInSentence } from '../utils/entityLabel';
 import { buildFileName } from '../utils/buildLibrary';
 import { configKeyOf } from '../utils/resultsStaleness';
@@ -811,8 +810,6 @@ export function ConfigImportExport({
                             </>
                         )}
                         <Disclosure summary="Import details" data-import-assumptions="" sx={{ mt: 1 }}>
-                            {pickupGeometryOf({ inserters: prospectiveInserters }).total > 0
-                                && <Typography variant="body2">Your input belt setting (moving or backed up) stays as it is.</Typography>}
                             <Box sx={{ mt: 1 }}>
                                 <InserterDetails inserters={prospectiveInserters} />
                                 {prospectiveInserters.flatMap((inserter, i) => inserter.sink.type === 'belt' && inserter.sink.drop

@@ -62,11 +62,6 @@ interface ResultSummaryCardProps {
     whyNotStable?: WhyNotStable | null;
     /** The clocks are for an earlier build */
     stale: boolean;
-    /**
-     * What the clocks assume of the belts, with the action for the other answer (2.4), in place of the card's own belt
-     * line; shown also before the first clock arrives
-     */
-    beltAction?: ReactNode;
     /** Saved build and inserter assumptions, shown inside the details disclosure. */
     runAssumptions?: ReactNode;
     comparisonAction?: ReactNode;
@@ -219,9 +214,6 @@ export function ResultSummaryCard(props: ResultSummaryCardProps) {
         return null;
     }
 
-    // one tree for a run's start and for its clocks, so the belt action (2.4) stays mounted, and keeps the keyboard
-    // focus, when the run it starts empties the list of clocks
-    const showBeltAction = Boolean(props.beltAction) && (!selected || selected.beltLabel !== '');
     const recommended = props.recommendedIndex === null ? undefined : alternatives[props.recommendedIndex];
     const causeAbove = whyNotStableShowsCause(props.whyNotStable, recommended);
     return (
@@ -243,11 +235,10 @@ export function ResultSummaryCard(props: ResultSummaryCardProps) {
             <Disclosure summary={CARD_COPY.detailsHeading} sx={{ mt: 1.5 }}>
                 <Box sx={{ display: 'grid', gap: 1, mt: 1 }}>
                     {selected && <ClockExplanation {...props} selected={selected} />}
-                    {/* Keep this action mounted when its run temporarily empties the clock list. */}
-                    {selected && !showBeltAction && (
+                    {/* only where no clocked inserter picks up from a belt: the card's Belt fact says the rest */}
+                    {selected && selected.beltLabel === '' && (
                         <Typography variant="body2" data-belt-line>{beltLine(selected.beltLabel)}</Typography>
                     )}
-                    {showBeltAction && props.beltAction}
                 </Box>
             </Disclosure>
         </Panel>
