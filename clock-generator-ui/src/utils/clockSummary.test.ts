@@ -99,32 +99,32 @@ describe('sampled starts remain separate from rate and recovery', () => {
 });
 
 describe('clockBadges', () => {
-    const { fewestWakeUps, fewestDeciders } = SUMMARY_COPY;
+    const { fewestWakeUps, fewestDeciders, stable } = SUMMARY_COPY;
 
     // the chips asked of each clock, by id: the recommended clock has its own chip, so none for what it has fewest of
     it.each<[string, SummaryClock[], Record<string, string[]>]>([
         ['gives the fewest-wakeups chip to a tied clock that is not the recommended one, not to the recommended one',
-            [clock('a', { wake_ups_per_minute: 8.0001 }), clock('b', { wake_ups_per_minute: 8 })], { a: [], b: [fewestWakeUps] }],
-        ['gives no chip to a clock with more wakeups',
-            [clock('a', { wake_ups_per_minute: 12 }), clock('b', { wake_ups_per_minute: 8 })], { a: [], b: [] }],
+            [clock('a', { wake_ups_per_minute: 8.0001 }), clock('b', { wake_ups_per_minute: 8 })], { a: [stable], b: [stable, fewestWakeUps] }],
+        ['gives only Stable to a clock with more wakeups',
+            [clock('a', { wake_ups_per_minute: 12 }), clock('b', { wake_ups_per_minute: 8 })], { a: [stable], b: [stable] }],
         ['gives the fewest-deciders chip to a clock with more wakeups but the fewest deciders',
             [clock('a', { wake_ups_per_minute: 8, window_count: 6, deciders: 10 }), clock('b', { wake_ups_per_minute: 12, window_count: 3, deciders: 6 })],
-            { b: [fewestDeciders], a: [] }],
+            { b: [stable, fewestDeciders], a: [stable] }],
         ['does not give Fewest deciders to a clock that only ties the recommended clock', [
             clock('a', { wake_ups_per_minute: 8, window_count: 6, deciders: 4 }),
             clock('b', { wake_ups_per_minute: 12, window_count: 6, deciders: 4 }),
             clock('c', { wake_ups_per_minute: 15, window_count: 3, deciders: 6 }),
-        ], { a: [], b: [], c: [] }],
+        ], { a: [stable], b: [stable], c: [stable] }],
         ['does not give Fewest deciders to a clock that only ties a clock tied for the fewest wakeups', [
             clock('a', { wake_ups_per_minute: 8.0001, window_count: 6, deciders: 8 }),
             clock('b', { wake_ups_per_minute: 8, window_count: 6, deciders: 4 }),
             clock('c', { wake_ups_per_minute: 15, window_count: 6, deciders: 4 }),
-        ], { a: [], b: [fewestWakeUps], c: [] }],
+        ], { a: [stable], b: [stable, fewestWakeUps], c: [stable] }],
         ['gives Fewest deciders to a clock that has fewer than the recommended clock and every clock with the fewest wakeups', [
             clock('a', { wake_ups_per_minute: 8, window_count: 6, deciders: 5 }),
             clock('b', { wake_ups_per_minute: 12, window_count: 6, deciders: 4 }),
             clock('c', { wake_ups_per_minute: 15, window_count: 6, deciders: 4 }),
-        ], { b: [fewestDeciders], c: [fewestDeciders] }],
+        ], { b: [stable, fewestDeciders], c: [stable, fewestDeciders] }],
         ['says a clock that has no recovery, or underproduces, so', [
             clock('a'),
             clock('b', { verdict: 'no recovery', meets_target_rate: false }),
@@ -135,11 +135,14 @@ describe('clockBadges', () => {
             clock('below', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48 }),
             clock('above', { meets_target_rate: false, rate_off_target: 12.5 }),
         ], { below: [SUMMARY_COPY.underproduces], above: [SUMMARY_COPY.overproduces] }],
-        ['does not say a rate less than half a hundredth off', [clock('a', { rate_off_target: -0.004 })], { a: [] }],
-        ['gives a clock with a deadlock risk that holds the rate no recovery chip, as its verdict does not decide', [
+        ['does not say a rate less than half a hundredth off', [clock('a', { rate_off_target: -0.004 })], { a: [stable] }],
+        ['gives a clock with a deadlock risk that meets the target no status chip, as its verdict does not decide', [
             clock('a', { verdict: 'no recovery', deadlock: true, wake_ups_per_minute: 6 }),
             clock('b', { verdict: 'stable', deadlock: true, wake_ups_per_minute: 9, window_count: 5 }),
         ], { a: [], b: [] }],
+        ['says No recovery, never Stable, of a clock with no recovery', [clock('a', { verdict: 'no recovery' })], { a: [SUMMARY_COPY.worksNoRecovery] }],
+        ['says Stable of a rounded clock that runs fast and meets the target', [clock('a', { rate_off_target: 0.24, runs_fast: 0.001 })], { a: [stable] }],
+        ['says Stable of a clock that meets the target whose recovery was not tried', [clock('a', { loss: null })], { a: [stable] }],
     ])('%s', (_, clocks, names) => {
         expect(Object.fromEntries(Object.keys(names).map(id => [id, nameOf(clocks, id)]))).toEqual(names);
     });
@@ -153,7 +156,7 @@ describe('clockBadges', () => {
             .toEqual([{ kind: 'status', text: 'Underproduces', detail: 'makes 192/s of 240/s' }]);
         expect(clockBadges([withLoss(clock('a', { verdict: 'unstable' }), 'belt_gaps')], 0))
             .toEqual([{ kind: 'status', text: 'Underproduces', detail: 'Missed pickups due to belt gaps' }]);
-        expect(clockBadges([clock('a')], 0)).toEqual([]);
+        expect(clockBadges([clock('a')], 0)).toEqual([{ kind: 'status', text: 'Stable' }]);
     });
 });
 
@@ -173,7 +176,9 @@ describe('outputTermOf', () => {
             { term: 'Overproduces', detail: 'makes 250/s of 240/s' }],
         ['is Overproduces for a stable clock over the setpoint', clock('a', { meets_target_rate: false, rate_off_target: 12.5, stable_above_target: true }),
             { term: 'Overproduces', detail: 'makes 252.5/s of 240/s' }],
-        ['is Overproduces for a rounded clock that runs fast, at the target by the selection\'s rule', clock('a', { rate_off_target: 0.24, runs_fast: 0.001 }),
+        ['is Stable for a rounded clock that runs fast and meets the target by the selection\'s rule', clock('a', { rate_off_target: 0.24, runs_fast: 0.001 }),
+            { term: 'Stable' }],
+        ['is Overproduces for a rounded clock that runs fast and does not meet the target', clock('a', { meets_target_rate: false, rate_off_target: 0.24 }),
             { term: 'Overproduces', detail: 'makes 240.24/s of 240/s' }],
         ['is Underproduces at the setpoint with a loss on a shared lane, with the words for its reason code',
             withLoss(clock('a', { verdict: 'unstable' }), 'belt_gaps'), { term: 'Underproduces', detail: 'Missed pickups due to belt gaps' }],
@@ -423,6 +428,10 @@ describe('worksOf', () => {
             clock('a', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48 }), { kind: 'no', text: 'Underproduces' }],
         ['says that a clock whose verdict is unstable overproduces above the setpoint',
             clock('a', { verdict: 'unstable', meets_target_rate: false, rate_off_target: 10 }), { kind: 'no', text: 'Overproduces' }],
+        ['says yes for a rounded clock that runs fast and meets the target, as for any clock that meets it',
+            clock('a', { rate_off_target: 0.24, runs_fast: 0.001 }), { kind: 'yes', text: SUMMARY_COPY.worksYes }],
+        ['says that a stable clock above the setpoint that does not meet the target overproduces',
+            clock('a', { meets_target_rate: false, rate_off_target: 12.5, stable_above_target: true }), { kind: 'no', text: 'Overproduces' }],
         ['says that a clock whose verdict is unstable underproduces at the target rate too', withLoss(clock('b', { verdict: 'unstable' })), { kind: 'no', text: 'Underproduces' }],
         ['says a clock that does not recover so',
             clock('a', { verdict: 'no recovery' }), { kind: 'caution', text: SUMMARY_COPY.worksNoRecovery }],

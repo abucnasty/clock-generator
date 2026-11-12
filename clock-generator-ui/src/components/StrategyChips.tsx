@@ -1,5 +1,5 @@
 import { Box, Chip, Tooltip, Typography } from '@mui/material';
-import type { ClockBadge } from '../utils/clockSummary';
+import { SUMMARY_COPY, type ClockBadge } from '../utils/clockSummary';
 import { clockChipsOf, type NamedClock } from '../utils/strategyNames';
 
 /**
@@ -30,7 +30,9 @@ export function BadgeChips({ badges, meanings = {} }: { badges: ClockBadge[]; me
             {badges.map(badge => {
                 const chip = (
                     <Chip size="small" variant="outlined" label={badge.text} data-badge={badge.kind}
-                        color={badge.kind === 'status' ? 'warning' : 'default'} tabIndex={meanings[badge.text] ? 0 : undefined}
+                        // Stable in the colour of a good state, as the full table's "Recovery: Yes"; the other status chips warn
+                        color={badge.kind !== 'status' ? 'default' : badge.text === SUMMARY_COPY.stable ? 'success' : 'warning'}
+                        tabIndex={meanings[badge.text] ? 0 : undefined}
                         // on the card colour of its own: the selected row's orange tint, hovered, takes warning words under 4.5:1
                         sx={{ bgcolor: 'background.paper' }} />
                 );

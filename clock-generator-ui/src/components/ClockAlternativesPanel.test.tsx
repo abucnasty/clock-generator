@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { screen, within } from '@testing-library/react';
+import { cleanup, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { show } from '../test/fixtures';
 import { AUTOMATION_240, checkedOf, viewsOf } from '../test/checkedLanesFixtures';
@@ -56,6 +56,33 @@ describe('the status of a clock that underproduces, in the list of clocks', () =
         const row = rowOf('takt_batches_observed');
         expect(row.getAllByText('Underproduces').length).toBeGreaterThan(0);
         expect(row.getByText(REASON_WORDS.target_full)).toBeTruthy();
+    });
+});
+
+describe('the status chip of every clock, in the list of clocks', () => {
+    const views = viewsOf(AUTOMATION_240);
+    const chipOf = (id: string) => {
+        show(<ClockAlternativesPanel comparison={{ allColumns: false, showUnstable: true }} onComparisonChange={() => {}}
+            alternatives={views} selectedIndex={AUTOMATION_240.selected_index} onSelect={() => {}} recommendedIndex={AUTOMATION_240.selected_index}
+            pickRule={null} isGenerating={false} />);
+        const row = screen.getByRole('radio', { name: fullClockName(views.find(view => view.id === id)!) }).closest('tr')!;
+        return row.querySelector('[data-badge="status"]')!;
+    };
+
+    it('reads Stable on the stable clock, in the colour of a good state, beside the Recommended chip', () => {
+        const chip = chipOf('time_study_windows');
+        expect(chip.textContent).toBe('Stable');
+        expect(chip.className).toMatch(/MuiChip-colorSuccess/);
+        expect(within(chip.closest('tr')!).getByText('Recommended')).toBeTruthy();
+    });
+
+    it('keeps the warning colour on the chip of a clock that underproduces or has no recovery', () => {
+        for (const id of ['euclidean_swings', 'pitch_pickups']) {
+            const chip = chipOf(id);
+            expect(chip.textContent).not.toBe('Stable');
+            expect(chip.className).toMatch(/MuiChip-colorWarning/);
+            cleanup();
+        }
     });
 });
 

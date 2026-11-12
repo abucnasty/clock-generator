@@ -146,6 +146,9 @@ describe("generateClockForConfig", () => {
             for (const id of ["takt_batches_observed_swings_7", "takt_batches_observed_swings_8"]) {
                 const insight = titleOf(id)!;
                 expect(insight.title).toBe("This clock overproduces");
+                // only what was measured: no reason, and one thing to do
+                expect(insight.why).toBe("");
+                expect(insight.explanation).toBe("Use a clock marked Stable.");
                 const [, moved, expected] = /moved ([\d.]+) of (\d+) items/.exec(insight.what)!;
                 expect(Number(moved)).toBeGreaterThan(Number(expected));
             }
@@ -266,6 +269,8 @@ describe("generateClockForConfig", () => {
                 expect(ids).not.toContain("spare-time");
                 expect(insight("swings-2", "unstable")?.title).toBe("This clock underproduces");
                 expect(insight("swings-2", "unstable")?.what).toContain("moved 16 of 32 items in a window cycle");
+                expect(insight("swings-2", "unstable")?.why).toMatch(/it cannot catch up\.$/);
+                expect(insight("swings-2", "unstable")?.explanation).toMatch(/^Use a clock marked Stable\. If none is, lower the setpoint/);
                 expect(insight("swings-2", "insertion-limits")?.table?.rows).toHaveLength(4);
             });
         });
