@@ -189,13 +189,13 @@ after the engine reads the file: a field with a default is required, but a confi
 | `belts[]{strategy=normal}.lanes[0].ingredient` | string | yes | The name of the item on the lane. |
 | `belts[]{strategy=normal}.lanes[0].stack_size` | integer > 0 | yes | The number of items in each stack on the lane. |
 | `belts[]{strategy=normal}.lanes[0].supply_rate` | number > 0 | no | The items per second that come onto the lane where it starts. The default is the lane's capacity. |
-| `belts[]{strategy=normal}.lanes[0].lane_end` | one of 3 objects, by `kind`: `dead_end`, `infinite`, `unknown` | no | The end of the lane. Without it, backed_up_belts sets the end if the configuration states it. If not, the role of the lane sets the end: an input or a buffer lane is a dead end, an output lane is an infinite end. |
+| `belts[]{strategy=normal}.lanes[0].lane_end` | one of 3 objects, by `kind`: `dead_end`, `infinite`, `unknown` | no | The end of the lane. Without it, the deprecated backed_up_belts sets the end if the configuration states it. If not, the role of the lane sets the end: an input or a buffer lane is a dead end, an output lane is an infinite end. |
 | `belts[]{strategy=normal}.lanes[0].sharing` | one of `shared`, `per_copy` | no | shared (default): all copies take from this lane. per_copy: each copy has a lane of its own. |
 | `belts[]{strategy=normal}.lanes[1]` | object | yes |  |
 | `belts[]{strategy=normal}.lanes[1].ingredient` | string | yes | The name of the item on the lane. |
 | `belts[]{strategy=normal}.lanes[1].stack_size` | integer > 0 | yes | The number of items in each stack on the lane. |
 | `belts[]{strategy=normal}.lanes[1].supply_rate` | number > 0 | no | The items per second that come onto the lane where it starts. The default is the lane's capacity. |
-| `belts[]{strategy=normal}.lanes[1].lane_end` | one of 3 objects, by `kind`: `dead_end`, `infinite`, `unknown` | no | The end of the lane. Without it, backed_up_belts sets the end if the configuration states it. If not, the role of the lane sets the end: an input or a buffer lane is a dead end, an output lane is an infinite end. |
+| `belts[]{strategy=normal}.lanes[1].lane_end` | one of 3 objects, by `kind`: `dead_end`, `infinite`, `unknown` | no | The end of the lane. Without it, the deprecated backed_up_belts sets the end if the configuration states it. If not, the role of the lane sets the end: an input or a buffer lane is a dead end, an output lane is an infinite end. |
 | `belts[]{strategy=normal}.lanes[1].sharing` | one of `shared`, `per_copy` | no | shared (default): all copies take from this lane. per_copy: each copy has a lane of its own. |
 | `belts[]{strategy=export}.id` | integer > 0 | yes | The number that identifies the belt in the configuration. |
 | `belts[]{strategy=export}.type` | one of `transport-belt`, `fast-transport-belt`, `express-transport-belt`, `turbo-transport-belt` | yes | The prototype name of the belt. |
@@ -205,14 +205,14 @@ after the engine reads the file: a field with a default is required, but a confi
 | `belts[]{strategy=export}.lanes[0].ingredient` | string | yes | The name of the item on the lane. |
 | `belts[]{strategy=export}.lanes[0].stack_size` | integer > 0 | yes | The number of items in each stack on the lane. |
 | `belts[]{strategy=export}.lanes[0].supply_rate` | number > 0 | no | The items per second that come onto the lane where it starts. The default is the lane's capacity. |
-| `belts[]{strategy=export}.lanes[0].lane_end` | one of 3 objects, by `kind`: `dead_end`, `infinite`, `unknown` | no | The end of the lane. Without it, backed_up_belts sets the end if the configuration states it. If not, the role of the lane sets the end: an input or a buffer lane is a dead end, an output lane is an infinite end. |
+| `belts[]{strategy=export}.lanes[0].lane_end` | one of 3 objects, by `kind`: `dead_end`, `infinite`, `unknown` | no | The end of the lane. Without it, the deprecated backed_up_belts sets the end if the configuration states it. If not, the role of the lane sets the end: an input or a buffer lane is a dead end, an output lane is an infinite end. |
 | `belts[]{strategy=export}.lanes[0].sharing` | one of `shared`, `per_copy` | no | shared (default): all copies take from this lane. per_copy: each copy has a lane of its own. |
 | `belts[]{strategy=export}.lanes[0].consumption_per_second` | number > 0 | no | The items per second that entities outside the configuration take off this lane. |
 | `belts[]{strategy=export}.lanes[1]` | object | yes |  |
 | `belts[]{strategy=export}.lanes[1].ingredient` | string | yes | The name of the item on the lane. |
 | `belts[]{strategy=export}.lanes[1].stack_size` | integer > 0 | yes | The number of items in each stack on the lane. |
 | `belts[]{strategy=export}.lanes[1].supply_rate` | number > 0 | no | The items per second that come onto the lane where it starts. The default is the lane's capacity. |
-| `belts[]{strategy=export}.lanes[1].lane_end` | one of 3 objects, by `kind`: `dead_end`, `infinite`, `unknown` | no | The end of the lane. Without it, backed_up_belts sets the end if the configuration states it. If not, the role of the lane sets the end: an input or a buffer lane is a dead end, an output lane is an infinite end. |
+| `belts[]{strategy=export}.lanes[1].lane_end` | one of 3 objects, by `kind`: `dead_end`, `infinite`, `unknown` | no | The end of the lane. Without it, the deprecated backed_up_belts sets the end if the configuration states it. If not, the role of the lane sets the end: an input or a buffer lane is a dead end, an output lane is an infinite end. |
 | `belts[]{strategy=export}.lanes[1].sharing` | one of `shared`, `per_copy` | no | shared (default): all copies take from this lane. per_copy: each copy has a lane of its own. |
 | `belts[]{strategy=export}.lanes[1].consumption_per_second` | number > 0 | no | The items per second that entities outside the configuration take off this lane. |
 
@@ -304,7 +304,7 @@ after the engine reads the file: a field with a default is required, but a confi
 | `overrides` | object | no | Settings that replace what the generator chooses for the configuration. |
 | `overrides.lcm` | integer > 0 | no | The number of output cycles in one window cycle; without it, the generator calculates the number. |
 | `overrides.terminal_swing_count` | integer > 0 | no | The number of output swings in each output cycle; without it, the generator chooses the number. |
-| `overrides.backed_up_belts` | boolean | no | Whether the input belts are backed up at the pickup. true: each lane without a lane_end is a dead end. false: each such lane is an infinite end. Without it, the role of the lane sets the end. |
+| `overrides.backed_up_belts` | boolean | no | Deprecated. State the lane_end of each lane instead. true: each lane without a lane_end is a dead end. false: each such lane is an infinite end. Without it, the role of the lane sets the end. |
 | `overrides.search_for_fewer_wake_ups` | boolean | no | Whether the generator always does the four searches, to find a clock with fewer wakeups. |
 | `overrides.check_start_dependence` | boolean | no | Whether the generator tests each clock from more starts than the cold start. |
 | `overrides.disturbance_trials_on_copies` | boolean | no | Whether the generator makes the disturbance trials again on the copies that share a lane. |
