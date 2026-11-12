@@ -76,6 +76,11 @@ export interface FuelViewData {
     plan: FuelPlan;
     /** The machines of the build, which the texts name by their kind and recipe; missing from views kept before they were carried */
     machines?: MachineToName[];
+    /**
+     * The names a sentence gives the build's belts, inserters, chests and drills by entity id ("inserter:3"), by their items in
+     * the game's names (the engine's entityNamesInSentence); missing from views kept before they were carried
+     */
+    entityNames?: Record<string, string>;
     /** Null when the run was not made */
     run: FuelRunView | null;
 }
@@ -195,6 +200,11 @@ export interface ClockAlternativeView {
 export interface ClockModelAssumptions {
     /** The machines of the build, which the texts name by their kind and recipe; missing from views kept before they were carried */
     machines?: MachineToName[];
+    /**
+     * The names a sentence gives the build's belts, inserters, chests and drills by entity id ("inserter:3"), by their items in
+     * the game's names (the engine's entityNamesInSentence); missing from views kept before they were carried
+     */
+    entityNames?: Record<string, string>;
     kickStarts: { machineId: string; item: string; items: number }[];
     outputDrops: { beltId: number; inserterIds: number[]; mode: 'shared-lanes' | 'free-lane' }[];
     overrides: Config['overrides'];

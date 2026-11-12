@@ -35,5 +35,6 @@ export function whyNotStableOf(
         target_items_per_second: recommended.assessment.items_per_second - recommended.ranking.rate_off_target,
         backed_up_belts: backedUpBelts,
         not_made: notMade,
+        ...(recommended.assumptions?.entityNames !== undefined && { entity_names: recommended.assumptions.entityNames }),
     });
 }

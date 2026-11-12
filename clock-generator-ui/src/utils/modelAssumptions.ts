@@ -1,5 +1,5 @@
 import type { ClockAlternativeView, GenerationAssumptions } from '../worker/types';
-import { entityLabel, machineInSentence, sentenceStart } from './entityLabel';
+import { entityInSentence, machineInSentence, sentenceStart } from './entityLabel';
 
 /** Only actual outcomes count as evaluated; the requested flag and null are never successful checks. */
 export function startCheckSummary(clocks: Pick<ClockAlternativeView, 'assessment'>[], generation: GenerationAssumptions | null): string {
@@ -42,8 +42,9 @@ export function modeledDetails(clock: ClockAlternativeView, itemLabel: (id: stri
         ...facts.kickStarts.map(seed =>
             `${machine(seed.machineId)} gets a kick start of ${seed.items} ${itemLabel(seed.item)}. Losing those items is a separate recovery question.`),
         ...facts.outputDrops.map(drop => drop.mode === 'shared-lanes'
-            ? `${entityLabel('belt', drop.beltId)}: the drop positions you gave are used to space the drops of ${drop.inserterIds.map(id => entityLabel('inserter', id)).join(', ')} on the belt.`
-            : freeLaneDropText(entityLabel('belt', drop.beltId))),
+            ? `${sentenceStart(entityInSentence('belt', drop.beltId, facts.entityNames))}: the drop positions you gave are used to space the drops of `
+                + `${drop.inserterIds.map(id => entityInSentence('inserter', id, facts.entityNames)).join(', ')} on the belt.`
+            : freeLaneDropText(entityInSentence('belt', drop.beltId, facts.entityNames))),
         ...facts.machineFuel.map(fuel => `${machine(fuel.machineId)}: imported fuel ${itemLabel(fuel.fuel)}.`),
         ...(facts.overrides !== undefined ? [`Explicit run overrides: ${JSON.stringify(facts.overrides)}.`] : []),
     ];

@@ -358,7 +358,7 @@ describe('live advice on a gear assembler, which does not block', () => {
         chests: [{ id: 1, type: 'infinity-chest', item_filter: [], remove_unfiltered_items: true }],
     } as Config);
     /** The engine's warning for gears({ stack_size: 2 }), live and in the generation log */
-    const pickupNotTested = 'Not tested: Inserter 1 picks up iron-plate from belt 1 in 2-item belt stacks. Belt pickup timing is calibrated '
+    const pickupNotTested = 'Not tested: The inserter (inserter 1) that takes iron-plate picks up iron-plate from the iron-plate belt (belt 1) in 2-item belt stacks. Belt pickup timing is calibrated '
         + 'with 16-item hands on 4-item belt stacks only; at other belt stack sizes and hand sizes it has not been compared with the '
         + 'game, so the clock may not match the game.';
 
@@ -388,7 +388,7 @@ describe('live advice on a gear assembler, which does not block', () => {
         const fed = gears();
         const marked = { ...fed, inserters: [fed.inserters[0], { ...fed.inserters[1], sink: { type: 'belt', id: 2, drop_capture: { status: 'side-loaded', tiles: 3 } } }],
             belts: [...fed.belts, { id: 2, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-gear-wheel', stack_size: 4 }] }] } as Config;
-        expect((await coverageOf(marked)).sideLoadedDrop).toBe('Inserter 2 drops onto a 3 tile belt buffer that side-loads onto another belt. '
+        expect((await coverageOf(marked)).sideLoadedDrop).toBe('The inserter (inserter 2) that drops iron-gear-wheel drops onto a 3 tile belt buffer that side-loads onto another belt. '
             + 'The clock may make less in the game than shown here, most of all when these inserters are switched on at the same time as others '
             + 'that drop onto the belt. Give each of these drops a belt of its own, or check the clock in the game.');
     });
@@ -446,9 +446,9 @@ it('says live whether the copies\' drops fit at the gap given, for the period es
         return coverageOf({ ...grenade, setpoint: { ...grenade.setpoint, copy_offset } });
     };
     const lead = "At about 112 ticks a window cycle (estimated from the setpoint: one output hand at the machine's rate), the hands of the 7 copies";
-    expect((await live({ x: 12, y: 0 })).dropRoom).toBe(`${lead} fit between each other on belt 1, if the inserters of a copy start together. `
+    expect((await live({ x: 12, y: 0 })).dropRoom).toBe(`${lead} fit between each other on the grenade belt (belt 1), if the inserters of a copy start together. `
         + 'They would also fit with the copies 16, 18, 20, 22 or 24 tiles apart, and at any of these plus 14. This assumes every copy drops onto the belt the way this one does.');
-    expect((await live({ x: 13, y: 0 })).dropRoom).toBe(`${lead} land on each other on belt 1, if the inserters of a copy start together, and some of them wait for room. `
+    expect((await live({ x: 13, y: 0 })).dropRoom).toBe(`${lead} land on each other on the grenade belt (belt 1), if the inserters of a copy start together, and some of them wait for room. `
         + 'They would fit with the copies 12, 16, 18, 20, 22 or 24 tiles apart, or 13 tiles apart with the inserters of a copy 7 tiles apart, and at any of these plus 14. This assumes every copy drops onto the belt the way this one does.');
     const without = await live(undefined);
     expect(without.dropRoom).toBeNull();
