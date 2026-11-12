@@ -10,12 +10,12 @@
 import { ItemName } from "../data";
 import { Entity, EntityId, ReadableEntityRegistry } from "../entities";
 import { machineNameOf } from "./machine-name";
-import { capitalized, insertersInSentence, NO_BUILD, type BuildToName } from "./entity-name";
+import { capitalized, insertersInSentence, NO_BUILD, textWords, type BuildToName } from "./entity-name";
 
 /** Two inserters that bring the same item to a machine, at least one of which brings another item too */
 export interface SharedItemDeadlockRisk {
     machine_id: number;
-    /** The machine by its kind and recipe, in ids (machine-name.ts): "assembling-machine-3 that makes utility-science-pack" */
+    /** The machine by its kind and recipe, in the words of a text (machine-name.ts): "assembling machine 3 that makes utility science pack" */
     machine: string;
     /** The item both inserters bring */
     item: ItemName;
@@ -62,18 +62,19 @@ export function sharedItemDeadlockRisks(entity_registry: Pick<ReadableEntityRegi
 }
 
 /**
- * "The inserter that takes low-density-structure and flying-robot-frame and the inserter that takes low-density-structure and
- * processing-unit both bring low-density-structure to the assembling-machine-3 that makes utility-science-pack.": the inserters
+ * "The inserter that takes low density structure and flying robot frame and the inserter that takes low density structure and
+ * processing unit both bring low density structure to the assembling machine 3 that makes utility science pack.": the inserters
  * by what they take (entity-name.ts, `build`: the config's), which says what else each brings. Where the build does not name
- * them: "Inserters 1 and 2 both bring ...; inserter 1 also brings flying-robot-frame, inserter 2 processing-unit."
+ * them: "Inserters 1 and 2 both bring ...; inserter 1 also brings flying robot frame, inserter 2 processing unit."
  */
 export function describeSharedItem(risk: SharedItemDeadlockRisk, build: BuildToName = NO_BUILD): string {
     const [first, second] = risk.inserters;
     const named = insertersInSentence([first.inserter_id, second.inserter_id], build);
-    if (!/^inserters? \d/.test(named.text)) return `${capitalized(named.text)} both bring ${risk.item} to the ${risk.machine}.`;
+    const words = textWords();
+    if (!/^inserters? \d/.test(named.text)) return `${capitalized(named.text)} both bring ${words.item(risk.item)} to the ${risk.machine}.`;
     const also = risk.inserters.filter(inserter => inserter.other_items.length > 0)
-        .map((inserter, index) => `inserter ${inserter.inserter_id}${index === 0 ? " also brings" : ""} ${inserter.other_items.join(" and ")}`);
-    return `Inserters ${first.inserter_id} and ${second.inserter_id} both bring ${risk.item} to the ${risk.machine}; ${also.join(", ")}.`;
+        .map((inserter, index) => `inserter ${inserter.inserter_id}${index === 0 ? " also brings" : ""} ${inserter.other_items.map(words.item).join(" and ")}`);
+    return `Inserters ${first.inserter_id} and ${second.inserter_id} both bring ${words.item(risk.item)} to the ${risk.machine}; ${also.join(", ")}.`;
 }
 
 /**

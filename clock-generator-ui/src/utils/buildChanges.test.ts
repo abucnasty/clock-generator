@@ -46,7 +46,7 @@ describe('buildChangesOf', () => {
 
     it('names the recipe by its game name when given one', () => {
         const gameName = (id: string) => (id === 'automation-science-pack' ? 'Automation science pack' : 'Logistic science pack');
-        expect(changes(toAutomation, form(), gameName)).toEqual(['Recipe (Logistic science pack → Automation science pack)']);
+        expect(changes(toAutomation, form(), gameName)).toEqual(['Recipe (logistic science pack → automation science pack)']);
     });
 
     it('lists the changes in the form\'s order, the same each time', () => {

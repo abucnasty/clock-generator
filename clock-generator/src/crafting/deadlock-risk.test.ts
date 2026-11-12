@@ -21,7 +21,7 @@ describe("the deadlock risk of two inserters that bring the same item", () => {
     it("is a machine with an inserter that brings two items, where another inserter brings one of the same", () => {
         expect(risksOf(utility_science)).toEqual([{
             machine_id: 1,
-            machine: "assembling-machine-3 that makes utility-science-pack",
+            machine: "assembling machine 3 that makes utility science pack",
             item: "low-density-structure",
             inserters: [
                 { inserter_id: 1, other_items: ["flying-robot-frame"] },
@@ -39,8 +39,8 @@ describe("the deadlock risk of two inserters that bring the same item", () => {
     it("says which two inserters share which item, and what else each brings", () => {
         const [risk] = risksOf(utility_science);
         expect(describeSharedItem(risk)).toBe(
-            "Inserters 1 and 2 both bring low-density-structure to the assembling-machine-3 that makes utility-science-pack; inserter 1 also brings flying-robot-frame, inserter 2 processing-unit.");
-        expect(deadlockRiskNote([risk])).toContain("Deadlock risk: Inserters 1 and 2 both bring low-density-structure to the assembling-machine-3 that makes utility-science-pack");
+            "Inserters 1 and 2 both bring low density structure to the assembling machine 3 that makes utility science pack; inserter 1 also brings flying robot frame, inserter 2 processing unit.");
+        expect(deadlockRiskNote([risk])).toContain("Deadlock risk: Inserters 1 and 2 both bring low density structure to the assembling machine 3 that makes utility science pack");
         expect(deadlockRiskNote([])).toBeNull();
     });
 

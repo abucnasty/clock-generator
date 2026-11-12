@@ -117,8 +117,8 @@ describe('staleResultsMessage', () => {
     it('says the recipe by its game name when given a label function', () => {
         const label = (id: string) => (id === 'logistic-science-pack' ? 'Logistic science pack' : id);
         expect(staleResultsMessage(madeFor(), [], { ...options, recipeLabel: label })).toBe(
-            'These clocks are for Logistic science pack at 240/s, made at 14:02. Your build has changed since.');
-        expect(generatedForText(madeFor(), label)).toBe('Logistic science pack at 240/s');
+            'These clocks are for logistic science pack at 240/s, made at 14:02. Your build has changed since.');
+        expect(generatedForText(madeFor(), label)).toBe('logistic science pack at 240/s');
     });
 
     it('prints the rate with at most two decimals', () => {

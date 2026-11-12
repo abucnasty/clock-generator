@@ -1,6 +1,7 @@
 import { ContainerPrototype, CraftingMachinePrototype, FactorioData, Ingredient, InserterPrototype, InserterResearch, Item, ItemName, ItemPrototypeFields, MiningDrillSpec, QualityName, QualitySpec, Recipe, Resource, ResourceName, RocketSiloPrototype, TransportBeltPrototype } from "./factorio-data-types";
 import { MiningDrillType } from "../entities/drill/mining-drill";
 import assert from "../common/assert";
+import { setGameWords } from "../crafting/entity-name";
 
 export type EnrichedIngredient = Ingredient & {
     item: Item;
@@ -368,6 +369,11 @@ export class FactorioDataService {
     }
 
 }
+
+// every text names items, recipes and machines by the game's names where the data can be read (entity-name.ts, textWords)
+setGameWords(() => FactorioDataService.isAvailable()
+    ? { item: id => FactorioDataService.itemNameInSentence(id), recipe: id => FactorioDataService.recipeNameInSentence(id) }
+    : undefined);
 
 /** "iron-plate" as "Iron plate": the name of an id the data does not name */
 function displayNameOfId(id: string): string {

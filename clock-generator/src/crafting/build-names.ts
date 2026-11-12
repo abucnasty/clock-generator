@@ -1,7 +1,6 @@
 import type { Config } from "../config/schema";
 import { Entity, EntityId } from "../entities";
-import { FactorioDataService } from "../data";
-import { entityNameOf, ITEM_IDS, type BuildToName, type EndToName } from "./entity-name";
+import { entityNameOf, type BuildToName, type EndToName } from "./entity-name";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 
 /** Where an inserter's end is, as entity-name.ts names an inserter by it */
@@ -35,17 +34,16 @@ export function buildToNameOf(config: Config): BuildToName {
 }
 
 /**
- * The names a sentence gives each belt, inserter, chest and drill of the config, by entity id ("inserter:3"), without "the":
- * in the game's names in a sentence where the game data is loaded, else in ids. Carried to why no clock is stable, which the
- * site works out without the game data.
+ * The names a sentence gives each belt, inserter, chest and drill of the config, by entity id ("inserter:3"), without "the",
+ * in the words textWords decides (entity-name.ts). Carried to why no clock is stable, which the site works out without the
+ * game data.
  */
 export function entityNamesInSentence(config: Config): Record<string, string> {
     const build = buildToNameOf(config);
-    const words = FactorioDataService.isAvailable() ? { item: (id: string) => FactorioDataService.itemNameInSentence(id) } : ITEM_IDS;
     const ids = [...build.belts.map(it => `belt:${it.id}`), ...build.inserters.map(it => `inserter:${it.id}`),
         ...build.chests.map(it => `chest:${it.id}`), ...build.drills.map(it => `drill:${it.id}`)];
     return Object.fromEntries(ids.flatMap(id => {
-        const name = entityNameOf(id, build, { words });
+        const name = entityNameOf(id, build);
         return name === undefined || /^(belt|inserter|chest|drill) \d/.test(name) ? [] : [[id, name] as const];
     }));
 }

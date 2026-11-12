@@ -49,7 +49,7 @@ import { NotMadeClock, notTriedSentence, WhyNotStable, whyNotStable, whyNotStabl
 import { DEFAULT_KICK_START_ITEMS } from "./runner/cold-start";
 import { ClockSharedLaneLoss, isNotChecked, judgeSharedLanes, SharedLaneJudgement, sharedLanesNotChecked } from "./shared-lane-verdict";
 import { buildToNameOf, entityNamesInSentence } from "./build-names";
-import { capitalized, drillNameInText, insertersInSentence } from "./entity-name";
+import { capitalized, drillNameInText, insertersInSentence, textWords } from "./entity-name";
 import { copiesDisturbanceTrial, CopiesTrialVerdict } from "./shared-lane-trial";
 
 
@@ -387,17 +387,18 @@ function primaryDefinition(config: Config, options: GenerateClockOptions, report
 
 /**
  * The entities whose swings a shifted cycle moved, by their names (entity-name.ts): "the inserters (1 and 2) that drop
- * chemical-science-pack; the inserter that takes advanced-circuit and sulfur". An entity the build does not name has its
- * number and the items of its moved swings: "inserter 4: chemical-science-pack".
+ * chemical science pack; the inserter that takes advanced circuit and sulfur". An entity the build does not name has its
+ * number and the items of its moved swings: "inserter 4: chemical science pack".
  */
 function movedNamed(moved: readonly { entity_id: { type: string; number: number }; item_names: readonly string[] }[], build: ReturnType<typeof buildToNameOf>): string {
     const inserters = moved.filter(it => it.entity_id.type === "inserter").map(it => it.entity_id.number);
+    const items = (ids: readonly string[]) => ids.map(textWords().item).join(", ");
     const named = insertersInSentence(inserters, build).text;
     const parts = /(^|and |, )inserters? \d/.test(named) || inserters.length === 0
-        ? moved.filter(it => it.entity_id.type === "inserter").map(it => `inserter ${it.entity_id.number}: ${it.item_names.join(", ")}`)
+        ? moved.filter(it => it.entity_id.type === "inserter").map(it => `inserter ${it.entity_id.number}: ${items(it.item_names)}`)
         : named.split(/, (?=the )| and (?=the )/);
     const others = moved.filter(it => it.entity_id.type !== "inserter").map(it => it.entity_id.type === "drill" && build.drills.some(drill => drill.id === it.entity_id.number)
-        ? `the ${drillNameInText(it.entity_id.number, build)}` : `${it.entity_id.type} ${it.entity_id.number}: ${it.item_names.join(", ")}`);
+        ? `the ${drillNameInText(it.entity_id.number, build)}` : `${it.entity_id.type} ${it.entity_id.number}: ${items(it.item_names)}`);
     return [...parts, ...others].join("; ");
 }
 

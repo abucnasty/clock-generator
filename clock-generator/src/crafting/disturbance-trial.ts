@@ -38,6 +38,7 @@ import type { OutputBeltRun } from "./output-belt-run";
 import type { CopiesTrialVerdict } from "./shared-lane-trial";
 import { COPY_NUMBER_STRIDE, twinOf } from "./sequence/build-copies";
 import type { WindowCycleClock } from "../simulation/controls/enable-control";
+import { textWords } from "./entity-name";
 
 export type DisturbanceTrial =
     /** Nothing is cut: the run as it is, counted as the runs with a loss are */
@@ -83,10 +84,10 @@ export function lossLabel(loss: DisturbanceTrial): string {
         return "nothing is cut";
     }
     if (loss.kind === "excess") {
-        const items = excessItems(loss).map(item => FactorioDataService.itemNameInSentence(item));
+        const items = excessItems(loss).map(item => textWords().item(item));
         return items.length === 1 ? `${items[0]} comes over its mean` : `${items.join(" and ")} come over their mean`;
     }
-    const item = FactorioDataService.itemNameInSentence(loss.item);
+    const item = textWords().item(loss.item);
     return loss.kind === "output" ? `${item} is not taken away` : `${item} stops arriving`;
 }
 

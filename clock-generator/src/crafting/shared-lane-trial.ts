@@ -22,10 +22,9 @@
 import { Config } from "../config";
 import { Logger } from "../common/logger";
 import { OpenRange } from "../data-types";
-import { FactorioDataService } from "../data";
 import { buildToNameOf } from "./build-names";
 import { SerializableClockWindows } from "./clock";
-import { ITEM_IDS, lanesInSentence, NO_BUILD, type BuildToName } from "./entity-name";
+import { lanesInSentence, NO_BUILD, type BuildToName } from "./entity-name";
 import { DisturbanceTrial, disturbanceTrialsOf, LossOutcome, lossLabel, lossLimitOf } from "./disturbance-trial";
 import { canonicalKey, currentRunMemo } from "./plan/run-memo";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
@@ -88,8 +87,7 @@ export function describeCopiesShort(loss: DisturbanceTrial, lanes: readonly stri
             + `upstream backs up from there. Then the infinite end opens again. ${ends}`;
     }
     const where = loss.kind === "supply"
-        ? ` at the entry of ${lanesInSentence(lanes.map(key => { const [belt_id, lane] = key.split("/").map(Number); return { belt_id, lane }; }), build,
-            { words: FactorioDataService.isAvailable() ? { item: id => FactorioDataService.itemNameInSentence(id) } : ITEM_IDS })}, which the ${copies} copies share`
+        ? ` at the entry of ${lanesInSentence(lanes.map(key => { const [belt_id, lane] = key.split("/").map(Number); return { belt_id, lane }; }), build)}, which the ${copies} copies share`
         : ` from the ${copies} copies`;
     const back = loss.kind === "supply" ? "comes back" : "is taken away again";
     return `${label[0].toUpperCase()}${label.slice(1)}${where}, and ${back}. ${ends}`;

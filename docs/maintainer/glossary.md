@@ -449,7 +449,8 @@ _Avoid_: recovers, recover, get back
 
 **Disturbance**:
 An input from outside that pushes the build away from its setpoint: a supply stop, an output blockage, or a
-productivity bonus. A maintainer term: users see supply stop, output blockage and recovery. Control theory:
+productivity bonus. On a shared lane, the other copies take items too. The gaps that their pickups leave are a
+disturbance to one copy. A maintainer term: users read supply stop, output blockage, recovery and gap. Control theory:
 IEC 351-48-08; Janert p.113, p.278. Not the runtime API's segmented units that investigate "a disturbance".
 _Avoid_: backpressure loss
 

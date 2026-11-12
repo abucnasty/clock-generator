@@ -49,7 +49,7 @@ describe('the words of the Setpoint row', () => {
 
     it('says which target it replaces', () => {
         expect(replacesTargetNote({ recipe: 'logistic-science-pack', items_per_second: 240, copies: 11 }, name))
-            .toBe('Tick to replace your current target (Logistic science pack at 240/s).');
+            .toBe('Tick to replace your current target (logistic science pack at 240/s).');
     });
 
     it('says what to do when it could not tell', () => {

@@ -50,7 +50,7 @@ describe("belt pickups outside 16-item hands on 4-item belt stacks", () => {
         });
         const [pickup] = uncalibratedBeltPickups(barrels);
         expect(pickup).toEqual({ inserter_id: 1, belt_id: 1, item: "water-barrel", lane_stack_sizes: [], hand_size: 10, item_stack_size: 10 });
-        expect(describeUncalibratedPickup(pickup)).toBe("Inserter 1 picks up water-barrel from belt 1 with a 10-item hand (water-barrel stacks to 10).");
+        expect(describeUncalibratedPickup(pickup)).toBe("Inserter 1 picks up water barrel from belt 1 with a 10-item hand (water barrel stacks to 10).");
     });
 
     it("name each lane of the item that is off, and both the stacks and the hand", () => {
@@ -59,11 +59,11 @@ describe("belt pickups outside 16-item hands on 4-item belt stacks", () => {
             feeder: { stack_size: 8 },
         });
         expect(uncalibratedBeltPickups(both_lanes).map(pickup => describeUncalibratedPickup(pickup))).toEqual([
-            "Inserter 1 picks up iron-plate from belt 1 in 2- and 3-item belt stacks with an 8-item hand.",
+            "Inserter 1 picks up iron plate from belt 1 in 2- and 3-item belt stacks with an 8-item hand.",
         ]);
         const one_lane_off = gears({ lanes: [{ ingredient: "iron-plate", stack_size: 4 }, { ingredient: "iron-plate", stack_size: 1 }] });
         expect(uncalibratedBeltPickups(one_lane_off).map(pickup => describeUncalibratedPickup(pickup))).toEqual([
-            "Inserter 1 picks up iron-plate from belt 1 in 1-item belt stacks.",
+            "Inserter 1 picks up iron plate from belt 1 in 1-item belt stacks.",
         ]);
     });
 
@@ -125,7 +125,7 @@ describe("belt pickups outside 16-item hands on 4-item belt stacks", () => {
 
     it("are told in one note: what is not tested, what is calibrated, and that the clock may not match the game", () => {
         expect(beltPickupNotTestedNote(uncalibratedBeltPickups(gears({ lanes: [{ ingredient: "iron-plate", stack_size: 2 }], feeder: { stack_size: 12 } })))).toBe(
-            "Not tested: Inserter 1 picks up iron-plate from belt 1 in 2-item belt stacks with a 12-item hand. Belt pickup timing is "
+            "Not tested: Inserter 1 picks up iron plate from belt 1 in 2-item belt stacks with a 12-item hand. Belt pickup timing is "
             + "calibrated with 16-item hands on 4-item belt stacks only; at other belt stack sizes and hand sizes it has not been "
             + "compared with the game, so the clock may not match the game.");
     });
@@ -141,7 +141,7 @@ describe("a generation with a belt pickup outside the calibration", () => {
                 id: "belt-pickup-not-tested",
                 scope: "build",
                 title: "Not tested: belt pickup outside 16-item hands on 4-item belt stacks",
-                what: "The inserter that takes iron-plate picks up iron-plate from the iron-plate belt in 2-item belt stacks.",
+                what: "The inserter that takes iron plate picks up iron plate from the iron plate belt in 2-item belt stacks.",
                 why: "Belt pickup timing is calibrated with 16-item hands on 4-item belt stacks only. At other belt stack sizes and "
                     + "hand sizes the simulator's pickup timing has not been compared with the game.",
                 explanation: "The clock may not match the game: its rate, stability and wakeups are worked out from pickup timing "
@@ -151,7 +151,7 @@ describe("a generation with a belt pickup outside the calibration", () => {
         // the log says it as the form does: the inserter and the belt by their items, with their numbers
         const config = gears({ lanes: [{ ingredient: "iron-plate", stack_size: 2 }] });
         expect(warned).toEqual([beltPickupNotTestedNote(uncalibratedBeltPickups(config), buildToNameOf(config))]);
-        expect(warned[0]).toContain("Not tested: The inserter (inserter 1) that takes iron-plate picks up iron-plate from the iron-plate belt (belt 1) in 2-item belt stacks.");
+        expect(warned[0]).toContain("Not tested: The inserter (inserter 1) that takes iron plate picks up iron plate from the iron plate belt (belt 1) in 2-item belt stacks.");
     });
 
     it("is not told about a build inside the calibration", () => {

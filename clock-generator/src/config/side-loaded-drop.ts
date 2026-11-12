@@ -23,7 +23,7 @@ export function sideLoadedDrops(config: Config): SideLoadedDrop[] {
             ? [{ inserter_id: inserter.id ?? index + 1, tiles: inserter.sink.drop_capture.tiles }] : []);
 }
 
-/** "The inserter that drops lithium-plate drops onto a 3 tile belt buffer ...": by its items, with its number where `numbered` (a note of the form) */
+/** "The inserter that drops lithium plate drops onto a 3 tile belt buffer ...": by its items, with its number where `numbered` (a note of the form) */
 export function describeSideLoadedDrop(drop: SideLoadedDrop, names: { build: BuildToName; numbered: boolean } = { build: NO_BUILD, numbered: false }): string {
     return `${capitalized(theName(inserterNameInText(drop.inserter_id, names.build, { numbered: names.numbered })))} drops onto a ${drop.tiles} tile belt buffer that side-loads onto another belt.`;
 }

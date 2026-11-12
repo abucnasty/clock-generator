@@ -2,6 +2,7 @@ import type { Config } from 'clock-generator/browser';
 import type { InserterFormData } from './configForm/formData';
 import { effectiveInserterStackSize } from './inserterMetadata';
 import { usesAutomaticFilters, usesBlacklist } from './inserterFilters';
+import { nameInSentence } from './entityLabel';
 
 /** What a player calls a chest of each type in the paste preview, singular and plural */
 const CHEST_KINDS: Record<string, [string, string]> = {
@@ -71,7 +72,7 @@ function inserterDescription(inserter: DetailedInserter, itemLabel: Labeler, plu
         : `${capacity} items at a time${inserter.stack_size === undefined ? ' (assumes all inserter capacity research)' : ''}`;
     const filters = usesBlacklist(inserter) ? 'a blacklist, which is not supported'
         : usesAutomaticFilters(inserter.filters) ? 'no filter'
-            : `${inserter.filters!.length === 1 ? 'filter' : 'filters'} ${inserter.filters!.map(itemLabel).join(', ')}`;
+            : `${inserter.filters!.length === 1 ? 'filter' : 'filters'} ${inserter.filters!.map(id => nameInSentence(itemLabel(id))).join(', ')}`;
     const mode = inserter.overrides?.enable_control?.mode;
     const rule = mode !== undefined && mode !== 'AUTO' ? `, enable rule ${mode}` : '';
     return `${sentenceCase(quality)} ${name}${plural ? 's' : ''}${assumed}, ${capacityText}, ${filters}${rule}`;

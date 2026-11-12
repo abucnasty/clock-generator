@@ -23,10 +23,10 @@ export { EntityType } from "./entities/entity-type";
 
 export { machineCanMake, machineForRecipe, machineForRule } from "./entities/machine/machine-rule";
 
-export { MACHINE_IDS, machineNameInText, machineNameOf } from "./crafting/machine-name";
+export { machineNameInText, machineNameOf } from "./crafting/machine-name";
 export type { MachineToName, MachineWords } from "./crafting/machine-name";
-export { beltNameInText, capitalized, chestNameInText, drillNameInText, entityNameOf, inserterNameInText, insertersInSentence, ITEM_IDS, laneNameInText, lanesInSentence, NO_BUILD, theName } from "./crafting/entity-name";
-export type { BuildToName, ItemWords } from "./crafting/entity-name";
+export { beltNameInText, capitalized, chestNameInText, drillNameInText, entityNameOf, inserterNameInText, insertersInSentence, laneNameInText, lanesInSentence, NO_BUILD, theName } from "./crafting/entity-name";
+export type { BuildToName, ItemWords, TextWords } from "./crafting/entity-name";
 export type { CraftingMachineRuleFacts, NamedCraftingMachine } from "./entities/machine/machine-rule";
 export { prototypeTraitsOf } from "./entities/traits/prototype-traits";
 export type { CraftingMachineTraitFacts, PrototypeTraits } from "./entities/traits/prototype-traits";
