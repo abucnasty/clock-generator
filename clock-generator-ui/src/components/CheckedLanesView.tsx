@@ -5,7 +5,7 @@ import type { BuildLane, CheckedLaneRow, CheckedLanes, SharedLaneCause } from 'c
 import type { ClockAlternativeView } from '../worker/types';
 import { useGameNames } from '../hooks/useGameNames';
 import {
-    CHECKED_LANES_COPY, endText, laneOf, lanesCountText, laneText, roleText, stateTone, supplyText, togetherText, type StateTone,
+    CHECKED_LANES_COPY, endText, laneOf, lanesCountText, laneText, roleText, stateSentence, stateTone, supplyText, togetherText, type StateTone,
 } from '../utils/checkedLanes';
 import { MissedSwingsPictures } from './MissedSwingsPictures';
 import { ScrollX } from './ScrollX';
@@ -32,7 +32,7 @@ function State({ row }: { row: CheckedLaneRow }) {
         <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, fontWeight: 600 }} data-state-label="">
             {TONE_ICON[stateTone(row.state)]}{row.label}
         </Box>
-        <Typography variant="caption" component="div" color="text.secondary" data-state-sentence="">{row.sentence}</Typography>
+        <Typography variant="caption" component="div" color="text.secondary" data-state-sentence="">{stateSentence(row)}</Typography>
     </>;
 }
 

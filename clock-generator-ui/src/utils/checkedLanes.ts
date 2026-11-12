@@ -1,5 +1,5 @@
 import { withOtherClocks } from 'clock-generator/light';
-import type { BuildLane, CheckedLaneRow, CheckedLanes, CheckedLaneState, ClockInsight, Config, WhyNotStable } from 'clock-generator/browser';
+import type { BuildLane, CheckedLaneRow, CheckedLanes, CheckedLaneState, ClockInsight, Config, LaneNotCheckedReason, WhyNotStable } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../worker/types';
 import { formatNumberText } from './numberText';
 
@@ -55,6 +55,31 @@ export function supplyText(row: CheckedLaneRow, lane: BuildLane | undefined): { 
         return { value: '—', sub: CHECKED_LANES_COPY.carries(row.together?.carries_per_second ?? lane.capacity) };
     }
     return { value: rate(lane.supply_rate), ...(lane.supply_rate_by_default && { sub: CHECKED_LANES_COPY.laneCapacity }) };
+}
+
+/**
+ * The words of why a lane was not checked or not run with the copies, for each code the engine gives (`state.reason`): one
+ * entry for every code, so that a code with no words fails the build
+ */
+const LANE_REASON_WORDS: { [C in LaneNotCheckedReason['code']]: (reason: Extract<LaneNotCheckedReason, { code: C }>) => string } = {
+    one_copy_does_not_hold: () => 'The clock does not hold its output on one copy, so the copies are not run.',
+    drop_rate_unknown: () => "The build's drop rate onto this lane is not known.",
+    drops_more_than_lane_carries: reason => `The ${formatNumberText(reason.data.copies)} copies together drop more than this lane carries.`,
+    build_drops_onto_belt: () => 'The build drops items onto this belt, and the check of a shared lane does not run those drops yet.',
+    check_stopped: reason => `The lanes its copies share could not be checked: ${reason.data.message}${/[.!?]$/.test(reason.data.message) ? '' : '.'}`,
+    output_belt_not_run: () => 'The output belt is run with the copies only together with a lane they take from, and no such lane is run.',
+    lane_not_in_model: () => 'The check of the shared lanes does not run this lane.',
+};
+
+/**
+ * The sentence of a row's state: for a lane not checked or not run with the copies, the words for its reason's code; else,
+ * and for a result of an older engine whose reason is a sentence, the engine's
+ */
+export function stateSentence(row: Pick<CheckedLaneRow, 'state' | 'sentence'>): string {
+    const { state } = row;
+    if ((state.kind !== 'not_checked' && state.kind !== 'not_run') || typeof state.reason !== 'object' || state.reason === null) return row.sentence;
+    const words = LANE_REASON_WORDS[state.reason.code] as ((reason: LaneNotCheckedReason) => string) | undefined;
+    return words === undefined ? row.sentence : words(state.reason);
 }
 
 /** The lane of the build a row is of */

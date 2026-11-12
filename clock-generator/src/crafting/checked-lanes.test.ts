@@ -4,7 +4,7 @@ import { loadConfigFromFile } from "../config/loader";
 import { Config, ConfigSchema } from "../config/schema";
 import { buildLanesOf, CheckedLanes, checkedLanesOf, CheckedLanesInput, withOtherClocks } from "./checked-lanes";
 import type { CopiesTrialVerdict } from "./shared-lane-trial";
-import type { SharedLaneJudgement, SharedLaneLoss, SharedLaneLossFacts } from "./shared-lane-verdict";
+import { sharedLanesNotChecked, type SharedLaneJudgement, type SharedLaneLoss, type SharedLaneLossFacts } from "./shared-lane-verdict";
 
 type Parts = Partial<Pick<Config, "machines" | "inserters" | "belts" | "overrides">> & { copies?: number };
 
@@ -112,7 +112,17 @@ describe("the rows of a clock", () => {
         });
         const lanes = checked({ config: buffer, judged: judged([], { simulated: false, lanes: [], loss_facts: [] }) });
         expect(rows(lanes)[0]).toEqual(["1/1", "not_checked", "Not checked", "The build drops items onto this belt, and the check of a shared lane does not run those drops yet."]);
+        // the reason is a code; the sentence is the same words as before
+        expect(lanes.rows[0].state).toEqual({ kind: "not_checked", reason: { code: "build_drops_onto_belt" } });
         expect(lanes.line.sentence).toContain("Checked on one copy. No lane the copies take from is run with every copy on it.");
+    });
+
+    it("are not checked where the check stopped: the error's message as data, the sentence as before", () => {
+        const stopped = sharedLanesNotChecked("Lane 1 of belt 9 is not in the config");
+        const lanes = checked({ config: gears(), judged: { stopped } });
+        const row = lanes.rows.find(it => it.state.kind === "not_checked")!;
+        expect(row.state).toEqual({ kind: "not_checked", reason: { code: "check_stopped", data: { message: "Lane 1 of belt 9 is not in the config" } } });
+        expect(row.sentence).toBe(stopped.text);
     });
 
     it("have no row for a lane that is one per copy", () => {

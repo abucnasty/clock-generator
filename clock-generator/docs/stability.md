@@ -156,7 +156,7 @@ Each clock of a build of copies has `checked_lanes` (`clock-generator/src/crafti
 - **Join full.** The output belt is the cause: the side belt of a copy is full at its join. The row gives the swings missed of the swings that the target needs.
 - **Takes less.** The copy takes less from the lane because its join is full. Where the run without the output belt shows the copy short on the lane too, the row says so.
 - **Rate fits.** An output belt that is a plain belt in `belts` is not run. The sum of the drops of the copies is not more than what the lane carries.
-- **Not checked.** The check does not run the lane, for the reason that the row gives: for example, the build drops items onto the belt.
+- **Not checked.** The check does not run the lane, for the reason that the row gives: for example, the build drops items onto the belt. The reason is a code (`reason.code`), with the numbers of its sentence as data. Where the check stopped with an error, the data is the error's message.
 - **Not run with the copies.** The clock does not hold its output on one copy, so the copies are not run. No row of such a clock holds.
 
 The short rows and the rows of a full join come first. The line of a clock says if the copies were run together. It says if every copy gets its items, and if a copy misses swings at the output belt. On plain output belts, it says that only the sum of the drops is checked. It names the chest that the output goes into.

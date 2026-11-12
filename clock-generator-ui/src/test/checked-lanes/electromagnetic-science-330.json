@@ -1099,7 +1099,9 @@
       },
       "state": {
        "kind": "not_run",
-       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+       "reason": {
+        "code": "one_copy_does_not_hold"
+       }
       },
       "label": "Not run with the copies",
       "sentence": "The clock does not hold its output on one copy, so the copies are not run."
@@ -1116,7 +1118,9 @@
       },
       "state": {
        "kind": "not_run",
-       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+       "reason": {
+        "code": "one_copy_does_not_hold"
+       }
       },
       "label": "Not run with the copies",
       "sentence": "The clock does not hold its output on one copy, so the copies are not run."
@@ -1232,7 +1236,9 @@
       },
       "state": {
        "kind": "not_run",
-       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+       "reason": {
+        "code": "one_copy_does_not_hold"
+       }
       },
       "label": "Not run with the copies",
       "sentence": "The clock does not hold its output on one copy, so the copies are not run."
@@ -1249,7 +1255,9 @@
       },
       "state": {
        "kind": "not_run",
-       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+       "reason": {
+        "code": "one_copy_does_not_hold"
+       }
       },
       "label": "Not run with the copies",
       "sentence": "The clock does not hold its output on one copy, so the copies are not run."
@@ -1365,7 +1373,9 @@
       },
       "state": {
        "kind": "not_run",
-       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+       "reason": {
+        "code": "one_copy_does_not_hold"
+       }
       },
       "label": "Not run with the copies",
       "sentence": "The clock does not hold its output on one copy, so the copies are not run."
@@ -1382,7 +1392,9 @@
       },
       "state": {
        "kind": "not_run",
-       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+       "reason": {
+        "code": "one_copy_does_not_hold"
+       }
       },
       "label": "Not run with the copies",
       "sentence": "The clock does not hold its output on one copy, so the copies are not run."
@@ -1498,7 +1510,9 @@
       },
       "state": {
        "kind": "not_run",
-       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+       "reason": {
+        "code": "one_copy_does_not_hold"
+       }
       },
       "label": "Not run with the copies",
       "sentence": "The clock does not hold its output on one copy, so the copies are not run."
@@ -1515,7 +1529,9 @@
       },
       "state": {
        "kind": "not_run",
-       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+       "reason": {
+        "code": "one_copy_does_not_hold"
+       }
       },
       "label": "Not run with the copies",
       "sentence": "The clock does not hold its output on one copy, so the copies are not run."
@@ -2446,7 +2462,9 @@
       },
       "state": {
        "kind": "not_run",
-       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+       "reason": {
+        "code": "one_copy_does_not_hold"
+       }
       },
       "label": "Not run with the copies",
       "sentence": "The clock does not hold its output on one copy, so the copies are not run."
@@ -2463,7 +2481,9 @@
       },
       "state": {
        "kind": "not_run",
-       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+       "reason": {
+        "code": "one_copy_does_not_hold"
+       }
       },
       "label": "Not run with the copies",
       "sentence": "The clock does not hold its output on one copy, so the copies are not run."

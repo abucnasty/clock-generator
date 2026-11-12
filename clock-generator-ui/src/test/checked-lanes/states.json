@@ -508,7 +508,9 @@
    },
    "state": {
     "kind": "not_run",
-    "reason": "The clock does not hold its output on one copy, so the copies are not run."
+    "reason": {
+     "code": "one_copy_does_not_hold"
+    }
    },
    "label": "Not run with the copies",
    "sentence": "The clock does not hold its output on one copy, so the copies are not run."
@@ -882,7 +884,9 @@
    },
    "state": {
     "kind": "not_checked",
-    "reason": "The build drops items onto this belt, and the check of a shared lane does not run those drops yet."
+    "reason": {
+     "code": "build_drops_onto_belt"
+    }
    },
    "label": "Not checked",
    "sentence": "The build drops items onto this belt, and the check of a shared lane does not run those drops yet."

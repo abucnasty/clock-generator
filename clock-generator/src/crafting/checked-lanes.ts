@@ -9,7 +9,7 @@ import { capitalized, chestNameInText, inserterNameInText, lanesInSentence, list
 import { machineNameInText } from "./machine-name";
 import { figure } from "./other-clocks";
 import type { CopiesTrialVerdict } from "./shared-lane-trial";
-import { droppedOntoSharedLanes, isNotChecked, type ClockSharedLaneLoss, type MissedInWindowCycle, type MissedSwingCause, type MissedSwingStops, type SharedLaneJudgement, type SharedLaneLoss,
+import { droppedOntoSharedLanes, isNotChecked, sharedLanesNotChecked, type SharedLanesNotChecked, type MissedInWindowCycle, type MissedSwingCause, type MissedSwingStops, type SharedLaneJudgement, type SharedLaneLoss,
     type SharedLaneLossFacts, type TakerSwings } from "./shared-lane-verdict";
 
 /**
@@ -66,8 +66,28 @@ export type CheckedLaneState =
     | { kind: "join_full"; copies: (CopyMissed & { held_hands: number; hands: number })[] }
     | { kind: "takes_less"; copies: (CopyMissed & { without_output_belt?: CopyMissed })[] }
     | { kind: "rate_fits"; drop_per_second: number; carries_per_second: number }
-    | { kind: "not_checked"; reason: string }
-    | { kind: "not_run"; reason: string };
+    | { kind: "not_checked"; reason: LaneNotCheckedReason }
+    | { kind: "not_run"; reason: Extract<LaneNotCheckedReason, { code: "one_copy_does_not_hold" }> };
+
+/**
+ * Why a lane was not checked or not run with the copies, as a code (a closed list) with the numbers its sentence uses (the
+ * row's sentence is `laneNotCheckedText`; the page has the same words):
+ * - `one_copy_does_not_hold`: the clock does not hold its output on one copy, so the copies are not run;
+ * - `drop_rate_unknown`: the build's drop rate onto a plain output lane is not known;
+ * - `drops_more_than_lane_carries`: the copies together drop more onto a plain output lane than it carries;
+ * - `build_drops_onto_belt`: the build drops items onto the belt, and the check does not run those drops;
+ * - `check_stopped`: the check of the shared lanes stopped with an error, whose message is kept as it is;
+ * - `output_belt_not_run`: the output belt is run only with a lane the copies take from, and none is run;
+ * - `lane_not_in_model`: the check of the shared lanes does not run the lane.
+ */
+export type LaneNotCheckedReason =
+    | { code: "one_copy_does_not_hold" }
+    | { code: "drop_rate_unknown" }
+    | { code: "drops_more_than_lane_carries"; data: { copies: number } }
+    | { code: "build_drops_onto_belt" }
+    | { code: "check_stopped"; data: { message: string } }
+    | { code: "output_belt_not_run" }
+    | { code: "lane_not_in_model" };
 
 /** One row of a clock: one lane the copies share. Its item, role, end and supply are the build's (`BuildLane`). */
 export interface CheckedLaneRow {
@@ -191,7 +211,7 @@ export interface CheckedLanesInput {
     /** Whether the clock holds its output on one copy: only such a clock is run with the copies */
     holds: boolean;
     /** The check of the shared lanes; null where it was not made; the loss that says it stopped, where it stopped */
-    judged: SharedLaneJudgement | { stopped: ClockSharedLaneLoss } | null;
+    judged: SharedLaneJudgement | { stopped: SharedLanesNotChecked } | null;
     window_cycle_ticks: number;
     /** The disturbance trials on the copies, where they were made */
     copies_trial: CopiesTrialVerdict | null;
@@ -354,9 +374,22 @@ function wordsOf(state: CheckedLaneState, copies: number): { label: string; sent
             return { label: "Rate fits", sentence: `The ${figure(copies)} copies together drop no more than this lane carries. `
                 + "Not simulated: a copy that drops onto a belt that already carries the other copies' items." };
         case "not_checked":
-            return { label: "Not checked", sentence: state.reason };
+            return { label: "Not checked", sentence: laneNotCheckedText(state.reason) };
         case "not_run":
-            return { label: "Not run with the copies", sentence: state.reason };
+            return { label: "Not run with the copies", sentence: laneNotCheckedText(state.reason) };
+    }
+}
+
+/** The sentence of why a lane was not checked or not run with the copies */
+function laneNotCheckedText(reason: LaneNotCheckedReason): string {
+    switch (reason.code) {
+        case "one_copy_does_not_hold": return NOT_RUN;
+        case "drop_rate_unknown": return NO_DROP_RATE;
+        case "drops_more_than_lane_carries": return `The ${figure(reason.data.copies)} copies together drop more than this lane carries.`;
+        case "build_drops_onto_belt": return DROPPED_ONTO;
+        case "check_stopped": return sharedLanesNotChecked(reason.data.message).text;
+        case "output_belt_not_run": return OUTPUT_BELT_NOT_RUN;
+        case "lane_not_in_model": return NOT_IN_MODEL;
     }
 }
 
@@ -401,22 +434,22 @@ export function checkedLanesOf(input: CheckedLanesInput): CheckedLanes | null {
         const together = togetherOf(config, lane, loads);
         const plain_output = lane.role === "output" && lane.belt_id !== stated_output_belt;
         const state = ((): CheckedLaneState => {
-            if (!holds) return { kind: "not_run", reason: NOT_RUN };
+            if (!holds) return { kind: "not_run", reason: { code: "one_copy_does_not_hold" } };
             if (plain_output) {
-                if (together === null || together.carries_per_second === undefined) return { kind: "not_checked", reason: NO_DROP_RATE };
+                if (together === null || together.carries_per_second === undefined) return { kind: "not_checked", reason: { code: "drop_rate_unknown" } };
                 return together.items_per_second <= together.carries_per_second + 1e-9
                     ? { kind: "rate_fits", drop_per_second: together.items_per_second, carries_per_second: together.carries_per_second }
-                    : { kind: "not_checked", reason: `The ${figure(copies)} copies together drop more than this lane carries.` };
+                    : { kind: "not_checked", reason: { code: "drops_more_than_lane_carries", data: { copies } } };
             }
-            if (dropped.has(key)) return { kind: "not_checked", reason: DROPPED_ONTO };
-            if (stopped !== null) return { kind: "not_checked", reason: stopped.text };
-            if (!run) return { kind: "not_checked", reason: lane.role === "output" ? OUTPUT_BELT_NOT_RUN : NOT_IN_MODEL };
+            if (dropped.has(key)) return { kind: "not_checked", reason: { code: "build_drops_onto_belt" } };
+            if (stopped !== null) return { kind: "not_checked", reason: { code: "check_stopped", data: { message: stopped.reason } } };
+            if (!run) return { kind: "not_checked", reason: { code: lane.role === "output" ? "output_belt_not_run" : "lane_not_in_model" } };
             if (lane.role === "output") {
                 const at_join = copiesAtFullJoin(join_losses);
                 if (at_join.length > 0) return { kind: "join_full", copies: at_join };
                 return { kind: "holds", not_the_cause: unstable_on_lanes, steady_run_only: trial_failed && !unstable_on_lanes, join_waits: judgement!.join_waits ?? [] };
             }
-            if (!ran_lanes.has(key)) return { kind: "not_checked", reason: NOT_IN_MODEL };
+            if (!ran_lanes.has(key)) return { kind: "not_checked", reason: { code: "lane_not_in_model" } };
             const short = lane_losses.filter(loss => onLane(loss, lane.belt_id, lane.lane));
             if (short.length > 0) return { kind: "short", copies: copiesShortOn(short) };
             const waiting = join_losses.filter(loss => onLane(loss, lane.belt_id, lane.lane));
