@@ -11,6 +11,7 @@ import { repeatedUnitsProblem } from '../utils/repeatedUnitsProblem';
 import type { z } from 'zod';
 import type { ClockAlternativeRun, Config, CopiesError, DebugSteps, LogMessage, Logger, MachineToName, NotMadeClock, SearchRangeEdge } from 'clock-generator/browser';
 import { parseFormConfig } from './formConfig';
+import { laneRolesAnswer } from './laneRoles';
 import { installFactsOf } from './installFacts';
 import { createReadyGate } from './requestGate';
 import { NO_NAMES, hiddenRecipeIds, type GameNames } from '../utils/gameNames';
@@ -461,6 +462,8 @@ function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
             };
         case 'repeated-unit-conversion':
             return checkRepeatedUnitConversion(query.config);
+        case 'lane-roles':
+            return laneRolesAnswer(query.config, clockGenerator.laneFactsOfConfig(query.config));
         case 'saved-config':
             return savedConfig(query.config);
         case 'config-file':

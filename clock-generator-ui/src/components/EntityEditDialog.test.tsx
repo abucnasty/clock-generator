@@ -5,6 +5,8 @@ import type { SerializableMachineFacts } from 'clock-generator/browser';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createDefaultConfig } from '../utils/configForm/formData';
 import { EntityEditDialog } from './EntityEditDialog';
+import { draftLaneFactsOf } from '../utils/laneFacts';
+import type { BeltFormData } from '../utils/configForm/formData';
 
 // the facts of the machine as it was saved, while those of the draft are on their way
 const facts = vi.hoisted(() => ({ error: null, updating: true, facts: {
@@ -167,5 +169,27 @@ describe('EntityEditDialog route actions', () => {
         Render({ outputTransfers: null });
         expect(screen.getByRole('group', { name: 'current-fallback' })).toBeDefined();
         expect(screen.queryByRole('group', { name: 'stale-fact' })).toBeNull();
+    });
+});
+
+describe('a belt edited from the diagram', () => {
+    const belt: BeltFormData = { id: 1, _uuid: 'b1', type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-gear-wheel', stack_size: 4 }, { ingredient: 'copper-plate', stack_size: 4, lane_end: { kind: 'infinite' } }] };
+    const roles = [{ belt_id: 1, lane: 1 as const, role: 'input' as const }, { belt_id: 1, lane: 2 as const, role: 'input' as const }];
+
+    it('shows the Lanes fields of the Belts section, with the engine\'s values in grey', () => {
+        Render({ entityType: 'belt', entityId: 1, belts: [belt], copies: 9, laneFactsOf: draft => draftLaneFactsOf(draft, [belt], roles, undefined) });
+        const dialog = screen.getByRole('dialog');
+        expect(within(dialog).getByRole('combobox', { name: 'Lane end, Belt 1, lane 1' }).textContent).toBe('Dead end, not stated');
+        expect(within(dialog).getByRole('combobox', { name: 'Lane end, Belt 1, lane 2' }).textContent).toBe('Infinite');
+        expect(within(dialog).getByRole('textbox', { name: 'Supply rate /s, Belt 1, lane 1' }).getAttribute('placeholder')).toBe('120');
+        expect(within(dialog).getByRole('combobox', { name: 'Sharing, Belt 1, lane 1' }).textContent).toBe('Shared, not stated');
+        expect(within(dialog).getByRole('combobox', { name: 'Flow direction (the way items pass the copies), Belt 1' })).toBeDefined();
+    });
+
+    it('shows only what the draft states once its items differ from the belt\'s, as the roles are of the items', () => {
+        const draft = { ...belt, lanes: [{ ingredient: 'iron-plate', stack_size: 4 }, belt.lanes[1]!] as BeltFormData['lanes'] };
+        const facts = draftLaneFactsOf(draft, [belt], roles, undefined)!;
+        expect(facts.of(1, 1)).toMatchObject({ role: undefined, end: undefined });
+        expect(draftLaneFactsOf(belt, [belt], roles, undefined)!.of(1, 1)).toMatchObject({ role: 'input', end: 'dead_end' });
     });
 });

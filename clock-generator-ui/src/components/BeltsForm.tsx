@@ -1,6 +1,7 @@
 import { BeltLanePreview } from './BeltLanePreview';
 import { EntitySettings } from './EntitySettings';
 import { memo } from 'react';
+import { InfoOutlined } from '@mui/icons-material';
 import { Box, Typography } from '@mui/material';
 import { BELT_STRATEGIES, type BeltFormData, type BeltLaneFormData } from '../hooks/useConfigForm';
 import { useEntityRows } from '../hooks/useEntityRows';
@@ -17,6 +18,9 @@ import { BELT_TYPES, entityTypeLabel } from './entityTypes';
 import { BeltAssumption } from './BeltAssumption';
 import type { BeltAnswer, BeltQuestion } from '../utils/beltQuestion';
 import { DROP_BELT_READ_ONLY } from '../utils/inserterMetadata';
+import type { Config } from 'clock-generator/browser';
+import { LANE_FACT_COPY, beltRoleLine, inputLaneEnds, inputLanesText, outputBeltSummary, type FormLaneFacts } from '../utils/laneFacts';
+import { HelpButton } from './HelpButton';
 
 interface BeltsFormProps {
     geometryBeltIds?: number[];
@@ -30,6 +34,12 @@ interface BeltsFormProps {
     /** Asked when an inserter takes from one of these belts */
     beltQuestion: BeltQuestion;
     onBeltAnswer: (answer: BeltAnswer) => void;
+    /** The lanes as the engine reads them; null while it cannot tell */
+    laneFacts?: FormLaneFacts | null;
+    /** The copies of the build */
+    copies?: number;
+    /** The output belt as the config states it, which the page keeps and does not edit */
+    outputBelt?: Config['output_belt'];
 }
 
 function BeltsFormComponent({
@@ -43,7 +53,12 @@ function BeltsFormComponent({
     onDuplicate,
     beltQuestion,
     onBeltAnswer,
+    laneFacts = null,
+    copies = 1,
+    outputBelt,
 }: BeltsFormProps) {
+    const inputEnds = inputLaneEnds(laneFacts);
+    const roleLine = (belt: BeltFormData) => beltRoleLine(belt.lanes.map((_, index) => laneFacts?.of(belt.id, index + 1 as 1 | 2)), copies);
     const { itemLabel } = useGameNames();
     const lanes = belts.flatMap(belt => belt.lanes);
     const common = belts.length === 0 ? [] : [
@@ -93,6 +108,16 @@ function BeltsFormComponent({
             }}
             actions={<AddButton label="Add Belt" onClick={() => addRow(onAdd)} />}
         >
+            {inputEnds !== null && inputEnds.dead_end + inputEnds.infinite + inputEnds.unknown > 0 && (
+                <Box data-input-lanes="" sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 1, mb: 1 }}>
+                    <Typography variant="body2" color="text.secondary">{LANE_FACT_COPY.countLabel}</Typography>
+                    <Typography variant="body2">{inputLanesText(inputEnds)}</Typography>
+                    <HelpButton label="About lane ends">
+                        <Typography variant="body2" sx={{ mb: 1 }}><strong>{LANE_FACT_COPY.ends.dead_end}:</strong> The lane stops. The items stay on it until a hand takes them.</Typography>
+                        <Typography variant="body2"><strong>{LANE_FACT_COPY.ends.infinite}:</strong> The lane continues. Every item that no hand takes moves on, as into an infinity chest.</Typography>
+                    </HelpButton>
+                </Box>
+            )}
             {beltQuestion.ask && (
                 <Box sx={{ mb: 1.5 }}>
                     <BeltAssumption answer={beltQuestion.answer} onChange={onBeltAnswer} />
@@ -119,10 +144,14 @@ function BeltsFormComponent({
                             </Box>
                         </EntityRowTop>
                         <EntitySettings actionContainerId={settingsSlotId('belt', belt.id)} label={label} tabs={[{ label: 'Lanes', content:
-                            <BeltLaneFields belt={belt} itemNames={itemNames} readOnly={readOnly} onChange={updates => onUpdate(beltIndex, updates)} /> }]}
-                            summary={<Typography variant="body2">
+                            <BeltLaneFields belt={belt} itemNames={itemNames} readOnly={readOnly} facts={laneFacts} copies={copies}
+                                onChange={updates => onUpdate(beltIndex, updates)} /> }]}
+                            summary={<>
+                                {roleLine(belt) !== null && <Typography variant="body2" data-belt-role="">{roleLine(belt)}</Typography>}
+                                <Typography variant="body2">
                                 {BELT_STRATEGIES.find(strategy => strategy.value === (belt.strategy ?? 'normal'))?.label} · {belt.lanes.map((lane, laneIndex) => `Lane ${laneIndex + 1} stack ${lane.stack_size}${belt.strategy === 'export' ? ` · Consumed ${lane.consumption_per_second ?? 'Automatic'}/s` : ''}`).join(' · ')}
-                            </Typography>}>
+                            </Typography>
+                            </>}>
                             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))', gap: 1, mb: 1.5 }}>
                                 <BeltStrategyField belt={belt} onChange={updates => onUpdate(beltIndex, updates)} />
                             </Box>
@@ -132,6 +161,16 @@ function BeltsFormComponent({
                 </EntityRow>;
             })}
             </SortableList>
+
+            {outputBelt !== undefined && (
+                <Box data-output-belt="" role="note" sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', p: 1.5, mt: 1, border: 1, borderColor: 'divider', borderRadius: 1 }}>
+                    <InfoOutlined fontSize="small" sx={{ color: 'text.secondary', mt: 0.25 }} aria-hidden />
+                    <Box>
+                        <Typography variant="body2"><strong>{LANE_FACT_COPY.outputBeltLabel}</strong> {LANE_FACT_COPY.outputBeltStated}</Typography>
+                        <Typography variant="body2" color="text.secondary">{outputBeltSummary(outputBelt)} {LANE_FACT_COPY.outputBeltKept}</Typography>
+                    </Box>
+                </Box>
+            )}
 
             {belts.length === 0 && (
                 <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
