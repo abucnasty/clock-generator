@@ -22,7 +22,7 @@ const agriculturalBackedUp: JobCheck[] = [{
         const batched = byMaker(generated, 'planned-belt-slack');
         expect(batched.label).toBe('Takt Batches: 5 output swings each output cycle');
         expect(batched.result.fuel_hand_room_ticks).toEqual({ 'inserter:1': 4, 'inserter:2': 4, 'inserter:11': 4 });
-        expect(batched.description).toContain('Inserters 1, 2 and 11 take fuel off the belt as well as an ingredient and stay enabled 4 more ticks');
+        expect(batched.description).toContain('The inserters (1, 2 and 11) that take bioflux and nutrients take fuel off the belt as well as an ingredient and stay enabled 4 more ticks');
     },
 }];
 

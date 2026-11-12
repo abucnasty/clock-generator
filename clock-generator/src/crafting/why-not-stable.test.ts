@@ -235,6 +235,14 @@ describe("an output chest that fills up", () => {
             + "and inserter 3 has nowhere to drop. The closest");
     });
 
+    it("names the chest by its kind and what it holds, and the inserters by what they drop, where the build's names are carried", () => {
+        const entity_names = { "chest:1": "buffer chest that holds electromagnetic science pack",
+            "inserter:1": "inserter (inserter 1) that drops electromagnetic science pack into a chest", "inserter:2": "inserter (inserter 2) that drops electromagnetic science pack into a chest" };
+        expect(whyNotStable([full([chest1])], 0, { ...build, entity_names })?.message).toContain("The buffer chest that holds electromagnetic science pack fills up. "
+            + "Nothing takes any electromagnetic science pack out of it, so it holds 9,600 of 9,600 and the inserters (1 and 2) that drop electromagnetic science pack "
+            + "into a chest have nowhere to drop.");
+    });
+
     it("comes before the other causes, and is not said of a clock that meets the target or was not found with a full chest", () => {
         expect(whyNotStable([full([chest1], { moving_belt: true })], 0, build)?.cause).toBe("output chest full");
         expect(whyNotStable([full([chest1], { meets_target_rate: true })], 0, build)).toBeNull();
@@ -264,6 +272,14 @@ describe("an export belt that gets less than it is taken off at", () => {
             message: "The recommended clock (Takt Batches: 2 output swings each output cycle) moves 80 a second, but Belt 2 gets 73.4 a second of electronic circuit, "
                 + "and 80 a second is taken off it (inserters 16 and 17 fill it).",
         });
+    });
+
+    it("names the belt and the inserters by their items where the build's names are carried", () => {
+        const entity_names = { "belt:2": "electronic circuit belt", "inserter:16": "inserter (inserter 16) that drops electronic circuit",
+            "inserter:17": "inserter (inserter 17) that drops electronic circuit" };
+        expect(whyNotStable([short([circuits])], 0, { ...build, entity_names })?.message).toBe("The recommended clock (Takt Batches: 2 output swings each output cycle) "
+            + "moves 80 a second, but the electronic circuit belt gets 73.4 a second of electronic circuit, and 80 a second is taken off it "
+            + "(the inserters (16 and 17) that drop electronic circuit fill it).");
     });
 
     it("names an inserter alone in the singular, and each belt", () => {

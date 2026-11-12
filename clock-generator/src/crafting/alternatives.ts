@@ -48,6 +48,8 @@ import { START_DEPENDENCE_NOT_CHECKED, StartDependence, startDependenceNote } fr
 import { NotMadeClock, notTriedSentence, WhyNotStable, whyNotStable, whyNotStableClockOf } from "./why-not-stable";
 import { DEFAULT_KICK_START_ITEMS } from "./runner/cold-start";
 import { ClockSharedLaneLoss, isNotChecked, judgeSharedLanes, SharedLaneJudgement, sharedLanesNotChecked } from "./shared-lane-verdict";
+import { buildToNameOf, entityNamesInSentence } from "./build-names";
+import { capitalized, drillNameInText, insertersInSentence } from "./entity-name";
 import { copiesDisturbanceTrial, CopiesTrialVerdict } from "./shared-lane-trial";
 
 
@@ -383,6 +385,22 @@ function primaryDefinition(config: Config, options: GenerateClockOptions, report
     };
 }
 
+/**
+ * The entities whose swings a shifted cycle moved, by their names (entity-name.ts): "the inserters (1 and 2) that drop
+ * chemical-science-pack; the inserter that takes advanced-circuit and sulfur". An entity the build does not name has its
+ * number and the items of its moved swings: "inserter 4: chemical-science-pack".
+ */
+function movedNamed(moved: readonly { entity_id: { type: string; number: number }; item_names: readonly string[] }[], build: ReturnType<typeof buildToNameOf>): string {
+    const inserters = moved.filter(it => it.entity_id.type === "inserter").map(it => it.entity_id.number);
+    const named = insertersInSentence(inserters, build).text;
+    const parts = /(^|and |, )inserters? \d/.test(named) || inserters.length === 0
+        ? moved.filter(it => it.entity_id.type === "inserter").map(it => `inserter ${it.entity_id.number}: ${it.item_names.join(", ")}`)
+        : named.split(/, (?=the )| and (?=the )/);
+    const others = moved.filter(it => it.entity_id.type !== "inserter").map(it => it.entity_id.type === "drill" && build.drills.some(drill => drill.id === it.entity_id.number)
+        ? `the ${drillNameInText(it.entity_id.number, build)}` : `${it.entity_id.type} ${it.entity_id.number}: ${it.item_names.join(", ")}`);
+    return [...parts, ...others].join("; ");
+}
+
 /** Sentences for an alternative's description about the belt its clock is made for, and the room for a hand of fuel */
 function beltNote(config: Config, result: BlueprintGenerationResult): string {
     const { belt } = result;
@@ -398,10 +416,12 @@ function beltNote(config: Config, result: BlueprintGenerationResult): string {
     const inserter_ids = new Map(config_ids.map(id => [EntityId.forInserter(id).id, id]));
     // the inserters with the fuel on their near lane get room for the hand it delays, the others for a hand of fuel
     const delayed = room.length === 0 ? new Map<string, number>() : delayedHandRoomTicks(createEntityRegistryFromConfig(config));
+    const build = buildToNameOf(config);
     const sentence = (entries: [string, number][], why: string) => {
         if (entries.length === 0) return "";
-        const ids = entries.map(([key]) => inserter_ids.get(key));
-        return ` ${ids.length === 1 ? `Inserter ${ids[0]} takes` : `Inserters ${ids.slice(0, -1).join(", ")} and ${ids[ids.length - 1]} take`} fuel off the belt as `
+        const ids = entries.map(([key]) => inserter_ids.get(key)!);
+        const named = insertersInSentence(ids, build);
+        return ` ${capitalized(named.text)} ${named.plural ? "take" : "takes"} fuel off the belt as `
             + `well as an ingredient and stay${ids.length === 1 ? "s" : ""} enabled ${entries[0][1]} more ticks after each enable window, ${why}, `
             + "and this clock did not hold the expected output without the room for it.";
     };
@@ -1001,6 +1021,8 @@ function runAlternativeOf(
         verification_cache?.set(signature, {...loss, start_dependence});
     }
     const deadlock_risks = sharedItemDeadlockRisks(entity_registry);
+    // the belts, inserters, chests and drills as the texts name them (entity-name.ts)
+    const build_names = buildToNameOf(config);
     const planning_note = actual_output_items === expected_output_items ? ""
         : ` The planning simulation moved ${actual_output_items} of ${expected_output_items} items each window cycle; `
         + "stability is judged by the clock-only check, which runs the enable windows of the blueprint.";
@@ -1009,7 +1031,7 @@ function runAlternativeOf(
         : ` Output swing ${search.picked!.row} starts ${Math.abs(search.picked!.setting)} ticks ${search.picked!.setting < 0 ? "earlier" : "later"} than planned.`;
     const shifted_note = search?.kind !== "shifted cycle" ? ""
         : ` The swings planned in clock ticks ${search.planned_ticks!.start}–${search.planned_ticks!.end} (`
-        + search.moved!.map(it => `${it.entity_id.type} ${it.entity_id.number}: ${it.item_names.join(", ")}`).join("; ")
+        + movedNamed(search.moved!, build_names)
         + `) start ${Math.abs(search.picked!.setting)} ticks ${search.picked!.setting < 0 ? "earlier" : "later"} than planned.`;
     const { belt } = result;
     const belt_note = beltNote(config, result);
@@ -1126,9 +1148,9 @@ function runAlternativeOf(
             + (start_dependence_note === null ? "" : ` ${start_dependence_note[0].toUpperCase()}${start_dependence_note.slice(1)}`) + row.description_suffix;
         // what a clock that holds says about the build is read from it, whether it gets back from a loss or not
         const insights = [
-            ...clockInsights(trial.result, trial.held, config.machines, config.overrides?.kick_start_items ?? DEFAULT_KICK_START_ITEMS),
+            ...clockInsights(trial.result, trial.held, config.machines, config.overrides?.kick_start_items ?? DEFAULT_KICK_START_ITEMS, build_names),
             ...(disturbance_trial !== null && !disturbance_trial.survives ? [disturbanceTrialInsight(disturbance_trial, expected_output_items)] : []),
-            ...(deadlock_risks.length > 0 ? [deadlockRiskInsight(deadlock_risks)] : []),
+            ...(deadlock_risks.length > 0 ? [deadlockRiskInsight(deadlock_risks, build_names)] : []),
             ...beltPickupNotTestedInsights(config),
             ...sideLoadedDropInsights(config),
             ...lanesExactlyFullInsights(config),
@@ -1137,7 +1159,7 @@ function runAlternativeOf(
             ...droppedOntoSharedLaneInsights(config),
             ...dropSpacingInsights(trial.result, config),
             ...(start_dependence_note !== null && trial.start_dependence !== null ? [startDependenceInsight(start_dependence_note, trial.start_dependence)] : []),
-            ...chestDrillInsights(trial.result),
+            ...chestDrillInsights(trial.result, build_names),
         ];
         // what the exported clock moved in its clock-only run, not the target, which is the same for every alternative
         const achieved_output_items = as_built?.actual_output_items ?? trial.result.stability_check.actual_output_items;
@@ -1651,5 +1673,6 @@ export function whyNotStableOf(
         target_items_per_second: config.setpoint.items_per_second,
         backed_up_belts: everyInputLaneIsDeadEnd(config),
         not_made,
+        entity_names: entityNamesInSentence(config),
     });
 }

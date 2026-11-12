@@ -10,6 +10,7 @@
 import { ItemName } from "../data";
 import { Entity, EntityId, ReadableEntityRegistry } from "../entities";
 import { machineNameOf } from "./machine-name";
+import { capitalized, insertersInSentence, NO_BUILD, type BuildToName } from "./entity-name";
 
 /** Two inserters that bring the same item to a machine, at least one of which brings another item too */
 export interface SharedItemDeadlockRisk {
@@ -61,11 +62,15 @@ export function sharedItemDeadlockRisks(entity_registry: Pick<ReadableEntityRegi
 }
 
 /**
- * "Inserters 1 and 2 both bring low-density-structure to the assembling-machine-3 that makes utility-science-pack; inserter 1
- * also brings flying-robot-frame, inserter 2 processing-unit."
+ * "The inserter that takes low-density-structure and flying-robot-frame and the inserter that takes low-density-structure and
+ * processing-unit both bring low-density-structure to the assembling-machine-3 that makes utility-science-pack.": the inserters
+ * by what they take (entity-name.ts, `build`: the config's), which says what else each brings. Where the build does not name
+ * them: "Inserters 1 and 2 both bring ...; inserter 1 also brings flying-robot-frame, inserter 2 processing-unit."
  */
-export function describeSharedItem(risk: SharedItemDeadlockRisk): string {
+export function describeSharedItem(risk: SharedItemDeadlockRisk, build: BuildToName = NO_BUILD): string {
     const [first, second] = risk.inserters;
+    const named = insertersInSentence([first.inserter_id, second.inserter_id], build);
+    if (!/^inserters? \d/.test(named.text)) return `${capitalized(named.text)} both bring ${risk.item} to the ${risk.machine}.`;
     const also = risk.inserters.filter(inserter => inserter.other_items.length > 0)
         .map((inserter, index) => `inserter ${inserter.inserter_id}${index === 0 ? " also brings" : ""} ${inserter.other_items.join(" and ")}`);
     return `Inserters ${first.inserter_id} and ${second.inserter_id} both bring ${risk.item} to the ${risk.machine}; ${also.join(", ")}.`;
@@ -75,11 +80,11 @@ export function describeSharedItem(risk: SharedItemDeadlockRisk): string {
  * What to tell whoever reads the clocks of a build with a deadlock risk, or copies one: which inserters share which
  * item, and what can come of it. Null for a build without one.
  */
-export function deadlockRiskNote(risks: readonly SharedItemDeadlockRisk[]): string | null {
+export function deadlockRiskNote(risks: readonly SharedItemDeadlockRisk[], build: BuildToName = NO_BUILD): string | null {
     if (risks.length === 0) {
         return null;
     }
-    return `Deadlock risk: ${risks.map(describeSharedItem).join(" ")} An inserter that starts picking up an item the other has already `
+    return `Deadlock risk: ${risks.map(risk => describeSharedItem(risk, build)).join(" ")} An inserter that starts picking up an item the other has already `
         + "filled the machine with holds its hand until the machine has room, and brings nothing else while it does. If the machine "
         + "then runs out of what only that inserter brings, the build stops for good, whatever the clock does afterwards. "
         + "Whether that happens depends on the timing of the two inserters against each other.";

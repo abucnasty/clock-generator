@@ -281,8 +281,8 @@ const lithium: JobCheck[] = [{
         for (const variant of lithiumSiloCases()) {
             const chosen = generated.alternatives.find(alternative => alternative.id === variant.alternative)!;
             expect(chosen.insights.filter(insight => insight.id === 'side-loaded-drop').map(insight => insight.what), variant.name).toEqual([
-                'Inserter 15 drops onto a 3 tile belt buffer that side-loads onto another belt. '
-                + 'Inserter 16 drops onto a 3 tile belt buffer that side-loads onto another belt.']);
+                'The inserter (inserter 15) that drops lithium-plate drops onto a 3 tile belt buffer that side-loads onto another belt. '
+                + 'The inserter (inserter 16) that drops lithium-plate drops onto a 3 tile belt buffer that side-loads onto another belt.']);
         }
     },
 }];
@@ -379,17 +379,18 @@ const grenade: JobCheck[] = [
         name: 'every alternative says the lanes of the belt are exactly full, and the selected clock\'s hands fit between each other',
         run: ({ generated }) => {
             for (const alternative of generated.alternatives) {
-                expect(alternative.insights.find(it => it.id === 'lanes-exactly-full')?.title).toBe('Both lanes of belt 1 are exactly full');
+                expect(alternative.insights.find(it => it.id === 'lanes-exactly-full')?.title).toBe('Both lanes of the grenade belt are exactly full');
                 expect(alternative.insights.find(it => it.id === 'drop-spacing')).toBeDefined();
             }
             // the two inserters of a row start in the same tick: the 14 hands of a row land on 14 tiles of the belt's cycle of 14
             const spacing = selectedOf(generated).insights.find(it => it.id === 'drop-spacing')!;
-            expect(spacing.title).toBe('Drops onto belt 1 fit between each other');
+            expect(spacing.title).toBe('Drops onto the grenade belt fit between each other');
             expect(spacing.table?.rows).toEqual([['1 and 2', '14', '12', '14', '0', '0'], ['7 and 8', '14', '12', '14', '0', '0']]);
             // and which spacings of the copies, and distances between a copy's inserters, would fit as well
-            expect(spacing.explanation).toContain('The belt moves 14 tiles a window cycle, so each hand lands on one of 14 tiles. With inserters 1 and 2 as they stand (3 tiles apart), '
+            expect(spacing.explanation).toContain('The belt moves 14 tiles a window cycle, so each hand lands on one of 14 tiles. With the inserters (1 and 2) that drop grenade as they stand (3 tiles apart), '
                 + 'the copies fit 12, 16, 18, 20, 22 or 24 tiles apart; 13, 15, 17, 19, 23 or 25 apart only with a copy\'s inserters 7 tiles apart; 14 or 21 apart never. '
-                + 'The same holds at any of these spacings plus 14. Starting inserter 2 16, 32 or 48 ticks after inserter 1 also fits (a tile every 8 ticks).');
+                + 'The same holds at any of these spacings plus 14. Starting the inserter (inserter 2) that drops grenade 16, 32 or 48 ticks after the inserter (inserter 1) '
+                + 'that drops grenade also fits (a tile every 8 ticks).');
         },
     },
 ];
@@ -405,7 +406,8 @@ const utility120: JobCheck[] = [
                 expect(alternative.deadlock_risks, alternative.id).toHaveLength(1);
                 const insight = alternative.insights.find(it => it.id === 'deadlock-risk');
                 expect(insight?.scope, alternative.id).toBe('build');
-                expect(insight?.what).toContain('Inserters 1 and 2 both bring low-density-structure to the assembling-machine-3 that makes utility-science-pack');
+                expect(insight?.what).toContain('The inserter that takes low-density-structure and flying-robot-frame and the inserter that takes low-density-structure '
+                    + 'and processing-unit both bring low-density-structure to the assembling-machine-3 that makes utility-science-pack');
             }
         },
     },

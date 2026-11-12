@@ -15,6 +15,8 @@ import { COPY_NUMBER_STRIDE } from "./sequence/build-copies";
 import { OutputCyclePlan } from "./sequence/cycle/output-cycle";
 import { targetInsertersOf, targetItemOf, targetMachinesOf } from "./sequence/cycle/target-ends";
 import { createEntityRegistryFromConfig, SimulationContext } from "./sequence/simulation-context";
+import { buildToNameOf } from "./build-names";
+import { capitalized, inserterNameInText, theName, ITEM_IDS, lanesInSentence, NO_BUILD, type BuildToName, type ItemWords } from "./entity-name";
 import { droppedOnto, ModelLane, modelLanesOf, takenLanesOf } from "./shared-lane-lanes";
 import { DropRecorder, HandDropped, LaidOutLane, LaneRow, recordInserters, runOnSharedLanes, SharedLaneLayout, sharedLaneLayoutOf } from "./shared-lane-model";
 import type { OutputBeltRun } from "./output-belt-run";
@@ -426,17 +428,26 @@ function directionWord(flow: FlowDirection): string {
 /** "1,234" */
 const counted = (value: number) => value.toLocaleString("en-US");
 
-/** "Lane 1 of belt 2 ends in a dead end.", "Lanes 1 and 2 of belt 2 end in a dead end.", or each lane with its end where they differ */
-function endsSentence(loss: Omit<SharedLaneLoss, "text">): string {
+/** How the loss texts write an item: by the game's name in a sentence, or by its id without the game data */
+function itemWords(): ItemWords {
+    return FactorioDataService.isAvailable() ? { item: id => FactorioDataService.itemNameInSentence(id) } : ITEM_IDS;
+}
+
+/**
+ * "The iron gear wheel lane ends in a dead end.", "Both lanes of the iron ore belt end in an infinite end.", or each lane with
+ * its end where they differ
+ */
+function endsSentence(loss: Omit<SharedLaneLoss, "text">, build: BuildToName, words: ItemWords): string {
     const lanes = [{ lane: loss.lane, lane_end: loss.lane_end, run_as: loss.run_as }, ...loss.other_lanes ?? []];
     const end = (it: typeof lanes[number], many: boolean) => {
         const run_as = it.run_as === "dead_end" ? "a dead end" : "an infinite end";
         return it.lane_end === "unknown" ? `${many ? "have" : "has"} an unknown end. ${many ? "They are" : "It is"} checked as ${run_as}.` : `${many ? "end" : "ends"} in ${run_as}.`;
     };
+    const named = (of: typeof lanes) => capitalized(lanesInSentence(of.map(it => ({ belt_id: loss.belt_id, lane: it.lane })), build, { words }));
     if (lanes.length > 1 && lanes.every(it => it.lane_end === lanes[0].lane_end && it.run_as === lanes[0].run_as)) {
-        return `Lanes ${lanes.map(it => it.lane).join(" and ")} of belt ${loss.belt_id} ${end(lanes[0], true)}`;
+        return `${named(lanes)} ${end(lanes[0], true)}`;
     }
-    return lanes.map(it => `Lane ${it.lane} of belt ${loss.belt_id} ${end(it, false)}`).join(" ");
+    return lanes.map(it => `${named([it])} ${end(it, false)}`).join(" ");
 }
 
 /** "misses 3 of its 65 swings with iron gear wheel in 65 window cycles", with the swings that carry fewer items where there are */
@@ -446,13 +457,14 @@ function missedSwings(loss: Omit<SharedLaneLoss, "text">, item: string): string 
 }
 
 /**
- * "Lane 1 of belt 2 ends in a dead end. The 6 copies take advanced circuit from it. When the items move east, copy 3 from the
- * entry does not get sufficient items. Its inserter 3 misses 70 of its 210 swings with advanced circuit in 50 window cycles."
- * At a join: "The side belt of copy 4 from the entry is full at its join onto the output belt. Its output inserter waits for room
- * in 84 of its 336 swings in 63 window cycles. It misses 42 of the 378 swings its target needs." A loss is said in swings, not in
- * items or crafts. One fact a sentence; the game's names of items have no plural.
+ * "The advanced circuit lane ends in a dead end. The 6 copies take advanced circuit from it. When the items move east, copy 3
+ * from the entry does not get sufficient items. Its inserter that takes advanced circuit and sulfur misses 70 of its 210 swings
+ * with advanced circuit in 50 window cycles." At a join: "The side belt of copy 4 from the entry is full at its join onto the
+ * output belt. Its output inserter waits for room in 84 of its 336 swings in 63 window cycles. It misses 42 of the 378 swings
+ * its target needs." A loss is said in swings, not in items or crafts; a lane and an inserter by their items (entity-name.ts:
+ * `build`, the config's). One fact a sentence; the game's names of items have no plural.
  */
-export function describeSharedLaneLoss(loss: Omit<SharedLaneLoss, "text">): string {
+export function describeSharedLaneLoss(loss: Omit<SharedLaneLoss, "text">, build: BuildToName = NO_BUILD): string {
     if (loss.join_full !== undefined) {
         const { held_hands, hands, target_swings } = loss.join_full;
         const missed = target_swings === undefined || target_swings <= hands ? ""
@@ -460,17 +472,19 @@ export function describeSharedLaneLoss(loss: Omit<SharedLaneLoss, "text">): stri
         return `The side belt of copy ${loss.copy} from the entry is full at its join onto the output belt. `
             + `Its output inserter waits for room in ${counted(held_hands)} of its ${counted(hands)} swings in ${loss.window_cycles} window cycles.${missed}`;
     }
-    const item = FactorioDataService.isAvailable() ? FactorioDataService.itemNameInSentence(loss.item) : loss.item;
+    const words = itemWords();
+    const item = words.item(loss.item);
     const them = loss.other_lanes === undefined ? "it" : "them";
+    const inserter = inserterNameInText(loss.inserter_id, build, { words });
     const waits = loss.side_belt_waits === undefined ? ""
         : ` Its output inserter also waits for room on its side belt in ${counted(loss.side_belt_waits.held_hands)} of its ${counted(loss.side_belt_waits.hands)} swings.`;
     if (loss.copies === 1) {
-        return `${endsSentence(loss)} The build takes ${item} from ${them}. `
-            + `When the items move ${directionWord(loss.flow)}, inserter ${loss.inserter_id} does not get sufficient items. It ${missedSwings(loss, item)}${waits}`;
+        return `${endsSentence(loss, build, words)} The build takes ${item} from ${them}. `
+            + `When the items move ${directionWord(loss.flow)}, ${theName(inserter)} does not get sufficient items. It ${missedSwings(loss, item)}${waits}`;
     }
-    return `${endsSentence(loss)} The ${loss.copies} copies take ${item} from ${them}. `
+    return `${endsSentence(loss, build, words)} The ${loss.copies} copies take ${item} from ${them}. `
         + `When the items move ${directionWord(loss.flow)}, copy ${loss.copy} from the entry does not get sufficient items. `
-        + `Its inserter ${loss.inserter_id} ${missedSwings(loss, item)}${waits}`;
+        + `Its ${inserter} ${missedSwings(loss, item)}${waits}`;
 }
 
 /** The tick window cycle `k` of the clock starts in: the clock stands at 0 in the run's first tick */
@@ -745,6 +759,7 @@ export function judgeSharedLanes(config: Config, clock_windows: SerializableCloc
     const lanes = modelLanesOf(config);
     const keys = lanes.map(lane => `${lane.belt_id}/${lane.lane}`);
     if (lanes.length === 0) return { losses: [], fast_check_passes: true, simulated: false, longer_run: false, lanes: keys };
+    const build = buildToNameOf(config);
     const windows = new Map(Object.entries(clock_windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     const window_cycles = longRunWindowCyclesOf(window_cycle_ticks);
     const ends = outputEndsOf(config);
@@ -798,7 +813,7 @@ export function judgeSharedLanes(config: Config, clock_windows: SerializableCloc
     const shortfalls = first.flatMap(it => it.runs.flatMap(({ run }) => run.shortfalls));
     const judged = (losses: Omit<SharedLaneLoss, "text">[], longer_run: boolean): SharedLaneJudgement => ({
         // the worst first: the most items short of the run of one copy
-        losses: losses.map(loss => ({ ...loss, text: describeSharedLaneLoss(loss) })).sort((a, b) => (b.alone_items - b.items) - (a.alone_items - a.items)),
+        losses: losses.map(loss => ({ ...loss, text: describeSharedLaneLoss(loss, build) })).sort((a, b) => (b.alone_items - b.items) - (a.alone_items - a.items)),
         fast_check_passes, simulated: true, longer_run, lanes: keys,
     });
     // no taker short, or one short by more than a hand, which the end of the judged span does not make: judged as it is,

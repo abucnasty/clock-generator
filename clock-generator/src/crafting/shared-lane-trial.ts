@@ -22,7 +22,10 @@
 import { Config } from "../config";
 import { Logger } from "../common/logger";
 import { OpenRange } from "../data-types";
+import { FactorioDataService } from "../data";
+import { buildToNameOf } from "./build-names";
 import { SerializableClockWindows } from "./clock";
+import { ITEM_IDS, lanesInSentence, NO_BUILD, type BuildToName } from "./entity-name";
 import { DisturbanceTrial, disturbanceTrialsOf, LossOutcome, lossLabel, lossLimitOf } from "./disturbance-trial";
 import { canonicalKey, currentRunMemo } from "./plan/run-memo";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
@@ -69,13 +72,14 @@ export interface CopiesTrialVerdict {
 const listed = (values: readonly (number | string)[]) => values.length <= 1 ? values.join("") : `${values.slice(0, -1).join(", ")} and ${values[values.length - 1]}`;
 
 /**
- * "Accumulator stops arriving at the entry of lane 1 of belt 1, which the 11 copies share, and comes back. Copy 3 from
+ * "Accumulator stops arriving at the entry of the accumulator lane, which the 11 copies share, and comes back. Copy 3 from
  * the entry ends at 288, 288 and 304 a window cycle, where one copy makes 352." One fact a sentence. With `infinite_end`,
  * the output blockage of a config that states its output belt: "Automation science pack is not taken away at the infinite
  * end of the output belt: the infinite end is shut, and every lane upstream backs up from there. Then the infinite end
- * opens again. ..."
+ * opens again. ..." A lane is named by its item (entity-name.ts, `build`: the config's).
  */
-export function describeCopiesShort(loss: DisturbanceTrial, lanes: readonly string[], copies: number, short: readonly CopyShortAfterLoss[], expected: number, infinite_end = false): string {
+export function describeCopiesShort(loss: DisturbanceTrial, lanes: readonly string[], copies: number, short: readonly CopyShortAfterLoss[], expected: number,
+    infinite_end = false, build: BuildToName = NO_BUILD): string {
     const label = lossLabel(loss);
     const each = short.map(it => `Copy ${it.copy} from the entry ends at ${listed(it.items_per_window_cycle.map(items => items.toLocaleString("en-US")))} a window cycle`);
     const ends = `${each.join(". ")}, where one copy makes ${expected.toLocaleString("en-US")}.`;
@@ -84,7 +88,8 @@ export function describeCopiesShort(loss: DisturbanceTrial, lanes: readonly stri
             + `upstream backs up from there. Then the infinite end opens again. ${ends}`;
     }
     const where = loss.kind === "supply"
-        ? ` at the entry of ${lanes.map(key => { const [belt, lane] = key.split("/"); return `lane ${lane} of belt ${belt}`; }).join(" and ")}, which the ${copies} copies share`
+        ? ` at the entry of ${lanesInSentence(lanes.map(key => { const [belt_id, lane] = key.split("/").map(Number); return { belt_id, lane }; }), build,
+            { words: FactorioDataService.isAvailable() ? { item: id => FactorioDataService.itemNameInSentence(id) } : ITEM_IDS })}, which the ${copies} copies share`
         : ` from the ${copies} copies`;
     const back = loss.kind === "supply" ? "comes back" : "is taken away again";
     return `${label[0].toUpperCase()}${label.slice(1)}${where}, and ${back}. ${ends}`;
@@ -143,7 +148,7 @@ function triedOnCopies(config: Config, lanes: ReturnType<typeof sharedLaneRunsOf
                             window_cycles_after: trial.output_per_bin.length * outcome.window_cycles_per_bin }, short,
                         ...(not_judged.size > 0 && { copies_not_judged: [...not_judged].sort((a, b) => a - b) }),
                         text: describeCopiesShort(loss, loss_lanes.length > 0 ? loss_lanes : shared_keys, copies, short, expected_output_items,
-                            loss.kind === "output" && under.output_belt !== undefined && loss.item === under.setpoint.recipe) };
+                            loss.kind === "output" && under.output_belt !== undefined && loss.item === under.setpoint.recipe, buildToNameOf(config)) };
                 }
                 recovered = Math.max(recovered, (outcome.recovered_after_bins ?? 0) * outcome.window_cycles_per_bin);
             }

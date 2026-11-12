@@ -5,6 +5,8 @@ import { computeMachineTargetRates } from "./machine-target-rates";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { buildOutputInsertersOf } from "./sequence/cycle/swing-counts";
 import { TargetProductionRate } from "./target-production-rate";
+import { buildToNameOf } from "./build-names";
+import { beltNameInText, theName } from "./entity-name";
 
 // ============================================================================
 // Whether the drops of the copies fit, before Generate
@@ -88,7 +90,9 @@ export function dropRoomNote(config: Config): string | null {
     const spacing = dropSpacing(config, together, window_cycle_ticks);
     if (spacing === null) return null;
     const belts = [...new Set(spacing.lines.map(line => line.belt_id))].sort((a, b) => a - b);
-    const belt = belts.length === 1 ? `belt ${belts[0]}` : `belts ${belts.join(", ")}`;
+    // a note of the form: the belts by their items, with their numbers to find the rows by
+    const build = buildToNameOf(config);
+    const belt = belts.map(id => theName(beltNameInText(id, build, { numbered: true }))).join(", ");
     const lead = `At about ${window_cycle_ticks} ticks a window cycle (estimated from the setpoint: one output hand at the machine's rate), the hands of the ${copies} copies`;
     const more = alsoFits(room);
     const plus = room.loop !== null ? `, and at any of these plus ${room.loop}` : "";
