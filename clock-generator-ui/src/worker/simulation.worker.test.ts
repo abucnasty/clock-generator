@@ -358,7 +358,7 @@ describe('live advice on a gear assembler, which does not block', () => {
         chests: [{ id: 1, type: 'infinity-chest', item_filter: [], remove_unfiltered_items: true }],
     } as Config);
     /** The engine's warning for gears({ stack_size: 2 }), live and in the generation log */
-    const pickupNotTested = 'Not tested: The inserter (inserter 1) that takes iron-plate picks up iron-plate from the iron-plate belt (belt 1) in 2-item belt stacks. Belt pickup timing is calibrated '
+    const pickupNotTested = 'Not tested: The inserter (inserter 1) that takes iron plate picks up iron plate from the iron plate belt (belt 1) in 2-item belt stacks. Belt pickup timing is calibrated '
         + 'with 16-item hands on 4-item belt stacks only; at other belt stack sizes and hand sizes it has not been compared with the '
         + 'game, so the clock may not match the game.';
 
@@ -388,7 +388,7 @@ describe('live advice on a gear assembler, which does not block', () => {
         const fed = gears();
         const marked = { ...fed, inserters: [fed.inserters[0], { ...fed.inserters[1], sink: { type: 'belt', id: 2, drop_capture: { status: 'side-loaded', tiles: 3 } } }],
             belts: [...fed.belts, { id: 2, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-gear-wheel', stack_size: 4 }] }] } as Config;
-        expect((await coverageOf(marked)).sideLoadedDrop).toBe('The inserter (inserter 2) that drops iron-gear-wheel drops onto a 3 tile belt buffer that side-loads onto another belt. '
+        expect((await coverageOf(marked)).sideLoadedDrop).toBe('The inserter (inserter 2) that drops iron gear wheel drops onto a 3 tile belt buffer that side-loads onto another belt. '
             + 'The clock may make less in the game than shown here, most of all when these inserters are switched on at the same time as others '
             + 'that drop onto the belt. Give each of these drops a belt of its own, or check the clock in the game.');
     });
