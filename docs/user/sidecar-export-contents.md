@@ -64,7 +64,7 @@ ends are different, the export gives `unknown`.
 
 ## Flow direction
 
-For each belt from which an inserter removes items, the export gives the direction in which the items move along the row
+For each belt from which an inserter removes items, the export gives the direction in which the belt flows along the row
 of copies (`flow_direction`): 0 north, 4 east, 8 south or 12 west.
 
 - If the export gives a copy spacing, the flow direction is the direction of the copy spacing.
