@@ -2,7 +2,6 @@ import { Config } from "../config";
 import { Logger } from "../common/logger";
 import { OpenRange } from "../data-types";
 import Fraction, { fraction } from "../data-types/fraction";
-import { FactorioDataService } from "../data";
 import { Entity, EntityId, handSizeFor, Inserter } from "../entities";
 import { FlowDirection, LaneEnd, laneFactsOf } from "../entities/traits/lane-facts";
 import { fractionOf } from "../entities/traits/ratio";
@@ -16,7 +15,7 @@ import { OutputCyclePlan } from "./sequence/cycle/output-cycle";
 import { targetInsertersOf, targetItemOf, targetMachinesOf } from "./sequence/cycle/target-ends";
 import { createEntityRegistryFromConfig, SimulationContext } from "./sequence/simulation-context";
 import { buildToNameOf } from "./build-names";
-import { capitalized, inserterNameInText, theName, ITEM_IDS, lanesInSentence, NO_BUILD, type BuildToName, type ItemWords } from "./entity-name";
+import { capitalized, inserterNameInText, theName, lanesInSentence, NO_BUILD, textWords, type BuildToName } from "./entity-name";
 import { droppedOnto, ModelLane, modelLanesOf, takenLanesOf } from "./shared-lane-lanes";
 import { DropRecorder, HandDropped, LaidOutLane, LaneRow, recordInserters, runOnSharedLanes, SharedLaneLayout, sharedLaneLayoutOf } from "./shared-lane-model";
 import type { OutputBeltRun } from "./output-belt-run";
@@ -428,22 +427,17 @@ function directionWord(flow: FlowDirection): string {
 /** "1,234" */
 const counted = (value: number) => value.toLocaleString("en-US");
 
-/** How the loss texts write an item: by the game's name in a sentence, or by its id without the game data */
-function itemWords(): ItemWords {
-    return FactorioDataService.isAvailable() ? { item: id => FactorioDataService.itemNameInSentence(id) } : ITEM_IDS;
-}
-
 /**
  * "The iron gear wheel lane ends in a dead end.", "Both lanes of the iron ore belt end in an infinite end.", or each lane with
  * its end where they differ
  */
-function endsSentence(loss: Omit<SharedLaneLoss, "text">, build: BuildToName, words: ItemWords): string {
+function endsSentence(loss: Omit<SharedLaneLoss, "text">, build: BuildToName): string {
     const lanes = [{ lane: loss.lane, lane_end: loss.lane_end, run_as: loss.run_as }, ...loss.other_lanes ?? []];
     const end = (it: typeof lanes[number], many: boolean) => {
         const run_as = it.run_as === "dead_end" ? "a dead end" : "an infinite end";
         return it.lane_end === "unknown" ? `${many ? "have" : "has"} an unknown end. ${many ? "They are" : "It is"} checked as ${run_as}.` : `${many ? "end" : "ends"} in ${run_as}.`;
     };
-    const named = (of: typeof lanes) => capitalized(lanesInSentence(of.map(it => ({ belt_id: loss.belt_id, lane: it.lane })), build, { words }));
+    const named = (of: typeof lanes) => capitalized(lanesInSentence(of.map(it => ({ belt_id: loss.belt_id, lane: it.lane })), build));
     if (lanes.length > 1 && lanes.every(it => it.lane_end === lanes[0].lane_end && it.run_as === lanes[0].run_as)) {
         return `${named(lanes)} ${end(lanes[0], true)}`;
     }
@@ -472,17 +466,16 @@ export function describeSharedLaneLoss(loss: Omit<SharedLaneLoss, "text">, build
         return `The side belt of copy ${loss.copy} from the entry is full at its join onto the output belt. `
             + `Its output inserter waits for room in ${counted(held_hands)} of its ${counted(hands)} swings in ${loss.window_cycles} window cycles.${missed}`;
     }
-    const words = itemWords();
-    const item = words.item(loss.item);
+    const item = textWords().item(loss.item);
     const them = loss.other_lanes === undefined ? "it" : "them";
-    const inserter = inserterNameInText(loss.inserter_id, build, { words });
+    const inserter = inserterNameInText(loss.inserter_id, build);
     const waits = loss.side_belt_waits === undefined ? ""
         : ` Its output inserter also waits for room on its side belt in ${counted(loss.side_belt_waits.held_hands)} of its ${counted(loss.side_belt_waits.hands)} swings.`;
     if (loss.copies === 1) {
-        return `${endsSentence(loss, build, words)} The build takes ${item} from ${them}. `
+        return `${endsSentence(loss, build)} The build takes ${item} from ${them}. `
             + `When the items move ${directionWord(loss.flow)}, ${theName(inserter)} does not get sufficient items. It ${missedSwings(loss, item)}${waits}`;
     }
-    return `${endsSentence(loss, build, words)} The ${loss.copies} copies take ${item} from ${them}. `
+    return `${endsSentence(loss, build)} The ${loss.copies} copies take ${item} from ${them}. `
         + `When the items move ${directionWord(loss.flow)}, copy ${loss.copy} from the entry does not get sufficient items. `
         + `Its ${inserter} ${missedSwings(loss, item)}${waits}`;
 }

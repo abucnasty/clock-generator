@@ -1,7 +1,7 @@
 import { Entity, Machine, ReadableEntityRegistry } from "../entities";
-import { FactorioDataService } from "../data";
 import { StockRecording } from "./machine-stock";
 import { machineNameOf } from "./machine-name";
+import { textWords } from "./entity-name";
 
 /** What the inserters that take the same results out of a machine's result target took over a span of a run */
 export interface ResultTakersOutcome {
@@ -50,7 +50,6 @@ export function resultsTakenOf(
     const inserters = registry.getAll().filter(Entity.isInserter);
     const all_machines = registry.getAll().filter(Entity.isMachine)
         .map(machine => ({ id: machine.entity_id.number, prototype: machine.metadata.prototype, recipe: machine.metadata.recipe.name }));
-    const words = { kind: (id: string) => FactorioDataService.itemNameInSentence(id), recipe: (id: string) => FactorioDataService.recipeNameInSentence(id) };
     const held = new Map(stock.inserters.map(series => [series.inserter_id, series.held]));
     const dropped = (inserter_id: string) => {
         const series = held.get(inserter_id) ?? [];
@@ -91,12 +90,12 @@ export function resultsTakenOf(
             const taken_items = group.inserter_ids.reduce((sum, id) => sum + dropped(id), 0);
             const per_window_cycle = ticks > 0 ? expected_items * window_cycle_ticks / ticks : 0;
             return {
-                items: group.items, item_labels: group.items.map(item => FactorioDataService.itemNameInSentence(item)),
+                items: group.items, item_labels: group.items.map(item => textWords().item(item)),
                 inserter_ids: group.inserter_ids, expected_items, taken_items,
                 short: taken_items < expected_items - per_window_cycle - group.inserter_ids.length * group.hand,
             };
         });
-        const machine_name = machineNameOf(machine.entity_id.number, all_machines, words);
+        const machine_name = machineNameOf(machine.entity_id.number, all_machines);
         return [{ machine_id: machine.entity_id.id, ...(machine_name !== undefined && { machine_name }), waiting_ticks, takers: outcomes }];
     });
 }
