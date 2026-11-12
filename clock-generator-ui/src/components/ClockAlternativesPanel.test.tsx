@@ -55,7 +55,7 @@ describe('the status of a clock that underproduces, in the list of clocks', () =
     it('of the 216-tick clock at a full join: the chip and the words for the code of a full join', () => {
         const row = rowOf('takt_batches_observed');
         expect(row.getAllByText('Underproduces').length).toBeGreaterThan(0);
-        expect(row.getByText(REASON_WORDS.join_full)).toBeTruthy();
+        expect(row.getByText(REASON_WORDS.target_full)).toBeTruthy();
     });
 });
 

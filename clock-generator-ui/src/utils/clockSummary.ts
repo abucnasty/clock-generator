@@ -78,7 +78,7 @@ export const SUMMARY_COPY = {
  */
 export const REASON_WORDS: Record<SharedLaneReasonCode, string> = {
     belt_gaps: 'Missed pickups due to belt gaps',
-    join_full: 'Output swings blocked due to a backed-up belt',
+    target_full: 'Output swings blocked: target full',
 };
 
 export const isStartDependent = (clock: Pick<SummaryClock, 'assessment'>): boolean =>

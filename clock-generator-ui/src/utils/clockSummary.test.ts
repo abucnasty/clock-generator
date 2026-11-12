@@ -208,9 +208,9 @@ describe('attemptResultOf', () => {
 
 describe('REASON_WORDS', () => {
     it('has the words for each reason code the engine gives', () => {
-        expect(Object.keys(REASON_WORDS).sort()).toEqual(['belt_gaps', 'join_full']);
+        expect(Object.keys(REASON_WORDS).sort()).toEqual(['belt_gaps', 'target_full']);
         expect(REASON_WORDS.belt_gaps).toBe('Missed pickups due to belt gaps');
-        expect(REASON_WORDS.join_full).not.toBe('');
+        expect(REASON_WORDS.target_full).not.toBe('');
     });
 });
 
