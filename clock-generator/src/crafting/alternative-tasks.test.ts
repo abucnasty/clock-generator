@@ -2,6 +2,7 @@ import {describe, expect, it} from "vitest";
 import {ChestType} from "../common/entity-types";
 import {ConfigPaths} from "../config/config-paths";
 import { TestConfigPaths } from "../../tests/configs/paths";
+import { loadKeptConfig } from "../../tests/configs/kept-config";
 import {loadConfigFromFile} from "../config/loader";
 import {EnableControlMode} from "../config/schema";
 import {planClockAlternatives, runClockAlternativeTask} from "./alternatives";
@@ -78,7 +79,7 @@ describe("the fractional swings task", () => {
     // on logistic science it is left out as well, where the primary keeps the belt pickup slack inside its windows (#595)
     // and the run of fractional swings, which adds the slack, makes the same windows with it: a clock the primary beats
     it("is left out where it would make the primary clock again, which made anyway it does", async () => {
-        const config = await loadConfigFromFile(TestConfigPaths.MILITARY_SCIENCE_120_COAL_LANE_PER_COPY);
+        const config = await loadKeptConfig(TestConfigPaths.MILITARY_SCIENCE_120_COAL_LANE_PER_COPY);
         let signature = "";
         const plan = planClockAlternatives(config, options, (_context, _tasks, primary) => { signature = primary; });
         expect(plan.context.fractional_is_primary).toBe(true);

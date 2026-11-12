@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { generateClockAlternatives } from "./generate-blueprint";
-import { loadConfigFromFile } from "../config/loader";
+import { loadKeptConfig } from "../../tests/configs/kept-config";
 import { TestConfigPaths } from "../../tests/configs/paths";
 import type { Config } from "../config/schema";
 import { quiet } from "./generate-blueprint-test-helpers";
@@ -14,7 +14,7 @@ describe("generateClockForConfig", () => {
     describe("agricultural science: windows for the inserters of the egg loop", async () => {
         // the sample's config before it stated its build of five copies: on the five-copy config the 5-swing clock holds without
         // windows on the loop, so the windows of the loop do not show there
-        const sample = await loadConfigFromFile(TestConfigPaths.AGRICULTURAL_SCIENCE_250_BIOFLUX_ON_NEAR_LANE);
+        const sample = await loadKeptConfig(TestConfigPaths.AGRICULTURAL_SCIENCE_250_BIOFLUX_ON_NEAR_LANE);
 
         it("counts a clock's windows without those of its feeders; the 5-swing clock does not go back to its rate by itself after a supply stop or an output blockage and the 2-swing one is selected", () => {
             // With hands of 12 on the sample this was 354 windows with the feeders', 324 without: the 3-swing clock has

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { generateClockForConfig, drawWindowTicks, planClockAlternatives, type BlueprintGenerationResult } from "./generate-blueprint";
 import { clockIdentity } from "./clock-identity";
-import { loadConfigFromFile } from "../config/loader";
+import { loadKeptConfig } from "../../tests/configs/kept-config";
 import { TestConfigPaths } from "../../tests/configs/paths";
 import type { Config } from "../config/schema";
 import { Entity } from "../entities";
@@ -20,7 +20,7 @@ describe("generateClockForConfig", () => {
     describe("agricultural science: windows for the inserters of the egg loop and those that take out of it", async () => {
         // the sample's config before it stated its build of five copies: on the five-copy config the 5-swing clock holds without
         // windows on the loop, so the windows of the loop do not show there
-        const sample = await loadConfigFromFile(TestConfigPaths.AGRICULTURAL_SCIENCE_250_BIOFLUX_ON_NEAR_LANE);
+        const sample = await loadKeptConfig(TestConfigPaths.AGRICULTURAL_SCIENCE_250_BIOFLUX_ON_NEAR_LANE);
         const five_swings = (config: Config): Config => ({ ...config, overrides: { ...config.overrides, terminal_swing_count: 5 } });
         const out_of_the_loop = ["inserter:10", "inserter:9"];
         const of_the_loop = ["inserter:5", "inserter:8"];

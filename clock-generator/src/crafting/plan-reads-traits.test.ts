@@ -1,9 +1,9 @@
-import fs from "fs";
 import { describe, expect, it } from "vitest";
 import assert from "../common/assert";
 import { assertInserterCoverage } from "../config/inserter-coverage-validator";
 import { laneLoads } from "../config/lane-capacity-validator";
 import { parseConfig } from "../config/loader";
+import { keptConfigText } from "../../tests/configs/kept-config";
 import { assertOutputTransferGenerationSupported } from "../config/output-transfer-generation";
 import { validateCopies } from "../config/copies-validator";
 import { Config } from "../config/schema";
@@ -294,7 +294,7 @@ function derivedConfigsOf(config: Config): Config[] {
 describe("the planner's reads of the traits", () => {
     it("give every config the numbers the planner read before, bit for bit", async () => {
         for (const file of SAMPLE_CONFIG_FILES) {
-            const config = await parseConfig(fs.readFileSync(file, "utf8")) as Config;
+            const config = await parseConfig(keptConfigText(file)) as Config;
             checked.configs += 1;
             checkConfig(config);
             for (const derived of derivedConfigsOf(config)) {
@@ -310,7 +310,7 @@ describe("the planner's reads of the traits", () => {
     });
 
     it("build a config's traits once and keep them with the config object", async () => {
-        const config = await parseConfig(fs.readFileSync(SAMPLE_CONFIG_FILES[0], "utf8")) as Config;
+        const config = await parseConfig(keptConfigText(SAMPLE_CONFIG_FILES[0])) as Config;
         expect(traitsOf(config)).toBe(traitsOf(config));
         expect(traitsOf({ ...config })).not.toBe(traitsOf(config));
         expect(traitsOf({ ...config })).toStrictEqual(traitsOf(config));

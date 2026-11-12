@@ -1,6 +1,6 @@
-import fs from "fs";
 import { describe, expect, it } from "vitest";
 import { parseConfig } from "../../config/loader";
+import { keptConfigText } from "../../../tests/configs/kept-config";
 import { Config } from "../../config/schema";
 import { BeltHandPickup } from "../../simulation/components/belt-hand-pickup";
 import { lossLimitOf } from "../../crafting/disturbance-trial";
@@ -266,7 +266,7 @@ function checkChests(registry: ReadableEntityRegistry, traits: ConfigTraits): vo
 describe("the traits of every sample", () => {
     it("give every figure the entities give today", async () => {
         for (const file of SAMPLES) {
-            const config = await parseConfig(fs.readFileSync(file, "utf8")) as Config;
+            const config = await parseConfig(keptConfigText(file)) as Config;
             const context = SimulationContext.fromConfig(config);
             const registry = context.entity_registry;
             const traits = buildTraits(config);
