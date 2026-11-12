@@ -209,7 +209,7 @@ describe('copies', () => {
         // 3 copies of a unit that drops 60 gears a second onto lane 1 of belt 2, of 120
         const config = gears({ items_per_second: 3 * 60, copies: 3, drop_lane: 1, output: belt(2, ['iron-gear-wheel', 'iron-gear-wheel']) });
         expect(lanesSharedByCopies(config).map(issue => [issue.kind, issue.belt_id, issue.lanes, issue.items_per_second])).toEqual([['drop', 2, [1], 60]]);
-        expect(laneSharedByCopiesWarning(config)).toBe('If the 3 copies share the iron-gear-wheel lane (lane 1 of belt 2), they drop 1.50 times what it carries '
+        expect(laneSharedByCopiesWarning(config)).toBe('If the 3 copies share the iron gear wheel lane (lane 1 of belt 2), they drop 1.50 times what it carries '
             + '(3 × 60 = 180 a second, of 120). This is only a warning. If each copy has a lane of its own, set the lane to per copy.');
         const warned: string[] = [];
         warnLanesSharedByCopies(config, { log: () => { }, warn: (message: string) => warned.push(message), error: () => { }, debug: () => { } });
@@ -237,15 +237,15 @@ describe('lanes exactly full', () => {
         // 2 copies of a unit that drops 120 gears a second on a belt of 2 x 120
         const config = gears({ items_per_second: 240, copies: 2 });
         expect(lanesExactlyFull(config).map(issue => [issue.kind, issue.belt_id, issue.lanes, issue.items_per_second, issue.capacity_per_second])).toEqual([['drop', 2, [1, 2], 120, 240]]);
-        expect(lanesExactlyFullWarning(config)).toBe('Both lanes of the iron-gear-wheel belt (belt 2) are exactly full at the target: the 2 copies drop 2 × 120 = 240 a second onto lanes that carry 240. '
+        expect(lanesExactlyFullWarning(config)).toBe('Both lanes of the iron gear wheel belt (belt 2) are exactly full at the target: the 2 copies drop 2 × 120 = 240 a second onto lanes that carry 240. '
             + 'Nothing is left over, so every hand has to land in a gap the others leave, and a wait is not made up later.');
     });
 
     it('says so of one lane, and of a build of one copy', () => {
         const lane = gears({ items_per_second: 120, copies: 3, drop_lane: 1, output: belt(2, ['iron-gear-wheel', 'iron-gear-wheel']) });
-        expect(lanesExactlyFullWarning(lane)).toBe('The iron-gear-wheel lane (lane 1 of belt 2) is exactly full at the target: the 3 copies drop 3 × 40 = 120 a second onto a lane that carries 120. '
+        expect(lanesExactlyFullWarning(lane)).toBe('The iron gear wheel lane (lane 1 of belt 2) is exactly full at the target: the 3 copies drop 3 × 40 = 120 a second onto a lane that carries 120. '
             + 'Nothing is left over, so every hand has to land in a gap the others leave, and a wait is not made up later.');
-        expect(lanesExactlyFullWarning(gears({ items_per_second: 240 }))).toBe('Both lanes of the iron-gear-wheel belt (belt 2) are exactly full at the target: the build drops 240 a second onto lanes that carry 240. '
+        expect(lanesExactlyFullWarning(gears({ items_per_second: 240 }))).toBe('Both lanes of the iron gear wheel belt (belt 2) are exactly full at the target: the build drops 240 a second onto lanes that carry 240. '
             + 'Nothing is left over, so every hand has to land in a gap the others leave, and a wait is not made up later.');
     });
 

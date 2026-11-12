@@ -281,8 +281,8 @@ const lithium: JobCheck[] = [{
         for (const variant of lithiumSiloCases()) {
             const chosen = generated.alternatives.find(alternative => alternative.id === variant.alternative)!;
             expect(chosen.insights.filter(insight => insight.id === 'side-loaded-drop').map(insight => insight.what), variant.name).toEqual([
-                'The inserter (inserter 15) that drops lithium-plate drops onto a 3 tile belt buffer that side-loads onto another belt. '
-                + 'The inserter (inserter 16) that drops lithium-plate drops onto a 3 tile belt buffer that side-loads onto another belt.']);
+                'The inserter (inserter 15) that drops lithium plate drops onto a 3 tile belt buffer that side-loads onto another belt. '
+                + 'The inserter (inserter 16) that drops lithium plate drops onto a 3 tile belt buffer that side-loads onto another belt.']);
         }
     },
 }];
@@ -406,8 +406,8 @@ const utility120: JobCheck[] = [
                 expect(alternative.deadlock_risks, alternative.id).toHaveLength(1);
                 const insight = alternative.insights.find(it => it.id === 'deadlock-risk');
                 expect(insight?.scope, alternative.id).toBe('build');
-                expect(insight?.what).toContain('The inserter that takes low-density-structure and flying-robot-frame and the inserter that takes low-density-structure '
-                    + 'and processing-unit both bring low-density-structure to the assembling-machine-3 that makes utility-science-pack');
+                expect(insight?.what).toContain('The inserter that takes low density structure and flying robot frame and the inserter that takes low density structure '
+                    + 'and processing unit both bring low density structure to the assembling machine 3 that makes utility science pack');
             }
         },
     },
