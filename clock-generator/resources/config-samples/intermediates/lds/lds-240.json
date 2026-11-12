@@ -225,6 +225,7 @@
     {
       "id": 2,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
           "ingredient": "coal",

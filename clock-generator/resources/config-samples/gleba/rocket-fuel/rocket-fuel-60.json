@@ -201,6 +201,7 @@
     {
       "id": 1,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
           "ingredient": "bioflux",
@@ -235,6 +236,7 @@
     {
       "id": 3,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
           "ingredient": "nutrients",

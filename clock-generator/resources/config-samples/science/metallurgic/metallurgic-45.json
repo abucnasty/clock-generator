@@ -180,6 +180,7 @@
     {
       "id": 2,
       "type": "turbo-transport-belt",
+      "flow_direction": 8,
       "lanes": [
         {
           "ingredient": "coal",
