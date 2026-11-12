@@ -86,8 +86,13 @@ function laneCapacityOf(belt: Config["belts"][number], lane: number): Ratio {
  * where it is false. Without the switch, the lane's role gives it: an input or a buffer lane is a dead end, an output
  * lane, or a lane with no role, has an infinite end. Never an unknown end.
  */
+/** Whether an export lane states what entities outside the config take off it */
+function consumes(stated: LaneConfig): boolean {
+    return "consumption_per_second" in stated && stated.consumption_per_second !== undefined;
+}
+
 function defaultEndOf(stated: LaneConfig, role: LaneRole | null, config: LaneFactsConfig): LaneEnd {
-    if ("consumption_per_second" in stated && stated.consumption_per_second !== undefined) return { kind: "infinite" };
+    if (consumes(stated)) return { kind: "infinite" };
     const backed_up_belts = config.overrides?.backed_up_belts;
     if (backed_up_belts !== undefined) return configDeadEnds(config) ? { kind: "dead_end" } : { kind: "infinite" };
     return role === "input" || role === "buffer" ? { kind: "dead_end" } : { kind: "infinite" };
@@ -96,8 +101,8 @@ function defaultEndOf(stated: LaneConfig, role: LaneRole | null, config: LaneFac
 /**
  * The facts of the lanes of a config. A fact that a lane of the config states is read as it is. A lane that states no
  * end has the end its role gives it, or the end the config's `backed_up_belts` switch gives it where the config states
- * the switch (defaultEndOf). A lane with no item that states no end has the end of the other lane of its belt where the
- * config does not state the switch, as it has its role. An infinite end takes as much as the lane carries. A supply rate
+ * the switch (defaultEndOf). A lane with no item that states no end and no consumption has the end of the other lane of its
+ * belt where the config does not state the switch, as it has its role. An infinite end takes as much as the lane carries. A supply rate
  * that is not stated is the lane's capacity (half the belt's speed times the lane's stack size), and the copies share a
  * lane that does not say otherwise. A belt that states one lane has one lane: there is no fact of a lane it does not
  * state, so nothing reads that lane's end, supply or sharing. Both lanes of a belt move the way the belt states
@@ -112,11 +117,12 @@ export function laneFactsOf(config: LaneFactsConfig, roles: LaneRolesOfBuild): L
         const roles_of_belt = listed.map((_, index) => roles.of(belt.id, index + 1 as 1 | 2));
         const own_ends = listed.map((stated, index): LaneEnd => stated.lane_end !== undefined ? { kind: stated.lane_end.kind }
             : defaultEndOf(stated, roles_of_belt[index], config));
-        // a lane with no item that states no end has the end of the other lane, where that lane has an item
+        // a lane with no item that states no end has the end of the other lane, where that lane has an item; a lane with a
+        // consumption keeps its infinite end
         const ends = listed.map((stated, index): LaneEnd => {
             const other = listed[1 - index];
-            return stated.ingredient === "" && stated.lane_end === undefined && !switch_stated && other !== undefined && other.ingredient !== ""
-                ? own_ends[1 - index] : own_ends[index];
+            return stated.ingredient === "" && stated.lane_end === undefined && !consumes(stated) && !switch_stated && other !== undefined
+                && other.ingredient !== "" ? own_ends[1 - index] : own_ends[index];
         });
         by_belt.set(belt.id, listed.map((stated, index) => {
             const capacity = laneCapacityOf(belt, index + 1);

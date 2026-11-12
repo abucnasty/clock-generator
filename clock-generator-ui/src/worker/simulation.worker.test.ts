@@ -9,7 +9,6 @@ import { configToFormData, formDataToConfig } from '../utils/configForm/configMa
 import { createDefaultConfig } from '../utils/configForm/formData';
 import { applyPaste } from '../utils/pastePreview';
 import { buildValidationIssues, refusedInserterIdsOf, type ValidationDiagnostic } from '../utils/buildValidation';
-import { beltQuestionOf } from '../utils/beltQuestion';
 import { timelineRequestFor } from '../utils/timelineRequest';
 import type { ClockAlternativeView } from './types';
 
@@ -495,7 +494,6 @@ describe('a build that states no lane end and no belt setting', () => {
     it('reads as backed up, loaded and generated with the belt setting untouched', async () => {
         const loaded = formDataToConfig(readSavedConfig(serializeConfig(configToFormData(statingNothing())))!);
         expect(loaded.overrides?.backed_up_belts).toBeUndefined();
-        expect(beltQuestionOf(loaded)).toEqual({ ask: true, answer: 'backed_up' });
         const { primary } = await primaryOf(loaded);
         expect(primary?.alternatives.map(it => [it.beltLabel, it.backedUpBelts, it.replayReadsConfig])).toEqual([['backed-up', true, true]]);
     }, 30_000);
@@ -533,10 +531,10 @@ describe("a clock's replay", () => {
         }
     });
 
-    it('gives a clock kept before the belt setting it was made for, as it did', async () => {
+    it('gives a clock kept before the belt it was made for on every lane, a lane that states its end too', async () => {
         const request = timelineRequestFor(mixed, { ...clock, beltLabel: 'backed-up', backedUpBelts: true }, 'clock');
-        expect(request?.config.overrides?.backed_up_belts).toBe(true);
-        expect(await endsOf(request!.config)).toEqual([['infinite'], ['dead_end'], ['dead_end']]);
+        expect(request?.config.overrides?.backed_up_belts).toBeUndefined();
+        expect(await endsOf(request!.config)).toEqual([['dead_end'], ['dead_end'], ['dead_end']]);
     });
 });
 

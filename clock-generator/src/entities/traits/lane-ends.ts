@@ -23,3 +23,22 @@ export function everyInputLaneIsDeadEnd(config: Pick<Config, "belts" | "override
     if (lanes.length === 0) return configDeadEnds(config);
     return lanes.every(lane => lane.lane_end.kind === "dead_end");
 }
+
+/**
+ * `config` with one end stated on every lane that states no consumption, for a reader that runs the build with that end
+ * on every lane, such as the run with backpressure at the pickups: an end the lane states gives way, which the switch
+ * never made it do. A lane with a consumption keeps its infinite end. The switch, if the config states it, is left as it
+ * is: no lane it could give an end to is left.
+ */
+export function withEveryLaneEnd<C extends Pick<Config, "belts">>(config: C, kind: "dead_end" | "infinite"): C {
+    return {
+        ...config,
+        belts: config.belts.map(belt => ({
+            ...belt,
+            lanes: (belt.lanes as readonly LaneOfBelt[]).map(lane => lane.consumption_per_second !== undefined ? lane : { ...lane, lane_end: { kind } }),
+        })),
+    };
+}
+
+/** A lane of a belt as the config lists it, read by withEveryLaneEnd */
+type LaneOfBelt = Config["belts"][number]["lanes"][number] & { consumption_per_second?: number };

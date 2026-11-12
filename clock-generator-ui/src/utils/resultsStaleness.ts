@@ -1,5 +1,4 @@
 import type { Config } from 'clock-generator/browser';
-import { beltQuestionOf, type BeltQuestion } from './beltQuestion';
 import type { TargetCounts } from './targetCounts';
 import { nameInSentence } from './entityLabel';
 
@@ -16,8 +15,8 @@ export const STALE_BLUEPRINT_NOTE = 'The blueprint is hidden because your build 
 export const STALE_GENERATE_AGAIN = 'Generate again';
 
 /**
- * What a generation was for: the key of its config, the target recipe and rate the clocks were made for, the belt
- * question as the config answered it, and when the generation started (ms since the epoch)
+ * What a generation was for: the key of its config, the target recipe and rate the clocks were made for, and when the
+ * generation started (ms since the epoch)
  */
 export interface GeneratedFor {
     key: string;
@@ -25,7 +24,6 @@ export interface GeneratedFor {
     itemsPerSecond: number;
     /** What the rate counts, when it is the item destroyed; none, the item made */
     counts?: TargetCounts;
-    beltQuestion: BeltQuestion;
     generatedAt: number;
 }
 
@@ -43,7 +41,6 @@ export function generatedForOf(config: Config, at: number = Date.now()): Generat
         recipe: config.setpoint.recipe,
         itemsPerSecond: config.setpoint.items_per_second,
         ...(config.setpoint.counts === 'destroyed' && { counts: 'destroyed' as const }),
-        beltQuestion: beltQuestionOf(config),
         generatedAt: at,
     };
 }

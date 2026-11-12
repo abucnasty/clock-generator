@@ -51,7 +51,7 @@ export { whyNotStable, whyNotStableClockOf } from "./crafting/why-not-stable";
 
 export { withOtherClocks } from "./crafting/other-clocks";
 
-export { everyInputLaneIsDeadEnd } from "./entities/traits/lane-ends";
+export { everyInputLaneIsDeadEnd, withEveryLaneEnd } from "./entities/traits/lane-ends";
 export { beltLaneFactsOf } from "./entities/traits/lane-facts";
 export type { BeltLaneFacts, FlowDirection, LaneEnd, LaneSharing } from "./entities/traits/lane-facts";
 export { laneRolesOf } from "./entities/traits/lane-role";

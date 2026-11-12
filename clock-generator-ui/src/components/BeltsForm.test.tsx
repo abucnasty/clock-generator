@@ -46,7 +46,7 @@ const withoutEnds = (form: ConfigFormData): ConfigFormData => ({ ...form, belts:
 function showBelts(form: ConfigFormData, facts: FormLaneFacts | null = factsOf(form)) {
     const onUpdate = vi.fn();
     const view = show(<BeltsForm belts={form.belts} itemNames={[]} onAdd={vi.fn()} onUpdate={onUpdate} onRemove={vi.fn()} onReorder={vi.fn()}
-        onDuplicate={vi.fn()} beltQuestion={{ ask: true, answer: 'backed_up' }} onBeltAnswer={vi.fn()} laneFacts={facts}
+        onDuplicate={vi.fn()} laneFacts={facts}
         copies={form.setpoint.copies} outputBelt={form.output_belt} />);
     return { ...view, onUpdate };
 }
@@ -59,10 +59,12 @@ async function openLanes(user: ReturnType<typeof show>['user'], belt: number) {
 const combo = (name: string) => screen.queryByRole('combobox', { name });
 
 describe('the Belts section', () => {
-    it('counts the input lanes by the end the engine reads, beside the belt setting, and says what the output belt states', () => {
+    it('counts the input lanes by the end the engine reads, with no belt setting, and says what the output belt states', () => {
         showBelts(exampleForm(AUTOMATION));
         expect(screen.getByText('Input lanes').parentElement!.textContent).toContain('2 dead ends · 0 infinite');
-        expect(screen.getByRole('group', { name: 'At your input pickups, items are:' })).toBeDefined();
+        expect(screen.queryByRole('group', { name: 'At your input pickups, items are:' })).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Moving' })).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Backed up' })).toBeNull();
         const outputBelt = screen.getByRole('note');
         expect(outputBelt.textContent).toBe('Output belt: stated in the file.5 stretches, 1 splitter, 1 infinite end. The page keeps it as it is stated. Change it in the configuration file.');
         expect(within(outputBelt).queryByRole('textbox')).toBeNull();

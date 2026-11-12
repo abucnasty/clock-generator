@@ -1,6 +1,6 @@
 import { ExpandMore } from '@mui/icons-material';
 import { Alert, Box, Button, Collapse, MenuItem, Paper, TextField, Typography } from '@mui/material';
-import { useId, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
+import { useId, useLayoutEffect, useMemo, useRef } from 'react';
 import type { Config, NotMadeClock } from 'clock-generator/browser';
 import type { ResultDetail } from '../utils/resultsView';
 import type { BuildViewContext, TimelineViewContext } from '../utils/buildViewContext';
@@ -113,11 +113,6 @@ interface ResultsWorkspaceProps {
     copied: boolean;
     /** The copy every Copy button shares */
     onCopy: () => void;
-    /**
-     * What the clocks assume of the input belts, with the action for the other answer (2.4's BeltAssumptionLine), shown in
-     * the card in place of its own belt line
-     */
-    beltAction?: ReactNode;
 }
 
 /**
@@ -216,7 +211,6 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 rateWarning={rateWarning}
                 whyNotStable={whyNotStable}
                 stale={props.staleFor !== null}
-                beltAction={props.beltAction}
                 comparisonAction={<Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                     {props.blueprintString && <Button size="small" color="inherit" onClick={props.onInstall}>Install guide</Button>}
                     <Button size="small" color="inherit" aria-expanded={comparisonOpen} aria-controls={comparisonId}

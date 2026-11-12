@@ -103,19 +103,20 @@ _Avoid_: transport lane (a buffer lane)
 **Lane end**:
 What the items do at the downstream end of a lane: a **dead end**, an **infinite end**, or an **unknown end**. A
 fact of the build: it does not change while the build runs. The configuration's `lane_end`, by its `kind`. A lane
-that states no end gets one: from `overrides.backed_up_belts` if the configuration states it, else from its **lane
-role**. A project technical noun (STE rule 1.6): STE approves END (n), and has no entry for lane.
+that states no end gets one: from `overrides.backed_up_belts` if the configuration states it (deprecated: state the
+`lane_end` of each lane), else from its **lane role**. The page converts a build that states `backed_up_belts` when
+it loads it: each input or buffer lane that states no end gets the end that the field gave it, and the field goes. A project technical noun (STE rule 1.6): STE approves END (n), and has no entry for lane.
 
 **Dead end**:
 A lane end that stops the items. They stay on the lane until a hand takes them, so the lane is a standing queue. In the
 configuration: `"lane_end": {"kind": "dead_end"}`. The end of an input or a buffer lane that states no end, if the
-configuration does not state `backed_up_belts`. A project technical noun (STE rule 1.6).
+configuration does not state the deprecated `backed_up_belts`. A project technical noun (STE rule 1.6).
 
 **Infinite end**:
 The end of a lane that takes every item that reaches it, as an infinity chest does. On an input lane, the items that
 no hand takes move along all the copies and then off the lane. In the configuration: `"lane_end": {"kind": "infinite"}`. The output
 belt ends in an infinite end too. The end of an output lane that states no end, if the configuration does not
-state `backed_up_belts`, and the end of each export lane. A project technical noun (STE rule 1.6): STE has no entry for infinite.
+state the deprecated `backed_up_belts`, and the end of each export lane. A project technical noun (STE rule 1.6): STE has no entry for infinite.
 _Avoid_: outlet, free outlet, passthrough
 
 **Unknown end**:

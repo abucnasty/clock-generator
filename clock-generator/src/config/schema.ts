@@ -612,7 +612,7 @@ const BeltLaneConfigSchema = z.object({
     ingredient: z.string().describe("The name of the item on the lane."),
     stack_size: z.number().int().positive().describe("The number of items in each stack on the lane."),
     supply_rate: z.number().positive().optional().describe("The items per second that come onto the lane where it starts. The default is the lane's capacity."),
-    lane_end: LaneEndConfigSchema.optional().describe("The end of the lane. Without it, backed_up_belts sets the end if the configuration states it. If not, the role of the lane sets the end: an input or a buffer lane is a dead end, an output lane is an infinite end."),
+    lane_end: LaneEndConfigSchema.optional().describe("The end of the lane. Without it, the deprecated backed_up_belts sets the end if the configuration states it. If not, the role of the lane sets the end: an input or a buffer lane is a dead end, an output lane is an infinite end."),
     sharing: LaneSharingConfigSchema.optional().describe("shared (default): all copies take from this lane. per_copy: each copy has a lane of its own."),
 });
 
@@ -828,7 +828,7 @@ export const ConfigOverridesSchema = z.preprocess(renameLoopSeedItemsToKickStart
      * is false, every such lane is an infinite end. Without it, the role of each such lane gives its end (lane-facts.ts).
      * The simulation times each pickup from the lane as it is.
      */
-    backed_up_belts: z.boolean().optional().describe("Whether the input belts are backed up at the pickup. true: each lane without a lane_end is a dead end. false: each such lane is an infinite end. Without it, the role of the lane sets the end."),
+    backed_up_belts: z.boolean().optional().describe("Deprecated. State the lane_end of each lane instead. true: each lane without a lane_end is a dead end. false: each such lane is an infinite end. Without it, the role of the lane sets the end."),
     /**
      * Run the four searches for every build: observed windows, uneven output swings, shifted swings and full-hand
      * output swings. They take most of the time of a generation.
