@@ -21,11 +21,11 @@ import {
 import { useId, useState, type ReactNode } from 'react';
 import { useBuildSection } from '../hooks/useBuildViewContext';
 import type { BuildViewContext } from '../utils/buildViewContext';
-import type { ClockVerdict } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 import { CLOCK_TABLE_NAME, CLOCK_TABLE_REGION, clockHelpName, termsHelpName } from '../utils/a11yLabels';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
-import { SUMMARY_COPY, beltCellText, clockBadges, foldedMakes, isStartDependent, outputTermOf, pickNameMeaning, recoversOf, wakeUpsAverageOf, worksOf } from '../utils/clockSummary';
+import { shownRateOf } from '../utils/shownRate';
+import { SUMMARY_COPY, clockBadges, foldedMakes, pickNameMeaning, recoversOf, statusOf, wakeUpsAverageOf, type ClockStatus } from '../utils/clockSummary';
 import { directRouterOf, familyCopyOf, fullClockName, clockChipsOf, sourceLinesOf, strategyNameOf } from '../utils/strategyNames';
 import { BadgeChips, ClockChips } from './StrategyChips';
 import { SIGNAL_DEFINITION, WAKEUP_DEFINITION, TERMS_FOCUS, type GlossaryId } from '../utils/glossary';
@@ -52,13 +52,9 @@ const COMPARE_COPY = {
     terms: 'About comparing clocks',
     showAll: 'Show all columns',
     clock: 'Clock',
-    works: 'Works?',
     status: 'Status',
     howMadeHeading: 'How it is made',
     worksHeading: 'Does it work?',
-    beltHelp: 'The belt the clock is made for. Moving: pickup geometry models which moving stacks are within reach; straight belt is '
-        + 'the default. Backed up: items stop between pickups and the belt refills the gaps; on a moving belt an inserter can be switched '
-        + 'off holding a partial hand. It is not ranked behind other clocks for it. Blank when no clocked inserter picks up from a belt.',
     swingsHelp: 'Total output swings each output cycle of each output machine, shared equally across its output inserters. '
         + 'Per-inserter counts may be fractional. The clock repeats after a whole number of output cycles (the window cycle).',
     signalsHelp: SIGNAL_DEFINITION + ' Counted per minute for one copy of the build, in the same run as the wakeups. No clock is ranked by signals.',
@@ -77,16 +73,17 @@ const COMPARE_COPY = {
     hideUnstable: (count: number) => `Hide ${count} unstable clock${count === 1 ? '' : 's'}`,
 };
 
-/** The full table's Status: the glossary's words for the verdict */
-const VERDICT_LABEL: Record<ClockVerdict, string> = { stable: 'Has recovery', 'no recovery': 'No recovery', unstable: SUMMARY_COPY.underproduces };
-const VERDICT_COLOR: Record<ClockVerdict, 'success' | 'warning' | 'error'> = { stable: 'success', 'no recovery': 'warning', unstable: 'error' };
-
-/** The icon beside the words of Works?: never the colour alone */
-const WORKS_ICON = {
-    yes: <CheckCircle fontSize="small" aria-hidden sx={{ color: 'secondary.light' }} />,
-    caution: <Warning fontSize="small" aria-hidden sx={{ color: 'warning.main' }} />,
-    no: <Cancel fontSize="small" aria-hidden sx={{ color: 'error.light' }} />,
-} as const;
+/** The icon beside the words of the compact table's Status: never the colour alone. Error has the red of a failed check */
+const YES_ICON = <CheckCircle fontSize="small" aria-hidden sx={{ color: 'secondary.light' }} />;
+const CAUTION_ICON = <Warning fontSize="small" aria-hidden sx={{ color: 'warning.main' }} />;
+const NO_ICON = <Cancel fontSize="small" aria-hidden sx={{ color: 'error.light' }} />;
+const STATUS_ICON: Record<ClockStatus['kind'], ReactNode> = {
+    stable: YES_ICON, 'start-dependent': CAUTION_ICON, 'no-recovery': CAUTION_ICON, underproduces: NO_ICON, overproduces: NO_ICON, error: NO_ICON,
+};
+/** The colour of the full table's Status chip: a clock that underproduces or overproduces, and Error, in red as "Check failed" */
+const STATUS_COLOR: Record<ClockStatus['kind'], 'success' | 'warning' | 'error'> = {
+    stable: 'success', 'start-dependent': 'warning', 'no-recovery': 'warning', underproduces: 'error', overproduces: 'error', error: 'error',
+};
 
 function statusDetail(alternative: ClockAlternativeView): string {
     const starts = alternative.assessment.start_dependence;
@@ -114,6 +111,20 @@ function TermsHeader({ label, focus }: { label: string; focus: readonly Glossary
             {label}
             <HelpButton label={termsHelpName(label)}>
                 <TermsList focus={focus} />
+            </HelpButton>
+        </Box>
+    );
+}
+
+/** The header Status, of both tables, with its help: each status the column can show, once */
+function StatusHeader() {
+    return (
+        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, whiteSpace: 'nowrap' }}>
+            {COMPARE_COPY.status}
+            <HelpButton label={`About ${COMPARE_COPY.status}`}>
+                {SUMMARY_COPY.statusHelp.map(([word, meaning]) => (
+                    <Typography key={word} variant="body2" sx={{ mb: 0.75 }}><Box component="strong">{word}:</Box> {meaning}</Typography>
+                ))}
             </HelpButton>
         </Box>
     );
@@ -203,12 +214,11 @@ export function ClockAlternativesPanel({
     const copies = alternatives[0]?.copies ?? 1; // of the generation, so a stale table keeps its own number
     // a Makes column that says the same on every row is one line above the table instead
     const fold = allColumns ? null : foldedMakes([...stable, ...unstable].map(({ alternative }) => alternative));
-    const columnCount = allColumns ? 12 : fold === null ? 7 : 6;
+    const columnCount = allColumns ? 11 : fold === null ? 7 : 6;
 
     // the index is the one drawn in this render, so a click cannot land on a row that has since moved
     const renderRow = ({ alternative, index }: ClockRow<ClockAlternativeView>) => {
-        const works = worksOf(alternative);
-        const recovery = recoversOf(alternative);
+        const status = statusOf(alternative);
         return (
             <TableRow
                 key={alternative.id}
@@ -232,9 +242,12 @@ export function ClockAlternativesPanel({
                     <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', columnGap: 1, rowGap: 0.5 }}>
                         <Box component="span" sx={{ fontWeight: 600 }}>{strategyNameOf(alternative)}</Box>
                         <ClockChips clock={alternative} />
-                        <BadgeChips badges={clockBadges(alternatives, index)} meanings={badgeMeanings(alternatives, index)} />
+                        {/* the status is the Status column's word: only what it has fewest of stands beside the name */}
+                        <BadgeChips badges={clockBadges(alternatives, index).filter(badge => badge.kind !== 'status')} meanings={badgeMeanings(alternatives, index)} />
                         {index === recommendedIndex && <RecommendedChip isGenerating={isGenerating} />}
                     </Box>
+                    {/* what is said beside the status: the rate, the reason code's words, or why the loss trials gave no answer */}
+                    {status.detail && <Typography variant="body2" color="text.secondary" data-status-detail="">{status.detail}</Typography>}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.secondary', typography: 'body2' }}>
                         <span data-strategy-line="">{familyCopyOf(alternative)?.line ?? alternative.label}</span>
                         <HelpButton label={clockHelpName(fullClockName(alternative))}>
@@ -245,19 +258,16 @@ export function ClockAlternativesPanel({
                             ))}
                             <Typography variant="subtitle2" component="p" sx={{ mt: 1.5, mb: 0.5 }}>{COMPARE_COPY.worksHeading}</Typography>
                             <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.5 }}>
-                                {WORKS_ICON[works.kind]}{works.text}
+                                {STATUS_ICON[status.kind]}{status.text}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">{statusDetail(alternative)}</Typography>
-                            {/* a clock not stable on a lane its copies share: its headline; the card of the selected clock shows the parts */}
+                            {/* a clock not stable on a lane its copies share: its headline; the Diagnostics tab of the selected clock shows the parts */}
                             {alternative.checkedLanes?.cause && <Box sx={{ mt: 1.5 }}><CauseHeadline cause={alternative.checkedLanes.cause} /></Box>}
                         </HelpButton>
                     </Box>
                 </TableCell>
                 {allColumns ? (
                     <>
-                        <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                            {beltCellText(alternative.beltLabel)}
-                        </TableCell>
                         <TableCell align="right">
                             {alternative.terminalSwingCount} per {formatTicks(alternative.cycleTicks)} ticks
                         </TableCell>
@@ -266,7 +276,7 @@ export function ClockAlternativesPanel({
                         <TableCell align="right">{alternative.deciders}</TableCell>
                         <TableCell align="right">{wakeUpsCell(alternative)}</TableCell>
                         <TableCell align="right">{signalsCell(alternative)}</TableCell>
-                        <TableCell align="right">{alternative.assessment.items_per_second.toFixed(2)}</TableCell>
+                        <TableCell align="right">{shownRateOf(alternative).toFixed(2)}</TableCell>
                         <TableCell align="right">
                             {alternative.asBuilt
                                 ? `${formatNumberText(alternative.asBuilt.actual_output_items)} / ${alternative.expectedOutputItems}`
@@ -277,14 +287,8 @@ export function ClockAlternativesPanel({
                                 <Chip
                                     tabIndex={0}
                                     size="small"
-                                    label={isStartDependent(alternative) ? 'Start-dependent'
-                                        // what it makes against the setpoint, where it is not stable at it
-                                        : outputTermOf(alternative).term !== SUMMARY_COPY.stable ? outputTermOf(alternative).term
-                                        : alternative.verdict === 'no recovery' && recovery.kind !== 'no' ? SUMMARY_COPY.recoveryUnavailable
-                                            : alternative.verdict === 'stable' ? `Recovery: ${recovery.value}` : VERDICT_LABEL[alternative.verdict]}
-                                    // a clock that underproduces or overproduces has the colour of an unstable clock, whatever its verdict
-                                    color={isStartDependent(alternative) || (alternative.verdict === 'stable' && recovery.kind === 'not-tested') ? 'warning'
-                                        : outputTermOf(alternative).term !== SUMMARY_COPY.stable ? VERDICT_COLOR.unstable : VERDICT_COLOR[alternative.verdict]}
+                                    label={status.text}
+                                    color={STATUS_COLOR[status.kind]}
                                     variant="outlined"
                                     // on the card colour of its own: the selected row's orange tint, hovered, takes green and red
                                     // words under 4.5:1
@@ -296,15 +300,15 @@ export function ClockAlternativesPanel({
                 ) : (
                     <>
                         {fold === null && (
-                            <TableCell align="right">{formatNumberText(alternative.assessment.items_per_second)}</TableCell>
+                            <TableCell align="right">{formatNumberText(shownRateOf(alternative))}</TableCell>
                         )}
                         <TableCell align="right">{wakeUpsCell(alternative)}</TableCell>
                         <TableCell align="right">{signalsCell(alternative)}</TableCell>
                         <TableCell align="right">{alternative.deciders}</TableCell>
                         <TableCell>
                             <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
-                                {WORKS_ICON[works.kind]}
-                                {works.text}
+                                {STATUS_ICON[status.kind]}
+                                {status.text}
                             </Box>
                         </TableCell>
                     </>
@@ -386,7 +390,6 @@ export function ClockAlternativesPanel({
                             <TableCell>{COMPARE_COPY.clock}</TableCell>
                             {allColumns ? (
                                 <>
-                                    <TableCell><HelpHeader label="Belt" help={COMPARE_COPY.beltHelp} /></TableCell>
                                     <TableCell align="right">{alternatives[0]?.counts === 'destroyed'
                                         ? <HelpHeader label={HANDS_TEXT.column} help={HANDS_TEXT.columnHelp} />
                                         : <HelpHeader label="Output swings" help={COMPARE_COPY.swingsHelp} />}</TableCell>
@@ -397,7 +400,7 @@ export function ClockAlternativesPanel({
                                     <TableCell align="right"><HelpHeader label={SIGNALS_HEADER} help={COMPARE_COPY.signalsHelp} /></TableCell>
                                     <TableCell align="right">{rateHeader(copies)}</TableCell>
                                     <TableCell align="right">{OUTPUT_PER_WINDOW_CYCLE_HEADER}</TableCell>
-                                    <TableCell><TermsHeader label={COMPARE_COPY.status} focus={TERMS_FOCUS.works} /></TableCell>
+                                    <TableCell><StatusHeader /></TableCell>
                                 </>
                             ) : (
                                 <>
@@ -405,7 +408,7 @@ export function ClockAlternativesPanel({
                                     <TableCell align="right"><TermsHeader label={WAKE_UPS_HEADER} focus={TERMS_FOCUS.wakeUps} /></TableCell>
                                     <TableCell align="right"><TermsHeader label={SIGNALS_HEADER} focus={TERMS_FOCUS.signals} /></TableCell>
                                     <TableCell align="right"><HelpHeader label={DECIDERS_HEADER} help={COMPARE_COPY.decidersHelp} /></TableCell>
-                                    <TableCell><TermsHeader label={COMPARE_COPY.works} focus={TERMS_FOCUS.works} /></TableCell>
+                                    <TableCell><StatusHeader /></TableCell>
                                 </>
                             )}
                         </TableRow>

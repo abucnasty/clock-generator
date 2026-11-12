@@ -9,8 +9,8 @@ import { capitalized, chestNameInText, inserterNameInText, lanesInSentence, list
 import { machineNameInText } from "./machine-name";
 import { figure } from "./other-clocks";
 import type { CopiesTrialVerdict } from "./shared-lane-trial";
-import { droppedOntoSharedLanes, isNotChecked, type ClockSharedLaneLoss, type MissedSwingStops, type SharedLaneJudgement, type SharedLaneLoss,
-    type SharedLaneLossFacts } from "./shared-lane-verdict";
+import { droppedOntoSharedLanes, isNotChecked, sharedLanesNotChecked, type SharedLanesNotChecked, type MissedInWindowCycle, type MissedSwingCause, type MissedSwingStops, type SharedLaneJudgement, type SharedLaneLoss,
+    type SharedLaneLossFacts, type TakerSwings, type CopiesMade } from "./shared-lane-verdict";
 
 /**
  * What a result says was checked on each lane the copies of a build share: the lanes of the build (`buildLanesOf`), and for
@@ -66,8 +66,28 @@ export type CheckedLaneState =
     | { kind: "join_full"; copies: (CopyMissed & { held_hands: number; hands: number })[] }
     | { kind: "takes_less"; copies: (CopyMissed & { without_output_belt?: CopyMissed })[] }
     | { kind: "rate_fits"; drop_per_second: number; carries_per_second: number }
-    | { kind: "not_checked"; reason: string }
-    | { kind: "not_run"; reason: string };
+    | { kind: "not_checked"; reason: LaneNotCheckedReason }
+    | { kind: "not_run"; reason: Extract<LaneNotCheckedReason, { code: "one_copy_does_not_hold" }> };
+
+/**
+ * Why a lane was not checked or not run with the copies, as a code (a closed list) with the numbers its sentence uses (the
+ * row's sentence is `laneNotCheckedText`; the page has the same words):
+ * - `one_copy_does_not_hold`: the clock does not hold its output on one copy, so the copies are not run;
+ * - `drop_rate_unknown`: the build's drop rate onto a plain output lane is not known;
+ * - `drops_more_than_lane_carries`: the copies together drop more onto a plain output lane than it carries;
+ * - `build_drops_onto_belt`: the build drops items onto the belt, and the check does not run those drops;
+ * - `check_stopped`: the check of the shared lanes stopped with an error, whose message is kept as it is;
+ * - `output_belt_not_run`: the output belt is run only with a lane the copies take from, and none is run;
+ * - `lane_not_in_model`: the check of the shared lanes does not run the lane.
+ */
+export type LaneNotCheckedReason =
+    | { code: "one_copy_does_not_hold" }
+    | { code: "drop_rate_unknown" }
+    | { code: "drops_more_than_lane_carries"; data: { copies: number } }
+    | { code: "build_drops_onto_belt" }
+    | { code: "check_stopped"; data: { message: string } }
+    | { code: "output_belt_not_run" }
+    | { code: "lane_not_in_model" };
 
 /** One row of a clock: one lane the copies share. Its item, role, end and supply are the build's (`BuildLane`). */
 export interface CheckedLaneRow {
@@ -112,14 +132,36 @@ export interface CausePart<T = Record<string, never>> {
  *   those that show the gap, over the copies of the cause part;
  * - `target_full`: the side belt of a copy is full where it joins the output belt (the game's "target full" of its output
  *   inserter); the missed output swings and the output
- *   swings its target needs, over the copies of the headline.
+ *   swings its target needs, over the copies of the headline;
+ * - `unknown`: on a lane loss, no missed swing shows the gap that the copy before leaves, and none shows the output of its
+ *   machine full (or the run of the copies kept no such record); the missed swings over the copies of the headline.
  */
 export type SharedLaneReason =
     | { code: "belt_gaps"; data: { missed: number; with_gap: number } }
-    | { code: "target_full"; data: { missed: number; swings: number } };
+    | { code: "target_full"; data: { missed: number; swings: number } }
+    | { code: "unknown"; data: { missed: number } };
 
 /** The codes of the reason (a closed list) */
 export type SharedLaneReasonCode = SharedLaneReason["code"];
+
+/**
+ * The swings of a clock not stable on a shared lane, window cycle by window cycle, as codes with numbers and no sentence (the
+ * page has the words):
+ * - `lane`: a row for each inserter of each copy of the cause part (`SharedLaneCause.cause`), with the items it takes, its
+ *   swings in each window cycle of the judged span in the run of one copy alone (one number where every window cycle has
+ *   the same, else one for each), and each window cycle where it made fewer, with the swings it missed there and what
+ *   stopped them. A missed swing is a missed hand of the inserter: it has no item of its own. By copy, by inserter and by
+ *   what stopped them, the missed swings add up to the cause part's counts and those of `where`.
+ * - `join`: for each copy at a full join, its output swings in each window cycle of the span, and those the clock gives it
+ *   in one; and whether its output inserter drops onto a side belt that side-loads onto the output belt (`side_belt`, the
+ *   config's `output_belt.side_belt`) or straight onto the output belt.
+ */
+export type MissedSwings =
+    | { kind: "lane"; rows: { copy: number; inserter_id: number; items: string[]; lanes: { belt_id: number; lane: number }[]; window_cycles: number;
+        swings_per_window_cycle: number | number[]; missed: MissedInWindowCycle[] }[] }
+    | { kind: "join"; side_belt: boolean; copies: { copy: number; window_cycles: number; made: number[]; gives: number }[] };
+
+export type { MissedInWindowCycle, MissedSwingCause };
 
 /** The parts of the cause of a clock that is not stable on a shared lane, as the page lays them out */
 export interface SharedLaneCause {
@@ -130,8 +172,9 @@ export interface SharedLaneCause {
     cause: CausePart<{ copies: ({ copy: number } & Partial<MissedSwingStops>)[] }> | null;
     /**
      * The reason beside the status of the clock, as a code and its counts (the page has the words): `belt_gaps` on a lane
-     * loss where at least one missed swing shows the gap that the copy before leaves; `target_full` at a full join. Absent on
-     * a lane loss where no missed swing shows the gap.
+     * loss where at least one missed swing shows the gap that the copy before leaves; `target_full` at a full join; `unknown`
+     * on a lane loss where no missed swing shows the gap or a full output. Absent on a lane loss where no missed swing shows
+     * the gap and at least one shows a full output.
      */
     reason?: SharedLaneReason;
     /** The reason from the spacing: only where the run shows the gap that the copy before leaves */
@@ -140,6 +183,11 @@ export interface SharedLaneCause {
     alone: CausePart<{ makes_all: boolean; missed: number; swings: number }>;
     /** What changes it: fewer copies whose run holds, and another clock of the result that holds with all copies */
     changes: CausePart<{ fewer_copies: number | null; other_clock: { id: string; label: string; window_cycle_ticks: number } | null }> | null;
+    /**
+     * The swings, window cycle by window cycle (`MissedSwings`); absent on a lane loss with no cause part, at a full join whose run kept no
+     * output swings, and in a result of an older engine
+     */
+    swings?: MissedSwings;
 }
 
 /** What a result says was checked of one clock on the lanes its copies share */
@@ -147,6 +195,12 @@ export interface CheckedLanes {
     line: CheckedLine;
     rows: CheckedLaneRow[];
     cause: SharedLaneCause | null;
+    /**
+     * What the output inserters of all the copies put down of the target's item in the run of the copies, over the judged
+     * span: items a second, and the span in window cycles. From the run the verdict judged by (`judgedCopiesMade`). Absent
+     * where the copies were not run, where no output inserter is recorded, and in a result of an older engine.
+     */
+    copies_made?: CopiesMade;
 }
 
 /** What the check of a clock's shared lanes found with fewer copies on the lanes (shared-lane-verdict.ts `fewerCopiesThatHold`) */
@@ -163,7 +217,7 @@ export interface CheckedLanesInput {
     /** Whether the clock holds its output on one copy: only such a clock is run with the copies */
     holds: boolean;
     /** The check of the shared lanes; null where it was not made; the loss that says it stopped, where it stopped */
-    judged: SharedLaneJudgement | { stopped: ClockSharedLaneLoss } | null;
+    judged: SharedLaneJudgement | { stopped: SharedLanesNotChecked } | null;
     window_cycle_ticks: number;
     /** The disturbance trials on the copies, where they were made */
     copies_trial: CopiesTrialVerdict | null;
@@ -307,7 +361,7 @@ function wordsOf(state: CheckedLaneState, copies: number): { label: string; sent
             return { label, sentence: `${capitalized(copiesNamed(waiting.map(it => it.copy)))} ${one ? "waits" : "wait"} for room at ${one ? "its" : "their"} join in ${counts}${steady}. No swing is missed.` };
         }
         case "short":
-            return { label: `Short on ${copiesNamed(state.copies.map(it => it.copy))}`, sentence: `${missedSentence(state.copies)}.` };
+            return { label: `Swings missed on ${copiesNamed(state.copies.map(it => it.copy))}`, sentence: `${missedSentence(state.copies)}.` };
         case "join_full": {
             const same = state.copies.every(it => it.missed === state.copies[0].missed && it.swings === state.copies[0].swings);
             const sentence = state.copies.length === 1 ? `${figure(state.copies[0].missed)} of ${figure(state.copies[0].swings)} swings missed.`
@@ -326,9 +380,22 @@ function wordsOf(state: CheckedLaneState, copies: number): { label: string; sent
             return { label: "Rate fits", sentence: `The ${figure(copies)} copies together drop no more than this lane carries. `
                 + "Not simulated: a copy that drops onto a belt that already carries the other copies' items." };
         case "not_checked":
-            return { label: "Not checked", sentence: state.reason };
+            return { label: "Not checked", sentence: laneNotCheckedText(state.reason) };
         case "not_run":
-            return { label: "Not run with the copies", sentence: state.reason };
+            return { label: "Not run with the copies", sentence: laneNotCheckedText(state.reason) };
+    }
+}
+
+/** The sentence of why a lane was not checked or not run with the copies */
+function laneNotCheckedText(reason: LaneNotCheckedReason): string {
+    switch (reason.code) {
+        case "one_copy_does_not_hold": return NOT_RUN;
+        case "drop_rate_unknown": return NO_DROP_RATE;
+        case "drops_more_than_lane_carries": return `The ${figure(reason.data.copies)} copies together drop more than this lane carries.`;
+        case "build_drops_onto_belt": return DROPPED_ONTO;
+        case "check_stopped": return sharedLanesNotChecked(reason.data.message).text;
+        case "output_belt_not_run": return OUTPUT_BELT_NOT_RUN;
+        case "lane_not_in_model": return NOT_IN_MODEL;
     }
 }
 
@@ -373,22 +440,22 @@ export function checkedLanesOf(input: CheckedLanesInput): CheckedLanes | null {
         const together = togetherOf(config, lane, loads);
         const plain_output = lane.role === "output" && lane.belt_id !== stated_output_belt;
         const state = ((): CheckedLaneState => {
-            if (!holds) return { kind: "not_run", reason: NOT_RUN };
+            if (!holds) return { kind: "not_run", reason: { code: "one_copy_does_not_hold" } };
             if (plain_output) {
-                if (together === null || together.carries_per_second === undefined) return { kind: "not_checked", reason: NO_DROP_RATE };
+                if (together === null || together.carries_per_second === undefined) return { kind: "not_checked", reason: { code: "drop_rate_unknown" } };
                 return together.items_per_second <= together.carries_per_second + 1e-9
                     ? { kind: "rate_fits", drop_per_second: together.items_per_second, carries_per_second: together.carries_per_second }
-                    : { kind: "not_checked", reason: `The ${figure(copies)} copies together drop more than this lane carries.` };
+                    : { kind: "not_checked", reason: { code: "drops_more_than_lane_carries", data: { copies } } };
             }
-            if (dropped.has(key)) return { kind: "not_checked", reason: DROPPED_ONTO };
-            if (stopped !== null) return { kind: "not_checked", reason: stopped.text };
-            if (!run) return { kind: "not_checked", reason: lane.role === "output" ? OUTPUT_BELT_NOT_RUN : NOT_IN_MODEL };
+            if (dropped.has(key)) return { kind: "not_checked", reason: { code: "build_drops_onto_belt" } };
+            if (stopped !== null) return { kind: "not_checked", reason: { code: "check_stopped", data: { message: stopped.reason } } };
+            if (!run) return { kind: "not_checked", reason: { code: lane.role === "output" ? "output_belt_not_run" : "lane_not_in_model" } };
             if (lane.role === "output") {
                 const at_join = copiesAtFullJoin(join_losses);
                 if (at_join.length > 0) return { kind: "join_full", copies: at_join };
                 return { kind: "holds", not_the_cause: unstable_on_lanes, steady_run_only: trial_failed && !unstable_on_lanes, join_waits: judgement!.join_waits ?? [] };
             }
-            if (!ran_lanes.has(key)) return { kind: "not_checked", reason: NOT_IN_MODEL };
+            if (!ran_lanes.has(key)) return { kind: "not_checked", reason: { code: "lane_not_in_model" } };
             const short = lane_losses.filter(loss => onLane(loss, lane.belt_id, lane.lane));
             if (short.length > 0) return { kind: "short", copies: copiesShortOn(short) };
             const waiting = join_losses.filter(loss => onLane(loss, lane.belt_id, lane.lane));
@@ -412,7 +479,8 @@ export function checkedLanesOf(input: CheckedLanesInput): CheckedLanes | null {
 
     const line = lineOf({ config, build, rows, run, holds, lane_losses, join_losses, judgement, trial_failed, copies_trial, ends, stated_output_belt });
     const cause = run && losses.length > 0 ? causeOf({ config, build, losses, facts, window_cycle_ticks, fewer, loads, lanes: [...ran_lanes] }) : null;
-    return { line, rows, cause };
+    const made = run ? judgement!.copies_made : undefined;
+    return { line, rows, cause, ...(made !== undefined && { copies_made: { items_per_second: rounded(made.items_per_second), window_cycles: made.window_cycles } }) };
 }
 
 function lineOf(input: { config: Config; build: BuildToName; rows: readonly CheckedLaneRow[]; run: boolean; holds: boolean; lane_losses: readonly SharedLaneLoss[];
@@ -499,6 +567,9 @@ function causeOf(input: { config: Config; build: BuildToName; losses: readonly S
         const alone_swings = losses.map(factsOf).find(it => it?.alone_output_swings !== undefined)?.alone_output_swings;
         const needed = at_join[0].swings;
         const makes_all = alone_swings !== undefined && alone_swings >= needed;
+        const output_swings = at_join.map(it => ({ copy: it.copy, of: losses.filter(loss => loss.copy === it.copy).map(factsOf).find(facts => facts?.output_swings !== undefined)?.output_swings }));
+        const swings: MissedSwings | undefined = output_swings.every(it => it.of !== undefined)
+            ? { kind: "join", side_belt: config.output_belt?.side_belt !== undefined, copies: output_swings.map(it => ({ copy: it.copy, window_cycles: it.of!.made.length, made: [...it.of!.made], gives: it.of!.gives })) } : undefined;
         return {
             kind,
             headline: { text: missedSentence(at_join), data: { copies: at_join.map(({ copy, missed, swings }) => ({ copy, missed, swings })) } },
@@ -513,17 +584,20 @@ function causeOf(input: { config: Config; build: BuildToName; losses: readonly S
                     : `Alone, the same inserter makes ${figure(alone_swings)} of the ${figure(needed)} swings its target needs.`,
             data: { makes_all, missed: alone_swings === undefined ? 0 : Math.max(0, needed - alone_swings), swings: needed } },
             changes: changes(null),
+            ...(swings !== undefined && { swings }),
         };
     }
     // a lane loss: each copy short, each of its takers with its items, and what stopped its missed swings
     const short = copiesShortOn(lane_losses);
-    const takers = new Map<string, { copy: number; inserter_id: number; items: { item: string; missed: number; swings: number; short_swings: number; hand: number }[];
-        stops?: MissedSwingStops; window_cycles: number }>();
+    const takers = new Map<string, { copy: number; inserter_id: number; items: { item: string; missed: number; swings: number; short_swings: number; hand: number;
+        lanes: { belt_id: number; lane: number }[] }[]; stops?: MissedSwingStops; swings?: TakerSwings; window_cycles: number }>();
     for (const loss of lane_losses) {
         const key = `${loss.copy}|${loss.inserter_id}`;
         const taker = takers.get(key) ?? { copy: loss.copy, inserter_id: loss.inserter_id, items: [], window_cycles: loss.window_cycles };
-        taker.items.push({ item: loss.item, missed: Math.max(0, loss.alone_swings - loss.swings), swings: loss.alone_swings, short_swings: loss.short_swings, hand: factsOf(loss)?.hand ?? 0 });
+        taker.items.push({ item: loss.item, missed: Math.max(0, loss.alone_swings - loss.swings), swings: loss.alone_swings, short_swings: loss.short_swings, hand: factsOf(loss)?.hand ?? 0,
+            lanes: [loss.lane, ...(loss.other_lanes ?? []).map(other => other.lane)].map(lane => ({ belt_id: loss.belt_id, lane })) });
         taker.stops ??= factsOf(loss)?.stops;
+        taker.swings ??= factsOf(loss)?.swings;
         takers.set(key, taker);
     }
     const of_takers = [...takers.values()].sort((a, b) => a.copy - b.copy || a.inserter_id - b.inserter_id);
@@ -594,11 +668,27 @@ function causeOf(input: { config: Config; build: BuildToName; losses: readonly S
             data: { step_tiles: spacing_facts.step_tiles, travel_ticks: spacing_facts.travel_ticks, window_cycle_ticks, take_all },
         };
     }
-    // the reason beside the status: only where at least one missed swing shows the copy before's gap
+    // the reason beside the status: belt gaps where at least one missed swing shows the copy before's gap; unknown where none
+    // shows the gap or a full output
     const with_gap = cause_parts.reduce((sum, it) => sum + (it.gap_from_copy_before ?? 0), 0);
+    const with_full = cause_parts.reduce((sum, it) => sum + (it.machine_full ?? 0), 0);
     const reason: SharedLaneCause["reason"] = with_gap > 0
         ? { code: "belt_gaps", data: { missed: cause_parts.reduce((sum, it) => sum + (it.missed ?? 0), 0), with_gap } }
-        : undefined;
+        : with_full === 0 ? { code: "unknown", data: { missed: short.reduce((sum, it) => sum + it.missed, 0) } } : undefined;
+    // the swings, window cycle by window cycle, of the copies of the cause part: from the same record as their counts
+    const of_cause = of_takers.filter(taker => cause_parts.some(it => it.copy === taker.copy));
+    const swings: MissedSwings | undefined = cause_parts.length === 0 || of_cause.some(taker => taker.swings === undefined) ? undefined : {
+        kind: "lane",
+        rows: of_cause.map(taker => {
+            const alone = taker.swings!.alone;
+            const lanes = [...new Map(taker.items.flatMap(it => it.lanes).map(it => [`${it.belt_id}/${it.lane}`, it])).values()];
+            // its items in the order of their lanes, belt by belt and lane 1 first
+            const at = (item: string) => Math.min(...taker.items.filter(it => it.item === item).flatMap(it => it.lanes.map(lane => lane.belt_id * 3 + lane.lane)));
+            const items = [...taker.swings!.items].sort((a, b) => (at(a) - at(b)) || 0);
+            return { copy: taker.copy, inserter_id: taker.inserter_id, items, lanes: lanes.sort((a, b) => a.belt_id - b.belt_id || a.lane - b.lane), window_cycles: alone.length,
+                swings_per_window_cycle: alone.every(it => it === alone[0]) && alone.length > 0 ? alone[0] : [...alone], missed: taker.swings!.missed.map(it => ({ ...it })) };
+        }),
+    };
     // one copy alone: the copy that misses the most
     const worst = [...short].sort((a, b) => b.missed - a.missed || a.copy - b.copy)[0];
     const worst_takers = of_takers.filter(it => it.copy === worst.copy).map(it => it.inserter_id);
@@ -618,6 +708,7 @@ function causeOf(input: { config: Config; build: BuildToName; losses: readonly S
             swings: it.items.reduce((s, x) => s + x.swings, 0), items: it.items.map(({ item, missed, swings }) => ({ item, missed, swings })) })) } },
         alone,
         changes: changes(null),
+        ...(swings !== undefined && { swings }),
     };
 }
 

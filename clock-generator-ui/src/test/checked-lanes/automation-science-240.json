@@ -480,7 +480,157 @@
         "window_cycle_ticks": 216
        }
       }
+     },
+     "swings": {
+      "kind": "join",
+      "side_belt": true,
+      "copies": [
+       {
+        "copy": 4,
+        "window_cycles": 63,
+        "made": [
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5
+        ],
+        "gives": 6
+       },
+       {
+        "copy": 8,
+        "window_cycles": 63,
+        "made": [
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5
+        ],
+        "gives": 6
+       }
+      ]
      }
+    },
+    "copies_made": {
+     "items_per_second": 234.074074074,
+     "window_cycles": 63
     }
    }
   },
@@ -672,7 +822,7 @@
         }
        ]
       },
-      "label": "Short on copy 2",
+      "label": "Swings missed on copy 2",
       "sentence": "Copy 2 misses 3 of 65 swings."
      },
      {
@@ -695,7 +845,7 @@
         }
        ]
       },
-      "label": "Short on copy 2",
+      "label": "Swings missed on copy 2",
       "sentence": "Copy 2 misses 3 of 65 swings."
      },
      {
@@ -861,7 +1011,74 @@
         "window_cycle_ticks": 216
        }
       }
+     },
+     "swings": {
+      "kind": "lane",
+      "rows": [
+       {
+        "copy": 2,
+        "inserter_id": 1,
+        "items": [
+         "iron-gear-wheel",
+         "copper-plate"
+        ],
+        "lanes": [
+         {
+          "belt_id": 1,
+          "lane": 1
+         },
+         {
+          "belt_id": 1,
+          "lane": 2
+         }
+        ],
+        "window_cycles": 65,
+        "swings_per_window_cycle": 2,
+        "missed": [
+         {
+          "window_cycle": 14,
+          "missed": 1,
+          "cause": "full",
+          "lane_empty": false
+         },
+         {
+          "window_cycle": 18,
+          "missed": 1,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 34,
+          "missed": 1,
+          "cause": "full",
+          "lane_empty": false
+         },
+         {
+          "window_cycle": 42,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 58,
+          "missed": 1,
+          "cause": "full",
+          "lane_empty": false
+         },
+         {
+          "window_cycle": 62,
+          "missed": 1,
+          "cause": "both",
+          "lane_empty": true
+         }
+        ]
+       }
+      ]
      }
+    },
+    "copies_made": {
+     "items_per_second": 238.769230769,
+     "window_cycles": 65
     }
    }
   },
@@ -1078,7 +1295,11 @@
       "sentence": "Copies 4 and 8 wait for room at their join in 128 of their 384 swings. No swing is missed."
      }
     ],
-    "cause": null
+    "cause": null,
+    "copies_made": {
+     "items_per_second": 240,
+     "window_cycles": 64
+    }
    }
   },
   {
@@ -1188,7 +1409,9 @@
       },
       "state": {
        "kind": "not_run",
-       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+       "reason": {
+        "code": "one_copy_does_not_hold"
+       }
       },
       "label": "Not run with the copies",
       "sentence": "The clock does not hold its output on one copy, so the copies are not run."
@@ -1205,7 +1428,9 @@
       },
       "state": {
        "kind": "not_run",
-       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+       "reason": {
+        "code": "one_copy_does_not_hold"
+       }
       },
       "label": "Not run with the copies",
       "sentence": "The clock does not hold its output on one copy, so the copies are not run."
@@ -1224,7 +1449,9 @@
       },
       "state": {
        "kind": "not_run",
-       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+       "reason": {
+        "code": "one_copy_does_not_hold"
+       }
       },
       "label": "Not run with the copies",
       "sentence": "The clock does not hold its output on one copy, so the copies are not run."
@@ -1340,7 +1567,9 @@
       },
       "state": {
        "kind": "not_run",
-       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+       "reason": {
+        "code": "one_copy_does_not_hold"
+       }
       },
       "label": "Not run with the copies",
       "sentence": "The clock does not hold its output on one copy, so the copies are not run."
@@ -1357,7 +1586,9 @@
       },
       "state": {
        "kind": "not_run",
-       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+       "reason": {
+        "code": "one_copy_does_not_hold"
+       }
       },
       "label": "Not run with the copies",
       "sentence": "The clock does not hold its output on one copy, so the copies are not run."
@@ -1376,7 +1607,9 @@
       },
       "state": {
        "kind": "not_run",
-       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+       "reason": {
+        "code": "one_copy_does_not_hold"
+       }
       },
       "label": "Not run with the copies",
       "sentence": "The clock does not hold its output on one copy, so the copies are not run."
@@ -1492,7 +1725,9 @@
       },
       "state": {
        "kind": "not_run",
-       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+       "reason": {
+        "code": "one_copy_does_not_hold"
+       }
       },
       "label": "Not run with the copies",
       "sentence": "The clock does not hold its output on one copy, so the copies are not run."
@@ -1509,7 +1744,9 @@
       },
       "state": {
        "kind": "not_run",
-       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+       "reason": {
+        "code": "one_copy_does_not_hold"
+       }
       },
       "label": "Not run with the copies",
       "sentence": "The clock does not hold its output on one copy, so the copies are not run."
@@ -1528,7 +1765,9 @@
       },
       "state": {
        "kind": "not_run",
-       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+       "reason": {
+        "code": "one_copy_does_not_hold"
+       }
       },
       "label": "Not run with the copies",
       "sentence": "The clock does not hold its output on one copy, so the copies are not run."
@@ -1725,7 +1964,7 @@
         }
        ]
       },
-      "label": "Short on copy 2",
+      "label": "Swings missed on copy 2",
       "sentence": "Copy 2 misses 7 of 65 swings."
      },
      {
@@ -1748,7 +1987,7 @@
         }
        ]
       },
-      "label": "Short on copy 2",
+      "label": "Swings missed on copy 2",
       "sentence": "Copy 2 misses 9 of 65 swings."
      },
      {
@@ -1914,7 +2153,134 @@
         "window_cycle_ticks": 216
        }
       }
+     },
+     "swings": {
+      "kind": "lane",
+      "rows": [
+       {
+        "copy": 2,
+        "inserter_id": 1,
+        "items": [
+         "iron-gear-wheel",
+         "copper-plate"
+        ],
+        "lanes": [
+         {
+          "belt_id": 1,
+          "lane": 1
+         },
+         {
+          "belt_id": 1,
+          "lane": 2
+         }
+        ],
+        "window_cycles": 65,
+        "swings_per_window_cycle": 2,
+        "missed": [
+         {
+          "window_cycle": 3,
+          "missed": 1,
+          "cause": "neither",
+          "lane_empty": false
+         },
+         {
+          "window_cycle": 7,
+          "missed": 1,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 11,
+          "missed": 1,
+          "cause": "neither",
+          "lane_empty": false
+         },
+         {
+          "window_cycle": 15,
+          "missed": 1,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 19,
+          "missed": 1,
+          "cause": "neither",
+          "lane_empty": false
+         },
+         {
+          "window_cycle": 23,
+          "missed": 1,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 27,
+          "missed": 1,
+          "cause": "neither",
+          "lane_empty": false
+         },
+         {
+          "window_cycle": 31,
+          "missed": 1,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 35,
+          "missed": 1,
+          "cause": "neither",
+          "lane_empty": false
+         },
+         {
+          "window_cycle": 39,
+          "missed": 1,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 43,
+          "missed": 1,
+          "cause": "neither",
+          "lane_empty": false
+         },
+         {
+          "window_cycle": 47,
+          "missed": 1,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 51,
+          "missed": 1,
+          "cause": "neither",
+          "lane_empty": false
+         },
+         {
+          "window_cycle": 55,
+          "missed": 1,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 59,
+          "missed": 1,
+          "cause": "neither",
+          "lane_empty": false
+         },
+         {
+          "window_cycle": 63,
+          "missed": 1,
+          "cause": "both",
+          "lane_empty": true
+         }
+        ]
+       }
+      ]
      }
+    },
+    "copies_made": {
+     "items_per_second": 236.512820513,
+     "window_cycles": 65
     }
    }
   },
@@ -2183,7 +2549,7 @@
         }
        ]
       },
-      "label": "Short on copies 2 and 3",
+      "label": "Swings missed on copies 2 and 3",
       "sentence": "Copy 2 misses 9 of 65 swings, and copy 3 misses 4 of 65."
      },
      {
@@ -2211,7 +2577,7 @@
         }
        ]
       },
-      "label": "Short on copies 2 and 3",
+      "label": "Swings missed on copies 2 and 3",
       "sentence": "Copy 2 misses 9 of 65 swings, and copy 3 misses 4 of 65."
      },
      {
@@ -2417,7 +2783,216 @@
         "window_cycle_ticks": 216
        }
       }
+     },
+     "swings": {
+      "kind": "lane",
+      "rows": [
+       {
+        "copy": 2,
+        "inserter_id": 1,
+        "items": [
+         "iron-gear-wheel",
+         "copper-plate"
+        ],
+        "lanes": [
+         {
+          "belt_id": 1,
+          "lane": 1
+         },
+         {
+          "belt_id": 1,
+          "lane": 2
+         }
+        ],
+        "window_cycles": 65,
+        "swings_per_window_cycle": 2,
+        "missed": [
+         {
+          "window_cycle": 1,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 2,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 12,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 14,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 16,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 17,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 27,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 29,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 31,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 32,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 42,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 44,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 46,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 47,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 57,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 59,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 61,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 62,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         }
+        ]
+       },
+       {
+        "copy": 3,
+        "inserter_id": 1,
+        "items": [
+         "iron-gear-wheel",
+         "copper-plate"
+        ],
+        "lanes": [
+         {
+          "belt_id": 1,
+          "lane": 1
+         },
+         {
+          "belt_id": 1,
+          "lane": 2
+         }
+        ],
+        "window_cycles": 65,
+        "swings_per_window_cycle": 2,
+        "missed": [
+         {
+          "window_cycle": 13,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 15,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 28,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 30,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 43,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 45,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 58,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 60,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         }
+        ]
+       }
+      ]
      }
+    },
+    "copies_made": {
+     "items_per_second": 234.461538462,
+     "window_cycles": 65
     }
    }
   },
@@ -2684,7 +3259,11 @@
       "sentence": "No copy waits at its join in the steady run."
      }
     ],
-    "cause": null
+    "cause": null,
+    "copies_made": {
+     "items_per_second": 240,
+     "window_cycles": 65
+    }
    }
   }
  ]

@@ -16,6 +16,22 @@ describe('per-build working context', () => {
         expect([...entries.keys()]).toEqual([contextKeyOf('two')]);
     });
 
+    it('loads a saved view of the workspace\'s tab: one saved before Diagnostics as it did, a saved Diagnostics on Diagnostics', () => {
+        const read = (value: unknown) => readBuildViewContext({ getItem: () => JSON.stringify(value) }, 'one').resultDetail;
+        // saved before the tab: Overview, Timeline, the older Why, Wake and Install, and none
+        expect(read({ version: 1, resultDetail: 'overview' })).toBe('overview');
+        expect(read({ version: 1, resultDetail: 'timeline' })).toBe('timeline');
+        expect(read({ version: 1, resultDetail: 'why' })).toBe('overview');
+        expect(read({ version: 1, resultDetail: 'why', detailsTab: 'blueprint' })).toBe('timeline');
+        expect(read({ version: 1, resultDetail: 'wake' })).toBe('timeline');
+        expect(read({ version: 1 })).toBe('timeline');
+        expect(read({ version: 1, resultDetail: 'diagnostics' })).toBe('diagnostics');
+        const entries = new Map<string, string>();
+        const storage = { getItem: (key: string) => entries.get(key) ?? null, setItem: (key: string, value: string) => { entries.set(key, value); } };
+        writeBuildViewContext(storage, 'one', { ...defaultBuildViewContext(), resultDetail: 'diagnostics' });
+        expect(readBuildViewContext(storage, 'one').resultDetail).toBe('diagnostics');
+    });
+
     it('rejects unsafe storage values and keeps navigation usable with denied storage', () => {
         const read = (value: unknown) => readBuildViewContext({ getItem: () => JSON.stringify(value) }, 'one');
         expect(read({ version: 2, view: 'results' })).toEqual(defaultBuildViewContext());

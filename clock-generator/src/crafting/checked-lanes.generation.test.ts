@@ -3,7 +3,7 @@ import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import type { ClockAlternative, ClockAlternativesResult } from "./alternatives";
 import { generateClockAlternatives } from "./generate-blueprint";
-import { quiet, reasonsOf } from "./generate-blueprint-test-helpers";
+import { quiet, reasonsOf, swingSumsOf } from "./generate-blueprint-test-helpers";
 
 /** The rows of a clock as the page reads them: belt and lane, the copies' take or drop a second, the state's label and sentence */
 const rowsOf = (clock: ClockAlternative) => clock.checked_lanes!.rows.map(row => ({ at: `${row.belt_id}/${row.lane}`,
@@ -29,8 +29,8 @@ describe("what was checked on the lanes the copies of the automation science 240
         const clock = clockOf(result, "euclidean_swings");
         expect(clock.result.simulation_duration.ticks).toBe(72);
         expect(rowsOf(clock)).toEqual([
-            { at: "1/1", together: "take 120", label: "Short on copy 2", sentence: "Copy 2 misses 3 of 65 swings." },
-            { at: "1/2", together: "take 120", label: "Short on copy 2", sentence: "Copy 2 misses 3 of 65 swings." },
+            { at: "1/1", together: "take 120", label: "Swings missed on copy 2", sentence: "Copy 2 misses 3 of 65 swings." },
+            { at: "1/2", together: "take 120", label: "Swings missed on copy 2", sentence: "Copy 2 misses 3 of 65 swings." },
             { at: "2/1", together: "drop 240", label: "Not the cause", sentence: "No copy waits at its join." },
         ]);
         const cause = clock.checked_lanes!.cause!;
@@ -96,6 +96,52 @@ describe("what was checked on the lanes the copies of the automation science 240
         }
     });
 
+    it("gives the swings of each cause window cycle by window cycle, which add up to the counts the cause carries by copy, inserter and cause", () => {
+        expect(swingSumsOf(result)).toEqual({ takt_batches_observed: [], euclidean_swings: [], takt_batches_observed_swings_2: [], takt_batches_swings_1: [] });
+    });
+
+    it("on the 72-tick clock: the six window cycles in which the inserter of copy 2 misses a swing, each with what stopped it", () => {
+        const swings = clockOf(result, "euclidean_swings").checked_lanes!.cause!.swings!;
+        expect(swings.kind).toBe("lane");
+        if (swings.kind !== "lane") return;
+        expect(swings.rows.map(({ missed: _, ...row }) => row)).toEqual([{ copy: 2, inserter_id: 1, items: ["iron-gear-wheel", "copper-plate"],
+            lanes: [{ belt_id: 1, lane: 1 }, { belt_id: 1, lane: 2 }], window_cycles: 65, swings_per_window_cycle: 2 }]);
+        expect(swings.rows[0].missed.map(it => `${it.window_cycle} ${it.missed} ${it.cause}${it.lane_empty ? " empty" : ""}`)).toEqual([
+            "14 1 full", "18 1 both empty", "34 1 full", "42 1 gap empty", "58 1 full", "62 1 both empty"]);
+    });
+
+    it("on the 216-tick clock: the output swings of copies 4 and 8 in each window cycle, 5, 6, 5 of the 6 the clock gives", () => {
+        const swings = clockOf(result, "takt_batches_observed").checked_lanes!.cause!.swings!;
+        expect(swings.kind).toBe("join");
+        if (swings.kind !== "join") return;
+        expect(swings.copies.map(it => ({ copy: it.copy, window_cycles: it.window_cycles, gives: it.gives, made: it.made.join("") })))
+            .toEqual([4, 8].map(copy => ({ copy, window_cycles: 63, gives: 6, made: "565".repeat(21) })));
+        // the output inserters drop onto side belts that side-load onto the output belt
+        expect(swings.side_belt).toBe(true);
+    });
+
+    // what the output inserters of all 9 copies put down over the judged span: 53,088 packs in 13,608 ticks on the 216-tick
+    // clock, which 240 x (9 x 378 - 84) / (9 x 378) gives from its swings too
+    it("gives the rate all the copies made together in the run of the copies, over the judged span, on the four clocks with a loss", () => {
+        const made = (id: string) => clockOf(result, id).checked_lanes!.copies_made;
+        expect(made("takt_batches_observed")).toEqual({ items_per_second: 234.074074074, window_cycles: 63 });
+        expect(made("euclidean_swings")).toEqual({ items_per_second: 238.769230769, window_cycles: 65 });
+        expect(made("takt_batches_observed_swings_2")).toEqual({ items_per_second: 236.512820513, window_cycles: 65 });
+        expect(made("takt_batches_swings_1")).toEqual({ items_per_second: 234.461538462, window_cycles: 65 });
+        // the clock-only run's rate is still the setpoint: the rate of the copies changes no assessment
+        expect(clockOf(result, "takt_batches_observed").assessment.items_per_second).toBe(240);
+    });
+
+    it("gives the setpoint as the rate of the copies on the stable time study windows clock", () => {
+        expect(clockOf(result, "time_study_windows").checked_lanes!.copies_made).toEqual({ items_per_second: 240, window_cycles: 64 });
+    });
+
+    it("gives no rate of the copies on a clock the copies were not run for (it does not hold on one copy)", () => {
+        const clock = clockOf(result, "takt_batches_observed_swings_4");
+        expect(clock.checked_lanes!.line.run_with_copies).toBe(false);
+        expect(clock.checked_lanes!.copies_made).toBeUndefined();
+    });
+
     it("gives the description's sentences on a shared-lane loss as a field of their own, word for word", () => {
         for (const [id, lead] of [["euclidean_swings", "It is not stable on a lane its copies share. "], ["takt_batches_observed", "It is not stable on its output belt. "]]) {
             const clock = clockOf(result, id);
@@ -131,5 +177,6 @@ describe("what was checked on other outputs", () => {
             euclidean_swings: { code: "belt_gaps", data: { missed: 162, with_gap: 162 } },
             takt_batches_swings_2: { code: "belt_gaps", data: { missed: 151, with_gap: 121 } },
         });
+        expect(swingSumsOf(result)).toEqual({ euclidean_swings: [], takt_batches_swings_2: [] });
     });
 });

@@ -4,7 +4,7 @@ import { loadConfigFromFile } from "../config/loader";
 import { Config, ConfigSchema } from "../config/schema";
 import { buildLanesOf, CheckedLanes, checkedLanesOf, CheckedLanesInput, withOtherClocks } from "./checked-lanes";
 import type { CopiesTrialVerdict } from "./shared-lane-trial";
-import type { SharedLaneJudgement, SharedLaneLoss, SharedLaneLossFacts } from "./shared-lane-verdict";
+import { sharedLanesNotChecked, type SharedLaneJudgement, type SharedLaneLoss, type SharedLaneLossFacts } from "./shared-lane-verdict";
 
 type Parts = Partial<Pick<Config, "machines" | "inserters" | "belts" | "overrides">> & { copies?: number };
 
@@ -60,6 +60,21 @@ describe("the lanes of the build", () => {
     });
 });
 
+describe("the rate all the copies made in their run together", () => {
+    it("is the judgement's, as a rate to the ninth decimal, with its span", () => {
+        const lanes = checked({ config: gears(), judged: judged([lossOf(2, 6, 130)], { copies_made: { items_per_second: 2.1 + 0.6 + 0.0000000001, window_cycles: 65 } }) });
+        expect(lanes.copies_made).toEqual({ items_per_second: 2.7, window_cycles: 65 });
+    });
+
+    it("is absent where the judgement has none (an older engine) and where the copies were not run", () => {
+        expect(checked({ config: gears() }).copies_made).toBeUndefined();
+        const made = { copies_made: { items_per_second: 6, window_cycles: 10 } };
+        expect(checked({ config: gears(), holds: false, judged: judged([], made) }).copies_made).toBeUndefined();
+        expect(checked({ config: gears(), judged: judged([], { ...made, simulated: false }) }).copies_made).toBeUndefined();
+        expect(checked({ config: gears(), judged: judged([], made) }).copies_made).toEqual({ items_per_second: 6, window_cycles: 10 });
+    });
+});
+
 describe("the rows of a clock", () => {
     it("hold where no copy loses swings, and a plain output belt is checked by rate", () => {
         const lanes = checked({ config: gears() });
@@ -74,7 +89,7 @@ describe("the rows of a clock", () => {
 
     it("are short on a lane a copy loses swings on, first, and the others not the cause", () => {
         const lanes = checked({ config: gears(), judged: judged([lossOf(2, 3, 65)]) });
-        expect(rows(lanes)[0]).toEqual(["1/1", "short", "Short on copy 2", "Copy 2 misses 3 of 65 swings."]);
+        expect(rows(lanes)[0]).toEqual(["1/1", "short", "Swings missed on copy 2", "Copy 2 misses 3 of 65 swings."]);
         expect(lanes.rows[0].state).toEqual({ kind: "short", copies: [{ copy: 2, missed: 3, swings: 65 }] });
         expect(lanes.line.sentence).toBe("Checked with all 3 copies on the lanes they share. Copy 2 does not get all its items. On the output belt, only the sum of the drops is checked.");
         expect(lanes.cause!.headline.text).toBe("Copy 2 misses 3 of 65 swings");
@@ -112,7 +127,17 @@ describe("the rows of a clock", () => {
         });
         const lanes = checked({ config: buffer, judged: judged([], { simulated: false, lanes: [], loss_facts: [] }) });
         expect(rows(lanes)[0]).toEqual(["1/1", "not_checked", "Not checked", "The build drops items onto this belt, and the check of a shared lane does not run those drops yet."]);
+        // the reason is a code; the sentence is the same words as before
+        expect(lanes.rows[0].state).toEqual({ kind: "not_checked", reason: { code: "build_drops_onto_belt" } });
         expect(lanes.line.sentence).toContain("Checked on one copy. No lane the copies take from is run with every copy on it.");
+    });
+
+    it("are not checked where the check stopped: the error's message as data, the sentence as before", () => {
+        const stopped = sharedLanesNotChecked("Lane 1 of belt 9 is not in the config");
+        const lanes = checked({ config: gears(), judged: { stopped } });
+        const row = lanes.rows.find(it => it.state.kind === "not_checked")!;
+        expect(row.state).toEqual({ kind: "not_checked", reason: { code: "check_stopped", data: { message: "Lane 1 of belt 9 is not in the config" } } });
+        expect(row.sentence).toBe(stopped.text);
     });
 
     it("have no row for a lane that is one per copy", () => {
@@ -191,7 +216,7 @@ describe("the parts of the cause", () => {
         expect(other.cause!.cause).toBeNull();
     });
 
-    it("give the reason code of belt gaps only where at least one missed swing shows the copy before's gap, with its counts", () => {
+    it("give the reason code of belt gaps where a missed swing shows the copy before's gap, unknown where none shows the gap or a full output", () => {
         const stops = { missed: 6, lane_empty: 3, gap_from_copy_before: 3, machine_full: 5, both: 2, neither: 0, lane_items: ["iron-plate"], gap_items: ["iron-plate"] };
         const gaps = checked({ config: gears(), judged: judged([lossOf(2, 6, 130)], { loss_facts: [{ ...facts, stops }] }) });
         expect(gaps.cause!.reason).toEqual({ code: "belt_gaps", data: { missed: 6, with_gap: 3 } });
@@ -200,9 +225,13 @@ describe("the parts of the cause", () => {
         const full = checked({ config: gears(), judged: judged([lossOf(2, 6, 130)], { loss_facts: [{ ...facts, stops: no_gap }] }) });
         expect(full.cause!.cause).not.toBeNull();
         expect(full.cause).not.toHaveProperty("reason");
-        // no record of the stops: no reason
+        // the run shows the missed swings, and none of them shows the gap or a full output: unknown
+        const neither = { ...stops, lane_empty: 2, gap_from_copy_before: 0, machine_full: 0, both: 0, neither: 4, gap_items: [] };
+        const unknown_cause = checked({ config: gears(), judged: judged([lossOf(2, 6, 130)], { loss_facts: [{ ...facts, stops: neither }] }) });
+        expect(unknown_cause.cause!.reason).toEqual({ code: "unknown", data: { missed: 6 } });
+        // no record of the stops: unknown
         const unknown = checked({ config: gears(), judged: judged([lossOf(2, 6, 130)]) });
-        expect(unknown.cause).not.toHaveProperty("reason");
+        expect(unknown.cause!.reason).toEqual({ code: "unknown", data: { missed: 6 } });
     });
 
     it("name another clock of the result that holds with all the copies", () => {

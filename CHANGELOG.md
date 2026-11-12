@@ -11,8 +11,13 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ## [Unreleased]
 
+### Added
+- ui: a Diagnostics tab shows the selected clock's shared lanes and why it is not stable
+
 ### Removed
 - ui: the Never on override is removed; older files and links load with Auto
+- ui: the result's Belt pickups fact and the Belt column of the clock table are removed
+- ui: the clock selector and the install dialog no longer name the belt
 - ui: the input belts setting is removed; older builds load with their input lane ends stated
 
 ### Changed
@@ -22,6 +27,12 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: a rounded clock that meets the target reads Stable, not Overproduces
 - ui: every clock shows its status beside its name, Stable included
 - ui: the note on a clock that overproduces says only what was measured
+- ui: a clock that loses swings on a shared lane shows what all its copies make
+- ui: a shared lane where a copy misses swings reads Swings missed, not Short
+- ui: the Works? column is now Status and says the same word as the card's chip
+- ui: the card's How this was checked is now Simulation results
+- ui: the shared lanes' column of the copies' rates is now headed Planned for the copies
+- ui: the clock selector says a clock's status in place of Not stable
 
 ## [0.28.1] - 2026-11-07
 

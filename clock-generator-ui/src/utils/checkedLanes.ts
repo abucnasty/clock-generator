@@ -1,5 +1,5 @@
 import { withOtherClocks } from 'clock-generator/light';
-import type { BuildLane, CheckedLaneRow, CheckedLanes, CheckedLaneState, ClockInsight, Config, WhyNotStable } from 'clock-generator/browser';
+import type { BuildLane, CheckedLaneRow, CheckedLanes, CheckedLaneState, ClockInsight, Config, LaneNotCheckedReason, WhyNotStable } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../worker/types';
 import { formatNumberText } from './numberText';
 
@@ -18,13 +18,10 @@ export const CHECKED_LANES_COPY = {
         role: 'Role',
         item: 'Item',
         end: 'End',
-        together: (copies: number) => `The ${formatNumberText(copies)} copies together`,
+        together: (copies: number) => `Planned for the ${formatNumberText(copies)} copies`,
         supply: 'Supply rate',
         state: 'State',
     },
-    where: 'Where and how much',
-    alone: 'One copy alone',
-    changes: 'What changes it',
     laneCapacity: 'lane capacity',
     endFromRole: 'assumed from its role',
     carries: (perSecond: number) => `carries ${rate(perSecond)}`,
@@ -60,6 +57,31 @@ export function supplyText(row: CheckedLaneRow, lane: BuildLane | undefined): { 
     return { value: rate(lane.supply_rate), ...(lane.supply_rate_by_default && { sub: CHECKED_LANES_COPY.laneCapacity }) };
 }
 
+/**
+ * The words of why a lane was not checked or not run with the copies, for each code the engine gives (`state.reason`): one
+ * entry for every code, so that a code with no words fails the build
+ */
+const LANE_REASON_WORDS: { [C in LaneNotCheckedReason['code']]: (reason: Extract<LaneNotCheckedReason, { code: C }>) => string } = {
+    one_copy_does_not_hold: () => 'The clock does not hold its output on one copy, so the copies are not run.',
+    drop_rate_unknown: () => "The build's drop rate onto this lane is not known.",
+    drops_more_than_lane_carries: reason => `The ${formatNumberText(reason.data.copies)} copies together drop more than this lane carries.`,
+    build_drops_onto_belt: () => 'The build drops items onto this belt, and the check of a shared lane does not run those drops yet.',
+    check_stopped: reason => `The lanes its copies share could not be checked: ${reason.data.message}${/[.!?]$/.test(reason.data.message) ? '' : '.'}`,
+    output_belt_not_run: () => 'The output belt is run with the copies only together with a lane they take from, and no such lane is run.',
+    lane_not_in_model: () => 'The check of the shared lanes does not run this lane.',
+};
+
+/**
+ * The sentence of a row's state: for a lane not checked or not run with the copies, the words for its reason's code; else,
+ * and for a result of an older engine whose reason is a sentence, the engine's
+ */
+export function stateSentence(row: Pick<CheckedLaneRow, 'state' | 'sentence'>): string {
+    const { state } = row;
+    if ((state.kind !== 'not_checked' && state.kind !== 'not_run') || typeof state.reason !== 'object' || state.reason === null) return row.sentence;
+    const words = LANE_REASON_WORDS[state.reason.code] as ((reason: LaneNotCheckedReason) => string) | undefined;
+    return words === undefined ? row.sentence : words(state.reason);
+}
+
 /** The lane of the build a row is of */
 export const laneOf = (lanes: readonly BuildLane[] | undefined, row: Pick<CheckedLaneRow, 'belt_id' | 'lane'>) =>
     lanes?.find(lane => lane.belt_id === row.belt_id && lane.lane === row.lane);
@@ -82,7 +104,7 @@ export function stateTone(state: CheckedLaneState): StateTone {
 function countWord(state: CheckedLaneState): string {
     switch (state.kind) {
         case 'holds': return state.not_the_cause ? 'not the cause' : 'hold';
-        case 'short': return 'short';
+        case 'short': return 'with missed swings';
         case 'join_full': return 'join full';
         case 'takes_less': return 'take less';
         case 'rate_fits': return 'by rate only';
@@ -136,13 +158,13 @@ export function insightsShown(clock: Pick<ClockAlternativeView, 'insights' | 'ch
     return notChecked.size === 0 ? clock.insights : clock.insights.filter(insight => !notChecked.has(insight.id));
 }
 
-/** Whether the note on why no clock is stable is of the recommended clock's loss on a shared lane, whose parts it then shows */
+/** Whether the note on why no clock is stable is of the recommended clock's loss on a shared lane, whose count line it then shows */
 export const whyNotStableShowsCause = (why: Pick<WhyNotStable, 'cause'> | null | undefined, recommended: Pick<ClockAlternativeView, 'checkedLanes'> | undefined) =>
     (why?.cause === 'shared lane short' || why?.cause === 'join full') && Boolean(recommended?.checkedLanes?.cause);
 
 /**
  * The first sentence of what a saved run assumed: "Made for 9 copies of your build." for a clock kept before the engine gave
- * the build's lanes (a clock that gives them says it in the card, with what was checked); no word of the belts either way
+ * the build's lanes (a clock that gives them says it in the card, and what was checked on its Diagnostics); no word of the belts either way
  */
 export function madeForLead(saved: Pick<Config, 'setpoint'> | null, clock: Pick<ClockAlternativeView, 'assumptions'>): string {
     if (saved === null) return 'These results are for a saved build whose metadata is unavailable.';

@@ -9,6 +9,8 @@ import { SwingBackoffReportDisplay } from './SwingBackoffReportDisplay';
 
 interface DetailsPanelProps {
     insights: ClockInsight[];
+    /** What the clock's notes say when it has none here */
+    nothing?: string;
     shiftOptions: ShiftOptionsView | null;
     swingBackoffReport: SwingBackoffReport | null;
     fuelView: FuelViewData | null;
@@ -18,7 +20,7 @@ interface DetailsPanelProps {
 export function DetailsPanel(props: DetailsPanelProps) {
     return <Box sx={{ mt: 2 }} data-details="" data-build-anchor="details">
         <SwingBackoffReportDisplay report={props.swingBackoffReport} />
-        <InsightsPanel insights={props.insights}>
+        <InsightsPanel insights={props.insights} nothing={props.nothing}>
             {props.shiftOptions && <ShiftRangePanel options={props.shiftOptions} />}
         </InsightsPanel>
         {props.fuelView && <Disclosure summary="Fuel use" sx={{ mt: 2 }}>

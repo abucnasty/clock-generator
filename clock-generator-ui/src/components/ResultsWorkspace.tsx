@@ -1,6 +1,6 @@
 import { ExpandMore } from '@mui/icons-material';
 import { Alert, Box, Button, Collapse, MenuItem, Paper, TextField, Typography } from '@mui/material';
-import { useId, useLayoutEffect, useMemo, useRef } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Config, NotMadeClock } from 'clock-generator/browser';
 import type { ResultDetail } from '../utils/resultsView';
 import type { BuildViewContext, TimelineViewContext } from '../utils/buildViewContext';
@@ -28,11 +28,13 @@ import { DeveloperToolsPanel } from './DeveloperToolsPanel';
 import { ResultSummaryCard } from './ResultSummaryCard';
 import { StaleResultsBanner } from './StaleResultsBanner';
 import { RunNotes } from './RunNotes';
-import { beltValue, wakeUpsText } from '../utils/clockSummary';
+import { statusOf, wakeUpsText } from '../utils/clockSummary';
 import { fullClockName } from '../utils/strategyNames';
 import { rateWarningOf } from '../utils/rateWarning';
 import { whyNotStableOf } from '../utils/whyNotStable';
-import { insightsShown, madeForLead } from '../utils/checkedLanes';
+import { madeForLead } from '../utils/checkedLanes';
+import { DIAGNOSTICS_COPY, notesOf } from '../utils/diagnostics';
+import { tabIds } from '../utils/tabIds';
 import type { GeneratedFor } from '../utils/resultsStaleness';
 import type { PickRule } from '../utils/recommendedClock';
 import { deeperSearchNoticeOf } from '../utils/deeperSearch';
@@ -150,6 +152,25 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
         captureWorkspacePosition(props.recommendedIndex === null ? undefined : props.alternatives[props.recommendedIndex]);
         props.onCardBackToRecommended();
     };
+    // the card's "See diagnostics": the Diagnostics tab of the clock, the workspace brought into view, the focus on the tab's panel
+    const [diagnosticsAsked, setDiagnosticsAsked] = useState(0);
+    const diagnosticsFocusPending = useRef(false);
+    const showDiagnostics = () => {
+        props.onDetailChange('diagnostics');
+        diagnosticsFocusPending.current = true;
+        setDiagnosticsAsked(asked => asked + 1);
+    };
+    // once the tab is shown, wherever the page keeps which tab is shown
+    useEffect(() => {
+        if (!diagnosticsFocusPending.current || props.detail !== 'diagnostics') return;
+        diagnosticsFocusPending.current = false;
+        workspaceRef.current?.scrollIntoView?.({ block: 'start' });
+        document.getElementById(tabIds('result-context', 'diagnostics').panel)?.focus({ preventScroll: true });
+    }, [diagnosticsAsked, props.detail]);
+    const selectClockById = (id: string) => {
+        const index = props.alternatives.findIndex(clock => clock.id === id);
+        if (index >= 0) selectClock(index);
+    };
     useLayoutEffect(() => {
         const anchor = selectionAnchor.current;
         selectionAnchor.current = null;
@@ -163,8 +184,12 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
         clock.counts === 'destroyed' ? HANDS_TEXT.clock(clock.terminalSwingCount)
             : `${clock.terminalSwingCount} ${clock.terminalSwingCount === 1 ? 'swing' : 'swings'}`,
         wakeUpsText(clock).value.replace(' a minute', ' wakeups/min'),
-        clock.beltLabel ? beltValue(clock.beltLabel) : '',
-    ].filter(Boolean).join(' · ');
+    ].join(' · ');
+    // the selector says a clock's status (statusOf) where it is not Stable: in the label before "Recommended", in a clock's line after it
+    const statusWord = (clock: ClockAlternativeView) => {
+        const status = statusOf(clock);
+        return status.kind === 'stable' ? null : status.text;
+    };
     const rateWarning = rateWarningOf(selected);
     // said of the whole run once it is done: while clocks still arrive, a stable one may yet come
     const whyNotStable = props.isRunning ? null
@@ -206,6 +231,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 selectedIndex={props.selectedIndex}
                 recommendedIndex={props.recommendedIndex}
                 onSelectRecommended={selectRecommended}
+                onShowDiagnostics={showDiagnostics}
                 isGenerating={props.isRunning}
                 stoppedEarly={props.stoppedEarly}
                 rateWarning={rateWarning}
@@ -256,18 +282,19 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                     />
                 </Collapse>
 
-                {selected && <Box ref={workspaceRef}>
-                    <SelectedClockContext selected={selected} detail={props.detail} onDetailChange={props.onDetailChange}
+                {/* brought into view below the sticky header */}
+                {selected && <Box ref={workspaceRef} sx={{ scrollMarginTop: 'calc(var(--app-header-height, 0px) + 8px)' }}>
+                    <SelectedClockContext selected={selected} detail={props.detail} onDetailChange={props.onDetailChange} onSelectClock={selectClockById}
                         generation={props.generationAssumptions}
                         clockSelector={selectableClocks.length > 1 && <TextField select
-                            label={selected.verdict !== 'stable' ? 'Clock · Not stable' : props.selectedIndex === props.recommendedIndex ? 'Clock · Recommended' : 'Clock'} size="small"
+                            label={statusWord(selected) !== null ? `Clock · ${statusWord(selected)}` : props.selectedIndex === props.recommendedIndex ? 'Clock · Recommended' : 'Clock'} size="small"
                             value={props.selectedIndex} onChange={event => selectClock(Number(event.target.value))}
                             slotProps={{ select: { renderValue: value => clockLabel(props.alternatives[Number(value)]) } }}
                             sx={{ width: { xs: 280, sm: 380 }, maxWidth: '100%' }}>
                             {selectableClocks.map(({ clock, index }) => <MenuItem key={clock.id} value={index}
                                 sx={{ display: 'block', whiteSpace: 'normal', maxWidth: { xs: 320, sm: 520 } }}>
                                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                    {clockLabel(clock)}{index === props.recommendedIndex ? ' · Recommended' : clock.verdict !== 'stable' ? ' · Not stable' : ''}
+                                    {clockLabel(clock)}{index === props.recommendedIndex ? ' · Recommended' : statusWord(clock) !== null ? ` · ${statusWord(clock)}` : ''}
                                 </Typography>
                                 <Typography variant="caption" component="p" color="text.secondary">
                                     {fullClockName(clock)}
@@ -283,7 +310,8 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                         }}
                         assumptions={saved?.inserters ? <InserterAssumptions inserters={saved.inserters} detailed /> : <Typography variant="body2">Saved inserter metadata unavailable.</Typography>}>
                         <DetailsPanel
-                            insights={insightsShown(selected)}
+                            insights={notesOf(selected).overview}
+                            nothing={notesOf(selected).diagnostics ? DIAGNOSTICS_COPY.overviewNothing : undefined}
                             shiftOptions={props.shiftOptions}
                             swingBackoffReport={props.swingBackoffReport}
                             fuelView={props.fuelView}

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CheckedLanes } from 'clock-generator/browser';
-import { AUTOMATION_240, checkedOf, ELECTROMAGNETIC_330_TWO_SWINGS, MILITARY_240, STATES, viewOf, viewsOf } from '../test/checkedLanesFixtures';
-import { descriptionShown, endText, givesLanes, insightsShown, laneOf, madeForLead, lanesCountText, laneText, roleText, stateTone, supplyText, togetherText, whyNotStableShowsCause, withOtherClocksOf } from './checkedLanes';
+import { AUTOMATION_240, checkedOf, ELECTROMAGNETIC_330, ELECTROMAGNETIC_330_TWO_SWINGS, MILITARY_240, STATES, viewOf, viewsOf } from '../test/checkedLanesFixtures';
+import { CHECKED_LANES_COPY, descriptionShown, endText, givesLanes, insightsShown, laneOf, madeForLead, lanesCountText, laneText, roleText, stateSentence, stateTone, supplyText, togetherText, whyNotStableShowsCause, withOtherClocksOf } from './checkedLanes';
 
 const lanes = AUTOMATION_240.lanes;
 
@@ -14,6 +14,11 @@ describe('the cells of a row, made from its data', () => {
         // the config states the input lane's end; the output lane's comes from its role
         expect(endText(laneOf(lanes, gears))).toEqual({ value: 'Dead end' });
         expect(endText(laneOf(lanes, output))).toEqual({ value: 'Infinite', sub: 'assumed from its role' });
+    });
+
+    it('are under a header that says they are the plan, with the build\'s copies as the header writes them, a part copy too', () => {
+        expect(CHECKED_LANES_COPY.columns.together(9)).toBe('Planned for the 9 copies');
+        expect(CHECKED_LANES_COPY.columns.together(5.5)).toBe('Planned for the 5.5 copies');
     });
 
     it('say what the copies take or drop together, and the supply rate, or what an output lane carries', () => {
@@ -36,9 +41,11 @@ describe('the count beside the heading', () => {
     it('counts the lanes and their states, and says "all hold" only where every row holds', () => {
         expect(lanesCountText(checkedOf(AUTOMATION_240, 'time_study_windows').rows)).toBe('3 lanes · all hold');
         expect(lanesCountText(checkedOf(AUTOMATION_240, 'takt_batches_observed').rows)).toBe('3 lanes · 1 join full · 2 take less');
-        expect(lanesCountText(checkedOf(AUTOMATION_240, 'euclidean_swings').rows)).toBe('3 lanes · 2 short · 1 not the cause');
+        expect(lanesCountText(checkedOf(AUTOMATION_240, 'euclidean_swings').rows)).toBe('3 lanes · 2 with missed swings · 1 not the cause');
         expect(lanesCountText(checkedOf(MILITARY_240, 'coordinated_sources').rows)).toBe('6 lanes · 2 by rate only · 4 hold');
         expect(lanesCountText(checkedOf(AUTOMATION_240, 'takt_batches_observed_swings_4').rows)).toBe('3 lanes · not run with the copies');
+        // where every lane has a copy that misses swings, the count is the only state
+        expect(lanesCountText([STATES.short.row, STATES.short.row])).toBe('2 lanes · with missed swings');
     });
 });
 
@@ -110,4 +117,23 @@ it('says what a clock kept before the engine gave the lanes was made for, withou
     expect(madeForLead(saved, kept)).toBe('Made for 9 copies of your build.');
     expect(madeForLead(saved, view)).toBe('');
     expect(madeForLead(null, kept)).toBe('These results are for a saved build whose metadata is unavailable.');
+});
+
+describe('the words of a lane not checked or not run with the copies', () => {
+    const kept = [AUTOMATION_240, ELECTROMAGNETIC_330, MILITARY_240, ELECTROMAGNETIC_330_TWO_SWINGS];
+    const rows = [...kept.flatMap(result => result.clocks.flatMap(clock => clock.checked_lanes?.rows ?? [])), ...Object.values(STATES).map(it => it.row)]
+        .filter(row => row.state.kind === 'not_checked' || row.state.kind === 'not_run');
+
+    it('are the engine\'s sentence, word for word, for every such row of the fixtures, from its code', () => {
+        expect(rows.length).toBeGreaterThan(0);
+        for (const row of rows) {
+            expect('reason' in row.state && typeof row.state.reason).toBe('object');
+            expect(stateSentence(row)).toBe(row.sentence);
+        }
+    });
+
+    it('show the sentence of a result whose reason is a sentence (an older engine)', () => {
+        const row = { state: { kind: 'not_checked', reason: 'The check of the shared lanes does not run this lane.' }, sentence: 'The check of the shared lanes does not run this lane.' };
+        expect(stateSentence(row as unknown as Parameters<typeof stateSentence>[0])).toBe(row.sentence);
+    });
 });

@@ -16,7 +16,68 @@ export const quiet = { log() { }, warn() { }, error() { }, debug() { } };
 export const reasonsOf = (result: ClockAlternativesResult) => Object.fromEntries(result.alternatives.filter(it => it.checked_lanes?.cause)
     .map(it => [it.id, it.checked_lanes!.cause!.reason ?? "none"]));
 
-export const SEARCH_MAKERS = ["derived", "uneven-output", "shifted-swings", "full-hand"];
+/**
+ * Where the swings of a clock's cause, window cycle by window cycle (`cause.swings`), do not add up to the counts the cause
+ * carries, by its id: each count that differs, as "<what>: <count> != <sum>", by copy (the headline and the cause part's
+ * counts by what stopped them) and by inserter (`where`). Empty where every count is the sum. A lane cause with a cause part
+ * has its swings, and one without has none; a cause at a full join has them.
+ */
+export function swingSumsOf(result: ClockAlternativesResult): Record<string, string[]> {
+    const out: Record<string, string[]> = {};
+    for (const clock of result.alternatives) {
+        const cause = clock.checked_lanes?.cause;
+        if (!cause) continue;
+        const off: string[] = [];
+        const same = (what: string, count: number, sum: number) => { if (count !== sum) off.push(`${what}: ${count} != ${sum}`); };
+        const swings = cause.swings;
+        if (cause.kind === "lane") {
+            same("swings given", cause.cause === null ? 0 : 1, swings === undefined ? 0 : 1);
+            if (swings?.kind === "lane") {
+                const aloneOf = (row: typeof swings.rows[number], window_cycle: number) => typeof row.swings_per_window_cycle === "number"
+                    ? row.swings_per_window_cycle : row.swings_per_window_cycle[window_cycle - 1];
+                for (const row of swings.rows) {
+                    for (const it of row.missed) {
+                        if (!(it.missed >= 1 && it.missed <= aloneOf(row, it.window_cycle))) off.push(`copy ${row.copy} inserter ${row.inserter_id} window cycle ${it.window_cycle}: ${it.missed} missed`);
+                    }
+                }
+                for (const part of cause.cause!.data.copies) {
+                    const of_copy = swings.rows.filter(it => it.copy === part.copy).flatMap(it => it.missed);
+                    const count = (test: (it: typeof of_copy[number]) => boolean) => of_copy.filter(test).reduce((sum, it) => sum + it.missed, 0);
+                    same(`copy ${part.copy} missed`, part.missed!, count(() => true));
+                    same(`copy ${part.copy} headline`, cause.headline.data.copies.find(it => it.copy === part.copy)!.missed, count(() => true));
+                    same(`copy ${part.copy} lane_empty`, part.lane_empty!, count(it => it.lane_empty));
+                    same(`copy ${part.copy} gap_from_copy_before`, part.gap_from_copy_before!, count(it => it.cause === "gap" || it.cause === "both"));
+                    same(`copy ${part.copy} machine_full`, part.machine_full!, count(it => it.cause === "full" || it.cause === "both"));
+                    same(`copy ${part.copy} both`, part.both!, count(it => it.lane_empty && (it.cause === "full" || it.cause === "both")));
+                    same(`copy ${part.copy} neither`, part.neither!, count(it => !it.lane_empty && (it.cause === "gap" || it.cause === "neither")));
+                }
+                for (const taker of cause.where.data.takers.filter(it => cause.cause!.data.copies.some(part => part.copy === it.copy))) {
+                    const row = swings.rows.find(it => it.copy === taker.copy && it.inserter_id === taker.inserter_id);
+                    if (row === undefined) { off.push(`copy ${taker.copy} inserter ${taker.inserter_id}: no row`); continue; }
+                    same(`copy ${taker.copy} inserter ${taker.inserter_id} missed`, taker.missed, row.missed.reduce((sum, it) => sum + it.missed, 0));
+                    same(`copy ${taker.copy} inserter ${taker.inserter_id} swings`, taker.swings,
+                        Array.from({ length: row.window_cycles }, (_, i) => aloneOf(row, i + 1)).reduce((sum, it) => sum + it, 0));
+                }
+                same("rows", cause.where.data.takers.filter(it => cause.cause!.data.copies.some(part => part.copy === it.copy)).length, swings.rows.length);
+            }
+        } else {
+            same("swings given", 1, swings?.kind === "join" ? 1 : 0);
+            if (swings?.kind === "join") {
+                for (const copy of cause.headline.data.copies) {
+                    const of_copy = swings.copies.find(it => it.copy === copy.copy);
+                    if (of_copy === undefined) { off.push(`copy ${copy.copy}: no output swings`); continue; }
+                    same(`copy ${copy.copy} swings`, copy.swings, Math.round(of_copy.gives * of_copy.window_cycles));
+                    same(`copy ${copy.copy} made`, copy.swings - copy.missed, of_copy.made.reduce((sum, it) => sum + it, 0));
+                    same(`copy ${copy.copy} missed`, copy.missed, of_copy.made.reduce((sum, it) => sum + Math.max(0, of_copy.gives - it), 0));
+                }
+            }
+        }
+        out[clock.id] = off;
+    }
+    return out;
+}
+
+export const SEARCH_MAKERS =["derived", "uneven-output", "shifted-swings", "full-hand"];
 export const SEARCH_LABELS = ["Time-Study Windows", "Moved Output Swing", "Phase-Shifted Batch", "Pitch Pickups"];
 export const alternativeMakersOf = (generated: ClockAlternativesResult) => generated.alternatives.map(alternative => alternative.maker);
 export const selectedAlternativeOf = (generated: ClockAlternativesResult) => generated.alternatives[generated.selected_index];

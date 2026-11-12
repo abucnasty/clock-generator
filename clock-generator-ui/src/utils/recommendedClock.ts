@@ -1,6 +1,7 @@
 import type { Config } from 'clock-generator/browser';
 import { combineClockAlternativeRuns } from 'clock-generator/light';
 import type { ClockAlternativeView } from '../worker/types';
+import { shownRateOf } from './shownRate';
 import { rateVerbs, type TargetCounts } from './targetCounts';
 
 /** What the selection rule is given by the config a generation ran with */
@@ -10,8 +11,8 @@ export interface PickRule {
 }
 
 /** The fields of a clock the recommendation is worked out from, so the tests need not build a whole view */
-type PickableClock = Pick<ClockAlternativeView, 'id' | 'verdict' | 'ranking' | 'beltLabel' | 'deadlockRisk' | 'inserterWindowCount'> & {
-    assessment: Pick<ClockAlternativeView['assessment'], 'items_per_second'> & Partial<Pick<ClockAlternativeView['assessment'], 'start_dependence' | 'disturbance_trial'>>;
+type PickableClock = Pick<ClockAlternativeView, 'id' | 'verdict' | 'ranking' | 'beltLabel' | 'deadlockRisk' | 'inserterWindowCount'> & Partial<Pick<ClockAlternativeView, 'checkedLanes'>> & {
+    assessment: Pick<ClockAlternativeView['assessment'], 'items_per_second'> & Partial<Pick<ClockAlternativeView['assessment'], 'start_dependence' | 'disturbance_trial' | 'shared_lane_losses'>>;
     /** What the rate counts, which the sentences say in their words: none is the item made */
     counts?: TargetCounts;
 };
@@ -152,7 +153,7 @@ function reasonOf(alternatives: PickableClock[], pick: PickableClock): string {
     const { ranking } = pick;
     const rate = figure(pick.assessment.items_per_second - ranking.rate_off_target);
     if (pick.assessment.disturbance_trial === null && pick.assessment.start_dependence?.verdict !== 'start-dependent') {
-        return `Recommended by the engine's rule at ${figure(pick.assessment.items_per_second)}/s. No usable recovery result is available.`;
+        return `Recommended by the engine's rule at ${figure(shownRateOf(pick))}/s. No usable recovery result is available.`;
     }
     // on a build with a deadlock risk a clock that holds the rate meets it, recovering or not; elsewhere it is Stable
     const deadlock = pick.deadlockRisk !== null;
@@ -203,22 +204,23 @@ function tieOf(pick: PickableClock, others: PickableClock[]): string {
 function nearestReason(alternatives: PickableClock[], pick: PickableClock, rate: string, deadlock: boolean): string {
     const { ranking } = pick;
     if (pick.assessment.start_dependence?.verdict === 'start-dependent') {
-        return `No clock qualifies under the engine's ranking rule. This one is assessed at ${figure(pick.assessment.items_per_second)}/s and reaches the setpoint from only some sampled starts. See Model and tested starts.`;
+        return `No clock qualifies under the engine's ranking rule. This one is assessed at ${figure(shownRateOf(pick))}/s and reaches the setpoint from only some sampled starts. See Model and tested starts.`;
     }
     const lead = RECOMMENDED_COPY.noneHolds(rate, deadlock);
     if (ranking.stable_above_target === true) {
         const target = pick.assessment.items_per_second - ranking.rate_off_target;
-        return lead + RECOMMENDED_COPY.stableOver(figure(pick.assessment.items_per_second), percentOf(ranking.rate_off_target / target));
+        return lead + RECOMMENDED_COPY.stableOver(figure(shownRateOf(pick)), percentOf(ranking.rate_off_target / target));
     }
     const counted = ranking.wake_ups_per_minute !== null;
     const near = offTargetKey(ranking.rate_off_target);
     if (near === 0) {
         // at the rate as the selection compares it, so holding the output decided, then the wake-ups
+        // the rate it shows: on a loss on a shared lane, what all the copies made, not the target
         return lead + (ranking.holds_expected_output
-            ? RECOMMENDED_COPY.atRateHolds(rate, counted)
-            : RECOMMENDED_COPY.atRateRuns(rate, counted));
+            ? RECOMMENDED_COPY.atRateHolds(figure(shownRateOf(pick)), counted)
+            : RECOMMENDED_COPY.atRateRuns(figure(shownRateOf(pick)), counted));
     }
-    const itsRate = figure(pick.assessment.items_per_second);
+    const itsRate = figure(shownRateOf(pick));
     const holdsOverEquallyNear = ranking.holds_expected_output && alternatives.some(other => other !== pick
         && offTargetKey(other.ranking.rate_off_target) === near && !other.ranking.holds_expected_output);
     return lead + (itsRate === rate ? RECOMMENDED_COPY.nearest : RECOMMENDED_COPY.nearestAt(itsRate))

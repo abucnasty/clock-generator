@@ -38,6 +38,8 @@ interface InsightsPanelProps {
     insights: ClockInsight[];
     /** Insights drawn by the page itself (a chart, a report), listed with the selected clock's */
     children?: ReactNode;
+    /** What the clock's notes say when it has none here; "Nothing stands out" when not given */
+    nothing?: string;
 }
 
 function Part({ label, children }: { label: string; children: ReactNode }) {
@@ -51,16 +53,21 @@ function Part({ label, children }: { label: string; children: ReactNode }) {
     );
 }
 
-/** One finding: its title, what it is in a sentence, and the reasons behind "Why?", with its chart or table */
-function InsightCard({ insight }: { insight: ClockInsight }) {
+/**
+ * One finding: its title, what it is in a sentence, and the reasons behind "Why?", with its chart or table. A finding with no
+ * "why" (that of a clock that overproduces) shows its explanation under what was found, with no "Why?"
+ */
+export function InsightCard({ insight, level = 4 }: { insight: ClockInsight; level?: 3 | 4 }) {
     const { nameIdsIn } = useGameNames();
     const [open, setOpen] = useBuildSection(`insight:${insight.id}`);
     const reasonsId = useId();
+    const hasWhy = insight.why !== '';
+    const explanation = <Part label={INSIGHTS_COPY.explanation}><Typography variant="body2">{nameIdsIn(insight.explanation)}</Typography></Part>;
     return (
-        <Panel title={nameIdsIn(insight.title)} level={4}>
+        <Panel title={nameIdsIn(insight.title)} level={level} data-insight={insight.id}>
             <Part label={INSIGHTS_COPY.what}>
                 <Typography variant="body2">{nameIdsIn(insight.what)}</Typography>
-                <Button
+                {hasWhy && <Button
                     size="small"
                     aria-expanded={open}
                     aria-controls={reasonsId}
@@ -70,12 +77,12 @@ function InsightCard({ insight }: { insight: ClockInsight }) {
                     sx={{ mt: 0.25, ml: -0.75, minWidth: 0 }}
                 >
                     {INSIGHTS_COPY.whyButton}
-                </Button>
+                </Button>}
             </Part>
-            <Collapse in={open} id={reasonsId}>
-                {insight.why !== '' && <Part label={INSIGHTS_COPY.why}><Typography variant="body2">{nameIdsIn(insight.why)}</Typography></Part>}
-                <Part label={INSIGHTS_COPY.explanation}><Typography variant="body2">{nameIdsIn(insight.explanation)}</Typography></Part>
-            </Collapse>
+            {hasWhy ? <Collapse in={open} id={reasonsId}>
+                <Part label={INSIGHTS_COPY.why}><Typography variant="body2">{nameIdsIn(insight.why)}</Typography></Part>
+                {explanation}
+            </Collapse> : explanation}
             {insight.swing_comparison && <SwingComparison data={insight.swing_comparison} />}
             {insight.table && (insight.swing_comparison ? <ExactTicks><InsightTable table={insight.table} title={insight.title} /></ExactTicks> : <InsightTable table={insight.table} title={insight.title} />)}
         </Panel>
@@ -112,7 +119,7 @@ function InsightTable({ table, title }: { table: NonNullable<ClockInsight['table
  * What the simulation found: what is particular to the selected clock, each finding in a sentence with its reasons
  * behind "Why?"; then, folded away, what holds for the build whichever clock is picked.
  */
-export function InsightsPanel({ insights, children }: InsightsPanelProps) {
+export function InsightsPanel({ insights, children, nothing = INSIGHTS_COPY.nothing }: InsightsPanelProps) {
     const [buildOpen, setBuildOpen] = useBuildSection('insights-build');
     const build = insights.filter(insight => insight.scope === 'build');
     const clock = insights.filter(insight => insight.scope === 'clock');
@@ -127,7 +134,7 @@ export function InsightsPanel({ insights, children }: InsightsPanelProps) {
                 {clock.map(insight => <InsightCard key={insight.id} insight={insight} />)}
                 {children}
                 {clock.length === 0 && !children && (
-                    <Typography variant="body2" color="text.secondary">{INSIGHTS_COPY.nothing}</Typography>
+                    <Typography variant="body2" color="text.secondary">{nothing}</Typography>
                 )}
             </Panel>
 

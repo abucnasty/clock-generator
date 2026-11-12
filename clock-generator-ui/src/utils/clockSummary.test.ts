@@ -7,10 +7,6 @@ import {
     SUMMARY_COPY,
     attemptResultOf,
     outputTermOf,
-    beltCellText,
-    beltLine,
-    beltValue,
-    beltValueSub,
     clockBadges,
     signalsText,
     differenceFromRecommended,
@@ -20,10 +16,11 @@ import {
     lossLimitText,
     minutesAndSecondsText,
     pickNameMeaning,
+    statusOf,
     wakeUpsText,
-    worksOf,
     type SummaryClock,
 } from './clockSummary';
+import { AUTOMATION_240, ELECTROMAGNETIC_330_TWO_SWINGS, viewOf, viewsOf } from '../test/checkedLanesFixtures';
 
 const TARGET = 240;
 
@@ -78,7 +75,7 @@ describe('sampled starts remain separate from rate and recovery', () => {
                 starts: ['cold', 'ascending'].map((id, i) => ({ id, label: id, reaches_target: i === 0,
                     output_items_per_window_cycle: i === 0 ? 240 : 120, cycle: null, off_bins: null, span_items: null, long_run_keeps_up: i === 0 })) } };
         expect(nameOf([dependent], 'dependent')).toEqual([SUMMARY_COPY.startDependent]);
-        expect(worksOf(dependent)).toEqual({ kind: 'caution', text: SUMMARY_COPY.worksStartDependent });
+        expect(statusOf(dependent)).toEqual({ kind: 'start-dependent', text: 'Start-dependent' });
         expect(recoversOf(dependent)).toMatchObject({ kind: 'yes', value: SUMMARY_COPY.recoversYes });
         expect(rateWarningOf(dependent)).toContain('some sampled starts');
         expect(rateWarningOf(dependent)).not.toContain('240 of 240');
@@ -92,8 +89,8 @@ describe('sampled starts remain separate from rate and recovery', () => {
         // the loss trials' baseline missed its output: no cause, so no verdict on recovery
         const baseline = clock('baseline', { verdict: 'no recovery', meets_target_rate: false, loss: { broken_by: [] } });
         expect(recoversOf(baseline)).toMatchObject({ value: SUMMARY_COPY.recoversUnavailable, detail: SUMMARY_COPY.recoversBaselineUnavailableDetail });
-        expect(nameOf([baseline], 'baseline')).toEqual([SUMMARY_COPY.recoveryUnavailable]);
-        expect(worksOf(baseline)).toEqual({ kind: 'caution', text: SUMMARY_COPY.recoveryUnavailable });
+        expect(nameOf([baseline], 'baseline')).toEqual([SUMMARY_COPY.error]);
+        expect(statusOf(baseline)).toEqual({ kind: 'error', text: 'Error', detail: SUMMARY_COPY.errorBaselineMissed });
         expect(differenceFromRecommended(baseline, clock('recommended'))).toBe('Recovery results are unavailable for this clock.');
     });
 });
@@ -129,20 +126,21 @@ describe('clockBadges', () => {
             clock('a'),
             clock('b', { verdict: 'no recovery', meets_target_rate: false }),
             clock('c', { verdict: 'unstable', meets_target_rate: false, holds_expected_output: false }),
-        ], { b: [SUMMARY_COPY.worksNoRecovery], c: [SUMMARY_COPY.underproduces] }],
+        ], { b: [SUMMARY_COPY.noRecovery], c: [SUMMARY_COPY.underproduces] }],
         ['says that a clock off the setpoint underproduces or overproduces, before its verdict', [
             clock('a'),
             clock('below', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48 }),
             clock('above', { meets_target_rate: false, rate_off_target: 12.5 }),
         ], { below: [SUMMARY_COPY.underproduces], above: [SUMMARY_COPY.overproduces] }],
         ['does not say a rate less than half a hundredth off', [clock('a', { rate_off_target: -0.004 })], { a: [stable] }],
-        ['gives a clock with a deadlock risk that meets the target no status chip, as its verdict does not decide', [
+        ['gives a clock with a deadlock risk that meets the target the status the rule gives, as the Status column does', [
             clock('a', { verdict: 'no recovery', deadlock: true, wake_ups_per_minute: 6 }),
             clock('b', { verdict: 'stable', deadlock: true, wake_ups_per_minute: 9, window_count: 5 }),
-        ], { a: [], b: [] }],
-        ['says No recovery, never Stable, of a clock with no recovery', [clock('a', { verdict: 'no recovery' })], { a: [SUMMARY_COPY.worksNoRecovery] }],
+        ], { a: [SUMMARY_COPY.noRecovery], b: [stable] }],
+        ['says No recovery, never Stable, of a clock with no recovery', [clock('a', { verdict: 'no recovery' })], { a: [SUMMARY_COPY.noRecovery] }],
         ['says Stable of a rounded clock that runs fast and meets the target', [clock('a', { rate_off_target: 0.24, runs_fast: 0.001 })], { a: [stable] }],
-        ['says Stable of a clock that meets the target whose recovery was not tried', [clock('a', { loss: null })], { a: [stable] }],
+        ['says Error, not Stable, of a clock that meets the target whose recovery gave no answer, as the Status column does',
+            [clock('a', { loss: null })], { a: [SUMMARY_COPY.error] }],
     ])('%s', (_, clocks, names) => {
         expect(Object.fromEntries(Object.keys(names).map(id => [id, nameOf(clocks, id)]))).toEqual(names);
     });
@@ -153,10 +151,10 @@ describe('clockBadges', () => {
 
     it('gives the status chip what outputTermOf gives, with what is said beside it', () => {
         expect(clockBadges([clock('below', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48 })], 0))
-            .toEqual([{ kind: 'status', text: 'Underproduces', detail: 'makes 192/s of 240/s' }]);
+            .toEqual([{ kind: 'status', status: 'underproduces', text: 'Underproduces', detail: 'makes 192/s of 240/s' }]);
         expect(clockBadges([withLoss(clock('a', { verdict: 'unstable' }), 'belt_gaps')], 0))
-            .toEqual([{ kind: 'status', text: 'Underproduces', detail: 'Missed pickups due to belt gaps' }]);
-        expect(clockBadges([clock('a')], 0)).toEqual([{ kind: 'status', text: 'Stable' }]);
+            .toEqual([{ kind: 'status', status: 'underproduces', text: 'Underproduces', detail: 'Missed pickups due to belt gaps' }]);
+        expect(clockBadges([clock('a')], 0)).toEqual([{ kind: 'status', status: 'stable', text: 'Stable' }]);
     });
 });
 
@@ -213,9 +211,11 @@ describe('attemptResultOf', () => {
 
 describe('REASON_WORDS', () => {
     it('has the words for each reason code the engine gives', () => {
-        expect(Object.keys(REASON_WORDS).sort()).toEqual(['belt_gaps', 'target_full']);
+        expect(Object.keys(REASON_WORDS).sort()).toEqual(['belt_gaps', 'target_full', 'unknown']);
         expect(REASON_WORDS.belt_gaps).toBe('Missed pickups due to belt gaps');
         expect(REASON_WORDS.target_full).not.toBe('');
+        // a loss with no diagnostic: the chip stands alone
+        expect(REASON_WORDS.unknown).toBe('');
     });
 });
 
@@ -341,29 +341,6 @@ describe('makesText and wakeUpsText', () => {
     });
 });
 
-describe('beltLine, beltValue and beltValueSub', () => {
-    const { beltLineMoving, beltLineBackedUp, beltMoving, beltBackedUp } = SUMMARY_COPY;
-
-    // the engine's belt for the clock: the line, the tile's word and the line under it
-    it.each<[string, string, string, string, string | undefined]>([
-        ['says moving for a clock the engine made for a moving belt', 'moving', beltLineMoving, beltMoving, undefined],
-        ['says backed up for a clock the engine made for a backed-up belt, whatever the belt setting', 'backed-up', beltLineBackedUp, beltBackedUp, undefined],
-        ['says moving for the label of a clock kept from an engine that gave slack', 'moving (+4 ticks)', beltLineMoving, beltMoving, undefined],
-        ['says there is no belt when no clocked inserter picks up from one', '', SUMMARY_COPY.beltLineNone, SUMMARY_COPY.beltNone, SUMMARY_COPY.beltNoneSub],
-    ])('%s', (_, label, line, value, sub) => {
-        expect([beltLine(label), beltValue(label), beltValueSub(label)]).toEqual([line, value, sub]);
-    });
-});
-
-describe('beltCellText', () => {
-    it('says the belt the engine made the clock for', () => {
-        expect(beltCellText('moving')).toBe(SUMMARY_COPY.beltMoving);
-        expect(beltCellText('moving (+4 ticks)')).toBe(SUMMARY_COPY.beltMoving);
-        expect(beltCellText('backed-up')).toBe(SUMMARY_COPY.beltBackedUp);
-        expect(beltCellText('')).toBe('');
-    });
-});
-
 describe('differenceFromRecommended', () => {
     const recommended = clock('r', { wake_ups_per_minute: 10 });
     const offRate = { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48, wake_ups_per_minute: 30 } as const;
@@ -419,34 +396,129 @@ describe('foldedMakes', () => {
     });
 });
 
-describe('worksOf', () => {
-    it.each<[string, SummaryClock, ReturnType<typeof worksOf>]>([
-        ['says yes for a clock that holds the rate and recovers, made for the belt asked for', clock('a'), { kind: 'yes', text: SUMMARY_COPY.worksYes }],
+/** A clock with a result of an older engine or a trial that stopped: no recovery result, and the engine's reason where it gives one */
+function untried(base: SummaryClock, reason?: string): SummaryClock {
+    return { ...base, assessment: { ...base.assessment, disturbance_trial: null, ...(reason !== undefined && { disturbance_trial_not_tried: reason }) } };
+}
+
+describe('statusOf: the one status the chip, the Status column and the full table say', () => {
+    it.each<[string, SummaryClock, ReturnType<typeof statusOf>]>([
+        ['is Stable for a clock that holds the rate and recovers', clock('a'), { kind: 'stable', text: 'Stable' }],
         ['says that a clock under the setpoint underproduces, before whether it recovers',
-            clock('a', { verdict: 'no recovery', meets_target_rate: false, rate_off_target: -48 }), { kind: 'no', text: 'Underproduces' }],
+            clock('a', { verdict: 'no recovery', meets_target_rate: false, rate_off_target: -48 }), { kind: 'underproduces', text: 'Underproduces', detail: 'makes 192/s of 240/s' }],
         ['says that a clock whose verdict is unstable underproduces below the setpoint',
-            clock('a', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48 }), { kind: 'no', text: 'Underproduces' }],
+            clock('a', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48 }), { kind: 'underproduces', text: 'Underproduces', detail: 'makes 192/s of 240/s' }],
         ['says that a clock whose verdict is unstable overproduces above the setpoint',
-            clock('a', { verdict: 'unstable', meets_target_rate: false, rate_off_target: 10 }), { kind: 'no', text: 'Overproduces' }],
-        ['says yes for a rounded clock that runs fast and meets the target, as for any clock that meets it',
-            clock('a', { rate_off_target: 0.24, runs_fast: 0.001 }), { kind: 'yes', text: SUMMARY_COPY.worksYes }],
+            clock('a', { verdict: 'unstable', meets_target_rate: false, rate_off_target: 10 }), { kind: 'overproduces', text: 'Overproduces', detail: 'makes 250/s of 240/s' }],
+        ['is Stable for a rounded clock that runs fast and meets the target, as for any clock that meets it',
+            clock('a', { rate_off_target: 0.24, runs_fast: 0.001 }), { kind: 'stable', text: 'Stable' }],
         ['says that a stable clock above the setpoint that does not meet the target overproduces',
-            clock('a', { meets_target_rate: false, rate_off_target: 12.5, stable_above_target: true }), { kind: 'no', text: 'Overproduces' }],
-        ['says that a clock whose verdict is unstable underproduces at the target rate too', withLoss(clock('b', { verdict: 'unstable' })), { kind: 'no', text: 'Underproduces' }],
-        ['says a clock that does not recover so',
-            clock('a', { verdict: 'no recovery' }), { kind: 'caution', text: SUMMARY_COPY.worksNoRecovery }],
+            clock('a', { meets_target_rate: false, rate_off_target: 12.5, stable_above_target: true }), { kind: 'overproduces', text: 'Overproduces', detail: 'makes 252.5/s of 240/s' }],
+        ['says that a clock whose verdict is unstable underproduces at the target rate too', withLoss(clock('b', { verdict: 'unstable' })), { kind: 'underproduces', text: 'Underproduces' }],
+        ['says No recovery of a clock that does not recover', clock('a', { verdict: 'no recovery' }), { kind: 'no-recovery', text: 'No recovery' }],
+        ['says No recovery of a clock with a deadlock risk that meets the target: no special case',
+            clock('a', { verdict: 'no recovery', deadlock: true }), { kind: 'no-recovery', text: 'No recovery' }],
+        ['says that a clock underproduces before its recovery gave no answer', untried(clock('a', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48 })),
+            { kind: 'underproduces', text: 'Underproduces', detail: 'makes 192/s of 240/s' }],
+        ['says Error with the engine\'s reason, as data, where the loss trials could not be run',
+            untried(clock('a'), 'the build has no loss to try'), { kind: 'error', text: 'Error', detail: 'the build has no loss to try' }],
+        ['says Error where the run with nothing cut did not make its expected output',
+            clock('a', { loss: { survives: false, broken_by: [] } }), { kind: 'error', text: 'Error', detail: SUMMARY_COPY.errorBaselineMissed }],
+        ['says Error where there is no recovery result', untried(clock('a')), { kind: 'error', text: 'Error', detail: SUMMARY_COPY.errorNoResult }],
+        ['says Error, not Stable, of a clock that is not unstable and whose recovery gave no answer', untried(clock('a'), 'stopped'),
+            { kind: 'error', text: 'Error', detail: 'stopped' }],
+        ['says Error of a clock with no recovery whose trials gave no answer', untried(clock('a', { verdict: 'no recovery' })),
+            { kind: 'error', text: 'Error', detail: SUMMARY_COPY.errorNoResult }],
     ])('%s', (_, result, expected) => {
-        expect(worksOf(result)).toEqual(expected);
+        expect(statusOf(result)).toEqual(expected);
+    });
+
+    it('says Start-dependent of a clock that is start-dependent, whatever else it is', () => {
+        const dependent = clock('a', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48 });
+        dependent.assessment = { ...dependent.assessment, start_dependence: { verdict: 'start-dependent', expected_output_items: 240, starts: [] } };
+        expect(statusOf(dependent)).toEqual({ kind: 'start-dependent', text: 'Start-dependent' });
+    });
+
+    it('gives the chip and the Status column the same word, from the one rule', () => {
+        const clocks = [clock('a'), clock('b', { verdict: 'no recovery' }), untried(clock('c'), 'stopped'),
+            clock('d', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48 })];
+        expect(clocks.map((_, i) => clockBadges(clocks, i)[0])).toEqual(clocks.map(it => {
+            const { kind, ...status } = statusOf(it);
+            return { kind: 'status', status: kind, ...status };
+        }));
+    });
+});
+
+describe('the help of the Status column', () => {
+    it('names every status the column can show, each once', () => {
+        const help = SUMMARY_COPY.statusHelp.map(([word, meaning]) => `${word}: ${meaning}`).join(' ');
+        for (const word of ['Stable', 'Underproduces', 'Overproduces', 'No recovery', 'Error', 'Start-dependent']) {
+            expect(help.split(word).length - 1, word).toBe(1);
+        }
+        expect(SUMMARY_COPY.statusHelp.map(([word]) => word)).toEqual([SUMMARY_COPY.stable, SUMMARY_COPY.underproduces, SUMMARY_COPY.overproduces,
+            SUMMARY_COPY.noRecovery, SUMMARY_COPY.error, SUMMARY_COPY.startDependent]);
     });
 });
 
 describe('SUMMARY_COPY', () => {
     it('uses the glossary words, not the old ones', () => {
         const texts = Object.values(SUMMARY_COPY)
-            .map(it => typeof it === 'string' ? it : (it as (...args: unknown[]) => string)('2', '3'));
+            .flatMap(it => typeof it === 'string' ? [it] : Array.isArray(it) ? it.flat() : [(it as (...args: unknown[]) => string)('2', '3')]);
         for (const text of texts) {
             expect(text).not.toMatch(/potential|backpressure|hands?\b|transfer|starved|jammed|wake window|wake-up/i);
             expect(text.length).toBeGreaterThan(0);
         }
+    });
+});
+
+// the rate the engine gives for all the copies on their shared lanes (checked_lanes.copies_made), read from its own results
+describe('the rate of a clock with a loss on a shared lane: what all the copies made together', () => {
+    const takt = viewOf(AUTOMATION_240, 'takt_batches_observed');
+    const stable = viewOf(AUTOMATION_240, 'time_study_windows');
+    /** The same clock from an older result, which has no rate of the copies */
+    const older = (view: SummaryClock): SummaryClock => ({ ...view, checkedLanes: { ...view.checkedLanes!, copies_made: undefined } });
+
+    it('is the Makes figure of the 216-tick clock: 234.07/s, all 9 copies; the stable clock keeps 240/s', () => {
+        expect(makesText(takt, 9)).toEqual({ value: '234.07/s', sub: 'all 9 copies' });
+        expect(makesText(stable, 9)).toEqual({ value: '240/s', sub: 'all 9 copies' });
+    });
+
+    it('is said where the selected clock differs from the recommended one, in place of "It underproduces."', () => {
+        expect(differenceFromRecommended(takt, stable)).toBe(`${SUMMARY_COPY.differsRate('234.07', '240')} It wakes inserters 109 fewer times a minute than the recommended clock.`);
+        expect(differenceFromRecommended(viewOf(AUTOMATION_240, 'euclidean_swings'), stable)).toBe(`${SUMMARY_COPY.differsRate('238.77', '240')} It wakes inserters 301 fewer times a minute than the recommended clock.`);
+    });
+
+    it('keeps clocks with different rates out of the folded line: electromagnetic science 330 with 2 swings', () => {
+        const views = viewsOf(ELECTROMAGNETIC_330_TWO_SWINGS);
+        // every clock has a loss; the clock-only runs all make 330/s
+        expect(views.every(view => view.assessment.items_per_second === 330 && (view.assessment.shared_lane_losses?.length ?? 0) > 0)).toBe(true);
+        expect(foldedMakes(views)).toBeNull();
+        // the three with the same rate at two decimals fold
+        const same = views.filter(view => view.checkedLanes!.copies_made!.items_per_second.toFixed(2) === '318.59');
+        expect(same.length).toBe(3);
+        expect(foldedMakes(same)).toBe(SUMMARY_COPY.foldedMakes(3, '318.59'));
+    });
+
+    it('does not change the status, the words beside it or the term the differs sentence leaves out', () => {
+        expect(outputTermOf(takt)).toEqual({ term: SUMMARY_COPY.underproduces, detail: REASON_WORDS.target_full });
+        expect(statusOf(takt)).toEqual({ kind: 'underproduces', text: SUMMARY_COPY.underproduces, detail: REASON_WORDS.target_full });
+    });
+
+    it('is the clock-only rate on a clock of an older result without the rate of the copies, as before', () => {
+        expect(makesText(older(takt), 9).value).toBe('240/s');
+        expect(differenceFromRecommended(older(takt), stable)).toBe('It wakes inserters 109 fewer times a minute than the recommended clock. It underproduces.');
+        expect(foldedMakes(viewsOf(ELECTROMAGNETIC_330_TWO_SWINGS).map(older))).toBe(SUMMARY_COPY.foldedMakes(6, '330'));
+    });
+
+    it('is the clock-only rate on a clock without a loss, and on one the copies were not run for', () => {
+        expect(makesText(viewOf(AUTOMATION_240, 'pitch_pickups'), 9).value).toBe('240/s');
+        expect(makesText(viewOf(AUTOMATION_240, 'takt_batches_observed_swings_4'), 9).value).toBe('180/s');
+    });
+
+    it('is beside the chip of a clock off the setpoint that has a loss: "makes" the copies\' rate', () => {
+        const off = { ...withLoss(clock('a', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -60 })) };
+        const measured: SummaryClock = { ...off, checkedLanes: { ...off.checkedLanes!, copies_made: { items_per_second: 171.5, window_cycles: 30 } } };
+        expect(outputTermOf(measured)).toEqual({ term: SUMMARY_COPY.underproduces, detail: 'makes 171.5/s of 240/s' });
+        expect(outputTermOf(off)).toEqual({ term: SUMMARY_COPY.underproduces, detail: 'makes 180/s of 240/s' });
     });
 });
