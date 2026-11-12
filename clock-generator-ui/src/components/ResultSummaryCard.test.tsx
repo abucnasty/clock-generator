@@ -99,7 +99,7 @@ describe('the status of a clock that underproduces, beside its name on the card'
     it('of the 72-tick clock: the chip Underproduces, and the words for the engine\'s reason code beside it', () => {
         expect(views.find(view => view.id === 'euclidean_swings')!.checkedLanes!.cause!.reason).toEqual({ code: 'belt_gaps', data: { missed: 6, with_gap: 3 } });
         const name = besideName(views, 'euclidean_swings');
-        expect(name.getByText(SUMMARY_COPY.unstable)).toBeTruthy();
+        expect(name.getByText(SUMMARY_COPY.underproduces)).toBeTruthy();
         expect(name.getByText('Missed pickups due to belt gaps')).toBeTruthy();
     });
 
@@ -109,10 +109,11 @@ describe('the status of a clock that underproduces, beside its name on the card'
         expect(name.queryByText(REASON_WORDS.belt_gaps)).toBeNull();
     });
 
-    it('of a clock unstable by another route: the chip alone', () => {
-        // a clock whose steady run does not hold, off the setpoint: the rate it misses; at the setpoint: Underproduces, no reason
+    it('of a clock unstable by another route: the chip, with the rate it makes off the setpoint, alone at it', () => {
+        // a clock whose steady run does not hold, below the setpoint: Underproduces, and the rate beside it
         const off = besideName(views, 'takt_batches_observed_swings_4');
-        expect(off.getByText(SUMMARY_COPY.worksOffTarget('180'))).toBeTruthy();
+        expect(off.getByText('Underproduces')).toBeTruthy();
+        expect(off.getByText('makes 180/s of 240/s')).toBeTruthy();
         expect(off.queryByText(REASON_WORDS.belt_gaps)).toBeNull();
         cleanup();
         const atTarget = views.map(view => view.id !== 'takt_batches_observed_swings_4' ? view
