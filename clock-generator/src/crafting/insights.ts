@@ -385,12 +385,13 @@ function unstableInsight(result: BlueprintGenerationResult): ClockInsight {
             + `${check.expected_output_items * as_built.repeat_window_cycles} items over them.`
         : "";
     const offset = as_built?.failed_start_offset;
-    // "underproduces" only where the judged output is below the expected output; a clock above it does not hold either
-    const below = (as_built?.actual_output_items ?? check.actual_output_items) < check.expected_output_items;
+    // by the judged output against the expected output: below, it underproduces; above, it overproduces
+    const judged = as_built?.actual_output_items ?? check.actual_output_items;
     return {
         id: "unstable",
         scope: "clock",
-        title: below ? "This clock underproduces" : "This clock does not hold the setpoint",
+        title: judged < check.expected_output_items ? "This clock underproduces"
+            : judged > check.expected_output_items ? "This clock overproduces" : "This clock does not hold the setpoint",
         what: `Driven only by its enable windows, the build moved ${actual} of ${check.expected_output_items} items `
             + (as_built?.output_basis === "long-run mean" ? "a window cycle on average over a long run" : "in a window cycle")
             + (offset ? ` when the clock started ${offset} ticks later relative to the machines` : "") + `.${repeats}`,
