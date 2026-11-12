@@ -18,7 +18,7 @@ import { HandTrait, inserterHand } from "./hand";
 import { InputLimitsTrait, machineInputLimits } from "./input-limits";
 import { beltLanesOfFacts, LaneTrait } from "./lane";
 import { LaneFactsOfBuild, laneFactsOf } from "./lane-facts";
-import { CarriedItemsOf, laneRolesOf } from "./lane-role";
+import { CarriedItemsOf, LaneRolesOfBuild, laneRolesOf } from "./lane-role";
 import { LoopTrait, machineLoop } from "./loop";
 import { machineOutputBlock, OutputBlockTrait } from "./output-block";
 import { drillPlacement, machinePlacement, PlacementTarget, PlacementTrait } from "./placement";
@@ -235,9 +235,30 @@ export function carriedItemsOf(config: Config, view: InserterEndView = endsOf(co
     return index => carried[index] ?? new Set();
 }
 
+/**
+ * The roles of the lanes of a config, worked out once for each set of the fields they depend on: the belts' items, the
+ * machines, chests and drills, and each inserter's ends and filters. A search asks for the lane facts of thousands of
+ * trial configs that differ in other fields only (5,392 to 11,679 calls a generation of the three largest samples, on
+ * one such set), and working out what the inserters carry builds every machine's traits. At most 256 sets are kept.
+ */
+const roles_by_fields = new Map<string, LaneRolesOfBuild>();
+function laneRolesOfConfig(config: Config): LaneRolesOfBuild {
+    const key = JSON.stringify([
+        config.belts.map(belt => [belt.id, (belt.lanes as readonly { ingredient: string }[]).map(lane => lane.ingredient)]),
+        config.machines, config.chests ?? null, config.drills ?? null,
+        config.inserters.map(inserter => [inserter.source.type, inserter.source.id, inserter.sink.type, inserter.sink.id, inserter.filters ?? null]),
+    ]);
+    const kept = roles_by_fields.get(key);
+    if (kept !== undefined) return kept;
+    const roles = laneRolesOf(config, carriedItemsOf(config));
+    if (roles_by_fields.size >= 256) roles_by_fields.clear();
+    roles_by_fields.set(key, roles);
+    return roles;
+}
+
 /** The facts of the lanes of a config (laneFactsOf), each with its role from what the inserters carry (laneRolesOf) */
 export function laneFactsOfConfig(config: Config): LaneFactsOfBuild {
-    return laneFactsOf(config, laneRolesOf(config, carriedItemsOf(config)));
+    return laneFactsOf(config, laneRolesOfConfig(config));
 }
 
 /**
