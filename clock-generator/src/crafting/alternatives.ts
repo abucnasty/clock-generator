@@ -10,8 +10,6 @@ import { Entity, EntityId } from "../entities";
 import { FactorioBlueprint } from "../blueprints/blueprint";
 import { withNetwork } from "./inserter-counters";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
-import { laneFactsOfConfig } from "../entities/traits/build-traits";
-import { everyInputLaneIsDeadEnd } from "../entities/traits/lane-ends";
 import { decimalOf } from "../entities/traits/ratio";
 import { machinesInOrder, traitsOf } from "../entities/traits/traits-of";
 import { Logger, defaultLogger } from "../common/logger";
@@ -1724,7 +1722,6 @@ export function whyNotStableOf(
         as_built: alternative.result.stability_check.as_built, expected_output_items: alternative.result.stability_check.expected_output_items }));
     return whyNotStable(clocks, selected_index, {
         target_items_per_second: config.setpoint.items_per_second,
-        backed_up_belts: everyInputLaneIsDeadEnd(config, laneFactsOfConfig(config)),
         not_made,
         entity_names: entityNamesInSentence(config),
     });

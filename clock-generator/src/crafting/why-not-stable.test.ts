@@ -31,9 +31,7 @@ function noRecovery(broken_by: string[], other_phases: string[] = [], overrides:
     });
 }
 
-const moving: WhyNotStableBuild = { target_items_per_second: 7.5, backed_up_belts: false, not_made: [] };
-
-const BACKED_UP_ADVICE = " If the input belts back up at their pickups, answer Backed up for the belts and generate again: a clock may hold then.";
+const moving: WhyNotStableBuild = { target_items_per_second: 7.5, not_made: [] };
 
 describe("why the selected clock does not meet goal 1", () => {
     it("is not said of a clock that meets it", () => {
@@ -55,10 +53,10 @@ describe("why the selected clock does not meet goal 1", () => {
             message: "The recommended clock (Takt Batches: 1 output swing each output cycle) is made for a moving belt. It holds the setpoint from the "
                 + "modeled start, but not when the lanes reach inserter 2 in another phase: from such a start it moves 880 of 1056 "
                 + "items over 6 window cycles. In the game a belt's lanes reach the pickups in whatever phase they happen to have, so the "
-                + `build can fall short.${BACKED_UP_ADVICE}`,
+                + "build can fall short.",
         });
-        // a config that already says its belts are backed up is not told to say so
-        expect(whyNotStable([unstable], 0, { ...moving, backed_up_belts: true })?.message).not.toContain("answer Backed up");
+        // no advice about an answer for the belts of the whole build
+        expect(whyNotStable([unstable], 0, moving)?.message).not.toMatch(/Backed up|generate again/);
         // without the as-built output the shortfall is left out; a failure of one window cycle is told per window cycle
         expect(whyNotStable([{ ...unstable, as_built_output: undefined }], 0, moving)?.message).toContain("in another phase. In the game");
         expect(whyNotStable([{ ...unstable, as_built_output: { items: 160 }, failed_pickup_phases: { "inserter:2": [1, 5], "inserter:4": [0, 0] } }], 0, moving)?.message)
@@ -98,7 +96,7 @@ describe("why the selected clock does not meet goal 1", () => {
             message: "The recommended clock (Time-Study Windows: 3 output swings each output cycle) is made for a moving belt. It holds the setpoint "
                 + "from the modeled start and goes back to it by itself from there after every supply stop and output blockage, but not when the lanes come back in "
                 + "another phase after accumulator stops arriving, or after electromagnetic science pack is not taken away. In the "
-                + `game a belt's lanes reach the pickups in whatever phase they happen to have, so the build can fall short.${BACKED_UP_ADVICE}`,
+                + "game a belt's lanes reach the pickups in whatever phase they happen to have, so the build can fall short.",
         });
     });
 
@@ -166,14 +164,14 @@ describe("why the selected clock does not meet goal 1", () => {
         const short = clock({ label: "Takt Batches: 1 output swing each output cycle", verdict: "unstable", meets_target_rate: false,
             assessment: { holds: false, items_per_second: 30.363636, disturbance_trial: null } });
         expect(whyNotStable([clock({ verdict: "unstable", meets_target_rate: false, assessment: { holds: false, items_per_second: 20, disturbance_trial: null } }), short],
-            1, { target_items_per_second: 40, backed_up_belts: true, not_made })).toEqual({
+            1, { target_items_per_second: 40, not_made })).toEqual({
             cause: "nothing holds",
             message: "No clock holds the setpoint of 40 a second. The closest, Takt Batches: 1 output swing each output cycle, moves 30.36 a second, 9.64 "
                 + "under the target. Not made: Time-Division Windows (only made where every inserter takes from a machine or a chest; "
                 + "inserter 6 takes from a belt); Phase-Shifted Batch (no Phase-Shifted Batch passes the clock-only check).",
         });
         const over = { ...short, assessment: { ...short.assessment, items_per_second: 126.09375 } };
-        expect(whyNotStable([over], 0, { target_items_per_second: 120, backed_up_belts: false, not_made: [] })?.message)
+        expect(whyNotStable([over], 0, { target_items_per_second: 120, not_made: [] })?.message)
             .toBe("No clock holds the setpoint of 120 a second. The closest, Takt Batches: 1 output swing each output cycle, moves 126.09 a second, 6.09 over the target.");
     });
 
@@ -199,7 +197,7 @@ describe("why the selected clock does not meet goal 1", () => {
     it("is nothing holds for a stable clock over the target, selected before nearer ones, with how far over it runs", () => {
         const over = clock({ label: "Time-Study Windows: 6 output swings each output cycle", meets_target_rate: false, stable_above_target: true,
             assessment: { holds: true, items_per_second: 82.286, disturbance_trial: { survives: true, broken_by: [], broken_at_other_lane_phases: [] } } });
-        expect(whyNotStable([over], 0, { target_items_per_second: 80.41875, backed_up_belts: false, not_made: [] })).toEqual({
+        expect(whyNotStable([over], 0, { target_items_per_second: 80.41875, not_made: [] })).toEqual({
             cause: "nothing holds",
             message: "No clock holds the setpoint of 80.42 a second. The recommended one, Time-Study Windows: 6 output swings each output cycle, is "
                 + "stable and moves 82.29 a second, 1.87 (2.32%) over the target: a stable clock over the target is picked before a clock "
@@ -214,7 +212,7 @@ const chest1: FullOutputChest = { chest_id: 1, chest_type: ChestType.BUFFER_CHES
 describe("an output chest that fills up", () => {
     const full = (chests: FullOutputChest[], overrides: Partial<WhyNotStableClock> = {}) => clock({ verdict: "unstable", meets_target_rate: false,
         assessment: { holds: false, items_per_second: 0, disturbance_trial: null }, full_output_chests: chests, ...overrides });
-    const build: WhyNotStableBuild = { target_items_per_second: 48, backed_up_belts: false, not_made: [{ id: "even-hands", label: "Time-Division Windows", reason: "not made." }] };
+    const build: WhyNotStableBuild = { target_items_per_second: 48, not_made: [{ id: "even-hands", label: "Time-Division Windows", reason: "not made." }] };
 
     it("is told as the cause, with the chest as the form names it, its numbers with thousands separators and the clocks not made", () => {
         expect(whyNotStable([full([chest1])], 0, build)).toEqual({
@@ -264,7 +262,7 @@ const circuits: ExportShortfall = { belt_id: 2, item: "electronic-circuit", item
 describe("an export belt that gets less than it is taken off at", () => {
     const short = (shortfalls: ExportShortfall[], overrides: Partial<WhyNotStableClock> = {}) => clock({ verdict: "unstable", meets_target_rate: false,
         assessment: { holds: false, items_per_second: 80, disturbance_trial: null }, export_shortfalls: shortfalls, ...overrides });
-    const build: WhyNotStableBuild = { target_items_per_second: 80, backed_up_belts: false, not_made: [] };
+    const build: WhyNotStableBuild = { target_items_per_second: 80, not_made: [] };
 
     it("is told as the cause, with the belt, the item and both rates", () => {
         expect(whyNotStable([short([circuits])], 0, build)).toEqual({
@@ -332,7 +330,7 @@ describe("what the summary reads of a clock", () => {
 });
 
 describe("results that are not all taken out of the container a machine places them into", () => {
-    const build: WhyNotStableBuild = { target_items_per_second: 2, backed_up_belts: false, not_made: [] };
+    const build: WhyNotStableBuild = { target_items_per_second: 2, not_made: [] };
     const taken = (overrides: Partial<WhyNotStableClock> = {}) => clock({ label: "Exhaust: 12 hands brought in each output cycle", verdict: "unstable",
         meets_target_rate: false, assessment: { holds: false, items_per_second: 2, disturbance_trial: null },
         results_taken: [{ machine_id: "machine:1", machine_name: "recycler that makes scrap recycling", waiting_ticks: 240, takers: [

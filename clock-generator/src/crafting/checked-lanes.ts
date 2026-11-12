@@ -455,8 +455,9 @@ function causeOf(input: { config: Config; build: BuildToName; losses: readonly S
     const kind = lane_losses.length > 0 ? "lane" as const : "join" as const;
     const ran = input.lanes.map(key => { const [belt_id, lane] = key.split("/").map(Number); return { belt_id, lane }; });
     const changes = (other: string | null): SharedLaneCause["changes"] => {
+        // at a full join the copies are fewer on the output belt as well as on the lanes they take from: the lanes are not named
         const fewer_text = fewer?.copies === null || fewer?.copies === undefined ? null
-            : `With ${figure(fewer.copies)} ${fewer.copies === 1 ? "copy" : "copies"} on ${lanesNamed(ran, config, build)}, every copy makes every swing.`;
+            : `With ${figure(fewer.copies)} ${fewer.copies === 1 ? "copy" : "copies"}${kind === "join" ? "" : ` on ${lanesNamed(ran, config, build)}`}, every copy makes every swing.`;
         return fewer_text === null && other === null ? null : { text: [fewer_text, other].filter(it => it !== null).join(" "),
             data: { fewer_copies: fewer?.copies ?? null, other_clock: null } };
     };
