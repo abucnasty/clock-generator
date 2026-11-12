@@ -158,13 +158,13 @@ export function insightsShown(clock: Pick<ClockAlternativeView, 'insights' | 'ch
     return notChecked.size === 0 ? clock.insights : clock.insights.filter(insight => !notChecked.has(insight.id));
 }
 
-/** Whether the note on why no clock is stable is of the recommended clock's loss on a shared lane, whose parts it then shows */
+/** Whether the note on why no clock is stable is of the recommended clock's loss on a shared lane, whose count line it then shows */
 export const whyNotStableShowsCause = (why: Pick<WhyNotStable, 'cause'> | null | undefined, recommended: Pick<ClockAlternativeView, 'checkedLanes'> | undefined) =>
     (why?.cause === 'shared lane short' || why?.cause === 'join full') && Boolean(recommended?.checkedLanes?.cause);
 
 /**
  * The first sentence of what a saved run assumed: "Made for 9 copies of your build." for a clock kept before the engine gave
- * the build's lanes (a clock that gives them says it in the card, with what was checked); no word of the belts either way
+ * the build's lanes (a clock that gives them says it in the card, and what was checked on its Diagnostics); no word of the belts either way
  */
 export function madeForLead(saved: Pick<Config, 'setpoint'> | null, clock: Pick<ClockAlternativeView, 'assumptions'>): string {
     if (saved === null) return 'These results are for a saved build whose metadata is unavailable.';

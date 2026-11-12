@@ -1,9 +1,9 @@
 // @vitest-environment happy-dom
 import { cleanup, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { ClockAlternativeView } from '../worker/types';
 import { show } from '../test/fixtures';
-import { AUTOMATION_240, checkedOf, ELECTROMAGNETIC_330_TWO_SWINGS, viewsOf } from '../test/checkedLanesFixtures';
+import { AUTOMATION_240, checkedOf, ELECTROMAGNETIC_330_TWO_SWINGS, MILITARY_240, viewsOf } from '../test/checkedLanesFixtures';
 import { REASON_WORDS, SUMMARY_COPY } from '../utils/clockSummary';
 import { strategyNameOf } from '../utils/strategyNames';
 import { ResultSummaryCard } from './ResultSummaryCard';
@@ -22,19 +22,22 @@ const keptBefore = (view: ClockAlternativeView): ClockAlternativeView => {
 describe('the card of a clock', () => {
     const views = viewsOf(AUTOMATION_240);
 
-    it('says what was checked on the shared lanes, without opening "How this was checked"', () => {
-        const { container } = card(views, AUTOMATION_240.selected_index);
-        const checked = container.querySelector('[data-checked-lanes]')!;
-        expect(checked.closest('details')).toBeNull();
-        expect(checked.textContent).toContain('Made for 9 copies of your build.');
-        expect(checked.textContent).toContain(checkedOf(AUTOMATION_240, 'time_study_windows').line.sentence);
-        expect(screen.getByRole('button', { name: 'What was checked' })).toBeTruthy();
+    it('says what it is made for, without opening "How this was checked"; what was checked on the lanes is on Diagnostics', () => {
+        const { container } = card(views, AUTOMATION_240.selected_index, { onShowDiagnostics: () => {} });
+        const madeFor = container.querySelector('[data-made-for]')!;
+        expect(madeFor.closest('details')).toBeNull();
+        expect(madeFor.textContent).toBe('Made for 9 copies of your build.');
+        expect(container.textContent).not.toContain(checkedOf(AUTOMATION_240, 'time_study_windows').line.sentence);
+        expect(screen.queryByRole('button', { name: 'What was checked' })).toBeNull();
+        expect(screen.queryByRole('table')).toBeNull();
+        // a stable clock with no cause and no note: no link
+        expect(screen.queryByRole('button', { name: 'See diagnostics' })).toBeNull();
     });
 
     it('kept before the engine gave the lanes opens as it did: no line, no table, no error', () => {
         const { container } = card(views.map(keptBefore), AUTOMATION_240.selected_index);
         expect(container.querySelector('[data-result-card]')).not.toBeNull();
-        expect(container.querySelector('[data-checked-lanes]')).toBeNull();
+        expect(container.querySelector('[data-made-for]')).toBeNull();
         expect(screen.queryByRole('button', { name: 'What was checked' })).toBeNull();
         expect(screen.queryByRole('table')).toBeNull();
         expect(container.textContent).not.toContain('Made for 9 copies of your build.');
@@ -46,26 +49,27 @@ describe('the note on why no clock is stable, of the recommended clock\'s loss o
     const views = viewsOf(result);
     const cause = views[result.selected_index].checkedLanes!.cause!;
     const parts = [cause.headline.text, cause.cause!.text, cause.spacing!.text, cause.where.text, cause.alone.text, cause.changes!.text];
-    const occurrences = (text: string, part: string) => text.split(part).length - 1;
 
-    it('keeps its title and shows the pictures and the parts as text in place of its message; the card below shows the table only', () => {
-        const { container } = card(views, result.selected_index, { recommendedIndex: result.selected_index, whyNotStable: result.why_not_stable });
-        const alert = container.querySelector('[data-why-not-stable]')!;
-        expect(alert.textContent).toContain('Why no clock is stable: a copy gets too few items from a shared lane');
-        expect(alert.textContent).not.toContain(result.why_not_stable!.message);
+    it('keeps its title and the count line in place of its message, and no link; the pictures and the other parts are not on the card', () => {
+        const { container } = card(views, result.selected_index, { recommendedIndex: result.selected_index, whyNotStable: result.why_not_stable, onShowDiagnostics: () => {} });
+        const alert = container.querySelector<HTMLElement>('[data-why-not-stable]')!;
+        expect(alert.textContent).toBe('Why no clock is stable: a copy gets too few items from a shared lane' + cause.headline.text);
+        expect(within(alert).queryByRole('button')).toBeNull();
         const text = container.textContent!;
-        // each part once on the card, in the note
-        for (const part of parts) {
-            expect(occurrences(text, part)).toBe(1);
-            expect(alert.textContent).toContain(part);
-        }
-        // the pictures stand in the note, not in the card below it
-        expect([...alert.querySelectorAll('[data-picture]')].map(it => it.getAttribute('data-picture'))).toEqual(['copies', 'window-cycles']);
-        expect(container.querySelectorAll('[data-picture]')).toHaveLength(2);
-        // the loss note and the why-not-stable sentence of the same loss are not beside the parts
+        for (const part of parts.slice(1)) expect(text).not.toContain(part);
+        expect(container.querySelectorAll('[data-picture], [data-other-clock], [data-read-as-text]')).toHaveLength(0);
+        expect(text).not.toContain(result.why_not_stable!.message);
         expect(text).not.toContain(views[result.selected_index].sharedLaneLossNote!);
-        expect(text).not.toContain('holds the setpoint on one copy, but not on a lane its copies share');
-        expect(screen.getByRole('table', { name: 'Shared lanes' })).toBeTruthy();
+        expect(screen.queryByRole('table')).toBeNull();
+        // the card's own link, on the selected clock's row
+        expect(container.querySelectorAll('[data-see-diagnostics]')).toHaveLength(1);
+        expect(alert.querySelector('[data-see-diagnostics]')).toBeNull();
+    });
+
+    it('keeps the recommended clock\'s count line while another clock is selected', () => {
+        const other = views.findIndex((_, index) => index !== result.selected_index);
+        const { container } = card(views, other, { recommendedIndex: result.selected_index, whyNotStable: result.why_not_stable });
+        expect(container.querySelector('[data-why-not-stable] [data-cause-headline]')!.textContent).toBe(cause.headline.text);
     });
 
     it('shows its message as it is where the recommended clock has no cause', () => {
@@ -75,19 +79,62 @@ describe('the note on why no clock is stable, of the recommended clock\'s loss o
     });
 });
 
-describe('the three clocks of automation science 240 say nothing twice', () => {
+describe('the card holds nothing of what Diagnostics shows', () => {
     const views = viewsOf(AUTOMATION_240);
-    it.each(['time_study_windows', 'euclidean_swings', 'takt_batches_observed'])('%s: no loss note and no why-not-stable sentence beside the parts', id => {
-        const index = views.findIndex(view => view.id === id);
-        const { container } = card(views, index);
-        const text = container.textContent!;
-        const note = views[index].sharedLaneLossNote;
-        if (note !== undefined) expect(text).not.toContain(note);
-        expect(text).not.toMatch(/It is not stable on (a lane its copies share|its output belt)\.|holds the setpoint on one copy, but not/);
-        const cause = views[index].checkedLanes!.cause;
-        if (cause) for (const part of [cause.headline.text, cause.where.text, cause.alone.text]) expect(occurrences(text, part)).toBe(1);
+    const one = { ...views[AUTOMATION_240.selected_index], copies: 1, checkedLanes: undefined };
+    const withoutPart = views.map(view => {
+        if (view.id !== 'euclidean_swings') return view;
+        const { swings: _swings, ...cause } = view.checkedLanes!.cause!;
+        void _swings;
+        return { ...view, checkedLanes: { ...view.checkedLanes!, cause } };
     });
-    const occurrences = (text: string, part: string) => text.split(part).length - 1;
+    it.each([
+        ['a lane cause', views, 'euclidean_swings', 9],
+        ['a join cause', views, 'takt_batches_observed', 9],
+        ['a cause with no cause part', withoutPart, 'euclidean_swings', 9],
+        ['no cause', views, 'time_study_windows', 9],
+        ['a note on why it is not stable', views, 'takt_batches_observed_swings_4', 9],
+        ['a build of one copy', [one], 'time_study_windows', 1],
+    ] as const)('%s: the made-for line, the chip as before; no headline, picture, line, table or note', (_, alternatives, id, copies) => {
+        const list = alternatives as ClockAlternativeView[];
+        const index = list.findIndex(view => view.id === id);
+        const { container } = card(list, index, { onShowDiagnostics: () => {} });
+        const clock = list[index];
+        const text = container.textContent!;
+        expect(container.querySelector('[data-made-for]')!.textContent).toBe(`Made for ${copies} ${copies === 1 ? 'copy' : 'copies'} of your build.`);
+        expect(container.querySelector('[data-cause-headline], [data-picture], [data-checked-line], [data-read-as-text], [data-other-clock], [data-insight]')).toBeNull();
+        expect(screen.queryByRole('table')).toBeNull();
+        expect(screen.queryByRole('button', { name: 'What was checked' })).toBeNull();
+        if (clock.checkedLanes) expect(text).not.toContain(clock.checkedLanes.line.sentence);
+        if (clock.checkedLanes?.cause) expect(text).not.toContain(clock.checkedLanes.cause.headline.text);
+        if (clock.sharedLaneLossNote !== undefined) expect(text).not.toContain(clock.sharedLaneLossNote);
+        expect(text).not.toContain('A build of one copy shares no lane.');
+        expect(text).not.toContain('This clock underproduces');
+    });
+});
+
+describe('the card\'s link to the Diagnostics tab', () => {
+    const views = viewsOf(AUTOMATION_240);
+    const military = viewsOf(MILITARY_240);
+    it.each([
+        ['a cause on a shared lane', views, 'euclidean_swings', true],
+        ['a cause at a full join', views, 'takt_batches_observed', true],
+        ['the note on why it is not stable', military, 'takt_batches_observed_swings_4', true],
+        ['no cause and no note, no recovery', views, 'pitch_pickups', false],
+        ['no cause and no note, stable', views, 'time_study_windows', false],
+    ] as const)('on a clock with %s: %s', async (_, alternatives, id, shown) => {
+        const onShowDiagnostics = vi.fn();
+        const list = alternatives as ClockAlternativeView[];
+        const index = list.findIndex(view => view.id === id);
+        const { user } = card(list, index, { onShowDiagnostics, recommendedIndex: null });
+        const link = screen.queryByRole('button', { name: 'See diagnostics' });
+        expect(link !== null).toBe(shown);
+        if (!link) return;
+        // in the row of the name and the chip
+        expect(screen.getByRole('heading', { level: 3, name: strategyNameOf(list[index]) }).parentElement!.contains(link)).toBe(true);
+        await user.click(link);
+        expect(onShowDiagnostics).toHaveBeenCalledTimes(1);
+    });
 });
 
 describe('the status of a clock that underproduces, beside its name on the card', () => {

@@ -1,6 +1,6 @@
 import { ExpandMore } from '@mui/icons-material';
 import { Alert, Box, Button, Collapse, MenuItem, Paper, TextField, Typography } from '@mui/material';
-import { useId, useLayoutEffect, useMemo, useRef } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Config, NotMadeClock } from 'clock-generator/browser';
 import type { ResultDetail } from '../utils/resultsView';
 import type { BuildViewContext, TimelineViewContext } from '../utils/buildViewContext';
@@ -32,7 +32,9 @@ import { beltValue, wakeUpsText } from '../utils/clockSummary';
 import { fullClockName } from '../utils/strategyNames';
 import { rateWarningOf } from '../utils/rateWarning';
 import { whyNotStableOf } from '../utils/whyNotStable';
-import { insightsShown, madeForLead } from '../utils/checkedLanes';
+import { madeForLead } from '../utils/checkedLanes';
+import { DIAGNOSTICS_COPY, notesOf } from '../utils/diagnostics';
+import { tabIds } from '../utils/tabIds';
 import type { GeneratedFor } from '../utils/resultsStaleness';
 import type { PickRule } from '../utils/recommendedClock';
 import { deeperSearchNoticeOf } from '../utils/deeperSearch';
@@ -150,6 +152,21 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
         captureWorkspacePosition(props.recommendedIndex === null ? undefined : props.alternatives[props.recommendedIndex]);
         props.onCardBackToRecommended();
     };
+    // the card's "See diagnostics": the Diagnostics tab of the clock, the workspace brought into view, the focus on the tab's panel
+    const [diagnosticsAsked, setDiagnosticsAsked] = useState(0);
+    const showDiagnostics = () => {
+        props.onDetailChange('diagnostics');
+        setDiagnosticsAsked(asked => asked + 1);
+    };
+    useEffect(() => {
+        if (diagnosticsAsked === 0) return;
+        workspaceRef.current?.scrollIntoView?.({ block: 'start' });
+        document.getElementById(tabIds('result-context', 'diagnostics').panel)?.focus({ preventScroll: true });
+    }, [diagnosticsAsked]);
+    const selectClockById = (id: string) => {
+        const index = props.alternatives.findIndex(clock => clock.id === id);
+        if (index >= 0) selectClock(index);
+    };
     useLayoutEffect(() => {
         const anchor = selectionAnchor.current;
         selectionAnchor.current = null;
@@ -206,7 +223,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 selectedIndex={props.selectedIndex}
                 recommendedIndex={props.recommendedIndex}
                 onSelectRecommended={selectRecommended}
-                onSelectClock={selectClock}
+                onShowDiagnostics={showDiagnostics}
                 isGenerating={props.isRunning}
                 stoppedEarly={props.stoppedEarly}
                 rateWarning={rateWarning}
@@ -257,8 +274,9 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                     />
                 </Collapse>
 
-                {selected && <Box ref={workspaceRef}>
-                    <SelectedClockContext selected={selected} detail={props.detail} onDetailChange={props.onDetailChange}
+                {/* brought into view below the sticky header */}
+                {selected && <Box ref={workspaceRef} sx={{ scrollMarginTop: 'calc(var(--app-header-height, 0px) + 8px)' }}>
+                    <SelectedClockContext selected={selected} detail={props.detail} onDetailChange={props.onDetailChange} onSelectClock={selectClockById}
                         generation={props.generationAssumptions}
                         clockSelector={selectableClocks.length > 1 && <TextField select
                             label={selected.verdict !== 'stable' ? 'Clock · Not stable' : props.selectedIndex === props.recommendedIndex ? 'Clock · Recommended' : 'Clock'} size="small"
@@ -284,7 +302,8 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                         }}
                         assumptions={saved?.inserters ? <InserterAssumptions inserters={saved.inserters} detailed /> : <Typography variant="body2">Saved inserter metadata unavailable.</Typography>}>
                         <DetailsPanel
-                            insights={insightsShown(selected)}
+                            insights={notesOf(selected).overview}
+                            nothing={notesOf(selected).diagnostics ? DIAGNOSTICS_COPY.overviewNothing : undefined}
                             shiftOptions={props.shiftOptions}
                             swingBackoffReport={props.swingBackoffReport}
                             fuelView={props.fuelView}

@@ -11,6 +11,9 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ## [Unreleased]
 
+### Added
+- ui: a Diagnostics tab shows the selected clock's shared lanes and why it is not stable
+
 ### Removed
 - ui: the Never on override is removed; older files and links load with Auto
 - ui: the input belts setting is removed; older builds load with their input lane ends stated

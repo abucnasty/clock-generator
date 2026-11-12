@@ -38,6 +38,8 @@ interface InsightsPanelProps {
     insights: ClockInsight[];
     /** Insights drawn by the page itself (a chart, a report), listed with the selected clock's */
     children?: ReactNode;
+    /** What the clock's notes say when it has none here; "Nothing stands out" when not given */
+    nothing?: string;
 }
 
 function Part({ label, children }: { label: string; children: ReactNode }) {
@@ -52,12 +54,12 @@ function Part({ label, children }: { label: string; children: ReactNode }) {
 }
 
 /** One finding: its title, what it is in a sentence, and the reasons behind "Why?", with its chart or table */
-function InsightCard({ insight }: { insight: ClockInsight }) {
+export function InsightCard({ insight, level = 4 }: { insight: ClockInsight; level?: 3 | 4 }) {
     const { nameIdsIn } = useGameNames();
     const [open, setOpen] = useBuildSection(`insight:${insight.id}`);
     const reasonsId = useId();
     return (
-        <Panel title={nameIdsIn(insight.title)} level={4}>
+        <Panel title={nameIdsIn(insight.title)} level={level} data-insight={insight.id}>
             <Part label={INSIGHTS_COPY.what}>
                 <Typography variant="body2">{nameIdsIn(insight.what)}</Typography>
                 <Button
@@ -112,7 +114,7 @@ function InsightTable({ table, title }: { table: NonNullable<ClockInsight['table
  * What the simulation found: what is particular to the selected clock, each finding in a sentence with its reasons
  * behind "Why?"; then, folded away, what holds for the build whichever clock is picked.
  */
-export function InsightsPanel({ insights, children }: InsightsPanelProps) {
+export function InsightsPanel({ insights, children, nothing = INSIGHTS_COPY.nothing }: InsightsPanelProps) {
     const [buildOpen, setBuildOpen] = useBuildSection('insights-build');
     const build = insights.filter(insight => insight.scope === 'build');
     const clock = insights.filter(insight => insight.scope === 'clock');
@@ -127,7 +129,7 @@ export function InsightsPanel({ insights, children }: InsightsPanelProps) {
                 {clock.map(insight => <InsightCard key={insight.id} insight={insight} />)}
                 {children}
                 {clock.length === 0 && !children && (
-                    <Typography variant="body2" color="text.secondary">{INSIGHTS_COPY.nothing}</Typography>
+                    <Typography variant="body2" color="text.secondary">{nothing}</Typography>
                 )}
             </Panel>
 

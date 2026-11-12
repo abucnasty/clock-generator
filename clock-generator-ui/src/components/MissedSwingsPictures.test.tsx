@@ -5,7 +5,7 @@ import type { CheckedLanes, SharedLaneCause } from 'clock-generator/browser';
 import { names, show } from '../test/fixtures';
 import { AUTOMATION_240, CAUSES, checkedOf, viewOf } from '../test/checkedLanesFixtures';
 import { CAUSE_WORDS, MISSED_SWINGS_COPY } from '../utils/missedSwings';
-import { CheckedLanesSummary, SharedLaneCauseParts } from './CheckedLanesView';
+import { LaneDiagnostics, SharedLaneCauseParts } from './CheckedLanesView';
 
 const gameNames = names({ 'iron-gear-wheel': 'Iron gear wheel', 'copper-plate': 'Copper plate', 'automation-science-pack': 'Automation science pack' });
 
@@ -24,7 +24,7 @@ const textParts = (cause: SharedLaneCause) => [cause.cause?.text, cause.spacing?
 describe('the pictures in place of the sentences of a cause', () => {
     it.each(['euclidean_swings', 'takt_batches_observed'])('%s: the sentences are not seen beside the pictures, and "Read this as text" holds them all', id => {
         const cause = checkedOf(AUTOMATION_240, id).cause!;
-        const { container } = show(<CheckedLanesSummary clock={viewOf(AUTOMATION_240, id)} />, { names: gameNames });
+        const { container } = show(<LaneDiagnostics clock={viewOf(AUTOMATION_240, id)} />, { names: gameNames });
         const closed = visibleText(container);
         for (const part of textParts(cause)) expect(closed).not.toContain(part);
         expect(closed).toContain(cause.headline.text);
@@ -38,7 +38,7 @@ describe('the pictures in place of the sentences of a cause', () => {
     });
 
     it.each(['euclidean_swings', 'takt_batches_observed'])('%s: in order the headline, the two pictures, the other clock, "Read this as text", then the table', id => {
-        const { container } = show(<CheckedLanesSummary clock={viewOf(AUTOMATION_240, id)} />, { names: gameNames });
+        const { container } = show(<LaneDiagnostics clock={viewOf(AUTOMATION_240, id)} />, { names: gameNames });
         const text = visibleText(container);
         const cause = checkedOf(AUTOMATION_240, id).cause!;
         const places = [cause.headline.text, MISSED_SWINGS_COPY.pictureOne, 'window cycles of', 'Another clock of this build', MISSED_SWINGS_COPY.readAsText, 'Shared lanes']
@@ -49,7 +49,7 @@ describe('the pictures in place of the sentences of a cause', () => {
 
     it.each(['euclidean_swings', 'takt_batches_observed'])('%s: each picture is an image for a screen reader with the sentences it stands for', id => {
         const cause = checkedOf(AUTOMATION_240, id).cause!;
-        show(<CheckedLanesSummary clock={viewOf(AUTOMATION_240, id)} />, { names: gameNames });
+        show(<LaneDiagnostics clock={viewOf(AUTOMATION_240, id)} />, { names: gameNames });
         const images = screen.getAllByRole('img').filter(it => it.hasAttribute('data-picture'));
         expect(images.map(it => it.getAttribute('data-picture'))).toEqual(['copies', 'window-cycles']);
         const labels = images.map(it => it.getAttribute('aria-label')!).join(' ');
@@ -57,7 +57,7 @@ describe('the pictures in place of the sentences of a cause', () => {
     });
 
     it('on the 72-tick clock: the chips of the copies, the 8 copies that hold, and six marked window cycles with their words', () => {
-        const { container } = show(<CheckedLanesSummary clock={viewOf(AUTOMATION_240, 'euclidean_swings')} />, { names: gameNames });
+        const { container } = show(<LaneDiagnostics clock={viewOf(AUTOMATION_240, 'euclidean_swings')} />, { names: gameNames });
         const chips = [...container.querySelectorAll('[data-picture="copies"] [data-chip]')].map(it => it.getAttribute('data-chip'));
         expect(chips.slice(0, 9)).toEqual(['0', '6', '0', '0', '0', '0', '0', '0', '0']);
         expect(chips.slice(9, 18)).toEqual([...Array(8).fill('0'), 'absent']);
@@ -79,7 +79,7 @@ describe('the pictures in place of the sentences of a cause', () => {
     });
 
     it('on the 216-tick clock: the join\'s caption with its hint, 42 marked window cycles a copy, and the 3 copies that hold', () => {
-        const { container } = show(<CheckedLanesSummary clock={viewOf(AUTOMATION_240, 'takt_batches_observed')} />, { names: gameNames });
+        const { container } = show(<LaneDiagnostics clock={viewOf(AUTOMATION_240, 'takt_batches_observed')} />, { names: gameNames });
         expect(container.textContent).toContain('The side-loaded belts of copies 4 and 8 are full where they join the output belt. '
             + 'Usually the side-loaded belt is too short, or items from an upstream copy are passing on the output belt.');
         expect(container.textContent).toContain(MISSED_SWINGS_COPY.entryOfInputLanes);

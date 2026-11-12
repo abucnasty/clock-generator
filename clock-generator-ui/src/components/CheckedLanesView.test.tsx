@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest';
 import type { CheckedLanes } from 'clock-generator/browser';
 import { names, show } from '../test/fixtures';
 import { AUTOMATION_240, checkedOf, ELECTROMAGNETIC_330, MILITARY_240, STATES, viewOf } from '../test/checkedLanesFixtures';
-import { CheckedLanesSummary, SharedLanesTable } from './CheckedLanesView';
+import { DIAGNOSTICS_COPY } from '../utils/diagnostics';
+import { LaneDiagnostics, SharedLanesTable } from './CheckedLanesView';
 
 const gameNames = names({ 'iron-gear-wheel': 'Iron gear wheel', 'copper-plate': 'Copper plate', 'automation-science-pack': 'Automation science pack',
     'accumulator': 'Accumulator', 'supercapacitor': 'Supercapacitor', 'military-science-pack': 'Military science pack', 'stone-wall': 'Stone wall',
@@ -21,16 +22,11 @@ const placesIn = (text: string, parts: string[]) => parts.map(part => text.index
 describe('a clock without a cause', () => {
     const stable = checkedOf(AUTOMATION_240, 'time_study_windows');
 
-    it('says what it is made for and the engine\'s line, with the table closed until a click', async () => {
-        const { user, container } = show(<CheckedLanesSummary clock={viewOf(AUTOMATION_240, 'time_study_windows')} />, { names: gameNames });
-        expect(container.textContent).toContain('Made for 9 copies of your build.');
-        expect(container.textContent).toContain(stable.line.sentence);
-        const control = screen.getByRole('button', { name: 'What was checked' });
-        expect(control.getAttribute('aria-expanded')).toBe('false');
-        expect(screen.queryByRole('table')).toBeNull();
-
-        await user.click(control);
-        expect(control.getAttribute('aria-expanded')).toBe('true');
+    it('says the engine\'s line, then the table open: no control, and not what it is made for (the card says it)', () => {
+        const { container } = show(<LaneDiagnostics clock={viewOf(AUTOMATION_240, 'time_study_windows')} />, { names: gameNames });
+        expect(container.textContent).not.toContain('Made for 9 copies of your build.');
+        expect(container.textContent!.indexOf(stable.line.sentence)).toBe(0);
+        expect(screen.queryByRole('button')).toBeNull();
         const table = screen.getByRole('table', { name: 'Shared lanes' });
         expect(within(table).getAllByRole('columnheader').map(it => it.textContent)).toEqual(COLUMNS);
         const rows = bodyRows(table);
@@ -47,19 +43,16 @@ describe('a clock without a cause', () => {
 
     it('that was not run with the copies shows the engine\'s line for it and never "holds"', async () => {
         const notRun = checkedOf(AUTOMATION_240, 'takt_batches_observed_swings_4');
-        const { user, container } = show(<CheckedLanesSummary clock={viewOf(AUTOMATION_240, 'takt_batches_observed_swings_4')} />, { names: gameNames });
+        const { container } = show(<LaneDiagnostics clock={viewOf(AUTOMATION_240, 'takt_batches_observed_swings_4')} />, { names: gameNames });
         expect(container.textContent).toContain(notRun.line.sentence);
-        await user.click(screen.getByRole('button', { name: 'What was checked' }));
         expect(bodyRows(screen.getByRole('table'))).toHaveLength(3);
         expect(container.textContent).not.toMatch(/holds/i);
     });
 
     it('drops into chests: the engine\'s line names the chest, and no output lane has a row', async () => {
         const chests = checkedOf(ELECTROMAGNETIC_330, 'takt_batches_observed');
-        const { user, container } = show(<CheckedLanesSummary clock={viewOf(ELECTROMAGNETIC_330, 'takt_batches_observed')} />, { names: gameNames });
-        expect(container.textContent).toContain('Made for 11 copies of your build.');
+        const { container } = show(<LaneDiagnostics clock={viewOf(ELECTROMAGNETIC_330, 'takt_batches_observed')} />, { names: gameNames });
         expect(container.textContent).toContain(chests.line.sentence);
-        await user.click(screen.getByRole('button', { name: 'What was checked' }));
         const rows = bodyRows(screen.getByRole('table', { name: 'Shared lanes' }));
         expect(rows.map(row => within(row).getAllByRole('cell')[0].textContent)).toEqual(['Input', 'Input']);
         expect(rows.map(row => within(row).getAllByRole('cell')[1].textContent)).toEqual(['Accumulator', 'Supercapacitor']);
@@ -67,9 +60,8 @@ describe('a clock without a cause', () => {
 
     it('drops onto two plain output belts: two rows whose rate fits, each with the engine\'s sentence', async () => {
         const plain = checkedOf(MILITARY_240, 'coordinated_sources');
-        const { user, container } = show(<CheckedLanesSummary clock={viewOf(MILITARY_240, 'coordinated_sources')} />, { names: gameNames });
+        const { container } = show(<LaneDiagnostics clock={viewOf(MILITARY_240, 'coordinated_sources')} />, { names: gameNames });
         expect(container.textContent).toContain(plain.line.sentence);
-        await user.click(screen.getByRole('button', { name: 'What was checked' }));
         const fits = bodyRows(screen.getByRole('table')).filter(row => row.getAttribute('data-lane-state') === 'rate_fits');
         expect(fits.map(row => within(row).getByRole('rowheader').textContent)).toEqual(['Belt 1, lane 1', 'Belt 2, lane 1']);
         for (const [index, row] of fits.entries()) {
@@ -80,11 +72,19 @@ describe('a clock without a cause', () => {
         expect(screen.getByText('6 lanes · 2 by rate only · 4 hold')).toBeTruthy();
     });
 
-    it('of a build of one copy says what it is made for, and has no table', () => {
+    it('of a build of one copy says that it shares no lane, and has no table', () => {
         const one = { ...viewOf(AUTOMATION_240, 'time_study_windows'), copies: 1, checkedLanes: undefined };
-        const { container } = show(<CheckedLanesSummary clock={one} />, { names: gameNames });
-        expect(container.textContent).toBe('Made for 1 copy of your build.');
+        const { container } = show(<LaneDiagnostics clock={one} />, { names: gameNames });
+        expect(container.textContent).toBe('A build of one copy shares no lane.');
         expect(screen.queryByRole('button')).toBeNull();
+        expect(screen.queryByRole('table')).toBeNull();
+    });
+
+    it('of a result kept before the engine checked the shared lanes says so, and has no table', () => {
+        const view = viewOf(AUTOMATION_240, 'time_study_windows');
+        const kept = { ...view, checkedLanes: undefined, assumptions: { ...view.assumptions, lanes: undefined } };
+        const { container } = show(<LaneDiagnostics clock={kept} />, { names: gameNames });
+        expect(container.textContent).toBe(DIAGNOSTICS_COPY.keptBefore);
         expect(screen.queryByRole('table')).toBeNull();
     });
 });
@@ -93,7 +93,7 @@ describe('a clock with a cause', () => {
     it('of 72 ticks shows its headline and pictures, then the table open without a click', () => {
         const short = checkedOf(AUTOMATION_240, 'euclidean_swings');
         const cause = short.cause!;
-        const { container } = show(<CheckedLanesSummary clock={viewOf(AUTOMATION_240, 'euclidean_swings')} />, { names: gameNames });
+        const { container } = show(<LaneDiagnostics clock={viewOf(AUTOMATION_240, 'euclidean_swings')} />, { names: gameNames });
         const text = container.textContent!;
         const parts = [cause.headline.text, 'Missed swings, copy by copy', 'The 65 window cycles of copy 2', 'Read this as text', 'Shared lanes'];
         const places = placesIn(text, parts);
@@ -109,7 +109,7 @@ describe('a clock with a cause', () => {
         const join = checkedOf(AUTOMATION_240, 'takt_batches_observed');
         const cause = join.cause!;
         expect(cause.spacing).toBeNull();
-        const { container } = show(<CheckedLanesSummary clock={viewOf(AUTOMATION_240, 'takt_batches_observed')} />, { names: gameNames });
+        const { container } = show(<LaneDiagnostics clock={viewOf(AUTOMATION_240, 'takt_batches_observed')} />, { names: gameNames });
         const text = container.textContent!;
         expect(text).not.toContain('Travel between copies');
         const places = placesIn(text, [cause.headline.text, 'Missed swings, copy by copy', 'The 63 window cycles of copies 4 and 8', 'Read this as text', 'Shared lanes']);
@@ -139,15 +139,6 @@ describe('on a narrow page', () => {
         expect(within(blocks[2]).getByText('Automation science pack')).toBeTruthy();
         expect(blocks[2].textContent).toContain('Infiniteassumed from its role');
     });
-});
-
-it('leaves the parts and pictures out of the card where the note on why no clock is stable shows them, and keeps the table', () => {
-    const { container } = show(<CheckedLanesSummary clock={viewOf(AUTOMATION_240, 'euclidean_swings')} causeShownAbove />, { names: gameNames });
-    const cause = checkedOf(AUTOMATION_240, 'euclidean_swings').cause!;
-    for (const part of [cause.headline.text, cause.where.text, cause.alone.text]) expect(container.textContent).not.toContain(part);
-    expect(container.querySelector('[data-picture]')).toBeNull();
-    expect(container.textContent).toContain('Made for 9 copies of your build.');
-    expect(screen.getByRole('table', { name: 'Shared lanes' })).toBeTruthy();
 });
 
 describe('every state has its row as the engine gives it', () => {

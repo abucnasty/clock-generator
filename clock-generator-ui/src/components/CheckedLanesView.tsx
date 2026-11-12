@@ -1,12 +1,13 @@
-import { Cancel, CheckCircle, ExpandMore, RemoveCircleOutline, Warning } from '@mui/icons-material';
-import { Box, Button, Collapse, Table, TableBody, TableCell, TableHead, TableRow, Typography, useMediaQuery, useTheme } from '@mui/material';
-import { useId, useState, type ReactNode } from 'react';
+import { Cancel, CheckCircle, RemoveCircleOutline, Warning } from '@mui/icons-material';
+import { Box, Table, TableBody, TableCell, TableHead, TableRow, Typography, useMediaQuery, useTheme } from '@mui/material';
+import { useId, type ReactNode } from 'react';
 import type { BuildLane, CheckedLaneRow, CheckedLanes, SharedLaneCause } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../worker/types';
 import { useGameNames } from '../hooks/useGameNames';
 import {
     CHECKED_LANES_COPY, endText, laneOf, lanesCountText, laneText, roleText, stateSentence, stateTone, supplyText, togetherText, type StateTone,
 } from '../utils/checkedLanes';
+import { lanesShownOf } from '../utils/diagnostics';
 import { MissedSwingsPictures } from './MissedSwingsPictures';
 import { ScrollX } from './ScrollX';
 
@@ -115,9 +116,9 @@ export function SharedLanesTable({ checked, lanes, level, narrow }: SharedLanesT
     </Box>;
 }
 
-/** The headline of a cause: how many swings which copies miss */
-export function CauseHeadline({ cause }: { cause: SharedLaneCause }) {
-    return <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, fontWeight: 600 }} data-cause-headline="">
+/** The headline of a cause: how many swings which copies miss. `level`: a heading of that level, where it heads the cause's parts */
+export function CauseHeadline({ cause, level }: { cause: SharedLaneCause; level?: 3 }) {
+    return <Typography variant="body2" component={level ? `h${level}` : 'p'} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, fontWeight: 600, m: 0 }} data-cause-headline="">
         {TONE_ICON.loss}{cause.headline.text}
     </Typography>;
 }
@@ -136,48 +137,33 @@ interface SharedLaneCausePartsProps {
 export function SharedLaneCauseParts({ checked, lanes, onSelectClock }: SharedLaneCausePartsProps) {
     const cause = checked.cause;
     return <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 1.5, minWidth: 0 }} data-lane-cause={cause.kind}>
-        <CauseHeadline cause={cause} />
+        <CauseHeadline cause={cause} level={3} />
         <MissedSwingsPictures checked={checked} cause={cause} lanes={lanes} onSelectClock={onSelectClock} />
     </Box>;
 }
 
-interface CheckedLanesSummaryProps {
+interface LaneDiagnosticsProps {
     clock: ClockAlternativeView;
     /** Selects the other clock that the cause's line names, by its id */
     onSelectClock?: (id: string) => void;
-    /** The note on why no clock is stable above shows this clock's cause: the parts are not said again here */
-    causeShownAbove?: boolean;
 }
 
 /**
- * What the result says was checked on the lanes the copies of the selected clock's build share. A clock with no cause:
- * "Made for 9 copies of your build.", the engine's line, and "What was checked", which opens the table. A clock with a cause:
- * its headline and pictures in place of the line, then the table, open. A build of one copy: its "Made for 1 copy of your build." alone.
+ * What the Diagnostics tab of the selected clock shows of the lanes its copies share (lanesShownOf). A clock with a cause: its
+ * headline and pictures, then the table. A clock with no cause: the engine's line, then the table. The table is open. A clock
+ * with no checked lanes: one sentence.
  */
-export function CheckedLanesSummary({ clock, causeShownAbove = false, onSelectClock }: CheckedLanesSummaryProps) {
-    const [open, setOpen] = useState(false);
-    const tableId = useId();
-    const checked = clock.checkedLanes;
+export function LaneDiagnostics({ clock, onSelectClock }: LaneDiagnosticsProps) {
     const lanes = clock.assumptions?.lanes;
+    const shown = lanesShownOf(clock);
+    if (shown.kind === 'sentence') return <Typography variant="body2" data-checked-lanes="" data-lanes-sentence="">{shown.text}</Typography>;
     return <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 1 }} data-checked-lanes="">
-        <Typography variant="body2" data-made-for="">{CHECKED_LANES_COPY.madeFor(clock.copies)}</Typography>
-        {checked && (checked.cause ? <>
-            {!causeShownAbove && <SharedLaneCauseParts checked={{ ...checked, cause: checked.cause }} lanes={lanes} onSelectClock={onSelectClock} />}
-            <Box sx={{ borderTop: causeShownAbove ? 0 : 1, borderColor: 'divider', pt: causeShownAbove ? 0 : 1 }}>
-                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600, mb: 0.5 }}>{CHECKED_LANES_COPY.whatWasChecked}</Typography>
-                <SharedLanesTable checked={checked} lanes={lanes} level={4} />
-            </Box>
-        </> : <>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 1.5, rowGap: 0.5 }}>
-                <Typography variant="body2" sx={{ flex: '1 1 320px' }} data-checked-line="">{checked.line.sentence}</Typography>
-                <Button size="small" aria-expanded={open} aria-controls={tableId} onClick={() => setOpen(!open)}
-                    endIcon={<ExpandMore sx={{ transform: open ? 'rotate(180deg)' : 'none' }} />}>
-                    {CHECKED_LANES_COPY.whatWasChecked}
-                </Button>
-            </Box>
-            <Collapse id={tableId} in={open} mountOnEnter unmountOnExit timeout={150}>
-                <SharedLanesTable checked={checked} lanes={lanes} level={4} />
-            </Collapse>
-        </>)}
+        {shown.kind === 'cause'
+            ? <SharedLaneCauseParts checked={shown.checked} lanes={lanes} onSelectClock={onSelectClock} />
+            : <Typography variant="body2" data-checked-line="">{shown.checked.line.sentence}</Typography>}
+        <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 1 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600, mb: 0.5 }}>{CHECKED_LANES_COPY.whatWasChecked}</Typography>
+            <SharedLanesTable checked={shown.checked} lanes={lanes} level={3} />
+        </Box>
     </Box>;
 }

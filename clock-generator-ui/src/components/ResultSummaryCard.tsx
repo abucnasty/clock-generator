@@ -1,5 +1,5 @@
 import { Cancel, CheckCircle, RemoveCircleOutline } from '@mui/icons-material';
-import { Alert, AlertTitle, Box, Button, Typography } from '@mui/material';
+import { Alert, AlertTitle, Box, Button, Link, Typography } from '@mui/material';
 import { useEffect, useRef, type ReactNode, type RefObject } from 'react';
 import type { WhyNotStable } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../worker/types';
@@ -29,8 +29,9 @@ import { REQUIRES_FACTORIO } from '../utils/installSteps';
 import { COLD_START, startCheckSummary } from '../utils/modelAssumptions';
 import { WHY_NOT_STABLE_TITLE } from '../utils/whyNotStable';
 import { useGameNames } from '../hooks/useGameNames';
-import { givesLanes, whyNotStableShowsCause } from '../utils/checkedLanes';
-import { CheckedLanesSummary, SharedLaneCauseParts } from './CheckedLanesView';
+import { CHECKED_LANES_COPY, givesLanes, whyNotStableShowsCause } from '../utils/checkedLanes';
+import { DIAGNOSTICS_COPY, hasDiagnostics } from '../utils/diagnostics';
+import { CauseHeadline } from './CheckedLanesView';
 
 /** Every string of the card that is not the clock's own, in one place */
 const CARD_COPY = {
@@ -54,8 +55,8 @@ interface ResultSummaryCardProps {
     recommendedIndex: number | null;
     /** Selects the recommended clock and lets the selection follow it again */
     onSelectRecommended: () => void;
-    /** Selects a clock by its index: the other clock that a cause's line names */
-    onSelectClock?: (index: number) => void;
+    /** Opens the Diagnostics tab of the selected clock and moves the focus there */
+    onShowDiagnostics?: () => void;
     /** More clocks may still arrive, so the recommendation is the best so far */
     isGenerating: boolean;
     /** The player stopped the run, so not every clock was tried and the recommendation is not final */
@@ -95,6 +96,11 @@ const RECOVERS_ICON = {
 
 type SelectedProps = ResultSummaryCardProps & { selected: ClockAlternativeView };
 
+/** The link to the Diagnostics tab of the selected clock */
+function SeeDiagnostics({ onClick }: { onClick: () => void }) {
+    return <Link component="button" variant="body2" onClick={onClick} sx={{ verticalAlign: 'baseline' }} data-see-diagnostics="">{DIAGNOSTICS_COPY.see}</Link>;
+}
+
 /** The selected clock's name, why it is the one, and its four facts */
 function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingElement | null> }) {
     const { alternatives, selectedIndex, recommendedIndex, isGenerating, selected, nameRef } = props;
@@ -132,6 +138,10 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
                     }}>
                         {isGenerating ? RECOMMENDED_COPY.backWhileGenerating : RECOMMENDED_COPY.backToRecommended}
                     </Button>
+                )}
+                {/* why the clock is not stable stands on the workspace's Diagnostics tab */}
+                {props.onShowDiagnostics && hasDiagnostics(selected) && (
+                    <SeeDiagnostics onClick={props.onShowDiagnostics} />
                 )}
             </Box>
             <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }} data-strategy-line>
@@ -223,25 +233,21 @@ export function ResultSummaryCard(props: ResultSummaryCardProps) {
 
     const recommended = props.recommendedIndex === null ? undefined : alternatives[props.recommendedIndex];
     const causeAbove = whyNotStableShowsCause(props.whyNotStable, recommended);
-    const onSelectClock = props.onSelectClock && ((id: string) => {
-        const index = alternatives.findIndex(it => it.id === id);
-        if (index >= 0) props.onSelectClock!(index);
-    });
     return (
         <Panel title={CARD_COPY.heading} actions={selected ? props.comparisonAction : undefined} sx={{ '& > :last-child': { p: 1.5 } }} data-result-card="" data-build-anchor="selected-clock">
             {props.rateWarning && <Alert severity="warning" sx={{ mb: 1 }}>{props.rateWarning}</Alert>}
             {props.whyNotStable && <Alert severity="warning" sx={{ mb: 1, '& .MuiAlert-message': { minWidth: 0, flex: 1 } }} data-why-not-stable={props.whyNotStable.cause}>
                 <AlertTitle>{WHY_NOT_STABLE_TITLE[props.whyNotStable.cause]}</AlertTitle>
-                {/* the recommended clock's loss on a shared lane: its parts, in place of the note's sentences on the same loss */}
+                {/* the recommended clock's loss on a shared lane: its count line in place of the note's sentences on the same loss; the rest is on Diagnostics */}
                 {causeAbove && recommended?.checkedLanes?.cause
-                    ? <SharedLaneCauseParts checked={{ ...recommended.checkedLanes, cause: recommended.checkedLanes.cause }} lanes={recommended.assumptions?.lanes} onSelectClock={onSelectClock} />
+                    ? <CauseHeadline cause={recommended.checkedLanes.cause} />
                     : props.whyNotStable.message}
             </Alert>}
             {props.stale && <Typography variant="body2" sx={{ mb: 1 }} data-card-stale>{CARD_COPY.staleLine}</Typography>}
             {selected ? <>
                 <ClockFacts {...props} selected={selected} nameRef={nameRef} />
-                {/* what was checked on the lanes the copies share, from an engine that gives the build's lanes */}
-                {givesLanes(selected) && <Box sx={{ mt: 1.5 }}><CheckedLanesSummary key={selected.id} clock={selected} causeShownAbove={causeAbove && selectedIndex === props.recommendedIndex} onSelectClock={onSelectClock} /></Box>}
+                {/* what was checked on the lanes the copies share is on Diagnostics; from an engine that gives the build's lanes, what they are made for */}
+                {givesLanes(selected) && <Typography variant="body2" sx={{ mt: 1.5 }} data-made-for="">{CHECKED_LANES_COPY.madeFor(selected.copies)}</Typography>}
             </> : (
                 <Typography variant="body2" color="text.secondary">{CARD_COPY.makingFirst}</Typography>
             )}

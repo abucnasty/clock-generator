@@ -71,7 +71,7 @@ function validateBuildViewContext(value: unknown): BuildViewContext {
     const resultDetail = v.resultDetail === 'wake' || v.resultDetail === 'install' ? 'timeline'
         : v.resultDetail === 'why' && v.detailsTab === 'blueprint' ? 'timeline'
         : v.resultDetail === 'why' ? 'overview'
-        : oneOf(v.resultDetail, ['overview', 'timeline'], d.resultDetail);
+        : oneOf(v.resultDetail, ['overview', 'diagnostics', 'timeline'], d.resultDetail);
     return { ...d, view: oneOf(v.view, ['configure', 'results'], d.view), configView: oneOf(v.configView, ['list', 'diagram'], d.configView),
         resultDetail, detailsTab: oneOf(v.detailsTab, ['insights', 'fuel', 'blueprint'], d.detailsTab), sections,
         comparison: { allColumns: bool(comparison.allColumns, false), showUnstable: bool(comparison.showUnstable, false) },

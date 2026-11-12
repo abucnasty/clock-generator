@@ -12,13 +12,17 @@ import { FullscreenWorkspace } from './FullscreenWorkspace';
 import { tabProps } from '../utils/tabIds';
 import { TabBody } from './TabBody';
 import { useBuildSection } from '../hooks/useBuildViewContext';
+import { DIAGNOSTICS_COPY } from '../utils/diagnostics';
+import { ClockDiagnostics } from './ClockDiagnostics';
 
 const ClockTimeline = lazy(() => import('./ClockTimelineWorkspace').then(module => ({ default: module.ClockTimelineWorkspace })));
 
-export function SelectedClockContext({ selected, detail, onDetailChange, timelineProps, generation, assumptions, clockSelector, children }: {
+export function SelectedClockContext({ selected, detail, onDetailChange, onSelectClock, timelineProps, generation, assumptions, clockSelector, children }: {
     selected: ClockAlternativeView;
     detail: ResultDetail;
     onDetailChange: (detail: ResultDetail) => void;
+    /** Selects another clock by its id: the clock that the line of a cause on a shared lane names */
+    onSelectClock?: (id: string) => void;
     timelineProps: Omit<ClockTimelineWorkspaceProps, 'selected' | 'fullscreen'>;
     clockSelector: ReactNode;
     generation: GenerationAssumptions | null;
@@ -35,6 +39,7 @@ export function SelectedClockContext({ selected, detail, onDetailChange, timelin
         <Tabs value={detail} onChange={(_, value: ResultDetail) => onDetailChange(value)} selectionFollowsFocus
             aria-label="Selected clock workspace" sx={{ ...(fullscreen && { position: 'sticky', top: -16, zIndex: 2, bgcolor: 'background.paper' }), borderBottom: 1, borderColor: 'divider', '& .MuiTab-root': { minWidth: 0, flex: 1 } }}>
             <Tab label="Overview" value="overview" {...tabProps('result-context', 'overview')} />
+            <Tab label={DIAGNOSTICS_COPY.tab} value="diagnostics" {...tabProps('result-context', 'diagnostics')} />
             <Tab label="Timeline" value="timeline" {...tabProps('result-context', 'timeline')} />
         </Tabs>
         <TabBody prefix="result-context" tab="overview" shown={detail === 'overview'}>
@@ -54,6 +59,10 @@ export function SelectedClockContext({ selected, detail, onDetailChange, timelin
                 {assumptions}
             </Disclosure>
             {children}
+        </TabBody>
+        <TabBody prefix="result-context" tab="diagnostics" shown={detail === 'diagnostics'} focusable>
+            {/* mounted while shown: the pictures take the width of the panel */}
+            {detail === 'diagnostics' && <ClockDiagnostics key={selected.id} clock={selected} onSelectClock={onSelectClock} />}
         </TabBody>
         <TabBody prefix="result-context" tab="timeline" shown={detail === 'timeline'}>
             {(timelineVisited || detail === 'timeline') && <Suspense fallback={<Typography role="status">Loading timelines…</Typography>}>
