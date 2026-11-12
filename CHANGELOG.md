@@ -20,6 +20,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: the input belts setting still works in configuration files and is deprecated
 - generation: 0.28 Moving builds, stating no lane end, now get dead ends on input lanes
 - ui: a rounded clock that meets the target reads Stable, not Overproduces
+- ui: every clock shows its status beside its name, Stable included
 
 ## [0.28.1] - 2026-11-07
 

@@ -149,25 +149,26 @@ export interface ClockBadge {
 
 /**
  * The status chip of a clock, the first that matches: it depends on how it is started; it underproduces or overproduces
- * (outputTermOf, with what is said beside it); it has no recovery. Null for a clock with none of these.
+ * (outputTermOf, with what is said beside it); it has no recovery; else it is Stable. Null for a clock that meets the
+ * target on a build with a deadlock risk.
  */
 function statusOf(clock: SummaryClock): Omit<ClockBadge, 'kind'> | null {
     if (isStartDependent(clock)) return { text: SUMMARY_COPY.startDependent };
     const output = outputTermOf(clock);
     if (output.term !== SUMMARY_COPY.stable) return { text: output.term, ...(output.detail !== undefined && { detail: output.detail }) };
-    // on a build with a deadlock risk the recovery trials do not decide, so a clock that holds the rate has no status chip for it
-    const verdictDecides = clock.deadlockRisk === null || !clock.ranking.meets_target_rate;
-    if (verdictDecides && clock.verdict === 'no recovery') {
+    // on a build with a deadlock risk the recovery trials do not decide, so a clock that meets the target rate has no status chip
+    if (clock.deadlockRisk !== null && clock.ranking.meets_target_rate) return null;
+    if (clock.verdict === 'no recovery') {
         return { text: recoversOf(clock).kind === 'no' ? SUMMARY_COPY.worksNoRecovery : SUMMARY_COPY.recoveryUnavailable };
     }
-    return null;
+    return { text: SUMMARY_COPY.stable };
 }
 
 /**
- * The chips beside the name of a clock, against the other clocks of its generation. One status chip when the clock has one.
- * Otherwise "Fewest wakeups" on a clock that ties the fewest without being the recommended one (the recommended clock has its
- * own chip and reason), and "Fewest deciders" on a clock with fewer deciders than the recommended clock and the fewest-wakeups
- * clocks have, when the clocks do not all have the same number.
+ * The chips beside the name of a clock, against the other clocks of its generation. Its status chip first, where it has one;
+ * a clock that is not Stable has only that. Beside Stable, or no status chip: "Fewest wakeups" on a clock that ties the fewest
+ * without being the recommended one (the recommended clock has its own chip and reason), and "Fewest deciders" on a clock with
+ * fewer deciders than the recommended clock and the fewest-wakeups clocks have, when the clocks do not all have the same number.
  */
 export function clockBadges(clocks: SummaryClock[], index: number): ClockBadge[] {
     const clock = clocks[index];
@@ -175,9 +176,9 @@ export function clockBadges(clocks: SummaryClock[], index: number): ClockBadge[]
         return [];
     }
     const status = statusOf(clock);
-    if (status !== null) return [{ kind: 'status', ...status }];
-    if (!isContender(clock)) return [];
-    const badges: ClockBadge[] = [];
+    if (status !== null && status.text !== SUMMARY_COPY.stable) return [{ kind: 'status', ...status }];
+    const badges: ClockBadge[] = status === null ? [] : [{ kind: 'status', ...status }];
+    if (!isContender(clock)) return badges;
     const recommended = recommendedIndexOf(clocks);
     const contenders = clocks.filter(isContender);
     const wakeUps = wakeUpsKey(clock.ranking.wake_ups_per_minute);
