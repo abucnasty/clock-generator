@@ -89,7 +89,7 @@ describe("the rows of a clock", () => {
 
     it("are short on a lane a copy loses swings on, first, and the others not the cause", () => {
         const lanes = checked({ config: gears(), judged: judged([lossOf(2, 3, 65)]) });
-        expect(rows(lanes)[0]).toEqual(["1/1", "short", "Short on copy 2", "Copy 2 misses 3 of 65 swings."]);
+        expect(rows(lanes)[0]).toEqual(["1/1", "short", "Swings missed on copy 2", "Copy 2 misses 3 of 65 swings."]);
         expect(lanes.rows[0].state).toEqual({ kind: "short", copies: [{ copy: 2, missed: 3, swings: 65 }] });
         expect(lanes.line.sentence).toBe("Checked with all 3 copies on the lanes they share. Copy 2 does not get all its items. On the output belt, only the sum of the drops is checked.");
         expect(lanes.cause!.headline.text).toBe("Copy 2 misses 3 of 65 swings");

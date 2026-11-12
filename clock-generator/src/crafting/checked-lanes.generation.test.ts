@@ -29,8 +29,8 @@ describe("what was checked on the lanes the copies of the automation science 240
         const clock = clockOf(result, "euclidean_swings");
         expect(clock.result.simulation_duration.ticks).toBe(72);
         expect(rowsOf(clock)).toEqual([
-            { at: "1/1", together: "take 120", label: "Short on copy 2", sentence: "Copy 2 misses 3 of 65 swings." },
-            { at: "1/2", together: "take 120", label: "Short on copy 2", sentence: "Copy 2 misses 3 of 65 swings." },
+            { at: "1/1", together: "take 120", label: "Swings missed on copy 2", sentence: "Copy 2 misses 3 of 65 swings." },
+            { at: "1/2", together: "take 120", label: "Swings missed on copy 2", sentence: "Copy 2 misses 3 of 65 swings." },
             { at: "2/1", together: "drop 240", label: "Not the cause", sentence: "No copy waits at its join." },
         ]);
         const cause = clock.checked_lanes!.cause!;

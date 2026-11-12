@@ -361,7 +361,7 @@ function wordsOf(state: CheckedLaneState, copies: number): { label: string; sent
             return { label, sentence: `${capitalized(copiesNamed(waiting.map(it => it.copy)))} ${one ? "waits" : "wait"} for room at ${one ? "its" : "their"} join in ${counts}${steady}. No swing is missed.` };
         }
         case "short":
-            return { label: `Short on ${copiesNamed(state.copies.map(it => it.copy))}`, sentence: `${missedSentence(state.copies)}.` };
+            return { label: `Swings missed on ${copiesNamed(state.copies.map(it => it.copy))}`, sentence: `${missedSentence(state.copies)}.` };
         case "join_full": {
             const same = state.copies.every(it => it.missed === state.copies[0].missed && it.swings === state.copies[0].swings);
             const sentence = state.copies.length === 1 ? `${figure(state.copies[0].missed)} of ${figure(state.copies[0].swings)} swings missed.`

@@ -27,6 +27,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: every clock shows its status beside its name, Stable included
 - ui: the note on a clock that overproduces says only what was measured
 - ui: a clock that loses swings on a shared lane shows what all its copies make
+- ui: a shared lane where a copy misses swings reads Swings missed, not Short
 
 ## [0.28.1] - 2026-11-07
 
