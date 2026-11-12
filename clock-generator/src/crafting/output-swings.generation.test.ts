@@ -139,7 +139,7 @@ describe("generateClockForConfig", () => {
     // One machine, two output hands and nine input hands per 288 ticks. Clocks for it are easy to get to the
     // expected output in one simulated window cycle without the build actually repeating that window cycle.
     describe("FLYING_ROBOT_FRAME_80 clock-only check", async () => {
-        // One copy of the sample at its rate per copy. No lane end is stated and the belt inserters have no near lane.
+        // One copy of the sample at its rate per copy. Every lane has an infinite end and the belt inserters have no near lane.
         // The output belt's lanes carry the processing unit and the frame. The checks below test the window cycle of one
         // machine, not lanes that copies share. They need a stable planned clock to shift and to cut.
         const sample = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME_80);
@@ -149,7 +149,7 @@ describe("generateClockForConfig", () => {
         delete config.setpoint.copy_offset;
         for (const belt of config.belts) {
             for (const lane of belt.lanes) {
-                delete lane.lane_end;
+                lane.lane_end = { kind: "infinite" };
             }
         }
         for (const inserter of config.inserters) {

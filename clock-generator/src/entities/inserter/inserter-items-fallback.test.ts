@@ -30,7 +30,7 @@ const chain = () => ConfigSchema.parse({
         // machine to chest
         { id: 4, source: { type: "machine", id: 2 }, sink: { type: "chest", id: 1 }, stack_size: 4 },
     ],
-    belts: [{ id: 1, type: "transport-belt", lanes: [{ ingredient: "iron-plate", stack_size: 4 }] }],
+    belts: [{ id: 1, type: "transport-belt", lanes: [{ ingredient: "iron-plate", stack_size: 4, lane_end: { kind: "infinite" } }] }],
     chests: [{ type: "buffer-chest", id: 1, storage_size: 100, item_filter: "transport-belt" }],
 });
 
@@ -81,7 +81,7 @@ describe("the items an inserter carries when its config names no filters", () =>
             setpoint: { recipe: "copper-cable", items_per_second: 1, copies: 1 },
             machines: [{ id: 1, recipe: "copper-cable", productivity: 0, crafting_speed: 1 }],
             inserters: [{ id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 }, stack_size: 4 }],
-            belts: [{ id: 1, type: "transport-belt", lanes: [{ ingredient: "iron-plate", stack_size: 4 }, { ingredient: "copper-plate", stack_size: 4 }] }],
+            belts: [{ id: 1, type: "transport-belt", lanes: [{ ingredient: "iron-plate", stack_size: 4 }, { ingredient: "copper-plate", stack_size: 4, lane_end: { kind: "infinite" } }] }],
             chests: [],
         }));
         expect(carriedBy(context, 1)).toEqual(["copper-plate"]);

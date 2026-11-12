@@ -1,7 +1,8 @@
 import Fraction, { fraction } from '../data-types/fraction';
 import { Entity, handSizeFor } from '../entities';
 import { beltLanesOfFacts, LaneTrait } from '../entities/traits/lane';
-import { LaneFactsOfBuild, laneFactsOf } from '../entities/traits/lane-facts';
+import { laneFactsOfConfig } from '../entities/traits/build-traits';
+import { LaneFactsOfBuild } from '../entities/traits/lane-facts';
 import { fractionOf } from '../entities/traits/ratio';
 import { beltSpeedOf, laneItemsPerSecond, laneStackFor } from '../entities/belt/belt-speed';
 import type { Logger } from '../common/logger';
@@ -101,7 +102,7 @@ export function laneLoads(config: Config): LaneLoad[] {
         const key = `${flow.belt_id}|${flow.kind}`;
         groups.set(key, [...(groups.get(key) ?? []), flow]);
     }
-    const lane_facts = laneFactsOf(config);
+    const lane_facts = laneFactsOfConfig(config);
     for (const group of groups.values()) {
         const { belt_id, kind } = group[0];
         const belt = config.belts.find(it => it.id === belt_id)!;
@@ -166,7 +167,7 @@ const onePerCopy = (facts: LaneFactsOfBuild, load: Pick<LaneLoad, 'belt_id' | 'l
 export function lanesSharedByCopies(config: Config): LaneCapacityIssue[] {
     const copies = fraction(config.setpoint.copies);
     if (!above(copies, fraction(1))) return [];
-    const facts = laneFactsOf(config);
+    const facts = laneFactsOfConfig(config);
     const loads = laneLoads(config).filter(load => load.kind === 'drop' && !onePerCopy(facts, load));
     const refused = overCapacity(loads, fraction(1));
     const touches = (load: LaneLoad) => refused.some(other => other.belt_id === load.belt_id && other.kind === load.kind
@@ -281,7 +282,7 @@ export interface OnePerCopyFeed {
  * target. A set of both lanes of a belt is listed only where both carry the same item, so that a take can use either.
  */
 export function onePerCopyFeeds(config: Config): OnePerCopyFeed[] {
-    const facts = laneFactsOf(config);
+    const facts = laneFactsOfConfig(config);
     return laneLoads(config).filter(load => load.kind === 'take' && onePerCopy(facts, load)).filter(load => {
         if (load.lanes.length === 1) return true;
         const items = config.belts.find(belt => belt.id === load.belt_id)!.lanes.map(lane => lane.ingredient);
@@ -316,7 +317,7 @@ export function laneRateIssues(config: Pick<Config, 'belts'>): LaneRateIssue[] {
 /** What a set of lanes gets for every copy together: each lane's supply rate, once for each copy on a lane that is per copy */
 export function sharedLaneSupplyOf(config: Config, load: LaneLoad): Fraction {
     const copies = fraction(config.setpoint.copies);
-    const facts = laneFactsOf(config);
+    const facts = laneFactsOfConfig(config);
     return load.lanes.reduce((sum, lane) => {
         const lane_facts = facts.of(load.belt_id, lane as 1 | 2);
         return sum.add(fractionOf(lane_facts.supply_rate).multiply(lane_facts.sharing === 'per_copy' ? copies : fraction(1)));
@@ -330,7 +331,7 @@ export function sharedLaneSupplyOf(config: Config, load: LaneLoad): Fraction {
  */
 export function sharedLaneSupplyIssues(config: Config): SharedLaneSupplyIssue[] {
     const copies = fraction(config.setpoint.copies);
-    const facts = laneFactsOf(config);
+    const facts = laneFactsOfConfig(config);
     const found: SharedLaneSupplyIssue[] = [];
     const shown: LaneLoad[] = [];
     for (const load of laneLoads(config).filter(load => load.kind === 'take')) {

@@ -3,7 +3,8 @@ import { Logger } from "../common/logger";
 import { OpenRange } from "../data-types";
 import Fraction, { fraction } from "../data-types/fraction";
 import { Entity, EntityId, handSizeFor, Inserter } from "../entities";
-import { FlowDirection, LaneEnd, laneFactsOf } from "../entities/traits/lane-facts";
+import { laneFactsOfConfig } from "../entities/traits/build-traits";
+import { FlowDirection, LaneEnd } from "../entities/traits/lane-facts";
 import { fractionOf } from "../entities/traits/ratio";
 import { handOfItem, traitsOf, traitsOfMachine } from "../entities/traits/traits-of";
 import type { AfterInsertersTick } from "../simulation/world";
@@ -296,7 +297,7 @@ export interface SharedLaneJudgement {
  */
 export function droppedOntoSharedLanes(config: Config): { belt_id: number; lane: 1 | 2 }[] {
     if (!(config.setpoint.copies > 1)) return [];
-    const facts = laneFactsOf(config);
+    const facts = laneFactsOfConfig(config);
     const dropped = droppedOnto(config);
     return takenLanesOf(config).filter(({ belt_id, lane }) => dropped.has(belt_id) && facts.of(belt_id, lane).sharing === "shared");
 }
@@ -540,7 +541,7 @@ export interface RunOfCopies {
  */
 function shortfallsOf(under: Config, lanes: readonly ModelLane[], layout: SharedLaneLayout, alone: AloneRun, windows: Map<string, OpenRange[]>,
     window_cycle_ticks: number, window_cycles: number, logger: Logger, ends: OutputEnds | null): RunOfCopies {
-    const facts = laneFactsOf(under);
+    const facts = laneFactsOfConfig(under);
     const { takes, made, last_tick, output_belt } = copyLaneTakes(under, windows, window_cycle_ticks, layout, window_cycles, logger, ends);
     const last = Math.min(alone.last_tick, last_tick);
     const first_cycle = Math.ceil(last / 2 / window_cycle_ticks), end_cycle = Math.floor((last + 1) / window_cycle_ticks + 1e-9);
@@ -785,7 +786,7 @@ export function judgeSharedLanes(config: Config, clock_windows: SerializableCloc
     const first: { under: Config; taker_ids: string[]; alone: AloneRun; runs: { layout: SharedLaneLayout; run: RunOfCopies }[] }[] = [];
     let fast_check_passes = true;
     for (const { under, layouts } of sharedLaneRunsOf(config).readings) {
-        const facts = laneFactsOf(under);
+        const facts = laneFactsOfConfig(under);
         const taker_ids = [...new Set(layouts[0].rows.flatMap(row => row.takers.map(taker => taker.inserter_id)))];
         const alone = runAlone(under, taker_ids, windows, window_cycle_ticks, window_cycles, logger);
         // the fast check, for each item of each belt: the lanes that carry it, their supply summed

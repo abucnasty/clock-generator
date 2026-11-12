@@ -30,7 +30,7 @@ describe("the transfers of a cycle", () => {
             { id: 2, recipe: "electronic-circuit", productivity: 0, crafting_speed: 1, type: "machine" },
         ],
         belts: [
-            { id: 1, type: "turbo-transport-belt", lanes: [{ ingredient: "copper-plate", stack_size: 4 }, { ingredient: "iron-plate", stack_size: 4 }] },
+            { id: 1, type: "turbo-transport-belt", lanes: [{ ingredient: "copper-plate", stack_size: 4, lane_end: { kind: "infinite" } }, { ingredient: "iron-plate", stack_size: 4, lane_end: { kind: "infinite" } }] },
             { id: 2, type: "turbo-transport-belt", lanes: [{ ingredient: "electronic-circuit", stack_size: 4 }] },
         ],
         inserters: [
@@ -63,8 +63,8 @@ describe("the transfers of a cycle through belts", () => {
             { id: 2, recipe: "electronic-circuit", productivity: 0, crafting_speed: 1, type: "machine" },
         ],
         belts: [
-            { id: 1, type: "turbo-transport-belt", lanes: [{ ingredient: "copper-plate", stack_size: 4 }, { ingredient: "iron-plate", stack_size: 4 }] },
-            { id: 2, type: "turbo-transport-belt", lanes: [{ ingredient: "copper-cable", stack_size: 4 }], ...cable_belt },
+            { id: 1, type: "turbo-transport-belt", lanes: [{ ingredient: "copper-plate", stack_size: 4, lane_end: { kind: "infinite" } }, { ingredient: "iron-plate", stack_size: 4, lane_end: { kind: "infinite" } }] },
+            { id: 2, type: "turbo-transport-belt", lanes: [{ ingredient: "copper-cable", stack_size: 4, lane_end: { kind: "infinite" } }], ...cable_belt },
             { id: 3, type: "turbo-transport-belt", lanes: [{ ingredient: "electronic-circuit", stack_size: 4 }] },
         ],
         inserters: [
@@ -188,7 +188,7 @@ describe("EntityTransferCountMap.divide", () => {
         const config = {
             setpoint: { recipe: "electronic-circuit", items_per_second: 10, copies: 1 },
             machines: [{ id: 1, recipe: "electronic-circuit", productivity: 0, crafting_speed: 1, type: "machine" }],
-            belts: [{ id: 1, type: "turbo-transport-belt", lanes: [{ ingredient: "copper-cable", stack_size: 4 }, { ingredient: "iron-plate", stack_size: 4 }] }],
+            belts: [{ id: 1, type: "turbo-transport-belt", lanes: [{ ingredient: "copper-cable", stack_size: 4, lane_end: { kind: "infinite" } }, { ingredient: "iron-plate", stack_size: 4, lane_end: { kind: "infinite" } }] }],
             inserters: [{ id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 }, stack_size: 16 }],
         };
         const inserter = Array.from(createEntityRegistryFromConfig(parseConfigFromObject(config)).getAll()).find(Entity.isInserter)!;

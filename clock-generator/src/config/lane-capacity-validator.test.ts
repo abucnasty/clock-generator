@@ -25,6 +25,9 @@ const belt = (id: number, lanes: [string] | [string, string], type: Belt['type']
 
 const inserter = (id: number, source: Inserter['source'], sink: Inserter['sink']): Inserter => ({ id, source, sink });
 
+/** A belt whose lanes move on past the build: an infinite end on each */
+const moving = (belt: Belt): Belt => ({ ...belt, lanes: belt.lanes.map(lane => ({ ...lane, lane_end: { kind: 'infinite' } })) as Belt['lanes'] });
+
 /**
  * Gear assemblers (2 iron plates a gear) fed from belt 1 (or an infinity chest) and dropping onto belt 2: the plates taken are twice the gears
  * a second, the gears dropped the target. Fast enough for any target here.
@@ -35,7 +38,7 @@ const gears = (parts: { items_per_second: number; copies?: number; machines?: nu
     return {
         setpoint: { recipe: 'iron-gear-wheel', items_per_second: parts.items_per_second, copies: parts.copies ?? 1 },
         machines: machines.map(id => ({ id, recipe: 'iron-gear-wheel', productivity: 0, crafting_speed: 1000 })),
-        belts: [...(chest ? [] : [parts.input as Belt | undefined ?? belt(1, ['iron-plate'])]), parts.output ?? belt(2, ['iron-gear-wheel'])],
+        belts: [...(chest ? [] : [moving(parts.input as Belt | undefined ?? belt(1, ['iron-plate']))]), parts.output ?? belt(2, ['iron-gear-wheel'])],
         ...(chest ? { chests: [{ id: 1, type: 'infinity-chest' as const, item_filter: [{ item_name: 'iron-plate', request_count: 100 }] }] } : {}),
         inserters: machines.flatMap(id => [
             inserter(2 * id - 1, { type: chest ? 'chest' : 'belt', id: 1 }, { type: 'machine', id }),
@@ -97,7 +100,7 @@ describe('takes from a lane', () => {
             setpoint: { recipe: 'electronic-circuit', items_per_second, copies: 1 },
             machines: [{ id: 1, recipe: 'electronic-circuit', productivity: 0, crafting_speed: 1000 }],
             belts: [
-                { id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }, { ingredient: 'copper-cable', stack_size: cable_stack }] },
+                { id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4, lane_end: { kind: 'infinite' } }, { ingredient: 'copper-cable', stack_size: cable_stack, lane_end: { kind: 'infinite' } }] },
                 belt(2, ['electronic-circuit']),
             ],
             inserters: [inserter(1, { type: 'belt', id: 1 }, { type: 'machine', id: 1 }), inserter(2, { type: 'machine', id: 1 }, { type: 'belt', id: 2 })],
@@ -156,7 +159,7 @@ describe('drops onto a lane', () => {
         const config: Config = {
             setpoint: { recipe: 'iron-gear-wheel', items_per_second: 60, copies: 1 },
             machines: [{ id: 1, recipe: 'iron-gear-wheel', productivity: 0, crafting_speed: 1000 }],
-            belts: [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }, { ingredient: 'iron-gear-wheel', stack_size: 1 }] }],
+            belts: [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4, lane_end: { kind: 'infinite' } }, { ingredient: 'iron-gear-wheel', stack_size: 1 }] }],
             inserters: [inserter(1, { type: 'belt', id: 1 }, { type: 'machine', id: 1 }), inserter(2, { type: 'machine', id: 1 }, { type: 'belt', id: 1 })],
         };
         expect(issuesOf(config)).toEqual([

@@ -10,9 +10,8 @@ import { Config } from "../config/schema";
 import Fraction, { fraction } from "../data-types/fraction";
 import { Belt, Entity, handSizeFor, isNeverBlockingSink, Machine, ReadableEntityRegistry } from "../entities";
 import { laneItemsPerSecond, laneStackFor } from "../entities/belt/belt-speed";
-import { ConfigTraits } from "../entities/traits/build-traits";
+import { ConfigTraits, laneFactsOfConfig } from "../entities/traits/build-traits";
 import { beltLanesOfFacts } from "../entities/traits/lane";
-import { laneFactsOf } from "../entities/traits/lane-facts";
 import { decimalOf, fractionOf } from "../entities/traits/ratio";
 import { SAMPLE_CONFIG_FILES } from "../entities/traits/sample-configs.fixture";
 import { handOfItem, machinesInOrder, mainProductRateOf, neverRefuses, traitsOf, traitsOfMachine } from "../entities/traits/traits-of";
@@ -224,7 +223,7 @@ function checkHands(registry: ReadableEntityRegistry, traits: ConfigTraits): voi
 
 /** What a lane carries, lane by lane, and the capacity of every load of the lane check */
 function checkLanes(config: Config): void {
-    const facts = laneFactsOf(config);
+    const facts = laneFactsOfConfig(config);
     for (const belt of config.belts) {
         const lanes = beltLanesOfFacts(belt, facts);
         for (const lane of [1, 2]) {

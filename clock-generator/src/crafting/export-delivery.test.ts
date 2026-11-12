@@ -16,7 +16,7 @@ const SMALL_BUILD = JSON.stringify({
         { id: 2, recipe: "copper-cable", productivity: 0, crafting_speed: 2, type: "machine" },
     ],
     belts: [
-        { id: 1, type: "turbo-transport-belt", lanes: [{ ingredient: "iron-plate", stack_size: 4 }, { ingredient: "copper-plate", stack_size: 4 }] },
+        { id: 1, type: "turbo-transport-belt", lanes: [{ ingredient: "iron-plate", stack_size: 4, lane_end: { kind: "infinite" } }, { ingredient: "copper-plate", stack_size: 4, lane_end: { kind: "infinite" } }] },
         { id: 2, type: "turbo-transport-belt", strategy: "export", lanes: [
             { ingredient: "copper-cable", stack_size: 4, consumption_per_second: 3 },
             { ingredient: "copper-cable", stack_size: 4, consumption_per_second: 3 },

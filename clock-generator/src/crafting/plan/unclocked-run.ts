@@ -57,6 +57,7 @@ import { clockCountsOneAt, DisturbanceTrialOptions, LossOutcome, runLossTrials }
 import { SerializableTransferHistory, serializeTransferHistory } from "../sequence/transfer-history-serializer";
 import { StateTransitionHistory } from "../sequence/state-transition-history";
 import { MachineFactsEntry } from "../insights";
+import { laneFactsOfConfig } from "../../entities/traits/build-traits";
 import { everyInputLaneIsDeadEnd } from "../../entities/traits/lane-ends";
 import { machineFactsOfEntity } from "../../entities/traits/machine-facts-of";
 import { CompactStateTransitionHistory } from "../sequence/compact-history";
@@ -1650,7 +1651,7 @@ export function clockOfWindows(
 export function clockBeltOf(config: Config, entity_registry: ReadableEntityRegistry, windows: ReadonlyMap<string, OpenRange[]>): ClockBelt | null {
     const belt_fed = entity_registry.getAll().some(entity => Entity.isInserter(entity) && (windows.get(entity.entity_id.id)?.length ?? 0) > 0
         && Entity.isBelt(entity_registry.getEntityByIdOrThrow(entity.source.entity_id)));
-    return !belt_fed ? null : everyInputLaneIsDeadEnd(config) ? { kind: "backed_up" } : { kind: "moving" };
+    return !belt_fed ? null : everyInputLaneIsDeadEnd(config, laneFactsOfConfig(config)) ? { kind: "backed_up" } : { kind: "moving" };
 }
 
 
@@ -2587,7 +2588,7 @@ function serializeClockWindows(windows: Map<string, OpenRange[]>): SerializableC
  * a window cycle of part ticks that no moving clock can be made for, and never reached 3, where observed windows hold.
  */
 function craftsWithBackpressure(config: Config, fractional_swings: boolean): Map<string, number> | null {
-    if (everyInputLaneIsDeadEnd(config) || config.overrides?.terminal_swing_count !== undefined
+    if (everyInputLaneIsDeadEnd(config, laneFactsOfConfig(config)) || config.overrides?.terminal_swing_count !== undefined
         || fractional_swings || !config.inserters.some(inserter => inserter.source.type === "belt")) {
         return null;
     }

@@ -14,7 +14,7 @@ function build(speeds = [1, 1]) {
             { source: { type: 'machine', id: i + 1 }, sink: { type: 'belt', id: 2 }, stack_size: 1 },
         ]),
         belts: [
-            { id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1 }] },
+            { id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1, lane_end: { kind: 'infinite' } }] },
             { id: 2, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-gear-wheel', stack_size: 1 }] },
         ],
     });

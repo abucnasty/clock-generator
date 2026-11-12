@@ -1,6 +1,7 @@
 import type { Config } from "../config/schema";
 import { FlowAcrossCopySpacingError, FlowAcrossCopySpacingIssue } from "../config/errors";
-import { FlowDirection, LaneEnd, laneFactsOf } from "../entities/traits/lane-facts";
+import { laneFactsOfConfig } from "../entities/traits/build-traits";
+import { FlowDirection, LaneEnd } from "../entities/traits/lane-facts";
 
 /**
  * The lanes the check of the shared lanes runs (shared-lane-verdict.ts), and how far along a lane's flow a place on the
@@ -41,7 +42,7 @@ export function takenLanesOf(config: Config): { belt_id: number; lane: 1 | 2 }[]
 
 /** The lanes the model judges (see shared-lane-verdict.ts) */
 export function modelLanesOf(config: Config): ModelLane[] {
-    const facts = laneFactsOf(config);
+    const facts = laneFactsOfConfig(config);
     const dropped = droppedOnto(config);
     return takenLanesOf(config).flatMap(({ belt_id, lane }) => {
         if (dropped.has(belt_id)) return [];

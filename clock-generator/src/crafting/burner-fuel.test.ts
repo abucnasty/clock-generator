@@ -13,9 +13,9 @@ const furnaceBuild = (prototype: string) => ConfigSchema.parse({
         { id: 3, source: { type: "belt", id: 3 }, sink: { type: "machine", id: 1 }, stack_size: 1 },
     ],
     belts: [
-        { id: 1, type: "transport-belt", lanes: [{ ingredient: "iron-ore", stack_size: 1 }] },
+        { id: 1, type: "transport-belt", lanes: [{ ingredient: "iron-ore", stack_size: 1, lane_end: { kind: "infinite" } }] },
         { id: 2, type: "transport-belt", lanes: [{ ingredient: "iron-plate", stack_size: 1 }] },
-        { id: 3, type: "transport-belt", lanes: [{ ingredient: "coal", stack_size: 1 }] },
+        { id: 3, type: "transport-belt", lanes: [{ ingredient: "coal", stack_size: 1, lane_end: { kind: "infinite" } }] },
     ],
 });
 

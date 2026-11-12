@@ -4,7 +4,7 @@ import { quiet, selectedAlternativeOf } from "./generate-blueprint-test-helpers"
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import type { Config } from "../config/schema";
-import { laneFactsOf } from "../entities/traits/lane-facts";
+import { laneFactsOfConfig } from "../entities/traits/build-traits";
 
 // abucnasty's military science build: five copies 9 tiles apart, each a mirrored pair (a military science assembler and a
 // grenade assembler above a foundry, and the same below it) that makes 48 a second, 240 in all.
@@ -26,7 +26,7 @@ describe("the military science sample", () => {
     });
 
     it("states the lanes of its build", () => {
-        const facts = laneFactsOf(config);
+        const facts = laneFactsOfConfig(config);
         const of = (belt_id: number, lane: 1 | 2) => {
             const lane_facts = facts.of(belt_id, lane);
             return [lane_facts.lane_end.kind, lane_facts.sharing, lane_facts.flow_direction];

@@ -14,7 +14,8 @@ const gears = (fields: { lanes?: object[]; feeder?: object; output?: object } = 
         { id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 }, ...fields.feeder },
         { id: 2, source: { type: "machine", id: 1 }, sink: { type: "chest", id: 1 }, ...fields.output },
     ],
-    belts: [{ id: 1, type: "turbo-transport-belt", lanes: fields.lanes ?? [{ ingredient: "iron-plate", stack_size: 4 }] }],
+    // the belt moves on past the build: each lane it states has an infinite end
+    belts: [{ id: 1, type: "turbo-transport-belt", lanes: (fields.lanes ?? [{ ingredient: "iron-plate", stack_size: 4 }]).map(lane => ({ ...lane, lane_end: { kind: "infinite" } })) }],
     chests: [{ id: 1, type: "infinity-chest", item_filter: [], remove_unfiltered_items: true }],
 });
 const warnings = () => {
