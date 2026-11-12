@@ -246,7 +246,7 @@ export function ClockAlternativesPanel({
                         <BadgeChips badges={clockBadges(alternatives, index).filter(badge => badge.kind !== 'status')} meanings={badgeMeanings(alternatives, index)} />
                         {index === recommendedIndex && <RecommendedChip isGenerating={isGenerating} />}
                     </Box>
-                    {/* what is said beside the status: the rate, the reason code's words, or why the recovery trials gave no answer */}
+                    {/* what is said beside the status: the rate, the reason code's words, or why the loss trials gave no answer */}
                     {status.detail && <Typography variant="body2" color="text.secondary" data-status-detail="">{status.detail}</Typography>}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.secondary', typography: 'body2' }}>
                         <span data-strategy-line="">{familyCopyOf(alternative)?.line ?? alternative.label}</span>

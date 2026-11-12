@@ -209,7 +209,7 @@ describe('the card\'s belt sentence, in Simulation results', () => {
     });
 });
 
-describe('the status Error beside the name on the card, where the recovery trials gave no answer', () => {
+describe('the status Error beside the name on the card, where the loss trials gave no answer', () => {
     it.each<[Parameters<typeof errorCaseViews>[0], string]>([
         ['not-tried', TRIALS_NOT_MADE_REASON],
         ['baseline-missed', SUMMARY_COPY.errorBaselineMissed],

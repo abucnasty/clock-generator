@@ -420,7 +420,7 @@ describe('statusOf: the one status the chip, the Status column and the full tabl
             clock('a', { verdict: 'no recovery', deadlock: true }), { kind: 'no-recovery', text: 'No recovery' }],
         ['says that a clock underproduces before its recovery gave no answer', untried(clock('a', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48 })),
             { kind: 'underproduces', text: 'Underproduces', detail: 'makes 192/s of 240/s' }],
-        ['says Error with the engine\'s reason, as data, where the recovery trials could not be run',
+        ['says Error with the engine\'s reason, as data, where the loss trials could not be run',
             untried(clock('a'), 'the build has no loss to try'), { kind: 'error', text: 'Error', detail: 'the build has no loss to try' }],
         ['says Error where the run with nothing cut did not make its expected output',
             clock('a', { loss: { survives: false, broken_by: [] } }), { kind: 'error', text: 'Error', detail: SUMMARY_COPY.errorBaselineMissed }],

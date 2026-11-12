@@ -99,7 +99,7 @@ describe('the status of every clock, in the list of clocks: the Status column, n
         ['not-tried', TRIALS_NOT_MADE_REASON],
         ['baseline-missed', SUMMARY_COPY.errorBaselineMissed],
         ['no-result', SUMMARY_COPY.errorNoResult],
-    ])('says Error of a clock whose recovery trials gave no answer (%s), with the reason as the line under its name', (kind, reason) => {
+    ])('says Error of a clock whose loss trials gave no answer (%s), with the reason as the line under its name', (kind, reason) => {
         const alternatives = errorCaseViews(kind);
         panel(alternatives);
         const { cells, chip, detail } = rowOf('time_study_windows', alternatives);

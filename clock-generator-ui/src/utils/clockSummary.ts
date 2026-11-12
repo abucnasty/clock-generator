@@ -28,16 +28,16 @@ export const SUMMARY_COPY = {
     startDependent: 'Start-dependent',
     // beside Underproduces or Overproduces off the setpoint: the rate it makes
     makesOf: (rate: string, target: string, counts?: TargetCounts) => `${rateVerbs(counts).third} ${rate}/s of ${target}/s`,
-    // beside Error: why the recovery trials gave no answer, where the engine gives no reason of its own
+    // beside Error: why the loss trials gave no answer, where the engine gives no reason of its own
     errorBaselineMissed: 'The run with no supply stop or output blockage did not make its expected output',
-    errorNoResult: 'The recovery trials gave no result',
+    errorNoResult: 'The loss trials gave no result',
     // the help of the Status column: each status the column can show, once
     statusHelp: [
         ['Stable', 'It holds the setpoint, and it goes back to its rate by itself after a supply stop or an output blockage.'],
         ['Underproduces', 'It makes less than the setpoint.'],
         ['Overproduces', 'It makes more than the setpoint.'],
         ['No recovery', 'It holds the setpoint, but it does not go back to its rate by itself after a supply stop or an output blockage.'],
-        ['Error', 'The recovery trials gave no answer. The line under the clock\'s name gives the reason.'],
+        ['Error', 'The loss trials gave no answer. The line under the clock\'s name gives the reason.'],
         ['Start-dependent', 'It holds the setpoint from some start points and not from others.'],
     ] as const,
     fewestWakeUps: 'Fewest wakeups',
@@ -155,7 +155,7 @@ export interface ClockStatus {
 }
 
 /**
- * Why the recovery trials gave no answer, beside Error: the engine's reason where the trials could not be run
+ * Why the loss trials gave no answer, beside Error: the engine's reason where the trials could not be run
  * (`disturbance_trial_not_tried`, as data); that the run with nothing cut did not make its expected output; or that there is
  * no recovery result
  */
@@ -168,7 +168,7 @@ function errorReasonOf(clock: Pick<SummaryClock, 'assessment'>): string {
 /**
  * A clock's status: the one rule the card's chip, the compare table's Status and the full table's Status read. The first that
  * matches: it is start-dependent; it underproduces or overproduces (outputTermOf, with what is said beside it); it has no
- * recovery; its recovery trials gave no answer (Error, with the reason); else it is Stable.
+ * recovery; its loss trials gave no answer (Error, with the reason); else it is Stable.
  */
 export function statusOf(clock: Pick<SummaryClock, 'verdict' | 'ranking' | 'assessment' | 'checkedLanes' | 'asBuilt' | 'expectedOutputItems' | 'counts'>): ClockStatus {
     if (isStartDependent(clock)) return { kind: 'start-dependent', text: SUMMARY_COPY.startDependent };

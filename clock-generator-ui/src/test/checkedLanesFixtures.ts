@@ -91,7 +91,7 @@ export const viewsOf = (result: KeptResult) => result.clocks.map(clock => viewOf
 export const TRIALS_NOT_MADE_REASON = 'the loss trials could not be made: no item of the build stops arriving';
 
 /**
- * The three cases of a clock whose recovery trials gave no answer (the status Error), which no clock of the samples is in:
+ * The three cases of a clock whose loss trials gave no answer (the status Error), which no clock of the samples is in:
  * the clocks of automation science 240 with the recommended one's recovery result changed. "not-tried": the trials could not
  * be made, with the engine's reason; "baseline-missed": the run with nothing cut did not make its expected output; "no-result":
  * there is no recovery result.
