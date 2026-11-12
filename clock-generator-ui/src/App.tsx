@@ -77,6 +77,8 @@ import { familyCopyOf, fullClockName } from './utils/strategyNames';
 import { ANNOUNCEMENTS } from './utils/workflowAnnouncement';
 import { BELT_COPY, beltQuestionOf, backedUpBeltsFor, withBeltAnswer, type BeltAnswer } from './utils/beltQuestion';
 import { PickupGeometrySummary } from './components/PickupGeometrySummary';
+import { useLaneFacts } from './hooks/useLaneFacts';
+import { inputLaneEnds } from './utils/laneFacts';
 import { PROGRESS_NAMES } from './utils/a11yLabels';
 import { chestLabel, entityLabel } from './utils/entityLabel';
 import { NO_DEBUG_STEPS, developerToolsInitial, readDeveloperTools, writeDeveloperTools } from './utils/developerTools';
@@ -343,6 +345,9 @@ function App() {
     // null until the engine has looked for missing inserters; until then the check catches them
     const checkedCoverage = useInserterValidation(engineConfig, isInitialized);
     const { transfers: outputTransfers, generationIssues: outputGenerationIssues, updating: outputTransfersLoading } = useOutputTransfers(engineConfig, isInitialized);
+    // the lanes as the engine reads them: each lane's role, and the end of a lane that states none
+    const laneFacts = useLaneFacts(engineConfig, isInitialized);
+    const inputEnds = inputLaneEnds(laneFacts);
     // the header's height, so that what is focused and scrolled to is not left under it
     const headerRef = useRef<HTMLElement>(null);
     useStickyHeaderHeight(headerRef);
@@ -1265,7 +1270,8 @@ function App() {
                             />
 
                             <BuildPanel view={configView} onViewChange={setConfigView}>
-                                <PickupGeometrySummary build={config} onEdit={reviewPickup} busy={busy} />
+                                <PickupGeometrySummary build={config} onEdit={reviewPickup} busy={busy}
+                                    backedUp={inputEnds === null ? null : inputEnds.infinite + inputEnds.unknown === 0 && inputEnds.dead_end > 0} />
                                 <BuildValidationPanel issues={validationIssues} machines={config.machines} belts={config.belts} chests={config.chests} inserters={config.inserters} outputTransfers={outputTransfers}
                                     onApplyFix={handleInserterFix} fixUnavailable={fixUnavailable} onSwitchType={undoable.switchChestType} onEnableRemoval={undoable.enableChestRemoval}
                                     onReview={goToTarget} onReviewInserter={editOutputInserter} recovery={conversionRecovery} conversionPending={conversionPending} onConvert={handleConvertRepeatedUnit} counts={targetCounts} />
@@ -1306,6 +1312,9 @@ function App() {
                                                 onDuplicate={duplicate.belts}
                                                 beltQuestion={beltQuestion}
                                                 onBeltAnswer={handleBeltAnswer}
+                                                laneFacts={laneFacts}
+                                                copies={config.setpoint.copies}
+                                                outputBelt={config.output_belt}
                                             />
                                             <ChestsForm
                                                 chests={config.chests}

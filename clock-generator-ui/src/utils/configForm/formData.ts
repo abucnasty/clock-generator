@@ -88,7 +88,7 @@ export interface InserterFormData {
     _forced_always?: true;
 }
 
-/** The lane facts a lane of the config may state; the form keeps them as the config gives them and has no field for them yet */
+/** The lane facts a lane of the config may state; a fact the lane does not state is left out, never written as a default */
 type LaneFactsFormData = Pick<Config['belts'][number]['lanes'][number], 'supply_rate' | 'lane_end' | 'sharing'>;
 
 export interface BeltLaneFormData extends LaneFactsFormData {
@@ -106,7 +106,7 @@ export interface BeltFormData {
     _uuid: string;
     type: 'transport-belt' | 'fast-transport-belt' | 'express-transport-belt' | 'turbo-transport-belt';
     strategy?: BeltStrategyFormValue;
-    /** The way the items on both lanes move; the form keeps it as the config gives it and has no field for it yet */
+    /** The way the items on both lanes move along the copies; left out where the config states none */
     flow_direction?: Config['belts'][number]['flow_direction'];
     lanes: [BeltLaneFormData] | [BeltLaneFormData, BeltLaneFormData];
 }
@@ -123,15 +123,19 @@ export const LANE_CONSUMPTION_TOOLTIP =
     'Items per second taken off this lane by machines outside this configuration. Inserters filling the lane are planned for this rate.';
 
 /**
- * A lane with one field set. A consumption rate states what leaves the end of an export lane, so a lane that gets one
- * drops its lane end, which the config may not state beside it
+ * A lane with one field set; undefined takes the field away, so the lane states nothing of it. A consumption rate states
+ * what leaves the end of an export lane, which the config may not state beside a lane end: a lane that gets one drops its
+ * lane end, and a lane that gets a lane end drops its consumption rate
  */
-export function laneFieldUpdate(lane: BeltLaneFormData, field: keyof BeltLaneFormData, value: string | number | undefined): BeltLaneFormData {
-    const updated = { ...lane, [field]: value };
-    if (field !== 'consumption_per_second' || value === undefined) return updated;
-    const { lane_end: _end, ...rest } = updated;
-    void _end;
-    return rest;
+export function laneFieldUpdate<K extends keyof BeltLaneFormData>(lane: BeltLaneFormData, field: K, value: BeltLaneFormData[K] | undefined): BeltLaneFormData {
+    const updated: BeltLaneFormData = { ...lane, [field]: value };
+    const drop = value === undefined ? field
+        : field === 'consumption_per_second' ? 'lane_end'
+        : field === 'lane_end' ? 'consumption_per_second' : null;
+    if (drop === null) return updated;
+    const { [drop]: _dropped, ...rest } = updated;
+    void _dropped;
+    return rest as BeltLaneFormData;
 }
 
 /** Switching a belt to normal drops the lane consumption rates only export belts have, and keeps every other lane field */

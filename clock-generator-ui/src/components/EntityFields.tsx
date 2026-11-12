@@ -18,6 +18,8 @@ import { NumberField } from './NumberField';
 import { OptionWithNote, SelectField } from './SelectField';
 import { CraftingSpeedHint, MachinePrototypeField, MachineQualityField } from './MachineFields';
 import { CHEST_TYPES, CHEST_TYPE_LABELS, chestTypeIcon } from '../utils/configForm/formData';
+import { isTakenLane, type FormLaneFacts } from '../utils/laneFacts';
+import { FlowDirectionField, LaneEndField, LaneSharingField, SupplyRateField } from './LaneFactFields';
 
 /** Controlled type fields shared by the list and diagram editors. Draft ownership stays with the caller. */
 export function EntityTypeField<T extends string>({ label, value, options, nameOf, iconOf = value => value, icons = true,
@@ -79,11 +81,15 @@ export function BeltStrategyField({ belt, onChange, dialog = false }: {
         sx={dialog ? { '& .MuiSelect-select': { whiteSpace: 'normal', overflowWrap: 'anywhere' } } : undefined} />;
 }
 
-export function BeltLaneFields({ belt, itemNames, readOnly, onChange, dialog = false }: {
+export function BeltLaneFields({ belt, itemNames, readOnly, onChange, dialog = false, facts = null, copies = 1 }: {
     belt: BeltFormData; itemNames: string[]; readOnly: boolean; onChange: (update: Partial<BeltFormData>) => void; dialog?: boolean;
+    /** The lanes as the engine reads them: a lane's role says which facts it has, and a fact it does not state shows the engine's in grey */
+    facts?: FormLaneFacts | null;
+    /** The copies of the build: the sharing of a lane is asked where there is more than one */
+    copies?: number;
 }) {
     const { itemLabel } = useGameNames();
-    const updateLane = (index: number, field: keyof BeltLaneFormData, value: string | number | undefined) => {
+    const updateLane = <K extends keyof BeltLaneFormData>(index: number, field: K, value: BeltLaneFormData[K] | undefined) => {
         const lanes = [...belt.lanes] as BeltFormData['lanes'];
         lanes[index] = laneFieldUpdate(lanes[index], field, value);
         onChange({ lanes });
@@ -93,31 +99,50 @@ export function BeltLaneFields({ belt, itemNames, readOnly, onChange, dialog = f
     const addButton = !readOnly && belt.lanes.length < 2 && <Button size="small" color="inherit" onClick={add}>
         {dialog ? 'Add Second Lane' : 'Add Lane'}
     </Button>;
+    const factSx = { flex: '1 1 140px', minWidth: 'min(140px, 100%)' };
     return <Box sx={{ minWidth: 0 }}>
         {!dialog && <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>{addButton}</Box>}
-        {belt.lanes.map((lane, index) => <Box key={index} sx={dialog
-            ? { display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', mb: 2 }
-            : { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 28px', gap: 1, alignItems: 'start', mb: 1, minWidth: 0 }}>
-            <Box sx={dialog ? { display: 'contents' } : { display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', minWidth: 0 }}>
-            <Typography variant="body2" sx={{ width: dialog ? 56 : 60, flexShrink: 0 }}>Lane {index + 1}:</Typography>
-            {readOnly ? <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>Ingredient: {itemLabel(lane.ingredient)}. Stack size: {lane.stack_size} (read-only).</Typography> : <>
-                {dialog && <ItemSelector value={lane.ingredient || null} options={itemNames} label="Ingredient" freeSolo
-                    onChange={value => updateLane(index, 'ingredient', value || '')} sx={{ flex: '1 1 200px', minWidth: 'min(200px, 100%)' }} />}
-                <NumberField label="Stack size" value={lane.stack_size} min={1} size="small"
-                    onValueChange={value => updateLane(index, 'stack_size', parseInt(value?.toString() || '') || BELT_FORM_DEFAULT_STACK_SIZE)}
-                    sx={{ width: dialog ? 110 : 100, maxWidth: '100%', flexShrink: 0 }} />
-            </>}
-            {belt.strategy === 'export' && <Tooltip title={LANE_CONSUMPTION_TOOLTIP} describeChild><Box sx={{ flexShrink: 0 }}>
-                <NumberField label="Consumed /s" value={lane.consumption_per_second ?? null} min={0} size="small"
-                    onValueChange={value => updateLane(index, 'consumption_per_second', value && value > 0 ? value : undefined)} sx={{ width: 120 }} />
-            </Box></Tooltip>}
-            </Box>
-            {!readOnly && belt.lanes.length > 1 && index === 1 ? <IconButton size="small" onClick={remove} color="error"
-                aria-label={dialog ? 'Remove lane' : deleteLaneName(entityLabel('belt', belt.id), index + 1)}>{dialog ? <Close fontSize="small" /> : <Delete fontSize="small" />}</IconButton>
-                : (dialog || !readOnly && belt.lanes.length > 1) && <Box sx={{ width: 28, flexShrink: 0 }} />}
-        </Box>)}
+        {belt.lanes.map((lane, index) => {
+            const fact = facts?.of(belt.id, index + 1 as 1 | 2);
+            const owner = `${entityLabel('belt', belt.id)}, lane ${index + 1}`;
+            // an inserter takes from it, or it carries an end the Sidecar could not tell, which the user sets
+            const endShown = isTakenLane(fact) || lane.lane_end?.kind === 'unknown';
+            return <Box key={index} sx={dialog
+                ? { display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', mb: 2 }
+                : { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 28px', gap: 1, alignItems: 'start', mb: 1, minWidth: 0 }}>
+                <Box sx={dialog ? { display: 'contents' } : { display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'flex-start', minWidth: 0 }}>
+                <Typography variant="body2" sx={{ width: dialog ? 56 : 60, flexShrink: 0, pt: dialog ? 0 : 1 }}>Lane {index + 1}:</Typography>
+                {readOnly ? <Typography variant="body2" sx={{ overflowWrap: 'anywhere', pt: dialog ? 0 : 1, flex: '1 1 100%' }}>Ingredient: {itemLabel(lane.ingredient)}. Stack size: {lane.stack_size} (read-only).</Typography> : <>
+                    {dialog && <ItemSelector value={lane.ingredient || null} options={itemNames} label="Ingredient" freeSolo
+                        onChange={value => updateLane(index, 'ingredient', value || '')} sx={{ flex: '1 1 200px', minWidth: 'min(200px, 100%)' }} />}
+                    <NumberField label="Stack size" value={lane.stack_size} min={1} size="small"
+                        onValueChange={value => updateLane(index, 'stack_size', parseInt(value?.toString() || '') || BELT_FORM_DEFAULT_STACK_SIZE)}
+                        sx={{ width: dialog ? 110 : 100, maxWidth: '100%', flexShrink: 0 }} />
+                </>}
+                {endShown && <LaneEndField value={lane.lane_end?.kind} engineEnd={lane.lane_end === undefined ? fact?.end : undefined} ownerName={owner}
+                    onChange={kind => updateLane(index, 'lane_end', kind === undefined ? undefined : { kind })} sx={factSx} />}
+                {isTakenLane(fact) && <SupplyRateField value={lane.supply_rate} capacity={fact?.capacity} ownerName={owner}
+                    onChange={rate => updateLane(index, 'supply_rate', rate)} sx={factSx} />}
+                {copies > 1 && <LaneSharingField value={lane.sharing} engineSharing={lane.sharing === undefined ? fact?.sharing : undefined} ownerName={owner}
+                    onChange={sharing => updateLane(index, 'sharing', sharing)} sx={factSx} />}
+                {belt.strategy === 'export' && <Tooltip title={LANE_CONSUMPTION_TOOLTIP} describeChild><Box sx={{ flexShrink: 0 }}>
+                    <NumberField label="Consumed /s" value={lane.consumption_per_second ?? null} min={0} size="small"
+                        onValueChange={value => updateLane(index, 'consumption_per_second', value && value > 0 ? value : undefined)} sx={{ width: 120 }} />
+                </Box></Tooltip>}
+                </Box>
+                {!readOnly && belt.lanes.length > 1 && index === 1 ? <IconButton size="small" onClick={remove} color="error"
+                    aria-label={dialog ? 'Remove lane' : deleteLaneName(entityLabel('belt', belt.id), index + 1)}>{dialog ? <Close fontSize="small" /> : <Delete fontSize="small" />}</IconButton>
+                    : (dialog || !readOnly && belt.lanes.length > 1) && <Box sx={{ width: 28, flexShrink: 0 }} />}
+            </Box>;
+        })}
         {dialog && addButton}
     </Box>;
+}
+
+/** The way the items on a belt move along the copies: one field of the belt, for both its lanes */
+export function BeltFlowDirectionField({ belt, onChange }: { belt: BeltFormData; onChange: (update: Partial<BeltFormData>) => void }) {
+    return <FlowDirectionField value={belt.flow_direction} ownerName={entityLabel('belt', belt.id)} sx={{ width: '100%' }}
+        onChange={flow_direction => onChange({ flow_direction })} />;
 }
 
 export function ChestFields({ chest, itemNames, onChange, onSwitchType, dialog = false, storageHelp, containerDetails = true }: {
