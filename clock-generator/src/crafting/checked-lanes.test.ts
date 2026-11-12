@@ -138,7 +138,7 @@ describe("the rows of a build that states its output belt", () => {
         expect(lanes.line.output_belt).toBe("misses");
         expect(lanes.cause!.cause!.text).toBe("The side belts of copies 4 and 8 are full where they join the automation science pack output belt.");
         // a full join: its code, with the missed output swings and the output swings over the copies
-        expect(lanes.cause!.reason).toEqual({ code: "join_full", data: { missed: 84, swings: 756 } });
+        expect(lanes.cause!.reason).toEqual({ code: "target_full", data: { missed: 84, swings: 756 } });
         // fewer copies are fewer on the output belt too: what changes it names no lane
         const fewer = checked({ config, judged: judgement, fewer: { copies: 3 } });
         expect(fewer.cause!.changes!.text).toBe("With 3 copies, every copy makes every swing.");

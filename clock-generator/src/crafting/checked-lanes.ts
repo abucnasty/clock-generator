@@ -110,12 +110,13 @@ export interface CausePart<T = Record<string, never>> {
  * The reason beside the status of a clock not stable on a shared lane, as a code (a closed list) and its counts:
  * - `belt_gaps`: at least one missed swing shows the gap that the copy before leaves on the lane; the missed swings and
  *   those that show the gap, over the copies of the cause part;
- * - `join_full`: the side belt of a copy is full where it joins the output belt; the missed output swings and the output
+ * - `target_full`: the side belt of a copy is full where it joins the output belt (the game's "target full" of its output
+ *   inserter); the missed output swings and the output
  *   swings its target needs, over the copies of the headline.
  */
 export type SharedLaneReason =
     | { code: "belt_gaps"; data: { missed: number; with_gap: number } }
-    | { code: "join_full"; data: { missed: number; swings: number } };
+    | { code: "target_full"; data: { missed: number; swings: number } };
 
 /** The codes of the reason (a closed list) */
 export type SharedLaneReasonCode = SharedLaneReason["code"];
@@ -129,7 +130,7 @@ export interface SharedLaneCause {
     cause: CausePart<{ copies: ({ copy: number } & Partial<MissedSwingStops>)[] }> | null;
     /**
      * The reason beside the status of the clock, as a code and its counts (the page has the words): `belt_gaps` on a lane
-     * loss where at least one missed swing shows the gap that the copy before leaves; `join_full` at a full join. Absent on
+     * loss where at least one missed swing shows the gap that the copy before leaves; `target_full` at a full join. Absent on
      * a lane loss where no missed swing shows the gap.
      */
     reason?: SharedLaneReason;
@@ -501,7 +502,7 @@ function causeOf(input: { config: Config; build: BuildToName; losses: readonly S
         return {
             kind,
             headline: { text: missedSentence(at_join), data: { copies: at_join.map(({ copy, missed, swings }) => ({ copy, missed, swings })) } },
-            reason: { code: "join_full", data: { missed: at_join.reduce((sum, it) => sum + it.missed, 0), swings: at_join.reduce((sum, it) => sum + it.swings, 0) } },
+            reason: { code: "target_full", data: { missed: at_join.reduce((sum, it) => sum + it.missed, 0), swings: at_join.reduce((sum, it) => sum + it.swings, 0) } },
             cause: { text: `The side ${one ? "belt" : "belts"} of ${copiesNamed(named)} ${one ? "is" : "are"} full where ${one ? "it joins" : "they join"} the ${output_item} output belt.`,
                 data: { copies: named.map(copy => ({ copy })) } },
             spacing: null,
