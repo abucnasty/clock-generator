@@ -142,6 +142,6 @@ describe('the note that says why a clock is not stable', () => {
         const automation = viewsOf(AUTOMATION_240);
         results(automation, AUTOMATION_240.selected_index, automation.findIndex(view => view.id === 'takt_batches_observed_swings_4'));
         expect(panel('overview').textContent).not.toContain('Nothing stands out');
-        expect(panel('overview').textContent).toContain('Nothing else stands out. Diagnostics says why this clock does not keep its rate.');
+        expect(panel('overview').textContent).toContain('Nothing else stands out. Diagnostics says why this clock is not stable.');
     });
 });

@@ -15,7 +15,7 @@ export const DIAGNOSTICS_COPY = {
     /** The tab of a clock of a result kept from before the engine checked the shared lanes */
     keptBefore: 'This clock was made before the lanes its copies share were checked. Generate again to check them.',
     /** Overview's notes of a clock whose only note is on Diagnostics: not "Nothing stands out", which says the clock holds */
-    overviewNothing: 'Nothing else stands out. Diagnostics says why this clock does not keep its rate.',
+    overviewNothing: 'Nothing else stands out. Diagnostics says why this clock is not stable.',
 };
 
 /** The note that says why a clock is not stable (the engine's insight `unstable`): on Diagnostics, not in Overview's notes */

@@ -154,15 +154,19 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
     };
     // the card's "See diagnostics": the Diagnostics tab of the clock, the workspace brought into view, the focus on the tab's panel
     const [diagnosticsAsked, setDiagnosticsAsked] = useState(0);
+    const diagnosticsFocusPending = useRef(false);
     const showDiagnostics = () => {
         props.onDetailChange('diagnostics');
+        diagnosticsFocusPending.current = true;
         setDiagnosticsAsked(asked => asked + 1);
     };
+    // once the tab is shown, wherever the page keeps which tab is shown
     useEffect(() => {
-        if (diagnosticsAsked === 0) return;
+        if (!diagnosticsFocusPending.current || props.detail !== 'diagnostics') return;
+        diagnosticsFocusPending.current = false;
         workspaceRef.current?.scrollIntoView?.({ block: 'start' });
         document.getElementById(tabIds('result-context', 'diagnostics').panel)?.focus({ preventScroll: true });
-    }, [diagnosticsAsked]);
+    }, [diagnosticsAsked, props.detail]);
     const selectClockById = (id: string) => {
         const index = props.alternatives.findIndex(clock => clock.id === id);
         if (index >= 0) selectClock(index);
