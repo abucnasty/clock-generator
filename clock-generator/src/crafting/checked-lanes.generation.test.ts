@@ -3,7 +3,7 @@ import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import type { ClockAlternative, ClockAlternativesResult } from "./alternatives";
 import { generateClockAlternatives } from "./generate-blueprint";
-import { quiet, reasonsOf } from "./generate-blueprint-test-helpers";
+import { quiet, reasonsOf, swingSumsOf } from "./generate-blueprint-test-helpers";
 
 /** The rows of a clock as the page reads them: belt and lane, the copies' take or drop a second, the state's label and sentence */
 const rowsOf = (clock: ClockAlternative) => clock.checked_lanes!.rows.map(row => ({ at: `${row.belt_id}/${row.lane}`,
@@ -96,6 +96,32 @@ describe("what was checked on the lanes the copies of the automation science 240
         }
     });
 
+    it("gives the swings of each cause swing by swing: by copy, taker and what stopped them they add up to the cause's counts; by item two clocks differ", () => {
+        expect(swingSumsOf(result)).toEqual({ takt_batches_observed: [], euclidean_swings: [],
+            // by copy, by taker and by what stopped them the sums hold; by item, a window cycle's missed swing is the item the
+            // taker made fewer of in that window cycle, which on these two clocks is not the item's count over the span
+            takt_batches_observed_swings_2: ["copy 2 inserter 1 copper-plate missed: 9 != 8", "copy 2 inserter 1 iron-gear-wheel missed: 7 != 8"],
+            takt_batches_swings_1: ["copy 3 inserter 1 iron-gear-wheel missed: 4 != 0", "copy 3 inserter 1 copper-plate missed: 4 != 8"] });
+    });
+
+    it("on the 72-tick clock: the six missed swings of copy 2, each with its window cycle and what stopped it", () => {
+        const swings = clockOf(result, "euclidean_swings").checked_lanes!.cause!.swings!;
+        expect(swings.kind).toBe("lane");
+        if (swings.kind !== "lane") return;
+        expect(swings.rows.map(it => `${it.copy} ${it.inserter_id} ${it.item} ${it.window_cycles} ${it.swings}`)).toEqual(["2 1 iron-gear-wheel 65 65", "2 1 copper-plate 65 65"]);
+        expect(swings.missed.map(it => `${it.item} ${it.swing} ${it.window_cycle} ${it.cause}${it.lane_empty ? " empty" : ""}`)).toEqual([
+            "iron-gear-wheel 14 14 full", "copper-plate 18 18 both empty", "iron-gear-wheel 34 34 full", "copper-plate 42 42 gap empty",
+            "iron-gear-wheel 58 58 full", "copper-plate 62 62 both empty"]);
+    });
+
+    it("on the 216-tick clock: the output swings of copies 4 and 8 in each window cycle, 5, 6, 5 of the 6 the clock gives", () => {
+        const swings = clockOf(result, "takt_batches_observed").checked_lanes!.cause!.swings!;
+        expect(swings.kind).toBe("join");
+        if (swings.kind !== "join") return;
+        expect(swings.copies.map(it => ({ copy: it.copy, window_cycles: it.window_cycles, gives: it.gives, made: it.made.join("") })))
+            .toEqual([4, 8].map(copy => ({ copy, window_cycles: 63, gives: 6, made: "565".repeat(21) })));
+    });
+
     it("gives the description's sentences on a shared-lane loss as a field of their own, word for word", () => {
         for (const [id, lead] of [["euclidean_swings", "It is not stable on a lane its copies share. "], ["takt_batches_observed", "It is not stable on its output belt. "]]) {
             const clock = clockOf(result, id);
@@ -131,5 +157,6 @@ describe("what was checked on other outputs", () => {
             euclidean_swings: { code: "belt_gaps", data: { missed: 162, with_gap: 162 } },
             takt_batches_swings_2: { code: "belt_gaps", data: { missed: 151, with_gap: 121 } },
         });
+        expect(swingSumsOf(result)).toEqual({ euclidean_swings: [], takt_batches_swings_2: [] });
     });
 });

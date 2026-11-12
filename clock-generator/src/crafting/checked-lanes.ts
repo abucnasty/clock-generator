@@ -9,8 +9,8 @@ import { capitalized, chestNameInText, inserterNameInText, lanesInSentence, list
 import { machineNameInText } from "./machine-name";
 import { figure } from "./other-clocks";
 import type { CopiesTrialVerdict } from "./shared-lane-trial";
-import { droppedOntoSharedLanes, isNotChecked, type ClockSharedLaneLoss, type MissedSwingStops, type SharedLaneJudgement, type SharedLaneLoss,
-    type SharedLaneLossFacts } from "./shared-lane-verdict";
+import { droppedOntoSharedLanes, isNotChecked, type ClockSharedLaneLoss, type MissedSwingCause, type MissedSwingStops, type SharedLaneJudgement, type SharedLaneLoss,
+    type SharedLaneLossFacts, type TakerSwings } from "./shared-lane-verdict";
 
 /**
  * What a result says was checked on each lane the copies of a build share: the lanes of the build (`buildLanesOf`), and for
@@ -121,6 +121,23 @@ export type SharedLaneReason =
 /** The codes of the reason (a closed list) */
 export type SharedLaneReasonCode = SharedLaneReason["code"];
 
+/**
+ * The swings of a clock not stable on a shared lane, swing by swing, as codes with numbers and no sentence (the page has the
+ * words):
+ * - `lane`: for each copy of the cause part (`SharedLaneCause.cause`), each of its takers' items the cause counts, with its
+ *   swings over the judged span in the run of one copy alone; and each swing missed, with its copy, taker and item, its place
+ *   (the swing from 1, and its window cycle from 1) and what stopped it. By copy and by what stopped them their sums are the
+ *   cause part's counts, and by taker those of `where`. By item they are the items the taker made fewer of in each window
+ *   cycle, which can differ from the item's count over the span in `where`: one hand takes either item.
+ * - `join`: for each copy at a full join, its output swings in each window cycle of the span, and those the clock gives it in one.
+ */
+export type MissedSwings =
+    | { kind: "lane"; rows: { copy: number; inserter_id: number; item: string; lanes: { belt_id: number; lane: number }[]; window_cycles: number; swings: number }[];
+        missed: ({ copy: number; inserter_id: number } & TakerSwings["missed"][number])[] }
+    | { kind: "join"; copies: { copy: number; window_cycles: number; made: number[]; gives: number }[] };
+
+export type { MissedSwingCause };
+
 /** The parts of the cause of a clock that is not stable on a shared lane, as the page lays them out */
 export interface SharedLaneCause {
     /** "lane": a copy gets too few items; "join": a copy's side belt is full where it joins the output belt */
@@ -140,6 +157,11 @@ export interface SharedLaneCause {
     alone: CausePart<{ makes_all: boolean; missed: number; swings: number }>;
     /** What changes it: fewer copies whose run holds, and another clock of the result that holds with all copies */
     changes: CausePart<{ fewer_copies: number | null; other_clock: { id: string; label: string; window_cycle_ticks: number } | null }> | null;
+    /**
+     * The swings, swing by swing (`MissedSwings`); absent on a lane loss with no cause part, at a full join whose run kept no
+     * output swings, and in a result of an older engine
+     */
+    swings?: MissedSwings;
 }
 
 /** What a result says was checked of one clock on the lanes its copies share */
@@ -499,6 +521,9 @@ function causeOf(input: { config: Config; build: BuildToName; losses: readonly S
         const alone_swings = losses.map(factsOf).find(it => it?.alone_output_swings !== undefined)?.alone_output_swings;
         const needed = at_join[0].swings;
         const makes_all = alone_swings !== undefined && alone_swings >= needed;
+        const output_swings = at_join.map(it => ({ copy: it.copy, of: losses.filter(loss => loss.copy === it.copy).map(factsOf).find(facts => facts?.output_swings !== undefined)?.output_swings }));
+        const swings: MissedSwings | undefined = output_swings.every(it => it.of !== undefined)
+            ? { kind: "join", copies: output_swings.map(it => ({ copy: it.copy, window_cycles: it.of!.made.length, made: [...it.of!.made], gives: it.of!.gives })) } : undefined;
         return {
             kind,
             headline: { text: missedSentence(at_join), data: { copies: at_join.map(({ copy, missed, swings }) => ({ copy, missed, swings })) } },
@@ -513,17 +538,20 @@ function causeOf(input: { config: Config; build: BuildToName; losses: readonly S
                     : `Alone, the same inserter makes ${figure(alone_swings)} of the ${figure(needed)} swings its target needs.`,
             data: { makes_all, missed: alone_swings === undefined ? 0 : Math.max(0, needed - alone_swings), swings: needed } },
             changes: changes(null),
+            ...(swings !== undefined && { swings }),
         };
     }
     // a lane loss: each copy short, each of its takers with its items, and what stopped its missed swings
     const short = copiesShortOn(lane_losses);
-    const takers = new Map<string, { copy: number; inserter_id: number; items: { item: string; missed: number; swings: number; short_swings: number; hand: number }[];
-        stops?: MissedSwingStops; window_cycles: number }>();
+    const takers = new Map<string, { copy: number; inserter_id: number; items: { item: string; missed: number; swings: number; short_swings: number; hand: number;
+        lanes: { belt_id: number; lane: number }[] }[]; stops?: MissedSwingStops; swings?: TakerSwings; window_cycles: number }>();
     for (const loss of lane_losses) {
         const key = `${loss.copy}|${loss.inserter_id}`;
         const taker = takers.get(key) ?? { copy: loss.copy, inserter_id: loss.inserter_id, items: [], window_cycles: loss.window_cycles };
-        taker.items.push({ item: loss.item, missed: Math.max(0, loss.alone_swings - loss.swings), swings: loss.alone_swings, short_swings: loss.short_swings, hand: factsOf(loss)?.hand ?? 0 });
+        taker.items.push({ item: loss.item, missed: Math.max(0, loss.alone_swings - loss.swings), swings: loss.alone_swings, short_swings: loss.short_swings, hand: factsOf(loss)?.hand ?? 0,
+            lanes: [loss.lane, ...(loss.other_lanes ?? []).map(other => other.lane)].map(lane => ({ belt_id: loss.belt_id, lane })) });
         taker.stops ??= factsOf(loss)?.stops;
+        taker.swings ??= factsOf(loss)?.swings;
         takers.set(key, taker);
     }
     const of_takers = [...takers.values()].sort((a, b) => a.copy - b.copy || a.inserter_id - b.inserter_id);
@@ -599,6 +627,14 @@ function causeOf(input: { config: Config; build: BuildToName; losses: readonly S
     const reason: SharedLaneCause["reason"] = with_gap > 0
         ? { code: "belt_gaps", data: { missed: cause_parts.reduce((sum, it) => sum + (it.missed ?? 0), 0), with_gap } }
         : undefined;
+    // the swings, swing by swing, of the copies of the cause part: from the same record as their counts
+    const of_cause = of_takers.filter(taker => cause_parts.some(it => it.copy === taker.copy));
+    const swings: MissedSwings | undefined = cause_parts.length === 0 || of_cause.some(taker => taker.swings === undefined) ? undefined : {
+        kind: "lane",
+        rows: of_cause.flatMap(taker => taker.items.map(it => ({ copy: taker.copy, inserter_id: taker.inserter_id, item: it.item, lanes: it.lanes,
+            window_cycles: taker.window_cycles, swings: it.swings }))),
+        missed: of_cause.flatMap(taker => taker.swings!.missed.map(it => ({ copy: taker.copy, inserter_id: taker.inserter_id, ...it }))),
+    };
     // one copy alone: the copy that misses the most
     const worst = [...short].sort((a, b) => b.missed - a.missed || a.copy - b.copy)[0];
     const worst_takers = of_takers.filter(it => it.copy === worst.copy).map(it => it.inserter_id);
@@ -618,6 +654,7 @@ function causeOf(input: { config: Config; build: BuildToName; losses: readonly S
             swings: it.items.reduce((s, x) => s + x.swings, 0), items: it.items.map(({ item, missed, swings }) => ({ item, missed, swings })) })) } },
         alone,
         changes: changes(null),
+        ...(swings !== undefined && { swings }),
     };
 }
 
