@@ -96,22 +96,18 @@ describe("what was checked on the lanes the copies of the automation science 240
         }
     });
 
-    it("gives the swings of each cause swing by swing: by copy, taker and what stopped them they add up to the cause's counts; by item two clocks differ", () => {
-        expect(swingSumsOf(result)).toEqual({ takt_batches_observed: [], euclidean_swings: [],
-            // by copy, by taker and by what stopped them the sums hold; by item, a window cycle's missed swing is the item the
-            // taker made fewer of in that window cycle, which on these two clocks is not the item's count over the span
-            takt_batches_observed_swings_2: ["copy 2 inserter 1 copper-plate missed: 9 != 8", "copy 2 inserter 1 iron-gear-wheel missed: 7 != 8"],
-            takt_batches_swings_1: ["copy 3 inserter 1 iron-gear-wheel missed: 4 != 0", "copy 3 inserter 1 copper-plate missed: 4 != 8"] });
+    it("gives the swings of each cause window cycle by window cycle, which add up to the counts the cause carries by copy, inserter and cause", () => {
+        expect(swingSumsOf(result)).toEqual({ takt_batches_observed: [], euclidean_swings: [], takt_batches_observed_swings_2: [], takt_batches_swings_1: [] });
     });
 
-    it("on the 72-tick clock: the six missed swings of copy 2, each with its window cycle and what stopped it", () => {
+    it("on the 72-tick clock: the six window cycles in which the inserter of copy 2 misses a swing, each with what stopped it", () => {
         const swings = clockOf(result, "euclidean_swings").checked_lanes!.cause!.swings!;
         expect(swings.kind).toBe("lane");
         if (swings.kind !== "lane") return;
-        expect(swings.rows.map(it => `${it.copy} ${it.inserter_id} ${it.item} ${it.window_cycles} ${it.swings}`)).toEqual(["2 1 iron-gear-wheel 65 65", "2 1 copper-plate 65 65"]);
-        expect(swings.missed.map(it => `${it.item} ${it.swing} ${it.window_cycle} ${it.cause}${it.lane_empty ? " empty" : ""}`)).toEqual([
-            "iron-gear-wheel 14 14 full", "copper-plate 18 18 both empty", "iron-gear-wheel 34 34 full", "copper-plate 42 42 gap empty",
-            "iron-gear-wheel 58 58 full", "copper-plate 62 62 both empty"]);
+        expect(swings.rows.map(({ missed: _, ...row }) => row)).toEqual([{ copy: 2, inserter_id: 1, items: ["iron-gear-wheel", "copper-plate"],
+            lanes: [{ belt_id: 1, lane: 1 }, { belt_id: 1, lane: 2 }], window_cycles: 65, swings_per_window_cycle: 2 }]);
+        expect(swings.rows[0].missed.map(it => `${it.window_cycle} ${it.missed} ${it.cause}${it.lane_empty ? " empty" : ""}`)).toEqual([
+            "14 1 full", "18 1 both empty", "34 1 full", "42 1 gap empty", "58 1 full", "62 1 both empty"]);
     });
 
     it("on the 216-tick clock: the output swings of copies 4 and 8 in each window cycle, 5, 6, 5 of the 6 the clock gives", () => {
@@ -120,6 +116,8 @@ describe("what was checked on the lanes the copies of the automation science 240
         if (swings.kind !== "join") return;
         expect(swings.copies.map(it => ({ copy: it.copy, window_cycles: it.window_cycles, gives: it.gives, made: it.made.join("") })))
             .toEqual([4, 8].map(copy => ({ copy, window_cycles: 63, gives: 6, made: "565".repeat(21) })));
+        // the output inserters drop onto side belts that side-load onto the output belt
+        expect(swings.side_belt).toBe(true);
     });
 
     it("gives the description's sentences on a shared-lane loss as a field of their own, word for word", () => {

@@ -191,7 +191,7 @@ describe("the parts of the cause", () => {
         expect(other.cause!.cause).toBeNull();
     });
 
-    it("give the reason code of belt gaps only where at least one missed swing shows the copy before's gap, with its counts", () => {
+    it("give the reason code of belt gaps where a missed swing shows the copy before's gap, unknown where none shows the gap or a full output", () => {
         const stops = { missed: 6, lane_empty: 3, gap_from_copy_before: 3, machine_full: 5, both: 2, neither: 0, lane_items: ["iron-plate"], gap_items: ["iron-plate"] };
         const gaps = checked({ config: gears(), judged: judged([lossOf(2, 6, 130)], { loss_facts: [{ ...facts, stops }] }) });
         expect(gaps.cause!.reason).toEqual({ code: "belt_gaps", data: { missed: 6, with_gap: 3 } });
@@ -200,9 +200,13 @@ describe("the parts of the cause", () => {
         const full = checked({ config: gears(), judged: judged([lossOf(2, 6, 130)], { loss_facts: [{ ...facts, stops: no_gap }] }) });
         expect(full.cause!.cause).not.toBeNull();
         expect(full.cause).not.toHaveProperty("reason");
-        // no record of the stops: no reason
+        // the run shows the missed swings, and none of them shows the gap or a full output: unknown
+        const neither = { ...stops, lane_empty: 2, gap_from_copy_before: 0, machine_full: 0, both: 0, neither: 4, gap_items: [] };
+        const unknown_cause = checked({ config: gears(), judged: judged([lossOf(2, 6, 130)], { loss_facts: [{ ...facts, stops: neither }] }) });
+        expect(unknown_cause.cause!.reason).toEqual({ code: "unknown", data: { missed: 6 } });
+        // no record of the stops: unknown
         const unknown = checked({ config: gears(), judged: judged([lossOf(2, 6, 130)]) });
-        expect(unknown.cause).not.toHaveProperty("reason");
+        expect(unknown.cause!.reason).toEqual({ code: "unknown", data: { missed: 6 } });
     });
 
     it("name another clock of the result that holds with all the copies", () => {

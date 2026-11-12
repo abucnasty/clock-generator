@@ -377,34 +377,33 @@ export interface MissedSwingStops {
 }
 
 /**
- * What stopped one missed swing, as the stops of its window cycle show it (a closed list): `gap` the gap that the copy before
- * leaves on the lane; `full` the output of the machine its inserter puts into is full; `both` the two; `neither` neither of them
+ * What stopped the missed swings of a window cycle, as its stops show them (a closed list): `gap` the gap that the copy
+ * before leaves on the lane; `full` the output of the machine the inserter puts into is full; `both` the two; `neither`
+ * neither of them
  */
 export type MissedSwingCause = "gap" | "full" | "both" | "neither";
 
-/** One missed swing of one taker of one copy, in the judged span of the run of the copies */
-export interface MissedSwing {
-    /** The item the swing would have taken */
-    item: string;
-    /** The swing's place among the taker's swings with the item in the run of one copy alone over the span, from 1 */
-    swing: number;
-    /** The window cycle of the span it is in, from 1 */
+/** A window cycle of the judged span in which one taker of one copy made fewer swings than in the run of one copy alone */
+export interface MissedInWindowCycle {
+    /** The window cycle of the span, from 1 */
     window_cycle: number;
+    /** The swings it made fewer than the run alone */
+    missed: number;
     cause: MissedSwingCause;
-    /** Whether the hand found the reach of an item's lane empty in its window cycle, the copy before's gap or not */
+    /** Whether the hand found the reach of a lane empty in the window cycle, the copy before's gap or not */
     lane_empty: boolean;
 }
 
 /**
- * The swings of one taker of one copy over the judged span, swing by swing: its swings with each item in the run of one copy
- * alone, and each swing missed in the run of the copies. A window cycle with n fewer swings than the run alone has n missed
- * swings (`missedSwingStops`): those of each item it has fewer of, its last ones in that window cycle; each with what the stops
- * of the window cycle show.
+ * The swings of one taker of one copy over the judged span, window cycle by window cycle (`missedSwingStops`): the items it
+ * takes in the run of one copy alone, its swings in each window cycle there, and each window cycle where the run of the
+ * copies makes fewer, with what its stops show. A missed swing is a missed hand of the taker: it has no item of its own.
  */
 export interface TakerSwings {
-    window_cycles: number;
-    items: { item: string; swings: number }[];
-    missed: MissedSwing[];
+    items: string[];
+    /** Its swings in each window cycle of the span in the run alone */
+    alone: number[];
+    missed: MissedInWindowCycle[];
 }
 
 /** What a run of the copies shows of one loss, beside the loss: kept for the result's rows and parts (checked-lanes.ts) */
@@ -775,7 +774,7 @@ const cycleOf = (tick: number, window_cycle_ticks: number) => {
  * items) than the same inserter in the run of one copy alone: a window cycle with n fewer swings counts n missed swings,
  * each with what its stopped ticks show (`TakerStops`). An empty reach is the copy before's gap where a taker of that copy
  * took the held item the ticks an item takes from it to this copy before, within the ticks an item takes over the reach. Read from the records of the runs made; it makes no run.
- * With the counts, the same swings one by one (`TakerSwings`).
+ * With the counts, the same window cycle by window cycle (`TakerSwings`).
  */
 function missedSwingStops(taker: TakerStops, before: readonly TakerStops[], alone_hands: readonly HandDropped[], hands: readonly HandDropped[],
     span: { first_cycle: number; end_cycle: number; window_cycle_ticks: number; travel_ticks: number; reach_ticks: number }): { stops: MissedSwingStops; swings: TakerSwings } {
@@ -789,12 +788,7 @@ function missedSwingStops(taker: TakerStops, before: readonly TakerStops[], alon
         return counts;
     };
     const alone = perCycle(alone_hands.map(it => it.tick)), copies = perCycle(hands.map(it => it.tick));
-    // each item's swings by window cycle, alone and with the copies, in the order the run alone first takes the items
-    const of_items = [...new Set(alone_hands.map(it => it.item))];
-    const byItem = (list: readonly HandDropped[]) => new Map(of_items.map(item => [item, perCycle(list.filter(it => it.item === item).map(it => it.tick))] as const));
-    const alone_items = byItem(alone_hands), copies_items = byItem(hands);
-    const before_k = new Map(of_items.map(item => [item, 0]));
-    const missed_swings: MissedSwing[] = [];
+    const missed_cycles: MissedInWindowCycle[] = [];
     const stopped = new Map<number, StoppedTick[]>();
     for (const it of taker.stopped) {
         const k = cycleOf(it.tick, window_cycle_ticks);
@@ -805,8 +799,6 @@ function missedSwingStops(taker: TakerStops, before: readonly TakerStops[], alon
     const items = new Set<string>(), gap_items = new Set<string>();
     for (let k = first_cycle; k < end_cycle; k++) {
         const fewer = (alone.get(k) ?? 0) - (copies.get(k) ?? 0);
-        const counted = of_items.map(item => ({ item, before: before_k.get(item)!, alone: alone_items.get(item)!.get(k) ?? 0, copies: copies_items.get(item)!.get(k) ?? 0 }));
-        counted.forEach(it => before_k.set(it.item, it.before + it.alone));
         if (fewer <= 0) continue;
         const of_cycle = stopped.get(k) ?? [];
         const empty = of_cycle.filter(it => it.stop === "lane_empty");
@@ -820,18 +812,13 @@ function missedSwingStops(taker: TakerStops, before: readonly TakerStops[], alon
         if (full) found.machine_full += fewer;
         if (empty.length > 0 && full) found.both += fewer;
         if (empty.length === 0 && !full) found.neither += fewer;
-        // the swings missed, item by item: an item's last swings of the window cycle in the run alone, as many as it has fewer
         const cause: MissedSwingCause = gaps.length > 0 ? (full ? "both" : "gap") : full ? "full" : "neither";
-        for (const it of counted) {
-            const short = Math.max(0, it.alone - it.copies);
-            for (let n = it.alone - short; n < it.alone; n++) {
-                missed_swings.push({ item: it.item, swing: it.before + n + 1, window_cycle: k - first_cycle + 1, cause, lane_empty: empty.length > 0 });
-            }
-        }
+        missed_cycles.push({ window_cycle: k - first_cycle + 1, missed: fewer, cause, lane_empty: empty.length > 0 });
     }
     found.lane_items = [...items];
     found.gap_items = [...gap_items];
-    return { stops: found, swings: { window_cycles: end_cycle - first_cycle, items: of_items.map(item => ({ item, swings: before_k.get(item)! })), missed: missed_swings } };
+    const alone_by_cycle = Array.from({ length: Math.max(0, end_cycle - first_cycle) }, (_, i) => alone.get(first_cycle + i) ?? 0);
+    return { stops: found, swings: { items: [...new Set(alone_hands.map(it => it.item))], alone: alone_by_cycle, missed: missed_cycles } };
 }
 
 /** The config with each output inserter dropping on a tile of its own: the run of the copies as it was before the output belt */
