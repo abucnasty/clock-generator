@@ -78,7 +78,7 @@ const COMPARE_COPY = {
 };
 
 /** The full table's Status: the glossary's words for the verdict */
-const VERDICT_LABEL: Record<ClockVerdict, string> = { stable: 'Has recovery', 'no recovery': 'No recovery', unstable: 'Unstable' };
+const VERDICT_LABEL: Record<ClockVerdict, string> = { stable: 'Has recovery', 'no recovery': 'No recovery', unstable: SUMMARY_COPY.unstable };
 const VERDICT_COLOR: Record<ClockVerdict, 'success' | 'warning' | 'error'> = { stable: 'success', 'no recovery': 'warning', unstable: 'error' };
 
 /** The icon beside the words of Works?: never the colour alone */

@@ -3,6 +3,7 @@ import type { ClockRanking, ClockVerdict } from 'clock-generator/browser';
 import { rateWarningOf } from './rateWarning';
 import { startCheckSummary } from './modelAssumptions';
 import {
+    REASON_WORDS,
     SUMMARY_COPY,
     beltCellText,
     beltLine,
@@ -122,7 +123,7 @@ describe('clockBadges', () => {
             clock('b', { wake_ups_per_minute: 12, window_count: 6, deciders: 4 }),
             clock('c', { wake_ups_per_minute: 15, window_count: 6, deciders: 4 }),
         ], { b: [fewestDeciders], c: [fewestDeciders] }],
-        ['says a clock that has no recovery, or does not hold its rate, so', [
+        ['says a clock that has no recovery, or underproduces, so', [
             clock('a'),
             clock('b', { verdict: 'no recovery', meets_target_rate: false }),
             clock('c', { verdict: 'unstable', meets_target_rate: false, holds_expected_output: false }),
@@ -143,6 +144,24 @@ describe('clockBadges', () => {
 
     it('is empty for an index with no clock', () => {
         expect(clockBadges([], 0)).toEqual([]);
+    });
+
+    it('says Underproduces for a clock whose verdict is unstable, with the words for the engine\'s reason code beside it where it gives one', () => {
+        expect(SUMMARY_COPY.unstable).toBe('Underproduces');
+        const cause = (reason?: { code: 'belt_gaps'; data: { missed: number; with_gap: number } }) =>
+            ({ checkedLanes: { cause: { ...(reason !== undefined && { reason }) } } }) as unknown as Partial<SummaryClock>;
+        const gaps = { ...clock('a', { verdict: 'unstable' }), ...cause({ code: 'belt_gaps', data: { missed: 6, with_gap: 3 } }) };
+        const noReason = { ...clock('b', { verdict: 'unstable' }), ...cause() };
+        const otherRoute = clock('c', { verdict: 'unstable', holds_expected_output: false });
+        expect(clockBadges([gaps], 0)).toEqual([{ kind: 'status', text: 'Underproduces', reason: 'Missed pickups due to belt gaps' }]);
+        expect(clockBadges([noReason], 0)).toEqual([{ kind: 'status', text: 'Underproduces' }]);
+        expect(clockBadges([otherRoute], 0)).toEqual([{ kind: 'status', text: 'Underproduces' }]);
+    });
+});
+
+describe('REASON_WORDS', () => {
+    it('has the words for each reason code the engine gives', () => {
+        expect(REASON_WORDS).toEqual({ belt_gaps: 'Missed pickups due to belt gaps' });
     });
 });
 
@@ -209,7 +228,7 @@ describe('recoversOf', () => {
         expect(recoversOf(untried).detail).toContain(`: ${reason}.`);
     });
 
-    it('says not tested for a clock that does not hold its rate', () => {
+    it('says not tested for a clock that underproduces', () => {
         expect(recoversOf(clock('a', { verdict: 'unstable' }))).toMatchObject({ kind: 'not-tested', value: SUMMARY_COPY.recoversNotTested });
     });
 });
@@ -348,9 +367,9 @@ describe('worksOf', () => {
         ['says yes for a clock that holds the rate and recovers, made for the belt asked for', clock('a'), { kind: 'yes', text: SUMMARY_COPY.worksYes }],
         ['names the rate a clock that holds a rate misses, before whether it recovers',
             clock('a', { verdict: 'no recovery', meets_target_rate: false, rate_off_target: -48 }), { kind: 'no', text: SUMMARY_COPY.worksOffTarget('192') }],
-        ['calls a clock that does not hold its rate unstable, whatever rate it runs at',
+        ['says that a clock whose verdict is unstable underproduces, whatever rate it runs at',
             clock('a', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48 }), { kind: 'no', text: SUMMARY_COPY.worksUnstable }],
-        ['calls a clock that does not hold its rate unstable at the target rate too', clock('b', { verdict: 'unstable' }), { kind: 'no', text: SUMMARY_COPY.worksUnstable }],
+        ['says that a clock whose verdict is unstable underproduces at the target rate too', clock('b', { verdict: 'unstable' }), { kind: 'no', text: SUMMARY_COPY.worksUnstable }],
         ['says a clock that does not recover so',
             clock('a', { verdict: 'no recovery' }), { kind: 'caution', text: SUMMARY_COPY.worksNoRecovery }],
     ])('%s', (_, result, expected) => {

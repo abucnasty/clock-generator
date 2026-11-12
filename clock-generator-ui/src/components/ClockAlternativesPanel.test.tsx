@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { show } from '../test/fixtures';
 import { AUTOMATION_240, checkedOf, viewsOf } from '../test/checkedLanesFixtures';
@@ -33,5 +33,27 @@ describe('the help of a clock in the list of clocks', () => {
         const { clock, text } = await helpOf('time_study_windows');
         expect(text).toContain(clock.description.split('. ')[0]);
         expect(document.querySelector('[data-cause-headline]')).toBeNull();
+    });
+});
+
+describe('the status of a clock that underproduces, in the list of clocks', () => {
+    const views = viewsOf(AUTOMATION_240);
+    const rowOf = (id: string) => {
+        show(<ClockAlternativesPanel comparison={{ allColumns: false, showUnstable: true }} onComparisonChange={() => {}}
+            alternatives={views} selectedIndex={AUTOMATION_240.selected_index} onSelect={() => {}} recommendedIndex={AUTOMATION_240.selected_index}
+            pickRule={null} isGenerating={false} />);
+        return within(screen.getByRole('radio', { name: fullClockName(views.find(view => view.id === id)!) }).closest('tr')!);
+    };
+
+    it('of the 72-tick clock: the chip and the words for its reason code', () => {
+        const row = rowOf('euclidean_swings');
+        expect(row.getAllByText('Underproduces').length).toBeGreaterThan(0);
+        expect(row.getByText('Missed pickups due to belt gaps')).toBeTruthy();
+    });
+
+    it('of the 216-tick clock at a full join: the chip and no reason', () => {
+        const row = rowOf('takt_batches_observed');
+        expect(row.getAllByText('Underproduces').length).toBeGreaterThan(0);
+        expect(row.queryByText('Missed pickups due to belt gaps')).toBeNull();
     });
 });

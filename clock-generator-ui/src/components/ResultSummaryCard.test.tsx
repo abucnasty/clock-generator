@@ -1,9 +1,11 @@
 // @vitest-environment happy-dom
-import { screen } from '@testing-library/react';
+import { cleanup, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { ClockAlternativeView } from '../worker/types';
 import { show } from '../test/fixtures';
 import { AUTOMATION_240, checkedOf, ELECTROMAGNETIC_330_TWO_SWINGS, viewsOf } from '../test/checkedLanesFixtures';
+import { REASON_WORDS, SUMMARY_COPY } from '../utils/clockSummary';
+import { strategyNameOf } from '../utils/strategyNames';
 import { ResultSummaryCard } from './ResultSummaryCard';
 
 const card = (alternatives: ClockAlternativeView[], selectedIndex: number, more: Partial<Parameters<typeof ResultSummaryCard>[0]> = {}) => show(
@@ -83,4 +85,52 @@ describe('the three clocks of automation science 240 say nothing twice', () => {
         if (cause) for (const part of [cause.headline.text, cause.where.text, cause.alone.text]) expect(occurrences(text, part)).toBe(1);
     });
     const occurrences = (text: string, part: string) => text.split(part).length - 1;
+});
+
+describe('the status of a clock that underproduces, beside its name on the card', () => {
+    const views = viewsOf(AUTOMATION_240);
+    /** What stands beside the selected clock's name: the heading's row */
+    const besideName = (alternatives: ClockAlternativeView[], id: string) => {
+        const index = alternatives.findIndex(view => view.id === id);
+        card(alternatives, index);
+        return within(screen.getByRole('heading', { level: 3, name: strategyNameOf(alternatives[index]) }).parentElement!);
+    };
+
+    it('of the 72-tick clock: the chip Underproduces, and the words for the engine\'s reason code beside it', () => {
+        expect(views.find(view => view.id === 'euclidean_swings')!.checkedLanes!.cause!.reason).toEqual({ code: 'belt_gaps', data: { missed: 6, with_gap: 3 } });
+        const name = besideName(views, 'euclidean_swings');
+        expect(name.getByText(SUMMARY_COPY.unstable)).toBeTruthy();
+        expect(name.getByText('Missed pickups due to belt gaps')).toBeTruthy();
+    });
+
+    it('of the 216-tick clock at a full join: the chip, and no reason', () => {
+        const name = besideName(views, 'takt_batches_observed');
+        expect(name.getByText('Underproduces')).toBeTruthy();
+        expect(name.queryByText(REASON_WORDS.belt_gaps)).toBeNull();
+    });
+
+    it('of a clock unstable by another route: the chip alone', () => {
+        // a clock whose steady run does not hold, off the setpoint: the rate it misses; at the setpoint: Underproduces, no reason
+        const off = besideName(views, 'takt_batches_observed_swings_4');
+        expect(off.getByText(SUMMARY_COPY.worksOffTarget('180'))).toBeTruthy();
+        expect(off.queryByText(REASON_WORDS.belt_gaps)).toBeNull();
+        cleanup();
+        const atTarget = views.map(view => view.id !== 'takt_batches_observed_swings_4' ? view
+            : { ...view, ranking: { ...view.ranking, rate_off_target: 0 }, assessment: { ...view.assessment, items_per_second: 240 } });
+        const name = besideName(atTarget, 'takt_batches_observed_swings_4');
+        expect(name.getByText('Underproduces')).toBeTruthy();
+        expect(name.queryByText(REASON_WORDS.belt_gaps)).toBeNull();
+    });
+
+    it('of a kept result whose cause has no reason: the chip, no reason, no error', () => {
+        const kept = views.map(view => {
+            if (!view.checkedLanes?.cause) return view;
+            const { reason: _reason, ...cause } = view.checkedLanes.cause;
+            void _reason;
+            return { ...view, checkedLanes: { ...view.checkedLanes, cause } };
+        });
+        const name = besideName(kept, 'euclidean_swings');
+        expect(name.getByText('Underproduces')).toBeTruthy();
+        expect(name.queryByText(REASON_WORDS.belt_gaps)).toBeNull();
+    });
 });
