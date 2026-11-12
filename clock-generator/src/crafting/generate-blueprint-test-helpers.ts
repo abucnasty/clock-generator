@@ -12,6 +12,10 @@ import { fraction } from "../data-types/fraction";
 /** A logger for the generations whose log the test does not read */
 export const quiet = { log() { }, warn() { }, error() { }, debug() { } };
 
+/** The reason of each clock that has a cause on the shared lanes, by its id: its code and counts, or "none" */
+export const reasonsOf = (result: ClockAlternativesResult) => Object.fromEntries(result.alternatives.filter(it => it.checked_lanes?.cause)
+    .map(it => [it.id, it.checked_lanes!.cause!.reason ?? "none"]));
+
 export const SEARCH_MAKERS = ["derived", "uneven-output", "shifted-swings", "full-hand"];
 export const SEARCH_LABELS = ["Time-Study Windows", "Moved Output Swing", "Phase-Shifted Batch", "Pitch Pickups"];
 export const alternativeMakersOf = (generated: ClockAlternativesResult) => generated.alternatives.map(alternative => alternative.maker);

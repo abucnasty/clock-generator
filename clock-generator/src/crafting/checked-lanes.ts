@@ -106,6 +106,18 @@ export interface CausePart<T = Record<string, never>> {
     data: T;
 }
 
+/**
+ * Why a clock is not stable on a shared lane, as a code (a closed list): `belt_gaps`, at least one missed swing shows the
+ * gap that the copy before leaves on the lane
+ */
+export type SharedLaneReasonCode = "belt_gaps";
+
+/** The reason beside the status of a clock: its code, and the totals over the copies of the cause part */
+export interface SharedLaneReason {
+    code: SharedLaneReasonCode;
+    data: { missed: number; with_gap: number };
+}
+
 /** The parts of the cause of a clock that is not stable on a shared lane, as the page lays them out */
 export interface SharedLaneCause {
     /** "lane": a copy gets too few items; "join": a copy's side belt is full where it joins the output belt */
@@ -114,11 +126,11 @@ export interface SharedLaneCause {
     /** What the run of the copies shows stopped the missed swings; null where it shows nothing it can name */
     cause: CausePart<{ copies: ({ copy: number } & Partial<MissedSwingStops>)[] }> | null;
     /**
-     * The reason beside the status of the clock, in a few words: on a lane loss where at least one missed swing shows the
-     * gap that the copy before leaves, "Missed pickups due to belt gaps", with the missed swings the cause counts and how
-     * many of them show the gap. Absent on any other loss.
+     * The reason beside the status of the clock, as a code and its counts (the page has the words): on a lane loss where at
+     * least one missed swing shows the gap that the copy before leaves, `belt_gaps`, with the missed swings of the copies the
+     * cause part counts and how many of them show the gap. Absent on any other loss.
      */
-    reason?: CausePart<{ missed: number; with_gap: number }>;
+    reason?: SharedLaneReason;
     /** The reason from the spacing: only where the run shows the gap that the copy before leaves */
     spacing: CausePart<{ step_tiles: number; travel_ticks: number; window_cycle_ticks: number; take_all: boolean }> | null;
     where: CausePart<{ takers: { copy: number; inserter_id: number; missed: number; swings: number; items: { item: string; missed: number; swings: number }[] }[] }>;
@@ -321,7 +333,6 @@ const NOT_RUN = "The clock does not hold its output on one copy, so the copies a
 const DROPPED_ONTO = "The build drops items onto this belt, and the check of a shared lane does not run those drops yet.";
 const NO_DROP_RATE = "The build's drop rate onto this lane is not known.";
 const NOT_IN_MODEL = "The check of the shared lanes does not run this lane.";
-const GAP_REASON = "Missed pickups due to belt gaps";
 const OUTPUT_BELT_NOT_RUN ="The output belt is run with the copies only together with a lane they take from, and no such lane is run.";
 
 /**
@@ -582,7 +593,7 @@ function causeOf(input: { config: Config; build: BuildToName; losses: readonly S
     // the reason beside the status: only where at least one missed swing shows the copy before's gap
     const with_gap = cause_parts.reduce((sum, it) => sum + (it.gap_from_copy_before ?? 0), 0);
     const reason: SharedLaneCause["reason"] = with_gap > 0
-        ? { text: GAP_REASON, data: { missed: cause_parts.reduce((sum, it) => sum + (it.missed ?? 0), 0), with_gap } }
+        ? { code: "belt_gaps", data: { missed: cause_parts.reduce((sum, it) => sum + (it.missed ?? 0), 0), with_gap } }
         : undefined;
     // one copy alone: the copy that misses the most
     const worst = [...short].sort((a, b) => b.missed - a.missed || a.copy - b.copy)[0];
