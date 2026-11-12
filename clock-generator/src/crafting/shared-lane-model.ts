@@ -2,7 +2,7 @@ import assert from "../common/assert";
 import { pickupLaneLength } from "../common/belt-pickup-layout";
 import { Config } from "../config";
 import { EntityId } from "../entities";
-import { laneFactsOf } from "../entities/traits/lane-facts";
+import { laneFactsOfConfig } from "../entities/traits/build-traits";
 import { BeltPickupStock } from "../state/belt-pickup-stock";
 import { EntityState } from "../state/entity-state";
 import { SharedLane } from "../state/shared-lane";
@@ -296,7 +296,7 @@ export function recordInserters(context: SimulationContext, inserter_ids: readon
  */
 export function installSharedLanes(context: SimulationContext, config: Config, rows: readonly LaneRow[]): SharedLaneRun {
     assert(context.tick_provider.getCurrentTick() === 0, "The shared lanes go in before the first tick");
-    const facts = laneFactsOf(config);
+    const facts = laneFactsOfConfig(config);
     const now = () => context.tick_provider.getCurrentTick();
     const archetypes = new Map(context.inserters.map(inserter => [inserter.entity_id.id, inserter]));
     // each taker's reaches, by the run's inserter, one for each lane the model runs

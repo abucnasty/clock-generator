@@ -3,7 +3,8 @@ import { Config, ConfigSchema } from "../config/schema";
 import { OpenRange } from "../data-types";
 import { Entity } from "../entities";
 import { everyInputLaneIsDeadEnd } from "../entities/traits/lane-ends";
-import { isDeadEnd, laneFactsOf } from "../entities/traits/lane-facts";
+import { laneFactsOfConfig } from "../entities/traits/build-traits";
+import { isDeadEnd } from "../entities/traits/lane-facts";
 import { backpressureHandTicks } from "./clock";
 import { countedInserters } from "./inserter-counters";
 import { movingPickupPhaseStarts } from "./moving-pickup-phase-starts";
@@ -45,7 +46,7 @@ function pickupOf(config: Config) {
 describe("a belt that states one lane", () => {
     it("has one lane: its lane facts hold no fact for the lane it does not state", () => {
         for (const backed_up_belts of [true, false, undefined]) {
-            const facts = laneFactsOf(configOf([iron()], backed_up_belts));
+            const facts = laneFactsOfConfig(configOf([iron()], backed_up_belts));
             expect(facts.lanesOf(1)).toHaveLength(1);
             expect(() => facts.of(1, 2)).toThrow("Lane 2 of belt 1 is not in the config");
         }
@@ -102,6 +103,6 @@ describe("a belt that states two lanes", () => {
         expect(clockBelt(two(dead_end, empty()))).toEqual({ kind: "moving" });
         expect(everyInputLaneIsDeadEnd(two(dead_end, empty({ lane_end: { kind: "dead_end" } })))).toBe(true);
         expect(everyInputLaneIsDeadEnd(two(iron(), empty(), true))).toBe(true);
-        expect(laneFactsOf(two(dead_end, empty())).lanesOf(1).map(facts => isDeadEnd(facts))).toEqual([true, false]);
+        expect(laneFactsOfConfig(two(dead_end, empty())).lanesOf(1).map(facts => isDeadEnd(facts))).toEqual([true, false]);
     });
 });

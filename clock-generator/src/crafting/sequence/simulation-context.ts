@@ -15,7 +15,7 @@ import assert from "../../common/assert";
 import { BeltPickupLane } from "../../state/belt-pickup-lane";
 import { pickupLaneLength } from "../../common/belt-pickup-layout";
 import { itemsPutInto, PutIntoView } from "../../entities/chest/items-put-into";
-import { laneFactsOf } from "../../entities/traits/lane-facts";
+import { laneFactsOfConfig } from "../../entities/traits/build-traits";
 import { ContainerStorage } from "../../simulation/components/container-storage";
 import { MiningDrillArchetype } from "../../simulation/archetypes/mining-drill";
 import { ACTIVATION_ORDER, InserterDispatch } from "../../simulation/dispatch";
@@ -141,7 +141,7 @@ export class SimulationContext {
 export function createEntityRegistryFromConfig(config: Config, copies?: BuildCopies): EntityRegistry {
     const entity_registry = new EntityRegistry();
 
-    const facts = laneFactsOf(config);
+    const facts = laneFactsOfConfig(config);
     const inserter_factory = new InserterFactory(entity_registry, facts);
 
     config.belts.forEach(beltConfig => {

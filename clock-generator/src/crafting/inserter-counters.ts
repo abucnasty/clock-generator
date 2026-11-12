@@ -1,7 +1,8 @@
 import { FactorioBlueprint } from "../blueprints/blueprint";
 import { Config } from "../config";
 import { Entity, EntityId, handSizeFor, Inserter } from "../entities";
-import { isDeadEnd, laneFactsOf } from "../entities/traits/lane-facts";
+import { laneFactsOfConfig } from "../entities/traits/build-traits";
+import { isDeadEnd } from "../entities/traits/lane-facts";
 import { FactorioInserterState } from "../state/factorio-entity-state";
 import { StockRecording } from "./machine-stock";
 import { beltLinesOf } from "./belt-lines";
@@ -141,7 +142,7 @@ export function countedInserters(config: Config): CountedInserter[] {
         machine.result_target === undefined ? [] : [[machine.result_target.id, machine.entity_id.id] as const]));
     // a hand of the largest size of the items it carries: the stock does not record which item is in the hand
     const belt_lines = beltLinesOf(registry);
-    const lane_facts = laneFactsOf(config);
+    const lane_facts = laneFactsOfConfig(config);
     const handSize = (inserter: Inserter) => inserter.filtered_items.size === 0 ? inserter.metadata.stack_size
         : Math.max(...Array.from(inserter.filtered_items, item_name => handSizeFor(inserter, item_name)));
     return registry.getAll().filter(Entity.isInserter).map(inserter => ({

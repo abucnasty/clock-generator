@@ -98,6 +98,7 @@ describe("the light entry", () => {
             "entities/machine/machine-type.ts",
             "entities/traits/lane-ends.ts",
             "entities/traits/lane-facts.ts",
+            "entities/traits/lane-role.ts",
             "entities/traits/prototype-traits.ts",
             "entities/traits/ratio.ts",
             "fp-ts/Option",

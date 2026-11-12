@@ -3,6 +3,7 @@ import type { Config } from "../../config/schema";
 import { fraction } from "../../data-types/fraction";
 import { beltSpeedOf, laneItemsPerSecond, laneStackFor } from "../belt/belt-speed";
 import { configDeadEnds } from "./lane-ends";
+import { LaneRole, LaneRolesOfBuild } from "./lane-role";
 import { Ratio, ratioOf } from "./ratio";
 
 /**
@@ -32,6 +33,8 @@ export interface LaneFacts {
     readonly sharing: LaneSharing;
     /** The way its items move, where the config states it on the belt; null where it does not */
     readonly flow_direction: FlowDirection | null;
+    /** What the build does with the lane (lane-role.ts); null where no inserter takes from it or drops onto it */
+    readonly role: LaneRole | null;
 }
 
 /**
@@ -84,21 +87,23 @@ function laneCapacityOf(belt: Config["belts"][number], lane: number): Ratio {
  * lane's capacity (half the belt's speed times the lane's stack size), and the copies share a lane that does not say
  * otherwise. A belt that states one lane has one lane: there is no fact of a lane it does not state, so nothing reads
  * that lane's end, supply or sharing. Both lanes of a belt move the way the belt states (`flow_direction`), and no way
- * where it states none.
+ * where it states none. Each lane carries its role, as `roles` gives it (laneRolesOf, lane-role.ts).
  */
-export function laneFactsOf(config: LaneFactsConfig): LaneFactsOfBuild {
+export function laneFactsOf(config: LaneFactsConfig, roles: LaneRolesOfBuild): LaneFactsOfBuild {
     const dead_end = configDeadEnds(config);
     const by_belt = new Map<number, readonly LaneFacts[]>();
     for (const belt of config.belts) {
         const listed: readonly LaneConfig[] = belt.lanes;
         by_belt.set(belt.id, listed.map((stated, index) => {
             const capacity = laneCapacityOf(belt, index + 1);
+            const role = roles.of(belt.id, index + 1 as 1 | 2);
             return {
                 supply_rate: stated.supply_rate === undefined ? capacity : ratioOf(fraction(stated.supply_rate)),
                 lane_end: stated.lane_end !== undefined ? { kind: stated.lane_end.kind }
                     : dead_end ? { kind: "dead_end" } : { kind: "infinite" },
                 sharing: stated.sharing ?? "shared",
                 flow_direction: belt.flow_direction === undefined ? null : flowOf(belt.flow_direction),
+                role,
             };
         }));
     }
@@ -119,10 +124,11 @@ export function laneFactsOf(config: LaneFactsConfig): LaneFactsOfBuild {
 
 /**
  * The facts of every lane the belts of a config state, belt by belt in the config's order and lane 1 before lane 2:
- * laneFactsOf's facts of each lane, with its capacity and whether its supply rate is that capacity by default
+ * laneFactsOf's facts of each lane, its role included, with its capacity and whether its supply rate is that capacity by
+ * default. The roles come from what the inserters carry, which needs the game data: the caller gives them (laneRolesOf).
  */
-export function beltLaneFactsOf(config: LaneFactsConfig): BeltLaneFacts[] {
-    const facts = laneFactsOf(config);
+export function beltLaneFactsOf(config: LaneFactsConfig, roles: LaneRolesOfBuild): BeltLaneFacts[] {
+    const facts = laneFactsOf(config, roles);
     return config.belts.flatMap(belt => {
         const listed: readonly LaneConfig[] = belt.lanes;
         return listed.map((stated, index) => {

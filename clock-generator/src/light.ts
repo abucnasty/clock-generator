@@ -1,7 +1,7 @@
 /**
  * The values of the browser exports that need neither the simulation, the game data nor zod: the enum-like
  * constants, the status categories, the clock ranking, the lane facts of a config (a lane's capacity from the engine's
- * belt speeds) and fp-ts's Option.
+ * belt speeds, its role from the items the caller says each inserter carries) and fp-ts's Option.
  *
  * A page that runs the generator in a web worker can take its values on the main thread from here, and only types
  * from `browser.ts`, so the generator itself is bundled once, in the worker. The "light entry" test in
@@ -51,6 +51,8 @@ export { whyNotStable, whyNotStableClockOf } from "./crafting/why-not-stable";
 export { everyInputLaneIsDeadEnd } from "./entities/traits/lane-ends";
 export { beltLaneFactsOf } from "./entities/traits/lane-facts";
 export type { BeltLaneFacts, FlowDirection, LaneEnd, LaneSharing } from "./entities/traits/lane-facts";
+export { laneRolesOf } from "./entities/traits/lane-role";
+export type { CarriedItemsOf, LaneRole, LaneRolesOfBuild } from "./entities/traits/lane-role";
 export type { Ratio } from "./entities/traits/ratio";
 
 export * as Option from "fp-ts/Option";
