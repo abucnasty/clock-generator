@@ -25,6 +25,7 @@ import { chestTypesText } from '../utils/pasteText';
 import { entityLabel, nameInSentence } from '../utils/entityLabel';
 import { buildFileName } from '../utils/buildLibrary';
 import { configKeyOf } from '../utils/resultsStaleness';
+import { recordConfigConversion } from '../utils/convertedKeys';
 import { nameWithId } from '../utils/gameNames';
 import {
     canShare,
@@ -310,9 +311,11 @@ export function ConfigImportExport({
     /** Replaces the build with the one a build file holds; throws when the text is not one */
     const importConfigText = useCallback(async (text: string, undoMessage: string, prototypeSource?: 'sample') => {
         // values out of bounds are kept, for the form to show; only a broken file is rejected
-        const parsedConfig = await askEngine({ kind: 'config-file', config: readConfigFile(text) });
-        // its Undo message says what replaced the build, and which entities its Never on override (removed) now leaves on Auto
-        onUndoable(withNeverOverrideNote(undoMessage, neverOverrideNoteOfText(text)));
+        const { config: parsedConfig, belt_note, converted_from } = await askEngine({ kind: 'config-file', config: readConfigFile(text) });
+        if (converted_from !== null) recordConfigConversion(converted_from, parsedConfig);
+        // its Undo message says what replaced the build, which entities its Never on override (removed) now leaves on
+        // Auto, and which lanes now state the end its belt setting (removed) gave them
+        onUndoable(withNeverOverrideNote(withNeverOverrideNote(undoMessage, neverOverrideNoteOfText(text)), belt_note));
         onImport(parsedConfig, prototypeSource);
         onBuildReplaced();
     }, [onImport, onBuildReplaced, onUndoable]);

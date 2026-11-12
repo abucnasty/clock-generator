@@ -9,12 +9,14 @@ import { repeatedUnitsProblem } from '../utils/repeatedUnitsProblem';
  */
 
 import type { z } from 'zod';
+import type { LaneRole } from 'clock-generator/light';
 import type { ClockAlternativeRun, Config, CopiesError, DebugSteps, LogMessage, Logger, MachineToName, NotMadeClock, SearchRangeEdge } from 'clock-generator/browser';
 import { parseFormConfig } from './formConfig';
 import { laneRolesAnswer } from './laneRoles';
+import { beltSettingNoteOf, convertBeltSetting } from '../utils/beltSettingConversion';
 import { installFactsOf } from './installFacts';
 import { createReadyGate } from './requestGate';
-import { NO_NAMES, hiddenRecipeIds, type GameNames } from '../utils/gameNames';
+import { NO_NAMES, hiddenRecipeIds, itemName, type GameNames } from '../utils/gameNames';
 import type { CheckedRepeatedUnitConversion, RepeatedUnitsRecovery, CheckedShiftRow, ClockAlternativeRunView, ClockAlternativeView, EngineAnswers, EngineQuery, FactorioLookups, FuelViewData, PastedEntities, ShiftOptionsView, ShiftRangeEdge, WorkerRequest, WorkerResponse } from './types';
 
 type ClockGenerator = typeof import('clock-generator/browser');
@@ -399,6 +401,38 @@ function pastedEntities(pasted: Extract<EngineQuery, { kind: 'pasted-entities' }
     };
 }
 
+/**
+ * The roles of the lanes of a build, as the engine's lane facts give them, for the conversion of the former belt setting.
+ * A machine with no recipe stops the engine from reading any role; the roles are then read without such machines and the
+ * inserters at them, so a lane only those inserters use has no role. A build the engine cannot read at all has none.
+ */
+function rolesForConversion(config: unknown): { of: (belt_id: number, lane: 1 | 2) => LaneRole | null } {
+    const read = (it: unknown) => {
+        const facts = clockGenerator.laneFactsOfConfig(it as Config);
+        return { of: (belt_id: number, lane: 1 | 2) => facts.of(belt_id, lane).role };
+    };
+    try {
+        return read(config);
+    } catch {
+        try {
+            const build = config as Config;
+            const kept = build.machines.filter(machine => machine.recipe !== '');
+            const ids = new Set(kept.map(machine => machine.id));
+            const atKept = (end: { type: string; id: number }) => end.type !== 'machine' || ids.has(end.id);
+            return read({ ...build, machines: kept, inserters: build.inserters.filter(inserter => atKept(inserter.source) && atKept(inserter.sink)) });
+        } catch {
+            return { of: () => null };
+        }
+    }
+}
+
+/** `config` with the former belt setting turned into lane ends, and the note that says so; as it is where it states none */
+function withoutBeltSetting<C>(config: C): { config: C; belt_note: string | null; converted_from: C | null } {
+    const conversion = convertBeltSetting(config as never, rolesForConversion(config));
+    return conversion === null ? { config, belt_note: null, converted_from: null }
+        : { config: conversion.config as C, belt_note: beltSettingNoteOf(conversion, id => itemName(gameNames, id)), converted_from: config };
+}
+
 const hasPrototype = (machine: unknown): boolean => typeof machine === 'object' && machine !== null && 'prototype' in machine && machine.prototype !== undefined;
 
 /**
@@ -413,16 +447,18 @@ function savedConfig(config: unknown): EngineAnswers['saved-config'] {
             ? { ...(machine as object), _prototype_source: 'recipe' } : machine) }
         : form;
     const result = parseFormConfig(clockGenerator.ConfigSchema, marked);
-    return { problem: result.success ? null : result.error.message, form: marked };
+    if (!result.success) return { problem: result.error.message, form: marked, belt_note: null, converted_from: null };
+    const converted = withoutBeltSetting(marked);
+    return { problem: null, form: converted.config, belt_note: converted.belt_note, converted_from: converted.converted_from };
 }
 
 /** An imported config file, which can hold what the form exports, e.g. an inserter end left unset; a former type is read as the machine */
-function configFile(config: unknown): Config {
+function configFile(config: unknown): EngineAnswers['config-file'] {
     const result = parseFormConfig(clockGenerator.ConfigSchema, clockGenerator.migrateMachineTypes(config));
     if (!result.success) {
         throw new clockGenerator.ConfigValidationError(result.error);
     }
-    return result.data;
+    return withoutBeltSetting(result.data);
 }
 
 function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {

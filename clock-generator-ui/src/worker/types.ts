@@ -551,8 +551,13 @@ export interface EngineAnswers {
      * The saved form state with each machine's former type read as its machine, to load in its place, and why it cannot
      * be loaded, or null when it can
      */
-    'saved-config': { problem: string | null; form: unknown };
-    'config-file': Config;
+    /**
+     * `form` with the former belt setting turned into lane ends (`converted_from`: the form before, null when it stated no
+     * setting), and the note that says so (`belt_note`)
+     */
+    'saved-config': { problem: string | null; form: unknown; belt_note: string | null; converted_from: unknown };
+    /** The same for a configuration file */
+    'config-file': { config: Config; belt_note: string | null; converted_from: Config | null };
     'pasted-entities': PastedEntities;
 }
 

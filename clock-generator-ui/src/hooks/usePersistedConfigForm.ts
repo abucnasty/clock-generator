@@ -42,6 +42,8 @@ import {
 } from '../utils/configForm/formData';
 import { formSlotFilters } from '../utils/containerSlotFilters';
 import { neverOverrideNoteOfText } from '../utils/neverOverrideNote';
+import { recordFormConversion } from '../utils/convertedKeys';
+import type { EngineAnswers } from '../worker/types';
 
 /** Migrate legacy inserter data to include id field */
 function migrateInserters(inserters: unknown[]): InserterFormData[] {
@@ -291,6 +293,20 @@ export interface BuildLibrary {
  * A `storage` listener hears the other tabs: another tab saving this build raises `library.conflict` (once per
  * episode), another deleting it warns, and a change to the list of builds shows in the menu without a reload.
  */
+/** The worker's answer for a saved build */
+type SavedConfigAnswer = EngineAnswers['saved-config'];
+
+/**
+ * A saved build that stated the former belt setting was loaded with lane ends in its place: its key before is recorded,
+ * so that its kept clocks are its own, and the user is told once (the build is saved converted)
+ */
+function beltSettingConverted(answer: SavedConfigAnswer, notify: (message: { severity: 'info'; text: string; durationMs: null }) => void): void {
+    // an answer without them (a test's stand-in for the worker) converted nothing
+    if (answer.converted_from === null || answer.converted_from === undefined) return;
+    recordFormConversion(answer.converted_from as ConfigFormData, answer.form as ConfigFormData);
+    if (typeof answer.belt_note === 'string') notify({ severity: 'info', text: answer.belt_note, durationMs: null });
+}
+
 export function usePersistedConfigForm() {
     const notify = useNotify();
     const [opened] = useState(() => openLibrary(pageLocal, pageSession, Date.now()));
@@ -437,10 +453,13 @@ export function usePersistedConfigForm() {
             else finish();
         };
         askEngine({ kind: 'saved-config', config: savedConfig }).then(
-            ({ problem, form }) => complete(() => {
+            (checked) => complete(() => {
+                const { problem, form } = checked;
                 if (problem === null) {
                     // unless the config was replaced (imported or reset) in the meantime; with its machines' former types read
-                    if (load.owner.form === defaultConfig) commitBuildReplacement(load.owner, form as ConfigFormData, () => {});
+                    if (load.owner.form === defaultConfig && commitBuildReplacement(load.owner, form as ConfigFormData, () => {})) {
+                        beltSettingConverted(checked, notify);
+                    }
                 } else {
                     console.warn('Saved config in localStorage is invalid, using defaults:', problem);
                     setLoadNotice(backUpSavedConfig(pageLocal, stored.text, backupKey(opened.activeId)));
@@ -456,7 +475,7 @@ export function usePersistedConfigForm() {
             alive = false;
             initialCompletionRef.current = null;
         };
-    }, [stored, defaultConfig, opened.activeId, beginLoad, matchesBuildMutation, commitBuildReplacement]);
+    }, [stored, defaultConfig, opened.activeId, beginLoad, matchesBuildMutation, commitBuildReplacement, notify]);
 
     // the tab remembers its build, so a reload stays on it
     useEffect(() => {
@@ -557,11 +576,13 @@ export function usePersistedConfigForm() {
         }
         let form = readSavedConfig(text);
         let problem: string | null = form === null ? 'not the form state' : null;
+        let converted: SavedConfigAnswer | null = null;
         if (form !== null) {
             try {
                 const checked = await askEngine({ kind: 'saved-config', config: form });
                 problem = checked.problem;
                 form = checked.form as ConfigFormData;
+                converted = checked;
             } catch (e) {
                 problem = e instanceof Error ? e.message : 'the check failed';
             }
@@ -575,6 +596,8 @@ export function usePersistedConfigForm() {
         // the build is saved with Auto from its next save on, so the note shows once
         const neverNote = neverOverrideNoteOfText(text);
         if (neverNote !== null) notify({ severity: 'info', text: neverNote, durationMs: null });
+        // likewise the build is saved with lane ends in place of its belt setting
+        if (converted !== null) beltSettingConverted(converted, notify);
         return { form, text };
     }, [notify]);
 
@@ -681,11 +704,13 @@ export function usePersistedConfigForm() {
         const id = idRef.current;
         let form = readSavedConfig(episode.text);
         let problem: string | null = form === null ? 'It is not a build.' : null;
+        let converted: SavedConfigAnswer | null = null;
         if (form !== null) {
             try {
                 const checked = await askEngine({ kind: 'saved-config', config: form });
                 problem = checked.problem;
                 form = checked.form as ConfigFormData;
+                converted = checked;
             } catch (e) {
                 problem = e instanceof Error ? e.message : 'The check failed.';
             }
@@ -699,6 +724,7 @@ export function usePersistedConfigForm() {
         }
         beforeApply();
         show({ id, form }, episode.text);
+        if (converted !== null) beltSettingConverted(converted, notify);
         setConflict((state) => nextConflict(state, { kind: 'loaded' }));
         return true;
     }, [beginLoad, isCurrentLoad, finishLoad, notify, setConflict, show]);
