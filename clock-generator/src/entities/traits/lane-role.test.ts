@@ -2,8 +2,13 @@ import { describe, expect, it } from "vitest";
 import { ConfigPaths } from "../../config/config-paths";
 import { loadConfigFromFile } from "../../config/loader";
 import { Config, ConfigSchema } from "../../config/schema";
+import { OpenRange } from "../../data-types";
+import { Entity } from "../../entities";
+import { clockBeltOf } from "../../crafting/plan/unclocked-run";
+import { createEntityRegistryFromConfig } from "../../crafting/sequence/simulation-context";
 import { takenLanesOf } from "../../crafting/shared-lane-lanes";
 import { laneFactsOfConfig } from "./build-traits";
+import { everyInputLaneIsDeadEnd } from "./lane-ends";
 import { LaneRole } from "./lane-role";
 
 type Parts = Partial<Pick<Config, "machines" | "inserters" | "belts" | "chests" | "overrides">>;
@@ -75,6 +80,107 @@ describe("the role of a lane", () => {
         expect(facts.lanesOf(3).map(it => it.role)).toEqual(["input", "output"]);
         // the lanes a belt pickup takes from are still read at the belt: an inserter without filters takes from both
         expect(takenLanesOf(config).filter(it => it.belt_id === 3).map(it => it.lane)).toEqual([1, 2]);
+    });
+});
+
+/** The end of every lane the belts of the config state, belt by belt, lane 1 first */
+function endsOf(config: Config): string[] {
+    const facts = laneFactsOfConfig(config);
+    return config.belts.flatMap(it => facts.lanesOf(it.id).map(lane_facts => lane_facts.lane_end.kind));
+}
+
+describe("the end of a lane that states none", () => {
+    // belt 1 an input lane, belt 2 an output lane, belt 3 a buffer lane
+    const roles = (overrides?: Config["overrides"], lanes: object = {}) => configOf({
+        machines,
+        belts: [belt(1, "iron-plate"), belt(2, "iron-gear-wheel"), belt(3, "iron-gear-wheel")]
+            .map(it => ({ ...it, lanes: it.lanes.map(stated => ({ ...stated, ...lanes })) })) as Config["belts"],
+        inserters: [take(1, 1, 1), put(2, 1, 2), put(3, 1, 3), take(4, 3, 3)],
+        ...(overrides && { overrides }),
+    });
+
+    it("is a dead end on an input lane and on a buffer lane, an infinite end on an output lane", () => {
+        expect(rolesOf(roles())).toEqual(["input", "output", "buffer"]);
+        expect(endsOf(roles())).toEqual(["dead_end", "infinite", "dead_end"]);
+    });
+
+    it("is never unknown, and the end a lane states wins over its role and over the switch", () => {
+        for (const kind of ["dead_end", "infinite", "unknown"] as const) {
+            for (const overrides of [undefined, { backed_up_belts: true }, { backed_up_belts: false }]) {
+                expect(endsOf(roles(overrides, { lane_end: { kind } }))).toEqual([kind, kind, kind]);
+            }
+        }
+        for (const overrides of [undefined, { backed_up_belts: true }, { backed_up_belts: false }]) {
+            expect(endsOf(roles(overrides))).not.toContain("unknown");
+        }
+    });
+
+    it("is what the switch gives where the config states it: a dead end where it is true, an infinite end where it is false", () => {
+        expect(endsOf(roles({ backed_up_belts: true }))).toEqual(["dead_end", "dead_end", "dead_end"]);
+        expect(endsOf(roles({ backed_up_belts: false }))).toEqual(["infinite", "infinite", "infinite"]);
+        expect(endsOf(roles({}))).toEqual(["dead_end", "infinite", "dead_end"]);
+    });
+
+    it("is an infinite end on an export lane, whatever the switch", () => {
+        const exporting = (overrides?: Config["overrides"]) => configOf({
+            machines,
+            belts: [belt(1, "iron-plate"),
+                { id: 2, type: "turbo-transport-belt", strategy: "export", lanes: [{ ingredient: "iron-gear-wheel", stack_size: 4, consumption_per_second: 1 }] }] as Config["belts"],
+            inserters: [take(1, 1, 1), put(2, 1, 2)],
+            ...(overrides && { overrides }),
+        });
+        for (const overrides of [undefined, { backed_up_belts: true }, { backed_up_belts: false }]) {
+            expect(laneFactsOfConfig(exporting(overrides)).of(2, 1).lane_end).toEqual({ kind: "infinite" });
+        }
+        expect(endsOf(exporting({ backed_up_belts: true }))).toEqual(["dead_end", "infinite"]);
+    });
+
+    it("is the end of the other lane of its belt on a lane with no item, and as without a role on a belt with two lanes without one", () => {
+        const empty_beside = configOf({ machines, belts: [belt(1, "iron-plate", ""), belt(2, "", "iron-gear-wheel")] as Config["belts"],
+            inserters: [take(1, 1, 1), put(2, 1, 2)] });
+        expect(endsOf(empty_beside)).toEqual(["dead_end", "dead_end", "infinite", "infinite"]);
+        const stated_beside = configOf({ machines, belts: [{ ...belt(1, "iron-plate", ""), lanes: [{ ...lane("iron-plate"), lane_end: { kind: "infinite" } }, lane("")] }] as Config["belts"],
+            inserters: [take(1, 1, 1)] });
+        expect(endsOf(stated_beside)).toEqual(["infinite", "infinite"]);
+        const both_empty = (overrides?: Config["overrides"]) => configOf({ machines, belts: [belt(1, "iron-plate"), belt(2, "", "")] as Config["belts"],
+            inserters: [take(1, 1, 1)], ...(overrides && { overrides }) });
+        expect(endsOf(both_empty())).toEqual(["dead_end", "infinite", "infinite"]);
+        expect(endsOf(both_empty({ backed_up_belts: true }))).toEqual(["dead_end", "dead_end", "dead_end"]);
+    });
+
+    it("is a dead end on both lanes where one inserter takes the one item from both", () => {
+        const config = configOf({ machines, belts: [belt(1, "iron-plate", "iron-plate")] as Config["belts"], inserters: [take(1, 1, 1)] });
+        expect(endsOf(config)).toEqual(["dead_end", "dead_end"]);
+    });
+
+    it("on a belt pickup with an input lane and a lane only dropped onto: a dead end and an infinite end, and the clock's belt moves", () => {
+        // the gear assembler takes iron plate off lane 1 and drops its gears onto the same belt, whose lane 2 carries gears
+        const config = configOf({ machines, belts: [belt(1, "iron-plate", "iron-gear-wheel")] as Config["belts"],
+            inserters: [take(1, 1, 1), put(2, 1, 1)] });
+        expect(rolesOf(config)).toEqual(["input", "output"]);
+        expect(endsOf(config)).toEqual(["dead_end", "infinite"]);
+        // backed up only where every lane of each belt an inserter takes from is a dead end: not here
+        expect(everyInputLaneIsDeadEnd(config, laneFactsOfConfig(config))).toBe(false);
+        const registry = createEntityRegistryFromConfig(config);
+        const taker = registry.getAll().filter(Entity.isInserter).find(it => it.entity_id.id === "inserter:1")!;
+        expect(clockBeltOf(config, registry, new Map([[taker.entity_id.id, [OpenRange.from(0, 10)]]]))).toEqual({ kind: "moving" });
+    });
+
+    it("is by item on the rocket fuel sample's belt 3 without its stated ends: nutrients a dead end, the seeds dropped onto it an infinite end", async () => {
+        const sample = await loadConfigFromFile(ConfigPaths.ROCKET_FUEL_60) as Config;
+        const config = { ...sample, belts: sample.belts.map(it => it.id !== 3 ? it
+            : { ...it, lanes: (it.lanes as readonly object[]).map(stated => { const { lane_end: _end, ...rest } = stated as { lane_end?: unknown }; return rest; }) }) } as Config;
+        expect(laneFactsOfConfig(config).lanesOf(3).map(it => [it.role, it.lane_end.kind])).toEqual([["input", "dead_end"], ["output", "infinite"]]);
+    });
+
+    it("on a mixed build: an input lane that states an infinite end keeps it, one that states nothing is a dead end, an output lane an infinite end", () => {
+        const mixed = configOf({
+            machines,
+            belts: [{ ...belt(1, "iron-plate"), lanes: [{ ...lane("iron-plate"), lane_end: { kind: "infinite" } }] }, belt(2, "copper-plate"), belt(3, "iron-gear-wheel")] as Config["belts"],
+            inserters: [take(1, 1, 1), take(2, 2, 2), put(3, 1, 3)],
+        });
+        expect(rolesOf(mixed)).toEqual(["input", "input", "output"]);
+        expect(endsOf(mixed)).toEqual(["infinite", "dead_end", "infinite"]);
     });
 });
 

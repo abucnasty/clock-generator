@@ -81,29 +81,51 @@ function laneCapacityOf(belt: Config["belts"][number], lane: number): Ratio {
 }
 
 /**
- * The facts of the lanes of a config. A fact that a lane of the config states is read as it is; a fact that it does
- * not state is derived from the config's `backed_up_belts` switch: with the switch set the lane is a dead end, without
- * it the lane has an infinite end, which takes as much as the lane carries. A supply rate that is not stated is the
- * lane's capacity (half the belt's speed times the lane's stack size), and the copies share a lane that does not say
- * otherwise. A belt that states one lane has one lane: there is no fact of a lane it does not state, so nothing reads
- * that lane's end, supply or sharing. Both lanes of a belt move the way the belt states (`flow_direction`), and no way
- * where it states none. Each lane carries its role, as `roles` gives it (laneRolesOf, lane-role.ts).
+ * The end of a lane that states none. An export lane has an infinite end: what leaves it is its consumption. Where the
+ * config states the `backed_up_belts` switch, the switch gives the end: a dead end where it is true, an infinite end
+ * where it is false. Without the switch, the lane's role gives it: an input or a buffer lane is a dead end, an output
+ * lane, or a lane with no role, has an infinite end. Never an unknown end.
+ */
+function defaultEndOf(stated: LaneConfig, role: LaneRole | null, config: LaneFactsConfig): LaneEnd {
+    if ("consumption_per_second" in stated && stated.consumption_per_second !== undefined) return { kind: "infinite" };
+    const backed_up_belts = config.overrides?.backed_up_belts;
+    if (backed_up_belts !== undefined) return configDeadEnds(config) ? { kind: "dead_end" } : { kind: "infinite" };
+    return role === "input" || role === "buffer" ? { kind: "dead_end" } : { kind: "infinite" };
+}
+
+/**
+ * The facts of the lanes of a config. A fact that a lane of the config states is read as it is. A lane that states no
+ * end has the end its role gives it, or the end the config's `backed_up_belts` switch gives it where the config states
+ * the switch (defaultEndOf). A lane with no item that states no end has the end of the other lane of its belt where the
+ * config does not state the switch, as it has its role. An infinite end takes as much as the lane carries. A supply rate
+ * that is not stated is the lane's capacity (half the belt's speed times the lane's stack size), and the copies share a
+ * lane that does not say otherwise. A belt that states one lane has one lane: there is no fact of a lane it does not
+ * state, so nothing reads that lane's end, supply or sharing. Both lanes of a belt move the way the belt states
+ * (`flow_direction`), and no way where it states none. Each lane carries its role, as `roles` gives it (laneRolesOf,
+ * lane-role.ts).
  */
 export function laneFactsOf(config: LaneFactsConfig, roles: LaneRolesOfBuild): LaneFactsOfBuild {
-    const dead_end = configDeadEnds(config);
+    const switch_stated = config.overrides?.backed_up_belts !== undefined;
     const by_belt = new Map<number, readonly LaneFacts[]>();
     for (const belt of config.belts) {
         const listed: readonly LaneConfig[] = belt.lanes;
+        const roles_of_belt = listed.map((_, index) => roles.of(belt.id, index + 1 as 1 | 2));
+        const own_ends = listed.map((stated, index): LaneEnd => stated.lane_end !== undefined ? { kind: stated.lane_end.kind }
+            : defaultEndOf(stated, roles_of_belt[index], config));
+        // a lane with no item that states no end has the end of the other lane, where that lane has an item
+        const ends = listed.map((stated, index): LaneEnd => {
+            const other = listed[1 - index];
+            return stated.ingredient === "" && stated.lane_end === undefined && !switch_stated && other !== undefined && other.ingredient !== ""
+                ? own_ends[1 - index] : own_ends[index];
+        });
         by_belt.set(belt.id, listed.map((stated, index) => {
             const capacity = laneCapacityOf(belt, index + 1);
-            const role = roles.of(belt.id, index + 1 as 1 | 2);
             return {
                 supply_rate: stated.supply_rate === undefined ? capacity : ratioOf(fraction(stated.supply_rate)),
-                lane_end: stated.lane_end !== undefined ? { kind: stated.lane_end.kind }
-                    : dead_end ? { kind: "dead_end" } : { kind: "infinite" },
+                lane_end: ends[index],
                 sharing: stated.sharing ?? "shared",
                 flow_direction: belt.flow_direction === undefined ? null : flowOf(belt.flow_direction),
-                role,
+                role: roles_of_belt[index],
             };
         }));
     }

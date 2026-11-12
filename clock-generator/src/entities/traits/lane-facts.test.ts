@@ -31,6 +31,8 @@ const put = (id: number, belt: number) => ({ id, source: { type: "machine" as co
 const every_lane = [[1, 1], [1, 2], [2, 1]] as const;
 /** No lane has a role: the config has no inserter */
 const no_roles = { of: () => null };
+/** Whether every input lane of the config is a dead end, by the ends its lane facts give */
+const inputLanesAreDeadEnds = (config: Config) => everyInputLaneIsDeadEnd(config, laneFactsOfConfig(config));
 /** The roles of the lanes of a config, from what its inserters carry */
 const rolesOf = (config: Config) => laneRolesOf(config, carriedItemsOf(config));
 
@@ -150,19 +152,19 @@ describe("the question about every input lane", () => {
 
     it.each([[true], [false], [undefined]])("answers as the switch (%s) when a belt is taken from", backed_up_belts => {
         const config = configOf({ machines, belts, inserters, overrides: backed_up_belts === undefined ? {} : { backed_up_belts } });
-        expect(everyInputLaneIsDeadEnd(config)).toBe(backed_up_belts === true);
+        expect(inputLanesAreDeadEnds(config)).toBe(backed_up_belts === true);
     });
 
     it("reads the ends the input lanes state", () => {
         const ending = (kind: "dead_end" | "unknown") => [{ ...belts[0], lanes: belts[0].lanes.map(lane => ({ ...lane, lane_end: { kind } })) }, belts[1]] as Config["belts"];
-        expect(everyInputLaneIsDeadEnd(configOf({ machines, belts: ending("dead_end"), inserters }))).toBe(true);
-        expect(everyInputLaneIsDeadEnd(configOf({ machines, belts: ending("unknown"), inserters, overrides: { backed_up_belts: true } }))).toBe(false);
+        expect(inputLanesAreDeadEnds(configOf({ machines, belts: ending("dead_end"), inserters }))).toBe(true);
+        expect(inputLanesAreDeadEnds(configOf({ machines, belts: ending("unknown"), inserters, overrides: { backed_up_belts: true } }))).toBe(false);
     });
 
     it.each([[true], [false]])("answers as the switch (%s) when no belt is taken from, or no belt is listed", backed_up_belts => {
         const overrides = { backed_up_belts };
-        expect(everyInputLaneIsDeadEnd(configOf({ machines, belts, inserters: [put(1, 2)], overrides }))).toBe(backed_up_belts);
-        expect(everyInputLaneIsDeadEnd(configOf({ overrides }))).toBe(backed_up_belts);
+        expect(inputLanesAreDeadEnds(configOf({ machines, belts, inserters: [put(1, 2)], overrides }))).toBe(backed_up_belts);
+        expect(inputLanesAreDeadEnds(configOf({ overrides }))).toBe(backed_up_belts);
     });
     // the question is answered from the ends alone, without the rates of the lane facts: it gives the ends the lane
     // facts give, on every sample as it is and with the switch either way
@@ -175,7 +177,7 @@ describe("the question about every input lane", () => {
                 const input_belts = config.belts.filter(belt => config.inserters.some(inserter => inserter.source.type === "belt" && inserter.source.id === belt.id));
                 const expected = input_belts.length === 0 ? backed_up_belts === true
                     : input_belts.every(belt => facts.lanesOf(belt.id).every(isDeadEnd));
-                expect(everyInputLaneIsDeadEnd(config), `${key} with backed_up_belts ${backed_up_belts}`).toBe(expected);
+                expect(inputLanesAreDeadEnds(config), `${key} with backed_up_belts ${backed_up_belts}`).toBe(expected);
             }
         }
     });
