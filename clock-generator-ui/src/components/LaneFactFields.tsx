@@ -38,8 +38,10 @@ function FactSelect<T extends string>({ label, inputAriaLabel, value, options, d
             onChange={event => onChange(event.target.value === NOT_STATED ? undefined : event.target.value as T)}
             inputProps={{ 'aria-label': inputAriaLabel, 'aria-describedby': isUnknown ? `${id}-note` : undefined }}
             renderValue={selected => selected === NOT_STATED
+                // the engine's value in grey, said as not stated; with none (a fact the engine has no default for), "Not stated" itself
                 ? <Typography variant="body2" component="span" color="text.secondary">
-                    {defaultText ?? ''}<Box component="span" sx={VISUALLY_HIDDEN}>{defaultText ? ', ' : ''}{LANE_FACT_COPY.notStated.toLowerCase()}</Box>
+                    {defaultText === undefined ? LANE_FACT_COPY.notStated
+                        : <>{defaultText}<Box component="span" sx={VISUALLY_HIDDEN}>, {LANE_FACT_COPY.notStated.toLowerCase()}</Box></>}
                 </Typography>
                 : isUnknown ? unknown.text : labelOf(selected)}>
             {isUnknown

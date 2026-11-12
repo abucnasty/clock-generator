@@ -103,7 +103,7 @@ describe('the Belts section', () => {
         const { user, onUpdate } = showBelts(form);
         await openLanes(user, 2);
         const field = combo('Flow direction (the way items pass the copies), Belt 2')!;
-        expect(field.textContent).toBe('not stated');
+        expect(field.textContent).toBe('Not stated');
         await user.click(field);
         await user.click(screen.getByRole('option', { name: 'South' }));
         expect(onUpdate).toHaveBeenLastCalledWith(1, { flow_direction: 8 });
@@ -227,7 +227,8 @@ describe('a stated value is never hidden', () => {
         expect(screen.queryByRole('textbox', { name: 'Supply rate /s, Belt 1, lane 1' })).toBeNull();
         const supply = screen.getByRole('textbox', { name: 'Supply rate /s, Belt 1, lane 2' }) as HTMLInputElement;
         expect([supply.value, supply.getAttribute('placeholder')]).toEqual(['30', null]);
-        expect(combo('Sharing, Belt 1, lane 1')!.textContent).toBe('not stated');
+        // a lane that states no sharing has no Sharing field, which would be empty
+        expect(combo('Sharing, Belt 1, lane 1')).toBeNull();
     });
 
     it('shows no Lane end on a lane with a consumption rate, whose end is infinite', async () => {
@@ -318,4 +319,32 @@ describe('the Lanes fields of the 9 examples follow the engine', () => {
                 unmount();
             }
         });
+});
+
+describe('no control of the Lanes tab is empty', () => {
+    it.each([
+        ['the engine gives the facts', false],
+        ['a machine has no recipe, so the engine gives no facts', true],
+    ])('%s: every field shows a value, a grey default or "Not stated"', async (_name, noRecipe) => {
+        const form = withoutEnds(exampleForm(AUTOMATION));
+        form.belts[0].lanes[1] = { ...form.belts[0].lanes[1]!, sharing: 'per_copy', lane_end: { kind: 'dead_end' } };
+        form.belts[1] = { ...form.belts[1], flow_direction: undefined };
+        if (noRecipe) form.machines.push({ ...form.machines[0], id: 9, _uuid: 'm9', recipe: '' });
+        const { user } = showBelts(form, pageFactsOf(form));
+        for (const belt of [1, 2]) {
+            const panel = await openLanes(user, belt);
+            for (const field of within(panel).getAllByRole('combobox')) {
+                expect(field.textContent!.trim(), field.getAttribute('aria-label')!).not.toBe('');
+            }
+            for (const field of within(panel).getAllByRole('textbox')) {
+                const input = field as HTMLInputElement;
+                expect(input.value !== '' || (input.getAttribute('placeholder') ?? '') !== '', input.getAttribute('aria-label') ?? 'textbox').toBe(true);
+            }
+        }
+        if (noRecipe) {
+            expect(combo('Sharing, Belt 1, lane 1')).toBeNull();
+            expect(combo('Sharing, Belt 1, lane 2')!.textContent).toBe('Per copy');
+            expect(combo('Flow direction (the way items pass the copies), Belt 2')!.textContent).toBe('Not stated');
+        }
+    });
 });

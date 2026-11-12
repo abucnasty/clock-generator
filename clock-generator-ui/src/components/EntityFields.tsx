@@ -114,7 +114,8 @@ export function BeltLaneFields({ belt, itemNames, readOnly, onChange, dialog = f
             // an inserter takes from it, or it states an end; never beside a consumption rate, which makes the end infinite
             const endShown = lane.consumption_per_second === undefined && (isTakenLane(fact) || lane.lane_end !== undefined);
             const supplyShown = isTakenLane(fact) || lane.supply_rate !== undefined;
-            const sharingShown = copies > 1 || lane.sharing !== undefined;
+            // never an empty field: where the engine cannot give the lane's facts, only a stated sharing shows
+            const sharingShown = (copies > 1 && engine !== undefined) || lane.sharing !== undefined;
             return <Box key={index} sx={dialog
                 ? { display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', mb: 2 }
                 : { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 28px', gap: 1, alignItems: 'start', mb: 1, minWidth: 0 }}>
