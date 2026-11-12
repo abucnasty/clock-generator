@@ -38,7 +38,7 @@ export interface ClockInsight {
     title: string;
     /** What the simulation found, with this build's numbers */
     what: string;
-    /** Why the game behaves that way */
+    /** Why the game behaves that way; empty where the insight gives no reason, and the page then shows no Why part */
     why: string;
     /** What that means for the clock */
     explanation: string;
@@ -387,14 +387,18 @@ function unstableInsight(result: BlueprintGenerationResult): ClockInsight {
     const offset = as_built?.failed_start_offset;
     // by the judged output against the expected output: below, it underproduces; above, it overproduces
     const judged = as_built?.actual_output_items ?? check.actual_output_items;
+    const what = `Driven only by its enable windows, the build moved ${actual} of ${check.expected_output_items} items `
+        + (as_built?.output_basis === "long-run mean" ? "a window cycle on average over a long run" : "in a window cycle")
+        + (offset ? ` when the clock started ${offset} ticks later relative to the machines` : "") + `.${repeats}`;
+    // above the expected output only what was measured is said: the reason below is of a clock that falls behind
+    if (judged > check.expected_output_items) {
+        return { id: "unstable", scope: "clock", title: "This clock overproduces", what, why: "", explanation: "Use a clock marked Stable." };
+    }
     return {
         id: "unstable",
         scope: "clock",
-        title: judged < check.expected_output_items ? "This clock underproduces"
-            : judged > check.expected_output_items ? "This clock overproduces" : "This clock does not hold the setpoint",
-        what: `Driven only by its enable windows, the build moved ${actual} of ${check.expected_output_items} items `
-            + (as_built?.output_basis === "long-run mean" ? "a window cycle on average over a long run" : "in a window cycle")
-            + (offset ? ` when the clock started ${offset} ticks later relative to the machines` : "") + `.${repeats}`,
+        title: judged < check.expected_output_items ? "This clock underproduces" : "This clock does not hold the setpoint",
+        what,
         why: "A clock has to work from wherever the machines happen to be when it starts, so it is simulated from several start "
             + "points. A swing that arrives while its machine is at an insertion limit, out of ingredients or without a full hand "
             + "does nothing useful, and once a machine has waited longer than its spare time it cannot catch up.",
