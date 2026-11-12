@@ -108,12 +108,14 @@ interface OutputTerm {
 
 /**
  * What a clock makes against the setpoint: the term every place that says a clock's status reads (the chip, the compare
- * table's Works?, the full table's status, how a selected clock differs). Off the setpoint, by its steady run's rate:
+ * table's Works?, the full table's status, how a selected clock differs). A rounded clock the engine accepts as meeting
+ * the target (`ranking.runs_fast`: at most 0.1% over it) is Stable. Off the setpoint, by its steady run's rate:
  * below, Underproduces; above, Overproduces; with the rate beside it. At the setpoint, a clock that is not unstable is
  * Stable; an unstable one with a loss on a lane its copies share Underproduces, with the words for the engine's reason;
  * any other unstable one by its judged output against the expected output: above, Overproduces; else Underproduces.
  */
 export function outputTermOf(clock: Pick<SummaryClock, 'verdict' | 'ranking' | 'assessment' | 'checkedLanes' | 'asBuilt' | 'expectedOutputItems' | 'counts'>): OutputTerm {
+    if (clock.ranking.meets_target_rate && clock.ranking.runs_fast !== undefined) return { term: SUMMARY_COPY.stable };
     if (isOffTarget(clock)) {
         return { term: clock.ranking.rate_off_target < 0 ? SUMMARY_COPY.underproduces : SUMMARY_COPY.overproduces,
             detail: SUMMARY_COPY.makesOf(rateText(clock.assessment.items_per_second), rateText(targetOf(clock)), clock.counts) };
