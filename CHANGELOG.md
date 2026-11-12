@@ -21,6 +21,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - generation: 0.28 Moving builds, stating no lane end, now get dead ends on input lanes
 - ui: a rounded clock that meets the target reads Stable, not Overproduces
 - ui: every clock shows its status beside its name, Stable included
+- ui: the note on a clock that overproduces says only what was measured
 
 ## [0.28.1] - 2026-11-07
 
