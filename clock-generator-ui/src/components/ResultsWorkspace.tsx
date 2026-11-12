@@ -32,6 +32,7 @@ import { beltValue, wakeUpsText } from '../utils/clockSummary';
 import { fullClockName } from '../utils/strategyNames';
 import { rateWarningOf } from '../utils/rateWarning';
 import { whyNotStableOf } from '../utils/whyNotStable';
+import { givesLanes } from '../utils/checkedLanes';
 import type { GeneratedFor } from '../utils/resultsStaleness';
 import type { PickRule } from '../utils/recommendedClock';
 import { deeperSearchNoticeOf } from '../utils/deeperSearch';
@@ -226,7 +227,8 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 </Button></Box>}
                 runAssumptions={selected && <Box data-result-assumptions sx={{ overflowWrap: 'anywhere' }}>
                     <Typography variant="body2">
-                        {saved ? `Made for ${saved.setpoint.copies} ${saved.setpoint.copies === 1 ? 'copy' : 'copies'} of your build${selected.beltLabel === '' ? '' : `, with the input belts ${saved.overrides?.backed_up_belts ? 'backed up' : 'moving'}`}.` : 'These results are for a saved build whose metadata is unavailable.'}
+                        {/* a clock that gives the build's lanes says what it was made for in the card, with what was checked */}
+                        {saved && givesLanes(selected) ? '' : saved ? `Made for ${saved.setpoint.copies} ${saved.setpoint.copies === 1 ? 'copy' : 'copies'} of your build${selected.beltLabel === '' ? '' : `, with the input belts ${saved.overrides?.backed_up_belts ? 'backed up' : 'moving'}`}.` : 'These results are for a saved build whose metadata is unavailable.'}
                         {selected.assumptions?.kickStarts.length ? ` ${selected.assumptions.kickStarts.length} modeled kick start(s).` : ''}
                         {selected.assumptions?.outputDrops.some(drop => drop.mode === 'shared-lanes') ? ' The drop positions you gave are used to space the output drops on the belt.' : ''}
                         {freeLaneBelts.length > 0 ? ` ${freeLaneDropText(freeLaneBelts.map(id => entityInSentence('belt', id, selected?.assumptions?.entityNames)).join(' and '))}` : ''}

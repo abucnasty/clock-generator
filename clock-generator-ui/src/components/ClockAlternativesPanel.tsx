@@ -30,6 +30,7 @@ import { directRouterOf, familyCopyOf, fullClockName, clockChipsOf, sourceLinesO
 import { BadgeChips, ClockChips } from './StrategyChips';
 import { SIGNAL_DEFINITION, WAKEUP_DEFINITION, TERMS_FOCUS, type GlossaryId } from '../utils/glossary';
 import { HelpButton } from './HelpButton';
+import { SharedLaneCauseParts } from './CheckedLanesView';
 import { ScrollX } from './ScrollX';
 import { Panel } from './Panel';
 import { RecommendedChip } from './RecommendedChip';
@@ -249,6 +250,8 @@ export function ClockAlternativesPanel({
                                 {WORKS_ICON[works.kind]}{works.text}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">{statusDetail(alternative)}</Typography>
+                            {/* a clock not stable on a lane its copies share: the parts of its cause, once */}
+                            {alternative.checkedLanes?.cause && <Box sx={{ mt: 1.5 }}><SharedLaneCauseParts cause={alternative.checkedLanes.cause} /></Box>}
                         </HelpButton>
                     </Box>
                 </TableCell>

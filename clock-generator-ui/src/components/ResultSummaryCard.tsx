@@ -29,6 +29,8 @@ import { REQUIRES_FACTORIO } from '../utils/installSteps';
 import { COLD_START, startCheckSummary } from '../utils/modelAssumptions';
 import { WHY_NOT_STABLE_TITLE } from '../utils/whyNotStable';
 import { useGameNames } from '../hooks/useGameNames';
+import { givesLanes } from '../utils/checkedLanes';
+import { CheckedLanesSummary } from './CheckedLanesView';
 
 /** Every string of the card that is not the clock's own, in one place */
 const CARD_COPY = {
@@ -230,7 +232,11 @@ export function ResultSummaryCard(props: ResultSummaryCardProps) {
                 {props.whyNotStable.message}
             </Alert>}
             {props.stale && <Typography variant="body2" sx={{ mb: 1 }} data-card-stale>{CARD_COPY.staleLine}</Typography>}
-            {selected ? <ClockFacts {...props} selected={selected} nameRef={nameRef} /> : (
+            {selected ? <>
+                <ClockFacts {...props} selected={selected} nameRef={nameRef} />
+                {/* what was checked on the lanes the copies share, from an engine that gives the build's lanes */}
+                {givesLanes(selected) && <Box sx={{ mt: 1.5 }}><CheckedLanesSummary key={selected.id} clock={selected} /></Box>}
+            </> : (
                 <Typography variant="body2" color="text.secondary">{CARD_COPY.makingFirst}</Typography>
             )}
             <Disclosure summary={CARD_COPY.detailsHeading} sx={{ mt: 1.5 }}>
