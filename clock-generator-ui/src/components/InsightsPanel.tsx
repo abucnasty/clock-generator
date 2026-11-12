@@ -53,16 +53,21 @@ function Part({ label, children }: { label: string; children: ReactNode }) {
     );
 }
 
-/** One finding: its title, what it is in a sentence, and the reasons behind "Why?", with its chart or table */
+/**
+ * One finding: its title, what it is in a sentence, and the reasons behind "Why?", with its chart or table. A finding with no
+ * "why" (that of a clock that overproduces) shows its explanation under what was found, with no "Why?"
+ */
 export function InsightCard({ insight, level = 4 }: { insight: ClockInsight; level?: 3 | 4 }) {
     const { nameIdsIn } = useGameNames();
     const [open, setOpen] = useBuildSection(`insight:${insight.id}`);
     const reasonsId = useId();
+    const hasWhy = insight.why !== '';
+    const explanation = <Part label={INSIGHTS_COPY.explanation}><Typography variant="body2">{nameIdsIn(insight.explanation)}</Typography></Part>;
     return (
         <Panel title={nameIdsIn(insight.title)} level={level} data-insight={insight.id}>
             <Part label={INSIGHTS_COPY.what}>
                 <Typography variant="body2">{nameIdsIn(insight.what)}</Typography>
-                <Button
+                {hasWhy && <Button
                     size="small"
                     aria-expanded={open}
                     aria-controls={reasonsId}
@@ -72,12 +77,12 @@ export function InsightCard({ insight, level = 4 }: { insight: ClockInsight; lev
                     sx={{ mt: 0.25, ml: -0.75, minWidth: 0 }}
                 >
                     {INSIGHTS_COPY.whyButton}
-                </Button>
+                </Button>}
             </Part>
-            <Collapse in={open} id={reasonsId}>
-                {insight.why !== '' && <Part label={INSIGHTS_COPY.why}><Typography variant="body2">{nameIdsIn(insight.why)}</Typography></Part>}
-                <Part label={INSIGHTS_COPY.explanation}><Typography variant="body2">{nameIdsIn(insight.explanation)}</Typography></Part>
-            </Collapse>
+            {hasWhy ? <Collapse in={open} id={reasonsId}>
+                <Part label={INSIGHTS_COPY.why}><Typography variant="body2">{nameIdsIn(insight.why)}</Typography></Part>
+                {explanation}
+            </Collapse> : explanation}
             {insight.swing_comparison && <SwingComparison data={insight.swing_comparison} />}
             {insight.table && (insight.swing_comparison ? <ExactTicks><InsightTable table={insight.table} title={insight.title} /></ExactTicks> : <InsightTable table={insight.table} title={insight.title} />)}
         </Panel>
