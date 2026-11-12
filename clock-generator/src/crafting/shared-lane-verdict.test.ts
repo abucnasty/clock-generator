@@ -5,7 +5,7 @@ import { Config } from "../config/schema";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import { SerializableClockWindows } from "./clock";
-import { behindTargetIn, CopyMade, judgeSharedLanes, RunOfCopies, TargetRates } from "./shared-lane-verdict";
+import { behindTargetIn, CopyMade, describeSharedLaneLoss, judgeSharedLanes, RunOfCopies, SharedLaneLoss, TargetRates } from "./shared-lane-verdict";
 import { withoutSharedLaneFacts } from "./generate-blueprint-test-helpers";
 
 const quiet = { log: () => {}, warn: () => {}, error: () => {}, debug: () => {} };
@@ -43,11 +43,6 @@ describe("the clocks recorded on the chemical science build whose copies share d
         JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "chemical-science-120-recorded-clocks.json"), "utf8"));
     const stated = flowing(withFacts(config, { "1/1": dead_end, "1/2": dead_end, "2/1": dead_end, "2/2": dead_end }), [1, 2], 4);
     const judged = (id: string, on: Config = stated) => judgeSharedLanes(on, clocks[id].windows, clocks[id].window_cycle_ticks, quiet);
-    // the fixture's machines by kind and recipe, the two of a kind and recipe with their numbers, in the game's names
-    const CHEMICAL_SCIENCE_MACHINES: Record<number, string> = {
-        1: "assembling machine 3 (machine 1) that makes chemical science pack", 2: "assembling machine 3 (machine 2) that makes chemical science pack",
-        3: "assembling machine 3 (machine 3) that makes engine unit", 4: "assembling machine 3 (machine 4) that makes engine unit", 5: "foundry that makes casting pipe",
-    };
 
     it.each(["coordinated_sources", "takt_batches_observed"])("fails %s on the second copy alone, its first circuit taker short the most", id => {
         const { losses } = judged(id);
@@ -60,10 +55,11 @@ describe("the clocks recorded on the chemical science build whose copies share d
         const behind = losses[0].behind!;
         expect([behind.copy, behind.kind]).toEqual([2, "machine"]);
         expect(behind.behind).toBeGreaterThan(1);
+        // the swings are the hands the runs keep: every hand of 16 here, so they are the items over a hand
+        expect([losses[0].swings * 16, losses[0].alone_swings * 16, losses[0].short_swings]).toEqual([losses[0].items, losses[0].alone_items, 0]);
         expect(losses[0].text).toBe(`Lane 1 of belt 2 ends in a dead end. The 5.5 copies take advanced circuit from it. When the items move east, `
-            + `copy 2 from the entry does not get sufficient items. Its inserter 3 takes ${losses[0].items.toLocaleString("en-US")} in ${losses[0].window_cycles} window cycles. `
-            + `With no other copy on the lane, it takes ${losses[0].alone_items.toLocaleString("en-US")}. `
-            + `In the same run, the ${CHEMICAL_SCIENCE_MACHINES[behind.id]} in copy 2 is ${behind.behind.toLocaleString("en-US", { maximumFractionDigits: 1 })} crafts behind its target rate.`);
+            + `copy 2 from the entry does not get sufficient items. Its inserter 3 misses ${losses[0].alone_swings - losses[0].swings} of its `
+            + `${losses[0].alone_swings} swings with advanced circuit in ${losses[0].window_cycles} window cycles.`);
     });
 
     it.each(["time_study_windows", "euclidean_swings"])("holds %s on every copy", id => {
@@ -109,15 +105,30 @@ describe("the clocks recorded on the inserter build whose copies share flowing o
         expect(losses.some(loss => loss.belt_id === 1 && loss.item === "iron-ore")).toBe(true);
     });
 
-    it("names the machine of copy 3 that falls more than a thousand crafts behind its target rate under takt_batches_swings_6", () => {
+    // Inserter 1 takes iron ore from both lanes of belt 1: a hand of it cannot be told by the lane it came from, so the loss
+    // is one for the inserter and the item, naming both lanes, with the inserter's swings with the ore. Belt 2 states no way
+    // its items move, so the copies are run twice, once each way, and each run gives its loss.
+    it("gives one loss for an inserter that takes one item from both lanes of its belt, in the inserter's swings", () => {
+        const { losses } = judged("takt_batches_swings_6");
+        const ore = losses.filter(loss => loss.inserter_id === 1 && loss.item === "iron-ore");
+        expect(ore).toHaveLength(2);
+        for (const loss of ore) {
+            expect([loss.belt_id, loss.lane, loss.other_lanes?.map(it => it.lane), loss.swings, loss.alone_swings, loss.short_swings])
+                .toEqual([1, 1, [2], 326, 390, 0]);
+            expect(loss.text).toMatch(/^Lanes 1 and 2 of belt 1 end in an infinite end\. The 3 copies take iron ore from them\. /);
+            expect(loss.text).toContain("Its inserter 1 misses 64 of its 390 swings with iron ore in 65 window cycles.");
+        }
+    });
+
+    it("keeps the machine of copy 3 that falls more than a thousand crafts behind its target rate under takt_batches_swings_6, and says the loss in swings", () => {
         const { losses } = judged("takt_batches_swings_6");
         const behind = losses[0].behind!;
         expect([behind.copy, behind.kind]).toEqual([3, "machine"]);
         expect(behind.behind).toBeGreaterThan(1000);
-        // the electric furnaces 2, 3, 5 and 6 make iron plate: they are told apart by their numbers
-        const name = behind.id === 1 ? "assembling machine 3 that makes inserter" : behind.id === 4 ? "assembling machine 3 that makes iron gear wheel"
-            : `electric furnace (machine ${behind.id}) that makes iron plate`;
-        expect(losses[0].text).toContain(`In the same run, the ${name} in copy 3 is `);
+        for (const loss of losses) {
+            expect(loss.text).toMatch(/misses [\d,]+ of its [\d,]+ swings with /);
+            expect(loss.text).not.toMatch(/crafts|behind its target|takes [\d,]+ in/);
+        }
     });
 
     it.each(["coordinated_sources", "takt_batches_swings_2", "takt_batches_observed_swings_2", "takt_batches_observed_swings_6"])("holds %s on every copy", id => {
@@ -277,9 +288,10 @@ describe("a copy short because its side belt is full at its join onto the output
         expect([...new Set(losses.map(loss => loss.copy))].sort()).toEqual([4, 8]);
         for (const loss of losses) {
             expect(loss.join_full).toBeDefined();
-            expect(loss.text).toMatch(new RegExp(`^The side belt of copy ${loss.copy} from the entry is full at its join onto the output belt\\. `
-                + "Its output inserter waits for room in \\d+ of its \\d+ hands in \\d+ window cycles\\. In the same run, "));
-            expect(loss.text).not.toMatch(/does not get sufficient items/);
+            // measured: 84 of its 336 hands wait, against the 378 its target puts down; inserter 1 makes 168 of its 189 swings with each item
+            expect([loss.join_full, loss.swings, loss.alone_swings, loss.short_swings]).toEqual([{ held_hands: 84, hands: 336, target_swings: 378 }, 168, 189, 0]);
+            expect(loss.text).toBe(`The side belt of copy ${loss.copy} from the entry is full at its join onto the output belt. `
+                + "Its output inserter waits for room in 84 of its 336 swings in 63 window cycles. It misses 42 of the 378 swings its target needs.");
         }
     });
 
@@ -305,7 +317,31 @@ describe("a copy short because its side belt is full at its join onto the output
         for (const loss of copy4) {
             expect(loss.join_full).toBeUndefined();
             expect(loss.side_belt_waits).toEqual({ held_hands: 2, hands: 128 });
-            expect(loss.text).toMatch(/^Lane [12] of belt 1 ends in a dead end\. The 9 copies take (iron gear wheel|copper plate) from it\. When the items move east, copy 4 from the entry does not get sufficient items\. Its inserter 1 takes 1,024 in 65 window cycles\. With no other copy on the lane, it takes 1,040\. Its output inserter also waits for room on its side belt in 2 of its 128 hands\. In the same run, the assembling machine 3 that makes automation science pack in copy 4 is 10 crafts behind its target rate\.$/);
+            expect(loss.text).toMatch(/^Lane [12] of belt 1 ends in a dead end\. The 9 copies take (iron gear wheel|copper plate) from it\. When the items move east, copy 4 from the entry does not get sufficient items\. Its inserter 1 misses 1 of its 65 swings with (iron gear wheel|copper plate) in 65 window cycles\. Its output inserter also waits for room on its side belt in 2 of its 128 swings\.$/);
         }
+    });
+});
+
+describe("the text of a loss on a lane the copies share", () => {
+    const loss: Omit<SharedLaneLoss, "text"> = { belt_id: 1, lane: 1, lane_end: "dead_end", run_as: "dead_end", item: "iron-gear-wheel", copies: 9, copy: 2,
+        inserter_id: 1, items: 984, alone_items: 1040, swings: 63, alone_swings: 65, short_swings: 2, window_cycles: 65, flow: { x: 1, y: 0 } };
+
+    it("says the swings that carry fewer items than a full hand beside the swings missed, never a count of items", () => {
+        const text = describeSharedLaneLoss(loss);
+        expect(text).toContain("Its inserter 1 misses 2 of its 65 swings with iron gear wheel, and 2 of the swings it makes carry fewer items, in 65 window cycles.");
+        expect(text).not.toMatch(/\b(984|1,040)\b|crafts|takes \d/);
+    });
+
+    it("names each lane with its end where the inserter takes the item from both lanes and their ends differ", () => {
+        const both = { ...loss, short_swings: 0, other_lanes: [{ lane: 2, lane_end: "unknown" as const, run_as: "infinite" as const }] };
+        expect(describeSharedLaneLoss(both)).toMatch(/^Lane 1 of belt 1 ends in a dead end\. Lane 2 of belt 1 has an unknown end\. It is checked as an infinite end\. The 9 copies take iron gear wheel from them\./);
+        const same = { ...both, other_lanes: [{ lane: 2, lane_end: "dead_end" as const, run_as: "dead_end" as const }] };
+        expect(describeSharedLaneLoss(same)).toMatch(/^Lanes 1 and 2 of belt 1 end in a dead end\. The 9 copies take iron gear wheel from them\./);
+    });
+
+    it("leaves the swings missed at a join out where the target could not be worked out", () => {
+        const join = { ...loss, short_swings: 0, join_full: { held_hands: 84, hands: 336 } };
+        expect(describeSharedLaneLoss(join)).toBe("The side belt of copy 2 from the entry is full at its join onto the output belt. "
+            + "Its output inserter waits for room in 84 of its 336 swings in 65 window cycles.");
     });
 });

@@ -10,7 +10,6 @@ import { handOfItem, traitsOf, traitsOfMachine } from "../entities/traits/traits
 import type { AfterInsertersTick } from "../simulation/world";
 import type { MachineState } from "../state/machine-state";
 import { SerializableClockWindows } from "./clock";
-import { machineNameOf, MACHINE_IDS, type MachineToName, type MachineWords } from "./machine-name";
 import { computeMachineTargetRates } from "./machine-target-rates";
 import { COPY_NUMBER_STRIDE } from "./sequence/build-copies";
 import { OutputCyclePlan } from "./sequence/cycle/output-cycle";
@@ -173,11 +172,17 @@ export function copyLaneTakes(config: Config, windows: Map<string, OpenRange[]>,
 /** One taker of one copy that loses swings on a lane the copies share */
 export interface SharedLaneLoss {
     belt_id: number;
-    /** The lane, 1 or 2 */
+    /** The lane, 1 or 2; the first, where the taker takes the item from both lanes of the belt (`other_lanes`) */
     lane: number;
     lane_end: LaneEnd["kind"];
     /** The end the lane was run under, for a lane of unknown end: a dead end or an infinite end */
     run_as: "dead_end" | "infinite";
+    /**
+     * The other lane of the belt that the taker takes the item from, where it takes it from both: the loss is one for the
+     * taker and the item, as a hand of it cannot be told by the lane it came from, and its counts are the taker's swings with
+     * the item. Absent where the taker takes the item from one lane.
+     */
+    other_lanes?: { lane: number; lane_end: LaneEnd["kind"]; run_as: "dead_end" | "infinite" }[];
     item: string;
     /** Copies that take from the lane, as the config counts them (5.5); one on a lane only one copy takes from */
     copies: number;
@@ -188,6 +193,12 @@ export interface SharedLaneLoss {
     items: number;
     /** What the inserter put down in them in a run of one copy alone */
     alone_items: number;
+    /** The taker's swings with the item in the judged window cycles: the hands of it the run of the copies keeps */
+    swings: number;
+    /** Its swings with the item in them in the run of one copy alone */
+    alone_swings: number;
+    /** Of `swings`, those with fewer items than a full hand of the taker for the item */
+    short_swings: number;
     window_cycles: number;
     /** The way the items flow, as a map direction */
     flow: FlowDirection;
@@ -215,6 +226,11 @@ export interface JoinFull {
     held_hands: number;
     /** Hands of the output inserter in them */
     hands: number;
+    /**
+     * Where the side belt is the cause (`SharedLaneLoss.join_full`): the hands the copy's output inserters' target puts down in
+     * the judged window cycles, from the target rates; absent where they cannot be worked out
+     */
+    target_swings?: number;
 }
 
 /** A machine or an output inserter of a copy behind its target rate over the judged window cycles of a run of the copies */
@@ -410,64 +426,61 @@ function directionWord(flow: FlowDirection): string {
 /** "1,234" */
 const counted = (value: number) => value.toLocaleString("en-US");
 
-/** How the loss texts write a machine's kind and recipe: by the game's names in a sentence, or by the ids without the game data */
-function machineWords(): MachineWords {
-    return FactorioDataService.isAvailable()
-        ? { kind: id => FactorioDataService.itemNameInSentence(id), recipe: id => FactorioDataService.recipeNameInSentence(id) }
-        : MACHINE_IDS;
+/** "Lane 1 of belt 2 ends in a dead end.", "Lanes 1 and 2 of belt 2 end in a dead end.", or each lane with its end where they differ */
+function endsSentence(loss: Omit<SharedLaneLoss, "text">): string {
+    const lanes = [{ lane: loss.lane, lane_end: loss.lane_end, run_as: loss.run_as }, ...loss.other_lanes ?? []];
+    const end = (it: typeof lanes[number], many: boolean) => {
+        const run_as = it.run_as === "dead_end" ? "a dead end" : "an infinite end";
+        return it.lane_end === "unknown" ? `${many ? "have" : "has"} an unknown end. ${many ? "They are" : "It is"} checked as ${run_as}.` : `${many ? "end" : "ends"} in ${run_as}.`;
+    };
+    if (lanes.length > 1 && lanes.every(it => it.lane_end === lanes[0].lane_end && it.run_as === lanes[0].run_as)) {
+        return `Lanes ${lanes.map(it => it.lane).join(" and ")} of belt ${loss.belt_id} ${end(lanes[0], true)}`;
+    }
+    return lanes.map(it => `Lane ${it.lane} of belt ${loss.belt_id} ${end(it, false)}`).join(" ");
+}
+
+/** "misses 3 of its 65 swings with iron gear wheel in 65 window cycles", with the swings that carry fewer items where there are */
+function missedSwings(loss: Omit<SharedLaneLoss, "text">, item: string): string {
+    const fewer = loss.short_swings > 0 ? `, and ${counted(loss.short_swings)} of the swings it makes ${loss.short_swings === 1 ? "carries" : "carry"} fewer items,` : "";
+    return `misses ${counted(Math.max(0, loss.alone_swings - loss.swings))} of its ${counted(loss.alone_swings)} swings with ${item}${fewer} in ${loss.window_cycles} window cycles.`;
 }
 
 /**
- * "In the same run, the electric furnace (machine 2) that makes iron plate in copy 3 is 1,536 crafts behind its target
- * rate.", or "output inserter 4 of copy 3 ... hands behind": a machine by its kind and recipe (machine-name.ts) among
- * the config's machines, an output inserter by its number. The copy is named where the lane's copies are, or where the
- * copy is not the config's own.
+ * "Lane 1 of belt 2 ends in a dead end. The 6 copies take advanced circuit from it. When the items move east, copy 3 from the
+ * entry does not get sufficient items. Its inserter 3 misses 70 of its 210 swings with advanced circuit in 50 window cycles."
+ * At a join: "The side belt of copy 4 from the entry is full at its join onto the output belt. Its output inserter waits for room
+ * in 84 of its 336 swings in 63 window cycles. It misses 42 of the 378 swings its target needs." A loss is said in swings, not in
+ * items or crafts. One fact a sentence; the game's names of items have no plural.
  */
-function describeBehind(behind: BehindTarget, copies: number, machines: readonly MachineToName[]): string {
-    const named = copies === 1 && behind.copy === 1;
-    const machine = behind.kind === "machine" ? machineNameOf(behind.id, machines, machineWords()) : undefined;
-    const entity = machine !== undefined ? `the ${machine}${named ? "" : ` in copy ${behind.copy}`}`
-        : `${behind.kind === "machine" ? "machine" : "output inserter"} ${behind.id}${named ? "" : ` of copy ${behind.copy}`}`;
-    const amount = behind.behind.toLocaleString("en-US", { maximumFractionDigits: 1 });
-    return `In the same run, ${entity} is ${amount} ${behind.kind === "machine" ? "crafts" : "hands"} behind its target rate.`;
-}
-
-/**
- * "Lane 1 of belt 2 ends in a dead end. The 6 copies take advanced circuit from it. When the items move east, copy 3 from
- * the entry does not get sufficient items. Its inserter 3 takes 2,240 in 50 window cycles. With no other copy on the lane, it
- * takes 3,360. In the same run, the electromagnetic plant (machine 2) that makes advanced circuit in copy 3 is 1,536 crafts
- * behind its target rate." One fact a sentence; the game's names of items have no plural. `machines`: the config's.
- */
-function describeSharedLaneLoss(loss: Omit<SharedLaneLoss, "text">, machines: readonly MachineToName[]): string {
+export function describeSharedLaneLoss(loss: Omit<SharedLaneLoss, "text">): string {
     if (loss.join_full !== undefined) {
-        const behind = loss.behind === undefined ? "" : ` ${describeBehind(loss.behind, loss.copies, machines)}`;
+        const { held_hands, hands, target_swings } = loss.join_full;
+        const missed = target_swings === undefined || target_swings <= hands ? ""
+            : ` It misses ${counted(target_swings - hands)} of the ${counted(target_swings)} swings its target needs.`;
         return `The side belt of copy ${loss.copy} from the entry is full at its join onto the output belt. `
-            + `Its output inserter waits for room in ${counted(loss.join_full.held_hands)} of its ${counted(loss.join_full.hands)} hands `
-            + `in ${loss.window_cycles} window cycles.${behind}`;
+            + `Its output inserter waits for room in ${counted(held_hands)} of its ${counted(hands)} swings in ${loss.window_cycles} window cycles.${missed}`;
     }
-    const run_as = loss.run_as === "dead_end" ? "a dead end" : "an infinite end";
-    const end = loss.lane_end === "unknown" ? `has an unknown end. It is checked as ${run_as}.` : `ends in ${run_as}.`;
     const item = FactorioDataService.isAvailable() ? FactorioDataService.itemNameInSentence(loss.item) : loss.item;
-    const counts = `takes ${counted(loss.items)} in ${loss.window_cycles} window cycles.`;
+    const them = loss.other_lanes === undefined ? "it" : "them";
     const waits = loss.side_belt_waits === undefined ? ""
-        : ` Its output inserter also waits for room on its side belt in ${counted(loss.side_belt_waits.held_hands)} of its ${counted(loss.side_belt_waits.hands)} hands.`;
-    const behind = `${waits}${loss.behind === undefined ? "" : ` ${describeBehind(loss.behind, loss.copies, machines)}`}`;
+        : ` Its output inserter also waits for room on its side belt in ${counted(loss.side_belt_waits.held_hands)} of its ${counted(loss.side_belt_waits.hands)} swings.`;
     if (loss.copies === 1) {
-        return `Lane ${loss.lane} of belt ${loss.belt_id} ${end} The build takes ${item} from it. `
-            + `When the items move ${directionWord(loss.flow)}, inserter ${loss.inserter_id} does not get sufficient items. `
-            + `It ${counts} With no other inserter on the lane, it takes ${counted(loss.alone_items)}.${behind}`;
+        return `${endsSentence(loss)} The build takes ${item} from ${them}. `
+            + `When the items move ${directionWord(loss.flow)}, inserter ${loss.inserter_id} does not get sufficient items. It ${missedSwings(loss, item)}${waits}`;
     }
-    return `Lane ${loss.lane} of belt ${loss.belt_id} ${end} The ${loss.copies} copies take ${item} from it. `
+    return `${endsSentence(loss)} The ${loss.copies} copies take ${item} from ${them}. `
         + `When the items move ${directionWord(loss.flow)}, copy ${loss.copy} from the entry does not get sufficient items. `
-        + `Its inserter ${loss.inserter_id} ${counts} With no other copy on the lane, it takes ${counted(loss.alone_items)}.${behind}`;
+        + `Its inserter ${loss.inserter_id} ${missedSwings(loss, item)}${waits}`;
 }
 
 /** The tick window cycle `k` of the clock starts in: the clock stands at 0 in the run's first tick */
 const cycleStart = (k: number, window_cycle_ticks: number) => Math.ceil(k * window_cycle_ticks - 1e-9);
 
-/** Items of the hands put down from tick `from` up to, not including, tick `to` */
-const itemsIn = (hands: readonly HandDropped[], from: number, to: number) =>
-    hands.reduce((sum, hand) => hand.tick >= from && hand.tick < to ? sum + hand.items : sum, 0);
+/** The hands put down from tick `from` up to, not including, tick `to` */
+const handsIn = (hands: readonly HandDropped[], from: number, to: number) => hands.filter(hand => hand.tick >= from && hand.tick < to);
+
+/** Items of the hands */
+const itemsOf = (hands: readonly HandDropped[]) => hands.reduce((sum, hand) => sum + hand.items, 0);
 
 /** What one taker of one copy put down short of the run of one copy, over the judged window cycles of one run of the copies */
 interface Shortfall {
@@ -528,18 +541,31 @@ function shortfallsOf(under: Config, lanes: readonly ModelLane[], layout: Shared
     const holds = layout.copies.later;
     const join_full = output_belt === undefined ? undefined : joinFullOf(output_belt, from, to);
     if (end_cycle <= first_cycle) return { shortfalls: [], made, from, to, holds, ...(join_full !== undefined && { join_full }) };
-    const shortfalls = takes.flatMap(take => {
-        const alone_items = itemsIn((alone.recorders.get(take.inserter_id)?.hands ?? []).filter(hand => hand.item === take.item), from, to);
-        const items = itemsIn(take.hands, from, to);
+    // a taker that takes one item from both lanes of its belt has the same hands on both: a hand cannot be told by its lane,
+    // so it makes one loss for the item, which names both lanes
+    const by_taker = new Map<string, CopyLaneTake[]>();
+    for (const take of takes) {
+        const key = `${take.copy}|${take.inserter_id}|${take.belt_id}|${take.item}`;
+        by_taker.set(key, [...by_taker.get(key) ?? [], take]);
+    }
+    const shortfalls = [...by_taker.values()].flatMap(([take, ...others]) => {
+        const alone_hands = handsIn((alone.recorders.get(take.inserter_id)?.hands ?? []).filter(hand => hand.item === take.item), from, to);
+        const hands = handsIn(take.hands, from, to);
+        const alone_items = itemsOf(alone_hands), items = itemsOf(hands);
         if (items >= alone_items) return [];
+        const hand = alone.handOf(take.inserter_id, take.item);
         const lane = lanes.find(it => it.belt_id === take.belt_id && it.lane === take.lane)!;
         const row = layout.rows.find(it => it.belt_id === take.belt_id && it.lane === take.lane)!;
-        const run_as = facts.of(take.belt_id, take.lane).lane_end.kind === "dead_end" ? "dead_end" as const : "infinite" as const;
-        const loss = { belt_id: take.belt_id, lane: take.lane, lane_end: lane.stated.kind, run_as, item: take.item,
+        const runAs = (of: 1 | 2) => facts.of(take.belt_id, of).lane_end.kind === "dead_end" ? "dead_end" as const : "infinite" as const;
+        const other_lanes = others.map(other => ({ lane: other.lane, lane_end: lanes.find(it => it.belt_id === other.belt_id && it.lane === other.lane)!.stated.kind,
+            run_as: runAs(other.lane) }));
+        const loss = { belt_id: take.belt_id, lane: take.lane, lane_end: lane.stated.kind, run_as: runAs(take.lane),
+            ...(other_lanes.length > 0 && { other_lanes }), item: take.item,
             copies: lane.shared ? under.setpoint.copies : 1, copy: take.copy + 1,
             inserter_id: Number(take.inserter_id.slice("inserter:".length)), items, alone_items,
+            swings: hands.length, alone_swings: alone_hands.length, short_swings: hands.filter(it => it.items < hand).length,
             window_cycles: end_cycle - first_cycle, flow: row.flow };
-        return [{ short: alone_items - items, hand: alone.handOf(take.inserter_id, take.item), loss }];
+        return [{ short: alone_items - items, hand, loss }];
     });
     return { shortfalls, made, from, to, holds, ...(join_full !== undefined && { join_full }) };
 }
@@ -672,6 +698,19 @@ function howFarBehind(run: RunOfCopies, rates: TargetRates): BehindTarget[] {
 }
 
 /**
+ * The hands that the target rates of copy `copy`'s output inserters put down over the judged window cycles of `run`, to the
+ * nearest whole hand; undefined where the copy has no output inserter with a target
+ */
+function targetSwingsOf(run: RunOfCopies, rates: TargetRates, copy: number): number | undefined {
+    const seconds = (run.to - run.from) / 60;
+    const of_copy = run.made.filter(it => it.copy + 1 === copy && it.kind === "output_inserter").flatMap(it => {
+        const output = rates.output_inserters.get(it.id);
+        return output === undefined ? [] : [output.items_per_second * seconds / output.hand];
+    });
+    return of_copy.length === 0 ? undefined : Math.round(of_copy.reduce((sum, it) => sum + it, 0));
+}
+
+/**
  * Whether the output belt makes a copy's entity further behind: by more than one craft or hand (the measure of
  * behindTargetIn) against the same run with each output inserter dropping on a tile of its own (`reference`)
  */
@@ -729,7 +768,9 @@ export function judgeSharedLanes(config: Config, clock_windows: SerializableCloc
             const held = run.join_full?.get(loss.copy);
             if (held === undefined) return { ...loss, behind: of_copy };
             without ??= reference();
-            return joinIsTheCause(of_copy, without, rates!) ? { ...loss, behind: of_copy, join_full: held } : { ...loss, behind: of_copy, side_belt_waits: held };
+            if (!joinIsTheCause(of_copy, without, rates!)) return { ...loss, behind: of_copy, side_belt_waits: held };
+            const target_swings = targetSwingsOf(run, rates!, loss.copy);
+            return { ...loss, behind: of_copy, join_full: { ...held, ...(target_swings !== undefined && { target_swings }) } };
         });
     };
     // the first run of each reading: the run of one copy, and the copies on each layout of the lanes, with their shortfalls
@@ -757,7 +798,7 @@ export function judgeSharedLanes(config: Config, clock_windows: SerializableCloc
     const shortfalls = first.flatMap(it => it.runs.flatMap(({ run }) => run.shortfalls));
     const judged = (losses: Omit<SharedLaneLoss, "text">[], longer_run: boolean): SharedLaneJudgement => ({
         // the worst first: the most items short of the run of one copy
-        losses: losses.map(loss => ({ ...loss, text: describeSharedLaneLoss(loss, config.machines) })).sort((a, b) => (b.alone_items - b.items) - (a.alone_items - a.items)),
+        losses: losses.map(loss => ({ ...loss, text: describeSharedLaneLoss(loss) })).sort((a, b) => (b.alone_items - b.items) - (a.alone_items - a.items)),
         fast_check_passes, simulated: true, longer_run, lanes: keys,
     });
     // no taker short, or one short by more than a hand, which the end of the judged span does not make: judged as it is,
