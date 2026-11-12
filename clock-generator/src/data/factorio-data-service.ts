@@ -318,6 +318,15 @@ export class FactorioDataService {
         return Object.prototype.hasOwnProperty.call(names, id) ? names[id] : this.itemDisplayName(id);
     }
 
+    /**
+     * A recipe's game name for the middle of a sentence, its first letter lower case: "automation science pack" for
+     * "automation-science-pack", "rocket fuel from jelly" for "rocket-fuel-from-jelly"
+     */
+    public static recipeNameInSentence(id: string): string {
+        const name = this.recipeDisplayName(id);
+        return name.charAt(0).toLowerCase() + name.slice(1);
+    }
+
     /** Every crafting machine prototype of the data, in its order */
     public static getAllCraftingMachines(): CraftingMachinePrototype[] {
         return Object.values(this.getData().crafting_machine ?? {});

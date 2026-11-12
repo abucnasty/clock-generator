@@ -217,17 +217,17 @@ describe("generateClockForConfig", () => {
             it("says how much time the machine has to spare", () => {
                 expect(insight("planned-belt-slack", "spare-time")).toMatchObject({
                     scope: "build",
-                    title: "Machine 1 (flying-robot-frame) has 9 ticks to spare each window cycle",
-                    table: { rows: [["Machine 1 (flying-robot-frame)", "279", "9", "17.4"]] },
+                    title: "The assembling-machine-3 that makes flying-robot-frame has 9 ticks to spare each window cycle",
+                    table: { rows: [["assembling-machine-3 that makes flying-robot-frame", "279", "9", "17.4"]] },
                 });
             });
 
             it("lists every ingredient's insertion limit and hands per period", () => {
                 expect(insight("planned-belt-slack", "insertion-limits")?.table?.rows).toEqual([
-                    ["Machine 1 (flying-robot-frame)", "steel-plate", "1", "6", "Inserter 2", "16", "1"],
-                    ["Machine 1 (flying-robot-frame)", "electric-engine-unit", "1", "6", "Inserter 2", "16", "1"],
-                    ["Machine 1 (flying-robot-frame)", "electronic-circuit", "3", "18", "Inserter 3", "16", "3"],
-                    ["Machine 1 (flying-robot-frame)", "battery", "2", "12", "Inserter 3", "16", "2"],
+                    ["assembling-machine-3 that makes flying-robot-frame", "steel-plate", "1", "6", "Inserter 2", "16", "1"],
+                    ["assembling-machine-3 that makes flying-robot-frame", "electric-engine-unit", "1", "6", "Inserter 2", "16", "1"],
+                    ["assembling-machine-3 that makes flying-robot-frame", "electronic-circuit", "3", "18", "Inserter 3", "16", "3"],
+                    ["assembling-machine-3 that makes flying-robot-frame", "battery", "2", "12", "Inserter 3", "16", "2"],
                 ]);
                 expect(insight("planned-belt-slack", "insertion-limits")?.what).toContain("takes electronic-circuit only while it holds fewer than 18");
             });
@@ -342,13 +342,13 @@ describe("generateClockForConfig", () => {
                 expect(shifted.result.search!.earliest).toEqual({
                     setting: -65,
                     is_search_limit: false,
-                    notes: ["Inserter 3 waits 10 ticks for Machine 1 (flying-robot-frame) to drop below its insertion limit for electronic-circuit"],
+                    notes: ["Inserter 3 waits 10 ticks for the assembling-machine-3 that makes flying-robot-frame to drop below its insertion limit for electronic-circuit"],
                 });
                 expect(shifted.result.search!.latest).toEqual({
                     setting: 35, // 60 with the untrimmed windows, 45 from the prepared build
                     is_search_limit: false,
                     // full output while its output is at the block, then short of ingredients: one 9 tick stop
-                    notes: ["Machine 1 (flying-robot-frame) is out of ingredients for 9 ticks until these swings arrive"],
+                    notes: ["The assembling-machine-3 that makes flying-robot-frame is out of ingredients for 9 ticks until these swings arrive"],
                 });
             });
 

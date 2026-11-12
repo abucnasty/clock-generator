@@ -1,4 +1,4 @@
-import { chestName, type ChestType } from 'clock-generator/light';
+import { chestName, machineNameOf, type ChestType, type MachineToName } from 'clock-generator/light';
 
 export type LabelKind = 'machine' | 'inserter' | 'belt' | 'chest' | 'drill';
 
@@ -24,6 +24,24 @@ export function chestLabel(chest: { id: number; type?: ChestType }): string {
 export function entityLabelIn(chests: readonly { id: number; type?: ChestType }[] | undefined, kind: LabelKind, id: number): string {
     const chest = kind === 'chest' ? chests?.find(row => row.id === id) : undefined;
     return chest ? chestLabel(chest) : entityLabel(kind, id);
+}
+
+/**
+ * A machine as a sentence about a result names it: by its kind and its recipe in the game's names, "the Biochamber
+ * (machine 1) that makes Rocket fuel from jelly" (the engine's machineNameOf: the number only where the copy has two of a
+ * kind and recipe); "Machine 1" where the machines of the build are not known (a view kept before they were carried)
+ */
+export function machineInSentence(id: number | string, machines: readonly MachineToName[] | undefined,
+    labels: { itemLabel: (id: string) => string; recipeLabel: (id: string) => string }): string {
+    const name = machines === undefined ? undefined : machineNameOf(id, machines, { kind: labels.itemLabel, recipe: labels.recipeLabel });
+    if (name !== undefined) return `the ${name}`;
+    const number = typeof id === 'number' ? id : Number(/^machine:(\d+)$/.exec(id)?.[1]);
+    return Number.isFinite(number) ? entityLabel('machine', number) : String(id);
+}
+
+/** A sentence's first letter upper case: "The Biochamber ..." */
+export function sentenceStart(text: string): string {
+    return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 /** Where a row's Entity details button goes: `EntitySettings` puts it there, next to the row's other actions */

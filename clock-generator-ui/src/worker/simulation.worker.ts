@@ -9,7 +9,7 @@ import { repeatedUnitsProblem } from '../utils/repeatedUnitsProblem';
  */
 
 import type { z } from 'zod';
-import type { ClockAlternativeRun, Config, CopiesError, DebugSteps, LogMessage, Logger, NotMadeClock, SearchRangeEdge } from 'clock-generator/browser';
+import type { ClockAlternativeRun, Config, CopiesError, DebugSteps, LogMessage, Logger, MachineToName, NotMadeClock, SearchRangeEdge } from 'clock-generator/browser';
 import { parseFormConfig } from './formConfig';
 import { installFactsOf } from './installFacts';
 import { createReadyGate } from './requestGate';
@@ -90,14 +90,20 @@ function shiftOptionsOf(result: ClockAlternativeRun['alternatives'][number]['res
     };
 }
 
+/** The machines of a config as its texts name them: number, prototype and recipe */
+function machinesToName(config: Config): MachineToName[] {
+    return config.machines.map(machine => ({ id: machine.id, ...(machine.prototype !== undefined && { prototype: machine.prototype }), recipe: machine.recipe }));
+}
+
 /** The fuel plan with the part of the fuel run the page draws: the fuel levels and the fuel inserters' swings */
-function fuelViewOf(result: ClockAlternativeRun['alternatives'][number]['result']): FuelViewData | null {
+function fuelViewOf(result: ClockAlternativeRun['alternatives'][number]['result'], config: Config): FuelViewData | null {
     if (!result.fuel_plan) {
         return null;
     }
     const view = result.fuel_consumption_view;
     return {
         plan: result.fuel_plan,
+        machines: machinesToName(config),
         run: view ? {
             window_cycles: view.window_cycles,
             durationTicks: view.duration_ticks,
@@ -126,6 +132,7 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         rankingWindowCount: alternative.ranking_window_count,
         assessment: alternative.assessment,
         assumptions: {
+            machines: machinesToName(config),
             kickStarts: result.machine_facts.flatMap(machine => machine.facts.inputs
                 .filter(input => clockGenerator.FactorioDataService.findRecipeOrThrow(machine.facts.recipe).results.some(output => output.name === input.item_name))
                 .map(input => ({ machineId: machine.entity_id, item: input.item_name,
@@ -155,7 +162,7 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         transferHistory: result.serializable_transfer_history,
         // the columns go as they are, copied by the structured clone (never transferred: alternatives share them)
         stateTransitionHistory: clockGenerator.toPortable(result.serializable_state_transition_history),
-        fuelView: fuelViewOf(result),
+        fuelView: fuelViewOf(result, config),
         clockWindows: result.clock_windows,
         alwaysOnReasons: result.always_on_reasons ?? {},
         // the engine adds no ticks to a window for a late pickup: the site's belt slack marks stay empty

@@ -17,6 +17,7 @@ import { chestName } from "../common/entity-types";
 import { chestDrillBecause } from "./chest-drill-windows";
 import { describeDropSpacing, dropSpacing, dropSpacingTable } from "../config/drop-spacing";
 import { describeOnePerCopyFeed, lanesExactlyFull, lanesExactlyFullNote, onePerCopyFeeds } from "../config/lane-capacity-validator";
+import { machineNameOf, type MachineToName } from "./machine-name";
 
 /** Facts of one machine of the build, for explaining what its limits allow */
 export interface MachineFactsEntry {
@@ -57,6 +58,25 @@ export interface SwingComparison {
 const SAME_SWING_TOLERANCE_TICKS = 4;
 
 const round = (value: number, digits = 1) => Number(value.toFixed(digits));
+
+/** How the insights name an entity of the history: a machine by its kind and recipe (machine-name.ts), anything else by its label */
+interface EntityName {
+    /** In a table cell: "foundry that makes casting-iron", "Belt 1" */
+    cell: string;
+    /** In a sentence: "the foundry that makes casting-iron", "Inserter 2" */
+    in_sentence: string;
+}
+
+/** Names an entity of the history by its id among the config's machines, or by its label where it is no machine of them */
+function entityNamer(machines: readonly MachineToName[]): (entity: { entity_id: string; label: string }) => EntityName {
+    return entity => {
+        const machine = machineNameOf(entity.entity_id, machines);
+        return machine === undefined ? { cell: entity.label, in_sentence: entity.label } : { cell: machine, in_sentence: `the ${machine}` };
+    };
+}
+
+/** A sentence's first letter upper case */
+const capital = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 const ticksList = (ticks: number[]) => ticks.length === 0 ? "never" : ticks.join(", ");
 
 function workingTicks(run: CompactStateTransitionHistory, entity: CompactEntityStateTransitions, window_cycle_ticks: number): number {
@@ -79,7 +99,7 @@ function dropTicks(history: CompactStateTransitionHistory, entity_id: string): n
 }
 
 /** How much of each window cycle the machines are not needed, the slack all timing has to fit in */
-function spareTimeInsight(result: BlueprintGenerationResult, run: CompactStateTransitionHistory): ClockInsight | null {
+function spareTimeInsight(result: BlueprintGenerationResult, run: CompactStateTransitionHistory, nameOf: (entity: { entity_id: string; label: string }) => EntityName): ClockInsight | null {
     const window_cycle_ticks = run.total_duration_ticks;
     const machines = run.entities.filter(it => it.entity_type === "machine").map(entity => {
         const working = workingTicks(run, entity, window_cycle_ticks);
@@ -91,32 +111,34 @@ function spareTimeInsight(result: BlueprintGenerationResult, run: CompactStateTr
     }
     const tightest = machines.reduce((a, b) => b.spare < a.spare ? b : a);
     const crafts = tightest.facts ? Math.round(tightest.working / tightest.facts.ticks_per_craft) : null;
+    const name = nameOf(tightest.entity).in_sentence;
     return {
         id: "spare-time",
         scope: "build",
-        title: `${tightest.entity.label} has ${round(tightest.spare)} ticks to spare each window cycle`,
-        what: `${tightest.entity.label} crafts for ${round(tightest.working)} of the ${round(window_cycle_ticks, 3)} ticks in a window cycle`
+        title: `${capital(name)} has ${round(tightest.spare)} ticks to spare each window cycle`,
+        what: `${capital(name)} crafts for ${round(tightest.working)} of the ${round(window_cycle_ticks, 3)} ticks in a window cycle`
             + (crafts !== null && tightest.facts ? ` (${crafts} crafts of ${round(tightest.facts.ticks_per_craft)} ticks)` : "")
             + ` and is stopped for the other ${round(tightest.spare)}.`
             + (machines.length > 1 ? " It is the machine with the least time to spare." : ""),
         why: "At the setpoint a machine is not needed the whole time. The ticks left over are the only spare time it has: "
             + "every tick it waits for an ingredient, or stops because its output has not been taken, comes out of them.",
-        explanation: `The swings can make ${tightest.entity.label} wait up to ${round(tightest.spare)} ticks each window cycle. `
+        explanation: `The swings can make ${name} wait up to ${round(tightest.spare)} ticks each window cycle. `
             + "Any more and it cannot catch up, so the build falls behind the target. The less there is to spare, the less room "
             + "there is to move swings around and the less a late belt pickup is forgiven.",
         table: {
             columns: ["Machine", "Crafting (ticks)", "Stopped (ticks)", "Ticks per craft"],
-            rows: machines.map(it => [it.entity.label, `${round(it.working)}`, `${round(it.spare)}`,
+            rows: machines.map(it => [nameOf(it.entity).cell, `${round(it.working)}`, `${round(it.spare)}`,
                 it.facts ? `${round(it.facts.ticks_per_craft)}` : ""]),
         },
-        spare_time: { machine: tightest.entity.label, spare_ticks: tightest.spare, working_ticks: tightest.working,
+        spare_time: { machine: name, spare_ticks: tightest.spare, working_ticks: tightest.working,
             recovery_window_cycles: MAX_RECOVERY_WINDOW_CYCLES },
     };
 }
 
 /** Per ingredient: when the machine takes it, how much comes per hand and how many hands a window cycle needs */
-function insertionLimitsInsight(result: BlueprintGenerationResult, entities: CompactEntityStateTransitions[]): ClockInsight | null {
-    const rows: { machine: string; item: string; per_craft: number; limit: number; inserter: string; hand: number; hands: number }[] = [];
+function insertionLimitsInsight(result: BlueprintGenerationResult, entities: CompactEntityStateTransitions[],
+    nameOf: (entity: { entity_id: string; label: string }) => EntityName): ClockInsight | null {
+    const rows: { machine: EntityName; item: string; per_craft: number; limit: number; inserter: string; hand: number; hands: number }[] = [];
     for (const planned of result.serializable_transfer_plan.entities) {
         const inserter = entities.find(it => it.entity_id === planned.entity_id);
         const machine = result.machine_facts.find(it => it.entity_id === inserter?.sink?.entity_id);
@@ -129,7 +151,7 @@ function insertionLimitsInsight(result: BlueprintGenerationResult, entities: Com
                 continue;
             }
             rows.push({
-                machine: inserter.sink!.label,
+                machine: nameOf(inserter.sink!),
                 item: transfer.item_name,
                 per_craft: input.amount_per_craft,
                 limit: input.automated_insertion_limit,
@@ -148,7 +170,7 @@ function insertionLimitsInsight(result: BlueprintGenerationResult, entities: Com
         id: "insertion-limits",
         scope: "build",
         title: "Each machine only takes an ingredient while it is below its insertion limit",
-        what: `${example.machine} takes ${example.item} only while it holds fewer than ${example.limit}. `
+        what: `${capital(example.machine.in_sentence)} takes ${example.item} only while it holds fewer than ${example.limit}. `
             + `${example.inserter} brings ${example.hand} at a time and the window cycle needs ${round(example.hands, 2)} `
             + `hand${example.hands === 1 ? "" : "s"} of it.`,
         why: "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount "
@@ -159,17 +181,18 @@ function insertionLimitsInsight(result: BlueprintGenerationResult, entities: Com
             + "cannot have them back to back once the machine holds the limit or more.",
         table: {
             columns: ["Machine", "Ingredient", "Per craft", "Insertion limit", "Brought by", "Per hand", "Hands each window cycle"],
-            rows: rows.map(it => [it.machine, it.item, `${it.per_craft}`, `${it.limit}`, it.inserter, `${it.hand}`, `${round(it.hands, 2)}`]),
+            rows: rows.map(it => [it.machine.cell, it.item, `${it.per_craft}`, `${it.limit}`, it.inserter, `${it.hand}`, `${round(it.hands, 2)}`]),
         },
     };
 }
 
 /** Machines whose recipe makes one of its own ingredients, which the simulation starts already holding that ingredient */
-function loopingRecipeInsight(result: BlueprintGenerationResult, entities: CompactEntityStateTransitions[], kick_start_items: number): ClockInsight | null {
+function loopingRecipeInsight(result: BlueprintGenerationResult, entities: CompactEntityStateTransitions[], kick_start_items: number,
+    nameOf: (entity: { entity_id: string; label: string }) => EntityName): ClockInsight | null {
     const rows = result.machine_facts.flatMap(machine => machine.facts.inputs
         .filter(input => FactorioDataService.findRecipeOrThrow(machine.facts.recipe).results.some(output => output.name === input.item_name))
         .map(input => ({
-            machine: entities.find(it => it.entity_id === machine.entity_id)?.label ?? machine.entity_id,
+            machine: nameOf({ entity_id: machine.entity_id, label: entities.find(it => it.entity_id === machine.entity_id)?.label ?? machine.entity_id }),
             recipe: machine.facts.recipe,
             item: input.item_name,
             per_craft: input.amount_per_craft,
@@ -184,21 +207,22 @@ function loopingRecipeInsight(result: BlueprintGenerationResult, entities: Compa
         scope: "build",
         title: `The ${example.recipe} recipe needs ${example.item} to make ${example.item}`,
         what: "The modeled cold trial gives a one-time seed: "
-            + rows.map(it => `${it.machine} starts with ${it.started_with} ${it.item}`).join("; ") + ". These recipes consume an item they also produce.",
+            + rows.map(it => `${it.machine.in_sentence} starts with ${it.started_with} ${it.item}`).join("; ") + ". These recipes consume an item they also produce.",
         why: "A machine does not craft from what it has just made: its products go to the output, and the ingredient has to be "
             + "brought to it by an inserter. With none inside, the recipe never starts, and nothing is made to bring.",
         explanation: `Each modeled self-feeding machine is given this seed once at the cold trial start. Planning uses a separate `
             + `prepared state. A real build needs its own initial ${example.item}; this seed assumption does not establish recovery after it is lost.`,
         table: {
             columns: ["Machine", "Recipe", "Item", "In per craft", "Cold trial seed"],
-            rows: rows.map(it => [it.machine, it.recipe, it.item, `${round(it.per_craft, 2)}`, `${it.started_with}`]),
+            rows: rows.map(it => [it.machine.cell, it.recipe, it.item, `${round(it.per_craft, 2)}`, `${it.started_with}`]),
         },
     };
 }
 
 /** How long a machine takes to make a full hand for the inserter that empties it */
-function outputHandInsight(result: BlueprintGenerationResult, entities: CompactEntityStateTransitions[]): ClockInsight | null {
-    const rows: { machine: string; item: string; inserter: string; hand: number; per_craft: number; crafts: number; ticks: number }[] = [];
+function outputHandInsight(result: BlueprintGenerationResult, entities: CompactEntityStateTransitions[],
+    nameOf: (entity: { entity_id: string; label: string }) => EntityName): ClockInsight | null {
+    const rows: { machine: EntityName; item: string; inserter: string; hand: number; per_craft: number; crafts: number; ticks: number }[] = [];
     for (const planned of result.serializable_transfer_plan.entities) {
         const inserter = entities.find(it => it.entity_id === planned.entity_id);
         const machine = result.machine_facts.find(it => it.entity_id === inserter?.source?.entity_id);
@@ -207,7 +231,7 @@ function outputHandInsight(result: BlueprintGenerationResult, entities: CompactE
         }
         const crafts = planned.stack_size / machine.facts.output_per_craft;
         rows.push({
-            machine: inserter.source!.label,
+            machine: nameOf(inserter.source!),
             item: machine.facts.output_item,
             inserter: inserter.label,
             hand: planned.stack_size,
@@ -224,7 +248,7 @@ function outputHandInsight(result: BlueprintGenerationResult, entities: CompactE
         id: "output-hand",
         scope: "build",
         title: `A full hand of ${example.item} takes ${round(example.ticks)} ticks to make`,
-        what: `${example.machine} makes ${round(example.per_craft, 2)} ${example.item} per craft (productivity included), so the `
+        what: `${capital(example.machine.in_sentence)} makes ${round(example.per_craft, 2)} ${example.item} per craft (productivity included), so the `
             + `${example.hand} that ${example.inserter} carries take ${round(example.crafts)} crafts, about ${round(example.ticks)} ticks.`,
         why: "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable "
             + "window closes it keeps holding those items until the next enable window.",
@@ -233,7 +257,7 @@ function outputHandInsight(result: BlueprintGenerationResult, entities: CompactE
             + "crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows.",
         table: {
             columns: ["Machine", "Item", "Taken by", "Hand", "Per craft", "Crafts per hand", "Ticks per hand"],
-            rows: rows.map(it => [it.machine, it.item, it.inserter, `${it.hand}`, `${round(it.per_craft, 2)}`, `${round(it.crafts)}`, `${round(it.ticks)}`]),
+            rows: rows.map(it => [it.machine.cell, it.item, it.inserter, `${it.hand}`, `${round(it.per_craft, 2)}`, `${round(it.crafts)}`, `${round(it.ticks)}`]),
         },
     };
 }
@@ -284,7 +308,8 @@ function planVersusClockInsight(result: BlueprintGenerationResult): ClockInsight
 const MOSTLY_ENABLED_SHARE = 0.8;
 
 /** How often the machines wake the inserters under this clock (goal 2 of GOALS.md), and which inserters most */
-function wakeUpsInsight(result: BlueprintGenerationResult, entities: CompactEntityStateTransitions[]): ClockInsight | null {
+function wakeUpsInsight(result: BlueprintGenerationResult, entities: CompactEntityStateTransitions[],
+    nameOf: (entity: { entity_id: string; label: string }) => EntityName): ClockInsight | null {
     const wake_ups = result.stability_check.as_built?.wake_ups;
     if (wake_ups === undefined || wake_ups.inserters.length === 0) {
         return null;
@@ -292,7 +317,7 @@ function wakeUpsInsight(result: BlueprintGenerationResult, entities: CompactEnti
     const percent = (share: number) => `${round(share * 100)}%`;
     const rows = wake_ups.inserters.map(it => {
         const entity = entities.find(entity => entity.entity_id === it.inserter_id);
-        const ends = entity?.source && entity.sink ? `${entity.source.label} to ${entity.sink.label}` : "";
+        const ends = entity?.source && entity.sink ? `${nameOf(entity.source).cell} to ${nameOf(entity.sink).cell}` : "";
         return { ...it, label: entity?.label ?? it.inserter_id, ends };
     }).sort((a, b) => b.wake_ups_per_minute - a.wake_ups_per_minute);
     const most = rows[0];
@@ -551,19 +576,21 @@ export function onePerCopyFeedInsights(config: Config): ClockInsight[] {
         what: describeOnePerCopyFeed(feed), why: "", explanation: "" }));
 }
 
-export function clockInsights(result: BlueprintGenerationResult, holds: boolean, kick_start_items = DEFAULT_KICK_START_ITEMS): ClockInsight[] {
+/** The insights of a clock; `machines`, the config's, name the machines in them (machine-name.ts) */
+export function clockInsights(result: BlueprintGenerationResult, holds: boolean, machines: readonly MachineToName[], kick_start_items = DEFAULT_KICK_START_ITEMS): ClockInsight[] {
     // the run the blueprint follows; build-wide numbers are only read from a clock that holds the target
     const run = result.clock_only_run?.state_transition_history ?? result.serializable_state_transition_history;
     // an inserter that never moved in one run is only listed in the other
     const entities = [...run.entities, ...result.serializable_state_transition_history.entities];
+    const nameOf = entityNamer(machines);
     const insights: (ClockInsight | null)[] = [
-        loopingRecipeInsight(result, entities, kick_start_items),
-        holds ? spareTimeInsight(result, run) : null,
-        insertionLimitsInsight(result, entities),
-        outputHandInsight(result, entities),
+        loopingRecipeInsight(result, entities, kick_start_items, nameOf),
+        holds ? spareTimeInsight(result, run, nameOf) : null,
+        insertionLimitsInsight(result, entities, nameOf),
+        outputHandInsight(result, entities, nameOf),
         holds ? null : unstableInsight(result),
         holds ? planVersusClockInsight(result) : null,
-        wakeUpsInsight(result, entities),
+        wakeUpsInsight(result, entities, nameOf),
     ];
     return insights.filter((it): it is ClockInsight => it !== null);
 }

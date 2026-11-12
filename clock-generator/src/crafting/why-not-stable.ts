@@ -47,7 +47,10 @@ export interface NotMadeClock {
 
 /** What the build's tightest machine has to spare a window cycle (the spare-time insight) */
 export interface SpareTime {
-    /** "Machine 3 (metallurgic-science-pack)" */
+    /**
+     * The machine as a sentence names it, by its kind and recipe (machine-name.ts): "the foundry that makes
+     * metallurgic-science-pack"; "Machine 3 (metallurgic-science-pack)" in results made before
+     */
     machine: string;
     spare_ticks: number;
     /** The ticks of a window cycle it crafts */
@@ -239,7 +242,7 @@ function spareTimeSentence(spare: SpareTime | null): string {
     }
     const ticks = figure(spare.spare_ticks);
     const window_cycles = Number.isFinite(make_up_window_cycles) ? `${Math.ceil(make_up_window_cycles)} window cycles` : "forever";
-    return ` ${spare.machine} crafts ${figure(spare.working_ticks)} ticks of a window cycle and has ${ticks} ${ticks === "1" ? "tick" : "ticks"} `
+    return ` ${spare.machine.charAt(0).toUpperCase()}${spare.machine.slice(1)} crafts ${figure(spare.working_ticks)} ticks of a window cycle and has ${ticks} ${ticks === "1" ? "tick" : "ticks"} `
         + `to spare: making up one window cycle it lost takes it ${window_cycles}, more than the ${spare.recovery_window_cycles} a build is given to `
         + "go back to its rate. That is too little to make up what it lost.";
 }
@@ -345,9 +348,12 @@ function exportBeltShort(clock: WhyNotStableClock, at_target: boolean): WhyNotSt
     };
 }
 
-/** "Machine 1 waited 240 ticks with a result its container had no room for." and "Inserter 10 took 52 of the 107 holmium ore the crafts gave." */
+/**
+ * "The recycler that makes scrap recycling waited 240 ticks with a result its container had no room for." and "Inserter 10
+ * took 52 of the 107 holmium ore the crafts gave." A result made before the machine's name was kept names it by its number.
+ */
 function resultsTakenSentences(taken: ResultsTaken): string[] {
-    const machine = taken.machine_id.replace(/^machine:/, "Machine ");
+    const machine = taken.machine_name !== undefined ? `The ${taken.machine_name}` : taken.machine_id.replace(/^machine:/, "Machine ");
     return [
         ...(taken.waiting_ticks > 0 ? [`${machine} waited ${count(taken.waiting_ticks)} ticks with a result its container had no room for.`] : []),
         ...taken.takers.filter(it => it.short).map(it => (`${insertersNumbered(it.inserter_ids.map(id => id.replace(/^inserter:/, "")))} took `

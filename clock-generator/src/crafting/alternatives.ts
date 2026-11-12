@@ -1126,7 +1126,7 @@ function runAlternativeOf(
             + (start_dependence_note === null ? "" : ` ${start_dependence_note[0].toUpperCase()}${start_dependence_note.slice(1)}`) + row.description_suffix;
         // what a clock that holds says about the build is read from it, whether it gets back from a loss or not
         const insights = [
-            ...clockInsights(trial.result, trial.held, config.overrides?.kick_start_items ?? DEFAULT_KICK_START_ITEMS),
+            ...clockInsights(trial.result, trial.held, config.machines, config.overrides?.kick_start_items ?? DEFAULT_KICK_START_ITEMS),
             ...(disturbance_trial !== null && !disturbance_trial.survives ? [disturbanceTrialInsight(disturbance_trial, expected_output_items)] : []),
             ...(deadlock_risks.length > 0 ? [deadlockRiskInsight(deadlock_risks)] : []),
             ...beltPickupNotTestedInsights(config),

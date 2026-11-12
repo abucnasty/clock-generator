@@ -22,6 +22,9 @@ export {
 export { EntityType } from "./entities/entity-type";
 
 export { machineCanMake, machineForRecipe, machineForRule } from "./entities/machine/machine-rule";
+
+export { MACHINE_IDS, machineNameInText, machineNameOf } from "./crafting/machine-name";
+export type { MachineToName, MachineWords } from "./crafting/machine-name";
 export type { CraftingMachineRuleFacts, NamedCraftingMachine } from "./entities/machine/machine-rule";
 export { prototypeTraitsOf } from "./entities/traits/prototype-traits";
 export type { CraftingMachineTraitFacts, PrototypeTraits } from "./entities/traits/prototype-traits";

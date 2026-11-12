@@ -25,7 +25,7 @@ export function SelectedClockContext({ selected, detail, onDetailChange, timelin
     assumptions: ReactNode;
     children: ReactNode;
 }) {
-    const { itemLabel } = useGameNames();
+    const { itemLabel, recipeLabel } = useGameNames();
     const [fullscreen, setFullscreen] = useState(false);
     const [timelineVisited, setTimelineVisited] = useState(detail === 'timeline');
     if (detail === 'timeline' && !timelineVisited) setTimelineVisited(true);
@@ -45,7 +45,7 @@ export function SelectedClockContext({ selected, detail, onDetailChange, timelin
             <Disclosure summary="Model and tested starts" open={assumptionsOpen} onToggle={setAssumptionsOpen} sx={{ mt: 1, overflowWrap: 'anywhere' }} data-model-assumptions="">
                 <Typography variant="body2" sx={{ mt: 1 }}>{MODELED_START}</Typography>
                 <Typography variant="body2" sx={{ mt: 1 }}>{startCheckSummary([selected], generation)}</Typography>
-                {modeledDetails(selected, itemLabel).map(line => <Typography key={line} variant="body2" sx={{ mt: 1 }}>{line}</Typography>)}
+                {modeledDetails(selected, itemLabel, recipeLabel).map(line => <Typography key={line} variant="body2" sx={{ mt: 1 }}>{line}</Typography>)}
                 <Typography variant="body2" sx={{ mt: 1 }}>{phaseChecksText(selected.asBuilt?.start_phases_checked)}</Typography>
                 {selected.assessment.start_dependence?.starts.map(start => <Typography key={start.id} variant="body2" sx={{ mt: 0.5 }}>
                     {start.label}: {start.reaches_target ? 'reaches target' : 'does not reach target'}{start.output_items_per_window_cycle === null ? '; steady-state rate unavailable' : `; ${formatNumberText(start.output_items_per_window_cycle)} items per window cycle`}.

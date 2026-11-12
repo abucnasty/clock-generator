@@ -141,9 +141,9 @@ describe("why the selected clock does not meet goal 1", () => {
 
     it("adds the spare time of a machine that takes longer to make up a period than a build is given to get back", () => {
         const spare = (spare_ticks: number, working_ticks: number) => whyNotStable(
-            [noRecovery(["tungsten ore stops arriving"], [], { spare_time: { machine: "Machine 3 (metallurgic-science-pack)", spare_ticks, working_ticks, recovery_window_cycles: 40 } })],
+            [noRecovery(["tungsten ore stops arriving"], [], { spare_time: { machine: "the foundry that makes metallurgic-science-pack", spare_ticks, working_ticks, recovery_window_cycles: 40 } })],
             0, moving)!.message;
-        expect(spare(1, 319)).toContain("after tungsten ore stops arriving. Machine 3 (metallurgic-science-pack) crafts 319 ticks of a window cycle "
+        expect(spare(1, 319)).toContain("after tungsten ore stops arriving. The foundry that makes metallurgic-science-pack crafts 319 ticks of a window cycle "
             + "and has 1 tick to spare: making up one window cycle it lost takes it 319 window cycles, more than the 40 a build is given to go back to its rate. "
             + "That is too little to make up what it lost. A buffer, or a faster machine, lets it catch up.");
         expect(spare(0, 320)).toContain("making up one window cycle it lost takes it forever");
@@ -295,12 +295,12 @@ describe("what the summary reads of a clock", () => {
             as_built: { holds: false, actual_output_items: 176, start_phases_checked: 1, failed_start_offset: 0,
                 failed_pickup_phases: { "inserter:2": [3, 0] }, repeat_window_cycles: 6, repeat_output_items: 880 },
             expected_output_items: 176,
-            insights: [{}, { spare_time: { machine: "Machine 1 (assembling-machine)", spare_ticks: 3, working_ticks: 160, recovery_window_cycles: 40 } }],
+            insights: [{}, { spare_time: { machine: "the assembling-machine-3 that makes automation-science-pack", spare_ticks: 3, working_ticks: 160, recovery_window_cycles: 40 } }],
         })).toEqual({
             label: "Takt Batches: 1 output swing each output cycle", verdict: "unstable", meets_target_rate: false, assessment, moving_belt: true,
             failed_pickup_phases: { "inserter:2": [3, 0] }, expected_output_items: 176,
             as_built_output: { items: 176, repeat_window_cycles: 6, repeat_output_items: 880 },
-            spare_time: { machine: "Machine 1 (assembling-machine)", spare_ticks: 3, working_ticks: 160, recovery_window_cycles: 40 },
+            spare_time: { machine: "the assembling-machine-3 that makes automation-science-pack", spare_ticks: 3, working_ticks: 160, recovery_window_cycles: 40 },
             full_output_chests: [], export_shortfalls: [],
         });
     });
@@ -319,7 +319,7 @@ describe("results that are not all taken out of the container a machine places t
     const build: WhyNotStableBuild = { target_items_per_second: 2, backed_up_belts: false, not_made: [] };
     const taken = (overrides: Partial<WhyNotStableClock> = {}) => clock({ label: "Exhaust: 12 hands brought in each output cycle", verdict: "unstable",
         meets_target_rate: false, assessment: { holds: false, items_per_second: 2, disturbance_trial: null },
-        results_taken: [{ machine_id: "machine:1", waiting_ticks: 240, takers: [
+        results_taken: [{ machine_id: "machine:1", machine_name: "recycler that makes scrap recycling", waiting_ticks: 240, takers: [
             { items: ["iron-gear-wheel"], inserter_ids: ["inserter:1"], expected_items: 2150.4, taken_items: 2144, short: false },
             { items: ["processing-unit", "holmium-ore"], item_labels: ["processing unit", "holmium ore"], inserter_ids: ["inserter:10"], expected_items: 107.5,
                 taken_items: 52, short: true },
@@ -329,9 +329,14 @@ describe("results that are not all taken out of the container a machine places t
         expect(whyNotStable([taken()], 0, build)).toEqual({
             cause: "results not taken out",
             message: "The recommended clock (Exhaust: 12 hands brought in each output cycle) brings in 2 a second, but its results are not all taken out as "
-                + "they come: Machine 1 waited 240 ticks with a result its container had no room for. Inserter 10 took 52 of the 108 processing unit "
+                + "they come: The recycler that makes scrap recycling waited 240 ticks with a result its container had no room for. Inserter 10 took 52 of the 108 processing unit "
                 + "and holmium ore the crafts gave.",
         });
+    });
+
+    it("names the machine by its number in a result made before its name was kept", () => {
+        const before = taken({ results_taken: [{ machine_id: "machine:1", waiting_ticks: 240, takers: [] }] });
+        expect(whyNotStable([before], 0, build)?.message).toContain("they come: Machine 1 waited 240 ticks");
     });
 
     it("is not said of a clock that is off the target, or whose results were all taken", () => {
@@ -343,7 +348,7 @@ describe("results that are not all taken out of the container a machine places t
 describe("why the selected clock does not meet goal 1 where a copy's side belt is full at its join", () => {
     it("names the full join, not a lane the copies share", () => {
         const text = "The side belt of copy 4 from the entry is full at its join onto the output belt. Its output inserter waits for room in "
-            + "80 of its 320 hands in 60 window cycles. In the same run, machine 1 of copy 4 is 300 crafts behind its target rate.";
+            + "80 of its 320 hands in 60 window cycles. In the same run, the assembling machine 3 that makes automation science pack in copy 4 is 300 crafts behind its target rate.";
         const loss = { belt_id: 1, lane: 1, lane_end: "dead_end" as const, run_as: "dead_end" as const, item: "iron-gear-wheel", copies: 9, copy: 4,
             inserter_id: 1, items: 2688, alone_items: 3024, window_cycles: 60, flow: { x: 1, y: 0 }, join_full: { held_hands: 80, hands: 320 }, text };
         const unstable = clock({ verdict: "unstable", meets_target_rate: false,

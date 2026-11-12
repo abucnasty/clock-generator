@@ -405,7 +405,7 @@ const utility120: JobCheck[] = [
                 expect(alternative.deadlock_risks, alternative.id).toHaveLength(1);
                 const insight = alternative.insights.find(it => it.id === 'deadlock-risk');
                 expect(insight?.scope, alternative.id).toBe('build');
-                expect(insight?.what).toContain('Inserters 1 and 2 both bring low-density-structure to machine 1');
+                expect(insight?.what).toContain('Inserters 1 and 2 both bring low-density-structure to the assembling-machine-3 that makes utility-science-pack');
             }
         },
     },

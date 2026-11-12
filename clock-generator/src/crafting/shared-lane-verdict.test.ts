@@ -43,6 +43,11 @@ describe("the clocks recorded on the chemical science build whose copies share d
         JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "chemical-science-120-recorded-clocks.json"), "utf8"));
     const stated = flowing(withFacts(config, { "1/1": dead_end, "1/2": dead_end, "2/1": dead_end, "2/2": dead_end }), [1, 2], 4);
     const judged = (id: string, on: Config = stated) => judgeSharedLanes(on, clocks[id].windows, clocks[id].window_cycle_ticks, quiet);
+    // the fixture's machines by kind and recipe, the two of a kind and recipe with their numbers, in the game's names
+    const CHEMICAL_SCIENCE_MACHINES: Record<number, string> = {
+        1: "assembling machine 3 (machine 1) that makes chemical science pack", 2: "assembling machine 3 (machine 2) that makes chemical science pack",
+        3: "assembling machine 3 (machine 3) that makes engine unit", 4: "assembling machine 3 (machine 4) that makes engine unit", 5: "foundry that makes casting pipe",
+    };
 
     it.each(["coordinated_sources", "takt_batches_observed"])("fails %s on the second copy alone, its first circuit taker short the most", id => {
         const { losses } = judged(id);
@@ -58,7 +63,7 @@ describe("the clocks recorded on the chemical science build whose copies share d
         expect(losses[0].text).toBe(`Lane 1 of belt 2 ends in a dead end. The 5.5 copies take advanced circuit from it. When the items move east, `
             + `copy 2 from the entry does not get sufficient items. Its inserter 3 takes ${losses[0].items.toLocaleString("en-US")} in ${losses[0].window_cycles} window cycles. `
             + `With no other copy on the lane, it takes ${losses[0].alone_items.toLocaleString("en-US")}. `
-            + `In the same run, machine ${behind.id} of copy 2 is ${behind.behind.toLocaleString("en-US", { maximumFractionDigits: 1 })} crafts behind its target rate.`);
+            + `In the same run, the ${CHEMICAL_SCIENCE_MACHINES[behind.id]} in copy 2 is ${behind.behind.toLocaleString("en-US", { maximumFractionDigits: 1 })} crafts behind its target rate.`);
     });
 
     it.each(["time_study_windows", "euclidean_swings"])("holds %s on every copy", id => {
@@ -109,7 +114,10 @@ describe("the clocks recorded on the inserter build whose copies share flowing o
         const behind = losses[0].behind!;
         expect([behind.copy, behind.kind]).toEqual([3, "machine"]);
         expect(behind.behind).toBeGreaterThan(1000);
-        expect(losses[0].text).toContain(`In the same run, machine ${behind.id} of copy 3 is `);
+        // the electric furnaces 2, 3, 5 and 6 make iron plate: they are told apart by their numbers
+        const name = behind.id === 1 ? "assembling machine 3 that makes inserter" : behind.id === 4 ? "assembling machine 3 that makes iron gear wheel"
+            : `electric furnace (machine ${behind.id}) that makes iron plate`;
+        expect(losses[0].text).toContain(`In the same run, the ${name} in copy 3 is `);
     });
 
     it.each(["coordinated_sources", "takt_batches_swings_2", "takt_batches_observed_swings_2", "takt_batches_observed_swings_6"])("holds %s on every copy", id => {
@@ -297,7 +305,7 @@ describe("a copy short because its side belt is full at its join onto the output
         for (const loss of copy4) {
             expect(loss.join_full).toBeUndefined();
             expect(loss.side_belt_waits).toEqual({ held_hands: 2, hands: 128 });
-            expect(loss.text).toMatch(/^Lane [12] of belt 1 ends in a dead end\. The 9 copies take (iron gear wheel|copper plate) from it\. When the items move east, copy 4 from the entry does not get sufficient items\. Its inserter 1 takes 1,024 in 65 window cycles\. With no other copy on the lane, it takes 1,040\. Its output inserter also waits for room on its side belt in 2 of its 128 hands\. In the same run, machine 1 of copy 4 is 10 crafts behind its target rate\.$/);
+            expect(loss.text).toMatch(/^Lane [12] of belt 1 ends in a dead end\. The 9 copies take (iron gear wheel|copper plate) from it\. When the items move east, copy 4 from the entry does not get sufficient items\. Its inserter 1 takes 1,024 in 65 window cycles\. With no other copy on the lane, it takes 1,040\. Its output inserter also waits for room on its side belt in 2 of its 128 hands\. In the same run, the assembling machine 3 that makes automation science pack in copy 4 is 10 crafts behind its target rate\.$/);
         }
     });
 });

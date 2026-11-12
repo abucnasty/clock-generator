@@ -1,5 +1,5 @@
 import type { ClockAlternativeView, GenerationAssumptions } from '../worker/types';
-import { entityLabel } from './entityLabel';
+import { entityLabel, machineInSentence, sentenceStart } from './entityLabel';
 
 /** Only actual outcomes count as evaluated; the requested flag and null are never successful checks. */
 export function startCheckSummary(clocks: Pick<ClockAlternativeView, 'assessment'>[], generation: GenerationAssumptions | null): string {
@@ -32,19 +32,19 @@ export const phaseChecksText = (checked: number | undefined): string => checked 
 export const freeLaneDropText = (belt: string): string =>
     `Where the output inserters drop onto ${belt} was not given, so each is treated as dropping onto its own stretch of empty belt; two that share a belt in the game could get in each other's way.`;
 
-export function modeledDetails(clock: ClockAlternativeView, itemLabel: (id: string) => string = (id) => id): string[] {
+/** What the model assumed of the selected clock's build; a machine by its kind and recipe in the game's names (machineInSentence) */
+export function modeledDetails(clock: ClockAlternativeView, itemLabel: (id: string) => string = (id) => id,
+    recipeLabel: (id: string) => string = (id) => id): string[] {
     const facts = clock.assumptions;
     if (!facts) return [];
+    const machine = (id: number | string) => sentenceStart(machineInSentence(id, facts.machines, { itemLabel, recipeLabel }));
     return [
-        ...facts.kickStarts.map(seed => {
-            const id = /^machine:(\d+)$/.exec(seed.machineId);
-            const machine = id ? entityLabel('machine', Number(id[1])) : seed.machineId;
-            return `${machine} gets a kick start of ${seed.items} ${itemLabel(seed.item)}. Losing those items is a separate recovery question.`;
-        }),
+        ...facts.kickStarts.map(seed =>
+            `${machine(seed.machineId)} gets a kick start of ${seed.items} ${itemLabel(seed.item)}. Losing those items is a separate recovery question.`),
         ...facts.outputDrops.map(drop => drop.mode === 'shared-lanes'
             ? `${entityLabel('belt', drop.beltId)}: the drop positions you gave are used to space the drops of ${drop.inserterIds.map(id => entityLabel('inserter', id)).join(', ')} on the belt.`
             : freeLaneDropText(entityLabel('belt', drop.beltId))),
-        ...facts.machineFuel.map(machine => `${entityLabel('machine', machine.machineId)}: imported fuel ${itemLabel(machine.fuel)}.`),
+        ...facts.machineFuel.map(fuel => `${machine(fuel.machineId)}: imported fuel ${itemLabel(fuel.fuel)}.`),
         ...(facts.overrides !== undefined ? [`Explicit run overrides: ${JSON.stringify(facts.overrides)}.`] : []),
     ];
 }
