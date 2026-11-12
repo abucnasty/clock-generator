@@ -113,8 +113,7 @@ function BeltsFormComponent({
                     <Typography variant="body2">{inputLanesText(inputEnds)}</Typography>
                     <HelpButton label="About lane ends">
                         <Typography variant="body2" sx={{ mb: 1 }}><strong>{LANE_FACT_COPY.ends.dead_end}:</strong> The lane stops. The items stay on it until a hand takes them.</Typography>
-                        <Typography variant="body2" sx={{ mb: 1 }}><strong>{LANE_FACT_COPY.ends.infinite}:</strong> The lane continues. Every item that no hand takes moves on, as into an infinity chest.</Typography>
-                        <Typography variant="body2">A lane that states no end has the end its role gives: a dead end where an inserter takes from it, an infinite end where the build only drops onto it.</Typography>
+                        <Typography variant="body2"><strong>{LANE_FACT_COPY.ends.infinite}:</strong> The lane continues. Every item that no hand takes moves on, as into an infinity chest.</Typography>
                     </HelpButton>
                 </Box>
             )}
@@ -144,14 +143,18 @@ function BeltsFormComponent({
                             </Box>
                         </EntityRowTop>
                         <EntitySettings actionContainerId={settingsSlotId('belt', belt.id)} label={label} tabs={[{ label: 'Lanes', content:
-                            <BeltLaneFields belt={belt} itemNames={itemNames} readOnly={readOnly} facts={laneFacts} copies={copies}
-                                onChange={updates => onUpdate(beltIndex, updates)} /> }]}
+                            <>
+                                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))', gap: 1, mb: 1.5 }}>
+                                    <BeltFlowDirectionField belt={belt} onChange={updates => onUpdate(beltIndex, updates)} />
+                                </Box>
+                                <BeltLaneFields belt={belt} itemNames={itemNames} readOnly={readOnly} facts={laneFacts} copies={copies}
+                                    onChange={updates => onUpdate(beltIndex, updates)} />
+                            </> }]}
                             summary={<Typography variant="body2">
                                 {BELT_STRATEGIES.find(strategy => strategy.value === (belt.strategy ?? 'normal'))?.label} · {belt.lanes.map((lane, laneIndex) => `Lane ${laneIndex + 1} stack ${lane.stack_size}${belt.strategy === 'export' ? ` · Consumed ${lane.consumption_per_second ?? 'Automatic'}/s` : ''}`).join(' · ')}
                             </Typography>}>
                             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))', gap: 1, mb: 1.5 }}>
                                 <BeltStrategyField belt={belt} onChange={updates => onUpdate(beltIndex, updates)} />
-                                <BeltFlowDirectionField belt={belt} onChange={updates => onUpdate(beltIndex, updates)} />
                             </Box>
                             {readOnly && <Typography variant="body2" sx={{ mb: 1 }}>{DROP_BELT_READ_ONLY}</Typography>}
                         </EntitySettings>

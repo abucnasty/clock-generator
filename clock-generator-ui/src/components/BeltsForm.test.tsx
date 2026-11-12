@@ -83,12 +83,24 @@ describe('the Belts section', () => {
     it('asks a flow direction of each belt, and writes the one chosen', async () => {
         const form = exampleForm(AUTOMATION);
         const { user, onUpdate } = showBelts(form);
-        await user.click(screen.getByRole('button', { name: 'Entity details for Belt 2' }));
+        await openLanes(user, 2);
         const field = combo('Flow direction (the way items pass the copies), Belt 2')!;
         expect(field.textContent).toBe('not stated');
         await user.click(field);
         await user.click(screen.getByRole('option', { name: 'South' }));
         expect(onUpdate).toHaveBeenLastCalledWith(1, { flow_direction: 8 });
+    });
+
+    it('takes a stated flow direction away for not stated', async () => {
+        const form = exampleForm(AUTOMATION);
+        expect(form.belts[0].flow_direction).toBe(4);
+        const { user, onUpdate } = showBelts(form);
+        await openLanes(user, 1);
+        const field = combo('Flow direction (the way items pass the copies), Belt 1')!;
+        expect(field.textContent).toBe('East');
+        await user.click(field);
+        await user.click(screen.getByRole('option', { name: 'Not stated' }));
+        expect(onUpdate).toHaveBeenLastCalledWith(0, { flow_direction: undefined });
     });
 
     it('renders a half-filled build without a role, a grey end or the count, where the engine cannot tell', async () => {

@@ -29,7 +29,10 @@ function FactSelect<T extends string>({ label, inputAriaLabel, value, options, d
     const id = useId();
     const isUnknown = unknown !== undefined && value === unknown.value;
     const labelOf = (it: string) => options.find(option => option.value === it)?.label ?? it;
-    return <FormControl size="small" sx={sx} color={isUnknown ? 'warning' : undefined} focused={isUnknown || undefined}>
+    // an end the Sidecar could not tell is outlined in the warning colour until the user sets one
+    const warned = isUnknown ? { '& .MuiOutlinedInput-notchedOutline, &:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'warning.main', borderWidth: 2 },
+        '& .MuiInputLabel-root': { color: 'warning.main' } } : {};
+    return <FormControl size="small" sx={[warned, ...(Array.isArray(sx) ? sx : [sx])]}>
         <InputLabel shrink>{label}</InputLabel>
         <Select<string> value={value ?? NOT_STATED} label={label} notched
             onChange={event => onChange(event.target.value === NOT_STATED ? undefined : event.target.value as T)}
