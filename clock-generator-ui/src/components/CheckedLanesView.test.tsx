@@ -90,13 +90,12 @@ describe('a clock without a cause', () => {
 });
 
 describe('a clock with a cause', () => {
-    it('of 72 ticks shows the parts in order, then the table open without a click', () => {
+    it('of 72 ticks shows its headline and pictures, then the table open without a click', () => {
         const short = checkedOf(AUTOMATION_240, 'euclidean_swings');
         const cause = short.cause!;
         const { container } = show(<CheckedLanesSummary clock={viewOf(AUTOMATION_240, 'euclidean_swings')} />, { names: gameNames });
         const text = container.textContent!;
-        const parts = [cause.headline.text, cause.cause!.text, cause.spacing!.text, 'Where and how much', cause.where.text, 'One copy alone', cause.alone.text,
-            'What changes it', cause.changes!.text, 'Shared lanes'];
+        const parts = [cause.headline.text, 'Missed swings, copy by copy', 'The 65 window cycles of copy 2', 'Read this as text', 'Shared lanes'];
         const places = placesIn(text, parts);
         expect(places.every(place => place >= 0)).toBe(true);
         expect(places).toEqual([...places].sort((a, b) => a - b));
@@ -106,13 +105,14 @@ describe('a clock with a cause', () => {
         rows.forEach((row, index) => expect(row.textContent).toContain(short.rows[index].label + short.rows[index].sentence));
     });
 
-    it('of 216 ticks, at a full join, shows its parts: no reason from the spacing where the engine gives none', () => {
+    it('of 216 ticks, at a full join, shows its headline and pictures: no spacing where the engine gives none', () => {
         const join = checkedOf(AUTOMATION_240, 'takt_batches_observed');
         const cause = join.cause!;
         expect(cause.spacing).toBeNull();
         const { container } = show(<CheckedLanesSummary clock={viewOf(AUTOMATION_240, 'takt_batches_observed')} />, { names: gameNames });
         const text = container.textContent!;
-        const places = placesIn(text, [cause.headline.text, cause.cause!.text, cause.where.text, cause.alone.text, cause.changes!.text, 'Shared lanes']);
+        expect(text).not.toContain('Travel between copies');
+        const places = placesIn(text, [cause.headline.text, 'Missed swings, copy by copy', 'The 63 window cycles of copies 4 and 8', 'Read this as text', 'Shared lanes']);
         expect(places.every(place => place >= 0)).toBe(true);
         expect(places).toEqual([...places].sort((a, b) => a - b));
         expect(screen.getByText('3 lanes · 1 join full · 2 take less')).toBeTruthy();
@@ -141,10 +141,11 @@ describe('on a narrow page', () => {
     });
 });
 
-it('leaves the parts out of the card where the note on why no clock is stable shows them, and keeps the table', () => {
+it('leaves the parts and pictures out of the card where the note on why no clock is stable shows them, and keeps the table', () => {
     const { container } = show(<CheckedLanesSummary clock={viewOf(AUTOMATION_240, 'euclidean_swings')} causeShownAbove />, { names: gameNames });
     const cause = checkedOf(AUTOMATION_240, 'euclidean_swings').cause!;
     for (const part of [cause.headline.text, cause.where.text, cause.alone.text]) expect(container.textContent).not.toContain(part);
+    expect(container.querySelector('[data-picture]')).toBeNull();
     expect(container.textContent).toContain('Made for 9 copies of your build.');
     expect(screen.getByRole('table', { name: 'Shared lanes' })).toBeTruthy();
 });

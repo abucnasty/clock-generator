@@ -206,6 +206,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 selectedIndex={props.selectedIndex}
                 recommendedIndex={props.recommendedIndex}
                 onSelectRecommended={selectRecommended}
+                onSelectClock={selectClock}
                 isGenerating={props.isRunning}
                 stoppedEarly={props.stoppedEarly}
                 rateWarning={rateWarning}

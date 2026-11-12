@@ -480,6 +480,152 @@
         "window_cycle_ticks": 216
        }
       }
+     },
+     "swings": {
+      "kind": "join",
+      "side_belt": true,
+      "copies": [
+       {
+        "copy": 4,
+        "window_cycles": 63,
+        "made": [
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5
+        ],
+        "gives": 6
+       },
+       {
+        "copy": 8,
+        "window_cycles": 63,
+        "made": [
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5,
+         5,
+         6,
+         5
+        ],
+        "gives": 6
+       }
+      ]
      }
     }
    }
@@ -861,6 +1007,69 @@
         "window_cycle_ticks": 216
        }
       }
+     },
+     "swings": {
+      "kind": "lane",
+      "rows": [
+       {
+        "copy": 2,
+        "inserter_id": 1,
+        "items": [
+         "iron-gear-wheel",
+         "copper-plate"
+        ],
+        "lanes": [
+         {
+          "belt_id": 1,
+          "lane": 1
+         },
+         {
+          "belt_id": 1,
+          "lane": 2
+         }
+        ],
+        "window_cycles": 65,
+        "swings_per_window_cycle": 2,
+        "missed": [
+         {
+          "window_cycle": 14,
+          "missed": 1,
+          "cause": "full",
+          "lane_empty": false
+         },
+         {
+          "window_cycle": 18,
+          "missed": 1,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 34,
+          "missed": 1,
+          "cause": "full",
+          "lane_empty": false
+         },
+         {
+          "window_cycle": 42,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 58,
+          "missed": 1,
+          "cause": "full",
+          "lane_empty": false
+         },
+         {
+          "window_cycle": 62,
+          "missed": 1,
+          "cause": "both",
+          "lane_empty": true
+         }
+        ]
+       }
+      ]
      }
     }
    }
@@ -1914,6 +2123,129 @@
         "window_cycle_ticks": 216
        }
       }
+     },
+     "swings": {
+      "kind": "lane",
+      "rows": [
+       {
+        "copy": 2,
+        "inserter_id": 1,
+        "items": [
+         "iron-gear-wheel",
+         "copper-plate"
+        ],
+        "lanes": [
+         {
+          "belt_id": 1,
+          "lane": 1
+         },
+         {
+          "belt_id": 1,
+          "lane": 2
+         }
+        ],
+        "window_cycles": 65,
+        "swings_per_window_cycle": 2,
+        "missed": [
+         {
+          "window_cycle": 3,
+          "missed": 1,
+          "cause": "neither",
+          "lane_empty": false
+         },
+         {
+          "window_cycle": 7,
+          "missed": 1,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 11,
+          "missed": 1,
+          "cause": "neither",
+          "lane_empty": false
+         },
+         {
+          "window_cycle": 15,
+          "missed": 1,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 19,
+          "missed": 1,
+          "cause": "neither",
+          "lane_empty": false
+         },
+         {
+          "window_cycle": 23,
+          "missed": 1,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 27,
+          "missed": 1,
+          "cause": "neither",
+          "lane_empty": false
+         },
+         {
+          "window_cycle": 31,
+          "missed": 1,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 35,
+          "missed": 1,
+          "cause": "neither",
+          "lane_empty": false
+         },
+         {
+          "window_cycle": 39,
+          "missed": 1,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 43,
+          "missed": 1,
+          "cause": "neither",
+          "lane_empty": false
+         },
+         {
+          "window_cycle": 47,
+          "missed": 1,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 51,
+          "missed": 1,
+          "cause": "neither",
+          "lane_empty": false
+         },
+         {
+          "window_cycle": 55,
+          "missed": 1,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 59,
+          "missed": 1,
+          "cause": "neither",
+          "lane_empty": false
+         },
+         {
+          "window_cycle": 63,
+          "missed": 1,
+          "cause": "both",
+          "lane_empty": true
+         }
+        ]
+       }
+      ]
      }
     }
    }
@@ -2417,6 +2749,211 @@
         "window_cycle_ticks": 216
        }
       }
+     },
+     "swings": {
+      "kind": "lane",
+      "rows": [
+       {
+        "copy": 2,
+        "inserter_id": 1,
+        "items": [
+         "iron-gear-wheel",
+         "copper-plate"
+        ],
+        "lanes": [
+         {
+          "belt_id": 1,
+          "lane": 1
+         },
+         {
+          "belt_id": 1,
+          "lane": 2
+         }
+        ],
+        "window_cycles": 65,
+        "swings_per_window_cycle": 2,
+        "missed": [
+         {
+          "window_cycle": 1,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 2,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 12,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 14,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 16,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 17,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 27,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 29,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 31,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 32,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 42,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 44,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 46,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 47,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 57,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 59,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 61,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 62,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         }
+        ]
+       },
+       {
+        "copy": 3,
+        "inserter_id": 1,
+        "items": [
+         "iron-gear-wheel",
+         "copper-plate"
+        ],
+        "lanes": [
+         {
+          "belt_id": 1,
+          "lane": 1
+         },
+         {
+          "belt_id": 1,
+          "lane": 2
+         }
+        ],
+        "window_cycles": 65,
+        "swings_per_window_cycle": 2,
+        "missed": [
+         {
+          "window_cycle": 13,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 15,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 28,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 30,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 43,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 45,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 58,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 60,
+          "missed": 1,
+          "cause": "gap",
+          "lane_empty": true
+         }
+        ]
+       }
+      ]
      }
     }
    }

@@ -208,9 +208,11 @@ describe('attemptResultOf', () => {
 
 describe('REASON_WORDS', () => {
     it('has the words for each reason code the engine gives', () => {
-        expect(Object.keys(REASON_WORDS).sort()).toEqual(['belt_gaps', 'target_full']);
+        expect(Object.keys(REASON_WORDS).sort()).toEqual(['belt_gaps', 'target_full', 'unknown']);
         expect(REASON_WORDS.belt_gaps).toBe('Missed pickups due to belt gaps');
         expect(REASON_WORDS.target_full).not.toBe('');
+        // a loss with no diagnostic: the chip stands alone
+        expect(REASON_WORDS.unknown).toBe('');
     });
 });
 

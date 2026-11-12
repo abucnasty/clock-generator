@@ -52,6 +52,8 @@ interface ResultSummaryCardProps {
     recommendedIndex: number | null;
     /** Selects the recommended clock and lets the selection follow it again */
     onSelectRecommended: () => void;
+    /** Selects a clock by its index: the other clock that a cause's line names */
+    onSelectClock?: (index: number) => void;
     /** More clocks may still arrive, so the recommendation is the best so far */
     isGenerating: boolean;
     /** The player stopped the run, so not every clock was tried and the recommendation is not final */
@@ -216,19 +218,25 @@ export function ResultSummaryCard(props: ResultSummaryCardProps) {
 
     const recommended = props.recommendedIndex === null ? undefined : alternatives[props.recommendedIndex];
     const causeAbove = whyNotStableShowsCause(props.whyNotStable, recommended);
+    const onSelectClock = props.onSelectClock && ((id: string) => {
+        const index = alternatives.findIndex(it => it.id === id);
+        if (index >= 0) props.onSelectClock!(index);
+    });
     return (
         <Panel title={CARD_COPY.heading} actions={selected ? props.comparisonAction : undefined} sx={{ '& > :last-child': { p: 1.5 } }} data-result-card="" data-build-anchor="selected-clock">
             {props.rateWarning && <Alert severity="warning" sx={{ mb: 1 }}>{props.rateWarning}</Alert>}
             {props.whyNotStable && <Alert severity="warning" sx={{ mb: 1, '& .MuiAlert-message': { minWidth: 0, flex: 1 } }} data-why-not-stable={props.whyNotStable.cause}>
                 <AlertTitle>{WHY_NOT_STABLE_TITLE[props.whyNotStable.cause]}</AlertTitle>
                 {/* the recommended clock's loss on a shared lane: its parts, in place of the note's sentences on the same loss */}
-                {causeAbove && recommended?.checkedLanes?.cause ? <SharedLaneCauseParts cause={recommended.checkedLanes.cause} /> : props.whyNotStable.message}
+                {causeAbove && recommended?.checkedLanes?.cause
+                    ? <SharedLaneCauseParts checked={{ ...recommended.checkedLanes, cause: recommended.checkedLanes.cause }} lanes={recommended.assumptions?.lanes} onSelectClock={onSelectClock} />
+                    : props.whyNotStable.message}
             </Alert>}
             {props.stale && <Typography variant="body2" sx={{ mb: 1 }} data-card-stale>{CARD_COPY.staleLine}</Typography>}
             {selected ? <>
                 <ClockFacts {...props} selected={selected} nameRef={nameRef} />
                 {/* what was checked on the lanes the copies share, from an engine that gives the build's lanes */}
-                {givesLanes(selected) && <Box sx={{ mt: 1.5 }}><CheckedLanesSummary key={selected.id} clock={selected} causeShownAbove={causeAbove && selectedIndex === props.recommendedIndex} /></Box>}
+                {givesLanes(selected) && <Box sx={{ mt: 1.5 }}><CheckedLanesSummary key={selected.id} clock={selected} causeShownAbove={causeAbove && selectedIndex === props.recommendedIndex} onSelectClock={onSelectClock} /></Box>}
             </> : (
                 <Typography variant="body2" color="text.secondary">{CARD_COPY.makingFirst}</Typography>
             )}
