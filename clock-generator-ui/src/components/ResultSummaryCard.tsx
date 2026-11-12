@@ -42,6 +42,8 @@ const CARD_COPY = {
     belt: 'Belt pickups',
     detailsHeading: 'How this was checked',
     staleLine: 'These clocks are for an earlier build. Generate again for a clock for the build you have now.',
+    // the hold sentence of a clock with a loss on a shared lane: the clock-only check, which runs one copy
+    holdsOneCopyAlone: 'At steady state one copy alone keeps its rate: yes.',
 };
 
 interface ResultSummaryCardProps {
@@ -164,7 +166,9 @@ function fewestDecidersMeaning(alternatives: ClockAlternativeView[], index: numb
 }
 
 /** Whether the clock keeps its rate at steady state, as a sentence */
-function holdStatusText(rate: string, holds: boolean | null | undefined, counts?: TargetCounts): string {
+function holdStatusText(rate: string, holds: boolean | null | undefined, counts?: TargetCounts, sharedLaneLoss = false): string {
+    // on a loss on a shared lane the rate is of all the copies, and the yes of the clock-only check: one copy alone, no number
+    if (holds === true && sharedLaneLoss) return CARD_COPY.holdsOneCopyAlone;
     if (holds === true) return `At steady state it keeps ${rateVerbs(counts).ing} ${rate}: yes.`;
     if (holds === false) return 'At steady state it does not keep its rate.';
     return 'Whether it keeps its rate at steady state is unavailable.';
@@ -183,7 +187,8 @@ function ClockExplanation(props: SelectedProps) {
             {COLD_START} {startCheckSummary([selected], props.generationAssumptions ?? null)}
         </Typography>
         <Typography variant="body2" data-hold-status>
-            {holdStatusText(makesText(selected, selected.copies).value, selected.assessment.holds, selected.counts)}
+            {holdStatusText(makesText(selected, selected.copies).value, selected.assessment.holds, selected.counts,
+                (selected.assessment.shared_lane_losses?.length ?? 0) > 0)}
         </Typography>
         {recovers.kind === 'yes' && <Typography variant="body2">{recovers.detail}</Typography>}
         {props.runAssumptions}

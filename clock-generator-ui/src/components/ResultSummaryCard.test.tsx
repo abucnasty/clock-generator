@@ -151,26 +151,30 @@ describe('the rate of a clock with a loss on a shared lane, on the card: what al
         return { makes: label.parentElement!.textContent, hold: container.querySelector('[data-hold-status]')!.textContent, reason: container.querySelector('[data-card-reason]')?.textContent };
     };
 
-    it('of the 216-tick clock: Makes 234.07/s for all 9 copies, the hold sentence and how it differs say the same', () => {
+    it('of the 216-tick clock: Makes 234.07/s for all 9 copies, how it differs says the same, the hold sentence is of one copy alone', () => {
         const { makes, hold, reason } = factsOf(views, 'takt_batches_observed');
         expect(makes).toContain('234.07/s');
         expect(makes).toContain('all 9 copies');
         expect(makes).not.toContain('240/s');
-        expect(hold).toBe('At steady state it keeps making 234.07/s: yes.');
+        // the yes is of the clock-only check, which runs one copy: no number beside it
+        expect(hold).toBe('At steady state one copy alone keeps its rate: yes.');
         expect(reason).toContain(SUMMARY_COPY.differsRate('234.07', '240'));
     });
 
-    it('of the stable clock: Makes 240/s, as before', () => {
+    it('of the stable clock and of the clock with no recovery: Makes 240/s and the hold sentence as before', () => {
         const { makes, hold } = factsOf(views, 'time_study_windows');
         expect(makes).toContain('240/s');
         expect(hold).toBe('At steady state it keeps making 240/s: yes.');
+        cleanup();
+        expect(factsOf(views, 'pitch_pickups').hold).toBe('At steady state it keeps making 240/s: yes.');
     });
 
-    it('of a clock of an older result without the rate of the copies: Makes 240/s, as before', () => {
+    it('of a clock of an older result without the rate of the copies: Makes 240/s, as before; the hold sentence of one copy alone', () => {
         const older = views.map(view => ({ ...view, checkedLanes: view.checkedLanes && { ...view.checkedLanes, copies_made: undefined } }));
         const { makes, hold, reason } = factsOf(older, 'takt_batches_observed');
         expect(makes).toContain('240/s');
-        expect(hold).toBe('At steady state it keeps making 240/s: yes.');
+        // the hold sentence goes by the loss, not by the rate of the copies
+        expect(hold).toBe('At steady state one copy alone keeps its rate: yes.');
         expect(reason).toContain(SUMMARY_COPY.differsUnderproduces);
     });
 
@@ -180,6 +184,6 @@ describe('the rate of a clock with a loss on a shared lane, on the card: what al
         const { container } = card(ems, result.selected_index, { recommendedIndex: result.selected_index, whyNotStable: result.why_not_stable });
         expect(screen.getByText('Makes').parentElement!.textContent).toContain('318.79/s');
         expect(container.querySelector('[data-card-reason]')!.textContent).toContain('This one runs at 318.79/s with the fewest wakeups.');
-        expect(container.querySelector('[data-hold-status]')!.textContent).toBe('At steady state it keeps making 318.79/s: yes.');
+        expect(container.querySelector('[data-hold-status]')!.textContent).toBe('At steady state one copy alone keeps its rate: yes.');
     });
 });
