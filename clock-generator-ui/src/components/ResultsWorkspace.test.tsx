@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { screen, within } from '@testing-library/react';
+import { cleanup, screen, within } from '@testing-library/react';
 import { useState, type ComponentProps } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import type { ClockAlternativeView } from '../worker/types';
@@ -166,5 +166,55 @@ describe('the workspace\'s clock selector', () => {
         const lines = await linesOf(military.map(view => ({ ...view, beltLabel: '', belt: undefined })));
         expect(lines).toContain('2 swings · 634 wakeups/min · Recommended');
         for (const line of lines) expect(line).not.toMatch(/None| · $/);
+    });
+});
+
+describe('the clock selector says the status of a clock that is not Stable', () => {
+    const military = viewsOf(MILITARY_240);
+    const recommended = MILITARY_240.selected_index;
+    /** The military clocks with clock `at` made to have `status`, as statusOf reads it */
+    const withStatus = (at: number, status: string): ClockAlternativeView[] => military.map((view, index) => {
+        if (index !== at) return view;
+        const off = (rate_off_target: number, verdict: string) => ({ ...view, verdict, ranking: { ...view.ranking, meets_target_rate: false, rate_off_target },
+            assessment: { ...view.assessment, items_per_second: view.assessment.items_per_second + rate_off_target } });
+        switch (status) {
+            case 'Underproduces': return off(-48, 'unstable') as ClockAlternativeView;
+            case 'Overproduces': return off(12, 'unstable') as ClockAlternativeView;
+            case 'No recovery': return { ...view, verdict: 'no recovery', assessment: { ...view.assessment,
+                disturbance_trial: { survives: false, broken_by: ['an input stops arriving'], recovered_after_window_cycles: null } } } as ClockAlternativeView;
+            case 'Error': return { ...view, assessment: { ...view.assessment, disturbance_trial: null } } as ClockAlternativeView;
+            case 'Start-dependent': return { ...view, verdict: 'unstable', assessment: { ...view.assessment,
+                start_dependence: { verdict: 'start-dependent', expected_output_items: 240, starts: [] } } } as ClockAlternativeView;
+            default: return view;
+        }
+    });
+    /** The selector's label, and the lines of the clocks in the open list */
+    const selectorOf = async (alternatives: ClockAlternativeView[], selected: number) => {
+        const { user } = results(alternatives, recommended, selected);
+        const label = [...document.querySelectorAll('label')].find(it => it.textContent!.startsWith('Clock'))!.textContent;
+        await user.click(screen.getByRole('combobox'));
+        const options = within(screen.getByRole('listbox')).getAllByRole('option').map(option => option.querySelector('p, span')!.textContent!);
+        return { label, options };
+    };
+
+    it.each(['Underproduces', 'Overproduces', 'No recovery', 'Error', 'Start-dependent'])('%s: "Clock · %s", and its line ends with the word', async status => {
+        const { label, options } = await selectorOf(withStatus(0, status), 0);
+        expect(label).toBe(`Clock · ${status}`);
+        expect(options[0]).toBe(`2 swings · 765 wakeups/min · ${status}`);
+        expect(options.join('\n')).not.toContain('Not stable');
+    });
+
+    it('Stable: "Clock" with no word, and nothing after its line; the recommended clock "Clock · Recommended"', async () => {
+        const { label, options } = await selectorOf(military, 0);
+        expect(label).toBe('Clock');
+        expect(options[0]).toBe('2 swings · 765 wakeups/min');
+        cleanup();
+        expect((await selectorOf(military, recommended)).label).toBe('Clock · Recommended');
+    });
+
+    it('keeps the order of today: the status before Recommended in the label, Recommended before the status in a line', async () => {
+        const { label, options } = await selectorOf(withStatus(recommended, 'No recovery'), recommended);
+        expect(label).toBe('Clock · No recovery');
+        expect(options).toContain('2 swings · 634 wakeups/min · Recommended');
     });
 });

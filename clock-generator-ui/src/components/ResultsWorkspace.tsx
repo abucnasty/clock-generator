@@ -28,7 +28,7 @@ import { DeveloperToolsPanel } from './DeveloperToolsPanel';
 import { ResultSummaryCard } from './ResultSummaryCard';
 import { StaleResultsBanner } from './StaleResultsBanner';
 import { RunNotes } from './RunNotes';
-import { wakeUpsText } from '../utils/clockSummary';
+import { statusOf, wakeUpsText } from '../utils/clockSummary';
 import { fullClockName } from '../utils/strategyNames';
 import { rateWarningOf } from '../utils/rateWarning';
 import { whyNotStableOf } from '../utils/whyNotStable';
@@ -185,6 +185,11 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
             : `${clock.terminalSwingCount} ${clock.terminalSwingCount === 1 ? 'swing' : 'swings'}`,
         wakeUpsText(clock).value.replace(' a minute', ' wakeups/min'),
     ].join(' · ');
+    // the selector says a clock's status (statusOf) where it is not Stable: in the label before "Recommended", in a clock's line after it
+    const statusWord = (clock: ClockAlternativeView) => {
+        const status = statusOf(clock);
+        return status.kind === 'stable' ? null : status.text;
+    };
     const rateWarning = rateWarningOf(selected);
     // said of the whole run once it is done: while clocks still arrive, a stable one may yet come
     const whyNotStable = props.isRunning ? null
@@ -282,14 +287,14 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                     <SelectedClockContext selected={selected} detail={props.detail} onDetailChange={props.onDetailChange} onSelectClock={selectClockById}
                         generation={props.generationAssumptions}
                         clockSelector={selectableClocks.length > 1 && <TextField select
-                            label={selected.verdict !== 'stable' ? 'Clock · Not stable' : props.selectedIndex === props.recommendedIndex ? 'Clock · Recommended' : 'Clock'} size="small"
+                            label={statusWord(selected) !== null ? `Clock · ${statusWord(selected)}` : props.selectedIndex === props.recommendedIndex ? 'Clock · Recommended' : 'Clock'} size="small"
                             value={props.selectedIndex} onChange={event => selectClock(Number(event.target.value))}
                             slotProps={{ select: { renderValue: value => clockLabel(props.alternatives[Number(value)]) } }}
                             sx={{ width: { xs: 280, sm: 380 }, maxWidth: '100%' }}>
                             {selectableClocks.map(({ clock, index }) => <MenuItem key={clock.id} value={index}
                                 sx={{ display: 'block', whiteSpace: 'normal', maxWidth: { xs: 320, sm: 520 } }}>
                                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                    {clockLabel(clock)}{index === props.recommendedIndex ? ' · Recommended' : clock.verdict !== 'stable' ? ' · Not stable' : ''}
+                                    {clockLabel(clock)}{index === props.recommendedIndex ? ' · Recommended' : statusWord(clock) !== null ? ` · ${statusWord(clock)}` : ''}
                                 </Typography>
                                 <Typography variant="caption" component="p" color="text.secondary">
                                     {fullClockName(clock)}

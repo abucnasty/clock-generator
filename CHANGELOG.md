@@ -32,6 +32,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: the Works? column is now Status and says the same word as the card's chip
 - ui: the card's How this was checked is now Simulation results
 - ui: the shared lanes' column of the copies' rates is now headed Planned for the copies
+- ui: the clock selector says a clock's status in place of Not stable
 
 ## [0.28.1] - 2026-11-07
 
