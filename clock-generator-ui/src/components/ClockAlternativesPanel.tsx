@@ -30,6 +30,8 @@ import { directRouterOf, familyCopyOf, fullClockName, clockChipsOf, sourceLinesO
 import { BadgeChips, ClockChips } from './StrategyChips';
 import { SIGNAL_DEFINITION, WAKEUP_DEFINITION, TERMS_FOCUS, type GlossaryId } from '../utils/glossary';
 import { HelpButton } from './HelpButton';
+import { CauseHeadline } from './CheckedLanesView';
+import { descriptionShown } from '../utils/checkedLanes';
 import { ScrollX } from './ScrollX';
 import { Panel } from './Panel';
 import { RecommendedChip } from './RecommendedChip';
@@ -54,12 +56,9 @@ const COMPARE_COPY = {
     status: 'Status',
     howMadeHeading: 'How it is made',
     worksHeading: 'Does it work?',
-    beltHelp: 'The belt the clock is made for. Moving: each enable window of an inserter that picks up from a belt stays '
-        + 'open the ticks shown longer (belt slack), so a pickup that comes late on a moving belt can finish; a rule of '
-        + 'thumb for late pickups. Pickup geometry models which moving stacks are within reach; straight belt is the default. Backed up: items '
-        + 'stop between pickups and the belt refills the gaps; on a moving belt an inserter can be switched off holding a partial hand. A '
-        + 'subtick clock never has belt slack. It is not ranked behind other clocks for it. Blank '
-        + 'when no clocked inserter picks up from a belt.',
+    beltHelp: 'The belt the clock is made for. Moving: pickup geometry models which moving stacks are within reach; straight belt is '
+        + 'the default. Backed up: items stop between pickups and the belt refills the gaps; on a moving belt an inserter can be switched '
+        + 'off holding a partial hand. It is not ranked behind other clocks for it. Blank when no clocked inserter picks up from a belt.',
     swingsHelp: 'Total output swings each output cycle of each output machine, shared equally across its output inserters. '
         + 'Per-inserter counts may be fractional. The clock repeats after a whole number of output cycles (the window cycle).',
     signalsHelp: SIGNAL_DEFINITION + ' Counted per minute for one copy of the build, in the same run as the wakeups. No clock is ranked by signals.',
@@ -233,7 +232,7 @@ export function ClockAlternativesPanel({
                     <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', columnGap: 1, rowGap: 0.5 }}>
                         <Box component="span" sx={{ fontWeight: 600 }}>{strategyNameOf(alternative)}</Box>
                         <ClockChips clock={alternative} />
-                        <BadgeChips badges={clockBadges(alternatives, index)} meanings={badgeMeanings(alternatives, index, pickRule)} />
+                        <BadgeChips badges={clockBadges(alternatives, index)} meanings={badgeMeanings(alternatives, index)} />
                         {index === recommendedIndex && <RecommendedChip isGenerating={isGenerating} />}
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.secondary', typography: 'body2' }}>
@@ -241,7 +240,7 @@ export function ClockAlternativesPanel({
                         <HelpButton label={clockHelpName(fullClockName(alternative))}>
                             <StrategyHelp clock={alternative} />
                             <Typography variant="subtitle2" component="p" sx={{ mb: 0.5 }}>{COMPARE_COPY.howMadeHeading}</Typography>
-                            {sentencesOf(alternative.description).map(sentence => (
+                            {sentencesOf(descriptionShown(alternative)).map(sentence => (
                                 <Typography key={sentence} variant="body2" sx={{ mb: 0.75 }}>{sentence}</Typography>
                             ))}
                             <Typography variant="subtitle2" component="p" sx={{ mt: 1.5, mb: 0.5 }}>{COMPARE_COPY.worksHeading}</Typography>
@@ -249,13 +248,15 @@ export function ClockAlternativesPanel({
                                 {WORKS_ICON[works.kind]}{works.text}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">{statusDetail(alternative)}</Typography>
+                            {/* a clock not stable on a lane its copies share: its headline; the card of the selected clock shows the parts */}
+                            {alternative.checkedLanes?.cause && <Box sx={{ mt: 1.5 }}><CauseHeadline cause={alternative.checkedLanes.cause} /></Box>}
                         </HelpButton>
                     </Box>
                 </TableCell>
                 {allColumns ? (
                     <>
                         <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                            {beltCellText(alternative.beltLabel, pickRule)}
+                            {beltCellText(alternative.beltLabel)}
                         </TableCell>
                         <TableCell align="right">
                             {alternative.terminalSwingCount} per {formatTicks(alternative.cycleTicks)} ticks
@@ -475,8 +476,8 @@ function signalsCell(alternative: ClockAlternativeView): ReactNode {
 }
 
 /** What a chip means, by its text, for the chips whose words need a line: Fewest deciders */
-function badgeMeanings(alternatives: ClockAlternativeView[], index: number, pickRule: PickRule | null): Record<string, string> {
-    const meaning = pickNameMeaning(alternatives, index, pickRule);
+function badgeMeanings(alternatives: ClockAlternativeView[], index: number): Record<string, string> {
+    const meaning = pickNameMeaning(alternatives, index);
     return meaning ? { [SUMMARY_COPY.fewestDeciders]: meaning } : {};
 }
 

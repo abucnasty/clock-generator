@@ -5,8 +5,6 @@ import { rateVerbs, type TargetCounts } from './targetCounts';
 
 /** What the selection rule is given by the config a generation ran with */
 export interface PickRule {
-    /** The input belts are backed up: every clock is made without belt slack and counts as made for the belt */
-    backedUpBelts: boolean;
     /** "Search for fewer wake-ups": the slower searches ran whether they were needed or not */
     searchedForFewerWakeUps: boolean;
 }
@@ -44,40 +42,32 @@ export const RECOMMENDED_COPY = {
             + 'one with fewer enable windows. If none qualifies, the stable clock that runs nearest over the setpoint. If there is none, the one '
             + 'that runs nearest to the setpoint. On a build with a loop of machines, '
             + 'whose wakeups depend on where its clock is when the build starts, their average over 12 start points is compared.',
-        'A clock made for a moving belt keeps each belt inserter\'s enable window open a few ticks longer (belt slack). '
-            + 'A clock made without it is only picked when no clock for a moving belt holds the rate. If you say your '
-            + 'input belts are backed up (Configure, Belts), every clock is made without the slack.',
     ],
-    runMovingBelts: 'This run assumed moving belts.',
-    runBackedUpBelts: 'This run assumed backed-up belts.',
     runSearched: 'The slower searches for fewer wakeups were run.',
     runSearchedWhenNeeded: 'The slower searches were only run if no other clock held the rate and had recovery, apart from the two that can still find fewer wakeups on a short clock.',
     provisional: 'More clocks are still being made, so this may change. ',
     stopped: 'You stopped this run early, so a better clock may not have been made yet. ',
-    beltBackedUp: ' with backed-up belts',
-    beltMoving: ' on a moving belt',
     /**
      * The clocks the pick was compared with: those that hold the rate and recover, or on a build with a deadlock risk
      * those that hold the rate (the glossary's words, not the table's old "Stable")
      */
     contenders: (rate: string, deadlock: boolean, counts?: TargetCounts) =>
         deadlock ? `the clocks that hold ${rate}/s` : `the clocks that keep ${rateVerbs(counts).ing} ${rate}/s and go back to it after a stop`,
-    fewestWakeUps: (contenders: string, belt: string) => `Fewest wakeups of ${contenders}${belt}.`,
-    fewestDeciders: (contenders: string, belt: string) => `Fewest deciders of ${contenders}${belt}. This is the least wiring to do by hand.`,
-    onlyContender: (rate: string, belt: string, deadlock: boolean) =>
-        deadlock ? `The only clock that holds ${rate}/s${belt}.` : `The only clock that holds ${rate}/s and has recovery${belt}.`,
-    wakeUpsNotCounted: (contenders: string, belt: string) =>
-        `Fewest enable windows among ${contenders}${belt}. Wakeups could not be counted for them.`,
-    tieOnWakeUps: (others: number, kind: string) =>
-        ` ${othersText(others, kind)} on wakeups, so the one with fewer enable windows was picked.`,
-    tieOnWakeUpsUncounted: (others: number, kind: string) =>
-        ` ${othersText(others, kind)} on wakeups, so the one with fewer enable windows was picked, not counting the `
+    fewestWakeUps: (contenders: string) => `Fewest wakeups of ${contenders}.`,
+    fewestDeciders: (contenders: string) => `Fewest deciders of ${contenders}. This is the least wiring to do by hand.`,
+    onlyContender: (rate: string, deadlock: boolean) =>
+        deadlock ? `The only clock that holds ${rate}/s.` : `The only clock that holds ${rate}/s and has recovery.`,
+    wakeUpsNotCounted: (contenders: string) =>
+        `Fewest enable windows among ${contenders}. Wakeups could not be counted for them.`,
+    tieOnWakeUps: (others: number) =>
+        ` ${othersText(others)} on wakeups, so the one with fewer enable windows was picked.`,
+    tieOnWakeUpsUncounted: (others: number) =>
+        ` ${othersText(others)} on wakeups, so the one with fewer enable windows was picked, not counting the `
         + 'extra enable windows that only cut wakeups.',
-    tieOnRecovery: (others: number, kind: string) =>
-        ` ${othersText(others, kind)} on wakeups, so the one that goes back to its rate sooner after a supply stop or an output blockage was picked.`,
-    tieOnWindows: (others: number, kind: string) =>
-        ` ${othersText(others, kind)} on wakeups and enable windows, so the first one in the list is shown.`,
-    tieKindMoving: ' for a moving belt',
+    tieOnRecovery: (others: number) =>
+        ` ${othersText(others)} on wakeups, so the one that goes back to its rate sooner after a supply stop or an output blockage was picked.`,
+    tieOnWindows: (others: number) =>
+        ` ${othersText(others)} on wakeups and enable windows, so the first one in the list is shown.`,
     recoveryDoesNotDecide: ' The recovery trials do not decide on this build.',
     noneHolds: (rate: string, deadlock: boolean) => deadlock ? `No clock holds ${rate}/s.` : `No clock holds ${rate}/s and has recovery.`,
     atRateHolds: (rate: string, fewest: boolean) =>
@@ -90,9 +80,9 @@ export const RECOMMENDED_COPY = {
         + 'a stable clock over the setpoint is picked before a clock nearer to it that is unstable or runs under it.',
 };
 
-/** "1 other clock for a moving belt ties" / "2 other clocks tie" */
-function othersText(others: number, kind: string): string {
-    return others === 1 ? `One other clock${kind} is level with it` : `${others} other clocks${kind} are level with it`;
+/** "One other clock is level with it" / "2 other clocks are level with it" */
+function othersText(others: number): string {
+    return others === 1 ? 'One other clock is level with it' : `${others} other clocks are level with it`;
 }
 
 /** As the rate warning prints a rate: 240, 12.5, 0.33 */
@@ -109,7 +99,6 @@ const offTargetKey = (rateOffTarget: number) => Math.round(Math.abs(rateOffTarge
 
 export function pickRuleOf(config: Config): PickRule {
     return {
-        backedUpBelts: config.overrides?.backed_up_belts === true,
         searchedForFewerWakeUps: config.overrides?.search_for_fewer_wake_ups === true,
     };
 }
@@ -133,7 +122,6 @@ export function recommendedIndexOf(alternatives: Pick<PickableClock, 'ranking'>[
 export function recommendationReason(
     alternatives: PickableClock[],
     recommendedIndex: number | null,
-    rule: PickRule | null,
     final: boolean,
     stopped = false,
 ): string {
@@ -141,34 +129,26 @@ export function recommendationReason(
     if (!pick) {
         return '';
     }
-    const reason = reasonOf(alternatives, pick, rule);
+    const reason = reasonOf(alternatives, pick);
     if (final) {
         return reason;
     }
     return (stopped ? RECOMMENDED_COPY.stopped : RECOMMENDED_COPY.provisional) + reason;
 }
 
-/** The pick is made for a moving belt, and the player did not say the belts are backed up */
-const isOnMovingBelt = (pick: Pick<PickableClock, 'beltLabel'>, rule: PickRule | null) => !rule?.backedUpBelts && pick.beltLabel.startsWith('moving');
-
-/** The belt a reason says its clocks are made for: " with backed-up belts", " on a moving belt", or nothing */
-const beltWordsOf = (pick: Pick<PickableClock, 'beltLabel'>, rule: PickRule | null) =>
-    rule?.backedUpBelts ? RECOMMENDED_COPY.beltBackedUp : isOnMovingBelt(pick, rule) ? RECOMMENDED_COPY.beltMoving : '';
-
 /**
  * What the name Fewest deciders means for a clock that has it (see `plainClockName`), in the words of the pick's reason:
  * "Fewest deciders of the clocks that keep making 240/s and recover: the least wiring to do by hand."
  */
 export function fewestDecidersReason(
-    clock: Pick<PickableClock, 'ranking' | 'beltLabel' | 'deadlockRisk' | 'assessment' | 'counts'>,
-    rule: PickRule | null,
+    clock: Pick<PickableClock, 'ranking' | 'deadlockRisk' | 'assessment' | 'counts'>,
 ): string {
     const rate = figure(clock.assessment.items_per_second - clock.ranking.rate_off_target);
     const contenders = RECOMMENDED_COPY.contenders(rate, clock.deadlockRisk !== null, clock.counts);
-    return RECOMMENDED_COPY.fewestDeciders(contenders, beltWordsOf(clock, rule));
+    return RECOMMENDED_COPY.fewestDeciders(contenders);
 }
 
-function reasonOf(alternatives: PickableClock[], pick: PickableClock, rule: PickRule | null): string {
+function reasonOf(alternatives: PickableClock[], pick: PickableClock): string {
     const { ranking } = pick;
     const rate = figure(pick.assessment.items_per_second - ranking.rate_off_target);
     if (pick.assessment.disturbance_trial === null && pick.assessment.start_dependence?.verdict !== 'start-dependent') {
@@ -180,19 +160,16 @@ function reasonOf(alternatives: PickableClock[], pick: PickableClock, rule: Pick
         return nearestReason(alternatives, pick, rate, deadlock);
     }
     const recovery = pick.verdict === 'no recovery' ? RECOMMENDED_COPY.recoveryDoesNotDecide : '';
-    const moving = isOnMovingBelt(pick, rule);
-    const belt = beltWordsOf(pick, rule);
     const others = alternatives.filter(other => other !== pick && other.ranking.meets_target_rate);
     if (others.length === 0) {
-        return RECOMMENDED_COPY.onlyContender(rate, belt, deadlock) + recovery;
+        return RECOMMENDED_COPY.onlyContender(rate, deadlock) + recovery;
     }
     const contenders = RECOMMENDED_COPY.contenders(rate, deadlock, pick.counts);
     // uncounted wake-ups rank after any count, so when the pick's were not counted no contender's were
     if (ranking.wake_ups_per_minute === null) {
-        return RECOMMENDED_COPY.wakeUpsNotCounted(contenders, belt) + recovery;
+        return RECOMMENDED_COPY.wakeUpsNotCounted(contenders) + recovery;
     }
-    return RECOMMENDED_COPY.fewestWakeUps(contenders, belt)
-        + tieOf(pick, others, moving ? RECOMMENDED_COPY.tieKindMoving : '') + recovery;
+    return RECOMMENDED_COPY.fewestWakeUps(contenders) + tieOf(pick, others) + recovery;
 }
 
 /**
@@ -200,26 +177,26 @@ function reasonOf(alternatives: PickableClock[], pick: PickableClock, rule: Pick
  * counts the windows without the output feeders' (the inserters that feed the machine the output is taken from); when
  * the table's column does not show the pick with fewer, the sentence says so.
  */
-function tieOf(pick: PickableClock, others: PickableClock[], kind: string): string {
+function tieOf(pick: PickableClock, others: PickableClock[]): string {
     const wakeUps = wakeUpsKey(pick.ranking.wake_ups_per_minute);
     const tiedOnWakeUps = others.filter(other => wakeUpsKey(other.ranking.wake_ups_per_minute) === wakeUps);
     // of equals on wake-ups the one that gets back from a loss sooner is picked, before the windows decide
     const recovery = (clock: PickableClock) => clock.ranking.recovery_window_cycles ?? Infinity;
     if (tiedOnWakeUps.length > 0 && tiedOnWakeUps.every(other => recovery(other) > recovery(pick))) {
-        return RECOMMENDED_COPY.tieOnRecovery(tiedOnWakeUps.length, kind);
+        return RECOMMENDED_COPY.tieOnRecovery(tiedOnWakeUps.length);
     }
     const tiedOnRecovery = tiedOnWakeUps.filter(other => recovery(other) === recovery(pick));
     const tiedOnWindows = tiedOnRecovery.filter(other => other.ranking.window_count === pick.ranking.window_count);
     if (tiedOnWindows.length > 0) {
-        return RECOMMENDED_COPY.tieOnWindows(tiedOnWindows.length, kind);
+        return RECOMMENDED_COPY.tieOnWindows(tiedOnWindows.length);
     }
     if (tiedOnRecovery.length === 0) {
         return '';
     }
     const fewerOnScreen = tiedOnRecovery.every(other => pick.inserterWindowCount < other.inserterWindowCount);
     return fewerOnScreen
-        ? RECOMMENDED_COPY.tieOnWakeUps(tiedOnRecovery.length, kind)
-        : RECOMMENDED_COPY.tieOnWakeUpsUncounted(tiedOnRecovery.length, kind);
+        ? RECOMMENDED_COPY.tieOnWakeUps(tiedOnRecovery.length)
+        : RECOMMENDED_COPY.tieOnWakeUpsUncounted(tiedOnRecovery.length);
 }
 
 /** Why the pick when no clock qualifies: actual modeled-start rate and sampled starts remain distinct. */
@@ -248,10 +225,9 @@ function nearestReason(alternatives: PickableClock[], pick: PickableClock, rate:
         + (holdsOverEquallyNear ? RECOMMENDED_COPY.nearestHolds : '');
 }
 
-/** The "This run" line of "How clocks are chosen": the belt the clocks were made for, and whether the searches ran */
+/** The "This run" line of "How clocks are chosen": whether the searches ran */
 export function disclosureRunLine(rule: PickRule | null): string {
-    return `${rule?.backedUpBelts ? RECOMMENDED_COPY.runBackedUpBelts : RECOMMENDED_COPY.runMovingBelts} `
-        + (rule?.searchedForFewerWakeUps ? RECOMMENDED_COPY.runSearched : RECOMMENDED_COPY.runSearchedWhenNeeded);
+    return rule?.searchedForFewerWakeUps ? RECOMMENDED_COPY.runSearched : RECOMMENDED_COPY.runSearchedWhenNeeded;
 }
 
 /** The recommended clock's row first, the others in the order given */

@@ -1,0 +1,2618 @@
+{
+ "sample": "science/electromagnetic/electromagnetic-330.json",
+ "copies": 11,
+ "selected_index": 0,
+ "why_not_stable": {
+  "cause": "shared lane short",
+  "message": "The recommended clock (Takt Batches: 2 output swings each output cycle) holds the setpoint on one copy, but not on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 54 of its 216 swings with accumulator in 27 window cycles. A clock needs enable windows that give the lane more time, or each copy needs a lane of its own."
+ },
+ "lanes": [
+  {
+   "belt_id": 1,
+   "lane": 1,
+   "item": "accumulator",
+   "role": "input",
+   "end": "dead_end",
+   "end_given_by": "lane",
+   "sharing": "shared",
+   "supply_rate": 120,
+   "supply_rate_by_default": true,
+   "capacity": 120
+  },
+  {
+   "belt_id": 1,
+   "lane": 2,
+   "item": "supercapacitor",
+   "role": "input",
+   "end": "dead_end",
+   "end_given_by": "lane",
+   "sharing": "shared",
+   "supply_rate": 120,
+   "supply_rate_by_default": true,
+   "capacity": 120
+  }
+ ],
+ "clocks": [
+  {
+   "id": "takt_batches_observed",
+   "label": "Takt Batches: 2 output swings each output cycle",
+   "verdict": "unstable",
+   "window_cycle_ticks": 704,
+   "copies": 11,
+   "description": "The swing schedule the generator plans for the setpoint. The build is simulated with each inserter waiting on its machine's inventory, and each inserter's enable windows are the ticks it moved items. Swings are grouped into batches that match the output cycle. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 54 of its 216 swings with accumulator in 27 window cycles.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": true,
+    "disturbance_trial": {
+     "survives": true,
+     "broken_by": [],
+     "broken_at_other_lane_phases": [],
+     "recovered_after_window_cycles": 1
+    },
+    "items_per_second": 330,
+    "wake_ups_per_minute": 87.05547652916074,
+    "signals_per_minute": 158.74822190611664,
+    "start_dependence": null,
+    "shared_lane_losses": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "accumulator",
+      "copies": 11,
+      "copy": 2,
+      "inserter_id": 1,
+      "items": 2592,
+      "alone_items": 3456,
+      "swings": 162,
+      "alone_swings": 216,
+      "short_swings": 0,
+      "window_cycles": 27,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 2,
+       "kind": "machine",
+       "id": 1,
+       "made": 2592,
+       "target": 3456,
+       "behind": 864
+      },
+      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 54 of its 216 swings with accumulator in 27 window cycles."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "supercapacitor",
+      "copies": 11,
+      "copy": 2,
+      "inserter_id": 1,
+      "items": 2592,
+      "alone_items": 3456,
+      "swings": 162,
+      "alone_swings": 216,
+      "short_swings": 0,
+      "window_cycles": 27,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 2,
+       "kind": "machine",
+       "id": 1,
+       "made": 2592,
+       "target": 3456,
+       "behind": 864
+      },
+      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 54 of its 216 swings with supercapacitor in 27 window cycles."
+     },
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "accumulator",
+      "copies": 11,
+      "copy": 3,
+      "inserter_id": 1,
+      "items": 3024,
+      "alone_items": 3456,
+      "swings": 189,
+      "alone_swings": 216,
+      "short_swings": 0,
+      "window_cycles": 27,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 3,
+       "kind": "machine",
+       "id": 1,
+       "made": 3024,
+       "target": 3456,
+       "behind": 432
+      },
+      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with accumulator in 27 window cycles."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "supercapacitor",
+      "copies": 11,
+      "copy": 3,
+      "inserter_id": 1,
+      "items": 3024,
+      "alone_items": 3456,
+      "swings": 189,
+      "alone_swings": 216,
+      "short_swings": 0,
+      "window_cycles": 27,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 3,
+       "kind": "machine",
+       "id": 1,
+       "made": 3024,
+       "target": 3456,
+       "behind": 432
+      },
+      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the items move east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with supercapacitor in 27 window cycles."
+     }
+    ]
+   },
+   "ranking": {
+    "meets_target_rate": false,
+    "recovery_untried": false,
+    "rate_off_target": 0,
+    "holds_expected_output": false,
+    "wake_ups_per_minute": 87.05547652916074,
+    "recovery_window_cycles": 1,
+    "window_count": 31
+   },
+   "strategy": {
+    "id": "takt_batches",
+    "tuning_method": "observed",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 2
+     },
+     "window_cycle": [],
+     "belt_pickups": []
+    },
+    "output_swings": 2,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 3,
+   "inserter_window_count": 31,
+   "terminal_swing_count": 2,
+   "cycle_ticks": 64,
+   "expected_output_items": 352,
+   "insights": [
+    {
+     "id": "spare-time",
+     "scope": "build",
+     "title": "The electromagnetic plant that makes electromagnetic science pack has 2 ticks to spare each window cycle",
+     "what": "The electromagnetic plant that makes electromagnetic science pack crafts for 702 of the 704 ticks in a window cycle (128 crafts of 5.5 ticks) and is stopped for the other 2.",
+     "why": "At the setpoint a machine is not needed the whole time. The ticks left over are the only spare time it has: every tick it waits for an ingredient, or stops because its output has not been taken, comes out of them.",
+     "explanation": "The swings can make the electromagnetic plant that makes electromagnetic science pack wait up to 2 ticks each window cycle. Any more and it cannot catch up, so the build falls behind the target. The less there is to spare, the less room there is to move swings around and the less a late belt pickup is forgiven."
+    },
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The electromagnetic plant that makes electromagnetic science pack takes supercapacitor only while it holds fewer than 14. The inserter that takes accumulator and supercapacitor brings 16 at a time and the window cycle needs 8 hands of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of electromagnetic science pack takes 31.9 ticks to make",
+     "what": "The electromagnetic plant that makes electromagnetic science pack makes 2.75 electromagnetic science pack per craft (productivity included), so the 16 that the inserter (inserter 2) that drops electromagnetic science pack into a chest carries take 5.8 crafts, about 31.9 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 31.9 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "wake-ups",
+     "scope": "clock",
+     "title": "Machines wake the inserters 87.1 times a minute",
+     "what": "In a long run of this clock the machines of one copy of the build woke its inserters 87.1 times a minute. The inserter (inserter 3) that drops electromagnetic science pack into a chest is woken most, 56.3 times a minute: it is on 14.1% of the time and is on and waiting for 0% of it.",
+     "why": "An enabled inserter with nothing to move sleeps on the wakeup list of the machine it waits on, and that machine wakes it every time it finishes a craft. The inserter looks for something to move, finds nothing or part of a hand, and sleeps again. An inserter its clock has disabled is on no list and is never woken. In game the debug option show-wakeup-lists draws a line from a waiting inserter to its machine; a line that flickers is this.",
+     "explanation": "Each wakeup is a check that moves little or nothing, so among clocks that hold the target the one with the fewest is the lightest on update time. An inserter that is enabled most of the time is woken at most of the crafts of the machine it waits on, whether its enable windows are long, it is left always enabled in a loop of machines, or the configuration sets it to always enabled."
+    }
+   ],
+   "shared_lane_loss_note": "It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 54 of its 216 swings with accumulator in 27 window cycles.",
+   "checked_lanes": {
+    "line": {
+     "copies": 11,
+     "plain_output_belts": 0,
+     "output_chests": [
+      {
+       "chest_id": 1,
+       "kind": "infinity-chest",
+       "items": [
+        "electromagnetic-science-pack"
+       ]
+      }
+     ],
+     "run_with_copies": true,
+     "every_copy_gets_items": false,
+     "output_belt": null,
+     "sentence": "Checked with all 11 copies on the lanes they share. Copies 2 and 3 do not get all their items. The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "short",
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 54,
+         "swings": 216
+        },
+        {
+         "copy": 3,
+         "missed": 27,
+         "swings": 216
+        }
+       ]
+      },
+      "label": "Short on copies 2 and 3",
+      "sentence": "Copy 2 misses 54 of 216 swings, and copy 3 misses 27 of 216."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "short",
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 54,
+         "swings": 216
+        },
+        {
+         "copy": 3,
+         "missed": 27,
+         "swings": 216
+        }
+       ]
+      },
+      "label": "Short on copies 2 and 3",
+      "sentence": "Copy 2 misses 54 of 216 swings, and copy 3 misses 27 of 216."
+     }
+    ],
+    "cause": {
+     "kind": "lane",
+     "headline": {
+      "text": "Copy 2 misses 108 of 432 swings, and copy 3 misses 54 of 432",
+      "data": {
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 108,
+         "swings": 432
+        },
+        {
+         "copy": 3,
+         "missed": 54,
+         "swings": 432
+        }
+       ]
+      }
+     },
+     "cause": {
+      "text": "The gap that copy 1 leaves on the accumulator and supercapacitor lanes reaches copy 2 when its inserter must pick up. The electromagnetic plant of copy 2 that makes electromagnetic science pack has its output full and takes no more items. Each of them shows both. Copy 3 finds the supercapacitor lane empty in the reach of its inserter while its hand fills. The electromagnetic plant of copy 3 that makes electromagnetic science pack has its output full and takes no more items. Each of them shows both.",
+      "data": {
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 108,
+         "lane_empty": 108,
+         "gap_from_copy_before": 108,
+         "machine_full": 108,
+         "both": 108,
+         "neither": 0,
+         "lane_items": [
+          "supercapacitor",
+          "accumulator"
+         ],
+         "gap_items": [
+          "supercapacitor",
+          "accumulator"
+         ]
+        },
+        {
+         "copy": 3,
+         "missed": 54,
+         "lane_empty": 54,
+         "gap_from_copy_before": 0,
+         "machine_full": 54,
+         "both": 54,
+         "neither": 0,
+         "lane_items": [
+          "supercapacitor"
+         ],
+         "gap_items": []
+        }
+       ]
+      }
+     },
+     "spacing": {
+      "text": "The copies stand 10 tiles apart. An item takes 80 ticks from one copy to the next, and the window cycle is 704 ticks. The 11 copies take every supercapacitor and accumulator the two lanes bring, so the gap does not close on the way.",
+      "data": {
+       "step_tiles": 10,
+       "travel_ticks": 80,
+       "window_cycle_ticks": 704,
+       "take_all": true
+      }
+     },
+     "where": {
+      "text": "The inserter of copy 2 that takes accumulator and supercapacitor misses 108 of its 432 swings in 27 window cycles: 54 with accumulator and 54 with supercapacitor. Each swing is a hand of 16. The inserter of copy 3 that takes accumulator and supercapacitor misses 54 of its 432 swings in 27 window cycles: 27 with accumulator and 27 with supercapacitor. Each swing is a hand of 16.",
+      "data": {
+       "takers": [
+        {
+         "copy": 2,
+         "inserter_id": 1,
+         "missed": 108,
+         "swings": 432,
+         "items": [
+          {
+           "item": "accumulator",
+           "missed": 54,
+           "swings": 216
+          },
+          {
+           "item": "supercapacitor",
+           "missed": 54,
+           "swings": 216
+          }
+         ]
+        },
+        {
+         "copy": 3,
+         "inserter_id": 1,
+         "missed": 54,
+         "swings": 432,
+         "items": [
+          {
+           "item": "accumulator",
+           "missed": 27,
+           "swings": 216
+          },
+          {
+           "item": "supercapacitor",
+           "missed": 27,
+           "swings": 216
+          }
+         ]
+        }
+       ]
+      }
+     },
+     "alone": {
+      "text": "The same inserter makes all 432 swings. The clock is right for one copy.",
+      "data": {
+       "makes_all": true,
+       "missed": 0,
+       "swings": 432
+      }
+     },
+     "changes": {
+      "text": "With 9 copies on the accumulator and supercapacitor lanes, every copy makes every swing.",
+      "data": {
+       "fewer_copies": 9,
+       "other_clock": null
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "euclidean_swings",
+   "label": "Euclidean Swings: 2 output swings each output cycle",
+   "verdict": "unstable",
+   "window_cycle_ticks": 704,
+   "copies": 11,
+   "description": "Takt Batches with fractional swings turned on: an inserter that needs e.g. 3/2 swings each output cycle alternates between 1 and 2 swings instead of rounding, which can need fewer or shorter enable windows. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": true,
+    "disturbance_trial": {
+     "survives": true,
+     "broken_by": [],
+     "broken_at_other_lane_phases": [],
+     "recovered_after_window_cycles": 1
+    },
+    "items_per_second": 330,
+    "wake_ups_per_minute": 133.14366998577526,
+    "signals_per_minute": 158.74822190611664,
+    "start_dependence": null,
+    "shared_lane_losses": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "accumulator",
+      "copies": 11,
+      "copy": 2,
+      "inserter_id": 1,
+      "items": 2800,
+      "alone_items": 3456,
+      "swings": 175,
+      "alone_swings": 216,
+      "short_swings": 0,
+      "window_cycles": 27,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 2,
+       "kind": "machine",
+       "id": 1,
+       "made": 2802,
+       "target": 3456,
+       "behind": 654
+      },
+      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles."
+     },
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "accumulator",
+      "copies": 11,
+      "copy": 3,
+      "inserter_id": 1,
+      "items": 2800,
+      "alone_items": 3456,
+      "swings": 175,
+      "alone_swings": 216,
+      "short_swings": 0,
+      "window_cycles": 27,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 3,
+       "kind": "machine",
+       "id": 1,
+       "made": 2803,
+       "target": 3456,
+       "behind": 653
+      },
+      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "supercapacitor",
+      "copies": 11,
+      "copy": 2,
+      "inserter_id": 1,
+      "items": 2816,
+      "alone_items": 3456,
+      "swings": 176,
+      "alone_swings": 216,
+      "short_swings": 0,
+      "window_cycles": 27,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 2,
+       "kind": "machine",
+       "id": 1,
+       "made": 2802,
+       "target": 3456,
+       "behind": 654
+      },
+      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 40 of its 216 swings with supercapacitor in 27 window cycles."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "supercapacitor",
+      "copies": 11,
+      "copy": 3,
+      "inserter_id": 1,
+      "items": 2816,
+      "alone_items": 3456,
+      "swings": 176,
+      "alone_swings": 216,
+      "short_swings": 0,
+      "window_cycles": 27,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 3,
+       "kind": "machine",
+       "id": 1,
+       "made": 2803,
+       "target": 3456,
+       "behind": 653
+      },
+      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the items move east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 40 of its 216 swings with supercapacitor in 27 window cycles."
+     }
+    ]
+   },
+   "ranking": {
+    "meets_target_rate": false,
+    "recovery_untried": false,
+    "rate_off_target": 0,
+    "holds_expected_output": false,
+    "wake_ups_per_minute": 133.14366998577526,
+    "recovery_window_cycles": 1,
+    "window_count": 31
+   },
+   "strategy": {
+    "id": "euclidean_swings",
+    "tuning_method": "observed",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 2
+     },
+     "window_cycle": [],
+     "belt_pickups": []
+    },
+    "output_swings": 2,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 3,
+   "inserter_window_count": 31,
+   "terminal_swing_count": 2,
+   "cycle_ticks": 64,
+   "expected_output_items": 352,
+   "insights": [
+    {
+     "id": "spare-time",
+     "scope": "build",
+     "title": "The electromagnetic plant that makes electromagnetic science pack has 2 ticks to spare each window cycle",
+     "what": "The electromagnetic plant that makes electromagnetic science pack crafts for 702 of the 704 ticks in a window cycle (128 crafts of 5.5 ticks) and is stopped for the other 2.",
+     "why": "At the setpoint a machine is not needed the whole time. The ticks left over are the only spare time it has: every tick it waits for an ingredient, or stops because its output has not been taken, comes out of them.",
+     "explanation": "The swings can make the electromagnetic plant that makes electromagnetic science pack wait up to 2 ticks each window cycle. Any more and it cannot catch up, so the build falls behind the target. The less there is to spare, the less room there is to move swings around and the less a late belt pickup is forgiven."
+    },
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The electromagnetic plant that makes electromagnetic science pack takes supercapacitor only while it holds fewer than 14. The inserter that takes accumulator and supercapacitor brings 16 at a time and the window cycle needs 8 hands of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of electromagnetic science pack takes 31.9 ticks to make",
+     "what": "The electromagnetic plant that makes electromagnetic science pack makes 2.75 electromagnetic science pack per craft (productivity included), so the 16 that the inserter (inserter 2) that drops electromagnetic science pack into a chest carries take 5.8 crafts, about 31.9 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 31.9 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "wake-ups",
+     "scope": "clock",
+     "title": "Machines wake the inserters 133.1 times a minute",
+     "what": "In a long run of this clock the machines of one copy of the build woke its inserters 133.1 times a minute. The inserter (inserter 3) that drops electromagnetic science pack into a chest is woken most, 56.3 times a minute: it is on 14.1% of the time and is on and waiting for 0% of it.",
+     "why": "An enabled inserter with nothing to move sleeps on the wakeup list of the machine it waits on, and that machine wakes it every time it finishes a craft. The inserter looks for something to move, finds nothing or part of a hand, and sleeps again. An inserter its clock has disabled is on no list and is never woken. In game the debug option show-wakeup-lists draws a line from a waiting inserter to its machine; a line that flickers is this.",
+     "explanation": "Each wakeup is a check that moves little or nothing, so among clocks that hold the target the one with the fewest is the lightest on update time. An inserter that is enabled most of the time is woken at most of the crafts of the machine it waits on, whether its enable windows are long, it is left always enabled in a loop of machines, or the configuration sets it to always enabled."
+    }
+   ],
+   "shared_lane_loss_note": "It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles.",
+   "checked_lanes": {
+    "line": {
+     "copies": 11,
+     "plain_output_belts": 0,
+     "output_chests": [
+      {
+       "chest_id": 1,
+       "kind": "infinity-chest",
+       "items": [
+        "electromagnetic-science-pack"
+       ]
+      }
+     ],
+     "run_with_copies": true,
+     "every_copy_gets_items": false,
+     "output_belt": null,
+     "sentence": "Checked with all 11 copies on the lanes they share. Copies 2 and 3 do not get all their items. The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "short",
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 41,
+         "swings": 216
+        },
+        {
+         "copy": 3,
+         "missed": 41,
+         "swings": 216
+        }
+       ]
+      },
+      "label": "Short on copies 2 and 3",
+      "sentence": "Copies 2 and 3 miss 41 of 216 swings each."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "short",
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 40,
+         "swings": 216
+        },
+        {
+         "copy": 3,
+         "missed": 40,
+         "swings": 216
+        }
+       ]
+      },
+      "label": "Short on copies 2 and 3",
+      "sentence": "Copies 2 and 3 miss 40 of 216 swings each."
+     }
+    ],
+    "cause": {
+     "kind": "lane",
+     "headline": {
+      "text": "Copies 2 and 3 miss 81 of 432 swings each",
+      "data": {
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 81,
+         "swings": 432
+        },
+        {
+         "copy": 3,
+         "missed": 81,
+         "swings": 432
+        }
+       ]
+      }
+     },
+     "cause": {
+      "text": "The gap that copy 1 leaves on the accumulator and supercapacitor lanes reaches copy 2 when its inserter must pick up. The electromagnetic plant of copy 2 that makes electromagnetic science pack has its output full and takes no more items. Each of them shows both. The gap that copy 2 leaves on the accumulator and supercapacitor lanes reaches copy 3 when its inserter must pick up. In 42 of the 81 missed swings, the electromagnetic plant of copy 3 that makes electromagnetic science pack has its output full and takes no more items. 42 of the 81 show both.",
+      "data": {
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 81,
+         "lane_empty": 81,
+         "gap_from_copy_before": 81,
+         "machine_full": 81,
+         "both": 81,
+         "neither": 0,
+         "lane_items": [
+          "supercapacitor",
+          "accumulator"
+         ],
+         "gap_items": [
+          "supercapacitor",
+          "accumulator"
+         ]
+        },
+        {
+         "copy": 3,
+         "missed": 81,
+         "lane_empty": 81,
+         "gap_from_copy_before": 81,
+         "machine_full": 42,
+         "both": 42,
+         "neither": 0,
+         "lane_items": [
+          "supercapacitor",
+          "accumulator"
+         ],
+         "gap_items": [
+          "supercapacitor",
+          "accumulator"
+         ]
+        }
+       ]
+      }
+     },
+     "spacing": {
+      "text": "The copies stand 10 tiles apart. An item takes 80 ticks from one copy to the next, and the window cycle is 704 ticks. The 11 copies take every supercapacitor and accumulator the two lanes bring, so the gap does not close on the way.",
+      "data": {
+       "step_tiles": 10,
+       "travel_ticks": 80,
+       "window_cycle_ticks": 704,
+       "take_all": true
+      }
+     },
+     "where": {
+      "text": "The inserter of copy 2 that takes accumulator and supercapacitor misses 81 of its 432 swings in 27 window cycles: 41 with accumulator and 40 with supercapacitor. Each swing is a hand of 16. The inserter of copy 3 that takes accumulator and supercapacitor misses 81 of its 432 swings in 27 window cycles: 41 with accumulator and 40 with supercapacitor. Each swing is a hand of 16.",
+      "data": {
+       "takers": [
+        {
+         "copy": 2,
+         "inserter_id": 1,
+         "missed": 81,
+         "swings": 432,
+         "items": [
+          {
+           "item": "accumulator",
+           "missed": 41,
+           "swings": 216
+          },
+          {
+           "item": "supercapacitor",
+           "missed": 40,
+           "swings": 216
+          }
+         ]
+        },
+        {
+         "copy": 3,
+         "inserter_id": 1,
+         "missed": 81,
+         "swings": 432,
+         "items": [
+          {
+           "item": "accumulator",
+           "missed": 41,
+           "swings": 216
+          },
+          {
+           "item": "supercapacitor",
+           "missed": 40,
+           "swings": 216
+          }
+         ]
+        }
+       ]
+      }
+     },
+     "alone": {
+      "text": "The same inserter makes all 432 swings. The clock is right for one copy.",
+      "data": {
+       "makes_all": true,
+       "missed": 0,
+       "swings": 432
+      }
+     },
+     "changes": {
+      "text": "With 9 copies on the accumulator and supercapacitor lanes, every copy makes every swing.",
+      "data": {
+       "fewer_copies": 9,
+       "other_clock": null
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "time_study_windows",
+   "label": "Time-Study Windows: 2 output swings each output cycle",
+   "verdict": "unstable",
+   "window_cycle_ticks": 704,
+   "copies": 11,
+   "description": "Built from what the inserters actually do rather than from the planned schedule. The build is simulated with only the output inserters clocked and every other inserter running freely; each inserter's enable windows are the ticks it was busy picking up, swinging and dropping, plus a few ticks of padding. Swings end up spread out, roughly one per craft, so its inserters usually have more enable windows than in Takt Batches, which groups several swings into one enable window. An inserter between two machines that waits at its source for a full hand gets short, evenly spaced enable windows instead when they stay stable, so it grabs a hand that is already there rather than staying enabled while the machine crafts. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with accumulator in 27 window cycles.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": true,
+    "disturbance_trial": {
+     "survives": true,
+     "broken_by": [],
+     "broken_at_other_lane_phases": [],
+     "recovered_after_window_cycles": 1
+    },
+    "items_per_second": 330,
+    "wake_ups_per_minute": 235.56187766714083,
+    "signals_per_minute": 102.41820768136557,
+    "start_dependence": null,
+    "shared_lane_losses": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "accumulator",
+      "copies": 11,
+      "copy": 2,
+      "inserter_id": 1,
+      "items": 3024,
+      "alone_items": 3456,
+      "swings": 189,
+      "alone_swings": 216,
+      "short_swings": 0,
+      "window_cycles": 27,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 2,
+       "kind": "machine",
+       "id": 1,
+       "made": 3024,
+       "target": 3456,
+       "behind": 432
+      },
+      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with accumulator in 27 window cycles."
+     },
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "accumulator",
+      "copies": 11,
+      "copy": 3,
+      "inserter_id": 1,
+      "items": 3024,
+      "alone_items": 3456,
+      "swings": 189,
+      "alone_swings": 216,
+      "short_swings": 0,
+      "window_cycles": 27,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 3,
+       "kind": "machine",
+       "id": 1,
+       "made": 3024,
+       "target": 3456,
+       "behind": 432
+      },
+      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with accumulator in 27 window cycles."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "supercapacitor",
+      "copies": 11,
+      "copy": 2,
+      "inserter_id": 1,
+      "items": 3024,
+      "alone_items": 3456,
+      "swings": 189,
+      "alone_swings": 216,
+      "short_swings": 0,
+      "window_cycles": 27,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 2,
+       "kind": "machine",
+       "id": 1,
+       "made": 3024,
+       "target": 3456,
+       "behind": 432
+      },
+      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with supercapacitor in 27 window cycles."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "supercapacitor",
+      "copies": 11,
+      "copy": 3,
+      "inserter_id": 1,
+      "items": 3024,
+      "alone_items": 3456,
+      "swings": 189,
+      "alone_swings": 216,
+      "short_swings": 0,
+      "window_cycles": 27,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 3,
+       "kind": "machine",
+       "id": 1,
+       "made": 3024,
+       "target": 3456,
+       "behind": 432
+      },
+      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the items move east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with supercapacitor in 27 window cycles."
+     }
+    ]
+   },
+   "ranking": {
+    "meets_target_rate": false,
+    "recovery_untried": false,
+    "rate_off_target": 0,
+    "holds_expected_output": false,
+    "wake_ups_per_minute": 235.56187766714083,
+    "recovery_window_cycles": 1,
+    "window_count": 31
+   },
+   "strategy": {
+    "id": "time_study_windows",
+    "tuning_method": "observed",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 2
+     },
+     "window_cycle": [],
+     "belt_pickups": []
+    },
+    "output_swings": 2,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 2,
+   "inserter_window_count": 31,
+   "terminal_swing_count": 2,
+   "cycle_ticks": 64,
+   "expected_output_items": 352,
+   "insights": [
+    {
+     "id": "spare-time",
+     "scope": "build",
+     "title": "The electromagnetic plant that makes electromagnetic science pack has 1 ticks to spare each window cycle",
+     "what": "The electromagnetic plant that makes electromagnetic science pack crafts for 703 of the 704 ticks in a window cycle (128 crafts of 5.5 ticks) and is stopped for the other 1.",
+     "why": "At the setpoint a machine is not needed the whole time. The ticks left over are the only spare time it has: every tick it waits for an ingredient, or stops because its output has not been taken, comes out of them.",
+     "explanation": "The swings can make the electromagnetic plant that makes electromagnetic science pack wait up to 1 ticks each window cycle. Any more and it cannot catch up, so the build falls behind the target. The less there is to spare, the less room there is to move swings around and the less a late belt pickup is forgiven."
+    },
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The electromagnetic plant that makes electromagnetic science pack takes supercapacitor only while it holds fewer than 14. The inserter that takes accumulator and supercapacitor brings 16 at a time and the window cycle needs 8 hands of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of electromagnetic science pack takes 31.9 ticks to make",
+     "what": "The electromagnetic plant that makes electromagnetic science pack makes 2.75 electromagnetic science pack per craft (productivity included), so the 16 that the inserter (inserter 2) that drops electromagnetic science pack into a chest carries take 5.8 crafts, about 31.9 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 31.9 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "wake-ups",
+     "scope": "clock",
+     "title": "Machines wake the inserters 235.6 times a minute",
+     "what": "In a long run of this clock the machines of one copy of the build woke its inserters 235.6 times a minute. The inserter that takes accumulator and supercapacitor is woken most, 122.9 times a minute: it is on 35.6% of the time and is on and waiting for 15.5% of it.",
+     "why": "An enabled inserter with nothing to move sleeps on the wakeup list of the machine it waits on, and that machine wakes it every time it finishes a craft. The inserter looks for something to move, finds nothing or part of a hand, and sleeps again. An inserter its clock has disabled is on no list and is never woken. In game the debug option show-wakeup-lists draws a line from a waiting inserter to its machine; a line that flickers is this.",
+     "explanation": "Each wakeup is a check that moves little or nothing, so among clocks that hold the target the one with the fewest is the lightest on update time. An inserter that is enabled most of the time is woken at most of the crafts of the machine it waits on, whether its enable windows are long, it is left always enabled in a loop of machines, or the configuration sets it to always enabled."
+    }
+   ],
+   "shared_lane_loss_note": "It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with accumulator in 27 window cycles.",
+   "checked_lanes": {
+    "line": {
+     "copies": 11,
+     "plain_output_belts": 0,
+     "output_chests": [
+      {
+       "chest_id": 1,
+       "kind": "infinity-chest",
+       "items": [
+        "electromagnetic-science-pack"
+       ]
+      }
+     ],
+     "run_with_copies": true,
+     "every_copy_gets_items": false,
+     "output_belt": null,
+     "sentence": "Checked with all 11 copies on the lanes they share. Copies 2 and 3 do not get all their items. The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "short",
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 27,
+         "swings": 216
+        },
+        {
+         "copy": 3,
+         "missed": 27,
+         "swings": 216
+        }
+       ]
+      },
+      "label": "Short on copies 2 and 3",
+      "sentence": "Copies 2 and 3 miss 27 of 216 swings each."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "short",
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 27,
+         "swings": 216
+        },
+        {
+         "copy": 3,
+         "missed": 27,
+         "swings": 216
+        }
+       ]
+      },
+      "label": "Short on copies 2 and 3",
+      "sentence": "Copies 2 and 3 miss 27 of 216 swings each."
+     }
+    ],
+    "cause": {
+     "kind": "lane",
+     "headline": {
+      "text": "Copies 2 and 3 miss 54 of 432 swings each",
+      "data": {
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 54,
+         "swings": 432
+        },
+        {
+         "copy": 3,
+         "missed": 54,
+         "swings": 432
+        }
+       ]
+      }
+     },
+     "cause": {
+      "text": "The gap that copy 1 leaves on the accumulator and supercapacitor lanes reaches copy 2 when its inserter must pick up. The electromagnetic plant of copy 2 that makes electromagnetic science pack has its output full and takes no more items. Each of them shows both. The gap that copy 2 leaves on the accumulator lane reaches copy 3 when its inserter must pick up. The electromagnetic plant of copy 3 that makes electromagnetic science pack has its output full and takes no more items. Each of them shows both.",
+      "data": {
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 54,
+         "lane_empty": 54,
+         "gap_from_copy_before": 54,
+         "machine_full": 54,
+         "both": 54,
+         "neither": 0,
+         "lane_items": [
+          "supercapacitor",
+          "accumulator"
+         ],
+         "gap_items": [
+          "supercapacitor",
+          "accumulator"
+         ]
+        },
+        {
+         "copy": 3,
+         "missed": 54,
+         "lane_empty": 54,
+         "gap_from_copy_before": 54,
+         "machine_full": 54,
+         "both": 54,
+         "neither": 0,
+         "lane_items": [
+          "accumulator",
+          "supercapacitor"
+         ],
+         "gap_items": [
+          "accumulator"
+         ]
+        }
+       ]
+      }
+     },
+     "spacing": {
+      "text": "The copies stand 10 tiles apart. An item takes 80 ticks from one copy to the next, and the window cycle is 704 ticks. The 11 copies take every supercapacitor and accumulator the two lanes bring, so the gap does not close on the way.",
+      "data": {
+       "step_tiles": 10,
+       "travel_ticks": 80,
+       "window_cycle_ticks": 704,
+       "take_all": true
+      }
+     },
+     "where": {
+      "text": "The inserter of copy 2 that takes accumulator and supercapacitor misses 54 of its 432 swings in 27 window cycles: 27 with accumulator and 27 with supercapacitor. Each swing is a hand of 16. The inserter of copy 3 that takes accumulator and supercapacitor misses 54 of its 432 swings in 27 window cycles: 27 with accumulator and 27 with supercapacitor. Each swing is a hand of 16.",
+      "data": {
+       "takers": [
+        {
+         "copy": 2,
+         "inserter_id": 1,
+         "missed": 54,
+         "swings": 432,
+         "items": [
+          {
+           "item": "accumulator",
+           "missed": 27,
+           "swings": 216
+          },
+          {
+           "item": "supercapacitor",
+           "missed": 27,
+           "swings": 216
+          }
+         ]
+        },
+        {
+         "copy": 3,
+         "inserter_id": 1,
+         "missed": 54,
+         "swings": 432,
+         "items": [
+          {
+           "item": "accumulator",
+           "missed": 27,
+           "swings": 216
+          },
+          {
+           "item": "supercapacitor",
+           "missed": 27,
+           "swings": 216
+          }
+         ]
+        }
+       ]
+      }
+     },
+     "alone": {
+      "text": "The same inserter makes all 432 swings. The clock is right for one copy.",
+      "data": {
+       "makes_all": true,
+       "missed": 0,
+       "swings": 432
+      }
+     },
+     "changes": {
+      "text": "With 9 copies on the accumulator and supercapacitor lanes, every copy makes every swing.",
+      "data": {
+       "fewer_copies": 9,
+       "other_clock": null
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "moved_output_swing",
+   "label": "Moved Output Swing: 2 output swings each output cycle",
+   "verdict": "unstable",
+   "window_cycle_ticks": 704,
+   "copies": 11,
+   "description": "Time-Study Windows with one output swing moved off its planned start, so the output swings are not evenly spaced. A machine only has to make up for what the output inserter takes over the whole window cycle, so it can craft more between one pair of swings than the next and carry the difference in its output slot. The swing is tried at positions a craft apart and every other inserter's enable windows are observed again for each; a position whose neighbours work too is used, the smallest move of those. Only offered when the window cycle has more than one output swing and a moved swing passes the clock-only check. Output swing 2 starts 38 ticks earlier than planned. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with accumulator in 27 window cycles.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": true,
+    "disturbance_trial": {
+     "survives": true,
+     "broken_by": [],
+     "broken_at_other_lane_phases": [],
+     "recovered_after_window_cycles": 1
+    },
+    "items_per_second": 330,
+    "wake_ups_per_minute": 276.52916073968703,
+    "signals_per_minute": 97.29729729729729,
+    "start_dependence": null,
+    "shared_lane_losses": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "accumulator",
+      "copies": 11,
+      "copy": 2,
+      "inserter_id": 1,
+      "items": 3024,
+      "alone_items": 3456,
+      "swings": 189,
+      "alone_swings": 216,
+      "short_swings": 0,
+      "window_cycles": 27,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 2,
+       "kind": "machine",
+       "id": 1,
+       "made": 3024,
+       "target": 3456,
+       "behind": 432
+      },
+      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with accumulator in 27 window cycles."
+     },
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "accumulator",
+      "copies": 11,
+      "copy": 3,
+      "inserter_id": 1,
+      "items": 3024,
+      "alone_items": 3456,
+      "swings": 189,
+      "alone_swings": 216,
+      "short_swings": 0,
+      "window_cycles": 27,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 3,
+       "kind": "machine",
+       "id": 1,
+       "made": 3024,
+       "target": 3456,
+       "behind": 432
+      },
+      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with accumulator in 27 window cycles."
+     },
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "accumulator",
+      "copies": 11,
+      "copy": 4,
+      "inserter_id": 1,
+      "items": 3024,
+      "alone_items": 3456,
+      "swings": 189,
+      "alone_swings": 216,
+      "short_swings": 0,
+      "window_cycles": 27,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 4,
+       "kind": "machine",
+       "id": 1,
+       "made": 3024,
+       "target": 3456,
+       "behind": 432
+      },
+      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 4 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with accumulator in 27 window cycles."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "supercapacitor",
+      "copies": 11,
+      "copy": 2,
+      "inserter_id": 1,
+      "items": 3024,
+      "alone_items": 3456,
+      "swings": 189,
+      "alone_swings": 216,
+      "short_swings": 0,
+      "window_cycles": 27,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 2,
+       "kind": "machine",
+       "id": 1,
+       "made": 3024,
+       "target": 3456,
+       "behind": 432
+      },
+      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with supercapacitor in 27 window cycles."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "supercapacitor",
+      "copies": 11,
+      "copy": 3,
+      "inserter_id": 1,
+      "items": 3024,
+      "alone_items": 3456,
+      "swings": 189,
+      "alone_swings": 216,
+      "short_swings": 0,
+      "window_cycles": 27,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 3,
+       "kind": "machine",
+       "id": 1,
+       "made": 3024,
+       "target": 3456,
+       "behind": 432
+      },
+      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the items move east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with supercapacitor in 27 window cycles."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "supercapacitor",
+      "copies": 11,
+      "copy": 4,
+      "inserter_id": 1,
+      "items": 3024,
+      "alone_items": 3456,
+      "swings": 189,
+      "alone_swings": 216,
+      "short_swings": 0,
+      "window_cycles": 27,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 4,
+       "kind": "machine",
+       "id": 1,
+       "made": 3024,
+       "target": 3456,
+       "behind": 432
+      },
+      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the items move east, copy 4 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with supercapacitor in 27 window cycles."
+     }
+    ]
+   },
+   "ranking": {
+    "meets_target_rate": false,
+    "recovery_untried": false,
+    "rate_off_target": 0,
+    "holds_expected_output": false,
+    "wake_ups_per_minute": 276.52916073968703,
+    "recovery_window_cycles": 1,
+    "window_count": 30
+   },
+   "strategy": {
+    "id": "moved_output_swing",
+    "tuning_method": "observed",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 2
+     },
+     "window_cycle": [],
+     "belt_pickups": []
+    },
+    "output_swings": 2,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 2,
+   "inserter_window_count": 30,
+   "terminal_swing_count": 2,
+   "cycle_ticks": 64,
+   "expected_output_items": 352,
+   "insights": [
+    {
+     "id": "spare-time",
+     "scope": "build",
+     "title": "The electromagnetic plant that makes electromagnetic science pack has 2 ticks to spare each window cycle",
+     "what": "The electromagnetic plant that makes electromagnetic science pack crafts for 702 of the 704 ticks in a window cycle (128 crafts of 5.5 ticks) and is stopped for the other 2.",
+     "why": "At the setpoint a machine is not needed the whole time. The ticks left over are the only spare time it has: every tick it waits for an ingredient, or stops because its output has not been taken, comes out of them.",
+     "explanation": "The swings can make the electromagnetic plant that makes electromagnetic science pack wait up to 2 ticks each window cycle. Any more and it cannot catch up, so the build falls behind the target. The less there is to spare, the less room there is to move swings around and the less a late belt pickup is forgiven."
+    },
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The electromagnetic plant that makes electromagnetic science pack takes supercapacitor only while it holds fewer than 14. The inserter that takes accumulator and supercapacitor brings 16 at a time and the window cycle needs 8 hands of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of electromagnetic science pack takes 31.9 ticks to make",
+     "what": "The electromagnetic plant that makes electromagnetic science pack makes 2.75 electromagnetic science pack per craft (productivity included), so the 16 that the inserter (inserter 2) that drops electromagnetic science pack into a chest carries take 5.8 crafts, about 31.9 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 31.9 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "wake-ups",
+     "scope": "clock",
+     "title": "Machines wake the inserters 276.5 times a minute",
+     "what": "In a long run of this clock the machines of one copy of the build woke its inserters 276.5 times a minute. The inserter (inserter 3) that drops electromagnetic science pack into a chest is woken most, 107.5 times a minute: it is on 14.1% of the time and is on and waiting for 5.4% of it.",
+     "why": "An enabled inserter with nothing to move sleeps on the wakeup list of the machine it waits on, and that machine wakes it every time it finishes a craft. The inserter looks for something to move, finds nothing or part of a hand, and sleeps again. An inserter its clock has disabled is on no list and is never woken. In game the debug option show-wakeup-lists draws a line from a waiting inserter to its machine; a line that flickers is this.",
+     "explanation": "Each wakeup is a check that moves little or nothing, so among clocks that hold the target the one with the fewest is the lightest on update time. An inserter that is enabled most of the time is woken at most of the crafts of the machine it waits on, whether its enable windows are long, it is left always enabled in a loop of machines, or the configuration sets it to always enabled."
+    }
+   ],
+   "shared_lane_loss_note": "It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with accumulator in 27 window cycles.",
+   "checked_lanes": {
+    "line": {
+     "copies": 11,
+     "plain_output_belts": 0,
+     "output_chests": [
+      {
+       "chest_id": 1,
+       "kind": "infinity-chest",
+       "items": [
+        "electromagnetic-science-pack"
+       ]
+      }
+     ],
+     "run_with_copies": true,
+     "every_copy_gets_items": false,
+     "output_belt": null,
+     "sentence": "Checked with all 11 copies on the lanes they share. Copies 2, 3 and 4 do not get all their items. The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "short",
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 27,
+         "swings": 216
+        },
+        {
+         "copy": 3,
+         "missed": 27,
+         "swings": 216
+        },
+        {
+         "copy": 4,
+         "missed": 27,
+         "swings": 216
+        }
+       ]
+      },
+      "label": "Short on copies 2, 3 and 4",
+      "sentence": "Copies 2, 3 and 4 miss 27 of 216 swings each."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "short",
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 27,
+         "swings": 216
+        },
+        {
+         "copy": 3,
+         "missed": 27,
+         "swings": 216
+        },
+        {
+         "copy": 4,
+         "missed": 27,
+         "swings": 216
+        }
+       ]
+      },
+      "label": "Short on copies 2, 3 and 4",
+      "sentence": "Copies 2, 3 and 4 miss 27 of 216 swings each."
+     }
+    ],
+    "cause": {
+     "kind": "lane",
+     "headline": {
+      "text": "Copies 2, 3 and 4 miss 54 of 432 swings each",
+      "data": {
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 54,
+         "swings": 432
+        },
+        {
+         "copy": 3,
+         "missed": 54,
+         "swings": 432
+        },
+        {
+         "copy": 4,
+         "missed": 54,
+         "swings": 432
+        }
+       ]
+      }
+     },
+     "cause": {
+      "text": "The gap that copy 1 leaves on the accumulator and supercapacitor lanes reaches copy 2 when its inserter must pick up. The electromagnetic plant of copy 2 that makes electromagnetic science pack has its output full and takes no more items. Each of them shows both. The gap that copy 2 leaves on the accumulator and supercapacitor lanes reaches copy 3 when its inserter must pick up. The electromagnetic plant of copy 3 that makes electromagnetic science pack has its output full and takes no more items. Each of them shows both. The gap that copy 3 leaves on the accumulator and supercapacitor lanes reaches copy 4 when its inserter must pick up. The electromagnetic plant of copy 4 that makes electromagnetic science pack has its output full and takes no more items. Each of them shows both.",
+      "data": {
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 54,
+         "lane_empty": 54,
+         "gap_from_copy_before": 54,
+         "machine_full": 54,
+         "both": 54,
+         "neither": 0,
+         "lane_items": [
+          "supercapacitor",
+          "accumulator"
+         ],
+         "gap_items": [
+          "supercapacitor",
+          "accumulator"
+         ]
+        },
+        {
+         "copy": 3,
+         "missed": 54,
+         "lane_empty": 54,
+         "gap_from_copy_before": 54,
+         "machine_full": 54,
+         "both": 54,
+         "neither": 0,
+         "lane_items": [
+          "accumulator",
+          "supercapacitor"
+         ],
+         "gap_items": [
+          "supercapacitor",
+          "accumulator"
+         ]
+        },
+        {
+         "copy": 4,
+         "missed": 54,
+         "lane_empty": 54,
+         "gap_from_copy_before": 54,
+         "machine_full": 54,
+         "both": 54,
+         "neither": 0,
+         "lane_items": [
+          "accumulator",
+          "supercapacitor"
+         ],
+         "gap_items": [
+          "accumulator",
+          "supercapacitor"
+         ]
+        }
+       ]
+      }
+     },
+     "spacing": {
+      "text": "The copies stand 10 tiles apart. An item takes 80 ticks from one copy to the next, and the window cycle is 704 ticks. The 11 copies take every supercapacitor and accumulator the two lanes bring, so the gap does not close on the way.",
+      "data": {
+       "step_tiles": 10,
+       "travel_ticks": 80,
+       "window_cycle_ticks": 704,
+       "take_all": true
+      }
+     },
+     "where": {
+      "text": "The inserter of copy 2 that takes accumulator and supercapacitor misses 54 of its 432 swings in 27 window cycles: 27 with accumulator and 27 with supercapacitor. Each swing is a hand of 16. The inserter of copy 3 that takes accumulator and supercapacitor misses 54 of its 432 swings in 27 window cycles: 27 with accumulator and 27 with supercapacitor. Each swing is a hand of 16. The inserter of copy 4 that takes accumulator and supercapacitor misses 54 of its 432 swings in 27 window cycles: 27 with accumulator and 27 with supercapacitor. Each swing is a hand of 16.",
+      "data": {
+       "takers": [
+        {
+         "copy": 2,
+         "inserter_id": 1,
+         "missed": 54,
+         "swings": 432,
+         "items": [
+          {
+           "item": "accumulator",
+           "missed": 27,
+           "swings": 216
+          },
+          {
+           "item": "supercapacitor",
+           "missed": 27,
+           "swings": 216
+          }
+         ]
+        },
+        {
+         "copy": 3,
+         "inserter_id": 1,
+         "missed": 54,
+         "swings": 432,
+         "items": [
+          {
+           "item": "accumulator",
+           "missed": 27,
+           "swings": 216
+          },
+          {
+           "item": "supercapacitor",
+           "missed": 27,
+           "swings": 216
+          }
+         ]
+        },
+        {
+         "copy": 4,
+         "inserter_id": 1,
+         "missed": 54,
+         "swings": 432,
+         "items": [
+          {
+           "item": "accumulator",
+           "missed": 27,
+           "swings": 216
+          },
+          {
+           "item": "supercapacitor",
+           "missed": 27,
+           "swings": 216
+          }
+         ]
+        }
+       ]
+      }
+     },
+     "alone": {
+      "text": "The same inserter makes all 432 swings. The clock is right for one copy.",
+      "data": {
+       "makes_all": true,
+       "missed": 0,
+       "swings": 432
+      }
+     },
+     "changes": {
+      "text": "With 9 copies on the accumulator and supercapacitor lanes, every copy makes every swing.",
+      "data": {
+       "fewer_copies": 9,
+       "other_clock": null
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "phase_shifted_batch",
+   "label": "Phase-Shifted Batch: 2 output swings each output cycle",
+   "verdict": "unstable",
+   "window_cycle_ticks": 704,
+   "copies": 11,
+   "description": "Takt Batches with one round of swings moved together to another place in the window cycle: an output swing and the input swings planned with it. The plan spaces these rounds evenly, but a machine takes a swing whenever its limits allow: an input hand once it is below its insertion limit and before it runs out of that ingredient, an output hand once a full one is ready and before the output fills up. Within those limits a round can run earlier or later. Enable window lengths and their spacing within the round are kept, so swings stay as batched as planned. Every shift is checked with the clock-only check and a shift whose neighbours work too is used, the smallest of those. Only offered when the window cycle has more than one round and a shift passes. The swings planned in clock ticks 65–106 (the inserters (3 and 2) that drop electromagnetic science pack into a chest; the inserter that takes accumulator and supercapacitor) start 20 ticks earlier than planned. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": true,
+    "disturbance_trial": {
+     "survives": true,
+     "broken_by": [],
+     "broken_at_other_lane_phases": [],
+     "recovered_after_window_cycles": 8
+    },
+    "items_per_second": 330,
+    "wake_ups_per_minute": 168.9900426742532,
+    "signals_per_minute": 102.41820768136557,
+    "start_dependence": null,
+    "shared_lane_losses": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "accumulator",
+      "copies": 11,
+      "copy": 2,
+      "inserter_id": 1,
+      "items": 2800,
+      "alone_items": 3456,
+      "swings": 175,
+      "alone_swings": 216,
+      "short_swings": 0,
+      "window_cycles": 27,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 2,
+       "kind": "machine",
+       "id": 1,
+       "made": 2802,
+       "target": 3456,
+       "behind": 654
+      },
+      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles."
+     },
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "accumulator",
+      "copies": 11,
+      "copy": 3,
+      "inserter_id": 1,
+      "items": 2800,
+      "alone_items": 3456,
+      "swings": 175,
+      "alone_swings": 216,
+      "short_swings": 0,
+      "window_cycles": 27,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 3,
+       "kind": "machine",
+       "id": 1,
+       "made": 2803,
+       "target": 3456,
+       "behind": 653
+      },
+      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "supercapacitor",
+      "copies": 11,
+      "copy": 2,
+      "inserter_id": 1,
+      "items": 2816,
+      "alone_items": 3456,
+      "swings": 176,
+      "alone_swings": 216,
+      "short_swings": 0,
+      "window_cycles": 27,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 2,
+       "kind": "machine",
+       "id": 1,
+       "made": 2802,
+       "target": 3456,
+       "behind": 654
+      },
+      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 40 of its 216 swings with supercapacitor in 27 window cycles."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "supercapacitor",
+      "copies": 11,
+      "copy": 3,
+      "inserter_id": 1,
+      "items": 2816,
+      "alone_items": 3456,
+      "swings": 176,
+      "alone_swings": 216,
+      "short_swings": 0,
+      "window_cycles": 27,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 3,
+       "kind": "machine",
+       "id": 1,
+       "made": 2803,
+       "target": 3456,
+       "behind": 653
+      },
+      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the items move east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 40 of its 216 swings with supercapacitor in 27 window cycles."
+     }
+    ]
+   },
+   "ranking": {
+    "meets_target_rate": false,
+    "recovery_untried": false,
+    "rate_off_target": 0,
+    "holds_expected_output": false,
+    "wake_ups_per_minute": 168.9900426742532,
+    "recovery_window_cycles": 8,
+    "window_count": 31
+   },
+   "strategy": {
+    "id": "phase_shifted_batch",
+    "tuning_method": "observed",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 2
+     },
+     "window_cycle": [],
+     "belt_pickups": []
+    },
+    "output_swings": 2,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 2,
+   "inserter_window_count": 31,
+   "terminal_swing_count": 2,
+   "cycle_ticks": 64,
+   "expected_output_items": 352,
+   "insights": [
+    {
+     "id": "spare-time",
+     "scope": "build",
+     "title": "The electromagnetic plant that makes electromagnetic science pack has 2 ticks to spare each window cycle",
+     "what": "The electromagnetic plant that makes electromagnetic science pack crafts for 702 of the 704 ticks in a window cycle (128 crafts of 5.5 ticks) and is stopped for the other 2.",
+     "why": "At the setpoint a machine is not needed the whole time. The ticks left over are the only spare time it has: every tick it waits for an ingredient, or stops because its output has not been taken, comes out of them.",
+     "explanation": "The swings can make the electromagnetic plant that makes electromagnetic science pack wait up to 2 ticks each window cycle. Any more and it cannot catch up, so the build falls behind the target. The less there is to spare, the less room there is to move swings around and the less a late belt pickup is forgiven."
+    },
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The electromagnetic plant that makes electromagnetic science pack takes supercapacitor only while it holds fewer than 14. The inserter that takes accumulator and supercapacitor brings 16 at a time and the window cycle needs 8 hands of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of electromagnetic science pack takes 31.9 ticks to make",
+     "what": "The electromagnetic plant that makes electromagnetic science pack makes 2.75 electromagnetic science pack per craft (productivity included), so the 16 that the inserter (inserter 2) that drops electromagnetic science pack into a chest carries take 5.8 crafts, about 31.9 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 31.9 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "wake-ups",
+     "scope": "clock",
+     "title": "Machines wake the inserters 169 times a minute",
+     "what": "In a long run of this clock the machines of one copy of the build woke its inserters 169 times a minute. The inserter (inserter 3) that drops electromagnetic science pack into a chest is woken most, 61.5 times a minute: it is on 14.1% of the time and is on and waiting for 2% of it.",
+     "why": "An enabled inserter with nothing to move sleeps on the wakeup list of the machine it waits on, and that machine wakes it every time it finishes a craft. The inserter looks for something to move, finds nothing or part of a hand, and sleeps again. An inserter its clock has disabled is on no list and is never woken. In game the debug option show-wakeup-lists draws a line from a waiting inserter to its machine; a line that flickers is this.",
+     "explanation": "Each wakeup is a check that moves little or nothing, so among clocks that hold the target the one with the fewest is the lightest on update time. An inserter that is enabled most of the time is woken at most of the crafts of the machine it waits on, whether its enable windows are long, it is left always enabled in a loop of machines, or the configuration sets it to always enabled."
+    }
+   ],
+   "shared_lane_loss_note": "It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles.",
+   "checked_lanes": {
+    "line": {
+     "copies": 11,
+     "plain_output_belts": 0,
+     "output_chests": [
+      {
+       "chest_id": 1,
+       "kind": "infinity-chest",
+       "items": [
+        "electromagnetic-science-pack"
+       ]
+      }
+     ],
+     "run_with_copies": true,
+     "every_copy_gets_items": false,
+     "output_belt": null,
+     "sentence": "Checked with all 11 copies on the lanes they share. Copies 2 and 3 do not get all their items. The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "short",
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 41,
+         "swings": 216
+        },
+        {
+         "copy": 3,
+         "missed": 41,
+         "swings": 216
+        }
+       ]
+      },
+      "label": "Short on copies 2 and 3",
+      "sentence": "Copies 2 and 3 miss 41 of 216 swings each."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "short",
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 40,
+         "swings": 216
+        },
+        {
+         "copy": 3,
+         "missed": 40,
+         "swings": 216
+        }
+       ]
+      },
+      "label": "Short on copies 2 and 3",
+      "sentence": "Copies 2 and 3 miss 40 of 216 swings each."
+     }
+    ],
+    "cause": {
+     "kind": "lane",
+     "headline": {
+      "text": "Copies 2 and 3 miss 81 of 432 swings each",
+      "data": {
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 81,
+         "swings": 432
+        },
+        {
+         "copy": 3,
+         "missed": 81,
+         "swings": 432
+        }
+       ]
+      }
+     },
+     "cause": {
+      "text": "The gap that copy 1 leaves on the accumulator and supercapacitor lanes reaches copy 2 when its inserter must pick up. The electromagnetic plant of copy 2 that makes electromagnetic science pack has its output full and takes no more items. Each of them shows both. The gap that copy 2 leaves on the accumulator and supercapacitor lanes reaches copy 3 when its inserter must pick up. In 51 of the 81 missed swings, the electromagnetic plant of copy 3 that makes electromagnetic science pack has its output full and takes no more items. 51 of the 81 show both.",
+      "data": {
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 81,
+         "lane_empty": 81,
+         "gap_from_copy_before": 81,
+         "machine_full": 81,
+         "both": 81,
+         "neither": 0,
+         "lane_items": [
+          "accumulator",
+          "supercapacitor"
+         ],
+         "gap_items": [
+          "accumulator",
+          "supercapacitor"
+         ]
+        },
+        {
+         "copy": 3,
+         "missed": 81,
+         "lane_empty": 81,
+         "gap_from_copy_before": 81,
+         "machine_full": 51,
+         "both": 51,
+         "neither": 0,
+         "lane_items": [
+          "supercapacitor",
+          "accumulator"
+         ],
+         "gap_items": [
+          "supercapacitor",
+          "accumulator"
+         ]
+        }
+       ]
+      }
+     },
+     "spacing": {
+      "text": "The copies stand 10 tiles apart. An item takes 80 ticks from one copy to the next, and the window cycle is 704 ticks. The 11 copies take every accumulator and supercapacitor the two lanes bring, so the gap does not close on the way.",
+      "data": {
+       "step_tiles": 10,
+       "travel_ticks": 80,
+       "window_cycle_ticks": 704,
+       "take_all": true
+      }
+     },
+     "where": {
+      "text": "The inserter of copy 2 that takes accumulator and supercapacitor misses 81 of its 432 swings in 27 window cycles: 41 with accumulator and 40 with supercapacitor. Each swing is a hand of 16. The inserter of copy 3 that takes accumulator and supercapacitor misses 81 of its 432 swings in 27 window cycles: 41 with accumulator and 40 with supercapacitor. Each swing is a hand of 16.",
+      "data": {
+       "takers": [
+        {
+         "copy": 2,
+         "inserter_id": 1,
+         "missed": 81,
+         "swings": 432,
+         "items": [
+          {
+           "item": "accumulator",
+           "missed": 41,
+           "swings": 216
+          },
+          {
+           "item": "supercapacitor",
+           "missed": 40,
+           "swings": 216
+          }
+         ]
+        },
+        {
+         "copy": 3,
+         "inserter_id": 1,
+         "missed": 81,
+         "swings": 432,
+         "items": [
+          {
+           "item": "accumulator",
+           "missed": 41,
+           "swings": 216
+          },
+          {
+           "item": "supercapacitor",
+           "missed": 40,
+           "swings": 216
+          }
+         ]
+        }
+       ]
+      }
+     },
+     "alone": {
+      "text": "The same inserter makes all 432 swings. The clock is right for one copy.",
+      "data": {
+       "makes_all": true,
+       "missed": 0,
+       "swings": 432
+      }
+     },
+     "changes": {
+      "text": "With 9 copies on the accumulator and supercapacitor lanes, every copy makes every swing.",
+      "data": {
+       "fewer_copies": 9,
+       "other_clock": null
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "pitch_pickups",
+   "label": "Pitch Pickups: 2 output swings each output cycle",
+   "verdict": "unstable",
+   "window_cycle_ticks": 704,
+   "copies": 11,
+   "description": "Output inserters swing once per enable window, evenly spaced and timed so the machine already holds a full hand when the inserter arrives, instead of grabbing a few items at a time while the machine crafts. Only offered when the planned output inserters often need more than one grab per hand and a full hand fits below the output block. The timing is searched with clock-only checks, preferring the fewest pickups that wait for items. The timing must let the build go back to its rate by itself when the output machines are full; if it does not, some enable windows are lengthened so a second grab can drain the surplus. Other inserters keep the enable windows of Takt Batches. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": true,
+    "disturbance_trial": {
+     "survives": true,
+     "broken_by": [],
+     "broken_at_other_lane_phases": [],
+     "recovered_after_window_cycles": 1
+    },
+    "items_per_second": 330,
+    "wake_ups_per_minute": 163.86913229018492,
+    "signals_per_minute": 102.41820768136557,
+    "start_dependence": null,
+    "shared_lane_losses": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "accumulator",
+      "copies": 11,
+      "copy": 2,
+      "inserter_id": 1,
+      "items": 2800,
+      "alone_items": 3456,
+      "swings": 175,
+      "alone_swings": 216,
+      "short_swings": 0,
+      "window_cycles": 27,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 2,
+       "kind": "machine",
+       "id": 1,
+       "made": 2802,
+       "target": 3456,
+       "behind": 654
+      },
+      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles."
+     },
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "accumulator",
+      "copies": 11,
+      "copy": 3,
+      "inserter_id": 1,
+      "items": 2800,
+      "alone_items": 3456,
+      "swings": 175,
+      "alone_swings": 216,
+      "short_swings": 0,
+      "window_cycles": 27,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 3,
+       "kind": "machine",
+       "id": 1,
+       "made": 2803,
+       "target": 3456,
+       "behind": 653
+      },
+      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "supercapacitor",
+      "copies": 11,
+      "copy": 2,
+      "inserter_id": 1,
+      "items": 2816,
+      "alone_items": 3456,
+      "swings": 176,
+      "alone_swings": 216,
+      "short_swings": 0,
+      "window_cycles": 27,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 2,
+       "kind": "machine",
+       "id": 1,
+       "made": 2802,
+       "target": 3456,
+       "behind": 654
+      },
+      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 40 of its 216 swings with supercapacitor in 27 window cycles."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "supercapacitor",
+      "copies": 11,
+      "copy": 3,
+      "inserter_id": 1,
+      "items": 2816,
+      "alone_items": 3456,
+      "swings": 176,
+      "alone_swings": 216,
+      "short_swings": 0,
+      "window_cycles": 27,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 3,
+       "kind": "machine",
+       "id": 1,
+       "made": 2803,
+       "target": 3456,
+       "behind": 653
+      },
+      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the items move east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 40 of its 216 swings with supercapacitor in 27 window cycles."
+     }
+    ]
+   },
+   "ranking": {
+    "meets_target_rate": false,
+    "recovery_untried": false,
+    "rate_off_target": 0,
+    "holds_expected_output": false,
+    "wake_ups_per_minute": 163.86913229018492,
+    "recovery_window_cycles": 1,
+    "window_count": 31
+   },
+   "strategy": {
+    "id": "pitch_pickups",
+    "tuning_method": "observed",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 2
+     },
+     "window_cycle": [],
+     "belt_pickups": []
+    },
+    "output_swings": 2,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 2,
+   "inserter_window_count": 31,
+   "terminal_swing_count": 2,
+   "cycle_ticks": 64,
+   "expected_output_items": 352,
+   "insights": [
+    {
+     "id": "spare-time",
+     "scope": "build",
+     "title": "The electromagnetic plant that makes electromagnetic science pack has 2 ticks to spare each window cycle",
+     "what": "The electromagnetic plant that makes electromagnetic science pack crafts for 702 of the 704 ticks in a window cycle (128 crafts of 5.5 ticks) and is stopped for the other 2.",
+     "why": "At the setpoint a machine is not needed the whole time. The ticks left over are the only spare time it has: every tick it waits for an ingredient, or stops because its output has not been taken, comes out of them.",
+     "explanation": "The swings can make the electromagnetic plant that makes electromagnetic science pack wait up to 2 ticks each window cycle. Any more and it cannot catch up, so the build falls behind the target. The less there is to spare, the less room there is to move swings around and the less a late belt pickup is forgiven."
+    },
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The electromagnetic plant that makes electromagnetic science pack takes supercapacitor only while it holds fewer than 14. The inserter that takes accumulator and supercapacitor brings 16 at a time and the window cycle needs 8 hands of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of electromagnetic science pack takes 31.9 ticks to make",
+     "what": "The electromagnetic plant that makes electromagnetic science pack makes 2.75 electromagnetic science pack per craft (productivity included), so the 16 that the inserter (inserter 2) that drops electromagnetic science pack into a chest carries take 5.8 crafts, about 31.9 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 31.9 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "wake-ups",
+     "scope": "clock",
+     "title": "Machines wake the inserters 163.9 times a minute",
+     "what": "In a long run of this clock the machines of one copy of the build woke its inserters 163.9 times a minute. The inserter (inserter 2) that drops electromagnetic science pack into a chest is woken most, 56.3 times a minute: it is on 14.1% of the time and is on and waiting for 0% of it.",
+     "why": "An enabled inserter with nothing to move sleeps on the wakeup list of the machine it waits on, and that machine wakes it every time it finishes a craft. The inserter looks for something to move, finds nothing or part of a hand, and sleeps again. An inserter its clock has disabled is on no list and is never woken. In game the debug option show-wakeup-lists draws a line from a waiting inserter to its machine; a line that flickers is this.",
+     "explanation": "Each wakeup is a check that moves little or nothing, so among clocks that hold the target the one with the fewest is the lightest on update time. An inserter that is enabled most of the time is woken at most of the crafts of the machine it waits on, whether its enable windows are long, it is left always enabled in a loop of machines, or the configuration sets it to always enabled."
+    }
+   ],
+   "shared_lane_loss_note": "It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles.",
+   "checked_lanes": {
+    "line": {
+     "copies": 11,
+     "plain_output_belts": 0,
+     "output_chests": [
+      {
+       "chest_id": 1,
+       "kind": "infinity-chest",
+       "items": [
+        "electromagnetic-science-pack"
+       ]
+      }
+     ],
+     "run_with_copies": true,
+     "every_copy_gets_items": false,
+     "output_belt": null,
+     "sentence": "Checked with all 11 copies on the lanes they share. Copies 2 and 3 do not get all their items. The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "short",
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 41,
+         "swings": 216
+        },
+        {
+         "copy": 3,
+         "missed": 41,
+         "swings": 216
+        }
+       ]
+      },
+      "label": "Short on copies 2 and 3",
+      "sentence": "Copies 2 and 3 miss 41 of 216 swings each."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "short",
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 40,
+         "swings": 216
+        },
+        {
+         "copy": 3,
+         "missed": 40,
+         "swings": 216
+        }
+       ]
+      },
+      "label": "Short on copies 2 and 3",
+      "sentence": "Copies 2 and 3 miss 40 of 216 swings each."
+     }
+    ],
+    "cause": {
+     "kind": "lane",
+     "headline": {
+      "text": "Copies 2 and 3 miss 81 of 432 swings each",
+      "data": {
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 81,
+         "swings": 432
+        },
+        {
+         "copy": 3,
+         "missed": 81,
+         "swings": 432
+        }
+       ]
+      }
+     },
+     "cause": {
+      "text": "The gap that copy 1 leaves on the accumulator and supercapacitor lanes reaches copy 2 when its inserter must pick up. The electromagnetic plant of copy 2 that makes electromagnetic science pack has its output full and takes no more items. Each of them shows both. The gap that copy 2 leaves on the accumulator and supercapacitor lanes reaches copy 3 when its inserter must pick up. In 42 of the 81 missed swings, the electromagnetic plant of copy 3 that makes electromagnetic science pack has its output full and takes no more items. 42 of the 81 show both.",
+      "data": {
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 81,
+         "lane_empty": 81,
+         "gap_from_copy_before": 81,
+         "machine_full": 81,
+         "both": 81,
+         "neither": 0,
+         "lane_items": [
+          "supercapacitor",
+          "accumulator"
+         ],
+         "gap_items": [
+          "supercapacitor",
+          "accumulator"
+         ]
+        },
+        {
+         "copy": 3,
+         "missed": 81,
+         "lane_empty": 81,
+         "gap_from_copy_before": 81,
+         "machine_full": 42,
+         "both": 42,
+         "neither": 0,
+         "lane_items": [
+          "supercapacitor",
+          "accumulator"
+         ],
+         "gap_items": [
+          "supercapacitor",
+          "accumulator"
+         ]
+        }
+       ]
+      }
+     },
+     "spacing": {
+      "text": "The copies stand 10 tiles apart. An item takes 80 ticks from one copy to the next, and the window cycle is 704 ticks. The 11 copies take every supercapacitor and accumulator the two lanes bring, so the gap does not close on the way.",
+      "data": {
+       "step_tiles": 10,
+       "travel_ticks": 80,
+       "window_cycle_ticks": 704,
+       "take_all": true
+      }
+     },
+     "where": {
+      "text": "The inserter of copy 2 that takes accumulator and supercapacitor misses 81 of its 432 swings in 27 window cycles: 41 with accumulator and 40 with supercapacitor. Each swing is a hand of 16. The inserter of copy 3 that takes accumulator and supercapacitor misses 81 of its 432 swings in 27 window cycles: 41 with accumulator and 40 with supercapacitor. Each swing is a hand of 16.",
+      "data": {
+       "takers": [
+        {
+         "copy": 2,
+         "inserter_id": 1,
+         "missed": 81,
+         "swings": 432,
+         "items": [
+          {
+           "item": "accumulator",
+           "missed": 41,
+           "swings": 216
+          },
+          {
+           "item": "supercapacitor",
+           "missed": 40,
+           "swings": 216
+          }
+         ]
+        },
+        {
+         "copy": 3,
+         "inserter_id": 1,
+         "missed": 81,
+         "swings": 432,
+         "items": [
+          {
+           "item": "accumulator",
+           "missed": 41,
+           "swings": 216
+          },
+          {
+           "item": "supercapacitor",
+           "missed": 40,
+           "swings": 216
+          }
+         ]
+        }
+       ]
+      }
+     },
+     "alone": {
+      "text": "The same inserter makes all 432 swings. The clock is right for one copy.",
+      "data": {
+       "makes_all": true,
+       "missed": 0,
+       "swings": 432
+      }
+     },
+     "changes": {
+      "text": "With 9 copies on the accumulator and supercapacitor lanes, every copy makes every swing.",
+      "data": {
+       "fewer_copies": 9,
+       "other_clock": null
+      }
+     }
+    }
+   }
+  }
+ ]
+}

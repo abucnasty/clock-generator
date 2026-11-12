@@ -23,7 +23,6 @@ export const WHY_NOT_STABLE_TITLE: Record<WhyNotStableCause, string> = {
 export function whyNotStableOf(
     alternatives: ClockAlternativeView[],
     recommendedIndex: number | null,
-    backedUpBelts: boolean,
     notMade: NotMadeClock[],
 ): WhyNotStable | null {
     const recommended = recommendedIndex === null ? undefined : alternatives[recommendedIndex];
@@ -33,7 +32,6 @@ export function whyNotStableOf(
     const clocks = alternatives.map(clock => whyNotStableClockOf({ ...clock, as_built: clock.asBuilt, expected_output_items: clock.expectedOutputItems }));
     return whyNotStable(clocks, recommendedIndex!, {
         target_items_per_second: recommended.assessment.items_per_second - recommended.ranking.rate_off_target,
-        backed_up_belts: backedUpBelts,
         not_made: notMade,
         ...(recommended.assumptions?.entityNames !== undefined && { entity_names: recommended.assumptions.entityNames }),
     });

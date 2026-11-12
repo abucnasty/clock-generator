@@ -56,8 +56,25 @@ export function withDefaultPickupType(source: Source): Source {
 }
 
 export interface PickupBuild {
-    inserters: readonly { id?: number; source: { type: string; pickup_length?: number; pickup_layout?: BeltPickupLayout; pickup_capture?: Source['pickup_capture'] } }[];
+    inserters: readonly { id?: number; source: { type: string; id?: number; pickup_length?: number; pickup_layout?: BeltPickupLayout; pickup_capture?: Source['pickup_capture'] } }[];
+    /** The belts, whose lanes say how they end; none where the place does not know them */
+    belts?: readonly { id: number; lanes: readonly { ingredient: string; lane_end?: { kind: string }; consumption_per_second?: number }[] }[];
     overrides?: { backed_up_belts?: boolean };
+}
+
+/**
+ * For a place that has no clock (the form, an import): whether every lane an inserter takes from ends in a dead end. A lane
+ * that states its end has it, an export lane is an infinite end, and a lane that states none has the end the belt setting
+ * gives (Moving: infinite, true: dead end), else the one its role gives, which for a lane an inserter takes from is a dead
+ * end. A lane of a belt that the build also drops onto is read as taken. With no such lane, the belt setting's answer. A
+ * clock reads the engine's belt instead (`ClockAlternativeView.belt`).
+ */
+export function takenLanesEndInDeadEnds(build: PickupBuild): boolean {
+    const takenBelts = new Set(build.inserters.flatMap(inserter => inserter.source.type === 'belt' && inserter.source.id !== undefined ? [inserter.source.id] : []));
+    const lanes = (build.belts ?? []).filter(belt => takenBelts.has(belt.id)).flatMap(belt => belt.lanes).filter(lane => lane.ingredient !== '');
+    if (lanes.length === 0) return build.overrides?.backed_up_belts === true;
+    const unstated = build.overrides?.backed_up_belts === false ? 'infinite' : 'dead_end';
+    return lanes.every(lane => (lane.consumption_per_second !== undefined ? 'infinite' : lane.lane_end?.kind ?? unstated) === 'dead_end');
 }
 
 export function pickupGeometryOf(build: PickupBuild) {
@@ -69,5 +86,5 @@ export function pickupGeometryOf(build: PickupBuild) {
     const missing = inputs.filter(({source}) => source.pickup_layout
         ? source.pickup_length !== pickupLengthForLayout(source.pickup_layout)
         : source.pickup_length !== 1).map(i => i.id);
-    return { total: inputs.length, known: inputs.filter(i => !missing.includes(i.id) && !unverified.includes(i.id)).length, missing, unverified, unsupported, backedUp: build.overrides?.backed_up_belts === true };
+    return { total: inputs.length, known: inputs.filter(i => !missing.includes(i.id) && !unverified.includes(i.id)).length, missing, unverified, unsupported };
 }

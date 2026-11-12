@@ -18,9 +18,9 @@ const bend = fromBelt({ pickup_layout: 'bend-right-upstream', pickup_length: 1, 
     model_version: 3, entity_type: 'transport-belt', sidecar_version: '0.15.0' } });
 /** A pickup Sidecar recorded but the generator cannot use, and why */
 const unsupported = (reason: string) => fromBelt({ pickup_capture: { status: 'unsupported', entity_type: 'transport-belt', reason } });
-const STRAIGHT_DEFAULT = 'Moving input belts · Straight belt is the default. Choose the belt shape and pickup approach.';
-const BACKED_UP = 'Backed-up input belts · Saturated supply with captured pickup rules.';
-const KNOWN_FOR_ALL = 'Moving input belts · Pickup type known for all 1 belt-fed inserter.';
+const STRAIGHT_DEFAULT = 'Straight belt is the default. Choose the belt shape and pickup approach.';
+const BACKED_UP = 'Saturated supply with captured pickup rules.';
+const KNOWN_FOR_ALL = 'Pickup type known for all 1 belt-fed inserter.';
 
 /** The List row's picker and the diagram's, both of Inserter 3 */
 function showPickers(source: Source) {
@@ -36,15 +36,19 @@ it.each([
     { why: 'backed-up belts', build: { ...twoInputs, overrides: { backed_up_belts: true } }, savedRun: false, says: BACKED_UP },
     { why: 'a saved run of complete geometry', build: { inserters: [twoInputs.inserters[0]] }, savedRun: true, says: KNOWN_FOR_ALL },
     { why: 'a saved run of a measured right bend', build: { inserters: [inserter(4, { source: bend })] }, savedRun: true, says: KNOWN_FOR_ALL },
-])('explains the pickup assumption of $why without asking for a missing type', ({ build, savedRun, says }) => {
-    show(<PickupGeometrySummary build={build} savedRun={savedRun} onEdit={vi.fn()} />);
+    // a saved run says what the engine's belt of the clock shown is, whatever the belt setting
+    { why: 'a saved run whose clock the engine made for a backed-up belt', build: { inserters: [twoInputs.inserters[0]] }, savedRun: true, backedUp: true, says: BACKED_UP },
+    { why: 'a saved run whose clock the engine made for a moving belt, with backed_up_belts true', build: { inserters: [twoInputs.inserters[0]], overrides: { backed_up_belts: true } },
+        savedRun: true, backedUp: false, says: KNOWN_FOR_ALL },
+])('explains the pickup assumption of $why without asking for a missing type', ({ build, savedRun, says, ...clock }) => {
+    show(<PickupGeometrySummary build={build} savedRun={savedRun} onEdit={vi.fn()} {...clock} />);
     expect(screen.getByText(says)).toBeDefined();
-    expect(screen.queryByText(/missing|Saved results retain/)).toBeNull();
+    expect(screen.queryByText(/missing|Saved results retain|input belts/)).toBeNull();
     expect(screen.queryByRole('button')).toBeNull();
 });
 
 it.each([
-    { why: 'a legacy saved run', build: twoInputs, savedRun: true, says: 'Moving input belts · Pickup type known for 1 of 2 belt-fed inserters.', id: 3 },
+    { why: 'a legacy saved run', build: twoInputs, savedRun: true, says: 'Pickup type known for 1 of 2 belt-fed inserters.', id: 3 },
     { why: 'a moving underground pickup', build: underground, savedRun: false, says: STRAIGHT_DEFAULT, id: 4 },
     { why: 'a backed-up underground pickup', build: { ...underground, overrides: { backed_up_belts: true } }, savedRun: false, says: BACKED_UP, id: 4 },
 ])('asks for the pickup layout of each inserter that lacks one in $why', async ({ build, savedRun, says, id }) => {

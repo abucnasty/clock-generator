@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import type { ClockRanking, ClockVerdict } from 'clock-generator/browser';
 import { rateWarningOf } from './rateWarning';
 import { startCheckSummary } from './modelAssumptions';
-import { RECOMMENDED_COPY, type PickRule } from './recommendedClock';
 import {
     SUMMARY_COPY,
     beltCellText,
@@ -152,25 +151,21 @@ describe('pickNameMeaning', () => {
         clock('a', { wake_ups_per_minute: 8, window_count: 6, deciders: 10 }),
         clock('b', { wake_ups_per_minute: 12, window_count: 3, deciders: 6 }),
     ];
-    const meaning = (clocks: SummaryClock[], id: string, rule: PickRule | null = null) =>
-        pickNameMeaning(clocks, clocks.findIndex(it => it.id === id), rule);
-    /** The pick's reason for the clock with the fewest deciders of these contenders, on a moving belt unless told otherwise */
-    const reason = (contenders: string, belt = RECOMMENDED_COPY.beltMoving) =>
-        `Fewest deciders of the clocks that ${contenders}${belt}. This is the least wiring to do by hand.`;
+    const meaning = (clocks: SummaryClock[], id: string) => pickNameMeaning(clocks, clocks.findIndex(it => it.id === id));
+    /** The pick's reason for the clock with the fewest deciders of these contenders */
+    const reason = (contenders: string) => `Fewest deciders of the clocks that ${contenders}. This is the least wiring to do by hand.`;
     const recover = 'keep making 240/s and go back to it after a stop';
 
     // what is said of clock b
-    it.each<[string, SummaryClock[], PickRule | null, string]>([
+    it.each<[string, SummaryClock[], string]>([
         ['says what Fewest deciders is for, in the words of the pick\'s reason',
-            [clock('a', { wake_ups_per_minute: 8, deciders: 10, beltLabel: '' }), clock('b', { wake_ups_per_minute: 12, deciders: 6, beltLabel: '' })], null, reason(recover, '')],
-        ['names the moving belt the clocks are made for, as the reason does', decidersAndWakeUps(), null, reason(recover)],
-        ['names the backed-up belts the build asks for, as the reason does',
-            decidersAndWakeUps(), { backedUpBelts: true, searchedForFewerWakeUps: false }, reason(recover, RECOMMENDED_COPY.beltBackedUp)],
+            [clock('a', { wake_ups_per_minute: 8, deciders: 10, beltLabel: '' }), clock('b', { wake_ups_per_minute: 12, deciders: 6, beltLabel: '' })], reason(recover)],
+        ['names no belt, as the reason does not', decidersAndWakeUps(), reason(recover)],
         ['says the clocks that hold the rate on a build with a deadlock risk, as the reason does',
             [clock('a', { wake_ups_per_minute: 8, deciders: 10, deadlock: true }), clock('b', { wake_ups_per_minute: 12, deciders: 6, deadlock: true })],
-            null, reason('hold 240/s')],
-    ])('%s', (_, clocks, rule, expected) => {
-        expect(meaning(clocks, 'b', rule)).toBe(expected);
+            reason('hold 240/s')],
+    ])('%s', (_, clocks, expected) => {
+        expect(meaning(clocks, 'b')).toBe(expected);
     });
 
     it('has nothing to say of a clock without the chip', () => {
@@ -274,33 +269,24 @@ describe('makesText and wakeUpsText', () => {
 });
 
 describe('beltLine, beltValue and beltValueSub', () => {
-    const moving = { backedUpBelts: false, searchedForFewerWakeUps: false };
-    const backedUp = { backedUpBelts: true, searchedForFewerWakeUps: false };
-    const { beltLineMoving, beltLineBackedUp, beltLineNoSlack, beltMoving, beltBackedUp, beltNoSlackSub } = SUMMARY_COPY;
+    const { beltLineMoving, beltLineBackedUp, beltMoving, beltBackedUp } = SUMMARY_COPY;
 
-    // the line, the tile's word and the line under it
-    it.each<[string, PickRule | null, string, string, string, string | undefined]>([
-        ['says moving for a clock made for a moving belt', moving, 'moving (+4 ticks)', beltLineMoving, beltMoving, undefined],
-        ['says backed up when the build says so', backedUp, 'moving (+4 ticks)', beltLineBackedUp, beltBackedUp, undefined],
-        // #457: a clock made without belt slack in a run for moving belts was checked on moving belts
-        ['says moving, without belt slack, for a clock without slack in a run for moving belts', moving, 'backed-up', beltLineNoSlack, beltMoving, beltNoSlackSub],
-        ['says backed up for a clock without slack when the rule is not known', null, 'backed-up', beltLineBackedUp, beltBackedUp, undefined],
-        ['says there is no belt when no clocked inserter picks up from one', moving, '', SUMMARY_COPY.beltLineNone, SUMMARY_COPY.beltNone, SUMMARY_COPY.beltNoneSub],
-        ['says there is no belt without a rule either', null, '', SUMMARY_COPY.beltLineNone, SUMMARY_COPY.beltNone, SUMMARY_COPY.beltNoneSub],
-        ['goes by the label alone without a rule', null, 'moving (+2 ticks)', beltLineMoving, beltMoving, undefined],
-    ])('%s', (_, rule, label, line, value, sub) => {
-        expect([beltLine(rule, label), beltValue(rule, label), beltValueSub(rule, label)]).toEqual([line, value, sub]);
+    // the engine's belt for the clock: the line, the tile's word and the line under it
+    it.each<[string, string, string, string, string | undefined]>([
+        ['says moving for a clock the engine made for a moving belt', 'moving', beltLineMoving, beltMoving, undefined],
+        ['says backed up for a clock the engine made for a backed-up belt, whatever the belt setting', 'backed-up', beltLineBackedUp, beltBackedUp, undefined],
+        ['says moving for the label of a clock kept from an engine that gave slack', 'moving (+4 ticks)', beltLineMoving, beltMoving, undefined],
+        ['says there is no belt when no clocked inserter picks up from one', '', SUMMARY_COPY.beltLineNone, SUMMARY_COPY.beltNone, SUMMARY_COPY.beltNoneSub],
+    ])('%s', (_, label, line, value, sub) => {
+        expect([beltLine(label), beltValue(label), beltValueSub(label)]).toEqual([line, value, sub]);
     });
 });
 
 describe('beltCellText', () => {
-    it('says the belt in the belt question\'s words, with the slack', () => {
-        expect(beltCellText('moving (+4 ticks)')).toBe(SUMMARY_COPY.beltCellMoving('+4 ticks'));
-        expect(beltCellText('moving (+2–4 ticks)')).toBe(SUMMARY_COPY.beltCellMoving('+2–4 ticks'));
+    it('says the belt the engine made the clock for', () => {
+        expect(beltCellText('moving')).toBe(SUMMARY_COPY.beltMoving);
+        expect(beltCellText('moving (+4 ticks)')).toBe(SUMMARY_COPY.beltMoving);
         expect(beltCellText('backed-up')).toBe(SUMMARY_COPY.beltBackedUp);
-        expect(beltCellText('backed-up', { backedUpBelts: true, searchedForFewerWakeUps: false })).toBe(SUMMARY_COPY.beltBackedUp);
-        // in a run for moving belts, a clock without slack was checked on moving belts
-        expect(beltCellText('backed-up', { backedUpBelts: false, searchedForFewerWakeUps: false })).toBe(SUMMARY_COPY.beltCellNoSlack);
         expect(beltCellText('')).toBe('');
     });
 });

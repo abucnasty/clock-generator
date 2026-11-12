@@ -50,8 +50,6 @@ export const TERMS = [
 
 export const LEGEND_LABEL = 'Legend';
 export const LEGEND_WINDOW = 'Enable window';
-export const LEGEND_SLACK = 'Belt slack at the end of an enable window';
-export const BELT_SLACK_EXPLANATION = 'Belt slack: “+N ticks” marks the hatched tail already included in each enable window, allowing a late pickup from a moving belt to finish.';
 export const LEGEND_SELECTED = 'Selected enable window';
 export const LEGEND_TRACK = 'One window cycle';
 
@@ -89,7 +87,6 @@ export const WINDOWS_TABLE_HEADERS = {
     ends: 'Ends at tick',
     lengthTicks: 'Length (ticks)',
     lengthSeconds: 'Length (s)',
-    slack: 'Belt slack (ticks)',
 } as const;
 export const NO_WINDOWS_TEXT = 'None of the inserters and drills of this clock has an enable window.';
 
@@ -271,7 +268,7 @@ export function summaryText(args: { windowCycleTicks: number; inserters: number;
 
 /**
  * A row's accessible name, everything the row shows: "Inserter 3, Iron plate: Belt 1 to Machine 2. 2 windows: ticks
- * 0–28 and 212–240, the last 4 ticks of each are belt slack. On for 10% of the window cycle. Wake-ups/min: 12.3."
+ * 0–28 and 212–240. On for 10% of the window cycle. Wake-ups/min: 12.3."
  */
 export function rowSummary(
     row: WakeWindowRow,
@@ -285,9 +282,7 @@ export function rowSummary(
         parts.push(`${mode}.`);
     } else {
         const ticks = listText(row.windows.map(windowTicksText), SUMMARY_WINDOWS);
-        const slack = Math.max(0, ...row.windows.map(window => window.slackTicks));
-        const slackText = slack > 0 ? `, the last ${ticksText(slack)} of each are belt slack` : '';
-        parts.push(`${plural(row.windows.length, 'enable window', 'enable windows')}: ticks ${ticks}${slackText}.`);
+        parts.push(`${plural(row.windows.length, 'enable window', 'enable windows')}: ticks ${ticks}.`);
     }
     parts.push(`On for ${percentText(row.onShare)} of the window cycle of ${windowCycleText(windowCycleTicks)}.`);
     parts.push(`${wakeUpsRowText(row)}.`);
@@ -299,8 +294,8 @@ export function rowSummary(
 }
 
 /**
- * The details of a selected wake window: "Wake window 2 of 3: ticks 212–240 (29 ticks, 0.48 s), of which the last 4 ticks are
- * belt slack. The inserter reacts 2 ticks after the wake window opens."
+ * The details of a selected wake window: "Wake window 2 of 3: ticks 212–240 (29 ticks, 0.48 s). The inserter reacts 2 ticks
+ * after the wake window opens."
  */
 export function windowDetails(row: WakeWindowRow, index: number, windowCycleTicks: number): string {
     const window = row.windows[index];
@@ -310,11 +305,8 @@ export function windowDetails(row: WakeWindowRow, index: number, windowCycleTick
     const where = window.wraps
         ? `ticks ${num(window.start)}–${num(window.end)}, past the end of the window cycle of ${windowCycleText(windowCycleTicks)} and on from tick 0`
         : `ticks ${num(window.start)}–${num(window.end)}`;
-    const slack = window.slackTicks > 0
-        ? `, of which the last ${ticksText(window.slackTicks)} ${window.slackTicks === 1 ? 'is' : 'are'} belt slack`
-        : '';
     const reacts = `The ${row.kind} reacts ${ticksText(CIRCUIT_LATENCY_TICKS)} after the enable window opens.`;
-    return `${windowOrdinalText(index, row.windows.length)}: ${where} (${lengthText(window.length)})${slack}. ${reacts}`;
+    return `${windowOrdinalText(index, row.windows.length)}: ${where} (${lengthText(window.length)}). ${reacts}`;
 }
 
 /** What the live region says when a window is selected */
@@ -322,7 +314,7 @@ export function selectionAnnouncement(row: WakeWindowRow, index: number, windowC
     return `${row.label}. ${windowDetails(row, index, windowCycleTicks)}`;
 }
 
-export type WatchNoteKind = 'mostly-on' | 'slack' | 'short' | 'wraps' | 'most-woken' | 'never-woken';
+export type WatchNoteKind = 'mostly-on' | 'short' | 'wraps' | 'most-woken' | 'never-woken';
 
 /** What to watch for in a row, in the glossary's terms; empty for a row with nothing to say */
 export function watchNotes(
@@ -337,14 +329,6 @@ export function watchNotes(
                 text: `On for ${percentText(row.onShare)} of the window cycle, so the clock switches this one on almost all the time. `
                     // leans on the provisional wake-up definition: the first line to revisit when it changes
                     + 'The wakeups it saves are few.',
-            });
-        }
-        const slack = Math.max(0, ...row.windows.map(window => window.slackTicks));
-        if (slack > 0) {
-            notes.push({
-                id: 'slack',
-                text: `+${ticksText(slack)}: the last ${ticksText(slack)} of each enable window ${slack === 1 ? 'is' : 'are'} belt slack, `
-                    + 'so a late pickup from a moving belt can still finish.',
             });
         }
         const short = row.windows

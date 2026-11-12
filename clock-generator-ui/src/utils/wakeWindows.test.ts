@@ -7,7 +7,6 @@ import {
     barsToDraw,
     buildWakeWindowRows,
     coverage,
-    drawnSpans,
     lastTickOf,
     mostWokenRowId,
     nearestWindowIndex,
@@ -88,7 +87,6 @@ function source({ entities = [], ...extra }: SourceFields = {}): WakeWindowSourc
         stateTransitionHistory: { reasons: [], total_duration_ticks: 600, entities: entities.map(one => typeof one === 'string' ? entity(one) : one) },
         asBuilt: null,
         fuelView: null,
-        beltPickupSlackTicks: {},
         ...extra,
     };
 }
@@ -112,7 +110,7 @@ describe('normalizeWindows', () => {
     });
 
     it('joins a window that wraps past the end of the period into one with two segments', () => {
-        expect(normalize(100, [0, 4], [96, 99])).toEqual([{ start: 96, end: 4, length: 9, segments: spans([96, 99], [0, 4]), wraps: true, slackTicks: 0 }]);
+        expect(normalize(100, [0, 4], [96, 99])).toEqual([{ start: 96, end: 4, length: 9, segments: spans([96, 99], [0, 4]), wraps: true }]);
     });
 
     it('takes the last tick of a fractional period as its whole part', () => {
@@ -141,34 +139,16 @@ describe('coverage', () => {
     });
 });
 
-describe('drawnSpans', () => {
-    it('puts the slack at the end of a window', () => {
-        const [window] = normalize(100, [10, 19]);
-        expect(drawnSpans({ ...window, slackTicks: 4 })).toEqual([{ start: 10, end: 15, slack: false }, { start: 16, end: 19, slack: true }]);
-    });
-
-    it('puts the slack of a wrapped window in its part from tick 0', () => {
-        const [window] = normalize(100, [0, 1], [96, 99]);
-        expect(drawnSpans({ ...window, slackTicks: 3 })).toEqual([
-            { start: 96, end: 98, slack: false },
-            { start: 99, end: 99, slack: true },
-            { start: 0, end: 1, slack: true },
-        ]);
-    });
-});
-
 describe('barsToDraw', () => {
-    it('draws each segment of a window as a bar, the slack in it', () => {
-        const windows = normalize(100, [0, 1], [10, 19], [96, 99]).map(window => ({ ...window, slackTicks: 2 }));
-        expect(barsToDraw(windows, 0, null).map(bar => [bar.windowIndex, bar.start, bar.end, bar.spans.map(span => span.slack)]))
-            .toEqual([[1, 0, 1, [true]], [0, 10, 19, [false, true]], [1, 96, 99, [false]]]);
+    it('draws each segment of a window as a bar', () => {
+        const windows = normalize(100, [0, 1], [10, 19], [96, 99]);
+        expect(barsToDraw(windows, 0, null).map(bar => [bar.windowIndex, bar.start, bar.end])).toEqual([[1, 0, 1], [0, 10, 19], [1, 96, 99]]);
     });
 
     it('merges windows under a pixel wide that lie within a pixel of each other, but never the selected one', () => {
         const windows = normalize(1000, [0, 0], [2, 2], [4, 4], [50, 50]);
         const bars = barsToDraw(windows, 5, null);
         expect(bars.map(bar => [bar.windowIndex, bar.merged, bar.start, bar.end])).toEqual([[0, true, 0, 4], [3, false, 50, 50]]);
-        expect(bars[0].spans).toEqual([{ start: 0, end: 4, slack: false }]);
         expect(barsToDraw(windows, 5, 1).map(bar => [bar.windowIndex, bar.merged])).toEqual([[0, false], [1, false], [2, false], [3, false]]);
         expect(barsToDraw(windows, 1, null)).toHaveLength(4);
     });
@@ -249,14 +229,6 @@ describe('buildWakeWindowRows', () => {
         expect(wakeUps(asBuilt({ 'inserter:1': 12.5, 'inserter:2': 3, 'drill:1': 99 }))).toEqual([12.5, 3, null]);
         expect(wakeUps(null)).toEqual([null, null, null]);
         expect(wakeUps(asBuilt(null))).toEqual([null, null, null]);
-    });
-
-    it('caps the belt slack at the window, and has none in a fractional period or for an inserter without it', () => {
-        const clockWindows = { 'inserter:1': spans([0, 9], [100, 101]), 'inserter:2': spans([0, 9]) };
-        const slack = (simulationDurationTicks: number) => rowsOf({ clockWindows, beltPickupSlackTicks: { 'inserter:1': 4 }, simulationDurationTicks })
-            .map(row => row.windows.map(w => w.slackTicks));
-        expect(slack(600)).toEqual([[4, 2], [0]]);
-        expect(slack(550.957)).toEqual([[0, 0], [0]]);
     });
 });
 

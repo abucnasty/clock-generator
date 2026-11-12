@@ -4,7 +4,7 @@ import { build, inserter } from '../test/fixtures';
 import type { InserterFormData } from './configForm/formData';
 import { configToFormData, formDataToConfig } from './configForm/configMapping';
 import { endpointUpdate } from './inserterMetadata';
-import { pickupGeometryOf, pickupTypeOf, unsupportedPickupOf, withPickupType } from './pickupGeometry';
+import { pickupGeometryOf, takenLanesEndInDeadEnds, pickupTypeOf, unsupportedPickupOf, withPickupType } from './pickupGeometry';
 import { configKeyOf, generatedForOf, isStale } from './resultsStaleness';
 
 type Source = InserterFormData['source'];
@@ -98,8 +98,28 @@ describe('pickup type edits and saved assumptions', () => {
             { id: 7, source: withPickupType(source, 'side-straight') }, { id: 9, source },
             { source: { type: 'machine' } }, { source: { type: 'belt' } },
         ];
-        expect(pickupGeometryOf({ inserters })).toEqual({ total: 3, known: 1, missing: [9, 4], unverified: [], unsupported: [], backedUp: false });
-        expect(pickupGeometryOf({ inserters, overrides: { backed_up_belts: true } }).backedUp).toBe(true);
+        expect(pickupGeometryOf({ inserters })).toEqual({ total: 3, known: 1, missing: [9, 4], unverified: [], unsupported: [] });
+    });
+});
+
+describe('takenLanesEndInDeadEnds', () => {
+    const takes = [{ source: { type: 'belt', id: 1 } }];
+    const belt = (...lanes: { ingredient: string; lane_end?: { kind: string }; consumption_per_second?: number }[]) => [{ id: 1, lanes }];
+
+    it('reads a lane that states no end as its role gives it, a dead end, unless the belt setting is Moving', () => {
+        expect(takenLanesEndInDeadEnds({ inserters: takes, belts: belt({ ingredient: 'iron-plate' }) })).toBe(true);
+        expect(takenLanesEndInDeadEnds({ inserters: takes, belts: belt({ ingredient: 'iron-plate' }), overrides: { backed_up_belts: false } })).toBe(false);
+    });
+
+    it('keeps the end a lane states, and reads an export lane as an infinite end', () => {
+        expect(takenLanesEndInDeadEnds({ inserters: takes, belts: belt({ ingredient: 'iron-plate', lane_end: { kind: 'dead_end' } }), overrides: { backed_up_belts: false } })).toBe(true);
+        expect(takenLanesEndInDeadEnds({ inserters: takes, belts: belt({ ingredient: 'iron-plate', lane_end: { kind: 'infinite' } }) })).toBe(false);
+        expect(takenLanesEndInDeadEnds({ inserters: takes, belts: belt({ ingredient: 'iron-plate', consumption_per_second: 5 }) })).toBe(false);
+    });
+
+    it('answers as the belt setting where no inserter takes from a lane of a belt it knows', () => {
+        expect(takenLanesEndInDeadEnds({ inserters: [] })).toBe(false);
+        expect(takenLanesEndInDeadEnds({ inserters: takes, overrides: { backed_up_belts: true } })).toBe(true);
     });
 });
 

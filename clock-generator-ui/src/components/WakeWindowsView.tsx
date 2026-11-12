@@ -8,10 +8,8 @@ import type { ClockAlternativeView } from '../worker/types';
 import { buildWakeWindowRows, mostWokenRowId, sumWakeUps, wakeUpsCounted } from '../utils/wakeWindows';
 import {
     KEYBOARD_HINT,
-    BELT_SLACK_EXPLANATION,
     LEGEND_LABEL,
     LEGEND_SELECTED,
-    LEGEND_SLACK,
     LEGEND_TRACK,
     LEGEND_WINDOW,
     NOT_COUNTED_NOTE,
@@ -25,7 +23,6 @@ import {
 } from '../utils/wakeWindowCopy';
 import {
     FORCED_COLORS,
-    SLACK_BACKGROUND_FORCED,
     WakeWindowsChart,
 } from './WakeWindowsChart';
 import { WakeWindowsTable } from './WakeWindowsTable';
@@ -50,25 +47,13 @@ interface WakeWindowsViewProps {
 }
 
 /** The shape each mark of the chart has, so the legend tells them apart without colour */
-function LegendSwatch({ kind }: { kind: 'window' | 'slack' | 'selected' | 'track' }) {
+function LegendSwatch({ kind }: { kind: 'window' | 'selected' | 'track' }) {
     // in forced colours, the system colours the chart uses (see FORCED_COLORS)
     const base = { width: 28, height: 12, boxSizing: 'border-box', flexShrink: 0, forcedColorAdjust: 'none' } as const;
     const solid = { bgcolor: BELT_CHART.entity.inserter, border: '1px solid', borderColor: 'text.secondary', [FORCED_COLORS]: { bgcolor: 'CanvasText' } } as const;
     switch (kind) {
         case 'window':
             return <Box aria-hidden sx={{ ...base, ...solid }} />;
-        case 'slack':
-            return (
-                <Box
-                    aria-hidden
-                    sx={{
-                        ...base,
-                        background: `repeating-linear-gradient(45deg, ${BELT_CHART.entity.inserter} 0 3px, #000000 3px 6px)`,
-                        border: '1px solid', borderColor: 'text.secondary',
-                        [FORCED_COLORS]: { background: SLACK_BACKGROUND_FORCED, borderColor: 'CanvasText' },
-                    }}
-                />
-            );
         case 'selected':
             return (
                 <Box
@@ -90,9 +75,8 @@ function LegendSwatch({ kind }: { kind: 'window' | 'slack' | 'selected' | 'track
     }
 }
 
-const LEGEND: { kind: 'window' | 'slack' | 'selected' | 'track'; text: string }[] = [
+const LEGEND: { kind: 'window' | 'selected' | 'track'; text: string }[] = [
     { kind: 'window', text: LEGEND_WINDOW },
-    { kind: 'slack', text: LEGEND_SLACK },
     { kind: 'selected', text: LEGEND_SELECTED },
     { kind: 'track', text: LEGEND_TRACK },
 ];
@@ -213,9 +197,6 @@ function WakeWindowsViewComponent({ alternative, config, cycleView = false, head
                         <Typography id={hintId} variant="caption" color="text.secondary" component="p" sx={{ mb: 1 }}>
                             Select an enable window for details. Use ↑ ↓ to change rows and ← → to step through enable windows.
                         </Typography>
-                        {rows.some(row => row.windows.some(window => window.slackTicks > 0)) && <Typography variant="caption" color="text.secondary" component="p" sx={{ mb: 1 }}>
-                            {BELT_SLACK_EXPLANATION}
-                        </Typography>}
                         <WakeWindowsChart
                             range={inspection?.range}
                             tick={inspection?.tick}

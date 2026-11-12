@@ -30,7 +30,8 @@ const OWN_OVERRIDES = ['backed_up_belts', 'search_for_fewer_wake_ups'];
 /** The parts of a config this file names a change in; anything else that changed is "other settings" */
 const NAMED_PARTS = ['setpoint', 'machines', 'inserters', 'belts', 'chests', 'drills', 'overrides'];
 
-const beltsText = (config: Config) => (config.overrides?.backed_up_belts === true ? 'backed up' : 'moving');
+/** The end the belt setting gives a lane that states none: Moving (false) an infinite end, true a dead end, none the lane's role */
+const unstatedEndsText = (config: Config) => ({ false: 'infinite', true: 'dead end', undefined: 'by role' })[`${config.overrides?.backed_up_belts}` as 'false' | 'true' | 'undefined'];
 const onOff = (on: boolean) => (on ? 'on' : 'off');
 
 /** "Inserters (5 → 4)" when the count changed, else "Inserter 3" or "Inserters 3, 5" for the ones that changed */
@@ -78,8 +79,8 @@ export function buildChangesOf(generated: Config, current: Config, recipeLabel: 
     if (Boolean(generated.drills) !== Boolean(current.drills) && !changes.some((it) => it.startsWith('Drills'))) {
         changes.push(`Mining drills (${onOff(Boolean(generated.drills))} → ${onOff(Boolean(current.drills))})`);
     }
-    if (beltsText(generated) !== beltsText(current)) {
-        changes.push(`Input belts (${beltsText(generated)} → ${beltsText(current)})`);
+    if (unstatedEndsText(generated) !== unstatedEndsText(current)) {
+        changes.push(`Unstated lane ends (${unstatedEndsText(generated)} → ${unstatedEndsText(current)})`);
     }
     const deeperBefore = generated.overrides?.search_for_fewer_wake_ups === true;
     const deeperAfter = current.overrides?.search_for_fewer_wake_ups === true;

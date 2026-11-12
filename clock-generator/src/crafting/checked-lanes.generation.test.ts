@@ -64,7 +64,7 @@ describe("what was checked on the lanes the copies of the automation science 240
         expect(cause.where.text).toBe("The inserter of copy 4 that drops automation science pack misses 42 of its 378 swings in 63 window cycles, and so does that of copy 8. "
             + "84 of the 336 swings each one makes wait for room.");
         expect(cause.alone.text).toBe("The same inserter makes all 378 swings. The clock is right for one copy.");
-        expect(cause.changes!.text).toContain("Another clock of this build has no full join: Time-Study Windows, window cycle 216 ticks.");
+        expect(cause.changes!.text).toBe("With 3 copies, every copy makes every swing. Another clock of this build has no full join: Time-Study Windows, window cycle 216 ticks.");
     });
 
     it("on the stable time study windows clock: the line and three rows that hold, with the waits at the join counted", () => {
@@ -77,6 +77,15 @@ describe("what was checked on the lanes the copies of the automation science 240
             { at: "2/1", together: "drop 240", label: "Holds", sentence: "Copies 4 and 8 wait for room at their join in 128 of their 384 swings. No swing is missed." },
         ]);
         expect(clock.checked_lanes!.cause).toBeNull();
+    });
+
+    it("gives the description's sentences on a shared-lane loss as a field of their own, word for word", () => {
+        for (const [id, lead] of [["euclidean_swings", "It is not stable on a lane its copies share. "], ["takt_batches_observed", "It is not stable on its output belt. "]]) {
+            const clock = clockOf(result, id);
+            expect(clock.shared_lane_loss_note!.startsWith(lead)).toBe(true);
+            expect(clock.description).toContain(` ${clock.shared_lane_loss_note}`);
+        }
+        expect(clockOf(result, "time_study_windows").shared_lane_loss_note).toBeUndefined();
     });
 });
 

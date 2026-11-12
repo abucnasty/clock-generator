@@ -10,8 +10,6 @@ import { Entity, EntityId } from "../entities";
 import { FactorioBlueprint } from "../blueprints/blueprint";
 import { withNetwork } from "./inserter-counters";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
-import { laneFactsOfConfig } from "../entities/traits/build-traits";
-import { everyInputLaneIsDeadEnd } from "../entities/traits/lane-ends";
 import { decimalOf } from "../entities/traits/ratio";
 import { machinesInOrder, traitsOf } from "../entities/traits/traits-of";
 import { Logger, defaultLogger } from "../common/logger";
@@ -92,6 +90,12 @@ export interface ClockAlternative {
      * stable on a shared lane the parts of its cause; absent for a build of one copy
      */
     checked_lanes?: CheckedLanes;
+    /**
+     * The sentences of the description on a loss on the lanes its copies share, word for word as the description has them
+     * after a space ("It is not stable on a lane its copies share. ..."), so that a page that shows the parts of the cause
+     * can leave them out; absent where the description has none
+     */
+    shared_lane_loss_note?: string;
     result: BlueprintGenerationResult;
 }
 
@@ -1180,8 +1184,9 @@ function runAlternativeOf(
         const disturbance_trial = withCopiesTrial(trial.loss.disturbance_trial, copies_trial);
         const start_dependence_note = trial.start_dependence === null ? null
             : startDependenceNote(trial.start_dependence, items => itemsPerSecondOverCopies(items, trial.clock_window_cycle, copies));
+        const loss_note = sharedLaneLossNote(shared_lane_losses);
         const description = withResolvedName(definition, definition.description, strategy) + moved_note + shifted_note + belt_note + planning_note + asBuiltNotes(as_built, expected_output_items)
-            + disturbanceTrialNote(disturbance_trial, disturbance_trial_not_tried) + sharedLaneLossNote(shared_lane_losses)
+            + disturbanceTrialNote(disturbance_trial, disturbance_trial_not_tried) + loss_note
             + (start_dependence_note === null ? "" : ` ${start_dependence_note[0].toUpperCase()}${start_dependence_note.slice(1)}`) + row.description_suffix;
         // what a clock that holds says about the build is read from it, whether it gets back from a loss or not
         const insights = [
@@ -1209,7 +1214,7 @@ function runAlternativeOf(
         const listed_strategy = strategyListedAs(strategy, row.listing ?? {});
         const checked_lanes = checkedLanes(tried_as, copies_trial);
         const clock = { id: alternativeIdOf(listed_strategy, definition), maker: row.id, label: row.label, description, result: row.result, ...(row.rounded && { rounded: row.rounded }),
-            ...(checked_lanes !== null && { checked_lanes }),
+            ...(checked_lanes !== null && { checked_lanes }), ...(loss_note !== "" && { shared_lane_loss_note: loss_note.trimStart() }),
             inserter_window_count, deciders: windowDeciderCount(row.result.blueprint), ranking_window_count, assessment, verdict: clockVerdictOf(assessment), deadlock_risks, belt, insights,
             strategy: listed_strategy };
         const ranking = rankingOf(clock, config);
@@ -1724,7 +1729,6 @@ export function whyNotStableOf(
         as_built: alternative.result.stability_check.as_built, expected_output_items: alternative.result.stability_check.expected_output_items }));
     return whyNotStable(clocks, selected_index, {
         target_items_per_second: config.setpoint.items_per_second,
-        backed_up_belts: everyInputLaneIsDeadEnd(config, laneFactsOfConfig(config)),
         not_made,
         entity_names: entityNamesInSentence(config),
     });

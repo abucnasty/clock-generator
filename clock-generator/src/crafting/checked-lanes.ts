@@ -7,6 +7,7 @@ import { fractionOf, Ratio } from "../entities/traits/ratio";
 import { buildToNameOf } from "./build-names";
 import { capitalized, chestNameInText, inserterNameInText, lanesInSentence, listedInText, textWords, theName, type BuildToName } from "./entity-name";
 import { machineNameInText } from "./machine-name";
+import { figure } from "./other-clocks";
 import type { CopiesTrialVerdict } from "./shared-lane-trial";
 import { droppedOntoSharedLanes, isNotChecked, type ClockSharedLaneLoss, type MissedSwingStops, type SharedLaneJudgement, type SharedLaneLoss,
     type SharedLaneLossFacts } from "./shared-lane-verdict";
@@ -151,12 +152,6 @@ export interface CheckedLanesInput {
 /** A rate as data: a decimal to the ninth place, so that a sum of float rates reads as the rate it is */
 const rounded = (value: number) => Math.round(value * 1e9) / 1e9;
 const ratio = (value: Ratio) => rounded(fractionOf(value).toDecimal());
-
-/** A number as the texts write it: "120", "26.67", "1,234" */
-function figure(value: number): string {
-    const rounded = Math.round(value * 100) / 100;
-    return rounded.toLocaleString("en-US", { maximumFractionDigits: 2 });
-}
 
 /** Where the end of lane `index` of `belt` comes from */
 function endGivenBy(config: Config, belt: Config["belts"][number], index: number): LaneEndGivenBy {
@@ -460,8 +455,9 @@ function causeOf(input: { config: Config; build: BuildToName; losses: readonly S
     const kind = lane_losses.length > 0 ? "lane" as const : "join" as const;
     const ran = input.lanes.map(key => { const [belt_id, lane] = key.split("/").map(Number); return { belt_id, lane }; });
     const changes = (other: string | null): SharedLaneCause["changes"] => {
+        // at a full join the copies are fewer on the output belt as well as on the lanes they take from: the lanes are not named
         const fewer_text = fewer?.copies === null || fewer?.copies === undefined ? null
-            : `With ${figure(fewer.copies)} ${fewer.copies === 1 ? "copy" : "copies"} on ${lanesNamed(ran, config, build)}, every copy makes every swing.`;
+            : `With ${figure(fewer.copies)} ${fewer.copies === 1 ? "copy" : "copies"}${kind === "join" ? "" : ` on ${lanesNamed(ran, config, build)}`}, every copy makes every swing.`;
         return fewer_text === null && other === null ? null : { text: [fewer_text, other].filter(it => it !== null).join(" "),
             data: { fewer_copies: fewer?.copies ?? null, other_clock: null } };
     };
@@ -597,28 +593,5 @@ function causeOf(input: { config: Config; build: BuildToName; losses: readonly S
     };
 }
 
-/**
- * Each clock's "what changes it" with another clock of the same result that holds with all the copies: a clock run with
- * the copies, stable, with no row short or at a full join; the selected clock where it is one, else the first listed.
- * "Another clock of this build holds with all 9: <its name>, window cycle 216 ticks." For a full join: "Another clock of
- * this build has no full join: ...".
- */
-export function withOtherClocks<T extends { id: string; label: string; verdict: string; checked_lanes?: CheckedLanes; result: { simulation_duration: { ticks: number } } }>(
-    alternatives: readonly T[], selected_index: number, copies: number): T[] {
-    const holding = (it: T) => it.verdict === "stable" && it.checked_lanes !== undefined && it.checked_lanes.line.run_with_copies
-        && it.checked_lanes.rows.every(row => row.state.kind !== "short" && row.state.kind !== "join_full");
-    const order = [alternatives[selected_index], ...alternatives.filter((_, index) => index !== selected_index)].filter(it => it !== undefined);
-    return alternatives.map(alternative => {
-        const cause = alternative.checked_lanes?.cause;
-        if (cause === null || cause === undefined) return alternative;
-        const other = order.find(it => it !== alternative && holding(it));
-        if (other === undefined) return alternative;
-        const name = other.label.split(":")[0];
-        const window_cycle_ticks = other.result.simulation_duration.ticks;
-        const text = cause.kind === "join" ? `Another clock of this build has no full join: ${name}, window cycle ${figure(window_cycle_ticks)} ticks.`
-            : `Another clock of this build holds with all ${figure(copies)}: ${name}, window cycle ${figure(window_cycle_ticks)} ticks.`;
-        const changes = { text: cause.changes === null ? text : `${cause.changes.text} ${text}`,
-            data: { fewer_copies: cause.changes?.data.fewer_copies ?? null, other_clock: { id: other.id, label: other.label, window_cycle_ticks } } };
-        return { ...alternative, checked_lanes: { ...alternative.checked_lanes!, cause: { ...cause, changes } } };
-    });
-}
+/** Each clock's "what changes it" with another clock of the same result (other-clocks.ts) */
+export { withOtherClocks } from "./other-clocks";

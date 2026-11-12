@@ -167,12 +167,10 @@ function shortfallOf(clock: WhyNotStableClock): string {
     return `${figure(output.items)} of ${clock.expected_output_items} items a window cycle`;
 }
 
-/** What the config says of its belts and its target, which every clock of a generation shares */
+/** What the config says of its target, which every clock of a generation shares */
 export interface WhyNotStableBuild {
     /** The target over all copies, as the clocks' rates are */
     target_items_per_second: number;
-    /** The config says its input belts are backed up (`overrides.backed_up_belts`) */
-    backed_up_belts: boolean;
     not_made: readonly NotMadeClock[];
     /**
      * The names a sentence gives the build's belts, inserters and chests, by entity id ("inserter:3"): by their items, in
@@ -203,17 +201,12 @@ function insertersNamed(ids: readonly (string | number)[], build: Pick<WhyNotSta
     return insertersNumbered(numbers);
 }
 
-/** Said of a moving-belt clock on a config whose belts move; not promised, since no clock is generated to show it */
-const BACKED_UP_MAY_HOLD = " If the input belts back up at their pickups, answer Backed up for the belts and generate again: "
-    + "a clock may hold then.";
-
 function movingLanePhases(clock: WhyNotStableClock, build: WhyNotStableBuild): WhyNotStable | null {
     if (!clock.moving_belt) {
         return null;
     }
     const lead = `The recommended clock (${clock.label}) is made for a moving belt. It holds the setpoint from the modeled start`;
-    const in_the_game = "In the game a belt's lanes reach the pickups in whatever phase they happen to have, so the build can fall short."
-        + (build.backed_up_belts ? "" : BACKED_UP_MAY_HOLD);
+    const in_the_game = "In the game a belt's lanes reach the pickups in whatever phase they happen to have, so the build can fall short.";
     if (clock.verdict === "unstable" && clock.failed_pickup_phases !== undefined) {
         const shortfall = shortfallOf(clock);
         return {

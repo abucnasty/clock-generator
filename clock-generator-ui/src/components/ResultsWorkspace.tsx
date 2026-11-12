@@ -32,6 +32,7 @@ import { beltValue, wakeUpsText } from '../utils/clockSummary';
 import { fullClockName } from '../utils/strategyNames';
 import { rateWarningOf } from '../utils/rateWarning';
 import { whyNotStableOf } from '../utils/whyNotStable';
+import { insightsShown, madeForLead } from '../utils/checkedLanes';
 import type { GeneratedFor } from '../utils/resultsStaleness';
 import type { PickRule } from '../utils/recommendedClock';
 import { deeperSearchNoticeOf } from '../utils/deeperSearch';
@@ -167,12 +168,12 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
         clock.counts === 'destroyed' ? HANDS_TEXT.clock(clock.terminalSwingCount)
             : `${clock.terminalSwingCount} ${clock.terminalSwingCount === 1 ? 'swing' : 'swings'}`,
         wakeUpsText(clock).value.replace(' a minute', ' wakeups/min'),
-        clock.beltLabel ? beltValue(props.pickRule, clock.beltLabel) : '',
+        clock.beltLabel ? beltValue(clock.beltLabel) : '',
     ].filter(Boolean).join(' · ');
     const rateWarning = rateWarningOf(selected);
     // said of the whole run once it is done: while clocks still arrive, a stable one may yet come
     const whyNotStable = props.isRunning ? null
-        : whyNotStableOf(props.alternatives, props.recommendedIndex, saved?.overrides?.backed_up_belts === true, props.notMade);
+        : whyNotStableOf(props.alternatives, props.recommendedIndex, props.notMade);
     const noticeKind = deeperSearchNoticeOf({
         searchesSkipped: props.skippedSearches.length > 0,
         searchedDeeper: props.searchedDeeper,
@@ -210,7 +211,6 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 selectedIndex={props.selectedIndex}
                 recommendedIndex={props.recommendedIndex}
                 onSelectRecommended={selectRecommended}
-                pickRule={props.pickRule}
                 isGenerating={props.isRunning}
                 stoppedEarly={props.stoppedEarly}
                 rateWarning={rateWarning}
@@ -226,14 +226,14 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 </Button></Box>}
                 runAssumptions={selected && <Box data-result-assumptions sx={{ overflowWrap: 'anywhere' }}>
                     <Typography variant="body2">
-                        {saved ? `Made for ${saved.setpoint.copies} ${saved.setpoint.copies === 1 ? 'copy' : 'copies'} of your build${selected.beltLabel === '' ? '' : `, with the input belts ${saved.overrides?.backed_up_belts ? 'backed up' : 'moving'}`}.` : 'These results are for a saved build whose metadata is unavailable.'}
+                        {madeForLead(saved, selected)}
                         {selected.assumptions?.kickStarts.length ? ` ${selected.assumptions.kickStarts.length} modeled kick start(s).` : ''}
                         {selected.assumptions?.outputDrops.some(drop => drop.mode === 'shared-lanes') ? ' The drop positions you gave are used to space the output drops on the belt.' : ''}
                         {freeLaneBelts.length > 0 ? ` ${freeLaneDropText(freeLaneBelts.map(id => entityInSentence('belt', id, selected?.assumptions?.entityNames)).join(' and '))}` : ''}
                         {selected.assumptions?.machineFuel.length ? ' Imported machine fuel is in Why.' : ''}
                     </Typography>
                     {saved?.inserters && <InserterAssumptions inserters={saved.inserters} />}
-                    {saved && <PickupGeometrySummary build={saved} savedRun onEdit={props.staleFor ? undefined : props.onEditPickup} busy={props.isRunning} />}
+                    {saved && <PickupGeometrySummary build={saved} savedRun backedUp={selected.belt ? selected.belt.kind === 'backed_up' : selected.beltLabel === 'backed-up'} onEdit={props.staleFor ? undefined : props.onEditPickup} busy={props.isRunning} />}
                 </Box>}
             />
 
@@ -289,7 +289,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                         }}
                         assumptions={saved?.inserters ? <InserterAssumptions inserters={saved.inserters} detailed /> : <Typography variant="body2">Saved inserter metadata unavailable.</Typography>}>
                         <DetailsPanel
-                            insights={selected.insights}
+                            insights={insightsShown(selected)}
                             shiftOptions={props.shiftOptions}
                             swingBackoffReport={props.swingBackoffReport}
                             fuelView={props.fuelView}
@@ -300,7 +300,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
 
             {selected && <InstallClockDialog open={props.installOpen} onClose={props.onInstallClose}
                 selected={selected} blueprintString={props.blueprintString} staleFor={props.staleFor}
-                copyLabel={props.copyLabel} copied={props.copied} onCopy={props.onCopy} pickRule={props.pickRule} />}
+                copyLabel={props.copyLabel} copied={props.copied} onCopy={props.onCopy} />}
 
             {/* Debug logging remains opt-in; timelines are available in the normal workspace. */}
             {props.developerTools && (

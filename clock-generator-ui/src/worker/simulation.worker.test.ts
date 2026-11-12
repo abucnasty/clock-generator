@@ -465,6 +465,19 @@ it('passes on the clock made with shared windows after the clock it shares, with
     expect(primary?.also?.flatMap(run => run.alternatives.map(it => [it.id, it.deciders, it.verdict]))).toEqual([['round_robin_polling_shared', 4, 'stable']]);
 }, 30_000);
 
+// a real plan of five copies, as above
+it('passes on what was checked on the shared lanes of each clock, and every lane of the build', async () => {
+    const { primary } = await primaryOf(JSON.parse(militarySample) as Config);
+    const [clock] = primary!.alternatives;
+    expect(clock.checkedLanes?.line).toMatchObject({ run_with_copies: true, copies: 5, plain_output_belts: 2 });
+    expect(clock.checkedLanes?.rows.map(row => [row.belt_id, row.lane, row.state.kind])).toEqual([
+        [1, 1, 'rate_fits'], [2, 1, 'rate_fits'], [3, 1, 'holds'], [3, 2, 'holds'], [4, 1, 'holds'], [4, 2, 'holds']]);
+    // the coal lanes are one per copy: in the list of lanes, with no row
+    expect(clock.assumptions.lanes?.map(lane => [lane.belt_id, lane.lane, lane.role, lane.sharing])).toEqual([
+        [1, 1, 'output', 'shared'], [2, 1, 'output', 'shared'], [3, 1, 'input', 'shared'], [3, 2, 'input', 'shared'], [4, 1, 'input', 'shared'],
+        [4, 2, 'input', 'shared'], [5, 1, 'input', 'per_copy'], [5, 2, 'input', 'per_copy'], [6, 1, 'input', 'per_copy'], [6, 2, 'input', 'per_copy']]);
+}, 30_000);
+
 describe('a build that states no lane end and no belt setting', () => {
     /** The military sample with no lane end and no belt setting stated: the engine gives each lane the end of its role */
     const statingNothing = () => {
