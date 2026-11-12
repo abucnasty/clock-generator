@@ -483,7 +483,7 @@
    "verdict": "unstable",
    "window_cycle_ticks": 72,
    "copies": 9,
-   "description": "Takt Batches with fractional swings turned on: an inserter that needs e.g. 3/2 swings each output cycle alternates between 1 and 2 swings instead of rounding, which can need fewer or shorter enable windows. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. It is not stable on a lane its copies share. The iron gear wheel lane ends in a dead end. The 9 copies take iron gear wheel from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 3 of its 65 swings with iron gear wheel in 65 window cycles.",
+   "description": "Takt Batches with fractional swings turned on: an inserter that needs e.g. 3/2 swings each output cycle alternates between 1 and 2 swings instead of rounding, which can need fewer or shorter enable windows. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. It is not stable on a lane its copies share. The iron gear wheel lane ends in a dead end. The 9 copies take iron gear wheel from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 3 of its 65 swings with iron gear wheel in 65 window cycles.",
    "belt": {
     "kind": "backed_up"
    },
@@ -528,7 +528,7 @@
        "target": 1040,
        "behind": 48
       },
-      "text": "The iron gear wheel lane ends in a dead end. The 9 copies take iron gear wheel from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 3 of its 65 swings with iron gear wheel in 65 window cycles."
+      "text": "The iron gear wheel lane ends in a dead end. The 9 copies take iron gear wheel from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 3 of its 65 swings with iron gear wheel in 65 window cycles."
      },
      {
       "belt_id": 1,
@@ -557,7 +557,7 @@
        "target": 1040,
        "behind": 48
       },
-      "text": "The copper plate lane ends in a dead end. The 9 copies take copper plate from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 3 of its 65 swings with copper plate in 65 window cycles."
+      "text": "The copper plate lane ends in a dead end. The 9 copies take copper plate from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 3 of its 65 swings with copper plate in 65 window cycles."
      }
     ]
    },
@@ -633,7 +633,7 @@
      "explanation": ""
     }
    ],
-   "shared_lane_loss_note": "It is not stable on a lane its copies share. The iron gear wheel lane ends in a dead end. The 9 copies take iron gear wheel from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 3 of its 65 swings with iron gear wheel in 65 window cycles.",
+   "shared_lane_loss_note": "It is not stable on a lane its copies share. The iron gear wheel lane ends in a dead end. The 9 copies take iron gear wheel from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 3 of its 65 swings with iron gear wheel in 65 window cycles.",
    "checked_lanes": {
     "line": {
      "copies": 9,
@@ -795,8 +795,15 @@
        ]
       }
      },
+     "reason": {
+      "code": "belt_gaps",
+      "data": {
+       "missed": 6,
+       "with_gap": 3
+      }
+     },
      "spacing": {
-      "text": "The copies stand 9 tiles apart. An item takes 72 ticks from one copy to the next, and the window cycle is 72 ticks. The 9 copies take every copper plate the lane brings, so the gap does not close on the way.",
+      "text": "The copies stand 9 tiles apart. It takes 72 ticks for items to travel between copies, and the window cycle is 72 ticks. The 9 copies take every copper plate the lane brings, so the gap does not close on the way.",
       "data": {
        "step_tiles": 9,
        "travel_ticks": 72,
@@ -1136,7 +1143,7 @@
     {
      "id": "unstable",
      "scope": "clock",
-     "title": "This clock does not hold the setpoint",
+     "title": "This clock underproduces",
      "what": "Driven only by its enable windows, the build moved 48 of 64 items in a window cycle. The build repeats every 2 window cycles and moves 96 of 128 items over them.",
      "why": "A clock has to work from wherever the machines happen to be when it starts, so it is simulated from several start points. A swing that arrives while its machine is at an insertion limit, out of ingredients or without a full hand does nothing useful, and once a machine has waited longer than its spare time it cannot catch up.",
      "explanation": "Use a clock marked Stable. If none is, lower the setpoint, force fewer output swings (which gives the machines more buffer between swings), or yell at abuc to go fix his algorithm by opening an issue on GitHub (https://github.com/abucnasty/clock-generator/issues/new)."
@@ -1288,7 +1295,7 @@
     {
      "id": "unstable",
      "scope": "clock",
-     "title": "This clock does not hold the setpoint",
+     "title": "This clock underproduces",
      "what": "Driven only by its enable windows, the build moved 128 of 160 items in a window cycle.",
      "why": "A clock has to work from wherever the machines happen to be when it starts, so it is simulated from several start points. A swing that arrives while its machine is at an insertion limit, out of ingredients or without a full hand does nothing useful, and once a machine has waited longer than its spare time it cannot catch up.",
      "explanation": "Use a clock marked Stable. If none is, lower the setpoint, force fewer output swings (which gives the machines more buffer between swings), or yell at abuc to go fix his algorithm by opening an issue on GitHub (https://github.com/abucnasty/clock-generator/issues/new)."
@@ -1440,7 +1447,7 @@
     {
      "id": "unstable",
      "scope": "clock",
-     "title": "This clock does not hold the setpoint",
+     "title": "This clock underproduces",
      "what": "Driven only by its enable windows, the build moved 64 of 96 items in a window cycle.",
      "why": "A clock has to work from wherever the machines happen to be when it starts, so it is simulated from several start points. A swing that arrives while its machine is at an insertion limit, out of ingredients or without a full hand does nothing useful, and once a machine has waited longer than its spare time it cannot catch up.",
      "explanation": "Use a clock marked Stable. If none is, lower the setpoint, force fewer output swings (which gives the machines more buffer between swings), or yell at abuc to go fix his algorithm by opening an issue on GitHub (https://github.com/abucnasty/clock-generator/issues/new)."
@@ -1529,7 +1536,7 @@
    "verdict": "unstable",
    "window_cycle_ticks": 72,
    "copies": 9,
-   "description": "Takt Batches with the output inserter limited to 2 swings each output cycle instead of 3. The output machine buffers more between swings; useful when the higher swing count is unstable. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. The planning simulation moved 16 of 32 items each window cycle; stability is judged by the clock-only check, which runs the enable windows of the blueprint. In the clock-only check the build repeats every 4 window cycles instead of every window cycle, moving 128 of 128 items over them. It is not stable on a lane its copies share. The copper plate lane ends in a dead end. The 9 copies take copper plate from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 9 of its 65 swings with copper plate in 65 window cycles.",
+   "description": "Takt Batches with the output inserter limited to 2 swings each output cycle instead of 3. The output machine buffers more between swings; useful when the higher swing count is unstable. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. The planning simulation moved 16 of 32 items each window cycle; stability is judged by the clock-only check, which runs the enable windows of the blueprint. In the clock-only check the build repeats every 4 window cycles instead of every window cycle, moving 128 of 128 items over them. It is not stable on a lane its copies share. The copper plate lane ends in a dead end. The 9 copies take copper plate from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 9 of its 65 swings with copper plate in 65 window cycles.",
    "belt": {
     "kind": "backed_up"
    },
@@ -1574,7 +1581,7 @@
        "target": 1040,
        "behind": 137
       },
-      "text": "The copper plate lane ends in a dead end. The 9 copies take copper plate from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 9 of its 65 swings with copper plate in 65 window cycles."
+      "text": "The copper plate lane ends in a dead end. The 9 copies take copper plate from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 9 of its 65 swings with copper plate in 65 window cycles."
      },
      {
       "belt_id": 1,
@@ -1603,7 +1610,7 @@
        "target": 1040,
        "behind": 137
       },
-      "text": "The iron gear wheel lane ends in a dead end. The 9 copies take iron gear wheel from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 7 of its 65 swings with iron gear wheel in 65 window cycles."
+      "text": "The iron gear wheel lane ends in a dead end. The 9 copies take iron gear wheel from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 7 of its 65 swings with iron gear wheel in 65 window cycles."
      }
     ]
    },
@@ -1679,7 +1686,7 @@
      "explanation": ""
     }
    ],
-   "shared_lane_loss_note": "It is not stable on a lane its copies share. The copper plate lane ends in a dead end. The 9 copies take copper plate from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 9 of its 65 swings with copper plate in 65 window cycles.",
+   "shared_lane_loss_note": "It is not stable on a lane its copies share. The copper plate lane ends in a dead end. The 9 copies take copper plate from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 9 of its 65 swings with copper plate in 65 window cycles.",
    "checked_lanes": {
     "line": {
      "copies": 9,
@@ -1841,8 +1848,15 @@
        ]
       }
      },
+     "reason": {
+      "code": "belt_gaps",
+      "data": {
+       "missed": 16,
+       "with_gap": 8
+      }
+     },
      "spacing": {
-      "text": "The copies stand 9 tiles apart. An item takes 72 ticks from one copy to the next, and the window cycle is 72 ticks. The 9 copies take every iron gear wheel the lane brings, so the gap does not close on the way.",
+      "text": "The copies stand 9 tiles apart. It takes 72 ticks for items to travel between copies, and the window cycle is 72 ticks. The 9 copies take every iron gear wheel the lane brings, so the gap does not close on the way.",
       "data": {
        "step_tiles": 9,
        "travel_ticks": 72,
@@ -1903,7 +1917,7 @@
    "verdict": "unstable",
    "window_cycle_ticks": 72,
    "copies": 9,
-   "description": "Takt Batches with the output inserter limited to 1 swing each output cycle instead of 3. The output machine buffers more between swings; useful when the higher swing count is unstable. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. It is not stable: the build does not go back to its expected output by itself under this clock after copper plate stops arriving. Not tried, since one failure is enough: iron gear wheel stops arriving, automation science pack is not taken away. It is not stable on a lane its copies share. The iron gear wheel lane ends in a dead end. The 9 copies take iron gear wheel from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 9 of its 65 swings with iron gear wheel in 65 window cycles.",
+   "description": "Takt Batches with the output inserter limited to 1 swing each output cycle instead of 3. The output machine buffers more between swings; useful when the higher swing count is unstable. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. It is not stable: the build does not go back to its expected output by itself under this clock after copper plate stops arriving. Not tried, since one failure is enough: iron gear wheel stops arriving, automation science pack is not taken away. It is not stable on a lane its copies share. The iron gear wheel lane ends in a dead end. The 9 copies take iron gear wheel from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 9 of its 65 swings with iron gear wheel in 65 window cycles.",
    "belt": {
     "kind": "backed_up"
    },
@@ -1954,7 +1968,7 @@
        "target": 1040,
        "behind": 152
       },
-      "text": "The iron gear wheel lane ends in a dead end. The 9 copies take iron gear wheel from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 9 of its 65 swings with iron gear wheel in 65 window cycles."
+      "text": "The iron gear wheel lane ends in a dead end. The 9 copies take iron gear wheel from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 9 of its 65 swings with iron gear wheel in 65 window cycles."
      },
      {
       "belt_id": 1,
@@ -1983,7 +1997,7 @@
        "target": 1040,
        "behind": 152
       },
-      "text": "The copper plate lane ends in a dead end. The 9 copies take copper plate from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 9 of its 65 swings with copper plate in 65 window cycles."
+      "text": "The copper plate lane ends in a dead end. The 9 copies take copper plate from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 9 of its 65 swings with copper plate in 65 window cycles."
      },
      {
       "belt_id": 1,
@@ -2012,7 +2026,7 @@
        "target": 1040,
        "behind": 61
       },
-      "text": "The iron gear wheel lane ends in a dead end. The 9 copies take iron gear wheel from it. When the items move east, copy 3 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 4 of its 65 swings with iron gear wheel in 65 window cycles."
+      "text": "The iron gear wheel lane ends in a dead end. The 9 copies take iron gear wheel from it. When the belt flows east, copy 3 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 4 of its 65 swings with iron gear wheel in 65 window cycles."
      },
      {
       "belt_id": 1,
@@ -2041,7 +2055,7 @@
        "target": 1040,
        "behind": 61
       },
-      "text": "The copper plate lane ends in a dead end. The 9 copies take copper plate from it. When the items move east, copy 3 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 4 of its 65 swings with copper plate in 65 window cycles."
+      "text": "The copper plate lane ends in a dead end. The 9 copies take copper plate from it. When the belt flows east, copy 3 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 4 of its 65 swings with copper plate in 65 window cycles."
      }
     ]
    },
@@ -2125,7 +2139,7 @@
      "explanation": ""
     }
    ],
-   "shared_lane_loss_note": "It is not stable on a lane its copies share. The iron gear wheel lane ends in a dead end. The 9 copies take iron gear wheel from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 9 of its 65 swings with iron gear wheel in 65 window cycles.",
+   "shared_lane_loss_note": "It is not stable on a lane its copies share. The iron gear wheel lane ends in a dead end. The 9 copies take iron gear wheel from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 9 of its 65 swings with iron gear wheel in 65 window cycles.",
    "checked_lanes": {
     "line": {
      "copies": 9,
@@ -2319,8 +2333,15 @@
        ]
       }
      },
+     "reason": {
+      "code": "belt_gaps",
+      "data": {
+       "missed": 26,
+       "with_gap": 26
+      }
+     },
      "spacing": {
-      "text": "The copies stand 9 tiles apart. An item takes 72 ticks from one copy to the next, and the window cycle is 72 ticks. The 9 copies take every iron gear wheel and copper plate the two lanes bring, so the gap does not close on the way.",
+      "text": "The copies stand 9 tiles apart. It takes 72 ticks for items to travel between copies, and the window cycle is 72 ticks. The 9 copies take every iron gear wheel and copper plate the two lanes bring, so the gap does not close on the way.",
       "data": {
        "step_tiles": 9,
        "travel_ticks": 72,

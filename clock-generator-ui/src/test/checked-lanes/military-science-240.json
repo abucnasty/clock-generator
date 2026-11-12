@@ -949,7 +949,7 @@
     {
      "id": "unstable",
      "scope": "clock",
-     "title": "This clock does not hold the setpoint",
+     "title": "This clock underproduces",
      "what": "Driven only by its enable windows, the build moved 160 of 384 items in a window cycle. The build repeats every 4 window cycles and moves 768 of 1536 items over them.",
      "why": "A clock has to work from wherever the machines happen to be when it starts, so it is simulated from several start points. A swing that arrives while its machine is at an insertion limit, out of ingredients or without a full hand does nothing useful, and once a machine has waited longer than its spare time it cannot catch up.",
      "explanation": "Use a clock marked Stable. If none is, lower the setpoint, force fewer output swings (which gives the machines more buffer between swings), or yell at abuc to go fix his algorithm by opening an issue on GitHub (https://github.com/abucnasty/clock-generator/issues/new)."
@@ -1162,7 +1162,7 @@
     {
      "id": "unstable",
      "scope": "clock",
-     "title": "This clock does not hold the setpoint",
+     "title": "This clock underproduces",
      "what": "Driven only by its enable windows, the build moved 64 of 128 items a window cycle on average over a long run.",
      "why": "A clock has to work from wherever the machines happen to be when it starts, so it is simulated from several start points. A swing that arrives while its machine is at an insertion limit, out of ingredients or without a full hand does nothing useful, and once a machine has waited longer than its spare time it cannot catch up.",
      "explanation": "Use a clock marked Stable. If none is, lower the setpoint, force fewer output swings (which gives the machines more buffer between swings), or yell at abuc to go fix his algorithm by opening an issue on GitHub (https://github.com/abucnasty/clock-generator/issues/new)."
@@ -1383,7 +1383,7 @@
     {
      "id": "unstable",
      "scope": "clock",
-     "title": "This clock does not hold the setpoint",
+     "title": "This clock underproduces",
      "what": "Driven only by its enable windows, the build moved 512 of 640 items in a window cycle.",
      "why": "A clock has to work from wherever the machines happen to be when it starts, so it is simulated from several start points. A swing that arrives while its machine is at an insertion limit, out of ingredients or without a full hand does nothing useful, and once a machine has waited longer than its spare time it cannot catch up.",
      "explanation": "Use a clock marked Stable. If none is, lower the setpoint, force fewer output swings (which gives the machines more buffer between swings), or yell at abuc to go fix his algorithm by opening an issue on GitHub (https://github.com/abucnasty/clock-generator/issues/new)."
@@ -1596,7 +1596,7 @@
     {
      "id": "unstable",
      "scope": "clock",
-     "title": "This clock does not hold the setpoint",
+     "title": "This clock underproduces",
      "what": "Driven only by its enable windows, the build moved 256 of 384 items in a window cycle.",
      "why": "A clock has to work from wherever the machines happen to be when it starts, so it is simulated from several start points. A swing that arrives while its machine is at an insertion limit, out of ingredients or without a full hand does nothing useful, and once a machine has waited longer than its spare time it cannot catch up.",
      "explanation": "Use a clock marked Stable. If none is, lower the setpoint, force fewer output swings (which gives the machines more buffer between swings), or yell at abuc to go fix his algorithm by opening an issue on GitHub (https://github.com/abucnasty/clock-generator/issues/new)."
