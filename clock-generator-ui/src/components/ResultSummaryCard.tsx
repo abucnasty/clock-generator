@@ -5,7 +5,6 @@ import type { WhyNotStable } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../worker/types';
 import { rateVerbs, type TargetCounts } from '../utils/targetCounts';
 import {
-    beltLine,
     clockBadges,
     differenceFromRecommended,
     lossLimitText,
@@ -252,7 +251,7 @@ export function ResultSummaryCard(props: ResultSummaryCardProps) {
                     {selected && <ClockExplanation {...props} selected={selected} />}
                     {/* only where no clocked inserter picks up from a belt: the card's Belt fact says the rest */}
                     {selected && selected.beltLabel === '' && (
-                        <Typography variant="body2" data-belt-line>{beltLine(selected.beltLabel)}</Typography>
+                        <Typography variant="body2" data-belt-line>{SUMMARY_COPY.beltLineNone}</Typography>
                     )}
                 </Box>
             </Disclosure>

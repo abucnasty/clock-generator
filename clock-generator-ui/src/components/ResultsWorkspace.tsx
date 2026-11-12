@@ -28,7 +28,7 @@ import { DeveloperToolsPanel } from './DeveloperToolsPanel';
 import { ResultSummaryCard } from './ResultSummaryCard';
 import { StaleResultsBanner } from './StaleResultsBanner';
 import { RunNotes } from './RunNotes';
-import { beltValue, wakeUpsText } from '../utils/clockSummary';
+import { wakeUpsText } from '../utils/clockSummary';
 import { fullClockName } from '../utils/strategyNames';
 import { rateWarningOf } from '../utils/rateWarning';
 import { whyNotStableOf } from '../utils/whyNotStable';
@@ -184,8 +184,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
         clock.counts === 'destroyed' ? HANDS_TEXT.clock(clock.terminalSwingCount)
             : `${clock.terminalSwingCount} ${clock.terminalSwingCount === 1 ? 'swing' : 'swings'}`,
         wakeUpsText(clock).value.replace(' a minute', ' wakeups/min'),
-        clock.beltLabel ? beltValue(clock.beltLabel) : '',
-    ].filter(Boolean).join(' · ');
+    ].join(' · ');
     const rateWarning = rateWarningOf(selected);
     // said of the whole run once it is done: while clocks still arrive, a stable one may yet come
     const whyNotStable = props.isRunning ? null

@@ -7,9 +7,6 @@ import {
     SUMMARY_COPY,
     attemptResultOf,
     outputTermOf,
-    beltCellText,
-    beltLine,
-    beltValue,
     clockBadges,
     signalsText,
     differenceFromRecommended,
@@ -341,29 +338,6 @@ describe('makesText and wakeUpsText', () => {
 
     it('says "Not counted" when they were not', () => {
         expect(wakeUpsText(clock('a', { wake_ups_per_minute: null }))).toEqual({ value: SUMMARY_COPY.wakeUpsNotCounted, sub: '' });
-    });
-});
-
-describe('beltLine and beltValue', () => {
-    const { beltLineMoving, beltLineBackedUp, beltMoving, beltBackedUp } = SUMMARY_COPY;
-
-    // the engine's belt for the clock: the line, and the word of the clock selector
-    it.each<[string, string, string, string]>([
-        ['says moving for a clock the engine made for a moving belt', 'moving', beltLineMoving, beltMoving],
-        ['says backed up for a clock the engine made for a backed-up belt, whatever the belt setting', 'backed-up', beltLineBackedUp, beltBackedUp],
-        ['says moving for the label of a clock kept from an engine that gave slack', 'moving (+4 ticks)', beltLineMoving, beltMoving],
-        ['says there is no belt when no clocked inserter picks up from one', '', SUMMARY_COPY.beltLineNone, SUMMARY_COPY.beltNone],
-    ])('%s', (_, label, line, value) => {
-        expect([beltLine(label), beltValue(label)]).toEqual([line, value]);
-    });
-});
-
-describe('beltCellText', () => {
-    it('says the belt the engine made the clock for', () => {
-        expect(beltCellText('moving')).toBe(SUMMARY_COPY.beltMoving);
-        expect(beltCellText('moving (+4 ticks)')).toBe(SUMMARY_COPY.beltMoving);
-        expect(beltCellText('backed-up')).toBe(SUMMARY_COPY.beltBackedUp);
-        expect(beltCellText('')).toBe('');
     });
 });
 

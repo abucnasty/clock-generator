@@ -145,3 +145,26 @@ describe('the note that says why a clock is not stable', () => {
         expect(panel('overview').textContent).toContain('Nothing else stands out. Diagnostics says why this clock is not stable.');
     });
 });
+
+describe('the workspace\'s clock selector', () => {
+    const military = viewsOf(MILITARY_240);
+    /** The selector's line of each clock it offers, as the open list shows it */
+    const linesOf = async (alternatives: ClockAlternativeView[]) => {
+        const { user } = results(alternatives, MILITARY_240.selected_index, MILITARY_240.selected_index);
+        await user.click(screen.getByRole('combobox'));
+        return within(screen.getByRole('listbox')).getAllByRole('option').map(option => option.querySelector('p, span')!.textContent);
+    };
+
+    it('says swings and wakeups of a clock made for a belt, and no belt word', async () => {
+        expect(military[MILITARY_240.selected_index].beltLabel).toBe('backed-up');
+        const lines = await linesOf(military);
+        expect(lines).toContain('2 swings · 634 wakeups/min · Recommended');
+        for (const line of lines) expect(line).not.toMatch(/Backed up|Moving| · $/);
+    });
+
+    it('says the same of a clock where no clocked inserter picks up from a belt, with no " · " left over', async () => {
+        const lines = await linesOf(military.map(view => ({ ...view, beltLabel: '', belt: undefined })));
+        expect(lines).toContain('2 swings · 634 wakeups/min · Recommended');
+        for (const line of lines) expect(line).not.toMatch(/None| · $/);
+    });
+});

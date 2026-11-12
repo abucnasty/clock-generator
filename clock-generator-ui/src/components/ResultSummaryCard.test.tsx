@@ -194,6 +194,21 @@ describe('the status of a clock that underproduces, beside its name on the card'
     });
 });
 
+describe('the card\'s belt sentence, in Simulation results', () => {
+    const views = viewsOf(AUTOMATION_240);
+    const index = AUTOMATION_240.selected_index;
+
+    it('says that no inserter on the clock picks up from a belt where none does, and says nothing of a belt where one does', () => {
+        const { container } = card(views.map((view, at) => at !== index ? view : { ...view, beltLabel: '', belt: undefined }), index);
+        expect(container.querySelector('[data-belt-line]')!.textContent).toBe('No inserter on the clock picks up from a belt.');
+        cleanup();
+        const { container: picks } = card(views, index);
+        expect(views[index].beltLabel).toBe('backed-up');
+        expect(picks.querySelector('[data-belt-line]')).toBeNull();
+        expect(picks.textContent).not.toMatch(/Made for (moving|backed-up) belts/);
+    });
+});
+
 describe('the status Error beside the name on the card, where the recovery trials gave no answer', () => {
     it.each<[Parameters<typeof errorCaseViews>[0], string]>([
         ['not-tried', TRIALS_NOT_MADE_REASON],

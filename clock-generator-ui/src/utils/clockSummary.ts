@@ -64,11 +64,7 @@ export const SUMMARY_COPY = {
     recoversBaselineUnavailableDetail: 'Recovery is unavailable: the undisturbed baseline for the loss trials did not hold its expected output.',
     recoversLossLimit: (duration: string, item: string) =>
         `Checked for losses up to ${duration}. A longer loss spoils the ${item} in the build, and no clock brings it back.`,
-    beltMoving: 'Moving',
-    beltBackedUp: 'Backed up',
-    beltNone: 'None',
-    beltLineMoving: 'Made for moving belts.',
-    beltLineBackedUp: 'Made for backed-up belts.',
+    // on the card, where no clocked inserter picks up from a belt
     beltLineNone: 'No inserter on the clock picks up from a belt.',
     // how a selected clock differs from the recommended one
     differsRate: (rate: string, target: string, counts?: TargetCounts) => `This one ${rateVerbs(counts).third} ${rate}/s, not ${target}/s.`,
@@ -330,31 +326,6 @@ export function signalsText(clock: Pick<SummaryClock, 'assessment'>): { value: s
         return { value: SUMMARY_COPY.wakeUpsNotCounted, sub: '' };
     }
     return { value: SUMMARY_COPY.wakeUps(Math.round(perMinute)), sub: SUMMARY_COPY.oneCopy };
-}
-
-type BeltKind = 'moving' | 'backed_up' | 'none';
-
-/** The belt the engine made a clock for, from its label ("moving", "backed-up"; empty when no clocked inserter picks up from a belt) */
-function beltKindOf(beltLabel: string): BeltKind {
-    if (beltLabel === '') {
-        return 'none';
-    }
-    return beltLabel.startsWith('moving') ? 'moving' : 'backed_up';
-}
-
-/** The belt's word in the workspace's clock selector: "Moving", "Backed up", or "None" when no clocked inserter picks up from a belt */
-export function beltValue(beltLabel: string): string {
-    return { moving: SUMMARY_COPY.beltMoving, backed_up: SUMMARY_COPY.beltBackedUp, none: SUMMARY_COPY.beltNone }[beltKindOf(beltLabel)];
-}
-
-/** The belt's word in the install dialog's line: "Moving", "Backed up", or nothing when no clocked inserter picks up from a belt */
-export function beltCellText(beltLabel: string): string {
-    return beltLabel === '' ? '' : beltValue(beltLabel);
-}
-
-/** The sentence under the tiles about the belt the clock is made for */
-export function beltLine(beltLabel: string): string {
-    return { moving: SUMMARY_COPY.beltLineMoving, backed_up: SUMMARY_COPY.beltLineBackedUp, none: SUMMARY_COPY.beltLineNone }[beltKindOf(beltLabel)];
 }
 
 /**
