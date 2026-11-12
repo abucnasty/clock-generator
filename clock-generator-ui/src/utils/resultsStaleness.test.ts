@@ -65,7 +65,7 @@ describe('generatedForOf', () => {
             key,
             recipe: 'logistic-science-pack',
             itemsPerSecond: 240,
-            beltQuestion: { ask: false, answer: 'moving' },
+            beltQuestion: { ask: false, answer: 'backed_up' },
             generatedAt: 1_000,
         });
         expect(keyOf(config)).not.toBe(key);

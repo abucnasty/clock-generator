@@ -25,7 +25,7 @@ describe('beltQuestionOf', () => {
         ['asks with two belt-fed inserters', [from('belt'), from('belt', 2)], [1, 2], true],
         ['asks with one belt-fed inserter of several', [from('machine'), from('belt', 2), from('chest')], [2], true],
     ])('%s', (_, inserters, beltIds, ask) => {
-        expect(beltQuestionOf({ inserters, belts: beltIds.map(id => ({ id })) })).toEqual({ ask, answer: 'moving' });
+        expect(beltQuestionOf({ inserters, belts: beltIds.map(id => ({ id })) })).toEqual({ ask, answer: 'backed_up' });
     });
 
     it('reads the answer from the overrides, asked or not', () => {
@@ -43,22 +43,27 @@ describe('beltQuestionOf', () => {
 });
 
 describe('backedUpBeltsFor', () => {
-    it('stores nothing for Moving and true for BackedUp', () => {
-        expect(backedUpBeltsFor('moving')).toBeUndefined();
-        expect(backedUpBeltsFor('backed_up')).toBe(true);
+    it('stores false for Moving and nothing for Backed up', () => {
+        expect(backedUpBeltsFor('moving')).toBe(false);
+        expect(backedUpBeltsFor('backed_up')).toBeUndefined();
     });
 
-    it('leaves no overrides when Moving takes back the only one', () => {
-        const backedUp = answered(form(), 'backed_up');
-        expect(beltQuestionOf(backedUp).answer).toBe('backed_up');
-        const moving = answered(backedUp, 'moving');
-        expect(moving).not.toHaveProperty('overrides');
-        expect(formDataToConfig(moving)).not.toHaveProperty('overrides');
+    it('leaves no overrides when Backed up takes back the only one', () => {
+        const moving = answered(form(), 'moving');
         expect(beltQuestionOf(moving).answer).toBe('moving');
+        expect(formDataToConfig(moving).overrides).toEqual({ backed_up_belts: false });
+        const backedUp = answered(moving, 'backed_up');
+        expect(backedUp).not.toHaveProperty('overrides');
+        expect(formDataToConfig(backedUp)).not.toHaveProperty('overrides');
+        expect(beltQuestionOf(backedUp).answer).toBe('backed_up');
     });
 
-    it('keeps the other overrides when Moving takes the answer back', () => {
-        expect(answered(answered(withLcm(), 'backed_up'), 'moving').overrides).toEqual({ lcm: 120 });
+    it('keeps the other overrides when Backed up takes the answer back', () => {
+        expect(answered(answered(withLcm(), 'moving'), 'backed_up').overrides).toEqual({ lcm: 120 });
+    });
+
+    it('still reads a stored true as Backed up', () => {
+        expect(beltQuestionOf(edits.updateOverrides(form(), 'backed_up_belts', true)).answer).toBe('backed_up');
     });
 });
 
@@ -69,6 +74,9 @@ describe('withBeltAnswer', () => {
         ['BackedUp already', answered(form(), 'backed_up')],
         ['BackedUp beside an LCM override', answered(withLcm(), 'backed_up')],
         ['an imported false', edits.updateOverrides(form(), 'backed_up_belts', false)],
+        ['Moving already', answered(form(), 'moving')],
+        ['Moving beside an LCM override', answered(withLcm(), 'moving')],
+        ['an imported true', edits.updateOverrides(form(), 'backed_up_belts', true)],
     ])('gives the key the form has once the answer is set, from %s', (_, start) => {
         for (const answer of ['moving', 'backed_up'] as const) {
             expect(configKeyOf(withBeltAnswer(formDataToConfig(start), answer))).toBe(configKeyOf(formDataToConfig(answered(start, answer))));
@@ -76,9 +84,9 @@ describe('withBeltAnswer', () => {
     });
 
     it('leaves the config it was given alone', () => {
-        const config = formDataToConfig(answered(form(), 'backed_up'));
+        const config = formDataToConfig(answered(form(), 'moving'));
         const before = configKeyOf(config);
-        withBeltAnswer(config, 'moving');
+        withBeltAnswer(config, 'backed_up');
         expect(configKeyOf(config)).toBe(before);
     });
 });
@@ -94,8 +102,8 @@ describe('otherAnswer and beltResultsLine', () => {
 });
 
 describe('generatedForOf and the belt answer', () => {
-    const moving = formDataToConfig(form());
-    const backedUp = formDataToConfig(answered(form(), 'backed_up'));
+    const moving = formDataToConfig(answered(form(), 'moving'));
+    const backedUp = formDataToConfig(form());
 
     it('records the question as the config answered it', () => {
         expect(generatedForOf(backedUp).beltQuestion).toEqual(beltQuestionOf(backedUp));

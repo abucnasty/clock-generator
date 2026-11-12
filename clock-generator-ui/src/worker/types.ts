@@ -195,6 +195,11 @@ export interface ClockAlternativeView {
     inserterClocks?: RecordTimelineRequest['inserter_clocks'];
     /** The belt timing actually used by this alternative, including clocks for the other belt setting. */
     backedUpBelts?: boolean;
+    /**
+     * True for a clock of an engine that gives each lane its end from the config alone (a lane that states none, by its
+     * role or by the config's switch), so that its replay reads the saved config as it is; missing from clocks kept before
+     */
+    replayReadsConfig?: true;
 }
 
 export interface ClockModelAssumptions {

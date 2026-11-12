@@ -9,6 +9,9 @@ import { configToFormData, formDataToConfig } from '../utils/configForm/configMa
 import { createDefaultConfig } from '../utils/configForm/formData';
 import { applyPaste } from '../utils/pastePreview';
 import { buildValidationIssues, refusedInserterIdsOf, type ValidationDiagnostic } from '../utils/buildValidation';
+import { beltQuestionOf } from '../utils/beltQuestion';
+import { timelineRequestFor } from '../utils/timelineRequest';
+import type { ClockAlternativeView } from './types';
 
 /** Every response the worker posted in this test, in order */
 let posted: WorkerResponse[];
@@ -461,6 +464,63 @@ it('passes on the clock made with shared windows after the clock it shares, with
     expect(primary?.alternatives.map(it => [it.id, it.deciders])).toEqual([['round_robin_polling', 5]]);
     expect(primary?.also?.flatMap(run => run.alternatives.map(it => [it.id, it.deciders, it.verdict]))).toEqual([['round_robin_polling_shared', 4, 'stable']]);
 }, 30_000);
+
+describe('a build that states no lane end and no belt setting', () => {
+    /** The military sample with no lane end and no belt setting stated: the engine gives each lane the end of its role */
+    const statingNothing = () => {
+        const sample = JSON.parse(militarySample) as Config;
+        const { backed_up_belts: _switch, ...overrides } = sample.overrides ?? {};
+        void _switch;
+        return { ...sample, overrides, belts: sample.belts.map(belt => ({ ...belt, lanes: belt.lanes.map(({ lane_end: _end, ...lane }) => lane) })) } as Config;
+    };
+
+    it('reads as backed up, loaded and generated with the belt setting untouched', async () => {
+        const loaded = formDataToConfig(readSavedConfig(serializeConfig(configToFormData(statingNothing())))!);
+        expect(loaded.overrides?.backed_up_belts).toBeUndefined();
+        expect(beltQuestionOf(loaded)).toEqual({ ask: true, answer: 'backed_up' });
+        const { primary } = await primaryOf(loaded);
+        expect(primary?.alternatives.map(it => [it.beltLabel, it.backedUpBelts, it.replayReadsConfig])).toEqual([['backed-up', true, true]]);
+    }, 30_000);
+});
+
+describe("a clock's replay", () => {
+    // one input lane states an infinite end, another input lane and the output lane state nothing
+    const mixed = {
+        setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+        machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }, { id: 2, recipe: 'copper-cable', crafting_speed: 1, productivity: 0 }],
+        inserters: [
+            { source: { type: 'belt', id: 1 }, sink: { type: 'machine', id: 1 } },
+            { source: { type: 'belt', id: 2 }, sink: { type: 'machine', id: 2 } },
+            { source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 3 } },
+        ],
+        belts: [
+            { id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4, lane_end: { kind: 'infinite' } }] },
+            { id: 2, type: 'turbo-transport-belt', lanes: [{ ingredient: 'copper-plate', stack_size: 4 }] },
+            { id: 3, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-gear-wheel', stack_size: 4 }] },
+        ],
+    } as Config;
+    const clock = { simulationDurationTicks: 100, terminalSwingCount: 2, clockWindows: {}, fuelView: null } as unknown as ClockAlternativeView;
+    const endsOf = async (config: Config) => {
+        const { laneFactsOfConfig } = await import('clock-generator/browser');
+        const facts = laneFactsOfConfig(config);
+        return config.belts.map(belt => facts.lanesOf(belt.id).map(lane => lane.lane_end.kind));
+    };
+
+    it('gives each lane of a clock of this engine the end its generation gave it, whatever belt the clock was made for', async () => {
+        const generation = await endsOf(mixed);
+        expect(generation).toEqual([['infinite'], ['dead_end'], ['infinite']]);
+        for (const made_for of [{ beltLabel: 'moving', backedUpBelts: false }, { beltLabel: 'backed-up', backedUpBelts: true }]) {
+            const request = timelineRequestFor(mixed, { ...clock, ...made_for, replayReadsConfig: true }, 'clock');
+            expect(await endsOf(request!.config)).toEqual(generation);
+        }
+    });
+
+    it('gives a clock kept before the belt setting it was made for, as it did', async () => {
+        const request = timelineRequestFor(mixed, { ...clock, beltLabel: 'backed-up', backedUpBelts: true }, 'clock');
+        expect(request?.config.overrides?.backed_up_belts).toBe(true);
+        expect(await endsOf(request!.config)).toEqual([['infinite'], ['dead_end'], ['dead_end']]);
+    });
+});
 
 it('posts the state transitions in columns with their own reasons, which a structured clone carries and which read back the same', async () => {
     const completed = await primaryOf(JSON.parse(grenadeSample) as Config);

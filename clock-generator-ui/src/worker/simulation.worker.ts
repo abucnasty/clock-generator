@@ -180,6 +180,7 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         swingBackoffReport: result.swing_backoff_report ?? null,
         inserterClocks: result.unplanned_inserter_clocks ?? {},
         backedUpBelts: alternative.belt?.kind === 'backed_up' || (alternative.belt === null && config.overrides?.backed_up_belts === true),
+        replayReadsConfig: true,
     }));
     // the same clock made with shared windows, listed after it
     const also = run.also?.flatMap(it => toRunView(it, config) ?? []);

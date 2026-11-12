@@ -36,25 +36,26 @@ interface BeltBuild {
 
 /**
  * Asked when a belt of the build feeds an inserter: only then does a clock get belt slack. The answer is read either
- * way, `backed_up_belts: true` being Backed up.
+ * way: `backed_up_belts: false` is Moving, and a build that states nothing is Backed up, as the engine gives each input
+ * lane that states no end a dead end.
  */
 export function beltQuestionOf(build: BeltBuild): BeltQuestion {
     const beltIds = new Set(build.belts.map(belt => belt.id));
     return {
         ask: build.inserters.some(inserter => inserter.source.type === 'belt' && beltIds.has(inserter.source.id)),
-        answer: build.overrides?.backed_up_belts === true ? 'backed_up' : 'moving',
+        answer: build.overrides?.backed_up_belts === false ? 'moving' : 'backed_up',
     };
 }
 
-/** What `overrides.backed_up_belts` stores for an answer: Moving stores nothing, never `false` */
-export function backedUpBeltsFor(answer: BeltAnswer): true | undefined {
-    return answer === 'backed_up' ? true : undefined;
+/** What `overrides.backed_up_belts` stores for an answer: Moving stores `false`, Backed up stores nothing */
+export function backedUpBeltsFor(answer: BeltAnswer): false | undefined {
+    return answer === 'moving' ? false : undefined;
 }
 
 /**
  * `config` with `answer` stored as the form stores it (`updateOverrides`), so a generation started from it has the key
- * the form has once the answer is set, and is not taken for out of date. Moving takes the key away, and the overrides
- * with it when it was the only one.
+ * the form has once the answer is set, and is not taken for out of date. Backed up takes the key away, and the
+ * overrides with it when it was the only one.
  */
 export function withBeltAnswer(config: Config, answer: BeltAnswer): Config {
     const overrides: NonNullable<Config['overrides']> = { ...config.overrides, backed_up_belts: backedUpBeltsFor(answer) };
