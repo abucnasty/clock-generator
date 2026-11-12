@@ -732,7 +732,7 @@ export function ConfigImportExport({
                     }} />}
                 {pendingImport && !pendingImport.reduction && (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                        <PickupGeometrySummary build={{ inserters: prospectiveInserters, overrides: currentForm.overrides }} />
+                        <PickupGeometrySummary build={{ inserters: prospectiveInserters }} backedUp={null} />
                         {importSelections.inserters && pendingImport.pickupWarnings?.map(warning => <Typography key={warning.inserter_id} variant="body2" color="text.secondary">
                             Captured Inserter {warning.inserter_id}: {pickupCaptureWarningMessage(warning.reason)}
                         </Typography>)}
@@ -811,7 +811,7 @@ export function ConfigImportExport({
                             </>
                         )}
                         <Disclosure summary="Import details" data-import-assumptions="" sx={{ mt: 1 }}>
-                            {pickupGeometryOf({ inserters: prospectiveInserters, overrides: currentForm.overrides }).total > 0
+                            {pickupGeometryOf({ inserters: prospectiveInserters }).total > 0
                                 && <Typography variant="body2">Your input belt setting (moving or backed up) stays as it is.</Typography>}
                             <Box sx={{ mt: 1 }}>
                                 <InserterDetails inserters={prospectiveInserters} />

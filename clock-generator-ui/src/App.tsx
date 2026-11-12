@@ -19,7 +19,7 @@ import type { ChestType, Config, DebugSteps, InserterCoverageIssue, InserterFixO
 import { useSimulationWorker } from './hooks/useSimulationWorker';
 import { useStartupTimeout } from './hooks/useStartupTimeout';
 import { useConfigForm, type BuildMutationSnapshot } from './hooks/useConfigForm';
-import type { InserterFormData } from './hooks/useConfigForm';
+import type { BeltFormData, InserterFormData } from './hooks/useConfigForm';
 import { useInserterValidation } from './hooks/useInserterValidation';
 import { useOutputTransfers } from './hooks/useOutputTransfers';
 import { useAnnounce, useDismissMessage, useNotify } from './hooks/useMessages';
@@ -77,6 +77,9 @@ import { familyCopyOf, fullClockName } from './utils/strategyNames';
 import { ANNOUNCEMENTS } from './utils/workflowAnnouncement';
 import { BELT_COPY, beltQuestionOf, backedUpBeltsFor, withBeltAnswer, type BeltAnswer } from './utils/beltQuestion';
 import { PickupGeometrySummary } from './components/PickupGeometrySummary';
+import { useLaneFacts } from './hooks/useLaneFacts';
+import { draftLaneFactsOf, inputLaneEnds } from './utils/laneFacts';
+import { asksCopyOffset } from './utils/copyOffset';
 import { PROGRESS_NAMES } from './utils/a11yLabels';
 import { chestLabel, entityLabel } from './utils/entityLabel';
 import { NO_DEBUG_STEPS, developerToolsInitial, readDeveloperTools, writeDeveloperTools } from './utils/developerTools';
@@ -343,6 +346,9 @@ function App() {
     // null until the engine has looked for missing inserters; until then the check catches them
     const checkedCoverage = useInserterValidation(engineConfig, isInitialized);
     const { transfers: outputTransfers, generationIssues: outputGenerationIssues, updating: outputTransfersLoading } = useOutputTransfers(engineConfig, isInitialized);
+    // the lanes as the engine reads them: each lane's role, and the end of a lane that states none
+    const { facts: laneFacts, roles: laneRoles } = useLaneFacts(engineConfig, isInitialized);
+    const inputEnds = inputLaneEnds(laneFacts);
     // the header's height, so that what is focused and scrolled to is not left under it
     const headerRef = useRef<HTMLElement>(null);
     useStickyHeaderHeight(headerRef);
@@ -874,6 +880,9 @@ function App() {
         onAddBelt: addBelt,
         onAddChest: addChest,
         onAddDrill: addDrill,
+        // the dialog's belt shows the Lanes fields of the Belts section, with the engine's facts of the belt it edits
+        laneFactsOf: (draft: BeltFormData) => draftLaneFactsOf(draft, config.belts, laneRoles, config.overrides),
+        copies: config.setpoint.copies,
     };
     const handleExcludeChange = useCallback((items: string[]) => {
         // an out-of-date plan numbers the inserters as they were, which a delete or reorder has since moved
@@ -1259,13 +1268,14 @@ function App() {
                                 onCountsChange={(counts) => updateSetpoint('counts', counts === 'made' ? undefined : counts)}
                                 onCopiesChange={(value) => updateSetpoint('copies', value)}
                                 copyOffset={config.setpoint.copy_offset}
-                                showCopyOffset={config.setpoint.copies > 1 && config.inserters.some(inserter => inserter.sink.type === 'belt' && inserter.position !== undefined)}
+                                showCopyOffset={asksCopyOffset(config.setpoint)}
                                 onCopyOffsetChange={(value) => updateSetpoint('copy_offset', value)}
                                 copyOffsetNote={checkedCoverage?.dropRoom}
                             />
 
                             <BuildPanel view={configView} onViewChange={setConfigView}>
-                                <PickupGeometrySummary build={config} onEdit={reviewPickup} busy={busy} />
+                                <PickupGeometrySummary build={config} onEdit={reviewPickup} busy={busy}
+                                    backedUp={inputEnds === null ? null : inputEnds.infinite + inputEnds.unknown === 0 && inputEnds.dead_end > 0} />
                                 <BuildValidationPanel issues={validationIssues} machines={config.machines} belts={config.belts} chests={config.chests} inserters={config.inserters} outputTransfers={outputTransfers}
                                     onApplyFix={handleInserterFix} fixUnavailable={fixUnavailable} onSwitchType={undoable.switchChestType} onEnableRemoval={undoable.enableChestRemoval}
                                     onReview={goToTarget} onReviewInserter={editOutputInserter} recovery={conversionRecovery} conversionPending={conversionPending} onConvert={handleConvertRepeatedUnit} counts={targetCounts} />
@@ -1306,6 +1316,9 @@ function App() {
                                                 onDuplicate={duplicate.belts}
                                                 beltQuestion={beltQuestion}
                                                 onBeltAnswer={handleBeltAnswer}
+                                                laneFacts={laneFacts}
+                                                copies={config.setpoint.copies}
+                                                outputBelt={config.output_belt}
                                             />
                                             <ChestsForm
                                                 chests={config.chests}

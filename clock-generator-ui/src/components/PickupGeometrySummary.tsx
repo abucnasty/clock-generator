@@ -1,11 +1,14 @@
 import { Box, Button, Typography } from '@mui/material';
-import { OUT_OF_SCOPE_PICKUP_SCOPE, OUT_OF_SCOPE_PICKUPS, pickupGeometryOf, takenLanesEndInDeadEnds, unsupportedPickupOf, type PickupBuild } from '../utils/pickupGeometry';
+import { OUT_OF_SCOPE_PICKUP_SCOPE, OUT_OF_SCOPE_PICKUPS, pickupGeometryOf, unsupportedPickupOf, type PickupBuild } from '../utils/pickupGeometry';
 
 /** Current builds default to straight belts; saved runs retain the assumptions they actually used. */
-export function PickupGeometrySummary({ build, onEdit, busy = false, savedRun = false, backedUp = takenLanesEndInDeadEnds(build) }: {
+export function PickupGeometrySummary({ build, onEdit, busy = false, savedRun = false, backedUp }: {
     build: PickupBuild;
-    /** Every lane an inserter takes from ends in a dead end: the engine's belt of the clock shown; by the build's lanes where none is */
-    backedUp?: boolean;
+    /**
+     * Every lane an inserter takes from ends in a dead end: the engine's belt of the clock shown, or the engine's reading
+     * of the build's lanes; null where the engine cannot tell (an import not yet placed, a form it cannot read yet)
+     */
+    backedUp: boolean | null;
     onEdit?: (id: number) => void;
     busy?: boolean;
     savedRun?: boolean;
