@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CheckedLanes } from 'clock-generator/browser';
-import { AUTOMATION_240, checkedOf, MILITARY_240, STATES, viewOf, viewsOf } from '../test/checkedLanesFixtures';
-import { endText, givesLanes, laneOf, lanesCountText, laneText, roleText, stateTone, supplyText, togetherText, withOtherClocksOf } from './checkedLanes';
+import { AUTOMATION_240, checkedOf, ELECTROMAGNETIC_330_TWO_SWINGS, MILITARY_240, STATES, viewOf, viewsOf } from '../test/checkedLanesFixtures';
+import { descriptionShown, endText, givesLanes, insightsShown, laneOf, madeForLead, lanesCountText, laneText, roleText, stateTone, supplyText, togetherText, whyNotStableShowsCause, withOtherClocksOf } from './checkedLanes';
 
 const lanes = AUTOMATION_240.lanes;
 
@@ -13,7 +13,7 @@ describe('the cells of a row, made from its data', () => {
         expect([gears, output].map(row => roleText(laneOf(lanes, row)))).toEqual(['Input', 'Output']);
         // the config states the input lane's end; the output lane's comes from its role
         expect(endText(laneOf(lanes, gears))).toEqual({ value: 'Dead end' });
-        expect(endText(laneOf(lanes, output))).toEqual({ value: 'Infinite', sub: 'from its role' });
+        expect(endText(laneOf(lanes, output))).toEqual({ value: 'Infinite', sub: 'assumed from its role' });
     });
 
     it('say what the copies take or drop together, and the supply rate, or what an output lane carries', () => {
@@ -71,4 +71,43 @@ it('tells a clock of an engine that gives the lanes from one kept before', () =>
     const view = viewOf(AUTOMATION_240, 'time_study_windows');
     expect(givesLanes(view)).toBe(true);
     expect(givesLanes({ ...view, assumptions: { ...view.assumptions, lanes: undefined } })).toBe(false);
+});
+
+describe('what is said once', () => {
+    it('leaves the engine\'s loss note out of the description of a clock whose cause the page shows, word for word, and nothing else', () => {
+        const short = viewOf(AUTOMATION_240, 'euclidean_swings');
+        const note = short.sharedLaneLossNote!;
+        expect(short.description).toContain(note);
+        expect(descriptionShown(short)).toBe(short.description.replace(` ${note}`, ''));
+        expect(descriptionShown(short)).not.toContain('It is not stable on a lane its copies share.');
+        // a clock with no cause, or kept before the note was carried, keeps its description
+        const stable = viewOf(AUTOMATION_240, 'time_study_windows');
+        expect(descriptionShown(stable)).toBe(stable.description);
+        expect(descriptionShown({ ...short, sharedLaneLossNote: undefined })).toBe(short.description);
+    });
+
+    it('leaves out the insight on a lane the build drops onto where a row of that lane is not checked', () => {
+        const { row, insights } = STATES.not_checked;
+        const clock = { insights: insights!, checkedLanes: { rows: [row] } as CheckedLanes };
+        expect(insightsShown(clock).map(insight => insight.id)).toEqual(['shared-lane-not-checked-1-2']);
+        expect(insightsShown({ ...clock, checkedLanes: undefined })).toBe(insights);
+    });
+
+    it('shows the parts in the note on why no clock is stable where it is of the recommended clock\'s shared-lane loss', () => {
+        const result = ELECTROMAGNETIC_330_TWO_SWINGS;
+        const recommended = viewOf(result, result.clocks[result.selected_index].id);
+        expect(result.why_not_stable?.cause).toBe('shared lane short');
+        expect(whyNotStableShowsCause(result.why_not_stable, recommended)).toBe(true);
+        expect(whyNotStableShowsCause({ cause: 'moving lane phases' }, recommended)).toBe(false);
+        expect(whyNotStableShowsCause(result.why_not_stable, { ...recommended, checkedLanes: undefined })).toBe(false);
+    });
+});
+
+it('says what a clock kept before the engine gave the lanes was made for, without the belts; the card says it for one that gives them', () => {
+    const view = viewOf(AUTOMATION_240, 'time_study_windows');
+    const kept = { ...view, assumptions: { ...view.assumptions, lanes: undefined } };
+    const saved = { setpoint: { recipe: 'automation-science-pack', items_per_second: 240, copies: 9 } };
+    expect(madeForLead(saved, kept)).toBe('Made for 9 copies of your build.');
+    expect(madeForLead(saved, view)).toBe('');
+    expect(madeForLead(null, kept)).toBe('These results are for a saved build whose metadata is unavailable.');
 });

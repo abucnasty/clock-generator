@@ -276,6 +276,7 @@
      "explanation": ""
     }
    ],
+   "shared_lane_loss_note": "It is not stable on its output belt. The side belt of copy 4 from the entry is full at its join onto the output belt. Its output inserter waits for room in 84 of its 336 swings in 63 window cycles. It misses 42 of the 378 swings its target needs.",
    "checked_lanes": {
     "line": {
      "copies": 9,
@@ -463,7 +464,7 @@
       }
      },
      "changes": {
-      "text": "With 3 copies on the iron gear wheel and copper plate lanes, every copy makes every swing. Another clock of this build has no full join: Time-Study Windows, window cycle 216 ticks.",
+      "text": "With 3 copies, every copy makes every swing. Another clock of this build has no full join: Time-Study Windows, window cycle 216 ticks.",
       "data": {
        "fewer_copies": 3,
        "other_clock": {
@@ -632,6 +633,7 @@
      "explanation": ""
     }
    ],
+   "shared_lane_loss_note": "It is not stable on a lane its copies share. The iron gear wheel lane ends in a dead end. The 9 copies take iron gear wheel from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 3 of its 65 swings with iron gear wheel in 65 window cycles.",
    "checked_lanes": {
     "line": {
      "copies": 9,
@@ -946,6 +948,7 @@
      "explanation": ""
     }
    ],
+   "shared_lane_loss_note": null,
    "checked_lanes": {
     "line": {
      "copies": 9,
@@ -1147,6 +1150,7 @@
      "explanation": ""
     }
    ],
+   "shared_lane_loss_note": null,
    "checked_lanes": {
     "line": {
      "copies": 9,
@@ -1298,6 +1302,7 @@
      "explanation": ""
     }
    ],
+   "shared_lane_loss_note": null,
    "checked_lanes": {
     "line": {
      "copies": 9,
@@ -1449,6 +1454,7 @@
      "explanation": ""
     }
    ],
+   "shared_lane_loss_note": null,
    "checked_lanes": {
     "line": {
      "copies": 9,
@@ -1673,6 +1679,7 @@
      "explanation": ""
     }
    ],
+   "shared_lane_loss_note": "It is not stable on a lane its copies share. The copper plate lane ends in a dead end. The 9 copies take copper plate from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 9 of its 65 swings with copper plate in 65 window cycles.",
    "checked_lanes": {
     "line": {
      "copies": 9,
@@ -2118,6 +2125,7 @@
      "explanation": ""
     }
    ],
+   "shared_lane_loss_note": "It is not stable on a lane its copies share. The iron gear wheel lane ends in a dead end. The 9 copies take iron gear wheel from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 9 of its 65 swings with iron gear wheel in 65 window cycles.",
    "checked_lanes": {
     "line": {
      "copies": 9,
@@ -2532,6 +2540,7 @@
      "explanation": ""
     }
    ],
+   "shared_lane_loss_note": null,
    "checked_lanes": {
     "line": {
      "copies": 9,

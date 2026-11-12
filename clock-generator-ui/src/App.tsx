@@ -432,7 +432,7 @@ function App() {
     // likewise a check, except that the switches only the clock search reads leave it current
     const checkKey = useMemo(() => checkKeyOf(engineConfig), [engineConfig]);
     const checkStatus = checkStatusOf(validation, checkKey);
-    // whether the clocks can get belt slack, and what the form says of the input belts
+    // whether the belt setting can change a clock, and what the form says of it
     const beltQuestion = useMemo(
         () => beltQuestionOf({ inserters: config.inserters, belts: config.belts, overrides: config.overrides }),
         [config.inserters, config.belts, config.overrides]
@@ -762,7 +762,7 @@ function App() {
         setView('results');
     }), [runChecked, runSimulation, runDebugSteps, runStreamLogs, setView]);
 
-    // Moving stores nothing, BackedUp `backed_up_belts: true`
+    // Moving stores `backed_up_belts: false`, Backed up stores nothing
     const handleBeltAnswer = useCallback(
         (answer: BeltAnswer) => updateOverrides('backed_up_belts', backedUpBeltsFor(answer)),
         [updateOverrides]
@@ -781,8 +781,10 @@ function App() {
             setView('results');
         });
     }, [busy, runChecked, handleBeltAnswer, runSimulation, runDebugSteps, runStreamLogs, setView]);
-    // the clocks on screen, read for backed-up belts; nothing while they may still change
-    const beltAssumption = generatedFor?.beltQuestion ?? null;
+    // the clocks on screen: asked as the run asked it, answered with the belt the engine made the selected clock for
+    const beltAssumption = generatedFor?.beltQuestion && selectedClock?.beltLabel
+        ? { ask: generatedFor.beltQuestion.ask, answer: selectedClock.beltLabel === 'backed-up' ? 'backed_up' as const : 'moving' as const }
+        : generatedFor?.beltQuestion ?? null;
 
     // the actions that throw part of the build away offer Undo, just before they are applied
     const undoable = useMemo(() => {

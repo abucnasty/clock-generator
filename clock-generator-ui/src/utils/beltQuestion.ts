@@ -14,11 +14,10 @@ export interface BeltQuestion {
 export const BELT_COPY = {
     question: 'At your input pickups, items are:',
     moving: 'Moving',
-    movingLine: 'Items continuously pass the pickup. Timing accounts for the stacks within reach; straight belt is the default pickup type. '
-        + 'Clocks also leave a few extra ticks (belt slack) for late pickups.',
+    movingLine: 'Each lane an inserter takes from that states no end runs on: it has an infinite end.',
     backedUp: 'Backed up',
-    backedUpLine: 'Items stop between pickups. Upstream supply refills the gaps, so a stack is available each pickup tick. Clocks omit belt slack.',
-    help: 'Not sure? Leave it on Moving.',
+    backedUpLine: 'Each lane an inserter takes from that states no end has a dead end.',
+    help: 'A lane that states its end keeps it.',
     /** The heading of the question's card under the diagram */
     diagramHeading: 'Belts',
     resultsMoving: 'This run used your Moving belt setting.',
@@ -35,7 +34,7 @@ interface BeltBuild {
 }
 
 /**
- * Asked when a belt of the build feeds an inserter: only then does a clock get belt slack. The answer is read either
+ * Asked when a belt of the build feeds an inserter: only then can the answer change a clock. The answer is read either
  * way: `backed_up_belts: false` is Moving, and a build that states nothing is Backed up, as the engine gives each input
  * lane that states no end a dead end.
  */

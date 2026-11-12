@@ -115,7 +115,7 @@ export const BELT_FORM_DEFAULT_TYPE = 'turbo-transport-belt';
 export const BELT_FORM_DEFAULT_STACK_SIZE = 4;
 
 export const BELT_STRATEGIES: { value: BeltStrategyFormValue; label: string; description: string }[] = [
-    { value: 'normal', label: 'Normal', description: 'Endless: always has items to pick up and room to drop onto.' },
+    { value: 'normal', label: 'Normal', description: 'Each lane\'s end is the one it states. A lane that states none has the end its role gives: a dead end where an inserter takes from it, an infinite end where the build only drops onto it.' },
     { value: 'export', label: 'Export', description: 'Normal, plus a consumption rate per lane for machines outside this configuration. Inserters filling the lane are clocked for that rate.' },
 ];
 

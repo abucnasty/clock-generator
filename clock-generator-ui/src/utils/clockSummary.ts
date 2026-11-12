@@ -1,7 +1,7 @@
 import type { ClockAlternativeView } from '../worker/types';
 import { formatNumberText } from './numberText';
 import { lossesOf, notTriedOf } from './rateWarning';
-import { fewestDecidersReason, recommendedIndexOf, type PickRule } from './recommendedClock';
+import { fewestDecidersReason, recommendedIndexOf } from './recommendedClock';
 import { rateVerbs, type TargetCounts } from './targetCounts';
 
 /** The fields of a clock its summary is worked out from, so the tests need not build a whole view */
@@ -48,12 +48,8 @@ export const SUMMARY_COPY = {
     beltBackedUp: 'Backed up',
     beltNone: 'None',
     beltNoneSub: 'no inserter picks up from a belt',
-    beltCellMoving: (slack: string) => `Moving (${slack} belt slack)`,
-    beltCellNoSlack: 'Moving (no belt slack)',
-    beltNoSlackSub: 'no belt slack',
     beltLineMoving: 'Made for moving belts.',
     beltLineBackedUp: 'Made for backed-up belts.',
-    beltLineNoSlack: 'Checked on moving belts, without belt slack.',
     beltLineNone: 'No inserter on the clock picks up from a belt.',
     // how a selected clock differs from the recommended one
     differsRate: (rate: string, target: string, counts?: TargetCounts) => `This one ${rateVerbs(counts).third} ${rate}/s, not ${target}/s.`,
@@ -151,8 +147,8 @@ export function clockBadges(clocks: SummaryClock[], index: number): ClockBadge[]
  * What the chip Fewest deciders means, for a clock that has it: it is the one with the least wiring to do by hand.
  * Empty for any other clock (the pick's own reason says what Fewest wakeups means).
  */
-export function pickNameMeaning(clocks: SummaryClock[], index: number, rule: PickRule | null): string {
-    return clockBadges(clocks, index).some(badge => badge.kind === 'fewest-deciders') ? fewestDecidersReason(clocks[index], rule) : '';
+export function pickNameMeaning(clocks: SummaryClock[], index: number): string {
+    return clockBadges(clocks, index).some(badge => badge.kind === 'fewest-deciders') ? fewestDecidersReason(clocks[index]) : '';
 }
 
 /** Whether the build goes back to its rate by itself after a supply stop or an output blockage: a word, an icon's kind and a sentence */
@@ -243,49 +239,34 @@ export function signalsText(clock: Pick<SummaryClock, 'assessment'>): { value: s
     return { value: SUMMARY_COPY.wakeUps(Math.round(perMinute)), sub: SUMMARY_COPY.oneCopy };
 }
 
-type BeltKind = 'moving' | 'moving_no_slack' | 'backed_up' | 'none';
+type BeltKind = 'moving' | 'backed_up' | 'none';
 
-/**
- * The supply a clock was checked on. A run for backed-up belts checks every clock on backed-up belts. In a run for moving
- * belts every clock is checked on moving belts, and one made without belt slack says so.
- */
-function beltKindOf(rule: PickRule | null, beltLabel: string): BeltKind {
+/** The belt the engine made a clock for, from its label ("moving", "backed-up"; empty when no clocked inserter picks up from a belt) */
+function beltKindOf(beltLabel: string): BeltKind {
     if (beltLabel === '') {
         return 'none';
     }
-    if (rule?.backedUpBelts === true) return 'backed_up';
-    if (beltLabel.startsWith('moving')) return 'moving';
-    return rule === null ? 'backed_up' : 'moving_no_slack';
+    return beltLabel.startsWith('moving') ? 'moving' : 'backed_up';
 }
 
 /** The Belt pickups tile's word: "Moving", "Backed up", or "None" when no clocked inserter picks up from a belt */
-export function beltValue(rule: PickRule | null, beltLabel: string): string {
-    return { moving: SUMMARY_COPY.beltMoving, moving_no_slack: SUMMARY_COPY.beltMoving, backed_up: SUMMARY_COPY.beltBackedUp, none: SUMMARY_COPY.beltNone }[beltKindOf(rule, beltLabel)];
+export function beltValue(beltLabel: string): string {
+    return { moving: SUMMARY_COPY.beltMoving, backed_up: SUMMARY_COPY.beltBackedUp, none: SUMMARY_COPY.beltNone }[beltKindOf(beltLabel)];
 }
 
-/** The line under the Belt pickups tile's word: what "None" means, or "no belt slack"; undefined otherwise */
-export function beltValueSub(rule: PickRule | null, beltLabel: string): string | undefined {
-    const kind = beltKindOf(rule, beltLabel);
-    return kind === 'none' ? SUMMARY_COPY.beltNoneSub : kind === 'moving_no_slack' ? SUMMARY_COPY.beltNoSlackSub : undefined;
+/** The line under the Belt pickups tile's word: what "None" means; undefined otherwise */
+export function beltValueSub(beltLabel: string): string | undefined {
+    return beltKindOf(beltLabel) === 'none' ? SUMMARY_COPY.beltNoneSub : undefined;
 }
 
-/**
- * The full clock table's Belt cell in the belt question's words: "Moving (+4 ticks belt slack)", "Moving (no belt slack)",
- * "Backed up", or nothing when no clocked inserter picks up from a belt. The engine's label is "moving (+4 ticks)" or "backed-up".
- */
-export function beltCellText(beltLabel: string, rule: PickRule | null = null): string {
-    if (beltLabel === '') {
-        return '';
-    }
-    const slack = /^moving \((.+)\)$/.exec(beltLabel);
-    if (slack) return SUMMARY_COPY.beltCellMoving(slack[1]);
-    if (beltLabel.startsWith('moving')) return SUMMARY_COPY.beltMoving;
-    return beltKindOf(rule, beltLabel) === 'moving_no_slack' ? SUMMARY_COPY.beltCellNoSlack : SUMMARY_COPY.beltBackedUp;
+/** The full clock table's Belt cell: "Moving", "Backed up", or nothing when no clocked inserter picks up from a belt */
+export function beltCellText(beltLabel: string): string {
+    return beltLabel === '' ? '' : beltValue(beltLabel);
 }
 
-/** The sentence under the tiles about the belt the clock is made for (2.4 may change its words, not its place) */
-export function beltLine(rule: PickRule | null, beltLabel: string): string {
-    return { moving: SUMMARY_COPY.beltLineMoving, moving_no_slack: SUMMARY_COPY.beltLineNoSlack, backed_up: SUMMARY_COPY.beltLineBackedUp, none: SUMMARY_COPY.beltLineNone }[beltKindOf(rule, beltLabel)];
+/** The sentence under the tiles about the belt the clock is made for */
+export function beltLine(beltLabel: string): string {
+    return { moving: SUMMARY_COPY.beltLineMoving, backed_up: SUMMARY_COPY.beltLineBackedUp, none: SUMMARY_COPY.beltLineNone }[beltKindOf(beltLabel)];
 }
 
 /**

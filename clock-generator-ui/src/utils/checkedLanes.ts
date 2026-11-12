@@ -1,5 +1,5 @@
 import { withOtherClocks } from 'clock-generator/light';
-import type { BuildLane, CheckedLaneRow, CheckedLanes, CheckedLaneState } from 'clock-generator/browser';
+import type { BuildLane, CheckedLaneRow, CheckedLanes, CheckedLaneState, ClockInsight, Config, WhyNotStable } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../worker/types';
 import { formatNumberText } from './numberText';
 
@@ -26,7 +26,7 @@ export const CHECKED_LANES_COPY = {
     alone: 'One copy alone',
     changes: 'What changes it',
     laneCapacity: 'lane capacity',
-    endFromRole: 'from its role',
+    endFromRole: 'assumed from its role',
     carries: (perSecond: number) => `carries ${rate(perSecond)}`,
     onLanes: (lanes: number[]) => `on lanes ${lanes.join(' and ')}`,
 };
@@ -118,4 +118,33 @@ export function withOtherClocksOf(alternatives: ClockAlternativeView[], selected
     const copies = alternatives[0]?.copies ?? 1;
     return withOtherClocks(shaped, selectedIndex, copies)
         .map(it => it.checked_lanes === it.view.checkedLanes ? it.view : { ...it.view, checkedLanes: it.checked_lanes as CheckedLanes });
+}
+
+/**
+ * The clock's description as its help shows it: where the page shows the clock's cause, without the sentences the engine
+ * gives on the same loss (`sharedLaneLossNote`, the exact text the description holds)
+ */
+export function descriptionShown(clock: Pick<ClockAlternativeView, 'description' | 'checkedLanes' | 'sharedLaneLossNote'>): string {
+    const note = clock.sharedLaneLossNote;
+    return clock.checkedLanes?.cause && note ? clock.description.replace(` ${note}`, '') : clock.description;
+}
+
+/** The insights of a clock without those a row of its checked lanes states: a lane not checked as the build drops onto it */
+export function insightsShown(clock: Pick<ClockAlternativeView, 'insights' | 'checkedLanes'>): ClockInsight[] {
+    const notChecked = new Set((clock.checkedLanes?.rows ?? []).filter(row => row.state.kind === 'not_checked')
+        .map(row => `shared-lane-not-checked-${row.belt_id}-${row.lane}`));
+    return notChecked.size === 0 ? clock.insights : clock.insights.filter(insight => !notChecked.has(insight.id));
+}
+
+/** Whether the note on why no clock is stable is of the recommended clock's loss on a shared lane, whose parts it then shows */
+export const whyNotStableShowsCause = (why: Pick<WhyNotStable, 'cause'> | null | undefined, recommended: Pick<ClockAlternativeView, 'checkedLanes'> | undefined) =>
+    (why?.cause === 'shared lane short' || why?.cause === 'join full') && Boolean(recommended?.checkedLanes?.cause);
+
+/**
+ * The first sentence of what a saved run assumed: "Made for 9 copies of your build." for a clock kept before the engine gave
+ * the build's lanes (a clock that gives them says it in the card, with what was checked); no word of the belts either way
+ */
+export function madeForLead(saved: Pick<Config, 'setpoint'> | null, clock: Pick<ClockAlternativeView, 'assumptions'>): string {
+    if (saved === null) return 'These results are for a saved build whose metadata is unavailable.';
+    return givesLanes(clock) ? '' : CHECKED_LANES_COPY.madeFor(saved.setpoint.copies);
 }

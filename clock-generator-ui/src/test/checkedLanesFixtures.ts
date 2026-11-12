@@ -3,10 +3,11 @@
  * not written by hand), and the views of their clocks as the worker gives them. A test reads the engine's sentences from
  * here, never from a copy of its own.
  */
-import type { BuildLane, CheckedLaneRow, CheckedLanes } from 'clock-generator/browser';
+import type { BuildLane, CheckedLaneRow, CheckedLanes, ClockInsight, WhyNotStable } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../worker/types';
 import automation from './checked-lanes/automation-science-240.json';
 import electromagnetic from './checked-lanes/electromagnetic-science-330.json';
+import electromagneticTwoSwings from './checked-lanes/electromagnetic-science-330-two-swings.json';
 import military from './checked-lanes/military-science-240.json';
 import statesJson from './checked-lanes/states.json';
 
@@ -28,6 +29,7 @@ interface KeptClock {
     cycle_ticks: number;
     expected_output_items: number;
     insights: unknown[];
+    shared_lane_loss_note: string | null;
     checked_lanes: CheckedLanes | null;
 }
 
@@ -35,6 +37,7 @@ interface KeptResult {
     sample: string;
     copies: number;
     selected_index: number;
+    why_not_stable: WhyNotStable | null;
     lanes: BuildLane[];
     clocks: KeptClock[];
 }
@@ -42,9 +45,11 @@ interface KeptResult {
 export const AUTOMATION_240 = automation as unknown as KeptResult;
 export const ELECTROMAGNETIC_330 = electromagnetic as unknown as KeptResult;
 export const MILITARY_240 = military as unknown as KeptResult;
+/** Electromagnetic science 330 with terminal_swing_count 2: its recommended clock is not stable on a shared lane */
+export const ELECTROMAGNETIC_330_TWO_SWINGS = electromagneticTwoSwings as unknown as KeptResult;
 
 /** One row of each state the engine gives, with the copies of its line and the lanes of its build */
-export const STATES = statesJson as unknown as Record<string, { from: string; copies: number; row: CheckedLaneRow; lanes: BuildLane[] }>;
+export const STATES = statesJson as unknown as Record<string, { from: string; copies: number; row: CheckedLaneRow; lanes: BuildLane[]; insights?: ClockInsight[] }>;
 
 /** A clock of a kept result by its id */
 function keptClock(result: KeptResult, id: string): KeptClock {
@@ -71,6 +76,7 @@ export function viewOf(result: KeptResult, id: string): ClockAlternativeView {
         expectedOutputItems: clock.expected_output_items, asBuilt: null, insights: clock.insights, deadlockRisk: null,
         assumptions: { lanes: result.lanes, kickStarts: [], outputDrops: [], overrides: {}, machineFuel: [] },
         ...(clock.checked_lanes !== null && { checkedLanes: clock.checked_lanes }),
+        ...(clock.shared_lane_loss_note !== null && { sharedLaneLossNote: clock.shared_lane_loss_note }),
     } as unknown as ClockAlternativeView;
 }
 

@@ -2,7 +2,7 @@
 import { screen, within } from '@testing-library/react';
 import { expect, it } from 'vitest';
 import { show } from '../test/fixtures';
-import { LEGEND_LABEL, LEGEND_SELECTED, LEGEND_SLACK, LEGEND_TRACK, LEGEND_WINDOW, summaryText } from '../utils/wakeWindowCopy';
+import { LEGEND_LABEL, LEGEND_SELECTED, LEGEND_TRACK, LEGEND_WINDOW, summaryText } from '../utils/wakeWindowCopy';
 import type { ClockAlternativeView } from '../worker/types';
 import { WakeWindowsView } from './WakeWindowsView';
 
@@ -15,7 +15,7 @@ it.each([false, true])('places the legend before the first plotted row (cycle vi
     const legend = screen.getByRole('list', { name: LEGEND_LABEL });
     expect(legend.compareDocumentPosition(screen.getByRole('group', { name: /^Inserter 1\b/ })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(within(legend).getAllByRole('listitem').map(item => item.textContent))
-        .toEqual([LEGEND_WINDOW, LEGEND_SLACK, LEGEND_SELECTED, cycleView ? 'One output cycle' : LEGEND_TRACK]);
+        .toEqual([LEGEND_WINDOW, LEGEND_SELECTED, cycleView ? 'One output cycle' : LEGEND_TRACK]);
 });
 
 // an iron gear wheel build at 9.97 a second's selected clock: its window cycle is 2880000/997 ticks, and its blueprint counts 2888 ("clock rounded to 2888

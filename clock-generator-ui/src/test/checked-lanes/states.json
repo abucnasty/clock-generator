@@ -912,6 +912,24 @@
     "supply_rate_by_default": true,
     "capacity": 120
    }
+  ],
+  "insights": [
+   {
+    "id": "shared-lane-not-checked-1-1",
+    "scope": "build",
+    "title": "The iron plate lane is not checked with every copy on it",
+    "what": "The iron plate lane is not checked with every copy on it. The build drops items onto this belt, and the check of a shared lane does not run those drops yet.",
+    "why": "",
+    "explanation": ""
+   },
+   {
+    "id": "shared-lane-not-checked-1-2",
+    "scope": "build",
+    "title": "The iron gear wheel lane is not checked with every copy on it",
+    "what": "The iron gear wheel lane is not checked with every copy on it. The build drops items onto this belt, and the check of a shared lane does not run those drops yet.",
+    "why": "",
+    "explanation": ""
+   }
   ]
  }
 }

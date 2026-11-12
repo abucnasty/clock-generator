@@ -36,7 +36,8 @@ describe('buildChangesOf', () => {
         ['names one edited inserter by its label', (config) => edits.updateInserter(config, 2, { stack_size: 12 }), ['Inserter 3']],
         ['names two edited inserters together',
             (config) => edits.updateInserter(edits.updateInserter(config, 0, { stack_size: 7 }), 2, { stack_size: 12 }), ['Inserters 1, 3']],
-        ['names the belt answer', (config) => edits.updateOverrides(config, 'backed_up_belts', true), ['Input belts (moving → backed up)']],
+        ['names the end the belt setting gives lanes that state none: Moving', (config) => edits.updateOverrides(config, 'backed_up_belts', false), ['Unstated lane ends (by role → infinite)']],
+        ['names the end the belt setting gives lanes that state none: true', (config) => edits.updateOverrides(config, 'backed_up_belts', true), ['Unstated lane ends (by role → dead end)']],
         ['names the deeper-search switch', (config) => edits.updateOverrides(config, 'search_for_fewer_wake_ups', true), ['Search for fewer wakeups (off → on)']],
         ['calls any other override "Advanced Overrides"', (config) => edits.updateOverrides(config, 'lcm', 120), ['Advanced Overrides']],
         ['names the drill whose productivity changed', (config) => edits.updateDrill(config, 0, { productivity: 30 }), ['Drill 1'], edits.addDrill(form())],
@@ -55,7 +56,7 @@ describe('buildChangesOf', () => {
             'backed_up_belts',
             true,
         );
-        const expected = ['Items per second (240 → 200)', 'Inserter 2', 'Belts (1 → 2)', 'Input belts (moving → backed up)'];
+        const expected = ['Items per second (240 → 200)', 'Inserter 2', 'Belts (1 → 2)', 'Unstated lane ends (by role → dead end)'];
         expect(changes(edit)).toEqual(expected);
         expect(changes(edit)).toEqual(expected);
     });

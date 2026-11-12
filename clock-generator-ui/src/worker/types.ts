@@ -161,6 +161,11 @@ export interface ClockAlternativeView {
      * page has them all (`withOtherClocks`). Absent for a build of one copy, and from clocks kept before it was carried.
      */
     checkedLanes?: CheckedLanes;
+    /**
+     * The sentences of `description` on a loss on the lanes the copies share, word for word (the engine's
+     * `shared_lane_loss_note`); missing where it has none, and from clocks kept before it was carried
+     */
+    sharedLaneLossNote?: string;
     /** The belt the clock is made for: "moving (+4 ticks)" or "backed-up"; empty when no clocked inserter picks up from a belt */
     beltLabel: string;
     /** The same belt as the engine gives it; missing from clocks kept before it was carried */
@@ -182,8 +187,6 @@ export interface ClockAlternativeView {
     clockWindows: SerializableClockWindows;
     /** Why the clock leaves an inserter or drill always on, by entity id; missing from clocks kept before it was carried */
     alwaysOnReasons?: AlwaysOnReasons;
-    /** Ticks of belt pickup slack at the end of each window, by inserter id */
-    beltPickupSlackTicks: Record<string, number>;
     /** What the simulation found that is worth explaining about the build and this clock */
     insights: ClockInsight[];
     /** Null unless this clock moved a output cycle or an output swing */

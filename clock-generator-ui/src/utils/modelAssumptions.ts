@@ -22,7 +22,7 @@ export const COLD_START = 'Tested in the simulator from a cold start: full input
 /** The same, with what it does not promise, for the Overview */
 export const MODELED_START = 'Tested from a cold start: full input, empty machines and inserters, the clock at its first tick. The clock is planned on a separate copy of the build, and rates are read at steady state, so they do not promise the setpoint in the first window cycle, or from every state a running build can be in.';
 /** What the tests do not cover, last in the Overview's list */
-export const START_LIMITS = 'None of this covers every stock of items in a running build, the order you build it in, how much a real belt carries, or recovery in the game. Belt slack is a rule of thumb, not a check of what the belt carries.';
+export const START_LIMITS = 'None of this covers every stock of items in a running build, the order you build it in, how much a real belt carries, or recovery in the game.';
 /** How many other places in its window cycle the clock was tried from */
 export const phaseChecksText = (checked: number | undefined): string => checked === undefined
     ? 'How many other places in its window cycle the clock was tried from is unavailable.'

@@ -51,7 +51,6 @@ export type GlossaryId =
     | 'supply-stop'
     | 'output-blockage'
     | 'recovery'
-    | 'belt-slack'
     | 'simulator'
     | 'hand'
     | 'lcm'
@@ -224,12 +223,6 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
             + 'and an output blockage. A clock that fails one loss is not tried on the others. '
             + 'This is separate from holding the modeled rate and from checks of other sampled starts.',
         insteadOf: 'recovers, recover, gets back',
-    },
-    {
-        id: 'belt-slack',
-        term: 'belt slack',
-        definition: 'Extra ticks added to an enable window. A late pickup from a moving belt can then still finish.',
-        insteadOf: 'belt pickup slack, pickup slack, slack on its own',
     },
     {
         id: 'simulator',

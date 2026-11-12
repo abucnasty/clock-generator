@@ -40,7 +40,7 @@ describe('a clock without a cause', () => {
             expect(row.textContent).toContain(stable.rows[index].sentence);
         });
         expect(rows[0].textContent).toBe('Belt 1, lane 1InputIron gear wheelDead endtake 120 /s120 /slane capacity' + stable.rows[0].label + stable.rows[0].sentence);
-        expect(rows[2].textContent).toBe('Belt 2, lane 1OutputAutomation science packInfinitefrom its roledrop 240 /son lanes 1 and 2—carries 240 /s'
+        expect(rows[2].textContent).toBe('Belt 2, lane 1OutputAutomation science packInfiniteassumed from its roledrop 240 /son lanes 1 and 2—carries 240 /s'
             + stable.rows[2].label + stable.rows[2].sentence);
         expect(screen.getByText('3 lanes · all hold')).toBeTruthy();
     });
@@ -117,6 +117,36 @@ describe('a clock with a cause', () => {
         expect(places).toEqual([...places].sort((a, b) => a - b));
         expect(screen.getByText('3 lanes · 1 join full · 2 take less')).toBeTruthy();
     });
+});
+
+describe('on a narrow page', () => {
+    it('gives each lane a block: the lane and its state first, then the columns as names and values, with nothing beside it', () => {
+        const short = checkedOf(AUTOMATION_240, 'euclidean_swings');
+        show(<SharedLanesTable checked={short} lanes={AUTOMATION_240.lanes} level={4} narrow />, { names: gameNames });
+        expect(screen.queryByRole('table')).toBeNull();
+        const list = screen.getByRole('list', { name: 'Shared lanes' });
+        const blocks = within(list).getAllByRole('listitem');
+        expect(blocks).toHaveLength(short.rows.length);
+        blocks.forEach((block, index) => {
+            const row = short.rows[index];
+            const text = block.textContent!;
+            // the lane, then the engine's label and sentence, then the other columns
+            const places = [`Lane Belt ${row.belt_id}, lane ${row.lane}`, row.label, row.sentence, 'Role', 'Item', 'End', 'The 9 copies together', 'Supply rate']
+                .map(part => text.indexOf(part));
+            expect(places.every(place => place >= 0)).toBe(true);
+            expect(places).toEqual([...places].sort((a, b) => a - b));
+        });
+        expect(within(blocks[2]).getByText('Automation science pack')).toBeTruthy();
+        expect(blocks[2].textContent).toContain('Infiniteassumed from its role');
+    });
+});
+
+it('leaves the parts out of the card where the note on why no clock is stable shows them, and keeps the table', () => {
+    const { container } = show(<CheckedLanesSummary clock={viewOf(AUTOMATION_240, 'euclidean_swings')} causeShownAbove />, { names: gameNames });
+    const cause = checkedOf(AUTOMATION_240, 'euclidean_swings').cause!;
+    for (const part of [cause.headline.text, cause.where.text, cause.alone.text]) expect(container.textContent).not.toContain(part);
+    expect(container.textContent).toContain('Made for 9 copies of your build.');
+    expect(screen.getByRole('table', { name: 'Shared lanes' })).toBeTruthy();
 });
 
 describe('every state has its row as the engine gives it', () => {

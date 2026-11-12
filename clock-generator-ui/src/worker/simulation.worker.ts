@@ -160,6 +160,7 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         ranking: alternative.ranking,
         deadlockRisk: clockGenerator.deadlockRiskNote(alternative.deadlock_risks, names),
         ...(alternative.checked_lanes !== undefined && { checkedLanes: alternative.checked_lanes }),
+        ...(alternative.shared_lane_loss_note !== undefined && { sharedLaneLossNote: alternative.shared_lane_loss_note }),
         beltLabel: clockGenerator.clockBeltLabel(alternative.belt),
         belt: alternative.belt,
         asBuilt: result.stability_check.as_built ?? null,
@@ -174,8 +175,6 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         fuelView: fuelViewOf(result, config),
         clockWindows: result.clock_windows,
         alwaysOnReasons: result.always_on_reasons ?? {},
-        // the engine adds no ticks to a window for a late pickup: the site's belt slack marks stay empty
-        beltPickupSlackTicks: {},
         insights: alternative.insights,
         shiftOptions: shiftOptionsOf(result),
         simulationDurationTicks: result.simulation_duration.ticks,
