@@ -10,7 +10,7 @@ import { machineNameInText } from "./machine-name";
 import { figure } from "./other-clocks";
 import type { CopiesTrialVerdict } from "./shared-lane-trial";
 import { droppedOntoSharedLanes, isNotChecked, sharedLanesNotChecked, type SharedLanesNotChecked, type MissedInWindowCycle, type MissedSwingCause, type MissedSwingStops, type SharedLaneJudgement, type SharedLaneLoss,
-    type SharedLaneLossFacts, type TakerSwings } from "./shared-lane-verdict";
+    type SharedLaneLossFacts, type TakerSwings, type CopiesMade } from "./shared-lane-verdict";
 
 /**
  * What a result says was checked on each lane the copies of a build share: the lanes of the build (`buildLanesOf`), and for
@@ -195,6 +195,12 @@ export interface CheckedLanes {
     line: CheckedLine;
     rows: CheckedLaneRow[];
     cause: SharedLaneCause | null;
+    /**
+     * What the output inserters of all the copies put down of the target's item in the run of the copies, over the judged
+     * span: items a second, and the span in window cycles. From the run the verdict judged by (`judgedCopiesMade`). Absent
+     * where the copies were not run, where no output inserter is recorded, and in a result of an older engine.
+     */
+    copies_made?: CopiesMade;
 }
 
 /** What the check of a clock's shared lanes found with fewer copies on the lanes (shared-lane-verdict.ts `fewerCopiesThatHold`) */
@@ -473,7 +479,8 @@ export function checkedLanesOf(input: CheckedLanesInput): CheckedLanes | null {
 
     const line = lineOf({ config, build, rows, run, holds, lane_losses, join_losses, judgement, trial_failed, copies_trial, ends, stated_output_belt });
     const cause = run && losses.length > 0 ? causeOf({ config, build, losses, facts, window_cycle_ticks, fewer, loads, lanes: [...ran_lanes] }) : null;
-    return { line, rows, cause };
+    const made = run ? judgement!.copies_made : undefined;
+    return { line, rows, cause, ...(made !== undefined && { copies_made: { items_per_second: rounded(made.items_per_second), window_cycles: made.window_cycles } }) };
 }
 
 function lineOf(input: { config: Config; build: BuildToName; rows: readonly CheckedLaneRow[]; run: boolean; holds: boolean; lane_losses: readonly SharedLaneLoss[];

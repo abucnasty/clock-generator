@@ -452,6 +452,20 @@ export interface SharedLaneJudgement {
     longer_run: boolean;
     /** Lanes the model runs, by "belt/lane" */
     lanes: string[];
+    /**
+     * What the output inserters of all the copies put down of the target's item over the judged span of the run the verdict
+     * judged by (`judgedCopiesMade`). Absent where no output inserter is recorded, where the span is empty, and in a
+     * judgement with fewer copies on the lanes.
+     */
+    copies_made?: CopiesMade;
+}
+
+/** What the output inserters of all the copies put down of the target's item in one run of the copies, over its judged span */
+export interface CopiesMade {
+    /** Items a second: the items over the span's ticks */
+    items_per_second: number;
+    /** The span, in window cycles */
+    window_cycles: number;
 }
 
 /**
@@ -697,6 +711,8 @@ export interface RunOfCopies {
     /** The judged window cycles, from the tick `from` up to, not including, the tick `to` */
     from: number;
     to: number;
+    /** The judged window cycles, by count */
+    window_cycles: number;
     /** What each copy after the config's own holds, in order: every entity, or the ids of the entities a part copy holds */
     holds: SharedLaneLayout["copies"]["later"];
     /** Where the config states its output belt: by the copy (1 the config's own), the hands its side belt held in the span */
@@ -723,7 +739,8 @@ function shortfallsOf(under: Config, lanes: readonly ModelLane[], layout: Shared
     const join_waits = output_belt === undefined ? undefined : joinWaitsOf(output_belt, from, to);
     const output_swings = output_belt === undefined ? undefined : outputSwingsOf(output_belt, first_cycle, end_cycle, window_cycle_ticks);
     const joins = { ...(join_full !== undefined && { join_full }), ...(join_waits !== undefined && { join_waits }), ...(output_swings !== undefined && { output_swings }) };
-    if (end_cycle <= first_cycle) return { shortfalls: [], made, from, to, holds, ...joins };
+    const span = Math.max(0, end_cycle - first_cycle);
+    if (end_cycle <= first_cycle) return { shortfalls: [], made, from, to, window_cycles: span, holds, ...joins };
     // a taker that takes one item from both lanes of its belt has the same hands on both: a hand cannot be told by its lane,
     // so it makes one loss for the item, which names both lanes
     const by_taker = new Map<string, CopyLaneTake[]>();
@@ -758,7 +775,30 @@ function shortfallsOf(under: Config, lanes: readonly ModelLane[], layout: Shared
                 { first_cycle, end_cycle, window_cycle_ticks, travel_ticks: step_tiles / tiles_a_tick, reach_ticks: taker.length_tiles / tiles_a_tick })) };
         return [{ short: alone_items - items, hand, loss, facts: loss_facts }];
     });
-    return { shortfalls, made, from, to, holds, ...joins };
+    return { shortfalls, made, from, to, window_cycles: span, holds, ...joins };
+}
+
+/**
+ * What the output inserters of all the copies put down of the target's item over the judged span of a run of the copies;
+ * null where the span is empty or no output inserter is recorded
+ */
+function copiesMadeIn(run: RunOfCopies): CopiesMade | null {
+    const outputs = run.made.filter(it => it.kind === "output_inserter");
+    if (!(run.to > run.from) || outputs.length === 0) return null;
+    const items = outputs.reduce((sum, { counts }) => counts.reduce((of, it) => it.tick >= run.from && it.tick < run.to ? of + it.amount : of, sum), 0);
+    return { items_per_second: items / (run.to - run.from) * 60, window_cycles: run.window_cycles };
+}
+
+/**
+ * The rate of the copies a judgement gives, of the runs the verdict judged by (one for each layout of the lanes and each
+ * reading of an unknown lane end, the longer run where it was made), each with the losses that stood in it: of the runs
+ * with a loss that stood, else of all, the one whose copies made the fewest items a second; the first of equals.
+ * Undefined where no run has a rate.
+ */
+export function judgedCopiesMade(runs: readonly { made: CopiesMade | null; losses: number }[]): CopiesMade | undefined {
+    const with_loss = runs.filter(it => it.losses > 0);
+    const candidates = (with_loss.length > 0 ? with_loss : runs).flatMap(it => it.made === null ? [] : [it.made]);
+    return candidates.reduce<CopiesMade | undefined>((low, it) => low === undefined || it.items_per_second < low.items_per_second ? it : low, undefined);
 }
 
 /** The window cycle a tick is in: the last that starts at or before it */
@@ -1126,19 +1166,28 @@ function judgedOnLanes(config: Config, clock_windows: SerializableClockWindows, 
         first.push({ reading, under, taker_ids, alone, runs: layouts.map(layout => ({ layout, run: shortfallsOf(under, lanes, layout, alone, windows, window_cycle_ticks, window_cycles, logger, ends) })) });
     }
     const shortfalls = first.flatMap(it => it.runs.flatMap(({ run }) => run.shortfalls));
+    // each run the verdict judged by, with the losses that stood in it: for the rate of the copies, read only where all
+    // the copies are on the lanes
+    const judged_runs: { run: RunOfCopies; losses: number }[] = [];
+    const judgedIn = (run: RunOfCopies, found: Judged[]): Judged[] => {
+        judged_runs.push({ run, losses: found.length });
+        return found;
+    };
     const judged = (found: Judged[], longer_run: boolean): SharedLaneJudgement => {
         // the worst first: the most items short of the run of one copy
         const sorted = found.map(({ loss, facts }) => ({ loss: { ...loss, text: describeSharedLaneLoss(loss, build) }, facts }))
             .sort((a, b) => (b.loss.alone_items - b.loss.items) - (a.loss.alone_items - a.loss.items));
+        const copies_made = copies_on_lanes === undefined ? judgedCopiesMade(judged_runs.map(it => ({ made: copiesMadeIn(it.run), losses: it.losses }))) : undefined;
         return { losses: sorted.map(it => it.loss), loss_facts: sorted.map(it => it.facts), fast_check_passes, simulated: true, longer_run, lanes: keys,
-            ...(join_waits.size > 0 && { join_waits: [...join_waits].sort(([a], [b]) => a - b).map(([copy, waits]) => ({ copy, held_hands: waits.held_hands, hands: waits.hands })) }) };
+            ...(join_waits.size > 0 && { join_waits: [...join_waits].sort(([a], [b]) => a - b).map(([copy, waits]) => ({ copy, held_hands: waits.held_hands, hands: waits.hands })) }),
+            ...(copies_made !== undefined && { copies_made }) };
     };
     // no taker short, or one short by more than a hand, which the end of the judged span does not make: judged as it is,
     // each run's losses standing where a machine or an output inserter of that run is behind its target
     if (shortfalls.length === 0 || shortfalls.some(it => it.short > it.hand)) {
         first.forEach(it => it.runs.forEach(({ run }) => waitsOf(run)));
-        return judged(first.flatMap(it => it.runs.flatMap(({ layout, run }) => standing(run, run.shortfalls, it.alone,
-            () => shortfallsOf(withoutOutputBelt(it.under), lanes, layout, it.alone, windows, window_cycle_ticks, window_cycles, logger, ends)))), false);
+        return judged(first.flatMap(it => it.runs.flatMap(({ layout, run }) => judgedIn(run, standing(run, run.shortfalls, it.alone,
+            () => shortfallsOf(withoutOutputBelt(it.under), lanes, layout, it.alone, windows, window_cycle_ticks, window_cycles, logger, ends))))), false);
     }
     // every taker short by at most one hand: the runs with a shortfall again, twice as long, and a loss where a taker is
     // short there by more than one hand of its own (the unfinished hand at the span's end can fall on another taker) and a
@@ -1146,14 +1195,17 @@ function judgedOnLanes(config: Config, clock_windows: SerializableClockWindows, 
     const found: Judged[] = [];
     for (const { reading, under, taker_ids, runs } of first) {
         const short_runs = runs.filter(({ run }) => run.shortfalls.length > 0);
-        runs.filter(({ run }) => run.shortfalls.length === 0).forEach(({ run }) => waitsOf(run));
+        runs.filter(({ run }) => run.shortfalls.length === 0).forEach(({ run }) => {
+            waitsOf(run);
+            judgedIn(run, []);
+        });
         if (short_runs.length === 0) continue;
         const alone = aloneOf(reading, under, taker_ids, 2 * window_cycles);
         for (const { layout } of short_runs) {
             const longer = shortfallsOf(under, lanes, layout, alone, windows, window_cycle_ticks, 2 * window_cycles, logger, ends);
             waitsOf(longer);
-            found.push(...standing(longer, longer.shortfalls.filter(shortfall => shortfall.short > shortfall.hand), alone,
-                () => shortfallsOf(withoutOutputBelt(under), lanes, layout, alone, windows, window_cycle_ticks, 2 * window_cycles, logger, ends)));
+            found.push(...judgedIn(longer, standing(longer, longer.shortfalls.filter(shortfall => shortfall.short > shortfall.hand), alone,
+                () => shortfallsOf(withoutOutputBelt(under), lanes, layout, alone, windows, window_cycle_ticks, 2 * window_cycles, logger, ends))));
         }
     }
     return judged(found, true);

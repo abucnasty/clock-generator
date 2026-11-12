@@ -5,7 +5,7 @@ import { Config } from "../config/schema";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import { SerializableClockWindows } from "./clock";
-import { behindTargetIn, CopyMade, describeSharedLaneLoss, fewerCopiesThatHold, judgeSharedLanes, RunOfCopies, SharedLaneLoss, TargetRates } from "./shared-lane-verdict";
+import { behindTargetIn, CopyMade, describeSharedLaneLoss, fewerCopiesThatHold, judgedCopiesMade, judgeSharedLanes, RunOfCopies, SharedLaneLoss, TargetRates } from "./shared-lane-verdict";
 import { withoutSharedLaneFacts } from "./generate-blueprint-test-helpers";
 
 const quiet = { log: () => {}, warn: () => {}, error: () => {}, debug: () => {} };
@@ -259,7 +259,7 @@ describe("the target a machine or an output inserter of a copy is held to", () =
         takers: new Map([[7, ["inserter:1", "inserter:2", "inserter:3", "inserter:9"].map(inserter_id => ({ inserter_id, transfers: 1 }))]]),
     };
     const part_copy = new Set(["machine:7", "inserter:1", "inserter:9"]);
-    const run = (made: CopyMade[]): RunOfCopies => ({ shortfalls: [], made, from: 0, to: 600, holds: ["whole", "whole", part_copy] });
+    const run = (made: CopyMade[]): RunOfCopies => ({ shortfalls: [], made, from: 0, to: 600, window_cycles: 10, holds: ["whole", "whole", part_copy] });
     const machine = (copy: number, crafts: number): CopyMade => ({ copy, kind: "machine", id: 7, counts: [{ tick: 300, amount: crafts }] });
 
     it("holds a part copy's machine with half of its takers to half of a whole copy's target: making half, it is not behind", () => {
@@ -279,6 +279,32 @@ describe("the target a machine or an output inserter of a copy is held to", () =
         const output: CopyMade = { copy: 3, kind: "output_inserter", id: 9, counts: [{ tick: 300, amount: 32 }] };
         expect(behindTargetIn(run([output]), rates)).toEqual([{ copy: 4, kind: "output_inserter", id: 9, made: 32, target: 40, behind: 2 }]);
         expect(behindTargetIn(run([{ ...output, counts: [{ tick: 300, amount: 40 }] }]), rates)).toEqual([]);
+    });
+});
+
+// No sample has a clock with more than one run judged (one layout of the lanes, one reading of their ends): the rule for
+// several is pinned here
+describe("the rate of all the copies that a judgement gives, of the runs the verdict judged by", () => {
+    const made = (items_per_second: number, window_cycles = 63) => ({ items_per_second, window_cycles });
+
+    it("gives the rate of the one run judged", () => {
+        expect(judgedCopiesMade([{ made: made(234.07), losses: 4 }])).toEqual(made(234.07));
+        expect(judgedCopiesMade([{ made: made(240), losses: 0 }])).toEqual(made(240));
+    });
+
+    it("of several runs, gives the lowest rate of the runs where a loss stood, not a lower one of a run without a loss", () => {
+        expect(judgedCopiesMade([{ made: made(230), losses: 0 }, { made: made(236, 65), losses: 2 }, { made: made(234, 66), losses: 1 }])).toEqual(made(234, 66));
+    });
+
+    it("of several runs with no loss, gives the lowest; of equals, the first", () => {
+        expect(judgedCopiesMade([{ made: made(240, 1), losses: 0 }, { made: made(239.5), losses: 0 }])).toEqual(made(239.5));
+        expect(judgedCopiesMade([{ made: made(240, 1), losses: 0 }, { made: made(240, 2), losses: 0 }])).toEqual(made(240, 1));
+    });
+
+    it("gives nothing where no run has a rate (no output inserter recorded, or an empty span)", () => {
+        expect(judgedCopiesMade([{ made: null, losses: 3 }])).toBeUndefined();
+        expect(judgedCopiesMade([])).toBeUndefined();
+        expect(judgedCopiesMade([{ made: null, losses: 3 }, { made: made(240), losses: 0 }])).toBeUndefined();
     });
 });
 

@@ -60,6 +60,21 @@ describe("the lanes of the build", () => {
     });
 });
 
+describe("the rate all the copies made in their run together", () => {
+    it("is the judgement's, as a rate to the ninth decimal, with its span", () => {
+        const lanes = checked({ config: gears(), judged: judged([lossOf(2, 6, 130)], { copies_made: { items_per_second: 2.1 + 0.6 + 0.0000000001, window_cycles: 65 } }) });
+        expect(lanes.copies_made).toEqual({ items_per_second: 2.7, window_cycles: 65 });
+    });
+
+    it("is absent where the judgement has none (an older engine) and where the copies were not run", () => {
+        expect(checked({ config: gears() }).copies_made).toBeUndefined();
+        const made = { copies_made: { items_per_second: 6, window_cycles: 10 } };
+        expect(checked({ config: gears(), holds: false, judged: judged([], made) }).copies_made).toBeUndefined();
+        expect(checked({ config: gears(), judged: judged([], { ...made, simulated: false }) }).copies_made).toBeUndefined();
+        expect(checked({ config: gears(), judged: judged([], made) }).copies_made).toEqual({ items_per_second: 6, window_cycles: 10 });
+    });
+});
+
 describe("the rows of a clock", () => {
     it("hold where no copy loses swings, and a plain output belt is checked by rate", () => {
         const lanes = checked({ config: gears() });

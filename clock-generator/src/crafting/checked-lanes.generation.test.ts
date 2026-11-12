@@ -120,6 +120,28 @@ describe("what was checked on the lanes the copies of the automation science 240
         expect(swings.side_belt).toBe(true);
     });
 
+    // what the output inserters of all 9 copies put down over the judged span: 53,088 packs in 13,608 ticks on the 216-tick
+    // clock, which 240 x (9 x 378 - 84) / (9 x 378) gives from its swings too
+    it("gives the rate all the copies made together in the run of the copies, over the judged span, on the four clocks with a loss", () => {
+        const made = (id: string) => clockOf(result, id).checked_lanes!.copies_made;
+        expect(made("takt_batches_observed")).toEqual({ items_per_second: 234.074074074, window_cycles: 63 });
+        expect(made("euclidean_swings")).toEqual({ items_per_second: 238.769230769, window_cycles: 65 });
+        expect(made("takt_batches_observed_swings_2")).toEqual({ items_per_second: 236.512820513, window_cycles: 65 });
+        expect(made("takt_batches_swings_1")).toEqual({ items_per_second: 234.461538462, window_cycles: 65 });
+        // the clock-only run's rate is still the setpoint: the rate of the copies changes no assessment
+        expect(clockOf(result, "takt_batches_observed").assessment.items_per_second).toBe(240);
+    });
+
+    it("gives the setpoint as the rate of the copies on the stable time study windows clock", () => {
+        expect(clockOf(result, "time_study_windows").checked_lanes!.copies_made).toEqual({ items_per_second: 240, window_cycles: 64 });
+    });
+
+    it("gives no rate of the copies on a clock the copies were not run for (it does not hold on one copy)", () => {
+        const clock = clockOf(result, "takt_batches_observed_swings_4");
+        expect(clock.checked_lanes!.line.run_with_copies).toBe(false);
+        expect(clock.checked_lanes!.copies_made).toBeUndefined();
+    });
+
     it("gives the description's sentences on a shared-lane loss as a field of their own, word for word", () => {
         for (const [id, lead] of [["euclidean_swings", "It is not stable on a lane its copies share. "], ["takt_batches_observed", "It is not stable on its output belt. "]]) {
             const clock = clockOf(result, id);
