@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CheckedLanes } from 'clock-generator/browser';
 import { AUTOMATION_240, checkedOf, ELECTROMAGNETIC_330, ELECTROMAGNETIC_330_TWO_SWINGS, MILITARY_240, STATES, viewOf, viewsOf } from '../test/checkedLanesFixtures';
-import { descriptionShown, endText, givesLanes, insightsShown, laneOf, madeForLead, lanesCountText, laneText, roleText, stateSentence, stateTone, supplyText, togetherText, whyNotStableShowsCause, withOtherClocksOf } from './checkedLanes';
+import { CHECKED_LANES_COPY, descriptionShown, endText, givesLanes, insightsShown, laneOf, madeForLead, lanesCountText, laneText, roleText, stateSentence, stateTone, supplyText, togetherText, whyNotStableShowsCause, withOtherClocksOf } from './checkedLanes';
 
 const lanes = AUTOMATION_240.lanes;
 
@@ -14,6 +14,11 @@ describe('the cells of a row, made from its data', () => {
         // the config states the input lane's end; the output lane's comes from its role
         expect(endText(laneOf(lanes, gears))).toEqual({ value: 'Dead end' });
         expect(endText(laneOf(lanes, output))).toEqual({ value: 'Infinite', sub: 'assumed from its role' });
+    });
+
+    it('are under a header that says they are the plan, with the build\'s copies as the header writes them, a part copy too', () => {
+        expect(CHECKED_LANES_COPY.columns.together(9)).toBe('Planned for the 9 copies');
+        expect(CHECKED_LANES_COPY.columns.together(5.5)).toBe('Planned for the 5.5 copies');
     });
 
     it('say what the copies take or drop together, and the supply rate, or what an output lane carries', () => {

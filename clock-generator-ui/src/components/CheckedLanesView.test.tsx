@@ -11,7 +11,7 @@ const gameNames = names({ 'iron-gear-wheel': 'Iron gear wheel', 'copper-plate': 
     'accumulator': 'Accumulator', 'supercapacitor': 'Supercapacitor', 'military-science-pack': 'Military science pack', 'stone-wall': 'Stone wall',
     'piercing-rounds-magazine': 'Piercing rounds magazine', 'iron-plate': 'Iron plate' });
 
-const COLUMNS = ['Lane', 'Role', 'Item', 'End', 'The 9 copies together', 'Supply rate', 'State'];
+const COLUMNS = ['Lane', 'Role', 'Item', 'End', 'Planned for the 9 copies', 'Supply rate', 'State'];
 
 /** The table's rows below its header, each as its cells' text */
 const bodyRows = (table: HTMLElement) => within(table).getAllByRole('row').slice(1);
@@ -131,7 +131,7 @@ describe('on a narrow page', () => {
             const row = short.rows[index];
             const text = block.textContent!;
             // the lane, then the engine's label and sentence, then the other columns
-            const places = [`Lane Belt ${row.belt_id}, lane ${row.lane}`, row.label, row.sentence, 'Role', 'Item', 'End', 'The 9 copies together', 'Supply rate']
+            const places = [`Lane Belt ${row.belt_id}, lane ${row.lane}`, row.label, row.sentence, 'Role', 'Item', 'End', 'Planned for the 9 copies', 'Supply rate']
                 .map(part => text.indexOf(part));
             expect(places.every(place => place >= 0)).toBe(true);
             expect(places).toEqual([...places].sort((a, b) => a - b));

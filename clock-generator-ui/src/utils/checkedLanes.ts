@@ -18,7 +18,7 @@ export const CHECKED_LANES_COPY = {
         role: 'Role',
         item: 'Item',
         end: 'End',
-        together: (copies: number) => `The ${formatNumberText(copies)} copies together`,
+        together: (copies: number) => `Planned for the ${formatNumberText(copies)} copies`,
         supply: 'Supply rate',
         state: 'State',
     },
