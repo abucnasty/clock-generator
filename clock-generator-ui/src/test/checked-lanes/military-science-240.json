@@ -1,0 +1,2577 @@
+{
+ "sample": "science/military/military-240.json",
+ "copies": 5,
+ "selected_index": 9,
+ "why_not_stable": null,
+ "lanes": [
+  {
+   "belt_id": 1,
+   "lane": 1,
+   "item": "military-science-pack",
+   "role": "output",
+   "end": "infinite",
+   "end_given_by": "lane",
+   "sharing": "shared",
+   "supply_rate": 120,
+   "supply_rate_by_default": true,
+   "capacity": 120
+  },
+  {
+   "belt_id": 2,
+   "lane": 1,
+   "item": "military-science-pack",
+   "role": "output",
+   "end": "infinite",
+   "end_given_by": "lane",
+   "sharing": "shared",
+   "supply_rate": 120,
+   "supply_rate_by_default": true,
+   "capacity": 120
+  },
+  {
+   "belt_id": 3,
+   "lane": 1,
+   "item": "stone-wall",
+   "role": "input",
+   "end": "dead_end",
+   "end_given_by": "lane",
+   "sharing": "shared",
+   "supply_rate": 120,
+   "supply_rate_by_default": true,
+   "capacity": 120
+  },
+  {
+   "belt_id": 3,
+   "lane": 2,
+   "item": "piercing-rounds-magazine",
+   "role": "input",
+   "end": "dead_end",
+   "end_given_by": "lane",
+   "sharing": "shared",
+   "supply_rate": 120,
+   "supply_rate_by_default": true,
+   "capacity": 120
+  },
+  {
+   "belt_id": 4,
+   "lane": 1,
+   "item": "piercing-rounds-magazine",
+   "role": "input",
+   "end": "dead_end",
+   "end_given_by": "lane",
+   "sharing": "shared",
+   "supply_rate": 120,
+   "supply_rate_by_default": true,
+   "capacity": 120
+  },
+  {
+   "belt_id": 4,
+   "lane": 2,
+   "item": "stone-wall",
+   "role": "input",
+   "end": "dead_end",
+   "end_given_by": "lane",
+   "sharing": "shared",
+   "supply_rate": 120,
+   "supply_rate_by_default": true,
+   "capacity": 120
+  },
+  {
+   "belt_id": 5,
+   "lane": 1,
+   "item": "coal",
+   "role": "input",
+   "end": "dead_end",
+   "end_given_by": "lane",
+   "sharing": "per_copy",
+   "supply_rate": 120,
+   "supply_rate_by_default": true,
+   "capacity": 120
+  },
+  {
+   "belt_id": 5,
+   "lane": 2,
+   "item": "coal",
+   "role": "input",
+   "end": "dead_end",
+   "end_given_by": "lane",
+   "sharing": "per_copy",
+   "supply_rate": 120,
+   "supply_rate_by_default": true,
+   "capacity": 120
+  },
+  {
+   "belt_id": 6,
+   "lane": 1,
+   "item": "coal",
+   "role": "input",
+   "end": "dead_end",
+   "end_given_by": "lane",
+   "sharing": "per_copy",
+   "supply_rate": 120,
+   "supply_rate_by_default": true,
+   "capacity": 120
+  },
+  {
+   "belt_id": 6,
+   "lane": 2,
+   "item": "coal",
+   "role": "input",
+   "end": "dead_end",
+   "end_given_by": "lane",
+   "sharing": "per_copy",
+   "supply_rate": 120,
+   "supply_rate_by_default": true,
+   "capacity": 120
+  }
+ ],
+ "clocks": [
+  {
+   "id": "round_robin_polling",
+   "label": "Round-Robin Polling: 2 output swings each output cycle",
+   "verdict": "stable",
+   "window_cycle_ticks": 80,
+   "copies": 5,
+   "description": "The swing schedule the generator plans for the setpoint. The build is simulated with each inserter waiting on its machine's inventory, and each inserter's enable windows are the ticks it moved items. Swings are grouped into batches that match the output cycle. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": true,
+    "disturbance_trial": {
+     "survives": true,
+     "broken_by": [],
+     "broken_at_other_lane_phases": [],
+     "recovered_after_window_cycles": 5,
+     "on_copies": {
+      "survives": true,
+      "lanes": [
+       "3/1",
+       "3/2",
+       "4/1",
+       "4/2"
+      ],
+      "expected_output_items": 64,
+      "recovered_after_window_cycles": 10
+     }
+    },
+    "items_per_second": 240,
+    "wake_ups_per_minute": 765,
+    "signals_per_minute": 225,
+    "start_dependence": null
+   },
+   "ranking": {
+    "meets_target_rate": true,
+    "recovery_untried": false,
+    "rate_off_target": 0,
+    "holds_expected_output": true,
+    "wake_ups_per_minute": 765,
+    "recovery_window_cycles": 5,
+    "window_count": 12
+   },
+   "strategy": {
+    "id": "round_robin_polling",
+    "tuning_method": "calculated",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 2
+     },
+     "window_cycle": [
+      {
+       "kind": "harmonic_window_cycle"
+      }
+     ],
+     "belt_pickups": []
+    },
+    "output_swings": 2,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 5,
+   "inserter_window_count": 12,
+   "terminal_swing_count": 2,
+   "cycle_ticks": 80,
+   "expected_output_items": 64,
+   "insights": [
+    {
+     "id": "spare-time",
+     "scope": "build",
+     "title": "The machine 1 that makes military science pack has 7 ticks to spare each window cycle",
+     "what": "The machine 1 that makes military science pack crafts for 73 of the 80 ticks in a window cycle (8 crafts of 9.5 ticks) and is stopped for the other 7. It is the machine with the least time to spare.",
+     "why": "At the setpoint a machine is not needed the whole time. The ticks left over are the only spare time it has: every tick it waits for an ingredient, or stops because its output has not been taken, comes out of them.",
+     "explanation": "The swings can make the machine 1 that makes military science pack wait up to 7 ticks each window cycle. Any more and it cannot catch up, so the build falls behind the target. The less there is to spare, the less room there is to move swings around and the less a late belt pickup is forgiven."
+    },
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The machine 3 that makes grenade takes coal only while it holds fewer than 90. The inserter (inserter 7) that takes coal brings 16 at a time and the window cycle needs 5 hands of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of grenade takes 146.1 ticks to make",
+     "what": "The machine 3 that makes grenade makes 1 grenade per craft (productivity included), so the 16 that the inserter (inserter 3) that moves grenade carries take 16 crafts, about 146.1 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 146.1 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "plan-versus-clock",
+     "scope": "clock",
+     "title": "Swings land a few ticks off the plan, as the blueprint runs them",
+     "what": "The plan has the inserter (inserter 10) that moves iron plate drop at ticks 31, 39, 47. Run by the clock alone, as in the game, it drops at ticks 49, 57, 65. The inserter (inserter 3) that moves grenade and the inserter (inserter 4) that moves grenade and the inserter that takes wall and piercing rounds magazine and the inserter that takes piercing rounds magazine and wall and the inserter (inserter 7) that takes coal and the inserter (inserter 8) that takes coal and the inserter (inserter 9) that moves iron plate differ too. The clock still holds its rate.",
+     "why": "The plan lets each inserter wait for its machine. The blueprint has only the clock, which switches inserters on and off. An enable window also stays on 2 ticks after the clock closes it, so an inserter that is back in time can start another swing if a full hand is waiting, and one that finds less keeps what it picked up for a later enable window.",
+     "explanation": "The same number of items moves each window cycle either way, but the swings can bunch together instead of landing one to an enable window. The Timeline tab shows both runs; the clock in the blueprint is the one the blueprint follows."
+    },
+    {
+     "id": "wake-ups",
+     "scope": "clock",
+     "title": "Machines wake the inserters 765 times a minute",
+     "what": "In a long run of this clock the machines of one copy of the build woke its inserters 765 times a minute. The inserter (inserter 9) that moves iron plate is woken most, 135 times a minute: it is on 32.5% of the time and is on and waiting for 7.5% of it.",
+     "why": "An enabled inserter with nothing to move sleeps on the wakeup list of the machine it waits on, and that machine wakes it every time it finishes a craft. The inserter looks for something to move, finds nothing or part of a hand, and sleeps again. An inserter its clock has disabled is on no list and is never woken. In game the debug option show-wakeup-lists draws a line from a waiting inserter to its machine; a line that flickers is this.",
+     "explanation": "Each wakeup is a check that moves little or nothing, so among clocks that hold the target the one with the fewest is the lightest on update time. An inserter that is enabled most of the time is woken at most of the crafts of the machine it waits on, whether its enable windows are long, it is left always enabled in a loop of machines, or the configuration sets it to always enabled."
+    },
+    {
+     "id": "one-per-copy-feed-5-1-2",
+     "scope": "build",
+     "title": "The supply rate that both lanes of the coal belt (belt 5) need in each copy",
+     "what": "Both lanes of the coal belt (belt 5) are per copy. The lanes of each copy need a supply rate of at least 60 a second, which the inserters of one copy take from them.",
+     "why": "",
+     "explanation": ""
+    },
+    {
+     "id": "one-per-copy-feed-6-1-2",
+     "scope": "build",
+     "title": "The supply rate that both lanes of the coal belt (belt 6) need in each copy",
+     "what": "Both lanes of the coal belt (belt 6) are per copy. The lanes of each copy need a supply rate of at least 60 a second, which the inserters of one copy take from them.",
+     "why": "",
+     "explanation": ""
+    }
+   ],
+   "checked_lanes": {
+    "line": {
+     "copies": 5,
+     "plain_output_belts": 2,
+     "output_chests": [],
+     "run_with_copies": true,
+     "every_copy_gets_items": true,
+     "output_belt": null,
+     "sentence": "Checked with all 5 copies on the lanes they share. Every copy gets its items. On the 2 output belts, only the sum of the drops is checked."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "drop",
+       "items_per_second": 120,
+       "lanes": [
+        1,
+        2
+       ],
+       "carries_per_second": 240
+      },
+      "state": {
+       "kind": "rate_fits",
+       "drop_per_second": 120,
+       "carries_per_second": 240
+      },
+      "label": "Rate fits",
+      "sentence": "The 5 copies together drop no more than this lane carries. Not simulated: a copy that drops onto a belt that already carries the other copies' items."
+     },
+     {
+      "belt_id": 2,
+      "lane": 1,
+      "together": {
+       "kind": "drop",
+       "items_per_second": 120,
+       "lanes": [
+        1,
+        2
+       ],
+       "carries_per_second": 240
+      },
+      "state": {
+       "kind": "rate_fits",
+       "drop_per_second": 120,
+       "carries_per_second": 240
+      },
+      "label": "Rate fits",
+      "sentence": "The 5 copies together drop no more than this lane carries. Not simulated: a copy that drops onto a belt that already carries the other copies' items."
+     },
+     {
+      "belt_id": 3,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 60,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": false
+      },
+      "label": "Holds",
+      "sentence": "Every copy gets its items."
+     },
+     {
+      "belt_id": 3,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 30,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": false
+      },
+      "label": "Holds",
+      "sentence": "Every copy gets its items."
+     },
+     {
+      "belt_id": 4,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 30,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": false
+      },
+      "label": "Holds",
+      "sentence": "Every copy gets its items."
+     },
+     {
+      "belt_id": 4,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 60,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": false
+      },
+      "label": "Holds",
+      "sentence": "Every copy gets its items."
+     }
+    ],
+    "cause": null
+   }
+  },
+  {
+   "id": "round_robin_polling_shared",
+   "label": "Round-Robin Polling, shared enable windows: 2 output swings each output cycle",
+   "verdict": "stable",
+   "window_cycle_ticks": 80,
+   "copies": 5,
+   "description": "The swing schedule the generator plans for the setpoint. The build is simulated with each inserter waiting on its machine's inventory, and each inserter's enable windows are the ticks it moved items. Swings are grouped into batches that match the output cycle. Inserters that take into their machines at the same moment share one enable window, as long as the longest of them needs, so they share one decider combinator. An inserter that needs fewer hands than that enable window stays enabled longer than it must, so it can have more wakeups. It is only listed when it keeps the rate and goes back to it by itself after a supply stop or an output blockage. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. In the clock-only check the build repeats every 2 window cycles instead of every window cycle, moving 128 of 128 items over them.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": true,
+    "disturbance_trial": {
+     "survives": true,
+     "broken_by": [],
+     "broken_at_other_lane_phases": [],
+     "recovered_after_window_cycles": 5,
+     "on_copies": {
+      "survives": true,
+      "lanes": [
+       "3/1",
+       "3/2",
+       "4/1",
+       "4/2"
+      ],
+      "expected_output_items": 64,
+      "recovered_after_window_cycles": 9
+     }
+    },
+    "items_per_second": 240,
+    "wake_ups_per_minute": 1222.6415094339623,
+    "signals_per_minute": 158.49056603773585,
+    "start_dependence": null
+   },
+   "ranking": {
+    "meets_target_rate": true,
+    "recovery_untried": false,
+    "rate_off_target": 0,
+    "holds_expected_output": true,
+    "wake_ups_per_minute": 1222.6415094339623,
+    "recovery_window_cycles": 5,
+    "window_count": 14
+   },
+   "strategy": {
+    "id": "round_robin_polling",
+    "tuning_method": "calculated",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 2
+     },
+     "window_cycle": [
+      {
+       "kind": "harmonic_window_cycle"
+      }
+     ],
+     "belt_pickups": [],
+     "shared_windows": "shared_enable_windows"
+    },
+    "output_swings": 2,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 4,
+   "inserter_window_count": 14,
+   "terminal_swing_count": 2,
+   "cycle_ticks": 80,
+   "expected_output_items": 64,
+   "insights": [
+    {
+     "id": "spare-time",
+     "scope": "build",
+     "title": "The machine 3 that makes grenade has 4 ticks to spare each window cycle",
+     "what": "The machine 3 that makes grenade crafts for 76 of the 80 ticks in a window cycle (8 crafts of 9.1 ticks) and is stopped for the other 4. It is the machine with the least time to spare.",
+     "why": "At the setpoint a machine is not needed the whole time. The ticks left over are the only spare time it has: every tick it waits for an ingredient, or stops because its output has not been taken, comes out of them.",
+     "explanation": "The swings can make the machine 3 that makes grenade wait up to 4 ticks each window cycle. Any more and it cannot catch up, so the build falls behind the target. The less there is to spare, the less room there is to move swings around and the less a late belt pickup is forgiven."
+    },
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The machine 3 that makes grenade takes coal only while it holds fewer than 90. The inserter (inserter 7) that takes coal brings 16 at a time and the window cycle needs 5 hands of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of grenade takes 146.1 ticks to make",
+     "what": "The machine 3 that makes grenade makes 1 grenade per craft (productivity included), so the 16 that the inserter (inserter 3) that moves grenade carries take 16 crafts, about 146.1 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 146.1 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "plan-versus-clock",
+     "scope": "clock",
+     "title": "Swings land a few ticks off the plan, as the blueprint runs them",
+     "what": "The plan has the inserter (inserter 10) that moves iron plate drop at ticks 31, 39, 47. Run by the clock alone, as in the game, it drops at ticks 13, 49. The inserter (inserter 3) that moves grenade and the inserter (inserter 4) that moves grenade and the inserter that takes wall and piercing rounds magazine and the inserter that takes piercing rounds magazine and wall and the inserter (inserter 7) that takes coal and the inserter (inserter 8) that takes coal and the inserter (inserter 9) that moves iron plate differ too. The clock still holds its rate.",
+     "why": "The plan lets each inserter wait for its machine. The blueprint has only the clock, which switches inserters on and off. An enable window also stays on 2 ticks after the clock closes it, so an inserter that is back in time can start another swing if a full hand is waiting, and one that finds less keeps what it picked up for a later enable window.",
+     "explanation": "The same number of items moves each window cycle either way, but the swings can bunch together instead of landing one to an enable window. The Timeline tab shows both runs; the clock in the blueprint is the one the blueprint follows."
+    },
+    {
+     "id": "wake-ups",
+     "scope": "clock",
+     "title": "Machines wake the inserters 1222.6 times a minute",
+     "what": "In a long run of this clock the machines of one copy of the build woke its inserters 1222.6 times a minute. The inserter (inserter 9) that moves iron plate is woken most, 362.3 times a minute: it is on 71.1% of the time and is on and waiting for 45.9% of it.",
+     "why": "An enabled inserter with nothing to move sleeps on the wakeup list of the machine it waits on, and that machine wakes it every time it finishes a craft. The inserter looks for something to move, finds nothing or part of a hand, and sleeps again. An inserter its clock has disabled is on no list and is never woken. In game the debug option show-wakeup-lists draws a line from a waiting inserter to its machine; a line that flickers is this.",
+     "explanation": "Each wakeup is a check that moves little or nothing, so among clocks that hold the target the one with the fewest is the lightest on update time. An inserter that is enabled most of the time is woken at most of the crafts of the machine it waits on, whether its enable windows are long, it is left always enabled in a loop of machines, or the configuration sets it to always enabled."
+    },
+    {
+     "id": "one-per-copy-feed-5-1-2",
+     "scope": "build",
+     "title": "The supply rate that both lanes of the coal belt (belt 5) need in each copy",
+     "what": "Both lanes of the coal belt (belt 5) are per copy. The lanes of each copy need a supply rate of at least 60 a second, which the inserters of one copy take from them.",
+     "why": "",
+     "explanation": ""
+    },
+    {
+     "id": "one-per-copy-feed-6-1-2",
+     "scope": "build",
+     "title": "The supply rate that both lanes of the coal belt (belt 6) need in each copy",
+     "what": "Both lanes of the coal belt (belt 6) are per copy. The lanes of each copy need a supply rate of at least 60 a second, which the inserters of one copy take from them.",
+     "why": "",
+     "explanation": ""
+    }
+   ],
+   "checked_lanes": {
+    "line": {
+     "copies": 5,
+     "plain_output_belts": 2,
+     "output_chests": [],
+     "run_with_copies": true,
+     "every_copy_gets_items": true,
+     "output_belt": null,
+     "sentence": "Checked with all 5 copies on the lanes they share. Every copy gets its items. On the 2 output belts, only the sum of the drops is checked."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "drop",
+       "items_per_second": 120,
+       "lanes": [
+        1,
+        2
+       ],
+       "carries_per_second": 240
+      },
+      "state": {
+       "kind": "rate_fits",
+       "drop_per_second": 120,
+       "carries_per_second": 240
+      },
+      "label": "Rate fits",
+      "sentence": "The 5 copies together drop no more than this lane carries. Not simulated: a copy that drops onto a belt that already carries the other copies' items."
+     },
+     {
+      "belt_id": 2,
+      "lane": 1,
+      "together": {
+       "kind": "drop",
+       "items_per_second": 120,
+       "lanes": [
+        1,
+        2
+       ],
+       "carries_per_second": 240
+      },
+      "state": {
+       "kind": "rate_fits",
+       "drop_per_second": 120,
+       "carries_per_second": 240
+      },
+      "label": "Rate fits",
+      "sentence": "The 5 copies together drop no more than this lane carries. Not simulated: a copy that drops onto a belt that already carries the other copies' items."
+     },
+     {
+      "belt_id": 3,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 60,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": false
+      },
+      "label": "Holds",
+      "sentence": "Every copy gets its items."
+     },
+     {
+      "belt_id": 3,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 30,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": false
+      },
+      "label": "Holds",
+      "sentence": "Every copy gets its items."
+     },
+     {
+      "belt_id": 4,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 30,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": false
+      },
+      "label": "Holds",
+      "sentence": "Every copy gets its items."
+     },
+     {
+      "belt_id": 4,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 60,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": false
+      },
+      "label": "Holds",
+      "sentence": "Every copy gets its items."
+     }
+    ],
+    "cause": null
+   }
+  },
+  {
+   "id": "time_study_windows",
+   "label": "Time-Study Windows: 3 output swings each output cycle",
+   "verdict": "stable",
+   "window_cycle_ticks": 480,
+   "copies": 5,
+   "description": "Built from what the inserters actually do rather than from the planned schedule. The build is simulated with only the output inserters clocked and every other inserter running freely; each inserter's enable windows are the ticks it was busy picking up, swinging and dropping, plus a few ticks of padding. Swings end up spread out, roughly one per craft, so its inserters usually have more enable windows than in Takt Batches, which groups several swings into one enable window. An inserter between two machines that waits at its source for a full hand gets short, evenly spaced enable windows instead when they stay stable, so it grabs a hand that is already there rather than staying enabled while the machine crafts. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. The planning simulation moved 288 of 384 items each window cycle; stability is judged by the clock-only check, which runs the enable windows of the blueprint.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": true,
+    "disturbance_trial": {
+     "survives": true,
+     "broken_by": [],
+     "broken_at_other_lane_phases": [],
+     "recovered_after_window_cycles": 5,
+     "on_copies": {
+      "survives": true,
+      "lanes": [
+       "3/1",
+       "3/2",
+       "4/1",
+       "4/2"
+      ],
+      "expected_output_items": 384,
+      "recovered_after_window_cycles": 6
+     }
+    },
+    "items_per_second": 240,
+    "wake_ups_per_minute": 1533.1941544885178,
+    "signals_per_minute": 345.72025052192066,
+    "start_dependence": null
+   },
+   "ranking": {
+    "meets_target_rate": true,
+    "recovery_untried": false,
+    "rate_off_target": 0,
+    "holds_expected_output": true,
+    "wake_ups_per_minute": 1533.1941544885178,
+    "recovery_window_cycles": 5,
+    "window_count": 53
+   },
+   "strategy": {
+    "id": "time_study_windows",
+    "tuning_method": "observed",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 3
+     },
+     "window_cycle": [],
+     "belt_pickups": []
+    },
+    "output_swings": 3,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 9,
+   "inserter_window_count": 53,
+   "terminal_swing_count": 3,
+   "cycle_ticks": 120,
+   "expected_output_items": 384,
+   "insights": [
+    {
+     "id": "spare-time",
+     "scope": "build",
+     "title": "The machine 1 that makes military science pack has 22 ticks to spare each window cycle",
+     "what": "The machine 1 that makes military science pack crafts for 458 of the 480 ticks in a window cycle (48 crafts of 9.5 ticks) and is stopped for the other 22. It is the machine with the least time to spare.",
+     "why": "At the setpoint a machine is not needed the whole time. The ticks left over are the only spare time it has: every tick it waits for an ingredient, or stops because its output has not been taken, comes out of them.",
+     "explanation": "The swings can make the machine 1 that makes military science pack wait up to 22 ticks each window cycle. Any more and it cannot catch up, so the build falls behind the target. The less there is to spare, the less room there is to move swings around and the less a late belt pickup is forgiven."
+    },
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The machine 3 that makes grenade takes coal only while it holds fewer than 90. The inserter (inserter 7) that takes coal brings 16 at a time and the window cycle needs 30 hands of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of grenade takes 146.1 ticks to make",
+     "what": "The machine 3 that makes grenade makes 1 grenade per craft (productivity included), so the 16 that the inserter (inserter 3) that moves grenade carries take 16 crafts, about 146.1 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 146.1 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "wake-ups",
+     "scope": "clock",
+     "title": "Machines wake the inserters 1533.2 times a minute",
+     "what": "In a long run of this clock the machines of one copy of the build woke its inserters 1533.2 times a minute. The inserter (inserter 10) that moves iron plate is woken most, 353.2 times a minute: it is on 59.1% of the time and is on and waiting for 34.2% of it. On 80% of the time or more: the inserter (inserter 7) that takes coal (80.2%).",
+     "why": "An enabled inserter with nothing to move sleeps on the wakeup list of the machine it waits on, and that machine wakes it every time it finishes a craft. The inserter looks for something to move, finds nothing or part of a hand, and sleeps again. An inserter its clock has disabled is on no list and is never woken. In game the debug option show-wakeup-lists draws a line from a waiting inserter to its machine; a line that flickers is this.",
+     "explanation": "Each wakeup is a check that moves little or nothing, so among clocks that hold the target the one with the fewest is the lightest on update time. An inserter that is enabled most of the time is woken at most of the crafts of the machine it waits on, whether its enable windows are long, it is left always enabled in a loop of machines, or the configuration sets it to always enabled."
+    },
+    {
+     "id": "one-per-copy-feed-5-1-2",
+     "scope": "build",
+     "title": "The supply rate that both lanes of the coal belt (belt 5) need in each copy",
+     "what": "Both lanes of the coal belt (belt 5) are per copy. The lanes of each copy need a supply rate of at least 60 a second, which the inserters of one copy take from them.",
+     "why": "",
+     "explanation": ""
+    },
+    {
+     "id": "one-per-copy-feed-6-1-2",
+     "scope": "build",
+     "title": "The supply rate that both lanes of the coal belt (belt 6) need in each copy",
+     "what": "Both lanes of the coal belt (belt 6) are per copy. The lanes of each copy need a supply rate of at least 60 a second, which the inserters of one copy take from them.",
+     "why": "",
+     "explanation": ""
+    }
+   ],
+   "checked_lanes": {
+    "line": {
+     "copies": 5,
+     "plain_output_belts": 2,
+     "output_chests": [],
+     "run_with_copies": true,
+     "every_copy_gets_items": true,
+     "output_belt": null,
+     "sentence": "Checked with all 5 copies on the lanes they share. Every copy gets its items. On the 2 output belts, only the sum of the drops is checked."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "drop",
+       "items_per_second": 120,
+       "lanes": [
+        1,
+        2
+       ],
+       "carries_per_second": 240
+      },
+      "state": {
+       "kind": "rate_fits",
+       "drop_per_second": 120,
+       "carries_per_second": 240
+      },
+      "label": "Rate fits",
+      "sentence": "The 5 copies together drop no more than this lane carries. Not simulated: a copy that drops onto a belt that already carries the other copies' items."
+     },
+     {
+      "belt_id": 2,
+      "lane": 1,
+      "together": {
+       "kind": "drop",
+       "items_per_second": 120,
+       "lanes": [
+        1,
+        2
+       ],
+       "carries_per_second": 240
+      },
+      "state": {
+       "kind": "rate_fits",
+       "drop_per_second": 120,
+       "carries_per_second": 240
+      },
+      "label": "Rate fits",
+      "sentence": "The 5 copies together drop no more than this lane carries. Not simulated: a copy that drops onto a belt that already carries the other copies' items."
+     },
+     {
+      "belt_id": 3,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 60,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": false
+      },
+      "label": "Holds",
+      "sentence": "Every copy gets its items."
+     },
+     {
+      "belt_id": 3,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 30,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": false
+      },
+      "label": "Holds",
+      "sentence": "Every copy gets its items."
+     },
+     {
+      "belt_id": 4,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 30,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": false
+      },
+      "label": "Holds",
+      "sentence": "Every copy gets its items."
+     },
+     {
+      "belt_id": 4,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 60,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": false
+      },
+      "label": "Holds",
+      "sentence": "Every copy gets its items."
+     }
+    ],
+    "cause": null
+   }
+  },
+  {
+   "id": "takt_batches_observed_swings_3",
+   "label": "Takt Batches: 3 output swings each output cycle",
+   "verdict": "unstable",
+   "window_cycle_ticks": 480,
+   "copies": 5,
+   "description": "Takt Batches with a longer output cycle: the output inserter takes 3 hands each output cycle instead of 2 while the machine keeps crafting between swings. Batches more swings into fewer, longer enable windows. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. The planning simulation moved 288 of 384 items each window cycle; stability is judged by the clock-only check, which runs the enable windows of the blueprint. In the clock-only check the build repeats every 4 window cycles instead of every window cycle, moving 768 of 1536 items over them.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": false,
+    "disturbance_trial": null,
+    "items_per_second": 100,
+    "wake_ups_per_minute": null,
+    "signals_per_minute": null,
+    "start_dependence": null
+   },
+   "ranking": {
+    "meets_target_rate": false,
+    "recovery_untried": false,
+    "rate_off_target": -140,
+    "holds_expected_output": false,
+    "wake_ups_per_minute": null,
+    "recovery_window_cycles": null,
+    "window_count": 38
+   },
+   "strategy": {
+    "id": "takt_batches",
+    "tuning_method": "observed",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 3
+     },
+     "window_cycle": [],
+     "belt_pickups": []
+    },
+    "output_swings": 3,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 5,
+   "inserter_window_count": 38,
+   "terminal_swing_count": 3,
+   "cycle_ticks": 120,
+   "expected_output_items": 384,
+   "insights": [
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The machine 3 that makes grenade takes coal only while it holds fewer than 90. The inserter (inserter 7) that takes coal brings 16 at a time and the window cycle needs 30 hands of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of grenade takes 146.1 ticks to make",
+     "what": "The machine 3 that makes grenade makes 1 grenade per craft (productivity included), so the 16 that the inserter (inserter 3) that moves grenade carries take 16 crafts, about 146.1 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 146.1 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "unstable",
+     "scope": "clock",
+     "title": "This clock does not hold the setpoint",
+     "what": "Driven only by its enable windows, the build moved 160 of 384 items in a window cycle. The build repeats every 4 window cycles and moves 768 of 1536 items over them.",
+     "why": "A clock has to work from wherever the machines happen to be when it starts, so it is simulated from several start points. A swing that arrives while its machine is at an insertion limit, out of ingredients or without a full hand does nothing useful, and once a machine has waited longer than its spare time it cannot catch up.",
+     "explanation": "Use a clock marked Stable. If none is, lower the setpoint, force fewer output swings (which gives the machines more buffer between swings), or yell at abuc to go fix his algorithm by opening an issue on GitHub (https://github.com/abucnasty/clock-generator/issues/new)."
+    },
+    {
+     "id": "one-per-copy-feed-5-1-2",
+     "scope": "build",
+     "title": "The supply rate that both lanes of the coal belt (belt 5) need in each copy",
+     "what": "Both lanes of the coal belt (belt 5) are per copy. The lanes of each copy need a supply rate of at least 60 a second, which the inserters of one copy take from them.",
+     "why": "",
+     "explanation": ""
+    },
+    {
+     "id": "one-per-copy-feed-6-1-2",
+     "scope": "build",
+     "title": "The supply rate that both lanes of the coal belt (belt 6) need in each copy",
+     "what": "Both lanes of the coal belt (belt 6) are per copy. The lanes of each copy need a supply rate of at least 60 a second, which the inserters of one copy take from them.",
+     "why": "",
+     "explanation": ""
+    }
+   ],
+   "checked_lanes": {
+    "line": {
+     "copies": 5,
+     "plain_output_belts": 0,
+     "output_chests": [],
+     "run_with_copies": false,
+     "every_copy_gets_items": null,
+     "output_belt": null,
+     "sentence": "Not run with the copies: the clock does not hold its output on one copy."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "drop",
+       "items_per_second": 120,
+       "lanes": [
+        1,
+        2
+       ],
+       "carries_per_second": 240
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     },
+     {
+      "belt_id": 2,
+      "lane": 1,
+      "together": {
+       "kind": "drop",
+       "items_per_second": 120,
+       "lanes": [
+        1,
+        2
+       ],
+       "carries_per_second": 240
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     },
+     {
+      "belt_id": 3,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 60,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     },
+     {
+      "belt_id": 3,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 30,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     },
+     {
+      "belt_id": 4,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 30,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     },
+     {
+      "belt_id": 4,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 60,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     }
+    ],
+    "cause": null
+   }
+  },
+  {
+   "id": "takt_batches_observed_swings_4",
+   "label": "Takt Batches: 4 output swings each output cycle",
+   "verdict": "unstable",
+   "window_cycle_ticks": 160,
+   "copies": 5,
+   "description": "Takt Batches with a longer output cycle: the output inserter takes 4 hands each output cycle instead of 2 while the machine keeps crafting between swings. Batches more swings into fewer, longer enable windows. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": false,
+    "disturbance_trial": null,
+    "items_per_second": 120,
+    "wake_ups_per_minute": 349.2957746478873,
+    "signals_per_minute": 157.74647887323943,
+    "start_dependence": null
+   },
+   "ranking": {
+    "meets_target_rate": false,
+    "recovery_untried": false,
+    "rate_off_target": -120,
+    "holds_expected_output": false,
+    "wake_ups_per_minute": 349.2957746478873,
+    "recovery_window_cycles": null,
+    "window_count": 16
+   },
+   "strategy": {
+    "id": "takt_batches",
+    "tuning_method": "observed",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 4
+     },
+     "window_cycle": [],
+     "belt_pickups": []
+    },
+    "output_swings": 4,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 5,
+   "inserter_window_count": 16,
+   "terminal_swing_count": 4,
+   "cycle_ticks": 160,
+   "expected_output_items": 128,
+   "insights": [
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The machine 3 that makes grenade takes coal only while it holds fewer than 90. The inserter (inserter 7) that takes coal brings 16 at a time and the window cycle needs 10 hands of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of grenade takes 146.1 ticks to make",
+     "what": "The machine 3 that makes grenade makes 1 grenade per craft (productivity included), so the 16 that the inserter (inserter 3) that moves grenade carries take 16 crafts, about 146.1 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 146.1 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "unstable",
+     "scope": "clock",
+     "title": "This clock does not hold the setpoint",
+     "what": "Driven only by its enable windows, the build moved 64 of 128 items a window cycle on average over a long run.",
+     "why": "A clock has to work from wherever the machines happen to be when it starts, so it is simulated from several start points. A swing that arrives while its machine is at an insertion limit, out of ingredients or without a full hand does nothing useful, and once a machine has waited longer than its spare time it cannot catch up.",
+     "explanation": "Use a clock marked Stable. If none is, lower the setpoint, force fewer output swings (which gives the machines more buffer between swings), or yell at abuc to go fix his algorithm by opening an issue on GitHub (https://github.com/abucnasty/clock-generator/issues/new)."
+    },
+    {
+     "id": "wake-ups",
+     "scope": "clock",
+     "title": "Machines wake the inserters 349.3 times a minute",
+     "what": "In a long run of this clock the machines of one copy of the build woke its inserters 349.3 times a minute. The inserter (inserter 3) that moves grenade is woken most, 78.9 times a minute: it is on 22.5% of the time and is on and waiting for 20.3% of it.",
+     "why": "An enabled inserter with nothing to move sleeps on the wakeup list of the machine it waits on, and that machine wakes it every time it finishes a craft. The inserter looks for something to move, finds nothing or part of a hand, and sleeps again. An inserter its clock has disabled is on no list and is never woken. In game the debug option show-wakeup-lists draws a line from a waiting inserter to its machine; a line that flickers is this.",
+     "explanation": "Each wakeup is a check that moves little or nothing, so among clocks that hold the target the one with the fewest is the lightest on update time. An inserter that is enabled most of the time is woken at most of the crafts of the machine it waits on, whether its enable windows are long, it is left always enabled in a loop of machines, or the configuration sets it to always enabled."
+    },
+    {
+     "id": "one-per-copy-feed-5-1-2",
+     "scope": "build",
+     "title": "The supply rate that both lanes of the coal belt (belt 5) need in each copy",
+     "what": "Both lanes of the coal belt (belt 5) are per copy. The lanes of each copy need a supply rate of at least 60 a second, which the inserters of one copy take from them.",
+     "why": "",
+     "explanation": ""
+    },
+    {
+     "id": "one-per-copy-feed-6-1-2",
+     "scope": "build",
+     "title": "The supply rate that both lanes of the coal belt (belt 6) need in each copy",
+     "what": "Both lanes of the coal belt (belt 6) are per copy. The lanes of each copy need a supply rate of at least 60 a second, which the inserters of one copy take from them.",
+     "why": "",
+     "explanation": ""
+    }
+   ],
+   "checked_lanes": {
+    "line": {
+     "copies": 5,
+     "plain_output_belts": 0,
+     "output_chests": [],
+     "run_with_copies": false,
+     "every_copy_gets_items": null,
+     "output_belt": null,
+     "sentence": "Not run with the copies: the clock does not hold its output on one copy."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "drop",
+       "items_per_second": 120,
+       "lanes": [
+        1,
+        2
+       ],
+       "carries_per_second": 240
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     },
+     {
+      "belt_id": 2,
+      "lane": 1,
+      "together": {
+       "kind": "drop",
+       "items_per_second": 120,
+       "lanes": [
+        1,
+        2
+       ],
+       "carries_per_second": 240
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     },
+     {
+      "belt_id": 3,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 60,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     },
+     {
+      "belt_id": 3,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 30,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     },
+     {
+      "belt_id": 4,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 30,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     },
+     {
+      "belt_id": 4,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 60,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     }
+    ],
+    "cause": null
+   }
+  },
+  {
+   "id": "takt_batches_observed_swings_5",
+   "label": "Takt Batches: 5 output swings each output cycle",
+   "verdict": "unstable",
+   "window_cycle_ticks": 800,
+   "copies": 5,
+   "description": "Takt Batches with a longer output cycle: the output inserter takes 5 hands each output cycle instead of 2 while the machine keeps crafting between swings. Batches more swings into fewer, longer enable windows. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. The planning simulation moved 512 of 640 items each window cycle; stability is judged by the clock-only check, which runs the enable windows of the blueprint.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": false,
+    "disturbance_trial": null,
+    "items_per_second": 192,
+    "wake_ups_per_minute": null,
+    "signals_per_minute": null,
+    "start_dependence": null
+   },
+   "ranking": {
+    "meets_target_rate": false,
+    "recovery_untried": false,
+    "rate_off_target": -48,
+    "holds_expected_output": false,
+    "wake_ups_per_minute": null,
+    "recovery_window_cycles": null,
+    "window_count": 44
+   },
+   "strategy": {
+    "id": "takt_batches",
+    "tuning_method": "observed",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 5
+     },
+     "window_cycle": [],
+     "belt_pickups": []
+    },
+    "output_swings": 5,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 5,
+   "inserter_window_count": 44,
+   "terminal_swing_count": 5,
+   "cycle_ticks": 200,
+   "expected_output_items": 640,
+   "insights": [
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The machine 3 that makes grenade takes coal only while it holds fewer than 90. The inserter (inserter 7) that takes coal brings 16 at a time and the window cycle needs 50 hands of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of grenade takes 146.1 ticks to make",
+     "what": "The machine 3 that makes grenade makes 1 grenade per craft (productivity included), so the 16 that the inserter (inserter 3) that moves grenade carries take 16 crafts, about 146.1 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 146.1 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "unstable",
+     "scope": "clock",
+     "title": "This clock does not hold the setpoint",
+     "what": "Driven only by its enable windows, the build moved 512 of 640 items in a window cycle.",
+     "why": "A clock has to work from wherever the machines happen to be when it starts, so it is simulated from several start points. A swing that arrives while its machine is at an insertion limit, out of ingredients or without a full hand does nothing useful, and once a machine has waited longer than its spare time it cannot catch up.",
+     "explanation": "Use a clock marked Stable. If none is, lower the setpoint, force fewer output swings (which gives the machines more buffer between swings), or yell at abuc to go fix his algorithm by opening an issue on GitHub (https://github.com/abucnasty/clock-generator/issues/new)."
+    },
+    {
+     "id": "one-per-copy-feed-5-1-2",
+     "scope": "build",
+     "title": "The supply rate that both lanes of the coal belt (belt 5) need in each copy",
+     "what": "Both lanes of the coal belt (belt 5) are per copy. The lanes of each copy need a supply rate of at least 60 a second, which the inserters of one copy take from them.",
+     "why": "",
+     "explanation": ""
+    },
+    {
+     "id": "one-per-copy-feed-6-1-2",
+     "scope": "build",
+     "title": "The supply rate that both lanes of the coal belt (belt 6) need in each copy",
+     "what": "Both lanes of the coal belt (belt 6) are per copy. The lanes of each copy need a supply rate of at least 60 a second, which the inserters of one copy take from them.",
+     "why": "",
+     "explanation": ""
+    }
+   ],
+   "checked_lanes": {
+    "line": {
+     "copies": 5,
+     "plain_output_belts": 0,
+     "output_chests": [],
+     "run_with_copies": false,
+     "every_copy_gets_items": null,
+     "output_belt": null,
+     "sentence": "Not run with the copies: the clock does not hold its output on one copy."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "drop",
+       "items_per_second": 120,
+       "lanes": [
+        1,
+        2
+       ],
+       "carries_per_second": 240
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     },
+     {
+      "belt_id": 2,
+      "lane": 1,
+      "together": {
+       "kind": "drop",
+       "items_per_second": 120,
+       "lanes": [
+        1,
+        2
+       ],
+       "carries_per_second": 240
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     },
+     {
+      "belt_id": 3,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 60,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     },
+     {
+      "belt_id": 3,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 30,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     },
+     {
+      "belt_id": 4,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 30,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     },
+     {
+      "belt_id": 4,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 60,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     }
+    ],
+    "cause": null
+   }
+  },
+  {
+   "id": "takt_batches_observed_swings_6",
+   "label": "Takt Batches: 6 output swings each output cycle",
+   "verdict": "unstable",
+   "window_cycle_ticks": 480,
+   "copies": 5,
+   "description": "Takt Batches with a longer output cycle: the output inserter takes 6 hands each output cycle instead of 2 while the machine keeps crafting between swings. Batches more swings into fewer, longer enable windows. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. The planning simulation moved 256 of 384 items each window cycle; stability is judged by the clock-only check, which runs the enable windows of the blueprint.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": false,
+    "disturbance_trial": null,
+    "items_per_second": 160,
+    "wake_ups_per_minute": null,
+    "signals_per_minute": null,
+    "start_dependence": null
+   },
+   "ranking": {
+    "meets_target_rate": false,
+    "recovery_untried": false,
+    "rate_off_target": -80,
+    "holds_expected_output": false,
+    "wake_ups_per_minute": null,
+    "recovery_window_cycles": null,
+    "window_count": 22
+   },
+   "strategy": {
+    "id": "takt_batches",
+    "tuning_method": "observed",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 6
+     },
+     "window_cycle": [],
+     "belt_pickups": []
+    },
+    "output_swings": 6,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 5,
+   "inserter_window_count": 22,
+   "terminal_swing_count": 6,
+   "cycle_ticks": 240,
+   "expected_output_items": 384,
+   "insights": [
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The machine 3 that makes grenade takes coal only while it holds fewer than 90. The inserter (inserter 7) that takes coal brings 16 at a time and the window cycle needs 30 hands of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of grenade takes 146.1 ticks to make",
+     "what": "The machine 3 that makes grenade makes 1 grenade per craft (productivity included), so the 16 that the inserter (inserter 3) that moves grenade carries take 16 crafts, about 146.1 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 146.1 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "unstable",
+     "scope": "clock",
+     "title": "This clock does not hold the setpoint",
+     "what": "Driven only by its enable windows, the build moved 256 of 384 items in a window cycle.",
+     "why": "A clock has to work from wherever the machines happen to be when it starts, so it is simulated from several start points. A swing that arrives while its machine is at an insertion limit, out of ingredients or without a full hand does nothing useful, and once a machine has waited longer than its spare time it cannot catch up.",
+     "explanation": "Use a clock marked Stable. If none is, lower the setpoint, force fewer output swings (which gives the machines more buffer between swings), or yell at abuc to go fix his algorithm by opening an issue on GitHub (https://github.com/abucnasty/clock-generator/issues/new)."
+    },
+    {
+     "id": "one-per-copy-feed-5-1-2",
+     "scope": "build",
+     "title": "The supply rate that both lanes of the coal belt (belt 5) need in each copy",
+     "what": "Both lanes of the coal belt (belt 5) are per copy. The lanes of each copy need a supply rate of at least 60 a second, which the inserters of one copy take from them.",
+     "why": "",
+     "explanation": ""
+    },
+    {
+     "id": "one-per-copy-feed-6-1-2",
+     "scope": "build",
+     "title": "The supply rate that both lanes of the coal belt (belt 6) need in each copy",
+     "what": "Both lanes of the coal belt (belt 6) are per copy. The lanes of each copy need a supply rate of at least 60 a second, which the inserters of one copy take from them.",
+     "why": "",
+     "explanation": ""
+    }
+   ],
+   "checked_lanes": {
+    "line": {
+     "copies": 5,
+     "plain_output_belts": 0,
+     "output_chests": [],
+     "run_with_copies": false,
+     "every_copy_gets_items": null,
+     "output_belt": null,
+     "sentence": "Not run with the copies: the clock does not hold its output on one copy."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "drop",
+       "items_per_second": 120,
+       "lanes": [
+        1,
+        2
+       ],
+       "carries_per_second": 240
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     },
+     {
+      "belt_id": 2,
+      "lane": 1,
+      "together": {
+       "kind": "drop",
+       "items_per_second": 120,
+       "lanes": [
+        1,
+        2
+       ],
+       "carries_per_second": 240
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     },
+     {
+      "belt_id": 3,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 60,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     },
+     {
+      "belt_id": 3,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 30,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     },
+     {
+      "belt_id": 4,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 30,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     },
+     {
+      "belt_id": 4,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 60,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     }
+    ],
+    "cause": null
+   }
+  },
+  {
+   "id": "round_robin_polling_swings_1",
+   "label": "Round-Robin Polling: 1 output swing each output cycle",
+   "verdict": "stable",
+   "window_cycle_ticks": 40,
+   "copies": 5,
+   "description": "Round-Robin Polling with the output inserter limited to 1 swing each output cycle instead of 2. The output machine buffers more between swings; useful when the higher swing count is unstable. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. The planning simulation moved 0 of 32 items each window cycle; stability is judged by the clock-only check, which runs the enable windows of the blueprint.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": true,
+    "disturbance_trial": {
+     "survives": true,
+     "broken_by": [],
+     "broken_at_other_lane_phases": [],
+     "recovered_after_window_cycles": 36,
+     "on_copies": {
+      "survives": true,
+      "lanes": [
+       "3/1",
+       "3/2",
+       "4/1",
+       "4/2"
+      ],
+      "expected_output_items": 32,
+      "recovered_after_window_cycles": 40
+     }
+    },
+    "items_per_second": 240,
+    "wake_ups_per_minute": 1206.8181818181818,
+    "signals_per_minute": 450,
+    "start_dependence": null
+   },
+   "ranking": {
+    "meets_target_rate": true,
+    "recovery_untried": false,
+    "rate_off_target": 0,
+    "holds_expected_output": true,
+    "wake_ups_per_minute": 1206.8181818181818,
+    "recovery_window_cycles": 36,
+    "window_count": 12
+   },
+   "strategy": {
+    "id": "round_robin_polling",
+    "tuning_method": "calculated",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 1
+     },
+     "window_cycle": [
+      {
+       "kind": "harmonic_window_cycle"
+      }
+     ],
+     "belt_pickups": []
+    },
+    "output_swings": 1,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 5,
+   "inserter_window_count": 12,
+   "terminal_swing_count": 1,
+   "cycle_ticks": 40,
+   "expected_output_items": 32,
+   "insights": [
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The machine 3 that makes grenade takes coal only while it holds fewer than 90. The inserter (inserter 7) that takes coal brings 16 at a time and the window cycle needs 2.5 hands of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of grenade takes 146.1 ticks to make",
+     "what": "The machine 3 that makes grenade makes 1 grenade per craft (productivity included), so the 16 that the inserter (inserter 3) that moves grenade carries take 16 crafts, about 146.1 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 146.1 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "plan-versus-clock",
+     "scope": "clock",
+     "title": "Swings land a few ticks off the plan, as the blueprint runs them",
+     "what": "The plan has the inserter (inserter 1) that drops military science pack drop at ticks never. Run by the clock alone, as in the game, it drops at ticks 6. The inserter (inserter 10) that moves iron plate and the inserter (inserter 2) that drops military science pack and the inserter (inserter 7) that takes coal and the inserter (inserter 8) that takes coal and the inserter (inserter 9) that moves iron plate differ too. The clock still holds its rate.",
+     "why": "The plan lets each inserter wait for its machine. The blueprint has only the clock, which switches inserters on and off. An enable window also stays on 2 ticks after the clock closes it, so an inserter that is back in time can start another swing if a full hand is waiting, and one that finds less keeps what it picked up for a later enable window.",
+     "explanation": "The same number of items moves each window cycle either way, but the swings can bunch together instead of landing one to an enable window. The Timeline tab shows both runs; the clock in the blueprint is the one the blueprint follows."
+    },
+    {
+     "id": "wake-ups",
+     "scope": "clock",
+     "title": "Machines wake the inserters 1206.8 times a minute",
+     "what": "In a long run of this clock the machines of one copy of the build woke its inserters 1206.8 times a minute. The inserter that takes wall and piercing rounds magazine is woken most, 265.9 times a minute: it is on 70% of the time and is on and waiting for 52.7% of it. On 80% of the time or more: the inserter (inserter 7) that takes coal (87.5%), the inserter (inserter 8) that takes coal (87.5%).",
+     "why": "An enabled inserter with nothing to move sleeps on the wakeup list of the machine it waits on, and that machine wakes it every time it finishes a craft. The inserter looks for something to move, finds nothing or part of a hand, and sleeps again. An inserter its clock has disabled is on no list and is never woken. In game the debug option show-wakeup-lists draws a line from a waiting inserter to its machine; a line that flickers is this.",
+     "explanation": "Each wakeup is a check that moves little or nothing, so among clocks that hold the target the one with the fewest is the lightest on update time. An inserter that is enabled most of the time is woken at most of the crafts of the machine it waits on, whether its enable windows are long, it is left always enabled in a loop of machines, or the configuration sets it to always enabled."
+    },
+    {
+     "id": "one-per-copy-feed-5-1-2",
+     "scope": "build",
+     "title": "The supply rate that both lanes of the coal belt (belt 5) need in each copy",
+     "what": "Both lanes of the coal belt (belt 5) are per copy. The lanes of each copy need a supply rate of at least 60 a second, which the inserters of one copy take from them.",
+     "why": "",
+     "explanation": ""
+    },
+    {
+     "id": "one-per-copy-feed-6-1-2",
+     "scope": "build",
+     "title": "The supply rate that both lanes of the coal belt (belt 6) need in each copy",
+     "what": "Both lanes of the coal belt (belt 6) are per copy. The lanes of each copy need a supply rate of at least 60 a second, which the inserters of one copy take from them.",
+     "why": "",
+     "explanation": ""
+    }
+   ],
+   "checked_lanes": {
+    "line": {
+     "copies": 5,
+     "plain_output_belts": 2,
+     "output_chests": [],
+     "run_with_copies": true,
+     "every_copy_gets_items": true,
+     "output_belt": null,
+     "sentence": "Checked with all 5 copies on the lanes they share. Every copy gets its items. On the 2 output belts, only the sum of the drops is checked."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "drop",
+       "items_per_second": 120,
+       "lanes": [
+        1,
+        2
+       ],
+       "carries_per_second": 240
+      },
+      "state": {
+       "kind": "rate_fits",
+       "drop_per_second": 120,
+       "carries_per_second": 240
+      },
+      "label": "Rate fits",
+      "sentence": "The 5 copies together drop no more than this lane carries. Not simulated: a copy that drops onto a belt that already carries the other copies' items."
+     },
+     {
+      "belt_id": 2,
+      "lane": 1,
+      "together": {
+       "kind": "drop",
+       "items_per_second": 120,
+       "lanes": [
+        1,
+        2
+       ],
+       "carries_per_second": 240
+      },
+      "state": {
+       "kind": "rate_fits",
+       "drop_per_second": 120,
+       "carries_per_second": 240
+      },
+      "label": "Rate fits",
+      "sentence": "The 5 copies together drop no more than this lane carries. Not simulated: a copy that drops onto a belt that already carries the other copies' items."
+     },
+     {
+      "belt_id": 3,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 60,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": false
+      },
+      "label": "Holds",
+      "sentence": "Every copy gets its items."
+     },
+     {
+      "belt_id": 3,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 30,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": false
+      },
+      "label": "Holds",
+      "sentence": "Every copy gets its items."
+     },
+     {
+      "belt_id": 4,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 30,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": false
+      },
+      "label": "Holds",
+      "sentence": "Every copy gets its items."
+     },
+     {
+      "belt_id": 4,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 60,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": false
+      },
+      "label": "Holds",
+      "sentence": "Every copy gets its items."
+     }
+    ],
+    "cause": null
+   }
+  },
+  {
+   "id": "round_robin_polling_swings_1_per_hand",
+   "label": "Round-Robin Polling: 1 output swing each output cycle, one enable window a swing",
+   "verdict": "stable",
+   "window_cycle_ticks": 40,
+   "copies": 5,
+   "description": "Round-Robin Polling with the output inserter limited to 1 swing each output cycle instead of 2. The output machine buffers more between swings; useful when the higher swing count is unstable. Inserters whose machines have room for more than the hands they need are enabled for one tick at the start of each of their swings instead of one enable window for all of them, so they have fewer wakeups while they wait between swings. It is only listed when it keeps the rate and goes back to it by itself after a supply stop or an output blockage. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. The planning simulation moved 0 of 32 items each window cycle; stability is judged by the clock-only check, which runs the enable windows of the blueprint.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": true,
+    "disturbance_trial": {
+     "survives": true,
+     "broken_by": [],
+     "broken_at_other_lane_phases": [],
+     "recovered_after_window_cycles": 36,
+     "on_copies": {
+      "survives": true,
+      "lanes": [
+       "3/1",
+       "3/2",
+       "4/1",
+       "4/2"
+      ],
+      "expected_output_items": 32,
+      "recovered_after_window_cycles": 40
+     }
+    },
+    "items_per_second": 240,
+    "wake_ups_per_minute": 1165.909090909091,
+    "signals_per_minute": 540,
+    "start_dependence": null
+   },
+   "ranking": {
+    "meets_target_rate": true,
+    "recovery_untried": false,
+    "rate_off_target": 0,
+    "holds_expected_output": true,
+    "wake_ups_per_minute": 1165.909090909091,
+    "recovery_window_cycles": 36,
+    "window_count": 14
+   },
+   "strategy": {
+    "id": "round_robin_polling",
+    "tuning_method": "calculated",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 1
+     },
+     "window_cycle": [
+      {
+       "kind": "harmonic_window_cycle"
+      }
+     ],
+     "belt_pickups": [],
+     "shared_windows": "window_a_swing"
+    },
+    "output_swings": 1,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 5,
+   "inserter_window_count": 14,
+   "terminal_swing_count": 1,
+   "cycle_ticks": 40,
+   "expected_output_items": 32,
+   "insights": [
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The machine 3 that makes grenade takes coal only while it holds fewer than 90. The inserter (inserter 7) that takes coal brings 16 at a time and the window cycle needs 2.5 hands of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of grenade takes 146.1 ticks to make",
+     "what": "The machine 3 that makes grenade makes 1 grenade per craft (productivity included), so the 16 that the inserter (inserter 3) that moves grenade carries take 16 crafts, about 146.1 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 146.1 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "plan-versus-clock",
+     "scope": "clock",
+     "title": "Swings land a few ticks off the plan, as the blueprint runs them",
+     "what": "The plan has the inserter (inserter 1) that drops military science pack drop at ticks never. Run by the clock alone, as in the game, it drops at ticks 6. The inserter (inserter 10) that moves iron plate and the inserter (inserter 2) that drops military science pack and the inserter (inserter 7) that takes coal and the inserter (inserter 8) that takes coal and the inserter (inserter 9) that moves iron plate differ too. The clock still holds its rate.",
+     "why": "The plan lets each inserter wait for its machine. The blueprint has only the clock, which switches inserters on and off. An enable window also stays on 2 ticks after the clock closes it, so an inserter that is back in time can start another swing if a full hand is waiting, and one that finds less keeps what it picked up for a later enable window.",
+     "explanation": "The same number of items moves each window cycle either way, but the swings can bunch together instead of landing one to an enable window. The Timeline tab shows both runs; the clock in the blueprint is the one the blueprint follows."
+    },
+    {
+     "id": "wake-ups",
+     "scope": "clock",
+     "title": "Machines wake the inserters 1165.9 times a minute",
+     "what": "In a long run of this clock the machines of one copy of the build woke its inserters 1165.9 times a minute. The inserter that takes wall and piercing rounds magazine is woken most, 265.9 times a minute: it is on 70% of the time and is on and waiting for 52.7% of it. On 80% of the time or more: the inserter (inserter 7) that takes coal (87.5%), the inserter (inserter 8) that takes coal (87.5%).",
+     "why": "An enabled inserter with nothing to move sleeps on the wakeup list of the machine it waits on, and that machine wakes it every time it finishes a craft. The inserter looks for something to move, finds nothing or part of a hand, and sleeps again. An inserter its clock has disabled is on no list and is never woken. In game the debug option show-wakeup-lists draws a line from a waiting inserter to its machine; a line that flickers is this.",
+     "explanation": "Each wakeup is a check that moves little or nothing, so among clocks that hold the target the one with the fewest is the lightest on update time. An inserter that is enabled most of the time is woken at most of the crafts of the machine it waits on, whether its enable windows are long, it is left always enabled in a loop of machines, or the configuration sets it to always enabled."
+    },
+    {
+     "id": "one-per-copy-feed-5-1-2",
+     "scope": "build",
+     "title": "The supply rate that both lanes of the coal belt (belt 5) need in each copy",
+     "what": "Both lanes of the coal belt (belt 5) are per copy. The lanes of each copy need a supply rate of at least 60 a second, which the inserters of one copy take from them.",
+     "why": "",
+     "explanation": ""
+    },
+    {
+     "id": "one-per-copy-feed-6-1-2",
+     "scope": "build",
+     "title": "The supply rate that both lanes of the coal belt (belt 6) need in each copy",
+     "what": "Both lanes of the coal belt (belt 6) are per copy. The lanes of each copy need a supply rate of at least 60 a second, which the inserters of one copy take from them.",
+     "why": "",
+     "explanation": ""
+    }
+   ],
+   "checked_lanes": {
+    "line": {
+     "copies": 5,
+     "plain_output_belts": 2,
+     "output_chests": [],
+     "run_with_copies": true,
+     "every_copy_gets_items": true,
+     "output_belt": null,
+     "sentence": "Checked with all 5 copies on the lanes they share. Every copy gets its items. On the 2 output belts, only the sum of the drops is checked."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "drop",
+       "items_per_second": 120,
+       "lanes": [
+        1,
+        2
+       ],
+       "carries_per_second": 240
+      },
+      "state": {
+       "kind": "rate_fits",
+       "drop_per_second": 120,
+       "carries_per_second": 240
+      },
+      "label": "Rate fits",
+      "sentence": "The 5 copies together drop no more than this lane carries. Not simulated: a copy that drops onto a belt that already carries the other copies' items."
+     },
+     {
+      "belt_id": 2,
+      "lane": 1,
+      "together": {
+       "kind": "drop",
+       "items_per_second": 120,
+       "lanes": [
+        1,
+        2
+       ],
+       "carries_per_second": 240
+      },
+      "state": {
+       "kind": "rate_fits",
+       "drop_per_second": 120,
+       "carries_per_second": 240
+      },
+      "label": "Rate fits",
+      "sentence": "The 5 copies together drop no more than this lane carries. Not simulated: a copy that drops onto a belt that already carries the other copies' items."
+     },
+     {
+      "belt_id": 3,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 60,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": false
+      },
+      "label": "Holds",
+      "sentence": "Every copy gets its items."
+     },
+     {
+      "belt_id": 3,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 30,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": false
+      },
+      "label": "Holds",
+      "sentence": "Every copy gets its items."
+     },
+     {
+      "belt_id": 4,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 30,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": false
+      },
+      "label": "Holds",
+      "sentence": "Every copy gets its items."
+     },
+     {
+      "belt_id": 4,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 60,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": false
+      },
+      "label": "Holds",
+      "sentence": "Every copy gets its items."
+     }
+    ],
+    "cause": null
+   }
+  },
+  {
+   "id": "coordinated_sources",
+   "label": "Coordinated Sources: 2 output swings each output cycle",
+   "verdict": "stable",
+   "window_cycle_ticks": 80,
+   "copies": 5,
+   "description": "The inserters of each source use the enable windows of one other clock made for the build, on one shared window cycle. A source is a machine, belt or chest that inserters take from. The generator sets the sources one at a time, from the output upstream. It keeps the setting with the smallest number of wakeups for the full clock, until no source changes. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. In the clock-only check the build repeats every 2 window cycles instead of every window cycle, moving 128 of 128 items over them.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": true,
+    "disturbance_trial": {
+     "survives": true,
+     "broken_by": [],
+     "broken_at_other_lane_phases": [],
+     "recovered_after_window_cycles": 5,
+     "on_copies": {
+      "survives": true,
+      "lanes": [
+       "3/1",
+       "3/2",
+       "4/1",
+       "4/2"
+      ],
+      "expected_output_items": 64,
+      "recovered_after_window_cycles": 9
+     }
+    },
+    "items_per_second": 240,
+    "wake_ups_per_minute": 633.9622641509434,
+    "signals_per_minute": 339.62264150943395,
+    "start_dependence": null
+   },
+   "ranking": {
+    "meets_target_rate": true,
+    "recovery_untried": false,
+    "rate_off_target": 0,
+    "holds_expected_output": true,
+    "wake_ups_per_minute": 633.9622641509434,
+    "recovery_window_cycles": 5,
+    "window_count": 18
+   },
+   "strategy": {
+    "id": null,
+    "tuning_method": null,
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 2
+     },
+     "window_cycle": [],
+     "belt_pickups": []
+    },
+    "output_swings": 2,
+    "routing": {
+     "router": "coordinated_sources",
+     "sources": [
+      {
+       "source": "machine:1",
+       "entities": {
+        "inserter:1": {
+         "kind": "strategy",
+         "id": "round_robin_polling",
+         "tuning_method": "calculated"
+        }
+       }
+      },
+      {
+       "source": "machine:2",
+       "entities": {
+        "inserter:2": {
+         "kind": "strategy",
+         "id": "round_robin_polling",
+         "tuning_method": "calculated"
+        }
+       }
+      },
+      {
+       "source": "belt:3",
+       "entities": {
+        "inserter:5": {
+         "kind": "strategy",
+         "id": "round_robin_polling",
+         "tuning_method": "calculated"
+        }
+       }
+      },
+      {
+       "source": "belt:4",
+       "entities": {
+        "inserter:6": {
+         "kind": "strategy",
+         "id": "round_robin_polling",
+         "tuning_method": "calculated"
+        }
+       }
+      },
+      {
+       "source": "machine:3",
+       "entities": {
+        "inserter:3": {
+         "kind": "strategy",
+         "id": "round_robin_polling",
+         "tuning_method": "calculated"
+        }
+       }
+      },
+      {
+       "source": "machine:4",
+       "entities": {
+        "inserter:4": {
+         "kind": "strategy",
+         "id": "round_robin_polling",
+         "tuning_method": "calculated"
+        }
+       }
+      },
+      {
+       "source": "belt:5",
+       "entities": {
+        "inserter:7": {
+         "kind": "strategy",
+         "id": "round_robin_polling",
+         "tuning_method": "calculated"
+        }
+       }
+      },
+      {
+       "source": "belt:6",
+       "entities": {
+        "inserter:8": {
+         "kind": "strategy",
+         "id": "round_robin_polling",
+         "tuning_method": "calculated"
+        }
+       }
+      },
+      {
+       "source": "machine:5",
+       "entities": {
+        "inserter:9": {
+         "kind": "strategy",
+         "id": "round_robin_polling",
+         "tuning_method": "calculated"
+        },
+        "inserter:10": {
+         "kind": "strategy",
+         "id": "round_robin_polling",
+         "tuning_method": "calculated"
+        }
+       }
+      }
+     ]
+    }
+   },
+   "deciders": 5,
+   "inserter_window_count": 18,
+   "terminal_swing_count": 2,
+   "cycle_ticks": 80,
+   "expected_output_items": 64,
+   "insights": [
+    {
+     "id": "spare-time",
+     "scope": "build",
+     "title": "The machine 3 that makes grenade has 4 ticks to spare each window cycle",
+     "what": "The machine 3 that makes grenade crafts for 76 of the 80 ticks in a window cycle (8 crafts of 9.1 ticks) and is stopped for the other 4. It is the machine with the least time to spare.",
+     "why": "At the setpoint a machine is not needed the whole time. The ticks left over are the only spare time it has: every tick it waits for an ingredient, or stops because its output has not been taken, comes out of them.",
+     "explanation": "The swings can make the machine 3 that makes grenade wait up to 4 ticks each window cycle. Any more and it cannot catch up, so the build falls behind the target. The less there is to spare, the less room there is to move swings around and the less a late belt pickup is forgiven."
+    },
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The machine 3 that makes grenade takes coal only while it holds fewer than 90. The inserter (inserter 7) that takes coal brings 16 at a time and the window cycle needs 5 hands of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of grenade takes 146.1 ticks to make",
+     "what": "The machine 3 that makes grenade makes 1 grenade per craft (productivity included), so the 16 that the inserter (inserter 3) that moves grenade carries take 16 crafts, about 146.1 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 146.1 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "plan-versus-clock",
+     "scope": "clock",
+     "title": "Swings land a few ticks off the plan, as the blueprint runs them",
+     "what": "The plan has the inserter (inserter 10) that moves iron plate drop at ticks 31, 39, 47. Run by the clock alone, as in the game, it drops at ticks 12, 20, 52. The inserter (inserter 3) that moves grenade and the inserter (inserter 4) that moves grenade and the inserter that takes wall and piercing rounds magazine and the inserter that takes piercing rounds magazine and wall and the inserter (inserter 7) that takes coal and the inserter (inserter 8) that takes coal and the inserter (inserter 9) that moves iron plate differ too. The clock still holds its rate.",
+     "why": "The plan lets each inserter wait for its machine. The blueprint has only the clock, which switches inserters on and off. An enable window also stays on 2 ticks after the clock closes it, so an inserter that is back in time can start another swing if a full hand is waiting, and one that finds less keeps what it picked up for a later enable window.",
+     "explanation": "The same number of items moves each window cycle either way, but the swings can bunch together instead of landing one to an enable window. The Timeline tab shows both runs; the clock in the blueprint is the one the blueprint follows."
+    },
+    {
+     "id": "wake-ups",
+     "scope": "clock",
+     "title": "Machines wake the inserters 634 times a minute",
+     "what": "In a long run of this clock the machines of one copy of the build woke its inserters 634 times a minute. The inserter that takes wall and piercing rounds magazine is woken most, 113.2 times a minute: it is on 35.2% of the time and is on and waiting for 16.4% of it.",
+     "why": "An enabled inserter with nothing to move sleeps on the wakeup list of the machine it waits on, and that machine wakes it every time it finishes a craft. The inserter looks for something to move, finds nothing or part of a hand, and sleeps again. An inserter its clock has disabled is on no list and is never woken. In game the debug option show-wakeup-lists draws a line from a waiting inserter to its machine; a line that flickers is this.",
+     "explanation": "Each wakeup is a check that moves little or nothing, so among clocks that hold the target the one with the fewest is the lightest on update time. An inserter that is enabled most of the time is woken at most of the crafts of the machine it waits on, whether its enable windows are long, it is left always enabled in a loop of machines, or the configuration sets it to always enabled."
+    },
+    {
+     "id": "one-per-copy-feed-5-1-2",
+     "scope": "build",
+     "title": "The supply rate that both lanes of the coal belt (belt 5) need in each copy",
+     "what": "Both lanes of the coal belt (belt 5) are per copy. The lanes of each copy need a supply rate of at least 60 a second, which the inserters of one copy take from them.",
+     "why": "",
+     "explanation": ""
+    },
+    {
+     "id": "one-per-copy-feed-6-1-2",
+     "scope": "build",
+     "title": "The supply rate that both lanes of the coal belt (belt 6) need in each copy",
+     "what": "Both lanes of the coal belt (belt 6) are per copy. The lanes of each copy need a supply rate of at least 60 a second, which the inserters of one copy take from them.",
+     "why": "",
+     "explanation": ""
+    }
+   ],
+   "checked_lanes": {
+    "line": {
+     "copies": 5,
+     "plain_output_belts": 2,
+     "output_chests": [],
+     "run_with_copies": true,
+     "every_copy_gets_items": true,
+     "output_belt": null,
+     "sentence": "Checked with all 5 copies on the lanes they share. Every copy gets its items. On the 2 output belts, only the sum of the drops is checked."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "drop",
+       "items_per_second": 120,
+       "lanes": [
+        1,
+        2
+       ],
+       "carries_per_second": 240
+      },
+      "state": {
+       "kind": "rate_fits",
+       "drop_per_second": 120,
+       "carries_per_second": 240
+      },
+      "label": "Rate fits",
+      "sentence": "The 5 copies together drop no more than this lane carries. Not simulated: a copy that drops onto a belt that already carries the other copies' items."
+     },
+     {
+      "belt_id": 2,
+      "lane": 1,
+      "together": {
+       "kind": "drop",
+       "items_per_second": 120,
+       "lanes": [
+        1,
+        2
+       ],
+       "carries_per_second": 240
+      },
+      "state": {
+       "kind": "rate_fits",
+       "drop_per_second": 120,
+       "carries_per_second": 240
+      },
+      "label": "Rate fits",
+      "sentence": "The 5 copies together drop no more than this lane carries. Not simulated: a copy that drops onto a belt that already carries the other copies' items."
+     },
+     {
+      "belt_id": 3,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 60,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": false
+      },
+      "label": "Holds",
+      "sentence": "Every copy gets its items."
+     },
+     {
+      "belt_id": 3,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 30,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": false
+      },
+      "label": "Holds",
+      "sentence": "Every copy gets its items."
+     },
+     {
+      "belt_id": 4,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 30,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": false
+      },
+      "label": "Holds",
+      "sentence": "Every copy gets its items."
+     },
+     {
+      "belt_id": 4,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 60,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": false
+      },
+      "label": "Holds",
+      "sentence": "Every copy gets its items."
+     }
+    ],
+    "cause": null
+   }
+  }
+ ]
+}

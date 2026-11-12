@@ -18,6 +18,7 @@ import { openResultsStore, readShownMarker, writeShownMarker, type ResultsStore 
 import { pendingStartupStep, startupFailureText, type StartupProgress } from '../utils/startupSteps';
 import { busyWorkersOf, checkToResend, crashOutcome, replaceWorkers } from '../worker/pool';
 import { orderAlternativeTasks } from '../worker/alternativeQueue';
+import { withOtherClocksOf } from '../utils/checkedLanes';
 import type { GenerationAssumptions, RepeatedUnitsRecovery } from '../worker/types';
 
 export type { ClockAlternativeView, RecipeInfo } from '../worker/types';
@@ -370,7 +371,8 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         const not_started = [...generation.waiting, ...generation.skipped];
         updateResults({
             generationAssumptions: generation.assumptions,
-            alternatives: combined.alternatives,
+            // a cause's "what changes it" names another clock of the generation, as the engine's result does
+            alternatives: withOtherClocksOf(combined.alternatives, combined.selected_index),
             selectedAlternativeIndex: user_index >= 0 ? user_index : combined.selected_index,
             pendingAlternatives: generation.tasks.filter(task => !generation.done.has(task.id) && !not_started.includes(task)).map(pendingClockName),
             skippedSearches: skippedSearchesOf(generation),

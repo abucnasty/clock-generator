@@ -127,6 +127,8 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
     // the belts, inserters, chests and drills as the texts name them, by their items (the engine's entity-name.ts)
     const names = clockGenerator.buildToNameOf(config);
     const entityNames = clockGenerator.entityNamesInSentence(config);
+    // every lane of the build once, which the rows of a clock's checked lanes are read with
+    const lanes = clockGenerator.buildLanesOf(config);
     const alternatives: ClockAlternativeView[] = run.alternatives.map(({ result, ...alternative }) => ({
         id: alternative.id,
         label: alternative.label,
@@ -138,6 +140,7 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         assumptions: {
             machines: machinesToName(config),
             entityNames,
+            lanes,
             kickStarts: result.machine_facts.flatMap(machine => machine.facts.inputs
                 .filter(input => clockGenerator.FactorioDataService.findRecipeOrThrow(machine.facts.recipe).results.some(output => output.name === input.item_name))
                 .map(input => ({ machineId: machine.entity_id, item: input.item_name,
@@ -156,6 +159,7 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         verdict: alternative.verdict,
         ranking: alternative.ranking,
         deadlockRisk: clockGenerator.deadlockRiskNote(alternative.deadlock_risks, names),
+        ...(alternative.checked_lanes !== undefined && { checkedLanes: alternative.checked_lanes }),
         beltLabel: clockGenerator.clockBeltLabel(alternative.belt),
         belt: alternative.belt,
         asBuilt: result.stability_check.as_built ?? null,

@@ -1,0 +1,2654 @@
+{
+ "sample": "science/automation/automation-240.json",
+ "copies": 9,
+ "selected_index": 2,
+ "why_not_stable": null,
+ "lanes": [
+  {
+   "belt_id": 1,
+   "lane": 1,
+   "item": "iron-gear-wheel",
+   "role": "input",
+   "end": "dead_end",
+   "end_given_by": "lane",
+   "sharing": "shared",
+   "supply_rate": 120,
+   "supply_rate_by_default": true,
+   "capacity": 120
+  },
+  {
+   "belt_id": 1,
+   "lane": 2,
+   "item": "copper-plate",
+   "role": "input",
+   "end": "dead_end",
+   "end_given_by": "lane",
+   "sharing": "shared",
+   "supply_rate": 120,
+   "supply_rate_by_default": true,
+   "capacity": 120
+  },
+  {
+   "belt_id": 2,
+   "lane": 1,
+   "item": "automation-science-pack",
+   "role": "output",
+   "end": "infinite",
+   "end_given_by": "role",
+   "sharing": "shared",
+   "supply_rate": 120,
+   "supply_rate_by_default": true,
+   "capacity": 120
+  }
+ ],
+ "clocks": [
+  {
+   "id": "takt_batches_observed",
+   "label": "Takt Batches: 3 output swings each output cycle",
+   "verdict": "unstable",
+   "window_cycle_ticks": 216,
+   "copies": 9,
+   "description": "The swing schedule the generator plans for the setpoint. The build is simulated with each inserter waiting on its machine's inventory, and each inserter's enable windows are the ticks it moved items. Swings are grouped into batches that match the output cycle. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. In the clock-only check the build repeats every 2 window cycles instead of every window cycle, moving 192 of 192 items over them. It is not stable on its output belt. The side belt of copy 4 from the entry is full at its join onto the output belt. Its output inserter waits for room in 84 of its 336 swings in 63 window cycles. It misses 42 of the 378 swings its target needs.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": true,
+    "disturbance_trial": {
+     "survives": true,
+     "broken_by": [],
+     "broken_at_other_lane_phases": [],
+     "recovered_after_window_cycles": 5
+    },
+    "items_per_second": 240,
+    "wake_ups_per_minute": 192.11136890951275,
+    "signals_per_minute": 100.23201856148492,
+    "start_dependence": null,
+    "shared_lane_losses": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "iron-gear-wheel",
+      "copies": 9,
+      "copy": 4,
+      "inserter_id": 1,
+      "items": 2688,
+      "alone_items": 3024,
+      "swings": 168,
+      "alone_swings": 189,
+      "short_swings": 0,
+      "window_cycles": 63,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 4,
+       "kind": "machine",
+       "id": 1,
+       "made": 2689,
+       "target": 3024.0000000000005,
+       "behind": 335.00000000000045
+      },
+      "join_full": {
+       "held_hands": 84,
+       "hands": 336,
+       "target_swings": 378
+      },
+      "text": "The side belt of copy 4 from the entry is full at its join onto the output belt. Its output inserter waits for room in 84 of its 336 swings in 63 window cycles. It misses 42 of the 378 swings its target needs."
+     },
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "iron-gear-wheel",
+      "copies": 9,
+      "copy": 8,
+      "inserter_id": 1,
+      "items": 2688,
+      "alone_items": 3024,
+      "swings": 168,
+      "alone_swings": 189,
+      "short_swings": 0,
+      "window_cycles": 63,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 8,
+       "kind": "machine",
+       "id": 1,
+       "made": 2688,
+       "target": 3024.0000000000005,
+       "behind": 336.00000000000045
+      },
+      "join_full": {
+       "held_hands": 84,
+       "hands": 336,
+       "target_swings": 378
+      },
+      "text": "The side belt of copy 8 from the entry is full at its join onto the output belt. Its output inserter waits for room in 84 of its 336 swings in 63 window cycles. It misses 42 of the 378 swings its target needs."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "copper-plate",
+      "copies": 9,
+      "copy": 4,
+      "inserter_id": 1,
+      "items": 2688,
+      "alone_items": 3024,
+      "swings": 168,
+      "alone_swings": 189,
+      "short_swings": 0,
+      "window_cycles": 63,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 4,
+       "kind": "machine",
+       "id": 1,
+       "made": 2689,
+       "target": 3024.0000000000005,
+       "behind": 335.00000000000045
+      },
+      "join_full": {
+       "held_hands": 84,
+       "hands": 336,
+       "target_swings": 378
+      },
+      "text": "The side belt of copy 4 from the entry is full at its join onto the output belt. Its output inserter waits for room in 84 of its 336 swings in 63 window cycles. It misses 42 of the 378 swings its target needs."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "copper-plate",
+      "copies": 9,
+      "copy": 8,
+      "inserter_id": 1,
+      "items": 2688,
+      "alone_items": 3024,
+      "swings": 168,
+      "alone_swings": 189,
+      "short_swings": 0,
+      "window_cycles": 63,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 8,
+       "kind": "machine",
+       "id": 1,
+       "made": 2688,
+       "target": 3024.0000000000005,
+       "behind": 336.00000000000045
+      },
+      "join_full": {
+       "held_hands": 84,
+       "hands": 336,
+       "target_swings": 378
+      },
+      "text": "The side belt of copy 8 from the entry is full at its join onto the output belt. Its output inserter waits for room in 84 of its 336 swings in 63 window cycles. It misses 42 of the 378 swings its target needs."
+     }
+    ]
+   },
+   "ranking": {
+    "meets_target_rate": false,
+    "recovery_untried": false,
+    "rate_off_target": 0,
+    "holds_expected_output": false,
+    "wake_ups_per_minute": 192.11136890951275,
+    "recovery_window_cycles": 5,
+    "window_count": 6
+   },
+   "strategy": {
+    "id": "takt_batches",
+    "tuning_method": "observed",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 3
+     },
+     "window_cycle": [],
+     "belt_pickups": []
+    },
+    "output_swings": 3,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 2,
+   "inserter_window_count": 6,
+   "terminal_swing_count": 3,
+   "cycle_ticks": 108,
+   "expected_output_items": 96,
+   "insights": [
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The assembling machine 3 that makes automation science pack takes copper plate only while it holds fewer than 18. The inserter that takes iron gear wheel and copper plate brings 16 at a time and the window cycle needs 3 hands of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of automation science pack takes 34.8 ticks to make",
+     "what": "The assembling machine 3 that makes automation science pack makes 2 automation science pack per craft (productivity included), so the 16 that the inserter that drops automation science pack carries take 8 crafts, about 34.8 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 34.8 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "plan-versus-clock",
+     "scope": "clock",
+     "title": "Swings land a few ticks off the plan, as the blueprint runs them",
+     "what": "The plan has the inserter that takes iron gear wheel and copper plate drop at ticks 21, 33, 49, 60, 138, 149, 188. Run by the clock alone, as in the game, it drops at ticks 23, 35, 52, 63, 143, 154. The clock still holds its rate.",
+     "why": "The plan lets each inserter wait for its machine. The blueprint has only the clock, which switches inserters on and off. An enable window also stays on 2 ticks after the clock closes it, so an inserter that is back in time can start another swing if a full hand is waiting, and one that finds less keeps what it picked up for a later enable window.",
+     "explanation": "The same number of items moves each window cycle either way, but the swings can bunch together instead of landing one to an enable window. The Timeline tab shows both runs; the clock in the blueprint is the one the blueprint follows."
+    },
+    {
+     "id": "wake-ups",
+     "scope": "clock",
+     "title": "Machines wake the inserters 192.1 times a minute",
+     "what": "In a long run of this clock the machines of one copy of the build woke its inserters 192.1 times a minute. The inserter that takes iron gear wheel and copper plate is woken most, 158.7 times a minute: it is on 39.4% of the time and is on and waiting for 15.3% of it.",
+     "why": "An enabled inserter with nothing to move sleeps on the wakeup list of the machine it waits on, and that machine wakes it every time it finishes a craft. The inserter looks for something to move, finds nothing or part of a hand, and sleeps again. An inserter its clock has disabled is on no list and is never woken. In game the debug option show-wakeup-lists draws a line from a waiting inserter to its machine; a line that flickers is this.",
+     "explanation": "Each wakeup is a check that moves little or nothing, so among clocks that hold the target the one with the fewest is the lightest on update time. An inserter that is enabled most of the time is woken at most of the crafts of the machine it waits on, whether its enable windows are long, it is left always enabled in a loop of machines, or the configuration sets it to always enabled."
+    },
+    {
+     "id": "lanes-exactly-full",
+     "scope": "build",
+     "title": "Both lanes of the automation science pack belt are exactly full",
+     "what": "Both lanes of the automation science pack belt are exactly full at the target: the 9 copies drop 9 × 26.67 = 240 a second onto lanes that carry 240. Nothing is left over, so every hand has to land in a gap the others leave, and a wait is not made up later.",
+     "why": "",
+     "explanation": ""
+    }
+   ],
+   "checked_lanes": {
+    "line": {
+     "copies": 9,
+     "plain_output_belts": 0,
+     "output_chests": [],
+     "run_with_copies": true,
+     "every_copy_gets_items": true,
+     "output_belt": "misses",
+     "sentence": "Checked with all 9 copies on the lanes they share. Every copy gets its items, and copies 4 and 8 miss swings at the output belt."
+    },
+    "rows": [
+     {
+      "belt_id": 2,
+      "lane": 1,
+      "together": {
+       "kind": "drop",
+       "items_per_second": 240,
+       "lanes": [
+        1,
+        2
+       ],
+       "carries_per_second": 240
+      },
+      "state": {
+       "kind": "join_full",
+       "copies": [
+        {
+         "copy": 4,
+         "missed": 42,
+         "swings": 378,
+         "held_hands": 84,
+         "hands": 336
+        },
+        {
+         "copy": 8,
+         "missed": 42,
+         "swings": 378,
+         "held_hands": 84,
+         "hands": 336
+        }
+       ]
+      },
+      "label": "Join full on copies 4 and 8",
+      "sentence": "42 of 378 swings missed, on each."
+     },
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "takes_less",
+       "copies": [
+        {
+         "copy": 4,
+         "missed": 21,
+         "swings": 189,
+         "without_output_belt": {
+          "copy": 4,
+          "missed": 11,
+          "swings": 189
+         }
+        },
+        {
+         "copy": 8,
+         "missed": 21,
+         "swings": 189
+        }
+       ]
+      },
+      "label": "Copies 4 and 8 take less",
+      "sentence": "They wait for the output belt. Without the output belt, copy 4 still misses 11 of 189 swings here."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "takes_less",
+       "copies": [
+        {
+         "copy": 4,
+         "missed": 21,
+         "swings": 189,
+         "without_output_belt": {
+          "copy": 4,
+          "missed": 11,
+          "swings": 189
+         }
+        },
+        {
+         "copy": 8,
+         "missed": 21,
+         "swings": 189
+        }
+       ]
+      },
+      "label": "Copies 4 and 8 take less",
+      "sentence": "They wait for the output belt. Without the output belt, copy 4 still misses 11 of 189 swings here."
+     }
+    ],
+    "cause": {
+     "kind": "join",
+     "headline": {
+      "text": "Copies 4 and 8 miss 42 of 378 swings each",
+      "data": {
+       "copies": [
+        {
+         "copy": 4,
+         "missed": 42,
+         "swings": 378
+        },
+        {
+         "copy": 8,
+         "missed": 42,
+         "swings": 378
+        }
+       ]
+      }
+     },
+     "cause": {
+      "text": "The side belts of copies 4 and 8 are full where they join the automation science pack output belt.",
+      "data": {
+       "copies": [
+        {
+         "copy": 4
+        },
+        {
+         "copy": 8
+        }
+       ]
+      }
+     },
+     "spacing": null,
+     "where": {
+      "text": "The inserter of copy 4 that drops automation science pack misses 42 of its 378 swings in 63 window cycles, and so does that of copy 8. 84 of the 336 swings each one makes wait for room.",
+      "data": {
+       "takers": [
+        {
+         "copy": 4,
+         "inserter_id": 2,
+         "missed": 42,
+         "swings": 378,
+         "items": [
+          {
+           "item": "automation-science-pack",
+           "missed": 42,
+           "swings": 378
+          }
+         ]
+        },
+        {
+         "copy": 8,
+         "inserter_id": 2,
+         "missed": 42,
+         "swings": 378,
+         "items": [
+          {
+           "item": "automation-science-pack",
+           "missed": 42,
+           "swings": 378
+          }
+         ]
+        }
+       ]
+      }
+     },
+     "alone": {
+      "text": "The same inserter makes all 378 swings. The clock is right for one copy.",
+      "data": {
+       "makes_all": true,
+       "missed": 0,
+       "swings": 378
+      }
+     },
+     "changes": {
+      "text": "With 3 copies on the iron gear wheel and copper plate lanes, every copy makes every swing. Another clock of this build has no full join: Time-Study Windows, window cycle 216 ticks.",
+      "data": {
+       "fewer_copies": 3,
+       "other_clock": {
+        "id": "time_study_windows",
+        "label": "Time-Study Windows: 3 output swings each output cycle",
+        "window_cycle_ticks": 216
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "euclidean_swings",
+   "label": "Euclidean Swings: 1 output swing each output cycle",
+   "verdict": "unstable",
+   "window_cycle_ticks": 72,
+   "copies": 9,
+   "description": "Takt Batches with fractional swings turned on: an inserter that needs e.g. 3/2 swings each output cycle alternates between 1 and 2 swings instead of rounding, which can need fewer or shorter enable windows. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. It is not stable on a lane its copies share. The iron gear wheel lane ends in a dead end. The 9 copies take iron gear wheel from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 3 of its 65 swings with iron gear wheel in 65 window cycles.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": true,
+    "disturbance_trial": {
+     "survives": true,
+     "broken_by": [],
+     "broken_at_other_lane_phases": [],
+     "recovered_after_window_cycles": 25
+    },
+    "items_per_second": 240,
+    "wake_ups_per_minute": 0,
+    "signals_per_minute": 150,
+    "start_dependence": null,
+    "shared_lane_losses": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "iron-gear-wheel",
+      "copies": 9,
+      "copy": 2,
+      "inserter_id": 1,
+      "items": 992,
+      "alone_items": 1040,
+      "swings": 62,
+      "alone_swings": 65,
+      "short_swings": 0,
+      "window_cycles": 65,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 2,
+       "kind": "machine",
+       "id": 1,
+       "made": 992,
+       "target": 1040,
+       "behind": 48
+      },
+      "text": "The iron gear wheel lane ends in a dead end. The 9 copies take iron gear wheel from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 3 of its 65 swings with iron gear wheel in 65 window cycles."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "copper-plate",
+      "copies": 9,
+      "copy": 2,
+      "inserter_id": 1,
+      "items": 992,
+      "alone_items": 1040,
+      "swings": 62,
+      "alone_swings": 65,
+      "short_swings": 0,
+      "window_cycles": 65,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 2,
+       "kind": "machine",
+       "id": 1,
+       "made": 992,
+       "target": 1040,
+       "behind": 48
+      },
+      "text": "The copper plate lane ends in a dead end. The 9 copies take copper plate from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 3 of its 65 swings with copper plate in 65 window cycles."
+     }
+    ]
+   },
+   "ranking": {
+    "meets_target_rate": false,
+    "recovery_untried": false,
+    "rate_off_target": 0,
+    "holds_expected_output": false,
+    "wake_ups_per_minute": 0,
+    "recovery_window_cycles": 25,
+    "window_count": 4
+   },
+   "strategy": {
+    "id": "euclidean_swings",
+    "tuning_method": "observed",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 1
+     },
+     "window_cycle": [],
+     "belt_pickups": []
+    },
+    "output_swings": 1,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 2,
+   "inserter_window_count": 4,
+   "terminal_swing_count": 1,
+   "cycle_ticks": 36,
+   "expected_output_items": 32,
+   "insights": [
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The assembling machine 3 that makes automation science pack takes copper plate only while it holds fewer than 18. The inserter that takes iron gear wheel and copper plate brings 16 at a time and the window cycle needs 1 hand of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of automation science pack takes 34.8 ticks to make",
+     "what": "The assembling machine 3 that makes automation science pack makes 2 automation science pack per craft (productivity included), so the 16 that the inserter that drops automation science pack carries take 8 crafts, about 34.8 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 34.8 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "plan-versus-clock",
+     "scope": "clock",
+     "title": "Swings land a few ticks off the plan, as the blueprint runs them",
+     "what": "The plan has the inserter that drops automation science pack drop at ticks 12, 47. Run by the clock alone, as in the game, it drops at ticks 7, 43. The clock still holds its rate.",
+     "why": "The plan lets each inserter wait for its machine. The blueprint has only the clock, which switches inserters on and off. An enable window also stays on 2 ticks after the clock closes it, so an inserter that is back in time can start another swing if a full hand is waiting, and one that finds less keeps what it picked up for a later enable window.",
+     "explanation": "The same number of items moves each window cycle either way, but the swings can bunch together instead of landing one to an enable window. The Timeline tab shows both runs; the clock in the blueprint is the one the blueprint follows."
+    },
+    {
+     "id": "wake-ups",
+     "scope": "clock",
+     "title": "Machines wake the inserters 0 times a minute",
+     "what": "In a long run of this clock the machines of one copy of the build woke its inserters 0 times a minute. The inserter that takes iron gear wheel and copper plate is woken most, 0 times a minute: it is on 27.8% of the time and is on and waiting for 2.1% of it.",
+     "why": "An enabled inserter with nothing to move sleeps on the wakeup list of the machine it waits on, and that machine wakes it every time it finishes a craft. The inserter looks for something to move, finds nothing or part of a hand, and sleeps again. An inserter its clock has disabled is on no list and is never woken. In game the debug option show-wakeup-lists draws a line from a waiting inserter to its machine; a line that flickers is this.",
+     "explanation": "Each wakeup is a check that moves little or nothing, so among clocks that hold the target the one with the fewest is the lightest on update time. An inserter that is enabled most of the time is woken at most of the crafts of the machine it waits on, whether its enable windows are long, it is left always enabled in a loop of machines, or the configuration sets it to always enabled."
+    },
+    {
+     "id": "lanes-exactly-full",
+     "scope": "build",
+     "title": "Both lanes of the automation science pack belt are exactly full",
+     "what": "Both lanes of the automation science pack belt are exactly full at the target: the 9 copies drop 9 × 26.67 = 240 a second onto lanes that carry 240. Nothing is left over, so every hand has to land in a gap the others leave, and a wait is not made up later.",
+     "why": "",
+     "explanation": ""
+    }
+   ],
+   "checked_lanes": {
+    "line": {
+     "copies": 9,
+     "plain_output_belts": 0,
+     "output_chests": [],
+     "run_with_copies": true,
+     "every_copy_gets_items": false,
+     "output_belt": "none_waits",
+     "sentence": "Checked with all 9 copies on the lanes they share. Copy 2 does not get all its items, and no copy is held back at the output belt."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "short",
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 3,
+         "swings": 65
+        }
+       ]
+      },
+      "label": "Short on copy 2",
+      "sentence": "Copy 2 misses 3 of 65 swings."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "short",
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 3,
+         "swings": 65
+        }
+       ]
+      },
+      "label": "Short on copy 2",
+      "sentence": "Copy 2 misses 3 of 65 swings."
+     },
+     {
+      "belt_id": 2,
+      "lane": 1,
+      "together": {
+       "kind": "drop",
+       "items_per_second": 240,
+       "lanes": [
+        1,
+        2
+       ],
+       "carries_per_second": 240
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": true,
+       "steady_run_only": false,
+       "join_waits": [
+        {
+         "copy": 1,
+         "held_hands": 0,
+         "hands": 130
+        },
+        {
+         "copy": 2,
+         "held_hands": 0,
+         "hands": 124
+        },
+        {
+         "copy": 3,
+         "held_hands": 0,
+         "hands": 130
+        },
+        {
+         "copy": 4,
+         "held_hands": 0,
+         "hands": 130
+        },
+        {
+         "copy": 5,
+         "held_hands": 0,
+         "hands": 130
+        },
+        {
+         "copy": 6,
+         "held_hands": 0,
+         "hands": 130
+        },
+        {
+         "copy": 7,
+         "held_hands": 0,
+         "hands": 130
+        },
+        {
+         "copy": 8,
+         "held_hands": 0,
+         "hands": 130
+        },
+        {
+         "copy": 9,
+         "held_hands": 0,
+         "hands": 130
+        }
+       ]
+      },
+      "label": "Not the cause",
+      "sentence": "No copy waits at its join."
+     }
+    ],
+    "cause": {
+     "kind": "lane",
+     "headline": {
+      "text": "Copy 2 misses 6 of 130 swings",
+      "data": {
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 6,
+         "swings": 130
+        }
+       ]
+      }
+     },
+     "cause": {
+      "text": "In 3 of the 6 missed swings, the gap that copy 1 leaves on the copper plate lane reaches copy 2 when its inserter must pick up. In 5 of the 6 missed swings, the assembling machine 3 of copy 2 that makes automation science pack has its output full and takes no more items. 2 of the 6 show both.",
+      "data": {
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 6,
+         "lane_empty": 3,
+         "gap_from_copy_before": 3,
+         "machine_full": 5,
+         "both": 2,
+         "neither": 0,
+         "lane_items": [
+          "copper-plate"
+         ],
+         "gap_items": [
+          "copper-plate"
+         ]
+        }
+       ]
+      }
+     },
+     "spacing": {
+      "text": "The copies stand 9 tiles apart. An item takes 72 ticks from one copy to the next, and the window cycle is 72 ticks. The 9 copies take every copper plate the lane brings, so the gap does not close on the way.",
+      "data": {
+       "step_tiles": 9,
+       "travel_ticks": 72,
+       "window_cycle_ticks": 72,
+       "take_all": true
+      }
+     },
+     "where": {
+      "text": "The inserter of copy 2 that takes iron gear wheel and copper plate misses 6 of its 130 swings in 65 window cycles: 3 with iron gear wheel and 3 with copper plate. Each swing is a hand of 16.",
+      "data": {
+       "takers": [
+        {
+         "copy": 2,
+         "inserter_id": 1,
+         "missed": 6,
+         "swings": 130,
+         "items": [
+          {
+           "item": "iron-gear-wheel",
+           "missed": 3,
+           "swings": 65
+          },
+          {
+           "item": "copper-plate",
+           "missed": 3,
+           "swings": 65
+          }
+         ]
+        }
+       ]
+      }
+     },
+     "alone": {
+      "text": "The same inserter makes all 130 swings. The clock is right for one copy.",
+      "data": {
+       "makes_all": true,
+       "missed": 0,
+       "swings": 130
+      }
+     },
+     "changes": {
+      "text": "With 8 copies on the iron gear wheel and copper plate lanes, every copy makes every swing. Another clock of this build holds with all 9: Time-Study Windows, window cycle 216 ticks.",
+      "data": {
+       "fewer_copies": 8,
+       "other_clock": {
+        "id": "time_study_windows",
+        "label": "Time-Study Windows: 3 output swings each output cycle",
+        "window_cycle_ticks": 216
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "time_study_windows",
+   "label": "Time-Study Windows: 3 output swings each output cycle",
+   "verdict": "stable",
+   "window_cycle_ticks": 216,
+   "copies": 9,
+   "description": "Built from what the inserters actually do rather than from the planned schedule. The build is simulated with only the output inserters clocked and every other inserter running freely; each inserter's enable windows are the ticks it was busy picking up, swinging and dropping, plus a few ticks of padding. Swings end up spread out, roughly one per craft, so its inserters usually have more enable windows than in Takt Batches, which groups several swings into one enable window. An inserter between two machines that waits at its source for a full hand gets short, evenly spaced enable windows instead when they stay stable, so it grabs a hand that is already there rather than staying enabled while the machine crafts. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. In the clock-only check the build repeats every 2 window cycles instead of every window cycle, moving 192 of 192 items over them.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": true,
+    "disturbance_trial": {
+     "survives": true,
+     "broken_by": [],
+     "broken_at_other_lane_phases": [],
+     "recovered_after_window_cycles": 6,
+     "on_copies": {
+      "survives": true,
+      "lanes": [
+       "1/1",
+       "1/2"
+      ],
+      "expected_output_items": 96,
+      "recovered_after_window_cycles": 63
+     }
+    },
+    "items_per_second": 240,
+    "wake_ups_per_minute": 300.69605568445473,
+    "signals_per_minute": 83.52668213457076,
+    "start_dependence": null
+   },
+   "ranking": {
+    "meets_target_rate": true,
+    "recovery_untried": false,
+    "rate_off_target": 0,
+    "holds_expected_output": true,
+    "wake_ups_per_minute": 300.69605568445473,
+    "recovery_window_cycles": 6,
+    "window_count": 6
+   },
+   "strategy": {
+    "id": "time_study_windows",
+    "tuning_method": "observed",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 3
+     },
+     "window_cycle": [],
+     "belt_pickups": []
+    },
+    "output_swings": 3,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 2,
+   "inserter_window_count": 6,
+   "terminal_swing_count": 3,
+   "cycle_ticks": 108,
+   "expected_output_items": 96,
+   "insights": [
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The assembling machine 3 that makes automation science pack takes copper plate only while it holds fewer than 18. The inserter that takes iron gear wheel and copper plate brings 16 at a time and the window cycle needs 3 hands of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of automation science pack takes 34.8 ticks to make",
+     "what": "The assembling machine 3 that makes automation science pack makes 2 automation science pack per craft (productivity included), so the 16 that the inserter that drops automation science pack carries take 8 crafts, about 34.8 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 34.8 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "wake-ups",
+     "scope": "clock",
+     "title": "Machines wake the inserters 300.7 times a minute",
+     "what": "In a long run of this clock the machines of one copy of the build woke its inserters 300.7 times a minute. The inserter that takes iron gear wheel and copper plate is woken most, 267.3 times a minute: it is on 49.9% of the time and is on and waiting for 27.6% of it.",
+     "why": "An enabled inserter with nothing to move sleeps on the wakeup list of the machine it waits on, and that machine wakes it every time it finishes a craft. The inserter looks for something to move, finds nothing or part of a hand, and sleeps again. An inserter its clock has disabled is on no list and is never woken. In game the debug option show-wakeup-lists draws a line from a waiting inserter to its machine; a line that flickers is this.",
+     "explanation": "Each wakeup is a check that moves little or nothing, so among clocks that hold the target the one with the fewest is the lightest on update time. An inserter that is enabled most of the time is woken at most of the crafts of the machine it waits on, whether its enable windows are long, it is left always enabled in a loop of machines, or the configuration sets it to always enabled."
+    },
+    {
+     "id": "lanes-exactly-full",
+     "scope": "build",
+     "title": "Both lanes of the automation science pack belt are exactly full",
+     "what": "Both lanes of the automation science pack belt are exactly full at the target: the 9 copies drop 9 × 26.67 = 240 a second onto lanes that carry 240. Nothing is left over, so every hand has to land in a gap the others leave, and a wait is not made up later.",
+     "why": "",
+     "explanation": ""
+    }
+   ],
+   "checked_lanes": {
+    "line": {
+     "copies": 9,
+     "plain_output_belts": 0,
+     "output_chests": [],
+     "run_with_copies": true,
+     "every_copy_gets_items": true,
+     "output_belt": "waits_none_misses",
+     "sentence": "Checked with all 9 copies on the lanes they share. Every copy gets its items, and no copy misses a swing at the output belt."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": false
+      },
+      "label": "Holds",
+      "sentence": "Every copy gets its items."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": false
+      },
+      "label": "Holds",
+      "sentence": "Every copy gets its items."
+     },
+     {
+      "belt_id": 2,
+      "lane": 1,
+      "together": {
+       "kind": "drop",
+       "items_per_second": 240,
+       "lanes": [
+        1,
+        2
+       ],
+       "carries_per_second": 240
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": false,
+       "join_waits": [
+        {
+         "copy": 1,
+         "held_hands": 0,
+         "hands": 384
+        },
+        {
+         "copy": 2,
+         "held_hands": 0,
+         "hands": 384
+        },
+        {
+         "copy": 3,
+         "held_hands": 0,
+         "hands": 384
+        },
+        {
+         "copy": 4,
+         "held_hands": 128,
+         "hands": 384
+        },
+        {
+         "copy": 5,
+         "held_hands": 0,
+         "hands": 384
+        },
+        {
+         "copy": 6,
+         "held_hands": 0,
+         "hands": 384
+        },
+        {
+         "copy": 7,
+         "held_hands": 0,
+         "hands": 384
+        },
+        {
+         "copy": 8,
+         "held_hands": 128,
+         "hands": 384
+        },
+        {
+         "copy": 9,
+         "held_hands": 0,
+         "hands": 384
+        }
+       ]
+      },
+      "label": "Holds",
+      "sentence": "Copies 4 and 8 wait for room at their join in 128 of their 384 swings. No swing is missed."
+     }
+    ],
+    "cause": null
+   }
+  },
+  {
+   "id": "takt_batches_observed_swings_4",
+   "label": "Takt Batches: 4 output swings each output cycle",
+   "verdict": "unstable",
+   "window_cycle_ticks": 144,
+   "copies": 9,
+   "description": "Takt Batches with a longer output cycle: the output inserter takes 4 hands each output cycle instead of 3 while the machine keeps crafting between swings. Batches more swings into fewer, longer enable windows. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. The planning simulation moved 48 of 64 items each window cycle; stability is judged by the clock-only check, which runs the enable windows of the blueprint. In the clock-only check the build repeats every 2 window cycles instead of every window cycle, moving 96 of 128 items over them.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": false,
+    "disturbance_trial": null,
+    "items_per_second": 180,
+    "wake_ups_per_minute": null,
+    "signals_per_minute": null,
+    "start_dependence": null
+   },
+   "ranking": {
+    "meets_target_rate": false,
+    "recovery_untried": false,
+    "rate_off_target": -60,
+    "holds_expected_output": false,
+    "wake_ups_per_minute": null,
+    "recovery_window_cycles": null,
+    "window_count": 2
+   },
+   "strategy": {
+    "id": "takt_batches",
+    "tuning_method": "observed",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 4
+     },
+     "window_cycle": [],
+     "belt_pickups": []
+    },
+    "output_swings": 4,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 2,
+   "inserter_window_count": 2,
+   "terminal_swing_count": 4,
+   "cycle_ticks": 144,
+   "expected_output_items": 64,
+   "insights": [
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The assembling machine 3 that makes automation science pack takes copper plate only while it holds fewer than 18. The inserter that takes iron gear wheel and copper plate brings 16 at a time and the window cycle needs 2 hands of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of automation science pack takes 34.8 ticks to make",
+     "what": "The assembling machine 3 that makes automation science pack makes 2 automation science pack per craft (productivity included), so the 16 that the inserter that drops automation science pack carries take 8 crafts, about 34.8 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 34.8 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "unstable",
+     "scope": "clock",
+     "title": "This clock does not hold the setpoint",
+     "what": "Driven only by its enable windows, the build moved 48 of 64 items in a window cycle. The build repeats every 2 window cycles and moves 96 of 128 items over them.",
+     "why": "A clock has to work from wherever the machines happen to be when it starts, so it is simulated from several start points. A swing that arrives while its machine is at an insertion limit, out of ingredients or without a full hand does nothing useful, and once a machine has waited longer than its spare time it cannot catch up.",
+     "explanation": "Use a clock marked Stable. If none is, lower the setpoint, force fewer output swings (which gives the machines more buffer between swings), or yell at abuc to go fix his algorithm by opening an issue on GitHub (https://github.com/abucnasty/clock-generator/issues/new)."
+    },
+    {
+     "id": "lanes-exactly-full",
+     "scope": "build",
+     "title": "Both lanes of the automation science pack belt are exactly full",
+     "what": "Both lanes of the automation science pack belt are exactly full at the target: the 9 copies drop 9 × 26.67 = 240 a second onto lanes that carry 240. Nothing is left over, so every hand has to land in a gap the others leave, and a wait is not made up later.",
+     "why": "",
+     "explanation": ""
+    }
+   ],
+   "checked_lanes": {
+    "line": {
+     "copies": 9,
+     "plain_output_belts": 0,
+     "output_chests": [],
+     "run_with_copies": false,
+     "every_copy_gets_items": null,
+     "output_belt": null,
+     "sentence": "Not run with the copies: the clock does not hold its output on one copy."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     },
+     {
+      "belt_id": 2,
+      "lane": 1,
+      "together": {
+       "kind": "drop",
+       "items_per_second": 240,
+       "lanes": [
+        1,
+        2
+       ],
+       "carries_per_second": 240
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     }
+    ],
+    "cause": null
+   }
+  },
+  {
+   "id": "takt_batches_observed_swings_5",
+   "label": "Takt Batches: 5 output swings each output cycle",
+   "verdict": "unstable",
+   "window_cycle_ticks": 360,
+   "copies": 9,
+   "description": "Takt Batches with a longer output cycle: the output inserter takes 5 hands each output cycle instead of 3 while the machine keeps crafting between swings. Batches more swings into fewer, longer enable windows. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. The planning simulation moved 128 of 160 items each window cycle; stability is judged by the clock-only check, which runs the enable windows of the blueprint.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": false,
+    "disturbance_trial": null,
+    "items_per_second": 192,
+    "wake_ups_per_minute": null,
+    "signals_per_minute": null,
+    "start_dependence": null
+   },
+   "ranking": {
+    "meets_target_rate": false,
+    "recovery_untried": false,
+    "rate_off_target": -48,
+    "holds_expected_output": false,
+    "wake_ups_per_minute": null,
+    "recovery_window_cycles": null,
+    "window_count": 4
+   },
+   "strategy": {
+    "id": "takt_batches",
+    "tuning_method": "observed",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 5
+     },
+     "window_cycle": [],
+     "belt_pickups": []
+    },
+    "output_swings": 5,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 2,
+   "inserter_window_count": 4,
+   "terminal_swing_count": 5,
+   "cycle_ticks": 180,
+   "expected_output_items": 160,
+   "insights": [
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The assembling machine 3 that makes automation science pack takes copper plate only while it holds fewer than 18. The inserter that takes iron gear wheel and copper plate brings 16 at a time and the window cycle needs 5 hands of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of automation science pack takes 34.8 ticks to make",
+     "what": "The assembling machine 3 that makes automation science pack makes 2 automation science pack per craft (productivity included), so the 16 that the inserter that drops automation science pack carries take 8 crafts, about 34.8 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 34.8 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "unstable",
+     "scope": "clock",
+     "title": "This clock does not hold the setpoint",
+     "what": "Driven only by its enable windows, the build moved 128 of 160 items in a window cycle.",
+     "why": "A clock has to work from wherever the machines happen to be when it starts, so it is simulated from several start points. A swing that arrives while its machine is at an insertion limit, out of ingredients or without a full hand does nothing useful, and once a machine has waited longer than its spare time it cannot catch up.",
+     "explanation": "Use a clock marked Stable. If none is, lower the setpoint, force fewer output swings (which gives the machines more buffer between swings), or yell at abuc to go fix his algorithm by opening an issue on GitHub (https://github.com/abucnasty/clock-generator/issues/new)."
+    },
+    {
+     "id": "lanes-exactly-full",
+     "scope": "build",
+     "title": "Both lanes of the automation science pack belt are exactly full",
+     "what": "Both lanes of the automation science pack belt are exactly full at the target: the 9 copies drop 9 × 26.67 = 240 a second onto lanes that carry 240. Nothing is left over, so every hand has to land in a gap the others leave, and a wait is not made up later.",
+     "why": "",
+     "explanation": ""
+    }
+   ],
+   "checked_lanes": {
+    "line": {
+     "copies": 9,
+     "plain_output_belts": 0,
+     "output_chests": [],
+     "run_with_copies": false,
+     "every_copy_gets_items": null,
+     "output_belt": null,
+     "sentence": "Not run with the copies: the clock does not hold its output on one copy."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     },
+     {
+      "belt_id": 2,
+      "lane": 1,
+      "together": {
+       "kind": "drop",
+       "items_per_second": 240,
+       "lanes": [
+        1,
+        2
+       ],
+       "carries_per_second": 240
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     }
+    ],
+    "cause": null
+   }
+  },
+  {
+   "id": "takt_batches_observed_swings_6",
+   "label": "Takt Batches: 6 output swings each output cycle",
+   "verdict": "unstable",
+   "window_cycle_ticks": 216,
+   "copies": 9,
+   "description": "Takt Batches with a longer output cycle: the output inserter takes 6 hands each output cycle instead of 3 while the machine keeps crafting between swings. Batches more swings into fewer, longer enable windows. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. The planning simulation moved 64 of 96 items each window cycle; stability is judged by the clock-only check, which runs the enable windows of the blueprint.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": false,
+    "disturbance_trial": null,
+    "items_per_second": 160,
+    "wake_ups_per_minute": null,
+    "signals_per_minute": null,
+    "start_dependence": null
+   },
+   "ranking": {
+    "meets_target_rate": false,
+    "recovery_untried": false,
+    "rate_off_target": -80,
+    "holds_expected_output": false,
+    "wake_ups_per_minute": null,
+    "recovery_window_cycles": null,
+    "window_count": 2
+   },
+   "strategy": {
+    "id": "takt_batches",
+    "tuning_method": "observed",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 6
+     },
+     "window_cycle": [],
+     "belt_pickups": []
+    },
+    "output_swings": 6,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 2,
+   "inserter_window_count": 2,
+   "terminal_swing_count": 6,
+   "cycle_ticks": 216,
+   "expected_output_items": 96,
+   "insights": [
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The assembling machine 3 that makes automation science pack takes copper plate only while it holds fewer than 18. The inserter that takes iron gear wheel and copper plate brings 16 at a time and the window cycle needs 3 hands of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of automation science pack takes 34.8 ticks to make",
+     "what": "The assembling machine 3 that makes automation science pack makes 2 automation science pack per craft (productivity included), so the 16 that the inserter that drops automation science pack carries take 8 crafts, about 34.8 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 34.8 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "unstable",
+     "scope": "clock",
+     "title": "This clock does not hold the setpoint",
+     "what": "Driven only by its enable windows, the build moved 64 of 96 items in a window cycle.",
+     "why": "A clock has to work from wherever the machines happen to be when it starts, so it is simulated from several start points. A swing that arrives while its machine is at an insertion limit, out of ingredients or without a full hand does nothing useful, and once a machine has waited longer than its spare time it cannot catch up.",
+     "explanation": "Use a clock marked Stable. If none is, lower the setpoint, force fewer output swings (which gives the machines more buffer between swings), or yell at abuc to go fix his algorithm by opening an issue on GitHub (https://github.com/abucnasty/clock-generator/issues/new)."
+    },
+    {
+     "id": "lanes-exactly-full",
+     "scope": "build",
+     "title": "Both lanes of the automation science pack belt are exactly full",
+     "what": "Both lanes of the automation science pack belt are exactly full at the target: the 9 copies drop 9 × 26.67 = 240 a second onto lanes that carry 240. Nothing is left over, so every hand has to land in a gap the others leave, and a wait is not made up later.",
+     "why": "",
+     "explanation": ""
+    }
+   ],
+   "checked_lanes": {
+    "line": {
+     "copies": 9,
+     "plain_output_belts": 0,
+     "output_chests": [],
+     "run_with_copies": false,
+     "every_copy_gets_items": null,
+     "output_belt": null,
+     "sentence": "Not run with the copies: the clock does not hold its output on one copy."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     },
+     {
+      "belt_id": 2,
+      "lane": 1,
+      "together": {
+       "kind": "drop",
+       "items_per_second": 240,
+       "lanes": [
+        1,
+        2
+       ],
+       "carries_per_second": 240
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": "The clock does not hold its output on one copy, so the copies are not run."
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     }
+    ],
+    "cause": null
+   }
+  },
+  {
+   "id": "takt_batches_observed_swings_2",
+   "label": "Takt Batches: 2 output swings each output cycle",
+   "verdict": "unstable",
+   "window_cycle_ticks": 72,
+   "copies": 9,
+   "description": "Takt Batches with the output inserter limited to 2 swings each output cycle instead of 3. The output machine buffers more between swings; useful when the higher swing count is unstable. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. The planning simulation moved 16 of 32 items each window cycle; stability is judged by the clock-only check, which runs the enable windows of the blueprint. In the clock-only check the build repeats every 4 window cycles instead of every window cycle, moving 128 of 128 items over them. It is not stable on a lane its copies share. The copper plate lane ends in a dead end. The 9 copies take copper plate from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 9 of its 65 swings with copper plate in 65 window cycles.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": true,
+    "disturbance_trial": {
+     "survives": true,
+     "broken_by": [],
+     "broken_at_other_lane_phases": [],
+     "recovered_after_window_cycles": 10
+    },
+    "items_per_second": 240,
+    "wake_ups_per_minute": 50.174216027874564,
+    "signals_per_minute": 100.34843205574913,
+    "start_dependence": null,
+    "shared_lane_losses": [
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "copper-plate",
+      "copies": 9,
+      "copy": 2,
+      "inserter_id": 1,
+      "items": 896,
+      "alone_items": 1040,
+      "swings": 56,
+      "alone_swings": 65,
+      "short_swings": 0,
+      "window_cycles": 65,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 2,
+       "kind": "machine",
+       "id": 1,
+       "made": 903,
+       "target": 1040,
+       "behind": 137
+      },
+      "text": "The copper plate lane ends in a dead end. The 9 copies take copper plate from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 9 of its 65 swings with copper plate in 65 window cycles."
+     },
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "iron-gear-wheel",
+      "copies": 9,
+      "copy": 2,
+      "inserter_id": 1,
+      "items": 928,
+      "alone_items": 1040,
+      "swings": 58,
+      "alone_swings": 65,
+      "short_swings": 0,
+      "window_cycles": 65,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 2,
+       "kind": "machine",
+       "id": 1,
+       "made": 903,
+       "target": 1040,
+       "behind": 137
+      },
+      "text": "The iron gear wheel lane ends in a dead end. The 9 copies take iron gear wheel from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 7 of its 65 swings with iron gear wheel in 65 window cycles."
+     }
+    ]
+   },
+   "ranking": {
+    "meets_target_rate": false,
+    "recovery_untried": false,
+    "rate_off_target": 0,
+    "holds_expected_output": false,
+    "wake_ups_per_minute": 50.174216027874564,
+    "recovery_window_cycles": 10,
+    "window_count": 2
+   },
+   "strategy": {
+    "id": "takt_batches",
+    "tuning_method": "observed",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 2
+     },
+     "window_cycle": [],
+     "belt_pickups": []
+    },
+    "output_swings": 2,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 2,
+   "inserter_window_count": 2,
+   "terminal_swing_count": 2,
+   "cycle_ticks": 72,
+   "expected_output_items": 32,
+   "insights": [
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The assembling machine 3 that makes automation science pack takes copper plate only while it holds fewer than 18. The inserter that takes iron gear wheel and copper plate brings 16 at a time and the window cycle needs 1 hand of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of automation science pack takes 34.8 ticks to make",
+     "what": "The assembling machine 3 that makes automation science pack makes 2 automation science pack per craft (productivity included), so the 16 that the inserter that drops automation science pack carries take 8 crafts, about 34.8 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 34.8 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "plan-versus-clock",
+     "scope": "clock",
+     "title": "Swings land a few ticks off the plan, as the blueprint runs them",
+     "what": "The plan has the inserter that drops automation science pack drop at ticks 5. Run by the clock alone, as in the game, it drops at ticks 7, 19. The clock still holds its rate.",
+     "why": "The plan lets each inserter wait for its machine. The blueprint has only the clock, which switches inserters on and off. An enable window also stays on 2 ticks after the clock closes it, so an inserter that is back in time can start another swing if a full hand is waiting, and one that finds less keeps what it picked up for a later enable window.",
+     "explanation": "The same number of items moves each window cycle either way, but the swings can bunch together instead of landing one to an enable window. The Timeline tab shows both runs; the clock in the blueprint is the one the blueprint follows."
+    },
+    {
+     "id": "wake-ups",
+     "scope": "clock",
+     "title": "Machines wake the inserters 50.2 times a minute",
+     "what": "In a long run of this clock the machines of one copy of the build woke its inserters 50.2 times a minute. The inserter that takes iron gear wheel and copper plate is woken most, 50.2 times a minute: it is on 33.4% of the time and is on and waiting for 5.6% of it.",
+     "why": "An enabled inserter with nothing to move sleeps on the wakeup list of the machine it waits on, and that machine wakes it every time it finishes a craft. The inserter looks for something to move, finds nothing or part of a hand, and sleeps again. An inserter its clock has disabled is on no list and is never woken. In game the debug option show-wakeup-lists draws a line from a waiting inserter to its machine; a line that flickers is this.",
+     "explanation": "Each wakeup is a check that moves little or nothing, so among clocks that hold the target the one with the fewest is the lightest on update time. An inserter that is enabled most of the time is woken at most of the crafts of the machine it waits on, whether its enable windows are long, it is left always enabled in a loop of machines, or the configuration sets it to always enabled."
+    },
+    {
+     "id": "lanes-exactly-full",
+     "scope": "build",
+     "title": "Both lanes of the automation science pack belt are exactly full",
+     "what": "Both lanes of the automation science pack belt are exactly full at the target: the 9 copies drop 9 × 26.67 = 240 a second onto lanes that carry 240. Nothing is left over, so every hand has to land in a gap the others leave, and a wait is not made up later.",
+     "why": "",
+     "explanation": ""
+    }
+   ],
+   "checked_lanes": {
+    "line": {
+     "copies": 9,
+     "plain_output_belts": 0,
+     "output_chests": [],
+     "run_with_copies": true,
+     "every_copy_gets_items": false,
+     "output_belt": "none_waits",
+     "sentence": "Checked with all 9 copies on the lanes they share. Copy 2 does not get all its items, and no copy is held back at the output belt."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "short",
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 7,
+         "swings": 65
+        }
+       ]
+      },
+      "label": "Short on copy 2",
+      "sentence": "Copy 2 misses 7 of 65 swings."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "short",
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 9,
+         "swings": 65
+        }
+       ]
+      },
+      "label": "Short on copy 2",
+      "sentence": "Copy 2 misses 9 of 65 swings."
+     },
+     {
+      "belt_id": 2,
+      "lane": 1,
+      "together": {
+       "kind": "drop",
+       "items_per_second": 240,
+       "lanes": [
+        1,
+        2
+       ],
+       "carries_per_second": 240
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": true,
+       "steady_run_only": false,
+       "join_waits": [
+        {
+         "copy": 1,
+         "held_hands": 0,
+         "hands": 130
+        },
+        {
+         "copy": 2,
+         "held_hands": 0,
+         "hands": 113
+        },
+        {
+         "copy": 3,
+         "held_hands": 0,
+         "hands": 130
+        },
+        {
+         "copy": 4,
+         "held_hands": 0,
+         "hands": 130
+        },
+        {
+         "copy": 5,
+         "held_hands": 0,
+         "hands": 130
+        },
+        {
+         "copy": 6,
+         "held_hands": 0,
+         "hands": 130
+        },
+        {
+         "copy": 7,
+         "held_hands": 0,
+         "hands": 130
+        },
+        {
+         "copy": 8,
+         "held_hands": 0,
+         "hands": 130
+        },
+        {
+         "copy": 9,
+         "held_hands": 0,
+         "hands": 130
+        }
+       ]
+      },
+      "label": "Not the cause",
+      "sentence": "No copy waits at its join."
+     }
+    ],
+    "cause": {
+     "kind": "lane",
+     "headline": {
+      "text": "Copy 2 misses 16 of 130 swings",
+      "data": {
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 16,
+         "swings": 130
+        }
+       ]
+      }
+     },
+     "cause": {
+      "text": "In 8 of the 16 missed swings, the gap that copy 1 leaves on the iron gear wheel lane reaches copy 2 when its inserter must pick up. In 8 of the 16 missed swings, the assembling machine 3 of copy 2 that makes automation science pack has its output full and takes no more items. 8 of the 16 show both. In 8 of the 16, the run shows neither an empty reach nor a full output.",
+      "data": {
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 16,
+         "lane_empty": 8,
+         "gap_from_copy_before": 8,
+         "machine_full": 8,
+         "both": 8,
+         "neither": 8,
+         "lane_items": [
+          "iron-gear-wheel"
+         ],
+         "gap_items": [
+          "iron-gear-wheel"
+         ]
+        }
+       ]
+      }
+     },
+     "spacing": {
+      "text": "The copies stand 9 tiles apart. An item takes 72 ticks from one copy to the next, and the window cycle is 72 ticks. The 9 copies take every iron gear wheel the lane brings, so the gap does not close on the way.",
+      "data": {
+       "step_tiles": 9,
+       "travel_ticks": 72,
+       "window_cycle_ticks": 72,
+       "take_all": true
+      }
+     },
+     "where": {
+      "text": "The inserter of copy 2 that takes iron gear wheel and copper plate misses 16 of its 130 swings in 65 window cycles: 9 with copper plate and 7 with iron gear wheel. Each swing is a hand of 16.",
+      "data": {
+       "takers": [
+        {
+         "copy": 2,
+         "inserter_id": 1,
+         "missed": 16,
+         "swings": 130,
+         "items": [
+          {
+           "item": "copper-plate",
+           "missed": 9,
+           "swings": 65
+          },
+          {
+           "item": "iron-gear-wheel",
+           "missed": 7,
+           "swings": 65
+          }
+         ]
+        }
+       ]
+      }
+     },
+     "alone": {
+      "text": "The same inserter makes all 130 swings. The clock is right for one copy.",
+      "data": {
+       "makes_all": true,
+       "missed": 0,
+       "swings": 130
+      }
+     },
+     "changes": {
+      "text": "With 8 copies on the iron gear wheel and copper plate lanes, every copy makes every swing. Another clock of this build holds with all 9: Time-Study Windows, window cycle 216 ticks.",
+      "data": {
+       "fewer_copies": 8,
+       "other_clock": {
+        "id": "time_study_windows",
+        "label": "Time-Study Windows: 3 output swings each output cycle",
+        "window_cycle_ticks": 216
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "takt_batches_swings_1",
+   "label": "Takt Batches: 1 output swing each output cycle",
+   "verdict": "unstable",
+   "window_cycle_ticks": 72,
+   "copies": 9,
+   "description": "Takt Batches with the output inserter limited to 1 swing each output cycle instead of 3. The output machine buffers more between swings; useful when the higher swing count is unstable. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. It is not stable: the build does not go back to its expected output by itself under this clock after copper plate stops arriving. Not tried, since one failure is enough: iron gear wheel stops arriving, automation science pack is not taken away. It is not stable on a lane its copies share. The iron gear wheel lane ends in a dead end. The 9 copies take iron gear wheel from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 9 of its 65 swings with iron gear wheel in 65 window cycles.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": true,
+    "disturbance_trial": {
+     "survives": false,
+     "broken_by": [
+      "copper plate stops arriving"
+     ],
+     "broken_at_other_lane_phases": [],
+     "not_tried": [
+      "iron gear wheel stops arriving",
+      "automation science pack is not taken away"
+     ],
+     "recovered_after_window_cycles": null
+    },
+    "items_per_second": 240,
+    "wake_ups_per_minute": 123.44763670064874,
+    "signals_per_minute": 200.18535681186285,
+    "start_dependence": null,
+    "shared_lane_losses": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "iron-gear-wheel",
+      "copies": 9,
+      "copy": 2,
+      "inserter_id": 1,
+      "items": 896,
+      "alone_items": 1040,
+      "swings": 56,
+      "alone_swings": 65,
+      "short_swings": 0,
+      "window_cycles": 65,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 2,
+       "kind": "machine",
+       "id": 1,
+       "made": 888,
+       "target": 1040,
+       "behind": 152
+      },
+      "text": "The iron gear wheel lane ends in a dead end. The 9 copies take iron gear wheel from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 9 of its 65 swings with iron gear wheel in 65 window cycles."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "copper-plate",
+      "copies": 9,
+      "copy": 2,
+      "inserter_id": 1,
+      "items": 896,
+      "alone_items": 1040,
+      "swings": 56,
+      "alone_swings": 65,
+      "short_swings": 0,
+      "window_cycles": 65,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 2,
+       "kind": "machine",
+       "id": 1,
+       "made": 888,
+       "target": 1040,
+       "behind": 152
+      },
+      "text": "The copper plate lane ends in a dead end. The 9 copies take copper plate from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 9 of its 65 swings with copper plate in 65 window cycles."
+     },
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "iron-gear-wheel",
+      "copies": 9,
+      "copy": 3,
+      "inserter_id": 1,
+      "items": 976,
+      "alone_items": 1040,
+      "swings": 61,
+      "alone_swings": 65,
+      "short_swings": 0,
+      "window_cycles": 65,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 3,
+       "kind": "machine",
+       "id": 1,
+       "made": 979,
+       "target": 1040,
+       "behind": 61
+      },
+      "text": "The iron gear wheel lane ends in a dead end. The 9 copies take iron gear wheel from it. When the items move east, copy 3 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 4 of its 65 swings with iron gear wheel in 65 window cycles."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "copper-plate",
+      "copies": 9,
+      "copy": 3,
+      "inserter_id": 1,
+      "items": 976,
+      "alone_items": 1040,
+      "swings": 61,
+      "alone_swings": 65,
+      "short_swings": 0,
+      "window_cycles": 65,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 3,
+       "kind": "machine",
+       "id": 1,
+       "made": 979,
+       "target": 1040,
+       "behind": 61
+      },
+      "text": "The copper plate lane ends in a dead end. The 9 copies take copper plate from it. When the items move east, copy 3 from the entry does not get sufficient items. Its inserter that takes iron gear wheel and copper plate misses 4 of its 65 swings with copper plate in 65 window cycles."
+     }
+    ]
+   },
+   "ranking": {
+    "meets_target_rate": false,
+    "recovery_untried": false,
+    "rate_off_target": 0,
+    "holds_expected_output": false,
+    "wake_ups_per_minute": 123.44763670064874,
+    "recovery_window_cycles": null,
+    "window_count": 5
+   },
+   "strategy": {
+    "id": "takt_batches",
+    "tuning_method": "calculated",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 1
+     },
+     "window_cycle": [],
+     "belt_pickups": []
+    },
+    "output_swings": 1,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 2,
+   "inserter_window_count": 5,
+   "terminal_swing_count": 1,
+   "cycle_ticks": 36,
+   "expected_output_items": 32,
+   "insights": [
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The assembling machine 3 that makes automation science pack takes copper plate only while it holds fewer than 18. The inserter that takes iron gear wheel and copper plate brings 16 at a time and the window cycle needs 1 hand of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of automation science pack takes 34.8 ticks to make",
+     "what": "The assembling machine 3 that makes automation science pack makes 2 automation science pack per craft (productivity included), so the 16 that the inserter that drops automation science pack carries take 8 crafts, about 34.8 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 34.8 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "plan-versus-clock",
+     "scope": "clock",
+     "title": "Swings land a few ticks off the plan, as the blueprint runs them",
+     "what": "The plan has the inserter that takes iron gear wheel and copper plate drop at ticks 7, 18. Run by the clock alone, as in the game, it drops at ticks 8, 44. The inserter that drops automation science pack differs too. The clock still holds its rate.",
+     "why": "The plan lets each inserter wait for its machine. The blueprint has only the clock, which switches inserters on and off. An enable window also stays on 2 ticks after the clock closes it, so an inserter that is back in time can start another swing if a full hand is waiting, and one that finds less keeps what it picked up for a later enable window.",
+     "explanation": "The same number of items moves each window cycle either way, but the swings can bunch together instead of landing one to an enable window. The Timeline tab shows both runs; the clock in the blueprint is the one the blueprint follows."
+    },
+    {
+     "id": "wake-ups",
+     "scope": "clock",
+     "title": "Machines wake the inserters 123.4 times a minute",
+     "what": "In a long run of this clock the machines of one copy of the build woke its inserters 123.4 times a minute. The inserter that drops automation science pack is woken most, 123.4 times a minute: it is on 36.1% of the time and is on and waiting for 14.6% of it.",
+     "why": "An enabled inserter with nothing to move sleeps on the wakeup list of the machine it waits on, and that machine wakes it every time it finishes a craft. The inserter looks for something to move, finds nothing or part of a hand, and sleeps again. An inserter its clock has disabled is on no list and is never woken. In game the debug option show-wakeup-lists draws a line from a waiting inserter to its machine; a line that flickers is this.",
+     "explanation": "Each wakeup is a check that moves little or nothing, so among clocks that hold the target the one with the fewest is the lightest on update time. An inserter that is enabled most of the time is woken at most of the crafts of the machine it waits on, whether its enable windows are long, it is left always enabled in a loop of machines, or the configuration sets it to always enabled."
+    },
+    {
+     "id": "backpressure-loss",
+     "scope": "clock",
+     "title": "This clock does not go back to its rate by itself after a supply stop or an output blockage",
+     "what": "This clock moves its 32 items every window cycle for as long as nothing runs out and nothing backs up. It does not go back to them by itself after a supply stop or an output blockage: copper plate stops arriving. Not tried, since one failure is enough: iron gear wheel stops arriving, automation science pack is not taken away.",
+     "why": "When an item stops arriving, or the output is not taken away, the machines run dry or fill up. Once it is back, every machine goes on from what it holds then, and the enable windows of this clock do not bring the build back from there. Each supply stop and output blockage is tried in the simulator: cut at four places in the window cycle, and for a quarter, a half, three quarters and all of the time the build takes to stop.",
+     "explanation": "Such a build has to be restarted by hand after an input ran out or the output backed up. Use a clock marked Stable. Where no clock of a build is, the build may not be able to go back to its rate by itself after a supply stop or an output blockage, whatever the clock, and its clocks are offered for what they are."
+    },
+    {
+     "id": "lanes-exactly-full",
+     "scope": "build",
+     "title": "Both lanes of the automation science pack belt are exactly full",
+     "what": "Both lanes of the automation science pack belt are exactly full at the target: the 9 copies drop 9 × 26.67 = 240 a second onto lanes that carry 240. Nothing is left over, so every hand has to land in a gap the others leave, and a wait is not made up later.",
+     "why": "",
+     "explanation": ""
+    }
+   ],
+   "checked_lanes": {
+    "line": {
+     "copies": 9,
+     "plain_output_belts": 0,
+     "output_chests": [],
+     "run_with_copies": true,
+     "every_copy_gets_items": false,
+     "output_belt": "none_waits",
+     "sentence": "Checked with all 9 copies on the lanes they share. Copies 2 and 3 do not get all their items, and no copy is held back at the output belt."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "short",
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 9,
+         "swings": 65
+        },
+        {
+         "copy": 3,
+         "missed": 4,
+         "swings": 65
+        }
+       ]
+      },
+      "label": "Short on copies 2 and 3",
+      "sentence": "Copy 2 misses 9 of 65 swings, and copy 3 misses 4 of 65."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "short",
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 9,
+         "swings": 65
+        },
+        {
+         "copy": 3,
+         "missed": 4,
+         "swings": 65
+        }
+       ]
+      },
+      "label": "Short on copies 2 and 3",
+      "sentence": "Copy 2 misses 9 of 65 swings, and copy 3 misses 4 of 65."
+     },
+     {
+      "belt_id": 2,
+      "lane": 1,
+      "together": {
+       "kind": "drop",
+       "items_per_second": 240,
+       "lanes": [
+        1,
+        2
+       ],
+       "carries_per_second": 240
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": true,
+       "steady_run_only": false,
+       "join_waits": [
+        {
+         "copy": 1,
+         "held_hands": 0,
+         "hands": 130
+        },
+        {
+         "copy": 2,
+         "held_hands": 0,
+         "hands": 111
+        },
+        {
+         "copy": 3,
+         "held_hands": 0,
+         "hands": 122
+        },
+        {
+         "copy": 4,
+         "held_hands": 0,
+         "hands": 130
+        },
+        {
+         "copy": 5,
+         "held_hands": 0,
+         "hands": 130
+        },
+        {
+         "copy": 6,
+         "held_hands": 0,
+         "hands": 130
+        },
+        {
+         "copy": 7,
+         "held_hands": 0,
+         "hands": 130
+        },
+        {
+         "copy": 8,
+         "held_hands": 0,
+         "hands": 130
+        },
+        {
+         "copy": 9,
+         "held_hands": 0,
+         "hands": 130
+        }
+       ]
+      },
+      "label": "Not the cause",
+      "sentence": "No copy waits at its join."
+     }
+    ],
+    "cause": {
+     "kind": "lane",
+     "headline": {
+      "text": "Copy 2 misses 18 of 130 swings, and copy 3 misses 8 of 130",
+      "data": {
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 18,
+         "swings": 130
+        },
+        {
+         "copy": 3,
+         "missed": 8,
+         "swings": 130
+        }
+       ]
+      }
+     },
+     "cause": {
+      "text": "The gap that copy 1 leaves on the iron gear wheel and copper plate lanes reaches copy 2 when its inserter must pick up. The gap that copy 2 leaves on the iron gear wheel lane reaches copy 3 when its inserter must pick up.",
+      "data": {
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 18,
+         "lane_empty": 18,
+         "gap_from_copy_before": 18,
+         "machine_full": 0,
+         "both": 0,
+         "neither": 0,
+         "lane_items": [
+          "iron-gear-wheel",
+          "copper-plate"
+         ],
+         "gap_items": [
+          "iron-gear-wheel",
+          "copper-plate"
+         ]
+        },
+        {
+         "copy": 3,
+         "missed": 8,
+         "lane_empty": 8,
+         "gap_from_copy_before": 8,
+         "machine_full": 0,
+         "both": 0,
+         "neither": 0,
+         "lane_items": [
+          "iron-gear-wheel"
+         ],
+         "gap_items": [
+          "iron-gear-wheel"
+         ]
+        }
+       ]
+      }
+     },
+     "spacing": {
+      "text": "The copies stand 9 tiles apart. An item takes 72 ticks from one copy to the next, and the window cycle is 72 ticks. The 9 copies take every iron gear wheel and copper plate the two lanes bring, so the gap does not close on the way.",
+      "data": {
+       "step_tiles": 9,
+       "travel_ticks": 72,
+       "window_cycle_ticks": 72,
+       "take_all": true
+      }
+     },
+     "where": {
+      "text": "The inserter of copy 2 that takes iron gear wheel and copper plate misses 18 of its 130 swings in 65 window cycles: 9 with iron gear wheel and 9 with copper plate. Each swing is a hand of 16. The inserter of copy 3 that takes iron gear wheel and copper plate misses 8 of its 130 swings in 65 window cycles: 4 with iron gear wheel and 4 with copper plate. Each swing is a hand of 16.",
+      "data": {
+       "takers": [
+        {
+         "copy": 2,
+         "inserter_id": 1,
+         "missed": 18,
+         "swings": 130,
+         "items": [
+          {
+           "item": "iron-gear-wheel",
+           "missed": 9,
+           "swings": 65
+          },
+          {
+           "item": "copper-plate",
+           "missed": 9,
+           "swings": 65
+          }
+         ]
+        },
+        {
+         "copy": 3,
+         "inserter_id": 1,
+         "missed": 8,
+         "swings": 130,
+         "items": [
+          {
+           "item": "iron-gear-wheel",
+           "missed": 4,
+           "swings": 65
+          },
+          {
+           "item": "copper-plate",
+           "missed": 4,
+           "swings": 65
+          }
+         ]
+        }
+       ]
+      }
+     },
+     "alone": {
+      "text": "The same inserter makes all 130 swings. The clock is right for one copy.",
+      "data": {
+       "makes_all": true,
+       "missed": 0,
+       "swings": 130
+      }
+     },
+     "changes": {
+      "text": "With 7 copies on the iron gear wheel and copper plate lanes, every copy makes every swing. Another clock of this build holds with all 9: Time-Study Windows, window cycle 216 ticks.",
+      "data": {
+       "fewer_copies": 7,
+       "other_clock": {
+        "id": "time_study_windows",
+        "label": "Time-Study Windows: 3 output swings each output cycle",
+        "window_cycle_ticks": 216
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "id": "pitch_pickups",
+   "label": "Pitch Pickups: 1 output swing each output cycle",
+   "verdict": "no recovery",
+   "window_cycle_ticks": 72,
+   "copies": 9,
+   "description": "Output inserters swing once per enable window, evenly spaced and timed so the machine already holds a full hand when the inserter arrives, instead of grabbing a few items at a time while the machine crafts. Only offered when the planned output inserters often need more than one grab per hand and a full hand fits below the output block. The timing is searched with clock-only checks, preferring the fewest pickups that wait for items. The timing must let the build go back to its rate by itself when the output machines are full; if it does not, some enable windows are lengthened so a second grab can drain the surplus. Other inserters keep the enable windows of Takt Batches. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. In the clock-only check the build repeats every 4 window cycles instead of every window cycle, moving 128 of 128 items over them. It is not stable: the build does not go back to its expected output by itself under this clock after copper plate stops arriving on the copies that share a lane. Copper plate stops arriving at the entry of the copper plate lane, which the 9 copies share, and comes back. Copy 2 from the entry ends at 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 0, 32, 32, 32, 32 and 32 a window cycle, where one copy makes 32.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": true,
+    "disturbance_trial": {
+     "survives": false,
+     "broken_by": [
+      "copper plate stops arriving on the copies that share a lane"
+     ],
+     "broken_at_other_lane_phases": [],
+     "recovered_after_window_cycles": null,
+     "on_copies": {
+      "survives": false,
+      "lanes": [
+       "1/1",
+       "1/2"
+      ],
+      "expected_output_items": 32,
+      "recovered_after_window_cycles": null,
+      "broken_by": "copper plate stops arriving",
+      "trial": {
+       "cut_at": 0,
+       "loss_ticks": 1371,
+       "until_stopped": false,
+       "proven": true,
+       "window_cycles_after": 56
+      },
+      "short": [
+       {
+        "copy": 2,
+        "items_per_window_cycle": [
+         32,
+         32,
+         32,
+         32,
+         32,
+         32,
+         32,
+         32,
+         32,
+         32,
+         0,
+         32,
+         32,
+         32,
+         32,
+         32
+        ]
+       }
+      ],
+      "text": "Copper plate stops arriving at the entry of the copper plate lane, which the 9 copies share, and comes back. Copy 2 from the entry ends at 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 0, 32, 32, 32, 32 and 32 a window cycle, where one copy makes 32."
+     }
+    },
+    "items_per_second": 240,
+    "wake_ups_per_minute": 50.174216027874564,
+    "signals_per_minute": 137.97909407665506,
+    "start_dependence": null
+   },
+   "ranking": {
+    "meets_target_rate": false,
+    "recovery_untried": false,
+    "rate_off_target": 0,
+    "holds_expected_output": true,
+    "wake_ups_per_minute": 50.174216027874564,
+    "recovery_window_cycles": null,
+    "window_count": 3
+   },
+   "strategy": {
+    "id": "pitch_pickups",
+    "tuning_method": "observed",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 1
+     },
+     "window_cycle": [],
+     "belt_pickups": []
+    },
+    "output_swings": 1,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 2,
+   "inserter_window_count": 3,
+   "terminal_swing_count": 1,
+   "cycle_ticks": 36,
+   "expected_output_items": 32,
+   "insights": [
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The assembling machine 3 that makes automation science pack takes copper plate only while it holds fewer than 18. The inserter that takes iron gear wheel and copper plate brings 16 at a time and the window cycle needs 1 hand of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of automation science pack takes 34.8 ticks to make",
+     "what": "The assembling machine 3 that makes automation science pack makes 2 automation science pack per craft (productivity included), so the 16 that the inserter that drops automation science pack carries take 8 crafts, about 34.8 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 34.8 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "plan-versus-clock",
+     "scope": "clock",
+     "title": "Swings land a few ticks off the plan, as the blueprint runs them",
+     "what": "The plan has the inserter that drops automation science pack drop at ticks 12, 47. Run by the clock alone, as in the game, it drops at ticks 6, 42. The clock still holds its rate.",
+     "why": "The plan lets each inserter wait for its machine. The blueprint has only the clock, which switches inserters on and off. An enable window also stays on 2 ticks after the clock closes it, so an inserter that is back in time can start another swing if a full hand is waiting, and one that finds less keeps what it picked up for a later enable window.",
+     "explanation": "The same number of items moves each window cycle either way, but the swings can bunch together instead of landing one to an enable window. The Timeline tab shows both runs; the clock in the blueprint is the one the blueprint follows."
+    },
+    {
+     "id": "wake-ups",
+     "scope": "clock",
+     "title": "Machines wake the inserters 50.2 times a minute",
+     "what": "In a long run of this clock the machines of one copy of the build woke its inserters 50.2 times a minute. The inserter that takes iron gear wheel and copper plate is woken most, 50.2 times a minute: it is on 33.4% of the time and is on and waiting for 5.6% of it.",
+     "why": "An enabled inserter with nothing to move sleeps on the wakeup list of the machine it waits on, and that machine wakes it every time it finishes a craft. The inserter looks for something to move, finds nothing or part of a hand, and sleeps again. An inserter its clock has disabled is on no list and is never woken. In game the debug option show-wakeup-lists draws a line from a waiting inserter to its machine; a line that flickers is this.",
+     "explanation": "Each wakeup is a check that moves little or nothing, so among clocks that hold the target the one with the fewest is the lightest on update time. An inserter that is enabled most of the time is woken at most of the crafts of the machine it waits on, whether its enable windows are long, it is left always enabled in a loop of machines, or the configuration sets it to always enabled."
+    },
+    {
+     "id": "backpressure-loss",
+     "scope": "clock",
+     "title": "This clock does not go back to its rate by itself after a supply stop or an output blockage",
+     "what": "This clock moves its 32 items every window cycle for as long as nothing runs out and nothing backs up. It does not go back to them by itself after a supply stop or an output blockage: copper plate stops arriving on the copies that share a lane.",
+     "why": "When an item stops arriving, or the output is not taken away, the machines run dry or fill up. Once it is back, every machine goes on from what it holds then, and the enable windows of this clock do not bring the build back from there. Each supply stop and output blockage is tried in the simulator: cut at four places in the window cycle, and for a quarter, a half, three quarters and all of the time the build takes to stop.",
+     "explanation": "Such a build has to be restarted by hand after an input ran out or the output backed up. Use a clock marked Stable. Where no clock of a build is, the build may not be able to go back to its rate by itself after a supply stop or an output blockage, whatever the clock, and its clocks are offered for what they are."
+    },
+    {
+     "id": "lanes-exactly-full",
+     "scope": "build",
+     "title": "Both lanes of the automation science pack belt are exactly full",
+     "what": "Both lanes of the automation science pack belt are exactly full at the target: the 9 copies drop 9 × 26.67 = 240 a second onto lanes that carry 240. Nothing is left over, so every hand has to land in a gap the others leave, and a wait is not made up later.",
+     "why": "",
+     "explanation": ""
+    }
+   ],
+   "checked_lanes": {
+    "line": {
+     "copies": 9,
+     "plain_output_belts": 0,
+     "output_chests": [],
+     "run_with_copies": true,
+     "every_copy_gets_items": true,
+     "output_belt": "none_waits",
+     "sentence": "Checked with all 9 copies on the lanes they share. Every copy gets its items in the steady run, and no copy is held back at the output belt. Copper plate stops arriving at the entry of the copper plate lane, which the 9 copies share, and comes back. Copy 2 from the entry ends at 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 0, 32, 32, 32, 32 and 32 a window cycle, where one copy makes 32."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": true
+      },
+      "label": "Holds",
+      "sentence": "Every copy gets its items in the steady run."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": true
+      },
+      "label": "Holds",
+      "sentence": "Every copy gets its items in the steady run."
+     },
+     {
+      "belt_id": 2,
+      "lane": 1,
+      "together": {
+       "kind": "drop",
+       "items_per_second": 240,
+       "lanes": [
+        1,
+        2
+       ],
+       "carries_per_second": 240
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": true,
+       "join_waits": [
+        {
+         "copy": 1,
+         "held_hands": 0,
+         "hands": 130
+        },
+        {
+         "copy": 2,
+         "held_hands": 0,
+         "hands": 130
+        },
+        {
+         "copy": 3,
+         "held_hands": 0,
+         "hands": 130
+        },
+        {
+         "copy": 4,
+         "held_hands": 0,
+         "hands": 130
+        },
+        {
+         "copy": 5,
+         "held_hands": 0,
+         "hands": 130
+        },
+        {
+         "copy": 6,
+         "held_hands": 0,
+         "hands": 130
+        },
+        {
+         "copy": 7,
+         "held_hands": 0,
+         "hands": 130
+        },
+        {
+         "copy": 8,
+         "held_hands": 0,
+         "hands": 130
+        },
+        {
+         "copy": 9,
+         "held_hands": 0,
+         "hands": 130
+        }
+       ]
+      },
+      "label": "Holds",
+      "sentence": "No copy waits at its join in the steady run."
+     }
+    ],
+    "cause": null
+   }
+  }
+ ]
+}

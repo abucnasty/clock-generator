@@ -6,6 +6,8 @@ import type {
     AlwaysOnReasons,
     AsBuiltStabilityCheck,
     BeltConfigSchema,
+    BuildLane,
+    CheckedLanes,
     ChestConfigSchema,
     ClockAssessment,
     ClockRanking,
@@ -153,6 +155,12 @@ export interface ClockAlternativeView {
      * item to a machine, and what can come of it. Null for a build without one.
      */
     deadlockRisk: string | null;
+    /**
+     * What was checked on each lane the copies share (the engine's `checked_lanes`): the rows, the line and, for a clock that is
+     * not stable on a shared lane, the parts of its cause; its "what changes it" names another clock of the generation once the
+     * page has them all (`withOtherClocks`). Absent for a build of one copy, and from clocks kept before it was carried.
+     */
+    checkedLanes?: CheckedLanes;
     /** The belt the clock is made for: "moving (+4 ticks)" or "backed-up"; empty when no clocked inserter picks up from a belt */
     beltLabel: string;
     /** The same belt as the engine gives it; missing from clocks kept before it was carried */
@@ -210,6 +218,11 @@ export interface ClockModelAssumptions {
      * the game's names (the engine's entityNamesInSentence); missing from views kept before they were carried
      */
     entityNames?: Record<string, string>;
+    /**
+     * Every lane of the build, once: its item, role, end and where the end comes from, sharing and supply (the engine's
+     * `buildLanesOf`); missing from views kept before they were carried
+     */
+    lanes?: BuildLane[];
     kickStarts: { machineId: string; item: string; items: number }[];
     outputDrops: { beltId: number; inserterIds: number[]; mode: 'shared-lanes' | 'free-lane' }[];
     overrides: Config['overrides'];
