@@ -13,13 +13,13 @@ import type { SimulationContext } from "./sequence/simulation-context";
 
 /**
  * The output belt of a config in the run of the copies: every stack on it moves each tick in the join model
- * (entities/belt/join/), from each copy's output inserter to the outlet. Each copy's output inserter puts its stacks down
+ * (entities/belt/join/), from each copy's output inserter to the infinite end. Each copy's output inserter puts its stacks down
  * on its drop tile, with the rule of a hand that drops on a belt (LaneTraffic): a stack goes down one step past the
  * tile's middle, or 64 behind the stack ahead, and less than 64 behind the middle; else it stays in the hand. On a free
  * side belt a hand's stacks go down 0, 1, 2 and 4 ticks after it comes, as in the game; a stack is held only when the
  * side belt has backed up to its drop tile (8 stacks on the automation science 240 build, as in the game).
  *
- * The output blockage shuts the outlet: the belt lane is blocked from draining to the belt it joins. Every lane upstream
+ * The output blockage shuts the infinite end: the belt lane is blocked from draining to the belt it joins. Every lane upstream
  * backs up from there, and a hand is held only when its side belt is full. The end change acts from the tick after the
  * next, as an end that a script changes in a tick acts from the next tick in the game.
  *
@@ -132,23 +132,23 @@ export class OutputBeltRun {
         return hand.last - hand.arrival > free;
     }
 
-    /** Shuts the outlet: the belt lane is blocked from draining to the belt it joins */
-    public shutOutlet(tick: number): void {
+    /** Shuts the infinite end: the belt lane is blocked from draining to the belt it joins */
+    public shutInfiniteEnd(tick: number): void {
         this.advanceTo(tick);
         this.shut = true;
-        this.ends.push(...this.join.outlet_lines.map(line => ({ line, end: "shut" as const })));
+        this.ends.push(...this.join.infinite_end_lines.map(line => ({ line, end: "shut" as const })));
     }
 
-    /** Opens the outlet again */
-    public openOutlet(tick: number): void {
+    /** Opens the infinite end again */
+    public openInfiniteEnd(tick: number): void {
         this.advanceTo(tick);
         this.shut = false;
-        this.ends.push(...this.join.outlet_lines.map(line => ({ line, end: "loader" as const })));
+        this.ends.push(...this.join.infinite_end_lines.map(line => ({ line, end: "loader" as const })));
     }
 
     /**
      * The key of what the output belt holds, for the key of a repeated state: every line's stacks by position (not by
-     * the order they were put on, which only grows), the stacks not yet given to the model, the outlet and its change
+     * the order they were put on, which only grows), the stacks not yet given to the model, the infinite end and its change
      */
     public key(tick: number): string {
         this.advanceTo(tick);

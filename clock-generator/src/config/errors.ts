@@ -393,7 +393,7 @@ export class LaneCapacityError extends Error {
 export interface LaneRateIssue {
     belt_id: number;
     lane: number;
-    fact: 'supply rate' | 'outlet rate';
+    fact: 'supply rate';
     items_per_second: number;
     /** Items a second the lane can carry: half the belt's speed times the lane's stack size */
     capacity_per_second: number;
@@ -401,11 +401,11 @@ export interface LaneRateIssue {
 
 /** "Lane 1 of belt 2 states a supply rate of 130 a second. The lane can carry 120 a second." */
 export function describeLaneRate(issue: LaneRateIssue): string {
-    return `Lane ${issue.lane} of belt ${issue.belt_id} states ${issue.fact === 'supply rate' ? 'a supply rate' : 'an outlet rate'} of `
+    return `Lane ${issue.lane} of belt ${issue.belt_id} states a supply rate of `
         + `${formatRate(issue.items_per_second, issue.capacity_per_second)} a second. The lane can carry ${formatRate(issue.capacity_per_second)} a second.`;
 }
 
-/** A lane of the config states a supply rate or an outlet rate that the lane cannot carry */
+/** A lane of the config states a supply rate that the lane cannot carry */
 export class LaneRateError extends Error {
     public readonly issues: LaneRateIssue[];
 

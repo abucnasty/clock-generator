@@ -12,7 +12,7 @@ import { runOnSharedLanes } from "./shared-lane-model";
 import { sharedLaneRunsOf } from "./shared-lane-verdict";
 
 // One copy's side belt (a drop tile and a turned belt, 551 long) side-loads onto an underground exit (128), which runs into
-// the outlet's loader: the automation science 240 build's copy 1, with its stretch cut short
+// the infinite end's loader: the automation science 240 build's copy 1, with its stretch cut short
 const JOIN: OutputBeltJoin = {
     layout: {
         lines: [
@@ -23,7 +23,7 @@ const JOIN: OutputBeltJoin = {
         side_loads: [{ sender: "side belt", receiver: "exit", lane: "downstream", entity: "underground-exit" }],
     },
     drops: new Map([[1, { line: "side belt", spot: 551 - 128 }]]),
-    outlet_lines: ["loader"],
+    infinite_end_lines: ["loader"],
 };
 
 /** The ticks a stack goes down in, trying in every tick from 1 to `ticks` */
@@ -50,9 +50,9 @@ describe("the output belt in the run of the copies", () => {
             .toEqual([295 + 96 - 5 * 32, 295 + 128 - 4 * 32, 295 + 160 - 3 * 32, 295 + 160 - 32]);
     });
 
-    it("holds a stack only when the side belt is full: 8 stacks, with the outlet shut", () => {
+    it("holds a stack only when the side belt is full: 8 stacks, with the infinite end shut", () => {
         const run = new OutputBeltRun(JOIN, 0);
-        run.shutOutlet(0);
+        run.shutInfiniteEnd(0);
         const down = putDowns(run, 400);
         const on_side_belt = run.stacks(400).filter(stack => stack.line === "side belt").length;
         expect(on_side_belt).toBe(8);
@@ -60,11 +60,11 @@ describe("the output belt in the run of the copies", () => {
         expect(run.hasRoom(1, 401)).toBe(false);
     });
 
-    it("drains again when the outlet opens", () => {
+    it("drains again when the infinite end opens", () => {
         const run = new OutputBeltRun(JOIN, 0);
-        run.shutOutlet(0);
+        run.shutInfiniteEnd(0);
         putDowns(run, 400);
-        run.openOutlet(400);
+        run.openInfiniteEnd(400);
         expect(run.hasRoom(1, 401)).toBe(false);
         expect(run.stacks(600)).toEqual([]);
         expect(run.hasRoom(1, 600)).toBe(true);
@@ -85,11 +85,11 @@ describe("the output belt in the run of the copies", () => {
         expect(lane.dropKey("inserter:2", 10)).not.toBe(twin.dropKey("inserter:2", 10));
     });
 
-    it("keys the outlet shut and the end change not yet acting", () => {
+    it("keys the infinite end shut and the end change not yet acting", () => {
         const open = new OutputBeltRun(JOIN, 0), shut = new OutputBeltRun(JOIN, 0);
-        shut.shutOutlet(5);
+        shut.shutInfiniteEnd(5);
         expect(shut.key(5)).not.toBe(open.key(5));
-        shut.openOutlet(6);
+        shut.openInfiniteEnd(6);
         expect(shut.key(8)).toBe(open.key(8));
     });
 });

@@ -123,8 +123,8 @@ export const LANE_CONSUMPTION_TOOLTIP =
     'Items per second taken off this lane by machines outside this configuration. Inserters filling the lane are planned for this rate.';
 
 /**
- * A lane with one field set. A consumption rate is the outlet rate of an export lane, so a lane that gets one drops its
- * lane end, which the config may not state beside it
+ * A lane with one field set. A consumption rate states what leaves the end of an export lane, so a lane that gets one
+ * drops its lane end, which the config may not state beside it
  */
 export function laneFieldUpdate(lane: BeltLaneFormData, field: keyof BeltLaneFormData, value: string | number | undefined): BeltLaneFormData {
     const updated = { ...lane, [field]: value };

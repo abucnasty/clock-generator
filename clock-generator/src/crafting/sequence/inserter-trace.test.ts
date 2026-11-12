@@ -97,7 +97,7 @@ test("distinguishes withheld supply, machine refusal and the existing first-grab
     expect(state.held_item).toBeNull();
 });
 
-test("output diagnostics distinguish a refused outlet from a wait for output space", () => {
+test("output diagnostics distinguish a refused output from a wait for output space", () => {
     const {context, state, source} = setup();
     state.held_item = {item_name: "iron-plate", quantity: 16};
     state.inventoryState.setQuantity("iron-plate", 16);

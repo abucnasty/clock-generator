@@ -10,7 +10,7 @@ import { LOADER_LINE_LENGTH, ReceivingEntity, UNDERGROUND_END_LINE_LENGTH } from
  *   of the downstream half, which is the tunnel's. The side-load point 60 is measured on the entrance's own line; with the
  *   tile's whole line a side-loaded stack would skip half a tile (the automation science 240 build's lane change takes 414
  *   ticks to the splitter in the game and with the cut, 410 without it).
- * - **The outlet** is a loader: a line of LOADER_LINE_LENGTH with the end "loader" after the stretch's last tile, on
+ * - **The infinite end** is a loader: a line of LOADER_LINE_LENGTH with the end "loader" after the stretch's last tile, on
  *   each lane. A blockage shuts it.
  * - **The splitter's input lines** are the splitter's inputs in the model, not lines that feed its outputs.
  * An underground exit's line is the downstream half of its tile, so the geometry's lines that end at an exit's tile need
@@ -30,8 +30,8 @@ export interface OutputBeltJoin {
     layout: JoinLayout;
     /** Each copy's drop spot, by the copy's number in the section (from 1) */
     drops: ReadonlyMap<number, OutputBeltDropSpot>;
-    /** The outlet's loader lines, one a lane */
-    outlet_lines: readonly string[];
+    /** The infinite end's loader lines, one a lane */
+    infinite_end_lines: readonly string[];
 }
 
 const LANES: readonly BeltLane[] = ["left", "right"];
@@ -76,14 +76,14 @@ export function outputBeltJoinOf(geometry: OutputBeltGeometry): OutputBeltJoin {
         }
     }
 
-    const outlet_lines: string[] = [];
-    for (const outlet of geometry.outlets) {
+    const infinite_end_lines: string[] = [];
+    for (const end of geometry.infinite_ends) {
         for (const lane of LANES) {
-            const last = line(outlet.lines?.[lane]);
-            const loader = { id: `the outlet's loader, ${lane} lane`, length: LOADER_LINE_LENGTH, lane, end: "loader" as const };
+            const last = line(end.lines?.[lane]);
+            const loader = { id: `the infinite end's loader, ${lane} lane`, length: LOADER_LINE_LENGTH, lane, end: "loader" as const };
             lines.set(loader.id, loader);
             last.feeds = loader.id;
-            outlet_lines.push(loader.id);
+            infinite_end_lines.push(loader.id);
         }
     }
 
@@ -113,6 +113,6 @@ export function outputBeltJoinOf(geometry: OutputBeltGeometry): OutputBeltJoin {
                 input_priority: splitter.input_priority, output_priority: splitter.output_priority }] }),
         },
         drops,
-        outlet_lines,
+        infinite_end_lines,
     };
 }

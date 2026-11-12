@@ -87,7 +87,7 @@ describe('a config that states its output belt', () => {
     // the site has no editor for the section: it keeps it as it was stated, as it keeps a car or a silo
     const output_belt = {
         side_belt: { lane: 'right', tiles: 2, left_curves: 1 },
-        stretches: [{ points: [{ side_load: [1], lane: 'right', layout: 'side-exit' }, { tiles: 3, lane_end: { kind: 'outlet' } }] }],
+        stretches: [{ points: [{ side_load: [1], lane: 'right', layout: 'side-exit' }, { tiles: 3, lane_end: { kind: 'infinite' } }] }],
     };
     // the machines without the former `type`, which the schema reads only with the game data
     const config = importedWith({ output_belt, machines: imported.machines.map(({ id, recipe, productivity, crafting_speed }) =>
@@ -247,7 +247,7 @@ describe('what goes through the form and back as the config gave it', () => {
 });
 
 describe('a lane edited in the form', () => {
-    it('drops its lane end when it gets a consumption rate, which is the outlet rate of an export lane', () => {
+    it('drops its lane end when it gets a consumption rate, which states what leaves the end of an export lane', () => {
         const lane = { ingredient: 'iron-plate', stack_size: 4, lane_end: { kind: 'dead_end' as const }, sharing: 'one_per_copy' as const };
         expect(laneFieldUpdate(lane, 'consumption_per_second', 5)).toEqual({ ingredient: 'iron-plate', stack_size: 4, sharing: 'one_per_copy', consumption_per_second: 5 });
         expect(laneFieldUpdate(lane, 'consumption_per_second', undefined)).toEqual({ ...lane, consumption_per_second: undefined });

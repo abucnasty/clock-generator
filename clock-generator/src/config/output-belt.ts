@@ -1,7 +1,8 @@
 import { z } from "zod";
+import { withoutOutletWords } from "./infinite-end";
 
 /**
- * The output belt of a build: the belts from the copies' output inserters to the outlet, stated in tiles. A config states
+ * The output belt of a build: the belts from the copies' output inserters to the infinite end, stated in tiles. A config states
  * it in `output_belt`; this file holds its schema, the checks that refuse what the generator does not model, and the
  * geometry derived from it. The run of the copies moves the output on it (crafting/output-belt-run.ts), on the lines that
  * entities/belt/join/output-belt-join.ts makes from this geometry.
@@ -11,10 +12,10 @@ import { z } from "zod";
  *   that has one has the same, so it is stated once.
  * - A **stretch** is a run of the output belt from where items first come onto it to where it ends, as a list of
  *   **points**, upstream first. Stretch 1 is the first in the list.
- * - A point is a tile where something happens: a side load onto it, a copy's drop, the splitter, the outlet. Its
+ * - A point is a tile where something happens: a side load onto it, a copy's drop, the splitter, the infinite end. Its
  *   `tiles` are the steps from the previous point's tile to its own, as the sidecar's walk counts them (clock-generator-
  *   sidecar/scripts/drop-merge.lua, `merge.tiles`): one step a piece, an underground pair the tiles between its ends,
- *   and the tile a stretch side-loads onto, the splitter and the outlet one step each. After a point that lists copies,
+ *   and the tile a stretch side-loads onto, the splitter and the infinite end one step each. After a point that lists copies,
  *   the steps are counted from the last copy of the list.
  * - A **join** is a belt lane going onto another belt, by a side load or by the splitter. No field names it.
  *
@@ -62,7 +63,7 @@ const SideBeltSchema = z.strictObject({
 const PointSchema = z.strictObject({
     tiles: z.number().int().positive().optional().describe("The steps from the previous point to this point, as the sidecar's walk counts them. "
         + "Each belt entity is one step. An underground pair is the tiles between its ends. "
-        + "The tile that a stretch side-loads onto, the splitter and the outlet are one step each. "
+        + "The tile that a stretch side-loads onto, the splitter and the infinite end are one step each. "
         + "After a point that lists copies, count from the last copy of the list. The first point of a stretch has no tiles."),
     left_curves: curvesSchema().optional().describe("The left curves between the previous point and this point."),
     right_curves: curvesSchema().optional().describe("The right curves between the previous point and this point."),
@@ -80,9 +81,9 @@ const PointSchema = z.strictObject({
     drop: z.number().int().positive().describe("The copy, from 1, with the output inserter that drops onto this point.").optional(),
     splitter_input: laneSchema("The splitter's input that this stretch ends in").optional(),
     splitter_output: laneSchema("The splitter's output that this stretch starts at").optional(),
-    lane_end: z.strictObject({
-        kind: z.literal("outlet").describe("outlet: the items leave the build here, at the capacity of the lane."),
-    }).optional().describe("The outlet of the output belt, on the last point of its stretch."),
+    lane_end: withoutOutletWords(z.strictObject({
+        kind: z.literal("infinite").describe("infinite: the items leave the build here, at the capacity of the lane."),
+    })).optional().describe("The infinite end of the output belt, on the last point of its stretch."),
 });
 
 const PrioritySchema = (which: string) => z.enum(BELT_LANES, { error: priorityError(which) });
@@ -166,7 +167,7 @@ export interface StretchGeometry {
     stretch: number;
     places: StretchPlace[];
     /** Where the stretch ends: the tile after its last belt tile, and the length of each lane to it */
-    end: { kind: "side_load" | "splitter_input" | "outlet" | "none"; tile: number; line_end: Lanes };
+    end: { kind: "side_load" | "splitter_input" | "infinite" | "none"; tile: number; line_end: Lanes };
     /** The lanes that carry items: each drop's and side load's lane, and at a splitter output the lanes of its inputs */
     carried: BeltLane[];
 }
@@ -205,8 +206,8 @@ export interface OutputBeltGeometry {
     /** Each drop onto a stretch, with the line that ends at the end of the drop's tile */
     drops: { copy: number; stretch: number; lane: BeltLane; tile: number; end_at: Lanes; line?: string }[];
     splitter?: { input_priority: BeltLane; output_priority: BeltLane; inputs: { side: BeltLane; stretch: number }[]; outputs: { side: BeltLane; stretch: number }[] };
-    /** The outlet, with the line of each lane that ends at it */
-    outlets: { stretch: number; tile: number; end_at: Lanes; lines?: Record<BeltLane, string> }[];
+    /** The infinite end, with the line of each lane that ends at it */
+    infinite_ends: { stretch: number; tile: number; end_at: Lanes; lines?: Record<BeltLane, string> }[];
 }
 
 /** The length of a stretch's first tile, which its first point is on */
@@ -218,19 +219,19 @@ function firstTile(point: Point): number {
 
 /**
  * The geometry of an output belt: every line of each lane with its length, which line feeds which, each side load with
- * its receiving lane, layout and side-load point, each drop, the splitter and the outlet. Pure: it reads the section and
+ * its receiving lane, layout and side-load point, each drop, the splitter and the infinite end. Pure: it reads the section and
  * the steps between two copies (`copySpacingOf`), and no engine rule. Run it on a section that `outputBeltProblems`
  * accepts.
  *
  * A run between two points is the `tiles` tiles after the first point's tile, up to and including the second point's
  * tile; its curves are among the tiles before the second point's, which is straight. A stretch's last point is not one of
- * its belt tiles (the tile it side-loads onto, the splitter, the outlet), so its run is the `tiles` - 1 tiles before it.
+ * its belt tiles (the tile it side-loads onto, the splitter, the infinite end), so its run is the `tiles` - 1 tiles before it.
  */
 export function outputBeltGeometry(belt: OutputBelt, copy_spacing: number): OutputBeltGeometry {
     const lines: LaneLine[] = [];
     const side_loads: SideLoadGeometry[] = [];
     const drops: OutputBeltGeometry["drops"] = [];
-    const outlets: OutputBeltGeometry["outlets"] = [];
+    const infinite_ends: OutputBeltGeometry["infinite_ends"] = [];
     const stretches: StretchGeometry[] = belt.stretches.map((stretch, index) => {
         const n = index + 1;
         const places: StretchPlace[] = [];
@@ -244,9 +245,9 @@ export function outputBeltGeometry(belt: OutputBelt, copy_spacing: number): Outp
                 const tiles = point.tiles ?? 0;
                 if (last && (isRunOnly(point) || point.splitter_input !== undefined || point.lane_end !== undefined)) {
                     const line_end = plus(end_at, runLength(tiles - 1, point.left_curves ?? 0, point.right_curves ?? 0));
-                    end = { kind: isRunOnly(point) ? "side_load" : point.splitter_input !== undefined ? "splitter_input" : "outlet",
+                    end = { kind: isRunOnly(point) ? "side_load" : point.splitter_input !== undefined ? "splitter_input" : "infinite",
                         tile: tile + tiles, line_end };
-                    if (point.lane_end !== undefined) outlets.push({ stretch: n, tile: tile + tiles, end_at: line_end });
+                    if (point.lane_end !== undefined) infinite_ends.push({ stretch: n, tile: tile + tiles, end_at: line_end });
                     return;
                 }
                 tile += tiles;
@@ -317,7 +318,7 @@ export function outputBeltGeometry(belt: OutputBelt, copy_spacing: number): Outp
         const stretch = belt.stretches[n - 1];
         const last = stretch.points[stretch.points.length - 1];
         if (last.splitter_input !== undefined) return `the splitter's ${last.splitter_input} input`;
-        if (last.lane_end !== undefined) return "the outlet";
+        if (last.lane_end !== undefined) return "the infinite end";
         const receiver = side_loads.find(load => "stretch" in load.sender && load.sender.stretch === n);
         return receiver ? `its side load onto stretch ${receiver.stretch}` : "its end";
     };
@@ -401,7 +402,7 @@ export function outputBeltGeometry(belt: OutputBelt, copy_spacing: number): Outp
 
     const side_belt = belt.side_belt === undefined || sideBeltEnd === undefined ? undefined
         : { lane: belt.side_belt.lane, drop_tile_end: STRAIGHT_TILE, line_end: sideBeltEnd };
-    // the lines each join, drop and outlet is at, by the names above
+    // the lines each join, drop and infinite end is at, by the names above
     const lastLineOf = (n: number, lane: BeltLane) => {
         const places = stretches[n - 1].places;
         return lineName(n, lane, places[places.length - 1].name, endName(n));
@@ -415,12 +416,12 @@ export function outputBeltGeometry(belt: OutputBelt, copy_spacing: number): Outp
     }));
     const named_drops = drops.map(drop => ({ ...drop,
         line: lineAt(drop.stretch, drop.lane, stretches[drop.stretch - 1].places.findIndex(place => place.name === `drop of copy ${drop.copy}`)) }));
-    const named_outlets = outlets.map(outlet => ({ ...outlet, lines: byLane(lane => lastLineOf(outlet.stretch, lane)) }));
+    const named_infinite_ends = infinite_ends.map(end => ({ ...end, lines: byLane(lane => lastLineOf(end.stretch, lane)) }));
     return {
         ...(side_belt && { side_belt }),
         stretches, lines, side_loads: named_loads, drops: named_drops,
         ...(belt.splitter && { splitter: { ...belt.splitter, inputs: splitterInputs, outputs: splitterOutputs } }),
-        outlets: named_outlets,
+        infinite_ends: named_infinite_ends,
     };
 }
 
@@ -476,7 +477,7 @@ export function outputBeltProblems(belt: OutputBelt, copy_offset: { x: number; y
                 shape.push({ path, message: "A stretch starts at a splitter output: state `splitter_output` on its first point only." });
             }
             if ((point.splitter_input !== undefined || point.lane_end !== undefined) && (p === 0 || p < stretch.points.length - 1)) {
-                shape.push({ path, message: "A stretch ends in a splitter input or in the outlet: state `splitter_input` or `lane_end` on its last point, after its first." });
+                shape.push({ path, message: "A stretch ends in a splitter input or in the infinite end: state `splitter_input` or `lane_end` on its last point, after its first." });
             }
             if (p > 0) {
                 const before = (point.tiles ?? 1) - 1;
@@ -552,30 +553,30 @@ export function outputBeltProblems(belt: OutputBelt, copy_offset: { x: number; y
                 + "The generator does not model a belt that comes onto the output belt from outside the build." });
         }
     });
-    // a stretch ends once: in the splitter, the outlet, or a side load that a point names
+    // a stretch ends once: in the splitter, the infinite end, or a side load that a point names
     belt.stretches.forEach((stretch, s) => {
         const p = stretch.points.length - 1;
         const last = stretch.points[p];
         const by = named.get(s + 1) ?? [];
         if (p > 0 && isRunOnly(last) && by.length === 0) {
             rules.push({ path: at(s, p), message: `The last point of stretch ${s + 1} holds only its run, but no \`side_load\` names stretch ${s + 1}. `
-                + `State where its items go: \`side_load: {"stretch": ${s + 1}}\` at the point that takes them, \`splitter_input\`, or the outlet.` });
+                + `State where its items go: \`side_load: {"stretch": ${s + 1}}\` at the point that takes them, \`splitter_input\`, or the infinite end.` });
         } else if (!(p > 0 && (isRunOnly(last) || last.splitter_input !== undefined || last.lane_end !== undefined))) {
             rules.push({ path: at(s, p), message: `Stretch ${s + 1} does not end. Its last point must hold only the run to where it side-loads, `
-                + "end in a splitter input, or be the outlet." });
+                + "end in a splitter input, or be the infinite end." });
         } else if (by.length > 0 && !isRunOnly(last)) {
-            rules.push({ path: at(s, p), message: `Stretch ${s + 1} ends ${last.splitter_input !== undefined ? "in the splitter" : "at the outlet"}, `
+            rules.push({ path: at(s, p), message: `Stretch ${s + 1} ends ${last.splitter_input !== undefined ? "in the splitter" : "at the infinite end"}, `
                 + `so it cannot also side-load onto stretch ${by[0]}. State its last point as the run to that side load only.` });
         }
         if (by.length > 1) {
             rules.push({ path: at(s, p), message: `Stretch ${s + 1} side-loads onto stretches ${words(by)}. A stretch ends once: state one side load of it.` });
         }
     });
-    // one outlet
-    const outlet_count = belt.stretches.reduce((sum, stretch) => sum + stretch.points.filter(point => point.lane_end !== undefined).length, 0);
-    if (outlet_count !== 1) {
-        rules.push({ path: [], message: `The output belt states ${outlet_count === 0 ? "no outlet" : `${outlet_count} outlets`}. `
-            + "State exactly one: `lane_end: {\"kind\": \"outlet\"}` on the last point of the stretch whose items leave the build." });
+    // one infinite end
+    const infinite_end_count = belt.stretches.reduce((sum, stretch) => sum + stretch.points.filter(point => point.lane_end !== undefined).length, 0);
+    if (infinite_end_count !== 1) {
+        rules.push({ path: [], message: `The output belt states ${infinite_end_count === 0 ? "no infinite end" : `${infinite_end_count} infinite ends`}. `
+            + "State exactly one: `lane_end: {\"kind\": \"infinite\"}` on the last point of the stretch whose items leave the build." });
     }
     if (shape.length > 0) return [...shape, ...rules];
 

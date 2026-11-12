@@ -165,7 +165,7 @@
           "ingredient": "military-science-pack",
           "stack_size": 4,
           "lane_end": {
-            "kind": "outlet"
+            "kind": "infinite"
           }
         }
       ]
@@ -178,7 +178,7 @@
           "ingredient": "military-science-pack",
           "stack_size": 4,
           "lane_end": {
-            "kind": "outlet"
+            "kind": "infinite"
           }
         }
       ]

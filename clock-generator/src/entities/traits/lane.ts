@@ -34,7 +34,7 @@ export function laneKey(belt_id: number, lane: number): string {
     return `${EntityId.forBelt(belt_id).id}/lane:${lane}`;
 }
 
-/** The trait's supply of a lane end: an outlet moves its items on, a dead end leaves a standing queue */
+/** The trait's supply of a lane end: an infinite end moves its items on, a dead end leaves a standing queue */
 export function supplyOfLaneEnd(lane_end: LaneEnd): LaneTrait["supply"] {
     return lane_end.kind === "dead_end" ? "backed_up" : "moving";
 }

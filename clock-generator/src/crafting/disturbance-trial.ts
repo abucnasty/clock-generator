@@ -261,7 +261,7 @@ export interface DisturbanceTrialOptions {
  */
 export interface CopiesOnSharedLanes {
     lanes: { belt_entity_id: string; item: ItemName; lane: SharedLane }[];
-    /** Where the config states its output belt: the belt that takes the copies' product, its item, to the outlet */
+    /** Where the config states its output belt: the belt that takes the copies' product, its item, to the infinite end */
     output_belt?: { item: ItemName; belt: OutputBeltRun };
 }
 
@@ -409,7 +409,7 @@ export function itemsCarried(entity_registry: Pick<ReadableEntityRegistry, "getE
  * and infinity chest withholds it as in a run of one copy.
  *
  * In a run of the copies whose config states its output belt, an output blockage of the item the output belt takes away
- * shuts its outlet: the belt lane is blocked from draining to the belt it joins. Every lane upstream backs up from there,
+ * shuts its infinite end: the belt lane is blocked from draining to the belt it joins. Every lane upstream backs up from there,
  * and a hand is held only when its side belt is full. No belt that carries the item refuses it. The chests the item ends
  * in refuse it as in a run of one copy.
  */
@@ -419,14 +419,14 @@ function switchOf(context: SimulationContext, loss: DisturbanceTrial, copies?: C
     }
     const now = () => context.tick_provider.getCurrentTick();
     const entries = loss.kind === "supply" ? (copies?.lanes ?? []).filter(it => it.item === loss.item) : [];
-    const outlet = loss.kind === "output" && copies?.output_belt?.item === loss.item ? copies.output_belt.belt : undefined;
+    const output_belt = loss.kind === "output" && copies?.output_belt?.item === loss.item ? copies.output_belt.belt : undefined;
     const entry_belts = new Set(entries.map(it => it.belt_entity_id));
     // on every belt and chest that gives the item, or that the build puts it into
     const inserters = context.inserters.map(it => it.inserter_state.inserter);
     const sets: Set<ItemName>[] = [];
     for (const state of context.state_registry.getAllStates()) {
         if (EntityState.isBelt(state)) {
-            const on_output_belt = outlet !== undefined && state.lanes.some(lane => lane.item === loss.item);
+            const on_output_belt = output_belt !== undefined && state.lanes.some(lane => lane.item === loss.item);
             if (!entry_belts.has(twinOf(state.entity_id).id) && !on_output_belt) sets.push(loss.kind === "supply" ? state.supply.withheld : state.supply.refused);
         } else if (ContainerStorage.isConstant(state) || ContainerStorage.isFinite(state)) {
             if (loss.kind === "supply" && ContainerStorage.isConstant(state)) {
@@ -444,12 +444,12 @@ function switchOf(context: SimulationContext, loss: DisturbanceTrial, copies?: C
         cut: () => {
             sets.forEach(set => set.add(loss.item));
             entries.forEach(it => it.lane.closeEntry(now()));
-            outlet?.shutOutlet(now());
+            output_belt?.shutInfiniteEnd(now());
         },
         restore: () => {
             sets.forEach(set => set.delete(loss.item));
             entries.forEach(it => it.lane.openEntry(now()));
-            outlet?.openOutlet(now());
+            output_belt?.openInfiniteEnd(now());
         },
     };
 }

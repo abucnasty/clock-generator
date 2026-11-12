@@ -189,15 +189,13 @@ after the engine reads the file: a field with a default is required, but a confi
 | `belts[]{strategy=normal}.lanes[0].ingredient` | string | yes | The name of the item on the lane. |
 | `belts[]{strategy=normal}.lanes[0].stack_size` | integer > 0 | yes | The number of items in each stack on the lane. |
 | `belts[]{strategy=normal}.lanes[0].supply_rate` | number > 0 | no | The items per second that come onto the lane where it starts. The default is the lane's capacity. |
-| `belts[]{strategy=normal}.lanes[0].lane_end` | one of 3 objects, by `kind`: `dead_end`, `outlet`, `unknown` | no | The end of the lane. Without it, backed_up_belts sets the end. |
-| `belts[]{strategy=normal}.lanes[0].lane_end{kind=outlet}.outlet_rate` | number > 0 | no | The items per second that move off the end of the lane. The default is the lane's capacity. |
+| `belts[]{strategy=normal}.lanes[0].lane_end` | one of 3 objects, by `kind`: `dead_end`, `infinite`, `unknown` | no | The end of the lane. Without it, backed_up_belts sets the end. |
 | `belts[]{strategy=normal}.lanes[0].sharing` | one of `shared_by_copies`, `one_per_copy` | no | shared_by_copies (default): all copies take from this lane. one_per_copy: each copy has a lane of its own. |
 | `belts[]{strategy=normal}.lanes[1]` | object | yes |  |
 | `belts[]{strategy=normal}.lanes[1].ingredient` | string | yes | The name of the item on the lane. |
 | `belts[]{strategy=normal}.lanes[1].stack_size` | integer > 0 | yes | The number of items in each stack on the lane. |
 | `belts[]{strategy=normal}.lanes[1].supply_rate` | number > 0 | no | The items per second that come onto the lane where it starts. The default is the lane's capacity. |
-| `belts[]{strategy=normal}.lanes[1].lane_end` | one of 3 objects, by `kind`: `dead_end`, `outlet`, `unknown` | no | The end of the lane. Without it, backed_up_belts sets the end. |
-| `belts[]{strategy=normal}.lanes[1].lane_end{kind=outlet}.outlet_rate` | number > 0 | no | The items per second that move off the end of the lane. The default is the lane's capacity. |
+| `belts[]{strategy=normal}.lanes[1].lane_end` | one of 3 objects, by `kind`: `dead_end`, `infinite`, `unknown` | no | The end of the lane. Without it, backed_up_belts sets the end. |
 | `belts[]{strategy=normal}.lanes[1].sharing` | one of `shared_by_copies`, `one_per_copy` | no | shared_by_copies (default): all copies take from this lane. one_per_copy: each copy has a lane of its own. |
 | `belts[]{strategy=export}.id` | integer > 0 | yes | The number that identifies the belt in the configuration. |
 | `belts[]{strategy=export}.type` | one of `transport-belt`, `fast-transport-belt`, `express-transport-belt`, `turbo-transport-belt` | yes | The prototype name of the belt. |
@@ -207,16 +205,14 @@ after the engine reads the file: a field with a default is required, but a confi
 | `belts[]{strategy=export}.lanes[0].ingredient` | string | yes | The name of the item on the lane. |
 | `belts[]{strategy=export}.lanes[0].stack_size` | integer > 0 | yes | The number of items in each stack on the lane. |
 | `belts[]{strategy=export}.lanes[0].supply_rate` | number > 0 | no | The items per second that come onto the lane where it starts. The default is the lane's capacity. |
-| `belts[]{strategy=export}.lanes[0].lane_end` | one of 3 objects, by `kind`: `dead_end`, `outlet`, `unknown` | no | The end of the lane. Without it, backed_up_belts sets the end. |
-| `belts[]{strategy=export}.lanes[0].lane_end{kind=outlet}.outlet_rate` | number > 0 | no | The items per second that move off the end of the lane. The default is the lane's capacity. |
+| `belts[]{strategy=export}.lanes[0].lane_end` | one of 3 objects, by `kind`: `dead_end`, `infinite`, `unknown` | no | The end of the lane. Without it, backed_up_belts sets the end. |
 | `belts[]{strategy=export}.lanes[0].sharing` | one of `shared_by_copies`, `one_per_copy` | no | shared_by_copies (default): all copies take from this lane. one_per_copy: each copy has a lane of its own. |
 | `belts[]{strategy=export}.lanes[0].consumption_per_second` | number > 0 | no | The items per second that entities outside the configuration take off this lane. |
 | `belts[]{strategy=export}.lanes[1]` | object | yes |  |
 | `belts[]{strategy=export}.lanes[1].ingredient` | string | yes | The name of the item on the lane. |
 | `belts[]{strategy=export}.lanes[1].stack_size` | integer > 0 | yes | The number of items in each stack on the lane. |
 | `belts[]{strategy=export}.lanes[1].supply_rate` | number > 0 | no | The items per second that come onto the lane where it starts. The default is the lane's capacity. |
-| `belts[]{strategy=export}.lanes[1].lane_end` | one of 3 objects, by `kind`: `dead_end`, `outlet`, `unknown` | no | The end of the lane. Without it, backed_up_belts sets the end. |
-| `belts[]{strategy=export}.lanes[1].lane_end{kind=outlet}.outlet_rate` | number > 0 | no | The items per second that move off the end of the lane. The default is the lane's capacity. |
+| `belts[]{strategy=export}.lanes[1].lane_end` | one of 3 objects, by `kind`: `dead_end`, `infinite`, `unknown` | no | The end of the lane. Without it, backed_up_belts sets the end. |
 | `belts[]{strategy=export}.lanes[1].sharing` | one of `shared_by_copies`, `one_per_copy` | no | shared_by_copies (default): all copies take from this lane. one_per_copy: each copy has a lane of its own. |
 | `belts[]{strategy=export}.lanes[1].consumption_per_second` | number > 0 | no | The items per second that entities outside the configuration take off this lane. |
 
@@ -321,7 +317,7 @@ after the engine reads the file: a field with a default is required, but a confi
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `output_belt` | object | no | The output belt: the side belt that each copy's output inserter drops on, and the stretches of belt from the copies to the outlet, in tiles. The run of the copies moves the output on it, and an output blockage shuts its outlet. |
+| `output_belt` | object | no | The output belt: the side belt that each copy's output inserter drops on, and the stretches of belt from the copies to the infinite end, in tiles. The run of the copies moves the output on it, and an output blockage shuts its infinite end. |
 | `output_belt.side_belt` | object | no | The side belt that each copy's output inserter drops on, the same for every copy that has one. |
 | `output_belt.side_belt.lane` | one of `left`, `right` | yes | The lane of the side belt that the output inserter drops on: "left" or "right" in the direction of travel. |
 | `output_belt.side_belt.tiles` | integer > 0 | yes | The steps from the drop tile to the tile that the side belt side-loads onto, as the sidecar's walk counts them. This is the number that `drop_capture.tiles` holds. On a drop tile and one curve, it is 2. |
@@ -329,7 +325,7 @@ after the engine reads the file: a field with a default is required, but a confi
 | `output_belt.side_belt.right_curves` | integer ≥ 0 | no | The right curves of the side belt after its drop tile. |
 | `output_belt.stretches` | array (at least 1) of objects | yes | The stretches of the output belt, each from where items first come onto it to where it ends. Stretch 1 is the first. |
 | `output_belt.stretches[].points` | array (at least 1) of objects | yes | The points of the stretch, upstream first. |
-| `output_belt.stretches[].points[].tiles` | integer > 0 | no | The steps from the previous point to this point, as the sidecar's walk counts them. Each belt entity is one step. An underground pair is the tiles between its ends. The tile that a stretch side-loads onto, the splitter and the outlet are one step each. After a point that lists copies, count from the last copy of the list. The first point of a stretch has no tiles. |
+| `output_belt.stretches[].points[].tiles` | integer > 0 | no | The steps from the previous point to this point, as the sidecar's walk counts them. Each belt entity is one step. An underground pair is the tiles between its ends. The tile that a stretch side-loads onto, the splitter and the infinite end are one step each. After a point that lists copies, count from the last copy of the list. The first point of a stretch has no tiles. |
 | `output_belt.stretches[].points[].left_curves` | integer ≥ 0 | no | The left curves between the previous point and this point. |
 | `output_belt.stretches[].points[].right_curves` | integer ≥ 0 | no | The right curves between the previous point and this point. |
 | `output_belt.stretches[].points[].side_load` | array (at least 1) of integer > 0 or object | no | What side-loads onto this point: a list of copies, or another stretch. A side load is stated once, at the point that takes it. The first copy of a list side-loads at this point, and each next copy `setpoint.copy_offset` further along the stretch. |
@@ -339,8 +335,8 @@ after the engine reads the file: a field with a default is required, but a confi
 | `output_belt.stretches[].points[].drop` | integer > 0 | no | The copy, from 1, with the output inserter that drops onto this point. |
 | `output_belt.stretches[].points[].splitter_input` | one of `left`, `right` | no | The splitter's input that this stretch ends in: "left" or "right" in the direction of travel. |
 | `output_belt.stretches[].points[].splitter_output` | one of `left`, `right` | no | The splitter's output that this stretch starts at: "left" or "right" in the direction of travel. |
-| `output_belt.stretches[].points[].lane_end` | object | no | The outlet of the output belt, on the last point of its stretch. |
-| `output_belt.stretches[].points[].lane_end.kind` | `outlet` | yes | outlet: the items leave the build here, at the capacity of the lane. |
+| `output_belt.stretches[].points[].lane_end` | object | no | The infinite end of the output belt, on the last point of its stretch. |
+| `output_belt.stretches[].points[].lane_end.kind` | `infinite` | yes | infinite: the items leave the build here, at the capacity of the lane. |
 | `output_belt.splitter` | object | no | The splitter of the output belt, with its priorities. Its inputs and outputs are the points that name them. |
 | `output_belt.splitter.input_priority` | one of `left`, `right` | yes | The input priority of the splitter: "left" or "right". The generator does not accept "none". |
 | `output_belt.splitter.output_priority` | one of `left`, `right` | yes | The output priority of the splitter: "left" or "right". The generator does not accept "none". |

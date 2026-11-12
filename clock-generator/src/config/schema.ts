@@ -25,6 +25,7 @@ import { migrateMachineTypeStep } from "./migrate-machine-type";
 import { FactorioDataService } from "../data/factorio-data-service";
 import { machinePlacesResults } from "./machine-prototype";
 import { OutputBeltSchema, outputBeltProblems } from "./output-belt";
+import { withoutOutletWords } from "./infinite-end";
 
 /**
  * The results of a recipe that a rocket silo used as a machine's result target keeps in its input slots: those its fixed
@@ -575,22 +576,21 @@ const BeltTypeSchema = z.enum([
 
 /**
  * What happens to an item at the downstream end of a lane, as `LaneEnd` in entities/traits/lane-facts.ts has it. A dead
- * end holds the items until a hand takes them; an outlet carries them away at `outlet_rate` items a second, and an outlet
- * that states no rate is a free outlet at the lane's capacity (which follows the belt and the stack size, so a number
- * written for it would go stale); "unknown" is an end that the build does not show.
+ * end holds the items until a hand takes them; an infinite end takes every item that reaches it, at the lane's capacity
+ * (which follows the belt and the stack size); "unknown" is an end that the build does not show. The words of the lane
+ * end before the infinite end are refused (infinite-end.ts).
  */
-const LaneEndConfigSchema = z.discriminatedUnion("kind", [
+const LaneEndConfigSchema = withoutOutletWords(z.discriminatedUnion("kind", [
     z.object({
         kind: z.literal("dead_end").describe("dead_end: the lane stops, and the items stay on it until a hand takes them."),
     }),
     z.object({
-        kind: z.literal("outlet").describe("outlet: the lane continues, and the items that no hand takes move away."),
-        outlet_rate: z.number().positive().optional().describe("The items per second that move off the end of the lane. The default is the lane's capacity."),
+        kind: z.literal("infinite").describe("infinite: the lane continues, and every item that no hand takes moves on, as into an infinity chest."),
     }),
     z.object({
         kind: z.literal("unknown").describe("unknown: the configuration does not know the end of the lane."),
     }),
-]);
+]));
 
 /**
  * The way the items on a belt move along the row of copies, as a cardinal direction of the game (DirectionSchema): 0 north,
@@ -824,7 +824,7 @@ export const ConfigOverridesSchema = z.preprocess(renameLoopSeedItemsToKickStart
      * speed, so a hand takes the stacks in reach a tick each and then waits for the belt to bring the rest. Geometry is
      * retained independently of this rule.
      *
-     * When enabled, every input lane that states no lane end is a dead end; else such a lane is an outlet. The
+     * When enabled, every input lane that states no lane end is a dead end; else such a lane is an infinite end. The
      * simulation times each pickup from the lane as it is.
      *
      * @default false
@@ -908,11 +908,11 @@ export const ConfigSchema = z.preprocess(renameTargetOutputToSetpoint, z.preproc
     chests: z.array(ChestConfigSchema).optional().describe("The chests of the build, and the cars, tanks, cargo wagons and rocket silos that it uses as chests."),
     overrides: ConfigOverridesSchema.optional().describe("Settings that replace what the generator chooses for the configuration."),
     /**
-     * The belts from the copies' output inserters to the outlet, in tiles (config/output-belt.ts). The run of the copies
+     * The belts from the copies' output inserters to the infinite end, in tiles (config/output-belt.ts). The run of the copies
      * moves the output on it (crafting/output-belt-run.ts).
      */
     output_belt: OutputBeltSchema.optional().describe("The output belt: the side belt that each copy's output inserter drops on, and the stretches "
-        + "of belt from the copies to the outlet, in tiles. The run of the copies moves the output on it, and an output blockage shuts its outlet."),
+        + "of belt from the copies to the infinite end, in tiles. The run of the copies moves the output on it, and an output blockage shuts its infinite end."),
 }).superRefine((config, context) => {
     if (config.output_belt !== undefined) {
         for (const problem of outputBeltProblems(config.output_belt, config.setpoint.copy_offset)) {
@@ -989,13 +989,13 @@ export const ConfigSchema = z.preprocess(renameTargetOutputToSetpoint, z.preproc
                 message: `Drill ${drill.id} drops into a chest; its override can be AUTO, CLOCKED or ALWAYS, not ${mode}` });
         }
     });
-    // an export lane's outlet rate is its consumption: a lane end beside it would say the same twice, or two things
+    // what leaves the end of an export lane is its consumption: a lane end beside it would say the same twice, or two things
     config.belts.forEach((belt, belt_index) => {
         (belt.lanes as readonly { consumption_per_second?: number; lane_end?: unknown }[]).forEach((lane, lane_index) => {
             if (lane.consumption_per_second === undefined || lane.lane_end === undefined) return;
             context.addIssue({ code: "custom", path: ["belts", belt_index, "lanes", lane_index, "lane_end"],
                 message: `Lane ${lane_index + 1} of belt ${belt.id} states a consumption rate and a lane end. The consumption rate `
-                    + "is the outlet rate of the lane. Remove the lane end." });
+                    + "states what leaves the end of the lane. Remove the lane end." });
         });
     });
     // a drop spot is all or none per belt: the lane rule needs every stack on it

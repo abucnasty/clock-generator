@@ -59,19 +59,19 @@ describe("a belt that states one lane", () => {
         }
     });
 
-    it("moves where its lane is an outlet, as before", () => {
-        for (const config of [configOf([iron()]), configOf([iron({ lane_end: { kind: "outlet" } })])]) {
+    it("moves where its lane is an infinite end, as before", () => {
+        for (const config of [configOf([iron()]), configOf([iron({ lane_end: { kind: "infinite" } })])]) {
             expect(everyInputLaneIsDeadEnd(config)).toBe(false);
             expect(clockBelt(config)).toEqual({ kind: "moving" });
-            expect(pickupOf(config)).toEqual({ lane_ends: ["outlet"], has_backpressure: false, hand_ticks: false });
+            expect(pickupOf(config)).toEqual({ lane_ends: ["infinite"], has_backpressure: false, hand_ticks: false });
         }
     });
 
-    it("moves where its lane states an outlet and the config's belts are backed up: no dead end comes from the lane it does not state", () => {
-        const config = configOf([iron({ lane_end: { kind: "outlet" } })], true);
+    it("moves where its lane states an infinite end and the config's belts are backed up: no dead end comes from the lane it does not state", () => {
+        const config = configOf([iron({ lane_end: { kind: "infinite" } })], true);
         expect(everyInputLaneIsDeadEnd(config)).toBe(false);
         expect(clockBelt(config)).toEqual({ kind: "moving" });
-        expect(pickupOf(config)).toEqual({ lane_ends: ["outlet"], has_backpressure: false, hand_ticks: false });
+        expect(pickupOf(config)).toEqual({ lane_ends: ["infinite"], has_backpressure: false, hand_ticks: false });
         // a pickup with no dead end is a moving pickup, so its starts are varied
         expect([...movingPickupPhaseStarts(config)].length).toBeGreaterThan(0);
     });
@@ -87,7 +87,7 @@ describe("a belt that states two lanes", () => {
         expect(pickupOf(two(dead_end, dead_end))).toEqual({ lane_ends: ["dead_end", "dead_end"], has_backpressure: true, hand_ticks: true });
     });
 
-    it("moves where one lane is a dead end and the other an outlet", () => {
+    it("moves where one lane is a dead end and the other an infinite end", () => {
         for (const config of [two(iron({ lane_end: { kind: "dead_end" } }), iron()), two(iron(), iron({ lane_end: { kind: "dead_end" } }))]) {
             expect(everyInputLaneIsDeadEnd(config)).toBe(false);
             expect(clockBelt(config)).toEqual({ kind: "moving" });

@@ -5,7 +5,7 @@ import {createEntityRegistryFromConfig, MovingPickupPhases} from "./sequence/sim
 
 /**
  * Bounded stock starts: vary both lanes of each ordinary moving pickup, one pickup at a time. A pickup is moving where
- * no lane of its belt ends in a dead end (an unknown end is read as a free outlet).
+ * no lane of its belt ends in a dead end (an unknown end is read as an infinite end).
  * This does not enumerate simultaneous phase combinations across a conveyor network.
  */
 export function* movingPickupPhaseStarts(config: Config): Generator<MovingPickupPhases> {

@@ -233,7 +233,7 @@ export interface SharedLaneRun {
     readonly rows: readonly LaneRow[];
     readonly lanes: readonly SharedLane[];
     readonly takers: readonly CopyTakerRecord[];
-    /** Where the config states its output belt: the belt from the copies' output inserters to the outlet, as it ran */
+    /** Where the config states its output belt: the belt from the copies' output inserters to the infinite end, as it ran */
     readonly output_belt?: OutputBeltRun;
     /** With a disturbance trial asked for (`runOnSharedLanes`): what the copies made after each trial of the loss */
     readonly disturbance_trial?: LossOutcome;

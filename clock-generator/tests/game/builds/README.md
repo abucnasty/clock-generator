@@ -349,7 +349,7 @@ hash is `builtClockIdentity` of the build's blueprint, recomputed by `clock-cont
 `over-hood-pickup-clock.game.test.ts` enumerates 32 controls: electronic circuits with different lane
 ingredients and gears with identical lane ingredients, at four speeds, both mirroring states, and
 moving/backed-up supply. Every variant uses the same compact assembler layout and 6/s target. Backed-up
-variants remove only the ingredient drain; the product outlet stays open until the output intervention.
+variants remove only the ingredient drain; the product's infinite end stays open until the output intervention.
 Sidecar must capture supported belt model 2, the over-the-hood layout and the correct preferred lane.
 
 [over-hood-clock-history-controls.json](over-hood-clock-history-controls.json) retains all 32 native summaries of #254,

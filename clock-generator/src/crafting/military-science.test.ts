@@ -40,10 +40,10 @@ describe("the military science sample", () => {
         for (const belt_id of [5, 6]) {
             expect([of(belt_id, 1), of(belt_id, 2)]).toEqual([["dead_end", "one_per_copy", east], ["dead_end", "one_per_copy", east]]);
         }
-        // the packs lanes go on to a loader: the config states the outlet, not only the default
+        // the packs lanes go on to a loader: the config states the infinite end, not only the default
         for (const belt_id of [1, 2]) {
-            expect(config.belts.find(belt => belt.id === belt_id)!.lanes[0].lane_end).toEqual({ kind: "outlet" });
-            expect(of(belt_id, 1)[0]).toBe("outlet");
+            expect(config.belts.find(belt => belt.id === belt_id)!.lanes[0].lane_end).toEqual({ kind: "infinite" });
+            expect(of(belt_id, 1)[0]).toBe("infinite");
         }
         // the near lane of each belt pickup: the top half's lane 1, the bottom half's lane 2
         expect(config.inserters.flatMap(inserter => inserter.source.type === "belt" ? [[inserter.source.id, inserter.source.near_lane]] : []))

@@ -116,7 +116,7 @@
         "points": [
           { "splitter_output": "right" },
           { "tiles": 1, "side_load": { "stretch": 5 }, "lane": "right", "layout": "side-straight" },
-          { "tiles": 2, "lane_end": { "kind": "outlet" } }
+          { "tiles": 2, "lane_end": { "kind": "infinite" } }
         ]
       },
       {

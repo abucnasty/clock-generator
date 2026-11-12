@@ -37,10 +37,10 @@ describe("the output belt as the lines of the join model", () => {
             receiver: "stretch 2 left lane: the tile of the side load of stretch 1", lane: "upstream", entity: "underground-entrance" });
     });
 
-    it("ends the outlet in a loader on each lane", () => {
-        expect(join.outlet_lines).toEqual(["the outlet's loader, left lane", "the outlet's loader, right lane"]);
-        expect(line("the outlet's loader, right lane")).toEqual({ id: "the outlet's loader, right lane", length: 128, end: "loader" });
-        expect(line("stretch 4 right lane: side load of stretch 5 to the outlet")?.feeds).toBe("the outlet's loader, right lane");
+    it("ends the infinite end in a loader on each lane", () => {
+        expect(join.infinite_end_lines).toEqual(["the infinite end's loader, left lane", "the infinite end's loader, right lane"]);
+        expect(line("the infinite end's loader, right lane")).toEqual({ id: "the infinite end's loader, right lane", length: 128, end: "loader" });
+        expect(line("stretch 4 right lane: side load of stretch 5 to the infinite end")?.feeds).toBe("the infinite end's loader, right lane");
     });
 
     it("has the side belts and the stretches side-load, and the splitter take its inputs", () => {

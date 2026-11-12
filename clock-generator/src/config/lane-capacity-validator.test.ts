@@ -324,18 +324,17 @@ describe('the rates a lane states', () => {
         return { ...config, belts: config.belts.map(it => it.id !== 1 ? it : { ...it, lanes: [{ ...it.lanes[0], ...lane }] }) } as Config;
     };
 
-    it('refuses a supply rate or an outlet rate above what the lane can carry, and lets one at it through', () => {
-        expect(laneRateIssues(stated({ supply_rate: 120, lane_end: { kind: 'outlet', outlet_rate: 120 } }))).toEqual([]);
-        expect(laneRateIssues(stated({ supply_rate: 120.5, lane_end: { kind: 'outlet', outlet_rate: 121 } }))).toEqual([
+    it('refuses a supply rate above what the lane can carry, and lets one at it through', () => {
+        expect(laneRateIssues(stated({ supply_rate: 120, lane_end: { kind: 'infinite' } }))).toEqual([]);
+        expect(laneRateIssues(stated({ supply_rate: 120.5, lane_end: { kind: 'infinite' } }))).toEqual([
             { belt_id: 1, lane: 1, fact: 'supply rate', items_per_second: 120.5, capacity_per_second: 120 },
-            { belt_id: 1, lane: 1, fact: 'outlet rate', items_per_second: 121, capacity_per_second: 120 },
         ]);
         expect(() => assertLaneCapacity(stated({ supply_rate: 130 }))).toThrow(LaneRateError);
         expect(() => assertLaneCapacity(stated({ supply_rate: 130 }))).toThrow('Lane 1 of belt 1 states a supply rate of 130 a second. '
             + 'The lane can carry 120 a second. Lower the rate, or remove it to use what the lane can carry.');
     });
 
-    it('refuses a lane end beside a consumption rate: the consumption rate is the outlet rate of an export lane', () => {
+    it('refuses a lane end beside a consumption rate: the consumption rate states what leaves the end of an export lane', () => {
         const config = gears({ items_per_second: 10 });
         const exported = (lane: Record<string, unknown>) => ConfigSchema.safeParse({ ...config, belts: config.belts.map(it => it.id !== 2 ? it
             : { ...it, strategy: 'export', lanes: [{ ...it.lanes[0], consumption_per_second: 5, ...lane }] }) });
@@ -343,6 +342,6 @@ describe('the rates a lane states', () => {
         const refused = exported({ lane_end: { kind: 'dead_end' } });
         expect(refused.success).toBe(false);
         expect(refused.error?.issues.map(issue => [issue.path.join('.'), issue.message])).toEqual([['belts.1.lanes.0.lane_end',
-            'Lane 1 of belt 2 states a consumption rate and a lane end. The consumption rate is the outlet rate of the lane. Remove the lane end.']]);
+            'Lane 1 of belt 2 states a consumption rate and a lane end. The consumption rate states what leaves the end of the lane. Remove the lane end.']]);
     });
 });

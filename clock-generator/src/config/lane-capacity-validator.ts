@@ -277,18 +277,16 @@ export function describeOnePerCopyFeed(feed: OnePerCopyFeed): string {
         + `${one ? 'needs' : 'need'} a supply rate of at least ${formatRate(feed.items_per_second)} a second, which the inserters of one copy take from ${one ? 'it' : 'them'}.`;
 }
 
-/** The lanes whose stated supply rate or outlet rate is above what the lane can carry */
+/** The lanes whose stated supply rate is above what the lane can carry */
 export function laneRateIssues(config: Pick<Config, 'belts'>): LaneRateIssue[] {
     const issues: LaneRateIssue[] = [];
     for (const belt of config.belts) {
         const belt_speed = beltSpeedOf(belt.type);
         belt.lanes.forEach((lane, index) => {
             const capacity = laneItemsPerSecond(belt_speed, laneStackFor(belt, index + 1));
-            const rates = [['supply rate', lane.supply_rate], ['outlet rate', lane.lane_end?.kind === 'outlet' ? lane.lane_end.outlet_rate : undefined]] as const;
-            for (const [fact, rate] of rates) {
-                if (rate !== undefined && above(fraction(rate), capacity)) {
-                    issues.push({ belt_id: belt.id, lane: index + 1, fact, items_per_second: rate, capacity_per_second: capacity.toDecimal() });
-                }
+            const rate = lane.supply_rate;
+            if (rate !== undefined && above(fraction(rate), capacity)) {
+                issues.push({ belt_id: belt.id, lane: index + 1, fact: 'supply rate', items_per_second: rate, capacity_per_second: capacity.toDecimal() });
             }
         });
     }
@@ -328,8 +326,8 @@ export function sharedLaneSupplyIssues(config: Config): SharedLaneSupplyIssue[] 
 }
 
 /**
- * Throws when a lane cannot give or carry what the config asks of it: a stated supply rate or outlet rate above what the
- * lane can carry (LaneRateError); one unit's inserters taking from, or dropping onto, a lane more items a second than it
+ * Throws when a lane cannot give or carry what the config asks of it: a stated supply rate above what the lane can
+ * carry (LaneRateError); one unit's inserters taking from, or dropping onto, a lane more items a second than it
  * carries (LaneCapacityError); the copies taking from lanes they share more than the lanes get (SharedLaneSupplyError).
  * Call it once the planner has accepted the target, so that its own refusals come first.
  */

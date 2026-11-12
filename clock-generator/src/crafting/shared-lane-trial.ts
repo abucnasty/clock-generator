@@ -7,7 +7,7 @@
  * trials are made again on the run of the copies that the shared-lane verdict makes (shared-lane-verdict.ts), with the
  * same losses, places and lengths: a supply stop closes the entry of each shared lane that carries the item, and the lane
  * drains as the takers take from it; an output blockage refuses the product where every copy puts it, or, where the config
- * states its output belt, shuts the outlet of the output belt: the belt lane is blocked from draining to the belt it joins,
+ * states its output belt, shuts the infinite end of the output belt: the belt lane is blocked from draining to the belt it joins,
  * every lane upstream backs up from there, and a hand is held only when its side belt is full. After each trial
  * every copy has to be back at the expected output of one copy, as the trials judge one copy: exactly in every window
  * cycle once its state, the lanes included, repeats, or in its last window cycles where none repeats. A trial a copy is
@@ -70,17 +70,18 @@ const listed = (values: readonly (number | string)[]) => values.length <= 1 ? va
 
 /**
  * "Accumulator stops arriving at the entry of lane 1 of belt 1, which the 11 copies share, and comes back. Copy 3 from
- * the entry ends at 288, 288 and 304 a window cycle, where one copy makes 352." One fact a sentence. With `outlet`, the
- * output blockage of a config that states its output belt: "Automation science pack is not taken away at the outlet of
- * the output belt: the outlet is shut, and every lane upstream backs up from there. Then the outlet opens again. ..."
+ * the entry ends at 288, 288 and 304 a window cycle, where one copy makes 352." One fact a sentence. With `infinite_end`,
+ * the output blockage of a config that states its output belt: "Automation science pack is not taken away at the infinite
+ * end of the output belt: the infinite end is shut, and every lane upstream backs up from there. Then the infinite end
+ * opens again. ..."
  */
-export function describeCopiesShort(loss: DisturbanceTrial, lanes: readonly string[], copies: number, short: readonly CopyShortAfterLoss[], expected: number, outlet = false): string {
+export function describeCopiesShort(loss: DisturbanceTrial, lanes: readonly string[], copies: number, short: readonly CopyShortAfterLoss[], expected: number, infinite_end = false): string {
     const label = lossLabel(loss);
     const each = short.map(it => `Copy ${it.copy} from the entry ends at ${listed(it.items_per_window_cycle.map(items => items.toLocaleString("en-US")))} a window cycle`);
     const ends = `${each.join(". ")}, where one copy makes ${expected.toLocaleString("en-US")}.`;
-    if (outlet) {
-        return `${label[0].toUpperCase()}${label.slice(1)} at the outlet of the output belt: the outlet is shut, and every lane upstream backs up `
-            + `from there. Then the outlet opens again. ${ends}`;
+    if (infinite_end) {
+        return `${label[0].toUpperCase()}${label.slice(1)} at the infinite end of the output belt: the infinite end is shut, and every lane `
+            + `upstream backs up from there. Then the infinite end opens again. ${ends}`;
     }
     const where = loss.kind === "supply"
         ? ` at the entry of ${lanes.map(key => { const [belt, lane] = key.split("/"); return `lane ${lane} of belt ${belt}`; }).join(" and ")}, which the ${copies} copies share`
