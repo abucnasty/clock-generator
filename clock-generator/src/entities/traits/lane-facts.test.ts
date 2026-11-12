@@ -150,9 +150,15 @@ describe("the lane facts a config states", () => {
 describe("the question about every input lane", () => {
     const inserters = [take(1, 1), put(2, 2)];
 
-    it.each([[true], [false], [undefined]])("answers as the switch (%s) when a belt is taken from", backed_up_belts => {
-        const config = configOf({ machines, belts, inserters, overrides: backed_up_belts === undefined ? {} : { backed_up_belts } });
-        expect(inputLanesAreDeadEnds(config)).toBe(backed_up_belts === true);
+    it.each([[true], [false]])("answers as the switch (%s) when a belt is taken from", backed_up_belts => {
+        const config = configOf({ machines, belts, inserters, overrides: { backed_up_belts } });
+        expect(inputLanesAreDeadEnds(config)).toBe(backed_up_belts);
+    });
+
+    it("reads only the input lane without the switch: the copper plate lane beside it has no role", () => {
+        const config = configOf({ machines, belts, inserters });
+        expect(laneFactsOfConfig(config).lanesOf(1).map(lane => [lane.role, lane.lane_end.kind])).toEqual([["input", "dead_end"], [null, "infinite"]]);
+        expect(inputLanesAreDeadEnds(config)).toBe(true);
     });
 
     it("reads the ends the input lanes state", () => {
@@ -174,9 +180,8 @@ describe("the question about every input lane", () => {
             for (const backed_up_belts of [sample.overrides?.backed_up_belts, true, false]) {
                 const config = { ...sample, overrides: { ...sample.overrides, backed_up_belts } };
                 const facts = laneFactsOfConfig(config);
-                const input_belts = config.belts.filter(belt => config.inserters.some(inserter => inserter.source.type === "belt" && inserter.source.id === belt.id));
-                const expected = input_belts.length === 0 ? backed_up_belts === true
-                    : input_belts.every(belt => facts.lanesOf(belt.id).every(isDeadEnd));
+                const input_lanes = config.belts.flatMap(belt => facts.lanesOf(belt.id)).filter(lane => lane.role === "input" || lane.role === "buffer");
+                const expected = input_lanes.length === 0 ? backed_up_belts === true : input_lanes.every(isDeadEnd);
                 expect(inputLanesAreDeadEnds(config), `${key} with backed_up_belts ${backed_up_belts}`).toBe(expected);
             }
         }
