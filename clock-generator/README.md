@@ -544,26 +544,25 @@ Both overrides are optional; `window_cycle_ticks` defaults to the output cycle d
 For a moving belt input, set `pickup_length` on the inserter's `source`: `1` for the exposed line on a straight
 belt or `0.5` at either underground endpoint. Sidecar 0.9.0 exports this automatically for inserters beside those
 pieces. Omitted `pickup_length` defaults to `1`, including in older configs. Moving supply uses reachable-stack
-timing; `overrides.backed_up_belts: true` selects backed-up supply independently of the physical geometry. See [pickup timing](docs/simulator.md#picking-up-from-moving-belts-and-underground-endpoints).
+timing; a dead end on each input lane (`lane_end`) selects supply with backpressure independently of the physical geometry. See [pickup timing](docs/simulator.md#picking-up-from-moving-belts-and-underground-endpoints).
 
 ### Configuration Overrides
 
 - `terminal_swing_count`: force the output swings per cycle, instead of the count the plan works out
 - `lcm`: override the LCM calculation for the cycle length
-- `backed_up_belts`: items back up at the input pickups and upstream supply refills the gaps, making one stack available each pickup tick (default false)
+- `backed_up_belts`: deprecated; state the `lane_end` of each lane instead. `true` makes each lane that states no end a dead end, `false` an infinite end
 - `search_for_fewer_wake_ups`: run the four searches for every build (default false)
 - `check_start_dependence`: try every clock from other starts than the cold start too, and name the clocks that reach their target from some starts only (default false; see `docs/stability.md`, "Start dependence")
 - `kick_start_items`: items a machine that makes its own ingredient (pentapod eggs) is given once when a clock starts (default 200, the same kick start as the harness gives)
 
 `src/config/schema.ts` (`ConfigOverridesSchema`) lists the others. Older files using `non_moving_belts` migrate to
-`backed_up_belts` on import; if both are present, `backed_up_belts` takes precedence. New configs and exports use
-only `backed_up_belts`.
+`backed_up_belts` on import; if both are present, `backed_up_belts` takes precedence. The page converts either into
+lane ends when it loads a build.
 
 ```json
 "overrides": {
   "terminal_swing_count": 4,
   "lcm": 12,
-  "backed_up_belts": true,
   "search_for_fewer_wake_ups": true
 }
 ```
@@ -577,7 +576,7 @@ Every clock names the belt it is made for:
 - **moving**: some input lane of the build is not a dead end. The simulator times each pickup from the stacks the hand reaches on the moving lane. Each window of an inserter that picks up from a lane that is not a dead end gets room for one more hand. The room is the ticks that hand takes at one lane stack a tick (`+4 ticks` for a hand of 16 from stacks of 4).
 - **backed-up belt**: every input lane is a dead end. The belt inserters get the windows they need with backpressure at the pickup.
 
-The belt a clock is made for does not change how it ranks. Set `backed_up_belts: true` (the Belts section's "Backed up" answer in the UI) when your belts are backed up: each input lane that states no `lane_end` is then a dead end. A clock that does not hold the expected output is first made again with room for a hand of fuel: each window of an inserter that takes fuel off the belt as well as an ingredient stays open the ticks a hand of fuel takes to fill (`+4 ticks` for a hand of 16 from stacks of 4), because the fuel slot asks for a hand at any tick, ahead of the hands the window is planned for. Its description names the inserters. A clock that does not hold with the room either, or has no such inserter, is listed as unstable.
+The belt a clock is made for does not change how it ranks. An input lane that states no `lane_end` is a dead end; state `{"kind": "infinite"}` on a lane whose items move on past the build. A clock that does not hold the expected output is first made again with room for a hand of fuel: each window of an inserter that takes fuel off the belt as well as an ingredient stays open the ticks a hand of fuel takes to fill (`+4 ticks` for a hand of 16 from stacks of 4), because the fuel slot asks for a hand at any tick, ahead of the hands the window is planned for. Its description names the inserters. A clock that does not hold with the room either, or has no such inserter, is listed as unstable.
 
 #### Searching for fewer wakeups
 

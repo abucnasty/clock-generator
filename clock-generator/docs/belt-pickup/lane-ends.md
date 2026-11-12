@@ -46,13 +46,19 @@ The generator finds the role of each lane from the inserters, item by item
 A lane with no item (`"ingredient": ""`) has the role and the end of the other lane of its belt. A lane that no
 inserter takes from or drops on has no role, and its end is an infinite end. The generator never gives an unknown end.
 
-`overrides.backed_up_belts` changes this only where the configuration states it:
+`overrides.backed_up_belts` is deprecated: state the `lane_end` of each lane instead. The generator still reads it, and
+it changes the ends only where the configuration states it:
 
 - `true`: each lane that states no end is a dead end. An export lane is an infinite end.
 - `false`: each lane that states no end is an infinite end.
 
 Thus a build that states no lane end and no `backed_up_belts` has dead ends on its input lanes: the generator makes
 its clocks for pickups with backpressure. A stated `lane_end` is always the end of the lane.
+
+The page has no setting for `backed_up_belts`. When it loads a file, a share link or a saved build that states the
+field, it states on each input or buffer lane with no end and no secondary setpoint the end that the field gave it: a dead end
+for `true`, an infinite end for `false`. Output lanes, and lanes with no role, get no end and keep the end of their
+role. Then the field goes, and the page says which lanes now state an end.
 
 To find the end, follow the lane downstream from the last inserter of the configuration that takes from it:
 
@@ -71,7 +77,9 @@ supply rate, no lane end and no sharing. Thus only the stated lane tells if all 
 - If the stated lane is an infinite end or an unknown end, the belt has a lane that is not a dead end.
 
 A lane end comes only to a lane that the belt states. A lane with `"ingredient": ""` is a stated lane. It carries no
-item, and its end is the end that it states, the end that `backed_up_belts` gives, or the end of the other lane.
+item, and its end is the end that it states, the end that the deprecated `backed_up_belts` gives, or the end of the
+other lane. A lane with a secondary setpoint (`consumption_per_second`) does not take the end of the other lane: its
+end is an infinite end.
 
 An inserter can drop items onto the two sides of a belt with one lane stated. The generator keeps the other side only
 for these items.

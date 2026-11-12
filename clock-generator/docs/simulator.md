@@ -64,7 +64,8 @@ rejected. Sidecar exports layout with model format 2; older underground captures
 
 Supply comes from the lane ends ([Lane ends](belt-pickup/lane-ends.md)). A lane that states no end has the end of its role: an
 input lane is a dead end, so a build that states no lane end and no `overrides.backed_up_belts` is **Backed up**.
-`overrides.backed_up_belts: false` makes it **Moving**, and `true` **Backed up**.
+The deprecated `overrides.backed_up_belts: false` makes it **Moving**, and `true` **Backed up**; state the `lane_end`
+of each lane instead.
 The simulator retains the pickup length in both cases. Moving supply models reachable stacks, holes and partial
 stacks; ordinary backed-up supply additionally stops and compresses stacks at its closed endpoint.
 Older `non_moving_belts` config settings migrate to `backed_up_belts` on import. New configs and exports use only

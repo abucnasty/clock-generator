@@ -13,9 +13,12 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ### Removed
 - ui: the Never on override is removed; older files and links load with Auto
+- ui: the input belts setting is removed; older builds load with their input lane ends stated
 
 ### Changed
 - generation: clocks with observed windows are found faster on large builds
+- ui: the input belts setting still works in configuration files and is deprecated
+- generation: a build stating no lane end now has dead ends on its input lanes, not Moving
 
 ## [0.28.1] - 2026-11-07
 
