@@ -113,6 +113,12 @@ export interface SharedLaneCause {
     headline: CausePart<{ copies: CopyMissed[] }>;
     /** What the run of the copies shows stopped the missed swings; null where it shows nothing it can name */
     cause: CausePart<{ copies: ({ copy: number } & Partial<MissedSwingStops>)[] }> | null;
+    /**
+     * The reason beside the status of the clock, in a few words: on a lane loss where at least one missed swing shows the
+     * gap that the copy before leaves, "Missed pickups due to belt gaps", with the missed swings the cause counts and how
+     * many of them show the gap. Absent on any other loss.
+     */
+    reason?: CausePart<{ missed: number; with_gap: number }>;
     /** The reason from the spacing: only where the run shows the gap that the copy before leaves */
     spacing: CausePart<{ step_tiles: number; travel_ticks: number; window_cycle_ticks: number; take_all: boolean }> | null;
     where: CausePart<{ takers: { copy: number; inserter_id: number; missed: number; swings: number; items: { item: string; missed: number; swings: number }[] }[] }>;
@@ -315,7 +321,8 @@ const NOT_RUN = "The clock does not hold its output on one copy, so the copies a
 const DROPPED_ONTO = "The build drops items onto this belt, and the check of a shared lane does not run those drops yet.";
 const NO_DROP_RATE = "The build's drop rate onto this lane is not known.";
 const NOT_IN_MODEL = "The check of the shared lanes does not run this lane.";
-const OUTPUT_BELT_NOT_RUN = "The output belt is run with the copies only together with a lane they take from, and no such lane is run.";
+const GAP_REASON = "Missed pickups due to belt gaps";
+const OUTPUT_BELT_NOT_RUN ="The output belt is run with the copies only together with a lane they take from, and no such lane is run.";
 
 /**
  * The rows, the line and the parts of the cause of one clock, from its check of the lanes its copies share (see the
@@ -572,6 +579,11 @@ function causeOf(input: { config: Config; build: BuildToName; losses: readonly S
             data: { step_tiles: spacing_facts.step_tiles, travel_ticks: spacing_facts.travel_ticks, window_cycle_ticks, take_all },
         };
     }
+    // the reason beside the status: only where at least one missed swing shows the copy before's gap
+    const with_gap = cause_parts.reduce((sum, it) => sum + (it.gap_from_copy_before ?? 0), 0);
+    const reason: SharedLaneCause["reason"] = with_gap > 0
+        ? { text: GAP_REASON, data: { missed: cause_parts.reduce((sum, it) => sum + (it.missed ?? 0), 0), with_gap } }
+        : undefined;
     // one copy alone: the copy that misses the most
     const worst = [...short].sort((a, b) => b.missed - a.missed || a.copy - b.copy)[0];
     const worst_takers = of_takers.filter(it => it.copy === worst.copy).map(it => it.inserter_id);
@@ -585,6 +597,7 @@ function causeOf(input: { config: Config; build: BuildToName; losses: readonly S
         kind,
         headline: { text: missedSentence(short), data: { copies: short } },
         cause: cause_texts.length === 0 ? null : { text: cause_texts.join(" "), data: { copies: cause_parts } },
+        ...(reason !== undefined && { reason }),
         spacing,
         where: { text: where, data: { takers: of_takers.map(it => ({ copy: it.copy, inserter_id: it.inserter_id, missed: it.items.reduce((s, x) => s + x.missed, 0),
             swings: it.items.reduce((s, x) => s + x.swings, 0), items: it.items.map(({ item, missed, swings }) => ({ item, missed, swings })) })) } },

@@ -38,6 +38,8 @@ describe("what was checked on the lanes the copies of the automation science 240
         // the run shows the copy before's gap on the copper plate lane only; the machine's full output in 5 of the 6
         expect(cause.cause!.text).toBe("In 3 of the 6 missed swings, the gap that copy 1 leaves on the copper plate lane reaches copy 2 when its inserter must pick up. "
             + "In 5 of the 6 missed swings, the assembling machine 3 of copy 2 that makes automation science pack has its output full and takes no more items. 2 of the 6 show both.");
+        // 3 of the 6 missed swings show the gap: the reason beside the status
+        expect(cause.reason).toEqual({ text: "Missed pickups due to belt gaps", data: { missed: 6, with_gap: 3 } });
         expect(cause.spacing!.text).toBe("The copies stand 9 tiles apart. An item takes 72 ticks from one copy to the next, and the window cycle is 72 ticks. "
             + "The 9 copies take every copper plate the lane brings, so the gap does not close on the way.");
         expect(cause.where.text).toBe("The inserter of copy 2 that takes iron gear wheel and copper plate misses 6 of its 130 swings in 65 window cycles: "
@@ -60,6 +62,8 @@ describe("what was checked on the lanes the copies of the automation science 240
         const cause = clock.checked_lanes!.cause!;
         expect(cause.headline.text).toBe("Copies 4 and 8 miss 42 of 378 swings each");
         expect(cause.cause!.text).toBe("The side belts of copies 4 and 8 are full where they join the automation science pack output belt.");
+        // a full join: no reason beside the status
+        expect(cause).not.toHaveProperty("reason");
         expect(cause.spacing).toBeNull();
         expect(cause.where.text).toBe("The inserter of copy 4 that drops automation science pack misses 42 of its 378 swings in 63 window cycles, and so does that of copy 8. "
             + "84 of the 336 swings each one makes wait for room.");

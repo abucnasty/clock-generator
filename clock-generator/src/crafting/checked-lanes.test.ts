@@ -137,6 +137,8 @@ describe("the rows of a build that states its output belt", () => {
         ]);
         expect(lanes.line.output_belt).toBe("misses");
         expect(lanes.cause!.cause!.text).toBe("The side belts of copies 4 and 8 are full where they join the automation science pack output belt.");
+        // a full join has no reason beside the status
+        expect(lanes.cause).not.toHaveProperty("reason");
         // fewer copies are fewer on the output belt too: what changes it names no lane
         const fewer = checked({ config, judged: judgement, fewer: { copies: 3 } });
         expect(fewer.cause!.changes!.text).toBe("With 3 copies, every copy makes every swing.");
@@ -187,6 +189,20 @@ describe("the parts of the cause", () => {
         expect(unknown.cause!.spacing).toBeNull();
         const other = checked({ config: gears(), judged: judged([lossOf(2, 5, 130)], { loss_facts: [{ ...facts, stops }] }) });
         expect(other.cause!.cause).toBeNull();
+    });
+
+    it("give the reason of belt gaps only where at least one missed swing shows the copy before's gap, with its counts", () => {
+        const stops = { missed: 6, lane_empty: 3, gap_from_copy_before: 3, machine_full: 5, both: 2, neither: 0, lane_items: ["iron-plate"], gap_items: ["iron-plate"] };
+        const gaps = checked({ config: gears(), judged: judged([lossOf(2, 6, 130)], { loss_facts: [{ ...facts, stops }] }) });
+        expect(gaps.cause!.reason).toEqual({ text: "Missed pickups due to belt gaps", data: { missed: 6, with_gap: 3 } });
+        // the run shows the missed swings, and none of them shows the gap: no reason
+        const no_gap = { ...stops, lane_empty: 0, gap_from_copy_before: 0, machine_full: 6, both: 0, gap_items: [] };
+        const full = checked({ config: gears(), judged: judged([lossOf(2, 6, 130)], { loss_facts: [{ ...facts, stops: no_gap }] }) });
+        expect(full.cause!.cause).not.toBeNull();
+        expect(full.cause).not.toHaveProperty("reason");
+        // no record of the stops: no reason
+        const unknown = checked({ config: gears(), judged: judged([lossOf(2, 6, 130)]) });
+        expect(unknown.cause).not.toHaveProperty("reason");
     });
 
     it("name another clock of the result that holds with all the copies", () => {
