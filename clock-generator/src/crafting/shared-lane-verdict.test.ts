@@ -5,7 +5,7 @@ import { Config } from "../config/schema";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import { SerializableClockWindows } from "./clock";
-import { behindTargetIn, CopyMade, describeSharedLaneLoss, judgeSharedLanes, RunOfCopies, SharedLaneLoss, TargetRates } from "./shared-lane-verdict";
+import { behindTargetIn, CopyMade, describeSharedLaneLoss, fewerCopiesThatHold, judgeSharedLanes, RunOfCopies, SharedLaneLoss, TargetRates } from "./shared-lane-verdict";
 import { withoutSharedLaneFacts } from "./generate-blueprint-test-helpers";
 
 const quiet = { log: () => {}, warn: () => {}, error: () => {}, debug: () => {} };
@@ -164,6 +164,9 @@ describe("the clocks recorded on the inserter build whose copies share flowing o
 // before it stated the spacing of its copies and the way its belts move, with the four lanes an infinite end. The sample now
 // states that those lanes end in a dead end, and this test is of lanes that flow on: it takes the sample without those
 // facts.
+// measured on this clock (2026-11-12): two copies of the three on the lanes hold
+const FEWER_COPIES_HOLD = 2;
+
 describe("a clock whose copy is short by more than one hand in the run twice as long", () => {
     it("fails it on that copy", async () => {
         const infinite_end = { lane_end: { kind: "infinite" } };
@@ -181,6 +184,24 @@ describe("a clock whose copy is short by more than one hand in the run twice as 
         expect(new Set(losses.map(loss => loss.copy))).toEqual(new Set([3]));
         expect(losses.every(loss => loss.alone_items - loss.items > 16)).toBe(true);
         expect(losses.some(loss => loss.belt_id === 4 && loss.alone_items - loss.items === 112)).toBe(true);
+    });
+
+    it("keeps beside each loss what the run shows, and finds the most copies on the lanes whose run holds", async () => {
+        const infinite_end = { lane_end: { kind: "infinite" } };
+        const config = withFacts(withoutSharedLaneFacts(await loadConfigFromFile(ConfigPaths.ADVANCED_CIRCUIT_240)),
+            { "1/1": infinite_end, "3/1": infinite_end, "3/2": infinite_end, "4/1": infinite_end });
+        const windows = {
+            "inserter:1": [{ start: 2, end: 18 }], "inserter:2": [{ start: 0, end: 0 }], "inserter:3": [{ start: 2, end: 19 }],
+            "inserter:4": [{ start: 20, end: 23 }, { start: 0, end: 5 }], "inserter:5": [{ start: 12, end: 23 }, { start: 0, end: 0 }],
+            "inserter:6": [{ start: 20, end: 23 }, { start: 0, end: 5 }], "inserter:7": [{ start: 2, end: 19 }], "inserter:8": [{ start: 2, end: 18 }],
+            "inserter:9": [{ start: 0, end: 0 }],
+        };
+        const judgement = judgeSharedLanes(config, windows, 24, quiet);
+        expect(judgement.loss_facts).toHaveLength(judgement.losses.length);
+        expect(judgement.loss_facts!.every(facts => facts.hand === 16 && facts.stops !== undefined)).toBe(true);
+        const fewer = fewerCopiesThatHold(config, windows, 24, quiet)!;
+        expect(fewer.copies).toBe(FEWER_COPIES_HOLD);
+        expect(fewer.tried.every(it => it.holds === (it.copies <= FEWER_COPIES_HOLD))).toBe(true);
     });
 });
 

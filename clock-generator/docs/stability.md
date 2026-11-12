@@ -145,6 +145,33 @@ Recorded on ELECTROMAGNETIC_SCIENCE_330, with 11 copies 11 tiles apart on two de
 
 A trial on the copies starts with all the lanes full and supplied at the entry. A build in the game does not start in that condition. Thus the stops that keep a copy short in the trials can be different from those in the game. Recorded on AUTOMATION_SCIENCE_240, with nine copies and the `pitch_pickups` clock of 72 ticks (Factorio 2.1.24, 2026-11-11): the trials on the copies find no recovery after a copper supply stop. In the game, after one copper stop, copy 2 was short in 2 of every 20 window cycles.
 
+#### What the result says was checked
+
+The result lists each lane of the build one time (`lanes`): its item, its **lane role**, its **lane end** and where the end comes from (`end_given_by`: the lane, the `backed_up_belts` switch, an export lane, or the role), its sharing, its supply rate and its capacity. A build of one copy has this list too.
+
+Each clock of a build of copies has `checked_lanes` (`clock-generator/src/crafting/checked-lanes.ts`). It has one row for each lane that the copies share and that has an item and a role. A lane that is per copy has no row. A row gives what the copies take from the lane or drop onto it together, in items a second, and a state:
+
+- **Holds.** The run of the copies finds no loss on the lane. At the output belt, the row gives the copies whose side belt held hands at their join, and in how many swings. On a clock that is not stable on a shared lane, the label is "Not the cause".
+- **Short.** A copy misses swings on the lane. The row gives each copy, with its swings missed of the swings that it makes alone. Two takers of one copy on the lane are added together.
+- **Join full.** The output belt is the cause: the side belt of a copy is full at its join. The row gives the swings missed of the swings that the target needs.
+- **Takes less.** The copy takes less from the lane because its join is full. Where the run without the output belt shows the copy short on the lane too, the row says so.
+- **Rate fits.** An output belt that is a plain belt in `belts` is not run. The sum of the drops of the copies is not more than what the lane carries.
+- **Not checked.** The check does not run the lane, for the reason that the row gives: for example, the build drops items onto the belt.
+- **Not run with the copies.** The clock does not hold its output on one copy, so the copies are not run. No row of such a clock holds.
+
+The short rows and the rows of a full join come first. The line of a clock says if the copies were run together. It says if every copy gets its items, and if a copy misses swings at the output belt. On plain output belts, it says that only the sum of the drops is checked. It names the chest that the output goes into.
+
+A clock that is not stable on a shared lane has the parts of its cause, each a sentence with its numbers:
+
+- The headline: the swings that each copy misses.
+- The cause, only where the run of the copies shows it. The run records each tick in which the hand of a taker holds items and takes none. It records if the reach of the lane of the held item is empty. It also records if the output of the machine of the taker is full. A window cycle in which a copy makes fewer swings than alone counts as many missed swings. An empty reach is the gap of the copy before where a taker of that copy took the item earlier. The time between is the ticks that an item takes from that copy to this copy. The cause gives the count of each, and of the swings that show both. At a full join, the cause is the full side belt.
+- The reason from the spacing, only where the run shows the gap of the copy before: the tiles between the copies, the ticks that an item takes over them, and the window cycle. It does not decide a verdict.
+- Where and how much: each taker of each copy by its items, with its swings missed.
+- One copy alone: what the same inserter makes in the run of one copy alone.
+- What changes it: the most copies on the shared lanes whose own run holds, found by bisection. Also another clock of the result that holds with all the copies.
+
+Recorded on AUTOMATION_SCIENCE_240, the clock of 72 ticks (2026-11-12): copy 2 misses 6 of 130 swings. In 3 of them, the gap of copy 1 on the copper plate lane reaches copy 2. In 5 of them, the output of its assembling machine is full, and 2 show both. With 8 copies on the lanes, every copy makes every swing.
+
 ### What a stable verdict proves
 
 A clock called stable is proven only where its check reports `long_run_proven` or `start_phases_proven` (#258), and then only under the simulator's mechanics. Everywhere else the verdict rests on a sample. The lane phases, the loss grid and the start-dependence starts described above are samples too.

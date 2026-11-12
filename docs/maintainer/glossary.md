@@ -259,6 +259,16 @@ is said in swings. It gives the swings that the inserter does not make. It compa
 is on the lane. A technical noun: STE has no entry.
 _Avoid_: a count of items or of crafts for a loss
 
+**Missed swing**:
+A swing that an inserter of a copy makes in the run of one copy alone and does not make in the run of the copies. A window
+cycle in which the inserter makes fewer swings than alone has as many missed swings. A project technical noun (STE rule 1.6).
+
+**Checked lane**:
+A lane that the copies share, as the result gives it for one clock: one row, with what the copies take or drop together
+and its state. The row says that the lane holds (the verb), or that it is **short**, at a **join full**, **takes less**,
+fits by its rate (**rate fits**), is **not checked**, or is **not run with the copies**. On a clock that is not stable on a
+shared lane, a lane that holds is **not the cause**. A project technical noun (STE rule 1.6).
+
 **Room for one more hand**:
 Ticks that the generator adds at the end of each enable window of an inserter. It adds them where the inserter takes
 from a lane that is not a dead end. They are the ticks that one more hand takes to fill at one lane stack a tick: 4

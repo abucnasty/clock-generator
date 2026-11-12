@@ -153,17 +153,24 @@ describe("the end of a lane that states none", () => {
         expect(endsOf(config)).toEqual(["dead_end", "dead_end"]);
     });
 
-    it("on a belt pickup with an input lane and a lane only dropped onto: a dead end and an infinite end, and the clock's belt moves", () => {
+    it("on a belt pickup with an input lane and a lane only dropped onto: a dead end and an infinite end, and the clock's belt is backed up", () => {
         // the gear assembler takes iron plate off lane 1 and drops its gears onto the same belt, whose lane 2 carries gears
         const config = configOf({ machines, belts: [belt(1, "iron-plate", "iron-gear-wheel")] as Config["belts"],
             inserters: [take(1, 1, 1), put(2, 1, 1)] });
         expect(rolesOf(config)).toEqual(["input", "output"]);
         expect(endsOf(config)).toEqual(["dead_end", "infinite"]);
-        // backed up only where every lane of each belt an inserter takes from is a dead end: not here
-        expect(everyInputLaneIsDeadEnd(config, laneFactsOfConfig(config))).toBe(false);
+        // the input and buffer lanes are read, by role: the output lane beside the input lane does not count
+        expect(everyInputLaneIsDeadEnd(config, laneFactsOfConfig(config))).toBe(true);
         const registry = createEntityRegistryFromConfig(config);
         const taker = registry.getAll().filter(Entity.isInserter).find(it => it.entity_id.id === "inserter:1")!;
-        expect(clockBeltOf(config, registry, new Map([[taker.entity_id.id, [OpenRange.from(0, 10)]]]))).toEqual({ kind: "moving" });
+        expect(clockBeltOf(config, registry, new Map([[taker.entity_id.id, [OpenRange.from(0, 10)]]]))).toEqual({ kind: "backed_up" });
+    });
+
+    it("reads an input lane that states an infinite end beside a lane only dropped onto: not backed up", () => {
+        const config = configOf({ machines, belts: [{ ...belt(1, "iron-plate", "iron-gear-wheel"),
+            lanes: [{ ...lane("iron-plate"), lane_end: { kind: "infinite" } }, lane("iron-gear-wheel")] }] as Config["belts"],
+            inserters: [take(1, 1, 1), put(2, 1, 1)] });
+        expect(everyInputLaneIsDeadEnd(config, laneFactsOfConfig(config))).toBe(false);
     });
 
     it("is by item on the rocket fuel sample's belt 3 without its stated ends: nutrients a dead end, the seeds dropped onto it an infinite end", async () => {
