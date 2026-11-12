@@ -345,5 +345,4 @@ export function glossaryWithFocus(focus: readonly GlossaryId[]): { related: Glos
 export const TERMS_FOCUS = {
     wakeUps: ['wakeup', 'enable-window'],
     signals: ['signal', 'wakeup', 'enable-window'],
-    works: ['holds-the-rate', 'recovery', 'output-blockage', 'supply-stop'],
 } as const satisfies Record<string, readonly GlossaryId[]>;

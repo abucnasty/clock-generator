@@ -86,3 +86,26 @@ export function viewOf(result: KeptResult, id: string): ClockAlternativeView {
 
 /** Every clock of a kept result as views, in its order */
 export const viewsOf = (result: KeptResult) => result.clocks.map(clock => viewOf(result, clock.id));
+
+/** The engine's reason, as it gives one where the loss trials of a clock could not be made (an error's message) */
+export const TRIALS_NOT_MADE_REASON = 'the loss trials could not be made: no item of the build stops arriving';
+
+/**
+ * The three cases of a clock whose recovery trials gave no answer (the status Error), which no clock of the samples is in:
+ * the clocks of automation science 240 with the recommended one's recovery result changed. "not-tried": the trials could not
+ * be made, with the engine's reason; "baseline-missed": the run with nothing cut did not make its expected output; "no-result":
+ * there is no recovery result.
+ */
+export function errorCaseViews(kind: 'not-tried' | 'baseline-missed' | 'no-result'): ClockAlternativeView[] {
+    const id = AUTOMATION_240.clocks[AUTOMATION_240.selected_index].id;
+    return viewsOf(AUTOMATION_240).map(view => {
+        if (view.id !== id) return view;
+        const { disturbance_trial_not_tried: _reason, ...assessment } = view.assessment;
+        void _reason;
+        return { ...view, assessment: {
+            ...assessment,
+            disturbance_trial: kind === 'baseline-missed' ? { survives: false, broken_by: [], recovered_after_window_cycles: null } : null,
+            ...(kind === 'not-tried' && { disturbance_trial_not_tried: TRIALS_NOT_MADE_REASON }),
+        } };
+    });
+}

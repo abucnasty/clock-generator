@@ -3,7 +3,7 @@ import { cleanup, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { ClockAlternativeView } from '../worker/types';
 import { show } from '../test/fixtures';
-import { AUTOMATION_240, checkedOf, ELECTROMAGNETIC_330_TWO_SWINGS, MILITARY_240, viewsOf } from '../test/checkedLanesFixtures';
+import { AUTOMATION_240, checkedOf, ELECTROMAGNETIC_330_TWO_SWINGS, errorCaseViews, MILITARY_240, TRIALS_NOT_MADE_REASON, viewsOf } from '../test/checkedLanesFixtures';
 import { REASON_WORDS, SUMMARY_COPY } from '../utils/clockSummary';
 import { strategyNameOf } from '../utils/strategyNames';
 import { ResultSummaryCard } from './ResultSummaryCard';
@@ -191,6 +191,24 @@ describe('the status of a clock that underproduces, beside its name on the card'
         const name = besideName(kept, 'euclidean_swings');
         expect(name.getByText('Underproduces')).toBeTruthy();
         expect(name.queryByText(REASON_WORDS.belt_gaps)).toBeNull();
+    });
+});
+
+describe('the status Error beside the name on the card, where the recovery trials gave no answer', () => {
+    it.each<[Parameters<typeof errorCaseViews>[0], string]>([
+        ['not-tried', TRIALS_NOT_MADE_REASON],
+        ['baseline-missed', SUMMARY_COPY.errorBaselineMissed],
+        ['no-result', SUMMARY_COPY.errorNoResult],
+    ])('%s: the chip Error, in the red of a failed check, and its reason beside it', (kind, reason) => {
+        const alternatives = errorCaseViews(kind);
+        card(alternatives, AUTOMATION_240.selected_index);
+        const name = within(screen.getByRole('heading', { level: 3, name: strategyNameOf(alternatives[AUTOMATION_240.selected_index]) }).parentElement!);
+        const chip = name.getByText('Error').closest('.MuiChip-root')!;
+        expect(chip.getAttribute('data-badge')).toBe('status');
+        expect(chip.className).toMatch(/MuiChip-colorError/);
+        expect(name.getByText(reason)).toBeTruthy();
+        // the Recovery fact keeps its own word
+        expect(screen.getByText('Unavailable')).toBeTruthy();
     });
 });
 

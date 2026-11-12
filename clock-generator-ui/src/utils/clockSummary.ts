@@ -19,14 +19,27 @@ const MIN_OFF_TARGET = 0.005;
 
 /** Every player-facing string of the clock summary, in one place for the glossary and for review */
 export const SUMMARY_COPY = {
-    // the chips beside a clock's name: its status, and what it has fewest of
-    recoveryUnavailable: 'Recovery unavailable',
-    // what a clock makes against the setpoint (outputTermOf), and the rate beside it
+    // a clock's status (statusOf): the card's chip and the compare tables' Status
     stable: 'Stable',
     underproduces: 'Underproduces',
     overproduces: 'Overproduces',
+    noRecovery: 'No recovery',
+    error: 'Error',
+    startDependent: 'Start-dependent',
+    // beside Underproduces or Overproduces off the setpoint: the rate it makes
     makesOf: (rate: string, target: string, counts?: TargetCounts) => `${rateVerbs(counts).third} ${rate}/s of ${target}/s`,
-    startDependent: 'Depends on how it is started',
+    // beside Error: why the recovery trials gave no answer, where the engine gives no reason of its own
+    errorBaselineMissed: 'The run with no supply stop or output blockage did not make its expected output',
+    errorNoResult: 'The recovery trials gave no result',
+    // the help of the Status column: each status the column can show, once
+    statusHelp: [
+        ['Stable', 'It holds the setpoint, and it goes back to its rate by itself after a supply stop or an output blockage.'],
+        ['Underproduces', 'It makes less than the setpoint.'],
+        ['Overproduces', 'It makes more than the setpoint.'],
+        ['No recovery', 'It holds the setpoint, but it does not go back to its rate by itself after a supply stop or an output blockage.'],
+        ['Error', 'The recovery trials gave no answer. The line under the clock\'s name gives the reason.'],
+        ['Start-dependent', 'It holds the setpoint from some start points and not from others.'],
+    ] as const,
     fewestWakeUps: 'Fewest wakeups',
     fewestDeciders: 'Fewest deciders',
     // the card's tiles
@@ -67,9 +80,6 @@ export const SUMMARY_COPY = {
     differsNothing: 'It is not the recommended clock.',
     // the compare table
     foldedMakes: (count: number, rate: string, counts?: TargetCounts) => `All ${count} clocks ${rateVerbs(counts).base} ${rate}/s.`,
-    worksYes: 'Yes',
-    worksNoRecovery: 'No recovery',
-    worksStartDependent: 'Start-dependent',
 };
 
 /**
@@ -83,7 +93,7 @@ export const REASON_WORDS: Record<SharedLaneReasonCode, string> = {
     unknown: '',
 };
 
-export const isStartDependent = (clock: Pick<SummaryClock, 'assessment'>): boolean =>
+const isStartDependent = (clock: Pick<SummaryClock, 'assessment'>): boolean =>
     clock.assessment.start_dependence?.verdict === 'start-dependent';
 
 /** A rate as the summary prints it: at most two decimals ("240", "12.5") */
@@ -109,8 +119,7 @@ interface OutputTerm {
 }
 
 /**
- * What a clock makes against the setpoint: the term every place that says a clock's status reads (the chip, the compare
- * table's Works?, the full table's status, how a selected clock differs). A rounded clock the engine accepts as meeting
+ * What a clock makes against the setpoint: the term its status reads (statusOf), and how a selected clock differs. A rounded clock the engine accepts as meeting
  * the target (`ranking.runs_fast`: at most 0.1% over it) is Stable. Off the setpoint, by its steady run's rate:
  * below, Underproduces; above, Overproduces; with the rate beside it. At the setpoint, a clock that is not unstable is
  * Stable; an unstable one with a loss on a lane its copies share Underproduces, with the words for the engine's reason;
@@ -141,34 +150,56 @@ export function attemptResultOf(attempt: { holds: boolean; actual_output_items: 
     return attempt.actual_output_items > attempt.expected_output_items ? SUMMARY_COPY.overproduces : SUMMARY_COPY.underproduces;
 }
 
-/** A chip beside a clock's name: its status, or what it has fewest of */
-export interface ClockBadge {
-    kind: 'status' | 'fewest-wakeups' | 'fewest-deciders';
+/** A clock's status, as one word: which one, its word, and what is said beside it */
+export interface ClockStatus {
+    kind: 'start-dependent' | 'underproduces' | 'overproduces' | 'no-recovery' | 'error' | 'stable';
     text: string;
-    /** Beside Underproduces or Overproduces: the rate, or the words for the engine's reason code (outputTermOf) */
+    /** Beside Underproduces or Overproduces: the rate, or the words for the engine's reason code (outputTermOf); beside Error: its reason */
     detail?: string;
 }
 
 /**
- * The status chip of a clock, the first that matches: it depends on how it is started; it underproduces or overproduces
- * (outputTermOf, with what is said beside it); it has no recovery; else it is Stable. Null for a clock that meets the
- * target on a build with a deadlock risk.
+ * Why the recovery trials gave no answer, beside Error: the engine's reason where the trials could not be run
+ * (`disturbance_trial_not_tried`, as data); that the run with nothing cut did not make its expected output; or that there is
+ * no recovery result
  */
-function statusOf(clock: SummaryClock): Omit<ClockBadge, 'kind'> | null {
-    if (isStartDependent(clock)) return { text: SUMMARY_COPY.startDependent };
-    const output = outputTermOf(clock);
-    if (output.term !== SUMMARY_COPY.stable) return { text: output.term, ...(output.detail !== undefined && { detail: output.detail }) };
-    // on a build with a deadlock risk the recovery trials do not decide, so a clock that meets the target rate has no status chip
-    if (clock.deadlockRisk !== null && clock.ranking.meets_target_rate) return null;
-    if (clock.verdict === 'no recovery') {
-        return { text: recoversOf(clock).kind === 'no' ? SUMMARY_COPY.worksNoRecovery : SUMMARY_COPY.recoveryUnavailable };
-    }
-    return { text: SUMMARY_COPY.stable };
+function errorReasonOf(clock: Pick<SummaryClock, 'assessment'>): string {
+    if (clock.assessment.disturbance_trial?.survives === false) return SUMMARY_COPY.errorBaselineMissed;
+    if (clock.assessment.disturbance_trial == null && clock.assessment.disturbance_trial_not_tried) return clock.assessment.disturbance_trial_not_tried;
+    return SUMMARY_COPY.errorNoResult;
 }
 
 /**
- * The chips beside the name of a clock, against the other clocks of its generation. Its status chip first, where it has one;
- * a clock that is not Stable has only that. Beside Stable, or no status chip: "Fewest wakeups" on a clock that ties the fewest
+ * A clock's status: the one rule the card's chip, the compare table's Status and the full table's Status read. The first that
+ * matches: it is start-dependent; it underproduces or overproduces (outputTermOf, with what is said beside it); it has no
+ * recovery; its recovery trials gave no answer (Error, with the reason); else it is Stable.
+ */
+export function statusOf(clock: Pick<SummaryClock, 'verdict' | 'ranking' | 'assessment' | 'checkedLanes' | 'asBuilt' | 'expectedOutputItems' | 'counts'>): ClockStatus {
+    if (isStartDependent(clock)) return { kind: 'start-dependent', text: SUMMARY_COPY.startDependent };
+    const output = outputTermOf(clock);
+    if (output.term !== SUMMARY_COPY.stable) {
+        return { kind: output.term === SUMMARY_COPY.underproduces ? 'underproduces' : 'overproduces', text: output.term,
+            ...(output.detail !== undefined && { detail: output.detail }) };
+    }
+    const recovery = recoversOf(clock).kind;
+    if (clock.verdict === 'no recovery' && recovery === 'no') return { kind: 'no-recovery', text: SUMMARY_COPY.noRecovery };
+    if (clock.verdict === 'no recovery' || recovery === 'not-tested') return { kind: 'error', text: SUMMARY_COPY.error, detail: errorReasonOf(clock) };
+    return { kind: 'stable', text: SUMMARY_COPY.stable };
+}
+
+/** A chip beside a clock's name: its status, or what it has fewest of */
+export interface ClockBadge {
+    kind: 'status' | 'fewest-wakeups' | 'fewest-deciders';
+    text: string;
+    /** Beside the status: what statusOf says beside it */
+    detail?: string;
+    /** The status's kind (statusOf), on the status chip */
+    status?: ClockStatus['kind'];
+}
+
+/**
+ * The chips beside the name of a clock, against the other clocks of its generation. Its status chip first (statusOf); a clock
+ * that is not Stable has only that. Beside Stable: "Fewest wakeups" on a clock that ties the fewest
  * without being the recommended one (the recommended clock has its own chip and reason), and "Fewest deciders" on a clock with
  * fewer deciders than the recommended clock and the fewest-wakeups clocks have, when the clocks do not all have the same number.
  */
@@ -177,9 +208,9 @@ export function clockBadges(clocks: SummaryClock[], index: number): ClockBadge[]
     if (!clock) {
         return [];
     }
-    const status = statusOf(clock);
-    if (status !== null && status.text !== SUMMARY_COPY.stable) return [{ kind: 'status', ...status }];
-    const badges: ClockBadge[] = status === null ? [] : [{ kind: 'status', ...status }];
+    const { kind, ...status } = statusOf(clock);
+    const badges: ClockBadge[] = [{ kind: 'status', status: kind, ...status }];
+    if (kind !== 'stable') return badges;
     if (!isContender(clock)) return badges;
     const recommended = recommendedIndexOf(clocks);
     const contenders = clocks.filter(isContender);
@@ -377,23 +408,4 @@ export function foldedMakes(clocks: Pick<SummaryClock, 'assessment' | 'checkedLa
     }
     const rates = new Set(clocks.map(clock => shownRateOf(clock).toFixed(2)));
     return rates.size === 1 ? SUMMARY_COPY.foldedMakes(clocks.length, rateText(shownRateOf(clocks[0])), clocks[0].counts) : null;
-}
-
-/**
- * The compare table's "Works?": "Yes" for a clock that holds the rate and recovers, made for the belt asked for;
- * otherwise what is wrong, the worst first: that it depends on how it is started, that it underproduces or overproduces
- * (outputTermOf; its rate is in Makes), that it needs a restart after a jam, or that it is only for backed-up belts.
- * `kind` picks the icon; the words say it without the colour.
- */
-export function worksOf(clock: Pick<SummaryClock, 'verdict' | 'ranking' | 'assessment' | 'checkedLanes' | 'asBuilt' | 'expectedOutputItems' | 'counts'>):
-    { kind: 'yes' | 'caution' | 'no'; text: string } {
-    if (isStartDependent(clock)) return { kind: 'caution', text: SUMMARY_COPY.worksStartDependent };
-    const output = outputTermOf(clock);
-    if (output.term !== SUMMARY_COPY.stable) return { kind: 'no', text: output.term };
-    if (clock.verdict === 'no recovery') {
-        return { kind: 'caution', text: recoversOf(clock).kind === 'no' ? SUMMARY_COPY.worksNoRecovery : SUMMARY_COPY.recoveryUnavailable };
-    }
-    return recoversOf(clock).kind === 'not-tested'
-        ? { kind: 'caution', text: SUMMARY_COPY.recoveryUnavailable }
-        : { kind: 'yes', text: SUMMARY_COPY.worksYes };
 }
