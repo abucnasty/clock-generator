@@ -247,6 +247,8 @@ export class DropRecorder implements AfterInsertersTick {
     public readonly hands: HandDropped[] = [];
     /** Each rise of what the hand holds: the items picked up in a tick */
     public readonly pickups: HandDropped[] = [];
+    /** The ticks the hand put down the last of what it held: one a swing, where a hand goes down in several drops (on a belt) */
+    public readonly hand_ends: number[] = [];
     private dropped: number;
     /** The item the hand held after the last tick: what a drop in this tick put down */
     private held: string | null;
@@ -265,10 +267,12 @@ export class DropRecorder implements AfterInsertersTick {
         const tick = this.now();
         this.last_tick = tick;
         const dropped = state.items_dropped;
-        if (dropped > this.dropped) this.hands.push({ tick, item: this.held ?? "", items: dropped - this.dropped });
+        const put_down = dropped > this.dropped;
+        if (put_down) this.hands.push({ tick, item: this.held ?? "", items: dropped - this.dropped });
         this.dropped = dropped;
         const quantity = state.held_item?.quantity ?? 0;
         if (state.held_item !== null && quantity > this.quantity) this.pickups.push({ tick, item: state.held_item.item_name, items: quantity - this.quantity });
+        if (this.quantity > 0 && quantity === 0 && put_down) this.hand_ends.push(tick);
         this.quantity = quantity;
         this.held = state.held_item?.item_name ?? this.held;
     }
