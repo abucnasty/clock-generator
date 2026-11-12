@@ -410,7 +410,7 @@ it('loads an imported build file that carries the former Fractional swings overr
         inserters: [], belts: [],
     };
     const loaded = await ask({ kind: 'config-file', config: { ...config, overrides: { use_fractional_swings: true, lcm: 2 } } });
-    expect(loaded.config.overrides).toEqual({ lcm: 2 });
+    expect(loaded.overrides).toEqual({ lcm: 2 });
     expect(await ask({ kind: 'config-file', config: { ...config, overrides: { use_fractional_swings: true } } }))
         .toEqual(await ask({ kind: 'config-file', config: { ...config, overrides: {} } }));
 });
@@ -427,7 +427,7 @@ it("gives the crafting machines, fills a prototype's rule on import and paste, a
     };
     // a former type is read as the machine, in a build file, a saved build and a paste from an older Sidecar
     const typed = { id: 1, recipe: 'iron-plate', crafting_speed: 2, productivity: 0, type: 'furnace' };
-    expect((await ask({ kind: 'config-file', config: { ...config, machines: [typed] } })).config.machines[0]).toEqual(furnace);
+    expect((await ask({ kind: 'config-file', config: { ...config, machines: [typed] } })).machines[0]).toEqual(furnace);
     const saved = await ask({ kind: 'saved-config', config: { ...config, machines: [{ ...typed, _uuid: 'm' }, { ...furnace, id: 2, type: 'machine' }] } });
     expect(saved.problem).toBeNull();
     expect((saved.form as { machines: unknown[] }).machines).toEqual([{ ...furnace, _uuid: 'm', _prototype_source: 'recipe' }, { ...furnace, id: 2 }]);

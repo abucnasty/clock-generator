@@ -158,27 +158,20 @@ export interface DroppedResults {
 
 /**
  * Which results to show on an empty Results page for the build with `currentKey`, first match wins: the ones kept for
- * this build; the ones kept for it before it was converted on load (`formerKeys`), shown as its own (`as`); the ones
- * set aside by the last Import, Paste or Reset of this build (its Undo); on load only, the ones that were on screen when
- * the page was left (`shownKey`), as they were (stale when the build changed since). Null when none: a page left with
- * nothing on screen opens with nothing.
+ * this build; the ones set aside by the last Import, Paste or Reset of this build (its Undo); on load only, the ones
+ * that were on screen when the page was left (`shownKey`), as they were (stale when the build changed since). Null
+ * when none: a page left with nothing on screen opens with nothing.
  */
-export function keyToShow({ currentKey, mode, entries, dropped, shownKey = null, formerKeys = [] }: {
+export function keyToShow({ currentKey, mode, entries, dropped, shownKey = null }: {
     currentKey: string;
     mode: 'load' | 'replace';
     entries: Pick<KeptEntry, 'key' | 'shownAt'>[];
     dropped: Pick<DroppedResults, 'formKey'> | null;
     /** The key of the results on screen when the page was left; null when nothing was */
     shownKey?: string | null;
-    /** The keys the build had before the page converted its belt setting on load (convertedKeys.ts) */
-    formerKeys?: readonly string[];
-}): { from: 'kept'; key: string; as?: string } | { from: 'dropped' } | null {
+}): { from: 'kept'; key: string } | { from: 'dropped' } | null {
     if (entries.some((entry) => entry.key === currentKey)) {
         return { from: 'kept', key: currentKey };
-    }
-    const former = formerKeys.find((key) => entries.some((entry) => entry.key === key));
-    if (former !== undefined) {
-        return { from: 'kept', key: former, as: currentKey };
     }
     if (dropped !== null && dropped.formKey === currentKey) {
         return { from: 'dropped' };

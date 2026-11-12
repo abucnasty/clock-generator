@@ -15,7 +15,6 @@ import { NO_CRAFTING_MACHINES } from '../utils/machinePrototype';
 import { fullClockName, pendingClockName } from '../utils/strategyNames';
 import { afterCancel, keyToShow, selectionAfterRun, type DroppedResults, type KeptPick, type KeptResults, type RunStop, type ShownResults } from '../utils/resultsCache';
 import { openResultsStore, readShownMarker, writeShownMarker, type ResultsStore } from '../utils/resultsStore';
-import { formerKeysOf } from '../utils/convertedKeys';
 import { pendingStartupStep, startupFailureText, type StartupProgress } from '../utils/startupSteps';
 import { busyWorkersOf, checkToResend, crashOutcome, replaceWorkers } from '../worker/pool';
 import { orderAlternativeTasks } from '../worker/alternativeQueue';
@@ -874,16 +873,14 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
         const store = storeRef.current;
         const entries = store?.entries() ?? [];
         const dropped = droppedRef.current;
-        const choice = keyToShow({ currentKey: key, mode, entries, dropped, shownKey: mode === 'load' ? readShownMarker() : null, formerKeys: formerKeysOf(key) });
+        const choice = keyToShow({ currentKey: key, mode, entries, dropped, shownKey: mode === 'load' ? readShownMarker() : null });
         if (choice === null) {
             return false;
         }
         let shown: ShownResults | null = null;
         if (choice.from === 'kept' && store) {
-            const kept = await store.get(choice.key);
+            const results = await store.get(choice.key);
             const pick = entries.find(entry => entry.key === choice.key)?.pick ?? null;
-            // kept for the build before its belt setting was converted: the clocks of the build as it is now
-            const results = kept && choice.as !== undefined ? { ...kept, generatedFor: { ...kept.generatedFor, key: choice.as } } : kept;
             shown = results && { results, pick };
         }
         // set aside by Import, Paste or Reset: also when the kept copy could not be read (or is not written yet)

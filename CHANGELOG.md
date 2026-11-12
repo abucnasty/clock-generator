@@ -18,7 +18,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 ### Changed
 - generation: clocks with observed windows are found faster on large builds
 - ui: the input belts setting still works in configuration files and is deprecated
-- generation: a build stating no lane end now has dead ends on its input lanes, not Moving
+- generation: 0.28 Moving builds, stating no lane end, now get dead ends on input lanes
 
 ## [0.28.1] - 2026-11-07
 

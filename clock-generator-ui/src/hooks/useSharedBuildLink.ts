@@ -4,7 +4,6 @@ import { askEngine } from '../worker/engineClient';
 import { decodeShareLink, readShareHash, shareInvalidMessage, SHARE_PROBLEM_MESSAGES, type SharedBuild } from '../utils/shareLink';
 import { readConfigFile } from './usePersistedConfigForm';
 import { neverOverrideNoteOfConfig } from '../utils/neverOverrideNote';
-import { recordConfigConversion } from '../utils/convertedKeys';
 import { useNotify } from './useMessages';
 
 interface QueuedLink {
@@ -70,9 +69,7 @@ export function useSharedBuildLink(ready: boolean) {
             let config: Config;
             try {
                 // migrated and checked as an opened build file is
-                const read = await askEngine({ kind: 'config-file', config: readConfigFile(JSON.stringify(decoded.config)) });
-                config = read.config;
-                if (read.converted_from !== null) recordConfigConversion(read.converted_from, config);
+                config = await askEngine({ kind: 'config-file', config: readConfigFile(JSON.stringify(decoded.config)) });
             } catch (error) {
                 if (alive) notify({ severity: 'error', text: shareInvalidMessage(error instanceof Error ? error.message : String(error)) });
                 return;

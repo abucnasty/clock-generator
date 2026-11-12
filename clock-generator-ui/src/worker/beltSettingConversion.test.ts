@@ -1,6 +1,6 @@
 import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { FactorioDataService, laneFactsOfConfig, type Config } from 'clock-generator/browser';
+import { ConfigSchema, FactorioDataService, laneFactsOfConfig, type Config } from 'clock-generator/browser';
 import type { EngineAnswers, EngineQuery, WorkerRequest, WorkerResponse } from './types';
 import { readConfigFile, readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
 import { configToFormData, formDataToConfig } from '../utils/configForm/configMapping';
@@ -66,7 +66,7 @@ describe('the conversion of the former belt setting', () => {
     it('keeps the engine\'s facts of every input and buffer lane; an output lane or a lane with no role goes to its role\'s end', async () => {
         const cases: [string, Config][] = [];
         for (const [name, file] of EXAMPLES) {
-            const config = (await ask({ kind: 'config-file', config: readConfigFile(sample(file)) })).config;
+            const config = await ask({ kind: 'config-file', config: readConfigFile(sample(file)) });
             for (const value of [true, false]) {
                 cases.push([`${name}, ${value}, stated ends kept`, withSetting(config, value)]);
                 cases.push([`${name}, ${value}, stated ends taken out`, withSetting(withoutEnds(config), value)]);
@@ -78,8 +78,8 @@ describe('the conversion of the former belt setting', () => {
         const lines: string[] = [];
         for (const [name, original] of cases) {
             const read = await ask({ kind: 'config-file', config: original });
-            expect(read.config.overrides?.backed_up_belts, name).toBeUndefined();
-            const before = factsOf(read.converted_from!), after = factsOf(read.config);
+            expect(read.overrides?.backed_up_belts, name).toBeUndefined();
+            const before = factsOf(ConfigSchema.parse(original) as Config), after = factsOf(read);
             before.forEach((lane, index) => {
                 const taken = lane.role === 'input' || lane.role === 'buffer';
                 const expected = taken ? lane : { ...lane, end: 'infinite' };
@@ -96,22 +96,19 @@ describe('the conversion of the former belt setting', () => {
     it('states nothing on a build that states no setting', async () => {
         const text = sample('science/automation/automation-240.json');
         const read = await ask({ kind: 'config-file', config: withSetting(withoutEnds(JSON.parse(text) as Config), undefined) });
-        expect(read.converted_from).toBeNull();
-        expect(lanesOf(read.config).every(lane => lane.lane_end === undefined)).toBe(true);
+        expect(lanesOf(read).every(lane => lane.lane_end === undefined)).toBe(true);
     });
 
     it('states Dead end on the input lanes of a build that stated true, Infinite on those of one that stated false, and says nothing of it', async () => {
         const automation = withoutEnds(JSON.parse(sample('science/automation/automation-240.json')) as Config);
         const backed = await ask({ kind: 'config-file', config: withSetting(automation, true) });
-        expect(lanesOf(backed.config).map(lane => lane.lane_end?.kind)).toEqual(['dead_end', 'dead_end', undefined]);
-        // the answer carries the build and the build before, and no text for the page to show
-        expect(Object.keys(backed).sort()).toEqual(['config', 'converted_from']);
+        expect(lanesOf(backed).map(lane => lane.lane_end?.kind)).toEqual(['dead_end', 'dead_end', undefined]);
         const moving = await ask({ kind: 'config-file', config: withSetting(automation, false) });
-        expect(lanesOf(moving.config).map(lane => lane.lane_end?.kind)).toEqual(['infinite', 'infinite', undefined]);
+        expect(lanesOf(moving).map(lane => lane.lane_end?.kind)).toEqual(['infinite', 'infinite', undefined]);
         // the former spelling
         const older = await ask({ kind: 'config-file', config: { ...automation, overrides: { non_moving_belts: true } } });
-        expect(lanesOf(older.config).map(lane => lane.lane_end?.kind)).toEqual(['dead_end', 'dead_end', undefined]);
-        expect(older.config.overrides).toBeUndefined();
+        expect(lanesOf(older).map(lane => lane.lane_end?.kind)).toEqual(['dead_end', 'dead_end', undefined]);
+        expect(older.overrides).toBeUndefined();
     });
 
     it('opens a share link and a saved build of the released page converted, and round-trips them with no setting', async () => {
@@ -123,21 +120,19 @@ describe('the conversion of the former belt setting', () => {
         const decoded = await decodeShareLink(hash);
         if (decoded.kind !== 'build') throw new Error('not a build');
         const opened = await ask({ kind: 'config-file', config: readConfigFile(JSON.stringify(decoded.config)) });
-        expect(lanesOf(opened.config).map(lane => lane.lane_end?.kind)).toEqual(['dead_end', 'dead_end', undefined]);
+        expect(lanesOf(opened).map(lane => lane.lane_end?.kind)).toEqual(['dead_end', 'dead_end', undefined]);
         // a saved build of the released page, then saved and loaded again
         const savedText = serializeConfig({ ...configToFormData(automation), overrides: { backed_up_belts: true } } as ConfigFormData);
         const loaded = await ask({ kind: 'saved-config', config: readSavedConfig(savedText) });
         expect(loaded.problem).toBeNull();
-        expect(Object.keys(loaded).sort()).toEqual(['converted_from', 'form', 'problem']);
         const form = loaded.form as ConfigFormData;
         expect(form.overrides?.backed_up_belts).toBeUndefined();
         const again = await ask({ kind: 'saved-config', config: readSavedConfig(serializeConfig(form)) });
-        expect(again.converted_from).toBeNull();
         expect(formDataToConfig(again.form as ConfigFormData)).toEqual(formDataToConfig(form));
         expect(lanesOf(formDataToConfig(form)).map(lane => lane.lane_end?.kind)).toEqual(['dead_end', 'dead_end', undefined]);
         // a saved build of the released page answered Moving stated nothing, and stays so
         const moving = await ask({ kind: 'saved-config', config: readSavedConfig(serializeConfig(configToFormData(automation))) });
-        expect(moving.converted_from).toBeNull();
+        expect(lanesOf(moving.form as ConfigFormData).every(lane => lane.lane_end === undefined)).toBe(true);
     });
 
     it('loads a half-filled old build with no error: a machine with no recipe leaves the other lanes their ends', async () => {
