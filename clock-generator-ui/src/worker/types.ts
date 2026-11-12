@@ -51,6 +51,7 @@ import type {
 import type { ClockInstallFacts } from './installFacts';
 import type { GameNames } from '../utils/gameNames';
 import type { TargetCounts } from '../utils/targetCounts';
+import type { LaneRole } from 'clock-generator/light';
 
 /** One swing of a fuel inserter into a fuel slot, in ticks of the fuel run */
 export interface FuelSwing {
@@ -478,6 +479,8 @@ export type EngineQuery =
     | { kind: 'output-transfers'; config: Config }
     | { kind: 'inserter-coverage'; config: Config }
     | { kind: 'repeated-unit-conversion'; config: Config }
+    /** The role of each lane the belts of a config state, as the engine reads it from what the inserters carry */
+    | { kind: 'lane-roles'; config: Config }
     /** The form state saved in localStorage, migrated but not yet checked against the config schema */
     | { kind: 'saved-config'; config: unknown }
     /**
@@ -496,6 +499,13 @@ export type EngineQuery =
         pickup_warnings?: unknown;
         suggested_target: unknown;
     };
+
+/** A lane of a belt of the config and its role, as the engine reads it (the light entry's `laneRolesOf`) */
+export interface LaneRoleOfLane {
+    belt_id: number;
+    lane: 1 | 2;
+    role: LaneRole | null;
+}
 
 export interface LiveCoverage {
     issues: InserterCoverageIssue[];
@@ -534,6 +544,8 @@ export interface EngineAnswers {
      */
     'inserter-coverage': LiveCoverage;
     'repeated-unit-conversion': CheckedRepeatedUnitConversion;
+    /** Each lane the belts state, belt by belt and lane 1 first, with its role; null where no inserter takes or drops its item */
+    'lane-roles': LaneRoleOfLane[];
     /** Why the saved config cannot be used; null when it can */
     /**
      * The saved form state with each machine's former type read as its machine, to load in its place, and why it cannot
