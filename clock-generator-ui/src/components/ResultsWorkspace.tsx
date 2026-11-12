@@ -19,7 +19,7 @@ import type {
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 import type { FuelViewData, GenerationAssumptions, ShiftOptionsView } from '../worker/types';
 import { freeLaneDropText, startCheckSummary } from '../utils/modelAssumptions';
-import { entityLabel } from '../utils/entityLabel';
+import { entityInSentence } from '../utils/entityLabel';
 import { ClockAlternativesPanel } from './ClockAlternativesPanel';
 import { DeeperSearchNotice } from './DeeperSearchNotice';
 import { DetailsPanel } from './DetailsPanel';
@@ -229,7 +229,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                         {saved ? `Made for ${saved.setpoint.copies} ${saved.setpoint.copies === 1 ? 'copy' : 'copies'} of your build${selected.beltLabel === '' ? '' : `, with the input belts ${saved.overrides?.backed_up_belts ? 'backed up' : 'moving'}`}.` : 'These results are for a saved build whose metadata is unavailable.'}
                         {selected.assumptions?.kickStarts.length ? ` ${selected.assumptions.kickStarts.length} modeled kick start(s).` : ''}
                         {selected.assumptions?.outputDrops.some(drop => drop.mode === 'shared-lanes') ? ' The drop positions you gave are used to space the output drops on the belt.' : ''}
-                        {freeLaneBelts.length > 0 ? ` ${freeLaneDropText(freeLaneBelts.map(id => entityLabel('belt', id)).join(' and '))}` : ''}
+                        {freeLaneBelts.length > 0 ? ` ${freeLaneDropText(freeLaneBelts.map(id => entityInSentence('belt', id, selected?.assumptions?.entityNames)).join(' and '))}` : ''}
                         {selected.assumptions?.machineFuel.length ? ' Imported machine fuel is in Why.' : ''}
                     </Typography>
                     {saved?.inserters && <InserterAssumptions inserters={saved.inserters} />}

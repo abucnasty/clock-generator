@@ -33,7 +33,7 @@ describe("the copies of a build that share dead-ended lanes", () => {
         expect(losses).toHaveLength(takt.assessment.shared_lane_losses?.length ?? 0);
         expect(new Set(losses.map(loss => loss.copy))).toEqual(new Set([2]));
         expect(losses.slice(0, 1).map(loss => [loss.belt_id, loss.lane, loss.copy, loss.inserter_id])).toEqual([[2, 1, 2, 3]]);
-        expect(takt.description).toContain("It is not stable on a lane its copies share. Lane 1 of belt 2 ends in a dead end. The 5.5 copies take "
+        expect(takt.description).toContain("It is not stable on a lane its copies share. The advanced circuit lane ends in a dead end. The 5.5 copies take "
             + "advanced circuit from it. When the items move east, copy 2 from the entry does not get sufficient items.");
     });
 
@@ -74,6 +74,33 @@ describe("a composed clock made and not stable on a lane the copies share", () =
         expect(generated.alternatives.some(it => it.maker === "per-branch")).toBe(false);
         const composed = generated.not_made.find(it => it.id === "per-branch");
         expect(composed).toMatchObject({ label: "Coordinated Sources" });
-        expect(composed!.reason).toMatch(/^Made on 352 ticks and not stable\. It is not stable on a lane its copies share\. Lane 1 of belt 1 ends in an infinite end\. The 5\.5 copies take advanced circuit from it\./);
+        expect(composed!.reason).toMatch(/^Made on 352 ticks and not stable\. It is not stable on a lane its copies share\. The advanced circuit lane \(lane 1 of belt 1\) ends in an infinite end\. The 5\.5 copies take advanced circuit from it\./);
     }, 300_000);
+});
+
+// AUTOMATION_SCIENCE_240: 9 copies take iron gear wheel and copper plate from the two dead-ended lanes of belt 1. Under
+// Euclidean Swings (72 ticks) copy 2's inserter 1 makes 62 of the 65 swings it makes alone with each item, every hand of
+// 16 (measured from the hands of the verdict's runs). A loss is said in those swings, never in items or crafts.
+describe("the swings a loss on the automation science build's shared lanes counts", () => {
+    let generated: ClockAlternativesResult;
+    beforeAll(async () => {
+        generated = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240), { logger: quiet });
+    });
+
+    it("are the hands of the runs: 62 of 65 on each input lane for copy 2 under Euclidean Swings", () => {
+        const euclidean = generated.alternatives.find(it => it.id === "euclidean_swings")!;
+        expect(euclidean.result.simulation_duration.ticks).toBe(72);
+        const losses = (euclidean.assessment.shared_lane_losses ?? []).filter((loss): loss is SharedLaneLoss => !isNotChecked(loss));
+        expect(losses.map(loss => [loss.lane, loss.copy, loss.swings, loss.alone_swings, loss.short_swings, loss.items, loss.alone_items]).sort())
+            .toEqual([[1, 2, 62, 65, 0, 992, 1040], [2, 2, 62, 65, 0, 992, 1040]]);
+        expect(losses.map(loss => loss.text.slice(loss.text.indexOf("Its inserter")))).toEqual(expect.arrayContaining([
+            "Its inserter that takes iron gear wheel and copper plate misses 3 of its 65 swings with iron gear wheel in 65 window cycles.",
+            "Its inserter that takes iron gear wheel and copper plate misses 3 of its 65 swings with copper plate in 65 window cycles."]));
+    });
+
+    it("leave no count of items or of crafts in any loss text", () => {
+        const texts = generated.alternatives.flatMap(it => (it.assessment.shared_lane_losses ?? []).map(loss => loss.text));
+        expect(texts.length).toBeGreaterThan(0);
+        for (const text of texts) expect(text).not.toMatch(/takes [\d,]+ in|it takes [\d,]+\.|crafts behind|hands behind/);
+    });
 });

@@ -41,4 +41,17 @@ describe('the model texts', () => {
         const before = { ...assumptions, machines: undefined };
         expect(modeledDetails({ assumptions: before } as unknown as ClockAlternativeView, words, words)[0]).toMatch(/^Machine 3 gets a kick start/);
     });
+    it('names the belt and the inserters of an output drop by their items, from the names the engine carried', () => {
+        const outputDrops = [{ beltId: 1, inserterIds: [1, 2], mode: 'shared-lanes' as const }, { beltId: 2, inserterIds: [3], mode: 'free-lane' as const }];
+        const entityNames = { 'belt:1': 'grenade belt', 'inserter:1': 'inserter (inserter 1) that drops grenade', 'inserter:2': 'inserter (inserter 2) that drops grenade',
+            'belt:2': 'coal belt' };
+        const assumptions = { kickStarts: [], outputDrops, overrides: undefined, machineFuel: [], entityNames };
+        expect(modeledDetails({ assumptions } as unknown as ClockAlternativeView)).toEqual([
+            'The grenade belt: the drop positions you gave are used to space the drops of the inserter (inserter 1) that drops grenade, '
+                + 'the inserter (inserter 2) that drops grenade on the belt.',
+            freeLaneDropText('the coal belt'),
+        ]);
+        // a view kept before the names were carried
+        expect(modeledDetails({ assumptions: { ...assumptions, entityNames: undefined } } as unknown as ClockAlternativeView)[0]).toMatch(/^Belt 1: .* Inserter 1, Inserter 2 on the belt\.$/);
+    });
 });

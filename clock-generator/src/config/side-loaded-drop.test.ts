@@ -62,7 +62,7 @@ describe("a drop marked as side-loading onto a belt downstream", () => {
                 id: "side-loaded-drop",
                 scope: "build",
                 title: "Known limit: a drop onto a belt that side-loads onto another",
-                what: "Inserter 2 drops onto a 3 tile belt buffer that side-loads onto another belt.",
+                what: "The inserter that drops iron-gear-wheel drops onto a 3 tile belt buffer that side-loads onto another belt.",
                 why: "",
                 explanation: "The clock may make less in the game than shown here, most of all when these inserters are switched on at the same time as "
                     + "others that drop onto the belt. Give each of these drops a belt of its own, or check the clock in the game.",

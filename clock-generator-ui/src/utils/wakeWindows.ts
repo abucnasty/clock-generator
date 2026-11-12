@@ -56,6 +56,11 @@ export interface WakeWindowRow {
     mode: WakeWindowRowMode;
     /** Why the clock leaves it always on, when the engine says; only on a row in 'always-on' mode */
     alwaysOnReason?: AlwaysOnReason;
+    /**
+     * The drill or inserter that the reason names, by its items ("the inserter that takes iron ore", the engine's names);
+     * absent where the reason names none, or the names were not carried
+     */
+    alwaysOnNamed?: string;
     ownClock?: OwnClock;
     /** Ticks of the window cycle it is on: the windows' lengths, the whole window cycle when always on */
     onTicks: number;
@@ -68,7 +73,15 @@ export interface WakeWindowRow {
 export type WakeWindowSource = Pick<
     ClockAlternativeView,
     'clockWindows' | 'stateTransitionHistory' | 'asBuilt' | 'fuelView' | 'beltPickupSlackTicks' | 'simulationDurationTicks' | 'alwaysOnReasons'
->;
+> & Partial<Pick<ClockAlternativeView, 'assumptions'>>;
+
+/** The drill or inserter that a drill's always-on reason names, by its items, from the names the engine carried */
+function alwaysOnNamedOf(reason: AlwaysOnReason | undefined, entityNames: Readonly<Record<string, string>> | undefined): string | undefined {
+    if (reason?.kind !== 'chest-drill') return undefined;
+    const why = reason.why;
+    const id = why.kind === 'other-drill' ? `drill:${why.drill_number}` : why.kind === 'filler' || why.kind === 'taker-without-window' ? `inserter:${why.inserter_number}` : undefined;
+    return id === undefined ? undefined : entityNames?.[id];
+}
 
 const TICKS_PER_SECOND = 60;
 
@@ -283,6 +296,10 @@ export function buildWakeWindowRows(alternative: WakeWindowSource, options: read
             windows,
             mode,
             ...(mode === 'always-on' && alternative.alwaysOnReasons?.[id] ? { alwaysOnReason: alternative.alwaysOnReasons[id] } : {}),
+            ...(() => {
+                const named = mode === 'always-on' ? alwaysOnNamedOf(alternative.alwaysOnReasons?.[id], alternative.assumptions?.entityNames) : undefined;
+                return named === undefined ? {} : { alwaysOnNamed: named };
+            })(),
             ...(ownClock ? { ownClock } : {}),
             onTicks,
             onShare,

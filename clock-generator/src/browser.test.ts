@@ -84,6 +84,7 @@ describe("the light entry", () => {
             "config/migrate-setpoint.ts",
             "config/migrate-window-cycle.ts",
             "crafting/candidates/coordinated-sources-parts.ts",
+            "crafting/entity-name.ts",
             "crafting/machine-name.ts",
             "crafting/rank.ts",
             "crafting/sequence/compact-history.ts",

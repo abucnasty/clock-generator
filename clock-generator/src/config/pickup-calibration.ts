@@ -5,6 +5,8 @@ import { beltPickupCalibrationOf, configuredHandSize } from "../entities/inserte
 import type { Logger } from "../common/logger";
 import { chestAcceptsItem, filtersExclude } from "./inserter-coverage-validator";
 import { Config, InserterConfig } from "./schema";
+import { buildToNameOf } from "../crafting/build-names";
+import { beltNameInText, capitalized, inserterNameInText, NO_BUILD, theName, type BuildToName } from "../crafting/entity-name";
 
 /**
  * A belt pickup outside what belt pickup timing was calibrated on: an item an inserter takes off a belt in stacks other
@@ -80,14 +82,16 @@ export function uncalibratedBeltPickups(config: Config): UncalibratedBeltPickup[
 const article = (count: number) => /^(8|1[18]$)/.test(String(count)) ? "an" : "a";
 
 /** "Inserter 3 picks up iron-plate from belt 2 in 2-item belt stacks with a 12-item hand." */
-export function describeUncalibratedPickup(pickup: UncalibratedBeltPickup): string {
+export function describeUncalibratedPickup(pickup: UncalibratedBeltPickup, names: { build: BuildToName; numbered: boolean } = { build: NO_BUILD, numbered: false }): string {
     const sizes = pickup.lane_stack_sizes;
     const stacks = sizes.length === 0 ? ""
         : ` in ${sizes.slice(0, -1).map(size => `${size}-`).join(", ")}${sizes.length > 1 ? " and " : ""}${sizes[sizes.length - 1]}-item belt stacks`;
     const hand = pickup.hand_size === null ? ""
         : ` with ${article(pickup.hand_size)} ${pickup.hand_size}-item hand`
             + (pickup.item_stack_size === null ? "" : ` (${pickup.item} stacks to ${pickup.item_stack_size})`);
-    return `Inserter ${pickup.inserter_id} picks up ${pickup.item} from belt ${pickup.belt_id}${stacks}${hand}.`;
+    const options = { numbered: names.numbered };
+    const inserter = capitalized(theName(inserterNameInText(pickup.inserter_id, names.build, options)));
+    return `${inserter} picks up ${pickup.item} from ${theName(beltNameInText(pickup.belt_id, names.build, options))}${stacks}${hand}.`;
 }
 
 /** What belt pickup timing was calibrated on, and what that means elsewhere */
@@ -97,17 +101,19 @@ export const BELT_PICKUP_CALIBRATION = "Belt pickup timing is calibrated with 16
  * The warning for a build with belt pickups outside the calibration, the same in the log and in the live editor; null
  * when every belt pickup is inside it.
  */
-export function beltPickupNotTestedNote(pickups: readonly UncalibratedBeltPickup[]): string | null {
+export function beltPickupNotTestedNote(pickups: readonly UncalibratedBeltPickup[], build: BuildToName = NO_BUILD): string | null {
     if (pickups.length === 0) {
         return null;
     }
-    return `Not tested: ${pickups.map(describeUncalibratedPickup).join(" ")} ${BELT_PICKUP_CALIBRATION}; at other belt stack `
+    // a note of the form and the log: the inserter and the belt by their items, with their numbers to find the rows by
+    return `Not tested: ${pickups.map(pickup => describeUncalibratedPickup(pickup, { build, numbered: true })).join(" ")} ${BELT_PICKUP_CALIBRATION}; at other belt stack `
         + "sizes and hand sizes it has not been compared with the game, so the clock may not match the game.";
 }
 
 /** Logs the warning once for a generation whose config has belt pickups outside the calibration */
 export function warnUncalibratedBeltPickups(config: Config, logger: Logger): void {
-    const note = beltPickupNotTestedNote(uncalibratedBeltPickups(config));
+    const pickups = uncalibratedBeltPickups(config);
+    const note = beltPickupNotTestedNote(pickups, pickups.length === 0 ? NO_BUILD : buildToNameOf(config));
     if (note !== null) {
         logger.warn(note);
     }

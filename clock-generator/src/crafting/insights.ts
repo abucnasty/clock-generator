@@ -18,6 +18,8 @@ import { chestDrillBecause } from "./chest-drill-windows";
 import { describeDropSpacing, dropSpacing, dropSpacingTable } from "../config/drop-spacing";
 import { describeOnePerCopyFeed, lanesExactlyFull, lanesExactlyFullNote, onePerCopyFeeds } from "../config/lane-capacity-validator";
 import { machineNameOf, type MachineToName } from "./machine-name";
+import { buildToNameOf } from "./build-names";
+import { capitalized, chestNameInText, drillNameInText, entityNameOf, lanesInSentence, NO_BUILD, theName, type BuildToName } from "./entity-name";
 
 /** Facts of one machine of the build, for explaining what its limits allow */
 export interface MachineFactsEntry {
@@ -59,24 +61,27 @@ const SAME_SWING_TOLERANCE_TICKS = 4;
 
 const round = (value: number, digits = 1) => Number(value.toFixed(digits));
 
-/** How the insights name an entity of the history: a machine by its kind and recipe (machine-name.ts), anything else by its label */
+/**
+ * How the insights name an entity of the history: a machine by its kind and recipe (machine-name.ts), a belt, an inserter, a
+ * chest and a drill by their items (entity-name.ts), anything else by its label
+ */
 interface EntityName {
-    /** In a table cell: "foundry that makes casting-iron", "Belt 1" */
+    /** In a table cell: "foundry that makes casting-iron", "accumulator belt (belt 1)" */
     cell: string;
-    /** In a sentence: "the foundry that makes casting-iron", "Inserter 2" */
+    /** In a sentence: "the foundry that makes casting-iron", "the inserter that moves battery" */
     in_sentence: string;
 }
 
-/** Names an entity of the history by its id among the config's machines, or by its label where it is no machine of them */
-function entityNamer(machines: readonly MachineToName[]): (entity: { entity_id: string; label: string }) => EntityName {
+/** Names an entity of the history by its id among the config's machines and the build's other entities, or by its label where it is none of them */
+function entityNamer(machines: readonly MachineToName[], build: BuildToName): (entity: { entity_id: string; label: string }) => EntityName {
     return entity => {
-        const machine = machineNameOf(entity.entity_id, machines);
-        return machine === undefined ? { cell: entity.label, in_sentence: entity.label } : { cell: machine, in_sentence: `the ${machine}` };
+        const name = machineNameOf(entity.entity_id, machines) ?? entityNameOf(entity.entity_id, build);
+        return name === undefined || /^(belt|inserter|chest|drill) \d/.test(name) ? { cell: entity.label, in_sentence: entity.label } : { cell: name, in_sentence: `the ${name}` };
     };
 }
 
 /** A sentence's first letter upper case */
-const capital = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+const capital = capitalized;
 const ticksList = (ticks: number[]) => ticks.length === 0 ? "never" : ticks.join(", ");
 
 function workingTicks(run: CompactStateTransitionHistory, entity: CompactEntityStateTransitions, window_cycle_ticks: number): number {
@@ -138,7 +143,7 @@ function spareTimeInsight(result: BlueprintGenerationResult, run: CompactStateTr
 /** Per ingredient: when the machine takes it, how much comes per hand and how many hands a window cycle needs */
 function insertionLimitsInsight(result: BlueprintGenerationResult, entities: CompactEntityStateTransitions[],
     nameOf: (entity: { entity_id: string; label: string }) => EntityName): ClockInsight | null {
-    const rows: { machine: EntityName; item: string; per_craft: number; limit: number; inserter: string; hand: number; hands: number }[] = [];
+    const rows: { machine: EntityName; item: string; per_craft: number; limit: number; inserter: EntityName; hand: number; hands: number }[] = [];
     for (const planned of result.serializable_transfer_plan.entities) {
         const inserter = entities.find(it => it.entity_id === planned.entity_id);
         const machine = result.machine_facts.find(it => it.entity_id === inserter?.sink?.entity_id);
@@ -155,7 +160,7 @@ function insertionLimitsInsight(result: BlueprintGenerationResult, entities: Com
                 item: transfer.item_name,
                 per_craft: input.amount_per_craft,
                 limit: input.automated_insertion_limit,
-                inserter: inserter.label,
+                inserter: nameOf(inserter),
                 hand: planned.stack_size,
                 hands: transfer.numerator / transfer.denominator * result.used_lcm,
             });
@@ -171,7 +176,7 @@ function insertionLimitsInsight(result: BlueprintGenerationResult, entities: Com
         scope: "build",
         title: "Each machine only takes an ingredient while it is below its insertion limit",
         what: `${capital(example.machine.in_sentence)} takes ${example.item} only while it holds fewer than ${example.limit}. `
-            + `${example.inserter} brings ${example.hand} at a time and the window cycle needs ${round(example.hands, 2)} `
+            + `${capital(example.inserter.in_sentence)} brings ${example.hand} at a time and the window cycle needs ${round(example.hands, 2)} `
             + `hand${example.hands === 1 ? "" : "s"} of it.`,
         why: "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount "
             + "for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes "
@@ -181,7 +186,7 @@ function insertionLimitsInsight(result: BlueprintGenerationResult, entities: Com
             + "cannot have them back to back once the machine holds the limit or more.",
         table: {
             columns: ["Machine", "Ingredient", "Per craft", "Insertion limit", "Brought by", "Per hand", "Hands each window cycle"],
-            rows: rows.map(it => [it.machine.cell, it.item, `${it.per_craft}`, `${it.limit}`, it.inserter, `${it.hand}`, `${round(it.hands, 2)}`]),
+            rows: rows.map(it => [it.machine.cell, it.item, `${it.per_craft}`, `${it.limit}`, it.inserter.cell, `${it.hand}`, `${round(it.hands, 2)}`]),
         },
     };
 }
@@ -222,7 +227,7 @@ function loopingRecipeInsight(result: BlueprintGenerationResult, entities: Compa
 /** How long a machine takes to make a full hand for the inserter that empties it */
 function outputHandInsight(result: BlueprintGenerationResult, entities: CompactEntityStateTransitions[],
     nameOf: (entity: { entity_id: string; label: string }) => EntityName): ClockInsight | null {
-    const rows: { machine: EntityName; item: string; inserter: string; hand: number; per_craft: number; crafts: number; ticks: number }[] = [];
+    const rows: { machine: EntityName; item: string; inserter: EntityName; hand: number; per_craft: number; crafts: number; ticks: number }[] = [];
     for (const planned of result.serializable_transfer_plan.entities) {
         const inserter = entities.find(it => it.entity_id === planned.entity_id);
         const machine = result.machine_facts.find(it => it.entity_id === inserter?.source?.entity_id);
@@ -233,7 +238,7 @@ function outputHandInsight(result: BlueprintGenerationResult, entities: CompactE
         rows.push({
             machine: nameOf(inserter.source!),
             item: machine.facts.output_item,
-            inserter: inserter.label,
+            inserter: nameOf(inserter),
             hand: planned.stack_size,
             per_craft: machine.facts.output_per_craft,
             crafts,
@@ -249,7 +254,7 @@ function outputHandInsight(result: BlueprintGenerationResult, entities: CompactE
         scope: "build",
         title: `A full hand of ${example.item} takes ${round(example.ticks)} ticks to make`,
         what: `${capital(example.machine.in_sentence)} makes ${round(example.per_craft, 2)} ${example.item} per craft (productivity included), so the `
-            + `${example.hand} that ${example.inserter} carries take ${round(example.crafts)} crafts, about ${round(example.ticks)} ticks.`,
+            + `${example.hand} that ${example.inserter.in_sentence} carries take ${round(example.crafts)} crafts, about ${round(example.ticks)} ticks.`,
         why: "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable "
             + "window closes it keeps holding those items until the next enable window.",
         explanation: `A swing that comes sooner than ${round(example.ticks)} ticks after the last one finds a partial hand unless the machine `
@@ -257,13 +262,13 @@ function outputHandInsight(result: BlueprintGenerationResult, entities: CompactE
             + "crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows.",
         table: {
             columns: ["Machine", "Item", "Taken by", "Hand", "Per craft", "Crafts per hand", "Ticks per hand"],
-            rows: rows.map(it => [it.machine.cell, it.item, it.inserter, `${it.hand}`, `${round(it.per_craft, 2)}`, `${round(it.crafts)}`, `${round(it.ticks)}`]),
+            rows: rows.map(it => [it.machine.cell, it.item, it.inserter.cell, `${it.hand}`, `${round(it.per_craft, 2)}`, `${round(it.crafts)}`, `${round(it.ticks)}`]),
         },
     };
 }
 
 /** Inserters that drop at other ticks when only the clock drives them than they did in the plan */
-function planVersusClockInsight(result: BlueprintGenerationResult): ClockInsight | null {
+function planVersusClockInsight(result: BlueprintGenerationResult, nameOf: (entity: { entity_id: string; label: string }) => EntityName): ClockInsight | null {
     const clock_only = result.clock_only_run?.state_transition_history;
     // shifted swings were moved off the plan on purpose; their own insight says where to
     if (clock_only === undefined || (result.search?.kind === "shifted cycle" && result.search.picked !== null)) {
@@ -272,6 +277,7 @@ function planVersusClockInsight(result: BlueprintGenerationResult): ClockInsight
     const plan = result.serializable_state_transition_history;
     const differing = plan.entities.filter(it => it.entity_type === "inserter").map(entity => ({
         label: entity.label,
+        name: nameOf(entity).in_sentence,
         planned: dropTicks(plan, entity.entity_id),
         clocked: dropTicks(clock_only, entity.entity_id),
     })).filter(({ planned, clocked }) => planned.length !== clocked.length
@@ -284,9 +290,9 @@ function planVersusClockInsight(result: BlueprintGenerationResult): ClockInsight
         id: "plan-versus-clock",
         scope: "clock",
         title: "Swings land a few ticks off the plan, as the blueprint runs them",
-        what: `The plan has ${example.label} drop at ticks ${ticksList(example.planned)}. Run by the clock alone, as in the game, `
+        what: `The plan has ${example.name} drop at ticks ${ticksList(example.planned)}. Run by the clock alone, as in the game, `
             + `it drops at ticks ${ticksList(example.clocked)}.`
-            + (differing.length > 1 ? ` ${differing.slice(1).map(it => it.label).join(" and ")} differ${differing.length === 2 ? "s" : ""} too.` : "")
+            + (differing.length > 1 ? ` ${capital(differing.slice(1).map(it => it.name).join(" and "))} differ${differing.length === 2 ? "s" : ""} too.` : "")
             + " The clock still holds its rate.",
         why: "The plan lets each inserter wait for its machine. The blueprint has only the clock, which switches inserters on and "
             + "off. An enable window also stays on 2 ticks after the clock closes it, so an inserter that is back in time can start "
@@ -318,7 +324,7 @@ function wakeUpsInsight(result: BlueprintGenerationResult, entities: CompactEnti
     const rows = wake_ups.inserters.map(it => {
         const entity = entities.find(entity => entity.entity_id === it.inserter_id);
         const ends = entity?.source && entity.sink ? `${nameOf(entity.source).cell} to ${nameOf(entity.sink).cell}` : "";
-        return { ...it, label: entity?.label ?? it.inserter_id, ends };
+        return { ...it, label: entity?.label ?? it.inserter_id, name: entity === undefined ? it.inserter_id : nameOf(entity).in_sentence, ends };
     }).sort((a, b) => b.wake_ups_per_minute - a.wake_ups_per_minute);
     const most = rows[0];
     const mostly_enabled = rows.filter(it => it.enabled_share >= MOSTLY_ENABLED_SHARE && it.alarms_per_minute > 0);
@@ -327,10 +333,10 @@ function wakeUpsInsight(result: BlueprintGenerationResult, entities: CompactEnti
         scope: "clock",
         title: `Machines wake the inserters ${round(wake_ups.wake_ups_per_minute)} times a minute`,
         what: `In a long run of this clock the machines of one copy of the build woke its inserters ${round(wake_ups.wake_ups_per_minute)} `
-            + `times a minute. ${most.label} is woken most, ${round(most.wake_ups_per_minute)} times a minute: it is on `
+            + `times a minute. ${capital(most.name)} is woken most, ${round(most.wake_ups_per_minute)} times a minute: it is on `
             + `${percent(most.enabled_share)} of the time and is on and waiting for ${percent(most.waiting_share)} of it.`
             + (mostly_enabled.length === 0 ? "" : ` On ${percent(MOSTLY_ENABLED_SHARE)} of the time or more: `
-                + `${mostly_enabled.map(it => `${it.label} (${percent(it.enabled_share)})`).join(", ")}.`),
+                + `${mostly_enabled.map(it => `${it.name} (${percent(it.enabled_share)})`).join(", ")}.`),
         why: "An enabled inserter with nothing to move sleeps on the wakeup list of the machine it waits on, and that machine "
             + "wakes it every time it finishes a craft. The inserter looks for something to move, finds nothing or part of a "
             + "hand, and sleeps again. An inserter its clock has disabled is on no list and is never woken. In game the debug "
@@ -432,12 +438,12 @@ export function disturbanceTrialInsight(verdict: DisturbanceTrialVerdict, expect
 }
 
 /** That the build can deadlock whatever its clock is, and which inserters it is about */
-export function deadlockRiskInsight(risks: readonly SharedItemDeadlockRisk[]): ClockInsight {
+export function deadlockRiskInsight(risks: readonly SharedItemDeadlockRisk[], build: BuildToName = NO_BUILD): ClockInsight {
     return {
         id: "deadlock-risk",
         scope: "build",
         title: "This build has a deadlock risk: two inserters bring the same item",
-        what: risks.map(describeSharedItem).join(" "),
+        what: risks.map(risk => describeSharedItem(risk, build)).join(" "),
         why: "An inserter that starts picking an item up after the other has already put it in finds the item at its insertion "
             + "limit by the time its hand is ready, and holds the hand until the machine has used enough for it to drop. While it "
             + "holds it, it takes nothing else off the belt. If the machine then runs out of what only that inserter brings while "
@@ -464,7 +470,7 @@ export function beltPickupNotTestedInsights(config: Config): ClockInsight[] {
         id: "belt-pickup-not-tested",
         scope: "build",
         title: "Not tested: belt pickup outside 16-item hands on 4-item belt stacks",
-        what: pickups.map(describeUncalibratedPickup).join(" "),
+        what: pickups.map(pickup => describeUncalibratedPickup(pickup, { build: buildToNameOf(config), numbered: false })).join(" "),
         why: `${BELT_PICKUP_CALIBRATION}. At other belt stack sizes and hand sizes the simulator's pickup timing has not been `
             + "compared with the game.",
         explanation: "The clock may not match the game: its rate, stability and wakeups are worked out from pickup timing "
@@ -485,7 +491,7 @@ export function sideLoadedDropInsights(config: Config): ClockInsight[] {
         id: "side-loaded-drop",
         scope: "build",
         title: SIDE_LOADED_DROP_TITLE,
-        what: drops.map(describeSideLoadedDrop).join(" "),
+        what: drops.map(drop => describeSideLoadedDrop(drop, { build: buildToNameOf(config), numbered: false })).join(" "),
         why: "",
         explanation: SIDE_LOADED_DROP_ADVICE,
     }];
@@ -507,7 +513,7 @@ export function dropSpacingInsights(result: Pick<BlueprintGenerationResult, "clo
     if (spacing === null) {
         return [];
     }
-    const text = describeDropSpacing(spacing);
+    const text = describeDropSpacing(spacing, { build: buildToNameOf(config), numbered: false });
     return [{ id: "drop-spacing", scope: "clock", title: text.title, what: text.what, why: text.why, explanation: text.explanation, table: dropSpacingTable(spacing) }];
 }
 
@@ -519,19 +525,16 @@ export function lanesExactlyFullInsights(config: Config): ClockInsight[] {
     } catch {
         return [];
     }
-    const note = lanesExactlyFullNote(issues);
+    const build = buildToNameOf(config);
+    const note = lanesExactlyFullNote(issues, { build, numbered: false });
     if (note === null) {
         return [];
     }
-    const lanes = issues.map(issue => issue.lanes.length === 1 ? `lane ${issue.lanes[0]} of belt ${issue.belt_id}` : `both lanes of belt ${issue.belt_id}`).join(" and ");
-    const title = `${lanes.charAt(0).toUpperCase()}${lanes.slice(1)} ${issues.length === 1 && issues[0].lanes.length === 1 ? "is" : "are"} exactly full`;
+    const lanes = issues.map(issue => lanesInSentence(issue.lanes.map(lane => ({ belt_id: issue.belt_id, lane })), build)).join(" and ");
+    const title = `${capital(lanes)} ${issues.length === 1 && issues[0].lanes.length === 1 ? "is" : "are"} exactly full`;
     return [{ id: "lanes-exactly-full", scope: "build", title, what: note, why: "", explanation: "" }];
 }
 
-/** "lane 1 of belt 2", "lanes 1 and 2 of belt 2", for lanes of one belt */
-function lanesOfBelt(belt_id: number, lanes: readonly number[]): string {
-    return lanes.length === 1 ? `lane ${lanes[0]} of belt ${belt_id}` : `lanes ${lanes.join(" and ")} of belt ${belt_id}`;
-}
 
 /**
  * That the copies were checked on the lanes they share at a spacing the config does not give (no `copy_offset`): a
@@ -540,6 +543,7 @@ function lanesOfBelt(belt_id: number, lanes: readonly number[]): string {
 export function assumedCopySpacingInsights(config: Config): ClockInsight[] {
     const spacings = assumedCopySpacings(config);
     if (spacings.length === 0) return [];
+    const build = buildToNameOf(config);
     const by_tiles = new Map<number, Map<number, number[]>>();
     for (const { belt_id, lane, tiles } of spacings) {
         const of_tiles = by_tiles.get(tiles) ?? new Map<number, number[]>();
@@ -547,7 +551,7 @@ export function assumedCopySpacingInsights(config: Config): ClockInsight[] {
         by_tiles.set(tiles, of_tiles);
     }
     const places = [...by_tiles].map(([tiles, belts]) => `The check puts the copies ${Number.isInteger(tiles) ? tiles : tiles.toFixed(1)} `
-        + `${tiles === 1 ? "tile" : "tiles"} apart on ${[...belts].map(([belt_id, lanes]) => lanesOfBelt(belt_id, lanes)).join(" and ")}.`);
+        + `${tiles === 1 ? "tile" : "tiles"} apart on ${[...belts].map(([belt_id, lanes]) => lanesInSentence(lanes.map(lane => ({ belt_id, lane })), build)).join(" and ")}.`);
     return [{ id: "assumed-copy-spacing", scope: "build", title: "The copies are checked at a spacing the configuration does not give",
         what: `The configuration has no copy_offset. ${places.join(" ")} `
             + "Set copy_offset to the distance from one copy to the next.",
@@ -556,9 +560,11 @@ export function assumedCopySpacingInsights(config: Config): ClockInsight[] {
 
 /** That the check of the shared lanes leaves out each lane the copies share on a belt the build drops onto */
 export function droppedOntoSharedLaneInsights(config: Config): ClockInsight[] {
-    return droppedOntoSharedLanes(config).map(({ belt_id, lane }) => ({ id: `shared-lane-not-checked-${belt_id}-${lane}`, scope: "build" as const,
-        title: `Lane ${lane} of belt ${belt_id} is not checked with every copy on it`,
-        what: `Lane ${lane} of belt ${belt_id} is not checked with every copy on it. The build drops items onto this belt, and the check of a `
+    const lanes = droppedOntoSharedLanes(config);
+    const build = lanes.length === 0 ? NO_BUILD : buildToNameOf(config);
+    return lanes.map(({ belt_id, lane }) => ({ id: `shared-lane-not-checked-${belt_id}-${lane}`, scope: "build" as const,
+        title: `${capital(lanesInSentence([{ belt_id, lane }], build))} is not checked with every copy on it`,
+        what: `${capital(lanesInSentence([{ belt_id, lane }], build))} is not checked with every copy on it. The build drops items onto this belt, and the check of a `
             + "shared lane does not run those drops yet.",
         why: "", explanation: "" }));
 }
@@ -571,25 +577,33 @@ export function onePerCopyFeedInsights(config: Config): ClockInsight[] {
     } catch {
         return [];
     }
-    return feeds.map(feed => ({ id: `one-per-copy-feed-${feed.belt_id}-${feed.lanes.join("-")}`, scope: "build" as const,
-        title: `The supply rate each copy's ${feed.lanes.length === 1 ? `lane ${feed.lanes[0]}` : "lanes"} of belt ${feed.belt_id} needs`,
-        what: describeOnePerCopyFeed(feed), why: "", explanation: "" }));
+    const build = feeds.length === 0 ? NO_BUILD : buildToNameOf(config);
+    return feeds.map(feed => {
+        const lanes = lanesInSentence(feed.lanes.map(lane => ({ belt_id: feed.belt_id, lane })), build);
+        return { id: `one-per-copy-feed-${feed.belt_id}-${feed.lanes.join("-")}`, scope: "build" as const,
+            title: `The supply rate that ${lanes} ${feed.lanes.length === 1 ? "needs" : "need"} in each copy`,
+            what: describeOnePerCopyFeed(feed, { build, numbered: false }), why: "", explanation: "" };
+    });
 }
 
-/** The insights of a clock; `machines`, the config's, name the machines in them (machine-name.ts) */
-export function clockInsights(result: BlueprintGenerationResult, holds: boolean, machines: readonly MachineToName[], kick_start_items = DEFAULT_KICK_START_ITEMS): ClockInsight[] {
+/**
+ * The insights of a clock; `machines`, the config's, name the machines in them (machine-name.ts), and `build` the belts,
+ * inserters, chests and drills (entity-name.ts)
+ */
+export function clockInsights(result: BlueprintGenerationResult, holds: boolean, machines: readonly MachineToName[], kick_start_items = DEFAULT_KICK_START_ITEMS,
+    build: BuildToName = NO_BUILD): ClockInsight[] {
     // the run the blueprint follows; build-wide numbers are only read from a clock that holds the target
     const run = result.clock_only_run?.state_transition_history ?? result.serializable_state_transition_history;
     // an inserter that never moved in one run is only listed in the other
     const entities = [...run.entities, ...result.serializable_state_transition_history.entities];
-    const nameOf = entityNamer(machines);
+    const nameOf = entityNamer(machines, build);
     const insights: (ClockInsight | null)[] = [
         loopingRecipeInsight(result, entities, kick_start_items, nameOf),
         holds ? spareTimeInsight(result, run, nameOf) : null,
         insertionLimitsInsight(result, entities, nameOf),
         outputHandInsight(result, entities, nameOf),
         holds ? null : unstableInsight(result),
-        holds ? planVersusClockInsight(result) : null,
+        holds ? planVersusClockInsight(result, nameOf) : null,
         wakeUpsInsight(result, entities, nameOf),
     ];
     return insights.filter((it): it is ClockInsight => it !== null);
@@ -599,7 +613,7 @@ export function clockInsights(result: BlueprintGenerationResult, holds: boolean,
  * What the clock gives each drill that drops into a chest (see chestDrillWindows): windows that keep the chest's takers
  * supplied just in time, or why it stays always enabled. None for a build without such a drill.
  */
-export function chestDrillInsights(result: Pick<BlueprintGenerationResult, "chest_drills" | "simulation_duration">): ClockInsight[] {
+export function chestDrillInsights(result: Pick<BlueprintGenerationResult, "chest_drills" | "simulation_duration">, build: BuildToName = NO_BUILD): ClockInsight[] {
     const drills = result.chest_drills ?? [];
     if (drills.length === 0) {
         return [];
@@ -612,9 +626,14 @@ export function chestDrillInsights(result: Pick<BlueprintGenerationResult, "ches
         title: clocked.length === drills.length ? "The drills into containers are enabled just in time"
             : clocked.length === 0 ? "The drills into containers are always enabled" : "Some drills into containers are always enabled",
         what: drills.map(drill => {
-            const into = `Drill ${drill.drill_id} drops ${drill.item.replace(/-/g, " ")} into ${chestName(drill.chest_type, drill.chest_id)}`;
+            // a drill by what it mines and its chest by its kind (entity-name.ts) where the build names them, else by their numbers
+            const named = build.drills.some(it => it.id === drill.drill_id);
+            const chest = build.chests.some(it => it.id === drill.chest_id) ? theName(chestNameInText(drill.chest_id, build, { words: { item: id => id.replace(/-/g, " ") } }))
+                : chestName(drill.chest_type, drill.chest_id);
+            const into = `${named ? capital(theName(drillNameInText(drill.drill_id, build, { words: { item: id => id.replace(/-/g, " ") } }))) : `Drill ${drill.drill_id}`} `
+                + `drops ${drill.item.replace(/-/g, " ")} into ${chest}`;
             if (drill.enabled_ticks === null) {
-                return `${into} and is always enabled: ${drill.always_enabled_because === undefined ? "nothing times it" : chestDrillBecause(drill.always_enabled_because)}.`;
+                return `${into} and is always enabled: ${drill.always_enabled_because === undefined ? "nothing times it" : chestDrillBecause(drill.always_enabled_because, build)}.`;
             }
             const ticks = Number(drill.enabled_ticks.toFixed(2));
             return `${into} and is enabled ${ticks} tick${ticks === 1 ? "" : "s"} of the ${window_cycle_ticks}-tick window cycle, in ${drill.window_count} enable window${drill.window_count === 1 ? "" : "s"}.`;

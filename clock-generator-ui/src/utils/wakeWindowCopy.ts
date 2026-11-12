@@ -4,6 +4,7 @@
  */
 import type { AlwaysOnReason } from 'clock-generator/browser';
 import { absurd } from 'fp-ts/function';
+import { theName } from 'clock-generator/light';
 import { WAKEUP_DEFINITION } from './glossary';
 import { formatNumberText } from './numberText';
 import type { OwnClock, WakeWindow, WakeWindowRow } from './wakeWindows';
@@ -143,7 +144,7 @@ function rowDetailText(row: Pick<WakeWindowRow, 'items' | 'route'>, itemLabel: (
  * Why the clock leaves an inserter or drill always on, in the words of the glossary: "Always on: its swings fill the
  * whole window cycle (24 ticks), so a wake window would never switch it off". The old words when the engine gives none.
  */
-function alwaysOnText(reason: AlwaysOnReason | undefined): string {
+function alwaysOnText(reason: AlwaysOnReason | undefined, named?: string): string {
     if (reason === undefined) {
         return ALWAYS_ON_TEXT;
     }
@@ -159,23 +160,26 @@ function alwaysOnText(reason: AlwaysOnReason | undefined): string {
         case 'no-swing':
             return 'Always on: it made no swing in the run the enable windows are read from, so the clock has no window for it';
         case 'chest-drill':
-            return `Always on: ${chestDrillWhyText(reason.why)}`;
+            return `Always on: ${chestDrillWhyText(reason.why, named)}`;
         default:
             return absurd(reason);
     }
 }
 
 /** Why nothing can time a drill into a chest */
-function chestDrillWhyText(why: Extract<AlwaysOnReason, { kind: 'chest-drill' }>['why']): string {
+function chestDrillWhyText(why: Extract<AlwaysOnReason, { kind: 'chest-drill' }>['why'], named?: string): string {
+    // the drill or inserter by its items where the engine's names were carried: "the drill that mines iron ore"
+    const drill = (number: number) => named === undefined ? `drill ${num(number)}` : theName(named);
+    const inserter = (number: number) => named === undefined ? `inserter ${num(number)}` : theName(named);
     switch (why.kind) {
         case 'other-drill':
-            return `drill ${num(why.drill_number)} fills the same chest with the same item, so the clock cannot time this drill on its own`;
+            return `${drill(why.drill_number)} fills the same chest with the same item, so the clock cannot time this drill on its own`;
         case 'filler':
-            return `inserter ${num(why.inserter_number)} fills the same chest with the same item, so the clock cannot time this drill on its own`;
+            return `${inserter(why.inserter_number)} fills the same chest with the same item, so the clock cannot time this drill on its own`;
         case 'no-taker':
             return 'no inserter takes its item out of its chest, so there is nothing to time it by';
         case 'taker-without-window':
-            return `inserter ${num(why.inserter_number)} takes its item out of its chest and has no enable window, so there is nothing to time it by`;
+            return `${inserter(why.inserter_number)} takes its item out of its chest and has no enable window, so there is nothing to time it by`;
         case 'no-take':
             return 'no enable window takes its item out of its chest, so there is nothing to time it by';
         case 'no-room':
@@ -199,10 +203,10 @@ function ownClockText(clock: OwnClock): string {
 }
 
 /** The words that stand in for a row's bars, or null when it has bars */
-export function modeText(row: Pick<WakeWindowRow, 'mode' | 'ownClock' | 'alwaysOnReason'>): string | null {
+export function modeText(row: Pick<WakeWindowRow, 'mode' | 'ownClock' | 'alwaysOnReason' | 'alwaysOnNamed'>): string | null {
     switch (row.mode) {
         case 'always-on':
-            return alwaysOnText(row.alwaysOnReason);
+            return alwaysOnText(row.alwaysOnReason, row.alwaysOnNamed);
         case 'never':
             return NEVER_TEXT;
         case 'own-clock':

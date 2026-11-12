@@ -188,7 +188,7 @@ describe("the drops of the grenade build onto its belt", () => {
     it("are not told when the copies' gap is not given, and the note asks for it", async () => {
         const config = await grenade(it => { delete it.setpoint.copy_offset; });
         expect(dropSpacing(config, BY_LINE, 112)).toBeNull();
-        expect(copyGapNeededNote(config)).toBe("The 7 copies may drop onto the same belt 1. Say how far apart they stand to check whether their drops fit between each other.");
+        expect(copyGapNeededNote(config)).toBe("The 7 copies may drop onto the same grenade belt (belt 1). Say how far apart they stand to check whether their drops fit between each other.");
         expect(copyGapNeededNote(await grenade())).toBeNull();
         expect(copyGapNeededNote(await grenade(it => { it.setpoint.copies = 1; delete it.setpoint.copy_offset; }))).toBeNull();
     });

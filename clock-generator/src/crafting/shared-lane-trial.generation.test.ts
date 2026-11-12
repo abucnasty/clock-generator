@@ -53,7 +53,7 @@ describe("the disturbance trials on the copies that share a dead-ended lane", ()
         // copies have stopped and restored a quarter into the window cycle, leaves copy 3 short for good
         expect(verdict).toMatchObject({ survives: false, broken_by: "supercapacitor stops arriving", lanes: ["1/1", "1/2"], recovered_after_window_cycles: null,
             trial: { cut_at: 176, until_stopped: true }, short: [{ copy: 3, items_per_window_cycle: [288, 304, 288] }] });
-        expect(verdict.text).toBe("Supercapacitor stops arriving at the entry of lane 2 of belt 1, which the 11 copies share, and comes back. "
+        expect(verdict.text).toBe("Supercapacitor stops arriving at the entry of the supercapacitor lane, which the 11 copies share, and comes back. "
             + "Copy 3 from the entry ends at 288, 304 and 288 a window cycle, where one copy makes 352.");
 
         // the accumulators stopped as in the game: copy 3 ends at 25 packs a second, 272 to 304 a window cycle, and the others at 352
@@ -116,7 +116,7 @@ describe("the verdict of a clock the trials on the copies break", () => {
         expect(clock.verdict).toBe("no recovery");
         expect(clock.assessment.disturbance_trial).toMatchObject({ survives: false, broken_by: ["copper plate stops arriving on the copies that share a lane"],
             on_copies: { survives: false, broken_by: "copper plate stops arriving", short: [{ copy: 2 }] } });
-        expect(clock.description).toContain("Copper plate stops arriving at the entry of lane");
+        expect(clock.description).toContain("Copper plate stops arriving at the entry of the copper plate lane");
         expect(alone.verdict).toBe("stable");
         expect(alone.assessment.disturbance_trial?.on_copies).toBeUndefined();
     });

@@ -3,7 +3,7 @@ import { memo, useId } from 'react';
 import type { FuelInserterPlan, FuelLevelSeries, FuelMachinePlan } from 'clock-generator/browser';
 import type { FuelRunView, FuelSwing, FuelViewData } from '../worker/types';
 import { CHART_NAMES, SCROLL_REGION_NAMES } from '../utils/a11yLabels';
-import { entityLabel, machineInSentence, sentenceStart } from '../utils/entityLabel';
+import { entityInSentence, entityLabel, machineInSentence, sentenceStart } from '../utils/entityLabel';
 import { useGameNames } from '../hooks/useGameNames';
 import { FactorioIcon } from './FactorioIcon';
 import { ChartSwatch } from './BeltChart';
@@ -266,7 +266,7 @@ function FuelTimeline({ fuel, run }: { fuel: FuelViewData; run: FuelRunView }) {
             ))}
             {fuel.plan.inserters.map(inserter => (
                 <Typography key={inserter.inserter_id} id={`${summaryId}-inserter-${inserter.inserter_number}`} variant="body2" sx={{ mb: 1.5 }}>
-                    Inserter {inserter.inserter_number} feeds {machineNamed(inserter.machine_number)}. Its fuel clock switches it on every {inserter.modulus} ticks,
+                    {sentenceStart(entityInSentence('inserter', inserter.inserter_number, fuel.entityNames))} feeds {machineNamed(inserter.machine_number)}. Its fuel clock switches it on every {inserter.modulus} ticks,
                     from tick {inserter.window.start} to {inserter.window.end} of that clock.
                     {' '}{(run.swings[inserter.inserter_id] ?? []).length} swings recorded over {durationTicks} ticks; Fuel events lists their start, end and items.
                 </Typography>

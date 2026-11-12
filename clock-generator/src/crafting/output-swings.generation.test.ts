@@ -224,10 +224,10 @@ describe("generateClockForConfig", () => {
 
             it("lists every ingredient's insertion limit and hands per period", () => {
                 expect(insight("planned-belt-slack", "insertion-limits")?.table?.rows).toEqual([
-                    ["assembling-machine-3 that makes flying-robot-frame", "steel-plate", "1", "6", "Inserter 2", "16", "1"],
-                    ["assembling-machine-3 that makes flying-robot-frame", "electric-engine-unit", "1", "6", "Inserter 2", "16", "1"],
-                    ["assembling-machine-3 that makes flying-robot-frame", "electronic-circuit", "3", "18", "Inserter 3", "16", "3"],
-                    ["assembling-machine-3 that makes flying-robot-frame", "battery", "2", "12", "Inserter 3", "16", "2"],
+                    ["assembling-machine-3 that makes flying-robot-frame", "steel-plate", "1", "6", "inserter that takes steel-plate and electric-engine-unit", "16", "1"],
+                    ["assembling-machine-3 that makes flying-robot-frame", "electric-engine-unit", "1", "6", "inserter that takes steel-plate and electric-engine-unit", "16", "1"],
+                    ["assembling-machine-3 that makes flying-robot-frame", "electronic-circuit", "3", "18", "inserter that takes electronic-circuit and battery", "16", "3"],
+                    ["assembling-machine-3 that makes flying-robot-frame", "battery", "2", "12", "inserter that takes electronic-circuit and battery", "16", "2"],
                 ]);
                 expect(insight("planned-belt-slack", "insertion-limits")?.what).toContain("takes electronic-circuit only while it holds fewer than 18");
             });
@@ -318,8 +318,8 @@ describe("generateClockForConfig", () => {
                         { entity_id: EntityId.forInserter(3), item_names: ["battery", "electronic-circuit"] },
                     ],
                 });
-                expect(shifted.description).toContain("The swings planned in clock ticks 145–181 (inserter 1: flying-robot-frame; "
-                    + "inserter 3: battery, electronic-circuit) start 25 ticks earlier than planned.");
+                expect(shifted.description).toContain("The swings planned in clock ticks 145–181 (the inserter that drops flying-robot-frame; "
+                    + "the inserter that takes electronic-circuit and battery) start 25 ticks earlier than planned.");
                 expect(shifted.result.clock_windows).toEqual({
                     "inserter:1": [{ start: 1, end: 13 }, { start: 120, end: 132 }],
                     "inserter:2": [{ start: 13, end: 37 }],
@@ -342,7 +342,7 @@ describe("generateClockForConfig", () => {
                 expect(shifted.result.search!.earliest).toEqual({
                     setting: -65,
                     is_search_limit: false,
-                    notes: ["Inserter 3 waits 10 ticks for the assembling-machine-3 that makes flying-robot-frame to drop below its insertion limit for electronic-circuit"],
+                    notes: ["The inserter that takes electronic-circuit and battery waits 10 ticks for the assembling-machine-3 that makes flying-robot-frame to drop below its insertion limit for electronic-circuit"],
                 });
                 expect(shifted.result.search!.latest).toEqual({
                     setting: 35, // 60 with the untrimmed windows, 45 from the prepared build

@@ -10,6 +10,8 @@ import { Confirmed, QuickTrial, SearchRangeEdge, SearchReport, confirm, quickTri
 import { cycleOfWindow, withCycleShifted } from "./transforms";
 import { transitionsOf } from "../sequence/compact-history";
 import { machineNameOf, type MachineToName } from "../machine-name";
+import { buildToNameOf } from "../build-names";
+import { capitalized, entityNameOf, NO_BUILD, theName, type BuildToName } from "../entity-name";
 
 /** Positions tried for a shifted crafting cycle, each a quick trial */
 const MAX_SHIFTED_CYCLE_CANDIDATES = 48;
@@ -118,12 +120,14 @@ function shiftEdgeNotes(
     run: TrialRun,
     moved: { entity_id: string; start: number; end: number }[],
     machines: readonly MachineToName[],
+    build: BuildToName = NO_BUILD,
 ): string[] {
     const entities = new Map(run.serializable_state_transition_history.entities.map(entity => [entity.entity_id, entity]));
-    // a machine by its kind and recipe among the config's machines (machine-name.ts), in a sentence; anything else by its label
+    // a machine by its kind and recipe among the config's machines (machine-name.ts), an inserter by what it takes or drops
+    // (entity-name.ts), in a sentence; anything else by its label
     const named = (end: { entity_id: string; label: string }) => {
-        const machine = machineNameOf(end.entity_id, machines);
-        return machine === undefined ? end.label : `the ${machine}`;
+        const name = machineNameOf(end.entity_id, machines) ?? entityNameOf(end.entity_id, build);
+        return name === undefined || /^(belt|inserter|chest|drill) \d/.test(name) ? end.label : theName(name);
     };
     const segmentsOf = (entity_id: string) => {
         const entity = entities.get(entity_id);
@@ -161,14 +165,14 @@ function shiftEdgeNotes(
                 if (entity.source?.entity_type === EntityType.BELT && entity.sink?.entity_type === EntityType.MACHINE) {
                     const item = run.serializable_transfer_history.entities.find(it => it.entity_id === window.entity_id)
                         ?.transfers.filter(it => it.end_tick > next.start).sort((a, b) => a.start_tick - b.start_tick)[0]?.item_name;
-                    notes.add(`${entity.label} waits ${waited} ticks for ${named(entity.sink)} to drop below its insertion limit`
+                    notes.add(`${capitalized(named(entity))} waits ${waited} ticks for ${named(entity.sink)} to drop below its insertion limit`
                         + (item ? ` for ${item}` : ""));
                 } else if (entity.source?.entity_type === EntityType.MACHINE) {
-                    notes.add(`${entity.label} waits ${waited} ticks for ${named(entity.source)} to have items`);
+                    notes.add(`${capitalized(named(entity))} waits ${waited} ticks for ${named(entity.source)} to have items`);
                 }
             }
             if (segment.status === InserterStatus.PICKUP && next.status === InserterStatus.SWING && entity.source?.entity_type === EntityType.MACHINE) {
-                notes.add(`${entity.label} waits ${waited} ticks at ${named(entity.source)} for a full hand`);
+                notes.add(`${capitalized(named(entity))} waits ${waited} ticks at ${named(entity.source)} for a full hand`);
             }
         });
 
@@ -252,7 +256,7 @@ function shiftedCycleWindows(
         return {
             setting: candidates[edge].shift_ticks,
             is_search_limit: beyond === undefined || beyond.cycle_index !== candidate.cycle_index,
-            notes: shiftEdgeNotes(tried[edge].quick.result, movedWindows(planned_windows, candidates[edge], cycle_ticks, window_cycle_ticks), config.machines),
+            notes: shiftEdgeNotes(tried[edge].quick.result, movedWindows(planned_windows, candidates[edge], cycle_ticks, window_cycle_ticks), config.machines, buildToNameOf(config)),
         };
     };
     const planned = movedWindows(planned_windows, { ...candidate, shift_ticks: 0 }, cycle_ticks, window_cycle_ticks);

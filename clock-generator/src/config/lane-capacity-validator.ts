@@ -8,6 +8,8 @@ import type { Logger } from '../common/logger';
 import { OutputCyclePlan } from '../crafting/sequence/cycle/output-cycle';
 import { createEntityRegistryFromConfig } from '../crafting/sequence/simulation-context';
 import { TargetProductionRate } from '../crafting/target-production-rate';
+import { buildToNameOf } from '../crafting/build-names';
+import { capitalized, lanesInSentence, type BuildToName } from '../crafting/entity-name';
 import { describeLanes, formatRate, LaneCapacityError, LaneCapacityIssue, LaneFlowKind, LaneRateError, LaneRateIssue, SharedLaneSupplyError, SharedLaneSupplyIssue } from './errors';
 import { Config } from './schema';
 
@@ -183,10 +185,28 @@ export function lanesExactlyFull(config: Config): LaneCapacityIssue[] {
     return alone.map(load => asIssue(load, config.setpoint.copies));
 }
 
-/** "Both lanes of belt 1 are exactly full at the target: the 7 copies drop 7 × 34.29 = 240 a second onto lanes that carry 240. ..." */
-export function describeLanesExactlyFull(issue: LaneCapacityIssue): string {
+/**
+ * How a note names the lanes of an issue: by their items (entity-name.ts), with their numbers always where `numbered` (a
+ * note of the form, which the user finds the row by); by their numbers where no build is given
+ */
+export interface LaneNames {
+    build: BuildToName;
+    numbered: boolean;
+}
+
+/** The lanes of an issue in a sentence: "the grenade belt's lanes", "lane 1 of belt 1" without names */
+function lanesNamed(issue: Pick<LaneCapacityIssue, 'lanes' | 'belt_id'>, names: LaneNames | undefined): string {
+    return names === undefined ? describeLanes(issue)
+        : lanesInSentence(issue.lanes.map(lane => ({ belt_id: issue.belt_id, lane })), names.build, { numbered: names.numbered });
+}
+
+/** The names of a config's lanes for a note of the form: by their items, with their numbers */
+const formNames = (config: Config): LaneNames => ({ build: buildToNameOf(config), numbered: true });
+
+/** "Both lanes of the grenade belt are exactly full at the target: the 7 copies drop 7 × 34.29 = 240 a second onto lanes that carry 240. ..." */
+export function describeLanesExactlyFull(issue: LaneCapacityIssue, names?: LaneNames): string {
     const one = issue.lanes.length === 1;
-    const lanes = describeLanes(issue);
+    const lanes = lanesNamed(issue, names);
     const drops = issue.copies === 1
         ? `the build drops ${formatRate(issue.items_per_second)}`
         : `the ${issue.copies} copies drop ${issue.copies} × ${formatRate(issue.items_per_second)} = ${formatRate(issue.items_per_second * issue.copies, issue.capacity_per_second)}`;
@@ -196,24 +216,24 @@ export function describeLanesExactlyFull(issue: LaneCapacityIssue): string {
 }
 
 /** The note for drops that fill their lanes exactly, the same in the log, the result and the live editor; null when none do */
-export function lanesExactlyFullNote(issues: readonly LaneCapacityIssue[]): string | null {
-    return issues.length === 0 ? null : issues.map(describeLanesExactlyFull).join(' ');
+export function lanesExactlyFullNote(issues: readonly LaneCapacityIssue[], names?: LaneNames): string | null {
+    return issues.length === 0 ? null : issues.map(issue => describeLanesExactlyFull(issue, names)).join(' ');
 }
 
 /** The note for a config's lanes filled exactly by its drops, read from the config alone: null when the plan cannot be made */
 export function lanesExactlyFullWarning(config: Config): string | null {
     try {
-        return lanesExactlyFullNote(lanesExactlyFull(config));
+        return lanesExactlyFullNote(lanesExactlyFull(config), formNames(config));
     } catch {
         return null;
     }
 }
 
-/** "If the 3 copies share lane 1 of belt 1, they take 1.46 times what it carries (3 × 48 = 144 a second, of 99)." */
-export function describeLaneSharedByCopies(issue: LaneCapacityIssue): string {
+/** "If the 3 copies share the iron-plate lane (lane 1 of belt 1), they take 1.46 times what it carries (3 × 48 = 144 a second, of 99)." */
+export function describeLaneSharedByCopies(issue: LaneCapacityIssue, names?: LaneNames): string {
     const total = issue.items_per_second * issue.copies;
     const one = issue.lanes.length === 1;
-    return `If the ${issue.copies} copies share ${describeLanes(issue)}, they ${issue.kind} ${(total / issue.capacity_per_second).toFixed(2)} `
+    return `If the ${issue.copies} copies share ${lanesNamed(issue, names)}, they ${issue.kind} ${(total / issue.capacity_per_second).toFixed(2)} `
         + `times what ${one ? 'it carries' : 'they carry'} (${issue.copies} × ${formatRate(issue.items_per_second)} = `
         + `${formatRate(total, issue.capacity_per_second)} a second, of ${formatRate(issue.capacity_per_second)}).`;
 }
@@ -222,18 +242,18 @@ export function describeLaneSharedByCopies(issue: LaneCapacityIssue): string {
  * The warning for lanes that only the copies summed ask too much of, the same in the log and in the live editor; null
  * when there are none.
  */
-export function lanesSharedByCopiesNote(issues: readonly LaneCapacityIssue[]): string | null {
+export function lanesSharedByCopiesNote(issues: readonly LaneCapacityIssue[], names?: LaneNames): string | null {
     if (issues.length === 0) {
         return null;
     }
-    return `${issues.map(describeLaneSharedByCopies).join(' ')} This is only a warning. If each copy has a lane of its own, `
+    return `${issues.map(issue => describeLaneSharedByCopies(issue, names)).join(' ')} This is only a warning. If each copy has a lane of its own, `
         + 'set the lane to per copy.';
 }
 
 /** The warning for a config's lanes shared by its copies, read from the config alone: null when the plan cannot be made */
 export function laneSharedByCopiesWarning(config: Config): string | null {
     try {
-        return lanesSharedByCopiesNote(lanesSharedByCopies(config));
+        return lanesSharedByCopiesNote(lanesSharedByCopies(config), formNames(config));
     } catch {
         return null;
     }
@@ -269,11 +289,11 @@ export function onePerCopyFeeds(config: Config): OnePerCopyFeed[] {
     }).map(load => ({ belt_id: load.belt_id, lanes: load.lanes, inserter_ids: load.inserter_ids, items_per_second: load.items_per_second.toDecimal() }));
 }
 
-/** "Lane 1 of belt 1 is per copy. The lane of each copy needs a supply rate of at least 36 a second, which the inserters of one copy take from it." */
-export function describeOnePerCopyFeed(feed: OnePerCopyFeed): string {
+/** "The coal lane is per copy. The lane of each copy needs a supply rate of at least 36 a second, which the inserters of one copy take from it." */
+export function describeOnePerCopyFeed(feed: OnePerCopyFeed, names?: LaneNames): string {
     const one = feed.lanes.length === 1;
-    const lanes = describeLanes(feed);
-    return `${lanes.charAt(0).toUpperCase()}${lanes.slice(1)} ${one ? 'is' : 'are'} per copy. ${one ? 'The lane' : 'The lanes'} of each copy `
+    const lanes = lanesNamed(feed, names);
+    return `${capitalized(lanes)} ${one ? 'is' : 'are'} per copy. ${one ? 'The lane' : 'The lanes'} of each copy `
         + `${one ? 'needs' : 'need'} a supply rate of at least ${formatRate(feed.items_per_second)} a second, which the inserters of one copy take from ${one ? 'it' : 'them'}.`;
 }
 

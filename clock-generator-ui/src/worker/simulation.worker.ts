@@ -104,6 +104,7 @@ function fuelViewOf(result: ClockAlternativeRun['alternatives'][number]['result'
     return {
         plan: result.fuel_plan,
         machines: machinesToName(config),
+        entityNames: clockGenerator.entityNamesInSentence(config),
         run: view ? {
             window_cycles: view.window_cycles,
             durationTicks: view.duration_ticks,
@@ -123,6 +124,9 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
     if (!run) {
         return null;
     }
+    // the belts, inserters, chests and drills as the texts name them, by their items (the engine's entity-name.ts)
+    const names = clockGenerator.buildToNameOf(config);
+    const entityNames = clockGenerator.entityNamesInSentence(config);
     const alternatives: ClockAlternativeView[] = run.alternatives.map(({ result, ...alternative }) => ({
         id: alternative.id,
         label: alternative.label,
@@ -133,6 +137,7 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         assessment: alternative.assessment,
         assumptions: {
             machines: machinesToName(config),
+            entityNames,
             kickStarts: result.machine_facts.flatMap(machine => machine.facts.inputs
                 .filter(input => clockGenerator.FactorioDataService.findRecipeOrThrow(machine.facts.recipe).results.some(output => output.name === input.item_name))
                 .map(input => ({ machineId: machine.entity_id, item: input.item_name,
@@ -150,7 +155,7 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         ...(config.setpoint.counts === 'destroyed' && { counts: 'destroyed' as const }),
         verdict: alternative.verdict,
         ranking: alternative.ranking,
-        deadlockRisk: clockGenerator.deadlockRiskNote(alternative.deadlock_risks),
+        deadlockRisk: clockGenerator.deadlockRiskNote(alternative.deadlock_risks, names),
         beltLabel: clockGenerator.clockBeltLabel(alternative.belt),
         belt: alternative.belt,
         asBuilt: result.stability_check.as_built ?? null,
@@ -431,7 +436,7 @@ function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
             // what is out of scope is refused before coverage, as Check does: read as built, a blacklist or a side stream
             // would be explained as a missing inserter
             const refusal = clockGenerator.insertersScopeProblem(query.config);
-            const pickupNotTested = clockGenerator.beltPickupNotTestedNote(clockGenerator.uncalibratedBeltPickups(query.config));
+            const pickupNotTested = clockGenerator.beltPickupNotTestedNote(clockGenerator.uncalibratedBeltPickups(query.config), clockGenerator.buildToNameOf(query.config));
             const laneSharedByCopies = clockGenerator.laneSharedByCopiesWarning(query.config);
             const sideLoadedDrop = clockGenerator.sideLoadedDropWarning(query.config);
             const lanesExactlyFull = clockGenerator.lanesExactlyFullWarning(query.config);

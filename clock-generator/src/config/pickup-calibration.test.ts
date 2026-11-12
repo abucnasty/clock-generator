@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { buildToNameOf } from "../crafting/build-names";
 import { ConfigSchema } from "./schema";
 import { Config } from "./index";
 import { generateClockAlternatives } from "../crafting/generate-blueprint";
@@ -57,11 +58,11 @@ describe("belt pickups outside 16-item hands on 4-item belt stacks", () => {
             lanes: [{ ingredient: "iron-plate", stack_size: 3 }, { ingredient: "iron-plate", stack_size: 2 }],
             feeder: { stack_size: 8 },
         });
-        expect(uncalibratedBeltPickups(both_lanes).map(describeUncalibratedPickup)).toEqual([
+        expect(uncalibratedBeltPickups(both_lanes).map(pickup => describeUncalibratedPickup(pickup))).toEqual([
             "Inserter 1 picks up iron-plate from belt 1 in 2- and 3-item belt stacks with an 8-item hand.",
         ]);
         const one_lane_off = gears({ lanes: [{ ingredient: "iron-plate", stack_size: 4 }, { ingredient: "iron-plate", stack_size: 1 }] });
-        expect(uncalibratedBeltPickups(one_lane_off).map(describeUncalibratedPickup)).toEqual([
+        expect(uncalibratedBeltPickups(one_lane_off).map(pickup => describeUncalibratedPickup(pickup))).toEqual([
             "Inserter 1 picks up iron-plate from belt 1 in 1-item belt stacks.",
         ]);
     });
@@ -89,7 +90,7 @@ describe("belt pickups outside 16-item hands on 4-item belt stacks", () => {
                 { id: 2, type: "turbo-transport-belt", lanes: [{ ingredient: "nutrients", stack_size: 2 }] },
             ],
         });
-        expect(uncalibratedBeltPickups(fuel).map(describeUncalibratedPickup)).toEqual([
+        expect(uncalibratedBeltPickups(fuel).map(pickup => describeUncalibratedPickup(pickup))).toEqual([
             "Inserter 2 picks up nutrients from belt 2 in 2-item belt stacks.",
         ]);
     });
@@ -140,14 +141,17 @@ describe("a generation with a belt pickup outside the calibration", () => {
                 id: "belt-pickup-not-tested",
                 scope: "build",
                 title: "Not tested: belt pickup outside 16-item hands on 4-item belt stacks",
-                what: "Inserter 1 picks up iron-plate from belt 1 in 2-item belt stacks.",
+                what: "The inserter that takes iron-plate picks up iron-plate from the iron-plate belt in 2-item belt stacks.",
                 why: "Belt pickup timing is calibrated with 16-item hands on 4-item belt stacks only. At other belt stack sizes and "
                     + "hand sizes the simulator's pickup timing has not been compared with the game.",
                 explanation: "The clock may not match the game: its rate, stability and wakeups are worked out from pickup timing "
                     + "never checked there.",
             }]);
         }
-        expect(warned).toEqual([beltPickupNotTestedNote(uncalibratedBeltPickups(gears({ lanes: [{ ingredient: "iron-plate", stack_size: 2 }] })))]);
+        // the log says it as the form does: the inserter and the belt by their items, with their numbers
+        const config = gears({ lanes: [{ ingredient: "iron-plate", stack_size: 2 }] });
+        expect(warned).toEqual([beltPickupNotTestedNote(uncalibratedBeltPickups(config), buildToNameOf(config))]);
+        expect(warned[0]).toContain("Not tested: The inserter (inserter 1) that takes iron-plate picks up iron-plate from the iron-plate belt (belt 1) in 2-item belt stacks.");
     });
 
     it("is not told about a build inside the calibration", () => {

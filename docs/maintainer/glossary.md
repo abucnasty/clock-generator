@@ -238,6 +238,16 @@ runs over the end of the window cycle is one enable window. **Enable if** is the
 inserter.
 _Avoid_: wake window, active window, window (bare), enable range
 
+**Hand**:
+The items that an inserter holds. The game uses the word: the stack inserter's description says that inserters wait for
+their hand to be full. A full hand is the most that the inserter holds of an item. A technical noun: STE has no entry.
+
+**Swing**:
+One move of an inserter from its pickup to its drop. The game's data names the arm swing of an inserter. A loss on a lane
+is said in swings. It gives the swings that the inserter does not make. It compares them with its swings when no other copy
+is on the lane. A technical noun: STE has no entry.
+_Avoid_: a count of items or of crafts for a loss
+
 **Room for one more hand**:
 Ticks that the generator adds at the end of each enable window of an inserter. It adds them where the inserter takes
 from a lane that is not a dead end. They are the ticks that one more hand takes to fill at one lane stack a tick: 4
