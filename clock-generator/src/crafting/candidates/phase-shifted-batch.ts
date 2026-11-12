@@ -11,7 +11,7 @@ import { cycleOfWindow, withCycleShifted } from "./transforms";
 import { transitionsOf } from "../sequence/compact-history";
 import { machineNameOf, type MachineToName } from "../machine-name";
 import { buildToNameOf } from "../build-names";
-import { capitalized, entityNameOf, NO_BUILD, theName, type BuildToName } from "../entity-name";
+import { capitalized, entityNameOf, NO_BUILD, textWords, theName, type BuildToName } from "../entity-name";
 
 /** Positions tried for a shifted crafting cycle, each a quick trial */
 const MAX_SHIFTED_CYCLE_CANDIDATES = 48;
@@ -166,7 +166,7 @@ function shiftEdgeNotes(
                     const item = run.serializable_transfer_history.entities.find(it => it.entity_id === window.entity_id)
                         ?.transfers.filter(it => it.end_tick > next.start).sort((a, b) => a.start_tick - b.start_tick)[0]?.item_name;
                     notes.add(`${capitalized(named(entity))} waits ${waited} ticks for ${named(entity.sink)} to drop below its insertion limit`
-                        + (item ? ` for ${item}` : ""));
+                        + (item ? ` for ${textWords().item(item)}` : ""));
                 } else if (entity.source?.entity_type === EntityType.MACHINE) {
                     notes.add(`${capitalized(named(entity))} waits ${waited} ticks for ${named(entity.source)} to have items`);
                 }
