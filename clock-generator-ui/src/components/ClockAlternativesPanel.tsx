@@ -246,7 +246,7 @@ export function ClockAlternativesPanel({
                                 {WORKS_ICON[works.kind]}{works.text}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">{statusDetail(alternative)}</Typography>
-                            {/* a clock not stable on a lane its copies share: its headline; the card of the selected clock shows the parts */}
+                            {/* a clock not stable on a lane its copies share: its headline; the Diagnostics tab of the selected clock shows the parts */}
                             {alternative.checkedLanes?.cause && <Box sx={{ mt: 1.5 }}><CauseHeadline cause={alternative.checkedLanes.cause} /></Box>}
                         </HelpButton>
                     </Box>
