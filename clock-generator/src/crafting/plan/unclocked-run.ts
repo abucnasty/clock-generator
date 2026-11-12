@@ -58,7 +58,7 @@ import { SerializableTransferHistory, serializeTransferHistory } from "../sequen
 import { StateTransitionHistory } from "../sequence/state-transition-history";
 import { MachineFactsEntry } from "../insights";
 import { laneFactsOfConfig } from "../../entities/traits/build-traits";
-import { everyInputLaneIsDeadEnd } from "../../entities/traits/lane-ends";
+import { everyInputLaneIsDeadEnd, withEveryLaneEnd } from "../../entities/traits/lane-ends";
 import { machineFactsOfEntity } from "../../entities/traits/machine-facts-of";
 import { CompactStateTransitionHistory } from "../sequence/compact-history";
 import { StateTransitionTracker } from "../../simulation/observers/state-transition-tracker";
@@ -2577,7 +2577,8 @@ function serializeClockWindows(windows: Map<string, OpenRange[]>): SerializableC
 }
 
 /**
- * The crafts of each machine, by id, in the prepare step of the build with backpressure at its pickups; null where the prepare
+ * The crafts of each machine, by id, in the prepare step of the build with backpressure at its pickups, every lane without a
+ * consumption a dead end there, whatever end it states (withEveryLaneEnd); null where the prepare
  * step that was run counts them: the lanes have backpressure already, no inserter takes from a belt, the config sets the
  * output swings, or the plan takes fractional swings, whose swings per cycle are the build's own count, not a cap.
  *
@@ -2592,7 +2593,7 @@ function craftsWithBackpressure(config: Config, fractional_swings: boolean): Map
         || fractional_swings || !config.inserters.some(inserter => inserter.source.type === "belt")) {
         return null;
     }
-    const simulation_context = SimulationContext.fromConfig({ ...config, overrides: { ...config.overrides, backed_up_belts: true } });
+    const simulation_context = SimulationContext.fromConfig(withEveryLaneEnd(config, "dead_end"));
     new PrepareStep(simulation_context).execute();
     return new Map(simulation_context.machines.map(({ machine_state }) => [machine_state.machine.entity_id.id, machine_state.craftCount]));
 }

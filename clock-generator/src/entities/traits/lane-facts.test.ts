@@ -6,7 +6,7 @@ import { beltLaneFactsOf } from "../../light";
 import { variantJobs } from "../../../tests/game/builds/variant-jobs";
 import { carriedItemsOf, laneFactsOfConfig } from "./build-traits";
 import { beltLanesOfFacts, supplyOfLaneEnd } from "./lane";
-import { everyInputLaneIsDeadEnd } from "./lane-ends";
+import { everyInputLaneIsDeadEnd, withEveryLaneEnd } from "./lane-ends";
 import { isDeadEnd, laneFactsOf } from "./lane-facts";
 import { laneRolesOf } from "./lane-role";
 
@@ -194,6 +194,32 @@ describe("the question about every input lane", () => {
                 const expected = input_lanes.length === 0 ? backed_up_belts === true : input_lanes.every(isDeadEnd);
                 expect(inputLanesAreDeadEnds(config), `${key} with backed_up_belts ${backed_up_belts}`).toBe(expected);
             }
+        }
+    });
+});
+
+describe("one end stated on every lane", () => {
+    const exporting = { id: 3, type: "turbo-transport-belt", strategy: "export",
+        lanes: [{ ingredient: "iron-plate", stack_size: 4, consumption_per_second: 5 }, { ingredient: "", stack_size: 4 }] };
+    const stated = { ...belts[0], lanes: [{ ...belts[0].lanes[0], lane_end: { kind: "infinite" } }, belts[0].lanes[1]] };
+    const config = configOf({ belts: [stated, exporting] as Config["belts"], overrides: { backed_up_belts: false } });
+
+    it.each(["dead_end", "infinite"] as const)("states %s on every lane without a consumption, a stated end included, and changes nothing else", kind => {
+        const before = structuredClone(config);
+        const forced = withEveryLaneEnd(config, kind);
+        expect(config).toEqual(before);
+        expect(forced.overrides).toEqual(config.overrides);
+        expect(forced.belts.flatMap(belt => (belt.lanes as readonly { lane_end?: unknown }[]).map(lane => lane.lane_end)))
+            .toEqual([{ kind }, { kind }, undefined, { kind }]);
+        expect(forced.belts.flatMap(belt => laneFactsOfConfig(forced).lanesOf(belt.id).map(lane => lane.lane_end.kind)))
+            .toEqual([kind, kind, "infinite", kind]);
+    });
+
+    it("gives the ends the switch gives a config that states none", () => {
+        const plain = configOf({ belts: [...belts, exporting] as Config["belts"] });
+        const ends = (it: Config) => it.belts.flatMap(belt => laneFactsOfConfig(it).lanesOf(belt.id).map(lane => lane.lane_end.kind));
+        for (const [value, kind] of [[true, "dead_end"], [false, "infinite"]] as const) {
+            expect(ends(withEveryLaneEnd(plain, kind))).toEqual(ends({ ...plain, overrides: { backed_up_belts: value } }));
         }
     });
 });
