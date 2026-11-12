@@ -78,6 +78,15 @@ describe("what was checked on the lanes the copies of the automation science 240
         ]);
         expect(clock.checked_lanes!.cause).toBeNull();
     });
+
+    it("gives the description's sentences on a shared-lane loss as a field of their own, word for word", () => {
+        for (const [id, lead] of [["euclidean_swings", "It is not stable on a lane its copies share. "], ["takt_batches_observed", "It is not stable on its output belt. "]]) {
+            const clock = clockOf(result, id);
+            expect(clock.shared_lane_loss_note!.startsWith(lead)).toBe(true);
+            expect(clock.description).toContain(` ${clock.shared_lane_loss_note}`);
+        }
+        expect(clockOf(result, "time_study_windows").shared_lane_loss_note).toBeUndefined();
+    });
 });
 
 describe("what was checked on other outputs", () => {
