@@ -43,6 +43,8 @@ const CAUSE_ORDER: readonly MissedSwingCause[] = ['gap', 'full', 'both', 'neithe
 export const MISSED_SWINGS_COPY = {
     pictureOne: 'Missed swings, copy by copy',
     copy: 'Copy',
+    /** The head of the chip of a part copy (5.5 copies): the last, as it stands last from the entry */
+    partCopy: (copy: number, narrow: boolean) => narrow ? 'part' : `${figure(copy)} (part)`,
     allCopies: (copies: number) => `All ${figure(copies)} copies`,
     fewerCopies: (copies: number) => `${figure(copies)} ${copies === 1 ? 'copy' : 'copies'}`,
     oneCopyAlone: '1 copy alone',

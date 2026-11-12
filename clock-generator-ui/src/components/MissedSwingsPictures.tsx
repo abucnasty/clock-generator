@@ -78,7 +78,10 @@ function CopiesPicture({ cause, copies, width, narrow, laneItems, label }: { cau
         }
     }
     parts.push(<Text key="copy" x={0} y={y + 13} size={11} fill={c.muted}>{MISSED_SWINGS_COPY.copy}</Text>);
-    cx.forEach((x, i) => parts.push(<Text key={`n-${i}`} x={x} y={y + 13} size={11} fill={c.muted} anchor="middle">{i + 1}</Text>));
+    // a part copy (5.5 copies) stands last: its head says so
+    const part = !Number.isInteger(copies);
+    cx.forEach((x, i) => parts.push(<Text key={`n-${i}`} x={x} y={y + 13} size={11} fill={c.muted} anchor="middle">
+        {part && i === slots - 1 ? MISSED_SWINGS_COPY.partCopy(i + 1, narrow) : i + 1}</Text>));
     y += 20;
     rows.forEach((row, r) => {
         parts.push(<Text key={`l-${r}`} x={0} y={y + 19} fill={c.text}>{row.label}</Text>);

@@ -119,6 +119,15 @@ describe('the pictures show what the engine counted, on every clock with a cause
         expect(sum(['full', 'both'])).toBe(of('machine_full'));
     });
 
+    it('gives a part copy (chemical science 240, 5.5 copies) a chip of its own, the last, its head saying so', () => {
+        const kept = CAUSES.find(it => it.sample === 'CHEMICAL_SCIENCE_240_SHARED_FOUNDRY' && it.id === 'takt_batches_observed')!;
+        const checked = { line: { copies: kept.copies }, rows: [], cause: kept.cause } as unknown as CheckedLanes & { cause: SharedLaneCause };
+        const { container } = show(<SharedLaneCauseParts checked={checked} lanes={[]} />);
+        const chips = [...container.querySelectorAll('[data-picture="copies"] [data-chip]')].map(it => it.getAttribute('data-chip'));
+        expect(chips.slice(0, 6)).toEqual(['0', '456', '0', '0', '0', '0']);
+        expect(container.querySelector('[data-picture="copies"]')!.textContent).toContain(MISSED_SWINGS_COPY.partCopy(6, false));
+    });
+
     it('has the 14 clocks with a cause of the five samples', () => {
         expect(CAUSES).toHaveLength(14);
     });
