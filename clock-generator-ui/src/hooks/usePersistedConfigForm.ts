@@ -298,13 +298,12 @@ type SavedConfigAnswer = EngineAnswers['saved-config'];
 
 /**
  * A saved build that stated the former belt setting was loaded with lane ends in its place: its key before is recorded,
- * so that its kept clocks are its own, and the user is told once (the build is saved converted)
+ * so that its kept clocks are its own
  */
-function beltSettingConverted(answer: SavedConfigAnswer, notify: (message: { severity: 'info'; text: string; durationMs: null }) => void): void {
-    // an answer without them (a test's stand-in for the worker) converted nothing
+function beltSettingConverted(answer: SavedConfigAnswer): void {
+    // an answer without it (a test's stand-in for the worker) converted nothing
     if (answer.converted_from === null || answer.converted_from === undefined) return;
     recordFormConversion(answer.converted_from as ConfigFormData, answer.form as ConfigFormData);
-    if (typeof answer.belt_note === 'string') notify({ severity: 'info', text: answer.belt_note, durationMs: null });
 }
 
 export function usePersistedConfigForm() {
@@ -458,7 +457,7 @@ export function usePersistedConfigForm() {
                 if (problem === null) {
                     // unless the config was replaced (imported or reset) in the meantime; with its machines' former types read
                     if (load.owner.form === defaultConfig && commitBuildReplacement(load.owner, form as ConfigFormData, () => {})) {
-                        beltSettingConverted(checked, notify);
+                        beltSettingConverted(checked);
                     }
                 } else {
                     console.warn('Saved config in localStorage is invalid, using defaults:', problem);
@@ -475,7 +474,7 @@ export function usePersistedConfigForm() {
             alive = false;
             initialCompletionRef.current = null;
         };
-    }, [stored, defaultConfig, opened.activeId, beginLoad, matchesBuildMutation, commitBuildReplacement, notify]);
+    }, [stored, defaultConfig, opened.activeId, beginLoad, matchesBuildMutation, commitBuildReplacement]);
 
     // the tab remembers its build, so a reload stays on it
     useEffect(() => {
@@ -596,8 +595,7 @@ export function usePersistedConfigForm() {
         // the build is saved with Auto from its next save on, so the note shows once
         const neverNote = neverOverrideNoteOfText(text);
         if (neverNote !== null) notify({ severity: 'info', text: neverNote, durationMs: null });
-        // likewise the build is saved with lane ends in place of its belt setting
-        if (converted !== null) beltSettingConverted(converted, notify);
+        if (converted !== null) beltSettingConverted(converted);
         return { form, text };
     }, [notify]);
 
@@ -724,7 +722,7 @@ export function usePersistedConfigForm() {
         }
         beforeApply();
         show({ id, form }, episode.text);
-        if (converted !== null) beltSettingConverted(converted, notify);
+        if (converted !== null) beltSettingConverted(converted);
         setConflict((state) => nextConflict(state, { kind: 'loaded' }));
         return true;
     }, [beginLoad, isCurrentLoad, finishLoad, notify, setConflict, show]);

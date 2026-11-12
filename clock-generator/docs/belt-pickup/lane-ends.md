@@ -58,7 +58,7 @@ its clocks for pickups with backpressure. A stated `lane_end` is always the end 
 The page has no setting for `backed_up_belts`. When it loads a file, a share link or a saved build that states the
 field, it states on each input or buffer lane with no end and no secondary setpoint the end that the field gave it: a dead end
 for `true`, an infinite end for `false`. Output lanes, and lanes with no role, get no end and keep the end of their
-role. Then the field goes, and the page says which lanes now state an end.
+role. Then the field goes.
 
 To find the end, follow the lane downstream from the last inserter of the configuration that takes from it:
 

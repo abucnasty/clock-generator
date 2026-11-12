@@ -7,7 +7,6 @@ import { configToFormData, formDataToConfig } from '../utils/configForm/configMa
 import type { ConfigFormData } from '../utils/configForm/formData';
 import { createDefaultConfig } from '../utils/configForm/formData';
 import { decodeShareLink, encodeShareLink, readShareHash } from '../utils/shareLink';
-import { beltSettingNoteOf } from '../utils/beltSettingConversion';
 
 FactorioDataService.initialize(JSON.parse(factorioData));
 
@@ -98,18 +97,17 @@ describe('the conversion of the former belt setting', () => {
         const text = sample('science/automation/automation-240.json');
         const read = await ask({ kind: 'config-file', config: withSetting(withoutEnds(JSON.parse(text) as Config), undefined) });
         expect(read.converted_from).toBeNull();
-        expect(read.belt_note).toBeNull();
         expect(lanesOf(read.config).every(lane => lane.lane_end === undefined)).toBe(true);
     });
 
-    it('states Dead end on the input lanes of a Backed up build, Infinite on those of a Moving one, and says so once', async () => {
+    it('states Dead end on the input lanes of a build that stated true, Infinite on those of one that stated false, and says nothing of it', async () => {
         const automation = withoutEnds(JSON.parse(sample('science/automation/automation-240.json')) as Config);
         const backed = await ask({ kind: 'config-file', config: withSetting(automation, true) });
         expect(lanesOf(backed.config).map(lane => lane.lane_end?.kind)).toEqual(['dead_end', 'dead_end', undefined]);
-        expect(backed.belt_note).toBe('Backed up is no longer a belt setting: the iron gear wheel and copper plate lanes now state the lane end Dead end.');
+        // the answer carries the build and the build before, and no text for the page to show
+        expect(Object.keys(backed).sort()).toEqual(['config', 'converted_from']);
         const moving = await ask({ kind: 'config-file', config: withSetting(automation, false) });
         expect(lanesOf(moving.config).map(lane => lane.lane_end?.kind)).toEqual(['infinite', 'infinite', undefined]);
-        expect(moving.belt_note).toBe('Moving is no longer a belt setting: the iron gear wheel and copper plate lanes now state the lane end Infinite.');
         // the former spelling
         const older = await ask({ kind: 'config-file', config: { ...automation, overrides: { non_moving_belts: true } } });
         expect(lanesOf(older.config).map(lane => lane.lane_end?.kind)).toEqual(['dead_end', 'dead_end', undefined]);
@@ -125,24 +123,21 @@ describe('the conversion of the former belt setting', () => {
         const decoded = await decodeShareLink(hash);
         if (decoded.kind !== 'build') throw new Error('not a build');
         const opened = await ask({ kind: 'config-file', config: readConfigFile(JSON.stringify(decoded.config)) });
-        expect(opened.belt_note).toMatch(/^Backed up is no longer a belt setting/);
         expect(lanesOf(opened.config).map(lane => lane.lane_end?.kind)).toEqual(['dead_end', 'dead_end', undefined]);
         // a saved build of the released page, then saved and loaded again
         const savedText = serializeConfig({ ...configToFormData(automation), overrides: { backed_up_belts: true } } as ConfigFormData);
         const loaded = await ask({ kind: 'saved-config', config: readSavedConfig(savedText) });
         expect(loaded.problem).toBeNull();
-        expect(loaded.belt_note).toMatch(/^Backed up is no longer a belt setting/);
+        expect(Object.keys(loaded).sort()).toEqual(['converted_from', 'form', 'problem']);
         const form = loaded.form as ConfigFormData;
         expect(form.overrides?.backed_up_belts).toBeUndefined();
         const again = await ask({ kind: 'saved-config', config: readSavedConfig(serializeConfig(form)) });
         expect(again.converted_from).toBeNull();
-        expect(again.belt_note).toBeNull();
         expect(formDataToConfig(again.form as ConfigFormData)).toEqual(formDataToConfig(form));
         expect(lanesOf(formDataToConfig(form)).map(lane => lane.lane_end?.kind)).toEqual(['dead_end', 'dead_end', undefined]);
-        // a saved build of the released page answered Moving stated nothing, and stays so, with no note
+        // a saved build of the released page answered Moving stated nothing, and stays so
         const moving = await ask({ kind: 'saved-config', config: readSavedConfig(serializeConfig(configToFormData(automation))) });
         expect(moving.converted_from).toBeNull();
-        expect(moving.belt_note).toBeNull();
     });
 
     it('loads a half-filled old build with no error: a machine with no recipe leaves the other lanes their ends', async () => {
@@ -165,15 +160,5 @@ describe('the conversion of the former belt setting', () => {
         // machine with no recipe, so it has no role yet: it states nothing and takes its role's end once it has one
         expect(lanes.map(lane => lane.lane_end?.kind)).toEqual(['dead_end', undefined]);
         expect((loaded.form as ConfigFormData).overrides?.backed_up_belts).toBeUndefined();
-        expect(loaded.belt_note).toBe('Backed up is no longer a belt setting: the iron plate lane now states the lane end Dead end.');
-    });
-});
-
-describe('the note', () => {
-    it('names each item once, in the config\'s order, and no lane with no item', () => {
-        const lanes = [{ belt_id: 1, lane: 1 as const, item: 'iron-plate' }, { belt_id: 2, lane: 1 as const, item: 'iron-plate' }, { belt_id: 2, lane: 2 as const, item: '' }];
-        expect(beltSettingNoteOf({ setting: 'backed_up', end: 'dead_end', lanes }, id => id === 'iron-plate' ? 'Iron plate' : id))
-            .toBe('Backed up is no longer a belt setting: the iron plate lanes now state the lane end Dead end.');
-        expect(beltSettingNoteOf({ setting: 'moving', end: 'infinite', lanes: [] })).toBe('Moving is no longer a belt setting.');
     });
 });

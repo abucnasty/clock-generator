@@ -311,11 +311,10 @@ export function ConfigImportExport({
     /** Replaces the build with the one a build file holds; throws when the text is not one */
     const importConfigText = useCallback(async (text: string, undoMessage: string, prototypeSource?: 'sample') => {
         // values out of bounds are kept, for the form to show; only a broken file is rejected
-        const { config: parsedConfig, belt_note, converted_from } = await askEngine({ kind: 'config-file', config: readConfigFile(text) });
+        const { config: parsedConfig, converted_from } = await askEngine({ kind: 'config-file', config: readConfigFile(text) });
         if (converted_from !== null) recordConfigConversion(converted_from, parsedConfig);
-        // its Undo message says what replaced the build, which entities its Never on override (removed) now leaves on
-        // Auto, and which lanes now state the end its belt setting (removed) gave them
-        onUndoable(withNeverOverrideNote(withNeverOverrideNote(undoMessage, neverOverrideNoteOfText(text)), belt_note));
+        // its Undo message says what replaced the build, and which entities its Never on override (removed) now leaves on Auto
+        onUndoable(withNeverOverrideNote(undoMessage, neverOverrideNoteOfText(text)));
         onImport(parsedConfig, prototypeSource);
         onBuildReplaced();
     }, [onImport, onBuildReplaced, onUndoable]);

@@ -553,11 +553,11 @@ export interface EngineAnswers {
      */
     /**
      * `form` with the former belt setting turned into lane ends (`converted_from`: the form before, null when it stated no
-     * setting), and the note that says so (`belt_note`)
+     * setting)
      */
-    'saved-config': { problem: string | null; form: unknown; belt_note: string | null; converted_from: unknown };
+    'saved-config': { problem: string | null; form: unknown; converted_from: unknown };
     /** The same for a configuration file */
-    'config-file': { config: Config; belt_note: string | null; converted_from: Config | null };
+    'config-file': { config: Config; converted_from: Config | null };
     'pasted-entities': PastedEntities;
 }
 

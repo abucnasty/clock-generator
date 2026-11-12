@@ -25,8 +25,6 @@ export interface SharedBuild {
     config: Config;
     /** Which entities held the Never on override, which is removed, and now use Auto; null when none did */
     never_note: string | null;
-    /** Which lanes now state the end the former belt setting gave them; null when the link stated no belt setting */
-    belt_note?: string | null;
 }
 
 type ShareProblem = 'broken' | 'newer-version' | 'too-big' | 'unsupported';

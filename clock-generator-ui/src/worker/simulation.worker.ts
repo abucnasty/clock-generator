@@ -13,10 +13,10 @@ import type { LaneRole } from 'clock-generator/light';
 import type { ClockAlternativeRun, Config, CopiesError, DebugSteps, LogMessage, Logger, MachineToName, NotMadeClock, SearchRangeEdge } from 'clock-generator/browser';
 import { parseFormConfig } from './formConfig';
 import { laneRolesAnswer } from './laneRoles';
-import { beltSettingNoteOf, convertBeltSetting } from '../utils/beltSettingConversion';
+import { convertBeltSetting } from '../utils/beltSettingConversion';
 import { installFactsOf } from './installFacts';
 import { createReadyGate } from './requestGate';
-import { NO_NAMES, hiddenRecipeIds, itemName, type GameNames } from '../utils/gameNames';
+import { NO_NAMES, hiddenRecipeIds, type GameNames } from '../utils/gameNames';
 import type { CheckedRepeatedUnitConversion, RepeatedUnitsRecovery, CheckedShiftRow, ClockAlternativeRunView, ClockAlternativeView, EngineAnswers, EngineQuery, FactorioLookups, FuelViewData, PastedEntities, ShiftOptionsView, ShiftRangeEdge, WorkerRequest, WorkerResponse } from './types';
 
 type ClockGenerator = typeof import('clock-generator/browser');
@@ -426,11 +426,10 @@ function rolesForConversion(config: unknown): { of: (belt_id: number, lane: 1 | 
     }
 }
 
-/** `config` with the former belt setting turned into lane ends, and the note that says so; as it is where it states none */
-function withoutBeltSetting<C>(config: C): { config: C; belt_note: string | null; converted_from: C | null } {
-    const conversion = convertBeltSetting(config as never, rolesForConversion(config));
-    return conversion === null ? { config, belt_note: null, converted_from: null }
-        : { config: conversion.config as C, belt_note: beltSettingNoteOf(conversion, id => itemName(gameNames, id)), converted_from: config };
+/** `config` with the former belt setting turned into lane ends, and the config before; as it is where it states none */
+function withoutBeltSetting<C>(config: C): { config: C; converted_from: C | null } {
+    const converted = convertBeltSetting(config as never, rolesForConversion(config)) as C | null;
+    return converted === null ? { config, converted_from: null } : { config: converted, converted_from: config };
 }
 
 const hasPrototype = (machine: unknown): boolean => typeof machine === 'object' && machine !== null && 'prototype' in machine && machine.prototype !== undefined;
@@ -447,9 +446,9 @@ function savedConfig(config: unknown): EngineAnswers['saved-config'] {
             ? { ...(machine as object), _prototype_source: 'recipe' } : machine) }
         : form;
     const result = parseFormConfig(clockGenerator.ConfigSchema, marked);
-    if (!result.success) return { problem: result.error.message, form: marked, belt_note: null, converted_from: null };
+    if (!result.success) return { problem: result.error.message, form: marked, converted_from: null };
     const converted = withoutBeltSetting(marked);
-    return { problem: null, form: converted.config, belt_note: converted.belt_note, converted_from: converted.converted_from };
+    return { problem: null, form: converted.config, converted_from: converted.converted_from };
 }
 
 /** An imported config file, which can hold what the form exports, e.g. an inserter end left unset; a former type is read as the machine */

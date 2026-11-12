@@ -68,19 +68,17 @@ export function useSharedBuildLink(ready: boolean) {
                 return;
             }
             let config: Config;
-            let belt_note: string | null;
             try {
                 // migrated and checked as an opened build file is
                 const read = await askEngine({ kind: 'config-file', config: readConfigFile(JSON.stringify(decoded.config)) });
                 config = read.config;
-                belt_note = read.belt_note;
                 if (read.converted_from !== null) recordConfigConversion(read.converted_from, config);
             } catch (error) {
                 if (alive) notify({ severity: 'error', text: shareInvalidMessage(error instanceof Error ? error.message : String(error)) });
                 return;
             }
             // a second link while one waits takes its place
-            if (alive) setPending({ name: decoded.name, config, never_note: neverOverrideNoteOfConfig(decoded.config), belt_note });
+            if (alive) setPending({ name: decoded.name, config, never_note: neverOverrideNoteOfConfig(decoded.config) });
         })().finally(() => {
             if (alive) setQueued((current) => (current?.id === queued.id ? null : current));
         });
