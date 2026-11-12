@@ -38,7 +38,7 @@ const CARD_COPY = {
     wakeUps: 'Wakeups',
     signals: 'Signals',
     recovers: 'Recovery',
-    detailsHeading: 'How this was checked',
+    detailsHeading: 'Simulation results',
     staleLine: 'These clocks are for an earlier build. Generate again for a clock for the build you have now.',
     // the hold sentence of a clock with a loss on a shared lane: the clock-only check, which runs one copy
     holdsOneCopyAlone: 'At steady state one copy alone keeps its rate: yes.',

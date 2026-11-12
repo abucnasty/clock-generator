@@ -22,7 +22,7 @@ const keptBefore = (view: ClockAlternativeView): ClockAlternativeView => {
 describe('the card of a clock', () => {
     const views = viewsOf(AUTOMATION_240);
 
-    it('says what it is made for, without opening "How this was checked"; what was checked on the lanes is on Diagnostics', () => {
+    it('says what it is made for, without opening "Simulation results"; what was checked on the lanes is on Diagnostics', () => {
         const { container } = card(views, AUTOMATION_240.selected_index, { onShowDiagnostics: () => {} });
         const madeFor = container.querySelector('[data-made-for]')!;
         expect(madeFor.closest('details')).toBeNull();
