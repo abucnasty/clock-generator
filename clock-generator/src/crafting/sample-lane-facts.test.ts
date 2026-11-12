@@ -3,6 +3,7 @@ import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import { buildTraits } from "../entities/traits/build-traits";
 import { laneKey } from "../entities/traits/lane";
+import { modelLanesOf } from "./shared-lane-lanes";
 
 const SAMPLES = Object.entries(ConfigPaths);
 
@@ -26,4 +27,17 @@ describe("the lane facts of the samples", () => {
         expect(problems).toEqual([]);
     });
 
+    // the config only, parsed: no run and no generation. A belt the model runs with every copy on it, and that states no
+    // flow direction, is run both ways (shared-lane-verdict.ts)
+    it("state the flow direction of every belt with a lane the model runs with every copy on it", async () => {
+        const problems: string[] = [];
+        for (const [key, file] of SAMPLES) {
+            const config = await loadConfigFromFile(file);
+            const judged = new Set(modelLanesOf(config).filter(lane => lane.shared).map(lane => lane.belt_id));
+            for (const belt_id of judged) {
+                if (config.belts.find(belt => belt.id === belt_id)!.flow_direction === undefined) problems.push(`${key} belt ${belt_id} states no flow direction`);
+            }
+        }
+        expect(problems).toEqual([]);
+    });
 });
