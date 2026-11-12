@@ -10,7 +10,6 @@ import {
     beltCellText,
     beltLine,
     beltValue,
-    beltValueSub,
     clockBadges,
     signalsText,
     differenceFromRecommended,
@@ -344,17 +343,17 @@ describe('makesText and wakeUpsText', () => {
     });
 });
 
-describe('beltLine, beltValue and beltValueSub', () => {
+describe('beltLine and beltValue', () => {
     const { beltLineMoving, beltLineBackedUp, beltMoving, beltBackedUp } = SUMMARY_COPY;
 
-    // the engine's belt for the clock: the line, the tile's word and the line under it
-    it.each<[string, string, string, string, string | undefined]>([
-        ['says moving for a clock the engine made for a moving belt', 'moving', beltLineMoving, beltMoving, undefined],
-        ['says backed up for a clock the engine made for a backed-up belt, whatever the belt setting', 'backed-up', beltLineBackedUp, beltBackedUp, undefined],
-        ['says moving for the label of a clock kept from an engine that gave slack', 'moving (+4 ticks)', beltLineMoving, beltMoving, undefined],
-        ['says there is no belt when no clocked inserter picks up from one', '', SUMMARY_COPY.beltLineNone, SUMMARY_COPY.beltNone, SUMMARY_COPY.beltNoneSub],
-    ])('%s', (_, label, line, value, sub) => {
-        expect([beltLine(label), beltValue(label), beltValueSub(label)]).toEqual([line, value, sub]);
+    // the engine's belt for the clock: the line, and the word of the clock selector
+    it.each<[string, string, string, string]>([
+        ['says moving for a clock the engine made for a moving belt', 'moving', beltLineMoving, beltMoving],
+        ['says backed up for a clock the engine made for a backed-up belt, whatever the belt setting', 'backed-up', beltLineBackedUp, beltBackedUp],
+        ['says moving for the label of a clock kept from an engine that gave slack', 'moving (+4 ticks)', beltLineMoving, beltMoving],
+        ['says there is no belt when no clocked inserter picks up from one', '', SUMMARY_COPY.beltLineNone, SUMMARY_COPY.beltNone],
+    ])('%s', (_, label, line, value) => {
+        expect([beltLine(label), beltValue(label)]).toEqual([line, value]);
     });
 });
 

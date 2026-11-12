@@ -34,6 +34,12 @@ describe('the card of a clock', () => {
         expect(screen.queryByRole('button', { name: 'See diagnostics' })).toBeNull();
     });
 
+    it('has four facts and no Belt pickups', () => {
+        const { container } = card(views, AUTOMATION_240.selected_index);
+        expect([...container.querySelectorAll('[data-summary-tile]')].map(tile => tile.getAttribute('data-summary-tile'))).toEqual(['Makes', 'Wakeups', 'Signals', 'Recovery']);
+        expect(container.textContent).not.toContain('Belt pickups');
+    });
+
     it('kept before the engine gave the lanes opens as it did: no line, no table, no error', () => {
         const { container } = card(views.map(keptBefore), AUTOMATION_240.selected_index);
         expect(container.querySelector('[data-result-card]')).not.toBeNull();

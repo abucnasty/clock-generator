@@ -54,7 +54,6 @@ export const SUMMARY_COPY = {
     beltMoving: 'Moving',
     beltBackedUp: 'Backed up',
     beltNone: 'None',
-    beltNoneSub: 'no inserter picks up from a belt',
     beltLineMoving: 'Made for moving belts.',
     beltLineBackedUp: 'Made for backed-up belts.',
     beltLineNone: 'No inserter on the clock picks up from a belt.',
@@ -312,17 +311,12 @@ function beltKindOf(beltLabel: string): BeltKind {
     return beltLabel.startsWith('moving') ? 'moving' : 'backed_up';
 }
 
-/** The Belt pickups tile's word: "Moving", "Backed up", or "None" when no clocked inserter picks up from a belt */
+/** The belt's word in the workspace's clock selector: "Moving", "Backed up", or "None" when no clocked inserter picks up from a belt */
 export function beltValue(beltLabel: string): string {
     return { moving: SUMMARY_COPY.beltMoving, backed_up: SUMMARY_COPY.beltBackedUp, none: SUMMARY_COPY.beltNone }[beltKindOf(beltLabel)];
 }
 
-/** The line under the Belt pickups tile's word: what "None" means; undefined otherwise */
-export function beltValueSub(beltLabel: string): string | undefined {
-    return beltKindOf(beltLabel) === 'none' ? SUMMARY_COPY.beltNoneSub : undefined;
-}
-
-/** The full clock table's Belt cell: "Moving", "Backed up", or nothing when no clocked inserter picks up from a belt */
+/** The belt's word in the install dialog's line: "Moving", "Backed up", or nothing when no clocked inserter picks up from a belt */
 export function beltCellText(beltLabel: string): string {
     return beltLabel === '' ? '' : beltValue(beltLabel);
 }

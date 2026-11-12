@@ -6,8 +6,6 @@ import type { ClockAlternativeView } from '../worker/types';
 import { rateVerbs, type TargetCounts } from '../utils/targetCounts';
 import {
     beltLine,
-    beltValue,
-    beltValueSub,
     clockBadges,
     differenceFromRecommended,
     lossLimitText,
@@ -40,7 +38,6 @@ const CARD_COPY = {
     wakeUps: 'Wakeups',
     signals: 'Signals',
     recovers: 'Recovery',
-    belt: 'Belt pickups',
     detailsHeading: 'How this was checked',
     staleLine: 'These clocks are for an earlier build. Generate again for a clock for the build you have now.',
     // the hold sentence of a clock with a loss on a shared lane: the clock-only check, which runs one copy
@@ -151,7 +148,7 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
             <Box
                 sx={{
                     display: 'grid',
-                    gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(5, minmax(0, 1fr))' },
+                    gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(4, minmax(0, 1fr))' },
                     columnGap: 2,
                     rowGap: 1,
                     mt: 1.5,
@@ -161,7 +158,6 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
                 <Fact label={CARD_COPY.wakeUps} value={wakeUps.value.replace(' a minute', '/min')} sub={wakeUps.sub} />
                 <Fact label={CARD_COPY.signals} value={signals.value.replace(' a minute', '/min')} sub={signals.sub} />
                 <Fact label={CARD_COPY.recovers} value={recovers.value} icon={RECOVERS_ICON[recovers.kind]} />
-                <Fact label={CARD_COPY.belt} value={beltValue(selected.beltLabel)} sub={beltValueSub(selected.beltLabel)} />
             </Box>
             {recovers.kind !== 'yes' && !props.rateWarning && <Typography variant="body2" sx={{ mt: 1 }}>{recovers.detail}</Typography>}
             {lossLimit && <Typography variant="body2" sx={{ mt: 1 }} data-loss-limit>{lossLimit}</Typography>}

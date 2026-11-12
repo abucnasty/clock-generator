@@ -26,7 +26,7 @@ import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 import { CLOCK_TABLE_NAME, CLOCK_TABLE_REGION, clockHelpName, termsHelpName } from '../utils/a11yLabels';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 import { shownRateOf } from '../utils/shownRate';
-import { SUMMARY_COPY, beltCellText, clockBadges, foldedMakes, isStartDependent, outputTermOf, pickNameMeaning, recoversOf, wakeUpsAverageOf, worksOf } from '../utils/clockSummary';
+import { SUMMARY_COPY, clockBadges, foldedMakes, isStartDependent, outputTermOf, pickNameMeaning, recoversOf, wakeUpsAverageOf, worksOf } from '../utils/clockSummary';
 import { directRouterOf, familyCopyOf, fullClockName, clockChipsOf, sourceLinesOf, strategyNameOf } from '../utils/strategyNames';
 import { BadgeChips, ClockChips } from './StrategyChips';
 import { SIGNAL_DEFINITION, WAKEUP_DEFINITION, TERMS_FOCUS, type GlossaryId } from '../utils/glossary';
@@ -57,9 +57,6 @@ const COMPARE_COPY = {
     status: 'Status',
     howMadeHeading: 'How it is made',
     worksHeading: 'Does it work?',
-    beltHelp: 'The belt the clock is made for. Moving: pickup geometry models which moving stacks are within reach; straight belt is '
-        + 'the default. Backed up: items stop between pickups and the belt refills the gaps; on a moving belt an inserter can be switched '
-        + 'off holding a partial hand. It is not ranked behind other clocks for it. Blank when no clocked inserter picks up from a belt.',
     swingsHelp: 'Total output swings each output cycle of each output machine, shared equally across its output inserters. '
         + 'Per-inserter counts may be fractional. The clock repeats after a whole number of output cycles (the window cycle).',
     signalsHelp: SIGNAL_DEFINITION + ' Counted per minute for one copy of the build, in the same run as the wakeups. No clock is ranked by signals.',
@@ -204,7 +201,7 @@ export function ClockAlternativesPanel({
     const copies = alternatives[0]?.copies ?? 1; // of the generation, so a stale table keeps its own number
     // a Makes column that says the same on every row is one line above the table instead
     const fold = allColumns ? null : foldedMakes([...stable, ...unstable].map(({ alternative }) => alternative));
-    const columnCount = allColumns ? 12 : fold === null ? 7 : 6;
+    const columnCount = allColumns ? 11 : fold === null ? 7 : 6;
 
     // the index is the one drawn in this render, so a click cannot land on a row that has since moved
     const renderRow = ({ alternative, index }: ClockRow<ClockAlternativeView>) => {
@@ -256,9 +253,6 @@ export function ClockAlternativesPanel({
                 </TableCell>
                 {allColumns ? (
                     <>
-                        <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                            {beltCellText(alternative.beltLabel)}
-                        </TableCell>
                         <TableCell align="right">
                             {alternative.terminalSwingCount} per {formatTicks(alternative.cycleTicks)} ticks
                         </TableCell>
@@ -387,7 +381,6 @@ export function ClockAlternativesPanel({
                             <TableCell>{COMPARE_COPY.clock}</TableCell>
                             {allColumns ? (
                                 <>
-                                    <TableCell><HelpHeader label="Belt" help={COMPARE_COPY.beltHelp} /></TableCell>
                                     <TableCell align="right">{alternatives[0]?.counts === 'destroyed'
                                         ? <HelpHeader label={HANDS_TEXT.column} help={HANDS_TEXT.columnHelp} />
                                         : <HelpHeader label="Output swings" help={COMPARE_COPY.swingsHelp} />}</TableCell>

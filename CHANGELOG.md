@@ -16,6 +16,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ### Removed
 - ui: the Never on override is removed; older files and links load with Auto
+- ui: the result's Belt pickups fact and the Belt column of the clock table are removed
 - ui: the input belts setting is removed; older builds load with their input lane ends stated
 
 ### Changed

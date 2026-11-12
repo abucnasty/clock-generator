@@ -154,3 +154,18 @@ describe('the rate of a clock with a loss on a shared lane, in the list of clock
         expect(folded.container.querySelector('[data-makes-fold]')!.textContent).toBe('All 6 clocks make 330/s.');
     });
 });
+
+describe('the full table of clocks', () => {
+    it('has no Belt column and no help for one', () => {
+        const views = viewsOf(AUTOMATION_240);
+        show(<ClockAlternativesPanel comparison={{ allColumns: true, showUnstable: true }} onComparisonChange={() => {}}
+            alternatives={views} selectedIndex={AUTOMATION_240.selected_index} onSelect={() => {}} recommendedIndex={AUTOMATION_240.selected_index}
+            pickRule={null} isGenerating={false} />);
+        const headers = screen.getAllByRole('columnheader').map(it => it.textContent);
+        expect(headers).toHaveLength(11);
+        expect(headers.some(header => /belt/i.test(header ?? ''))).toBe(false);
+        expect(screen.queryByRole('button', { name: /belt/i })).toBeNull();
+        const firstRow = screen.getAllByRole('row').find(row => within(row).queryByRole('radio'))!;
+        expect(within(firstRow).getAllByRole('cell').concat(within(firstRow).queryAllByRole('rowheader'))).toHaveLength(11);
+    });
+});
