@@ -341,6 +341,9 @@ export type { NotMadeClock, SpareTime, WhyNotStable, WhyNotStableBuild, WhyNotSt
 export { deadlockRiskNote } from './crafting/deadlock-risk';
 export { MACHINE_IDS, machineNameInText, machineNameOf } from './crafting/machine-name';
 export type { MachineToName, MachineWords } from './crafting/machine-name';
+export { beltNameInText, capitalized, chestNameInText, drillNameInText, entityNameOf, inserterNameInText, insertersInSentence, ITEM_IDS, laneNameInText, lanesInSentence, NO_BUILD, theName } from './crafting/entity-name';
+export type { BuildToName, ItemWords } from './crafting/entity-name';
+export { buildToNameOf, entityNamesInSentence } from './crafting/build-names';
 export type { SharedItemDeadlockRisk } from './crafting/deadlock-risk';
 export { DEFAULT_KICK_START_ITEMS } from './crafting/runner/cold-start';
 
