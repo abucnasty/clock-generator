@@ -531,10 +531,10 @@ describe("a clock's replay", () => {
         }
     });
 
-    it('gives a clock kept before the belt setting it was made for, as it did', async () => {
+    it('gives a clock kept before the belt it was made for on every lane, a lane that states its end too', async () => {
         const request = timelineRequestFor(mixed, { ...clock, beltLabel: 'backed-up', backedUpBelts: true }, 'clock');
-        expect(request?.config.overrides?.backed_up_belts).toBe(true);
-        expect(await endsOf(request!.config)).toEqual([['infinite'], ['dead_end'], ['dead_end']]);
+        expect(request?.config.overrides?.backed_up_belts).toBeUndefined();
+        expect(await endsOf(request!.config)).toEqual([['dead_end'], ['dead_end'], ['dead_end']]);
     });
 });
 
