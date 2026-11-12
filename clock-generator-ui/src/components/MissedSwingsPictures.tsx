@@ -34,7 +34,7 @@ function useColours(): Colours {
         line: theme.palette.divider,
         cell: alpha(theme.palette.text.primary, 0.12),
         chip: alpha(theme.palette.text.primary, 0.05),
-        // the mock's red and yellow are the page's lighter red and its yellow
+        // the gap of the copy before in the page's lighter red, a full output in its yellow
         gap: theme.palette.error.light,
         full: theme.palette.warning.main,
     };
