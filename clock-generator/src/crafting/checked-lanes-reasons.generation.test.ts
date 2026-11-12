@@ -6,7 +6,8 @@ import { quiet, reasonsOf } from "./generate-blueprint-test-helpers";
 
 // The reason beside the status of each clock with a cause on the shared lanes: the code of belt gaps where at least one
 // missed swing shows the gap that the copy before leaves, with the totals over the copies of the cause part; no reason on
-// a lane loss where none shows it. Agricultural science has a file of its own, as it takes the longest to generate.
+// a lane loss where none shows it. Agricultural science 250 (no reason on its three lane losses, out of the suite as it
+// takes over 200 s to generate) is not here.
 describe("the reason of each clock with a cause on the shared lanes", () => {
     it.each<[keyof typeof ConfigPaths, Record<string, unknown>]>([
         ["CHEMICAL_SCIENCE_240_SHARED_FOUNDRY", {

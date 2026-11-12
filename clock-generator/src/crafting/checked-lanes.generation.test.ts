@@ -62,8 +62,8 @@ describe("what was checked on the lanes the copies of the automation science 240
         const cause = clock.checked_lanes!.cause!;
         expect(cause.headline.text).toBe("Copies 4 and 8 miss 42 of 378 swings each");
         expect(cause.cause!.text).toBe("The side belts of copies 4 and 8 are full where they join the automation science pack output belt.");
-        // a full join: no reason beside the status
-        expect(cause).not.toHaveProperty("reason");
+        // a full join: its code, with the missed output swings and the output swings of copies 4 and 8
+        expect(cause.reason).toEqual({ code: "join_full", data: { missed: 84, swings: 756 } });
         expect(cause.spacing).toBeNull();
         expect(cause.where.text).toBe("The inserter of copy 4 that drops automation science pack misses 42 of its 378 swings in 63 window cycles, and so does that of copy 8. "
             + "84 of the 336 swings each one makes wait for room.");
@@ -83,16 +83,16 @@ describe("what was checked on the lanes the copies of the automation science 240
         expect(clock.checked_lanes!.cause).toBeNull();
     });
 
-    it("gives the reason code of belt gaps, with its counts, on each lane loss where a missed swing shows the gap, and on no other clock", () => {
+    it("gives the reason code of belt gaps on each lane loss where a missed swing shows the gap, and of a full join on the join clock, with their counts", () => {
         expect(reasonsOf(result)).toEqual({
-            takt_batches_observed: "none",
+            takt_batches_observed: { code: "join_full", data: { missed: 84, swings: 756 } },
             euclidean_swings: { code: "belt_gaps", data: { missed: 6, with_gap: 3 } },
             takt_batches_observed_swings_2: { code: "belt_gaps", data: { missed: 16, with_gap: 8 } },
             takt_batches_swings_1: { code: "belt_gaps", data: { missed: 26, with_gap: 26 } },
         });
         // the reason is a code: the engine writes no sentence for it
         for (const clock of result.alternatives) {
-            for (const text of [clock.description, clock.shared_lane_loss_note ?? ""]) expect(text).not.toMatch(/belt gaps|belt_gaps/i);
+            for (const text of [clock.description, clock.shared_lane_loss_note ?? ""]) expect(text).not.toMatch(/belt gaps|belt_gaps|join_full/i);
         }
     });
 
