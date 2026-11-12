@@ -250,6 +250,7 @@ describe("generateClockForConfig", () => {
                 const ids = insightsOf("swings-2").map(it => it.id);
                 expect(ids).toContain("unstable");
                 expect(ids).not.toContain("spare-time");
+                expect(insight("swings-2", "unstable")?.title).toBe("This clock underproduces");
                 expect(insight("swings-2", "unstable")?.what).toContain("moved 16 of 32 items in a window cycle");
                 expect(insight("swings-2", "insertion-limits")?.table?.rows).toHaveLength(4);
             });

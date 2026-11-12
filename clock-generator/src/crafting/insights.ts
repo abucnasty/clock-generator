@@ -388,7 +388,7 @@ function unstableInsight(result: BlueprintGenerationResult): ClockInsight {
     return {
         id: "unstable",
         scope: "clock",
-        title: "This clock does not hold the setpoint",
+        title: "This clock underproduces",
         what: `Driven only by its enable windows, the build moved ${actual} of ${check.expected_output_items} items `
             + (as_built?.output_basis === "long-run mean" ? "a window cycle on average over a long run" : "in a window cycle")
             + (offset ? ` when the clock started ${offset} ticks later relative to the machines` : "") + `.${repeats}`,
