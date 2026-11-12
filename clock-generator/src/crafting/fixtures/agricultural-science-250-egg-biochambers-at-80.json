@@ -203,7 +203,7 @@
         {
           "ingredient": "bioflux",
           "stack_size": 4,
-          "sharing": "one_per_copy"
+          "sharing": "per_copy"
         },
         {
           "ingredient": "nutrients",

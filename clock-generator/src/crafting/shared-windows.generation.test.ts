@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { combineClockAlternativeRuns, generateClockAlternatives, COORDINATED_SOURCES_MAKER } from "./generate-blueprint";
-import { loadKeptConfig } from "../../tests/configs/kept-config";
+import { loadConfigFromFile } from "../config/loader";
 import { TestConfigPaths } from "../../tests/configs/paths";
 
 // Clocks of the grouped hands rule are also offered with the windows of the takers that open together made one, as an
@@ -15,7 +15,7 @@ const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
  */
 const EARLIER_SPEEDS: Record<number, number> = { 1: 66.031247377396, 2: 62.437498569489, 3: 112.20000267029 };
 const generateOnEarlierSpeeds = async () => {
-    const config = await loadKeptConfig(TestConfigPaths.MILITARY_SCIENCE_120_COAL_LANE_PER_COPY);
+    const config = await loadConfigFromFile(TestConfigPaths.MILITARY_SCIENCE_120_COAL_LANE_PER_COPY);
     return generateClockAlternatives({ ...config, machines: config.machines.map(machine => ({ ...machine, crafting_speed: EARLIER_SPEEDS[machine.id] })) }, { logger: quiet });
 };
 

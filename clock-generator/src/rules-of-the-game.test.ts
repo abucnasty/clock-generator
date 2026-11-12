@@ -7,13 +7,12 @@ import { Lane } from "./entities/belt/belt";
 import { createEntityRegistryFromConfig } from "./crafting/sequence/simulation-context";
 import { actsInTheTickTheBlockIsLifted, delayedHandRoomTicks, fuelHandRoomTicks, fuelRoomTicks, laneHandRoomTicks, miningDrillMaxInsertion, nearestLaneFirst } from "./rules-of-the-game";
 import { TestConfigPaths } from "../tests/configs/paths";
-import { loadKeptConfig } from "../tests/configs/kept-config";
 
 /**
  * The tables of recorded cases of the rules of the game that have no table elsewhere (see rules-of-the-game.ts for
  * where the others are). Each case is a figure read off the game, in Factorio 2.1.21 unless said otherwise.
  */
-const registryOf = async (path: string): Promise<ReadableEntityRegistry> => createEntityRegistryFromConfig(await loadKeptConfig(path));
+const registryOf = async (path: string): Promise<ReadableEntityRegistry> => createEntityRegistryFromConfig(await loadConfigFromFile(path));
 
 describe("the rules of the game", () => {
 

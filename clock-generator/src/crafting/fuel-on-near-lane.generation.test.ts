@@ -4,7 +4,6 @@ import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import type { Config } from "../config/schema";
 import { TestConfigPaths } from "../../tests/configs/paths";
-import { loadKeptConfig } from "../../tests/configs/kept-config";
 import { clockOfPlan, unclockedRun } from "./plan/unclocked-run";
 import { quiet } from "./generate-blueprint-test-helpers";
 
@@ -31,7 +30,7 @@ describe("a clock of a build that takes fuel off the near lane of a belt", () =>
 
     // the sample's config before its five copies has the bioflux on inserter 11's near lane and the nutrients on that of inserters 1 and 2
     it("gives the room to the inserters with the fuel on their near lane only, on top of the room for one more hand", async () => {
-        const plan = unclockedRun(await loadKeptConfig(TestConfigPaths.AGRICULTURAL_SCIENCE_250_BIOFLUX_ON_NEAR_LANE), { logger: quiet });
+        const plan = unclockedRun(await loadConfigFromFile(TestConfigPaths.AGRICULTURAL_SCIENCE_250_BIOFLUX_ON_NEAR_LANE), { logger: quiet });
         const without = clockOfPlan(plan, { lane_hand_room: "always" });
         const with_room = clockOfPlan(plan, { lane_hand_room: "always", fuel_hand_room: true });
         expect(Object.fromEntries(with_room.fuel_hand_room)).toEqual({ "inserter:1": 6, "inserter:2": 6 });

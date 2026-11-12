@@ -267,14 +267,14 @@
           "ingredient": "iron-ore",
           "stack_size": 4,
           "lane_end": {
-            "kind": "outlet"
+            "kind": "infinite"
           }
         },
         {
           "ingredient": "iron-ore",
           "stack_size": 4,
           "lane_end": {
-            "kind": "outlet"
+            "kind": "infinite"
           }
         }
       ]
@@ -312,14 +312,14 @@
           "ingredient": "iron-ore",
           "stack_size": 4,
           "lane_end": {
-            "kind": "outlet"
+            "kind": "infinite"
           }
         },
         {
           "ingredient": "iron-ore",
           "stack_size": 4,
           "lane_end": {
-            "kind": "outlet"
+            "kind": "infinite"
           }
         }
       ]

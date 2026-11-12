@@ -4,7 +4,6 @@ import { describe, expect, it } from "vitest";
 import { Config } from "../config/schema";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
-import { loadKeptConfig } from "../../tests/configs/kept-config";
 import { SerializableClockWindows } from "./clock";
 import { behindTargetIn, CopyMade, judgeSharedLanes, RunOfCopies, TargetRates } from "./shared-lane-verdict";
 import { withoutSharedLaneFacts } from "./generate-blueprint-test-helpers";
@@ -98,7 +97,7 @@ describe("the clocks recorded on the chemical science build whose copies share d
 // with these enable windows (read off the recording, a window cycle of 216 ticks): under Takt Batches with 6 swings copy 3
 // made about 4,000 of 4,800 a minute, its two ore inserters 82 swings against 99; under the other four every copy made 4,800.
 describe("the clocks recorded on the inserter build whose copies share flowing ore lanes", async () => {
-    const config = withFacts(await loadKeptConfig(path.join(__dirname, "fixtures", "inserter-crafting-240-3-copies-ore-lines.json")),
+    const config = withFacts(await loadConfigFromFile(path.join(__dirname, "fixtures", "inserter-crafting-240-3-copies-ore-lines.json")),
         { "2/1": dead_end, "2/2": dead_end });
     const clocks: Record<string, { window_cycle_ticks: number; windows: SerializableClockWindows }> =
         JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "inserter-crafting-240-recorded-clocks.json"), "utf8"));

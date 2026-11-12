@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import path from "node:path";
-import { loadKeptConfig } from "../../tests/configs/kept-config";
+import { loadConfigFromFile } from "../config/loader";
 import { generateClockWithSwingBackoff } from "./generate-clock";
 import { quiet } from "./generate-blueprint-test-helpers";
 
@@ -11,7 +11,7 @@ import { quiet } from "./generate-blueprint-test-helpers";
 const CONFIG = path.join(__dirname, "fixtures", "agricultural-science-250-egg-biochambers-at-80.json");
 
 describe("ghost-wakeup shaping on a build where it would leave an inserter no window", async () => {
-    const config = await loadKeptConfig(CONFIG);
+    const config = await loadConfigFromFile(CONFIG);
     const messages: string[] = [];
     const logger = { log: (m: string) => messages.push(m), info() { }, warn() { }, error() { }, debug() { } };
     const unclocked = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
