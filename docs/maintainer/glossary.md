@@ -92,26 +92,37 @@ The items per second that come onto an input lane where it starts. The configura
 the supply rate is the capacity of the lane: on a turbo belt with stacks of 4, 120 items per second. STE: SUPPLY (n)
 and RATE (n), approved.
 
+**Lane role**:
+What the build does with a lane. **Input**: an inserter takes the item of the lane from it, and no inserter drops that
+item on it. **Output**: an inserter drops the item of the lane on it, and no inserter takes that item from it.
+**Buffer**: inserters drop the item on it and take the item from it. The generator finds the role from the
+inserters, item by item. The configuration does not state it. A lane with no item has the role of the other lane of
+its belt. A project technical noun (STE rule 1.6): STE approves ROLE (n), and has no entry for lane.
+_Avoid_: transport lane (a buffer lane)
+
 **Lane end**:
 What the items do at the downstream end of a lane: a **dead end**, an **infinite end**, or an **unknown end**. A
-fact of the build: it does not change while the build runs. The configuration's `lane_end`, by its `kind`. A project
-technical noun (STE rule 1.6): STE approves END (n), and has no entry for lane.
+fact of the build: it does not change while the build runs. The configuration's `lane_end`, by its `kind`. A lane
+that states no end gets one: from `overrides.backed_up_belts` if the configuration states it, else from its **lane
+role**. A project technical noun (STE rule 1.6): STE approves END (n), and has no entry for lane.
 
 **Dead end**:
 A lane end that stops the items. They stay on the lane until a hand takes them, so the lane is a standing queue. In the
-configuration: `"lane_end": {"kind": "dead_end"}`. A project technical noun (STE rule 1.6).
+configuration: `"lane_end": {"kind": "dead_end"}`. The end of an input or a buffer lane that states no end, if the
+configuration does not state `backed_up_belts`. A project technical noun (STE rule 1.6).
 
 **Infinite end**:
 The end of a lane that takes every item that reaches it, as an infinity chest does. On an input lane, the items that
 no hand takes move along all the copies and then off the lane. In the configuration: `"lane_end": {"kind": "infinite"}`. The output
-belt ends in an infinite end too. A project technical noun (STE rule 1.6): STE has no entry for infinite.
+belt ends in an infinite end too. The end of an output lane that states no end, if the configuration does not
+state `backed_up_belts`, and the end of each export lane. A project technical noun (STE rule 1.6): STE has no entry for infinite.
 _Avoid_: outlet, free outlet, passthrough
 
 **Unknown end**:
 The lane end of a lane when the configuration does not know its end. In the configuration:
 `"lane_end": {"kind": "unknown"}`. The generator checks the clock as a dead end and as an infinite end. The clock must
 hold under both. Only the Sidecar gives it, when it cannot see the end of a lane. It helps you find a problem. It is
-not a default. The samples state the end of each lane. STE: UNKNOWN (adj) and END (n), approved.
+never a default: a lane that states no end gets a dead end or an infinite end. The samples state the end of each lane. STE: UNKNOWN (adj) and END (n), approved.
 
 **Lane sharing**:
 Whether all copies take from one lane, or each copy has a lane of its own. **Shared**: the inserters of every copy

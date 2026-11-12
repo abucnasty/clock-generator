@@ -30,8 +30,29 @@ independently:
 The flow direction is a fact of the belt, not of each lane: `flow_direction` on the belt.
 
 An export lane can have a secondary setpoint (`consumption_per_second`). That rate tells what goes off the end of the
-lane. Thus the lane states no lane end. For a lane that states no lane end, see `lane_end` in
-[Configuration file fields](../../../docs/maintainer/configuration-file-fields.md).
+lane. Thus the lane states no lane end, and its end is an infinite end.
+
+## The end of a lane that states none
+
+The generator finds the role of each lane from the inserters, item by item
+([lane role](../../../docs/maintainer/glossary.md)):
+
+| Lane role | What the inserters do | End when the lane states none |
+| --- | --- | --- |
+| Input | An inserter takes the item of the lane from it. No inserter drops that item on it. | Dead end |
+| Buffer | Inserters drop the item of the lane on it and take it from it. | Dead end |
+| Output | An inserter drops the item of the lane on it. No inserter takes that item from it. | Infinite end |
+
+A lane with no item (`"ingredient": ""`) has the role and the end of the other lane of its belt. A lane that no
+inserter takes from or drops on has no role, and its end is an infinite end. The generator never gives an unknown end.
+
+`overrides.backed_up_belts` changes this only where the configuration states it:
+
+- `true`: each lane that states no end is a dead end. An export lane is an infinite end.
+- `false`: each lane that states no end is an infinite end.
+
+Thus a build that states no lane end and no `backed_up_belts` has dead ends on its input lanes: the generator makes
+its clocks for pickups with backpressure. A stated `lane_end` is always the end of the lane.
 
 To find the end, follow the lane downstream from the last inserter of the configuration that takes from it:
 
@@ -49,8 +70,8 @@ supply rate, no lane end and no sharing. Thus only the stated lane tells if all 
   configuration are dead ends, the generator makes the clock for pickups with backpressure.
 - If the stated lane is an infinite end or an unknown end, the belt has a lane that is not a dead end.
 
-`overrides.backed_up_belts` gives a lane end only to a lane that the belt states. A lane with `"ingredient": ""` is a
-stated lane. It carries no item, and its end is the end that it states, or the end that `backed_up_belts` gives.
+A lane end comes only to a lane that the belt states. A lane with `"ingredient": ""` is a stated lane. It carries no
+item, and its end is the end that it states, the end that `backed_up_belts` gives, or the end of the other lane.
 
 An inserter can drop items onto the two sides of a belt with one lane stated. The generator keeps the other side only
 for these items.
