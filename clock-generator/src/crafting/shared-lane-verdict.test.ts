@@ -58,7 +58,7 @@ describe("the clocks recorded on the chemical science build whose copies share d
         // the swings are the hands the runs keep: every hand of 16 here, so they are the items over a hand
         expect([losses[0].swings * 16, losses[0].alone_swings * 16, losses[0].short_swings]).toEqual([losses[0].items, losses[0].alone_items, 0]);
         // inserters 3 and 6 both take advanced circuit and sulfur from belt 2: they are told apart by their numbers
-        expect(losses[0].text).toBe(`The advanced circuit lane ends in a dead end. The 5.5 copies take advanced circuit from it. When the items move east, `
+        expect(losses[0].text).toBe(`The advanced circuit lane ends in a dead end. The 5.5 copies take advanced circuit from it. When the belt flows east, `
             + `copy 2 from the entry does not get sufficient items. Its inserter (inserter 3) that takes advanced circuit and sulfur misses ${losses[0].alone_swings - losses[0].swings} of its `
             + `${losses[0].alone_swings} swings with advanced circuit in ${losses[0].window_cycles} window cycles.`);
     });
@@ -340,7 +340,7 @@ describe("a copy short because its side belt is full at its join onto the output
         for (const loss of copy4) {
             expect(loss.join_full).toBeUndefined();
             expect(loss.side_belt_waits).toEqual({ held_hands: 2, hands: 128 });
-            expect(loss.text).toMatch(/^The (iron gear wheel|copper plate) lane ends in a dead end\. The 9 copies take (iron gear wheel|copper plate) from it\. When the items move east, copy 4 from the entry does not get sufficient items\. Its inserter that takes iron gear wheel and copper plate misses 1 of its 65 swings with (iron gear wheel|copper plate) in 65 window cycles\. Its output inserter also waits for room on its side belt in 2 of its 128 swings\.$/);
+            expect(loss.text).toMatch(/^The (iron gear wheel|copper plate) lane ends in a dead end\. The 9 copies take (iron gear wheel|copper plate) from it\. When the belt flows east, copy 4 from the entry does not get sufficient items\. Its inserter that takes iron gear wheel and copper plate misses 1 of its 65 swings with (iron gear wheel|copper plate) in 65 window cycles\. Its output inserter also waits for room on its side belt in 2 of its 128 swings\.$/);
         }
     });
 });

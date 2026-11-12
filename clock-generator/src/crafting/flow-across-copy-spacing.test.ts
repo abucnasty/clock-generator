@@ -34,6 +34,7 @@ describe("a belt whose stated flow direction is across the copy spacing", () => 
         expect(message).toContain("Belt 3 states flow_direction 8 (south), and the copies share both lanes of belt 3.");
         expect(message).toContain("copy_offset (10, 0) puts the copies along x");
         expect(message).toContain("4 (east) or 12 (west)");
+        expect(message).toContain("State the way the belt flows along the row of copies, 4 (east) or 12 (west), or remove flow_direction from the belt.");
     });
 
     it("is not refused where the flow is along the spacing, where no flow or no spacing is stated, or for one copy", () => {

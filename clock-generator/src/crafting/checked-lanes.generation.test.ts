@@ -40,7 +40,7 @@ describe("what was checked on the lanes the copies of the automation science 240
             + "In 5 of the 6 missed swings, the assembling machine 3 of copy 2 that makes automation science pack has its output full and takes no more items. 2 of the 6 show both.");
         // 3 of the 6 missed swings show the gap: the reason beside the status
         expect(cause.reason).toEqual({ text: "Missed pickups due to belt gaps", data: { missed: 6, with_gap: 3 } });
-        expect(cause.spacing!.text).toBe("The copies stand 9 tiles apart. An item takes 72 ticks from one copy to the next, and the window cycle is 72 ticks. "
+        expect(cause.spacing!.text).toBe("The copies stand 9 tiles apart. It takes 72 ticks for items to travel between copies, and the window cycle is 72 ticks. "
             + "The 9 copies take every copper plate the lane brings, so the gap does not close on the way.");
         expect(cause.where.text).toBe("The inserter of copy 2 that takes iron gear wheel and copper plate misses 6 of its 130 swings in 65 window cycles: "
             + "3 with iron gear wheel and 3 with copper plate. Each swing is a hand of 16.");

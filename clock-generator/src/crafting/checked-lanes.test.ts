@@ -182,7 +182,7 @@ describe("the parts of the cause", () => {
         const lanes = checked({ config: gears(), judged: judged([lossOf(2, 6, 130)], { loss_facts: [{ ...facts, stops }] }) });
         expect(lanes.cause!.cause!.text).toBe("In 3 of the 6 missed swings, the gap that copy 1 leaves on the iron plate lane reaches copy 2 when its inserter must pick up. "
             + "In 5 of the 6 missed swings, the machine of copy 2 that makes iron gear wheel has its output full and takes no more items. 2 of the 6 show both.");
-        expect(lanes.cause!.spacing!.text).toMatch(/^The copies stand 4 tiles apart\. An item takes 32 ticks from one copy to the next, and the window cycle is 60 ticks\./);
+        expect(lanes.cause!.spacing!.text).toMatch(/^The copies stand 4 tiles apart\. It takes 32 ticks for items to travel between copies, and the window cycle is 60 ticks\./);
         // no record of the stops, or a count that does not add up to the swings missed: no cause and no reason from the spacing
         const unknown = checked({ config: gears(), judged: judged([lossOf(2, 6, 130)]) });
         expect(unknown.cause!.cause).toBeNull();

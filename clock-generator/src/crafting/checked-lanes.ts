@@ -573,7 +573,7 @@ function causeOf(input: { config: Config; build: BuildToName; losses: readonly S
         });
         const items = listedInText([...spacing_items].map(words.item));
         spacing = {
-            text: `The copies stand ${figure(spacing_facts.step_tiles)} tiles apart. An item takes ${figure(spacing_facts.travel_ticks)} ticks from one copy to the next, `
+            text: `The copies stand ${figure(spacing_facts.step_tiles)} tiles apart. It takes ${figure(spacing_facts.travel_ticks)} ticks for items to travel between copies, `
                 + `and the window cycle is ${figure(window_cycle_ticks)} ticks.`
                 + (take_all ? ` The ${figure(config.setpoint.copies)} copies take every ${items} the ${gap_lanes.length === 1 ? "lane brings" : `${gap_lanes.length === 2 ? "two " : ""}lanes bring`}, so the gap does not close on the way.` : ""),
             data: { step_tiles: spacing_facts.step_tiles, travel_ticks: spacing_facts.travel_ticks, window_cycle_ticks, take_all },

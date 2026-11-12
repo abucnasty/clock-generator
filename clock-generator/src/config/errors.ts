@@ -495,7 +495,7 @@ export class FlowAcrossCopySpacingError extends Error {
         const belts = issues.map(issue => `Belt ${issue.belt_id} states flow_direction ${issue.flow_direction} (${DIRECTION_WORDS[issue.flow_direction]}), `
             + `and the copies share ${describeLanes({ belt_id: issue.belt_id, lanes: issue.lanes })}.`);
         return `${belts.join(' ')} That is across the copy spacing: copy_offset (${offset.x}, ${offset.y}) puts the copies along ${axis}. `
-            + `State the way the items move along the row of copies, ${along}, or remove flow_direction from the belt.`;
+            + `State the way the belt flows along the row of copies, ${along}, or remove flow_direction from the belt.`;
     }
 }
 
