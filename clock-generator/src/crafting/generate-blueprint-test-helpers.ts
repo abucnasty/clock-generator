@@ -26,8 +26,8 @@ export const withSearches = (config: Config): Config =>
 
 /**
  * The config without what it states about the lanes its copies share: no `setpoint.copy_offset`, no belt's
- * `flow_direction` and no lane's `lane_end`. The engine then takes a spacing of its own, lanes that flow on past the
- * copies, and items that move either way along them. For a test whose case is a lane that flows on, on a sample that
+ * `flow_direction`, and an infinite end on each lane that is not an export lane in place of the `lane_end` it states. The
+ * engine then takes a spacing of its own, lanes that flow on past the copies, and items that move either way along them. For a test whose case is a lane that flows on, on a sample that
  * states its lanes end.
  */
 export function withoutSharedLaneFacts(config: Config): Config {
@@ -37,7 +37,8 @@ export function withoutSharedLaneFacts(config: Config): Config {
         setpoint,
         belts: config.belts.map(({ flow_direction: _flow_direction, ...belt }) => ({
             ...belt,
-            lanes: belt.lanes.map(({ lane_end: _lane_end, ...lane }) => lane) as typeof belt.lanes,
+            lanes: belt.lanes.map(({ lane_end: _lane_end, ...lane }) =>
+                "consumption_per_second" in lane && lane.consumption_per_second !== undefined ? lane : { ...lane, lane_end: { kind: "infinite" } }) as typeof belt.lanes,
         })),
     };
 }

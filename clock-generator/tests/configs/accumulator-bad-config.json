@@ -33,7 +33,8 @@
       "lanes": [
         {
           "ingredient": "battery",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {"kind": "infinite"}
         }
       ]
     }

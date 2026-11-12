@@ -202,11 +202,13 @@
       "lanes": [
         {
           "ingredient": "bioflux",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {"kind": "infinite"}
         },
         {
           "ingredient": "nutrients",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {"kind": "infinite"}
         }
       ]
     },
@@ -216,11 +218,13 @@
       "lanes": [
         {
           "ingredient": "bioflux",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {"kind": "infinite"}
         },
         {
           "ingredient": "nutrients",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {"kind": "infinite"}
         }
       ]
     }

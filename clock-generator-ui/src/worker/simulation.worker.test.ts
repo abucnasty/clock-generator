@@ -152,7 +152,7 @@ describe('repeated units: the real engine separates Check and generation recover
             { id: 2 * i + 2, source: { type: 'machine' as const, id: i + 1 }, sink: { type: 'belt' as const, id: 2 }, stack_size: 1, filters: ['iron-gear-wheel'] },
         ]).flat(),
         belts: [
-            { id: 1, type: 'transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1 }] },
+            { id: 1, type: 'transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1, lane_end: { kind: 'infinite' } }] },
             { id: 2, type: 'transport-belt', lanes: [{ ingredient: 'iron-gear-wheel', stack_size: 1 }] },
         ], chests: [],
     } as Config;
@@ -225,7 +225,7 @@ it('replays detailed activity through the real worker query without changing the
         inserters: [
             { source: { type: 'belt', id: 1 }, sink: { type: 'machine', id: 1 }, stack_size: 1 },
             { source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 1 }, stack_size: 1 },
-        ], belts: [{ id: 1, type: 'transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1 }] }],
+        ], belts: [{ id: 1, type: 'transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1, lane_end: { kind: 'infinite' } }] }],
         chests: [{ id: 1, type: 'infinity-chest', item_filter: [{ item_name: 'iron-gear-wheel', request_count: 1 }] }],
     } as Config;
     const before = JSON.stringify(config);
@@ -245,7 +245,7 @@ describe('a captured inserter kind, quality and filter mode', () => {
             { source: pickup, sink: { type: 'machine', id: 1 }, prototype: 'stack-inserter', quality: 'legendary', stack_size: 16, ...input },
             { source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 1 }, prototype: 'fast-inserter', quality: 'normal', stack_size: 4, ...output },
         ],
-        belts: [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }] }],
+        belts: [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4, lane_end: { kind: 'infinite' } }] }],
         chests: [{ id: 1, type: 'infinity-chest', remove_unfiltered_items: true }],
     });
     /** Paste into a new build, save it and reload it the way the page does */
@@ -303,9 +303,9 @@ describe('inserters that take from a belt into chests (#650)', () => {
             { id: 5, source: { type: 'belt', id: 3, pickup_length: 1 }, sink: { type: 'chest', id: 3 } },
         ],
         belts: [
-            { id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }] },
-            { id: 2, type: 'turbo-transport-belt', lanes: [{ ingredient: 'steel-plate', stack_size: 4 }] },
-            { id: 3, type: 'turbo-transport-belt', lanes: [{ ingredient: 'stone', stack_size: 4 }] },
+            { id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4, lane_end: { kind: 'infinite' } }] },
+            { id: 2, type: 'turbo-transport-belt', lanes: [{ ingredient: 'steel-plate', stack_size: 4, lane_end: { kind: 'infinite' } }] },
+            { id: 3, type: 'turbo-transport-belt', lanes: [{ ingredient: 'stone', stack_size: 4, lane_end: { kind: 'infinite' } }] },
         ],
         chests: [
             { id: 1, type: 'infinity-chest', item_filter: [], remove_unfiltered_items: true },
@@ -354,7 +354,7 @@ describe('live advice on a gear assembler, which does not block', () => {
             { id: 1, source: { type: 'belt', id: 1, pickup_length: 1 }, sink: { type: 'machine', id: 1 } },
             { id: 2, source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 1 } },
         ],
-        belts: [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size }] }],
+        belts: [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size, lane_end: { kind: 'infinite' } }] }],
         chests: [{ id: 1, type: 'infinity-chest', item_filter: [], remove_unfiltered_items: true }],
     } as Config);
     /** The engine's warning for gears({ stack_size: 2 }), live and in the generation log */

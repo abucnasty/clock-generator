@@ -123,7 +123,8 @@
         {
           "ingredient": "coal",
           "stack_size": 4,
-          "sharing": "per_copy"
+          "sharing": "per_copy",
+          "lane_end": {"kind": "infinite"}
         }
       ]
     },
@@ -133,11 +134,13 @@
       "lanes": [
         {
           "ingredient": "stone-wall",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {"kind": "infinite"}
         },
         {
           "ingredient": "piercing-rounds-magazine",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {"kind": "infinite"}
         }
       ]
     }

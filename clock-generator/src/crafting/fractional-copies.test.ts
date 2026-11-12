@@ -70,7 +70,7 @@ describe("the copies validator with a fractional number of copies", () => {
             { source: { type: "belt", id: 1 }, sink: { type: "machine", id }, stack_size: 1 },
             { source: { type: "machine", id }, sink: { type: "belt", id: 2 }, stack_size: 1 },
         ]),
-        belts: [{ id: 1, ...lane("iron-plate") }, { id: 2, ...lane("iron-gear-wheel") }],
+        belts: [{ id: 1, type: "transport-belt", lanes: [{ ingredient: "iron-plate", stack_size: 1, lane_end: { kind: "infinite" } }] }, { id: 2, ...lane("iron-gear-wheel") }],
     } as unknown as Config);
 
     it("tells to set the copies to the exact product, 11 for 5.5 copies of two units", () => {
@@ -102,7 +102,7 @@ describe("a clock for a fractional number of copies", () => {
             { id: 2, source: { type: "machine", id: 1 }, sink: { type: "belt", id: 2 }, stack_size: 1, filters: ["iron-gear-wheel"] },
         ],
         belts: [
-            { id: 1, type: "transport-belt", lanes: [{ ingredient: "iron-plate", stack_size: 1, sharing: "per_copy" }] },
+            { id: 1, type: "transport-belt", lanes: [{ ingredient: "iron-plate", stack_size: 1, sharing: "per_copy", lane_end: { kind: "infinite" } }] },
             { id: 2, type: "transport-belt", lanes: [{ ingredient: "iron-gear-wheel", stack_size: 1 }] },
         ],
     } as unknown as Config);

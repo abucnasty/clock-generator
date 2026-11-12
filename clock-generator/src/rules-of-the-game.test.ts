@@ -167,7 +167,7 @@ describe("the rules of the game", () => {
                     { id: 2, source: { type: "machine", id: 1 }, sink: { type: "chest", id: 1 }, stack_size: 16 },
                 ],
                 belts: [{ id: 1, type: "turbo-transport-belt", lanes: lanes.map(ingredient =>
-                    ({ ingredient, stack_size: 4, ...(lane_end !== undefined && { lane_end }) })) }],
+                    ({ ingredient, stack_size: 4, lane_end: lane_end ?? { kind: "infinite" } })) }],
                 chests: [{ id: 1, type: "infinity-chest", item_filter: [], remove_unfiltered_items: true }],
             }))).get("inserter:1");
 

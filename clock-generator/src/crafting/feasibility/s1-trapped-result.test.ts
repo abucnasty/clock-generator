@@ -14,7 +14,7 @@ describe("S1: a result with no way out stops its machine for good", () => {
                 { id: 1, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 1000 },
                 { id: 2, recipe: "iron-stick", productivity: 0, crafting_speed: 1000 },
             ],
-            belts: [belt(1, [lane("iron-plate")])],
+            belts: [belt(1, [lane("iron-plate", { lane_end: { kind: "infinite" } })])],
             chests: [infinityChest(2, ["iron-gear-wheel"]), { id: 3, type: "buffer-chest", storage_size: 1, item_filter: "iron-stick" }],
             inserters: [
                 inserter(1, { type: "belt", id: 1 }, { type: "machine", id: 1 }),
@@ -38,7 +38,7 @@ describe("S1: a result with no way out stops its machine for good", () => {
             { id: 1, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 1 },
             { id: 2, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 1 },
         ],
-        belts: [belt(1, [lane("iron-plate")])],
+        belts: [belt(1, [lane("iron-plate", { lane_end: { kind: "infinite" } })])],
         chests: [
             infinityChest(2, ["iron-gear-wheel"]),
             { id: 3, type: "buffer-chest", storage_size: 1, item_filter: "iron-gear-wheel" },

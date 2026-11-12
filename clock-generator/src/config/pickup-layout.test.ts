@@ -10,6 +10,7 @@ function config(source: object) {
         machines: [{id: 1, recipe: "iron-gear-wheel", crafting_speed: 1, productivity: 0}],
         inserters: [{id: 1, source: {type: "belt", id: 1, ...source}, sink: {type: "machine", id: 1}}],
         belts: [{id: 1, type: "turbo-transport-belt", lanes: [{ingredient: "iron-plate", stack_size: 4}]}],
+        overrides: {backed_up_belts: false},
     };
 }
 

@@ -23,7 +23,7 @@ function config(item: string) {
             source: {type: "belt", id: 1, pickup_layout: "bend-right-upstream", near_lane: 1},
             sink: {type: "machine", id: 1}, filters: [item]}],
         belts: [{id: 1, type: "turbo-transport-belt", lanes: [
-            {ingredient: "superconductor", stack_size: 4}, {ingredient: "holmium-plate", stack_size: 4}]}],
+            {ingredient: "superconductor", stack_size: 4, lane_end: {kind: "infinite"}}, {ingredient: "holmium-plate", stack_size: 4, lane_end: {kind: "infinite"}}]}],
     });
 }
 

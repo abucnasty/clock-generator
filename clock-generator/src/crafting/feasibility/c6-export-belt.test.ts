@@ -66,7 +66,7 @@ describe("C6: an export an output inserter fills is not judged", () => {
         setpoint: { recipe: "jelly", items_per_second: 16, copies: 1 },
         machines: [{ id: 1, recipe: "jellynut-processing", productivity: 0, crafting_speed: 5 }],
         belts: [
-            belt(1, [lane("jellynut")]),
+            belt(1, [lane("jellynut", { lane_end: { kind: "infinite" } })]),
             belt(2, [lane("jelly"), lane("jellynut-seed", { consumption_per_second: 10 })], { strategy: "export" }),
         ],
         inserters: [
