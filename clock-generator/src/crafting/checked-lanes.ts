@@ -5,15 +5,18 @@ import { beltLaneFactsOf, LaneEnd, LaneSharing } from "../entities/traits/lane-f
 import type { LaneRole } from "../entities/traits/lane-role";
 import { fractionOf, Ratio } from "../entities/traits/ratio";
 import { buildToNameOf } from "./build-names";
-import { capitalized, chestNameInText, listedInText, theName, type BuildToName } from "./entity-name";
+import { capitalized, chestNameInText, inserterNameInText, lanesInSentence, listedInText, textWords, theName, type BuildToName } from "./entity-name";
+import { machineNameInText } from "./machine-name";
 import type { CopiesTrialVerdict } from "./shared-lane-trial";
-import { droppedOntoSharedLanes, isNotChecked, type ClockSharedLaneLoss, type SharedLaneJudgement, type SharedLaneLoss,
+import { droppedOntoSharedLanes, isNotChecked, type ClockSharedLaneLoss, type MissedSwingStops, type SharedLaneJudgement, type SharedLaneLoss,
     type SharedLaneLossFacts } from "./shared-lane-verdict";
 
 /**
  * What a result says was checked on each lane the copies of a build share: the lanes of the build (`buildLanesOf`), and for
- * each clock its rows and its line (`checkedLanesOf`). Every figure comes from the runs a generation makes: the check of the
- * shared lanes (shared-lane-verdict.ts). A loss is said in swings missed.
+ * each clock its rows, its line and, for a clock that is not stable on a shared lane, the parts of the cause
+ * (`checkedLanesOf`). Every figure comes from the runs a generation makes: the check of the shared lanes
+ * (shared-lane-verdict.ts) and, for a clock with a loss, its runs with fewer copies on the lanes. A cause is written only
+ * where the run of the copies shows it; a loss is said in swings missed.
  */
 
 /** Where the end of a lane comes from: the lane states it, the config's `backed_up_belts` switch, an export lane, or the lane's role */
@@ -96,10 +99,40 @@ export interface CheckedLine {
     sentence: string;
 }
 
+/** One part of the cause of a clock that is not stable on a shared lane: its sentence, and its numbers beside it */
+export interface CausePart<T = Record<string, never>> {
+    text: string;
+    data: T;
+}
+
+/** The parts of the cause of a clock that is not stable on a shared lane, as the page lays them out */
+export interface SharedLaneCause {
+    /** "lane": a copy gets too few items; "join": a copy's side belt is full where it joins the output belt */
+    kind: "lane" | "join";
+    headline: CausePart<{ copies: CopyMissed[] }>;
+    /** What the run of the copies shows stopped the missed swings; null where it shows nothing it can name */
+    cause: CausePart<{ copies: ({ copy: number } & Partial<MissedSwingStops>)[] }> | null;
+    /** The reason from the spacing: only where the run shows the gap that the copy before leaves */
+    spacing: CausePart<{ step_tiles: number; travel_ticks: number; window_cycle_ticks: number; take_all: boolean }> | null;
+    where: CausePart<{ takers: { copy: number; inserter_id: number; missed: number; swings: number; items: { item: string; missed: number; swings: number }[] }[] }>;
+    alone: CausePart<{ makes_all: boolean; missed: number; swings: number }>;
+    /** What changes it: fewer copies whose run holds, and another clock of the result that holds with all copies */
+    changes: CausePart<{ fewer_copies: number | null; other_clock: { id: string; label: string; window_cycle_ticks: number } | null }> | null;
+}
+
 /** What a result says was checked of one clock on the lanes its copies share */
 export interface CheckedLanes {
     line: CheckedLine;
     rows: CheckedLaneRow[];
+    cause: SharedLaneCause | null;
+}
+
+/** What the check of a clock's shared lanes found with fewer copies on the lanes (shared-lane-verdict.ts `fewerCopiesThatHold`) */
+export interface FewerCopiesFound {
+    /** The largest count of copies on the lanes whose own run holds; null where none does */
+    copies: number | null;
+    /** Where the run with one copy on the lanes was made and does not hold: that copy's swings missed, by inserter */
+    one_copy_short?: { inserter_id: number; missed: number; swings: number }[];
 }
 
 /** What a clock's check of its shared lanes gives the rows */
@@ -112,6 +145,7 @@ export interface CheckedLanesInput {
     window_cycle_ticks: number;
     /** The disturbance trials on the copies, where they were made */
     copies_trial: CopiesTrialVerdict | null;
+    fewer: FewerCopiesFound | null;
 }
 
 /** A rate as data: a decimal to the ninth place, so that a sum of float rates reads as the rate it is */
@@ -169,6 +203,26 @@ function outputEndsOf(config: Config): { belts: Set<number>; chests: Set<number>
         if (makers.has(machine.id) && machine.result_target?.type === "chest") chests.add(machine.result_target.id);
     }
     return { belts, chests };
+}
+
+/** The output inserter of the config that drops the target's item onto a belt, by number; undefined where there is not one */
+function outputInserterOf(config: Config): number | undefined {
+    const item = config.setpoint.recipe;
+    const found = config.inserters.flatMap((inserter, index) => inserter.sink.type === "belt"
+        && config.belts.find(belt => belt.id === inserter.sink.id)?.lanes.some(lane => lane.ingredient === item) ? [inserter.id ?? index + 1] : []);
+    return found.length === 1 ? found[0] : undefined;
+}
+
+/**
+ * Lanes named by their items in a sentence: "the copper plate lane", "the iron gear wheel and copper plate lanes"; where an
+ * item is on more than one lane of the build, as lanesInSentence names them
+ */
+function lanesNamed(lanes: readonly { belt_id: number; lane: number }[], config: Config, build: BuildToName): string {
+    const items = lanes.map(it => config.belts.find(belt => belt.id === it.belt_id)?.lanes[it.lane - 1]?.ingredient ?? "");
+    const all = config.belts.flatMap(belt => belt.lanes.map(lane => lane.ingredient));
+    const unique = items.every(item => item !== "" && all.filter(it => it === item).length === 1);
+    if (!unique || lanes.length === 0) return lanesInSentence(lanes, build);
+    return `the ${listedInText(items.map(textWords().item))} ${lanes.length === 1 ? "lane" : "lanes"}`;
 }
 
 /** "copy 2", "copies 4 and 8" */
@@ -269,11 +323,11 @@ const NOT_IN_MODEL = "The check of the shared lanes does not run this lane.";
 const OUTPUT_BELT_NOT_RUN = "The output belt is run with the copies only together with a lane they take from, and no such lane is run.";
 
 /**
- * The rows and the line of one clock, from its check of the lanes its copies share (see the module's description); null
- * for a build of one copy
+ * The rows, the line and the parts of the cause of one clock, from its check of the lanes its copies share (see the
+ * module's description); null for a build of one copy
  */
 export function checkedLanesOf(input: CheckedLanesInput): CheckedLanes | null {
-    const { config, holds, judged, copies_trial } = input;
+    const { config, holds, judged, window_cycle_ticks, copies_trial, fewer } = input;
     const copies = config.setpoint.copies;
     if (!(copies > 1)) return null;
     const build = buildToNameOf(config);
@@ -341,7 +395,8 @@ export function checkedLanesOf(input: CheckedLanesInput): CheckedLanes | null {
     rows.sort((a, b) => first(a) - first(b) || a.belt_id - b.belt_id || a.lane - b.lane);
 
     const line = lineOf({ config, build, rows, run, holds, lane_losses, join_losses, judgement, trial_failed, copies_trial, ends, stated_output_belt });
-    return { line, rows };
+    const cause = run && losses.length > 0 ? causeOf({ config, build, losses, facts, window_cycle_ticks, fewer, loads, lanes: [...ran_lanes] }) : null;
+    return { line, rows, cause };
 }
 
 function lineOf(input: { config: Config; build: BuildToName; rows: readonly CheckedLaneRow[]; run: boolean; holds: boolean; lane_losses: readonly SharedLaneLoss[];
@@ -378,4 +433,192 @@ function lineOf(input: { config: Config; build: BuildToName; rows: readonly Chec
     const trial = trial_failed && copies_trial?.text !== undefined ? ` ${copies_trial.text}` : "";
     return { ...base, run_with_copies: true, every_copy_gets_items: short_copies.length === 0, output_belt,
         sentence: `Checked with all ${figure(copies)} copies on the lanes they share. ${items}${at_belt}.${plain}${chests}${trial}` };
+}
+
+/** "the inserter of copy 2 that takes iron gear wheel and copper plate": the name of an inserter with its copy */
+function inserterOfCopy(inserter_id: number, copy: number, build: BuildToName): string {
+    const name = inserterNameInText(inserter_id, build);
+    const of_copy = /^inserter( \(inserter \d+\))?/.test(name) ? name.replace(/^inserter( \(inserter \d+\))?/, match => `${match} of copy ${copy}`) : `${name} of copy ${copy}`;
+    return theName(of_copy);
+}
+
+/** The machine an inserter of the config puts into, named; undefined where it puts into no machine */
+function sinkMachineOf(config: Config, inserter_id: number): string | undefined {
+    const inserter = config.inserters.find((it, index) => (it.id ?? index + 1) === inserter_id);
+    if (inserter?.sink.type !== "machine") return undefined;
+    const sink_id = inserter.sink.id;
+    const machine = config.machines.find(it => it.id === sink_id);
+    return machine === undefined ? undefined : machineNameInText(machine, config.machines);
+}
+
+function causeOf(input: { config: Config; build: BuildToName; losses: readonly SharedLaneLoss[]; facts: readonly SharedLaneLossFacts[]; window_cycle_ticks: number;
+    fewer: FewerCopiesFound | null; loads: ReturnType<typeof laneLoads> | null; lanes: string[] }): SharedLaneCause {
+    const { config, build, losses, facts, window_cycle_ticks, fewer, loads } = input;
+    const words = textWords();
+    const factsOf = (loss: SharedLaneLoss) => facts[losses.indexOf(loss)];
+    const lane_losses = losses.filter(loss => loss.join_full === undefined);
+    const kind = lane_losses.length > 0 ? "lane" as const : "join" as const;
+    const ran = input.lanes.map(key => { const [belt_id, lane] = key.split("/").map(Number); return { belt_id, lane }; });
+    const changes = (other: string | null): SharedLaneCause["changes"] => {
+        const fewer_text = fewer?.copies === null || fewer?.copies === undefined ? null
+            : `With ${figure(fewer.copies)} ${fewer.copies === 1 ? "copy" : "copies"} on ${lanesNamed(ran, config, build)}, every copy makes every swing.`;
+        return fewer_text === null && other === null ? null : { text: [fewer_text, other].filter(it => it !== null).join(" "),
+            data: { fewer_copies: fewer?.copies ?? null, other_clock: null } };
+    };
+    if (kind === "join") {
+        const at_join = copiesAtFullJoin(losses);
+        const named = at_join.map(it => it.copy);
+        const output_item = words.item(config.setpoint.recipe);
+        const one = named.length === 1;
+        const output_inserter = outputInserterOf(config);
+        const swinger = (copy: number) => output_inserter === undefined ? `the output inserter of copy ${copy}` : inserterOfCopy(output_inserter, copy, build);
+        const same = at_join.every(it => it.missed === at_join[0].missed && it.swings === at_join[0].swings && it.held_hands === at_join[0].held_hands && it.hands === at_join[0].hands);
+        const where = same
+            ? `${capitalized(swinger(at_join[0].copy))} misses ${figure(at_join[0].missed)} of its ${figure(at_join[0].swings)} swings in ${losses[0].window_cycles} window cycles`
+                + (one ? "." : `, and so ${at_join.length === 2 ? "does that" : "do those"} of ${copiesNamed(named.slice(1))}.`)
+                + ` ${figure(at_join[0].held_hands)} of the ${figure(at_join[0].hands)} swings ${one ? "it makes wait" : "each one makes wait"} for room.`
+            : at_join.map(it => `${capitalized(swinger(it.copy))} misses ${figure(it.missed)} of its ${figure(it.swings)} swings in ${losses[0].window_cycles} window cycles. `
+                + `${figure(it.held_hands)} of the ${figure(it.hands)} swings it makes wait for room.`).join(" ");
+        const alone_swings = losses.map(factsOf).find(it => it?.alone_output_swings !== undefined)?.alone_output_swings;
+        const needed = at_join[0].swings;
+        const makes_all = alone_swings !== undefined && alone_swings >= needed;
+        return {
+            kind,
+            headline: { text: missedSentence(at_join), data: { copies: at_join.map(({ copy, missed, swings }) => ({ copy, missed, swings })) } },
+            cause: { text: `The side ${one ? "belt" : "belts"} of ${copiesNamed(named)} ${one ? "is" : "are"} full where ${one ? "it joins" : "they join"} the ${output_item} output belt.`,
+                data: { copies: named.map(copy => ({ copy })) } },
+            spacing: null,
+            where: { text: where, data: { takers: at_join.map(it => ({ copy: it.copy, inserter_id: output_inserter ?? 0, missed: it.missed, swings: it.swings,
+                items: [{ item: config.setpoint.recipe, missed: it.missed, swings: it.swings }] })) } },
+            alone: { text: alone_swings === undefined ? "The run of one copy alone does not record the output inserter."
+                : makes_all ? `The same inserter makes all ${figure(needed)} swings. The clock is right for one copy.`
+                    : `Alone, the same inserter makes ${figure(alone_swings)} of the ${figure(needed)} swings its target needs.`,
+            data: { makes_all, missed: alone_swings === undefined ? 0 : Math.max(0, needed - alone_swings), swings: needed } },
+            changes: changes(null),
+        };
+    }
+    // a lane loss: each copy short, each of its takers with its items, and what stopped its missed swings
+    const short = copiesShortOn(lane_losses);
+    const takers = new Map<string, { copy: number; inserter_id: number; items: { item: string; missed: number; swings: number; short_swings: number; hand: number }[];
+        stops?: MissedSwingStops; window_cycles: number }>();
+    for (const loss of lane_losses) {
+        const key = `${loss.copy}|${loss.inserter_id}`;
+        const taker = takers.get(key) ?? { copy: loss.copy, inserter_id: loss.inserter_id, items: [], window_cycles: loss.window_cycles };
+        taker.items.push({ item: loss.item, missed: Math.max(0, loss.alone_swings - loss.swings), swings: loss.alone_swings, short_swings: loss.short_swings, hand: factsOf(loss)?.hand ?? 0 });
+        taker.stops ??= factsOf(loss)?.stops;
+        takers.set(key, taker);
+    }
+    const of_takers = [...takers.values()].sort((a, b) => a.copy - b.copy || a.inserter_id - b.inserter_id);
+    const where = of_takers.map(taker => {
+        const missed = taker.items.reduce((sum, it) => sum + it.missed, 0), swings = taker.items.reduce((sum, it) => sum + it.swings, 0);
+        const by_item = taker.items.length < 2 ? "" : `: ${listedInText(taker.items.map(it => `${figure(it.missed)} with ${words.item(it.item)}`))}`;
+        const hands = new Set(taker.items.map(it => it.hand));
+        const fewer_items = taker.items.reduce((sum, it) => sum + it.short_swings, 0);
+        const hand = fewer_items > 0 ? ` ${figure(fewer_items)} of the swings it makes carry fewer items.` : hands.size === 1 ? ` Each swing is a hand of ${figure([...hands][0])}.` : "";
+        return `${capitalized(inserterOfCopy(taker.inserter_id, taker.copy, build))} misses ${figure(missed)} of its ${figure(swings)} swings in ${taker.window_cycles} window cycles${by_item}.${hand}`;
+    }).join(" ");
+    // the cause, copy by copy, only where its missed swings by window cycle add up to its swings missed
+    const cause_parts: ({ copy: number } & Partial<MissedSwingStops>)[] = [];
+    const cause_texts: string[] = [];
+    const spacing_items = new Set<string>();
+    let spacing_facts: SharedLaneLossFacts | undefined;
+    for (const copy of short) {
+        const own = of_takers.filter(it => it.copy === copy.copy);
+        const stops = own.map(it => it.stops);
+        if (stops.some(it => it === undefined)) continue;
+        const sum = (key: "missed" | "lane_empty" | "gap_from_copy_before" | "machine_full" | "both" | "neither") => stops.reduce((total, it) => total + it![key], 0);
+        const total = sum("missed");
+        if (total !== copy.missed || total === 0) continue;
+        const found = { missed: total, lane_empty: sum("lane_empty"), gap_from_copy_before: sum("gap_from_copy_before"), machine_full: sum("machine_full"),
+            both: sum("both"), neither: sum("neither"), lane_items: [...new Set(stops.flatMap(it => it!.lane_items))], gap_items: [...new Set(stops.flatMap(it => it!.gap_items))] };
+        cause_parts.push({ copy: copy.copy, ...found });
+        const of_total = (count: number) => count === total ? "" : `In ${figure(count)} of the ${figure(total)} missed swings, `;
+        const lanesOfItems = (items: readonly string[]) => lanesNamed(ran.filter(it => items.includes(config.belts.find(belt => belt.id === it.belt_id)?.lanes[it.lane - 1]?.ingredient ?? "")), config, build);
+        const sentences: string[] = [];
+        if (found.gap_from_copy_before > 0) {
+            const prefix = of_total(found.gap_from_copy_before);
+            sentences.push(`${prefix}${prefix === "" ? "The" : "the"} gap that copy ${copy.copy - 1} leaves on ${lanesOfItems(found.gap_items)} reaches copy ${copy.copy} when its inserter must pick up.`);
+            found.gap_items.forEach(it => spacing_items.add(it));
+            spacing_facts ??= lane_losses.filter(loss => loss.copy === copy.copy).map(factsOf).find(it => it !== undefined);
+        }
+        const empty_other = found.lane_empty - found.gap_from_copy_before;
+        if (empty_other > 0) {
+            const prefix = of_total(empty_other);
+            sentences.push(`${prefix}${prefix === "" ? "C" : "c"}opy ${copy.copy} finds ${lanesOfItems(found.lane_items)} empty in the reach of its inserter while its hand fills.`);
+        }
+        if (found.machine_full > 0) {
+            const machines = [...new Set(own.map(it => sinkMachineOf(config, it.inserter_id)))];
+            // "the assembling machine 3 of copy 2 that makes automation science pack"
+            const machine = machines.length === 1 && machines[0] !== undefined
+                ? `the ${/ that makes /.test(machines[0]) ? machines[0].replace(/ that makes /, ` of copy ${copy.copy} that makes `) : `${machines[0]} of copy ${copy.copy}`}`
+                : `the machine of copy ${copy.copy}`;
+            const prefix = of_total(found.machine_full);
+            sentences.push(`${prefix}${prefix === "" ? capitalized(machine) : machine} has its output full and takes no more items.`
+                + (found.both === 0 ? "" : found.both === total ? " Each of them shows both." : ` ${figure(found.both)} of the ${figure(total)} show both.`));
+        }
+        if (found.neither > 0) sentences.push(`${of_total(found.neither) === "" ? "In each" : `In ${figure(found.neither)} of the ${figure(total)}`}, the run shows neither an empty reach nor a full output.`);
+        cause_texts.push(sentences.join(" "));
+    }
+    // the reason from the spacing: only where the run shows the copy before's gap
+    let spacing: SharedLaneCause["spacing"] = null;
+    if (spacing_facts !== undefined && spacing_items.size > 0) {
+        const gap_lanes = ran.filter(it => spacing_items.has(config.belts.find(belt => belt.id === it.belt_id)?.lanes[it.lane - 1]?.ingredient ?? ""));
+        const lane_facts = laneFactsOfConfig(config);
+        const take_all = loads !== null && gap_lanes.every(it => {
+            const load = loads.find(one => one.kind === "take" && one.belt_id === it.belt_id && one.lanes.length === 1 && one.lanes[0] === it.lane);
+            return load !== undefined && load.items_per_second.toDecimal() * config.setpoint.copies >= ratio(lane_facts.of(it.belt_id, it.lane as 1 | 2).supply_rate) - 1e-9;
+        });
+        const items = listedInText([...spacing_items].map(words.item));
+        spacing = {
+            text: `The copies stand ${figure(spacing_facts.step_tiles)} tiles apart. An item takes ${figure(spacing_facts.travel_ticks)} ticks from one copy to the next, `
+                + `and the window cycle is ${figure(window_cycle_ticks)} ticks.`
+                + (take_all ? ` The ${figure(config.setpoint.copies)} copies take every ${items} the ${gap_lanes.length === 1 ? "lane brings" : `${gap_lanes.length === 2 ? "two " : ""}lanes bring`}, so the gap does not close on the way.` : ""),
+            data: { step_tiles: spacing_facts.step_tiles, travel_ticks: spacing_facts.travel_ticks, window_cycle_ticks, take_all },
+        };
+    }
+    // one copy alone: the copy that misses the most
+    const worst = [...short].sort((a, b) => b.missed - a.missed || a.copy - b.copy)[0];
+    const worst_takers = of_takers.filter(it => it.copy === worst.copy).map(it => it.inserter_id);
+    const one_copy = (fewer?.one_copy_short ?? []).filter(it => worst_takers.includes(it.inserter_id));
+    const plural = worst_takers.length > 1;
+    const alone = one_copy.length > 0
+        ? { text: `With one copy alone on the lanes, the same ${plural ? "inserters miss" : "inserter misses"} ${figure(one_copy.reduce((s, it) => s + it.missed, 0))} of `
+            + `${figure(one_copy.reduce((s, it) => s + it.swings, 0))} swings.`, data: { makes_all: false, missed: one_copy.reduce((s, it) => s + it.missed, 0), swings: one_copy.reduce((s, it) => s + it.swings, 0) } }
+        : { text: `The same ${plural ? "inserters make" : "inserter makes"} all ${figure(worst.swings)} swings. The clock is right for one copy.`, data: { makes_all: true, missed: 0, swings: worst.swings } };
+    return {
+        kind,
+        headline: { text: missedSentence(short), data: { copies: short } },
+        cause: cause_texts.length === 0 ? null : { text: cause_texts.join(" "), data: { copies: cause_parts } },
+        spacing,
+        where: { text: where, data: { takers: of_takers.map(it => ({ copy: it.copy, inserter_id: it.inserter_id, missed: it.items.reduce((s, x) => s + x.missed, 0),
+            swings: it.items.reduce((s, x) => s + x.swings, 0), items: it.items.map(({ item, missed, swings }) => ({ item, missed, swings })) })) } },
+        alone,
+        changes: changes(null),
+    };
+}
+
+/**
+ * Each clock's "what changes it" with another clock of the same result that holds with all the copies: a clock run with
+ * the copies, stable, with no row short or at a full join; the selected clock where it is one, else the first listed.
+ * "Another clock of this build holds with all 9: <its name>, window cycle 216 ticks." For a full join: "Another clock of
+ * this build has no full join: ...".
+ */
+export function withOtherClocks<T extends { id: string; label: string; verdict: string; checked_lanes?: CheckedLanes; result: { simulation_duration: { ticks: number } } }>(
+    alternatives: readonly T[], selected_index: number, copies: number): T[] {
+    const holding = (it: T) => it.verdict === "stable" && it.checked_lanes !== undefined && it.checked_lanes.line.run_with_copies
+        && it.checked_lanes.rows.every(row => row.state.kind !== "short" && row.state.kind !== "join_full");
+    const order = [alternatives[selected_index], ...alternatives.filter((_, index) => index !== selected_index)].filter(it => it !== undefined);
+    return alternatives.map(alternative => {
+        const cause = alternative.checked_lanes?.cause;
+        if (cause === null || cause === undefined) return alternative;
+        const other = order.find(it => it !== alternative && holding(it));
+        if (other === undefined) return alternative;
+        const name = other.label.split(":")[0];
+        const window_cycle_ticks = other.result.simulation_duration.ticks;
+        const text = cause.kind === "join" ? `Another clock of this build has no full join: ${name}, window cycle ${figure(window_cycle_ticks)} ticks.`
+            : `Another clock of this build holds with all ${figure(copies)}: ${name}, window cycle ${figure(window_cycle_ticks)} ticks.`;
+        const changes = { text: cause.changes === null ? text : `${cause.changes.text} ${text}`,
+            data: { fewer_copies: cause.changes?.data.fewer_copies ?? null, other_clock: { id: other.id, label: other.label, window_cycle_ticks } } };
+        return { ...alternative, checked_lanes: { ...alternative.checked_lanes!, cause: { ...cause, changes } } };
+    });
 }

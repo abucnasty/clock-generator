@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import { Config, ConfigSchema } from "../config/schema";
-import { buildLanesOf, CheckedLanes, checkedLanesOf, CheckedLanesInput } from "./checked-lanes";
+import { buildLanesOf, CheckedLanes, checkedLanesOf, CheckedLanesInput, withOtherClocks } from "./checked-lanes";
 import type { CopiesTrialVerdict } from "./shared-lane-trial";
 import type { SharedLaneJudgement, SharedLaneLoss, SharedLaneLossFacts } from "./shared-lane-verdict";
 
@@ -40,7 +40,7 @@ function judged(losses: SharedLaneLoss[], more: Partial<SharedLaneJudgement> = {
 }
 
 const checked = (input: Partial<CheckedLanesInput> & { config: Config }): CheckedLanes =>
-    checkedLanesOf({ holds: true, judged: judged([]), window_cycle_ticks: 60, copies_trial: null, ...input })!;
+    checkedLanesOf({ holds: true, judged: judged([]), window_cycle_ticks: 60, copies_trial: null, fewer: null, ...input })!;
 
 const rows = (lanes: CheckedLanes) => lanes.rows.map(row => [`${row.belt_id}/${row.lane}`, row.state.kind, row.label, row.sentence]);
 
@@ -52,7 +52,7 @@ describe("the lanes of the build", () => {
             { belt_id: 2, lane: 1, item: "iron-gear-wheel", role: "output", end: "infinite", end_given_by: "role", sharing: "shared", supply_rate: 120, supply_rate_by_default: true, capacity: 120 },
         ]);
         // a build of one copy has no row
-        expect(checkedLanesOf({ config: one, holds: true, judged: judged([]), window_cycle_ticks: 60, copies_trial: null })).toBeNull();
+        expect(checkedLanesOf({ config: one, holds: true, judged: judged([]), window_cycle_ticks: 60, copies_trial: null, fewer: null })).toBeNull();
     });
 
     it("give the switch as where the end comes from where the config states it", () => {
@@ -69,6 +69,7 @@ describe("the rows of a clock", () => {
         ]);
         expect(lanes.rows[0].together).toEqual({ kind: "take", items_per_second: 6, lanes: [1] });
         expect(lanes.line.sentence).toBe("Checked with all 3 copies on the lanes they share. Every copy gets its items. On the output belt, only the sum of the drops is checked.");
+        expect(lanes.cause).toBeNull();
     });
 
     it("are short on a lane a copy loses swings on, first, and the others not the cause", () => {
@@ -76,12 +77,15 @@ describe("the rows of a clock", () => {
         expect(rows(lanes)[0]).toEqual(["1/1", "short", "Short on copy 2", "Copy 2 misses 3 of 65 swings."]);
         expect(lanes.rows[0].state).toEqual({ kind: "short", copies: [{ copy: 2, missed: 3, swings: 65 }] });
         expect(lanes.line.sentence).toBe("Checked with all 3 copies on the lanes they share. Copy 2 does not get all its items. On the output belt, only the sum of the drops is checked.");
+        expect(lanes.cause!.headline.text).toBe("Copy 2 misses 3 of 65 swings");
     });
 
-    it("sum the swings of two takers of one copy on one lane", () => {
+    it("sum the swings of two takers of one copy on one lane, and name each taker in where and how much", () => {
         const two = gears({ inserters: [take(1, 1), take(3, 1), put(2, 2)] });
         const lanes = checked({ config: two, judged: judged([lossOf(2, 3, 65), lossOf(2, 2, 60, { inserter_id: 3 })]) });
         expect(lanes.rows[0].state).toEqual({ kind: "short", copies: [{ copy: 2, missed: 5, swings: 125 }] });
+        expect(lanes.cause!.where.text).toBe("The inserter (inserter 1) of copy 2 that takes iron plate misses 3 of its 65 swings in 65 window cycles. Each swing is a hand of 4. "
+            + "The inserter (inserter 3) of copy 2 that takes iron plate misses 2 of its 60 swings in 60 window cycles. Each swing is a hand of 4.");
     });
 
     it("hold in the steady run where the copies do not get back after a trial and lose no swings", () => {
@@ -132,6 +136,7 @@ describe("the rows of a build that states its output belt", () => {
             ["1/2", "holds", "Not the cause", "Every copy gets its items."],
         ]);
         expect(lanes.line.output_belt).toBe("misses");
+        expect(lanes.cause!.cause!.text).toBe("The side belts of copies 4 and 8 are full where they join the automation science pack output belt.");
     });
 
     it("hold at the output belt and count the waits at a join that misses no swing", async () => {
@@ -153,5 +158,43 @@ describe("the line of a build that drops into a chest of each copy", () => {
         expect(lanes.rows.map(row => `${row.belt_id}/${row.lane}`)).toEqual(["1/1", "1/2"]);
         expect(lanes.line.sentence).toBe("Checked with all 11 copies on the lanes they share. Every copy gets its items. "
             + "The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack.");
+    });
+});
+
+describe("the parts of the cause", () => {
+    it("say what changes it with fewer copies only where their run holds, and where one copy alone on the lanes is short, say so", () => {
+        const loss = lossOf(2, 3, 65);
+        const holds = checked({ config: gears(), judged: judged([loss]), fewer: { copies: 2 } });
+        expect(holds.cause!.changes!.text).toBe("With 2 copies on the iron plate lane, every copy makes every swing.");
+        expect(holds.cause!.alone.text).toBe("The same inserter makes all 65 swings. The clock is right for one copy.");
+        const none = checked({ config: gears(), judged: judged([loss]), fewer: { copies: null, one_copy_short: [{ inserter_id: 1, missed: 5, swings: 65 }] } });
+        expect(none.cause!.changes).toBeNull();
+        expect(none.cause!.alone).toEqual({ text: "With one copy alone on the lanes, the same inserter misses 5 of 65 swings.", data: { makes_all: false, missed: 5, swings: 65 } });
+    });
+
+    it("write the cause only where the run shows it: the copy before's gap, the full output, both, with their counts", () => {
+        const stops = { missed: 6, lane_empty: 3, gap_from_copy_before: 3, machine_full: 5, both: 2, neither: 0, lane_items: ["iron-plate"], gap_items: ["iron-plate"] };
+        const lanes = checked({ config: gears(), judged: judged([lossOf(2, 6, 130)], { loss_facts: [{ ...facts, stops }] }) });
+        expect(lanes.cause!.cause!.text).toBe("In 3 of the 6 missed swings, the gap that copy 1 leaves on the iron plate lane reaches copy 2 when its inserter must pick up. "
+            + "In 5 of the 6 missed swings, the machine of copy 2 that makes iron gear wheel has its output full and takes no more items. 2 of the 6 show both.");
+        expect(lanes.cause!.spacing!.text).toMatch(/^The copies stand 4 tiles apart\. An item takes 32 ticks from one copy to the next, and the window cycle is 60 ticks\./);
+        // no record of the stops, or a count that does not add up to the swings missed: no cause and no reason from the spacing
+        const unknown = checked({ config: gears(), judged: judged([lossOf(2, 6, 130)]) });
+        expect(unknown.cause!.cause).toBeNull();
+        expect(unknown.cause!.spacing).toBeNull();
+        const other = checked({ config: gears(), judged: judged([lossOf(2, 5, 130)], { loss_facts: [{ ...facts, stops }] }) });
+        expect(other.cause!.cause).toBeNull();
+    });
+
+    it("name another clock of the result that holds with all the copies", () => {
+        const short = checked({ config: gears(), judged: judged([lossOf(2, 3, 65)]) });
+        const holding = checked({ config: gears() });
+        const clocks = [
+            { id: "a", label: "Euclidean Swings: 1 output swing each output cycle", verdict: "unstable", checked_lanes: short, result: { simulation_duration: { ticks: 72 } } },
+            { id: "b", label: "Time-Study Windows: 3 output swings each output cycle", verdict: "stable", checked_lanes: holding, result: { simulation_duration: { ticks: 216 } } },
+        ];
+        const [first] = withOtherClocks(clocks, 1, 3);
+        expect(first.checked_lanes!.cause!.changes).toEqual({ text: "Another clock of this build holds with all 3: Time-Study Windows, window cycle 216 ticks.",
+            data: { fewer_copies: null, other_clock: { id: "b", label: "Time-Study Windows: 3 output swings each output cycle", window_cycle_ticks: 216 } } });
     });
 });

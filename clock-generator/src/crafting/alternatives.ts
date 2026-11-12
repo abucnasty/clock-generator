@@ -48,8 +48,8 @@ import { signalsPerMinuteOf } from "./clock-signals";
 import { START_DEPENDENCE_NOT_CHECKED, StartDependence, startDependenceNote } from "./start-dependence";
 import { NotMadeClock, notTriedSentence, WhyNotStable, whyNotStable, whyNotStableClockOf } from "./why-not-stable";
 import { DEFAULT_KICK_START_ITEMS } from "./runner/cold-start";
-import { ClockSharedLaneLoss, isNotChecked, judgeSharedLanes, SharedLaneJudgement, sharedLanesNotChecked } from "./shared-lane-verdict";
-import { buildLanesOf, BuildLane, CheckedLanes, checkedLanesOf } from "./checked-lanes";
+import { ClockSharedLaneLoss, fewerCopiesThatHold, isNotChecked, judgeSharedLanes, SharedLaneJudgement, sharedLanesNotChecked } from "./shared-lane-verdict";
+import { buildLanesOf, BuildLane, CheckedLanes, checkedLanesOf, withOtherClocks } from "./checked-lanes";
 import { buildToNameOf, entityNamesInSentence } from "./build-names";
 import { capitalized, drillNameInText, insertersInSentence, textWords } from "./entity-name";
 import { copiesDisturbanceTrial, CopiesTrialVerdict } from "./shared-lane-trial";
@@ -1107,14 +1107,29 @@ function runAlternativeOf(
         return shared_lane_checks_of.get(trial)!;
     };
     const sharedLaneLosses = (trial: Trial): readonly ClockSharedLaneLoss[] => sharedLaneCheck(trial)?.losses ?? [];
-    /** What was checked on the lanes the copies share (checked-lanes.ts), made once per trial from the check of the shared lanes */
+    /**
+     * What was checked on the lanes the copies share (checked-lanes.ts), made once per trial: from the check of the shared
+     * lanes, and for a clock that loses swings there, the runs with fewer copies on the lanes (`fewerCopiesThatHold`)
+     */
     const checked_lanes_of = new Map<Trial, CheckedLanes | null>();
     const checkedLanes = (trial: Trial, copies_trial: CopiesTrialVerdict | null): CheckedLanes | null => {
         if (!checked_lanes_of.has(trial)) {
+            const on = used.planned_on ?? config;
             const check = sharedLaneCheck(trial);
+            const judgement = check?.judgement ?? null;
+            const with_swings = { ...on, overrides: { ...on.overrides, terminal_swing_count: trial.result.used_terminal_swing_count } };
+            let fewer: ReturnType<typeof fewerCopiesThatHold> = null;
+            if (judgement !== null && judgement.losses.length > 0) {
+                try {
+                    fewer = fewerCopiesThatHold(with_swings, trial.result.clock_windows, trial.clock_window_cycle, logger);
+                } catch (error) {
+                    if (isInternalError(error)) throw error;
+                    logger.warn(`Clock "${label}": the runs with fewer copies on the shared lanes could not be made: ${error instanceof Error ? error.message : String(error)}`);
+                }
+            }
             const stopped = check?.losses.find(isNotChecked);
-            checked_lanes_of.set(trial, checkedLanesOf({ config: used.planned_on ?? config, holds: trial.held,
-                judged: stopped !== undefined ? { stopped } : check?.judgement ?? null, window_cycle_ticks: trial.clock_window_cycle, copies_trial }));
+            checked_lanes_of.set(trial, checkedLanesOf({ config: on, holds: trial.held,
+                judged: stopped !== undefined ? { stopped } : judgement, window_cycle_ticks: trial.clock_window_cycle, copies_trial, fewer }));
         }
         return checked_lanes_of.get(trial)!;
     };
@@ -1644,7 +1659,9 @@ function generateAllAlternatives(config: Config, options: GenerateClockOptions):
 
     current_step = "Done";
     report();
-    const combined = combineClockAlternativeRuns(runs, it => it.ranking);
+    const ranked = combineClockAlternativeRuns(runs, it => it.ranking);
+    // each clock's "what changes it" names another clock of this result that holds with all the copies (checked-lanes.ts)
+    const combined = { ...ranked, alternatives: withOtherClocks(ranked.alternatives, ranked.selected_index, config.setpoint.copies) };
     return {
         ...combined,
         lanes: buildLanesOf(config),
