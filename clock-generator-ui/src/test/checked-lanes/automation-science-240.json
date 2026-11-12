@@ -408,6 +408,13 @@
        ]
       }
      },
+     "reason": {
+      "code": "join_full",
+      "data": {
+       "missed": 84,
+       "swings": 756
+      }
+     },
      "cause": {
       "text": "The side belts of copies 4 and 8 are full where they join the automation science pack output belt.",
       "data": {
