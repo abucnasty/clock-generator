@@ -204,11 +204,17 @@
       "lanes": [
         {
           "ingredient": "bioflux",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "infinite"
+          }
         },
         {
           "ingredient": "jellynut",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "infinite"
+          }
         }
       ]
     },
@@ -232,11 +238,17 @@
       "lanes": [
         {
           "ingredient": "nutrients",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "infinite"
+          }
         },
         {
           "ingredient": "jellynut-seed",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "infinite"
+          }
         }
       ]
     }

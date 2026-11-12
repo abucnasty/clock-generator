@@ -228,7 +228,10 @@
       "lanes": [
         {
           "ingredient": "coal",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         }
       ]
     }

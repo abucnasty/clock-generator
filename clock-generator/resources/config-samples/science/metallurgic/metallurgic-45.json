@@ -163,11 +163,17 @@
       "lanes": [
         {
           "ingredient": "tungsten-ore",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         },
         {
           "ingredient": "tungsten-ore",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         }
       ]
     },
@@ -177,11 +183,17 @@
       "lanes": [
         {
           "ingredient": "coal",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         },
         {
           "ingredient": "coal",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         }
       ]
     }
