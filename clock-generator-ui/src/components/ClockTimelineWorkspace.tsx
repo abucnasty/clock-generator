@@ -9,6 +9,7 @@ import { useTimelineRecording } from '../hooks/useTimelineRecording';
 import { useGameNames } from '../hooks/useGameNames';
 import { DEFAULT_INSPECTION, validInspection, resolveTimelineEntity, timelineEntityName, clampTimelineRange, panTimeline, relevantTimelineEvents, relatedTimelineEntities, upperBound, zoomTimeline, type TimelineInspection, type TimelineRange } from '../utils/timelineInspection';
 import { formatNumberText } from '../utils/numberText';
+import { shownRateOf } from '../utils/shownRate';
 import { signalsForTimelinePause } from '../utils/timelinePresentation';
 import { TimelineSignals } from './TimelineSignals';
 import { Disclosure } from './Disclosure';
@@ -202,7 +203,7 @@ export function ClockTimelineWorkspace(props: ClockTimelineWorkspaceProps) {
         {inspection.view === 'activity' && <TimelineSignals signals={inspection.signals} onChange={signals => patch({ signals })} />}
         {inspection.view === 'cycles' && <OutputCycleNavigator cycles={cycles} index={cycleIndex} windowCycleTicks={props.selected.simulationDurationTicks} swings={props.selected.terminalSwingCount} counts={props.selected.counts} onSelect={selectCycle} />}
         {recordingWanted && <Typography variant="body2" sx={{ mb: 1 }}>
-            {props.selected.ranking.meets_target_rate ? `This clock holds the setpoint of ${number(props.selected.assessment.items_per_second)} items/s across all copies. Pauses can be part of that pattern.`
+            {props.selected.ranking.meets_target_rate ? `This clock holds the setpoint of ${number(shownRateOf(props.selected))} items/s across all copies. Pauses can be part of that pattern.`
                 : 'Explore the recorded activity alongside this clock’s assessed output.'}
         </Typography>}
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', lg: recordingWanted ? 'minmax(0,1fr) 245px' : 'minmax(0,1fr)' }, gap: 1.5, alignItems: 'start' }}>

@@ -192,7 +192,11 @@
       "sentence": "Every copy gets its items."
      }
     ],
-    "cause": null
+    "cause": null,
+    "copies_made": {
+     "items_per_second": 330,
+     "window_cycles": 10
+    }
    }
   },
   {
@@ -989,6 +993,10 @@
        }
       ]
      }
+    },
+    "copies_made": {
+     "items_per_second": 318.585858586,
+     "window_cycles": 27
     }
    }
   },
@@ -2352,6 +2360,10 @@
        }
       ]
      }
+    },
+    "copies_made": {
+     "items_per_second": 320.016233766,
+     "window_cycles": 28
     }
    }
   },

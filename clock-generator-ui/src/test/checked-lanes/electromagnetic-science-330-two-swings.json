@@ -819,6 +819,10 @@
        }
       ]
      }
+    },
+    "copies_made": {
+     "items_per_second": 318.787878788,
+     "window_cycles": 27
     }
    }
   },
@@ -1612,6 +1616,10 @@
        }
       ]
      }
+    },
+    "copies_made": {
+     "items_per_second": 318.585858586,
+     "window_cycles": 27
     }
    }
   },
@@ -2404,6 +2412,10 @@
        }
       ]
      }
+    },
+    "copies_made": {
+     "items_per_second": 322.424242424,
+     "window_cycles": 27
     }
    }
   },
@@ -3489,6 +3501,10 @@
        }
       ]
      }
+    },
+    "copies_made": {
+     "items_per_second": 318.636363636,
+     "window_cycles": 27
     }
    }
   },
@@ -4282,6 +4298,10 @@
        }
       ]
      }
+    },
+    "copies_made": {
+     "items_per_second": 318.585858586,
+     "window_cycles": 27
     }
    }
   },
@@ -5075,6 +5095,10 @@
        }
       ]
      }
+    },
+    "copies_made": {
+     "items_per_second": 318.585858586,
+     "window_cycles": 27
     }
    }
   }

@@ -378,7 +378,11 @@
       "sentence": "Every copy gets its items."
      }
     ],
-    "cause": null
+    "cause": null,
+    "copies_made": {
+     "items_per_second": 240,
+     "window_cycles": 65
+    }
    }
   },
   {
@@ -634,7 +638,11 @@
       "sentence": "Every copy gets its items."
      }
     ],
-    "cause": null
+    "cause": null,
+    "copies_made": {
+     "items_per_second": 240,
+     "window_cycles": 64
+    }
    }
   },
   {
@@ -877,7 +885,11 @@
       "sentence": "Every copy gets its items."
      }
     ],
-    "cause": null
+    "cause": null,
+    "copies_made": {
+     "items_per_second": 240,
+     "window_cycles": 40
+    }
    }
   },
   {
@@ -2032,7 +2044,11 @@
       "sentence": "Every copy gets its items."
      }
     ],
-    "cause": null
+    "cause": null,
+    "copies_made": {
+     "items_per_second": 240,
+     "window_cycles": 65
+    }
    }
   },
   {
@@ -2280,7 +2296,11 @@
       "sentence": "Every copy gets its items."
      }
     ],
-    "cause": null
+    "cause": null,
+    "copies_made": {
+     "items_per_second": 240,
+     "window_cycles": 65
+    }
    }
   },
   {
@@ -2628,7 +2648,11 @@
       "sentence": "Every copy gets its items."
      }
     ],
-    "cause": null
+    "cause": null,
+    "copies_made": {
+     "items_per_second": 240,
+     "window_cycles": 64
+    }
    }
   }
  ]

@@ -25,6 +25,7 @@ import type { ClockVerdict } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 import { CLOCK_TABLE_NAME, CLOCK_TABLE_REGION, clockHelpName, termsHelpName } from '../utils/a11yLabels';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
+import { shownRateOf } from '../utils/shownRate';
 import { SUMMARY_COPY, beltCellText, clockBadges, foldedMakes, isStartDependent, outputTermOf, pickNameMeaning, recoversOf, wakeUpsAverageOf, worksOf } from '../utils/clockSummary';
 import { directRouterOf, familyCopyOf, fullClockName, clockChipsOf, sourceLinesOf, strategyNameOf } from '../utils/strategyNames';
 import { BadgeChips, ClockChips } from './StrategyChips';
@@ -266,7 +267,7 @@ export function ClockAlternativesPanel({
                         <TableCell align="right">{alternative.deciders}</TableCell>
                         <TableCell align="right">{wakeUpsCell(alternative)}</TableCell>
                         <TableCell align="right">{signalsCell(alternative)}</TableCell>
-                        <TableCell align="right">{alternative.assessment.items_per_second.toFixed(2)}</TableCell>
+                        <TableCell align="right">{shownRateOf(alternative).toFixed(2)}</TableCell>
                         <TableCell align="right">
                             {alternative.asBuilt
                                 ? `${formatNumberText(alternative.asBuilt.actual_output_items)} / ${alternative.expectedOutputItems}`
@@ -296,7 +297,7 @@ export function ClockAlternativesPanel({
                 ) : (
                     <>
                         {fold === null && (
-                            <TableCell align="right">{formatNumberText(alternative.assessment.items_per_second)}</TableCell>
+                            <TableCell align="right">{formatNumberText(shownRateOf(alternative))}</TableCell>
                         )}
                         <TableCell align="right">{wakeUpsCell(alternative)}</TableCell>
                         <TableCell align="right">{signalsCell(alternative)}</TableCell>

@@ -3,6 +3,7 @@ import type { ClockAlternativeView } from '../worker/types';
 import { formatNumberText } from './numberText';
 import { lossesOf, notTriedOf } from './rateWarning';
 import { fewestDecidersReason, recommendedIndexOf } from './recommendedClock';
+import { shownRateOf } from './shownRate';
 import { rateVerbs, type TargetCounts } from './targetCounts';
 
 /** The fields of a clock its summary is worked out from, so the tests need not build a whole view */
@@ -120,7 +121,7 @@ export function outputTermOf(clock: Pick<SummaryClock, 'verdict' | 'ranking' | '
     if (clock.ranking.meets_target_rate && clock.ranking.runs_fast !== undefined) return { term: SUMMARY_COPY.stable };
     if (isOffTarget(clock)) {
         return { term: clock.ranking.rate_off_target < 0 ? SUMMARY_COPY.underproduces : SUMMARY_COPY.overproduces,
-            detail: SUMMARY_COPY.makesOf(rateText(clock.assessment.items_per_second), rateText(targetOf(clock)), clock.counts) };
+            detail: SUMMARY_COPY.makesOf(rateText(shownRateOf(clock)), rateText(targetOf(clock)), clock.counts) };
     }
     if (clock.verdict !== 'unstable') return { term: SUMMARY_COPY.stable };
     if ((clock.assessment.shared_lane_losses?.length ?? 0) > 0) {
@@ -245,10 +246,13 @@ export function lossLimitText(clock: Pick<SummaryClock, 'assessment'>, itemLabel
     return SUMMARY_COPY.recoversLossLimit(minutesAndSecondsText(limit.ticks), name.charAt(0).toLowerCase() + name.slice(1));
 }
 
-/** What the clock makes, for all the copies, and the line under it: "240/s", "all 11 copies" (nothing for one copy) */
-export function makesText(clock: Pick<SummaryClock, 'assessment'>, copies: number): { value: string; sub: string } {
+/**
+ * What the clock makes, for all the copies, and the line under it: "240/s", "all 11 copies" (nothing for one copy). On a
+ * clock with a loss on a lane its copies share, what all the copies made in their run together (shownRateOf).
+ */
+export function makesText(clock: Pick<SummaryClock, 'assessment' | 'checkedLanes'>, copies: number): { value: string; sub: string } {
     return {
-        value: SUMMARY_COPY.makes(rateText(clock.assessment.items_per_second)),
+        value: SUMMARY_COPY.makes(rateText(shownRateOf(clock))),
         sub: copies !== 1 ? SUMMARY_COPY.allCopies(copies) : '',
     };
 }
@@ -329,18 +333,20 @@ export function beltLine(beltLabel: string): string {
 }
 
 /**
- * What sets a selected clock apart from the recommended one, in at most two sentences: its rate, its wake-ups (when
- * both were counted), its belt, then whether it recovers.
+ * What sets a selected clock apart from the recommended one, in at most two sentences: its rate (shownRateOf, where it is
+ * off the setpoint), its wake-ups (when both were counted), its belt, then whether it recovers.
  */
 export function differenceFromRecommended(selected: SummaryClock, recommended: SummaryClock): string {
     const sentences: string[] = [];
     if (isStartDependent(selected)) sentences.push('It depends on how it is started.');
-    if (isOffTarget(selected)) {
-        sentences.push(SUMMARY_COPY.differsRate(rateText(selected.assessment.items_per_second), rateText(targetOf(selected)), selected.counts));
+    // the rate it shows off the setpoint: its own, or on a loss on a shared lane what all the copies made
+    const rateDiffers = Math.abs(shownRateOf(selected) - targetOf(selected)) >= MIN_OFF_TARGET;
+    if (rateDiffers) {
+        sentences.push(SUMMARY_COPY.differsRate(rateText(shownRateOf(selected)), rateText(targetOf(selected)), selected.counts));
     }
     // at the setpoint, a clock that underproduces or overproduces beside a stable recommended clock (off it, the rate says so)
     const selectedTerm = outputTermOf(selected).term;
-    const termDiffers = !isOffTarget(selected) && selectedTerm !== SUMMARY_COPY.stable && outputTermOf(recommended).term === SUMMARY_COPY.stable;
+    const termDiffers = !rateDiffers && selectedTerm !== SUMMARY_COPY.stable && outputTermOf(recommended).term === SUMMARY_COPY.stable;
     const mine = selected.assessment.wake_ups_per_minute;
     const theirs = recommended.assessment.wake_ups_per_minute;
     if (mine !== null && theirs !== null) {
@@ -367,15 +373,16 @@ export function differenceFromRecommended(selected: SummaryClock, recommended: S
 const FOLD_MIN_ROWS = 3;
 
 /**
- * "All 5 clocks make 240/s." when 3 or more clocks shown make the same rate at two decimals, so the compare table can
- * leave out a column that says the same on every row; null when they differ, or there are too few to fold.
+ * "All 5 clocks make 240/s." when 3 or more clocks shown make the same rate at two decimals (the rate each shows,
+ * shownRateOf), so the compare table can leave out a column that says the same on every row; null when they differ, or
+ * there are too few to fold.
  */
-export function foldedMakes(clocks: Pick<SummaryClock, 'assessment' | 'counts'>[]): string | null {
+export function foldedMakes(clocks: Pick<SummaryClock, 'assessment' | 'checkedLanes' | 'counts'>[]): string | null {
     if (clocks.length < FOLD_MIN_ROWS) {
         return null;
     }
-    const rates = new Set(clocks.map(clock => clock.assessment.items_per_second.toFixed(2)));
-    return rates.size === 1 ? SUMMARY_COPY.foldedMakes(clocks.length, rateText(clocks[0].assessment.items_per_second), clocks[0].counts) : null;
+    const rates = new Set(clocks.map(clock => shownRateOf(clock).toFixed(2)));
+    return rates.size === 1 ? SUMMARY_COPY.foldedMakes(clocks.length, rateText(shownRateOf(clocks[0])), clocks[0].counts) : null;
 }
 
 /**

@@ -24,6 +24,7 @@ import {
     worksOf,
     type SummaryClock,
 } from './clockSummary';
+import { AUTOMATION_240, ELECTROMAGNETIC_330_TWO_SWINGS, viewOf, viewsOf } from '../test/checkedLanesFixtures';
 
 const TARGET = 240;
 
@@ -450,5 +451,57 @@ describe('SUMMARY_COPY', () => {
             expect(text).not.toMatch(/potential|backpressure|hands?\b|transfer|starved|jammed|wake window|wake-up/i);
             expect(text.length).toBeGreaterThan(0);
         }
+    });
+});
+
+// the rate the engine gives for all the copies on their shared lanes (checked_lanes.copies_made), read from its own results
+describe('the rate of a clock with a loss on a shared lane: what all the copies made together', () => {
+    const takt = viewOf(AUTOMATION_240, 'takt_batches_observed');
+    const stable = viewOf(AUTOMATION_240, 'time_study_windows');
+    /** The same clock from an older result, which has no rate of the copies */
+    const older = (view: SummaryClock): SummaryClock => ({ ...view, checkedLanes: { ...view.checkedLanes!, copies_made: undefined } });
+
+    it('is the Makes figure of the 216-tick clock: 234.07/s, all 9 copies; the stable clock keeps 240/s', () => {
+        expect(makesText(takt, 9)).toEqual({ value: '234.07/s', sub: 'all 9 copies' });
+        expect(makesText(stable, 9)).toEqual({ value: '240/s', sub: 'all 9 copies' });
+    });
+
+    it('is said where the selected clock differs from the recommended one, in place of "It underproduces."', () => {
+        expect(differenceFromRecommended(takt, stable)).toBe(`${SUMMARY_COPY.differsRate('234.07', '240')} It wakes inserters 109 fewer times a minute than the recommended clock.`);
+        expect(differenceFromRecommended(viewOf(AUTOMATION_240, 'euclidean_swings'), stable)).toBe(`${SUMMARY_COPY.differsRate('238.77', '240')} It wakes inserters 301 fewer times a minute than the recommended clock.`);
+    });
+
+    it('keeps clocks with different rates out of the folded line: electromagnetic science 330 with 2 swings', () => {
+        const views = viewsOf(ELECTROMAGNETIC_330_TWO_SWINGS);
+        // every clock has a loss; the clock-only runs all make 330/s
+        expect(views.every(view => view.assessment.items_per_second === 330 && (view.assessment.shared_lane_losses?.length ?? 0) > 0)).toBe(true);
+        expect(foldedMakes(views)).toBeNull();
+        // the three with the same rate at two decimals fold
+        const same = views.filter(view => view.checkedLanes!.copies_made!.items_per_second.toFixed(2) === '318.59');
+        expect(same.length).toBe(3);
+        expect(foldedMakes(same)).toBe(SUMMARY_COPY.foldedMakes(3, '318.59'));
+    });
+
+    it('does not change the status, the words beside it, Works? or the term the differs sentence leaves out', () => {
+        expect(outputTermOf(takt)).toEqual({ term: SUMMARY_COPY.underproduces, detail: REASON_WORDS.target_full });
+        expect(worksOf(takt)).toEqual({ kind: 'no', text: SUMMARY_COPY.underproduces });
+    });
+
+    it('is the clock-only rate on a clock of an older result without the rate of the copies, as before', () => {
+        expect(makesText(older(takt), 9).value).toBe('240/s');
+        expect(differenceFromRecommended(older(takt), stable)).toBe('It wakes inserters 109 fewer times a minute than the recommended clock. It underproduces.');
+        expect(foldedMakes(viewsOf(ELECTROMAGNETIC_330_TWO_SWINGS).map(older))).toBe(SUMMARY_COPY.foldedMakes(6, '330'));
+    });
+
+    it('is the clock-only rate on a clock without a loss, and on one the copies were not run for', () => {
+        expect(makesText(viewOf(AUTOMATION_240, 'pitch_pickups'), 9).value).toBe('240/s');
+        expect(makesText(viewOf(AUTOMATION_240, 'takt_batches_observed_swings_4'), 9).value).toBe('180/s');
+    });
+
+    it('is beside the chip of a clock off the setpoint that has a loss: "makes" the copies\' rate', () => {
+        const off = { ...withLoss(clock('a', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -60 })) };
+        const measured: SummaryClock = { ...off, checkedLanes: { ...off.checkedLanes!, copies_made: { items_per_second: 171.5, window_cycles: 30 } } };
+        expect(outputTermOf(measured)).toEqual({ term: SUMMARY_COPY.underproduces, detail: 'makes 171.5/s of 240/s' });
+        expect(outputTermOf(off)).toEqual({ term: SUMMARY_COPY.underproduces, detail: 'makes 180/s of 240/s' });
     });
 });

@@ -10,6 +10,7 @@ import {
     recommendedIndexOf,
     type PickRule,
 } from './recommendedClock';
+import { ELECTROMAGNETIC_330_TWO_SWINGS, viewsOf } from '../test/checkedLanesFixtures';
 
 interface Clock {
     id: string;
@@ -292,5 +293,21 @@ describe('RECOMMENDED_COPY.intro', () => {
     it('names the card a row is shown in by its heading, Selected clock (#658)', () => {
         expect(RECOMMENDED_COPY.intro).toContain('show it in Selected clock above');
         expect(RECOMMENDED_COPY.intro).not.toContain('Your clock');
+    });
+});
+
+describe('the reason of a recommended clock with a loss on a shared lane', () => {
+    const views = viewsOf(ELECTROMAGNETIC_330_TWO_SWINGS);
+    const index = ELECTROMAGNETIC_330_TWO_SWINGS.selected_index;
+
+    it('says the rate all the copies made together, not the setpoint as its rate: electromagnetic science 330 with 2 swings', () => {
+        expect(recommendedIndexOf(views)).toBe(index);
+        expect(views[index].checkedLanes!.copies_made!.items_per_second).toBeCloseTo(318.79, 2);
+        expect(recommendationReason(views, index, true)).toBe('No clock holds 330/s and has recovery. This one runs at 318.79/s with the fewest wakeups.');
+    });
+
+    it('says the setpoint where the result has no rate of the copies (an older result), as before', () => {
+        const older = views.map(view => ({ ...view, checkedLanes: { ...view.checkedLanes!, copies_made: undefined } }));
+        expect(recommendationReason(older, index, true)).toBe('No clock holds 330/s and has recovery. This one runs at 330/s with the fewest wakeups.');
     });
 });

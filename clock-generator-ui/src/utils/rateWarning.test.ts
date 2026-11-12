@@ -87,3 +87,24 @@ describe('a clock rounded down to whole ticks that meets the target rate', () =>
         expect(copyBlueprintLabelOf(rounded, false)).toBe('Copy blueprint');
     });
 });
+
+describe('a clock off the setpoint that has a loss on a shared lane', () => {
+    // no sample has one: the rate the warning and the label say is what all the copies made together, the target the setpoint
+    const off: Pick<ClockAlternativeView, 'verdict' | 'assessment' | 'ranking' | 'deadlockRisk' | 'checkedLanes'> = {
+        ...clock(192, -48, false),
+        verdict: 'unstable',
+        assessment: { items_per_second: 192, shared_lane_losses: [{}] } as ClockAlternativeView['assessment'],
+        checkedLanes: { copies_made: { items_per_second: 187.25, window_cycles: 30 } } as ClockAlternativeView['checkedLanes'],
+    };
+
+    it('says the copies\' rate against the setpoint, and so does the Copy label', () => {
+        expect(rateWarningOf(off)).toContain('it runs at 187.25/s; requested 240/s in the simulator.');
+        expect(copyBlueprintLabelOf(off, false)).toBe('Copy blueprint (187.25/s, below setpoint)');
+    });
+
+    it('says the clock-only rate where the result has no rate of the copies, as before', () => {
+        const older = { ...off, checkedLanes: undefined };
+        expect(rateWarningOf(older)).toContain('it runs at 192/s; requested 240/s in the simulator.');
+        expect(copyBlueprintLabelOf(older, false)).toBe('Copy blueprint (192/s, below setpoint)');
+    });
+});

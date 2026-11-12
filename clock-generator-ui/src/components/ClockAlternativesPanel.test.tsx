@@ -2,7 +2,7 @@
 import { cleanup, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { show } from '../test/fixtures';
-import { AUTOMATION_240, checkedOf, viewsOf } from '../test/checkedLanesFixtures';
+import { AUTOMATION_240, checkedOf, ELECTROMAGNETIC_330_TWO_SWINGS, viewsOf } from '../test/checkedLanesFixtures';
 import { REASON_WORDS } from '../utils/clockSummary';
 import { fullClockName } from '../utils/strategyNames';
 import { ClockAlternativesPanel } from './ClockAlternativesPanel';
@@ -102,5 +102,55 @@ describe('the status of a stable clock above the setpoint, in the full table', (
         expect(chips.length).toBe(2);
         for (const chip of chips) expect(chip.className).not.toMatch(/MuiChip-colorSuccess/);
         expect(chips.some(chip => /MuiChip-colorError/.test(chip.className))).toBe(true);
+    });
+});
+
+describe('the rate of a clock with a loss on a shared lane, in the list of clocks: what all the copies made together', () => {
+    const views = viewsOf(AUTOMATION_240);
+    /** The table's cells of the row of the clock with `id`, as their text */
+    const cellsOf = (alternatives: typeof views, id: string, allColumns: boolean, selectedIndex = AUTOMATION_240.selected_index) => {
+        show(<ClockAlternativesPanel comparison={{ allColumns, showUnstable: true }} onComparisonChange={() => {}}
+            alternatives={alternatives} selectedIndex={selectedIndex} onSelect={() => {}} recommendedIndex={selectedIndex}
+            pickRule={null} isGenerating={false} />);
+        const row = screen.getByRole('radio', { name: fullClockName(alternatives.find(view => view.id === id)!) }).closest('tr')!;
+        return [...row.querySelectorAll('td')].map(cell => cell.textContent);
+    };
+    const older = views.map(view => ({ ...view, checkedLanes: view.checkedLanes && { ...view.checkedLanes, copies_made: undefined } }));
+
+    it('in the Makes column: 234.07 on the 216-tick clock, 238.77 on the 72-tick one, 240 on the stable one', () => {
+        expect(cellsOf(views, 'takt_batches_observed', false)).toContain('234.07');
+        cleanup();
+        expect(cellsOf(views, 'euclidean_swings', false)).toContain('238.77');
+        cleanup();
+        expect(cellsOf(views, 'time_study_windows', false)).toContain('240');
+    });
+
+    it('in the full table\'s rate column: 234.07 on the 216-tick clock, 240.00 on the stable one', () => {
+        expect(cellsOf(views, 'takt_batches_observed', true)).toContain('234.07');
+        cleanup();
+        expect(cellsOf(views, 'time_study_windows', true)).toContain('240.00');
+    });
+
+    it('in an older result without the rate of the copies: the clock-only rate, as before', () => {
+        expect(cellsOf(older, 'takt_batches_observed', false)).toContain('240');
+        cleanup();
+        expect(cellsOf(older, 'takt_batches_observed', true)).toContain('240.00');
+    });
+
+    it('keeps clocks with different rates out of the folded line: electromagnetic science 330 with 2 swings', () => {
+        const ems = viewsOf(ELECTROMAGNETIC_330_TWO_SWINGS);
+        const { container } = show(<ClockAlternativesPanel comparison={{ allColumns: false, showUnstable: true }} onComparisonChange={() => {}}
+            alternatives={ems} selectedIndex={ELECTROMAGNETIC_330_TWO_SWINGS.selected_index} onSelect={() => {}} recommendedIndex={ELECTROMAGNETIC_330_TWO_SWINGS.selected_index}
+            pickRule={null} isGenerating={false} />);
+        expect(container.querySelector('[data-makes-fold]')).toBeNull();
+        expect(container.textContent).toContain('318.79');
+        expect(container.textContent).toContain('322.42');
+        cleanup();
+        // an older result of the same build folds them as before
+        const folded = show(<ClockAlternativesPanel comparison={{ allColumns: false, showUnstable: true }} onComparisonChange={() => {}}
+            alternatives={ems.map(view => ({ ...view, checkedLanes: { ...view.checkedLanes!, copies_made: undefined } }))}
+            selectedIndex={ELECTROMAGNETIC_330_TWO_SWINGS.selected_index} onSelect={() => {}} recommendedIndex={ELECTROMAGNETIC_330_TWO_SWINGS.selected_index}
+            pickRule={null} isGenerating={false} />);
+        expect(folded.container.querySelector('[data-makes-fold]')!.textContent).toBe('All 6 clocks make 330/s.');
     });
 });

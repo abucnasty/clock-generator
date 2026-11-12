@@ -627,6 +627,10 @@
        }
       ]
      }
+    },
+    "copies_made": {
+     "items_per_second": 234.074074074,
+     "window_cycles": 63
     }
    }
   },
@@ -1071,6 +1075,10 @@
        }
       ]
      }
+    },
+    "copies_made": {
+     "items_per_second": 238.769230769,
+     "window_cycles": 65
     }
    }
   },
@@ -1287,7 +1295,11 @@
       "sentence": "Copies 4 and 8 wait for room at their join in 128 of their 384 swings. No swing is missed."
      }
     ],
-    "cause": null
+    "cause": null,
+    "copies_made": {
+     "items_per_second": 240,
+     "window_cycles": 64
+    }
    }
   },
   {
@@ -2265,6 +2277,10 @@
        }
       ]
      }
+    },
+    "copies_made": {
+     "items_per_second": 236.512820513,
+     "window_cycles": 65
     }
    }
   },
@@ -2973,6 +2989,10 @@
        }
       ]
      }
+    },
+    "copies_made": {
+     "items_per_second": 234.461538462,
+     "window_cycles": 65
     }
    }
   },
@@ -3239,7 +3259,11 @@
       "sentence": "No copy waits at its join in the steady run."
      }
     ],
-    "cause": null
+    "cause": null,
+    "copies_made": {
+     "items_per_second": 240,
+     "window_cycles": 65
+    }
    }
   }
  ]

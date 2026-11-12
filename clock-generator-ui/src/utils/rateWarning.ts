@@ -1,5 +1,6 @@
 import type { ClockAlternativeView } from '../worker/types';
 import { STALE_COPY_LABEL } from './resultsStaleness';
+import { shownRateOf } from './shownRate';
 
 /** A rate as the sentences about it print it: at most two decimals, no trailing zeros ("192", "12.5", "0.33") */
 const figure = (rate: number) => Number(rate.toFixed(2)).toString();
@@ -42,7 +43,7 @@ export function notTriedOf(alternative: Pick<ClockAlternativeView, 'assessment'>
  * at the target rate on a build without the risk.
  */
 export function rateWarningOf(
-    alternative: Pick<ClockAlternativeView, 'verdict' | 'assessment' | 'ranking' | 'deadlockRisk'> | undefined,
+    alternative: Pick<ClockAlternativeView, 'verdict' | 'assessment' | 'ranking' | 'deadlockRisk' | 'checkedLanes'> | undefined,
 ): string | null {
     if (!alternative) {
         return null;
@@ -52,7 +53,7 @@ export function rateWarningOf(
 }
 
 function clockWarningOf(
-    alternative: Pick<ClockAlternativeView, 'verdict' | 'assessment' | 'ranking'>,
+    alternative: Pick<ClockAlternativeView, 'verdict' | 'assessment' | 'ranking' | 'checkedLanes'>,
 ): string | null {
     const warnings: string[] = [];
     if (alternative.assessment.start_dependence?.verdict === 'start-dependent') {
@@ -68,20 +69,21 @@ function clockWarningOf(
                 ? 'No usable recovery result is available for this clock.'
                 : 'Recovery could not be assessed: the simulator baseline for the loss trials was off its expected output.');
     }
-    const { items_per_second } = alternative.assessment;
+    // the rate the page shows (shownRateOf); the target is the assessment's rate less how far it is off it
+    const items_per_second = shownRateOf(alternative);
+    const target = alternative.assessment.items_per_second - alternative.ranking.rate_off_target;
     const runsFast = alternative.ranking.runs_fast;
     if (runsFast !== undefined) {
         warnings.push(`This clock’s window cycle time is rounded down to whole ticks, so it runs ${fastPercent(runsFast)} fast: `
             // to three decimals: a rate 0.1% fast prints as the target at two
-            + `${Number(items_per_second.toFixed(3))}/s for the ${Number((items_per_second - alternative.ranking.rate_off_target).toFixed(3))}/s requested, `
+            + `${Number(items_per_second.toFixed(3))}/s for the ${Number(target.toFixed(3))}/s requested, `
             + 'within the 0.1% a rounded clock may run and what the machines can make.');
     } else if (alternative.ranking.stable_above_target === true) {
-        const target = items_per_second - alternative.ranking.rate_off_target;
         warnings.push(`This clock runs over the setpoint: ${figure(items_per_second)}/s for the ${figure(target)}/s requested, `
             + `${fastPercent(alternative.ranking.rate_off_target / target)} over, in the simulator.`);
     } else if (Math.abs(alternative.ranking.rate_off_target) >= MIN_SHORTFALL) {
         warnings.push(`This clock’s output rate differs from the setpoint: it runs at ${figure(items_per_second)}/s; requested `
-            + `${figure(items_per_second - alternative.ranking.rate_off_target)}/s in the simulator.`);
+            + `${figure(target)}/s in the simulator.`);
     }
     if (alternative.assessment.holds === false) {
         warnings.push('This clock does not hold its expected output in the modeled clock checks.');
@@ -103,7 +105,7 @@ export function isBelowTarget(alternative: Pick<ClockAlternativeView, 'ranking'>
  * "Copy blueprint" otherwise. The other warnings are shown by the button's colour, its icon and its tooltip.
  */
 export function copyBlueprintLabelOf(
-    alternative: Pick<ClockAlternativeView, 'assessment' | 'ranking'> | undefined,
+    alternative: Pick<ClockAlternativeView, 'assessment' | 'ranking' | 'checkedLanes'> | undefined,
     stale: boolean,
     running = false,
 ): string {
@@ -112,7 +114,7 @@ export function copyBlueprintLabelOf(
     }
     const label = running ? COPY_CURRENT_BEST_LABEL : COPY_BLUEPRINT_LABEL;
     if (alternative && isBelowTarget(alternative)) {
-        return `${label} (${figure(alternative.assessment.items_per_second)}/s, below setpoint)`;
+        return `${label} (${figure(shownRateOf(alternative))}/s, below setpoint)`;
     }
     return label;
 }
