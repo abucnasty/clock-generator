@@ -5,18 +5,36 @@ import { describe, expect, it, vi } from 'vitest';
 import { ConfigSchema, FactorioDataService, laneFactsOfConfig, type Config } from 'clock-generator/browser';
 import automation from '../../../clock-generator/resources/config-samples/science/automation/automation-240.json';
 import metallurgic from '../../../clock-generator/resources/config-samples/science/metallurgic/metallurgic-45.json';
-import { show } from '../test/fixtures';
+import military from '../../../clock-generator/resources/config-samples/science/military/military-240.json';
+import logistic from '../../../clock-generator/resources/config-samples/science/logistic/logistic-240.json';
+import utility from '../../../clock-generator/resources/config-samples/science/utility/utility-120.json';
+import chemical from '../../../clock-generator/resources/config-samples/science/chemical/chemical-240-shared-foundry.json';
+import electromagnetic from '../../../clock-generator/resources/config-samples/science/electromagnetic/electromagnetic-330.json';
+import production from '../../../clock-generator/resources/config-samples/science/production/production-120-two-belts.json';
+import agriculture from '../../../clock-generator/resources/config-samples/science/agricultural/agricultural-250.json';
+import { belt as beltRow, build, inserter, machine, show } from '../test/fixtures';
 import { configToFormData, formDataToConfig } from '../utils/configForm/configMapping';
 import type { BeltFormData, ConfigFormData } from '../utils/configForm/formData';
 import { formLaneFactsOf, type FormLaneFacts } from '../utils/laneFacts';
 import { laneRolesAnswer } from '../worker/laneRoles';
 import { BeltsForm } from './BeltsForm';
+import { BeltLaneFields } from './EntityFields';
 
 FactorioDataService.initialize(JSON.parse(data));
 
 const exampleForm = (sample: unknown) => configToFormData(ConfigSchema.parse(sample));
 const AUTOMATION = automation;
 const METALLURGIC = metallurgic;
+const MILITARY = military;
+/** The facts as the page has them: none of the engine's where it throws (a machine with no recipe) */
+const pageFactsOf = (form: ConfigFormData) => {
+    const config = formDataToConfig(form);
+    try {
+        return formLaneFactsOf(config, laneRolesAnswer(config, laneFactsOfConfig(config)));
+    } catch {
+        return formLaneFactsOf(config, null);
+    }
+};
 /** The facts the page shows: the roles as the worker answers them, the rest from the light entry */
 const factsOf = (form: ConfigFormData) => {
     const config = formDataToConfig(form);
@@ -103,12 +121,13 @@ describe('the Belts section', () => {
         expect(onUpdate).toHaveBeenLastCalledWith(0, { flow_direction: undefined });
     });
 
-    it('renders a half-filled build without a role, a grey end or the count, where the engine cannot tell', async () => {
+    it('shows the stated ends, with no grey value and no count, before the engine has given the roles', async () => {
         const form = exampleForm(AUTOMATION);
         const { user } = showBelts(form, formLaneFactsOf(formDataToConfig(form), null));
         expect(screen.queryByText('Input lanes')).toBeNull();
         await openLanes(user, 1);
-        expect(combo('Lane end, Belt 1, lane 1')).toBeNull();
+        expect(combo('Lane end, Belt 1, lane 1')!.textContent).toBe('Dead end');
+        expect(screen.queryByRole('textbox', { name: 'Supply rate /s, Belt 1, lane 1' })).toBeNull();
         expect(screen.getAllByRole('textbox', { name: 'Stack size' })).toHaveLength(2);
     });
 });
@@ -181,4 +200,122 @@ it('keeps an example\'s lanes as stated through the form', () => {
     const form = exampleForm(AUTOMATION);
     const config: Config = formDataToConfig(form);
     expect(config.belts).toEqual(ConfigSchema.parse(automation).belts);
+});
+
+describe('a stated value is never hidden', () => {
+    it('shows a lane the build only drops onto with the end it states, and no field where it states none', async () => {
+        const { user, unmount } = showBelts(exampleForm(MILITARY));
+        await openLanes(user, 1);
+        expect(combo('Lane end, Belt 1, lane 1')!.textContent).toBe('Infinite');
+        expect(screen.queryByRole('textbox', { name: 'Supply rate /s, Belt 1, lane 1' })).toBeNull();
+        unmount();
+        const { user: other } = showBelts(exampleForm(AUTOMATION));
+        await openLanes(other, 2);
+        expect(combo('Lane end, Belt 2, lane 1')).toBeNull();
+    });
+
+    it('shows every stated end, supply rate and sharing where the engine cannot give the roles, with no grey default and no count', async () => {
+        const form = exampleForm(AUTOMATION);
+        form.machines.push({ ...form.machines[0], id: 9, _uuid: 'm9', recipe: '' });
+        form.belts[0].lanes[1] = { ...form.belts[0].lanes[1]!, supply_rate: 30 };
+        expect(() => laneFactsOfConfig(formDataToConfig(form))).toThrow();
+        const { user } = showBelts(form, pageFactsOf(form));
+        expect(screen.queryByText('Input lanes')).toBeNull();
+        expect(screen.queryByText(/^input belt/)).toBeNull();
+        await openLanes(user, 1);
+        expect(combo('Lane end, Belt 1, lane 1')!.textContent).toBe('Dead end');
+        expect(screen.queryByRole('textbox', { name: 'Supply rate /s, Belt 1, lane 1' })).toBeNull();
+        const supply = screen.getByRole('textbox', { name: 'Supply rate /s, Belt 1, lane 2' }) as HTMLInputElement;
+        expect([supply.value, supply.getAttribute('placeholder')]).toEqual(['30', null]);
+        expect(combo('Sharing, Belt 1, lane 1')!.textContent).toBe('not stated');
+    });
+
+    it('shows no Lane end on a lane with a consumption rate, whose end is infinite', async () => {
+        const form = exampleForm(AUTOMATION);
+        form.belts[1] = { ...form.belts[1], strategy: 'export', lanes: [{ ...form.belts[1].lanes[0], consumption_per_second: 5 }] };
+        const { user } = showBelts(form);
+        await openLanes(user, 2);
+        expect(combo('Lane end, Belt 2, lane 1')).toBeNull();
+        expect(screen.getByRole('textbox', { name: 'Consumed /s' })).toBeDefined();
+    });
+});
+
+describe('the grey default follows the engine', () => {
+    it.each([
+        [false, 'Infinite, not stated'],
+        [undefined, 'Dead end, not stated'],
+        [true, 'Dead end, not stated'],
+    ])('with backed_up_belts %s a taken lane that states no end shows %s', async (backed_up_belts, shown) => {
+        const form = withoutEnds(exampleForm(AUTOMATION));
+        if (backed_up_belts !== undefined) form.overrides = { ...form.overrides, backed_up_belts };
+        const { user } = showBelts(form);
+        await openLanes(user, 1);
+        expect(combo('Lane end, Belt 1, lane 1')!.textContent).toBe(shown);
+    });
+});
+
+describe('the role line under each belt', () => {
+    it.each([
+        ['automation science, belt 1', AUTOMATION, 1, 'input belt · the 9 copies share it'],
+        ['automation science, belt 2', AUTOMATION, 2, 'output belt · the output inserters drop on it'],
+        ['military science, belt 5', MILITARY, 5, 'input belt · each copy has its own'],
+        ['military science, belt 3', MILITARY, 3, 'input belt · the 5 copies share it'],
+        ['metallurgic science, belt 1', METALLURGIC, 1, 'input belt'],
+    ])('%s: %s', (_name, sample, belt, line) => {
+        const { container } = showBelts(exampleForm(sample));
+        const lines = [...container.querySelectorAll('[data-belt-role]')].map(it => it.textContent);
+        const form = exampleForm(sample);
+        expect(lines[form.belts.findIndex(it => it.id === belt)]).toBe(line);
+    });
+});
+
+describe('a half-filled form', () => {
+    const lanes = (...items: string[]) => items.map(ingredient => ({ ingredient, stack_size: 4 })) as BeltFormData['lanes'];
+    const takes = (fields = {}) => inserter(1, { source: { type: 'belt', id: 1 }, sink: { type: 'machine', id: 1 }, ...fields });
+    it.each([
+        ['a lane with no item', build({ machines: [machine(1, { recipe: 'iron-gear-wheel' })], belts: [beltRow(1, { lanes: lanes('') })], inserters: [takes()] })],
+        ['a belt with no lane', build({ machines: [machine(1, { recipe: 'iron-gear-wheel' })], belts: [beltRow(1, { lanes: [] as unknown as BeltFormData['lanes'] })], inserters: [takes()] })],
+        ['an inserter with no source', build({ machines: [machine(1, { recipe: 'iron-gear-wheel' })], belts: [beltRow(1, { lanes: lanes('iron-plate') })],
+            inserters: [takes({ source: { type: 'belt', id: 0 } })] })],
+        ['an inserter with no sink', build({ machines: [machine(1, { recipe: 'iron-gear-wheel' })], belts: [beltRow(1, { lanes: lanes('iron-plate') })],
+            inserters: [takes({ sink: { type: 'machine', id: 0 } })] })],
+        ['a build with no machine', build({ machines: [], belts: [beltRow(1, { lanes: lanes('iron-plate') })], inserters: [takes()] })],
+        ['a machine with no recipe', build({ machines: [machine(1, { recipe: '' })], belts: [beltRow(1, { lanes: lanes('iron-plate') })], inserters: [takes()] })],
+    ])('%s: the Belts section renders, with no role and no grey default where the engine cannot tell', async (_name, form) => {
+        const { user } = showBelts(form, pageFactsOf(form));
+        expect(screen.getByRole('heading', { name: 'Belts (1)' })).toBeDefined();
+        expect(screen.queryByText(/belt ·|^input belt$|^lane 1/)).toBeNull();
+        await openLanes(user, 1);
+        // no inserter takes this lane's item, or the engine cannot tell: no Lane end and no grey value
+        expect(combo('Lane end, Belt 1, lane 1')).toBeNull();
+        expect(screen.queryByRole('textbox', { name: 'Supply rate /s, Belt 1, lane 1' })).toBeNull();
+    });
+});
+
+describe('the Lanes fields of the 9 examples follow the engine', () => {
+    const EXAMPLES = { logistic, automation, utility, chemical, electromagnetic, military, production, metallurgic, agriculture };
+    const ENDS = { dead_end: 'Dead end', infinite: 'Infinite', unknown: 'Unknown: set the end' } as const;
+    it.each(Object.entries(EXAMPLES).flatMap(([name, sample]) => [[name, sample, 'as stated'], [name, sample, 'with no end stated']] as const))(
+        '%s, %s: a lane has a Lane end field where it is taken from or states one, showing the stated end or the engine\'s in grey, and a Supply rate field where it is taken from or states one',
+        (_name, sample, variant) => {
+            const form = variant === 'as stated' ? exampleForm(sample) : withoutEnds(exampleForm(sample));
+            const config = formDataToConfig(form);
+            const engine = laneFactsOfConfig(config);
+            const facts = factsOf(form);
+            for (const belt of form.belts) {
+                const { unmount } = show(<BeltLaneFields belt={belt} itemNames={[]} readOnly={false} facts={facts} copies={form.setpoint.copies} onChange={vi.fn()} />);
+                belt.lanes.forEach((lane, index) => {
+                    const fact = engine.of(belt.id, index + 1 as 1 | 2);
+                    const taken = fact.role === 'input' || fact.role === 'buffer';
+                    const owner = `Belt ${belt.id}, lane ${index + 1}`;
+                    const end = combo(`Lane end, ${owner}`);
+                    expect(end !== null).toBe(lane.consumption_per_second === undefined && (taken || lane.lane_end !== undefined));
+                    if (end !== null) {
+                        expect(end.textContent).toBe(lane.lane_end !== undefined ? ENDS[lane.lane_end.kind] : `${ENDS[fact.lane_end.kind]}, not stated`);
+                    }
+                    expect(screen.queryByRole('textbox', { name: `Supply rate /s, ${owner}` }) !== null).toBe(taken || lane.supply_rate !== undefined);
+                });
+                unmount();
+            }
+        });
 });

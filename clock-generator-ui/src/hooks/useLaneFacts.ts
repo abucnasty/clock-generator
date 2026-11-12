@@ -5,11 +5,11 @@ import { formLaneFactsOf, laneRolesKeyOf, type FormLaneFacts } from '../utils/la
 import type { LaneRoleOfLane } from '../worker/types';
 
 /**
- * The lanes of the build as the engine reads them: the roles from the worker (they need the game data), asked again only
+ * The lanes of the build as the engine reads them, and the roles the worker gave: the roles from the worker (they need the game data), asked again only
  * when a field they come from changes, and the rest from the light entry at once. Until the worker answers for the build
  * as it is, or where it cannot tell (a machine with no recipe yet), each lane's role and end are unknown.
  */
-export function useLaneFacts(config: Config, enabled = true): FormLaneFacts | null {
+export function useLaneFacts(config: Config, enabled = true): { facts: FormLaneFacts | null; roles: LaneRoleOfLane[] | null } {
     const key = useMemo(() => laneRolesKeyOf(config), [config]);
     const latest = useRef(config);
     useEffect(() => {
@@ -30,5 +30,6 @@ export function useLaneFacts(config: Config, enabled = true): FormLaneFacts | nu
     }, [enabled, key]);
 
     const roles = answer?.key === key ? answer.roles : null;
-    return useMemo(() => formLaneFactsOf(config, roles), [config, roles]);
+    const facts = useMemo(() => formLaneFactsOf(config, roles), [config, roles]);
+    return { facts, roles };
 }

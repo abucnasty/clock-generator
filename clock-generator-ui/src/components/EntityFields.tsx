@@ -101,12 +101,20 @@ export function BeltLaneFields({ belt, itemNames, readOnly, onChange, dialog = f
     </Button>;
     const factSx = { flex: '1 1 140px', minWidth: 'min(140px, 100%)' };
     return <Box sx={{ minWidth: 0 }}>
-        {!dialog && <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>{addButton}</Box>}
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', mb: dialog ? 2 : 1.5 }}>
+            <FlowDirectionField value={belt.flow_direction} ownerName={entityLabel('belt', belt.id)} sx={{ flex: '1 1 240px', minWidth: 'min(240px, 100%)' }}
+                onChange={flow_direction => onChange({ flow_direction })} />
+            {!dialog && addButton}
+        </Box>
         {belt.lanes.map((lane, index) => {
             const fact = facts?.of(belt.id, index + 1 as 1 | 2);
+            // the engine's values in grey only where it gave the roles; a stated value is shown whatever the engine can tell
+            const engine = fact?.role !== undefined ? fact : undefined;
             const owner = `${entityLabel('belt', belt.id)}, lane ${index + 1}`;
-            // an inserter takes from it, or it carries an end the Sidecar could not tell, which the user sets
-            const endShown = isTakenLane(fact) || lane.lane_end?.kind === 'unknown';
+            // an inserter takes from it, or it states an end; never beside a consumption rate, which makes the end infinite
+            const endShown = lane.consumption_per_second === undefined && (isTakenLane(fact) || lane.lane_end !== undefined);
+            const supplyShown = isTakenLane(fact) || lane.supply_rate !== undefined;
+            const sharingShown = copies > 1 || lane.sharing !== undefined;
             return <Box key={index} sx={dialog
                 ? { display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', mb: 2 }
                 : { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 28px', gap: 1, alignItems: 'start', mb: 1, minWidth: 0 }}>
@@ -119,11 +127,11 @@ export function BeltLaneFields({ belt, itemNames, readOnly, onChange, dialog = f
                         onValueChange={value => updateLane(index, 'stack_size', parseInt(value?.toString() || '') || BELT_FORM_DEFAULT_STACK_SIZE)}
                         sx={{ width: dialog ? 110 : 100, maxWidth: '100%', flexShrink: 0 }} />
                 </>}
-                {endShown && <LaneEndField value={lane.lane_end?.kind} engineEnd={lane.lane_end === undefined ? fact?.end : undefined} ownerName={owner}
+                {endShown && <LaneEndField value={lane.lane_end?.kind} engineEnd={lane.lane_end === undefined ? engine?.end : undefined} ownerName={owner}
                     onChange={kind => updateLane(index, 'lane_end', kind === undefined ? undefined : { kind })} sx={factSx} />}
-                {isTakenLane(fact) && <SupplyRateField value={lane.supply_rate} capacity={fact?.capacity} ownerName={owner}
+                {supplyShown && <SupplyRateField value={lane.supply_rate} capacity={engine?.capacity} ownerName={owner}
                     onChange={rate => updateLane(index, 'supply_rate', rate)} sx={factSx} />}
-                {copies > 1 && <LaneSharingField value={lane.sharing} engineSharing={lane.sharing === undefined ? fact?.sharing : undefined} ownerName={owner}
+                {sharingShown && <LaneSharingField value={lane.sharing} engineSharing={lane.sharing === undefined ? engine?.sharing : undefined} ownerName={owner}
                     onChange={sharing => updateLane(index, 'sharing', sharing)} sx={factSx} />}
                 {belt.strategy === 'export' && <Tooltip title={LANE_CONSUMPTION_TOOLTIP} describeChild><Box sx={{ flexShrink: 0 }}>
                     <NumberField label="Consumed /s" value={lane.consumption_per_second ?? null} min={0} size="small"
@@ -137,12 +145,6 @@ export function BeltLaneFields({ belt, itemNames, readOnly, onChange, dialog = f
         })}
         {dialog && addButton}
     </Box>;
-}
-
-/** The way the items on a belt move along the copies: one field of the belt, for both its lanes */
-export function BeltFlowDirectionField({ belt, onChange }: { belt: BeltFormData; onChange: (update: Partial<BeltFormData>) => void }) {
-    return <FlowDirectionField value={belt.flow_direction} ownerName={entityLabel('belt', belt.id)} sx={{ width: '100%' }}
-        onChange={flow_direction => onChange({ flow_direction })} />;
 }
 
 export function ChestFields({ chest, itemNames, onChange, onSwitchType, dialog = false, storageHelp, containerDetails = true }: {

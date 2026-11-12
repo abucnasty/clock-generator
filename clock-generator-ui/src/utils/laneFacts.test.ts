@@ -2,7 +2,7 @@ import data from '../../../clock-generator/resources/data-filtered.json?raw';
 import { describe, expect, it } from 'vitest';
 import { ConfigSchema, FactorioDataService, laneFactsOfConfig, type Config } from 'clock-generator/browser';
 import { laneRolesAnswer } from '../worker/laneRoles';
-import { formLaneFactsOf, inputLaneEnds, inputLanesText, isTakenLane, laneRolesKeyOf, outputBeltSummary } from './laneFacts';
+import { beltRoleLine, formLaneFactsOf, inputLaneEnds, inputLanesText, isTakenLane, laneRolesKeyOf, outputBeltSummary } from './laneFacts';
 
 FactorioDataService.initialize(JSON.parse(data));
 
@@ -81,5 +81,23 @@ describe('outputBeltSummary', () => {
     it('counts what the output belt of a config states', () => {
         expect(outputBeltSummary(example('science/automation/automation-240.json').output_belt!)).toBe('5 stretches, 1 splitter, 1 infinite end.');
         expect(outputBeltSummary({ stretches: [{ points: [{ drop: 1, lane: 'left' }] }] })).toBe('1 stretch.');
+    });
+});
+
+describe('beltRoleLine', () => {
+    const lane = (role: 'input' | 'output' | 'buffer' | null | undefined, sharing: 'shared' | 'per_copy' = 'shared') => ({ role, sharing });
+    it.each([
+        [[lane('input'), lane('input')], 9, 'input belt · the 9 copies share it'],
+        [[lane('input')], 5.5, 'input belt · the 5.5 copies share it'],
+        [[lane('input', 'per_copy'), lane('input', 'per_copy')], 5, 'input belt · each copy has its own'],
+        [[lane('input')], 1, 'input belt'],
+        [[lane('output')], 9, 'output belt · the output inserters drop on it'],
+        [[lane('buffer')], 9, 'buffer belt · inserters drop on it and take from it'],
+        [[lane('input'), lane('output')], 9, 'lane 1 input, lane 2 output'],
+        [[lane(null), lane(null)], 9, null],
+        [[lane('input'), lane(undefined)], 9, null],
+        [[], 9, null],
+    ] as const)('%o of %s copies: %s', (lanes, copies, line) => {
+        expect(beltRoleLine(lanes, copies)).toBe(line);
     });
 });

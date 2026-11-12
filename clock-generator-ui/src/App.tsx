@@ -19,7 +19,7 @@ import type { ChestType, Config, DebugSteps, InserterCoverageIssue, InserterFixO
 import { useSimulationWorker } from './hooks/useSimulationWorker';
 import { useStartupTimeout } from './hooks/useStartupTimeout';
 import { useConfigForm, type BuildMutationSnapshot } from './hooks/useConfigForm';
-import type { InserterFormData } from './hooks/useConfigForm';
+import type { BeltFormData, InserterFormData } from './hooks/useConfigForm';
 import { useInserterValidation } from './hooks/useInserterValidation';
 import { useOutputTransfers } from './hooks/useOutputTransfers';
 import { useAnnounce, useDismissMessage, useNotify } from './hooks/useMessages';
@@ -78,7 +78,8 @@ import { ANNOUNCEMENTS } from './utils/workflowAnnouncement';
 import { BELT_COPY, beltQuestionOf, backedUpBeltsFor, withBeltAnswer, type BeltAnswer } from './utils/beltQuestion';
 import { PickupGeometrySummary } from './components/PickupGeometrySummary';
 import { useLaneFacts } from './hooks/useLaneFacts';
-import { inputLaneEnds } from './utils/laneFacts';
+import { draftLaneFactsOf, inputLaneEnds } from './utils/laneFacts';
+import { asksCopyOffset } from './utils/copyOffset';
 import { PROGRESS_NAMES } from './utils/a11yLabels';
 import { chestLabel, entityLabel } from './utils/entityLabel';
 import { NO_DEBUG_STEPS, developerToolsInitial, readDeveloperTools, writeDeveloperTools } from './utils/developerTools';
@@ -346,7 +347,7 @@ function App() {
     const checkedCoverage = useInserterValidation(engineConfig, isInitialized);
     const { transfers: outputTransfers, generationIssues: outputGenerationIssues, updating: outputTransfersLoading } = useOutputTransfers(engineConfig, isInitialized);
     // the lanes as the engine reads them: each lane's role, and the end of a lane that states none
-    const laneFacts = useLaneFacts(engineConfig, isInitialized);
+    const { facts: laneFacts, roles: laneRoles } = useLaneFacts(engineConfig, isInitialized);
     const inputEnds = inputLaneEnds(laneFacts);
     // the header's height, so that what is focused and scrolled to is not left under it
     const headerRef = useRef<HTMLElement>(null);
@@ -879,6 +880,9 @@ function App() {
         onAddBelt: addBelt,
         onAddChest: addChest,
         onAddDrill: addDrill,
+        // the dialog's belt shows the Lanes fields of the Belts section, with the engine's facts of the belt it edits
+        laneFactsOf: (draft: BeltFormData) => draftLaneFactsOf(draft, config.belts, laneRoles, config.overrides),
+        copies: config.setpoint.copies,
     };
     const handleExcludeChange = useCallback((items: string[]) => {
         // an out-of-date plan numbers the inserters as they were, which a delete or reorder has since moved
@@ -1264,7 +1268,7 @@ function App() {
                                 onCountsChange={(counts) => updateSetpoint('counts', counts === 'made' ? undefined : counts)}
                                 onCopiesChange={(value) => updateSetpoint('copies', value)}
                                 copyOffset={config.setpoint.copy_offset}
-                                showCopyOffset={config.setpoint.copies > 1}
+                                showCopyOffset={asksCopyOffset(config.setpoint)}
                                 onCopyOffsetChange={(value) => updateSetpoint('copy_offset', value)}
                                 copyOffsetNote={checkedCoverage?.dropRoom}
                             />

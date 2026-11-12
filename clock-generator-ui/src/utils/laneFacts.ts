@@ -61,6 +61,21 @@ export function formLaneFactsOf(config: Pick<Config, 'belts' | 'overrides'>, rol
     return { of: (belt_id, lane) => of.get(`${belt_id}.${lane}`), lanes };
 }
 
+/**
+ * The facts of a belt being edited apart from the build (the diagram's dialog): the roles the engine gave the belt as the
+ * build has it, while the draft's lanes carry the same items, since the roles come from the items; else none, so that
+ * only what the draft states is shown
+ */
+export function draftLaneFactsOf(draft: { id: number; type: Config['belts'][number]['type']; flow_direction?: Config['belts'][number]['flow_direction'];
+    lanes: readonly { ingredient: string }[] }, saved: readonly { id: number; lanes: readonly { ingredient: string }[] }[],
+    roles: readonly LaneRoleOfLane[] | null, overrides: Config['overrides']): FormLaneFacts | null {
+    const before = saved.find(belt => belt.id === draft.id);
+    const sameItems = before !== undefined && JSON.stringify(before.lanes.map(lane => lane.ingredient)) === JSON.stringify(draft.lanes.map(lane => lane.ingredient));
+    const belt = { id: draft.id, type: draft.type, ...(draft.flow_direction !== undefined && { flow_direction: draft.flow_direction }), lanes: draft.lanes };
+    return formLaneFactsOf({ belts: [belt] as unknown as Config['belts'], overrides },
+        roles !== null && sameItems ? roles.filter(lane => lane.belt_id === draft.id) : null);
+}
+
 /** Whether an inserter takes from the lane: an input or a buffer lane */
 export const isTakenLane = (fact: Pick<FormLaneFact, 'role'> | undefined) => fact?.role === 'input' || fact?.role === 'buffer';
 
@@ -113,4 +128,24 @@ export function outputBeltSummary(outputBelt: NonNullable<Config['output_belt']>
         ...(outputBelt.splitter !== undefined ? ['1 splitter'] : []),
         ...(ends > 0 ? [plural(ends, 'infinite end', 'infinite ends')] : [])];
     return `${parts.join(', ')}.`;
+}
+
+/**
+ * What the build does with a belt, under its name: "input belt · the 9 copies share it", "input belt · each copy has its
+ * own", "input belt" for one copy, "output belt · the output inserters drop on it", "buffer belt · inserters drop on it and
+ * take from it", "lane 1 input, lane 2 output" where its lanes differ; null where no lane has a role or the engine cannot
+ * tell. Interim words.
+ */
+export function beltRoleLine(lanes: readonly (Pick<FormLaneFact, 'role' | 'sharing'> | undefined)[], copies: number): string | null {
+    if (lanes.length === 0 || lanes.some(lane => lane === undefined || lane.role === undefined)) return null;
+    const known = lanes.map((lane, index) => ({ lane: index + 1, role: lane!.role, sharing: lane!.sharing })).filter(lane => lane.role !== null);
+    const roles = new Set(known.map(lane => lane.role));
+    if (roles.size === 0) return null;
+    if (roles.size > 1) return known.map(lane => `lane ${lane.lane} ${lane.role}`).join(', ');
+    const role = known[0].role;
+    if (role === 'output') return 'output belt · the output inserters drop on it';
+    if (role === 'buffer') return 'buffer belt · inserters drop on it and take from it';
+    if (copies <= 1) return 'input belt';
+    return known.every(lane => lane.sharing === 'per_copy') ? 'input belt · each copy has its own'
+        : `input belt · the ${Number(copies.toFixed(2))} copies share it`;
 }

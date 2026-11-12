@@ -7,7 +7,7 @@ import { BELT_STRATEGIES, type BeltFormData, type BeltLaneFormData } from '../ho
 import { useEntityRows } from '../hooks/useEntityRows';
 import { PanelSection } from './Panel';
 import { ItemPickerField } from './ItemPickerField';
-import { BeltFlowDirectionField, BeltLaneFields, BeltStrategyField, EntityTypeField } from './EntityFields';
+import { BeltLaneFields, BeltStrategyField, EntityTypeField } from './EntityFields';
 import { SortableList } from './SortableList';
 import { AddButton } from './AddRow';
 import { EntityRow, EntityRowActions, EntityRowTop } from './EntityRow';
@@ -19,7 +19,7 @@ import { BeltAssumption } from './BeltAssumption';
 import type { BeltAnswer, BeltQuestion } from '../utils/beltQuestion';
 import { DROP_BELT_READ_ONLY } from '../utils/inserterMetadata';
 import type { Config } from 'clock-generator/browser';
-import { LANE_FACT_COPY, inputLaneEnds, inputLanesText, outputBeltSummary, type FormLaneFacts } from '../utils/laneFacts';
+import { LANE_FACT_COPY, beltRoleLine, inputLaneEnds, inputLanesText, outputBeltSummary, type FormLaneFacts } from '../utils/laneFacts';
 import { HelpButton } from './HelpButton';
 
 interface BeltsFormProps {
@@ -58,6 +58,7 @@ function BeltsFormComponent({
     outputBelt,
 }: BeltsFormProps) {
     const inputEnds = inputLaneEnds(laneFacts);
+    const roleLine = (belt: BeltFormData) => beltRoleLine(belt.lanes.map((_, index) => laneFacts?.of(belt.id, index + 1 as 1 | 2)), copies);
     const { itemLabel } = useGameNames();
     const lanes = belts.flatMap(belt => belt.lanes);
     const common = belts.length === 0 ? [] : [
@@ -143,16 +144,14 @@ function BeltsFormComponent({
                             </Box>
                         </EntityRowTop>
                         <EntitySettings actionContainerId={settingsSlotId('belt', belt.id)} label={label} tabs={[{ label: 'Lanes', content:
-                            <>
-                                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))', gap: 1, mb: 1.5 }}>
-                                    <BeltFlowDirectionField belt={belt} onChange={updates => onUpdate(beltIndex, updates)} />
-                                </Box>
-                                <BeltLaneFields belt={belt} itemNames={itemNames} readOnly={readOnly} facts={laneFacts} copies={copies}
-                                    onChange={updates => onUpdate(beltIndex, updates)} />
-                            </> }]}
-                            summary={<Typography variant="body2">
+                            <BeltLaneFields belt={belt} itemNames={itemNames} readOnly={readOnly} facts={laneFacts} copies={copies}
+                                onChange={updates => onUpdate(beltIndex, updates)} /> }]}
+                            summary={<>
+                                {roleLine(belt) !== null && <Typography variant="body2" data-belt-role="">{roleLine(belt)}</Typography>}
+                                <Typography variant="body2">
                                 {BELT_STRATEGIES.find(strategy => strategy.value === (belt.strategy ?? 'normal'))?.label} · {belt.lanes.map((lane, laneIndex) => `Lane ${laneIndex + 1} stack ${lane.stack_size}${belt.strategy === 'export' ? ` · Consumed ${lane.consumption_per_second ?? 'Automatic'}/s` : ''}`).join(' · ')}
-                            </Typography>}>
+                            </Typography>
+                            </>}>
                             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))', gap: 1, mb: 1.5 }}>
                                 <BeltStrategyField belt={belt} onChange={updates => onUpdate(beltIndex, updates)} />
                             </Box>
