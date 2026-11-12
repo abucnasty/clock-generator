@@ -282,7 +282,9 @@ export function ClockAlternativesPanel({
                                         : outputTermOf(alternative).term !== SUMMARY_COPY.stable ? outputTermOf(alternative).term
                                         : alternative.verdict === 'no recovery' && recovery.kind !== 'no' ? SUMMARY_COPY.recoveryUnavailable
                                             : alternative.verdict === 'stable' ? `Recovery: ${recovery.value}` : VERDICT_LABEL[alternative.verdict]}
-                                    color={isStartDependent(alternative) || (alternative.verdict === 'stable' && recovery.kind === 'not-tested') ? 'warning' : VERDICT_COLOR[alternative.verdict]}
+                                    // a clock that underproduces or overproduces has the colour of an unstable clock, whatever its verdict
+                                    color={isStartDependent(alternative) || (alternative.verdict === 'stable' && recovery.kind === 'not-tested') ? 'warning'
+                                        : outputTermOf(alternative).term !== SUMMARY_COPY.stable ? VERDICT_COLOR.unstable : VERDICT_COLOR[alternative.verdict]}
                                     variant="outlined"
                                     // on the card colour of its own: the selected row's orange tint, hovered, takes green and red
                                     // words under 4.5:1

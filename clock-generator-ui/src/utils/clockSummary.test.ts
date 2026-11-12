@@ -5,6 +5,7 @@ import { startCheckSummary } from './modelAssumptions';
 import {
     REASON_WORDS,
     SUMMARY_COPY,
+    attemptResultOf,
     outputTermOf,
     beltCellText,
     beltLine,
@@ -170,8 +171,10 @@ describe('outputTermOf', () => {
             { term: 'Underproduces', detail: 'makes 192/s of 240/s' }],
         ['is Overproduces above the setpoint, with the rate, whatever the verdict', clock('a', { verdict: 'unstable', meets_target_rate: false, rate_off_target: 10 }),
             { term: 'Overproduces', detail: 'makes 250/s of 240/s' }],
-        ['is Overproduces for a stable clock over the setpoint', clock('a', { meets_target_rate: false, rate_off_target: 12.5 }),
+        ['is Overproduces for a stable clock over the setpoint', clock('a', { meets_target_rate: false, rate_off_target: 12.5, stable_above_target: true }),
             { term: 'Overproduces', detail: 'makes 252.5/s of 240/s' }],
+        ['is Overproduces for a rounded clock that runs fast, at the target by the selection\'s rule', clock('a', { rate_off_target: 0.24, runs_fast: 0.001 }),
+            { term: 'Overproduces', detail: 'makes 240.24/s of 240/s' }],
         ['is Underproduces at the setpoint with a loss on a shared lane, with the words for its reason code',
             withLoss(clock('a', { verdict: 'unstable' }), 'belt_gaps'), { term: 'Underproduces', detail: 'Missed pickups due to belt gaps' }],
         ['is Underproduces at the setpoint with a loss on a shared lane and no reason code, with nothing beside it',
@@ -180,6 +183,11 @@ describe('outputTermOf', () => {
             { ...clock('a', { verdict: 'unstable' }), asBuilt: { actual_output_items: 352 } as never, expectedOutputItems: 336 }, { term: 'Overproduces' }],
         ['is Underproduces at the setpoint with no shared-lane loss where the judged output is below the expected output',
             { ...clock('a', { verdict: 'unstable' }), asBuilt: { actual_output_items: 320 } as never, expectedOutputItems: 336 }, { term: 'Underproduces' }],
+        // neither number decides (no clock of the samples comes here): Underproduces, as the verdict unstable said before
+        ['is Underproduces at the setpoint with no shared-lane loss where the judged output is not known',
+            { ...clock('a', { verdict: 'unstable' }), asBuilt: null, expectedOutputItems: 336 }, { term: 'Underproduces' }],
+        ['is Underproduces at the setpoint with no shared-lane loss where the judged output is the expected output',
+            { ...clock('a', { verdict: 'unstable' }), asBuilt: { actual_output_items: 336 } as never, expectedOutputItems: 336 }, { term: 'Underproduces' }],
     ])('%s', (_, given, expected) => {
         expect(outputTermOf(given)).toEqual(expected);
     });
@@ -190,9 +198,19 @@ describe('outputTermOf', () => {
     });
 });
 
+describe('attemptResultOf', () => {
+    it('says a swing count that holds holds the rate, and one that does not underproduces or overproduces by its output', () => {
+        expect(attemptResultOf({ holds: true, actual_output_items: 32, expected_output_items: 32 })).toBe('Holds the rate');
+        expect(attemptResultOf({ holds: false, actual_output_items: 16, expected_output_items: 32 })).toBe('Underproduces');
+        expect(attemptResultOf({ holds: false, actual_output_items: 352, expected_output_items: 336 })).toBe('Overproduces');
+    });
+});
+
 describe('REASON_WORDS', () => {
     it('has the words for each reason code the engine gives', () => {
-        expect(REASON_WORDS).toEqual({ belt_gaps: 'Missed pickups due to belt gaps' });
+        expect(Object.keys(REASON_WORDS).sort()).toEqual(['belt_gaps', 'join_full']);
+        expect(REASON_WORDS.belt_gaps).toBe('Missed pickups due to belt gaps');
+        expect(REASON_WORDS.join_full).not.toBe('');
     });
 });
 

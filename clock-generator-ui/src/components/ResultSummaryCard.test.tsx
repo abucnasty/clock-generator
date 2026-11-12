@@ -103,9 +103,11 @@ describe('the status of a clock that underproduces, beside its name on the card'
         expect(name.getByText('Missed pickups due to belt gaps')).toBeTruthy();
     });
 
-    it('of the 216-tick clock at a full join: the chip, and no reason', () => {
+    it('of the 216-tick clock at a full join: the chip, and the words for the code of a full join beside it', () => {
+        expect(views.find(view => view.id === 'takt_batches_observed')!.checkedLanes!.cause!.reason).toEqual({ code: 'join_full', data: { missed: 84, swings: 756 } });
         const name = besideName(views, 'takt_batches_observed');
         expect(name.getByText('Underproduces')).toBeTruthy();
+        expect(name.getByText(REASON_WORDS.join_full)).toBeTruthy();
         expect(name.queryByText(REASON_WORDS.belt_gaps)).toBeNull();
     });
 

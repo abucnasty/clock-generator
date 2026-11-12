@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Alert, AlertTitle, Button, Chip, Typography } from '@mui/material';
 import type { SwingAttemptResult, SwingBackoffReport } from 'clock-generator/browser';
+import { attemptResultOf } from '../utils/clockSummary';
 import { AppDialog } from './AppDialog';
 import { DataTable } from './DataTable';
 
@@ -68,7 +69,7 @@ export function SwingBackoffReportDisplay({ report }: SwingBackoffReportDisplayP
                         </> },
                         { header: 'Actual Items', align: 'right', cell: attempt => attempt.actual_output_items },
                         { header: 'Expected Items', align: 'right', cell: attempt => attempt.expected_output_items },
-                        { header: 'Result', align: 'center', cell: attempt => <Chip label={attempt.holds ? 'Holds the rate' : 'Does not hold it'}
+                        { header: 'Result', align: 'center', cell: attempt => <Chip label={attemptResultOf(attempt)}
                             color={attempt.holds ? 'success' : 'error'} size="small" variant="outlined" /> },
                     ]} />
             </AppDialog>

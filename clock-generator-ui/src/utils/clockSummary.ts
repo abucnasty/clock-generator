@@ -78,6 +78,7 @@ export const SUMMARY_COPY = {
  */
 export const REASON_WORDS: Record<SharedLaneReasonCode, string> = {
     belt_gaps: 'Missed pickups due to belt gaps',
+    join_full: 'Output swings blocked due to a backed-up belt',
 };
 
 export const isStartDependent = (clock: Pick<SummaryClock, 'assessment'>): boolean =>
@@ -125,6 +126,15 @@ export function outputTermOf(clock: Pick<SummaryClock, 'verdict' | 'ranking' | '
     const judged = clock.asBuilt?.actual_output_items;
     const above = judged !== undefined && clock.expectedOutputItems !== undefined && judged > clock.expectedOutputItems;
     return { term: above ? SUMMARY_COPY.overproduces : SUMMARY_COPY.underproduces };
+}
+
+/**
+ * The result of a swing count the back-off tried: "Holds the rate"; else by its actual output against the expected
+ * output, above it Overproduces, otherwise Underproduces
+ */
+export function attemptResultOf(attempt: { holds: boolean; actual_output_items: number; expected_output_items: number }): string {
+    if (attempt.holds) return 'Holds the rate';
+    return attempt.actual_output_items > attempt.expected_output_items ? SUMMARY_COPY.overproduces : SUMMARY_COPY.underproduces;
 }
 
 /** A chip beside a clock's name: its status, or what it has fewest of */

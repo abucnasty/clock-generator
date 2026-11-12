@@ -3,6 +3,7 @@ import { screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { show } from '../test/fixtures';
 import { AUTOMATION_240, checkedOf, viewsOf } from '../test/checkedLanesFixtures';
+import { REASON_WORDS } from '../utils/clockSummary';
 import { fullClockName } from '../utils/strategyNames';
 import { ClockAlternativesPanel } from './ClockAlternativesPanel';
 
@@ -51,9 +52,28 @@ describe('the status of a clock that underproduces, in the list of clocks', () =
         expect(row.getByText('Missed pickups due to belt gaps')).toBeTruthy();
     });
 
-    it('of the 216-tick clock at a full join: the chip and no reason', () => {
+    it('of the 216-tick clock at a full join: the chip and the words for the code of a full join', () => {
         const row = rowOf('takt_batches_observed');
         expect(row.getAllByText('Underproduces').length).toBeGreaterThan(0);
-        expect(row.queryByText('Missed pickups due to belt gaps')).toBeNull();
+        expect(row.getByText(REASON_WORDS.join_full)).toBeTruthy();
+    });
+});
+
+describe('the status of a stable clock above the setpoint, in the full table', () => {
+    // the time study windows clock made stable above the setpoint, as the engine ranks one (ranking.stable_above_target)
+    const views = viewsOf(AUTOMATION_240).map(view => view.id !== 'time_study_windows' ? view : { ...view,
+        assessment: { ...view.assessment, items_per_second: 252 }, ranking: { ...view.ranking, meets_target_rate: false, rate_off_target: 12, stable_above_target: true } });
+    const clock = views.find(view => view.id === 'time_study_windows')!;
+
+    it('reads Overproduces, with the rate beside the chip, in the colour of an unstable clock, never the stable one', () => {
+        show(<ClockAlternativesPanel comparison={{ allColumns: true, showUnstable: true }} onComparisonChange={() => {}}
+            alternatives={views} selectedIndex={AUTOMATION_240.selected_index} onSelect={() => {}} recommendedIndex={AUTOMATION_240.selected_index}
+            pickRule={null} isGenerating={false} />);
+        const row = within(screen.getByRole('radio', { name: fullClockName(clock) }).closest('tr')!);
+        expect(row.getByText('makes 252/s of 240/s')).toBeTruthy();
+        const chips = row.getAllByText('Overproduces').map(text => text.closest('.MuiChip-root')!);
+        expect(chips.length).toBe(2);
+        for (const chip of chips) expect(chip.className).not.toMatch(/MuiChip-colorSuccess/);
+        expect(chips.some(chip => /MuiChip-colorError/.test(chip.className))).toBe(true);
     });
 });
