@@ -45,9 +45,9 @@ describe("lane facts in the configuration", () => {
         ["a dead end", { lane_end: { kind: "dead_end" } }],
         ["an infinite end", { lane_end: { kind: "infinite" } }],
         ["an unknown end", { lane_end: { kind: "unknown" } }],
-        ["a lane each copy has to itself", { sharing: "one_per_copy" }],
-        ["a lane the copies share", { sharing: "shared_by_copies" }],
-        ["all three", { supply_rate: 60, lane_end: { kind: "dead_end" }, sharing: "one_per_copy" }],
+        ["a lane each copy has to itself", { sharing: "per_copy" }],
+        ["a lane the copies share", { sharing: "shared" }],
+        ["all three", { supply_rate: 60, lane_end: { kind: "dead_end" }, sharing: "per_copy" }],
     ])("keeps %s on a lane as the file states it", async (_, lane) => {
         const input = configWith(lane);
         for (const config of [ConfigSchema.parse(input), await parseConfig(JSON.stringify(input))]) {
@@ -56,7 +56,7 @@ describe("lane facts in the configuration", () => {
     });
 
     it("keeps the facts of an export lane beside its consumption, and refuses a lane end there: the consumption states what leaves its end", () => {
-        const lane = { consumption_per_second: 5, supply_rate: 100, sharing: "one_per_copy" };
+        const lane = { consumption_per_second: 5, supply_rate: 100, sharing: "per_copy" };
         expect(ConfigSchema.parse(configWith(lane, "export")).belts[0].lanes[0]).toEqual({ ingredient: "iron-plate", stack_size: 4, ...lane });
         expect(ConfigSchema.safeParse(configWith({ ...lane, lane_end: { kind: "infinite" } }, "export")).success).toBe(false);
     });
@@ -70,7 +70,8 @@ describe("lane facts in the configuration", () => {
         ["a supply rate that is not a number", { supply_rate: "120" }],
         ["an end of another kind", { lane_end: { kind: "loop" } }],
         ["an end given as text", { lane_end: "dead_end" }],
-        ["a sharing of another kind", { sharing: "shared" }],
+        ["a sharing in the words before shared and per copy", { sharing: "one_per_copy" }],
+        ["a sharing of another kind", { sharing: "shared_by_copies" }],
     ])("refuses %s", (_, lane) => {
         expect(ConfigSchema.safeParse(configWith(lane)).success).toBe(false);
     });

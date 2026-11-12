@@ -114,10 +114,10 @@ hold under both. Only the Sidecar gives it, when it cannot see the end of a lane
 not a default. The samples state the end of each lane. STE: UNKNOWN (adj) and END (n), approved.
 
 **Lane sharing**:
-Whether all copies take from one lane, or each copy has a lane of its own. **Shared by copies**: the inserters of
-every copy take from the lane. This is the default. **One per copy**: each copy has its own lane. The generator checks
-the inserters of one copy on it. The configuration's `sharing`: `shared_by_copies` or `one_per_copy`. A project
-technical noun (STE rule 1.6).
+Whether all copies take from one lane, or each copy has a lane of its own. **Shared**: the inserters of every copy
+take from the lane. This is the default. **Per copy**: each copy has its own lane. The generator checks the inserters
+of one copy on it. The configuration's `sharing`: `shared` or `per_copy`. A project technical noun (STE rule 1.6).
+_Avoid_: shared by copies, one per copy
 
 **Flow direction**:
 The direction in which the items on a belt move. Both lanes of a belt move in the same direction. The configuration's

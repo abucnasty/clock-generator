@@ -16,7 +16,7 @@ export type LaneEnd =
     | { readonly kind: "unknown" };
 
 /** Whether every copy of the unit takes from the same lane, or each copy has a lane of its own */
-export type LaneSharing = "shared_by_copies" | "one_per_copy";
+export type LaneSharing = "shared" | "per_copy";
 
 /** A map direction as a unit step, x east and y south: the way a lane's items move */
 export interface FlowDirection {
@@ -97,7 +97,7 @@ export function laneFactsOf(config: LaneFactsConfig): LaneFactsOfBuild {
                 supply_rate: stated.supply_rate === undefined ? capacity : ratioOf(fraction(stated.supply_rate)),
                 lane_end: stated.lane_end !== undefined ? { kind: stated.lane_end.kind }
                     : dead_end ? { kind: "dead_end" } : { kind: "infinite" },
-                sharing: stated.sharing ?? "shared_by_copies",
+                sharing: stated.sharing ?? "shared",
                 flow_direction: belt.flow_direction === undefined ? null : flowOf(belt.flow_direction),
             };
         }));

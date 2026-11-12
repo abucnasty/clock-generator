@@ -423,16 +423,16 @@ export interface SharedLaneSupplyIssue {
     /** The inserters of one unit that take from only these lanes */
     inserter_ids: number[];
     copies: number;
-    /** Whether every lane of the set is one per copy: then one copy's takes are held against one copy's lanes */
-    one_per_copy: boolean;
+    /** Whether every lane of the set is per copy: then one copy's takes are held against one copy's lanes */
+    per_copy: boolean;
     /** Items a second those inserters take at the target, in one unit */
     items_per_second: number;
-    /** Items a second the lanes get: for the copies together, or for one copy where the lanes are one per copy */
+    /** Items a second the lanes get: for the copies together, or for one copy where the lanes are per copy */
     supply_per_second: number;
 }
 
 /** Whether the takes of the copies add up on the lanes: they share them, and there is more than one copy */
-const summedOverCopies = (issue: SharedLaneSupplyIssue): boolean => !issue.one_per_copy && issue.copies > 1;
+const summedOverCopies = (issue: SharedLaneSupplyIssue): boolean => !issue.per_copy && issue.copies > 1;
 
 /** "The 5 copies share lane 1 of belt 2. Together they take 5 × 60 = 300 a second from it. Its supply rate is 120 a second." */
 export function describeSharedLaneSupply(issue: SharedLaneSupplyIssue): string {
@@ -440,8 +440,8 @@ export function describeSharedLaneSupply(issue: SharedLaneSupplyIssue): string {
     const lanes = describeLanes(issue);
     const Lanes = `${lanes.charAt(0).toUpperCase()}${lanes.slice(1)}`;
     if (!summedOverCopies(issue)) {
-        return issue.one_per_copy && issue.copies > 1
-            ? `${Lanes} ${one ? 'is' : 'are'} one per copy. Each copy takes ${formatRate(issue.items_per_second, issue.supply_per_second)} a second from ${one ? 'its lane' : 'its lanes'}, `
+        return issue.per_copy && issue.copies > 1
+            ? `${Lanes} ${one ? 'is' : 'are'} per copy. Each copy takes ${formatRate(issue.items_per_second, issue.supply_per_second)} a second from ${one ? 'its lane' : 'its lanes'}, `
                 + `and the supply rate of ${one ? 'the lane' : 'the lanes'} is ${formatRate(issue.supply_per_second)} a second.`
             : `The build takes ${formatRate(issue.items_per_second, issue.supply_per_second)} a second from ${lanes}, `
                 + `and ${one ? 'its' : 'their'} supply rate is ${formatRate(issue.supply_per_second)} a second.`;
@@ -458,7 +458,7 @@ export class SharedLaneSupplyError extends Error {
 
     constructor(issues: SharedLaneSupplyIssue[]) {
         super(`${issues.map(describeSharedLaneSupply).join(' ')} `
-            + (issues.some(summedOverCopies) ? 'Set the lane to one per copy if the copies do not share it. If they share it, use a smaller number of copies.'
+            + (issues.some(summedOverCopies) ? 'Set the lane to per copy if the copies do not share it. If they share it, use a smaller number of copies.'
                 : 'Raise the supply rate, or lower the target.'));
         this.name = 'SharedLaneSupplyError';
         this.issues = issues;

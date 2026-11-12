@@ -49,7 +49,7 @@ describe("a belt whose stated flow direction is across the copy spacing", () => 
     });
 
     it("is not refused on a lane each copy has of its own", () => {
-        expect(flowsAcrossCopySpacing(withBelt3(config, 8, { sharing: "one_per_copy" }))).toEqual([]);
+        expect(flowsAcrossCopySpacing(withBelt3(config, 8, { sharing: "per_copy" }))).toEqual([]);
     });
 
     // a lane of unknown end that the copies do not share is laid out too, with the takers of one copy on it
@@ -57,7 +57,7 @@ describe("a belt whose stated flow direction is across the copy spacing", () => 
         const unknown = { lane_end: { kind: "unknown" as const } };
         for (const alone of [
             { ...withBelt3(config, 8, unknown), setpoint: { ...config.setpoint, copies: 1, items_per_second: 80 } },
-            withBelt3(config, 8, { ...unknown, sharing: "one_per_copy" }),
+            withBelt3(config, 8, { ...unknown, sharing: "per_copy" }),
         ]) {
             const runs = sharedLaneRunsOf(alone);
             expect(runs.lanes.filter(lane => lane.belt_id === 3)).toEqual([{ belt_id: 3, lane: 1, shared: false, stated: { kind: "unknown" }, flow: { x: 0, y: 1 } },

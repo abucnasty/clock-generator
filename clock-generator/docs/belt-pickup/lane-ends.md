@@ -25,7 +25,7 @@ independently:
 - `supply_rate`: the items per second that come onto the lane where it starts. Without it, the supply rate is the
   capacity of the lane.
 - `lane_end`: the end of the lane, as in the table above.
-- `sharing`: `shared_by_copies` (the default) or `one_per_copy`.
+- `sharing`: `shared` (the default) or `per_copy`.
 
 The flow direction is a fact of the belt, not of each lane: `flow_direction` on the belt.
 

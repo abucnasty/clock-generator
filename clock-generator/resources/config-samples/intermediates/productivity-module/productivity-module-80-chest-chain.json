@@ -455,7 +455,7 @@
           "lane_end": {
             "kind": "dead_end"
           },
-          "sharing": "one_per_copy"
+          "sharing": "per_copy"
         }
       ]
     },

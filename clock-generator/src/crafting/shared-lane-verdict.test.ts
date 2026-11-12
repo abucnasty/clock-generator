@@ -85,10 +85,10 @@ describe("the clocks recorded on the chemical science build whose copies share d
             .toContain("Lane 1 of belt 2 has an unknown end. It is checked as a dead end. The 5.5 copies take advanced circuit from it.");
     });
 
-    it("leaves lanes that are one per copy to the run of one copy when they end in a dead end", () => {
-        const own = { ...dead_end, sharing: "one_per_copy" };
-        const one_per_copy = withFacts(config, { "1/1": own, "1/2": own, "2/1": own, "2/2": own });
-        expect(judged("takt_batches_observed", one_per_copy)).toMatchObject({ losses: [], simulated: false, lanes: [] });
+    it("leaves lanes that are per copy to the run of one copy when they end in a dead end", () => {
+        const own = { ...dead_end, sharing: "per_copy" };
+        const per_copy = withFacts(config, { "1/1": own, "1/2": own, "2/1": own, "2/2": own });
+        expect(judged("takt_batches_observed", per_copy)).toMatchObject({ losses: [], simulated: false, lanes: [] });
     });
 });
 

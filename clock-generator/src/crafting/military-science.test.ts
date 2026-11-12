@@ -34,11 +34,11 @@ describe("the military science sample", () => {
         const east = { x: 1, y: 0 };
         // the walls and rounds belts end after the last copy's pickup, and the copies share them
         for (const belt_id of [3, 4]) {
-            expect([of(belt_id, 1), of(belt_id, 2)]).toEqual([["dead_end", "shared_by_copies", east], ["dead_end", "shared_by_copies", east]]);
+            expect([of(belt_id, 1), of(belt_id, 2)]).toEqual([["dead_end", "shared", east], ["dead_end", "shared", east]]);
         }
         // each copy has coal lanes of its own, which end at its pickup
         for (const belt_id of [5, 6]) {
-            expect([of(belt_id, 1), of(belt_id, 2)]).toEqual([["dead_end", "one_per_copy", east], ["dead_end", "one_per_copy", east]]);
+            expect([of(belt_id, 1), of(belt_id, 2)]).toEqual([["dead_end", "per_copy", east], ["dead_end", "per_copy", east]]);
         }
         // the packs lanes go on to a loader: the config states the infinite end, not only the default
         for (const belt_id of [1, 2]) {

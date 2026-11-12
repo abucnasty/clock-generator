@@ -102,7 +102,7 @@ describe("a clock for a fractional number of copies", () => {
             { id: 2, source: { type: "machine", id: 1 }, sink: { type: "belt", id: 2 }, stack_size: 1, filters: ["iron-gear-wheel"] },
         ],
         belts: [
-            { id: 1, type: "transport-belt", lanes: [{ ingredient: "iron-plate", stack_size: 1, sharing: "one_per_copy" }] },
+            { id: 1, type: "transport-belt", lanes: [{ ingredient: "iron-plate", stack_size: 1, sharing: "per_copy" }] },
             { id: 2, type: "transport-belt", lanes: [{ ingredient: "iron-gear-wheel", stack_size: 1 }] },
         ],
     } as unknown as Config);

@@ -281,7 +281,7 @@ export function droppedOntoSharedLanes(config: Config): { belt_id: number; lane:
     if (!(config.setpoint.copies > 1)) return [];
     const facts = laneFactsOf(config);
     const dropped = droppedOnto(config);
-    return takenLanesOf(config).filter(({ belt_id, lane }) => dropped.has(belt_id) && facts.of(belt_id, lane).sharing === "shared_by_copies");
+    return takenLanesOf(config).filter(({ belt_id, lane }) => dropped.has(belt_id) && facts.of(belt_id, lane).sharing === "shared");
 }
 
 /**

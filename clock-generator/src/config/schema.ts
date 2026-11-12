@@ -600,7 +600,7 @@ const LaneEndConfigSchema = withoutOutletWords(z.discriminatedUnion("kind", [
 const BeltFlowDirectionConfigSchema = z.union([z.literal(0), z.literal(4), z.literal(8), z.literal(12)]);
 
 /** Whether every copy of the unit takes from the same lane, or each copy has a lane of its own (`LaneSharing`) */
-const LaneSharingConfigSchema = z.enum(["shared_by_copies", "one_per_copy"]);
+const LaneSharingConfigSchema = z.enum(["shared", "per_copy"]);
 
 /**
  * One lane of a belt. The lane facts (`supply_rate`, `lane_end`, `sharing`) are optional, and each one is read alone:
@@ -613,7 +613,7 @@ const BeltLaneConfigSchema = z.object({
     stack_size: z.number().int().positive().describe("The number of items in each stack on the lane."),
     supply_rate: z.number().positive().optional().describe("The items per second that come onto the lane where it starts. The default is the lane's capacity."),
     lane_end: LaneEndConfigSchema.optional().describe("The end of the lane. Without it, backed_up_belts sets the end."),
-    sharing: LaneSharingConfigSchema.optional().describe("shared_by_copies (default): all copies take from this lane. one_per_copy: each copy has a lane of its own."),
+    sharing: LaneSharingConfigSchema.optional().describe("shared (default): all copies take from this lane. per_copy: each copy has a lane of its own."),
 });
 
 const ExportBeltLaneConfigSchema = BeltLaneConfigSchema.extend({

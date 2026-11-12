@@ -4,20 +4,26 @@ import { parseConfig } from '../../src/config/loader';
 import type { ParsedConfig } from '../../src/config/schema';
 
 /**
- * The kept configs that still state a lane end in the words it had before the infinite end (`"kind": "outlet"`). The
- * schema refuses those words, and these files stay as they were: the tests read them with each such lane end stated as
- * an infinite end, the same end.
+ * The kept configs that still state a lane in the words it had before the infinite end and the words shared and per
+ * copy: `"kind": "outlet"`, `"sharing": "shared_by_copies"` or `"one_per_copy"`. The schema refuses those words, and
+ * these files stay as they were: the tests read them with each such lane in today's words, the same facts.
  */
 const STATING_OLD_LANE_WORDS = new Set([
     path.resolve(__dirname, '../../src/crafting/fixtures/inserter-crafting-240-3-copies-ore-lines.json'),
+    path.resolve(__dirname, '../../src/crafting/fixtures/agricultural-science-250-egg-biochambers-at-80.json'),
+    path.resolve(__dirname, 'agricultural-science-250-bioflux-on-near-lane.json'),
+    path.resolve(__dirname, 'military-science-120-coal-lane-per-copy.json'),
 ]);
 
-type RawLane = { lane_end?: { kind?: string } };
+const SHARING_IN_TODAYS_WORDS: Record<string, string> = { shared_by_copies: 'shared', one_per_copy: 'per_copy' };
 
-/** The config of a kept file with its lane ends in today's words */
+type RawLane = { lane_end?: { kind?: string }; sharing?: string };
+
+/** The config of a kept file with its lane ends and lane sharing in today's words */
 function inTodaysWords(config: { belts?: { lanes?: RawLane[] }[] }): unknown {
     for (const lane of (config.belts ?? []).flatMap(belt => belt.lanes ?? [])) {
         if (lane.lane_end?.kind === 'outlet') lane.lane_end = { kind: 'infinite' };
+        if (lane.sharing !== undefined && lane.sharing in SHARING_IN_TODAYS_WORDS) lane.sharing = SHARING_IN_TODAYS_WORDS[lane.sharing];
     }
     return config;
 }

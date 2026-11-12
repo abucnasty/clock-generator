@@ -56,7 +56,7 @@ describe("the lane facts of a config", () => {
         for (const overrides of [{ backed_up_belts: true }, { backed_up_belts: false }]) {
             const facts = laneFactsOf(configOf({ belts, overrides }));
             for (const [belt, lane] of every_lane) {
-                expect(facts.of(belt, lane).sharing).toBe("shared_by_copies");
+                expect(facts.of(belt, lane).sharing).toBe("shared");
                 expect(facts.of(belt, lane).lane_end.kind).not.toBe("unknown");
             }
         }
@@ -81,15 +81,15 @@ describe("the lane facts a config states", () => {
         expect(supply).toEqual({ ...today, supply_rate: { numerator: 88, denominator: 1 } });
         const end = laneFactsOf(configOf({ belts: stating({ lane_end: { kind: "unknown" } }), overrides })).of(1, 1);
         expect(end).toEqual({ ...today, lane_end: { kind: "unknown" } });
-        const sharing = laneFactsOf(configOf({ belts: stating({ sharing: "one_per_copy" }), overrides })).of(1, 1);
-        expect(sharing).toEqual({ ...today, sharing: "one_per_copy" });
+        const sharing = laneFactsOf(configOf({ belts: stating({ sharing: "per_copy" }), overrides })).of(1, 1);
+        expect(sharing).toEqual({ ...today, sharing: "per_copy" });
     });
 
     it.each([[true], [false]])("reads every fact together, whatever the switch (%s)", backed_up_belts => {
-        const [first, second] = stating({ supply_rate: 120.7, lane_end: { kind: "dead_end" }, sharing: "one_per_copy" });
+        const [first, second] = stating({ supply_rate: 120.7, lane_end: { kind: "dead_end" }, sharing: "per_copy" });
         const facts = laneFactsOf(configOf({ belts: [{ ...first, flow_direction: 8 }, second] as Config["belts"], overrides: { backed_up_belts } }));
         expect(facts.of(1, 1)).toEqual({
-            supply_rate: { numerator: 1207, denominator: 10 }, lane_end: { kind: "dead_end" }, sharing: "one_per_copy", flow_direction: { x: 0, y: 1 },
+            supply_rate: { numerator: 1207, denominator: 10 }, lane_end: { kind: "dead_end" }, sharing: "per_copy", flow_direction: { x: 0, y: 1 },
         });
     });
 
@@ -106,7 +106,7 @@ describe("the lane facts a config states", () => {
     it("leaves every lane that states nothing as the switch gives it", () => {
         for (const backed_up_belts of [true, false]) {
             const stated = laneFactsOf(configOf({
-                belts: stating({ supply_rate: 50, lane_end: { kind: "unknown" }, sharing: "one_per_copy" }), overrides: { backed_up_belts },
+                belts: stating({ supply_rate: 50, lane_end: { kind: "unknown" }, sharing: "per_copy" }), overrides: { backed_up_belts },
             }));
             for (const [belt, lane] of every_lane.filter(([belt, lane]) => belt !== 1 || lane !== 1)) {
                 expect(stated.of(belt, lane)).toEqual(derived(backed_up_belts).of(belt, lane));
@@ -126,10 +126,10 @@ describe("the lane facts a config states", () => {
 
     it("reads the facts of an export lane beside its consumption", () => {
         const belt = { id: 3, type: "turbo-transport-belt", strategy: "export",
-            lanes: [{ ingredient: "iron-plate", stack_size: 4, consumption_per_second: 5, supply_rate: 100, sharing: "one_per_copy" }] };
+            lanes: [{ ingredient: "iron-plate", stack_size: 4, consumption_per_second: 5, supply_rate: 100, sharing: "per_copy" }] };
         const config = configOf({ belts: [belt] as Config["belts"] });
         expect(config.belts[0].lanes[0]).toHaveProperty("consumption_per_second", 5);
-        expect(laneFactsOf(config).of(3, 1)).toMatchObject({ supply_rate: { numerator: 100, denominator: 1 }, sharing: "one_per_copy" });
+        expect(laneFactsOf(config).of(3, 1)).toMatchObject({ supply_rate: { numerator: 100, denominator: 1 }, sharing: "per_copy" });
     });
 
     it("gives the lane traits the supply of a stated end", () => {

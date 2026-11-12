@@ -178,21 +178,21 @@ describe('copies', () => {
         expect(laneCapacityIssues(config)).toEqual([]);
         expect(lanesSharedByCopies(config)).toEqual([]);
         expect(sharedLaneSupplyIssues(config)).toEqual([
-            { belt_id: 1, lanes: [1], inserter_ids: [1], copies: 3, one_per_copy: false, items_per_second: 96, supply_per_second: 120 },
+            { belt_id: 1, lanes: [1], inserter_ids: [1], copies: 3, per_copy: false, items_per_second: 96, supply_per_second: 120 },
         ]);
         expect(() => assertLaneCapacity(config)).toThrow(SharedLaneSupplyError);
         expect(() => assertLaneCapacity(config)).toThrow('The 3 copies share lane 1 of belt 1. Together they take 3 × 96 = 288 a second '
-            + 'from it. Its supply rate is 120 a second. Set the lane to one per copy if the copies do not share it. If they share it, use a smaller number of copies.');
+            + 'from it. Its supply rate is 120 a second. Set the lane to per copy if the copies do not share it. If they share it, use a smaller number of copies.');
     });
 
-    it('holds the takes against a stated supply rate, and the takes of one copy against a lane that is one per copy', () => {
+    it('holds the takes against a stated supply rate, and the takes of one copy against a lane that is per copy', () => {
         const fed = (lane: Record<string, unknown>, copies: number) => {
             const config = gears({ items_per_second: copies * 48, copies });
             return { ...config, belts: config.belts.map(it => it.id !== 1 ? it : { ...it, lanes: [{ ...it.lanes[0], ...lane }] }) } as Config;
         };
-        expect(sharedLaneSupplyIssues(fed({ sharing: 'one_per_copy' }, 3))).toEqual([]);
+        expect(sharedLaneSupplyIssues(fed({ sharing: 'per_copy' }, 3))).toEqual([]);
         expect(sharedLaneSupplyIssues(fed({ supply_rate: 100 }, 1))).toEqual([]);
-        expect(() => assertLaneCapacity(fed({ sharing: 'one_per_copy', supply_rate: 90 }, 3))).toThrow('Lane 1 of belt 1 is one per copy. '
+        expect(() => assertLaneCapacity(fed({ sharing: 'per_copy', supply_rate: 90 }, 3))).toThrow('Lane 1 of belt 1 is per copy. '
             + 'Each copy takes 96 a second from its lane, and the supply rate of the lane is 90 a second. Raise the supply rate, or lower the target.');
         expect(() => assertLaneCapacity(fed({ supply_rate: 90 }, 1))).toThrow('The build takes 96 a second from lane 1 of belt 1, and its supply rate '
             + 'is 90 a second. Raise the supply rate, or lower the target.');
@@ -205,23 +205,23 @@ describe('copies', () => {
         expect(() => assertLaneCapacity(gears({ items_per_second: 60, copies: 1 }))).not.toThrow();
     });
 
-    it('only warns when the drops of the copies summed are over capacity, and not on a lane that is one per copy', () => {
+    it('only warns when the drops of the copies summed are over capacity, and not on a lane that is per copy', () => {
         // 3 copies of a unit that drops 60 gears a second onto lane 1 of belt 2, of 120
         const config = gears({ items_per_second: 3 * 60, copies: 3, drop_lane: 1, output: belt(2, ['iron-gear-wheel', 'iron-gear-wheel']) });
         expect(lanesSharedByCopies(config).map(issue => [issue.kind, issue.belt_id, issue.lanes, issue.items_per_second])).toEqual([['drop', 2, [1], 60]]);
         expect(laneSharedByCopiesWarning(config)).toBe('If the 3 copies share lane 1 of belt 2, they drop 1.50 times what it carries '
-            + '(3 × 60 = 180 a second, of 120). This is only a warning. If each copy has a lane of its own, set the lane to one per copy.');
+            + '(3 × 60 = 180 a second, of 120). This is only a warning. If each copy has a lane of its own, set the lane to per copy.');
         const warned: string[] = [];
         warnLanesSharedByCopies(config, { log: () => { }, warn: (message: string) => warned.push(message), error: () => { }, debug: () => { } });
         expect(warned).toEqual([laneSharedByCopiesWarning(config)]);
-        const own = { ...config, belts: config.belts.map(it => it.id !== 2 ? it : { ...it, lanes: it.lanes.map(lane => ({ ...lane, sharing: 'one_per_copy' as const })) as typeof it.lanes }) };
+        const own = { ...config, belts: config.belts.map(it => it.id !== 2 ? it : { ...it, lanes: it.lanes.map(lane => ({ ...lane, sharing: 'per_copy' as const })) as typeof it.lanes }) };
         expect(laneSharedByCopiesWarning(own)).toBeNull();
     });
 
-    it('warns of the drops of the copies onto a belt that states one lane, one per copy: nothing says its other side is', () => {
+    it('warns of the drops of the copies onto a belt that states one lane, per copy: nothing says its other side is', () => {
         // 3 copies of a unit that drops 100 gears a second onto belt 2, whose drops can land on both sides, of 240
         const config = gears({ items_per_second: 3 * 100, copies: 3, input: 'chest' });
-        const own = { ...config, belts: config.belts.map(it => it.id !== 2 ? it : { ...it, lanes: [{ ...it.lanes[0], sharing: 'one_per_copy' as const }] }) } as Config;
+        const own = { ...config, belts: config.belts.map(it => it.id !== 2 ? it : { ...it, lanes: [{ ...it.lanes[0], sharing: 'per_copy' as const }] }) } as Config;
         for (const build of [config, own]) {
             expect(lanesSharedByCopies(build).map(issue => [issue.kind, issue.belt_id, issue.lanes, issue.items_per_second])).toEqual([['drop', 2, [1, 2], 100]]);
         }
@@ -307,13 +307,13 @@ describe('where it runs', () => {
     });
 });
 
-describe('the feed of a lane that is one per copy', () => {
+describe('the feed of a lane that is per copy', () => {
     it('is what the inserters of one copy take from it, and none is told for a lane the copies share', () => {
         const config = gears({ items_per_second: 3 * 48, copies: 3 });
-        const own = { ...config, belts: config.belts.map(it => it.id !== 1 ? it : { ...it, lanes: [{ ...it.lanes[0], sharing: 'one_per_copy' as const }] }) } as Config;
+        const own = { ...config, belts: config.belts.map(it => it.id !== 1 ? it : { ...it, lanes: [{ ...it.lanes[0], sharing: 'per_copy' as const }] }) } as Config;
         expect(onePerCopyFeeds(config)).toEqual([]);
         expect(onePerCopyFeeds(own)).toEqual([{ belt_id: 1, lanes: [1], inserter_ids: [1], items_per_second: 96 }]);
-        expect(describeOnePerCopyFeed(onePerCopyFeeds(own)[0])).toBe('Lane 1 of belt 1 is one per copy. The lane of each copy needs a supply rate '
+        expect(describeOnePerCopyFeed(onePerCopyFeeds(own)[0])).toBe('Lane 1 of belt 1 is per copy. The lane of each copy needs a supply rate '
             + 'of at least 96 a second, which the inserters of one copy take from it.');
     });
 });

@@ -151,7 +151,7 @@ function partCopyOf(config: Config, chosen: ReadonlySet<string>, lane_takers: Re
  * stands last, with the takers of it that stand furthest upstream (`partCopyOf`). The row is straight: a row folded
  * back on itself or mirrored is not expressed, and is run as if it were straight.
  *
- * A lane one copy alone takes from (one per copy, or a build of one copy) holds the takers of the config's copy only.
+ * A lane one copy alone takes from (per copy, or a build of one copy) holds the takers of the config's copy only.
  * It needs no spacing along it, and may run across `copy_offset`; a lane that more than one copy shares needs one.
  *
  * A config without the positions of a lane's takers has the takers of a copy a tile apart in the config's order, and the
