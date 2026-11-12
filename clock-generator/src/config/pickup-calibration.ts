@@ -6,7 +6,7 @@ import type { Logger } from "../common/logger";
 import { chestAcceptsItem, filtersExclude } from "./inserter-coverage-validator";
 import { Config, InserterConfig } from "./schema";
 import { buildToNameOf } from "../crafting/build-names";
-import { beltNameInText, capitalized, inserterNameInText, NO_BUILD, theName, type BuildToName } from "../crafting/entity-name";
+import { beltNameInText, capitalized, inserterNameInText, NO_BUILD, textWords, theName, type BuildToName } from "../crafting/entity-name";
 
 /**
  * A belt pickup outside what belt pickup timing was calibrated on: an item an inserter takes off a belt in stacks other
@@ -81,17 +81,17 @@ export function uncalibratedBeltPickups(config: Config): UncalibratedBeltPickup[
 
 const article = (count: number) => /^(8|1[18]$)/.test(String(count)) ? "an" : "a";
 
-/** "Inserter 3 picks up iron-plate from belt 2 in 2-item belt stacks with a 12-item hand." */
+/** "Inserter 3 picks up iron plate from belt 2 in 2-item belt stacks with a 12-item hand." */
 export function describeUncalibratedPickup(pickup: UncalibratedBeltPickup, names: { build: BuildToName; numbered: boolean } = { build: NO_BUILD, numbered: false }): string {
     const sizes = pickup.lane_stack_sizes;
     const stacks = sizes.length === 0 ? ""
         : ` in ${sizes.slice(0, -1).map(size => `${size}-`).join(", ")}${sizes.length > 1 ? " and " : ""}${sizes[sizes.length - 1]}-item belt stacks`;
     const hand = pickup.hand_size === null ? ""
         : ` with ${article(pickup.hand_size)} ${pickup.hand_size}-item hand`
-            + (pickup.item_stack_size === null ? "" : ` (${pickup.item} stacks to ${pickup.item_stack_size})`);
+            + (pickup.item_stack_size === null ? "" : ` (${textWords().item(pickup.item)} stacks to ${pickup.item_stack_size})`);
     const options = { numbered: names.numbered };
     const inserter = capitalized(theName(inserterNameInText(pickup.inserter_id, names.build, options)));
-    return `${inserter} picks up ${pickup.item} from ${theName(beltNameInText(pickup.belt_id, names.build, options))}${stacks}${hand}.`;
+    return `${inserter} picks up ${textWords().item(pickup.item)} from ${theName(beltNameInText(pickup.belt_id, names.build, options))}${stacks}${hand}.`;
 }
 
 /** What belt pickup timing was calibrated on, and what that means elsewhere */

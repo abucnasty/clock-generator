@@ -99,7 +99,7 @@ function beltBase(belt: BuildToName["belts"][number], words: ItemWords): string 
     return items.length === 0 ? undefined : `${listedInText(items.map(words.item))} belt`;
 }
 
-/** The name of belt `id`: "iron-gear-wheel and copper-plate belt", "accumulator belt (belt 2)", "belt 3" where it has no item */
+/** The name of belt `id`: "iron gear wheel and copper plate belt", "accumulator belt (belt 2)", "belt 3" where it has no item */
 export function beltNameInText(id: number, build: BuildToName, options: NameOptions = {}): string {
     const words = textWords(options.words);
     const belt = build.belts.find(it => it.id === id);
@@ -120,7 +120,7 @@ function laneAlike(build: BuildToName, belt_id: number, lane: number, item: stri
     return build.belts.some(belt => belt.lanes.some((it, index) => it === item && !(belt.id === belt_id && index + 1 === lane)));
 }
 
-/** The name of a lane: "iron-gear-wheel lane", "iron-ore lane (lane 1 of belt 1)", "lane 2 of the automation-science-pack belt" */
+/** The name of a lane: "iron gear wheel lane", "iron ore lane (lane 1 of belt 1)", "lane 2 of the automation science pack belt" */
 export function laneNameInText(belt_id: number, lane: number, build: BuildToName, options: NameOptions = {}): string {
     const words = textWords(options.words);
     const item = laneItem(build, belt_id, lane);
@@ -132,8 +132,8 @@ export function laneNameInText(belt_id: number, lane: number, build: BuildToName
 }
 
 /**
- * Lanes named together in a sentence, with "the": "the iron-gear-wheel lane", "the iron-gear-wheel and copper-plate lanes",
- * "both lanes of the coal belt (belt 5)", "the logistic-science-pack lanes (lane 1 of belt 1 and lane 1 of belt 2)"
+ * Lanes named together in a sentence, with "the": "the iron gear wheel lane", "the iron gear wheel and copper plate lanes",
+ * "both lanes of the coal belt (belt 5)", "the logistic science pack lanes (lane 1 of belt 1 and lane 1 of belt 2)"
  */
 export function lanesInSentence(lanes: readonly { belt_id: number; lane: number }[], build: BuildToName, options: NameOptions = {}): string {
     const words = textWords(options.words);
@@ -210,7 +210,7 @@ function chestBase(chest: BuildToName["chests"][number], words: ItemWords): stri
     return VEHICLES.has(chest.kind) || chest.holds.length === 0 ? kind : `${kind} that holds ${listedInText(chest.holds.map(words.item))}`;
 }
 
-/** The name of chest `id`: "buffer-chest that holds iron-plate", "car", "car (car 1)", "chest 2" where the build does not have it */
+/** The name of chest `id`: "buffer chest that holds iron plate", "car", "car (car 1)", "chest 2" where the build does not have it */
 export function chestNameInText(id: number, build: BuildToName, options: NameOptions = {}): string {
     const words = textWords(options.words);
     const chest = build.chests.find(it => it.id === id);

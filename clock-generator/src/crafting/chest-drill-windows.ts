@@ -1,5 +1,5 @@
 import { Config } from "../config";
-import { drillNameInText, inserterNameInText, NO_BUILD, theName, type BuildToName } from "./entity-name";
+import { drillNameInText, inserterNameInText, NO_BUILD, textWords, theName, type BuildToName } from "./entity-name";
 import { EnableControlMode } from "../common/enable-control-types";
 import { ChestType, chestName } from "../common/entity-types";
 import { clockPosition } from "../simulation/controls/enable-control";
@@ -34,14 +34,15 @@ export type ChestDrillWhy =
  * names them (entity-name.ts; the insight), by their numbers where it does not (the log)
  */
 export function chestDrillBecause(why: ChestDrillWhy, build: BuildToName = NO_BUILD): string {
+    const item = "item" in why ? textWords().item(why.item) : "";
     switch (why.kind) {
         case "config": return "the configuration sets it to always enabled";
-        case "other-drill": return `${theName(drillNameInText(why.drill_number, build))} fills the same chest with ${why.item} too`;
-        case "filler": return `${theName(inserterNameInText(why.inserter_number, build))} fills the same chest with ${why.item} too`;
-        case "no-taker": return `no inserter of the plan takes ${why.item} out of the chest`;
-        case "taker-without-window": return `${theName(inserterNameInText(why.inserter_number, build))} takes ${why.item} out of the chest with no enable window`;
-        case "no-take": return `no enable window of the clock takes ${why.item} out of the chest`;
-        case "no-room": return `the chest has no room for ${why.item}`;
+        case "other-drill": return `${theName(drillNameInText(why.drill_number, build))} fills the same chest with ${item} too`;
+        case "filler": return `${theName(inserterNameInText(why.inserter_number, build))} fills the same chest with ${item} too`;
+        case "no-taker": return `no inserter of the plan takes ${item} out of the chest`;
+        case "taker-without-window": return `${theName(inserterNameInText(why.inserter_number, build))} takes ${item} out of the chest with no enable window`;
+        case "no-take": return `no enable window of the clock takes ${item} out of the chest`;
+        case "no-room": return `the chest has no room for ${item}`;
         case "needs-whole-period": return "no enable windows shorter than the whole window cycle keep the chest's takers supplied";
         case "would-cover-period": return "its enable windows would cover the whole window cycle";
         case "fallback": return "the clock is not stable with its fewest enable windows, nor with them a tick longer";

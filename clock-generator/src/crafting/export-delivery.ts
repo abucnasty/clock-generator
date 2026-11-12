@@ -1,5 +1,6 @@
-import { FactorioDataService, ItemName } from "../data";
+import { ItemName } from "../data";
 import { Entity, ReadableEntityRegistry } from "../entities";
+import { textWords } from "./entity-name";
 
 /**
  * What a belt with a consumption rate has to receive. A lane of an export belt is emptied by consumers outside the
@@ -76,7 +77,7 @@ function shortfallOf(exported: ExportedItem, delivered_per_second: number): Expo
     return {
         belt_id: exported.belt_number,
         item: exported.item,
-        item_label: FactorioDataService.itemNameInSentence(exported.item),
+        item_label: textWords().item(exported.item),
         expected_per_second: exported.items_per_second,
         delivered_per_second,
         inserter_ids: exported.filler_numbers,

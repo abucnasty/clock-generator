@@ -13,8 +13,8 @@
 import { FeasibilityIssue } from "../../config/errors";
 import type { InserterEdge } from "../../data-types/planner-facts";
 import type { GraphEdge } from "../../data-types/planner-graph";
-import { FactorioDataService } from "../../data/factorio-data-service";
 import { BuildView, DemandResult, nodeKeyOf } from "./demand";
+import { textWords } from "../entity-name";
 
 /** The number of an entity key, "inserter:6" -> 6 */
 export const numberOf = (key: string): number => Number(key.split("/")[0].split(":")[1]);
@@ -112,7 +112,7 @@ export function trappedResultIssue(view: BuildView, trap: TrappedResult, others:
         terms: {
             rule: "S1",
             machine: numberOf(trap.machine),
-            item: FactorioDataService.itemNameInSentence(trap.item),
+            item: textWords().item(trap.item),
             into: trap.port === null ? null : {
                 container: numberOf(nodeKeyOf(trap.port)),
                 input_slots: trap.edges.some(edge => edge.lands_in === "input-slots"),
@@ -152,7 +152,7 @@ export function sharedHandIssues(demand: DemandResult): FeasibilityIssue[] {
                 terms: {
                     rule: "S2",
                     inserter: numberOf(inserter),
-                    items: taken.map(item => FactorioDataService.itemNameInSentence(item)),
+                    items: taken.map(item => textWords().item(item)),
                     target: { type: view.node.get(target)?.kind === "machine" ? "machine" : "chest", number: numberOf(target) },
                 },
             });
@@ -175,7 +175,7 @@ export function loopTrapIssues(demand: DemandResult): FeasibilityIssue[] {
                 rule: "S3",
                 producer: trap.groups[0].kind,
                 ids: members.map(member => numberOf(member.key)),
-                rows: trap.rows.map(row => ({ item: FactorioDataService.itemNameInSentence(row.item), gives: row.gives.toDecimal(), takes: row.takes.toDecimal() })),
+                rows: trap.rows.map(row => ({ item: textWords().item(row.item), gives: row.gives.toDecimal(), takes: row.takes.toDecimal() })),
             },
         };
     });

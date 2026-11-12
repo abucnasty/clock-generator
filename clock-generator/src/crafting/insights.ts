@@ -19,7 +19,7 @@ import { describeDropSpacing, dropSpacing, dropSpacingTable } from "../config/dr
 import { describeOnePerCopyFeed, lanesExactlyFull, lanesExactlyFullNote, onePerCopyFeeds } from "../config/lane-capacity-validator";
 import { machineNameOf, type MachineToName } from "./machine-name";
 import { buildToNameOf } from "./build-names";
-import { capitalized, chestNameInText, drillNameInText, entityNameOf, lanesInSentence, NO_BUILD, theName, type BuildToName } from "./entity-name";
+import { capitalized, chestNameInText, drillNameInText, entityNameOf, lanesInSentence, NO_BUILD, textWords, theName, type BuildToName } from "./entity-name";
 
 /** Facts of one machine of the build, for explaining what its limits allow */
 export interface MachineFactsEntry {
@@ -66,9 +66,9 @@ const round = (value: number, digits = 1) => Number(value.toFixed(digits));
  * chest and a drill by their items (entity-name.ts), anything else by its label
  */
 interface EntityName {
-    /** In a table cell: "foundry that makes casting-iron", "accumulator belt (belt 1)" */
+    /** In a table cell: "foundry that makes casting iron", "accumulator belt (belt 1)" */
     cell: string;
-    /** In a sentence: "the foundry that makes casting-iron", "the inserter that moves battery" */
+    /** In a sentence: "the foundry that makes casting iron", "the inserter that moves battery" */
     in_sentence: string;
 }
 
@@ -82,6 +82,9 @@ function entityNamer(machines: readonly MachineToName[], build: BuildToName): (e
 
 /** A sentence's first letter upper case */
 const capital = capitalized;
+/** An item or a recipe as a sentence writes it (entity-name.ts, textWords); a table cell keeps the id */
+const itemInText = (id: string) => textWords().item(id);
+const recipeInText = (id: string) => textWords().recipe(id);
 const ticksList = (ticks: number[]) => ticks.length === 0 ? "never" : ticks.join(", ");
 
 function workingTicks(run: CompactStateTransitionHistory, entity: CompactEntityStateTransitions, window_cycle_ticks: number): number {
@@ -175,7 +178,7 @@ function insertionLimitsInsight(result: BlueprintGenerationResult, entities: Com
         id: "insertion-limits",
         scope: "build",
         title: "Each machine only takes an ingredient while it is below its insertion limit",
-        what: `${capital(example.machine.in_sentence)} takes ${example.item} only while it holds fewer than ${example.limit}. `
+        what: `${capital(example.machine.in_sentence)} takes ${itemInText(example.item)} only while it holds fewer than ${example.limit}. `
             + `${capital(example.inserter.in_sentence)} brings ${example.hand} at a time and the window cycle needs ${round(example.hands, 2)} `
             + `hand${example.hands === 1 ? "" : "s"} of it.`,
         why: "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount "
@@ -210,13 +213,13 @@ function loopingRecipeInsight(result: BlueprintGenerationResult, entities: Compa
     return {
         id: "looping-recipe",
         scope: "build",
-        title: `The ${example.recipe} recipe needs ${example.item} to make ${example.item}`,
+        title: `The ${recipeInText(example.recipe)} recipe needs ${itemInText(example.item)} to make ${itemInText(example.item)}`,
         what: "The modeled cold trial gives a one-time seed: "
-            + rows.map(it => `${it.machine.in_sentence} starts with ${it.started_with} ${it.item}`).join("; ") + ". These recipes consume an item they also produce.",
+            + rows.map(it => `${it.machine.in_sentence} starts with ${it.started_with} ${itemInText(it.item)}`).join("; ") + ". These recipes consume an item they also produce.",
         why: "A machine does not craft from what it has just made: its products go to the output, and the ingredient has to be "
             + "brought to it by an inserter. With none inside, the recipe never starts, and nothing is made to bring.",
         explanation: `Each modeled self-feeding machine is given this seed once at the cold trial start. Planning uses a separate `
-            + `prepared state. A real build needs its own initial ${example.item}; this seed assumption does not establish recovery after it is lost.`,
+            + `prepared state. A real build needs its own initial ${itemInText(example.item)}; this seed assumption does not establish recovery after it is lost.`,
         table: {
             columns: ["Machine", "Recipe", "Item", "In per craft", "Cold trial seed"],
             rows: rows.map(it => [it.machine.cell, it.recipe, it.item, `${round(it.per_craft, 2)}`, `${it.started_with}`]),
@@ -252,8 +255,8 @@ function outputHandInsight(result: BlueprintGenerationResult, entities: CompactE
     return {
         id: "output-hand",
         scope: "build",
-        title: `A full hand of ${example.item} takes ${round(example.ticks)} ticks to make`,
-        what: `${capital(example.machine.in_sentence)} makes ${round(example.per_craft, 2)} ${example.item} per craft (productivity included), so the `
+        title: `A full hand of ${itemInText(example.item)} takes ${round(example.ticks)} ticks to make`,
+        what: `${capital(example.machine.in_sentence)} makes ${round(example.per_craft, 2)} ${itemInText(example.item)} per craft (productivity included), so the `
             + `${example.hand} that ${example.inserter.in_sentence} carries take ${round(example.crafts)} crafts, about ${round(example.ticks)} ticks.`,
         why: "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable "
             + "window closes it keeps holding those items until the next enable window.",
@@ -628,10 +631,10 @@ export function chestDrillInsights(result: Pick<BlueprintGenerationResult, "ches
         what: drills.map(drill => {
             // a drill by what it mines and its chest by its kind (entity-name.ts) where the build names them, else by their numbers
             const named = build.drills.some(it => it.id === drill.drill_id);
-            const chest = build.chests.some(it => it.id === drill.chest_id) ? theName(chestNameInText(drill.chest_id, build, { words: { item: id => id.replace(/-/g, " ") } }))
+            const chest = build.chests.some(it => it.id === drill.chest_id) ? theName(chestNameInText(drill.chest_id, build))
                 : chestName(drill.chest_type, drill.chest_id);
-            const into = `${named ? capital(theName(drillNameInText(drill.drill_id, build, { words: { item: id => id.replace(/-/g, " ") } }))) : `Drill ${drill.drill_id}`} `
-                + `drops ${drill.item.replace(/-/g, " ")} into ${chest}`;
+            const into = `${named ? capital(theName(drillNameInText(drill.drill_id, build))) : `Drill ${drill.drill_id}`} `
+                + `drops ${itemInText(drill.item)} into ${chest}`;
             if (drill.enabled_ticks === null) {
                 return `${into} and is always enabled: ${drill.always_enabled_because === undefined ? "nothing times it" : chestDrillBecause(drill.always_enabled_because, build)}.`;
             }

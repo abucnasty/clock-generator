@@ -229,7 +229,7 @@ export function lanesExactlyFullWarning(config: Config): string | null {
     }
 }
 
-/** "If the 3 copies share the iron-plate lane (lane 1 of belt 1), they take 1.46 times what it carries (3 × 48 = 144 a second, of 99)." */
+/** "If the 3 copies share the iron plate lane (lane 1 of belt 1), they take 1.46 times what it carries (3 × 48 = 144 a second, of 99)." */
 export function describeLaneSharedByCopies(issue: LaneCapacityIssue, names?: LaneNames): string {
     const total = issue.items_per_second * issue.copies;
     const one = issue.lanes.length === 1;

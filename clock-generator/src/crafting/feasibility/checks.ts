@@ -22,9 +22,9 @@ import { FeasibilityCarriers, FeasibilityIssue, FeasibilityLane, FeasibilityLimi
 import Fraction, { fraction } from "../../data-types/fraction";
 import type { LaneNode } from "../../data-types/planner-facts";
 import type { GraphEdge } from "../../data-types/planner-graph";
-import { FactorioDataService } from "../../data/factorio-data-service";
 import { above, BuildView, Demand, DemandResult, exact, laneBrings, less, lowest, nodeKeyOf, ProducerGroup, ProducerNode, spoilsInto, sumOf, takesPerCraft, ZERO } from "./demand";
 import { leaks, numberOf, trappedResultIssue, trappedResultsOf } from "./traps";
+import { textWords } from "../entity-name";
 
 /** A cut: what it must carry against the most it carries */
 export interface Cut {
@@ -51,11 +51,10 @@ const FLOAT_MARGIN = fraction(1, 1_000_000_000);
 /** Whether a cut refuses: its need is strictly above a known capacity, by more than the floats' noise */
 export const refuses = (cut: Cut): boolean => cut.capacity !== null && above(cut.need, cut.capacity.add(cut.capacity.multiply(FLOAT_MARGIN)));
 
-const label = (item: string): string => FactorioDataService.itemNameInSentence(item);
+const label = (item: string): string => textWords().item(item);
 
 function recipeLabel(recipe: string): string {
-    const name = FactorioDataService.recipeDisplayName(recipe);
-    return name.charAt(0).toLowerCase() + name.slice(1);
+    return textWords().recipe(recipe);
 }
 
 /** "belt:2/lane:1" or a port of it -> belt 2, lane 1 */
