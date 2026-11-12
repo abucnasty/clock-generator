@@ -141,6 +141,16 @@ describe("the lane facts a config states", () => {
         expect(laneFactsOfConfig(config).of(3, 1)).toMatchObject({ supply_rate: { numerator: 100, denominator: 1 }, sharing: "per_copy" });
     });
 
+    it("keeps the infinite end of a lane with a consumption and no item: the other lane's end does not reach it", () => {
+        const belt = { id: 3, type: "turbo-transport-belt", strategy: "export", lanes: [
+            { ingredient: "iron-plate", stack_size: 4, lane_end: { kind: "dead_end" } },
+            { ingredient: "", stack_size: 4, consumption_per_second: 1 }] };
+        for (const overrides of [undefined, { backed_up_belts: true }, { backed_up_belts: false }]) {
+            const facts = laneFactsOfConfig(configOf({ belts: [belt] as Config["belts"], overrides }));
+            expect(facts.lanesOf(3).map(lane => lane.lane_end.kind)).toEqual(["dead_end", "infinite"]);
+        }
+    });
+
     it("gives the lane traits the supply of a stated end", () => {
         const config = configOf({ belts: stating({ lane_end: { kind: "dead_end" } }) });
         expect(beltLanesOfFacts(config.belts[0], laneFactsOfConfig(config)).map(lane => lane.supply)).toEqual(["backed_up", "moving"]);
