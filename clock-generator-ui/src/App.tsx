@@ -1264,7 +1264,7 @@ function App() {
                                 onCountsChange={(counts) => updateSetpoint('counts', counts === 'made' ? undefined : counts)}
                                 onCopiesChange={(value) => updateSetpoint('copies', value)}
                                 copyOffset={config.setpoint.copy_offset}
-                                showCopyOffset={config.setpoint.copies > 1 && config.inserters.some(inserter => inserter.sink.type === 'belt' && inserter.position !== undefined)}
+                                showCopyOffset={config.setpoint.copies > 1}
                                 onCopyOffsetChange={(value) => updateSetpoint('copy_offset', value)}
                                 copyOffsetNote={checkedCoverage?.dropRoom}
                             />
