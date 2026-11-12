@@ -6,6 +6,7 @@ import { askEngine } from '../worker/engineClient';
 import { useGameNames } from '../hooks/useGameNames';
 import { importReduction, type ImportReduction } from '../utils/importReduction';
 import { importedAsOneUnitText } from '../utils/pasteText';
+import { nameInSentence } from '../utils/entityLabel';
 
 function Changes({ reduction }: { reduction: ImportReduction }) {
     return <Box component="ul" sx={{ my: 1, pl: 2 }}>
@@ -54,7 +55,7 @@ export function ImportSimplification({ config, applied, onSimplify, onRestore, o
     if (applied) return <Alert severity="success" sx={{ mb: 2 }}>
         <AlertTitle>Simpler build ready to import</AlertTitle>
         <Changes reduction={applied} />
-        <Typography variant="body2">Total output: {applied.target.items_per_second}/s {recipeLabel(applied.target.recipe)} across {applied.copies} copies.</Typography>
+        <Typography variant="body2">Total output: {applied.target.items_per_second}/s {nameInSentence(recipeLabel(applied.target.recipe))} across {applied.copies} copies.</Typography>
         <Button size="small" color="inherit" onClick={onRestore} sx={{ mt: 0.5 }}>Review full pasted build</Button>
     </Alert>;
     const checked = result?.key === key ? result.checked : null;

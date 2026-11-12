@@ -1,5 +1,6 @@
 import type { SuggestedTarget } from 'clock-generator/browser';
 import { formatNumberText } from './numberText';
+import { nameInSentence } from './entityLabel';
 
 /** A target output, as the form and the export hold it */
 export interface TargetValues {
@@ -53,7 +54,7 @@ export function maximumTargetNote(source: SuggestedTarget['source']): string | n
 
 /** Said under the row when Target Output is already set, so the row starts unticked */
 export function replacesTargetNote(current: TargetValues, name: (id: string) => string): string {
-    return `Tick to replace your current target (${name(current.recipe)} at ${formatNumberText(current.items_per_second)}/s).`;
+    return `Tick to replace your current target (${nameInSentence(name(current.recipe))} at ${formatNumberText(current.items_per_second)}/s).`;
 }
 
 export const NO_TARGET_NOTE = 'Could not tell what the build makes. Set the setpoint after importing.';

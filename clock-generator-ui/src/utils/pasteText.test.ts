@@ -35,9 +35,9 @@ describe('inserterDetailLines', () => {
             .toEqual(['Inserters 1 to 4: Legendary stack inserters, 16 items at a time, no filter.']);
         expect(inserterDetailLines([stack(1, { filters: ['iron-plate'] }), stack(2, { filters: ['steel-plate'] }), stack(3, { filters: ['steel-plate'] }),
             stack(4, { filters: ['iron-plate'] }), stack(5, { filters: ['iron-ore'] })], label)).toEqual([
-            'Inserters 1 and 4: Legendary stack inserters, 16 items at a time, filter Iron plate.',
-            'Inserters 2 and 3: Legendary stack inserters, 16 items at a time, filter Steel plate.',
-            'Inserter 5: Legendary stack inserter, 16 items at a time, filter Iron ore.',
+            'Inserters 1 and 4: Legendary stack inserters, 16 items at a time, filter iron plate.',
+            'Inserters 2 and 3: Legendary stack inserters, 16 items at a time, filter steel plate.',
+            'Inserter 5: Legendary stack inserter, 16 items at a time, filter iron ore.',
         ]);
     });
     it('says what the export left out and the generator assumed, and an enable rule set by hand', () => {

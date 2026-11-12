@@ -1,6 +1,6 @@
 import type { Config } from 'clock-generator/browser';
 import type { ChestType } from 'clock-generator/light';
-import { entityLabelIn, type LabelKind } from './entityLabel';
+import { entityLabelIn, nameInSentence, type LabelKind } from './entityLabel';
 import { COUNTS_TEXT, countsLabel, countsOf } from './targetCounts';
 
 /** A rate or count as the sentences print it: at most two decimals, no trailing zeros */
@@ -58,7 +58,7 @@ export function buildChangesOf(generated: Config, current: Config, recipeLabel: 
     const before = generated.setpoint;
     const after = current.setpoint;
     if (before.recipe !== after.recipe) {
-        changes.push(`Recipe (${recipeLabel(before.recipe)} → ${recipeLabel(after.recipe)})`);
+        changes.push(`Recipe (${nameInSentence(recipeLabel(before.recipe))} → ${nameInSentence(recipeLabel(after.recipe))})`);
     }
     if (before.items_per_second !== after.items_per_second) {
         changes.push(`Items per second (${figure(before.items_per_second)} → ${figure(after.items_per_second)})`);

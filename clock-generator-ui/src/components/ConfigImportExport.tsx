@@ -23,7 +23,7 @@ import { InserterDetails } from './InserterDetails';
 import { Disclosure } from './Disclosure';
 import { chestTypesText } from '../utils/pasteText';
 import { pickupGeometryOf } from '../utils/pickupGeometry';
-import { entityLabel } from '../utils/entityLabel';
+import { entityLabel, nameInSentence } from '../utils/entityLabel';
 import { buildFileName } from '../utils/buildLibrary';
 import { configKeyOf } from '../utils/resultsStaleness';
 import { nameWithId } from '../utils/gameNames';
@@ -817,7 +817,7 @@ export function ConfigImportExport({
                                 <InserterDetails inserters={prospectiveInserters} />
                                 {prospectiveInserters.flatMap((inserter, i) => inserter.sink.type === 'belt' && inserter.sink.drop
                                     ? [<Typography key={`drop-${i}`} variant="body2">Inserter {inserter.id ?? i + 1}: imported drop on Belt {inserter.sink.id}, lane {inserter.sink.drop.lane}, position {inserter.sink.drop.position} (read-only).</Typography>] : [])}
-                                {prospectiveMachines.flatMap(machine => machine.fuel === undefined ? [] : [<Typography key={`fuel-${machine.id}`} variant="body2" title={nameWithId(itemLabel(machine.fuel), machine.fuel)}>Machine {machine.id}: imported fuel {itemLabel(machine.fuel)} (read-only).</Typography>])}
+                                {prospectiveMachines.flatMap(machine => machine.fuel === undefined ? [] : [<Typography key={`fuel-${machine.id}`} variant="body2" title={nameWithId(itemLabel(machine.fuel), machine.fuel)}>Machine {machine.id}: imported fuel {nameInSentence(itemLabel(machine.fuel))} (read-only).</Typography>])}
                                 {currentForm.overrides && <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>Retained run overrides: {JSON.stringify(currentForm.overrides)}.</Typography>}
                             </Box>
                         </Disclosure>

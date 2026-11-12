@@ -35,8 +35,8 @@ describe('the model texts', () => {
         const words = (id: string) => ({ biochamber: 'Biochamber', 'pentapod-egg': 'Pentapod egg', 'agricultural-science-pack': 'Agricultural science pack',
             nutrients: 'Nutrients' } as Record<string, string>)[id] ?? id;
         expect(modeledDetails({ assumptions } as unknown as ClockAlternativeView, words, words)).toEqual([
-            'The Biochamber (machine 3) that makes Pentapod egg gets a kick start of 84 Pentapod egg. Losing those items is a separate recovery question.',
-            'The Biochamber that makes Agricultural science pack: imported fuel Nutrients.',
+            'The biochamber (machine 3) that makes pentapod egg gets a kick start of 84 pentapod egg. Losing those items is a separate recovery question.',
+            'The biochamber that makes agricultural science pack: imported fuel nutrients.',
         ]);
         const before = { ...assumptions, machines: undefined };
         expect(modeledDetails({ assumptions: before } as unknown as ClockAlternativeView, words, words)[0]).toMatch(/^Machine 3 gets a kick start/);

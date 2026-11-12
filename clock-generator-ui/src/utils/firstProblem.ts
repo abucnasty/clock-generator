@@ -1,7 +1,7 @@
 import { COPIES_POSITIVE_PROBLEM, copiesProblem } from './copiesProblem';
 import type { InserterCoverageIssue } from 'clock-generator/browser';
 import type { CheckStatus } from './checkThenGenerate';
-import { entityLabel } from './entityLabel';
+import { entityLabel, nameInSentence } from './entityLabel';
 import { outputChestIssueElementId } from './outputChestIssues';
 import { isTargetAboveMax, maxRateText, totalMachineCapacity, type MachinesMax } from './targetRateLimit';
 import { countsOf, type TargetCounts } from './targetCounts';
@@ -24,9 +24,9 @@ export const PROBLEM_TEXT = {
             : `Items per Second is more than the build can carry (at most ${maxRateText(total)})`,
     machineWithoutRecipe: (machineId: number) => `Set the recipe of ${entityLabel('machine', machineId)}`,
     missingInput: (machineId: number, item: string, itemLabel: LabelOf = identity) =>
-        `${entityLabel('machine', machineId)} has no source of ${itemLabel(item)}`,
+        `${entityLabel('machine', machineId)} has no source of ${nameInSentence(itemLabel(item))}`,
     missingOutput: (machineId: number, item: string, itemLabel: LabelOf = identity) =>
-        `${entityLabel('machine', machineId)} has no inserter taking ${itemLabel(item)} out`,
+        `${entityLabel('machine', machineId)} has no inserter taking ${nameInSentence(itemLabel(item))} out`,
     validationFailed: 'The last check failed. Show why',
     /** On a build with nothing entered yet, before a manual route has been chosen */
     routes: 'Start with Paste from Factorio, try an example, or build by hand.',

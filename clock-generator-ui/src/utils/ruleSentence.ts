@@ -13,6 +13,7 @@ import {
 import { isCondition } from '../components/ruleSetUtils';
 import type { Condition, EnableControlOverride, RuleSet, ValueReference } from './configForm/formData';
 import { ticksText, type RuleTiming } from './ruleTiming';
+import { nameInSentence } from './entityLabel';
 
 type EntityType = 'inserter' | 'drill';
 
@@ -81,7 +82,7 @@ const END_NAMES: Record<EntityReference, { the: string; whose: string }> = {
 type ItemLabel = (id: string) => string;
 
 function valueText(value: ValueReference, itemLabel: ItemLabel): string {
-    const item = (id: string | undefined) => (id ? itemLabel(id) : RULE_COPY.noItem);
+    const item = (id: string | undefined) => (id ? nameInSentence(itemLabel(id)) : RULE_COPY.noItem);
     switch (value.type) {
         case ValueReferenceType.CONSTANT:
             return `${value.value}`;
@@ -96,7 +97,7 @@ function valueText(value: ValueReference, itemLabel: ItemLabel): string {
         case ValueReferenceType.BONUS_PROGRESS:
             return `${END_NAMES[value.entity].whose} bonus progress (%)`;
         case ValueReferenceType.HAND_QUANTITY:
-            return value.item_name ? `${itemLabel(value.item_name)} in its hand` : 'items in its hand';
+            return value.item_name ? `${nameInSentence(itemLabel(value.item_name))} in its hand` : 'items in its hand';
         case ValueReferenceType.INSERTER_STACK_SIZE:
             return 'its stack size';
         case ValueReferenceType.MACHINE_STATUS:

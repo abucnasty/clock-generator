@@ -6,7 +6,7 @@ import { containerItems, isBufferChest, isInfinityChest } from '../hooks/useConf
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import type { OutputTransferSummary } from 'clock-generator/browser';
 import { describeEnableRule } from './enableRuleLabel';
-import { chestLabel, entityLabel, entityLabelIn } from './entityLabel';
+import { chestLabel, entityLabel, entityLabelIn, nameInSentence } from './entityLabel';
 import { drillItemsInto, inferInserterItems, machineItemsInto } from './inferInserterItems';
 import { assignFlowPorts, type FlowMeasurements } from './flowRouting';
 import { machineDetailLayout, outputLabelLayout, type FlowOutputItem } from './flowLabelLayout';
@@ -204,6 +204,8 @@ export function buildFlowGraph(
     outputTransfers?: readonly OutputTransferSummary[] | null,
     measurements: FlowMeasurements = {},
 ): { nodes: Node[], edges: Edge[] } {
+    // an item in the spoken sentences of a node, as a sentence writes its game name
+    const inSentence = (id: string) => nameInSentence(itemLabel(id));
     const g = new dagre.graphlib.Graph();
     g.setDefaultEdgeLabel(() => ({}));
     // Leave a corridor between columns for separate routes and replay quantities.
@@ -262,7 +264,7 @@ export function buildFlowGraph(
             id,
             type: 'entityNode',
             position: { x: 0, y: 0 },
-            ariaLabel: nodeAriaLabel(label, machine.recipe ? `makes ${recipeLabel(machine.recipe)}` : 'no recipe',
+            ariaLabel: nodeAriaLabel(label, machine.recipe ? `makes ${nameInSentence(recipeLabel(machine.recipe))}` : 'no recipe',
                 machine.result_target && machine.result_target.id !== 0 ? `puts its results into ${entityLabelIn(chests, machine.result_target.type, machine.result_target.id)}` : undefined),
             data: {
                 entityType: 'machine',
@@ -291,7 +293,7 @@ export function buildFlowGraph(
             label: entityLabel('belt', belt.id),
             iconName: belt.type,
             filterIcons: filterIcons.length > 0 ? filterIcons : undefined,
-        }, filterIcons.length > 0 ? `carries ${listText(filterIcons, itemLabel)}` : undefined);
+        }, filterIcons.length > 0 ? `carries ${listText(filterIcons, inSentence)}` : undefined);
     });
 
     chests.forEach(chest => {
@@ -316,7 +318,7 @@ export function buildFlowGraph(
             iconName,
             filterIcons,
             ...(isInfinityChest(chest) && chest.remove_unfiltered_items && { sublabel: filterIcons?.length ? 'Removes unfiltered items' : 'Removes all incoming items' }),
-        }, isInfinityChest(chest) && chest.remove_unfiltered_items ? 'removes unfiltered incoming items' : filterIcons ? `holds ${listText(filterIcons, itemLabel)}` : undefined);
+        }, isInfinityChest(chest) && chest.remove_unfiltered_items ? 'removes unfiltered incoming items' : filterIcons ? `holds ${listText(filterIcons, inSentence)}` : undefined);
     });
 
     // --- Inserter nodes + edges ---
@@ -344,7 +346,7 @@ export function buildFlowGraph(
         }
         drawn.set(inserterNodeId, { w: width, h: height });
         const label = entityLabel('inserter', inserter.id);
-        const items = listText(filterIcons, itemLabel);
+        const items = listText(filterIcons, inSentence);
         const route = `from ${entityLabelIn(chests, inserter.source.type, inserter.source.id)} to ${entityLabelIn(chests, inserter.sink.type, inserter.sink.id)}`;
         nodes.push({
             id: inserterNodeId,
@@ -387,7 +389,7 @@ export function buildFlowGraph(
             id: drillNodeId,
             type: 'drillNode',
             position: { x: 0, y: 0 },
-            ariaLabel: nodeAriaLabel(entityLabel('drill', drill.id), drill.mined_item_name ? `mines ${itemLabel(drill.mined_item_name)}` : 'no resource'),
+            ariaLabel: nodeAriaLabel(entityLabel('drill', drill.id), drill.mined_item_name ? `mines ${nameInSentence(itemLabel(drill.mined_item_name))}` : 'no resource'),
             data: {
                 drillId: drill.id,
                 drillType: drill.type,
