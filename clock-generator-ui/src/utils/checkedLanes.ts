@@ -104,7 +104,7 @@ export function stateTone(state: CheckedLaneState): StateTone {
 function countWord(state: CheckedLaneState): string {
     switch (state.kind) {
         case 'holds': return state.not_the_cause ? 'not the cause' : 'hold';
-        case 'short': return 'short';
+        case 'short': return 'with missed swings';
         case 'join_full': return 'join full';
         case 'takes_less': return 'take less';
         case 'rate_fits': return 'by rate only';

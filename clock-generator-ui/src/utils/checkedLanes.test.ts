@@ -36,9 +36,11 @@ describe('the count beside the heading', () => {
     it('counts the lanes and their states, and says "all hold" only where every row holds', () => {
         expect(lanesCountText(checkedOf(AUTOMATION_240, 'time_study_windows').rows)).toBe('3 lanes · all hold');
         expect(lanesCountText(checkedOf(AUTOMATION_240, 'takt_batches_observed').rows)).toBe('3 lanes · 1 join full · 2 take less');
-        expect(lanesCountText(checkedOf(AUTOMATION_240, 'euclidean_swings').rows)).toBe('3 lanes · 2 short · 1 not the cause');
+        expect(lanesCountText(checkedOf(AUTOMATION_240, 'euclidean_swings').rows)).toBe('3 lanes · 2 with missed swings · 1 not the cause');
         expect(lanesCountText(checkedOf(MILITARY_240, 'coordinated_sources').rows)).toBe('6 lanes · 2 by rate only · 4 hold');
         expect(lanesCountText(checkedOf(AUTOMATION_240, 'takt_batches_observed_swings_4').rows)).toBe('3 lanes · not run with the copies');
+        // where every lane has a copy that misses swings, the count is the only state
+        expect(lanesCountText([STATES.short.row, STATES.short.row])).toBe('2 lanes · with missed swings');
     });
 });
 
