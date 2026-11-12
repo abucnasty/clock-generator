@@ -120,7 +120,7 @@ mirrored. The other lane stays stationary and untouched. The existing backed-up 
 hand counts; half-tile geometry and lane preference remain separate from the supply setting.
 The [same-item front-exit controls](../tests/game/mechanics/belt-pickup/fixtures/front-underground-exit/README.md#same-item-on-both-lanes)
 also fill at `0,1,2,3` entirely from lane 1 unmirrored or lane 2 mirrored, leaving the other lane untouched.
-The front inserter blocks the lane past it, so these are backed-up measurements.
+The front inserter blocks the lane past it, so the lane has backpressure in these measurements.
 
 The [four-speed backfill](belt-pickup/experiments.md#belt-speed-coverage) now measures side pickups,
 front-entrance moving/backed-up controls and front-exit backed-up controls at turbo, express, fast and normal
