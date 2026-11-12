@@ -7,6 +7,8 @@ import { parseFormConfig } from '../../worker/formConfig';
 import type { PastedEntities } from '../../worker/types';
 import { applyPaste } from '../pastePreview';
 import { decodeShareLink, encodeShareLink, readShareHash } from '../shareLink';
+import { checkKeyOf } from '../checkThenGenerate';
+import { configKeyOf, generatedForOf, isStale } from '../resultsStaleness';
 import { configToFormData, formDataToConfig } from './configMapping';
 import { laneFieldUpdate, type ConfigFormData } from './formData';
 
@@ -107,5 +109,25 @@ describe('each lane fact round-trips', () => {
         const lane = { ingredient: 'iron-plate', stack_size: 4 };
         expect(laneFieldUpdate({ ...lane, lane_end: { kind: 'dead_end' } }, 'consumption_per_second', 5)).toEqual({ ...lane, consumption_per_second: 5 });
         expect(laneFieldUpdate({ ...lane, consumption_per_second: 5 }, 'lane_end', { kind: 'dead_end' })).toEqual({ ...lane, lane_end: { kind: 'dead_end' } });
+    });
+});
+
+describe('a kept result', () => {
+    it.each([
+        ['a lane end', (form: ConfigFormData) => laneFieldUpdate(form.belts[0].lanes[0], 'lane_end', { kind: 'infinite' })],
+        ['a supply rate', (form: ConfigFormData) => laneFieldUpdate(form.belts[0].lanes[0], 'supply_rate', 30)],
+        ['a sharing', (form: ConfigFormData) => laneFieldUpdate(form.belts[0].lanes[0], 'sharing', 'per_copy')],
+    ])('goes stale when %s is edited, as for any other edit, and so does the check', (_what, edit) => {
+        const form = configToFormData(configFile(sampleText(ConfigPaths.AUTOMATION_SCIENCE_240)));
+        const generated = generatedForOf(formDataToConfig(form));
+        const edited = formDataToConfig({ ...form, belts: [{ ...form.belts[0], lanes: [edit(form), form.belts[0].lanes[1]!] }, ...form.belts.slice(1)] });
+        expect(isStale(generated, configKeyOf(edited))).toBe(true);
+        expect(checkKeyOf(edited)).not.toBe(checkKeyOf(formDataToConfig(form)));
+    });
+
+    it('goes stale when a belt\'s flow direction is edited', () => {
+        const form = configToFormData(configFile(sampleText(ConfigPaths.AUTOMATION_SCIENCE_240)));
+        const generated = generatedForOf(formDataToConfig(form));
+        expect(isStale(generated, configKeyOf(formDataToConfig({ ...form, belts: [{ ...form.belts[0], flow_direction: 8 }, ...form.belts.slice(1)] })))).toBe(true);
     });
 });
