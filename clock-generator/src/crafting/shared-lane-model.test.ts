@@ -143,7 +143,7 @@ function handsOfTaker(config: Config, layout: SharedLaneLayout | null): string {
 }
 
 describe("the model run with one copy and one taker on the lane", () => {
-    it.each([[{ lane_end: { kind: "dead_end" } }], [{ lane_end: { kind: "outlet" } }]])("gives the hands of the run without it (%j)", lane => {
+    it.each([[{ lane_end: { kind: "dead_end" } }], [{ lane_end: { kind: "infinite" } }]])("gives the hands of the run without it (%j)", lane => {
         const config = gearConfig(lane);
         expect(handsOfTaker(config, rowsOf(config, { x: 1, y: 0 }))).toBe(handsOfTaker(config, null));
     });

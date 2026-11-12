@@ -87,7 +87,7 @@ describe('a config that states its output belt', () => {
     // the site has no editor for the section: it keeps it as it was stated, as it keeps a car or a silo
     const output_belt = {
         side_belt: { lane: 'right', tiles: 2, left_curves: 1 },
-        stretches: [{ points: [{ side_load: [1], lane: 'right', layout: 'side-exit' }, { tiles: 3, lane_end: { kind: 'outlet' } }] }],
+        stretches: [{ points: [{ side_load: [1], lane: 'right', layout: 'side-exit' }, { tiles: 3, lane_end: { kind: 'infinite' } }] }],
     };
     // the machines without the former `type`, which the schema reads only with the game data
     const config = importedWith({ output_belt, machines: imported.machines.map(({ id, recipe, productivity, crafting_speed }) =>
@@ -223,11 +223,11 @@ describe('what goes through the form and back as the config gave it', () => {
         ['the lane facts of a normal and an export belt, and the way a belt moves', {
             belts: [
                 { id: 1, type: 'turbo-transport-belt', flow_direction: 4, lanes: [
-                    { ingredient: 'iron-plate', stack_size: 4, supply_rate: 88, lane_end: { kind: 'dead_end' }, sharing: 'one_per_copy' },
+                    { ingredient: 'iron-plate', stack_size: 4, supply_rate: 88, lane_end: { kind: 'dead_end' }, sharing: 'per_copy' },
                     { ingredient: 'copper-plate', stack_size: 4, lane_end: { kind: 'unknown' } },
                 ] },
                 { id: 2, type: 'turbo-transport-belt', strategy: 'export', lanes: [
-                    { ingredient: 'electronic-circuit', stack_size: 4, consumption_per_second: 5, sharing: 'shared_by_copies' },
+                    { ingredient: 'electronic-circuit', stack_size: 4, consumption_per_second: 5, sharing: 'shared' },
                 ] },
             ],
         }, c => c.belts.map(belt => [belt.flow_direction, belt.lanes]), true],
@@ -247,9 +247,9 @@ describe('what goes through the form and back as the config gave it', () => {
 });
 
 describe('a lane edited in the form', () => {
-    it('drops its lane end when it gets a consumption rate, which is the outlet rate of an export lane', () => {
-        const lane = { ingredient: 'iron-plate', stack_size: 4, lane_end: { kind: 'dead_end' as const }, sharing: 'one_per_copy' as const };
-        expect(laneFieldUpdate(lane, 'consumption_per_second', 5)).toEqual({ ingredient: 'iron-plate', stack_size: 4, sharing: 'one_per_copy', consumption_per_second: 5 });
+    it('drops its lane end when it gets a consumption rate, which states what leaves the end of an export lane', () => {
+        const lane = { ingredient: 'iron-plate', stack_size: 4, lane_end: { kind: 'dead_end' as const }, sharing: 'per_copy' as const };
+        expect(laneFieldUpdate(lane, 'consumption_per_second', 5)).toEqual({ ingredient: 'iron-plate', stack_size: 4, sharing: 'per_copy', consumption_per_second: 5 });
         expect(laneFieldUpdate(lane, 'consumption_per_second', undefined)).toEqual({ ...lane, consumption_per_second: undefined });
         expect(laneFieldUpdate(lane, 'stack_size', 2)).toEqual({ ...lane, stack_size: 2 });
     });

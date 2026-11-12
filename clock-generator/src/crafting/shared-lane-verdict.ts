@@ -28,9 +28,9 @@ import { longRunWindowCyclesOf, runClockOnBuild } from "./trial";
  * takers on it, whatever its end (crafting/shared-lane-model.ts). A copy that loses swings there fails the clock.
  *
  * The lanes judged: every lane a belt pickup takes from that the copies share (`sharing`, more than one copy), under its
- * end; a lane of unknown end is run as a dead end and as a free outlet in turn, and the clock has to hold under both. A
+ * end; a lane of unknown end is run as a dead end and as an infinite end in turn, and the clock has to hold under both. A
  * lane of unknown end that the copies do not share is run with the takers of one copy on it as a dead end (the run of one
- * copy reads it as a free outlet). A belt the build drops onto is left out: its entry would be the drops, which the
+ * copy reads it as an infinite end). A belt the build drops onto is left out: its entry would be the drops, which the
  * model does not run (`droppedOntoSharedLanes`).
  *
  * A lane whose belt states its `flow_direction` is run with its items moving that way; a lane whose belt does not is run
@@ -176,8 +176,8 @@ export interface SharedLaneLoss {
     /** The lane, 1 or 2 */
     lane: number;
     lane_end: LaneEnd["kind"];
-    /** The end the lane was run under, for a lane of unknown end: a dead end or an outlet */
-    run_as: "dead_end" | "outlet";
+    /** The end the lane was run under, for a lane of unknown end: a dead end or an infinite end */
+    run_as: "dead_end" | "infinite";
     item: string;
     /** Copies that take from the lane, as the config counts them (5.5); one on a lane only one copy takes from */
     copies: number;
@@ -281,7 +281,7 @@ export function droppedOntoSharedLanes(config: Config): { belt_id: number; lane:
     if (!(config.setpoint.copies > 1)) return [];
     const facts = laneFactsOf(config);
     const dropped = droppedOnto(config);
-    return takenLanesOf(config).filter(({ belt_id, lane }) => dropped.has(belt_id) && facts.of(belt_id, lane).sharing === "shared_by_copies");
+    return takenLanesOf(config).filter(({ belt_id, lane }) => dropped.has(belt_id) && facts.of(belt_id, lane).sharing === "shared");
 }
 
 /**
@@ -301,7 +301,7 @@ export function assumedCopySpacings(config: Config): { belt_id: number; lane: 1 
 }
 
 /**
- * The config with each lane of unknown end as one reading has it: a dead end in reading 0, a free outlet in reading 1.
+ * The config with each lane of unknown end as one reading has it: a dead end in reading 0, an infinite end in reading 1.
  * A lane of known end is run as it is.
  */
 function configUnder(config: Config, lanes: readonly ModelLane[], reading: number): Config {
@@ -311,8 +311,8 @@ function configUnder(config: Config, lanes: readonly ModelLane[], reading: numbe
         return { ...belt, lanes: belt.lanes.map((lane, index) => {
             const model = unknown.find(it => it.lane === index + 1);
             if (model === undefined) return lane;
-            // a lane the copies do not share is run as a dead end only: the run of one copy reads it as a free outlet
-            return { ...lane, lane_end: reading === 1 && model.shared ? { kind: "outlet" } : { kind: "dead_end" } };
+            // a lane the copies do not share is run as a dead end only: the run of one copy reads it as an infinite end
+            return { ...lane, lane_end: reading === 1 && model.shared ? { kind: "infinite" } : { kind: "dead_end" } };
         }) as typeof belt.lanes };
     }) };
 }
@@ -445,7 +445,7 @@ function describeSharedLaneLoss(loss: Omit<SharedLaneLoss, "text">, machines: re
             + `Its output inserter waits for room in ${counted(loss.join_full.held_hands)} of its ${counted(loss.join_full.hands)} hands `
             + `in ${loss.window_cycles} window cycles.${behind}`;
     }
-    const run_as = loss.run_as === "dead_end" ? "a dead end" : "an outlet";
+    const run_as = loss.run_as === "dead_end" ? "a dead end" : "an infinite end";
     const end = loss.lane_end === "unknown" ? `has an unknown end. It is checked as ${run_as}.` : `ends in ${run_as}.`;
     const item = FactorioDataService.isAvailable() ? FactorioDataService.itemNameInSentence(loss.item) : loss.item;
     const counts = `takes ${counted(loss.items)} in ${loss.window_cycles} window cycles.`;
@@ -534,7 +534,7 @@ function shortfallsOf(under: Config, lanes: readonly ModelLane[], layout: Shared
         if (items >= alone_items) return [];
         const lane = lanes.find(it => it.belt_id === take.belt_id && it.lane === take.lane)!;
         const row = layout.rows.find(it => it.belt_id === take.belt_id && it.lane === take.lane)!;
-        const run_as = facts.of(take.belt_id, take.lane).lane_end.kind === "dead_end" ? "dead_end" as const : "outlet" as const;
+        const run_as = facts.of(take.belt_id, take.lane).lane_end.kind === "dead_end" ? "dead_end" as const : "infinite" as const;
         const loss = { belt_id: take.belt_id, lane: take.lane, lane_end: lane.stated.kind, run_as, item: take.item,
             copies: lane.shared ? under.setpoint.copies : 1, copy: take.copy + 1,
             inserter_id: Number(take.inserter_id.slice("inserter:".length)), items, alone_items,
@@ -682,7 +682,7 @@ function joinIsTheCause(behind: BehindTarget, reference: RunOfCopies, rates: Tar
 
 /**
  * The runs of the copies the verdict makes, before any is made: the lanes it judges (`modelLanesOf`), and for each reading of
- * the lanes of unknown end (a dead end, then a free outlet, where one the copies share has an unknown end) the config under
+ * the lanes of unknown end (a dead end, then an infinite end, where one the copies share has an unknown end) the config under
  * it and its layouts, one for each way the items move, those with the same rows once.
  */
 export function sharedLaneRunsOf(config: Config): { lanes: { belt_id: number; lane: 1 | 2; shared: boolean }[]; readings: { under: Config; layouts: SharedLaneLayout[] }[] } {

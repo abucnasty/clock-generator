@@ -97,7 +97,7 @@ describe("the rules of the game", () => {
     });
 
     describe("room for one more hand", () => {
-        type LaneEnd = { kind: "dead_end" } | { kind: "unknown" } | { kind: "outlet" };
+        type LaneEnd = { kind: "dead_end" } | { kind: "unknown" } | { kind: "infinite" };
         // one inserter of a hand of `hand` that takes iron plates off lane 1 and copper cable off lane 2 of a turbo belt
         const roomOf = (lanes: { iron_stack: number; iron_end?: LaneEnd; cable_stack?: number; cable_end?: LaneEnd },
             hand = 16, backed_up_belts = false) => laneHandRoomTicks(createEntityRegistryFromConfig(ConfigSchema.parse({
@@ -137,7 +137,7 @@ describe("the rules of the game", () => {
         // a hand on a dead end can start later than in the planning run as well (it waits for its machine, or a hand
         // upstream empties the lane before it), so the end of the lane changes nothing of the room
         describe("of a pickup from a dead end, as of a pickup from a lane that flows on", () => {
-            const dead_end: LaneEnd = { kind: "dead_end" }, outlet: LaneEnd = { kind: "outlet" };
+            const dead_end: LaneEnd = { kind: "dead_end" }, infinite: LaneEnd = { kind: "infinite" };
             it.each<[string, { iron_stack: number; cable_stack?: number }, number]>([
                 ["two items, one on each lane", { iron_stack: 4 }, 16],
                 ["a hand of 12", { iron_stack: 4 }, 12],
@@ -145,7 +145,7 @@ describe("the rules of the game", () => {
                 ["the slower lane sets it", { iron_stack: 4, cable_stack: 1 }, 16],
             ])("is the same: %s", (_, lanes, hand) => {
                 const room = roomOf({ ...lanes, iron_end: dead_end, cable_end: dead_end }, hand);
-                expect(room).toBe(roomOf({ ...lanes, iron_end: outlet, cable_end: outlet }, hand));
+                expect(room).toBe(roomOf({ ...lanes, iron_end: infinite, cable_end: infinite }, hand));
                 expect(room).toBeDefined();
             });
         });

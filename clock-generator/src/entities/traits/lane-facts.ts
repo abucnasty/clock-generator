@@ -7,16 +7,16 @@ import { Ratio, ratioOf } from "./ratio";
 
 /**
  * What happens to an item at the downstream end of a lane. A dead end holds items until a hand takes them, so the lane
- * is a standing queue; an outlet carries them away at `outlet_rate` items a second, so a moving lane is assumed full.
- * "unknown" is a lane whose end the build has not said.
+ * is a standing queue; an infinite end takes every item that reaches it, as much as the lane carries, so a moving lane is
+ * assumed full. "unknown" is a lane whose end the build has not said.
  */
 export type LaneEnd =
     | { readonly kind: "dead_end" }
-    | { readonly kind: "outlet"; readonly outlet_rate: Ratio }
+    | { readonly kind: "infinite" }
     | { readonly kind: "unknown" };
 
 /** Whether every copy of the unit takes from the same lane, or each copy has a lane of its own */
-export type LaneSharing = "shared_by_copies" | "one_per_copy";
+export type LaneSharing = "shared" | "per_copy";
 
 /** A map direction as a unit step, x east and y south: the way a lane's items move */
 export interface FlowDirection {
@@ -77,16 +77,10 @@ function laneCapacityOf(belt: Config["belts"][number], lane: number): Ratio {
     return ratioOf(laneItemsPerSecond(beltSpeedOf(belt.type), laneStackFor(belt, lane)));
 }
 
-/** A lane end the config states, with the outlet's rate made exact: an outlet that states no rate is free, at the lane's capacity */
-function laneEndOf(stated: NonNullable<LaneConfig["lane_end"]>, capacity: Ratio): LaneEnd {
-    if (stated.kind !== "outlet") return { kind: stated.kind };
-    return { kind: "outlet", outlet_rate: stated.outlet_rate === undefined ? capacity : ratioOf(fraction(stated.outlet_rate)) };
-}
-
 /**
  * The facts of the lanes of a config. A fact that a lane of the config states is read as it is; a fact that it does
  * not state is derived from the config's `backed_up_belts` switch: with the switch set the lane is a dead end, without
- * it the lane has a free outlet that carries away as much as the lane carries. A supply rate that is not stated is the
+ * it the lane has an infinite end, which takes as much as the lane carries. A supply rate that is not stated is the
  * lane's capacity (half the belt's speed times the lane's stack size), and the copies share a lane that does not say
  * otherwise. A belt that states one lane has one lane: there is no fact of a lane it does not state, so nothing reads
  * that lane's end, supply or sharing. Both lanes of a belt move the way the belt states (`flow_direction`), and no way
@@ -101,9 +95,9 @@ export function laneFactsOf(config: LaneFactsConfig): LaneFactsOfBuild {
             const capacity = laneCapacityOf(belt, index + 1);
             return {
                 supply_rate: stated.supply_rate === undefined ? capacity : ratioOf(fraction(stated.supply_rate)),
-                lane_end: stated.lane_end !== undefined ? laneEndOf(stated.lane_end, capacity)
-                    : dead_end ? { kind: "dead_end" } : { kind: "outlet", outlet_rate: capacity },
-                sharing: stated.sharing ?? "shared_by_copies",
+                lane_end: stated.lane_end !== undefined ? { kind: stated.lane_end.kind }
+                    : dead_end ? { kind: "dead_end" } : { kind: "infinite" },
+                sharing: stated.sharing ?? "shared",
                 flow_direction: belt.flow_direction === undefined ? null : flowOf(belt.flow_direction),
             };
         }));

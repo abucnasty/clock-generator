@@ -448,6 +448,7 @@
     {
       "id": 1,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
           "ingredient": "coal",
@@ -455,7 +456,7 @@
           "lane_end": {
             "kind": "dead_end"
           },
-          "sharing": "one_per_copy"
+          "sharing": "per_copy"
         }
       ]
     },

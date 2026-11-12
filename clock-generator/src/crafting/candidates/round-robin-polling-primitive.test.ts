@@ -163,7 +163,7 @@ describe("pure primitive grouped construction", () => {
         expect(() => constructPrimitiveRoundRobinPolling({ ...config, overrides })).toThrow(/requires automatic/);
     });
 
-    it("keeps explicit Always and missing physical outlet coverage as refusals", () => {
+    it("keeps explicit Always and missing physical output coverage as refusals", () => {
         const forced = { ...config, inserters: config.inserters.map(inserter => inserter.id === 10 ? { ...inserter,
             overrides: { enable_control: { mode: "ALWAYS" as const } } } : inserter) };
         expect(() => constructPrimitiveRoundRobinPolling(forced)).toThrow(/requires automatic/);

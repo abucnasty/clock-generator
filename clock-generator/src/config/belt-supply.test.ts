@@ -43,12 +43,11 @@ describe("lane facts in the configuration", () => {
     it.each<[string, Record<string, unknown>]>([
         ["a supply rate", { supply_rate: 120.7 }],
         ["a dead end", { lane_end: { kind: "dead_end" } }],
-        ["an outlet with its rate", { lane_end: { kind: "outlet", outlet_rate: 88 } }],
-        ["a free outlet, without a rate", { lane_end: { kind: "outlet" } }],
+        ["an infinite end", { lane_end: { kind: "infinite" } }],
         ["an unknown end", { lane_end: { kind: "unknown" } }],
-        ["a lane each copy has to itself", { sharing: "one_per_copy" }],
-        ["a lane the copies share", { sharing: "shared_by_copies" }],
-        ["all three", { supply_rate: 60, lane_end: { kind: "dead_end" }, sharing: "one_per_copy" }],
+        ["a lane each copy has to itself", { sharing: "per_copy" }],
+        ["a lane the copies share", { sharing: "shared" }],
+        ["all three", { supply_rate: 60, lane_end: { kind: "dead_end" }, sharing: "per_copy" }],
     ])("keeps %s on a lane as the file states it", async (_, lane) => {
         const input = configWith(lane);
         for (const config of [ConfigSchema.parse(input), await parseConfig(JSON.stringify(input))]) {
@@ -56,10 +55,10 @@ describe("lane facts in the configuration", () => {
         }
     });
 
-    it("keeps the facts of an export lane beside its consumption, and refuses a lane end there: the consumption is its outlet rate", () => {
-        const lane = { consumption_per_second: 5, supply_rate: 100, sharing: "one_per_copy" };
+    it("keeps the facts of an export lane beside its consumption, and refuses a lane end there: the consumption states what leaves its end", () => {
+        const lane = { consumption_per_second: 5, supply_rate: 100, sharing: "per_copy" };
         expect(ConfigSchema.parse(configWith(lane, "export")).belts[0].lanes[0]).toEqual({ ingredient: "iron-plate", stack_size: 4, ...lane });
-        expect(ConfigSchema.safeParse(configWith({ ...lane, lane_end: { kind: "outlet", outlet_rate: 5 } }, "export")).success).toBe(false);
+        expect(ConfigSchema.safeParse(configWith({ ...lane, lane_end: { kind: "infinite" } }, "export")).success).toBe(false);
     });
 
     it("adds no lane fact to a lane that states none", () => {
@@ -69,11 +68,29 @@ describe("lane facts in the configuration", () => {
     it.each<[string, Record<string, unknown>]>([
         ["a supply rate of zero", { supply_rate: 0 }],
         ["a supply rate that is not a number", { supply_rate: "120" }],
-        ["an outlet rate of zero", { lane_end: { kind: "outlet", outlet_rate: 0 } }],
         ["an end of another kind", { lane_end: { kind: "loop" } }],
         ["an end given as text", { lane_end: "dead_end" }],
-        ["a sharing of another kind", { sharing: "shared" }],
+        ["a sharing in the words before shared and per copy", { sharing: "one_per_copy" }],
+        ["a sharing of another kind", { sharing: "shared_by_copies" }],
     ])("refuses %s", (_, lane) => {
         expect(ConfigSchema.safeParse(configWith(lane)).success).toBe(false);
+    });
+});
+
+describe("the words of a lane end before the infinite end", () => {
+    const configWith = (lane_end: Record<string, unknown>) => JSON.stringify({
+        setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+        machines: [], inserters: [],
+        belts: [{ id: 1, type: "turbo-transport-belt", lanes: [{ ingredient: "iron-plate", stack_size: 4, lane_end }] }],
+    });
+
+    it("refuses an end of kind outlet, and says to state an infinite end", async () => {
+        await expect(parseConfig(configWith({ kind: "outlet" })))
+            .rejects.toThrow("`lane_end.kind` \"outlet\" is not read. A lane end that is not a dead end is an infinite end: state `{\"kind\": \"infinite\"}`.");
+    });
+
+    it.each([{ kind: "infinite", outlet_rate: 40 }, { kind: "dead_end", outlet_rate: 40 }, { kind: "outlet", outlet_rate: 0 }])("refuses outlet_rate on %j, and says an infinite end takes every item", async lane_end => {
+        await expect(parseConfig(configWith(lane_end)))
+            .rejects.toThrow("`lane_end.outlet_rate` is not read. An infinite end takes every item that reaches it: remove the field.");
     });
 });

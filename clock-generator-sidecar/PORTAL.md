@@ -93,7 +93,7 @@ items. It does not examine the belts that put items on it. The export gives each
 
 - `dead_end`: the lane stops. The belt has no belt after it, or it goes into an underground belt entrance that has no
   exit.
-- `outlet`, with no rate: the items move off the lane. The sidecar gives this end only when the belt goes into a loader
+- `infinite`: the items move off the lane. The sidecar gives this end only when the belt goes into a loader
   that fills an infinity chest that removes all items. The loader and the chest must be in your selection.
 - `unknown`: the sidecar cannot see the end of the lane.
 

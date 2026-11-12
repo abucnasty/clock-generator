@@ -278,11 +278,11 @@ describe('shared builds through the real file and worker boundary', () => {
 
     it('keeps the lane facts and the way a belt moves when the build is opened, edited elsewhere, saved and shared again', async () => {
         const lanes = [
-            { ingredient: 'iron-plate', stack_size: 4, supply_rate: 120.7, lane_end: { kind: 'dead_end' }, sharing: 'one_per_copy' },
-            { ingredient: 'copper-plate', stack_size: 4, lane_end: { kind: 'outlet', outlet_rate: 88 } },
+            { ingredient: 'iron-plate', stack_size: 4, supply_rate: 120.7, lane_end: { kind: 'dead_end' }, sharing: 'per_copy' },
+            { ingredient: 'copper-plate', stack_size: 4, lane_end: { kind: 'infinite' } },
         ];
-        // an export lane's outlet rate is its consumption: it states no lane end beside it
-        const exportLane = { ingredient: 'iron-plate', stack_size: 4, consumption_per_second: 5, sharing: 'shared_by_copies' };
+        // what leaves the end of an export lane is its consumption: it states no lane end beside it
+        const exportLane = { ingredient: 'iron-plate', stack_size: 4, consumption_per_second: 5, sharing: 'shared' };
         const build = smallBuild();
         const config = { ...build, inserters: [{ source: { type: 'belt', id: 1 }, sink: { type: 'machine', id: 1 }, stack_size: 16 }, ...build.inserters],
             belts: [

@@ -28,7 +28,7 @@
 ---@field unit_number number The unit number of the belt entity
 ---@field lanes BeltLaneData[] Data for each lane (1 = left, 2 = right, as get_transport_line numbers them)
 ---@field lane_lines number[]|nil The transport line (1 left, 2 right) each listed lane is; nil when the lanes are items of splitter or loader lines
----@field line_ends {kind: "dead_end"|"outlet"|"unknown"}[]|nil The end of transport lines 1 and 2 (drop-merge.lua lane_ends); nil when no inserter picks up from the belt
+---@field line_ends {kind: "dead_end"|"infinite"|"unknown"}[]|nil The end of transport lines 1 and 2 (drop-merge.lua lane_ends); nil when no inserter picks up from the belt
 ---@field flow_direction defines.direction|false|nil The way the items move at the pieces inserters pick up from; false when they do not all give one way, nil when no inserter picks up from the belt
 
 ---@class InserterTargetRef

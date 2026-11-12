@@ -84,7 +84,7 @@ function merge.tiles(drop_target, selected)
 end
 
 local DEAD_END = { kind = "dead_end" }
-local OUTLET = { kind = "outlet" }
+local INFINITE = { kind = "infinite" }
 local UNKNOWN = { kind = "unknown" }
 
 ---The direction a transport belt takes its items in from: a curve turns them, a straight piece does not
@@ -150,7 +150,7 @@ end
 ---The end of each lane of the belt line that `pickup` belongs to, followed downstream from `pickup` over the selected
 ---pieces only, never upstream:
 --- - the line ends (its last piece has nothing after it, or an underground entrance has no exit): both lanes dead_end;
---- - the line ends in a loader that takes everything (loader_voids): both lanes an outlet, at no stated rate;
+--- - the line ends in a loader that takes everything (loader_voids): both lanes an infinite end;
 --- - the line side-loads into an underground piece of another belt: the lane the hood blocks is dead_end; the lane that
 ---   goes on is unknown. Where the other belt carries items from upstream, they take its room; where it does not, the
 ---   lane runs at what the hands past the side-load take, which depends on the machines they feed and not on anything
@@ -160,7 +160,7 @@ end
 ---@param pickup LuaEntity The belt piece an inserter picks up from
 ---@param selected table<number, LuaEntity> The belt pieces of the export by unit number
 ---@param selected_units table<number, true> The unit numbers of every selected entity
----@return {kind: "dead_end"|"outlet"|"unknown"}[] ends Lane 1 (left) and lane 2 (right), as the transport lines number them
+---@return {kind: "dead_end"|"infinite"|"unknown"}[] ends Lane 1 (left) and lane 2 (right), as the transport lines number them
 function merge.lane_ends(pickup, selected, selected_units)
     local piece = pickup
     local seen = {}
@@ -198,7 +198,7 @@ function merge.lane_ends(pickup, selected, selected_units)
             end
             if next_piece.type == "loader" or next_piece.type == "loader-1x1" then
                 if loader_voids(next_piece, piece, selected_units) then
-                    return { OUTLET, OUTLET }
+                    return { INFINITE, INFINITE }
                 end
                 return { UNKNOWN, UNKNOWN }
             end

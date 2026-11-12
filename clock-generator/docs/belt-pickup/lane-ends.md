@@ -11,8 +11,8 @@ the [glossary](../../../docs/maintainer/glossary.md).
 | Lane end | What the items do at the end | In the configuration (`lane_end`) |
 | --- | --- | --- |
 | Dead end | The lane stops. The items stay on it until a hand takes them. The lane is a standing queue. | `{"kind": "dead_end"}` |
-| Outlet | The lane continues. The items that no hand takes leave the lane at its outlet rate. | `{"kind": "outlet", "outlet_rate": 40}`. Without `outlet_rate`, it is a free outlet at the capacity of the lane. |
-| Unknown end | The configuration does not know the end. The generator checks the clock as a dead end and as a free outlet. The clock must hold under both. | `{"kind": "unknown"}` |
+| Infinite end | The lane continues. All items that no hand takes go off the lane, as into an infinity chest. The end takes as many items as the lane carries. | `{"kind": "infinite"}` |
+| Unknown end | The configuration does not know the end. The generator checks the clock as a dead end and as an infinite end. The clock must hold under both. The Sidecar gives this end only when it cannot see the end of the lane. | `{"kind": "unknown"}` |
 
 A lane end is a fact of the build. It does not change while the build runs. Backpressure and moving are different.
 Each one is the state of one lane at one tick.
@@ -25,19 +25,19 @@ independently:
 - `supply_rate`: the items per second that come onto the lane where it starts. Without it, the supply rate is the
   capacity of the lane.
 - `lane_end`: the end of the lane, as in the table above.
-- `sharing`: `shared_by_copies` (the default) or `one_per_copy`.
+- `sharing`: `shared` (the default) or `per_copy`.
 
 The flow direction is a fact of the belt, not of each lane: `flow_direction` on the belt.
 
-An export lane can have a secondary setpoint (`consumption_per_second`). That rate is its outlet rate. Thus the lane
-states no lane end. For a lane that states no lane end, see `lane_end` in
+An export lane can have a secondary setpoint (`consumption_per_second`). That rate tells what goes off the end of the
+lane. Thus the lane states no lane end. For a lane that states no lane end, see `lane_end` in
 [Configuration file fields](../../../docs/maintainer/configuration-file-fields.md).
 
 To find the end, follow the lane downstream from the last inserter of the configuration that takes from it:
 
 - Where the items stop, the end is a dead end.
-- Where the items move on to entities outside the configuration, the end is an outlet. The outlet rate is the rate
-  at which those entities take the items.
+- Where the items move on to entities outside the configuration, the end is an infinite end. The configuration
+  states no rate at a lane end: the generator lets the end take as many items as the lane carries.
 - Where you cannot see what the items do, the end is unknown.
 
 ## A belt with one lane stated
@@ -47,7 +47,7 @@ supply rate, no lane end and no sharing. Thus only the stated lane tells if all 
 
 - If the stated lane is a dead end, all the lanes of the belt are dead ends. Where all the input lanes of the
   configuration are dead ends, the generator makes the clock for pickups with backpressure.
-- If the stated lane is an outlet or an unknown end, the belt has a lane that is not a dead end.
+- If the stated lane is an infinite end or an unknown end, the belt has a lane that is not a dead end.
 
 `overrides.backed_up_belts` gives a lane end only to a lane that the belt states. A lane with `"ingredient": ""` is a
 stated lane. It carries no item, and its end is the end that it states, or the end that `backed_up_belts` gives.
@@ -70,8 +70,8 @@ Belt A side-loads into an underground end of belt B. A stops at the side of the 
 onto B. The two lanes of A then have different ends:
 
 - The lane of A at the hood stops, because the hood blocks it. It is a dead end.
-- The lane of A at the opening continues onto B. It is an outlet. Its outlet rate is the rate at which the
-  entities on B after the side-load take the items.
+- The lane of A at the opening continues onto B. It is an infinite end. The configuration states no rate at a lane
+  end. Thus the generator does not use the rate of the entities on B after the side-load.
 - B can already carry items on that lane from upstream. Then state the lane of A as unknown. B has priority at a
   side-load. The items of A go only into the empty spaces on that lane of B. The generator does not model this.
 
@@ -88,9 +88,9 @@ take ore for two furnaces.
 
 | Belt | Near lane | End of the near lane | End of the far lane |
 | --- | --- | --- | --- |
-| 1 | 2 | dead end | outlet at 53 1/3 items per second |
-| 4 | 1 | dead end | outlet at 53 1/3 items per second |
+| 1 | 2 | dead end | infinite end; outside the configuration, 53 1/3 items per second go on |
+| 4 | 1 | dead end | infinite end; outside the configuration, 53 1/3 items per second go on |
 
 The sample is cut from a larger build. In that build, each ore belt side-loads into an underground exit after the
 third copy. The hood blocks the near lane, so it is a dead end. The far lane continues to two furnaces outside the
-configuration. They take 53 1/3 iron ore per second. That is the outlet rate of the far lane.
+configuration. They take 53 1/3 iron ore per second. The configuration cannot state that rate at a lane end.

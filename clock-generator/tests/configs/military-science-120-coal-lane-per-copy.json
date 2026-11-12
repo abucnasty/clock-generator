@@ -123,7 +123,7 @@
         {
           "ingredient": "coal",
           "stack_size": 4,
-          "sharing": "one_per_copy"
+          "sharing": "per_copy"
         }
       ]
     },

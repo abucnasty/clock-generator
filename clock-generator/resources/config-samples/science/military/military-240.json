@@ -165,7 +165,7 @@
           "ingredient": "military-science-pack",
           "stack_size": 4,
           "lane_end": {
-            "kind": "outlet"
+            "kind": "infinite"
           }
         }
       ]
@@ -178,7 +178,7 @@
           "ingredient": "military-science-pack",
           "stack_size": 4,
           "lane_end": {
-            "kind": "outlet"
+            "kind": "infinite"
           }
         }
       ]
@@ -194,7 +194,7 @@
           "lane_end": {
             "kind": "dead_end"
           },
-          "sharing": "shared_by_copies"
+          "sharing": "shared"
         },
         {
           "ingredient": "piercing-rounds-magazine",
@@ -202,7 +202,7 @@
           "lane_end": {
             "kind": "dead_end"
           },
-          "sharing": "shared_by_copies"
+          "sharing": "shared"
         }
       ]
     },
@@ -217,7 +217,7 @@
           "lane_end": {
             "kind": "dead_end"
           },
-          "sharing": "shared_by_copies"
+          "sharing": "shared"
         },
         {
           "ingredient": "stone-wall",
@@ -225,7 +225,7 @@
           "lane_end": {
             "kind": "dead_end"
           },
-          "sharing": "shared_by_copies"
+          "sharing": "shared"
         }
       ]
     },
@@ -240,7 +240,7 @@
           "lane_end": {
             "kind": "dead_end"
           },
-          "sharing": "one_per_copy"
+          "sharing": "per_copy"
         },
         {
           "ingredient": "coal",
@@ -248,7 +248,7 @@
           "lane_end": {
             "kind": "dead_end"
           },
-          "sharing": "one_per_copy"
+          "sharing": "per_copy"
         }
       ]
     },
@@ -263,7 +263,7 @@
           "lane_end": {
             "kind": "dead_end"
           },
-          "sharing": "one_per_copy"
+          "sharing": "per_copy"
         },
         {
           "ingredient": "coal",
@@ -271,7 +271,7 @@
           "lane_end": {
             "kind": "dead_end"
           },
-          "sharing": "one_per_copy"
+          "sharing": "per_copy"
         }
       ]
     }

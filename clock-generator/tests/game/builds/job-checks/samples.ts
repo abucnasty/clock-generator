@@ -114,12 +114,12 @@ const agriculturalScience: JobCheck[] = [
 // The processing unit circuit export (PROCESSING_UNIT_80_CIRCUIT_EXPORT), a real cell (#189) at 80 processing units a second.
 const circuitExport: JobCheck[] = [
     {
-        name: 'Behavior: the explicit one-cycle plan is offered, in 24 ticks with 32 items, on a moving belt',
+        name: 'Behavior: the explicit one-cycle plan is offered, in 24 ticks with 32 items, on a backed-up belt',
         run: ({ generated }) => {
             const plan = byMaker(generated, 'planned-belt-slack');
             expect(plan, 'the explicit behavior plan is offered, independently of the selector').toBeDefined();
             expect(plan.result.stability_check.as_built).toMatchObject({ holds: true, actual_output_items: 32 });
-            expect(plan.belt).toEqual({ kind: 'moving' });
+            expect(plan.belt).toEqual({ kind: 'backed_up' });
         },
     },
     {

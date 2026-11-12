@@ -46,7 +46,7 @@ export function modelLanesOf(config: Config): ModelLane[] {
     return takenLanesOf(config).flatMap(({ belt_id, lane }) => {
         if (dropped.has(belt_id)) return [];
         const lane_facts = facts.of(belt_id, lane);
-        const shared = lane_facts.sharing === "shared_by_copies" && config.setpoint.copies > 1;
+        const shared = lane_facts.sharing === "shared" && config.setpoint.copies > 1;
         if (!shared && lane_facts.lane_end.kind !== "unknown") return [];
         return [{ belt_id, lane, shared, stated: lane_facts.lane_end, flow: lane_facts.flow_direction }];
     });

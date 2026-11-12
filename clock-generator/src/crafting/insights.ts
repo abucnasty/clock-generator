@@ -563,7 +563,7 @@ export function droppedOntoSharedLaneInsights(config: Config): ClockInsight[] {
         why: "", explanation: "" }));
 }
 
-/** The supply rate each copy's lane needs, for every lane that is one per copy */
+/** The supply rate each copy's lane needs, for every lane that is per copy */
 export function onePerCopyFeedInsights(config: Config): ClockInsight[] {
     let feeds;
     try {

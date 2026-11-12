@@ -53,7 +53,8 @@ _Avoid_: target output, target rate, goal, control frequency (that is the window
 
 **Secondary setpoint**:
 The rate at which entities outside the configuration take items off an export lane, in items per second. The
-configuration's `consumption_per_second` on the lane. It is the outlet rate of the lane, so the lane states no lane end.
+configuration's `consumption_per_second` on the lane. It tells what leaves the end of the lane, so the lane states no
+lane end.
 A project technical noun, related to **Setpoint** (STE rule 1.6): STE approves SECONDARY (adj), and has no entry for
 setpoint.
 _Avoid_: export rate, consumption
@@ -92,7 +93,7 @@ the supply rate is the capacity of the lane: on a turbo belt with stacks of 4, 1
 and RATE (n), approved.
 
 **Lane end**:
-What the items do at the downstream end of a lane: a **dead end**, an **outlet**, or an **unknown end**. A
+What the items do at the downstream end of a lane: a **dead end**, an **infinite end**, or an **unknown end**. A
 fact of the build: it does not change while the build runs. The configuration's `lane_end`, by its `kind`. A project
 technical noun (STE rule 1.6): STE approves END (n), and has no entry for lane.
 
@@ -100,25 +101,23 @@ technical noun (STE rule 1.6): STE approves END (n), and has no entry for lane.
 A lane end that stops the items. They stay on the lane until a hand takes them, so the lane is a standing queue. In the
 configuration: `"lane_end": {"kind": "dead_end"}`. A project technical noun (STE rule 1.6).
 
-**Outlet**:
-A lane end that lets the items move on. The items that no hand takes leave the lane at its outlet rate. A
-**free outlet** takes as many items as the lane carries. In the configuration: `"lane_end": {"kind": "outlet"}`. A
-project technical noun (STE rule 1.6): STE has no entry for outlet.
-
-**Outlet rate**:
-The items per second that leave a lane at its outlet. The configuration's `lane_end.outlet_rate`. Without it, the
-outlet is a free outlet: its rate is the capacity of the lane. A project technical noun (STE rule 1.6).
+**Infinite end**:
+The end of a lane that takes every item that reaches it, as an infinity chest does. On an input lane, the items that
+no hand takes move along all the copies and then off the lane. In the configuration: `"lane_end": {"kind": "infinite"}`. The output
+belt ends in an infinite end too. A project technical noun (STE rule 1.6): STE has no entry for infinite.
+_Avoid_: outlet, free outlet, passthrough
 
 **Unknown end**:
 The lane end of a lane when the configuration does not know its end. In the configuration:
-`"lane_end": {"kind": "unknown"}`. The generator checks the clock as a dead end and as a free outlet. The clock must
-hold under both. STE: UNKNOWN (adj) and END (n), approved.
+`"lane_end": {"kind": "unknown"}`. The generator checks the clock as a dead end and as an infinite end. The clock must
+hold under both. Only the Sidecar gives it, when it cannot see the end of a lane. It helps you find a problem. It is
+not a default. The samples state the end of each lane. STE: UNKNOWN (adj) and END (n), approved.
 
 **Lane sharing**:
-Whether all copies take from one lane, or each copy has a lane of its own. **Shared by copies**: the inserters of
-every copy take from the lane. This is the default. **One per copy**: each copy has its own lane. The generator checks
-the inserters of one copy on it. The configuration's `sharing`: `shared_by_copies` or `one_per_copy`. A project
-technical noun (STE rule 1.6).
+Whether all copies take from one lane, or each copy has a lane of its own. **Shared**: the inserters of every copy
+take from the lane. This is the default. **Per copy**: each copy has its own lane. The generator checks the inserters
+of one copy on it. The configuration's `sharing`: `shared` or `per_copy`. A project technical noun (STE rule 1.6).
+_Avoid_: shared by copies, one per copy
 
 **Flow direction**:
 The direction in which the items on a belt move. Both lanes of a belt move in the same direction. The configuration's
@@ -134,9 +133,9 @@ configuration's `source.near_lane`. A project technical noun (STE rule 1.6): STE
 entry for lane.
 
 **Output belt**:
-The belts from the output inserters of the copies to the outlet. The configuration's `output_belt`: a side belt, and
-stretches of belt in tiles. The run of the copies moves the stacks on it, and an output blockage shuts its outlet. A
-project technical noun (STE rule 1.6): STE approves OUTPUT (n), and has no entry for belt.
+The belts from the output inserters of the copies to the infinite end. The configuration's `output_belt`: a side
+belt, and stretches of belt in tiles. The run of the copies moves the stacks on it, and an output blockage shuts its
+infinite end. A project technical noun (STE rule 1.6): STE approves OUTPUT (n), and has no entry for belt.
 _Avoid_: output line (the game's `output_lines` are transport lines)
 
 **Side belt**:

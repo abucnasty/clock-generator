@@ -76,7 +76,7 @@ describe("the clocks recorded on the chemical science build whose copies share d
         expect([worst(1).copy, worst(1).inserter_id, worst(-1).copy, worst(-1).inserter_id]).toEqual([2, 3, 2, 6]);
     });
 
-    it("checks an unknown end as a dead end and as a free outlet", () => {
+    it("checks an unknown end as a dead end and as an infinite end", () => {
         const unknown = withFacts(stated, { "2/1": { lane_end: { kind: "unknown" } } });
         const losses = judged("takt_batches_observed", unknown).losses.filter(loss => loss.belt_id === 2 && loss.lane === 1);
         expect(losses.some(loss => loss.run_as === "dead_end" && loss.copy === 2 && loss.inserter_id === 3)).toBe(true);
@@ -84,15 +84,15 @@ describe("the clocks recorded on the chemical science build whose copies share d
             .toContain("Lane 1 of belt 2 has an unknown end. It is checked as a dead end. The 5.5 copies take advanced circuit from it.");
     });
 
-    it("leaves lanes that are one per copy to the run of one copy when they end in a dead end", () => {
-        const own = { ...dead_end, sharing: "one_per_copy" };
-        const one_per_copy = withFacts(config, { "1/1": own, "1/2": own, "2/1": own, "2/2": own });
-        expect(judged("takt_batches_observed", one_per_copy)).toMatchObject({ losses: [], simulated: false, lanes: [] });
+    it("leaves lanes that are per copy to the run of one copy when they end in a dead end", () => {
+        const own = { ...dead_end, sharing: "per_copy" };
+        const per_copy = withFacts(config, { "1/1": own, "1/2": own, "2/1": own, "2/2": own });
+        expect(judged("takt_batches_observed", per_copy)).toMatchObject({ losses: [], simulated: false, lanes: [] });
     });
 });
 
 // #660: INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK in the game, three copies 9 tiles apart on two ore belts that run east into
-// loaders, both lanes of each a free outlet that never stands (recorded), and an electronic-circuit belt that ends in a
+// loaders, both lanes of each an infinite end that never stands (recorded), and an electronic-circuit belt that ends in a
 // dead end: its last tile faces nothing, and no item leaves it past the last taker (recorded). The game ran the five clocks
 // with these enable windows (read off the recording, a window cycle of 216 ticks): under Takt Batches with 6 swings copy 3
 // made about 4,000 of 4,800 a minute, its two ore inserters 82 swings against 99; under the other four every copy made 4,800.
@@ -145,17 +145,17 @@ describe("the clocks recorded on the inserter build whose copies share flowing o
     });
 });
 
-// ADVANCED_CIRCUIT_240, three copies, every lane a free outlet: a clock the generator made for it (Euclidean Swings on 24
+// ADVANCED_CIRCUIT_240, three copies, every lane an infinite end: a clock the generator made for it (Euclidean Swings on 24
 // ticks) has copy 3 short by one hand (16 items) on the electronic circuits of belts 1 and 4 and on the coal of belt 3 in the
 // judged window cycles, and in the run twice as long by 32 on belt 1 and 112 on belt 4. Measured on the sample as it was
-// before it stated the spacing of its copies and the way its belts move, with the four lanes a free outlet. The sample now
+// before it stated the spacing of its copies and the way its belts move, with the four lanes an infinite end. The sample now
 // states that those lanes end in a dead end, and this test is of lanes that flow on: it takes the sample without those
 // facts.
 describe("a clock whose copy is short by more than one hand in the run twice as long", () => {
     it("fails it on that copy", async () => {
-        const outlet = { lane_end: { kind: "outlet" } };
+        const infinite_end = { lane_end: { kind: "infinite" } };
         const config = withFacts(withoutSharedLaneFacts(await loadConfigFromFile(ConfigPaths.ADVANCED_CIRCUIT_240)),
-            { "1/1": outlet, "3/1": outlet, "3/2": outlet, "4/1": outlet });
+            { "1/1": infinite_end, "3/1": infinite_end, "3/2": infinite_end, "4/1": infinite_end });
         const windows = {
             "inserter:1": [{ start: 2, end: 18 }], "inserter:2": [{ start: 0, end: 0 }], "inserter:3": [{ start: 2, end: 19 }],
             "inserter:4": [{ start: 20, end: 23 }, { start: 0, end: 5 }], "inserter:5": [{ start: 12, end: 23 }, { start: 0, end: 0 }],
@@ -175,12 +175,12 @@ describe("a clock whose copy is short by more than one hand in the run twice as 
 // ticks, and Coordinated Sources composed on 48): in the run of the three copies, copy 3's ore inserters put each hand down
 // up to 10 ticks after the run of one copy alone, and that lag does not grow. In the judged window cycles copy 3 is short
 // by the one hand still being filled at their end (688 against 704 on 24 ticks; 1,392 against 1,408 and 1,376 against
-// 1,392 on 48): in a run twice as long it is short by no more than that. Measured with both lanes of each ore belt a free
-// outlet, which the sample stated before it stated the ends the build has; the test keeps those ends.
+// 1,392 on 48): in a run twice as long it is short by no more than that. Measured with both lanes of each ore belt an
+// infinite end, which the sample stated before it stated the ends the build has; the test keeps those ends.
 describe("the clocks whose third copy puts its last ore hand down a few ticks after one copy alone", async () => {
-    const free_outlet = { lane_end: { kind: "outlet" } };
+    const infinite_end = { lane_end: { kind: "infinite" } };
     const config = withFacts(atSpeeds(await loadConfigFromFile(ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK), THIRD_COPY_SPEEDS),
-        { "1/1": free_outlet, "1/2": free_outlet, "4/1": free_outlet, "4/2": free_outlet });
+        { "1/1": infinite_end, "1/2": infinite_end, "4/1": infinite_end, "4/2": infinite_end });
     const clocks: Record<string, { window_cycle_ticks: number; windows: SerializableClockWindows }> =
         JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "inserter-crafting-240-generated-clocks-copy-3-one-hand-late.json"), "utf8"));
 

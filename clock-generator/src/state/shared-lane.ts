@@ -1,6 +1,7 @@
 import assert from "../common/assert";
 import { BeltSpeed } from "../entities/belt";
-import { Ratio } from "../entities/traits/ratio";
+import { laneItemsPerSecond } from "../entities/belt/belt-speed";
+import { Ratio, ratioOf } from "../entities/traits/ratio";
 import type { LaneEnd } from "../entities/traits/lane-facts";
 import { BeltPickupStock } from "./belt-pickup-stock";
 
@@ -36,7 +37,7 @@ export interface SharedLaneArgs {
 /**
  * One lane of a belt with every taker of every copy on it, tick by tick: stacks come on at the entry at the supply rate
  * while there is room, move downstream at the belt's speed, keep a stack's spacing behind the stack ahead, and at the
- * end either stand (a dead end) or leave at the outlet rate (an outlet). A taker reaches a stretch of the lane and takes
+ * end either stand (a dead end) or leave at the lane's capacity (an infinite end). A taker reaches a stretch of the lane and takes
  * at most one stack, or part of one, a tick (`reachOf`). A taken stack leaves a gap that the stacks behind close where
  * they stand, and that travels on with them where they move.
  *
@@ -52,18 +53,18 @@ export class SharedLane {
     private readonly stack_size: number;
     /** The entry's rate, exact: items a tick are `numerator / (60 denominator)`, its bank counts in that unit */
     private readonly supply: Ratio;
-    /** The outlet's rate, exact as the entry's; null at a dead end */
-    private readonly outlet: Ratio | null;
+    /** The rate at which the infinite end takes, the lane's capacity, exact as the entry's; null at a dead end */
+    private readonly infinite_end: Ratio | null;
     /** The stacks from the head (furthest downstream) to the tail */
     private stacks: LaneStack[] = [];
     private supply_bank = 0;
-    private outlet_bank = 0;
+    private infinite_end_bank = 0;
     private tick = 0;
     /** Whether the entry is closed: nothing comes onto the lane, and its bank stays as it was at the close */
     private entry_closed = false;
     /** Items on the lane at the start */
     public readonly initial: number;
-    /** Items the entry put on and the outlet took off, from the start */
+    /** Items the entry put on and the infinite end took off, from the start */
     public supplied = 0;
     public drained = 0;
 
@@ -73,10 +74,11 @@ export class SharedLane {
         this.end = Math.round(args.length_tiles * 256);
         this.stack_size = args.stack_size;
         this.supply = args.supply_rate;
-        this.outlet = args.lane_end.kind === "outlet" ? args.lane_end.outlet_rate : null;
+        // the lane's capacity: half the belt's speed times the stack size, as laneFactsOf gives it
+        this.infinite_end = args.lane_end.kind === "infinite" ? ratioOf(laneItemsPerSecond(args.belt_speed, args.stack_size)) : null;
         // both banks start full, so that a rate of the lane's capacity keeps up from the first tick
         this.supply_bank = this.stack_size * 60 * this.supply.denominator;
-        this.outlet_bank = this.outlet === null ? 0 : this.stack_size * 60 * this.outlet.denominator;
+        this.infinite_end_bank = this.infinite_end === null ? 0 : this.stack_size * 60 * this.infinite_end.denominator;
         // the lane starts full: a stack every spacing from the end back to the entry
         for (let x = this.end; x >= 0; x -= STACK_SPACING) this.stacks.push({ x, count: this.stack_size });
         this.initial = this.items();
@@ -114,17 +116,17 @@ export class SharedLane {
         this.entry_closed = false;
     }
 
-    /** One tick: the outlet takes the head where it may, every stack moves, then the entry puts a stack on where there is room */
+    /** One tick: the infinite end takes the head where it may, every stack moves, then the entry puts a stack on where there is room */
     private step(): void {
         const stacks = this.stacks;
-        const outlet = this.outlet;
-        if (outlet !== null) {
-            const unit = 60 * outlet.denominator;
-            // the outlet takes a whole stack whenever it is not behind its rate, and is then behind by what it took over
-            // its rate: over time it takes its rate, whatever the stack size and the ticks the stacks arrive in
-            this.outlet_bank = Math.min(this.outlet_bank + outlet.numerator, this.stack_size * unit);
-            while (stacks.length > 0 && stacks[0].x >= this.end && this.outlet_bank > 0) {
-                this.outlet_bank -= stacks[0].count * unit;
+        const infinite_end = this.infinite_end;
+        if (infinite_end !== null) {
+            const unit = 60 * infinite_end.denominator;
+            // the infinite end takes a whole stack whenever it is not behind its rate, and is then behind by what it took
+            // over its rate: over time it takes its rate, whatever the stack size and the ticks the stacks arrive in
+            this.infinite_end_bank = Math.min(this.infinite_end_bank + infinite_end.numerator, this.stack_size * unit);
+            while (stacks.length > 0 && stacks[0].x >= this.end && this.infinite_end_bank > 0) {
+                this.infinite_end_bank -= stacks[0].count * unit;
                 this.drained += stacks[0].count;
                 stacks.shift();
             }
@@ -132,7 +134,7 @@ export class SharedLane {
         const speed = this.speed;
         for (let index = 0; index < stacks.length; index++) {
             const stack = stacks[index];
-            // the head stops at the end until the outlet takes it; every other stack keeps its spacing behind the one ahead
+            // the head stops at the end until the infinite end takes it; every other stack keeps its spacing behind the one ahead
             const limit = index === 0 ? this.end : stacks[index - 1].x - STACK_SPACING;
             stack.x = Math.max(stack.x, Math.min(stack.x + speed, limit));
         }
@@ -184,7 +186,7 @@ export class SharedLane {
 
     /** Everything a later tick of the lane reads, for the state key */
     public key(): string {
-        return `${this.entry_closed ? "closed;" : ""}${this.supply_bank};${this.outlet_bank};${this.stacks.map(stack => `${stack.x}:${stack.count}`).join(",")}`;
+        return `${this.entry_closed ? "closed;" : ""}${this.supply_bank};${this.infinite_end_bank};${this.stacks.map(stack => `${stack.x}:${stack.count}`).join(",")}`;
     }
 
     /** The items on the lane now */

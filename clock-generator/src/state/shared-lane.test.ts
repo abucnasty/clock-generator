@@ -25,10 +25,10 @@ describe("a shared lane with one taker", () => {
         }
     });
 
-    it("is the moving pickup lane where the lane runs on into a free outlet", () => {
+    it("is the moving pickup lane where the lane runs on into an infinite end", () => {
         for (const period of [7, 20, 61]) {
             const lane = new SharedLane({ belt_speed: TURBO, stack_size: 4, supply_rate: ratio(120),
-                lane_end: { kind: "outlet", outlet_rate: ratio(120) }, length_tiles: 6 });
+                lane_end: { kind: "infinite" }, length_tiles: 6 });
             const [shared, alone] = takesOf([lane.reachOf(6, 1), new BeltPickupLane(TURBO, 1, 4, 0)], 400, bursts(period));
             expect(shared.reduce((a, b) => a + b, 0)).toBe(alone.reduce((a, b) => a + b, 0));
             expect(shared).toEqual(alone);
@@ -62,11 +62,11 @@ describe("a shared lane with takers in a row", () => {
         expect(lane.drained).toBe(0);
     });
 
-    it("lets an outlet take its rate off a lane nobody takes from", () => {
-        const lane = new SharedLane({ belt_speed: TURBO, stack_size: 4, supply_rate: ratio(120), lane_end: { kind: "outlet", outlet_rate: ratio(88) }, length_tiles: 3 });
+    it("lets an infinite end take the lane's capacity off a lane nobody takes from", () => {
+        const lane = new SharedLane({ belt_speed: TURBO, stack_size: 4, supply_rate: ratio(120), lane_end: { kind: "infinite" }, length_tiles: 3 });
         lane.advanceTo(600);
-        // 88 a second over 10 seconds, give or take the stack in the bank
-        expect(Math.abs(lane.drained - 880)).toBeLessThanOrEqual(4);
+        // 120 a second, a turbo lane of stacks of 4, over 10 seconds, give or take the stack in the bank
+        expect(Math.abs(lane.drained - 1200)).toBeLessThanOrEqual(4);
     });
 
     it("takes one stack a tick for each reach", () => {

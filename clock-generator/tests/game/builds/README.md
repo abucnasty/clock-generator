@@ -18,7 +18,7 @@ uses it. Setup, selective execution and artifact retention are in the [game veri
 - `iron-plate-80-car-chest-clock.game.test.ts`: the iron plate build, a car taken as a chest between a big mining drill and two furnaces.
 - `steel-plate-26-wagon-chest-clock.game.test.ts`: the steel build, a cargo wagon taken as a chest that a big mining drill and two furnaces fill and empty, the steel leaving through it.
 - `inserter-crafting-240-shared-signal-clock.game.test.ts`: the inserter build on three copies, once with the hand-made clock and once with the generated clock, and the sample's scaffold of one copy under the generator's Round-Robin Polling clock with 6 output swings for the config with backpressure on its belts (`backed_up_belts`; `round_robin_polling_swings_6`, 72 ticks), with the ore and the circuits cut and the output blocked (#442).
-- `logistic-science-240-direct-insert-clock.game.test.ts`: the logistic science build with direct insertion, the sample's scaffold of one copy, under the generated clock for the config as it is (fractional swings, 96 ticks), with the inserters cut from the belts and the output blocked (#442). The scaffold's inserter belts end closed, so they stand backed up in the game while the clock is made for moving belts.
+- `logistic-science-240-direct-insert-clock.game.test.ts`: the logistic science build with direct insertion, the sample's scaffold of one copy, under the generated clock for the config as it is (fractional swings, 96 ticks), with the inserters cut from the belts and the output blocked (#442). The scaffold's inserter belts end closed, so in the game their lanes have backpressure. The config states those lanes as dead ends, so the clock is made for belts with backpressure.
 - `grenade-clock.game.test.ts`: the grenade build on one copy and on its full build of seven, each with the hand-made clock and with the generated clock.
 - `processing-unit-80-circuit-export-clock.game.test.ts`: the circuit export build (processing units from two circuit machines and two advanced circuit machines, an export belt) on its throttled scaffold with the generated clock, as it is and with the belts backed up.
 - `utility-science-480-lds-foundry-chain-clock.game.test.ts`: the utility science 480 build (a chain of machines with a coal inserter that moves 15/8 hands a cycle) with the generated clock.
@@ -349,7 +349,7 @@ hash is `builtClockIdentity` of the build's blueprint, recomputed by `clock-cont
 `over-hood-pickup-clock.game.test.ts` enumerates 32 controls: electronic circuits with different lane
 ingredients and gears with identical lane ingredients, at four speeds, both mirroring states, and
 moving/backed-up supply. Every variant uses the same compact assembler layout and 6/s target. Backed-up
-variants remove only the ingredient drain; the product outlet stays open until the output intervention.
+variants remove only the ingredient drain; the product's infinite end stays open until the output intervention.
 Sidecar must capture supported belt model 2, the over-the-hood layout and the correct preferred lane.
 
 [over-hood-clock-history-controls.json](over-hood-clock-history-controls.json) retains all 32 native summaries of #254,

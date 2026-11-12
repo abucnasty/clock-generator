@@ -120,7 +120,7 @@ mirrored. The other lane stays stationary and untouched. The existing backed-up 
 hand counts; half-tile geometry and lane preference remain separate from the supply setting.
 The [same-item front-exit controls](../tests/game/mechanics/belt-pickup/fixtures/front-underground-exit/README.md#same-item-on-both-lanes)
 also fill at `0,1,2,3` entirely from lane 1 unmirrored or lane 2 mirrored, leaving the other lane untouched.
-Their outlet is physically blocked by the front inserter, so these are backed-up measurements.
+The front inserter blocks the lane past it, so the lane has backpressure in these measurements.
 
 The [four-speed backfill](belt-pickup/experiments.md#belt-speed-coverage) now measures side pickups,
 front-entrance moving/backed-up controls and front-exit backed-up controls at turbo, express, fast and normal
@@ -254,7 +254,7 @@ taking, where the game first fills the belt behind the drop (112 to 192 items on
 stack size 4; 9 to 156 on the blocked-output clocks at stack sizes 1–4, `tests/game/builds/blocked-output-clock-controls.json`).
 That moves output between the blocked window cycles and the few after the release (the game is back at its output 0 to 5
 window cycles after the release window cycle, the simulator 1 to 6), not what follows: in all 120 recordings every window cycle the
-captures judge is the same in game and simulator, and a belt that fills to an outlet 10 or 25 tiles past the drop
+captures judge is the same in game and simulator, and a belt that fills to an infinite end 10 or 25 tiles past the drop
 changes no verdict or selection in the blast or on those 16 clocks
 ([experiments](belt-pickup/experiments.md#generated-clocks-and-drops)). External incoming traffic still needs its own
 modeled transport geometry. Other inserter prototypes and qualities remain uncalibrated.
@@ -280,13 +280,13 @@ The result also lists the spacings of the copies (from the width of a copy for o
 ### Copies that take from one lane
 
 A clock is made on one copy of the build. Where the copies take from the same lane (a lane's `sharing`, default
-`shared_by_copies`), each clock that holds is run once more with every copy built, each with its own machines, chests,
+`shared`), each clock that holds is run once more with every copy built, each with its own machines, chests,
 drills and inserters on the clock of the config's own (`src/crafting/shared-lane-model.ts`). The copies stand in a row,
 `setpoint.copy_offset` apart along each lane they share. Without it, a copy's length comes from its positions. Without
 positions, its length is the longer side of its widest machine or drill. The result says the spacing it assumed. Each
 shared lane runs tick by tick with every copy's takers on it (`src/state/shared-lane.ts`): stacks come on at the
-lane's `supply_rate`, move at the belt's speed and leave at its end (`lane_end`: a dead end holds them, an outlet
-takes them at its `outlet_rate`; an unknown end is run both ways). A
+lane's `supply_rate`, move at the belt's speed and leave at its end (`lane_end`: a dead end holds them, an infinite
+end takes them at the lane's capacity; an unknown end is run both ways). A
 part copy holds its share of each shared lane's takers, rounded up for each, the ones furthest upstream, with what their
 machines need. The items on a lane move in the direction of the belt (`flow_direction`). Without it, the check runs
 the items in each direction along the copies. The verdict has two checks (`src/crafting/shared-lane-verdict.ts`). First,
@@ -307,12 +307,12 @@ machines two copies share in the game are not.
 ### The output belt of the copies
 
 Where a config states its output belt (`output_belt`), the run of the copies moves every stack on it in each tick
-(`src/crafting/output-belt-run.ts`). The stacks go from the output inserters of the copies to the outlet. The config
+(`src/crafting/output-belt-run.ts`). The stacks go from the output inserters of the copies to the infinite end. The config
 states tiles. The engine makes the lines of each lane from them (`src/config/output-belt.ts`,
 `src/entities/belt/join/output-belt-join.ts`). The join model moves the stacks on the lines in each tick
 ([belt join](../tests/game/mechanics/belt-join/README.md)). It has each side belt and its join, and the joins of the
 copies in order. It has the lane change onto an underground entrance and a copy's drop onto a stretch. It has the
-splitter with its loop, and the outlet. The outlet is a loader at the end of the last stretch. A config without the
+splitter with its loop, and the infinite end. The infinite end is a loader at the end of the last stretch. A config without the
 section runs as before: each output inserter drops on a tile of its own.
 
 An output inserter puts its stacks on the middle of its drop tile, with the rule above. A stack goes one step past the
@@ -321,7 +321,7 @@ down 0, 1, 2 and 4 ticks after it comes. A stack stays in the hand only when the
 the automation science 240 build, that is 8 stacks, as in the game. In the game, that build's drops show the stacks at
 96, 128, 160 and 160 from the end of the drop tile. Behind a full side belt, they are at 153 and 185.
 
-An output blockage of the product shuts the outlet: the belt lane is blocked from draining to the belt it joins. Every
+An output blockage of the product shuts the infinite end: the belt lane is blocked from draining to the belt it joins. Every
 lane upstream backs up from there. A hand is held only when its side belt is full. The blockage does not refuse the
 product at every drop. The end changes from the tick after the next. In the game, an end that a script changes acts
 from the next tick. The state of a repeat holds every stack on the output belt, by its line and position.
@@ -336,7 +336,7 @@ Recorded on AUTOMATION_SCIENCE_240, nine copies (Factorio 2.1.24, 2026-11-11):
   other copies hold. The output inserters of copies 4 and 8 take more than 5 ticks from the first stack to the last in
   80 of 320 hands. The game has 15 of 61 and 14 of 60. Only the third hand of a window is held. On the selected clock
   (b1490c9f2c49) every copy holds, as in the game.
-- The outlet was shut at clock value 54 for 864 ticks on the selected clock. The engine gave the game's packs in every
+- The infinite end was shut at clock value 54 for 864 ticks on the selected clock. The engine gave the game's packs in every
   window cycle on copies 1, 2, 4 and 6. On each other copy, 2 or 3 window cycles are different by 4 to 16 packs. The packs lost
   are the game's on all nine copies. Copy 5 stops 613 ticks after the cut, the game 608. Copy 9 stops at 493, the game
   at 496.
@@ -357,10 +357,10 @@ the runs of this build reach it:
 - The splitter: "none" for a priority is refused. An output looks at the stack ahead on the next line. One held-out copy
   shows this, and no hand-over of this build's runs needs it. The back end takes only the head of the input with the
   priority (24 of 24 held-out copies). 105,273 hand-overs of the generation go to the back end.
-- Two side belts onto one tile are refused only with a `copy_offset` of zero. The outlet's loader and a lone underground
+- Two side belts onto one tile are refused only with a `copy_offset` of zero. The infinite end's loader and a lone underground
   exit's line (128) come from the module's lengths and the recording of the build. A side head that lands past the end
   of a lone exit's line stays on that line. No landing of this build's runs does this.
-- The model shuts the outlet's loader. The game test removes the loader. So the model's loader line holds two more
+- The model shuts the infinite end's loader. The game test removes the loader. So the model's loader line holds two more
   stacks a lane while it is shut.
 - The recording of the selected clock was replayed through the model, from its first row. From row 6,000, the model
   holds the game's stacks on every recorded line, with one exception: the last stack of the loop's first line in a

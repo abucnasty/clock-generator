@@ -393,10 +393,10 @@ ingredients when it has none.
 
 ### Output belt
 
-`output_belt` states the belts from the output inserters of the copies to the outlet, in tiles. A join is a belt lane
+`output_belt` states the belts from the output inserters of the copies to the infinite end, in tiles. A join is a belt lane
 that goes onto another belt. It is a side load or the splitter. Where a config states the section, the run of the
 copies moves the output stacks on it in each tick. The stacks go from each copy's side belt through the joins to the
-outlet. When a copy's side belt is full at its join, the copy holds its hand. An output blockage shuts the outlet: the
+infinite end. When a copy's side belt is full at its join, the copy holds its hand. An output blockage shuts the infinite end: the
 belt lane is blocked from draining to the belt it joins, and every lane upstream backs up from there. The engine
 calculates each tick from the tiles ([simulator](docs/simulator.md#the-output-belt-of-the-copies)). A config without the
 section runs as before.
@@ -416,7 +416,7 @@ A point is a tile where something occurs. It states one of these:
   exit).
 - `drop`: the copy with an output inserter that drops onto this tile, with its `lane`.
 - `splitter_input`: the input of the splitter that the stretch ends in. `splitter_output`: the output that it starts at.
-- `lane_end: {"kind": "outlet"}`: the outlet, on the last point of its stretch.
+- `lane_end: {"kind": "infinite"}`: the infinite end, on the last point of its stretch.
 - Only `tiles` and curves: the last point of a stretch that side-loads onto another stretch. A `side_load` names it.
 
 `tiles` is the number of steps from the previous point to this point. Count the steps as the sidecar counts them for
@@ -424,7 +424,7 @@ A point is a tile where something occurs. It states one of these:
 
 - One step for each belt entity: a belt, a curve or an end of an underground pair.
 - The tiles between the two ends of an underground pair.
-- One step for the tile that a stretch side-loads onto, one for the splitter and one for the outlet.
+- One step for the tile that a stretch side-loads onto, one for the splitter and one for the infinite end.
 
 After a list of copies, count from the last copy in the list. The copies of a list are `setpoint.copy_offset` apart
 along the stretch.
@@ -451,7 +451,7 @@ The automation science sample of 240 per second (`AUTOMATION_SCIENCE_240`) state
     { "points": [
       { "splitter_output": "right" },
       { "tiles": 1, "side_load": { "stretch": 5 }, "lane": "right", "layout": "side-straight" },
-      { "tiles": 2, "lane_end": { "kind": "outlet" } } ] },
+      { "tiles": 2, "lane_end": { "kind": "infinite" } } ] },
     { "points": [
       { "splitter_output": "left" },
       { "tiles": 12, "left_curves": 5 } ] }
@@ -462,13 +462,13 @@ The automation science sample of 240 per second (`AUTOMATION_SCIENCE_240`) state
 
 Copies 1 to 4 side-load onto the underground exits of stretch 1, 9 tiles apart. Stretch 1 goes onto the left lane of
 stretch 2 at an underground entrance. Copy 5 drops onto stretch 2, and copies 6 to 8 side-load onto it. Copy 9 drops at
-the start of stretch 3. The two stretches go into the splitter. Stretch 4, the right output, goes to the outlet.
+the start of stretch 3. The two stretches go into the splitter. Stretch 4, the right output, goes to the infinite end.
 Stretch 5, the left output, turns back. It side-loads onto the first tile of stretch 4.
 
 The generator does not accept these output belts. Each message tells what to state:
 
 - A stretch that starts with nothing that supplies it: a belt that comes onto the output belt from outside the build.
-- No outlet, or more than one.
+- No infinite end, or more than one.
 - Two side loads onto one tile.
 - A side load onto the lane that the hood of an underground closes. An exit lets the lane on the side of the items go
   through. An entrance lets the other lane go through.

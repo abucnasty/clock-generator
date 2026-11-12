@@ -150,15 +150,15 @@ export function laneCapacityIssues(config: Config): LaneCapacityIssue[] {
 }
 
 /**
- * Whether every lane of a set is one per copy, so that the copies do not add up on it. The side a belt that states one
- * lane does not state has no facts, so nothing says it is one per copy: the copies' drops that land there add up.
+ * Whether every lane of a set is per copy, so that the copies do not add up on it. The side a belt that states one
+ * lane does not state has no facts, so nothing says it is per copy: the copies' drops that land there add up.
  */
 const onePerCopy = (facts: LaneFactsOfBuild, load: Pick<LaneLoad, 'belt_id' | 'lanes'>): boolean =>
-    load.lanes.every(lane => facts.lanesOf(load.belt_id)[lane - 1]?.sharing === 'one_per_copy');
+    load.lanes.every(lane => facts.lanesOf(load.belt_id)[lane - 1]?.sharing === 'per_copy');
 
 /**
  * The drops within capacity in one unit that are over it once every copy drops onto the lanes, which is only a warning;
- * lanes that are one per copy are left out. What the copies take from the lanes they share is refused instead
+ * lanes that are per copy are left out. What the copies take from the lanes they share is refused instead
  * (`sharedLaneSupplyIssues`).
  */
 export function lanesSharedByCopies(config: Config): LaneCapacityIssue[] {
@@ -227,7 +227,7 @@ export function lanesSharedByCopiesNote(issues: readonly LaneCapacityIssue[]): s
         return null;
     }
     return `${issues.map(describeLaneSharedByCopies).join(' ')} This is only a warning. If each copy has a lane of its own, `
-        + 'set the lane to one per copy.';
+        + 'set the lane to per copy.';
 }
 
 /** The warning for a config's lanes shared by its copies, read from the config alone: null when the plan cannot be made */
@@ -247,7 +247,7 @@ export function warnLanesSharedByCopies(config: Config, logger: Logger): void {
     }
 }
 
-/** A lane, or both lanes of a belt that carry one item, that is one per copy, and what one copy takes from it */
+/** A lane, or both lanes of a belt that carry one item, that is per copy, and what one copy takes from it */
 export interface OnePerCopyFeed {
     belt_id: number;
     lanes: number[];
@@ -257,7 +257,7 @@ export interface OnePerCopyFeed {
 }
 
 /**
- * The lanes that are one per copy, each with the supply rate it needs: what the inserters of one copy take from it at the
+ * The lanes that are per copy, each with the supply rate it needs: what the inserters of one copy take from it at the
  * target. A set of both lanes of a belt is listed only where both carry the same item, so that a take can use either.
  */
 export function onePerCopyFeeds(config: Config): OnePerCopyFeed[] {
@@ -269,45 +269,43 @@ export function onePerCopyFeeds(config: Config): OnePerCopyFeed[] {
     }).map(load => ({ belt_id: load.belt_id, lanes: load.lanes, inserter_ids: load.inserter_ids, items_per_second: load.items_per_second.toDecimal() }));
 }
 
-/** "Lane 1 of belt 1 is one per copy. The lane of each copy needs a supply rate of at least 36 a second, which the inserters of one copy take from it." */
+/** "Lane 1 of belt 1 is per copy. The lane of each copy needs a supply rate of at least 36 a second, which the inserters of one copy take from it." */
 export function describeOnePerCopyFeed(feed: OnePerCopyFeed): string {
     const one = feed.lanes.length === 1;
     const lanes = describeLanes(feed);
-    return `${lanes.charAt(0).toUpperCase()}${lanes.slice(1)} ${one ? 'is' : 'are'} one per copy. ${one ? 'The lane' : 'The lanes'} of each copy `
+    return `${lanes.charAt(0).toUpperCase()}${lanes.slice(1)} ${one ? 'is' : 'are'} per copy. ${one ? 'The lane' : 'The lanes'} of each copy `
         + `${one ? 'needs' : 'need'} a supply rate of at least ${formatRate(feed.items_per_second)} a second, which the inserters of one copy take from ${one ? 'it' : 'them'}.`;
 }
 
-/** The lanes whose stated supply rate or outlet rate is above what the lane can carry */
+/** The lanes whose stated supply rate is above what the lane can carry */
 export function laneRateIssues(config: Pick<Config, 'belts'>): LaneRateIssue[] {
     const issues: LaneRateIssue[] = [];
     for (const belt of config.belts) {
         const belt_speed = beltSpeedOf(belt.type);
         belt.lanes.forEach((lane, index) => {
             const capacity = laneItemsPerSecond(belt_speed, laneStackFor(belt, index + 1));
-            const rates = [['supply rate', lane.supply_rate], ['outlet rate', lane.lane_end?.kind === 'outlet' ? lane.lane_end.outlet_rate : undefined]] as const;
-            for (const [fact, rate] of rates) {
-                if (rate !== undefined && above(fraction(rate), capacity)) {
-                    issues.push({ belt_id: belt.id, lane: index + 1, fact, items_per_second: rate, capacity_per_second: capacity.toDecimal() });
-                }
+            const rate = lane.supply_rate;
+            if (rate !== undefined && above(fraction(rate), capacity)) {
+                issues.push({ belt_id: belt.id, lane: index + 1, fact: 'supply rate', items_per_second: rate, capacity_per_second: capacity.toDecimal() });
             }
         });
     }
     return issues;
 }
 
-/** What a set of lanes gets for every copy together: each lane's supply rate, once for each copy on a lane that is one per copy */
+/** What a set of lanes gets for every copy together: each lane's supply rate, once for each copy on a lane that is per copy */
 export function sharedLaneSupplyOf(config: Config, load: LaneLoad): Fraction {
     const copies = fraction(config.setpoint.copies);
     const facts = laneFactsOf(config);
     return load.lanes.reduce((sum, lane) => {
         const lane_facts = facts.of(load.belt_id, lane as 1 | 2);
-        return sum.add(fractionOf(lane_facts.supply_rate).multiply(lane_facts.sharing === 'one_per_copy' ? copies : fraction(1)));
+        return sum.add(fractionOf(lane_facts.supply_rate).multiply(lane_facts.sharing === 'per_copy' ? copies : fraction(1)));
     }, fraction(0));
 }
 
 /**
  * The lanes the copies take more from, summed, than the lanes get: their supply rate, once for a lane the copies share
- * and once for each copy on a lane that is one per copy. A set of lanes whose excess a smaller set already shows is left
+ * and once for each copy on a lane that is per copy. A set of lanes whose excess a smaller set already shows is left
  * out.
  */
 export function sharedLaneSupplyIssues(config: Config): SharedLaneSupplyIssue[] {
@@ -321,15 +319,15 @@ export function sharedLaneSupplyIssues(config: Config): SharedLaneSupplyIssue[] 
         if (!above(load.items_per_second.multiply(copies), supply) || shown.some(inside)) continue;
         shown.push(load);
         found.push({ belt_id: load.belt_id, lanes: load.lanes, inserter_ids: load.inserter_ids, copies: config.setpoint.copies,
-            one_per_copy: onePerCopy(facts, load), items_per_second: load.items_per_second.toDecimal(),
+            per_copy: onePerCopy(facts, load), items_per_second: load.items_per_second.toDecimal(),
             supply_per_second: (onePerCopy(facts, load) ? supply.divide(copies) : supply).toDecimal() });
     }
     return found;
 }
 
 /**
- * Throws when a lane cannot give or carry what the config asks of it: a stated supply rate or outlet rate above what the
- * lane can carry (LaneRateError); one unit's inserters taking from, or dropping onto, a lane more items a second than it
+ * Throws when a lane cannot give or carry what the config asks of it: a stated supply rate above what the lane can
+ * carry (LaneRateError); one unit's inserters taking from, or dropping onto, a lane more items a second than it
  * carries (LaneCapacityError); the copies taking from lanes they share more than the lanes get (SharedLaneSupplyError).
  * Call it once the planner has accepted the target, so that its own refusals come first.
  */

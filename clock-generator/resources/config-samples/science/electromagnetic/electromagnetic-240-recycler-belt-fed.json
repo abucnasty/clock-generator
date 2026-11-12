@@ -394,7 +394,10 @@
         },
         {
           "ingredient": "",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         }
       ]
     },
@@ -443,7 +446,10 @@
         },
         {
           "ingredient": "",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         }
       ]
     }

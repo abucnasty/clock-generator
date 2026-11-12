@@ -13,7 +13,7 @@ second over 11 copies, with 12 legendary beacons; its config has no overrides.
 The blueprint supplied by warbaque in [#100](https://github.com/abucnasty/clock-generator/issues/100) is unchanged: 211 entities,
 two recyclers inserting electronic circuits directly into their supercapacitor plants, four electromagnetic
 science plants, two curved holmium/superconductor pickups, original source feeders, steel output buffers,
-and advanced-circuit outlet belts leading to the existing disposal loader and infinity chest.
+and the advanced-circuit belts that lead out to the existing disposal loader and infinity chest.
 
 `electromagnetic-240-recycler-belt-fed.scaffold` is the byte-identical full blueprint. Its target is 96 science packs a
 second, equivalent to 240/s across 2.5 full-scaffold copies.
@@ -21,7 +21,7 @@ second, equivalent to 240/s across 2.5 full-scaffold copies.
 The config describes one build at 48/s and sets Copies to 5, following the existing one-unit config rule.
 Its clock's blueprint and schedule wire both copies in this blueprint, one set of controls for each. The config
 comes from a fresh Sidecar 0.15.0 export of the left copy in the original blueprint, with its real pickup captures.
-No source or outlet is replaced with a chest. Empty unused belt lanes remain in the config so lane numbers still identify
+No source, and no belt that leads out, is replaced with a chest. Empty unused belt lanes remain in the config so lane numbers still identify
 the same physical lane. The curved input has the measured `bend-right-upstream` layout with version 3 capture; existing
 files marked unsupported bend must be captured again, since changing a saved warning is not a capture.
 
@@ -40,7 +40,7 @@ plants filled and emptied at the same points of their turns, which is what the g
 
 `tests/game/builds/electromagnetic-science-240-recycler-belt-fed-clock.game.test.ts` generates that clock from this config and runs it on the
 whole blueprint, both copies, in the game, with the clock's blueprint and schedule wiring both copies. The physical
-blueprint is unchanged; losses use script disable flags and restore the original supplies and outlets.
+blueprint is unchanged; losses use script disable flags and restore the original supplies and the belts that lead out.
 
 - 3,600 window cycles after settling: every final taker delivers exactly 16 in every window cycle (96 science/s), and the science
   held in each plant, its steel buffer and the arms between them grows rather than drains.
