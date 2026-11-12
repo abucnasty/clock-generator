@@ -471,7 +471,12 @@ describe('a build that states no lane end and no belt setting', () => {
         const sample = JSON.parse(militarySample) as Config;
         const { backed_up_belts: _switch, ...overrides } = sample.overrides ?? {};
         void _switch;
-        return { ...sample, overrides, belts: sample.belts.map(belt => ({ ...belt, lanes: belt.lanes.map(({ lane_end: _end, ...lane }) => lane) })) } as Config;
+        const belts = sample.belts.map(belt => ({ ...belt, lanes: belt.lanes.map(lane => {
+            const stated: { lane_end?: unknown } = { ...lane };
+            delete stated.lane_end;
+            return stated;
+        }) }));
+        return { ...sample, overrides, belts } as Config;
     };
 
     it('reads as backed up, loaded and generated with the belt setting untouched', async () => {
