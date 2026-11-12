@@ -31,7 +31,7 @@ interface KeptClock {
     checked_lanes: CheckedLanes | null;
 }
 
-export interface KeptResult {
+interface KeptResult {
     sample: string;
     copies: number;
     selected_index: number;
@@ -47,7 +47,7 @@ export const MILITARY_240 = military as unknown as KeptResult;
 export const STATES = statesJson as unknown as Record<string, { from: string; copies: number; row: CheckedLaneRow; lanes: BuildLane[] }>;
 
 /** A clock of a kept result by its id */
-export function keptClock(result: KeptResult, id: string): KeptClock {
+function keptClock(result: KeptResult, id: string): KeptClock {
     const clock = result.clocks.find(it => it.id === id);
     if (clock === undefined) throw new Error(`${result.sample} has no clock ${id}`);
     return clock;
