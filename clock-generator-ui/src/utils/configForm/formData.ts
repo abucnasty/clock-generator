@@ -125,13 +125,11 @@ export const LANE_CONSUMPTION_TOOLTIP =
 /**
  * A lane with one field set; undefined takes the field away, so the lane states nothing of it. A consumption rate states
  * what leaves the end of an export lane, which the config may not state beside a lane end: a lane that gets one drops its
- * lane end, and a lane that gets a lane end drops its consumption rate
+ * lane end (a lane with one shows no Lane end field)
  */
 export function laneFieldUpdate<K extends keyof BeltLaneFormData>(lane: BeltLaneFormData, field: K, value: BeltLaneFormData[K] | undefined): BeltLaneFormData {
     const updated: BeltLaneFormData = { ...lane, [field]: value };
-    const drop = value === undefined ? field
-        : field === 'consumption_per_second' ? 'lane_end'
-        : field === 'lane_end' ? 'consumption_per_second' : null;
+    const drop = value === undefined ? field : field === 'consumption_per_second' ? 'lane_end' : null;
     if (drop === null) return updated;
     const { [drop]: _dropped, ...rest } = updated;
     void _dropped;

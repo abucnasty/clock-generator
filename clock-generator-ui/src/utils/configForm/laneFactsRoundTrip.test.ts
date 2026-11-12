@@ -105,10 +105,10 @@ describe('each lane fact round-trips', () => {
         expect(Object.keys(lane)).toEqual(['ingredient', 'stack_size']);
     });
 
-    it('drops a lane end where a consumption rate is set, and a consumption rate where a lane end is set, as the config takes only one', () => {
+    it('drops a stated lane end where a consumption rate is set, as the config takes only one, and nothing drops a consumption rate but its own field', () => {
         const lane = { ingredient: 'iron-plate', stack_size: 4 };
         expect(laneFieldUpdate({ ...lane, lane_end: { kind: 'dead_end' } }, 'consumption_per_second', 5)).toEqual({ ...lane, consumption_per_second: 5 });
-        expect(laneFieldUpdate({ ...lane, consumption_per_second: 5 }, 'lane_end', { kind: 'dead_end' })).toEqual({ ...lane, lane_end: { kind: 'dead_end' } });
+        expect(laneFieldUpdate({ ...lane, consumption_per_second: 5 }, 'supply_rate', 30)).toEqual({ ...lane, consumption_per_second: 5, supply_rate: 30 });
     });
 });
 
