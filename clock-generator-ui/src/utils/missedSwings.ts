@@ -56,7 +56,6 @@ export const MISSED_SWINGS_COPY = {
         ? `Travel between copies: ${figure(travel)} ticks (${figure(tiles)} tiles), one window cycle`
         : `Travel between copies: ${figure(travel)} ticks (${figure(tiles)} tiles); window cycle ${figure(windowCycle)} ticks`,
     unit: (swings: number | null) => swings === null ? 'swings missed' : `swings missed, of ${figure(swings)} each`,
-    absent: 'not on the lanes',
     /** The caption of picture one on a lane loss */
     laneCaption: (missing: readonly number[], fewer: number | null, aloneMisses: number) => {
         const one = missing.length === 1;
