@@ -578,7 +578,7 @@ function missedSwings(loss: Omit<SharedLaneLoss, "text">, item: string): string 
 }
 
 /**
- * "The advanced circuit lane ends in a dead end. The 6 copies take advanced circuit from it. When the items move east, copy 3
+ * "The advanced circuit lane ends in a dead end. The 6 copies take advanced circuit from it. When the belt flows east, copy 3
  * from the entry does not get sufficient items. Its inserter that takes advanced circuit and sulfur misses 70 of its 210 swings
  * with advanced circuit in 50 window cycles." At a join: "The side belt of copy 4 from the entry is full at its join onto the
  * output belt. Its output inserter waits for room in 84 of its 336 swings in 63 window cycles. It misses 42 of the 378 swings
@@ -600,10 +600,10 @@ export function describeSharedLaneLoss(loss: Omit<SharedLaneLoss, "text">, build
         : ` Its output inserter also waits for room on its side belt in ${counted(loss.side_belt_waits.held_hands)} of its ${counted(loss.side_belt_waits.hands)} swings.`;
     if (loss.copies === 1) {
         return `${endsSentence(loss, build)} The build takes ${item} from ${them}. `
-            + `When the items move ${directionWord(loss.flow)}, ${theName(inserter)} does not get sufficient items. It ${missedSwings(loss, item)}${waits}`;
+            + `When the belt flows ${directionWord(loss.flow)}, ${theName(inserter)} does not get sufficient items. It ${missedSwings(loss, item)}${waits}`;
     }
     return `${endsSentence(loss, build)} The ${loss.copies} copies take ${item} from ${them}. `
-        + `When the items move ${directionWord(loss.flow)}, copy ${loss.copy} from the entry does not get sufficient items. `
+        + `When the belt flows ${directionWord(loss.flow)}, copy ${loss.copy} from the entry does not get sufficient items. `
         + `Its ${inserter} ${missedSwings(loss, item)}${waits}`;
 }
 

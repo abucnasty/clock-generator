@@ -137,6 +137,8 @@ describe("the rows of a build that states its output belt", () => {
         ]);
         expect(lanes.line.output_belt).toBe("misses");
         expect(lanes.cause!.cause!.text).toBe("The side belts of copies 4 and 8 are full where they join the automation science pack output belt.");
+        // a full join: its code, with the missed output swings and the output swings over the copies
+        expect(lanes.cause!.reason).toEqual({ code: "target_full", data: { missed: 84, swings: 756 } });
         // fewer copies are fewer on the output belt too: what changes it names no lane
         const fewer = checked({ config, judged: judgement, fewer: { copies: 3 } });
         expect(fewer.cause!.changes!.text).toBe("With 3 copies, every copy makes every swing.");
@@ -180,13 +182,27 @@ describe("the parts of the cause", () => {
         const lanes = checked({ config: gears(), judged: judged([lossOf(2, 6, 130)], { loss_facts: [{ ...facts, stops }] }) });
         expect(lanes.cause!.cause!.text).toBe("In 3 of the 6 missed swings, the gap that copy 1 leaves on the iron plate lane reaches copy 2 when its inserter must pick up. "
             + "In 5 of the 6 missed swings, the machine of copy 2 that makes iron gear wheel has its output full and takes no more items. 2 of the 6 show both.");
-        expect(lanes.cause!.spacing!.text).toMatch(/^The copies stand 4 tiles apart\. An item takes 32 ticks from one copy to the next, and the window cycle is 60 ticks\./);
+        expect(lanes.cause!.spacing!.text).toMatch(/^The copies stand 4 tiles apart\. It takes 32 ticks for items to travel between copies, and the window cycle is 60 ticks\./);
         // no record of the stops, or a count that does not add up to the swings missed: no cause and no reason from the spacing
         const unknown = checked({ config: gears(), judged: judged([lossOf(2, 6, 130)]) });
         expect(unknown.cause!.cause).toBeNull();
         expect(unknown.cause!.spacing).toBeNull();
         const other = checked({ config: gears(), judged: judged([lossOf(2, 5, 130)], { loss_facts: [{ ...facts, stops }] }) });
         expect(other.cause!.cause).toBeNull();
+    });
+
+    it("give the reason code of belt gaps only where at least one missed swing shows the copy before's gap, with its counts", () => {
+        const stops = { missed: 6, lane_empty: 3, gap_from_copy_before: 3, machine_full: 5, both: 2, neither: 0, lane_items: ["iron-plate"], gap_items: ["iron-plate"] };
+        const gaps = checked({ config: gears(), judged: judged([lossOf(2, 6, 130)], { loss_facts: [{ ...facts, stops }] }) });
+        expect(gaps.cause!.reason).toEqual({ code: "belt_gaps", data: { missed: 6, with_gap: 3 } });
+        // the run shows the missed swings, and none of them shows the gap: no reason
+        const no_gap = { ...stops, lane_empty: 0, gap_from_copy_before: 0, machine_full: 6, both: 0, gap_items: [] };
+        const full = checked({ config: gears(), judged: judged([lossOf(2, 6, 130)], { loss_facts: [{ ...facts, stops: no_gap }] }) });
+        expect(full.cause!.cause).not.toBeNull();
+        expect(full.cause).not.toHaveProperty("reason");
+        // no record of the stops: no reason
+        const unknown = checked({ config: gears(), judged: judged([lossOf(2, 6, 130)]) });
+        expect(unknown.cause).not.toHaveProperty("reason");
     });
 
     it("name another clock of the result that holds with all the copies", () => {

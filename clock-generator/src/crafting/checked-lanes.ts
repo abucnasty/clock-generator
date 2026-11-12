@@ -106,6 +106,21 @@ export interface CausePart<T = Record<string, never>> {
     data: T;
 }
 
+/**
+ * The reason beside the status of a clock not stable on a shared lane, as a code (a closed list) and its counts:
+ * - `belt_gaps`: at least one missed swing shows the gap that the copy before leaves on the lane; the missed swings and
+ *   those that show the gap, over the copies of the cause part;
+ * - `target_full`: the side belt of a copy is full where it joins the output belt (the game's "target full" of its output
+ *   inserter); the missed output swings and the output
+ *   swings its target needs, over the copies of the headline.
+ */
+export type SharedLaneReason =
+    | { code: "belt_gaps"; data: { missed: number; with_gap: number } }
+    | { code: "target_full"; data: { missed: number; swings: number } };
+
+/** The codes of the reason (a closed list) */
+export type SharedLaneReasonCode = SharedLaneReason["code"];
+
 /** The parts of the cause of a clock that is not stable on a shared lane, as the page lays them out */
 export interface SharedLaneCause {
     /** "lane": a copy gets too few items; "join": a copy's side belt is full where it joins the output belt */
@@ -113,6 +128,12 @@ export interface SharedLaneCause {
     headline: CausePart<{ copies: CopyMissed[] }>;
     /** What the run of the copies shows stopped the missed swings; null where it shows nothing it can name */
     cause: CausePart<{ copies: ({ copy: number } & Partial<MissedSwingStops>)[] }> | null;
+    /**
+     * The reason beside the status of the clock, as a code and its counts (the page has the words): `belt_gaps` on a lane
+     * loss where at least one missed swing shows the gap that the copy before leaves; `target_full` at a full join. Absent on
+     * a lane loss where no missed swing shows the gap.
+     */
+    reason?: SharedLaneReason;
     /** The reason from the spacing: only where the run shows the gap that the copy before leaves */
     spacing: CausePart<{ step_tiles: number; travel_ticks: number; window_cycle_ticks: number; take_all: boolean }> | null;
     where: CausePart<{ takers: { copy: number; inserter_id: number; missed: number; swings: number; items: { item: string; missed: number; swings: number }[] }[] }>;
@@ -315,7 +336,7 @@ const NOT_RUN = "The clock does not hold its output on one copy, so the copies a
 const DROPPED_ONTO = "The build drops items onto this belt, and the check of a shared lane does not run those drops yet.";
 const NO_DROP_RATE = "The build's drop rate onto this lane is not known.";
 const NOT_IN_MODEL = "The check of the shared lanes does not run this lane.";
-const OUTPUT_BELT_NOT_RUN = "The output belt is run with the copies only together with a lane they take from, and no such lane is run.";
+const OUTPUT_BELT_NOT_RUN ="The output belt is run with the copies only together with a lane they take from, and no such lane is run.";
 
 /**
  * The rows, the line and the parts of the cause of one clock, from its check of the lanes its copies share (see the
@@ -481,6 +502,7 @@ function causeOf(input: { config: Config; build: BuildToName; losses: readonly S
         return {
             kind,
             headline: { text: missedSentence(at_join), data: { copies: at_join.map(({ copy, missed, swings }) => ({ copy, missed, swings })) } },
+            reason: { code: "target_full", data: { missed: at_join.reduce((sum, it) => sum + it.missed, 0), swings: at_join.reduce((sum, it) => sum + it.swings, 0) } },
             cause: { text: `The side ${one ? "belt" : "belts"} of ${copiesNamed(named)} ${one ? "is" : "are"} full where ${one ? "it joins" : "they join"} the ${output_item} output belt.`,
                 data: { copies: named.map(copy => ({ copy })) } },
             spacing: null,
@@ -566,12 +588,17 @@ function causeOf(input: { config: Config; build: BuildToName; losses: readonly S
         });
         const items = listedInText([...spacing_items].map(words.item));
         spacing = {
-            text: `The copies stand ${figure(spacing_facts.step_tiles)} tiles apart. An item takes ${figure(spacing_facts.travel_ticks)} ticks from one copy to the next, `
+            text: `The copies stand ${figure(spacing_facts.step_tiles)} tiles apart. It takes ${figure(spacing_facts.travel_ticks)} ticks for items to travel between copies, `
                 + `and the window cycle is ${figure(window_cycle_ticks)} ticks.`
                 + (take_all ? ` The ${figure(config.setpoint.copies)} copies take every ${items} the ${gap_lanes.length === 1 ? "lane brings" : `${gap_lanes.length === 2 ? "two " : ""}lanes bring`}, so the gap does not close on the way.` : ""),
             data: { step_tiles: spacing_facts.step_tiles, travel_ticks: spacing_facts.travel_ticks, window_cycle_ticks, take_all },
         };
     }
+    // the reason beside the status: only where at least one missed swing shows the copy before's gap
+    const with_gap = cause_parts.reduce((sum, it) => sum + (it.gap_from_copy_before ?? 0), 0);
+    const reason: SharedLaneCause["reason"] = with_gap > 0
+        ? { code: "belt_gaps", data: { missed: cause_parts.reduce((sum, it) => sum + (it.missed ?? 0), 0), with_gap } }
+        : undefined;
     // one copy alone: the copy that misses the most
     const worst = [...short].sort((a, b) => b.missed - a.missed || a.copy - b.copy)[0];
     const worst_takers = of_takers.filter(it => it.copy === worst.copy).map(it => it.inserter_id);
@@ -585,6 +612,7 @@ function causeOf(input: { config: Config; build: BuildToName; losses: readonly S
         kind,
         headline: { text: missedSentence(short), data: { copies: short } },
         cause: cause_texts.length === 0 ? null : { text: cause_texts.join(" "), data: { copies: cause_parts } },
+        ...(reason !== undefined && { reason }),
         spacing,
         where: { text: where, data: { takers: of_takers.map(it => ({ copy: it.copy, inserter_id: it.inserter_id, missed: it.items.reduce((s, x) => s + x.missed, 0),
             swings: it.items.reduce((s, x) => s + x.swings, 0), items: it.items.map(({ item, missed, swings }) => ({ item, missed, swings })) })) } },

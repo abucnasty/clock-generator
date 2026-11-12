@@ -4,7 +4,7 @@
  "selected_index": 0,
  "why_not_stable": {
   "cause": "shared lane short",
-  "message": "The recommended clock (Takt Batches: 2 output swings each output cycle) holds the setpoint on one copy, but not on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 54 of its 216 swings with accumulator in 27 window cycles. A clock needs enable windows that give the lane more time, or each copy needs a lane of its own."
+  "message": "The recommended clock (Takt Batches: 2 output swings each output cycle) holds the setpoint on one copy, but not on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 54 of its 216 swings with accumulator in 27 window cycles. A clock needs enable windows that give the lane more time, or each copy needs a lane of its own."
  },
  "lanes": [
   {
@@ -39,7 +39,7 @@
    "verdict": "unstable",
    "window_cycle_ticks": 704,
    "copies": 11,
-   "description": "The swing schedule the generator plans for the setpoint. The build is simulated with each inserter waiting on its machine's inventory, and each inserter's enable windows are the ticks it moved items. Swings are grouped into batches that match the output cycle. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 54 of its 216 swings with accumulator in 27 window cycles.",
+   "description": "The swing schedule the generator plans for the setpoint. The build is simulated with each inserter waiting on its machine's inventory, and each inserter's enable windows are the ticks it moved items. Swings are grouped into batches that match the output cycle. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 54 of its 216 swings with accumulator in 27 window cycles.",
    "belt": {
     "kind": "backed_up"
    },
@@ -84,7 +84,7 @@
        "target": 3456,
        "behind": 864
       },
-      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 54 of its 216 swings with accumulator in 27 window cycles."
+      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 54 of its 216 swings with accumulator in 27 window cycles."
      },
      {
       "belt_id": 1,
@@ -113,7 +113,7 @@
        "target": 3456,
        "behind": 864
       },
-      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 54 of its 216 swings with supercapacitor in 27 window cycles."
+      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 54 of its 216 swings with supercapacitor in 27 window cycles."
      },
      {
       "belt_id": 1,
@@ -142,7 +142,7 @@
        "target": 3456,
        "behind": 432
       },
-      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with accumulator in 27 window cycles."
+      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with accumulator in 27 window cycles."
      },
      {
       "belt_id": 1,
@@ -171,7 +171,7 @@
        "target": 3456,
        "behind": 432
       },
-      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the items move east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with supercapacitor in 27 window cycles."
+      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the belt flows east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with supercapacitor in 27 window cycles."
      }
     ]
    },
@@ -239,7 +239,7 @@
      "explanation": "Each wakeup is a check that moves little or nothing, so among clocks that hold the target the one with the fewest is the lightest on update time. An inserter that is enabled most of the time is woken at most of the crafts of the machine it waits on, whether its enable windows are long, it is left always enabled in a loop of machines, or the configuration sets it to always enabled."
     }
    ],
-   "shared_lane_loss_note": "It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 54 of its 216 swings with accumulator in 27 window cycles.",
+   "shared_lane_loss_note": "It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 54 of its 216 swings with accumulator in 27 window cycles.",
    "checked_lanes": {
     "line": {
      "copies": 11,
@@ -372,8 +372,15 @@
        ]
       }
      },
+     "reason": {
+      "code": "belt_gaps",
+      "data": {
+       "missed": 162,
+       "with_gap": 108
+      }
+     },
      "spacing": {
-      "text": "The copies stand 10 tiles apart. An item takes 80 ticks from one copy to the next, and the window cycle is 704 ticks. The 11 copies take every supercapacitor and accumulator the two lanes bring, so the gap does not close on the way.",
+      "text": "The copies stand 10 tiles apart. It takes 80 ticks for items to travel between copies, and the window cycle is 704 ticks. The 11 copies take every supercapacitor and accumulator the two lanes bring, so the gap does not close on the way.",
       "data": {
        "step_tiles": 10,
        "travel_ticks": 80,
@@ -448,7 +455,7 @@
    "verdict": "unstable",
    "window_cycle_ticks": 704,
    "copies": 11,
-   "description": "Takt Batches with fractional swings turned on: an inserter that needs e.g. 3/2 swings each output cycle alternates between 1 and 2 swings instead of rounding, which can need fewer or shorter enable windows. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles.",
+   "description": "Takt Batches with fractional swings turned on: an inserter that needs e.g. 3/2 swings each output cycle alternates between 1 and 2 swings instead of rounding, which can need fewer or shorter enable windows. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles.",
    "belt": {
     "kind": "backed_up"
    },
@@ -493,7 +500,7 @@
        "target": 3456,
        "behind": 654
       },
-      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles."
+      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles."
      },
      {
       "belt_id": 1,
@@ -522,7 +529,7 @@
        "target": 3456,
        "behind": 653
       },
-      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles."
+      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles."
      },
      {
       "belt_id": 1,
@@ -551,7 +558,7 @@
        "target": 3456,
        "behind": 654
       },
-      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 40 of its 216 swings with supercapacitor in 27 window cycles."
+      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 40 of its 216 swings with supercapacitor in 27 window cycles."
      },
      {
       "belt_id": 1,
@@ -580,7 +587,7 @@
        "target": 3456,
        "behind": 653
       },
-      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the items move east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 40 of its 216 swings with supercapacitor in 27 window cycles."
+      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the belt flows east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 40 of its 216 swings with supercapacitor in 27 window cycles."
      }
     ]
    },
@@ -648,7 +655,7 @@
      "explanation": "Each wakeup is a check that moves little or nothing, so among clocks that hold the target the one with the fewest is the lightest on update time. An inserter that is enabled most of the time is woken at most of the crafts of the machine it waits on, whether its enable windows are long, it is left always enabled in a loop of machines, or the configuration sets it to always enabled."
     }
    ],
-   "shared_lane_loss_note": "It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles.",
+   "shared_lane_loss_note": "It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles.",
    "checked_lanes": {
     "line": {
      "copies": 11,
@@ -785,8 +792,15 @@
        ]
       }
      },
+     "reason": {
+      "code": "belt_gaps",
+      "data": {
+       "missed": 162,
+       "with_gap": 162
+      }
+     },
      "spacing": {
-      "text": "The copies stand 10 tiles apart. An item takes 80 ticks from one copy to the next, and the window cycle is 704 ticks. The 11 copies take every supercapacitor and accumulator the two lanes bring, so the gap does not close on the way.",
+      "text": "The copies stand 10 tiles apart. It takes 80 ticks for items to travel between copies, and the window cycle is 704 ticks. The 11 copies take every supercapacitor and accumulator the two lanes bring, so the gap does not close on the way.",
       "data": {
        "step_tiles": 10,
        "travel_ticks": 80,
@@ -861,7 +875,7 @@
    "verdict": "unstable",
    "window_cycle_ticks": 704,
    "copies": 11,
-   "description": "Built from what the inserters actually do rather than from the planned schedule. The build is simulated with only the output inserters clocked and every other inserter running freely; each inserter's enable windows are the ticks it was busy picking up, swinging and dropping, plus a few ticks of padding. Swings end up spread out, roughly one per craft, so its inserters usually have more enable windows than in Takt Batches, which groups several swings into one enable window. An inserter between two machines that waits at its source for a full hand gets short, evenly spaced enable windows instead when they stay stable, so it grabs a hand that is already there rather than staying enabled while the machine crafts. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with accumulator in 27 window cycles.",
+   "description": "Built from what the inserters actually do rather than from the planned schedule. The build is simulated with only the output inserters clocked and every other inserter running freely; each inserter's enable windows are the ticks it was busy picking up, swinging and dropping, plus a few ticks of padding. Swings end up spread out, roughly one per craft, so its inserters usually have more enable windows than in Takt Batches, which groups several swings into one enable window. An inserter between two machines that waits at its source for a full hand gets short, evenly spaced enable windows instead when they stay stable, so it grabs a hand that is already there rather than staying enabled while the machine crafts. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with accumulator in 27 window cycles.",
    "belt": {
     "kind": "backed_up"
    },
@@ -906,7 +920,7 @@
        "target": 3456,
        "behind": 432
       },
-      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with accumulator in 27 window cycles."
+      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with accumulator in 27 window cycles."
      },
      {
       "belt_id": 1,
@@ -935,7 +949,7 @@
        "target": 3456,
        "behind": 432
       },
-      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with accumulator in 27 window cycles."
+      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with accumulator in 27 window cycles."
      },
      {
       "belt_id": 1,
@@ -964,7 +978,7 @@
        "target": 3456,
        "behind": 432
       },
-      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with supercapacitor in 27 window cycles."
+      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with supercapacitor in 27 window cycles."
      },
      {
       "belt_id": 1,
@@ -993,7 +1007,7 @@
        "target": 3456,
        "behind": 432
       },
-      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the items move east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with supercapacitor in 27 window cycles."
+      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the belt flows east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with supercapacitor in 27 window cycles."
      }
     ]
    },
@@ -1061,7 +1075,7 @@
      "explanation": "Each wakeup is a check that moves little or nothing, so among clocks that hold the target the one with the fewest is the lightest on update time. An inserter that is enabled most of the time is woken at most of the crafts of the machine it waits on, whether its enable windows are long, it is left always enabled in a loop of machines, or the configuration sets it to always enabled."
     }
    ],
-   "shared_lane_loss_note": "It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with accumulator in 27 window cycles.",
+   "shared_lane_loss_note": "It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with accumulator in 27 window cycles.",
    "checked_lanes": {
     "line": {
      "copies": 11,
@@ -1197,8 +1211,15 @@
        ]
       }
      },
+     "reason": {
+      "code": "belt_gaps",
+      "data": {
+       "missed": 108,
+       "with_gap": 108
+      }
+     },
      "spacing": {
-      "text": "The copies stand 10 tiles apart. An item takes 80 ticks from one copy to the next, and the window cycle is 704 ticks. The 11 copies take every supercapacitor and accumulator the two lanes bring, so the gap does not close on the way.",
+      "text": "The copies stand 10 tiles apart. It takes 80 ticks for items to travel between copies, and the window cycle is 704 ticks. The 11 copies take every supercapacitor and accumulator the two lanes bring, so the gap does not close on the way.",
       "data": {
        "step_tiles": 10,
        "travel_ticks": 80,
@@ -1273,7 +1294,7 @@
    "verdict": "unstable",
    "window_cycle_ticks": 704,
    "copies": 11,
-   "description": "Time-Study Windows with one output swing moved off its planned start, so the output swings are not evenly spaced. A machine only has to make up for what the output inserter takes over the whole window cycle, so it can craft more between one pair of swings than the next and carry the difference in its output slot. The swing is tried at positions a craft apart and every other inserter's enable windows are observed again for each; a position whose neighbours work too is used, the smallest move of those. Only offered when the window cycle has more than one output swing and a moved swing passes the clock-only check. Output swing 2 starts 38 ticks earlier than planned. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with accumulator in 27 window cycles.",
+   "description": "Time-Study Windows with one output swing moved off its planned start, so the output swings are not evenly spaced. A machine only has to make up for what the output inserter takes over the whole window cycle, so it can craft more between one pair of swings than the next and carry the difference in its output slot. The swing is tried at positions a craft apart and every other inserter's enable windows are observed again for each; a position whose neighbours work too is used, the smallest move of those. Only offered when the window cycle has more than one output swing and a moved swing passes the clock-only check. Output swing 2 starts 38 ticks earlier than planned. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with accumulator in 27 window cycles.",
    "belt": {
     "kind": "backed_up"
    },
@@ -1318,7 +1339,7 @@
        "target": 3456,
        "behind": 432
       },
-      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with accumulator in 27 window cycles."
+      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with accumulator in 27 window cycles."
      },
      {
       "belt_id": 1,
@@ -1347,7 +1368,7 @@
        "target": 3456,
        "behind": 432
       },
-      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with accumulator in 27 window cycles."
+      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with accumulator in 27 window cycles."
      },
      {
       "belt_id": 1,
@@ -1376,7 +1397,7 @@
        "target": 3456,
        "behind": 432
       },
-      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 4 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with accumulator in 27 window cycles."
+      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 4 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with accumulator in 27 window cycles."
      },
      {
       "belt_id": 1,
@@ -1405,7 +1426,7 @@
        "target": 3456,
        "behind": 432
       },
-      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with supercapacitor in 27 window cycles."
+      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with supercapacitor in 27 window cycles."
      },
      {
       "belt_id": 1,
@@ -1434,7 +1455,7 @@
        "target": 3456,
        "behind": 432
       },
-      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the items move east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with supercapacitor in 27 window cycles."
+      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the belt flows east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with supercapacitor in 27 window cycles."
      },
      {
       "belt_id": 1,
@@ -1463,7 +1484,7 @@
        "target": 3456,
        "behind": 432
       },
-      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the items move east, copy 4 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with supercapacitor in 27 window cycles."
+      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the belt flows east, copy 4 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with supercapacitor in 27 window cycles."
      }
     ]
    },
@@ -1531,7 +1552,7 @@
      "explanation": "Each wakeup is a check that moves little or nothing, so among clocks that hold the target the one with the fewest is the lightest on update time. An inserter that is enabled most of the time is woken at most of the crafts of the machine it waits on, whether its enable windows are long, it is left always enabled in a loop of machines, or the configuration sets it to always enabled."
     }
    ],
-   "shared_lane_loss_note": "It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with accumulator in 27 window cycles.",
+   "shared_lane_loss_note": "It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 27 of its 216 swings with accumulator in 27 window cycles.",
    "checked_lanes": {
     "line": {
      "copies": 11,
@@ -1700,8 +1721,15 @@
        ]
       }
      },
+     "reason": {
+      "code": "belt_gaps",
+      "data": {
+       "missed": 162,
+       "with_gap": 162
+      }
+     },
      "spacing": {
-      "text": "The copies stand 10 tiles apart. An item takes 80 ticks from one copy to the next, and the window cycle is 704 ticks. The 11 copies take every supercapacitor and accumulator the two lanes bring, so the gap does not close on the way.",
+      "text": "The copies stand 10 tiles apart. It takes 80 ticks for items to travel between copies, and the window cycle is 704 ticks. The 11 copies take every supercapacitor and accumulator the two lanes bring, so the gap does not close on the way.",
       "data": {
        "step_tiles": 10,
        "travel_ticks": 80,
@@ -1794,7 +1822,7 @@
    "verdict": "unstable",
    "window_cycle_ticks": 704,
    "copies": 11,
-   "description": "Takt Batches with one round of swings moved together to another place in the window cycle: an output swing and the input swings planned with it. The plan spaces these rounds evenly, but a machine takes a swing whenever its limits allow: an input hand once it is below its insertion limit and before it runs out of that ingredient, an output hand once a full one is ready and before the output fills up. Within those limits a round can run earlier or later. Enable window lengths and their spacing within the round are kept, so swings stay as batched as planned. Every shift is checked with the clock-only check and a shift whose neighbours work too is used, the smallest of those. Only offered when the window cycle has more than one round and a shift passes. The swings planned in clock ticks 65–106 (the inserters (3 and 2) that drop electromagnetic science pack into a chest; the inserter that takes accumulator and supercapacitor) start 20 ticks earlier than planned. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles.",
+   "description": "Takt Batches with one round of swings moved together to another place in the window cycle: an output swing and the input swings planned with it. The plan spaces these rounds evenly, but a machine takes a swing whenever its limits allow: an input hand once it is below its insertion limit and before it runs out of that ingredient, an output hand once a full one is ready and before the output fills up. Within those limits a round can run earlier or later. Enable window lengths and their spacing within the round are kept, so swings stay as batched as planned. Every shift is checked with the clock-only check and a shift whose neighbours work too is used, the smallest of those. Only offered when the window cycle has more than one round and a shift passes. The swings planned in clock ticks 65–106 (the inserters (3 and 2) that drop electromagnetic science pack into a chest; the inserter that takes accumulator and supercapacitor) start 20 ticks earlier than planned. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles.",
    "belt": {
     "kind": "backed_up"
    },
@@ -1839,7 +1867,7 @@
        "target": 3456,
        "behind": 654
       },
-      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles."
+      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles."
      },
      {
       "belt_id": 1,
@@ -1868,7 +1896,7 @@
        "target": 3456,
        "behind": 653
       },
-      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles."
+      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles."
      },
      {
       "belt_id": 1,
@@ -1897,7 +1925,7 @@
        "target": 3456,
        "behind": 654
       },
-      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 40 of its 216 swings with supercapacitor in 27 window cycles."
+      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 40 of its 216 swings with supercapacitor in 27 window cycles."
      },
      {
       "belt_id": 1,
@@ -1926,7 +1954,7 @@
        "target": 3456,
        "behind": 653
       },
-      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the items move east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 40 of its 216 swings with supercapacitor in 27 window cycles."
+      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the belt flows east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 40 of its 216 swings with supercapacitor in 27 window cycles."
      }
     ]
    },
@@ -1994,7 +2022,7 @@
      "explanation": "Each wakeup is a check that moves little or nothing, so among clocks that hold the target the one with the fewest is the lightest on update time. An inserter that is enabled most of the time is woken at most of the crafts of the machine it waits on, whether its enable windows are long, it is left always enabled in a loop of machines, or the configuration sets it to always enabled."
     }
    ],
-   "shared_lane_loss_note": "It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles.",
+   "shared_lane_loss_note": "It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles.",
    "checked_lanes": {
     "line": {
      "copies": 11,
@@ -2131,8 +2159,15 @@
        ]
       }
      },
+     "reason": {
+      "code": "belt_gaps",
+      "data": {
+       "missed": 162,
+       "with_gap": 162
+      }
+     },
      "spacing": {
-      "text": "The copies stand 10 tiles apart. An item takes 80 ticks from one copy to the next, and the window cycle is 704 ticks. The 11 copies take every accumulator and supercapacitor the two lanes bring, so the gap does not close on the way.",
+      "text": "The copies stand 10 tiles apart. It takes 80 ticks for items to travel between copies, and the window cycle is 704 ticks. The 11 copies take every accumulator and supercapacitor the two lanes bring, so the gap does not close on the way.",
       "data": {
        "step_tiles": 10,
        "travel_ticks": 80,
@@ -2207,7 +2242,7 @@
    "verdict": "unstable",
    "window_cycle_ticks": 704,
    "copies": 11,
-   "description": "Output inserters swing once per enable window, evenly spaced and timed so the machine already holds a full hand when the inserter arrives, instead of grabbing a few items at a time while the machine crafts. Only offered when the planned output inserters often need more than one grab per hand and a full hand fits below the output block. The timing is searched with clock-only checks, preferring the fewest pickups that wait for items. The timing must let the build go back to its rate by itself when the output machines are full; if it does not, some enable windows are lengthened so a second grab can drain the surplus. Other inserters keep the enable windows of Takt Batches. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles.",
+   "description": "Output inserters swing once per enable window, evenly spaced and timed so the machine already holds a full hand when the inserter arrives, instead of grabbing a few items at a time while the machine crafts. Only offered when the planned output inserters often need more than one grab per hand and a full hand fits below the output block. The timing is searched with clock-only checks, preferring the fewest pickups that wait for items. The timing must let the build go back to its rate by itself when the output machines are full; if it does not, some enable windows are lengthened so a second grab can drain the surplus. Other inserters keep the enable windows of Takt Batches. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles.",
    "belt": {
     "kind": "backed_up"
    },
@@ -2252,7 +2287,7 @@
        "target": 3456,
        "behind": 654
       },
-      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles."
+      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles."
      },
      {
       "belt_id": 1,
@@ -2281,7 +2316,7 @@
        "target": 3456,
        "behind": 653
       },
-      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles."
+      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles."
      },
      {
       "belt_id": 1,
@@ -2310,7 +2345,7 @@
        "target": 3456,
        "behind": 654
       },
-      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 40 of its 216 swings with supercapacitor in 27 window cycles."
+      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 40 of its 216 swings with supercapacitor in 27 window cycles."
      },
      {
       "belt_id": 1,
@@ -2339,7 +2374,7 @@
        "target": 3456,
        "behind": 653
       },
-      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the items move east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 40 of its 216 swings with supercapacitor in 27 window cycles."
+      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the belt flows east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 40 of its 216 swings with supercapacitor in 27 window cycles."
      }
     ]
    },
@@ -2407,7 +2442,7 @@
      "explanation": "Each wakeup is a check that moves little or nothing, so among clocks that hold the target the one with the fewest is the lightest on update time. An inserter that is enabled most of the time is woken at most of the crafts of the machine it waits on, whether its enable windows are long, it is left always enabled in a loop of machines, or the configuration sets it to always enabled."
     }
    ],
-   "shared_lane_loss_note": "It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the items move east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles.",
+   "shared_lane_loss_note": "It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles.",
    "checked_lanes": {
     "line": {
      "copies": 11,
@@ -2544,8 +2579,15 @@
        ]
       }
      },
+     "reason": {
+      "code": "belt_gaps",
+      "data": {
+       "missed": 162,
+       "with_gap": 162
+      }
+     },
      "spacing": {
-      "text": "The copies stand 10 tiles apart. An item takes 80 ticks from one copy to the next, and the window cycle is 704 ticks. The 11 copies take every supercapacitor and accumulator the two lanes bring, so the gap does not close on the way.",
+      "text": "The copies stand 10 tiles apart. It takes 80 ticks for items to travel between copies, and the window cycle is 704 ticks. The 11 copies take every supercapacitor and accumulator the two lanes bring, so the gap does not close on the way.",
       "data": {
        "step_tiles": 10,
        "travel_ticks": 80,

@@ -341,7 +341,7 @@ export type { DisturbanceTrialVerdict } from './crafting/disturbance-trial';
 export { whyNotStable, whyNotStableClockOf } from './crafting/why-not-stable';
 export type { NotMadeClock, SpareTime, WhyNotStable, WhyNotStableBuild, WhyNotStableCause, WhyNotStableClock } from './crafting/why-not-stable';
 export { buildLanesOf, withOtherClocks } from './crafting/checked-lanes';
-export type { BuildLane, CausePart, CheckedLaneRow, CheckedLanes, CheckedLaneState, CheckedLine, CopyMissed, LaneEndGivenBy, LaneTogether, SharedLaneCause } from './crafting/checked-lanes';
+export type { BuildLane, CausePart, CheckedLaneRow, CheckedLanes, CheckedLaneState, CheckedLine, CopyMissed, LaneEndGivenBy, LaneTogether, SharedLaneCause, SharedLaneReason, SharedLaneReasonCode } from './crafting/checked-lanes';
 export { deadlockRiskNote } from './crafting/deadlock-risk';
 export { machineNameInText, machineNameOf } from './crafting/machine-name';
 export type { MachineToName, MachineWords } from './crafting/machine-name';

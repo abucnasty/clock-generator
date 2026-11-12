@@ -25,7 +25,7 @@ import type { ClockVerdict } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 import { CLOCK_TABLE_NAME, CLOCK_TABLE_REGION, clockHelpName, termsHelpName } from '../utils/a11yLabels';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
-import { SUMMARY_COPY, beltCellText, clockBadges, foldedMakes, isStartDependent, pickNameMeaning, recoversOf, wakeUpsAverageOf, worksOf } from '../utils/clockSummary';
+import { SUMMARY_COPY, beltCellText, clockBadges, foldedMakes, isStartDependent, outputTermOf, pickNameMeaning, recoversOf, wakeUpsAverageOf, worksOf } from '../utils/clockSummary';
 import { directRouterOf, familyCopyOf, fullClockName, clockChipsOf, sourceLinesOf, strategyNameOf } from '../utils/strategyNames';
 import { BadgeChips, ClockChips } from './StrategyChips';
 import { SIGNAL_DEFINITION, WAKEUP_DEFINITION, TERMS_FOCUS, type GlossaryId } from '../utils/glossary';
@@ -78,7 +78,7 @@ const COMPARE_COPY = {
 };
 
 /** The full table's Status: the glossary's words for the verdict */
-const VERDICT_LABEL: Record<ClockVerdict, string> = { stable: 'Has recovery', 'no recovery': 'No recovery', unstable: 'Unstable' };
+const VERDICT_LABEL: Record<ClockVerdict, string> = { stable: 'Has recovery', 'no recovery': 'No recovery', unstable: SUMMARY_COPY.underproduces };
 const VERDICT_COLOR: Record<ClockVerdict, 'success' | 'warning' | 'error'> = { stable: 'success', 'no recovery': 'warning', unstable: 'error' };
 
 /** The icon beside the words of Works?: never the colour alone */
@@ -278,9 +278,13 @@ export function ClockAlternativesPanel({
                                     tabIndex={0}
                                     size="small"
                                     label={isStartDependent(alternative) ? 'Start-dependent'
+                                        // what it makes against the setpoint, where it is not stable at it
+                                        : outputTermOf(alternative).term !== SUMMARY_COPY.stable ? outputTermOf(alternative).term
                                         : alternative.verdict === 'no recovery' && recovery.kind !== 'no' ? SUMMARY_COPY.recoveryUnavailable
                                             : alternative.verdict === 'stable' ? `Recovery: ${recovery.value}` : VERDICT_LABEL[alternative.verdict]}
-                                    color={isStartDependent(alternative) || (alternative.verdict === 'stable' && recovery.kind === 'not-tested') ? 'warning' : VERDICT_COLOR[alternative.verdict]}
+                                    // a clock that underproduces or overproduces has the colour of an unstable clock, whatever its verdict
+                                    color={isStartDependent(alternative) || (alternative.verdict === 'stable' && recovery.kind === 'not-tested') ? 'warning'
+                                        : outputTermOf(alternative).term !== SUMMARY_COPY.stable ? VERDICT_COLOR.unstable : VERDICT_COLOR[alternative.verdict]}
                                     variant="outlined"
                                     // on the card colour of its own: the selected row's orange tint, hovered, takes green and red
                                     // words under 4.5:1

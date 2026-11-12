@@ -3,7 +3,10 @@ import type { ClockRanking, ClockVerdict } from 'clock-generator/browser';
 import { rateWarningOf } from './rateWarning';
 import { startCheckSummary } from './modelAssumptions';
 import {
+    REASON_WORDS,
     SUMMARY_COPY,
+    attemptResultOf,
+    outputTermOf,
     beltCellText,
     beltLine,
     beltValue,
@@ -122,16 +125,16 @@ describe('clockBadges', () => {
             clock('b', { wake_ups_per_minute: 12, window_count: 6, deciders: 4 }),
             clock('c', { wake_ups_per_minute: 15, window_count: 6, deciders: 4 }),
         ], { b: [fewestDeciders], c: [fewestDeciders] }],
-        ['says a clock that has no recovery, or does not hold its rate, so', [
+        ['says a clock that has no recovery, or underproduces, so', [
             clock('a'),
             clock('b', { verdict: 'no recovery', meets_target_rate: false }),
             clock('c', { verdict: 'unstable', meets_target_rate: false, holds_expected_output: false }),
-        ], { b: [SUMMARY_COPY.worksNoRecovery], c: [SUMMARY_COPY.unstable] }],
-        ['says the rate a clock off the setpoint misses, below or above, before its verdict', [
+        ], { b: [SUMMARY_COPY.worksNoRecovery], c: [SUMMARY_COPY.underproduces] }],
+        ['says that a clock off the setpoint underproduces or overproduces, before its verdict', [
             clock('a'),
             clock('below', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48 }),
             clock('above', { meets_target_rate: false, rate_off_target: 12.5 }),
-        ], { below: [SUMMARY_COPY.worksOffTarget('192')], above: [SUMMARY_COPY.worksOffTarget('252.5')] }],
+        ], { below: [SUMMARY_COPY.underproduces], above: [SUMMARY_COPY.overproduces] }],
         ['does not say a rate less than half a hundredth off', [clock('a', { rate_off_target: -0.004 })], { a: [] }],
         ['gives a clock with a deadlock risk that holds the rate no recovery chip, as its verdict does not decide', [
             clock('a', { verdict: 'no recovery', deadlock: true, wake_ups_per_minute: 6 }),
@@ -143,6 +146,71 @@ describe('clockBadges', () => {
 
     it('is empty for an index with no clock', () => {
         expect(clockBadges([], 0)).toEqual([]);
+    });
+
+    it('gives the status chip what outputTermOf gives, with what is said beside it', () => {
+        expect(clockBadges([clock('below', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48 })], 0))
+            .toEqual([{ kind: 'status', text: 'Underproduces', detail: 'makes 192/s of 240/s' }]);
+        expect(clockBadges([withLoss(clock('a', { verdict: 'unstable' }), 'belt_gaps')], 0))
+            .toEqual([{ kind: 'status', text: 'Underproduces', detail: 'Missed pickups due to belt gaps' }]);
+        expect(clockBadges([clock('a')], 0)).toEqual([]);
+    });
+});
+
+/** A clock with a loss on a lane its copies share, and the reason code of its cause where one is given */
+function withLoss(base: SummaryClock, code?: 'belt_gaps'): SummaryClock {
+    return { ...base, assessment: { ...base.assessment, shared_lane_losses: [{} as never] },
+        checkedLanes: { cause: { ...(code !== undefined && { reason: { code, data: { missed: 6, with_gap: 3 } } }) } } as never };
+}
+
+describe('outputTermOf', () => {
+    it.each<[string, SummaryClock, ReturnType<typeof outputTermOf>]>([
+        ['is Stable for a stable clock at the setpoint', clock('a'), { term: 'Stable' }],
+        ['is Stable for a clock with no recovery at the setpoint: its own chip says that', clock('a', { verdict: 'no recovery' }), { term: 'Stable' }],
+        ['is Underproduces below the setpoint, with the rate', clock('a', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48 }),
+            { term: 'Underproduces', detail: 'makes 192/s of 240/s' }],
+        ['is Overproduces above the setpoint, with the rate, whatever the verdict', clock('a', { verdict: 'unstable', meets_target_rate: false, rate_off_target: 10 }),
+            { term: 'Overproduces', detail: 'makes 250/s of 240/s' }],
+        ['is Overproduces for a stable clock over the setpoint', clock('a', { meets_target_rate: false, rate_off_target: 12.5, stable_above_target: true }),
+            { term: 'Overproduces', detail: 'makes 252.5/s of 240/s' }],
+        ['is Overproduces for a rounded clock that runs fast, at the target by the selection\'s rule', clock('a', { rate_off_target: 0.24, runs_fast: 0.001 }),
+            { term: 'Overproduces', detail: 'makes 240.24/s of 240/s' }],
+        ['is Underproduces at the setpoint with a loss on a shared lane, with the words for its reason code',
+            withLoss(clock('a', { verdict: 'unstable' }), 'belt_gaps'), { term: 'Underproduces', detail: 'Missed pickups due to belt gaps' }],
+        ['is Underproduces at the setpoint with a loss on a shared lane and no reason code, with nothing beside it',
+            withLoss(clock('a', { verdict: 'unstable' })), { term: 'Underproduces' }],
+        ['is Overproduces at the setpoint with no shared-lane loss where the judged output is above the expected output',
+            { ...clock('a', { verdict: 'unstable' }), asBuilt: { actual_output_items: 352 } as never, expectedOutputItems: 336 }, { term: 'Overproduces' }],
+        ['is Underproduces at the setpoint with no shared-lane loss where the judged output is below the expected output',
+            { ...clock('a', { verdict: 'unstable' }), asBuilt: { actual_output_items: 320 } as never, expectedOutputItems: 336 }, { term: 'Underproduces' }],
+        // neither number decides (no clock of the samples comes here): Underproduces, as the verdict unstable said before
+        ['is Underproduces at the setpoint with no shared-lane loss where the judged output is not known',
+            { ...clock('a', { verdict: 'unstable' }), asBuilt: null, expectedOutputItems: 336 }, { term: 'Underproduces' }],
+        ['is Underproduces at the setpoint with no shared-lane loss where the judged output is the expected output',
+            { ...clock('a', { verdict: 'unstable' }), asBuilt: { actual_output_items: 336 } as never, expectedOutputItems: 336 }, { term: 'Underproduces' }],
+    ])('%s', (_, given, expected) => {
+        expect(outputTermOf(given)).toEqual(expected);
+    });
+
+    it('says the rate with the verb of a target that counts the item destroyed', () => {
+        const destroyed = { ...clock('a', { meets_target_rate: false, rate_off_target: -40 }), counts: 'destroyed' as const };
+        expect(outputTermOf(destroyed).detail).toBe('destroys 200/s of 240/s');
+    });
+});
+
+describe('attemptResultOf', () => {
+    it('says a swing count that holds holds the rate, and one that does not underproduces or overproduces by its output', () => {
+        expect(attemptResultOf({ holds: true, actual_output_items: 32, expected_output_items: 32 })).toBe('Holds the rate');
+        expect(attemptResultOf({ holds: false, actual_output_items: 16, expected_output_items: 32 })).toBe('Underproduces');
+        expect(attemptResultOf({ holds: false, actual_output_items: 352, expected_output_items: 336 })).toBe('Overproduces');
+    });
+});
+
+describe('REASON_WORDS', () => {
+    it('has the words for each reason code the engine gives', () => {
+        expect(Object.keys(REASON_WORDS).sort()).toEqual(['belt_gaps', 'target_full']);
+        expect(REASON_WORDS.belt_gaps).toBe('Missed pickups due to belt gaps');
+        expect(REASON_WORDS.target_full).not.toBe('');
     });
 });
 
@@ -209,7 +277,7 @@ describe('recoversOf', () => {
         expect(recoversOf(untried).detail).toContain(`: ${reason}.`);
     });
 
-    it('says not tested for a clock that does not hold its rate', () => {
+    it('says not tested for a clock that underproduces', () => {
         expect(recoversOf(clock('a', { verdict: 'unstable' }))).toMatchObject({ kind: 'not-tested', value: SUMMARY_COPY.recoversNotTested });
     });
 });
@@ -299,6 +367,9 @@ describe('differenceFromRecommended', () => {
 
     it.each<[string, SummaryClock, string]>([
         ['says the rate first', clock('s', offRate), `${SUMMARY_COPY.differsRate('192', '240')} ${wakes('20 more times')}`],
+        ['says that a clock at the setpoint underproduces', withLoss(clock('s', { verdict: 'unstable' })), SUMMARY_COPY.differsUnderproduces],
+        ['says that a clock at the setpoint overproduces',
+            { ...clock('s', { verdict: 'unstable' }), asBuilt: { actual_output_items: 352 } as never, expectedOutputItems: 336 }, SUMMARY_COPY.differsOverproduces],
         // one time, not one times
         ['says one more wakeup', clock('s', { wake_ups_per_minute: 11 }), wakes('1 more time')],
         ['says fewer wakeups', clock('s', { wake_ups_per_minute: 4 }), wakes('6 fewer times')],
@@ -346,11 +417,13 @@ describe('foldedMakes', () => {
 describe('worksOf', () => {
     it.each<[string, SummaryClock, ReturnType<typeof worksOf>]>([
         ['says yes for a clock that holds the rate and recovers, made for the belt asked for', clock('a'), { kind: 'yes', text: SUMMARY_COPY.worksYes }],
-        ['names the rate a clock that holds a rate misses, before whether it recovers',
-            clock('a', { verdict: 'no recovery', meets_target_rate: false, rate_off_target: -48 }), { kind: 'no', text: SUMMARY_COPY.worksOffTarget('192') }],
-        ['calls a clock that does not hold its rate unstable, whatever rate it runs at',
-            clock('a', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48 }), { kind: 'no', text: SUMMARY_COPY.worksUnstable }],
-        ['calls a clock that does not hold its rate unstable at the target rate too', clock('b', { verdict: 'unstable' }), { kind: 'no', text: SUMMARY_COPY.worksUnstable }],
+        ['says that a clock under the setpoint underproduces, before whether it recovers',
+            clock('a', { verdict: 'no recovery', meets_target_rate: false, rate_off_target: -48 }), { kind: 'no', text: 'Underproduces' }],
+        ['says that a clock whose verdict is unstable underproduces below the setpoint',
+            clock('a', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48 }), { kind: 'no', text: 'Underproduces' }],
+        ['says that a clock whose verdict is unstable overproduces above the setpoint',
+            clock('a', { verdict: 'unstable', meets_target_rate: false, rate_off_target: 10 }), { kind: 'no', text: 'Overproduces' }],
+        ['says that a clock whose verdict is unstable underproduces at the target rate too', withLoss(clock('b', { verdict: 'unstable' })), { kind: 'no', text: 'Underproduces' }],
         ['says a clock that does not recover so',
             clock('a', { verdict: 'no recovery' }), { kind: 'caution', text: SUMMARY_COPY.worksNoRecovery }],
     ])('%s', (_, result, expected) => {

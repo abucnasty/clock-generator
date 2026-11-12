@@ -34,9 +34,12 @@ export function BadgeChips({ badges, meanings = {} }: { badges: ClockBadge[]; me
                         // on the card colour of its own: the selected row's orange tint, hovered, takes warning words under 4.5:1
                         sx={{ bgcolor: 'background.paper' }} />
                 );
+                // beside the status chip: the rate, or the words for the engine's reason code (outputTermOf)
+                const reason = badge.detail !== undefined
+                    && <Typography component="span" variant="body2" color="text.secondary" data-badge-detail="">{badge.detail}</Typography>;
                 return meanings[badge.text]
-                    ? <Tooltip key={badge.text} title={meanings[badge.text]} arrow describeChild>{chip}</Tooltip>
-                    : <Box component="span" key={badge.text} sx={{ display: 'contents' }}>{chip}</Box>;
+                    ? <Box component="span" key={badge.text} sx={{ display: 'contents' }}><Tooltip title={meanings[badge.text]} arrow describeChild>{chip}</Tooltip>{reason}</Box>
+                    : <Box component="span" key={badge.text} sx={{ display: 'contents' }}>{chip}{reason}</Box>;
             })}
         </Box>
     );

@@ -3,7 +3,7 @@ import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import type { ClockAlternative, ClockAlternativesResult } from "./alternatives";
 import { generateClockAlternatives } from "./generate-blueprint";
-import { quiet } from "./generate-blueprint-test-helpers";
+import { quiet, reasonsOf } from "./generate-blueprint-test-helpers";
 
 /** The rows of a clock as the page reads them: belt and lane, the copies' take or drop a second, the state's label and sentence */
 const rowsOf = (clock: ClockAlternative) => clock.checked_lanes!.rows.map(row => ({ at: `${row.belt_id}/${row.lane}`,
@@ -38,7 +38,9 @@ describe("what was checked on the lanes the copies of the automation science 240
         // the run shows the copy before's gap on the copper plate lane only; the machine's full output in 5 of the 6
         expect(cause.cause!.text).toBe("In 3 of the 6 missed swings, the gap that copy 1 leaves on the copper plate lane reaches copy 2 when its inserter must pick up. "
             + "In 5 of the 6 missed swings, the assembling machine 3 of copy 2 that makes automation science pack has its output full and takes no more items. 2 of the 6 show both.");
-        expect(cause.spacing!.text).toBe("The copies stand 9 tiles apart. An item takes 72 ticks from one copy to the next, and the window cycle is 72 ticks. "
+        // 3 of the 6 missed swings show the gap: the reason beside the status
+        expect(cause.reason).toEqual({ code: "belt_gaps", data: { missed: 6, with_gap: 3 } });
+        expect(cause.spacing!.text).toBe("The copies stand 9 tiles apart. It takes 72 ticks for items to travel between copies, and the window cycle is 72 ticks. "
             + "The 9 copies take every copper plate the lane brings, so the gap does not close on the way.");
         expect(cause.where.text).toBe("The inserter of copy 2 that takes iron gear wheel and copper plate misses 6 of its 130 swings in 65 window cycles: "
             + "3 with iron gear wheel and 3 with copper plate. Each swing is a hand of 16.");
@@ -60,6 +62,8 @@ describe("what was checked on the lanes the copies of the automation science 240
         const cause = clock.checked_lanes!.cause!;
         expect(cause.headline.text).toBe("Copies 4 and 8 miss 42 of 378 swings each");
         expect(cause.cause!.text).toBe("The side belts of copies 4 and 8 are full where they join the automation science pack output belt.");
+        // a full join: its code, with the missed output swings and the output swings of copies 4 and 8
+        expect(cause.reason).toEqual({ code: "target_full", data: { missed: 84, swings: 756 } });
         expect(cause.spacing).toBeNull();
         expect(cause.where.text).toBe("The inserter of copy 4 that drops automation science pack misses 42 of its 378 swings in 63 window cycles, and so does that of copy 8. "
             + "84 of the 336 swings each one makes wait for room.");
@@ -77,6 +81,19 @@ describe("what was checked on the lanes the copies of the automation science 240
             { at: "2/1", together: "drop 240", label: "Holds", sentence: "Copies 4 and 8 wait for room at their join in 128 of their 384 swings. No swing is missed." },
         ]);
         expect(clock.checked_lanes!.cause).toBeNull();
+    });
+
+    it("gives the reason code of belt gaps on each lane loss where a missed swing shows the gap, and of a full join on the join clock, with their counts", () => {
+        expect(reasonsOf(result)).toEqual({
+            takt_batches_observed: { code: "target_full", data: { missed: 84, swings: 756 } },
+            euclidean_swings: { code: "belt_gaps", data: { missed: 6, with_gap: 3 } },
+            takt_batches_observed_swings_2: { code: "belt_gaps", data: { missed: 16, with_gap: 8 } },
+            takt_batches_swings_1: { code: "belt_gaps", data: { missed: 26, with_gap: 26 } },
+        });
+        // the reason is a code: the engine writes no sentence for it
+        for (const clock of result.alternatives) {
+            for (const text of [clock.description, clock.shared_lane_loss_note ?? ""]) expect(text).not.toMatch(/belt gaps|belt_gaps|target_full/i);
+        }
     });
 
     it("gives the description's sentences on a shared-lane loss as a field of their own, word for word", () => {
@@ -110,5 +127,9 @@ describe("what was checked on other outputs", () => {
         expect(clock.checked_lanes!.line.sentence).toBe("Checked with all 11 copies on the lanes they share. Every copy gets its items. "
             + "The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack.");
         expect(clock.checked_lanes!.line.output_chests).toEqual([{ chest_id: 1, kind: "infinity-chest", items: ["electromagnetic-science-pack"] }]);
+        expect(reasonsOf(result)).toEqual({
+            euclidean_swings: { code: "belt_gaps", data: { missed: 162, with_gap: 162 } },
+            takt_batches_swings_2: { code: "belt_gaps", data: { missed: 151, with_gap: 121 } },
+        });
     });
 });
