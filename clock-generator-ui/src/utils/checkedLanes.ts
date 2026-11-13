@@ -82,6 +82,23 @@ export function stateSentence(row: Pick<CheckedLaneRow, 'state' | 'sentence'>): 
     return words === undefined ? row.sentence : words(state.reason);
 }
 
+/**
+ * The sentence the lane table shows under a row's state, by the state's kind; null where it would only repeat the tab: a lane
+ * that holds says it in its label, unless copies wait at their join (`join_waits`), which the sentence adds; a full join
+ * where every copy misses the same count says it in the tab's headline, and keeps its sentence where the copies differ
+ */
+export function rowSentenceShown(row: Pick<CheckedLaneRow, 'state' | 'sentence'>): string | null {
+    const { state } = row;
+    switch (state.kind) {
+        case 'holds':
+            return state.join_waits === undefined ? null : stateSentence(row);
+        case 'join_full':
+            return state.copies.every(it => it.missed === state.copies[0].missed && it.swings === state.copies[0].swings) ? null : stateSentence(row);
+        default:
+            return stateSentence(row);
+    }
+}
+
 /** The lane of the build a row is of */
 export const laneOf = (lanes: readonly BuildLane[] | undefined, row: Pick<CheckedLaneRow, 'belt_id' | 'lane'>) =>
     lanes?.find(lane => lane.belt_id === row.belt_id && lane.lane === row.lane);

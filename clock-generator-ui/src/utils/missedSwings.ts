@@ -206,7 +206,11 @@ export function pictureLabelsOf(cause: SharedLaneCause): { one: string; two: str
     return { one: one.filter(Boolean).join(' '), two: two.filter(Boolean).join(' ') };
 }
 
-/** The engine's sentences behind "Read this as text", in the page's order */
+/**
+ * The engine's sentences behind "Read this as text", in the page's order, without the two that stand just above it: at a full
+ * join, the side belts that are full (picture one's caption); and the other clock of the build (its own line)
+ */
 export function textPartsOf(cause: SharedLaneCause): string[] {
-    return [cause.cause?.text, cause.spacing?.text, cause.where.text, cause.alone.text, cause.changes?.text].filter((it): it is string => Boolean(it));
+    return [cause.kind === 'join' ? undefined : cause.cause?.text, cause.spacing?.text, cause.where.text, cause.alone.text, fewerCopiesText(cause)]
+        .filter((it): it is string => Boolean(it));
 }

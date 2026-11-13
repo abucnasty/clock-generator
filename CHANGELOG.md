@@ -19,6 +19,14 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: the result's Belt pickups fact and the Belt column of the clock table are removed
 - ui: the clock selector and the install dialog no longer name the belt
 - ui: the input belts setting is removed; older builds load with their input lane ends stated
+- ui: Overview no longer has Why this clock; Model and tested starts comes first
+- ui: the compare table's rows no longer explain the clock's name; the card keeps it
+- ui: an Error card no longer repeats its reason under the four facts
+- ui: the card no longer says how the windows were made or how many copies
+- ui: Simulation results no longer repeat what Model and tested starts and the install steps say
+- ui: Diagnostics no longer repeats its headline in the lane table or Read this as text
+- ui: the Timeline's lead drops the wakeups of one copy; the chart drops its key hint
+- ui: empty run overrides, empty Explanation labels and the install caption's Factorio version are gone
 
 ### Changed
 - generation: clocks with observed windows are found faster on large builds
@@ -33,6 +41,11 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: the card's How this was checked is now Simulation results
 - ui: the shared lanes' column of the copies' rates is now headed Planned for the copies
 - ui: the clock selector says a clock's status in place of Not stable
+- ui: the pickup sentence reads: the simulation assumes backpressure at the belt pickups
+- ui: the row help's Does it work? is now Status
+- ui: the compare table's group of other clocks is named Clocks that are not Stable
+- ui: a deadlock warning names the two inserters; About this build keeps how it happens
+- ui: the output swing back-off report is in Model and tested starts, not a warning
 
 ## [0.28.1] - 2026-11-07
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CheckedLanes } from 'clock-generator/browser';
 import { AUTOMATION_240, checkedOf, ELECTROMAGNETIC_330, ELECTROMAGNETIC_330_TWO_SWINGS, MILITARY_240, STATES, viewOf, viewsOf } from '../test/checkedLanesFixtures';
-import { CHECKED_LANES_COPY, descriptionShown, endText, givesLanes, insightsShown, laneOf, madeForLead, lanesCountText, laneText, roleText, stateSentence, stateTone, supplyText, togetherText, whyNotStableShowsCause, withOtherClocksOf } from './checkedLanes';
+import { CHECKED_LANES_COPY, descriptionShown, endText, givesLanes, insightsShown, laneOf, madeForLead, lanesCountText, laneText, roleText, rowSentenceShown, stateSentence, stateTone, supplyText, togetherText, whyNotStableShowsCause, withOtherClocksOf } from './checkedLanes';
 
 const lanes = AUTOMATION_240.lanes;
 
@@ -135,5 +135,34 @@ describe('the words of a lane not checked or not run with the copies', () => {
     it('show the sentence of a result whose reason is a sentence (an older engine)', () => {
         const row = { state: { kind: 'not_checked', reason: 'The check of the shared lanes does not run this lane.' }, sentence: 'The check of the shared lanes does not run this lane.' };
         expect(stateSentence(row as unknown as Parameters<typeof stateSentence>[0])).toBe(row.sentence);
+    });
+});
+
+describe('the sentence under a row\'s state, by the state\'s kind', () => {
+    // shown: the sentence adds a fact; hidden: the label or the tab's headline says it
+    it.each([
+        ['holds', false],
+        ['holds/steady_run_only', false],
+        ['holds/join_waits', true],
+        ['holds/not_the_cause/join_waits', true],
+        ['holds/steady_run_only/join_waits', true],
+        ['join_full', false],
+        ['short', true],
+        ['takes_less', true],
+        ['rate_fits', true],
+        ['not_checked', true],
+        ['not_run', true],
+    ] as const)('%s: shown %s', (key, shown) => {
+        const { row } = STATES[key];
+        expect(rowSentenceShown(row)).toBe(shown ? stateSentence(row) : null);
+    });
+
+    it('keeps a full join\'s sentence where its copies miss different counts, as the tab\'s headline does not say one count', () => {
+        const { row } = STATES.join_full;
+        if (row.state.kind !== 'join_full') throw new Error('the fixture is not a full join');
+        const differ = { ...row, state: { ...row.state, copies: [row.state.copies[0], { ...row.state.copies[1], missed: 40 }] } };
+        expect(rowSentenceShown(differ)).toBe(differ.sentence);
+        const one = { ...row, state: { ...row.state, copies: [row.state.copies[0]] } };
+        expect(rowSentenceShown(one)).toBeNull();
     });
 });

@@ -19,7 +19,7 @@ const bend = fromBelt({ pickup_layout: 'bend-right-upstream', pickup_length: 1, 
 /** A pickup Sidecar recorded but the generator cannot use, and why */
 const unsupported = (reason: string) => fromBelt({ pickup_capture: { status: 'unsupported', entity_type: 'transport-belt', reason } });
 const STRAIGHT_DEFAULT = 'Straight belt is the default. Choose the belt shape and pickup approach.';
-const BACKED_UP = 'Saturated supply with captured pickup rules.';
+const BACKED_UP = 'The simulation assumes backpressure at the belt pickups.';
 const KNOWN_FOR_ALL = 'Pickup type known for all 1 belt-fed inserter.';
 
 /** The List row's picker and the diagram's, both of Inserter 3 */
@@ -95,7 +95,7 @@ it.each([
         expect(screen.getByText('1 belt pickup is not supported and blocks generation.')).toBeDefined();
         // named by what puts it out of scope, never by its entity type
         expect(screen.getByText(`Not supported: Inserter 3 (${label}). ${OUT_OF_SCOPE_PICKUP_SCOPE}`)).toBeDefined();
-        expect(screen.queryByText(/\(transport-belt\)|Unverified|Updating the mod alone|Saturated supply/)).toBeNull();
+        expect(screen.queryByText(/\(transport-belt\)|Unverified|Updating the mod alone|backpressure at the belt pickups/)).toBeNull();
         unmount();
     }
 });

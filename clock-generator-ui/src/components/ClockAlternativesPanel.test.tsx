@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { show } from '../test/fixtures';
 import { AUTOMATION_240, checkedOf, ELECTROMAGNETIC_330_TWO_SWINGS, errorCaseViews, TRIALS_NOT_MADE_REASON, viewsOf } from '../test/checkedLanesFixtures';
 import { REASON_WORDS, SUMMARY_COPY } from '../utils/clockSummary';
-import { fullClockName } from '../utils/strategyNames';
+import { familyCopyOf, fullClockName } from '../utils/strategyNames';
 import { ClockAlternativesPanel } from './ClockAlternativesPanel';
 
 describe('the help of a clock in the list of clocks', () => {
@@ -212,5 +212,64 @@ describe('the full table of clocks', () => {
         expect(screen.queryByRole('button', { name: /belt/i })).toBeNull();
         const firstRow = screen.getAllByRole('row').find(row => within(row).queryByRole('radio'))!;
         expect(within(firstRow).getAllByRole('cell').concat(within(firstRow).queryAllByRole('rowheader'))).toHaveLength(11);
+    });
+});
+
+describe('the words of the compare table', () => {
+    const views = viewsOf(AUTOMATION_240);
+    const stableAt = views.findIndex(view => view.verdict === 'stable');
+    const unstable = views.filter(view => view.verdict !== 'stable');
+    const panel = (alternatives = views, showUnstable = true, selectedIndex = AUTOMATION_240.selected_index) => show(
+        <ClockAlternativesPanel comparison={{ allColumns: false, showUnstable }} onComparisonChange={() => {}}
+            alternatives={alternatives} selectedIndex={selectedIndex} onSelect={() => {}} recommendedIndex={selectedIndex}
+            pickRule={null} isGenerating={false} />);
+
+    it('heads the row help\'s part on whether the clock works "Status"', async () => {
+        const { user } = panel();
+        await user.click(screen.getByRole('button', { name: `About ${fullClockName(views[0])}` }));
+        const help = await screen.findByRole('dialog');
+        expect(within(help).getByText('Status', { selector: 'p' })).toBeTruthy();
+        expect(help.textContent).not.toContain('Does it work?');
+    });
+
+    it('names the group of clocks that are not Stable, and its button says how many, one or several', async () => {
+        expect(stableAt).toBeGreaterThanOrEqual(0);
+        expect(unstable.length).toBeGreaterThan(1);
+        const { user } = panel([views[stableAt], ...unstable], false, 0);
+        const show = screen.getByRole('button', { name: `Show ${unstable.length} clocks that are not Stable` });
+        expect(document.body.textContent).not.toMatch(/unstable clock|that were tried/i);
+        await user.click(show);
+        cleanup();
+        panel([views[stableAt], ...unstable], true, 0);
+        expect(screen.getByRole('cell', { name: 'Clocks that are not Stable' })).toBeTruthy();
+        expect(screen.getByRole('button', { name: `Hide ${unstable.length} clocks that are not Stable` })).toBeTruthy();
+        cleanup();
+        panel([views[stableAt], unstable[0]], false, 0);
+        expect(screen.getByRole('button', { name: 'Show 1 clock that is not Stable' })).toBeTruthy();
+        cleanup();
+        panel([views[stableAt], unstable[0]], true, 0);
+        expect(screen.getByRole('button', { name: 'Hide 1 clock that is not Stable' })).toBeTruthy();
+    });
+
+    it('leaves the line that explains a clock\'s name out of its row and its help; the card keeps it', async () => {
+        const { container, user } = panel(views, true);
+        expect(container.querySelector('[data-strategy-line]')).toBeNull();
+        for (const view of views) {
+            const line = familyCopyOf(view)?.line;
+            if (line) expect(container.textContent).not.toContain(line);
+        }
+        const clock = views[0];
+        await user.click(screen.getByRole('button', { name: `About ${fullClockName(clock)}` }));
+        const help = await screen.findByRole('dialog');
+        expect(help.textContent).not.toContain(familyCopyOf(clock)!.line);
+        expect(help.textContent).toContain(familyCopyOf(clock)!.definition);
+    });
+
+    it('says nothing of a deadlock risk: the card and About this build say it', () => {
+        const risk = 'Deadlock risk: Inserters 1 and 2 both bring iron plate to the machine. An inserter that starts picking up an item the other has already filled the machine with holds its hand.';
+        const { container } = panel(views.map(view => ({ ...view, deadlockRisk: risk })));
+        expect(container.textContent).not.toContain('Deadlock risk');
+        expect(container.textContent).not.toContain('The tests that stop a supply or block an output do not see this');
+        expect(container.querySelector('.MuiAlert-root')).toBeNull();
     });
 });

@@ -12,6 +12,7 @@ import {
     pickNameMeaning,
     recoversOf,
     signalsText,
+    statusOf,
     SUMMARY_COPY,
     wakeUpsText,
 } from '../utils/clockSummary';
@@ -21,12 +22,9 @@ import { RECOMMENDED_COPY, recommendationReason } from '../utils/recommendedCloc
 import { Panel } from './Panel';
 import { Disclosure } from './Disclosure';
 import { RecommendedChip } from './RecommendedChip';
-import type { GenerationAssumptions } from '../worker/types';
-import { REQUIRES_FACTORIO } from '../utils/installSteps';
-import { COLD_START, startCheckSummary } from '../utils/modelAssumptions';
 import { WHY_NOT_STABLE_TITLE } from '../utils/whyNotStable';
 import { useGameNames } from '../hooks/useGameNames';
-import { CHECKED_LANES_COPY, givesLanes, whyNotStableShowsCause } from '../utils/checkedLanes';
+import { whyNotStableShowsCause } from '../utils/checkedLanes';
 import { DIAGNOSTICS_COPY, hasDiagnostics } from '../utils/diagnostics';
 import { CauseHeadline } from './CheckedLanesView';
 
@@ -44,7 +42,6 @@ const CARD_COPY = {
 };
 
 interface ResultSummaryCardProps {
-    generationAssumptions?: GenerationAssumptions | null;
     alternatives: ClockAlternativeView[];
     selectedIndex: number;
     /** The clock the selection rule picks; null while there are none */
@@ -122,7 +119,8 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
                 >
                     {strategyNameOf(selected)}
                 </Typography>
-                <ClockChips clock={selected} />
+                {/* how the windows were made is said in the compare table's rows, the clock selector and the install dialog */}
+                <ClockChips clock={selected} settingsOnly />
                 <BadgeChips badges={clockBadges(alternatives, selectedIndex)} meanings={fewestDecidersMeaning(alternatives, selectedIndex)} />
                 {isRecommended && (
                     <RecommendedChip isGenerating={isGenerating} data-card-chip="" />
@@ -158,7 +156,8 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
                 <Fact label={CARD_COPY.signals} value={signals.value.replace(' a minute', '/min')} sub={signals.sub} />
                 <Fact label={CARD_COPY.recovers} value={recovers.value} icon={RECOVERS_ICON[recovers.kind]} />
             </Box>
-            {recovers.kind !== 'yes' && !props.rateWarning && <Typography variant="body2" sx={{ mt: 1 }}>{recovers.detail}</Typography>}
+            {/* on an Error card the reason beside the chip says it */}
+            {recovers.kind !== 'yes' && !props.rateWarning && statusOf(selected).kind !== 'error' && <Typography variant="body2" sx={{ mt: 1 }} data-recovery-detail="">{recovers.detail}</Typography>}
             {lossLimit && <Typography variant="body2" sx={{ mt: 1 }} data-loss-limit>{lossLimit}</Typography>}
         </>
     );
@@ -188,16 +187,12 @@ function ClockExplanation(props: SelectedProps) {
     const recovers = recoversOf(selected);
     return <Box sx={{ display: 'grid', gap: 1 }}>
         {reason && <Typography variant="body2" data-card-reason>{reason}</Typography>}
-        <Typography variant="body2" data-start-assumption>
-            {COLD_START} {startCheckSummary([selected], props.generationAssumptions ?? null)}
-        </Typography>
         <Typography variant="body2" data-hold-status>
             {holdStatusText(makesText(selected, selected.copies).value, selected.assessment.holds, selected.counts,
                 (selected.assessment.shared_lane_losses?.length ?? 0) > 0)}
         </Typography>
         {recovers.kind === 'yes' && <Typography variant="body2">{recovers.detail}</Typography>}
         {props.runAssumptions}
-        <Typography variant="caption" color="text.secondary">{REQUIRES_FACTORIO}</Typography>
     </Box>;
 }
 
@@ -239,11 +234,9 @@ export function ResultSummaryCard(props: ResultSummaryCardProps) {
                     : props.whyNotStable.message}
             </Alert>}
             {props.stale && <Typography variant="body2" sx={{ mb: 1 }} data-card-stale>{CARD_COPY.staleLine}</Typography>}
-            {selected ? <>
+            {selected ? (
                 <ClockFacts {...props} selected={selected} nameRef={nameRef} />
-                {/* what was checked on the lanes the copies share is on Diagnostics; from an engine that gives the build's lanes, what they are made for */}
-                {givesLanes(selected) && <Typography variant="body2" sx={{ mt: 1.5 }} data-made-for="">{CHECKED_LANES_COPY.madeFor(selected.copies)}</Typography>}
-            </> : (
+            ) : (
                 <Typography variant="body2" color="text.secondary">{CARD_COPY.makingFirst}</Typography>
             )}
             <Disclosure summary={CARD_COPY.detailsHeading} sx={{ mt: 1.5 }}>

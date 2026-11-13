@@ -4,8 +4,8 @@ import { useId, useLayoutEffect, useMemo, useState } from 'react';
 import type { ClockAlternativeView } from '../worker/types';
 import { wakeUpsText } from '../utils/clockSummary';
 import { fullClockName } from '../utils/strategyNames';
-import { INSTALL_COPY, needsNoClock, REQUIRES_FACTORIO, type WiringMoves } from '../utils/installSteps';
-import { rateWarningOf } from '../utils/rateWarning';
+import { INSTALL_COPY, needsNoClock, type WiringMoves } from '../utils/installSteps';
+import { cardWarningOf } from '../utils/rateWarning';
 import type { GeneratedFor } from '../utils/resultsStaleness';
 import { tabProps } from '../utils/tabIds';
 import { buildWakeWindowRows } from '../utils/wakeWindows';
@@ -42,13 +42,13 @@ export function InstallClockDialog({ open, onClose, selected, blueprintString, s
     }, [open, modalRoot]);
     const moves = useMemo(() => new Map<string, WiringMoves>(open ? buildWakeWindowRows(selected).map(row => [row.id, { items: row.items, route: row.route }]) : []), [open, selected]);
     const movesOf = (entity: string) => moves.get(entity) ?? { items: [], route: '' };
-    const warning = rateWarningOf(selected);
+    const warning = cardWarningOf(selected);
     return <AppDialog ref={setModalRoot} open={open} onClose={onClose} maxWidth="md" dividers title="Install in Factorio" cancel="Close"
         actions={blueprintString && <Button variant="contained" color={staleFor || warning ? 'warning' : 'secondary'} onClick={onCopy} startIcon={copied ? <Check /> : <ContentCopy />}>
             {copied ? 'Copied' : copyLabel}
         </Button>}>
         <Typography variant="body2" sx={{ fontWeight: 600 }}>{selected.counts === 'destroyed' ? HANDS_TEXT.clock(selected.terminalSwingCount) : `${selected.terminalSwingCount} ${selected.terminalSwingCount === 1 ? 'swing' : 'swings'}`} · {wakeUpsText(selected).value.replace(' a minute', ' wakeups/min')}</Typography>
-        <Typography variant="caption" color="text.secondary" component="p">{fullClockName(selected)} · {REQUIRES_FACTORIO}</Typography>
+        <Typography variant="caption" color="text.secondary" component="p">{fullClockName(selected)}</Typography>
         {warning && <Alert severity="warning" sx={{ mt: 1 }}>{warning}</Alert>}
         <Tabs value={tab} onChange={(_, value: 'guide' | 'wiring') => setTab(value)} aria-label="Installation help" sx={{ mt: 1, borderBottom: 1, borderColor: 'divider' }}>
             <Tab label="Guide" value="guide" {...tabProps(id, 'guide')} />

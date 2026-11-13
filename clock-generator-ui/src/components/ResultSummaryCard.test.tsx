@@ -5,6 +5,8 @@ import type { ClockAlternativeView } from '../worker/types';
 import { show } from '../test/fixtures';
 import { AUTOMATION_240, checkedOf, ELECTROMAGNETIC_330_TWO_SWINGS, errorCaseViews, MILITARY_240, TRIALS_NOT_MADE_REASON, viewsOf } from '../test/checkedLanesFixtures';
 import { REASON_WORDS, SUMMARY_COPY } from '../utils/clockSummary';
+import { cardWarningOf } from '../utils/rateWarning';
+import { clockChipsOf } from '../utils/strategyNames';
 import { strategyNameOf } from '../utils/strategyNames';
 import { ResultSummaryCard } from './ResultSummaryCard';
 
@@ -22,11 +24,11 @@ const keptBefore = (view: ClockAlternativeView): ClockAlternativeView => {
 describe('the card of a clock', () => {
     const views = viewsOf(AUTOMATION_240);
 
-    it('says what it is made for, without opening "Simulation results"; what was checked on the lanes is on Diagnostics', () => {
+    it('says nothing of the copies it is made for (Makes says all 9 copies); what was checked on the lanes is on Diagnostics', () => {
         const { container } = card(views, AUTOMATION_240.selected_index, { onShowDiagnostics: () => {} });
-        const madeFor = container.querySelector('[data-made-for]')!;
-        expect(madeFor.closest('details')).toBeNull();
-        expect(madeFor.textContent).toBe('Made for 9 copies of your build.');
+        expect(container.querySelector('[data-made-for]')).toBeNull();
+        expect(container.textContent).not.toContain('Made for 9 copies of your build.');
+        expect(screen.getByText('Makes').parentElement!.textContent).toContain('all 9 copies');
         expect(container.textContent).not.toContain(checkedOf(AUTOMATION_240, 'time_study_windows').line.sentence);
         expect(screen.queryByRole('button', { name: 'What was checked' })).toBeNull();
         expect(screen.queryByRole('table')).toBeNull();
@@ -101,13 +103,14 @@ describe('the card holds nothing of what Diagnostics shows', () => {
         ['no cause', views, 'time_study_windows', 9],
         ['a note on why it is not stable', views, 'takt_batches_observed_swings_4', 9],
         ['a build of one copy', [one], 'time_study_windows', 1],
-    ] as const)('%s: the made-for line, the chip as before; no headline, picture, line, table or note', (_, alternatives, id, copies) => {
+    ] as const)('%s: no made-for line, the chip as before; no headline, picture, line, table or note', (_, alternatives, id, copies) => {
         const list = alternatives as ClockAlternativeView[];
         const index = list.findIndex(view => view.id === id);
         const { container } = card(list, index, { onShowDiagnostics: () => {} });
         const clock = list[index];
         const text = container.textContent!;
-        expect(container.querySelector('[data-made-for]')!.textContent).toBe(`Made for ${copies} ${copies === 1 ? 'copy' : 'copies'} of your build.`);
+        expect(container.querySelector('[data-made-for]')).toBeNull();
+        expect(text).not.toContain(`Made for ${copies} ${copies === 1 ? 'copy' : 'copies'} of your build.`);
         expect(container.querySelector('[data-cause-headline], [data-picture], [data-checked-line], [data-read-as-text], [data-other-clock], [data-insight]')).toBeNull();
         expect(screen.queryByRole('table')).toBeNull();
         expect(screen.queryByRole('button', { name: 'What was checked' })).toBeNull();
@@ -271,5 +274,44 @@ describe('the rate of a clock with a loss on a shared lane, on the card: what al
         expect(screen.getByText('Makes').parentElement!.textContent).toContain('318.79/s');
         expect(container.querySelector('[data-card-reason]')!.textContent).toContain('This one runs at 318.79/s with the fewest wakeups.');
         expect(container.querySelector('[data-hold-status]')!.textContent).toBe('At steady state one copy alone keeps its rate: yes.');
+    });
+});
+
+describe('the chips beside the name on the card', () => {
+    const views = viewsOf(AUTOMATION_240);
+    it('keep the clock\'s settings and leave how its windows were made to the compare table, the selector and the install dialog', () => {
+        const index = views.findIndex(view => view.id === 'takt_batches_observed');
+        const { container } = card(views, index);
+        const shown = [...container.querySelectorAll('[data-strategy-chip]')].map(chip => chip.getAttribute('data-strategy-chip'));
+        const all = clockChipsOf(views[index]).map(chip => chip.id);
+        expect(all).toContain('tuning_method');
+        expect(all).toContain('selection');
+        expect(shown).toEqual(all.filter(id => id !== 'tuning_method' && id !== 'selection'));
+        expect(shown.length).toBeGreaterThan(0);
+        expect(container.textContent).not.toMatch(/· (observed|calculated|one version|best of several versions|found by search)/);
+    });
+});
+
+describe('the recovery sentence under the facts', () => {
+    const index = AUTOMATION_240.selected_index;
+    it.each(['not-tried', 'no-result'] as const)('%s, with the rate warning the page gives: not on an Error card, whose reason beside the chip says it', (kind) => {
+        const alternatives = errorCaseViews(kind);
+        const { container } = card(alternatives, index, { rateWarning: cardWarningOf(alternatives[index]) });
+        expect(cardWarningOf(alternatives[index])).toBeNull();
+        expect(screen.getByText('Error')).toBeTruthy();
+        expect(screen.getByText('Unavailable')).toBeTruthy();
+        expect(container.querySelector('[data-recovery-detail]')).toBeNull();
+        expect(container.textContent).not.toContain(SUMMARY_COPY.recoversNotTestedDetail);
+        expect(container.textContent).not.toContain('Recovery could not be tried in the simulator');
+    });
+
+    it('stays on a clock with another status: the 216-tick clock with its loss trials not run reads Underproduces and keeps it', () => {
+        const views = viewsOf(AUTOMATION_240).map(view => view.id !== 'takt_batches_observed' ? view
+            : { ...view, assessment: { ...view.assessment, disturbance_trial: null, disturbance_trial_not_tried: TRIALS_NOT_MADE_REASON } });
+        const at = views.findIndex(view => view.id === 'takt_batches_observed');
+        const { container } = card(views, at, { rateWarning: cardWarningOf(views[at]) });
+        expect(cardWarningOf(views[at])).toBeNull();
+        expect(screen.getByText('Underproduces')).toBeTruthy();
+        expect(container.querySelector('[data-recovery-detail]')!.textContent).toBe(SUMMARY_COPY.recoversNotTriedDetail(TRIALS_NOT_MADE_REASON));
     });
 });

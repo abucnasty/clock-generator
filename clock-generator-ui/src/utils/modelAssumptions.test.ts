@@ -54,4 +54,12 @@ describe('the model texts', () => {
         // a view kept before the names were carried
         expect(modeledDetails({ assumptions: { ...assumptions, entityNames: undefined } } as unknown as ClockAlternativeView)[0]).toMatch(/^Belt 1: .* Inserter 1, Inserter 2 on the belt\.$/);
     });
+
+    it('says the run overrides only where there are some: an empty set says nothing', () => {
+        const assumptions = { kickStarts: [], outputDrops: [], machineFuel: [] };
+        expect(modeledDetails({ assumptions: { ...assumptions, overrides: {} } } as unknown as ClockAlternativeView)).toEqual([]);
+        expect(modeledDetails({ assumptions: { ...assumptions, overrides: undefined } } as unknown as ClockAlternativeView)).toEqual([]);
+        expect(modeledDetails({ assumptions: { ...assumptions, overrides: { terminal_swing_count: 3 } } } as unknown as ClockAlternativeView))
+            .toEqual(['Explicit run overrides: {"terminal_swing_count":3}.']);
+    });
 });

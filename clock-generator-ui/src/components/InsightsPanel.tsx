@@ -62,7 +62,8 @@ export function InsightCard({ insight, level = 4 }: { insight: ClockInsight; lev
     const [open, setOpen] = useBuildSection(`insight:${insight.id}`);
     const reasonsId = useId();
     const hasWhy = insight.why !== '';
-    const explanation = <Part label={INSIGHTS_COPY.explanation}><Typography variant="body2">{nameIdsIn(insight.explanation)}</Typography></Part>;
+    // a note with no explanation shows no Explanation label
+    const explanation = insight.explanation !== '' && <Part label={INSIGHTS_COPY.explanation}><Typography variant="body2">{nameIdsIn(insight.explanation)}</Typography></Part>;
     return (
         <Panel title={nameIdsIn(insight.title)} level={level} data-insight={insight.id}>
             <Part label={INSIGHTS_COPY.what}>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ClockAlternativeView } from '../worker/types';
-import { copyBlueprintLabelOf, isBelowTarget, rateWarningOf } from './rateWarning';
+import { cardWarningOf, copyBlueprintLabelOf, isBelowTarget, rateWarningOf } from './rateWarning';
 import { STALE_COPY_LABEL } from './resultsStaleness';
 
 type Clock = Pick<ClockAlternativeView, 'verdict' | 'assessment' | 'ranking' | 'deadlockRisk'>;
@@ -106,5 +106,28 @@ describe('a clock off the setpoint that has a loss on a shared lane', () => {
         const older = { ...off, checkedLanes: undefined };
         expect(rateWarningOf(older)).toContain('it runs at 192/s; requested 240/s in the simulator.');
         expect(copyBlueprintLabelOf(older, false)).toBe('Copy blueprint (192/s, below setpoint)');
+    });
+});
+
+describe('the deadlock risk on the card and in the install dialog', () => {
+    const what = 'Inserters 1 and 2 both bring iron plate to the machine 3 that makes gears; inserter 1 also brings coal.';
+    const note = `Deadlock risk: ${what} An inserter that starts picking up an item the other has already filled the machine with holds its hand.`;
+    const insight = { id: 'deadlock-risk', scope: 'build' as const, title: 'This build has a deadlock risk: two inserters bring the same item', what, why: 'Why.', explanation: 'Explanation.' };
+    const risky = { ...clock(240, 0, true), deadlockRisk: note, insights: [insight] };
+
+    it('is "Deadlock risk:" and the What of the engine\'s note on it; the Copy button\'s warning keeps the whole text', () => {
+        expect(cardWarningOf(risky)).toBe(`Deadlock risk: ${what}`);
+        expect(rateWarningOf(risky)).toBe(note);
+    });
+
+    it('keeps the engine\'s whole text on a result without the note, and says nothing on a build without the risk', () => {
+        expect(cardWarningOf({ ...risky, insights: [] })).toBe(note);
+        expect(cardWarningOf({ ...clock(240, 0, true), insights: [insight] })).toBeNull();
+        expect(cardWarningOf(undefined)).toBeNull();
+    });
+
+    it('follows the clock\'s own warning, as before', () => {
+        const short = { ...clock(192, -48), deadlockRisk: note, insights: [insight] };
+        expect(cardWarningOf(short)).toBe(`${rateWarningOf({ ...short, deadlockRisk: null })} Deadlock risk: ${what}`);
     });
 });

@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { screen, within } from '@testing-library/react';
-import { expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { show } from '../test/fixtures';
 import { LEGEND_LABEL, LEGEND_SELECTED, LEGEND_TRACK, LEGEND_WINDOW, summaryText } from '../utils/wakeWindowCopy';
 import type { ClockAlternativeView } from '../worker/types';
@@ -31,4 +31,20 @@ it.each([
     expect(subtitle).toBe(summaryText({ windowCycleTicks, inserters: 1, drills: 0, wakeUps: null }));
     // the copy has no test of its own: the window cycle reads in whole ticks and seconds, as the blueprint counts it
     expect(subtitle.split(' · ')[0]).toBe(window_cycle);
+});
+
+describe('the Enable windows chart\'s words', () => {
+    it('ask to select an enable window and leave the keys to "Reading this chart"', () => {
+        show(<WakeWindowsView alternative={alternative} asTable={false} onAsTableChange={() => {}} />);
+        expect(screen.getByText('Select an enable window for details.')).toBeTruthy();
+        expect(document.body.textContent).not.toContain('Use ↑ ↓ to change rows');
+    });
+
+    it('lead with the window cycle and the rows; the wakeups of one copy only where the card has none or another figure', () => {
+        const args = { windowCycleTicks: 216, inserters: 2, drills: 0 };
+        expect(summaryText({ ...args, wakeUps: 192.1 })).toBe('Window cycle time 216 ticks (3.6 s) · 2 inserters');
+        expect(summaryText({ ...args, wakeUps: null })).toBe('Window cycle time 216 ticks (3.6 s) · 2 inserters · Wakeups not counted');
+        expect(summaryText({ ...args, wakeUps: 192.1, fromColdStart: true }))
+            .toBe('Window cycle time 216 ticks (3.6 s) · 2 inserters · 192 wakeups a minute for one copy from a cold start');
+    });
 });

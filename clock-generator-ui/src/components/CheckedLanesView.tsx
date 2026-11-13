@@ -5,7 +5,7 @@ import type { BuildLane, CheckedLaneRow, CheckedLanes, SharedLaneCause } from 'c
 import type { ClockAlternativeView } from '../worker/types';
 import { useGameNames } from '../hooks/useGameNames';
 import {
-    CHECKED_LANES_COPY, endText, laneOf, lanesCountText, laneText, roleText, stateSentence, stateTone, supplyText, togetherText, type StateTone,
+    CHECKED_LANES_COPY, endText, laneOf, lanesCountText, laneText, roleText, rowSentenceShown, stateTone, supplyText, togetherText, type StateTone,
 } from '../utils/checkedLanes';
 import { lanesShownOf } from '../utils/diagnostics';
 import { MissedSwingsPictures } from './MissedSwingsPictures';
@@ -27,13 +27,14 @@ function Cell({ value, sub }: { value: ReactNode; sub?: string }) {
     </>;
 }
 
-/** A row's state: the engine's label, then its sentence */
+/** A row's state: the engine's label, then its sentence where it says more than the label and the tab (rowSentenceShown) */
 function State({ row }: { row: CheckedLaneRow }) {
+    const sentence = rowSentenceShown(row);
     return <>
         <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, fontWeight: 600 }} data-state-label="">
             {TONE_ICON[stateTone(row.state)]}{row.label}
         </Box>
-        <Typography variant="caption" component="div" color="text.secondary" data-state-sentence="">{stateSentence(row)}</Typography>
+        {sentence !== null && <Typography variant="caption" component="div" color="text.secondary" data-state-sentence="">{sentence}</Typography>}
     </>;
 }
 

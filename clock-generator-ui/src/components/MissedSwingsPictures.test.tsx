@@ -22,7 +22,7 @@ function visibleText(container: HTMLElement): string {
 const textParts = (cause: SharedLaneCause) => [cause.cause?.text, cause.spacing?.text, cause.where.text, cause.alone.text].filter((it): it is string => Boolean(it));
 
 describe('the pictures in place of the sentences of a cause', () => {
-    it.each(['euclidean_swings', 'takt_batches_observed'])('%s: the sentences are not seen beside the pictures, and "Read this as text" holds them all', id => {
+    it.each(['euclidean_swings', 'takt_batches_observed'])('%s: the sentences are not seen beside the pictures, and "Read this as text" holds them, less the two said just above it', id => {
         const cause = checkedOf(AUTOMATION_240, id).cause!;
         const { container } = show(<LaneDiagnostics clock={viewOf(AUTOMATION_240, id)} />, { names: gameNames });
         const closed = visibleText(container);
@@ -33,8 +33,14 @@ describe('the pictures in place of the sentences of a cause', () => {
         fireEvent.click(screen.getByText(MISSED_SWINGS_COPY.readAsText));
         const details = container.querySelector('[data-read-as-text]') as HTMLDetailsElement;
         details.open = true;
-        const open = visibleText(container);
-        for (const part of [...textParts(cause), cause.changes!.text]) expect(open).toContain(part);
+        const inside = details.textContent!;
+        // the other clock is its own line above; at a full join, picture one's caption says the side belts are full
+        const fewer = cause.changes!.text.split(/(?<=\.)\s+(?=[A-Z])/).filter(it => !it.startsWith('Another clock of this build'));
+        const said = textParts(cause).filter(part => !(cause.kind === 'join' && part === cause.cause?.text));
+        for (const part of [...said, ...fewer]) expect(inside).toContain(part);
+        expect(inside).not.toContain('Another clock of this build');
+        if (cause.kind === 'join') expect(inside).not.toContain(cause.cause!.text);
+        expect(visibleText(container).split('Another clock of this build')).toHaveLength(2);
     });
 
     it.each(['euclidean_swings', 'takt_batches_observed'])('%s: in order the headline, the two pictures, the other clock, "Read this as text", then the table', id => {
