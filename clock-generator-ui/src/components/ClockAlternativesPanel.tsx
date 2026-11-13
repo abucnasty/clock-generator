@@ -198,14 +198,22 @@ const FULL_CLOCK_TABLE_SX = {
     '& tbody td:not(:nth-of-type(3))': { whiteSpace: 'nowrap' },
 } as const;
 
-/** The compact table: 6px beside each cell's words in place of 16, so that the clock's name has the width for one line */
-const COMPACT_CLOCK_TABLE_SX = { '& .MuiTableCell-root:not(.MuiTableCell-paddingCheckbox)': { px: 0.75 } } as const;
+/**
+ * The compact table: 6px beside each cell's words in place of 16, and every other column as narrow as its words, so that
+ * the Clock column has all the width that is left for the clock's name
+ */
+const COMPACT_CLOCK_TABLE_SX = {
+    '& .MuiTableCell-root:not(.MuiTableCell-paddingCheckbox)': { px: 0.75 },
+    '& tbody td:nth-of-type(3)': { width: '100%' },
+    '& tbody td:not(:nth-of-type(3))': { whiteSpace: 'nowrap' },
+} as const;
 
 /**
- * The compact table: from the width of a laptop screen on, the clock's name, its chips and its (?) stay on one line;
- * narrower, the chips wrap under the name.
+ * The clock's name, its chips and its (?) on one line where the table has the width for it (automation science 240 at
+ * 1280 px); where it has not, the chips wrap under the name, so that the Status column stays in view. The (?) wraps
+ * with the last chip.
  */
-const NAME_LINE_SX = { display: 'flex', alignItems: 'center', columnGap: 0.5, rowGap: 0.25, flexWrap: { xs: 'wrap', md: 'nowrap' }, whiteSpace: { md: 'nowrap' } } as const;
+const NAME_LINE_SX = { display: 'flex', alignItems: 'center', columnGap: 0.5, rowGap: 0.25, flexWrap: 'wrap' } as const;
 
 /** A row's group: the Stable ones, then the others under the divider, by the word of the Status column */
 const isStable = (alternative: ClockAlternativeView) => statusOf(alternative).kind === 'stable';
@@ -270,11 +278,10 @@ export function ClockAlternativesPanel({
                 </TableCell>
                 <TableCell>
                     {/* the name, its chips and its (?) on one line; the status is the Status column's word and the place is the Rank's */}
-                    <Box sx={allColumns ? { ...NAME_LINE_SX, flexWrap: 'wrap', whiteSpace: 'normal' } : NAME_LINE_SX} data-name-line="">
+                    <Box sx={NAME_LINE_SX} data-name-line="">
                         <Box component="span" sx={{ fontWeight: 600 }}>{strategyNameOf(alternative)}</Box>
-                        <ClockChips clock={alternative} />
-                        {/* the line that explains the clock's name stands on the card only */}
-                        <Box component="span" sx={{ display: 'inline-flex', my: -0.75 }}>
+                        {/* the (?) stays with the last chip when the line wraps; the line that explains the clock's name stands on the card only */}
+                        <ClockChips clock={alternative} after={<Box component="span" sx={{ display: 'inline-flex', my: -0.75 }}>
                             <HelpButton label={clockHelpName(fullClockName(alternative))}>
                                 <StrategyHelp clock={alternative} />
                                 <Typography variant="subtitle2" component="p" sx={{ mb: 0.5 }}>{COMPARE_COPY.howMadeHeading}</Typography>
@@ -289,7 +296,7 @@ export function ClockAlternativesPanel({
                                 {/* a clock not stable on a lane its copies share: its headline; the Diagnostics tab of the selected clock shows the parts */}
                                 {alternative.checkedLanes?.cause && <Box sx={{ mt: 1.5 }}><CauseHeadline cause={alternative.checkedLanes.cause} /></Box>}
                             </HelpButton>
-                        </Box>
+                        </Box>} />
                     </Box>
                     {/* what is said beside the status: the rate, the reason code's words, or why the loss trials gave no answer */}
                     {status.detail && <Typography variant="body2" color="text.secondary" data-status-detail="">{status.detail}</Typography>}

@@ -247,8 +247,12 @@ describe('the Rank column: the engine\'s order', () => {
         panel(views, 0);
         for (const view of views) {
             const line = screen.getByRole('radio', { name: fullClockName(view) }).closest('tr')!.querySelector('[data-name-line]')!;
-            expect(within(line as HTMLElement).getByRole('button', { name: `About ${fullClockName(view)}` })).toBeTruthy();
+            const help = within(line as HTMLElement).getByRole('button', { name: `About ${fullClockName(view)}` });
             expect(line.textContent!.startsWith(strategyNameOf(view))).toBe(true);
+            // the (?) and the last chip in one span that does not wrap, so a narrow screen never puts the (?) on a line of its own
+            const lastChip = [...line.querySelectorAll('[data-strategy-chip]')].at(-1)!;
+            expect(lastChip.parentElement).toBe(help.parentElement!.parentElement);
+            expect(getComputedStyle(lastChip.parentElement!).whiteSpace).toBe('nowrap');
         }
     });
 
