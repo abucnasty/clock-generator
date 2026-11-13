@@ -20,7 +20,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 ### Removed
 - ui: the Never on override is removed; older files and links load with Auto
 - ui: the result's Belt pickups fact and the Belt column of the clock table are removed
-- ui: the clock selector and the install dialog no longer name the belt
+- ui: the install dialog no longer names the belt
 - ui: the input belts setting is removed; older builds load with their input lane ends stated
 - ui: Overview no longer has Why this clock
 - ui: the card drops its tuning and selection chips and the repeats in Simulation results
@@ -30,8 +30,14 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: empty run overrides and empty Explanation labels are no longer shown
 - ui: Overview's notes on the clock no longer say that swings land off the plan
 - ui: Diagnostics of an Oscillates clock no longer says the items moved on average
+- ui: the workspace's clock selector is removed; the list of clocks selects the clock
+- ui: the compare table's Show all columns, its Rate column and its hidden clocks are removed
 
 ### Changed
+- ui: Results shows the clocks as a list beside the selected clock, using the whole width
+- ui: Compare all opens the compare table over the page; a row selects its clock
+- ui: the compare table has every column where it fits, else a details row per clock
+- ui: from 1536 px wide, Diagnostics stands beside the selected clock and is no tab
 - ui: each note on the selected clock is one line, and Details opens the rest
 - ui: the compare table ranks the clocks in a Rank column, without chips or fold
 - ui: the compare table's rows hold still during a run and sort when it ends
@@ -49,7 +55,6 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: the Works? column is now Status and says the same word as the card's chip
 - ui: the card's How this was checked is now Simulation results
 - ui: the shared lanes' column of the copies' rates is now headed Planned for the copies
-- ui: the clock selector says a clock's status in place of Not stable
 - ui: the pickup sentence reads: the simulation assumes backpressure at the belt pickups
 - ui: the row help's Does it work? is now Status
 - ui: the compare table's group of other clocks is named Clocks that are not Stable

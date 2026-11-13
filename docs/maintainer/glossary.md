@@ -512,8 +512,8 @@ _Avoid_: backpressure loss trial
 
 ## Statuses
 
-The site gives each clock one status. It shows the status on the card of the selected clock. It also shows it in the
-**Status** column of the clock tables. A stable clock has the status **Stable** (the entry **Stable**, under Control).
+The site gives each clock one status. It shows the status on the card of the selected clock. It also shows it as a
+mark in the list of clocks, and in the **Status** column of the compare table. A stable clock has the status **Stable** (the entry **Stable**, under Control).
 Each status below is a technical noun (STE rule 1.6). Write it as the site shows it. Do not use it as a verb in your
 own text.
 
