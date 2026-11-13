@@ -78,7 +78,8 @@ const reportOf = (config: Config, alternative: ClockAlternative): DisturbanceTri
 };
 /**
  * The fractional swings clock of AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING as it was made before its enable windows were shaped against
- * ghost wakeups (#641): it gets back from none of the build's three losses. Since then no clock of the job breaks on a loss.
+ * ghost wakeups (#641): it has no recovery after any of the build's three losses. The recommended clock today has recovery after every
+ * disturbance trial on one copy, and none after the trials on the copies that share a lane.
  */
 const BROKEN_AUTOMATION_WINDOWS = { "inserter:1": [{ start: 1, end: 20 }], "inserter:2": [{ start: 1, end: 21 }, { start: 37, end: 56 }, { start: 73, end: 73 }] };
 const brokenReportOf = (config: Config, generated: ClockAlternativesResult): DisturbanceTrialReport => {
@@ -96,13 +97,20 @@ const automation: JobCheck[] = [
         },
     },
     {
-        name: 'a clock tried for backpressure loss is run once with nothing cut, where it makes what the generator\'s own check found',
+        // the trials of disturbanceTrialOf are of one copy; the clock's verdict also has the trials on the copies that share a lane
+        name: 'a clock that gets the disturbance trials is run once with nothing cut on one copy, where it recovers and makes what the generator\'s own check found; the recommended clock has no recovery as the copies that share a lane do not recover',
         run: ({ config, generated }) => {
             const selected = selectedOf(generated);
             const report = reportOf(config, selected);
             expect(report.undisturbed.trials).toHaveLength(1);
-            expect(report.undisturbed.recovers).toBe(selected.verdict === 'stable');
+            expect(report.undisturbed.recovers).toBe(true);
             expect(report.undisturbed.expected_per_bin).toBe(selected.result.stability_check.expected_output_items);
+            expect(report.survives).toBe(true);
+            const trial = selected.assessment.disturbance_trial;
+            expect(selected.verdict).toBe('no recovery');
+            expect(trial?.survives).toBe(false);
+            expect(trial?.on_copies?.survives).toBe(false);
+            expect(trial?.broken_by.every(loss => loss.endsWith('on the copies that share a lane'))).toBe(true);
         },
     },
     {

@@ -74,7 +74,7 @@ values. The six properties:
 | --- | --- |
 | `entity-routes-total` | every inserter and drill of a clock has exactly one route: a reason it stays always on exactly when it has no window and no clock of its own, and the clock's reasons are exactly those |
 | `decider-build-order` | the order the check gives the window deciders is the order the exported blueprint builds them in |
-| `stable-holds-and-survives-loss` | a clock gets the disturbance trials when it is not unstable; it is stable only when it has recovery after every disturbance trial; a clock that meets the setpoint is stable |
+| `stable-holds-and-survives-loss` | a clock gets the disturbance trials exactly when one copy alone holds its rate (`holds`), also when all the copies together miss it; it is stable only when it has recovery after every disturbance trial; a clock that meets the setpoint is stable, or on a build with a deadlock risk not unstable (the ranking's rule) |
 | `counters-add-up` | the per-inserter counters add up to the wakeups, and the clock-level figures agree with the clock |
 | `fuel-never-dry` | no machine that burns fuel runs out of it in the fuel consumption view |
 | `strategy-and-signals` | the strategy's output swings are the count the clock was made at, counted as output swings or as hands brought in, a construction named for the families made from batched swings only; signals a minute counted where wake-ups are, none from a clock with no window decider |
