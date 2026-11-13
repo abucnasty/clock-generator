@@ -49,6 +49,10 @@ export const SUMMARY_COPY = {
         ['Error', 'The loss trials gave no answer. The line under the clock\'s name gives the reason.'],
         ['Start-dependent', 'It holds the setpoint from some start points and not from others.'],
     ] as const,
+    // under the statuses in the help of the Status column: how the clocks are checked
+    statusChecks: 'The simulator checks the blueprint\'s enable windows from a modeled cold start, including clock-phase checks where available. '
+        + 'Extended sampled-start checks are separate and optional; Model and tested starts reports what actually ran. '
+        + 'Clocks that hold are also assessed for recovery after a supply stop or an output blockage; an unavailable result is not a pass.',
     fewestWakeUps: 'Fewest wakeups',
     fewestDeciders: 'Fewest deciders',
     // the card's tiles

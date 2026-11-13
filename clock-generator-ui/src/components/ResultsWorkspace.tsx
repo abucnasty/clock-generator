@@ -264,9 +264,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                         alternatives={props.alternatives}
                         selectedIndex={props.selectedIndex}
                         onSelect={selectClock}
-                        recommendedIndex={props.recommendedIndex}
                         pickRule={props.pickRule}
-                        isGenerating={props.isRunning}
                         pending={props.pending}
                         notice={
                             <DeeperSearchNotice

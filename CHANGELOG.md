@@ -29,6 +29,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: empty run overrides and empty Explanation labels are no longer shown
 
 ### Changed
+- ui: the compare table ranks the clocks in a Rank column, without chips or fold
 - ui: each Build check advisory is one line with its inserters, and Details opens the rest
 - generation: clocks with observed windows are found faster on large builds
 - ui: the input belts setting still works in configuration files and is deprecated
