@@ -84,6 +84,8 @@ describe("the rows of a clock", () => {
         ]);
         expect(lanes.rows[0].together).toEqual({ kind: "take", items_per_second: 6, lanes: [1] });
         expect(lanes.line.sentence).toBe("Checked with all 3 copies on the lanes they share. Every copy gets its items. On the output belt, only the sum of the drops is checked.");
+        expect(lanes.line).not.toHaveProperty("output_chests_text");
+        expect(lanes.line).not.toHaveProperty("copies_trial_text");
         expect(lanes.cause).toBeNull();
     });
 
@@ -109,6 +111,9 @@ describe("the rows of a clock", () => {
         expect(rows(lanes)[0]).toEqual(["1/1", "holds", "Holds", "Every copy gets its items in the steady run."]);
         expect(lanes.line.sentence).toBe("Checked with all 3 copies on the lanes they share. Every copy gets its items in the steady run. "
             + "On the output belt, only the sum of the drops is checked. Iron plate stops arriving.");
+        // the trial's part of the sentence, on its own
+        expect(lanes.line.copies_trial_text).toBe("Iron plate stops arriving.");
+        expect(lanes.line.output_chests_text).toBeUndefined();
     });
 
     it("are not run with the copies where the clock does not hold on one copy, output rows included", () => {
@@ -188,6 +193,9 @@ describe("the line of a build that drops into a chest of each copy", () => {
         expect(lanes.rows.map(row => `${row.belt_id}/${row.lane}`)).toEqual(["1/1", "1/2"]);
         expect(lanes.line.sentence).toBe("Checked with all 11 copies on the lanes they share. Every copy gets its items. "
             + "The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack.");
+        // the chests' part of the sentence, on its own
+        expect(lanes.line.output_chests_text).toBe("The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack.");
+        expect(lanes.line).not.toHaveProperty("copies_trial_text");
     });
 });
 

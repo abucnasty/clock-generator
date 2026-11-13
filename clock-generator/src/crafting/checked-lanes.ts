@@ -117,6 +117,10 @@ export interface CheckedLine {
     plain_output_belts: number;
     /** The chests of each copy the output goes into, by kind and item */
     output_chests: { chest_id: number; kind: string; items: string[] }[];
+    /** The sentence's part that names the chests the output goes into; absent where there are none */
+    output_chests_text?: string;
+    /** The sentence's part on the copy that is not back after a disturbance trial on the copies; absent where every copy is back */
+    copies_trial_text?: string;
     sentence: string;
 }
 
@@ -496,7 +500,7 @@ function lineOf(input: { config: Config; build: BuildToName; rows: readonly Chec
     const plain = plain_output_belts === 0 ? "" : plain_output_belts === 1 ? " On the output belt, only the sum of the drops is checked."
         : ` On the ${plain_output_belts} output belts, only the sum of the drops is checked.`;
     const chests = output_chests.length === 0 ? "" : ` The output goes into a chest of each copy: ${listedInText(output_chests.map(it => theName(chestNameInText(it.chest_id, build))))}.`;
-    const base = { copies, plain_output_belts, output_chests };
+    const base = { copies, plain_output_belts, output_chests, ...(chests !== "" && { output_chests_text: chests.trimStart() }) };
     if (!holds) {
         return { ...base, run_with_copies: false, every_copy_gets_items: null, output_belt: null,
             sentence: `Not run with the copies: the clock does not hold its output on one copy.${plain}${chests}` };
@@ -515,7 +519,7 @@ function lineOf(input: { config: Config; build: BuildToName; rows: readonly Chec
     const at_belt = output_belt === null ? "" : output_belt === "misses" ? `, and ${copiesNamed(join_copies)} ${join_copies.length === 1 ? "misses" : "miss"} swings at the output belt`
         : output_belt === "waits_none_misses" ? ", and no copy misses a swing at the output belt" : ", and no copy is held back at the output belt";
     const trial = trial_failed && copies_trial?.text !== undefined ? ` ${copies_trial.text}` : "";
-    return { ...base, run_with_copies: true, every_copy_gets_items: short_copies.length === 0, output_belt,
+    return { ...base, run_with_copies: true, every_copy_gets_items: short_copies.length === 0, output_belt, ...(trial !== "" && { copies_trial_text: trial.trimStart() }),
         sentence: `Checked with all ${figure(copies)} copies on the lanes they share. ${items}${at_belt}.${plain}${chests}${trial}` };
 }
 
