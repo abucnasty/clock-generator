@@ -51,6 +51,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 ### Fixed
 - ui: Paste from Factorio keeps where the next copy stands, as the export gives it
 - ui: Copy's warning no longer stays open over the result after Generate
+- ui: Paste from Factorio suggests no more than the output belt carries
 
 ## [0.28.1] - 2026-11-07
 

@@ -2,17 +2,29 @@ import { pipe } from "fp-ts/function";
 import * as O from "fp-ts/Option";
 import { RecipeMetadata } from "../entities/machine/recipe/recipe-metadata";
 import { computeMachineFacts } from "../entities/traits/machine-facts-of";
-import { MachineConfiguration, TargetProductionRateConfig, TargetProductionRateConfigSchema } from "./schema";
+import { dropLanesOf, lanesCapacityOf } from "./lane-capacity-validator";
+import { BeltConfig, InserterConfig, MachineConfiguration, TargetProductionRateConfig, TargetProductionRateConfigSchema } from "./schema";
 
 /**
- * The target output a paste from the sidecar mod suggests: the product that leaves the selection and what the selected
- * machines make of it together at their maximum. A ceiling, not a recommendation: a clock that runs the machines at their
- * maximum has nothing to switch off.
+ * The setpoint a paste from the sidecar mod suggests: the product that leaves the selection and what the selected
+ * machines make of it together at their maximum, or what the belt the product is put on carries where that is less. A
+ * ceiling, not a recommendation: a clock that runs the machines at their maximum has nothing to switch off.
  */
 export interface SuggestedTarget {
     target: TargetProductionRateConfig;
     /** "mod": the export carried it; "inferred": worked out from the pasted machines */
     source: "mod" | "inferred";
+    /**
+     * Set where the belt the product is put on carries less than the machines make: that belt, and what the machines
+     * make. The target's rate is then what the belt carries.
+     */
+    belt_limit?: { belt_id: number; machines_per_second: number };
+}
+
+/** The inserters and belts of a paste, for the belt the product is put on */
+export interface PastedOutputs {
+    inserters: readonly InserterConfig[];
+    belts: readonly BeltConfig[];
 }
 
 const SuggestedTargetSchema = TargetProductionRateConfigSchema.extend({
@@ -109,11 +121,69 @@ export function inferSuggestedTarget(machines: readonly MachineConfiguration[]):
     return O.some({ recipe: best.product, items_per_second: best.items_per_second, copies: 1 });
 }
 
+/** The main product of a recipe, null for an unknown recipe or one with no item product */
+function mainProductOf(recipe: string): string | null {
+    try {
+        return RecipeMetadata.fromRecipeName(recipe).output.name;
+    } catch {
+        return null;
+    }
+}
+
 /**
- * The target output to suggest for a paste from the sidecar mod: the export's own `suggested_target` when it is valid,
- * else the one worked out from the machines (an export from a mod before 0.8.0), else None.
+ * The belt that every machine making the product puts it on, and what the lanes the product can land on carry at
+ * most; null where the product does not all go onto one belt of the paste. The machines making it are the pasted
+ * machines whose main product it is. Each must have an output inserter that carries the product, and every such
+ * inserter drops onto the same belt: a machine that places its results itself, an inserter into a chest or a machine,
+ * or a second belt leaves the product off this belt. The lanes are those of the lane rule of one unit's drops
+ * (`dropLanesOf`), each at its own stack size.
+ *
+ * The rule is mirrored in the sidecar mod (`clock-generator-sidecar/scripts/suggested-target.lua`); change both together.
  */
-export function suggestedTargetOf(raw: unknown, machines: readonly MachineConfiguration[]): O.Option<SuggestedTarget> {
+function outputBeltOf(product: string, machines: readonly MachineConfiguration[], outputs: PastedOutputs): { belt_id: number; items_per_second: number } | null {
+    const making = machines.filter(machine => mainProductOf(machine.recipe) === product);
+    if (making.length === 0 || making.some(machine => machine.result_target !== undefined)) return null;
+    const ids = new Set(making.map(machine => machine.id));
+    const carrying = outputs.inserters.filter(inserter => inserter.source.type === "machine" && ids.has(inserter.source.id)
+        && (inserter.filters === undefined || inserter.filters.length === 0 || inserter.filters.includes(product)));
+    const fed = new Set(carrying.map(inserter => inserter.source.id));
+    if (making.some(machine => !fed.has(machine.id))) return null;
+    const belt_ids = new Set(carrying.map(inserter => inserter.sink.type === "belt" ? inserter.sink.id : null));
+    if (belt_ids.size !== 1 || belt_ids.has(null)) return null;
+    const belt = outputs.belts.find(it => belt_ids.has(it.id));
+    if (belt === undefined) return null;
+    const lanes = [...new Set(carrying.flatMap(inserter => inserter.sink.type === "belt" ? dropLanesOf(belt, inserter.sink, product) : []))];
+    if (lanes.length === 0) return null;
+    try {
+        return { belt_id: belt.id, items_per_second: lanesCapacityOf(belt, lanes).toDecimal() };
+    } catch {
+        // a belt the engine has no speed for
+        return null;
+    }
+}
+
+/**
+ * A suggestion held to the belt its product is put on: the lower of what the machines make and what that belt carries.
+ * The rate is the total for all the copies (the setpoint's `items_per_second`); a suggestion is always for copies 1 with
+ * every selected machine in it, and the conversion to copies keeps the rate, so the total is what the belt takes.
+ */
+function heldToOutputBelt(suggestion: SuggestedTarget, machines: readonly MachineConfiguration[], outputs: PastedOutputs): SuggestedTarget {
+    const belt = outputBeltOf(suggestion.target.recipe, machines, outputs);
+    const made = suggestion.target.items_per_second;
+    if (belt === null || !(made > belt.items_per_second)) return suggestion;
+    return {
+        ...suggestion,
+        target: { ...suggestion.target, items_per_second: belt.items_per_second },
+        belt_limit: { belt_id: belt.belt_id, machines_per_second: made },
+    };
+}
+
+/**
+ * The setpoint to suggest for a paste from the sidecar mod: the export's own `suggested_target` when it is valid, else
+ * the one worked out from the machines (an export from a mod before 0.8.0), else None. With the paste's inserters and
+ * belts, it is held to the belt the product is put on.
+ */
+export function suggestedTargetOf(raw: unknown, machines: readonly MachineConfiguration[], outputs?: PastedOutputs): O.Option<SuggestedTarget> {
     return pipe(
         parseSuggestedTarget(raw),
         O.map((target): SuggestedTarget => ({ target, source: "mod" })),
@@ -121,5 +191,6 @@ export function suggestedTargetOf(raw: unknown, machines: readonly MachineConfig
             inferSuggestedTarget(machines),
             O.map((target): SuggestedTarget => ({ target, source: "inferred" })),
         )),
+        O.map(suggestion => outputs === undefined ? suggestion : heldToOutputBelt(suggestion, machines, outputs)),
     );
 }

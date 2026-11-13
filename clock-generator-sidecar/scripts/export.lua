@@ -183,11 +183,29 @@ function export.left_out_drills(result)
     return left_out
 end
 
----The product that leaves the selection and what its machines make of it per second at most, nil when there is none
+---The product that leaves the selection and what its machines make of it per second at most, held to what the belt it
+---is put on carries; nil when there is none. The window shows it and the export carries it, so both call this.
 ---@param result ExtractionResult
----@return SuggestedTarget|nil
+---@return SuggestedTarget|nil suggestion
+---@return {belt_id: number, machines_per_second: number}|nil limit The belt and what the machines make, where the belt carries less
 function export.suggested_target(result)
-    return suggested_target.find(result.machines)
+    local found = suggested_target.find(result.machines)
+    if not found then
+        return nil, nil
+    end
+    local machines = {}
+    for i, machine in ipairs(result.machines) do
+        table.insert(machines, { id = i, recipe = machine.recipe, places_results = export.result_target(machine, result) ~= nil })
+    end
+    local inserters = {}
+    for _, exported in ipairs(export.exported_inserters(result)) do
+        table.insert(inserters, { source = exported.source, sink = exported.sink, filters = exported.inserter.filters })
+    end
+    local belts = {}
+    for i, belt in ipairs(result.belts) do
+        belts[i] = { belt_type = belt.belt_type, lanes = belt.lanes }
+    end
+    return suggested_target.held_to_belt(found, suggested_target.output_belt(found.recipe, machines, inserters, belts))
 end
 
 ---Convert extraction result to a clock-generator compatible config table
@@ -206,7 +224,7 @@ function export.to_table(result, options)
         belts = {},
         chests = {},
         -- nil, which leaves the key out, when the selection has no final product
-        suggested_target = export.suggested_target(result)
+        suggested_target = (export.suggested_target(result))
     }
     -- The copy spacing goes in the suggested target, which a paste makes the setpoint: an export with a setpoint of its
     -- own is taken for a build file of the site and refused. Without a suggested target it is not exported.

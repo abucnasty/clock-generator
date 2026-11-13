@@ -52,6 +52,14 @@ describe('the words of the Setpoint row', () => {
         expect(targetRowCaption('inferred')).toMatch(/^Estimated maximum output of the imported machines\. .*lower the rate in the Setpoint panel after importing\./);
     });
 
+    it('says when the rate is lowered to what the output belt carries, and what the machines make', () => {
+        const limit = { belt_id: 2, machines_per_second: 248.00625000000002 };
+        expect(targetRowCaption('mod', limit)).toBe('From the Factorio export, lowered to what Belt 2 carries. '
+            + 'The machines make up to 248.006/s. You can lower the rate after importing.');
+        expect(targetRowCaption('inferred', limit)).toBe('Estimated from the imported machines, lowered to what Belt 2 carries. '
+            + 'The machines make up to 248.006/s. You can lower the rate in the Setpoint panel after importing.');
+    });
+
     it('says which target it replaces', () => {
         expect(replacesTargetNote({ recipe: 'logistic-science-pack', items_per_second: 240, copies: 11 }, name))
             .toBe('Tick to replace your current target (logistic science pack at 240/s).');

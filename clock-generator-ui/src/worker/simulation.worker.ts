@@ -386,18 +386,23 @@ function validateEntries<T>(schema: z.ZodType<T>, entries: unknown, label: strin
 function pastedEntities(pasted: Extract<EngineQuery, { kind: 'pasted-entities' }>): PastedEntities {
     // IDs are already assigned by the mod
     const machines = validateEntries(clockGenerator.MachineConfigurationSchema, pasted.machines, 'machine');
+    // checked in this order, so the first entry the schema rejects is the one named
+    const drills = validateEntries(clockGenerator.MiningDrillConfigSchema, pasted.drills, 'drill');
+    const inserters = validateEntries(clockGenerator.InserterConfigSchema, clockGenerator.sidecarPickupInserters(pasted.inserters, pasted.sidecar_version, pasted.pickup_warnings), 'inserter');
+    const belts = validateEntries(clockGenerator.BeltConfigSchema, pasted.belts, 'belt');
     return {
         machines,
         picked_machines: machines.filter((machine, index) => machine.prototype !== undefined && !hasPrototype(Array.isArray(pasted.machines) ? pasted.machines[index] : undefined))
             .map(machine => machine.id),
-        drills: validateEntries(clockGenerator.MiningDrillConfigSchema, pasted.drills, 'drill'),
-        inserters: validateEntries(clockGenerator.InserterConfigSchema, clockGenerator.sidecarPickupInserters(pasted.inserters, pasted.sidecar_version, pasted.pickup_warnings), 'inserter'),
-        belts: validateEntries(clockGenerator.BeltConfigSchema, pasted.belts, 'belt'),
+        drills,
+        inserters,
+        belts,
         chests: validateEntries(clockGenerator.ChestConfigSchema, pasted.chests, 'chest'),
         guidance: clockGenerator.checkSidecarImport(pasted.sidecar_version, machines, undefined,
             Array.isArray(pasted.chests) ? pasted.chests : [], Array.isArray(pasted.inserters) ? pasted.inserters : [],
             Array.isArray(pasted.drills) ? pasted.drills : []),
-        suggested_target: clockGenerator.suggestedTargetOf(pasted.suggested_target, machines),
+        // held to the belt the product is put on, where that carries less than the machines make
+        suggested_target: clockGenerator.suggestedTargetOf(pasted.suggested_target, machines, { inserters, belts }),
     };
 }
 

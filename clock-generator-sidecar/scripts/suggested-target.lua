@@ -15,6 +15,8 @@
 -- 6. Its rate is the sum over its machines of crafting_speed / energy * ((amount - ignored) * (1 + productivity / 100)
 --    + ignored), the main product's amount and the part of it productivity ignores, as the clock generator's machine
 --    facts work it out (without the probability); copies is 1.
+-- 7. Where the belt the product is put on carries less, the rate is what that belt carries (suggested_target.output_belt
+--    and held_to_belt, which export.suggested_target applies, so the window and the export say the same).
 
 require("__clock-generator-sidecar__.scripts.types")
 
@@ -138,6 +140,118 @@ function suggested_target.find(machines)
         items_per_second = best.items_per_second,
         copies = 1
     }
+end
+
+---Items a second one lane of a belt carries at a stack size: half the belt's items a second, from its prototype's
+---belt_speed in tiles a tick (60 ticks a second, 8 items a tile), times the stack size; nil for a prototype that is not a belt
+---@param belt_type string
+---@param stack_size number
+---@return number|nil
+local function lane_capacity(belt_type, stack_size)
+    local prototype = prototypes.entity[belt_type]
+    local speed = prototype and prototype.belt_speed
+    if not speed or speed <= 0 then
+        return nil
+    end
+    return speed * 60 * 8 / 2 * stack_size
+end
+
+---The belt every machine making the product puts it on, and what the lanes the product can land on carry; nil where
+---the product does not all go onto one exported belt. This mirrors outputBeltOf in clock-generator/src/config/
+---suggested-target.ts; change both together:
+---
+--- 1. The machines making it are the exported machines whose main product it is. None may place its results itself.
+--- 2. Each has an exported output inserter that carries it (no filters, or filters that name it), and all such
+---    inserters drop onto the same belt.
+--- 3. The lanes are both lanes when the belt lists one, else the lanes that list the product, each at its stack size.
+---@param product string The suggested product
+---@param machines {id: number, recipe: string, places_results: boolean}[] The exported machines
+---@param inserters {source: table, sink: table, filters: string[]|nil}[] The exported inserters, with their config ends
+---@param belts table<number, {belt_type: string, lanes: {ingredient: string|nil, stack_size: number}[]}> The exported belts by id
+---@return {belt_id: number, items_per_second: number}|nil
+function suggested_target.output_belt(product, machines, inserters, belts)
+    local making = {}
+    local count = 0
+    for _, machine in ipairs(machines) do
+        local recipe = prototypes.recipe[machine.recipe]
+        local main = recipe and main_product_of(recipe)
+        if main and main.name == product then
+            if machine.places_results then
+                return nil
+            end
+            making[machine.id] = false
+            count = count + 1
+        end
+    end
+    if count == 0 then
+        return nil
+    end
+    local belt_id = nil
+    local carrying = {}
+    for _, inserter in ipairs(inserters) do
+        local source = inserter.source
+        if source.type == "machine" and making[source.id] ~= nil then
+            local carries = true
+            if inserter.filters and #inserter.filters > 0 then
+                carries = false
+                for _, name in ipairs(inserter.filters) do
+                    if name == product then carries = true end
+                end
+            end
+            if carries then
+                if inserter.sink.type ~= "belt" or (belt_id and belt_id ~= inserter.sink.id) then
+                    return nil
+                end
+                belt_id = inserter.sink.id
+                making[source.id] = true
+                table.insert(carrying, inserter)
+            end
+        end
+    end
+    for _, fed in pairs(making) do
+        if not fed then
+            return nil
+        end
+    end
+    local belt = belt_id and belts[belt_id]
+    if not belt or #belt.lanes == 0 then
+        return nil
+    end
+    local lanes = {}
+    if #belt.lanes == 1 then
+        lanes = { 1, 2 }
+    else
+        for index, lane in ipairs(belt.lanes) do
+            if lane.ingredient == product then table.insert(lanes, index) end
+        end
+    end
+    if #lanes == 0 then
+        return nil
+    end
+    local total = 0
+    for _, lane in ipairs(lanes) do
+        local capacity = lane_capacity(belt.belt_type, belt.lanes[math.min(lane, #belt.lanes)].stack_size)
+        if not capacity then
+            return nil
+        end
+        total = total + capacity
+    end
+    return { belt_id = belt_id, items_per_second = total }
+end
+
+---A suggestion held to the belt its product is put on: the lower of what the machines make and what that belt carries.
+---The rate is the total for all the copies, as the suggestion is for copies 1 with every selected machine in it.
+---@param suggestion SuggestedTarget|nil
+---@param belt {belt_id: number, items_per_second: number}|nil What suggested_target.output_belt gives
+---@return SuggestedTarget|nil suggestion The suggestion, lowered where the belt carries less
+---@return {belt_id: number, machines_per_second: number}|nil limit The belt and what the machines make, where it is lowered
+function suggested_target.held_to_belt(suggestion, belt)
+    if not suggestion or not belt or not (suggestion.items_per_second > belt.items_per_second) then
+        return suggestion, nil
+    end
+    local made = suggestion.items_per_second
+    suggestion.items_per_second = belt.items_per_second
+    return suggestion, { belt_id = belt.belt_id, machines_per_second = made }
 end
 
 return suggested_target
