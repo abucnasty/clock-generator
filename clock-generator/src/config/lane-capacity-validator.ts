@@ -57,6 +57,23 @@ export interface LaneLoad {
 
 const above = (a: Fraction, b: Fraction): boolean => a.subtract(b).getNumerator > 0;
 
+/**
+ * The lanes, by place in the belt's `lanes`, that an inserter's drop of an item can land on: its `drop.lane` when it has
+ * one, else the lanes that list the item. A belt that lists one lane says nothing of the side an inserter drops on
+ * (`drop.lane` is 1 there even on the right lane), so its drops can fill both.
+ */
+export function dropLanesOf(belt: Pick<Config['belts'][number], 'lanes'>, sink: { drop?: { lane: 1 | 2 } }, item: string): number[] {
+    if (belt.lanes.length === 1) return [1, 2];
+    if (sink.drop !== undefined) return [sink.drop.lane];
+    return belt.lanes.flatMap((lane, index) => lane.ingredient === item ? [index + 1] : []);
+}
+
+/** What a set of lanes of a belt carries at most, items a second: each lane's capacity at its stack size */
+export function lanesCapacityOf(belt: Config['belts'][number], lanes: readonly number[]): Fraction {
+    const belt_speed = beltSpeedOf(belt.type);
+    return lanes.reduce((sum, lane) => sum.add(laneItemsPerSecond(belt_speed, laneStackFor(belt, lane))), fraction(0));
+}
+
 /** The flows of one unit at the target, from the planner's transfer plan */
 function laneFlowsOf(config: Config): LaneFlow[] {
     const registry = createEntityRegistryFromConfig(config);
@@ -80,9 +97,7 @@ function laneFlowsOf(config: Config): LaneFlow[] {
             const sink = inserter.sink;
             const onto = sink.type === 'belt' ? config.belts.find(it => it.id === sink.id) : undefined;
             if (onto !== undefined && sink.type === 'belt') {
-                // a belt that lists one lane says nothing of the side an inserter drops on (`drop.lane` is 1 there
-                // even on the right lane), so its drops can fill both
-                const lanes = onto.lanes.length === 1 ? [1, 2] : sink.drop !== undefined ? [sink.drop.lane] : listing(onto);
+                const lanes = dropLanesOf(onto, sink, item.item_name);
                 if (lanes.length > 0) flows.push({ inserter_id, belt_id: onto.id, kind: 'drop', lanes, items_per_second });
             }
         }

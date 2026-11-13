@@ -1,6 +1,6 @@
 import type { SuggestedTarget } from 'clock-generator/browser';
 import { formatNumberText } from './numberText';
-import { nameInSentence } from './entityLabel';
+import { entityLabel, nameInSentence } from './entityLabel';
 
 /** A target output, as the form and the export hold it */
 export interface TargetValues {
@@ -42,8 +42,28 @@ export function targetRowLabel(target: TargetValues, name: (id: string) => strin
     return `Setpoint: ${name(target.recipe)}, up to ${formatNumberText(target.items_per_second, { maxDecimals: TARGET_DECIMALS })}/s, ${copiesText(target.copies)}`;
 }
 
-/** Where the suggestion came from, and that it is a ceiling */
-export function targetRowCaption(source: SuggestedTarget['source']): string {
+/**
+ * Where the suggestion came from, and that it is a ceiling. Where it is lowered to what the belt the product is put on
+ * carries, it says so, with what the machines make. Where it is lowered to the most the build can hold, it gives the
+ * engine's words for the limit that decided it (`targetRateMaxOf`'s `limit`), or what the machines make where it has none.
+ */
+export function targetRowCaption(source: SuggestedTarget['source'], beltLimit?: SuggestedTarget['belt_limit'],
+    buildLimit?: SuggestedTarget['build_limit']): string {
+    const from = source === 'mod' ? 'From the Factorio export' : 'Estimated from the imported machines';
+    const after = source === 'mod' ? 'You can lower the rate after importing.' : 'You can lower the rate in the Setpoint panel after importing.';
+    if (buildLimit !== undefined) {
+        return buildLimit.text !== null
+            ? `${from}, lowered to the most the build can hold. ${buildLimit.text}`
+            : `${from}, lowered to the most the build can hold. The machines make up to `
+                + `${formatNumberText(buildLimit.machines_per_second, { maxDecimals: TARGET_DECIMALS })}/s. ${after}`;
+    }
+    if (beltLimit !== undefined) {
+        const lowered = `lowered to what ${entityLabel('belt', beltLimit.belt_id)} carries. The machines make up to `
+            + `${formatNumberText(beltLimit.machines_per_second, { maxDecimals: TARGET_DECIMALS })}/s.`;
+        return source === 'mod'
+            ? `From the Factorio export, ${lowered} You can lower the rate after importing.`
+            : `Estimated from the imported machines, ${lowered} You can lower the rate in the Setpoint panel after importing.`;
+    }
     return source === 'mod'
         ? 'From the Factorio export. This is the maximum output; you can lower the rate after importing.'
         : 'Estimated maximum output of the imported machines. You can lower the rate in the Setpoint panel after importing.';

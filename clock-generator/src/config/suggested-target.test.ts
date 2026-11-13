@@ -3,7 +3,8 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import * as O from "fp-ts/Option";
 import { computeMachineFacts } from "../entities/traits/machine-facts-of";
-import { MachineConfiguration, MachineConfigurationSchema } from "./schema";
+import { targetRateMaxOf } from "../crafting/feasibility/max-rate";
+import { BeltConfig, Config, ConfigSchema, InserterConfig, MachineConfiguration, MachineConfigurationSchema } from "./schema";
 import { checkSidecarImport, LATEST_SIDECAR_VERSION } from "./sidecar-version";
 import { inferSuggestedTarget, parseSuggestedTarget, suggestedTargetOf } from "./suggested-target";
 
@@ -187,6 +188,118 @@ describe("suggestedTargetOf", () => {
     it("suggests nothing with no target and no usable machines", () => {
         expect(suggestedTargetOf(undefined, [])).toEqual(O.none);
         expect(suggestedTargetOf(null, machines(assembler("no-such-recipe")))).toEqual(O.none);
+    });
+});
+
+describe("suggestedTargetOf, held to the belt the product is put on", () => {
+    // the automation science sample's unit, nine times in one selection as a paste gives it: copies 1, nine machines
+    // that make 248.006 a second together, all dropping onto belt 2, a turbo belt with stacks of 4 (240 a second)
+    const sample = JSON.parse(fs.readFileSync(
+        path.resolve(__dirname, "../../resources/config-samples/science/automation/automation-240.json"), "utf8",
+    )) as Config;
+    const pasted = (count: number, output_belt: Partial<BeltConfig> = {}) => {
+        const unit = sample.machines[0];
+        const machines = Array.from({ length: count }, (_, index) => ({ ...unit, id: index + 1 }));
+        const inserters: InserterConfig[] = machines.flatMap(machine => [
+            { ...sample.inserters[0], sink: { type: "machine" as const, id: machine.id } },
+            { ...sample.inserters[1], source: { type: "machine" as const, id: machine.id } },
+        ]).map((inserter, index) => ({ ...inserter, id: index + 1 }));
+        const belts = [sample.belts[0], { ...sample.belts[1], ...output_belt } as BeltConfig];
+        return { machines, outputs: { inserters, belts } };
+    };
+    const from_mod = (machines: readonly MachineConfiguration[]) => O.toNullable(inferSuggestedTarget(machines))!;
+
+    it("lowers the suggestion to what the output belt carries: 248.006 a second against 240", () => {
+        const { machines, outputs } = pasted(9);
+        expect(from_mod(machines).items_per_second).toBeCloseTo(248.006, 3);
+        for (const raw of [from_mod(machines), undefined]) {
+            const suggested = O.toNullable(suggestedTargetOf(raw, machines, outputs));
+            expect(suggested?.target).toEqual({ recipe: "automation-science-pack", items_per_second: 240, copies: 1 });
+            expect(suggested?.belt_limit).toEqual({ belt_id: 2, machines_per_second: from_mod(machines).items_per_second });
+        }
+    });
+
+    describe("with the rest of the paste, held to the most the build can hold", () => {
+        // the input belt is a fast belt: each ingredient lane carries 60 a second, so the build holds at most 120 a
+        // second, less than the turbo output belt's 240
+        const slow_input = () => {
+            const { machines, outputs } = pasted(9);
+            const belts = [{ ...outputs.belts[0], type: "fast-transport-belt" } as BeltConfig, outputs.belts[1]];
+            return { machines, outputs: { ...outputs, belts } };
+        };
+        const configAt = (items_per_second: number, machines: MachineConfiguration[], outputs: { inserters: InserterConfig[], belts: BeltConfig[] }) =>
+            ConfigSchema.parse({ setpoint: { recipe: "automation-science-pack", items_per_second, copies: 1 }, overrides: {}, machines,
+                inserters: outputs.inserters, belts: outputs.belts, chests: [] }) as Config;
+
+        it("lowers it to an input lane that allows less than the output belt, and gives the engine's words for that limit", () => {
+            const { machines, outputs } = slow_input();
+            const made = from_mod(machines).items_per_second;
+            const suggested = O.toNullable(suggestedTargetOf(from_mod(machines), machines, outputs, { chests: [], drills: [] }));
+            const most = targetRateMaxOf(configAt(made, machines, outputs));
+            expect(most?.cut).toMatch(/^C2 /);
+            expect(suggested).toEqual({ target: { recipe: "automation-science-pack", items_per_second: 120, copies: 1 }, source: "mod",
+                build_limit: { machines_per_second: made, text: most!.limit } });
+            expect(most!.limit).toMatch(/^At most 60 a second of (copper plate|iron gear wheel) reaches the machines/);
+            // at the suggested rate the site's check finds nothing above the most
+            const at_suggested = targetRateMaxOf(configAt(suggested!.target.items_per_second, machines, outputs));
+            expect(at_suggested!.per_copy_per_second).toBeGreaterThanOrEqual(suggested!.target.items_per_second);
+            expect(at_suggested!.limit).toBeNull();
+        });
+
+        it("names the output belt where it is the lower limit, as without the rest of the paste", () => {
+            const { machines, outputs } = pasted(9, { type: "fast-transport-belt" });
+            expect(suggestedTargetOf(from_mod(machines), machines, outputs, { chests: [], drills: [] }))
+                .toEqual(suggestedTargetOf(from_mod(machines), machines, outputs));
+        });
+
+        it("leaves a paste with no belts as it is", () => {
+            const { machines, outputs } = pasted(9);
+            const no_belts = { inserters: outputs.inserters.filter(inserter => inserter.sink.type !== "belt" && inserter.source.type !== "belt"), belts: [] };
+            expect(O.toNullable(suggestedTargetOf(from_mod(machines), machines, no_belts, { chests: [], drills: [] })))
+                .toEqual({ target: from_mod(machines), source: "mod" });
+        });
+    });
+
+    it("keeps the reason for an export the sidecar already lowered to what the belt carries", () => {
+        const { machines, outputs } = pasted(9);
+        const lowered = { recipe: "automation-science-pack", items_per_second: 240, copies: 1 };
+        expect(O.toNullable(suggestedTargetOf(lowered, machines, outputs))).toEqual({ target: lowered, source: "mod",
+            belt_limit: { belt_id: 2, machines_per_second: from_mod(machines).items_per_second } });
+    });
+
+    it("lowers it to a slower belt: a fast belt carries 120, which the engine's most for the build says too", () => {
+        const { machines, outputs } = pasted(9, { type: "fast-transport-belt" });
+        const suggested = O.toNullable(suggestedTargetOf(from_mod(machines), machines, outputs));
+        expect(suggested?.target.items_per_second).toBe(120);
+        // the build as the paste gives it, with the suggestion as its setpoint
+        const config = { setpoint: { recipe: "automation-science-pack", items_per_second: 120, copies: 1 }, overrides: {}, machines,
+            inserters: outputs.inserters, belts: outputs.belts, chests: [] };
+        const most = targetRateMaxOf(ConfigSchema.parse(config) as Config);
+        expect(most?.cut).toBe("C3 automation-science-pack");
+        expect(most?.per_copy_per_second).toBe(suggested?.target.items_per_second);
+    });
+
+    it("keeps the machines' rate when the belt carries more", () => {
+        const { machines, outputs } = pasted(1);
+        const suggested = O.toNullable(suggestedTargetOf(from_mod(machines), machines, outputs));
+        expect(suggested).toEqual({ target: from_mod(machines), source: "mod" });
+    });
+
+    it("keeps the machines' rate when the product goes into a chest, not onto a belt", () => {
+        const { machines, outputs } = pasted(9);
+        const into_chest = outputs.inserters.map(inserter => inserter.sink.type === "belt"
+            ? { ...inserter, sink: { type: "chest" as const, id: 1 } } : inserter);
+        const suggested = O.toNullable(suggestedTargetOf(from_mod(machines), machines, { ...outputs, inserters: into_chest }));
+        expect(suggested).toEqual({ target: from_mod(machines), source: "mod" });
+    });
+
+    it("keeps the machines' rate when the product goes onto more than one belt", () => {
+        const { machines, outputs } = pasted(9);
+        const third = { ...outputs.belts[1], id: 3 } as BeltConfig;
+        const split = outputs.inserters.map((inserter, index) => inserter.sink.type === "belt" && index > 9
+            ? { ...inserter, sink: { ...inserter.sink, id: 3 } } : inserter);
+        const suggested = O.toNullable(suggestedTargetOf(from_mod(machines), machines, { inserters: split, belts: [...outputs.belts, third] }));
+        expect(suggested).toEqual({ target: from_mod(machines), source: "mod" });
     });
 });
 

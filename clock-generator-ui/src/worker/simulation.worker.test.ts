@@ -10,6 +10,9 @@ import { createDefaultConfig } from '../utils/configForm/formData';
 import { applyPaste } from '../utils/pastePreview';
 import { buildValidationIssues, refusedInserterIdsOf, type ValidationDiagnostic } from '../utils/buildValidation';
 import { timelineRequestFor } from '../utils/timelineRequest';
+import { Option } from 'clock-generator/light';
+import { targetToFill } from '../utils/pasteTarget';
+import { isTargetAboveMax, rateMaxOf } from '../utils/targetRateLimit';
 import type { ClockAlternativeView } from './types';
 
 /** Every response the worker posted in this test, in order */
@@ -140,6 +143,49 @@ it('keeps an out-of-order recycler machine target, byproduct belt, and bend capt
         sink: { type: 'belt', id: 90 }, filters: ['advanced-circuit'] });
     expect(roundTripped.inserters.find(inserter => inserter.id === 32)?.source).toMatchObject({ id: 22,
         pickup_layout: 'bend-right-upstream', pickup_capture: capture });
+});
+
+it('suggests no more than the output belt carries: nine automation science assemblers make 248.006 a second onto a belt of 240', async () => {
+    const machines = Array.from({ length: 9 }, (_, i) => ({ id: i + 1, recipe: 'automation-science-pack', crafting_speed: 68.890625,
+        productivity: 100, prototype: 'assembling-machine-3' }));
+    const pasted = await ask({
+        kind: 'pasted-entities', sidecar_version: LATEST_SIDECAR_VERSION, drills: [], chests: [], machines,
+        suggested_target: { recipe: 'automation-science-pack', items_per_second: 248.00625000000002, copies: 1 },
+        belts: [{ id: 2, type: 'turbo-transport-belt', lanes: [{ ingredient: 'automation-science-pack', stack_size: 4 }] }],
+        inserters: machines.map(machine => ({ id: machine.id, source: { type: 'machine', id: machine.id }, sink: { type: 'belt', id: 2 },
+            prototype: 'stack-inserter', quality: 'legendary' })),
+    });
+    expect(pasted.suggested_target).toEqual({ _tag: 'Some', value: {
+        target: { recipe: 'automation-science-pack', items_per_second: 240, copies: 1 }, source: 'mod',
+        belt_limit: { belt_id: 2, machines_per_second: 248.00625000000002 } } });
+});
+
+it('suggests the most the build can hold where an input lane allows less than the output belt, and the page then finds no rate above it', async () => {
+    const machines = Array.from({ length: 9 }, (_, i) => ({ id: i + 1, recipe: 'automation-science-pack', crafting_speed: 68.890625,
+        productivity: 100, prototype: 'assembling-machine-3' }));
+    const pickup = { type: 'belt', id: 1, near_lane: 2, pickup_length: 1, pickup_layout: 'side-straight', pickup_capture: { status: 'supported',
+        entity_type: 'transport-belt', entity_name: 'fast-transport-belt', sidecar_version: LATEST_SIDECAR_VERSION, model: 'belt', model_version: 2 } };
+    const pasted = await ask({
+        kind: 'pasted-entities', sidecar_version: LATEST_SIDECAR_VERSION, drills: [], chests: [], machines,
+        suggested_target: { recipe: 'automation-science-pack', items_per_second: 248.00625000000002, copies: 1 },
+        // a fast input belt: 60 a second of each ingredient, so the build holds at most 120 a second
+        belts: [{ id: 1, type: 'fast-transport-belt', flow_direction: 4, lanes: [{ ingredient: 'iron-gear-wheel', stack_size: 4, lane_end: { kind: 'dead_end' } },
+            { ingredient: 'copper-plate', stack_size: 4, lane_end: { kind: 'dead_end' } }] },
+            { id: 2, type: 'turbo-transport-belt', lanes: [{ ingredient: 'automation-science-pack', stack_size: 4 }] }],
+        inserters: machines.flatMap(machine => [
+            { id: 2 * machine.id - 1, source: pickup, sink: { type: 'machine', id: machine.id }, prototype: 'stack-inserter', quality: 'legendary', stack_size: 16 },
+            { id: 2 * machine.id, source: { type: 'machine', id: machine.id }, sink: { type: 'belt', id: 2 }, prototype: 'stack-inserter', quality: 'legendary', stack_size: 16 },
+        ]),
+    });
+    const suggestion = Option.toNullable(pasted.suggested_target)!;
+    expect(suggestion.target.items_per_second).toBe(120);
+    expect(suggestion.belt_limit).toBeUndefined();
+    expect(suggestion.build_limit?.text).toMatch(/^At most 60 a second of (copper plate|iron gear wheel) reaches the machines that need it/);
+    const config = formDataToConfig(pastedAndSaved(pasted));
+    config.setpoint = targetToFill(suggestion);
+    const most = await ask({ kind: 'target-rate-max', config });
+    expect(isTargetAboveMax(config.setpoint.items_per_second, config.setpoint.copies, rateMaxOf(null, { max: most, current: true }))).toBe(false);
+    expect(most?.limit).toBeNull();
 });
 
 describe('repeated units: the real engine separates Check and generation recovery, the recomputed conversion and query failure', () => {

@@ -83,7 +83,8 @@ A belt from which no inserter removes items has no lane ends and no flow directi
 ## Suggested target
 
 The export gives a suggested target output: the product that goes out of your selection, and the maximum rate at
-which the machines can make it, in items each second.
+which the machines can make it, in items each second. If the belt that the output inserters put the product on
+carries less, the rate is what that belt carries. The sidecar window then shows both rates.
 
 ### Copy spacing
 
