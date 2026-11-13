@@ -67,7 +67,73 @@ describe("combineClockAlternativeRuns", () => {
             { setpoint: { items_per_second: 10 } } as Config);
         expect(ranking("stable", "moving")).toEqual(ranking("stable", "backed_up"));
         expect(Object.keys(ranking("stable", "moving")).sort()).toEqual(["holds_expected_output", "meets_target_rate", "rate_off_target",
-            "recovery_untried", "recovery_window_cycles", "wake_ups_per_minute", "window_count"]);
+            "recovery_untried", "recovery_window_cycles", "signals_per_minute", "wake_ups_per_minute", "window_count"]);
+    });
+
+    // the list of clocks shows each clock's signals a minute from its assessment: the ranking reads the same figure
+    it("ranks a clock by the signals a minute of its assessment, null where they were not counted", () => {
+        const ranking = (signals_per_minute: number | null | undefined) => rankingOf({ verdict: "stable", deadlock_risks: [],
+            assessment: { items_per_second: 10, wake_ups_per_minute: 30, holds: true, disturbance_trial: {},
+                ...(signals_per_minute !== undefined && { signals_per_minute }) },
+            ranking_window_count: 4 } as unknown as Omit<ClockAlternative, "ranking">,
+            { setpoint: { items_per_second: 10 } } as Config);
+        expect(ranking(138.4).signals_per_minute).toBe(138.4);
+        expect(ranking(null).signals_per_minute).toBeNull();
+        expect(ranking(undefined).signals_per_minute).toBeNull();
+    });
+
+    // a build with Pitch Pickups of 1 swing and Takt Batches of 2 swings, both at 452 wakeups a minute: 138 signals a
+    // minute against 100, where the 1-swing clock recovered in 6 window cycles against 10
+    it("selects, of clocks equal on wake-ups, the one with fewer signals a minute, before the window cycles to recover", () => {
+        expect(selectedOf([
+            clock("more-signals", { wake_ups_per_minute: 452, signals_per_minute: 138, recovery_window_cycles: 6, window_count: 4 }),
+            clock("fewer-signals", { wake_ups_per_minute: 452, signals_per_minute: 100, recovery_window_cycles: 10, window_count: 8 }),
+        ])).toBe("fewer-signals");
+    });
+
+    it("does not let fewer signals overturn fewer wake-ups", () => {
+        expect(selectedOf([
+            clock("fewer-signals", { wake_ups_per_minute: 452.002, signals_per_minute: 10 }),
+            clock("fewer-wake-ups", { wake_ups_per_minute: 452, signals_per_minute: 900 }),
+        ])).toBe("fewer-wake-ups");
+    });
+
+    it("compares the signals to a thousandth, as the wake-ups", () => {
+        expect(selectedOf([
+            clock("first", { signals_per_minute: 100.0004, recovery_window_cycles: 9 }),
+            clock("sooner", { signals_per_minute: 100, recovery_window_cycles: 3 }),
+        ])).toBe("sooner");
+    });
+
+    it("ranks a clock whose signals were not counted after one whose were, and as one with none where neither was", () => {
+        expect(selectedOf([
+            clock("not-counted", { signals_per_minute: null, recovery_window_cycles: 1, window_count: 1 }),
+            clock("counted", { signals_per_minute: 5000, recovery_window_cycles: 30, window_count: 30 }),
+        ])).toBe("counted");
+        // a ranking kept from before the signals ranked has no figure: it ranks as one not counted
+        expect(selectedOf([
+            clock("kept", { recovery_window_cycles: 1 }),
+            clock("counted", { signals_per_minute: 5000, recovery_window_cycles: 30 }),
+        ])).toBe("counted");
+        expect(selectedOf([
+            clock("kept-slow", { recovery_window_cycles: 30 }),
+            clock("not-counted-sooner", { signals_per_minute: null, recovery_window_cycles: 2 }),
+        ])).toBe("not-counted-sooner");
+    });
+
+    it("leaves a tie on wake-ups and signals to the window cycles to recover, then the windows, then the first listed", () => {
+        expect(selectedOf([
+            clock("slow", { signals_per_minute: 100, recovery_window_cycles: 10, window_count: 2 }),
+            clock("sooner", { signals_per_minute: 100.0004, recovery_window_cycles: 6, window_count: 9 }),
+        ])).toBe("sooner");
+        expect(selectedOf([
+            clock("more-windows", { signals_per_minute: 100, recovery_window_cycles: 6, window_count: 9 }),
+            clock("fewer-windows", { signals_per_minute: 100, recovery_window_cycles: 6, window_count: 2 }),
+        ])).toBe("fewer-windows");
+        expect(selectedOf([
+            clock("first", { signals_per_minute: 100, recovery_window_cycles: 6, window_count: 2 }),
+            clock("second", { signals_per_minute: 100, recovery_window_cycles: 6, window_count: 2 }),
+        ])).toBe("first");
     });
 
     it("selects the fewest windows among clocks with the same wake-ups, and the first listed among equals", () => {
@@ -207,6 +273,12 @@ describe("the order of combineClockAlternativeRuns", () => {
             clock("more", { wake_ups_per_minute: 12 }),
             clock("fewer", { wake_ups_per_minute: 8, window_count: 30 }),
             clock("fewer-too", { wake_ups_per_minute: 8.0004, window_count: 20 }),
+        ], ["fewer-too", "fewer", "more", "not-counted"]],
+        ["then the signals a minute to a thousandth, a count before none", [
+            clock("not-counted", { signals_per_minute: null, recovery_window_cycles: 1, window_count: 1 }),
+            clock("more", { signals_per_minute: 138, recovery_window_cycles: 6 }),
+            clock("fewer", { signals_per_minute: 100, recovery_window_cycles: 10, window_count: 30 }),
+            clock("fewer-too", { signals_per_minute: 100.0004, recovery_window_cycles: 10, window_count: 20 }),
         ], ["fewer-too", "fewer", "more", "not-counted"]],
         ["then the window cycles to recover after a stop, a count before none", [
             clock("untimed", { wake_ups_per_minute: 0, recovery_window_cycles: null, window_count: 1 }),

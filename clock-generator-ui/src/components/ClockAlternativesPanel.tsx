@@ -57,7 +57,7 @@ const COMPARE_COPY = {
         + 'Per-inserter counts may be fractional. The clock repeats after a whole number of output cycles (the window cycle).',
     decidersHelp: 'How many decider combinators the clock\'s blueprint has to switch inserters and drills on and off, not counting the clock itself. Each one is wired to the inserters and drills its description names, so fewer deciders is less wiring to do by hand.',
     windowsHelp: 'How many enable windows the clock has in all: stretches of ticks during which it switches an inserter on.',
-    signalsHelp: SIGNAL_DEFINITION + ' Counted per minute for one copy of the build, in the same run as the wakeups. No clock is ranked by signals.',
+    signalsHelp: SIGNAL_DEFINITION + ' Counted per minute for one copy of the build, in the same run as the wakeups. Of clocks with the same wakeups, the one with fewer signals ranks first.',
     wakeUpsHelp: WAKEUP_DEFINITION + ' Counted per minute, summed over the inserters of one copy of the build '
         + 'in a long run of this clock. Shown for clocks that were run long enough to count them. It is the count from '
         + 'one start point, but on a build with a loop of machines: a clock there settles into another steady state from '
@@ -130,7 +130,7 @@ function StatusHelp() {
     );
 }
 
-/** The (?) of the Rank head: the engine's six keys in order, and whether the slower searches ran */
+/** The (?) of the Rank head: the engine's seven keys in order, and whether the slower searches ran */
 function RankHelp({ pickRule }: { pickRule: PickRule | null }) {
     const { rank, rankLead, rankKeys, rankTie, rankFirst } = RECOMMENDED_COPY;
     return (

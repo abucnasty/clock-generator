@@ -160,6 +160,21 @@ describe('recommendationReason', () => {
     ])('%s', says);
 
 
+    // Pitch Pickups of 1 swing and Takt Batches of 2 swings at 452 wakeups a minute: 138 signals against 100
+    it('says the pick sends fewer signals when it ties on wakeups with clocks that send more, whatever their recovery', () => {
+        const pick = clock('fewer', { wake_ups_per_minute: 452, signals_per_minute: 100, recovery_window_cycles: 10 });
+        const more = clock('more', { wake_ups_per_minute: 452, signals_per_minute: 138, recovery_window_cycles: 6 });
+        sentences(recommendationReason([more, pick], 1, true, false),
+            'Fewest wakeups of the clocks that keep making 240/s and go back to it after a stop.' + RECOMMENDED_COPY.tieOnSignals(1));
+    });
+
+    it('goes on to the recovery when the clocks tie on wakeups and signals', () => {
+        const pick = clock('fast', { wake_ups_per_minute: 0, signals_per_minute: 50, recovery_window_cycles: 3 });
+        const slow = clock('slow', { wake_ups_per_minute: 0, signals_per_minute: 50.0004, recovery_window_cycles: 33 });
+        sentences(recommendationReason([slow, pick], 1, true, false),
+            'Fewest wakeups of the clocks that keep making 240/s and go back to it after a stop.' + RECOMMENDED_COPY.tieOnRecovery(1));
+    });
+
     it('says the pick recovers sooner when it ties on wakeups with clocks that take longer to get back', () => {
         const pick = clock('fast', { wake_ups_per_minute: 0, recovery_window_cycles: 3, window_count: 9 });
         const slow = clock('slow', { wake_ups_per_minute: 0, recovery_window_cycles: 33, window_count: 2 });
@@ -219,13 +234,13 @@ describe('RECOMMENDED_COPY', () => {
         expect(RECOMMENDED_COPY.rankKeys[0]).toContain('On a build with a deadlock risk, it holds the setpoint.');
     });
 
-    it('names the six keys of the engine\'s order in the help of the Rank column, in order, and rank 1 as the recommended clock', () => {
+    it('names the seven keys of the engine\'s order in the help of the Rank column, in order, and rank 1 as the recommended clock', () => {
         const { rankKeys, rankFirst, rankTie } = RECOMMENDED_COPY;
-        expect(rankKeys).toHaveLength(6);
-        // the tier, the distance from the setpoint, holding the output, the wakeups, the recovery, the enable windows
-        ['rounded to whole ticks', 'nearer to the setpoint', 'holds its output', 'fewer wakeups', 'fewer window cycles', 'fewer enable windows']
+        expect(rankKeys).toHaveLength(7);
+        // the tier, the distance from the setpoint, holding the output, the wakeups, the signals, the recovery, the enable windows
+        ['rounded to whole ticks', 'nearer to the setpoint', 'holds its output', 'fewer wakeups', 'fewer signals', 'fewer window cycles', 'fewer enable windows']
             .forEach((words, key) => expect(rankKeys[key]).toContain(words));
-        expect(rankTie).toBe('Clocks that are equal on all six keep the order they were made in.');
+        expect(rankTie).toBe('Clocks that are equal on all seven keep the order they were made in.');
         expect(rankFirst).toBe('Rank 1 is the recommended clock.');
     });
 

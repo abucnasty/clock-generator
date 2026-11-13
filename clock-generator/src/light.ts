@@ -43,7 +43,7 @@ export type {
 
 export { StatusCategory, statusToCategory } from "./state/status-category";
 
-export { combineClockAlternativeRuns, searchesAreNeeded, searchesToRun } from "./crafting/rank";
+export { combineClockAlternativeRuns, searchesAreNeeded, searchesToRun, signalsKey } from "./crafting/rank";
 
 export { coordinatedSourcesInputOf } from "./crafting/candidates/coordinated-sources-parts";
 

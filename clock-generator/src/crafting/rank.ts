@@ -54,9 +54,16 @@ export interface ClockRanking {
     /** Null when they were not counted, which ranks after any count */
     wake_ups_per_minute: number | null;
     /**
+     * The signals a minute the clock's window deciders send (`ClockAssessment.signals_per_minute`, the figure the list of
+     * clocks shows for one copy). Of clocks equal on wake-ups the one with fewer comes first (decided 2026-11-13, abucnasty:
+     * "if wakeups per minute are tied, then the one with less signals per minute should win"). Null where they were not
+     * counted, and absent from a ranking kept from before it; either ranks after any count.
+     */
+    signals_per_minute?: number | null;
+    /**
      * The most window cycles the clock took to be back at its expected output over its backpressure loss trials
      * (`DisturbanceTrialVerdict.recovered_after_window_cycles`); null where it was not tried or does not get back, and absent
-     * from a ranking kept from before 0.26.0. Of clocks equal on wake-ups the one that recovers sooner comes first
+     * from a ranking kept from before 0.26.0. Of clocks equal on wake-ups and signals the one that recovers sooner comes first
      * (decided 2026-10-31: on the container wagons, even hands recovered from the second cut of an input within 5
      * window cycles in the game where another clock of 0 wake-ups too took 33 to 48).
      */
@@ -119,6 +126,7 @@ export function rankingOf(clock: Omit<ClockAlternative, "ranking">, config: Conf
         rate_off_target,
         holds_expected_output: clock.verdict !== "unstable",
         wake_ups_per_minute: clock.assessment.wake_ups_per_minute,
+        signals_per_minute: clock.assessment.signals_per_minute ?? null,
         recovery_window_cycles: clock.assessment.disturbance_trial?.recovered_after_window_cycles ?? null,
         window_count: clock.ranking_window_count,
     };
@@ -168,13 +176,23 @@ export function costKey(ranking: Pick<ClockRanking, "wake_ups_per_minute">): num
 }
 
 /**
- * The dominance rule behind the skip of the searches at 0 wakeups: under today's ranking no search can beat a selected
- * clock of 0 wakeups. The selection puts the fewest wakeups a minute (to a thousandth, as `costKey` compares) before
- * the window cycles to get back from a loss and then the window count. 0 wakeups is the floor of the first key and 1 window cycle
- * the floor of the second, so a search can at best tie a clock of 0 wakeups on those. The window count is no floor: a
- * search could in principle tie on both and have fewer windows. Lifting the skip on all 86 record jobs found no such
- * clock (0 new; 1 duplicate of the selected clock), but that is a measure, not part of the rule. The rule is not a
- * cost skip; it holds only while the ranking puts wakeups first among these keys. A cost not counted (null) is not 0.
+ * Signals a minute as the selection compares them, after the wake-ups: to a thousandth, as `costKey` compares those and for
+ * the same reason. Not counted (null), or absent from a ranking kept from before the key, ranks after any count.
+ */
+export function signalsKey(ranking: Pick<ClockRanking, "signals_per_minute">): number {
+    const signals = ranking.signals_per_minute;
+    return signals === null || signals === undefined ? Infinity : Math.round(signals * 1000);
+}
+
+/**
+ * The rule behind the skip of the searches at 0 wakeups: no search can have fewer wakeups than a selected clock of 0.
+ * The selection puts the fewest wakeups a minute (to a thousandth, as `costKey` compares) first among the keys after the
+ * tier; then the signals a minute, the window cycles to get back from a loss and the window count. 0 wakeups is the floor
+ * of the first key, so a search can at best tie a clock of 0 wakeups on it. The keys after it are no floor: a search could
+ * in principle tie on wakeups and have fewer signals, or tie on those and get back sooner or have fewer windows. Lifting
+ * the skip on all 86 record jobs found no such clock, before the signals were a key (0 new; 1 duplicate of the selected
+ * clock), but that is a measure, not part of the rule. The rule is not a cost skip; it holds only while the ranking puts
+ * wakeups first among these keys. A cost not counted (null) is not 0.
  */
 export function noSearchCanBeat(ranking: Pick<ClockRanking, "wake_ups_per_minute">): boolean {
     return costKey(ranking) <= 0;
@@ -220,7 +238,7 @@ export function searchesToRun<T, S extends { id: string }>(
 }
 
 /**
- * The windows an alternative is ranked by, between clocks with the same wake-ups: those it has without the windows of
+ * The windows an alternative is ranked by, between clocks equal on the keys before them: those it has without the windows of
  * the inserters of a loop, which only reduce idle checks and must never count against a clock, so its windows rank as
  * they would with those inserters always enabled.
  */
@@ -240,8 +258,8 @@ export function rankingWindowCount(
  * Lists runs in order, skipping duplicates, and selects one. The alternatives that meet the target rate (goal 1) come
  * first: those at exactly the target rate and tried, then those rounded down to whole ticks that run at most 0.1% fast
  * and were tried, then those whose recovery could not be tried; then the fewest wake-ups a
- * minute (goal 2); then the fewest window cycles to get back from a loss; then the fewest windows. Of equals the first listed
- * is selected.
+ * minute (goal 2); then the fewest signals a minute; then the fewest window cycles to get back from a loss; then the fewest
+ * windows. Of equals the first listed is selected.
  *
  * Where none meets the target rate, those stable above it come first (`stable_above_target`), the nearest to it
  * first: the build then runs at least at what was asked, on a clock that holds and recovers. Where none is either, the
@@ -281,7 +299,9 @@ export function combineClockAlternativeRuns<T>(
             ranking.meets_target_rate || ranking.holds_expected_output ? 0 : 1,
             // to a thousandth: less than that is the rounding of a division, not a difference between two clocks
             costKey(ranking),
-            // of equals on cost, the one that gets back from a loss sooner
+            // of equals on cost, the one whose deciders send fewer signals, to a thousandth as the wake-ups
+            signalsKey(ranking),
+            // then the one that gets back from a loss sooner
             ranking.recovery_window_cycles ?? Infinity,
             ranking.window_count,
         ];
