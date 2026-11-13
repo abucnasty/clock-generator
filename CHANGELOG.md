@@ -27,8 +27,10 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: the Timeline drops the wakeups of one copy and the chart's key hint
 - ui: the install dialog's caption no longer names the Factorio version
 - ui: empty run overrides and empty Explanation labels are no longer shown
+- ui: Overview's notes on the clock no longer say that swings land off the plan
 
 ### Changed
+- ui: each note on the selected clock is one line, and Details opens the rest
 - ui: each Build check advisory is one line with its inserters, and Details opens the rest
 - generation: clocks with observed windows are found faster on large builds
 - ui: the input belts setting still works in configuration files and is deprecated

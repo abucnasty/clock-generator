@@ -12,16 +12,16 @@ import { useId, type ReactNode } from 'react';
 import { useBuildSection } from '../hooks/useBuildViewContext';
 import type { ClockInsight } from 'clock-generator/browser';
 import { useGameNames } from '../hooks/useGameNames';
-import { GameName } from './GameName';
+import { CLOCK_NOTE_COPY } from '../utils/clockNotes';
+import { ClockNoteLine, type NoteInserter } from './ClockNoteLine';
+import { InsightTable } from './InsightTable';
 import { Panel } from './Panel';
-import { DataTable } from './DataTable';
 import { ExactTicks, SwingComparison } from './SwingComparison';
 
-/** Every string of the panel that is not the engine's */
+/** Every string of the panel that is not the engine's; the notes on the clock have theirs in clockNotes.ts */
 const INSIGHTS_COPY = {
     clockHeading: 'Notes on this clock',
     clockIntro: 'What is particular to the clock shown at the top.',
-    nothing: 'Nothing stands out: this clock swings as planned and holds the setpoint.',
     buildHeading: 'About this build: what every clock has to work within',
     what: 'What',
     why: 'Why',
@@ -40,6 +40,8 @@ interface InsightsPanelProps {
     children?: ReactNode;
     /** What the clock's notes say when it has none here; "Nothing stands out" when not given */
     nothing?: string;
+    /** The saved configuration's inserters, which the lines' chips draw */
+    inserters?: readonly NoteInserter[];
 }
 
 function Part({ label, children }: { label: string; children: ReactNode }) {
@@ -90,37 +92,11 @@ export function InsightCard({ insight, level = 4 }: { insight: ClockInsight; lev
     );
 }
 
-/** A cell that is a number, with a unit or none: "12", "4.5 ticks", "93%", "240/s" */
-const NUMERIC_CELL = /^[-+−]?\d[\d,.]*\s*(ticks?|%|\/s|\/min|s|×)?$/;
-
-/** The columns whose every cell is a number, which line up on the right as numbers do */
-function numericColumns(table: NonNullable<ClockInsight['table']>): boolean[] {
-    return table.columns.map((_, column) => {
-        const cells = table.rows.map(row => (row[column] ?? '').trim()).filter(cell => cell !== '' && cell !== '—');
-        return cells.length > 0 && cells.every(cell => NUMERIC_CELL.test(cell));
-    });
-}
-
-function InsightTable({ table, title }: { table: NonNullable<ClockInsight['table']>; title: string }) {
-    const { names, nameIdsIn } = useGameNames();
-    const numeric = numericColumns(table);
-    // a cell that is exactly an id of the game data shows its name; the engine's other text is left as it is
-    const cellOf = (cell: string, columnName: string): ReactNode => {
-        if (columnName === 'Recipe' && Object.hasOwn(names.recipe, cell)) return <GameName id={cell} kind="recipe" />;
-        if (Object.hasOwn(names.recipe, cell) && !Object.hasOwn(names.item, cell)) return <GameName id={cell} kind="recipe" />;
-        return Object.hasOwn(names.item, cell) ? <GameName id={cell} /> : nameIdsIn(cell);
-    };
-    return (
-        <DataTable label={`${title} table`} sx={{ mt: 1 }} rows={table.rows} rowKey={(_, index) => index}
-            columns={table.columns.map((column, index) => ({ header: column, align: numeric[index] ? 'right' as const : 'left' as const, cell: (row: string[]) => cellOf(row[index], column) }))} />
-    );
-}
-
 /**
- * What the simulation found: what is particular to the selected clock, each finding in a sentence with its reasons
- * behind "Why?"; then, folded away, what holds for the build whichever clock is picked.
+ * What the simulation found: what is particular to the selected clock, each finding one line whose Details open the rest;
+ * then, folded away, what holds for the build whichever clock is picked, each finding with its reasons behind "Why?".
  */
-export function InsightsPanel({ insights, children, nothing = INSIGHTS_COPY.nothing }: InsightsPanelProps) {
+export function InsightsPanel({ insights, children, nothing = CLOCK_NOTE_COPY.nothing, inserters }: InsightsPanelProps) {
     const [buildOpen, setBuildOpen] = useBuildSection('insights-build');
     const build = insights.filter(insight => insight.scope === 'build');
     const clock = insights.filter(insight => insight.scope === 'clock');
@@ -132,7 +108,7 @@ export function InsightsPanel({ insights, children, nothing = INSIGHTS_COPY.noth
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
                     {INSIGHTS_COPY.clockIntro}
                 </Typography>
-                {clock.map(insight => <InsightCard key={insight.id} insight={insight} />)}
+                {clock.map(insight => <ClockNoteLine key={insight.id} insight={insight} inserters={inserters} />)}
                 {children}
                 {clock.length === 0 && !children && (
                     <Typography variant="body2" color="text.secondary">{nothing}</Typography>
