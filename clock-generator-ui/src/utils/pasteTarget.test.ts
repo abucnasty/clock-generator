@@ -30,6 +30,11 @@ describe('targetToFill', () => {
         expect(targetToFill({ target: { recipe: 'iron-gear-wheel', items_per_second: 2, copies: 3 }, source: 'mod' }))
             .toEqual({ recipe: 'iron-gear-wheel', items_per_second: 2, copies: 3 });
     });
+
+    it('keeps the gap to the next copy where the export states one', () => {
+        expect(targetToFill({ target: { recipe: 'iron-gear-wheel', items_per_second: 2, copies: 1, copy_offset: { x: 0, y: -7 } }, source: 'mod' }))
+            .toEqual({ recipe: 'iron-gear-wheel', items_per_second: 2, copies: 1, copy_offset: { x: 0, y: -7 } });
+    });
 });
 
 describe('the words of the Setpoint row', () => {
