@@ -12,23 +12,19 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 ## [Unreleased]
 
 ### Added
-- ui: a Diagnostics tab shows the selected clock's shared lanes and why it is not stable
-- ui: Diagnostics opens with the clock's three tests: one copy, all copies, loss of inputs
+- ui: a Diagnostics tab shows the selected clock's tests, shared lanes and why it is not stable
 
 ### Removed
 - ui: the Never on override is removed; older files and links load with Auto
 - ui: the result's Belt pickups fact and the Belt column of the clock table are removed
 - ui: the clock selector and the install dialog no longer name the belt
 - ui: the input belts setting is removed; older builds load with their input lane ends stated
-- ui: Overview no longer has Why this clock; Model and tested starts comes first
-- ui: the compare table's rows no longer explain the clock's name; the card keeps it
-- ui: an Error card no longer repeats its reason under the four facts
-- ui: the card no longer says how the windows were made or how many copies
-- ui: Simulation results no longer repeat what Model and tested starts and the install steps say
-- ui: Diagnostics no longer repeats its headline in the lane table or Read this as text
-- ui: the Timeline's lead drops the wakeups of one copy; the chart drops its key hint
-- ui: empty run overrides, empty Explanation labels and the install caption's Factorio version are gone
-- ui: Simulation results and the lane table no longer say which test ran; the graphic does
+- ui: Overview no longer has Why this clock
+- ui: the card drops its tuning and selection chips and the repeats in Simulation results
+- ui: the compare table's rows drop the line that explains the clock's name
+- ui: the Timeline drops the wakeups of one copy and the chart's key hint
+- ui: the install dialog's caption no longer names the Factorio version
+- ui: empty run overrides and empty Explanation labels are no longer shown
 
 ### Changed
 - generation: clocks with observed windows are found faster on large builds
@@ -46,7 +42,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: the pickup sentence reads: the simulation assumes backpressure at the belt pickups
 - ui: the row help's Does it work? is now Status
 - ui: the compare table's group of other clocks is named Clocks that are not Stable
-- ui: a deadlock warning names the two inserters; About this build keeps how it happens
+- ui: a deadlock warning names only the two inserters; About this build says how it happens
 - ui: the output swing back-off report is in Model and tested starts, not a warning
 
 ## [0.28.1] - 2026-11-07

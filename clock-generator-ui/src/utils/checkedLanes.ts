@@ -193,7 +193,7 @@ export const whyNotStableShowsCause = (why: Pick<WhyNotStable, 'cause'> | null |
 
 /**
  * The first sentence of what a saved run assumed: "Made for 9 copies of your build." for a clock kept before the engine gave
- * the build's lanes (a clock that gives them says it in the card, and what was checked on its Diagnostics); no word of the belts either way
+ * the build's lanes (for a clock that gives them the card's Makes says "all 9 copies", and Diagnostics what was checked); no word of the belts either way
  */
 export function madeForLead(saved: Pick<Config, 'setpoint'> | null, clock: Pick<ClockAlternativeView, 'assumptions'>): string {
     if (saved === null) return 'These results are for a saved build whose metadata is unavailable.';

@@ -26,7 +26,7 @@ const placesIn = (text: string, parts: string[]) => parts.map(part => text.index
 describe('a clock without a cause', () => {
     const stable = checkedOf(AUTOMATION_240, 'time_study_windows');
 
-    it('says the engine\'s line, then the table open: no control, and not what it is made for (the card says it)', () => {
+    it('says the engine\'s line, then the table open: no control, and not what it is made for (Makes says all 9 copies)', () => {
         const { container } = show(<LaneDiagnostics clock={viewOf(AUTOMATION_240, 'time_study_windows')} />, { names: gameNames });
         expect(container.textContent).not.toContain('Made for 9 copies of your build.');
         expect(container.textContent!.indexOf(stable.line.sentence)).toBe(0);
