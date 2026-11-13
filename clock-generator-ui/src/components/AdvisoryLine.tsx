@@ -10,6 +10,10 @@ import { EntityBadge } from './EntityBadge';
 import { FactorioIcon } from './FactorioIcon';
 import { MachineIcon } from './MachineIcon';
 import { WithQuality } from './QualityBadge';
+import { ScrollX } from './ScrollX';
+
+/** The narrowest the drawing gets: its smallest words stay about 11 px high */
+const DRAWING_MIN_WIDTH = 420;
 
 /**
  * An advisory of the Build check as one line: its mark, what it is, the inserters or machines it is about (each a step to
@@ -157,7 +161,8 @@ function SideLoadDrawing({ tiles, inserters, icon }: { tiles: number; inserters:
         belt: alpha(theme.palette.text.primary, 0.08), chevron: alpha(theme.palette.text.primary, 0.55), warn: theme.palette.warning.main,
     };
     const iconHref = `/icons/${icon.toLowerCase().replace(/_/g, '-')}.png`;
-    return <Box component="figure" sx={{ m: 0 }}>
+    // on a narrow window it scrolls sideways rather than shrink its words below reading size
+    return <ScrollX label={words.drawingRegion} minWidth={DRAWING_MIN_WIDTH} sx={{ m: 0 }}>
         <svg viewBox={`0 0 ${width} ${height}`} width="100%" style={{ maxWidth: 540, display: 'block' }} role="img" aria-label={words.drawing(inserters, tiles)}>
             <defs>
                 <marker id={arrow} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -185,5 +190,5 @@ function SideLoadDrawing({ tiles, inserters, icon }: { tiles: number; inserters:
                 <text x={otherX + T + 6} y={beltY - 14} fontSize={12} fill={c.muted}>{words.others}</text>
             </g>
         </svg>
-    </Box>;
+    </ScrollX>;
 }

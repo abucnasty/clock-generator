@@ -42,6 +42,8 @@ export const ADVISORY_COPY = {
     sideLoadedDrop: {
         tiles: (tiles: number) => `${tiles} ${tiles === 1 ? 'tile' : 'tiles'}`,
         otherBelt: 'Other belt',
+        /** The name of the drawing's box while it scrolls sideways on a narrow window */
+        drawingRegion: 'Drawing of the side-load',
         others: 'Other drops',
         /** The drawing's text alternative */
         drawing: (inserters: number[], tiles: number) => `${inserters.length === 1 ? 'Inserter' : 'Inserters'} ${listed(inserters)} `
