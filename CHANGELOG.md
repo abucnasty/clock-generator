@@ -15,6 +15,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: a clock that makes its rate only on average reads Oscillates, with an output chart
 - ui: a Diagnostics tab shows the selected clock's tests, shared lanes and why it is not stable
 - ui: the form sets each belt's flow direction and each lane's end, supply rate and sharing
+- ui: the Terms list defines rank
 
 ### Removed
 - ui: the Never on override is removed; older files and links load with Auto
@@ -28,10 +29,12 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: the install dialog's caption no longer names the Factorio version
 - ui: empty run overrides and empty Explanation labels are no longer shown
 - ui: Overview's notes on the clock no longer say that swings land off the plan
+- ui: Diagnostics of an Oscillates clock no longer says the items moved on average
 
 ### Changed
 - ui: each note on the selected clock is one line, and Details opens the rest
 - ui: the compare table ranks the clocks in a Rank column, without chips or fold
+- ui: the compare table's rows hold still during a run and sort when it ends
 - ui: each Build check advisory is one line with its inserters, and Details opens the rest
 - generation: clocks with observed windows are found faster on large builds
 - ui: the input belts setting still works in configuration files and is deprecated
