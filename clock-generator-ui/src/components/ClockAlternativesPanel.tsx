@@ -14,7 +14,7 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import { useId, type ReactNode } from 'react';
+import { Fragment, useId, type ReactNode } from 'react';
 import type { BuildViewContext } from '../utils/buildViewContext';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 import { CLOCK_TABLE_NAME, CLOCK_TABLE_REGION, clockHelpName, termsHelpName } from '../utils/a11yLabels';
@@ -99,11 +99,25 @@ function statusDetail(alternative: ClockAlternativeView): string {
 /** The engine's description in sentences, so the popover reads as short paragraphs and not one block */
 const sentencesOf = (text: string) => text.split(/(?<=\.)\s+(?=[A-Z])/).filter(Boolean);
 
+/**
+ * A header's words, which may break onto a second line only before a part in brackets: "Wakeups/min" over "(1 copy)",
+ * so that the clock's name has the width for one line
+ */
+function HeaderWords({ label }: { label: string }) {
+    return (
+        <Box component="span" sx={{ textAlign: 'inherit' }}>
+            {label.split(/ (?=\()/).map((part, at) => (
+                <Fragment key={part}>{at > 0 && ' '}<Box component="span" sx={{ whiteSpace: 'nowrap' }}>{part}</Box></Fragment>
+            ))}
+        </Box>
+    );
+}
+
 /** A header with its (i), which opens the Terms with the column's terms first */
 function TermsHeader({ label, focus }: { label: string; focus: readonly GlossaryId[] }) {
     return (
-        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, whiteSpace: 'nowrap' }}>
-            {label}
+        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25 }}>
+            <HeaderWords label={label} />
             <HelpButton label={termsHelpName(label)}>
                 <TermsList focus={focus} />
             </HelpButton>
@@ -148,8 +162,8 @@ function RankHeader({ pickRule }: { pickRule: PickRule | null }) {
 /** A header of the full table with the help that was its hover text */
 function HelpHeader({ label, help }: { label: string; help: string }) {
     return (
-        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, whiteSpace: 'nowrap' }}>
-            {label}
+        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25 }}>
+            <HeaderWords label={label} />
             <HelpButton label={`About ${label}`}>
                 <Typography variant="body2">{help}</Typography>
             </HelpButton>
@@ -184,11 +198,14 @@ const FULL_CLOCK_TABLE_SX = {
     '& tbody td:not(:nth-of-type(3))': { whiteSpace: 'nowrap' },
 } as const;
 
+/** The compact table: 6px beside each cell's words in place of 16, so that the clock's name has the width for one line */
+const COMPACT_CLOCK_TABLE_SX = { '& .MuiTableCell-root:not(.MuiTableCell-paddingCheckbox)': { px: 0.75 } } as const;
+
 /**
  * The compact table: from the width of a laptop screen on, the clock's name, its chips and its (?) stay on one line;
  * narrower, the chips wrap under the name.
  */
-const NAME_LINE_SX = { display: 'flex', alignItems: 'center', columnGap: 1, rowGap: 0.25, flexWrap: { xs: 'wrap', md: 'nowrap' }, whiteSpace: { md: 'nowrap' } } as const;
+const NAME_LINE_SX = { display: 'flex', alignItems: 'center', columnGap: 0.5, rowGap: 0.25, flexWrap: { xs: 'wrap', md: 'nowrap' }, whiteSpace: { md: 'nowrap' } } as const;
 
 /** A row's group: the Stable ones, then the others under the divider, by the word of the Status column */
 const isStable = (alternative: ClockAlternativeView) => statusOf(alternative).kind === 'stable';
@@ -361,7 +378,7 @@ export function ClockAlternativesPanel({
                 </Button>
             </Box>
             <ScrollX label={CLOCK_TABLE_REGION}>
-                <Table id={tableId} size="small" aria-label={CLOCK_TABLE_NAME} sx={allColumns ? FULL_CLOCK_TABLE_SX : undefined}>
+                <Table id={tableId} size="small" aria-label={CLOCK_TABLE_NAME} sx={allColumns ? FULL_CLOCK_TABLE_SX : COMPACT_CLOCK_TABLE_SX}>
                     <TableHead>
                         <TableRow>
                             <TableCell align="right" sx={{ pr: 0.5 }}><RankHeader pickRule={pickRule} /></TableCell>
