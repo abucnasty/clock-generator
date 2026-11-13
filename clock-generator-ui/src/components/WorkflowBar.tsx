@@ -1,6 +1,6 @@
 import { Check, ContentCopy, Warning } from '@mui/icons-material';
 import { Box, Button, Chip, CircularProgress, LinearProgress, ToggleButton, ToggleButtonGroup, Toolbar, Tooltip, Typography, useMediaQuery, useTheme } from '@mui/material';
-import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useAnnounce } from '../hooks/useMessages';
 import type { GenerationProgressStore } from '../hooks/useSimulationWorker';
 import { CHECK_TEXT, type CheckStatus } from '../utils/checkThenGenerate';
@@ -159,6 +159,15 @@ export function WorkflowBar({
     const generateRef = useRef<HTMLButtonElement>(null);
     const copyRef = useRef<HTMLButtonElement>(null);
     const cancelledRef = useRef(false);
+    // Copy's warning opens when the player moves the pointer onto Copy or puts the focus on it. It does not open when Copy
+    // comes in under a pointer that rests where Generate was, or when the bar moves the focus to it as a run ends: it
+    // would then cover the result card until the pointer or the focus left Copy. The line under the bar has the warning too.
+    const [copyTooltipOpen, setCopyTooltipOpen] = useState(false);
+    const movedToCopyRef = useRef(false);
+    const copyButtonRef = useCallback((node: HTMLButtonElement | null) => {
+        copyRef.current = node;
+        if (node === null) setCopyTooltipOpen(false);
+    }, []);
     const wasRunningRef = useRef(running);
     useEffect(() => {
         const was = wasRunningRef.current;
@@ -172,6 +181,7 @@ export function WorkflowBar({
         } else if (was && !running) {
             const target = cancelledRef.current ? generateRef.current : fell ? copyRef.current ?? generateRef.current : null;
             cancelledRef.current = false;
+            movedToCopyRef.current = target !== null && target === copyRef.current;
             target?.focus({ preventScroll: true });
         }
     }, [running]);
@@ -380,9 +390,17 @@ export function WorkflowBar({
                             {/* describeChild keeps the button's label as its name. Below it when the actions wrap, so
                                 the help leaves Configure/Results reachable; above it when wide, clear of the messages.
                                 It stays open under the pointer (WCAG 1.4.13), inside the banner (disablePortal). */}
-                            <Tooltip title={copyTooltip} arrow describeChild placement={wide ? 'top' : 'bottom'} slotProps={{ popper: { disablePortal: true } }}>
+                            <Tooltip title={copyTooltip} arrow describeChild placement={wide ? 'top' : 'bottom'} slotProps={{ popper: { disablePortal: true } }}
+                                open={copyTooltipOpen}
+                                onOpen={event => {
+                                    if (copyTooltip && event.type !== 'mouseover' && !(event.type === 'focus' && movedToCopyRef.current)) setCopyTooltipOpen(true);
+                                }}
+                                onClose={() => setCopyTooltipOpen(false)}>
                                 <Button
-                                    ref={copyRef}
+                                    ref={copyButtonRef}
+                                    onMouseMove={() => { if (copyTooltip && !copyTooltipOpen) setCopyTooltipOpen(true); }}
+                                    onMouseLeave={() => { if (!copyTooltip) setCopyTooltipOpen(false); }}
+                                    onBlur={() => { movedToCopyRef.current = false; }}
                                     variant={copyFilled ? 'contained' : 'outlined'}
                                     size="small"
                                     onClick={onCopy}

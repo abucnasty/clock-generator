@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, waitForElementToBeRemoved } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import { show } from '../test/fixtures';
 import { buildValidationIssues, isRefused } from '../utils/buildValidation';
@@ -49,6 +49,34 @@ it('turns Generate on again once the build has changed and the refusal is gone',
     expect(generate.getAttribute('aria-describedby')).toBeNull();
     await view.user.click(generate);
     expect(onGenerate).toHaveBeenCalledOnce();
+});
+
+it("does not open Copy's warning for the pointer it comes in under or the focus the bar moves to it; the player's move and focus open it", async () => {
+    const warning = 'This clock has no recovery: the build does not go back to its rate by itself.';
+    const props = bar();
+    const view = show(<WorkflowBar {...props} />);
+    // Generate turns off while the run goes, which drops the focus to the page; the bar moves it to Cancel
+    view.rerender(<WorkflowBar {...props} running isLoading busy />);
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: CHECK_TEXT.cancel }));
+    // the run ends with a clock that warns: Cancel goes, and the bar moves the focus to Copy
+    view.rerender(<WorkflowBar {...props} primaryAction="copy-bar" blueprintString="0eNq" rateWarning={warning} />);
+    const copy = screen.getByRole('button', { name: 'Copy blueprint' });
+    expect(document.activeElement).toBe(copy);
+    // Copy came in under a pointer that rests where Generate was: the browser gives a mouseover and no move
+    fireEvent.mouseOver(copy);
+    await new Promise(resolve => setTimeout(resolve, 300));
+    expect(screen.queryByRole('tooltip')).toBeNull();
+    fireEvent.mouseLeave(copy);
+    // the player's move over Copy opens it, and leaving closes it
+    await view.user.hover(copy);
+    expect((await screen.findByRole('tooltip')).textContent).toContain(warning);
+    await view.user.unhover(copy);
+    await waitForElementToBeRemoved(() => screen.queryByRole('tooltip'));
+    // the player's own focus opens it
+    await view.user.tab({ shift: true });
+    await view.user.tab();
+    expect(document.activeElement).toBe(copy);
+    expect((await screen.findByRole('tooltip')).textContent).toContain(warning);
 });
 
 it('leaves Generate on for the other blocking errors, which it goes to instead', () => {

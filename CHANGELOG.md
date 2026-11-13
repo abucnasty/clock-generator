@@ -34,6 +34,9 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: the shared lanes' column of the copies' rates is now headed Planned for the copies
 - ui: the clock selector says a clock's status in place of Not stable
 
+### Fixed
+- ui: Copy's warning no longer stays open over the result after Generate
+
 ## [0.28.1] - 2026-11-07
 
 ### Fixed
