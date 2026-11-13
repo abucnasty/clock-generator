@@ -41,6 +41,9 @@ export function lanesShownOf(clock: Pick<ClockAlternativeView, 'checkedLanes' | 
     return { kind: 'sentence', text: clock.copies <= 1 ? DIAGNOSTICS_COPY.oneCopy : DIAGNOSTICS_COPY.keptBefore };
 }
 
-/** Whether the card links to the clock's Diagnostics: a clock with a cause on a shared lane, or with the note on why it is not stable */
-export const hasDiagnostics = (clock: Pick<ClockAlternativeView, 'insights' | 'checkedLanes'>): boolean =>
-    Boolean(clock.checkedLanes?.cause) || notesOf(clock).diagnostics !== undefined;
+/**
+ * Whether the card links to the clock's Diagnostics: a clock with a cause on a shared lane, with the note on why it is not
+ * stable, or with the output of its window cycles to draw (the engine's reason `oscillation`)
+ */
+export const hasDiagnostics = (clock: Pick<ClockAlternativeView, 'insights' | 'checkedLanes'> & Partial<Pick<ClockAlternativeView, 'asBuilt'>>): boolean =>
+    Boolean(clock.checkedLanes?.cause) || notesOf(clock).diagnostics !== undefined || clock.asBuilt?.output_reason !== undefined;

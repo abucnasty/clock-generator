@@ -10,13 +10,14 @@ import { Logger, defaultLogger } from "../common/logger";
 import { StockDetail, StockRecording } from "./machine-stock";
 import { WakeUps, wakeUpsOfStock } from "./wake-ups";
 import { InserterCounters, inserterEnds, wakeUpsAndCountersOfStock } from "./inserter-counters";
-import { judgeCounterSpan, judgeLongRun, judgeProvenCycle, LONG_RUN_MAX_TICKS, LONG_RUN_SETTLE_SHARE, longRunWindowCycles, wholeOutputRepeats } from "./long-run";
+import { judgeCounterSpan, judgeLongRun, judgeProvenCycle, LONG_RUN_MAX_TICKS, LONG_RUN_SETTLE_SHARE, longRunWindowCycles, OutputReason, outputReasonOf, wholeOutputRepeats } from "./long-run";
 import { DisturbanceTrial, DisturbanceTrialOptions, DisturbanceTrialReport, DisturbanceTrialVerdict, disturbanceTrialsOf, ExcessLoss, LATE_AFTER_WINDOW_CYCLES, LossOutcome, lossLimitOf, MAX_RECOVERY_WINDOW_CYCLES, reportOf, verdictOf } from "./disturbance-trial";
 import { SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForWindowCycle, withWindowsLengthened } from "./clock";
 import type { SubtickWindowCycle } from "../common/subtick-window-cycle";
 import { canonicalKey, currentRunMemo } from "./plan/run-memo";
 import { wholeCounterOf } from "./plan/clock-window-cycle-limit";
 import { assessTargetProduction, TargetProduction } from "./target-production";
+import { TARGET_RATE_TOLERANCE } from "./rank";
 import { BlueprintGenerationResult, BuildRun, FractionalSwings, LCM_STABILITY_TOLERANCE, SIMULATION_BUDGET_TICKS, RunOptions, fractionalSwingsOf, SimulationStabilityCheck, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, coldControlledTrialBuild, unclockedRun, provenRepeatBin, runBuild, trialRunOf, withInserterClocks } from "./plan/unclocked-run";
 import { SimulationTick } from "./runner/simulation-tick";
 import { simulationStateKey } from "./runner/steady-state";
@@ -200,6 +201,14 @@ export interface AsBuiltStabilityCheck {
     clock_tick_at_first_judged?: number;
     /** Clock window cycles in the repeating cycle the proven long run was judged on */
     long_run_cycle_window_cycles?: number;
+    /**
+     * Why the check failed where no rate says it, as a code with its numbers (`OutputReason`, long-run.ts): `oscillation`
+     * where the long run of the check, or the long run a clock that failed its first check is listed by (`withSettledOutput`),
+     * failed with its mean output at the expected output and one or more bins off it by more than its tolerance. A report: no
+     * verdict, ranking or selection reads it, and the verification signature leaves it out. Absent on any other check, and
+     * where the check failed under another taker order.
+     */
+    output_reason?: OutputReason;
     /**
      * Under the strict target amount, on a proven long run: what the build moved short of its target before the proven
      * repeat starts (`orbit_start_window_cycle`, window cycles of the long run). A loss of the start-up, not of the rate: the
@@ -478,6 +487,8 @@ function longRunOfFreeRunningBuild(
     stock: StockRecording;
     /** The judged bins repeat forever: the verdict is a proof of the build's eternity, not a sample of 120 window cycles */
     proven: boolean;
+    /** Where the mean output is the expected output and one or more bins are off it by more than the tolerance (`outputReasonOf`) */
+    output_reason: OutputReason | undefined;
     /** Clock window cycles in the proven repeating cycle; null when the run never repeated */
     cycle_window_cycles: number | null;
     /** Tick of the run the first judged bin starts at, for judging the same window the verdict is of */
@@ -554,6 +565,10 @@ function longRunOfFreeRunningBuild(
     }
     const stock = run.machine_stock!;
     const proven = run.state_repeat !== undefined;
+    const cycle_window_cycles = run.state_repeat === undefined ? null : run.state_repeat.cycle_bins * run.state_repeat.window_cycles_per_bin;
+    // the mean is the expected output to within the rate tolerance of the ranking, which is over all the copies: the
+    // long run is of one copy
+    const output_reason = outputReasonOf(verdict, TARGET_RATE_TOLERANCE * window_cycle_ticks / 60 / (config.setpoint.copies ?? 1), cycle_window_cycles);
     const start_up_shortfall = proven ? startUpShortfallOf(held, verdict.first_judged_tick, window_cycle_ticks, expected_output_items) : undefined;
     // the exports are judged in the bins of the output: a belt with a consumption rate has to receive it in every bin
     const exported = exportedItemsOf(registry, output_ids);
@@ -581,7 +596,8 @@ function longRunOfFreeRunningBuild(
         span_items: verdict.total - verdict.expected_total,
         stock,
         proven,
-        cycle_window_cycles: run.state_repeat === undefined ? null : run.state_repeat.cycle_bins * run.state_repeat.window_cycles_per_bin,
+        output_reason,
+        cycle_window_cycles,
         first_judged_tick: verdict.first_judged_tick,
         // only where every clock ran on from the warm-up: a clock that started again with the recording (one of p/q ticks)
         // stands at no one tick a replay from the cold start reaches
@@ -1268,6 +1284,9 @@ export function runAsBuiltCheck(
                 }
                 if (long_run.export_shortfalls !== undefined) {
                     check.export_shortfalls = long_run.export_shortfalls;
+                }
+                if (long_run.output_reason !== undefined) {
+                    check.output_reason = long_run.output_reason;
                 }
             } else if (long_run === null && strict) {
                 // a window cycle too long for a long run: the final check has the span its first check measured
@@ -1968,8 +1987,10 @@ export function withSettledOutput(
         const windows = withChestDrillWindows(config, new Map(Object.entries(result.clock_windows).map(([entity_id, ranges]) =>
             [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const)), window_cycle_ticks);
         const long_run = longRunOfFreeRunningBuild(config, windows, window_cycle_ticks, result.stability_check.expected_output_items, quietLogger(logger), FREE_RUNNING_CHECK_TICKS, swings, "hands");
+        // the long run the clock is listed by: its reason where it has one (see `outputReasonOf`)
         return reported(long_run === null ? one_window_cycle
-            : { ...as_built, actual_output_items: long_run.output_items_per_window_cycle, output_basis: "long-run mean" });
+            : { ...as_built, actual_output_items: long_run.output_items_per_window_cycle, output_basis: "long-run mean",
+                ...(long_run.output_reason !== undefined && { output_reason: long_run.output_reason }) });
     } catch (error) {
         logger.log(`The long run of a clock that fails its first check could not be made, so it is listed by the one window cycle measured: ${error instanceof Error ? error.message : String(error)}`);
         return reported(one_window_cycle);
@@ -2020,7 +2041,15 @@ export function clockVerificationSignature(config: Config, result: BlueprintGene
         base_cycle_ticks: result.output_cycle_plan.total_duration.ticks,
         transfer_plan: result.serializable_transfer_plan,
         inserter_clocks: result.unplanned_inserter_clocks,
-        check: result.stability_check.as_built ?? result.stability_check });
+        check: withoutOutputReason(result.stability_check.as_built) ?? result.stability_check });
+}
+
+/** A check without its output reason: the reason is read off the same long run as the rest of the check, and adds nothing to tell two clocks apart */
+function withoutOutputReason(check: AsBuiltStabilityCheck | undefined): AsBuiltStabilityCheck | undefined {
+    if (check?.output_reason === undefined) return check;
+    const rest = { ...check };
+    delete rest.output_reason;
+    return rest;
 }
 
 /**

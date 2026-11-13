@@ -57,6 +57,7 @@ export type GlossaryId =
     | 'setpoint'
     | 'stable'
     | 'steady-state'
+    | 'oscillates'
     | 'signal';
 
 /**
@@ -256,6 +257,14 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
         definition: 'The condition after the startup period. The build repeats the same pattern in each window cycle. '
             + 'The output repeats. It is not constant.',
         insteadOf: 'warm, warmed up, settled',
+    },
+    {
+        id: 'oscillates',
+        term: 'Oscillates',
+        definition: 'The status of a clock that makes the setpoint on average, but the output of one or more window cycles is '
+            + 'more than a hand off it. An output that repeats over a few window cycles, each within a hand, is a steady state '
+            + 'and does not have this status.',
+        insteadOf: 'Underproduces, for a clock that makes the setpoint on average',
     },
     {
         id: 'strategy',

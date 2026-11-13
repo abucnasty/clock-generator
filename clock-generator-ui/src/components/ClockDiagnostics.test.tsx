@@ -6,6 +6,7 @@ import { names, show } from '../test/fixtures';
 import { AUTOMATION_240, checkedOf, ELECTROMAGNETIC_330, MILITARY_240, viewOf } from '../test/checkedLanesFixtures';
 import { MISSED_SWINGS_COPY } from '../utils/missedSwings';
 import { ClockDiagnostics } from './ClockDiagnostics';
+import { oscillatingOf } from '../test/oscillationFixture';
 
 const gameNames = names({ 'iron-gear-wheel': 'Iron gear wheel', 'copper-plate': 'Copper plate', 'automation-science-pack': 'Automation science pack',
     'military-science-pack': 'Military science pack', 'stone-wall': 'Stone wall', 'piercing-rounds-magazine': 'Piercing rounds magazine', 'iron-plate': 'Iron plate' });
@@ -111,5 +112,35 @@ describe('the tests of the clock, first on the tab', () => {
         expect(two.textContent).toContain('Makes 234.07/s of 240/s');
         expect(two.textContent).not.toMatch(/swing/i);
         expect(container.textContent!.split(view.checkedLanes!.cause!.headline.text)).toHaveLength(2);
+    });
+});
+
+describe('the chart of a clock whose status is Oscillates, after the tests', () => {
+    it('a bar for each window cycle, the two off it with their items above them, the expected output as a labelled line, and the numbers as text', () => {
+        const view = oscillatingOf(viewOf(AUTOMATION_240, 'time_study_windows'));
+        const { container } = show(<ClockDiagnostics clock={view} />, { names: gameNames });
+        const figure = container.querySelector<HTMLElement>('[data-oscillation]')!;
+        expect(container.querySelector('[data-test-pipeline]')!.nextElementSibling).toBe(figure);
+        expect(figure.textContent).toContain('Output in each window cycle of the repeating run');
+        const chart = within(figure).getByRole('img', { name: '26 bars, 288 items expected in each. Window cycle 2: 432 items. Window cycle 18: 144 items.' });
+        expect(chart.querySelectorAll('[data-bar]')).toHaveLength(26);
+        expect([...chart.querySelectorAll('[data-off]')].map(bar => bar.getAttribute('data-bar'))).toEqual(['2', '18']);
+        // the items of the bars off it stand above them, and the expected output is said beside its line: never the colour alone
+        expect([...chart.querySelectorAll('text')].map(text => text.textContent)).toEqual(expect.arrayContaining(['432', '144', '288 expected']));
+        expect(figure.textContent).toContain('Red bars, with their items above them, are more than 16 items off the expected output. The output is of one copy.');
+        const rows = within(figure.querySelector<HTMLElement>('[data-output-table]')!).getAllByRole('row');
+        expect(rows).toHaveLength(27);
+        expect(rows[2].textContent).toBe('2432+144');
+        expect(rows[18].textContent).toBe('18144−144');
+    });
+
+    it('the first box says the status', () => {
+        const { container } = show(<ClockDiagnostics clock={oscillatingOf(viewOf(AUTOMATION_240, 'time_study_windows'))} />, { names: gameNames });
+        expect(container.querySelector('[data-test="one-copy"] [data-test-result]')!.textContent).toBe('Oscillates');
+    });
+
+    it('no chart for a clock without the engine\'s reason', () => {
+        const { container } = show(<ClockDiagnostics clock={viewOf(AUTOMATION_240, 'takt_batches_observed_swings_4')} />, { names: gameNames });
+        expect(container.querySelector('[data-oscillation]')).toBeNull();
     });
 });

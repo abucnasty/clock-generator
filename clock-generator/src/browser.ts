@@ -338,6 +338,7 @@ export { targetRateMaxOf } from './crafting/feasibility/max-rate';
 export type { TargetRateMax } from './crafting/feasibility/max-rate';
 export type { ClockInsight, MachineFactsEntry, SwingComparison } from './crafting/insights';
 export type { DisturbanceTrialVerdict } from './crafting/disturbance-trial';
+export type { OscillationFacts, OutputReason } from './crafting/long-run';
 export { whyNotStable, whyNotStableClockOf } from './crafting/why-not-stable';
 export type { NotMadeClock, SpareTime, WhyNotStable, WhyNotStableBuild, WhyNotStableCause, WhyNotStableClock } from './crafting/why-not-stable';
 export { buildLanesOf, withOtherClocks } from './crafting/checked-lanes';
