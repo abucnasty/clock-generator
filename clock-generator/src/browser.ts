@@ -103,7 +103,7 @@ export {
 } from './config/inserter-coverage-validator';
 export { insertersScopeProblem, beltPickupSinkRefusal } from './config/inserter-scope';
 export { uncalibratedBeltPickups, beltPickupNotTestedNote } from './config/pickup-calibration';
-export { laneCapacityIssues, lanesExactlyFullWarning, lanesSharedByCopies, laneSharedByCopiesWarning } from './config/lane-capacity-validator';
+export { laneCapacityIssues, lanesExactlyFull, lanesExactlyFullWarning, lanesSharedByCopies, laneSharedByCopiesWarning } from './config/lane-capacity-validator';
 // the facts of each lane of a config, its end and its role among them, as the engine reads them
 export { laneFactsOfConfig } from './entities/traits/build-traits';
 export { copyGapNeededNote } from './config/drop-spacing';

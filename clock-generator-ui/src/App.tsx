@@ -542,8 +542,9 @@ function App() {
             machinesMax,
         }).concat(outputGenerationIssues.map(issue => ({ text: issue.message,
                     target: { kind: 'machine-result-target', machineId: issue.machine_id } as FocusTarget }))),
-        coverage: checkedCoverage?.issues ?? [], scopeRefusal: checkedCoverage?.refusal, scopeRefusalInserters: checkedCoverage?.refusal_inserters, pickupNotTested: checkedCoverage?.pickupNotTested, laneSharedByCopies: checkedCoverage?.laneSharedByCopies,
-        sideLoadedDrop: checkedCoverage?.sideLoadedDrop, lanesExactlyFull: checkedCoverage?.lanesExactlyFull, copyGapNeeded: checkedCoverage?.copyGapNeeded,
+        coverage: checkedCoverage?.issues ?? [], scopeRefusal: checkedCoverage?.refusal, scopeRefusalInserters: checkedCoverage?.refusal_inserters, pickupsNotTested: checkedCoverage?.pickupsNotTested,
+        laneSharedByCopies: checkedCoverage?.laneSharedByCopies, laneSharedByCopiesInserters: checkedCoverage?.laneSharedByCopiesInserters, sideLoadedDrops: checkedCoverage?.sideLoadedDrops,
+        lanesExactlyFull: checkedCoverage?.lanesExactlyFull, lanesExactlyFullInserters: checkedCoverage?.lanesExactlyFullInserters, copyGapNeeded: checkedCoverage?.copyGapNeeded,
         machinePrototypes: checkedCoverage?.machinePrototypes?.map(issue => ({ ...issue, message: nameIdsInText(gameNames, issue.message) })), chests: config.chests, inserters: config.inserters, machines: config.machines, belts: config.belts, chestIssues,
         coverageText: issue => (issue.kind === 'missing_input_inserter' ? PROBLEM_TEXT.missingInput : PROBLEM_TEXT.missingOutput)(
             issue.machine_id, issue.item_name, id => itemName(gameNames, id)),

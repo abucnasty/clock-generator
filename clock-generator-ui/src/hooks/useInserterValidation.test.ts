@@ -19,7 +19,7 @@ const blacklisting = (fields: object = {}): Config => ({
     belts: [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }] }],
     chests: [{ id: 1, type: 'infinity-chest', item_filter: [], remove_unfiltered_items: true }],
 } as Config);
-const refused: LiveCoverage = { issues: [], refusal: 'Inserter 2: `filter_mode` "blacklist" is refused', refusal_inserters: [], pickupNotTested: null, laneSharedByCopies: null, sideLoadedDrop: null, lanesExactlyFull: null, copyGapNeeded: null, dropRoom: null, machinePrototypes: [] };
+const refused: LiveCoverage = { issues: [], refusal: 'Inserter 2: `filter_mode` "blacklist" is refused', refusal_inserters: [], pickupsNotTested: [], laneSharedByCopies: null, laneSharedByCopiesInserters: [], sideLoadedDrops: [], lanesExactlyFull: null, lanesExactlyFullInserters: [], copyGapNeeded: null, dropRoom: null, machinePrototypes: [] };
 const targeting = { ...blacklisting(), machines: [{ ...blacklisting().machines[0], result_target: { type: 'machine', id: 8 } as const }] } as Config;
 const wagon = { ...blacklisting(), chests: [{ id: 1, type: 'cargo-wagon', quality: 'normal' }] } as unknown as Config;
 const retarget = (target: Config['machines'][number]['result_target']) => (config: Config) => ({ ...config, machines: [{ ...config.machines[0], result_target: target }] });

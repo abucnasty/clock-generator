@@ -28,6 +28,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: empty run overrides and empty Explanation labels are no longer shown
 
 ### Changed
+- ui: each Build check advisory is one line with its inserters, and Details opens the rest
 - generation: clocks with observed windows are found faster on large builds
 - ui: the input belts setting still works in configuration files and is deprecated
 - generation: 0.28 Moving builds, stating no lane end, now get dead ends on input lanes

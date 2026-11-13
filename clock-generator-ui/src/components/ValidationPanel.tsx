@@ -25,9 +25,10 @@ export function ValidationPanel({ issues, children, focusTargets = true }: {
         <Box sx={{ maxHeight: focusTargets ? 480 : '35dvh', overflowY: 'auto', p: 0.5 }}>
             {[...errors, ...advice].map(issue => <Box key={issue.id} id={focusTargets ? validationIssueElementId(issue.id) : undefined}
                 role="group" aria-label={issue.text} tabIndex={-1}
-                sx={{ p: 1.5, mb: 1, border: 1, borderColor: 'divider', borderLeft: 3, borderLeftColor: `${issue.severity}.main`,
+                sx={{ p: issue.advisory ? 1 : 1.5, mb: 1, border: 1, borderColor: 'divider', borderLeft: 3, borderLeftColor: `${issue.severity}.main`,
                     '&:last-child': { mb: 0 }, '&:focus': { outline: '2px solid', outlineColor: `${issue.severity}.main`, outlineOffset: 2 } }}>
-                {!issue.blocksGeneration && <Typography variant="caption" color="text.secondary" component="p">Advisory · does not block generation</Typography>}
+                {/* an advisory line says it with its mark */}
+                {!issue.blocksGeneration && !issue.advisory && <Typography variant="caption" color="text.secondary" component="p">Advisory · does not block generation</Typography>}
                 {children(issue)}
             </Box>)}
         </Box>

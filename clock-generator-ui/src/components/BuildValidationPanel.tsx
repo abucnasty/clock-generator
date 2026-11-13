@@ -6,6 +6,7 @@ import type { RepeatedUnitsRecovery } from '../worker/types';
 import type { BuildValidationIssue } from '../utils/buildValidation';
 import type { TargetCounts } from '../utils/targetCounts';
 import type { FocusTarget } from '../utils/firstProblem';
+import { AdvisoryLine } from './AdvisoryLine';
 import { CheckErrorAlert } from './CheckErrorAlert';
 import { MissingInserterAlert } from './MissingInserterAlert';
 import { OutputChestAlert } from './OutputChestAlert';
@@ -29,7 +30,10 @@ export function BuildValidationPanel({ issues, machines, belts, chests, inserter
     counts?: TargetCounts;
     focusTargets?: boolean;
 }) {
-    return <ValidationPanel issues={issues} focusTargets={focusTargets}>{issue => issue.chest ? <OutputChestAlert embedded focusTargets={false} chests={[issue.chest.chest]} inserters={inserters}
+    return <ValidationPanel issues={issues} focusTargets={focusTargets}>{issue => issue.advisory
+                    ? <AdvisoryLine advisory={issue.advisory} severity={issue.severity} inserters={inserters} machines={machines}
+                        onReviewInserter={onReviewInserter} onReviewMachine={id => onReview({ kind: 'machine-recipe', machineId: id })} />
+                    : issue.chest ? <OutputChestAlert embedded focusTargets={false} chests={[issue.chest.chest]} inserters={inserters}
                     onSwitchType={(_index, type, disposal) => onSwitchType(issue.chest!.index, type, disposal)}
                     onEnableRemoval={() => onEnableRemoval(issue.chest!.index)} />
                     : issue.coverage ? <>

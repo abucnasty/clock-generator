@@ -1,4 +1,5 @@
-import type { InserterCoverageIssue, MachinePrototypeIssue } from 'clock-generator/browser';
+import type { InserterCoverageIssue, MachinePrototypeIssue, UncalibratedBeltPickup } from 'clock-generator/browser';
+import { advisoryLine, type Advisory, type SideLoadedDropFact } from './advisory';
 import type { ChestFormData, InserterFormData } from './configForm/formData';
 import { entityLabel, entityLabelIn } from './entityLabel';
 import { coverageIssueElementId, focusIdOf, type FocusTarget, type Problem } from './firstProblem';
@@ -20,7 +21,7 @@ export interface BuildValidationIssue extends Problem {
     /**
      * 'calibration': the engine's warning that a belt pickup's timing is not tested; 'lanes': its warning that the copies
      * summed would ask a lane for more than it carries; 'machine': its warning that a machine's prototype disagrees with its
-     * type or cannot make its recipe; 'drop': its note that a drop side-loads onto another belt. All shown as plain text.
+     * type or cannot make its recipe; 'drop': its note that a drop side-loads onto another belt. Each shown as an advisory line.
      * 'refusal': one problem of the refusal of a build no clock can hold, which is a refusal of the build as a whole.
      */
     source: 'field' | 'coverage' | 'chest' | 'engine' | 'calibration' | 'lanes' | 'drop' | 'machine' | 'refusal';
@@ -31,6 +32,8 @@ export interface BuildValidationIssue extends Problem {
     chest?: OutputChestIssue;
     /** The inserters the engine's refusal names, which the panel points at */
     inserters?: number[];
+    /** An advisory of the engine, shown as one line (its `text`) with its entities and a window of details */
+    advisory?: Advisory;
 }
 
 /** The ids of the inserters the engine's refusal names, whose rows are outlined for as long as it stands: none once the build no longer has the problem */
@@ -120,14 +123,18 @@ interface Input {
     scopeRefusal?: string | null;
     /** The ids of the inserters the live refusal names, if it names any */
     scopeRefusalInserters?: readonly number[];
-    /** The live warning for belt pickups outside 16-item hands on 4-item belt stacks: advice, never blocking */
-    pickupNotTested?: string | null;
+    /** The live belt pickups outside 16-item hands on 4-item belt stacks: advice, never blocking */
+    pickupsNotTested?: readonly UncalibratedBeltPickup[];
     /** The live warning for lanes the copies would ask too much of if they shared them: advice, never blocking */
     laneSharedByCopies?: string | null;
-    /** The live note for drops marked as side-loading onto another belt: a known limit, never blocking */
-    sideLoadedDrop?: string | null;
+    /** The inserters that drop onto those lanes */
+    laneSharedByCopiesInserters?: readonly number[];
+    /** The live drops marked as side-loading onto another belt: a known limit, never blocking */
+    sideLoadedDrops?: readonly SideLoadedDropFact[];
     /** The live note for drops that fill the lanes of a belt exactly: a note, never blocking */
     lanesExactlyFull?: string | null;
+    /** The inserters whose drops fill those lanes */
+    lanesExactlyFullInserters?: readonly number[];
     /** The live note that the gap between copies is needed to check their drops onto a belt: a note, never blocking */
     copyGapNeeded?: string | null;
     /** The live warnings for machines whose prototype disagrees with their type or cannot make their recipe: advice, never blocking */
@@ -198,36 +205,33 @@ export function buildValidationIssues(input: Input): BuildValidationIssue[] {
         add({ id, text: input.failure.message, severity: 'error', blocksGeneration: true, source: 'engine',
             target: { kind: 'validation-issue', id } });
     }
-    if (input.pickupNotTested) {
-        const id = 'belt-pickup-not-tested';
-        add({ id, text: input.pickupNotTested, severity: 'warning', blocksGeneration: false, source: 'calibration',
-            target: { kind: 'validation-issue', id } });
+    // each advisory is one line, named by its kind: the line's words are the issue's text
+    const advise = (id: string, severity: 'warning' | 'info', source: BuildValidationIssue['source'], advisory: Advisory) =>
+        add({ id, text: advisoryLine(advisory), severity, blocksGeneration: false, source, advisory, target: { kind: 'validation-issue', id } });
+    if (input.pickupsNotTested?.length) {
+        advise('belt-pickup-not-tested', 'warning', 'calibration', { kind: 'pickup-not-tested', pickups: [...input.pickupsNotTested] });
     }
     if (input.laneSharedByCopies) {
-        const id = 'lanes-shared-by-copies';
-        add({ id, text: input.laneSharedByCopies, severity: 'warning', blocksGeneration: false, source: 'lanes',
-            target: { kind: 'validation-issue', id } });
+        advise('lanes-shared-by-copies', 'warning', 'lanes',
+            { kind: 'lanes-shared-by-copies', inserters: [...input.laneSharedByCopiesInserters ?? []], text: input.laneSharedByCopies });
     }
-    if (input.sideLoadedDrop) {
-        const id = 'side-loaded-drop';
-        add({ id, text: input.sideLoadedDrop, severity: 'warning', blocksGeneration: false, source: 'drop',
-            target: { kind: 'validation-issue', id } });
+    if (input.sideLoadedDrops?.length) {
+        advise('side-loaded-drop', 'warning', 'drop', { kind: 'side-loaded-drop', drops: [...input.sideLoadedDrops] });
     }
     if (input.lanesExactlyFull) {
-        const id = 'lanes-exactly-full';
-        add({ id, text: input.lanesExactlyFull, severity: 'info', blocksGeneration: false, source: 'lanes',
-            target: { kind: 'validation-issue', id } });
+        advise('lanes-exactly-full', 'info', 'lanes',
+            { kind: 'lanes-exactly-full', inserters: [...input.lanesExactlyFullInserters ?? []], text: input.lanesExactlyFull });
     }
     if (input.copyGapNeeded) {
-        const id = 'copy-gap-needed';
-        add({ id, text: input.copyGapNeeded, severity: 'info', blocksGeneration: false, source: 'drop',
-            target: { kind: 'validation-issue', id } });
+        advise('copy-gap-needed', 'info', 'drop', { kind: 'copy-gap-needed', text: input.copyGapNeeded });
     }
+    // the machines of one kind of prototype warning are one line, in the order the engine gives them
+    const prototypes = new Map<MachinePrototypeIssue['kind'], { machine_id: number; message: string }[]>();
     for (const issue of input.machinePrototypes ?? []) {
-        const id = `machine-prototype:${issue.machine_id}:${issue.kind}`;
-        add({ id, text: issue.message, severity: 'warning', blocksGeneration: false, source: 'machine',
-            fieldTarget: input.machines.some(machine => machine.id === issue.machine_id) ? { kind: 'machine-recipe', machineId: issue.machine_id } : undefined,
-            target: { kind: 'validation-issue', id } });
+        prototypes.set(issue.kind, [...(prototypes.get(issue.kind) ?? []), { machine_id: issue.machine_id, message: issue.message }]);
+    }
+    for (const [problem, machines] of prototypes) {
+        advise(`machine-prototype:${problem}`, 'warning', 'machine', { kind: 'machine-prototype', problem, machines });
     }
     return [...found.values()];
 }

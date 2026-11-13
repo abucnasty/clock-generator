@@ -47,7 +47,9 @@ import type {
     RepeatedUnitConversionReasonCode,
     RecordTimelineRequest,
     TimelineRecording,
+    UncalibratedBeltPickup,
 } from 'clock-generator/browser';
+import type { SideLoadedDropFact } from '../utils/advisory';
 import type { ClockInstallFacts } from './installFacts';
 import type { GameNames } from '../utils/gameNames';
 import type { TargetCounts } from '../utils/targetCounts';
@@ -512,14 +514,18 @@ export interface LiveCoverage {
     refusal: string | null;
     /** The ids of the inserters `refusal` names, when it is the one for inserters that take from a belt into anything but a machine; else empty */
     refusal_inserters: number[];
-    /** The engine's warning for belt pickups outside 16-item hands on 4-item belt stacks, which does not block generation */
-    pickupNotTested: string | null;
+    /** The engine's belt pickups outside 16-item hands on 4-item belt stacks, which the site words; they do not block generation */
+    pickupsNotTested: UncalibratedBeltPickup[];
     /** The engine's warning for belt lanes that the copies, summed, would ask for more than they carry; it does not block */
     laneSharedByCopies: string | null;
-    /** The engine's note for drops marked as side-loading onto another belt, a known limit; it does not block */
-    sideLoadedDrop: string | null;
+    /** The inserters that drop onto those lanes; empty without the warning */
+    laneSharedByCopiesInserters: number[];
+    /** The engine's drops marked as side-loading onto another belt, a known limit, which the site words; they do not block */
+    sideLoadedDrops: SideLoadedDropFact[];
     /** The engine's note for drops that fill the lanes of a belt exactly, which does not block */
     lanesExactlyFull: string | null;
+    /** The inserters whose drops fill those lanes; empty without the note */
+    lanesExactlyFullInserters: number[];
     /** The engine's note that the copies' gap is needed to check their drops onto a belt, which does not block */
     copyGapNeeded: string | null;
     /** The engine's note on whether the copies' drops fit between each other at the window cycle estimated from the settings, shown under the gap between copies */

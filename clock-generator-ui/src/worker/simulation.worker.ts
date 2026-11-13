@@ -457,6 +457,15 @@ function configFile(config: unknown): EngineAnswers['config-file'] {
     return withoutBeltSetting(result.data);
 }
 
+/** The inserters a note on lanes is about, each once, in order; none where the lanes cannot be read, as the note then says nothing */
+function insertersOf(lanes: () => readonly { inserter_ids: readonly number[] }[]): number[] {
+    try {
+        return [...new Set(lanes().flatMap(lane => lane.inserter_ids))].sort((a, b) => a - b);
+    } catch {
+        return [];
+    }
+}
+
 function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
     switch (query.kind) {
         case 'timeline-recording':
@@ -473,15 +482,20 @@ function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
             // what is out of scope is refused before coverage, as Check does: read as built, a blacklist or a side stream
             // would be explained as a missing inserter
             const refusal = clockGenerator.insertersScopeProblem(query.config);
-            const pickupNotTested = clockGenerator.beltPickupNotTestedNote(clockGenerator.uncalibratedBeltPickups(query.config), clockGenerator.buildToNameOf(query.config));
+            // the data of the side-loaded drops and the untested pickups, which the site words; the words of the others, with
+            // the inserters they are about
+            const pickupsNotTested = clockGenerator.uncalibratedBeltPickups(query.config);
             const laneSharedByCopies = clockGenerator.laneSharedByCopiesWarning(query.config);
-            const sideLoadedDrop = clockGenerator.sideLoadedDropWarning(query.config);
+            const laneSharedByCopiesInserters = laneSharedByCopies === null ? [] : insertersOf(() => clockGenerator.lanesSharedByCopies(query.config));
+            const sideLoadedDrops = clockGenerator.sideLoadedDrops(query.config);
             const lanesExactlyFull = clockGenerator.lanesExactlyFullWarning(query.config);
+            const lanesExactlyFullInserters = lanesExactlyFull === null ? [] : insertersOf(() => clockGenerator.lanesExactlyFull(query.config));
             const copyGapNeeded = clockGenerator.copyGapNeededNote(query.config);
             const dropRoom = clockGenerator.dropRoomNote(query.config);
             const machinePrototypes = clockGenerator.machinePrototypeIssues(query.config);
             const refusal_inserters = clockGenerator.beltPickupSinkRefusal(query.config)?.inserter_ids ?? [];
-            return { issues: refusal === null ? liveCoverage(query.config) : [], refusal, refusal_inserters, pickupNotTested, laneSharedByCopies, sideLoadedDrop, lanesExactlyFull, copyGapNeeded, dropRoom, machinePrototypes };
+            return { issues: refusal === null ? liveCoverage(query.config) : [], refusal, refusal_inserters, pickupsNotTested, laneSharedByCopies,
+                laneSharedByCopiesInserters, sideLoadedDrops, lanesExactlyFull, lanesExactlyFullInserters, copyGapNeeded, dropRoom, machinePrototypes };
         }
         case 'machine-target-rates':
             return clockGenerator.computeMachineTargetRates(query.config);

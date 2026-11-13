@@ -40,14 +40,15 @@ async function ask<K extends EngineQuery['kind']>(query: Extract<EngineQuery, { 
 const coverageOf = (config: Config) => ask({ kind: 'inserter-coverage', config });
 
 /** A live answer with nothing to say */
-const nothingLive: LiveCoverage = { issues: [], refusal: null, refusal_inserters: [], pickupNotTested: null, laneSharedByCopies: null, sideLoadedDrop: null,
-    lanesExactlyFull: null, copyGapNeeded: null, dropRoom: null, machinePrototypes: [] };
+const nothingLive: LiveCoverage = { issues: [], refusal: null, refusal_inserters: [], pickupsNotTested: [], laneSharedByCopies: null, laneSharedByCopiesInserters: [],
+    sideLoadedDrops: [], lanesExactlyFull: null, lanesExactlyFullInserters: [], copyGapNeeded: null, dropRoom: null, machinePrototypes: [] };
 
 /** The issues the App lists for a live answer, folded in as App.tsx does it, for a build with no field problems or chest issues */
 const listed = (live: LiveCoverage, machines: { id: number }[], failure?: { message: string; diagnostics?: ValidationDiagnostic[] }) => buildValidationIssues({
     fieldProblems: [], chests: [], inserters: [], chestIssues: [], machines, failure,
-    coverage: live.issues, scopeRefusal: live.refusal, scopeRefusalInserters: live.refusal_inserters, pickupNotTested: live.pickupNotTested, laneSharedByCopies: live.laneSharedByCopies,
-    sideLoadedDrop: live.sideLoadedDrop, lanesExactlyFull: live.lanesExactlyFull, copyGapNeeded: live.copyGapNeeded,
+    coverage: live.issues, scopeRefusal: live.refusal, scopeRefusalInserters: live.refusal_inserters, pickupsNotTested: live.pickupsNotTested,
+    laneSharedByCopies: live.laneSharedByCopies, laneSharedByCopiesInserters: live.laneSharedByCopiesInserters, sideLoadedDrops: live.sideLoadedDrops,
+    lanesExactlyFull: live.lanesExactlyFull, lanesExactlyFullInserters: live.lanesExactlyFullInserters, copyGapNeeded: live.copyGapNeeded,
     machinePrototypes: live.machinePrototypes, coverageText: issue => `${issue.kind} ${issue.item_name}`,
 });
 
@@ -359,19 +360,18 @@ describe('live advice on a gear assembler, which does not block', () => {
         belts: [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size, lane_end: { kind: 'infinite' } }] }],
         chests: [{ id: 1, type: 'infinity-chest', item_filter: [], remove_unfiltered_items: true }],
     } as Config);
-    /** The engine's warning for gears({ stack_size: 2 }), live and in the generation log */
+    /** The engine's warning for gears({ stack_size: 2 }) in the generation log */
     const pickupNotTested = 'Not tested: The inserter (inserter 1) that takes iron plate picks up iron plate from the iron plate belt (belt 1) in 2-item belt stacks. Belt pickup timing is calibrated '
         + 'with 16-item hands on 4-item belt stacks only; at other belt stack sizes and hand sizes it has not been compared with the '
         + 'game, so the clock may not match the game.';
 
-    it.each([
-        { name: 'a belt pickup of untested timing', config: gears({ stack_size: 2 }), field: 'pickupNotTested', source: 'calibration',
-            warning: pickupNotTested },
-    ] as const)('warns live of $name, and Check goes on', async ({ config, field, source, warning }) => {
+    it('warns live of a belt pickup of untested timing with the engine\'s data, which the site words, and Check goes on', async () => {
+        const config = gears({ stack_size: 2 });
         const live = await coverageOf(config);
-        expect(live).toEqual({ ...nothingLive, [field]: warning });
-        expect(listed(live, config.machines).map(({ source, severity, blocksGeneration, text }) => ({ source, severity, blocksGeneration, text })))
-            .toEqual([{ source, severity: 'warning', blocksGeneration: false, text: warning }]);
+        const pickups = [{ inserter_id: 1, belt_id: 1, item: 'iron-plate', lane_stack_sizes: [2], hand_size: null, item_stack_size: null }];
+        expect(live).toEqual({ ...nothingLive, pickupsNotTested: pickups });
+        expect(listed(live, config.machines).map(({ source, severity, blocksGeneration, text, advisory }) => ({ source, severity, blocksGeneration, text, advisory })))
+            .toEqual([{ source: 'calibration', severity: 'warning', blocksGeneration: false, text: 'Belt pickup not tested', advisory: { kind: 'pickup-not-tested', pickups } }]);
         expect(await send({ type: 'validate', requestId: 61, config })).toMatchObject({ type: 'validated' });
     });
 
@@ -386,13 +386,14 @@ describe('live advice on a gear assembler, which does not block', () => {
 
     it('says nothing of a pickup from 4-item belt stacks, and notes a drop the Sidecar marked as side-loading', async () => {
         expect(await coverageOf(gears())).toEqual(nothingLive);
-        // the live answer carries the note as the log and the result say it, and blocks nothing
+        // the live answer carries the engine's data, which the site words; it blocks nothing
         const fed = gears();
         const marked = { ...fed, inserters: [fed.inserters[0], { ...fed.inserters[1], sink: { type: 'belt', id: 2, drop_capture: { status: 'side-loaded', tiles: 3 } } }],
             belts: [...fed.belts, { id: 2, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-gear-wheel', stack_size: 4 }] }] } as Config;
-        expect((await coverageOf(marked)).sideLoadedDrop).toBe('The inserter (inserter 2) that drops iron gear wheel drops onto a 3 tile belt buffer that side-loads onto another belt. '
-            + 'The clock may make less in the game than shown here, most of all when these inserters are switched on at the same time as others '
-            + 'that drop onto the belt. Give each of these drops a belt of its own, or check the clock in the game.');
+        const live = await coverageOf(marked);
+        expect(live.sideLoadedDrops).toEqual([{ inserter_id: 2, tiles: 3 }]);
+        expect(listed(live, marked.machines).map(({ text, blocksGeneration }) => ({ text, blocksGeneration })))
+            .toEqual([{ text: 'Drops onto a belt that side-loads', blocksGeneration: false }]);
     });
 
     it('logs the untested belt pickup in generation, as it warns of it live, and makes the clock with it as an insight', async () => {
@@ -438,8 +439,9 @@ it("gives the crafting machines, fills a prototype's rule on import and paste, a
     const live = await coverageOf({ ...config, machines: [{ ...furnace, prototype: 'cryogenic-plant' }] } as Config);
     expect(live.machinePrototypes.map(issue => issue.kind)).toEqual(['recipe-not-made']);
     expect(listed({ ...nothingLive, machinePrototypes: live.machinePrototypes }, [{ id: 1 }])
-        .map(({ source, severity, blocksGeneration, fieldTarget }) => ({ source, severity, blocksGeneration, fieldTarget })))
-        .toEqual([{ source: 'machine', severity: 'warning', blocksGeneration: false, fieldTarget: { kind: 'machine-recipe', machineId: 1 } }]);
+        .map(({ source, severity, blocksGeneration, advisory }) => ({ source, severity, blocksGeneration, advisory })))
+        .toEqual([{ source: 'machine', severity: 'warning', blocksGeneration: false,
+            advisory: { kind: 'machine-prototype', problem: 'recipe-not-made', machines: [{ machine_id: 1, message: live.machinePrototypes[0].message }] } }]);
 });
 
 it('says live whether the copies\' drops fit at the gap given, for the period estimated from the settings', async () => {
@@ -455,6 +457,9 @@ it('says live whether the copies\' drops fit at the gap given, for the period es
     const without = await live(undefined);
     expect(without.dropRoom).toBeNull();
     expect(without.copyGapNeeded).not.toBeNull();
+    // the note on the lanes the copies fill exactly comes with the inserters it is about, the chips of its line: the four
+    // that drop onto the grenade belt
+    expect({ note: without.lanesExactlyFull !== null, inserters: without.lanesExactlyFullInserters }).toEqual({ note: true, inserters: [1, 2, 7, 8] });
 });
 
 // A real plan of five copies: about 2 s alone, over vitest's 5 s default on a loaded CI runner. Fewer copies make no shared-windows clock.
