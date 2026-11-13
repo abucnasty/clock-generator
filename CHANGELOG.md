@@ -13,6 +13,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ### Added
 - ui: a Diagnostics tab shows the selected clock's shared lanes and why it is not stable
+- ui: the form sets each belt's flow direction and each lane's end, supply rate and sharing
 
 ### Removed
 - ui: the Never on override is removed; older files and links load with Auto
@@ -25,7 +26,10 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: the input belts setting still works in configuration files and is deprecated
 - generation: 0.28 Moving builds, stating no lane end, now get dead ends on input lanes
 - ui: a rounded clock that meets the target reads Stable, not Overproduces
-- ui: every clock shows its status beside its name, Stable included
+- ui: each clock's status shows on its card and in the Status column, Stable included
+- ui: Underproduces and Overproduces replace the statuses Does not hold its rate and Misses the rate
+- ui: the status Recovery unavailable is now Error, with its reason beside it
+- ui: the status Depends on how it is started is now Start-dependent
 - ui: the note on a clock that overproduces says only what was measured
 - ui: a clock that loses swings on a shared lane shows what all its copies make
 - ui: a shared lane where a copy misses swings reads Swings missed, not Short
