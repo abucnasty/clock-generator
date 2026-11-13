@@ -43,24 +43,24 @@ suite; it is not a generic visual mode for every mechanic test.
 
 A build that holds the config more than once names the copies it holds (`copies`). The harness finds them by their inserters: the
 machines that inserters move items between are one group, and belts, which the copies share, join none. A group with a machine
-for every machine of the config is a whole copy; the count has to be the one named, and the generated clock is wired to the
+for every machine of the config is a full copy; the count has to be the one named, and the generated clock is wired to the
 inserters of each copy. A machine of the config's recipes in no copy is refused.
 
-`copies` may have a fraction, the fraction the config's own `copies` has (5.5 for a config of 5.5): that many whole copies and
-one part copy. The part copy is the one the generator lays out on the lanes the copies share (`partCopiesOf`): on each shared
+`copies` may have a fraction, the fraction the config's own `copies` has (5.5 for a config of 5.5): that many full copies and
+one partial copy. The partial copy is the one the generator lays out on the lanes the copies share (`partCopiesOf`): on each shared
 lane the takers furthest upstream, the fraction of the copy's takers there rounded up, with the machines they feed, the inserters
 that feed those machines and the inserters that take their results. A group of the build with every machine and inserter of it
-and no machine more is the part copy; the clock is wired to its inserters as to the same inserters of a whole copy. The part
-copy is held to its share of a copy's output, the generator's rule for a part copy's machine (a machine is held to its whole
-target times the share of the inserters that take from it that the part copy holds) counted over the final machines; the
+and no machine more is the partial copy; the clock is wired to its inserters as to the same inserters of a full copy. The partial
+copy is held to its share of a copy's output, the generator's rule for a partial copy's machine (a machine is held to its whole
+target times the share of the inserters that take from it that the partial copy holds) counted over the final machines; the
 harness counts each such inserter as one, where the generator weighs it by what it moves, the same where a final machine has
-one output inserter. Refused: a group that is neither a whole copy nor the part copy (the message lists the groups), two part
-copies, another fraction than the config's, and a part copy where the count is a whole number (its machines are beyond the
-config). The harness takes what the build is: a part copy's machines may differ from a whole copy's (other beacons, another
+one output inserter. Refused: a group that is neither a full copy nor the partial copy (the message lists the groups), two partial
+copies, another fraction than the config's, and a partial copy where the count is a whole number (its machines are beyond the
+config). The harness takes what the build is: a partial copy's machines may differ from a full copy's (other beacons, another
 crafting speed) and are judged by what they make.
 
 Each copy is judged by itself: in the scaffold recordings, what its output inserters move in every window cycle checked against
-its target (the part copy against its share); in the families with a protocol (`pickup-clock-capture.ts`), each copy's final
+its target (the partial copy against its share); in the families with a protocol (`pickup-clock-capture.ts`), each copy's final
 machines over the baseline's whole clock cycles. The simulator's entity-by-entity comparison and the wake-ups are of one copy and
 are not made for a build of copies.
 
@@ -70,17 +70,17 @@ are not made for a build of copies.
 entities, the clock it came with in it): both mirrored sides, 22 science and 22 engine machines and 6 pipe foundries on the centre
 line 18 tiles apart, so 5 whole blocks of `CHEMICAL_SCIENCE_240_SHARED_FOUNDRY` and a half block at the east end, and two foundries at
 the west end that cast the gears and the steel of both engine lines. Every input line ends in an underground entrance with nothing
-beyond. The config is the sample as committed, `copies: 5.5`; its part copy is the half block (machines 1, 3, 5, 7 and 9), held to
+beyond. The config is the sample as committed, `copies: 5.5`; its partial copy is the half block (machines 1, 3, 5, 7 and 9), held to
 half a block's packs. The half block's pipe foundry has 5 beacons where the others have 8 (199.75 against 236.78, computed from the
 blueprint), and engine line 3 holds gears on the lane taken first where the config states steel (not confirmed); neither is in
 the config. Two cases in the scaffold recordings, each recorded twice on 2026-11-11 at Factorio 2.1.24:
 
-- **The generated clock** (Coordinated Sources, 1 output swing, 352 ticks): every whole copy moved 256 packs and the part copy 128
+- **The generated clock** (Coordinated Sources, 1 output swing, 352 ticks): every full copy moved 256 packs and the partial copy 128
   in each of the window cycles checked, 704 in each row and 1,408 over the build.
 - **The clock it came with** (made by the generator of 0.28.1 for one side of the build): it opens the advanced circuit takers of
   every copy of a side together, and the dead-ended circuit lane refills too late for the third science machine of each side from
   the west (#725). That machine moved 464 of 704 over the recording, and its copy, the second, 224, 192 and 224 of its 256 in turn;
-  every other copy, and the part copy, made its target. The case expects that copy short and no other: it shows that the check of
+  every other copy, and the partial copy, made its target. The case expects that copy short and no other: it shows that the check of
   each copy sees a copy the others starve, where the build's total (1,376 or 1,344 of 1,408) only says the build is short.
 
 ## How a clock run is timed

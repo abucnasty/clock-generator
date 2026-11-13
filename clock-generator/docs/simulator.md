@@ -63,9 +63,8 @@ rejected. Sidecar exports layout with model format 2; older underground captures
 [capture guide](belt-pickup/capture.md#physical-layout).
 
 Supply comes from the lane ends ([Lane ends](belt-pickup/lane-ends.md)). A lane that states no end has the end of its role: an
-input lane is a dead end, so a build that states no lane end and no `overrides.backed_up_belts` is **Backed up**.
-The deprecated `overrides.backed_up_belts: false` makes it **Moving**, and `true` **Backed up**; state the `lane_end`
-of each lane instead.
+input lane is a dead end. The deprecated `overrides.backed_up_belts` gives each lane that states no end an end: `true`
+a dead end, `false` an infinite end. State the `lane_end` of each lane instead.
 The simulator retains the pickup length in both cases. Moving supply models reachable stacks, holes and partial
 stacks; ordinary backed-up supply additionally stops and compresses stacks at its closed endpoint.
 Older `non_moving_belts` config settings migrate to `backed_up_belts` on import. New configs and exports use only
@@ -290,12 +289,12 @@ positions, its length is the longer side of its widest machine or drill. The res
 shared lane runs tick by tick with every copy's takers on it (`src/state/shared-lane.ts`): stacks come on at the
 lane's `supply_rate`, move at the belt's speed and leave at its end (`lane_end`: a dead end holds them, an infinite
 end takes them at the lane's capacity; an unknown end is run both ways). A
-part copy holds its share of each shared lane's takers, rounded up for each, the ones furthest upstream, with what their
+partial copy holds its share of each shared lane's takers, rounded up for each, the ones furthest upstream, with what their
 machines need. The belt of a lane flows in one direction (`flow_direction`). Without it, the check runs
 the items in each direction along the copies. The verdict has two checks (`src/crafting/shared-lane-verdict.ts`). First,
 a taker that puts down fewer of the lane's items over the whole window cycles of the second half of the run than in a
 run of one copy alone is short. Second, a shortfall makes the clock unstable only where a machine or an output inserter
-of a copy is behind its target over the same window cycles; a machine of a part copy is held to its share of a whole
+of a copy is behind its target over the same window cycles; a machine of a partial copy is held to its share of a full
 copy's target. Where nothing is behind, the shortfall is stock that moved between the two runs, and the clock holds
 ([stability](stability.md#copies-that-share-a-lane)).
 
