@@ -13,6 +13,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ### Added
 - ui: a Diagnostics tab shows the selected clock's shared lanes and why it is not stable
+- ui: Diagnostics opens with the clock's three tests: one copy, all copies, loss of inputs
 
 ### Removed
 - ui: the Never on override is removed; older files and links load with Auto

@@ -130,10 +130,11 @@ describe('the note that says why a clock is not stable', () => {
         expect(panel('diagnostics').textContent).toBe('');
     });
 
-    it('opens on Diagnostics as the first thing there', async () => {
+    it('opens on Diagnostics as the first thing there after the tests of the clock', async () => {
         const { user } = results(views, MILITARY_240.selected_index, index);
         await user.click(screen.getByRole('button', { name: 'See diagnostics' }));
-        const first = panel('diagnostics').querySelector('[data-diagnostics] > *')!;
+        const [tests, first] = panel('diagnostics').querySelectorAll('[data-diagnostics] > *');
+        expect(tests.hasAttribute('data-test-pipeline')).toBe(true);
         expect(first.getAttribute('data-insight')).toBe('unstable');
         expect(panel('diagnostics').querySelectorAll('[data-insight]')).toHaveLength(1);
         expect(document.querySelectorAll('[data-insight="unstable"]')).toHaveLength(1);
