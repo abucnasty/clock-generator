@@ -22,7 +22,7 @@ import { shownRateOf } from '../utils/shownRate';
 import { SUMMARY_COPY, foldedMakes, recoversOf, statusOf, wakeUpsAverageOf } from '../utils/clockSummary';
 import { directRouterOf, familyCopyOf, fullClockName, clockChipsOf, sourceLinesOf, strategyNameOf } from '../utils/strategyNames';
 import { ClockChips } from './StrategyChips';
-import { TERMS_FOCUS, type GlossaryId } from '../utils/glossary';
+import { SIGNAL_DEFINITION, WAKEUP_DEFINITION, TERMS_FOCUS, type GlossaryId } from '../utils/glossary';
 import { HelpButton } from './HelpButton';
 import { CauseHeadline } from './CheckedLanesView';
 import { descriptionShown } from '../utils/checkedLanes';
@@ -57,6 +57,11 @@ const COMPARE_COPY = {
         + 'Per-inserter counts may be fractional. The clock repeats after a whole number of output cycles (the window cycle).',
     decidersHelp: 'How many decider combinators the clock\'s blueprint has to switch inserters and drills on and off, not counting the clock itself. Each one is wired to the inserters and drills its description names, so fewer deciders is less wiring to do by hand.',
     windowsHelp: 'How many enable windows the clock has in all: stretches of ticks during which it switches an inserter on.',
+    signalsHelp: SIGNAL_DEFINITION + ' Counted per minute for one copy of the build, in the same run as the wakeups. No clock is ranked by signals.',
+    wakeUpsHelp: WAKEUP_DEFINITION + ' Counted per minute, summed over the inserters of one copy of the build '
+        + 'in a long run of this clock. Shown for clocks that were run long enough to count them. It is the count from '
+        + 'one start point, but on a build with a loop of machines: a clock there settles into another steady state from '
+        + 'another start point, with another count, so its figure is the average over 12 start points, and the table says so.',
     noneRecover: 'No clock qualifies as stable across its completed checks. Compare its modeled rate, recovery and sampled starts separately.',
     noneHold: 'None of the clocks tried holds the setpoint, so they are all listed.',
     computing: (label: string) => `${label}: computing…`,
@@ -185,21 +190,30 @@ const NUMERIC: ReadonlySet<ColumnId> = new Set(['rank', 'makes', 'wakeUps', 'sig
 /** The figures that are columns where the table has the width, and a details row under each clock where it has not */
 const DETAIL_COLUMNS: readonly ColumnId[] = ['swings', 'windowCycle', 'windows', 'perWindowCycle'];
 
-interface Shared { pickRule: PickRule | null; copies: number; counts: ClockAlternativeView['counts'] }
+interface Shared {
+    pickRule: PickRule | null; copies: number; counts: ClockAlternativeView['counts'];
+    /**
+     * Every figure a column: the Wakeups and Signals heads have the help of the table that had every column (what is
+     * counted, and how), the default columns the Terms, as the two tables had them
+     */
+    allColumns: boolean;
+}
 
 const swingsLabel = (counts: ClockAlternativeView['counts']) => counts === 'destroyed' ? HANDS_TEXT.column : COMPARE_COPY.swings;
 const swingsHelp = (counts: ClockAlternativeView['counts']) => counts === 'destroyed'
     ? textHelp(HANDS_TEXT.column, HANDS_TEXT.columnHelp) : textHelp(COMPARE_COPY.swings, COMPARE_COPY.swingsHelp);
 
 /** A column's head */
-function headOf(id: ColumnId, { pickRule, copies, counts }: Shared): ReactNode {
+function headOf(id: ColumnId, { pickRule, copies, counts, allColumns }: Shared): ReactNode {
     switch (id) {
         case 'rank': return <Head label={RECOMMENDED_COPY.rank} help={<RankHelp pickRule={pickRule} />} numeric />;
         case 'select': return <Box component="span" sx={VISUALLY_HIDDEN}>Select</Box>;
         case 'clock': return <Head label={COMPARE_COPY.clock} />;
         case 'makes': return <Head label={makesHeader(copies, counts)} numeric />;
-        case 'wakeUps': return <Head label={WAKE_UPS_HEADER} help={termsHelp(WAKE_UPS_HEADER, TERMS_FOCUS.wakeUps)} numeric />;
-        case 'signals': return <Head label={SIGNALS_HEADER} help={termsHelp(SIGNALS_HEADER, TERMS_FOCUS.signals)} numeric />;
+        case 'wakeUps': return <Head label={WAKE_UPS_HEADER} numeric
+            help={allColumns ? textHelp(WAKE_UPS_HEADER, COMPARE_COPY.wakeUpsHelp) : termsHelp(WAKE_UPS_HEADER, TERMS_FOCUS.wakeUps)} />;
+        case 'signals': return <Head label={SIGNALS_HEADER} numeric
+            help={allColumns ? textHelp(SIGNALS_HEADER, COMPARE_COPY.signalsHelp) : termsHelp(SIGNALS_HEADER, TERMS_FOCUS.signals)} />;
         case 'deciders': return <Head label={DECIDERS_HEADER} help={textHelp(DECIDERS_HEADER, COMPARE_COPY.decidersHelp)} numeric />;
         case 'swings': return <Head label={swingsLabel(counts)} help={swingsHelp(counts)} numeric />;
         case 'windowCycle': return <Head label={COMPARE_COPY.windowCycle} numeric />;
@@ -346,7 +360,7 @@ export function ClockAlternativesPanel({ alternatives, selectedIndex, onSelect, 
     // while a run adds clocks, the rows hold their order and show the ranks so far; after it, they are sorted by rank
     const { stable, unstable } = partitionClockRows(alternatives, { isStable, held });
     const anyHolds = alternatives.some(alternative => alternative.assessment.holds);
-    const shared: Shared = { pickRule, copies: alternatives[0]?.copies ?? 1, counts: alternatives[0]?.counts };
+    const shared: Shared = { pickRule, copies: alternatives[0]?.copies ?? 1, counts: alternatives[0]?.counts, allColumns };
     // a Makes column that says the same on every row is one line above the table instead
     const fold = foldedMakes([...stable, ...unstable].map(({ alternative }) => alternative));
     const columns: ColumnId[] = ['rank', 'select', 'clock', ...(fold === null ? ['makes' as const] : []), 'wakeUps', 'signals', 'deciders',

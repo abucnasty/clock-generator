@@ -315,12 +315,12 @@ describe('the compare table\'s two widths', () => {
     const heads = () => screen.getAllByRole('columnheader').map(head => head.textContent);
     // the clocks were made for 9 copies of the build
     const MAKES = `Makes(items/s,\u00a0all\u00a0${views[0].copies}\u00a0copies)`;
-    const EXTRA = ['Output swings', 'Window cycle time', 'Enable windows', 'Output per window cycle(1 copy)'];
+    const EXTRA = ['Output swings', 'Window cycle time', 'Enable windows', 'Output per window cycle(1\u00a0copy)'];
 
     it('where every figure fits as a column with every name on one line: every figure a column, no Belt column, no details control', () => {
         table(views, AUTOMATION_240.selected_index, EVERY_COLUMN);
         expect(screen.getByRole('table').hasAttribute('data-all-columns')).toBe(true);
-        expect(heads()).toEqual(['Rank', 'Select', 'Clock', MAKES, 'Wakeups/min(1 copy)', 'Signals/min(1 copy)', 'Deciders', ...EXTRA, 'Status']);
+        expect(heads()).toEqual(['Rank', 'Select', 'Clock', MAKES, 'Wakeups/min(1\u00a0copy)', 'Signals/min(1\u00a0copy)', 'Deciders', ...EXTRA, 'Status']);
         expect(heads().some(head => /belt/i.test(head ?? ''))).toBe(false);
         expect(screen.queryByRole('button', { name: /belt|^Details of/i })).toBeNull();
         const firstRow = screen.getAllByRole('row').find(row => within(row).queryByRole('radio'))!;
@@ -329,7 +329,7 @@ describe('the compare table\'s two widths', () => {
 
     it('where they do not fit: the default columns, and a control on each row that opens its other figures under it', async () => {
         const { user } = table(views, AUTOMATION_240.selected_index, EVERY_COLUMN - 2);
-        expect(heads()).toEqual(['Details', 'Rank', 'Select', 'Clock', MAKES, 'Wakeups/min(1 copy)', 'Signals/min(1 copy)', 'Deciders', 'Status']);
+        expect(heads()).toEqual(['Details', 'Rank', 'Select', 'Clock', MAKES, 'Wakeups/min(1\u00a0copy)', 'Signals/min(1\u00a0copy)', 'Deciders', 'Status']);
         const clock = views.find(view => view.id === 'time_study_windows')!;
         const control = screen.getByRole('button', { name: `Details of ${fullClockName(clock)}` });
         expect(control.getAttribute('aria-expanded')).toBe('false');
@@ -360,6 +360,16 @@ describe('the compare table\'s two widths', () => {
         expect(screen.getByRole('table').hasAttribute('data-all-columns')).toBe(false);
     });
 
+    it.each([[WIDE, 'About Wakeups/min (1\u00a0copy)', /average over 12 start points/], [NARROW, 'Terms for Wakeups/min (1\u00a0copy)', /./]])(
+        'keeps the help of each table on the Wakeups head: with every column what is counted and how, else the Terms (%s px)', async (width, name, words) => {
+            const { user } = table(views, AUTOMATION_240.selected_index, width);
+            const head = screen.getAllByRole('columnheader').find(cell => cell.querySelector('[data-head-name]')?.textContent === 'Wakeups/min')!;
+            const button = within(head).getByRole('button');
+            expect(button.getAttribute('aria-label')).toBe(name);
+            await user.click(button);
+            expect((await screen.findByRole('dialog')).textContent).toMatch(words);
+        });
+
     it('never lets a name wrap with every column', () => {
         table(views, AUTOMATION_240.selected_index, WIDE);
         for (const line of document.querySelectorAll<HTMLElement>('[data-name-line]')) {
@@ -372,7 +382,7 @@ describe('the compare table\'s two widths', () => {
         table(views, AUTOMATION_240.selected_index, WIDE);
         const head = (name: string) => screen.getAllByRole('columnheader').find(cell => cell.querySelector('[data-head-name]')?.textContent === name)!;
         const wakeUps = head('Wakeups/min');
-        expect(wakeUps.querySelector('[data-head-unit]')!.textContent).toBe('(1 copy)');
+        expect(wakeUps.querySelector('[data-head-unit]')!.textContent).toBe('(1\u00a0copy)');
         expect(within(wakeUps.querySelector<HTMLElement>('[data-head-name]')!).getByRole('button')).toBeTruthy();
         expect(head('Makes').querySelector('[data-head-unit]')!.textContent).toBe(`(items/s,\u00a0all\u00a0${views[0].copies}\u00a0copies)`);
         expect(head('Deciders').querySelector('[data-head-unit]')).toBeNull();
