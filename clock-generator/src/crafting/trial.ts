@@ -203,10 +203,10 @@ export interface AsBuiltStabilityCheck {
     long_run_cycle_window_cycles?: number;
     /**
      * Why the check failed where no rate says it, as a code with its numbers (`OutputReason`, long-run.ts): `oscillation`
-     * where the long run of the check, or the long run a clock that failed its first check is listed by (`withSettledOutput`),
-     * failed with its mean output at the expected output and one or more bins off it by more than its tolerance. A report: no
-     * verdict, ranking or selection reads it, and the verification signature leaves it out. Absent on any other check, and
-     * where the check failed under another taker order.
+     * where the check's own long run failed with its mean output at the expected output and one or more bins off it by
+     * more than its tolerance. A report: no verdict, ranking or selection reads it, and the verification signature leaves
+     * it out. Absent on any other check: one that failed before its long run (its first check, a start phase), under
+     * another taker order, or whose long run failed otherwise.
      */
     output_reason?: OutputReason;
     /**
@@ -1987,10 +1987,8 @@ export function withSettledOutput(
         const windows = withChestDrillWindows(config, new Map(Object.entries(result.clock_windows).map(([entity_id, ranges]) =>
             [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const)), window_cycle_ticks);
         const long_run = longRunOfFreeRunningBuild(config, windows, window_cycle_ticks, result.stability_check.expected_output_items, quietLogger(logger), FREE_RUNNING_CHECK_TICKS, swings, "hands");
-        // the long run the clock is listed by: its reason where it has one (see `outputReasonOf`)
         return reported(long_run === null ? one_window_cycle
-            : { ...as_built, actual_output_items: long_run.output_items_per_window_cycle, output_basis: "long-run mean",
-                ...(long_run.output_reason !== undefined && { output_reason: long_run.output_reason }) });
+            : { ...as_built, actual_output_items: long_run.output_items_per_window_cycle, output_basis: "long-run mean" });
     } catch (error) {
         logger.log(`The long run of a clock that fails its first check could not be made, so it is listed by the one window cycle measured: ${error instanceof Error ? error.message : String(error)}`);
         return reported(one_window_cycle);

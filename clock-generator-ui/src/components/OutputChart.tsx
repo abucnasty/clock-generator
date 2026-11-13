@@ -14,6 +14,16 @@ const PLOT_HEIGHT = 110;
 const TOP = 18, BOTTOM = 18;
 /** Room right of the bars for the expected output's label */
 const LABEL_WIDTH = 78;
+/** The widest a bar is drawn: a thin mark, the rest of its slot left as air */
+const MAX_BAR = 24;
+/** The radius of a bar's top; its foot on the baseline stays square */
+const TOP_RADIUS = 4;
+
+/** A bar from the baseline up, its top corners rounded */
+function barPath(x: number, y: number, w: number, base: number): string {
+    const r = Math.min(TOP_RADIUS, w / 2, base - y);
+    return `M${x},${base}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${base}Z`;
+}
 
 function Text({ x, y, fill, anchor = 'middle', children }: { x: number; y: number; fill: string; anchor?: 'start' | 'middle' | 'end'; children: ReactNode }) {
     return <text x={x} y={y} fontSize={11} fill={fill} textAnchor={anchor}>{children}</text>;
@@ -23,7 +33,7 @@ function Text({ x, y, fill, anchor = 'middle', children }: { x: number; y: numbe
 function Bars({ bars, expected, width, label }: { bars: OutputBar[]; expected: number; width: number; label: string }) {
     const theme = useTheme();
     const colours = { text: theme.palette.text.primary, muted: theme.palette.text.secondary, bar: alpha(theme.palette.text.primary, 0.35),
-        off: theme.palette.error.light, expected: theme.palette.success.light };
+        off: theme.palette.error.light, line: theme.palette.success.light };
     const right = width - LABEL_WIDTH;
     const pitch = right / bars.length;
     const gap = pitch > 6 ? 2 : pitch > 3 ? 1 : 0;
@@ -33,9 +43,10 @@ function Bars({ bars, expected, width, label }: { bars: OutputBar[]; expected: n
     // the window cycles named under the bars: the first, the last and those off, where they do not run into the one before
     let lastEnd = -Infinity;
     bars.forEach((bar, index) => {
-        const x = index * pitch, w = Math.max(0.5, pitch - gap), y = yOf(bar.items);
-        parts.push(<rect key={`b-${bar.place}`} x={x} y={y} width={w} height={TOP + PLOT_HEIGHT - y} fill={bar.off ? colours.off : colours.bar}
-            data-bar={bar.windowCycles} data-off={bar.off ? '' : undefined} />);
+        const w = Math.max(0.5, Math.min(MAX_BAR, pitch - gap)), x = index * pitch + (pitch - gap - w) / 2, y = yOf(bar.items);
+        // the bar's own words on hover: its window cycles and items
+        parts.push(<path key={`b-${bar.place}`} d={barPath(x, y, w, TOP + PLOT_HEIGHT)} fill={bar.off ? colours.off : colours.bar}
+            data-bar={bar.windowCycles} data-off={bar.off ? '' : undefined}><title>{OUTPUT_CHART_COPY.barTip(bar)}</title></path>);
         if (bar.off) parts.push(<Text key={`v-${bar.place}`} x={x + w / 2} y={y - 4} fill={colours.text}>{formatNumberText(bar.items)}</Text>);
         const named = bar.off || index === 0 || index === bars.length - 1;
         const half = bar.windowCycles.length * 3.3;
@@ -45,8 +56,9 @@ function Bars({ bars, expected, width, label }: { bars: OutputBar[]; expected: n
         }
     });
     const line = yOf(expected);
-    parts.push(<line key="expected" x1={0} y1={line} x2={right} y2={line} stroke={colours.expected} strokeWidth={1.5} strokeDasharray="6 5" />);
-    parts.push(<Text key="expected-label" x={right + 6} y={line + 4} fill={colours.expected} anchor="start">{OUTPUT_CHART_COPY.expected(expected)}</Text>);
+    parts.push(<line key="expected" x1={0} y1={line} x2={right} y2={line} stroke={colours.line} strokeWidth={2} strokeDasharray="6 5" />);
+    // words in the page's text colour; the line beside them carries the colour
+    parts.push(<Text key="expected-label" x={right + 6} y={line + 4} fill={colours.muted} anchor="start">{OUTPUT_CHART_COPY.expected(expected)}</Text>);
     const height = TOP + PLOT_HEIGHT + BOTTOM;
     return <svg viewBox={`0 0 ${width} ${height}`} width="100%" role="img" aria-label={label} style={{ display: 'block' }} data-output-chart="">{parts}</svg>;
 }

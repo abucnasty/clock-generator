@@ -9,6 +9,7 @@ export const OUTPUT_CHART_COPY = {
     title: (proven: boolean, perBin: number) => `Output in each ${perBin === 1 ? 'window cycle' : `${formatNumberText(perBin)} window cycles`} of the ${proven ? 'repeating' : 'sampled'} run`,
     expected: (items: number) => `${formatNumberText(items)} expected`,
     windowCycle: 'Window cycle',
+    barTip: (bar: OutputBar) => `Window cycle ${bar.windowCycles}: ${formatNumberText(bar.items)} items`,
     items: 'Items',
     offBy: 'Off by',
     caption: (tolerance: number) => `Red bars, with their items above them, are more than ${formatNumberText(tolerance)} items off the expected output.`,

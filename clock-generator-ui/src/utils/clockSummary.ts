@@ -214,7 +214,7 @@ function errorReasonOf(clock: Pick<SummaryClock, 'assessment'>): string {
 
 /**
  * A clock's status: the one rule the card's chip, the compare table's Status and the full table's Status read. The first that
- * matches: it is start-dependent; it underproduces, overproduces or oscillates (outputTermOf, with what is said beside it);
+ * matches: it is start-dependent; its output term is Underproduces, Overproduces or Oscillates (outputTermOf, with what is said beside it);
  * it has no recovery; its loss trials gave no answer (Error, with the reason); else it is Stable.
  */
 export function statusOf(clock: Pick<SummaryClock, 'verdict' | 'ranking' | 'assessment' | 'checkedLanes' | 'asBuilt' | 'expectedOutputItems' | 'counts' | 'copies'>): ClockStatus {

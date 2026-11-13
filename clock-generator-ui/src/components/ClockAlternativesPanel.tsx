@@ -80,7 +80,7 @@ const NO_ICON = <Cancel fontSize="small" aria-hidden sx={{ color: 'error.light' 
 const STATUS_ICON: Record<ClockStatus['kind'], ReactNode> = {
     stable: YES_ICON, 'start-dependent': CAUTION_ICON, 'no-recovery': CAUTION_ICON, underproduces: NO_ICON, overproduces: NO_ICON, oscillates: NO_ICON, error: NO_ICON,
 };
-/** The colour of the full table's Status chip: a clock that underproduces, overproduces or oscillates, and Error, in red as "Check failed" */
+/** The colour of the full table's Status chip: Underproduces, Overproduces, Oscillates and Error, in red as "Check failed" */
 const STATUS_COLOR: Record<ClockStatus['kind'], 'success' | 'warning' | 'error'> = {
     stable: 'success', 'start-dependent': 'warning', 'no-recovery': 'warning', underproduces: 'error', overproduces: 'error', oscillates: 'error', error: 'error',
 };
