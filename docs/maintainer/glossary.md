@@ -66,7 +66,7 @@ _Avoid_: units (as the count)
 
 **Full copy**:
 A copy that holds all the machines of the build. STE: FULL (adj) and COPY (n), approved.
-_Avoid_: whole copy
+_Avoid_: whole copy (for a full copy)
 
 **Partial copy**:
 The copy that holds fewer of the machines of the build than the others: the fraction of the copies after the full
@@ -164,8 +164,6 @@ _Avoid_: output line (the game's `output_lines` are transport lines)
 **Side belt**:
 The belt that the output inserter of a copy drops on. It side-loads onto the output belt. The configuration's
 `output_belt.side_belt`. A project technical noun (STE rule 1.6): STE approves SIDE (n), and has no entry for belt.
-The site calls it the **side-loaded belt**. The configuration keeps the name `side_belt`. Side-loaded belt is a project
-technical noun too.
 
 **Join**:
 A belt lane that goes onto another belt: a side load, or the splitter. At an output blockage, the belt lane is blocked
@@ -513,7 +511,8 @@ _Avoid_: backpressure loss trial
 
 The site gives each clock one status. It shows the status on the card of the selected clock. It also shows it in the
 **Status** column of the clock tables. A stable clock has the status **Stable** (the entry **Stable**, under Control).
-A status is a technical noun (STE rule 1.6). Write it as the site shows it. Do not use it as a verb in your own text.
+Each status below is a technical noun (STE rule 1.6). Write it as the site shows it. Do not use it as a verb in your
+own text.
 
 **Underproduces**:
 The status of a clock that makes less than its setpoint. Next to it, the site gives the rate of the clock or the
@@ -522,13 +521,12 @@ it. Do not write underproduce as a verb.
 _Avoid_: Does not hold its rate (as the status), Misses the rate (as the status)
 
 **Overproduces**:
-The status of a clock that makes more than its setpoint. The site gives the rate of the clock next to it. A rounded
-clock can run at most 0.1% fast. If the generator accepts it as at its setpoint, its status is **Stable**. A project
-technical noun: the game and STE have no entry for it. Do not write overproduce as a verb.
+The status of a clock that makes more than its setpoint. The site gives the rate of the clock next to it. The
+generator accepts some rounded clocks as at their setpoint. They run at most 0.1% fast and do not have this status. A project technical noun: the game and STE have no entry for it. Do not write overproduce as a verb.
 
 **No recovery**:
-The status of a clock that holds its setpoint at steady state. After a disturbance trial, the clock has no recovery. A
-project technical noun: STE has no entry for recovery.
+The status of a clock that holds its setpoint at steady state. After one or more disturbance trials, the clock has no
+recovery. A project technical noun: STE has no entry for recovery.
 
 **Start-dependent**:
 The status of a clock that holds its setpoint from some starts only. The generator runs the other starts only if the

@@ -29,7 +29,6 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: each clock's status shows on its card and in the Status column, Stable included
 - ui: Underproduces and Overproduces replace the statuses Does not hold its rate and Misses the rate
 - ui: the status Recovery unavailable is now Error, with its reason beside it
-- ui: the status Depends on how it is started is now Start-dependent
 - ui: the note on a clock that overproduces says only what was measured
 - ui: a clock that loses swings on a shared lane shows what all its copies make
 - ui: a shared lane where a copy misses swings reads Swings missed, not Short
