@@ -228,10 +228,11 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
 
             <Box data-results-columns sx={{ display: 'grid', gridTemplateColumns: columns, columnGap: 2, rowGap: 1.5, alignItems: 'start', '& > *': { minWidth: 0 } }}>
                 {listShown && <Box data-clock-list-column="" sx={twoColumns ? {
-                    // in view while the selected clock scrolls, between the sticky header and the fixed footer (48 px
-                    // from sm up); its own scroll where it is taller than that
+                    // in view while the selected clock scrolls, between the sticky header (8 px under it) and the fixed
+                    // footer (48 px from sm up) with the page's 24 px above it, so that it fits at the end of the page too;
+                    // its own scroll where it is taller than that
                     position: 'sticky', top: 'calc(var(--app-header-height, 0px) + 8px)',
-                    maxHeight: 'calc(100vh - var(--app-header-height, 0px) - 48px - env(safe-area-inset-bottom) - 16px)', overflowY: 'auto',
+                    maxHeight: 'calc(100vh - var(--app-header-height, 0px) - 48px - env(safe-area-inset-bottom) - 32px)', overflowY: 'auto',
                 } : undefined}>
                     <ClockList
                         alternatives={props.alternatives}
