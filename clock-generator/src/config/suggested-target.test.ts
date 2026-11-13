@@ -219,6 +219,47 @@ describe("suggestedTargetOf, held to the belt the product is put on", () => {
         }
     });
 
+    describe("with the rest of the paste, held to the most the build can hold", () => {
+        // the input belt is a fast belt: each ingredient lane carries 60 a second, so the build holds at most 120 a
+        // second, less than the turbo output belt's 240
+        const slow_input = () => {
+            const { machines, outputs } = pasted(9);
+            const belts = [{ ...outputs.belts[0], type: "fast-transport-belt" } as BeltConfig, outputs.belts[1]];
+            return { machines, outputs: { ...outputs, belts } };
+        };
+        const configAt = (items_per_second: number, machines: MachineConfiguration[], outputs: { inserters: InserterConfig[], belts: BeltConfig[] }) =>
+            ConfigSchema.parse({ setpoint: { recipe: "automation-science-pack", items_per_second, copies: 1 }, overrides: {}, machines,
+                inserters: outputs.inserters, belts: outputs.belts, chests: [] }) as Config;
+
+        it("lowers it to an input lane that allows less than the output belt, and gives the engine's words for that limit", () => {
+            const { machines, outputs } = slow_input();
+            const made = from_mod(machines).items_per_second;
+            const suggested = O.toNullable(suggestedTargetOf(from_mod(machines), machines, outputs, { chests: [], drills: [] }));
+            const most = targetRateMaxOf(configAt(made, machines, outputs));
+            expect(most?.cut).toMatch(/^C2 /);
+            expect(suggested).toEqual({ target: { recipe: "automation-science-pack", items_per_second: 120, copies: 1 }, source: "mod",
+                build_limit: { machines_per_second: made, text: most!.limit } });
+            expect(most!.limit).toMatch(/^At most 60 a second of (copper plate|iron gear wheel) reaches the machines/);
+            // at the suggested rate the site's check finds nothing above the most
+            const at_suggested = targetRateMaxOf(configAt(suggested!.target.items_per_second, machines, outputs));
+            expect(at_suggested!.per_copy_per_second).toBeGreaterThanOrEqual(suggested!.target.items_per_second);
+            expect(at_suggested!.limit).toBeNull();
+        });
+
+        it("names the output belt where it is the lower limit, as without the rest of the paste", () => {
+            const { machines, outputs } = pasted(9, { type: "fast-transport-belt" });
+            expect(suggestedTargetOf(from_mod(machines), machines, outputs, { chests: [], drills: [] }))
+                .toEqual(suggestedTargetOf(from_mod(machines), machines, outputs));
+        });
+
+        it("leaves a paste with no belts as it is", () => {
+            const { machines, outputs } = pasted(9);
+            const no_belts = { inserters: outputs.inserters.filter(inserter => inserter.sink.type !== "belt" && inserter.source.type !== "belt"), belts: [] };
+            expect(O.toNullable(suggestedTargetOf(from_mod(machines), machines, no_belts, { chests: [], drills: [] })))
+                .toEqual({ target: from_mod(machines), source: "mod" });
+        });
+    });
+
     it("keeps the reason for an export the sidecar already lowered to what the belt carries", () => {
         const { machines, outputs } = pasted(9);
         const lowered = { recipe: "automation-science-pack", items_per_second: 240, copies: 1 };

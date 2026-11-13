@@ -46,7 +46,8 @@ Use the sidecar mod to copy a build from Factorio to the clock generator site.
 ### Result
 
 The build is on the site. If the site had no setpoint before, the setpoint is the suggested target: the
-product of the build at the maximum rate of its machines, or at what its output belt carries if that is less. At the
+product of the build at the maximum rate of its machines. If its output belt or a different part of the build cannot
+take that rate, the setpoint is the maximum that the build can hold, and the **Confirm Import from Factorio** dialog shows the limit. At the
 maximum rate, the clock has no time for recovery.
 To give the clock time for recovery, decrease the rate in **Setpoint**.
 

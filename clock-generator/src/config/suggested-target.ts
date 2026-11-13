@@ -2,29 +2,43 @@ import { pipe } from "fp-ts/function";
 import * as O from "fp-ts/Option";
 import { RecipeMetadata } from "../entities/machine/recipe/recipe-metadata";
 import { computeMachineFacts } from "../entities/traits/machine-facts-of";
+import { targetRateMaxOf } from "../crafting/feasibility/max-rate";
 import { dropLanesOf, lanesCapacityOf } from "./lane-capacity-validator";
-import { BeltConfig, InserterConfig, MachineConfiguration, TargetProductionRateConfig, TargetProductionRateConfigSchema } from "./schema";
+import { BeltConfig, ChestConfig, Config, ConfigSchema, InserterConfig, MachineConfiguration, MiningDrillConfig, TargetProductionRateConfig, TargetProductionRateConfigSchema } from "./schema";
 
 /**
  * The setpoint a paste from the sidecar mod suggests: the product that leaves the selection and what the selected
- * machines make of it together at their maximum, or what the belt the product is put on carries where that is less. A
- * ceiling, not a recommendation: a clock that runs the machines at their maximum has nothing to switch off.
+ * machines make of it together at their maximum, or less where the belt the product is put on carries less, or the
+ * build can hold less. A ceiling, not a recommendation: a clock that runs the machines at their maximum has nothing to
+ * switch off.
  */
 export interface SuggestedTarget {
     target: TargetProductionRateConfig;
     /** "mod": the export carried it; "inferred": worked out from the pasted machines */
     source: "mod" | "inferred";
     /**
-     * Set where the belt the product is put on carries less than the machines make: that belt, and what the machines
-     * make. The target's rate is then what the belt carries.
+     * Set where the belt the product is put on carries less than the machines make, and is what decides the rate: that
+     * belt, and what the machines make. The target's rate is then what the belt carries.
      */
     belt_limit?: { belt_id: number; machines_per_second: number };
+    /**
+     * Set where the engine's most for the pasted build (`targetRateMaxOf`) is below both what the machines make and what
+     * the output belt carries: what the machines make, and the engine's words for the limit at that rate (its `limit`,
+     * null where it has none). The target's rate is then that most.
+     */
+    build_limit?: { machines_per_second: number; text: string | null };
 }
 
 /** The inserters and belts of a paste, for the belt the product is put on */
 export interface PastedOutputs {
     inserters: readonly InserterConfig[];
     belts: readonly BeltConfig[];
+}
+
+/** The rest of a paste, for the engine's most for the whole build */
+export interface PastedRest {
+    chests: readonly ChestConfig[];
+    drills: readonly MiningDrillConfig[];
 }
 
 const SuggestedTargetSchema = TargetProductionRateConfigSchema.extend({
@@ -191,11 +205,39 @@ function machinesRateOf(product: string, machines: readonly MachineConfiguration
 }
 
 /**
+ * A suggestion held to the engine's most for the pasted build (`targetRateMaxOf`: the cuts of the feasibility pass and
+ * the lanes the copies share, the same figure as the page's "At most N/s"), where that is below the suggestion. The
+ * build is the paste with the machines' rate as its setpoint, so the engine's words say what stops that rate. A paste
+ * with no belts, or one the schema or the engine cannot read, is left as it is.
+ */
+function heldToBuild(suggestion: SuggestedTarget, machines: readonly MachineConfiguration[], outputs: PastedOutputs, rest: PastedRest): SuggestedTarget {
+    if (outputs.belts.length === 0) return suggestion;
+    const product = suggestion.target.recipe;
+    const made = suggestion.belt_limit?.machines_per_second ?? Math.max(suggestion.target.items_per_second, machinesRateOf(product, machines));
+    const parsed = ConfigSchema.safeParse({
+        setpoint: { recipe: product, items_per_second: made, copies: suggestion.target.copies }, overrides: {},
+        machines, inserters: outputs.inserters, belts: outputs.belts, chests: rest.chests,
+        ...(rest.drills.length > 0 && { drills: { configs: rest.drills } }),
+    });
+    if (!parsed.success) return suggestion;
+    const most = targetRateMaxOf(parsed.data as Config);
+    // the most is for one copy; a suggestion is for copies 1, so it is the total
+    if (most === null || !(most.per_copy_per_second < suggestion.target.items_per_second)) return suggestion;
+    const { belt_limit: _belt, ...rest_of } = suggestion;
+    return {
+        ...rest_of,
+        target: { ...suggestion.target, items_per_second: most.per_copy_per_second },
+        build_limit: { machines_per_second: made, text: most.limit },
+    };
+}
+
+/**
  * The setpoint to suggest for a paste from the sidecar mod: the export's own `suggested_target` when it is valid, else
  * the one worked out from the machines (an export from a mod before 0.8.0), else None. With the paste's inserters and
- * belts, it is held to the belt the product is put on.
+ * belts, it is held to the belt the product is put on; with the rest of the paste too, to the engine's most for the
+ * whole build. The lowest of the three is the suggestion, and the one that decides it is named.
  */
-export function suggestedTargetOf(raw: unknown, machines: readonly MachineConfiguration[], outputs?: PastedOutputs): O.Option<SuggestedTarget> {
+export function suggestedTargetOf(raw: unknown, machines: readonly MachineConfiguration[], outputs?: PastedOutputs, rest?: PastedRest): O.Option<SuggestedTarget> {
     return pipe(
         parseSuggestedTarget(raw),
         O.map((target): SuggestedTarget => ({ target, source: "mod" })),
@@ -204,5 +246,6 @@ export function suggestedTargetOf(raw: unknown, machines: readonly MachineConfig
             O.map((target): SuggestedTarget => ({ target, source: "inferred" })),
         )),
         O.map(suggestion => outputs === undefined ? suggestion : heldToOutputBelt(suggestion, machines, outputs)),
+        O.map(suggestion => outputs === undefined || rest === undefined ? suggestion : heldToBuild(suggestion, machines, outputs, rest)),
     );
 }

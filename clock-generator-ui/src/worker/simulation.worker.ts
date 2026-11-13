@@ -390,6 +390,7 @@ function pastedEntities(pasted: Extract<EngineQuery, { kind: 'pasted-entities' }
     const drills = validateEntries(clockGenerator.MiningDrillConfigSchema, pasted.drills, 'drill');
     const inserters = validateEntries(clockGenerator.InserterConfigSchema, clockGenerator.sidecarPickupInserters(pasted.inserters, pasted.sidecar_version, pasted.pickup_warnings), 'inserter');
     const belts = validateEntries(clockGenerator.BeltConfigSchema, pasted.belts, 'belt');
+    const chests = validateEntries(clockGenerator.ChestConfigSchema, pasted.chests, 'chest');
     return {
         machines,
         picked_machines: machines.filter((machine, index) => machine.prototype !== undefined && !hasPrototype(Array.isArray(pasted.machines) ? pasted.machines[index] : undefined))
@@ -397,12 +398,12 @@ function pastedEntities(pasted: Extract<EngineQuery, { kind: 'pasted-entities' }
         drills,
         inserters,
         belts,
-        chests: validateEntries(clockGenerator.ChestConfigSchema, pasted.chests, 'chest'),
+        chests,
         guidance: clockGenerator.checkSidecarImport(pasted.sidecar_version, machines, undefined,
             Array.isArray(pasted.chests) ? pasted.chests : [], Array.isArray(pasted.inserters) ? pasted.inserters : [],
             Array.isArray(pasted.drills) ? pasted.drills : []),
-        // held to the belt the product is put on, where that carries less than the machines make
-        suggested_target: clockGenerator.suggestedTargetOf(pasted.suggested_target, machines, { inserters, belts }),
+        // held to the belt the product is put on and to the engine's most for the whole build, where they are lower
+        suggested_target: clockGenerator.suggestedTargetOf(pasted.suggested_target, machines, { inserters, belts }, { chests, drills }),
     };
 }
 

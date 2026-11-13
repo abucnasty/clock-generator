@@ -60,6 +60,14 @@ describe('the words of the Setpoint row', () => {
             + 'The machines make up to 248.006/s. You can lower the rate in the Setpoint panel after importing.');
     });
 
+    it('names the limit of the build that lowered the rate, in the engine\'s words', () => {
+        const limit = { machines_per_second: 248.00625000000002, text: 'At most 60 a second of copper plate reaches the machines that need it.' };
+        expect(targetRowCaption('mod', undefined, limit)).toBe('From the Factorio export, lowered to the most the build can hold. '
+            + 'At most 60 a second of copper plate reaches the machines that need it.');
+        expect(targetRowCaption('inferred', undefined, { ...limit, text: null })).toBe('Estimated from the imported machines, lowered to the most '
+            + 'the build can hold. The machines make up to 248.006/s. You can lower the rate in the Setpoint panel after importing.');
+    });
+
     it('says which target it replaces', () => {
         expect(replacesTargetNote({ recipe: 'logistic-science-pack', items_per_second: 240, copies: 11 }, name))
             .toBe('Tick to replace your current target (logistic science pack at 240/s).');

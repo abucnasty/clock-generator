@@ -44,9 +44,19 @@ export function targetRowLabel(target: TargetValues, name: (id: string) => strin
 
 /**
  * Where the suggestion came from, and that it is a ceiling. Where it is lowered to what the belt the product is put on
- * carries, it says so, with what the machines make.
+ * carries, it says so, with what the machines make. Where it is lowered to the most the build can hold, it gives the
+ * engine's words for the limit that decided it (`targetRateMaxOf`'s `limit`), or what the machines make where it has none.
  */
-export function targetRowCaption(source: SuggestedTarget['source'], beltLimit?: SuggestedTarget['belt_limit']): string {
+export function targetRowCaption(source: SuggestedTarget['source'], beltLimit?: SuggestedTarget['belt_limit'],
+    buildLimit?: SuggestedTarget['build_limit']): string {
+    const from = source === 'mod' ? 'From the Factorio export' : 'Estimated from the imported machines';
+    const after = source === 'mod' ? 'You can lower the rate after importing.' : 'You can lower the rate in the Setpoint panel after importing.';
+    if (buildLimit !== undefined) {
+        return buildLimit.text !== null
+            ? `${from}, lowered to the most the build can hold. ${buildLimit.text}`
+            : `${from}, lowered to the most the build can hold. The machines make up to `
+                + `${formatNumberText(buildLimit.machines_per_second, { maxDecimals: TARGET_DECIMALS })}/s. ${after}`;
+    }
     if (beltLimit !== undefined) {
         const lowered = `lowered to what ${entityLabel('belt', beltLimit.belt_id)} carries. The machines make up to `
             + `${formatNumberText(beltLimit.machines_per_second, { maxDecimals: TARGET_DECIMALS })}/s.`;

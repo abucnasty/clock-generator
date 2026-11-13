@@ -73,7 +73,8 @@ interface PendingImport extends PastedEntities {
     repeatedSourceKey?: string;
     originalSelections?: ImportSelections;
     /** The Target Output the paste can fill in, and where it came from; null when it could not tell */
-    fill: { values: TargetValues; source: SuggestedTarget['source']; beltLimit?: SuggestedTarget['belt_limit'] } | null;
+    fill: { values: TargetValues; source: SuggestedTarget['source']; beltLimit?: SuggestedTarget['belt_limit'];
+        buildLimit?: SuggestedTarget['build_limit'] } | null;
 }
 
 /** What the intro card starts in here */
@@ -349,7 +350,8 @@ export function ConfigImportExport({
         if (request !== pasteRequestRef.current) return null;
         const suggestion = Option.toNullable(validated.suggested_target);
         const fill = suggestion ? { values: targetToFill(suggestion), source: suggestion.source,
-            ...(suggestion.belt_limit !== undefined && { beltLimit: suggestion.belt_limit }) } : null;
+            ...(suggestion.belt_limit !== undefined && { beltLimit: suggestion.belt_limit }),
+            ...(suggestion.build_limit !== undefined && { buildLimit: suggestion.build_limit }) } : null;
         confirmOpenerRef.current = document.activeElement;
         setPendingImport({ ...validated, fill, pickupWarnings: read.pickupWarnings });
         // everything there is, except a target the player has already set; the first exports had machines only
@@ -754,7 +756,7 @@ export function ConfigImportExport({
                                     label={targetRowLabel(pendingImport.fill.values, recipeLabel)}
                                 />
                                 <Typography id={TARGET_CAPTION_ID} variant="body2" color="text.secondary" sx={{ ml: 4 }}>
-                                    {targetRowCaption(pendingImport.fill.source, pendingImport.fill.beltLimit)}
+                                    {targetRowCaption(pendingImport.fill.source, pendingImport.fill.beltLimit, pendingImport.fill.buildLimit)}
                                     {currentTarget.recipe !== '' && ` ${replacesTargetNote(currentTarget, recipeLabel)}`}
                                 </Typography>
                                 {maximumTargetNote(pendingImport.fill.source) && <Typography id={TARGET_MAXIMUM_ID} variant="body2" color="text.secondary" sx={{ ml: 4 }}>
