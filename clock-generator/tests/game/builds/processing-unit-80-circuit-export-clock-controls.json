@@ -67,7 +67,7 @@
      "id": "round_robin_polling_per_hand",
      "holds": true,
      "rate": 80,
-     "supply": "moving"
+     "supply": "backed_up"
     },
     "clock_sha256": "7de289c785c103b91b175bb4d83d8bb2414d7081f9d1c1c41dc3a6e359485037"
    }
