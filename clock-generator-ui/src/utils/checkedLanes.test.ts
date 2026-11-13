@@ -151,7 +151,7 @@ describe('the sentence under a row\'s state, by the state\'s kind', () => {
         ['takes_less', true],
         ['rate_fits', true],
         ['not_checked', true],
-        ['not_run', true],
+        ['not_run', false],
     ] as const)('%s: shown %s', (key, shown) => {
         const { row } = STATES[key];
         expect(rowSentenceShown(row)).toBe(shown ? stateSentence(row) : null);

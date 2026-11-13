@@ -47,12 +47,23 @@ describe('a clock without a cause', () => {
         expect(screen.getByText('3 lanes · all hold')).toBeTruthy();
     });
 
-    it('that was not run with the copies shows the engine\'s line for it and never "holds"', async () => {
+    it('that was not run with the copies as one copy alone does not hold: no line, the rows\' label alone, and never "holds"', async () => {
         const notRun = checkedOf(AUTOMATION_240, 'takt_batches_observed_swings_4');
         const { container } = show(<LaneDiagnostics clock={viewOf(AUTOMATION_240, 'takt_batches_observed_swings_4')} />, { names: gameNames });
-        expect(container.textContent).toContain(notRun.line.sentence);
-        expect(bodyRows(screen.getByRole('table'))).toHaveLength(3);
+        expect(container.textContent).not.toContain(notRun.line.sentence);
+        expect(container.querySelector('[data-checked-line]')).toBeNull();
+        const rows = bodyRows(screen.getByRole('table'));
+        expect(rows).toHaveLength(3);
+        for (const row of rows) expect(row.textContent!.endsWith('Not run with the copies')).toBe(true);
+        expect(container.textContent).not.toContain('so the copies are not run');
         expect(container.textContent).not.toMatch(/holds/i);
+    });
+
+    it('that was not run with the copies, with a sentence of the output chests after the line: the line as the engine gives it', async () => {
+        const notRun = checkedOf(ELECTROMAGNETIC_330, 'takt_batches_observed_swings_4');
+        expect(notRun.line.output_chests.length).toBeGreaterThan(0);
+        const { container } = show(<LaneDiagnostics clock={viewOf(ELECTROMAGNETIC_330, 'takt_batches_observed_swings_4')} />, { names: gameNames });
+        expect(container.querySelector('[data-checked-line]')!.textContent).toBe(notRun.line.sentence);
     });
 
     it('drops into chests: the engine\'s line names the chest, and no output lane has a row', async () => {

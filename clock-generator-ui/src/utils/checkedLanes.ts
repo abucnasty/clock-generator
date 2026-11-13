@@ -85,7 +85,8 @@ export function stateSentence(row: Pick<CheckedLaneRow, 'state' | 'sentence'>): 
 /**
  * The sentence the lane table shows under a row's state, by the state's kind; null where it would only repeat the tab: a lane
  * that holds says it in its label, unless copies wait at their join (`join_waits`), which the sentence adds; a full join
- * where every copy misses the same count says it in the tab's headline, and keeps its sentence where the copies differ
+ * where every copy misses the same count says it in the tab's headline, and keeps its sentence where the copies differ; a lane
+ * not run with the copies says it in its label, and the tests of the clock say why
  */
 export function rowSentenceShown(row: Pick<CheckedLaneRow, 'state' | 'sentence'>): string | null {
     const { state } = row;
@@ -94,9 +95,20 @@ export function rowSentenceShown(row: Pick<CheckedLaneRow, 'state' | 'sentence'>
             return state.join_waits === undefined ? null : stateSentence(row);
         case 'join_full':
             return state.copies.every(it => it.missed === state.copies[0].missed && it.swings === state.copies[0].swings) ? null : stateSentence(row);
+        case 'not_run':
+            // the label says it, and the tests above the table say why: one copy alone does not hold its rate
+            return null;
         default:
             return stateSentence(row);
     }
+}
+
+/**
+ * Whether the tab shows the engine's line above the lane table: not where it only says that the copies were not run because
+ * one copy alone does not hold (the tests of the clock say it), with nothing after it (no plain output belt, no output chest)
+ */
+export function lineShown(clock: Pick<ClockAlternativeView, 'assessment'>, line: CheckedLanes['line']): boolean {
+    return !(clock.assessment.holds === false && !line.run_with_copies && line.plain_output_belts === 0 && line.output_chests.length === 0);
 }
 
 /** The lane of the build a row is of */

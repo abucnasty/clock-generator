@@ -62,10 +62,10 @@ describe('the Diagnostics tab holds exactly what each clock has', () => {
         expect(afterTests(container)).toBe('A build of one copy shares no lane.');
     });
 
-    it('a clock with the note on why it is not stable: the note first, as the notes show it, then the line and the table', async () => {
+    it('a clock with the note on why it is not stable: the note first, as the notes show it, then the table; no line, as one copy alone does not hold', async () => {
         const view = viewOf(MILITARY_240, 'takt_batches_observed_swings_4');
         const { container, user } = show(<ClockDiagnostics clock={view} />, { names: gameNames });
-        expect(partsOf(container)).toEqual(['test-pipeline', 'note unstable', 'checked-line', 'table']);
+        expect(partsOf(container)).toEqual(['test-pipeline', 'note unstable', 'table']);
         const note = container.querySelector<HTMLElement>('[data-insight="unstable"]')!;
         expect(within(note).getByRole('heading', { level: 3, name: 'This clock underproduces' })).toBeTruthy();
         // the other notes stay in Overview

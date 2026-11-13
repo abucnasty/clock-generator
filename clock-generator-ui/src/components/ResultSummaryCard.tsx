@@ -3,7 +3,7 @@ import { Alert, AlertTitle, Box, Button, Link, Typography } from '@mui/material'
 import { useEffect, useRef, type ReactNode, type RefObject } from 'react';
 import type { WhyNotStable } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../worker/types';
-import { rateVerbs, type TargetCounts } from '../utils/targetCounts';
+import { rateVerbs } from '../utils/targetCounts';
 import {
     clockBadges,
     differenceFromRecommended,
@@ -37,8 +37,6 @@ const CARD_COPY = {
     recovers: 'Recovery',
     detailsHeading: 'Simulation results',
     staleLine: 'These clocks are for an earlier build. Generate again for a clock for the build you have now.',
-    // the hold sentence of a clock with a loss on a shared lane: the clock-only check, which runs one copy
-    holdsOneCopyAlone: 'At steady state one copy alone keeps its rate: yes.',
 };
 
 interface ResultSummaryCardProps {
@@ -60,7 +58,7 @@ interface ResultSummaryCardProps {
     whyNotStable?: WhyNotStable | null;
     /** The clocks are for an earlier build */
     stale: boolean;
-    /** Saved build and inserter assumptions, shown inside the details disclosure. */
+    /** Saved build and inserter assumptions, shown inside the details disclosure; null where there are none to show */
     runAssumptions?: ReactNode;
     comparisonAction?: ReactNode;
 }
@@ -169,31 +167,13 @@ function fewestDecidersMeaning(alternatives: ClockAlternativeView[], index: numb
     return meaning ? { [SUMMARY_COPY.fewestDeciders]: meaning } : {};
 }
 
-/** Whether the clock keeps its rate at steady state, as a sentence */
-function holdStatusText(rate: string, holds: boolean | null | undefined, counts?: TargetCounts, sharedLaneLoss = false): string {
-    // on a loss on a shared lane the rate is of all the copies, and the yes of the clock-only check: one copy alone, no number
-    if (holds === true && sharedLaneLoss) return CARD_COPY.holdsOneCopyAlone;
-    if (holds === true) return `At steady state it keeps ${rateVerbs(counts).ing} ${rate}: yes.`;
-    if (holds === false) return 'At steady state it does not keep its rate.';
-    return 'Whether it keeps its rate at steady state is unavailable.';
-}
-
-function ClockExplanation(props: SelectedProps) {
+/** Why this clock is the pick, or how it differs from the pick; empty where there is no pick yet */
+function reasonOf(props: SelectedProps): string {
     const { alternatives, selectedIndex, recommendedIndex, isGenerating, selected } = props;
     const recommended = recommendedIndex === null ? undefined : alternatives[recommendedIndex];
-    const reason = selectedIndex === recommendedIndex
+    return selectedIndex === recommendedIndex
         ? recommendationReason(alternatives, recommendedIndex, !isGenerating && !props.stoppedEarly, props.stoppedEarly && !isGenerating)
         : recommended ? [pickNameMeaning(alternatives, selectedIndex), differenceFromRecommended(selected, recommended)].filter(Boolean).join(' ') : '';
-    const recovers = recoversOf(selected);
-    return <Box sx={{ display: 'grid', gap: 1 }}>
-        {reason && <Typography variant="body2" data-card-reason>{reason}</Typography>}
-        <Typography variant="body2" data-hold-status>
-            {holdStatusText(makesText(selected, selected.copies).value, selected.assessment.holds, selected.counts,
-                (selected.assessment.shared_lane_losses?.length ?? 0) > 0)}
-        </Typography>
-        {recovers.kind === 'yes' && <Typography variant="body2">{recovers.detail}</Typography>}
-        {props.runAssumptions}
-    </Box>;
 }
 
 /**
@@ -223,6 +203,8 @@ export function ResultSummaryCard(props: ResultSummaryCardProps) {
 
     const recommended = props.recommendedIndex === null ? undefined : alternatives[props.recommendedIndex];
     const causeAbove = whyNotStableShowsCause(props.whyNotStable, recommended);
+    const reason = selected ? reasonOf({ ...props, selected }) : '';
+    const beltLine = selected?.beltLabel === '';
     return (
         <Panel title={CARD_COPY.heading} actions={selected ? props.comparisonAction : undefined} sx={{ '& > :last-child': { p: 1.5 } }} data-result-card="" data-build-anchor="selected-clock">
             {props.rateWarning && <Alert severity="warning" sx={{ mb: 1 }}>{props.rateWarning}</Alert>}
@@ -239,15 +221,15 @@ export function ResultSummaryCard(props: ResultSummaryCardProps) {
             ) : (
                 <Typography variant="body2" color="text.secondary">{CARD_COPY.makingFirst}</Typography>
             )}
-            <Disclosure summary={CARD_COPY.detailsHeading} sx={{ mt: 1.5 }}>
+            {/* which tests ran and what they found is the Diagnostics tab's graphic; a fold with no line left is not drawn */}
+            {selected && (reason || props.runAssumptions || beltLine) && <Disclosure summary={CARD_COPY.detailsHeading} sx={{ mt: 1.5 }}>
                 <Box sx={{ display: 'grid', gap: 1, mt: 1 }}>
-                    {selected && <ClockExplanation {...props} selected={selected} />}
+                    {reason && <Typography variant="body2" data-card-reason>{reason}</Typography>}
+                    {props.runAssumptions}
                     {/* only where no clocked inserter picks up from a belt: the card's Belt fact says the rest */}
-                    {selected && selected.beltLabel === '' && (
-                        <Typography variant="body2" data-belt-line>{SUMMARY_COPY.beltLineNone}</Typography>
-                    )}
+                    {beltLine && <Typography variant="body2" data-belt-line>{SUMMARY_COPY.beltLineNone}</Typography>}
                 </Box>
-            </Disclosure>
+            </Disclosure>}
         </Panel>
     );
 }

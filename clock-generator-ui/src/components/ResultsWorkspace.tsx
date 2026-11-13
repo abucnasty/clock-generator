@@ -8,6 +8,7 @@ import { useBuildSection } from '../hooks/useBuildViewContext';
 import { SelectedClockContext } from './SelectedClockContext';
 import { InserterAssumptions } from './InserterAssumptions';
 import { PickupGeometrySummary } from './PickupGeometrySummary';
+import { pickupGeometryOf } from '../utils/pickupGeometry';
 import type {
     LogMessage,
     DebugSteps,
@@ -189,6 +190,14 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
         return status.kind === 'stable' ? null : status.text;
     };
     const rateWarning = cardWarningOf(selected);
+    // what a saved run assumed, in the card's Simulation results: a line, and the belt pickups where the build has some
+    const runLead = selected ? [
+        madeForLead(saved, selected),
+        selected.assumptions?.kickStarts.length ? `${selected.assumptions.kickStarts.length} modeled kick start(s).` : '',
+        selected.assumptions?.outputDrops.some(drop => drop.mode === 'shared-lanes') ? 'The drop positions you gave are used to space the output drops on the belt.' : '',
+        selected.assumptions?.machineFuel.length ? 'Imported machine fuel is in Why.' : '',
+    ].filter(Boolean).join(' ') : '';
+    const pickupsShown = saved !== null && saved !== undefined && pickupGeometryOf(saved).total > 0;
     // said of the whole run once it is done: while clocks still arrive, a stable one may yet come
     const whyNotStable = props.isRunning ? null
         : whyNotStableOf(props.alternatives, props.recommendedIndex, props.notMade);
@@ -241,15 +250,10 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                     endIcon={<ExpandMore sx={{ transform: comparisonOpen ? 'rotate(180deg)' : 'none' }} />}>
                     Compare clocks
                 </Button></Box>}
-                runAssumptions={selected && <Box data-result-assumptions sx={{ overflowWrap: 'anywhere' }}>
-                    <Typography variant="body2">
-                        {madeForLead(saved, selected)}
-                        {selected.assumptions?.kickStarts.length ? ` ${selected.assumptions.kickStarts.length} modeled kick start(s).` : ''}
-                        {selected.assumptions?.outputDrops.some(drop => drop.mode === 'shared-lanes') ? ' The drop positions you gave are used to space the output drops on the belt.' : ''}
-                        {selected.assumptions?.machineFuel.length ? ' Imported machine fuel is in Why.' : ''}
-                    </Typography>
+                runAssumptions={selected && (runLead !== '' || pickupsShown) ? <Box data-result-assumptions sx={{ overflowWrap: 'anywhere' }}>
+                    {runLead !== '' && <Typography variant="body2">{runLead}</Typography>}
                     {saved && <PickupGeometrySummary build={saved} savedRun backedUp={selected.belt ? selected.belt.kind === 'backed_up' : selected.beltLabel === 'backed-up'} onEdit={props.staleFor ? undefined : props.onEditPickup} busy={props.isRunning} />}
-                </Box>}
+                </Box> : null}
             />
 
             <Box data-results-columns sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 1.5, '& > *': { minWidth: 0 } }}>

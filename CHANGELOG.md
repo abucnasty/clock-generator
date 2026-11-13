@@ -28,6 +28,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: Diagnostics no longer repeats its headline in the lane table or Read this as text
 - ui: the Timeline's lead drops the wakeups of one copy; the chart drops its key hint
 - ui: empty run overrides, empty Explanation labels and the install caption's Factorio version are gone
+- ui: Simulation results and the lane table no longer say which test ran; the graphic does
 
 ### Changed
 - generation: clocks with observed windows are found faster on large builds
