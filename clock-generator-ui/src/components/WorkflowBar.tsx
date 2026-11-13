@@ -398,7 +398,8 @@ export function WorkflowBar({
                                 onClose={() => setCopyTooltipOpen(false)}>
                                 <Button
                                     ref={copyButtonRef}
-                                    onMouseMove={() => { if (copyTooltip && !copyTooltipOpen) setCopyTooltipOpen(true); }}
+                                    // a pointer move, not a mouse move: a tap gives a mouse move too, and a touch opens it only when held
+                                    onPointerMove={event => { if (event.pointerType !== 'touch' && copyTooltip && !copyTooltipOpen) setCopyTooltipOpen(true); }}
                                     onMouseLeave={() => { if (!copyTooltip) setCopyTooltipOpen(false); }}
                                     onBlur={() => { movedToCopyRef.current = false; }}
                                     variant={copyFilled ? 'contained' : 'outlined'}

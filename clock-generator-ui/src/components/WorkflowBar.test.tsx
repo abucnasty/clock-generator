@@ -64,6 +64,9 @@ it("does not open Copy's warning for the pointer it comes in under or the focus 
     expect(document.activeElement).toBe(copy);
     // Copy came in under a pointer that rests where Generate was: the browser gives a mouseover and no move
     fireEvent.mouseOver(copy);
+    // a tap gives a touch pointer move and a mouse move: a touch opens it only when held
+    fireEvent.pointerMove(copy, { pointerType: 'touch' });
+    fireEvent.mouseMove(copy);
     await new Promise(resolve => setTimeout(resolve, 300));
     expect(screen.queryByRole('tooltip')).toBeNull();
     fireEvent.mouseLeave(copy);
