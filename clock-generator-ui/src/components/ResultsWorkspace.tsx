@@ -315,6 +315,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                             shiftOptions={props.shiftOptions}
                             swingBackoffReport={props.swingBackoffReport}
                             fuelView={props.fuelView}
+                            inserters={saved?.inserters}
                         />
                     </SelectedClockContext>
                 </Box>}

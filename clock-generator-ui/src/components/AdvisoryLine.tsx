@@ -1,15 +1,10 @@
-import { InfoOutlined, WarningAmber } from '@mui/icons-material';
-import { alpha, Box, Button, ButtonBase, Tooltip, Typography, useTheme } from '@mui/material';
-import { useId, useState, type ReactNode } from 'react';
+import { alpha, Box, Typography, useTheme } from '@mui/material';
+import { useId, type ReactNode } from 'react';
 import type { InserterFormData, MachineFormData } from '../hooks/useConfigForm';
 import { useGameNames } from '../hooks/useGameNames';
 import { ADVISORY_COPY, advisoryInserters, advisoryLine, advisoryMachines, dropsByTiles, idLines, pickupFact, type Advisory } from '../utils/advisory';
-import { entityLabel, type LabelKind } from '../utils/entityLabel';
-import { AppDialog } from './AppDialog';
-import { EntityBadge } from './EntityBadge';
-import { FactorioIcon } from './FactorioIcon';
 import { MachineIcon } from './MachineIcon';
-import { WithQuality } from './QualityBadge';
+import { InserterChipIcon, NoteChips, NoteLine, NoteFacts as Facts } from './NoteLine';
 import { ScrollX } from './ScrollX';
 
 /** The narrowest the drawing gets: its smallest words stay about 11 px high */
@@ -27,54 +22,18 @@ export function AdvisoryLine({ advisory, severity, inserters, machines, onReview
     onReviewInserter?: (id: number) => void;
     onReviewMachine?: (id: number) => void;
 }) {
-    const [open, setOpen] = useState(false);
-    const line = advisoryLine(advisory);
-    const note = severity === 'info';
-    const Mark = note ? InfoOutlined : WarningAmber;
     const inserterIds = advisoryInserters(advisory);
     const machineIds = advisoryMachines(advisory);
-    return <Box>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 1.5, rowGap: 1 }}>
-            <Mark sx={{ color: `${severity}.main` }} titleAccess={note ? ADVISORY_COPY.marks.info : ADVISORY_COPY.marks.warning} />
-            <Typography variant="body1" sx={{ fontWeight: 600 }}>{line}</Typography>
-            {inserterIds.length > 0 && <Chips label={ADVISORY_COPY.chips.inserters} kind="inserter" ids={inserterIds} onClick={onReviewInserter}
+    return <NoteLine mark={severity} markLabel={severity === 'info' ? ADVISORY_COPY.marks.info : ADVISORY_COPY.marks.warning}
+        title={advisoryLine(advisory)} details={ADVISORY_COPY.details}
+        chips={<>
+            {inserterIds.length > 0 && <NoteChips label={ADVISORY_COPY.chips.inserters} kind="inserter" ids={inserterIds} onClick={onReviewInserter}
                 icon={id => <InserterChipIcon value={inserters.find(row => row.id === id)} />} />}
-            {machineIds.length > 0 && <Chips label={ADVISORY_COPY.chips.machines} kind="machine" ids={machineIds} onClick={onReviewMachine}
+            {machineIds.length > 0 && <NoteChips label={ADVISORY_COPY.chips.machines} kind="machine" ids={machineIds} onClick={onReviewMachine}
                 icon={id => <MachineIcon machine={machines.find(row => row.id === id) ?? {}} size={20} />} />}
-            <Box sx={{ flexGrow: 1 }} />
-            <Button size="small" color="inherit" variant="outlined" onClick={() => setOpen(true)}>{ADVISORY_COPY.details}</Button>
-        </Box>
-        <AppDialog open={open} onClose={() => setOpen(false)} title={line} closeButton maxWidth="sm">
-            <AdvisoryDetail advisory={advisory} inserters={inserters} />
-        </AppDialog>
-    </Box>;
-}
-
-/** The entities of a line as the rows show them: icon and number; each a button to its row where there is a step to it */
-function Chips({ label, kind, ids, icon, onClick }: {
-    label: string; kind: LabelKind; ids: number[]; icon: (id: number) => ReactNode; onClick?: (id: number) => void;
-}) {
-    return <Box component="ul" aria-label={label} sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, m: 0, p: 0, listStyle: 'none' }}>
-        {ids.map(id => {
-            const name = entityLabel(kind, id);
-            const badge = <EntityBadge id={id} size="small"><Box component="span" aria-hidden sx={{ display: 'inline-flex' }}>{icon(id)}</Box></EntityBadge>;
-            return <Box component="li" key={id} sx={{ display: 'flex' }}>
-                {onClick
-                    ? <Tooltip title={name}>
-                        <ButtonBase aria-label={`Review ${name.toLowerCase()}`} onClick={() => onClick(id)}
-                            sx={{ borderRadius: 0.5, '&.Mui-focusVisible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 1 } }}>{badge}</ButtonBase>
-                    </Tooltip>
-                    : <Box component="span" title={name}>{badge}</Box>}
-            </Box>;
-        })}
-    </Box>;
-}
-
-/** An inserter's icon with its quality, as its row shows it; a stack inserter where the row is not known */
-function InserterChipIcon({ value }: { value: InserterFormData | undefined }) {
-    return <WithQuality quality={value?.quality ?? 'legendary'} size={20}>
-        <FactorioIcon name={value?.prototype ?? 'stack-inserter'} size={20} alt="" />
-    </WithQuality>;
+        </>}>
+        <AdvisoryDetail advisory={advisory} inserters={inserters} />
+    </NoteLine>;
 }
 
 /** The window of an advisory: a picture or a list where there is one, then why, what it can cost and what to do where its words say them */
@@ -106,15 +65,6 @@ function AdvisoryDetail({ advisory, inserters }: { advisory: Advisory; inserters
             // the engine's words, whole: they say what and what to do in each sentence
             return <Typography variant="body2">{advisory.text}</Typography>;
     }
-}
-
-function Facts({ rows }: { rows: [string, string][] }) {
-    return <Box component="dl" sx={{ m: 0, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '9.5rem 1fr' }, columnGap: 2, rowGap: { xs: 0.25, sm: 1 } }}>
-        {rows.map(([label, text]) => <Box key={label} sx={{ display: 'contents' }}>
-            <Typography component="dt" variant="overline" color="text.secondary" sx={{ lineHeight: 1.6, mt: { xs: 1, sm: 0 } }}>{label}</Typography>
-            <Typography component="dd" variant="body2" sx={{ m: 0 }}>{text}</Typography>
-        </Box>)}
-    </Box>;
 }
 
 /** Tiles of a belt seen from above, with chevrons the way it moves */

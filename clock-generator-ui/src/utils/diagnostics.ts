@@ -1,6 +1,7 @@
 import type { CheckedLanes, ClockInsight, SharedLaneCause } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../worker/types';
 import { insightsShown } from './checkedLanes';
+import { shownInOverview } from './clockNotes';
 
 /**
  * What the selected clock's workspace shows on its Diagnostics tab, and the card's way to it: every string of it and every
@@ -21,10 +22,13 @@ export const DIAGNOSTICS_COPY = {
 /** The note that says why a clock is not stable (the engine's insight `unstable`): on Diagnostics, not in Overview's notes */
 const UNSTABLE_NOTE = 'unstable';
 
-/** The notes of a clock, by where they stand: the note on why it is not stable on Diagnostics, every other note in Overview */
+/**
+ * The notes of a clock, by where they stand: the note on why it is not stable on Diagnostics, every other note in Overview
+ * but the one on swings at other ticks than the plan (clockNotes.ts)
+ */
 export function notesOf(clock: Pick<ClockAlternativeView, 'insights' | 'checkedLanes'>): { diagnostics: ClockInsight | undefined; overview: ClockInsight[] } {
     const shown = insightsShown(clock);
-    return { diagnostics: shown.find(insight => insight.id === UNSTABLE_NOTE), overview: shown.filter(insight => insight.id !== UNSTABLE_NOTE) };
+    return { diagnostics: shown.find(insight => insight.id === UNSTABLE_NOTE), overview: shown.filter(insight => insight.id !== UNSTABLE_NOTE && shownInOverview(insight)) };
 }
 
 /** What Diagnostics shows of a clock's shared lanes */

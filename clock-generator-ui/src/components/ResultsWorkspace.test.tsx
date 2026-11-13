@@ -149,6 +149,29 @@ describe('the note that says why a clock is not stable', () => {
     });
 });
 
+describe('the note on swings at other ticks than the plan', () => {
+    const views = viewsOf(AUTOMATION_240);
+    const index = views.findIndex(view => view.id === 'takt_batches_observed');
+    const swings = views[index].insights.find(insight => insight.id === 'plan-versus-clock')!;
+
+    it('is in the clock\'s data and not in Overview\'s notes; the clock\'s other notes are lines there', () => {
+        expect(swings.scope).toBe('clock');
+        results(views, AUTOMATION_240.selected_index, index);
+        const overview = panel('overview');
+        expect(overview.querySelector('[data-insight="plan-versus-clock"]')).toBeNull();
+        expect(overview.textContent).not.toContain(swings.title);
+        expect(overview.textContent).not.toContain(swings.what);
+        expect(within(overview).getByRole('group', { name: views[index].insights.find(insight => insight.id === 'wake-ups')!.title })
+            .getAttribute('data-insight')).toBe('wake-ups');
+    });
+
+    it('where it is the clock\'s only note, Overview says that nothing stands out on this clock', () => {
+        const only = views.map((view, at) => at === index ? { ...view, insights: view.insights.filter(insight => insight.scope === 'build' || insight.id === 'plan-versus-clock') } : view);
+        results(only, AUTOMATION_240.selected_index, index);
+        expect(panel('overview').textContent).toContain('Nothing stands out on this clock.');
+    });
+});
+
 describe('the workspace\'s clock selector', () => {
     const military = viewsOf(MILITARY_240);
     /** The selector's line of each clock it offers, as the open list shows it */
