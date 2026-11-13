@@ -10,7 +10,7 @@ import {PickupClockScenario} from "./pickup-clock-capture";
 
 /**
  * Cell 02 (`PROCESSING_UNIT_80_CIRCUIT_EXPORT`, 80 processing units a second): two machines make the processing units from the circuits of two
- * circuit machines and the advanced circuits of two more, which have their plastic from a belt; two foundries cast the copper cable and one
+ * circuit machines and the advanced circuits of two more, which each take their plastic from a belt of their own; two foundries cast the copper cable and one
  * the iron; the circuits leave on an export belt of two lanes at 40 a second a lane. The sample's scaffold throttles that export to 80 a
  * second with a constant combinator and four throttle inserters, and has four chest inserters that put the plastic onto its belt.
  * The generator's clock for the config, as it is and with the belts backed up (the plastic belt is, in the game), is recorded on it.
