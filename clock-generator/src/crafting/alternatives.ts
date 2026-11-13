@@ -108,6 +108,11 @@ export interface ClockAlternativesResult {
      */
     selected_index: number;
     /**
+     * Every alternative in the selection's order, as indexes into `alternatives`: `selected_index` first, of equals the
+     * first listed first (combineClockAlternativeRuns). A position, not a score.
+     */
+    order: number[];
+    /**
      * The labels of the searches that were not run, because a clock made without one can be selected as stable and
      * they were not among those that can still improve on it (see `searchesToRun`); empty when all ran.
      * `overrides.search_for_fewer_wake_ups` runs them for every build.

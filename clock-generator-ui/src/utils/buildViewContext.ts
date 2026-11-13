@@ -31,7 +31,7 @@ export interface BuildViewContext {
     position: Partial<Record<'configure' | 'results', { anchor: BuildAnchor; offset: number }>>;
 }
 const ANCHORS: BuildAnchor[] = ['configure', 'target', 'build', 'advanced', 'results', 'selected-clock', 'comparison', 'clock-context', 'details', 'developer'];
-const SECTIONS = ['advanced', 'transfer-plan', 'insights-build', 'comparison-help', 'comparison-open', 'model-assumptions'];
+const SECTIONS = ['advanced', 'transfer-plan', 'insights-build', 'comparison-open', 'model-assumptions'];
 const KINDS: EntityClickType[] = ['machine', 'inserter', 'belt', 'chest', 'drill'];
 const MAX_OFFSET = 4000;
 const MAX_TEXT = 2_000_000;

@@ -3,11 +3,12 @@ import type { ClockRanking, ClockVerdict, Config } from 'clock-generator/browser
 import { combineClockAlternativeRuns } from 'clock-generator/light';
 import {
     RECOMMENDED_COPY,
-    disclosureRunLine,
     partitionClockRows,
     pickRuleOf,
+    rankOrderOf,
     recommendationReason,
     recommendedIndexOf,
+    searchesRunLine,
     type PickRule,
 } from './recommendedClock';
 import { ELECTROMAGNETIC_330_TWO_SWINGS, viewsOf } from '../test/checkedLanesFixtures';
@@ -213,8 +214,18 @@ describe('RECOMMENDED_COPY', () => {
         expect(RECOMMENDED_COPY).toMatchObject({ chipWhileGenerating: 'Best so far', backWhileGenerating: 'Back to best so far' });
     });
 
-    it('says in "How clocks are chosen" what is picked on a build with a deadlock risk', () => {
-        expect(RECOMMENDED_COPY.disclosure[1]).toContain('on a build with a deadlock risk, the one with the fewest wakeups of the clocks that hold the rate');
+    it('says in the help of the Rank column what ranks first on a build with a deadlock risk', () => {
+        expect(RECOMMENDED_COPY.rankKeys[0]).toContain('On a build with a deadlock risk, it holds the setpoint.');
+    });
+
+    it('names the six keys of the engine\'s order in the help of the Rank column, in order, and rank 1 as the recommended clock', () => {
+        const { rankKeys, rankFirst, rankTie } = RECOMMENDED_COPY;
+        expect(rankKeys).toHaveLength(6);
+        // the tier, the distance from the setpoint, holding the output, the wakeups, the recovery, the enable windows
+        ['rounded to whole ticks', 'nearer to the setpoint', 'holds its output', 'fewer wakeups', 'fewer window cycles', 'fewer enable windows']
+            .forEach((words, key) => expect(rankKeys[key]).toContain(words));
+        expect(rankTie).toBe('Clocks that are equal on all six keep the order they were made in.');
+        expect(rankFirst).toBe('Rank 1 is the recommended clock.');
     });
 
     it('says one other clock is level with the pick, and 2 other clocks are', () => {
@@ -224,12 +235,12 @@ describe('RECOMMENDED_COPY', () => {
     });
 });
 
-describe('disclosureRunLine', () => {
+describe('searchesRunLine', () => {
     it('says whether the searches ran, and names no belt', () => {
         const { runSearched: searched, runSearchedWhenNeeded: whenNeeded } = RECOMMENDED_COPY;
-        expect(disclosureRunLine(WHEN_NEEDED)).toBe(whenNeeded);
-        expect(disclosureRunLine(SEARCHED)).toBe(searched);
-        expect(disclosureRunLine(null)).toBe(whenNeeded);
+        expect(searchesRunLine(WHEN_NEEDED)).toBe(whenNeeded);
+        expect(searchesRunLine(SEARCHED)).toBe(searched);
+        expect(searchesRunLine(null)).toBe(whenNeeded);
     });
 });
 
@@ -242,50 +253,65 @@ describe('pickRuleOf', () => {
     });
 });
 
+describe('rankOrderOf', () => {
+    it('is the engine\'s order of the clocks, the recommended clock first', () => {
+        const clocks = [short('near', 0.5), clock('more', { wake_ups_per_minute: 12 }), clock('fewest', { wake_ups_per_minute: 8 }), short('far', -3)];
+        expect(rankOrderOf(clocks).map(index => clocks[index].id)).toEqual(['fewest', 'more', 'near', 'far']);
+        expect(rankOrderOf(clocks)[0]).toBe(recommendedIndexOf(clocks));
+        expect(rankOrderOf([])).toEqual([]);
+    });
+
+    it('is the order of the engine\'s combination of every run, as the worker lists the clocks', () => {
+        const runs = [
+            { signature: 'batched', alternatives: [clock('a', { wake_ups_per_minute: 15 }), short('b', 1)] },
+            { signature: 'uneven', alternatives: [clock('c', { wake_ups_per_minute: 7, window_count: 9 })] },
+            { signature: 'shifted', alternatives: [clock('d', { wake_ups_per_minute: 7, window_count: 5 }), short('e', 1)] },
+        ];
+        const engine = combineClockAlternativeRuns([runs[2], null, runs[0], runs[1]], it => it.ranking);
+        expect(rankOrderOf(engine.alternatives)).toEqual(engine.order);
+    });
+});
+
 describe('partitionClockRows', () => {
     type Options = Parameters<typeof partitionClockRows>[1];
-    const rowsOf = (verdicts: ClockVerdict[]) => verdicts.map((verdict, index) => ({ id: `clock-${index}`, verdict }));
-    // 0 stable, 1 unstable, 2 stable, 3 no recovery, 4 unstable
-    const clocks = rowsOf(['stable', 'unstable', 'stable', 'no recovery', 'unstable']);
-    const indexes = (rows: { index: number }[]) => rows.map(it => it.index);
-    /** The groups by the indexes of their rows, and the counts */
-    const groups = (rows: ReturnType<typeof rowsOf>, options: Options) => {
-        const { stable, unstable, ...counts } = partitionClockRows(rows, options);
-        return { stable: indexes(stable), unstable: indexes(unstable), ...counts };
+    // in list order: 0 stable with 20 wakeups, 1 unstable 2/s short, 2 stable with 5, 3 no recovery 1/s short, 4 unstable 3/s short
+    const clocks = [clock('a', { wake_ups_per_minute: 20 }), short('b', -2, false), clock('c', { wake_ups_per_minute: 5 }), short('d', -1), short('e', -3, false)];
+    const isStable = (it: Clock) => it.verdict === 'stable';
+    /** The groups by the indexes of their rows with their ranks, and the counts */
+    const groups = (rows: Clock[], options: Omit<Options, 'isStable'>) => {
+        const { stable, unstable, ...counts } = partitionClockRows(rows, { ...options, isStable });
+        const of = (group: typeof stable) => group.map(it => [it.index, it.rank]);
+        return { stable: of(stable), unstable: of(unstable), ...counts };
     };
 
-    // the options, then the stable and the other rows shown and how many of the others are hidden
-    it.each<[string, Options, number[], number[], number]>([
-        ['puts the stable clocks first and the others after, each in list order, with no recovery among the others',
-            { selectedIndex: 0, recommendedIndex: 0, showUnstable: true }, [0, 2], [1, 3, 4], 0],
-        ['keeps only the selected and the recommended unstable clocks while the others are hidden',
-            { selectedIndex: 4, recommendedIndex: 0, showUnstable: false }, [0, 2], [4], 2],
-        ['keeps the recommended clock when it is not stable', { selectedIndex: 0, recommendedIndex: 3, showUnstable: false }, [0, 2], [3], 2],
-        ['puts the recommended clock first in its group, the others in list order',
-            { selectedIndex: 0, recommendedIndex: 2, showUnstable: true }, [2, 0], [1, 3, 4], 0],
-        ['keeps list order while a run can still change the pick',
-            { selectedIndex: 0, recommendedIndex: 2, showUnstable: true, recommendedFirst: false }, [0, 2], [1, 3, 4], 0],
+    // the options, then the stable and the other rows shown as [index, rank], and how many of the others are hidden
+    it.each<[string, Omit<Options, 'isStable'>, number[][], number[][], number]>([
+        ['puts the stable clocks first and the others after, each in the engine\'s order, numbered straight through',
+            { selectedIndex: 0, showUnstable: true }, [[2, 1], [0, 2]], [[3, 3], [1, 4], [4, 5]], 0],
+        ['keeps only the selected unstable clock while the others are hidden, with its rank',
+            { selectedIndex: 4, showUnstable: false }, [[2, 1], [0, 2]], [[4, 5]], 2],
     ])('%s', (_, options, stable, unstable, hiddenCount) => {
         expect(groups(clocks, options)).toEqual({ stable, unstable, unstableCount: 3, hiddenCount, anyStable: true });
     });
 
-    it('keeps the rows that stayed while hidden first under the divider once the others are shown (utility science)', () => {
-        // unstable rows at 2 and 3 come before the recommended no-recovery row at 5 in the list
-        const utility = rowsOf(['stable', 'stable', 'unstable', 'unstable', 'stable', 'no recovery', 'unstable']);
-        // the other rows with `selectedIndex` selected while hidden, then shown with those that stayed pinned
-        const hiddenThenShown = (selectedIndex: number) => {
-            const hidden = partitionClockRows(utility, { selectedIndex, recommendedIndex: 5, showUnstable: false }).unstable;
-            const pinnedIds = hidden.map(row => row.alternative.id);
-            return [indexes(hidden), indexes(partitionClockRows(utility, { selectedIndex, recommendedIndex: 5, showUnstable: true, pinnedIds }).unstable)];
-        };
-        expect(hiddenThenShown(0)).toEqual([[5], [5, 2, 3, 6]]);
-        // with an unstable row selected too, both stay in place, the recommended first
-        expect(hiddenThenShown(3)).toEqual([[5, 3], [5, 3, 2, 6]]);
+    it('keeps the recommended clock in view when it is not stable', () => {
+        // a build with a deadlock risk: a clock that holds the setpoint without recovery meets it, here with the fewest wakeups
+        const deadlock = [clock('stable', { wake_ups_per_minute: 9 }), short('drifts', -1, false), clock('holds', { verdict: 'no recovery', wake_ups_per_minute: 2 })];
+        expect(groups(deadlock, { selectedIndex: 0, showUnstable: false }))
+            .toEqual({ stable: [[0, 2]], unstable: [[2, 1]], unstableCount: 2, hiddenCount: 1, anyStable: true });
+    });
+
+    it('sorts every row by its rank while a run adds clocks: a clock that arrives and ranks first leads, the others move down one', () => {
+        const before = groups(clocks, { selectedIndex: 0, showUnstable: true });
+        const after = groups([...clocks, clock('new', { wake_ups_per_minute: 1 })], { selectedIndex: 0, showUnstable: true });
+        expect(before.stable).toEqual([[2, 1], [0, 2]]);
+        expect(after.stable).toEqual([[5, 1], [2, 2], [0, 3]]);
+        expect(after.unstable).toEqual([[3, 4], [1, 5], [4, 6]]);
     });
 
     it('shows every clock in one group when none is stable', () => {
-        expect(groups(rowsOf(['unstable', 'no recovery']), { selectedIndex: 1, recommendedIndex: 1, showUnstable: false }))
-            .toEqual({ stable: [], unstable: [1, 0], unstableCount: 2, hiddenCount: 0, anyStable: false });
+        expect(groups([short('far', -2), short('near', -1, false)], { selectedIndex: 1, showUnstable: false }))
+            .toEqual({ stable: [], unstable: [[1, 1], [0, 2]], unstableCount: 2, hiddenCount: 0, anyStable: false });
     });
 });
 

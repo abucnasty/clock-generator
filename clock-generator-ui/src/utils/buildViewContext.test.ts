@@ -32,6 +32,13 @@ describe('per-build working context', () => {
         expect(readBuildViewContext(storage, 'one').resultDetail).toBe('diagnostics');
     });
 
+    it('loads a view saved while the compare table had its "How clocks are chosen" fold, without the fold\'s state', () => {
+        const read = (value: unknown) => readBuildViewContext({ getItem: () => JSON.stringify(value) }, 'one');
+        expect(read({ version: 1, view: 'results', sections: { 'comparison-help': true, 'comparison-open': true } }))
+            .toMatchObject({ view: 'results', sections: { 'comparison-open': true } });
+        expect(read({ version: 1, sections: { 'comparison-help': true } }).sections).toEqual({});
+    });
+
     it('rejects unsafe storage values and keeps navigation usable with denied storage', () => {
         const read = (value: unknown) => readBuildViewContext({ getItem: () => JSON.stringify(value) }, 'one');
         expect(read({ version: 2, view: 'results' })).toEqual(defaultBuildViewContext());

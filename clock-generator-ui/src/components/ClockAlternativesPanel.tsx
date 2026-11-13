@@ -1,9 +1,6 @@
 import { Cancel, CheckCircle, Warning } from '@mui/icons-material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {
-    Accordion,
-    AccordionDetails,
-    AccordionSummary,
     Box,
     Button,
     Chip,
@@ -17,27 +14,25 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import { useId, useState, type ReactNode } from 'react';
-import { useBuildSection } from '../hooks/useBuildViewContext';
+import { Fragment, useId, type ReactNode } from 'react';
 import type { BuildViewContext } from '../utils/buildViewContext';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 import { CLOCK_TABLE_NAME, CLOCK_TABLE_REGION, clockHelpName, termsHelpName } from '../utils/a11yLabels';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 import { shownRateOf } from '../utils/shownRate';
-import { SUMMARY_COPY, clockBadges, foldedMakes, pickNameMeaning, recoversOf, statusOf, wakeUpsAverageOf, type ClockStatus } from '../utils/clockSummary';
+import { SUMMARY_COPY, foldedMakes, recoversOf, statusOf, wakeUpsAverageOf, type ClockStatus } from '../utils/clockSummary';
 import { directRouterOf, familyCopyOf, fullClockName, clockChipsOf, sourceLinesOf, strategyNameOf } from '../utils/strategyNames';
-import { BadgeChips, ClockChips } from './StrategyChips';
+import { ClockChips } from './StrategyChips';
 import { SIGNAL_DEFINITION, WAKEUP_DEFINITION, TERMS_FOCUS, type GlossaryId } from '../utils/glossary';
 import { HelpButton } from './HelpButton';
 import { CauseHeadline } from './CheckedLanesView';
 import { descriptionShown } from '../utils/checkedLanes';
 import { ScrollX } from './ScrollX';
 import { Panel } from './Panel';
-import { RecommendedChip } from './RecommendedChip';
 import { HANDS_TEXT } from '../utils/targetCounts';
 import { TermsList } from './TermsPopover';
 import { OUTPUT_PER_WINDOW_CYCLE_HEADER, SIGNALS_HEADER, WAKE_UPS_HEADER, formatNumberText, makesHeader, rateHeader } from '../utils/numberText';
-import { RECOMMENDED_COPY, disclosureRunLine, partitionClockRows, type ClockRow, type PickRule } from '../utils/recommendedClock';
+import { RECOMMENDED_COPY, partitionClockRows, searchesRunLine, type ClockRow, type PickRule } from '../utils/recommendedClock';
 
 // fractional (subtick) window cycles are shown to 3 decimals
 /** The header of the column that counts a clock's decider combinators */
@@ -104,11 +99,25 @@ function statusDetail(alternative: ClockAlternativeView): string {
 /** The engine's description in sentences, so the popover reads as short paragraphs and not one block */
 const sentencesOf = (text: string) => text.split(/(?<=\.)\s+(?=[A-Z])/).filter(Boolean);
 
+/**
+ * A header's words, which may break onto a second line only before a part in brackets: "Wakeups/min" over "(1 copy)",
+ * so that the clock's name has the width for one line
+ */
+function HeaderWords({ label }: { label: string }) {
+    return (
+        <Box component="span" sx={{ textAlign: 'inherit' }}>
+            {label.split(/ (?=\()/).map((part, at) => (
+                <Fragment key={part}>{at > 0 && ' '}<Box component="span" sx={{ whiteSpace: 'nowrap' }}>{part}</Box></Fragment>
+            ))}
+        </Box>
+    );
+}
+
 /** A header with its (i), which opens the Terms with the column's terms first */
 function TermsHeader({ label, focus }: { label: string; focus: readonly GlossaryId[] }) {
     return (
-        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, whiteSpace: 'nowrap' }}>
-            {label}
+        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25 }}>
+            <HeaderWords label={label} />
             <HelpButton label={termsHelpName(label)}>
                 <TermsList focus={focus} />
             </HelpButton>
@@ -116,7 +125,7 @@ function TermsHeader({ label, focus }: { label: string; focus: readonly Glossary
     );
 }
 
-/** The header Status, of both tables, with its help: each status the column can show, once */
+/** The header Status, of both tables, with its help: each status the column can show, once, then how the clocks are checked */
 function StatusHeader() {
     return (
         <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, whiteSpace: 'nowrap' }}>
@@ -125,6 +134,26 @@ function StatusHeader() {
                 {SUMMARY_COPY.statusHelp.map(([word, meaning]) => (
                     <Typography key={word} variant="body2" sx={{ mb: 0.75 }}><Box component="strong">{word}:</Box> {meaning}</Typography>
                 ))}
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>{SUMMARY_COPY.statusChecks}</Typography>
+            </HelpButton>
+        </Box>
+    );
+}
+
+/** The header Rank, of both tables, with its help: the engine's six keys in order, and whether the slower searches ran */
+function RankHeader({ pickRule }: { pickRule: PickRule | null }) {
+    const { rank, rankLead, rankKeys, rankTie, rankFirst } = RECOMMENDED_COPY;
+    return (
+        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, whiteSpace: 'nowrap' }}>
+            {rank}
+            <HelpButton label={`About ${rank}`}>
+                <Typography variant="body2" sx={{ mb: 0.75 }}>{rankLead}</Typography>
+                <Box component="ol" sx={{ m: 0, mb: 1, pl: 2.5, typography: 'body2', '& li': { mb: 0.5 } }}>
+                    {rankKeys.map(key => <li key={key}>{key}</li>)}
+                </Box>
+                <Typography variant="body2" sx={{ mb: 0.75 }}>{rankTie}</Typography>
+                <Typography variant="body2" sx={{ mb: 0.75, fontWeight: 600 }}>{rankFirst}</Typography>
+                <Typography variant="body2" color="text.secondary">{searchesRunLine(pickRule)}</Typography>
             </HelpButton>
         </Box>
     );
@@ -133,8 +162,8 @@ function StatusHeader() {
 /** A header of the full table with the help that was its hover text */
 function HelpHeader({ label, help }: { label: string; help: string }) {
     return (
-        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, whiteSpace: 'nowrap' }}>
-            {label}
+        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25 }}>
+            <HeaderWords label={label} />
             <HelpButton label={`About ${label}`}>
                 <Typography variant="body2">{help}</Typography>
             </HelpButton>
@@ -148,12 +177,8 @@ interface ClockAlternativesPanelProps {
     alternatives: ClockAlternativeView[];
     selectedIndex: number;
     onSelect: (index: number) => void;
-    /** The clock the selection rule picks, which gets the "Recommended" chip; null while there are none */
-    recommendedIndex: number | null;
     /** What the selection rule was given by the latest generation's config; null before one */
     pickRule: PickRule | null;
-    /** While true more clocks may still arrive, so the recommendation is the best so far */
-    isGenerating: boolean;
     /** Labels of alternatives still being generated */
     pending?: string[];
     /** Shown below the table: whether a deeper search is on offer */
@@ -168,14 +193,35 @@ interface ClockAlternativesPanelProps {
  * scrolls sideways in its box (ScrollX). A header may wrap but is never narrower than 96px.
  */
 const FULL_CLOCK_TABLE_SX = {
-    '& th': { minWidth: 96 },
-    '& tbody td:nth-of-type(2)': { minWidth: 200 },
-    '& tbody td:not(:nth-of-type(2))': { whiteSpace: 'nowrap' },
+    '& th:not(:first-of-type)': { minWidth: 96 },
+    '& tbody td:nth-of-type(3)': { minWidth: 200 },
+    '& tbody td:not(:nth-of-type(3))': { whiteSpace: 'nowrap' },
 } as const;
 
 /**
- * The other clocks of the generation, to compare with the one at the top: by default a compact table (the plain name,
- * what it makes, its wake-ups and whether it works), with every column one press away. A row selects its clock.
+ * The compact table: 6px beside each cell's words in place of 16, and every other column as narrow as its words, so that
+ * the Clock column has all the width that is left for the clock's name
+ */
+const COMPACT_CLOCK_TABLE_SX = {
+    '& .MuiTableCell-root:not(.MuiTableCell-paddingCheckbox)': { px: 0.75 },
+    '& tbody td:nth-of-type(3)': { width: '100%' },
+    '& tbody td:not(:nth-of-type(3))': { whiteSpace: 'nowrap' },
+} as const;
+
+/**
+ * The clock's name, its chips and its (?) on one line where the table has the width for it (automation science 240 at
+ * 1280 px); where it has not, the chips wrap under the name, so that the Status column stays in view. The (?) wraps
+ * with the last chip.
+ */
+const NAME_LINE_SX = { display: 'flex', alignItems: 'center', columnGap: 0.5, rowGap: 0.25, flexWrap: 'wrap' } as const;
+
+/** A row's group: the Stable ones, then the others under the divider, by the word of the Status column */
+const isStable = (alternative: ClockAlternativeView) => statusOf(alternative).kind === 'stable';
+
+/**
+ * The other clocks of the generation, to compare with the one at the top: by default a compact table (the rank, the plain
+ * name, what it makes, its wake-ups and whether it works), with every column one press away. The rows are in the engine's
+ * order, the ranks numbered straight through the two groups. A row selects its clock.
  */
 export function ClockAlternativesPanel({
     comparison,
@@ -183,9 +229,7 @@ export function ClockAlternativesPanel({
     alternatives,
     selectedIndex,
     onSelect,
-    recommendedIndex,
     pickRule,
-    isGenerating,
     pending = [],
     notice,
     holdNotice = false,
@@ -193,29 +237,22 @@ export function ClockAlternativesPanel({
     const { showUnstable, allColumns } = comparison;
     const setShowUnstable = (showUnstable: boolean) => onComparisonChange({ ...comparison, showUnstable });
     const setAllColumns = (next: boolean | ((shown: boolean) => boolean)) => onComparisonChange({ ...comparison, allColumns: typeof next === 'function' ? next(allColumns) : next });
-    const [helpOpen, setHelpOpen] = useBuildSection('comparison-help');
-    // the unstable rows that were on screen when the others were shown
-    const [pinnedIds, setPinnedIds] = useState<string[]>([]);
     const tableId = useId();
 
     if (alternatives.length === 0 && pending.length === 0 && !holdNotice) {
         return null;
     }
 
-    const { stable, unstable, unstableCount, hiddenCount, anyStable } = partitionClockRows(
-        alternatives,
-        // the recommended row leads once the run is over: while it runs the pick can change, and rows must not jump
-        // under the pointer
-        { selectedIndex, recommendedIndex, showUnstable, pinnedIds, recommendedFirst: !isGenerating },
-    );
+    // while a run adds clocks, the rows are in the engine's order of the clocks made so far
+    const { stable, unstable, unstableCount, hiddenCount, anyStable } = partitionClockRows(alternatives, { selectedIndex, showUnstable, isStable });
     const anyHolds = alternatives.some(alternative => alternative.assessment.holds);
     const copies = alternatives[0]?.copies ?? 1; // of the generation, so a stale table keeps its own number
     // a Makes column that says the same on every row is one line above the table instead
     const fold = allColumns ? null : foldedMakes([...stable, ...unstable].map(({ alternative }) => alternative));
-    const columnCount = allColumns ? 11 : fold === null ? 7 : 6;
+    const columnCount = allColumns ? 12 : fold === null ? 8 : 7;
 
     // the index is the one drawn in this render, so a click cannot land on a row that has since moved
-    const renderRow = ({ alternative, index }: ClockRow<ClockAlternativeView>) => {
+    const renderRow = ({ alternative, index, rank }: ClockRow<ClockAlternativeView>) => {
         const status = statusOf(alternative);
         return (
             <TableRow
@@ -225,6 +262,9 @@ export function ClockAlternativesPanel({
                 onClick={() => onSelect(index)}
                 sx={{ cursor: 'pointer' }}
             >
+                <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: rank === 1 ? 700 : undefined, pr: 0.5 }} data-rank="">
+                    {rank}
+                </TableCell>
                 <TableCell padding="checkbox">
                     <Radio
                         // one native group, so the arrow keys move between the clocks; the row's own click selects too
@@ -237,32 +277,29 @@ export function ClockAlternativesPanel({
                     />
                 </TableCell>
                 <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', columnGap: 1, rowGap: 0.5 }}>
+                    {/* the name, its chips and its (?) on one line; the status is the Status column's word and the place is the Rank's */}
+                    <Box sx={NAME_LINE_SX} data-name-line="">
                         <Box component="span" sx={{ fontWeight: 600 }}>{strategyNameOf(alternative)}</Box>
-                        <ClockChips clock={alternative} />
-                        {/* the status is the Status column's word: only what it has fewest of stands beside the name */}
-                        <BadgeChips badges={clockBadges(alternatives, index).filter(badge => badge.kind !== 'status')} meanings={badgeMeanings(alternatives, index)} />
-                        {index === recommendedIndex && <RecommendedChip isGenerating={isGenerating} />}
+                        {/* the (?) stays with the last chip when the line wraps; the line that explains the clock's name stands on the card only */}
+                        <ClockChips clock={alternative} after={<Box component="span" sx={{ display: 'inline-flex', my: -0.75 }}>
+                            <HelpButton label={clockHelpName(fullClockName(alternative))}>
+                                <StrategyHelp clock={alternative} />
+                                <Typography variant="subtitle2" component="p" sx={{ mb: 0.5 }}>{COMPARE_COPY.howMadeHeading}</Typography>
+                                {sentencesOf(descriptionShown(alternative)).map(sentence => (
+                                    <Typography key={sentence} variant="body2" sx={{ mb: 0.75 }}>{sentence}</Typography>
+                                ))}
+                                <Typography variant="subtitle2" component="p" sx={{ mt: 1.5, mb: 0.5 }}>{COMPARE_COPY.worksHeading}</Typography>
+                                <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.5 }}>
+                                    {STATUS_ICON[status.kind]}{status.text}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">{statusDetail(alternative)}</Typography>
+                                {/* a clock not stable on a lane its copies share: its headline; the Diagnostics tab of the selected clock shows the parts */}
+                                {alternative.checkedLanes?.cause && <Box sx={{ mt: 1.5 }}><CauseHeadline cause={alternative.checkedLanes.cause} /></Box>}
+                            </HelpButton>
+                        </Box>} />
                     </Box>
                     {/* what is said beside the status: the rate, the reason code's words, or why the loss trials gave no answer */}
                     {status.detail && <Typography variant="body2" color="text.secondary" data-status-detail="">{status.detail}</Typography>}
-                    {/* the line that explains the clock's name stands on the card only */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.secondary', typography: 'body2' }}>
-                        <HelpButton label={clockHelpName(fullClockName(alternative))}>
-                            <StrategyHelp clock={alternative} />
-                            <Typography variant="subtitle2" component="p" sx={{ mb: 0.5 }}>{COMPARE_COPY.howMadeHeading}</Typography>
-                            {sentencesOf(descriptionShown(alternative)).map(sentence => (
-                                <Typography key={sentence} variant="body2" sx={{ mb: 0.75 }}>{sentence}</Typography>
-                            ))}
-                            <Typography variant="subtitle2" component="p" sx={{ mt: 1.5, mb: 0.5 }}>{COMPARE_COPY.worksHeading}</Typography>
-                            <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.5 }}>
-                                {STATUS_ICON[status.kind]}{status.text}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">{statusDetail(alternative)}</Typography>
-                            {/* a clock not stable on a lane its copies share: its headline; the Diagnostics tab of the selected clock shows the parts */}
-                            {alternative.checkedLanes?.cause && <Box sx={{ mt: 1.5 }}><CauseHeadline cause={alternative.checkedLanes.cause} /></Box>}
-                        </HelpButton>
-                    </Box>
                 </TableCell>
                 {allColumns ? (
                     <>
@@ -332,32 +369,6 @@ export function ClockAlternativesPanel({
                     {anyHolds ? COMPARE_COPY.noneRecover : COMPARE_COPY.noneHold}
                 </Typography>
             )}
-            <Accordion
-                expanded={helpOpen}
-                onChange={(_, open) => setHelpOpen(open)}
-                disableGutters
-                elevation={0}
-                slotProps={{ heading: { component: 'h3' }, region: { 'aria-labelledby': 'how-clocks-are-chosen-summary' } }}
-                sx={{ mb: 1, maxWidth: '72ch' }}
-            >
-                <AccordionSummary
-                    expandIcon={<ExpandMoreIcon />}
-                    id="how-clocks-are-chosen-summary"
-                    aria-controls="how-clocks-are-chosen-details"
-                    // the chevron next to its words, not at the far end of the line
-                    sx={{ px: 1.5, justifyContent: 'flex-start', '& .MuiAccordionSummary-content': { flexGrow: 0, mr: 1 } }}
-                >
-                    <Typography variant="body2" component="span">{RECOMMENDED_COPY.disclosureTitle}</Typography>
-                </AccordionSummary>
-                <AccordionDetails sx={{ px: 1.5, pt: 0 }}>
-                    {RECOMMENDED_COPY.disclosure.map(paragraph => (
-                        <Typography key={paragraph} variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                            {paragraph}
-                        </Typography>
-                    ))}
-                    <Typography variant="body2">{disclosureRunLine(pickRule)}</Typography>
-                </AccordionDetails>
-            </Accordion>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 2, rowGap: 0.5, mb: 0.5 }}>
                 {fold !== null && <Typography variant="body2" data-makes-fold="">{fold}</Typography>}
                 <Button
@@ -374,9 +385,10 @@ export function ClockAlternativesPanel({
                 </Button>
             </Box>
             <ScrollX label={CLOCK_TABLE_REGION}>
-                <Table id={tableId} size="small" aria-label={CLOCK_TABLE_NAME} sx={allColumns ? FULL_CLOCK_TABLE_SX : undefined}>
+                <Table id={tableId} size="small" aria-label={CLOCK_TABLE_NAME} sx={allColumns ? FULL_CLOCK_TABLE_SX : COMPACT_CLOCK_TABLE_SX}>
                     <TableHead>
                         <TableRow>
+                            <TableCell align="right" sx={{ pr: 0.5 }}><RankHeader pickRule={pickRule} /></TableCell>
                             <TableCell padding="checkbox">
                                 <Box component="span" sx={VISUALLY_HIDDEN}>Select</Box>
                             </TableCell>
@@ -414,10 +426,12 @@ export function ClockAlternativesPanel({
                     <TableBody>
                         {pending.map(label => (
                             <TableRow key={`pending-${label}`}>
+                                {/* no rank until the engine has ranked the clock */}
+                                <TableCell data-rank="" />
                                 <TableCell padding="checkbox">
                                     <CircularProgress size={16} sx={{ ml: 1.5 }} aria-hidden />
                                 </TableCell>
-                                <TableCell colSpan={columnCount - 1} sx={{ color: 'text.secondary' }}>
+                                <TableCell colSpan={columnCount - 2} sx={{ color: 'text.secondary' }}>
                                     {COMPARE_COPY.computing(label)}
                                 </TableCell>
                             </TableRow>
@@ -429,13 +443,7 @@ export function ClockAlternativesPanel({
                 <Box sx={{ mt: 1 }}>
                     <Button
                         size="small"
-                        onClick={() => {
-                            // the unstable rows already on screen stay first in their group once the others are shown
-                            if (!showUnstable) {
-                                setPinnedIds(unstable.map(({ alternative }) => alternative.id));
-                            }
-                            setShowUnstable(!showUnstable);
-                        }}
+                        onClick={() => setShowUnstable(!showUnstable)}
                     >
                         {showUnstable ? COMPARE_COPY.hideUnstable(unstableCount) : COMPARE_COPY.showUnstable(hiddenCount)}
                     </Button>
@@ -473,12 +481,6 @@ function wakeUpsCell(alternative: ClockAlternativeView): ReactNode {
 function signalsCell(alternative: ClockAlternativeView): ReactNode {
     const perMinute = alternative.assessment.signals_per_minute;
     return perMinute === null || perMinute === undefined ? '—' : `${Math.round(perMinute)}`;
-}
-
-/** What a chip means, by its text, for the chips whose words need a line: Fewest deciders */
-function badgeMeanings(alternatives: ClockAlternativeView[], index: number): Record<string, string> {
-    const meaning = pickNameMeaning(alternatives, index);
-    return meaning ? { [SUMMARY_COPY.fewestDeciders]: meaning } : {};
 }
 
 /** The (i) of a clock: its strategy's definition and practice, for Coordinated Sources what each source was given, then what each chip says */

@@ -249,11 +249,15 @@ export function rankingWindowCount(
  * runs as near to what was asked as any clock on offer gets it. Of two equally near, the one that holds its expected
  * output from the generator's start comes before one that does not. The rest of the order only parts clocks at the
  * same rate.
+ *
+ * `order` is every alternative in that order, as indexes into `alternatives`: the selected one first, then the one it
+ * would select from the rest, and so on, of equals the first listed first. It is an order and not a score: the keys are
+ * compared one after the other and never added.
  */
 export function combineClockAlternativeRuns<T>(
     runs: (ClockAlternativeRun<T> | null)[],
     rankingOf: (alternative: T) => ClockRanking,
-): { alternatives: T[]; selected_index: number } {
+): { alternatives: T[]; selected_index: number; order: number[] } {
     const seen = new Set<string>();
     const alternatives: T[] = [];
     const list = (run: ClockAlternativeRun<T> | null): void => {
@@ -282,18 +286,16 @@ export function combineClockAlternativeRuns<T>(
             ranking.window_count,
         ];
     };
-    const beats = (a: T, b: T): boolean => {
-        const [ra, rb] = [rank(a), rank(b)];
+    const keys = alternatives.map(rank);
+    // the first key that differs decides; compared, not subtracted, as two keys can both be Infinity
+    const compare = (a: number, b: number): number => {
+        const [ra, rb] = [keys[a], keys[b]];
         for (let i = 0; i < ra.length; i++) {
-            if (ra[i] !== rb[i]) return ra[i] < rb[i];
+            if (ra[i] !== rb[i]) return ra[i] < rb[i] ? -1 : 1;
         }
-        return false;
+        return 0;
     };
-    let selected_index = 0;
-    alternatives.forEach((alternative, index) => {
-        if (beats(alternative, alternatives[selected_index])) {
-            selected_index = index;
-        }
-    });
-    return { alternatives, selected_index };
+    // a stable sort: of equals the first listed comes first
+    const order = alternatives.map((_, index) => index).sort(compare);
+    return { alternatives, selected_index: order[0] ?? 0, order };
 }

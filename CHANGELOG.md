@@ -31,6 +31,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ### Changed
 - ui: each note on the selected clock is one line, and Details opens the rest
+- ui: the compare table ranks the clocks in a Rank column, without chips or fold
 - ui: each Build check advisory is one line with its inserters, and Details opens the rest
 - generation: clocks with observed windows are found faster on large builds
 - ui: the input belts setting still works in configuration files and is deprecated

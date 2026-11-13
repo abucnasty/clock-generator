@@ -2,16 +2,18 @@
 import { cleanup, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { show } from '../test/fixtures';
-import { AUTOMATION_240, checkedOf, ELECTROMAGNETIC_330_TWO_SWINGS, errorCaseViews, TRIALS_NOT_MADE_REASON, viewsOf } from '../test/checkedLanesFixtures';
+import { AUTOMATION_240, checkedOf, ELECTROMAGNETIC_330, ELECTROMAGNETIC_330_TWO_SWINGS, errorCaseViews, MILITARY_240, TRIALS_NOT_MADE_REASON, viewsOf } from '../test/checkedLanesFixtures';
 import { REASON_WORDS, SUMMARY_COPY } from '../utils/clockSummary';
-import { familyCopyOf, fullClockName } from '../utils/strategyNames';
+import { RECOMMENDED_COPY, rankOrderOf } from '../utils/recommendedClock';
+import { familyCopyOf, fullClockName, strategyNameOf } from '../utils/strategyNames';
+import type { ClockAlternativeView } from '../worker/types';
 import { ClockAlternativesPanel } from './ClockAlternativesPanel';
 
 describe('the help of a clock in the list of clocks', () => {
     const views = viewsOf(AUTOMATION_240);
     const panel = () => show(<ClockAlternativesPanel comparison={{ allColumns: false, showUnstable: true }} onComparisonChange={() => {}}
-        alternatives={views} selectedIndex={AUTOMATION_240.selected_index} onSelect={() => {}} recommendedIndex={AUTOMATION_240.selected_index}
-        pickRule={null} isGenerating={false} />);
+        alternatives={views} selectedIndex={AUTOMATION_240.selected_index} onSelect={() => {}}
+        pickRule={null} />);
     /** Opens the help of the clock with `id` and gives its text */
     const helpOf = async (id: string) => {
         const { user } = panel();
@@ -41,8 +43,7 @@ describe('the status of a clock that underproduces, in the list of clocks', () =
     const views = viewsOf(AUTOMATION_240);
     const rowOf = (id: string) => {
         show(<ClockAlternativesPanel comparison={{ allColumns: false, showUnstable: true }} onComparisonChange={() => {}}
-            alternatives={views} selectedIndex={AUTOMATION_240.selected_index} onSelect={() => {}} recommendedIndex={AUTOMATION_240.selected_index}
-            pickRule={null} isGenerating={false} />);
+            alternatives={views} selectedIndex={AUTOMATION_240.selected_index} onSelect={() => {}}            pickRule={null} />);
         return within(screen.getByRole('radio', { name: fullClockName(views.find(view => view.id === id)!) }).closest('tr')!);
     };
 
@@ -62,8 +63,8 @@ describe('the status of a clock that underproduces, in the list of clocks', () =
 describe('the status of every clock, in the list of clocks: the Status column, no chip', () => {
     const views = viewsOf(AUTOMATION_240);
     const panel = (alternatives = views, allColumns = false) => show(<ClockAlternativesPanel comparison={{ allColumns, showUnstable: true }} onComparisonChange={() => {}}
-        alternatives={alternatives} selectedIndex={AUTOMATION_240.selected_index} onSelect={() => {}} recommendedIndex={AUTOMATION_240.selected_index}
-        pickRule={null} isGenerating={false} />);
+        alternatives={alternatives} selectedIndex={AUTOMATION_240.selected_index} onSelect={() => {}}
+        pickRule={null} />);
     /** The row of the clock with `id`: its cells' text, and whether a status chip stands in it */
     const rowOf = (id: string, alternatives = views) => {
         const row = screen.getByRole('radio', { name: fullClockName(alternatives.find(view => view.id === id)!) }).closest('tr')!;
@@ -71,12 +72,14 @@ describe('the status of every clock, in the list of clocks: the Status column, n
             detail: row.querySelector('[data-status-detail]')?.textContent ?? null };
     };
 
-    it('says Stable in the Status column of the stable clock, with no chip, beside the Recommended chip', () => {
+    it('says Stable in the Status column of the stable clock, with no chip, and its rank 1 in bold in the Rank column', () => {
         panel();
         const { row, cells, chip } = rowOf('time_study_windows');
         expect(chip).toBeNull();
         expect(cells.at(-1)).toBe('Stable');
-        expect(within(row).getByText('Recommended')).toBeTruthy();
+        expect(cells[0]).toBe('1');
+        expect(getComputedStyle(row.querySelector('[data-rank]')!).fontWeight).toBe('700');
+        expect(within(row).queryByText('Recommended')).toBeNull();
     });
 
     it('says Underproduces and No recovery in the column, and keeps the line under the name', () => {
@@ -89,10 +92,13 @@ describe('the status of every clock, in the list of clocks: the Status column, n
         expect([off.cells.at(-1), off.detail]).toEqual(['Underproduces', 'makes 180/s of 240/s']);
     });
 
-    it('keeps the chips that are not a status: Fewest wakeups and Fewest deciders', () => {
-        panel();
-        const chips = [...document.querySelectorAll('[data-badge]')].map(chip => chip.getAttribute('data-badge'));
-        expect(chips).not.toContain('status');
+    it('has no chip beside a name: no Recommended, Fewest wakeups or Fewest deciders, in either table', () => {
+        for (const allColumns of [false, true]) {
+            const { container } = panel(views, allColumns);
+            expect(container.querySelectorAll('[data-badge], [data-card-chip]')).toHaveLength(0);
+            for (const words of ['Recommended', 'Best so far', 'Fewest wakeups', 'Fewest deciders']) expect(container.textContent).not.toContain(words);
+            cleanup();
+        }
     });
 
     it.each<[Parameters<typeof errorCaseViews>[0], string]>([
@@ -112,15 +118,16 @@ describe('the status of every clock, in the list of clocks: the Status column, n
         expect(full.row.querySelector('td:last-child .MuiChip-root')!.className).toMatch(/MuiChip-colorError/);
     });
 
-    it.each([false, true])('names the column Status, with a help that names each status once (all columns: %s)', async allColumns => {
+    it.each([false, true])('names the column Status, with a help that names each status once, then how the clocks are checked (all columns: %s)', async allColumns => {
         const { user } = panel(views, allColumns);
         expect(screen.queryByRole('columnheader', { name: /Works\?/ })).toBeNull();
         const header = screen.getAllByRole('columnheader').find(cell => cell.textContent === 'Status')!;
         await user.click(within(header).getByRole('button', { name: 'About Status' }));
         const help = (await screen.findByRole('dialog')).textContent!;
-        for (const word of ['Stable', 'Underproduces', 'Overproduces', 'No recovery', 'Error', 'Start-dependent']) {
+        for (const word of ['Stable', 'Underproduces', 'Overproduces', 'Oscillates', 'No recovery', 'Error', 'Start-dependent']) {
             expect(help.split(word).length - 1, word).toBe(1);
         }
+        expect(help.endsWith(SUMMARY_COPY.statusChecks)).toBe(true);
     });
 
     it('says in the full table the word of the Status column, Stable in place of "Recovery: Yes"', () => {
@@ -139,8 +146,7 @@ describe('the status of a stable clock above the setpoint, in the full table', (
 
     it('reads Overproduces in its Status, with the rate as the line under its name, in the colour of an unstable clock', () => {
         show(<ClockAlternativesPanel comparison={{ allColumns: true, showUnstable: true }} onComparisonChange={() => {}}
-            alternatives={views} selectedIndex={AUTOMATION_240.selected_index} onSelect={() => {}} recommendedIndex={AUTOMATION_240.selected_index}
-            pickRule={null} isGenerating={false} />);
+            alternatives={views} selectedIndex={AUTOMATION_240.selected_index} onSelect={() => {}}            pickRule={null} />);
         const row = within(screen.getByRole('radio', { name: fullClockName(clock) }).closest('tr')!);
         expect(row.getByText('makes 252/s of 240/s')).toBeTruthy();
         // the full table's Status chip only: the status chip has left the row
@@ -155,8 +161,7 @@ describe('the rate of a clock with a loss on a shared lane, in the list of clock
     /** The table's cells of the row of the clock with `id`, as their text */
     const cellsOf = (alternatives: typeof views, id: string, allColumns: boolean, selectedIndex = AUTOMATION_240.selected_index) => {
         show(<ClockAlternativesPanel comparison={{ allColumns, showUnstable: true }} onComparisonChange={() => {}}
-            alternatives={alternatives} selectedIndex={selectedIndex} onSelect={() => {}} recommendedIndex={selectedIndex}
-            pickRule={null} isGenerating={false} />);
+            alternatives={alternatives} selectedIndex={selectedIndex} onSelect={() => {}}            pickRule={null} />);
         const row = screen.getByRole('radio', { name: fullClockName(alternatives.find(view => view.id === id)!) }).closest('tr')!;
         return [...row.querySelectorAll('td')].map(cell => cell.textContent);
     };
@@ -185,8 +190,7 @@ describe('the rate of a clock with a loss on a shared lane, in the list of clock
     it('keeps clocks with different rates out of the folded line: electromagnetic science 330 with 2 swings', () => {
         const ems = viewsOf(ELECTROMAGNETIC_330_TWO_SWINGS);
         const { container } = show(<ClockAlternativesPanel comparison={{ allColumns: false, showUnstable: true }} onComparisonChange={() => {}}
-            alternatives={ems} selectedIndex={ELECTROMAGNETIC_330_TWO_SWINGS.selected_index} onSelect={() => {}} recommendedIndex={ELECTROMAGNETIC_330_TWO_SWINGS.selected_index}
-            pickRule={null} isGenerating={false} />);
+            alternatives={ems} selectedIndex={ELECTROMAGNETIC_330_TWO_SWINGS.selected_index} onSelect={() => {}}            pickRule={null} />);
         expect(container.querySelector('[data-makes-fold]')).toBeNull();
         expect(container.textContent).toContain('318.79');
         expect(container.textContent).toContain('322.42');
@@ -194,9 +198,85 @@ describe('the rate of a clock with a loss on a shared lane, in the list of clock
         // an older result of the same build folds them as before
         const folded = show(<ClockAlternativesPanel comparison={{ allColumns: false, showUnstable: true }} onComparisonChange={() => {}}
             alternatives={ems.map(view => ({ ...view, checkedLanes: { ...view.checkedLanes!, copies_made: undefined } }))}
-            selectedIndex={ELECTROMAGNETIC_330_TWO_SWINGS.selected_index} onSelect={() => {}} recommendedIndex={ELECTROMAGNETIC_330_TWO_SWINGS.selected_index}
-            pickRule={null} isGenerating={false} />);
+            selectedIndex={ELECTROMAGNETIC_330_TWO_SWINGS.selected_index} onSelect={() => {}}            pickRule={null} />);
         expect(folded.container.querySelector('[data-makes-fold]')!.textContent).toBe('All 6 clocks make 330/s.');
+    });
+});
+
+describe('the Rank column: the engine\'s order', () => {
+    const SAMPLES = { AUTOMATION_240, ELECTROMAGNETIC_330, ELECTROMAGNETIC_330_TWO_SWINGS, MILITARY_240 };
+    const panel = (alternatives: ClockAlternativeView[], selectedIndex: number, options: { allColumns?: boolean; showUnstable?: boolean; pending?: string[] } = {}) =>
+        show(<ClockAlternativesPanel comparison={{ allColumns: options.allColumns ?? false, showUnstable: options.showUnstable ?? true }} onComparisonChange={() => {}}
+            alternatives={alternatives} selectedIndex={selectedIndex} onSelect={() => {}} pickRule={null} pending={options.pending} />);
+    /** The rows of clocks from the top, each its rank and the id of its clock */
+    const rowsOf = (alternatives: ClockAlternativeView[]) => screen.getAllByRole('radio').map(radio => {
+        const row = radio.closest('tr')!;
+        return [row.querySelector('[data-rank]')!.textContent, alternatives.find(view => fullClockName(view) === radio.getAttribute('aria-label'))!.id];
+    });
+
+    it.each(Object.entries(SAMPLES))('numbers the rows of %s 1 to the last straight through both groups, in the engine\'s order, rank 1 its recommended clock', (_, result) => {
+        const views = viewsOf(result);
+        panel(views, result.selected_index);
+        const order = rankOrderOf(views);
+        expect(rowsOf(views)).toEqual(order.map((index, at) => [`${at + 1}`, views[index].id]));
+        // the engine's recommended clock of the whole generation is rank 1
+        expect(views[order[0]].id).toBe(result.clocks[result.selected_index].id);
+    });
+
+    it('heads the column Rank, with a help that lists the six keys in order, the tie, rank 1 and whether the slower searches ran', async () => {
+        const views = viewsOf(AUTOMATION_240);
+        const { user } = show(<ClockAlternativesPanel comparison={{ allColumns: false, showUnstable: true }} onComparisonChange={() => {}}
+            alternatives={views} selectedIndex={0} onSelect={() => {}} pickRule={{ searchedForFewerWakeUps: true }} />);
+        const header = screen.getAllByRole('columnheader')[0];
+        expect(header.textContent).toBe('Rank');
+        await user.click(within(header).getByRole('button', { name: 'About Rank' }));
+        const help = await screen.findByRole('dialog');
+        expect(within(help).getAllByRole('listitem').map(item => item.textContent)).toEqual(RECOMMENDED_COPY.rankKeys);
+        expect(help.textContent).toBe([RECOMMENDED_COPY.rankLead, ...RECOMMENDED_COPY.rankKeys, RECOMMENDED_COPY.rankTie, RECOMMENDED_COPY.rankFirst,
+            RECOMMENDED_COPY.runSearched].join(''));
+    });
+
+    it('has no "How clocks are chosen" fold: its words are in the two helps', () => {
+        const { container } = panel(viewsOf(AUTOMATION_240), 0);
+        expect(container.textContent).not.toContain('How clocks are chosen');
+        expect(container.querySelector('.MuiAccordion-root')).toBeNull();
+    });
+
+    it('puts each clock\'s help on the line of its name, and nothing on a line of its own under it', () => {
+        const views = viewsOf(AUTOMATION_240);
+        panel(views, 0);
+        for (const view of views) {
+            const line = screen.getByRole('radio', { name: fullClockName(view) }).closest('tr')!.querySelector('[data-name-line]')!;
+            const help = within(line as HTMLElement).getByRole('button', { name: `About ${fullClockName(view)}` });
+            expect(line.textContent!.startsWith(strategyNameOf(view))).toBe(true);
+            // the (?) and the last chip in one span that does not wrap, so a narrow screen never puts the (?) on a line of its own
+            const lastChip = [...line.querySelectorAll('[data-strategy-chip]')].at(-1)!;
+            expect(lastChip.parentElement).toBe(help.parentElement!.parentElement);
+            expect(getComputedStyle(lastChip.parentElement!).whiteSpace).toBe('nowrap');
+        }
+    });
+
+    it('while a run goes, ranks the clocks made so far and gives a clock still being made no rank', () => {
+        const views = viewsOf(AUTOMATION_240);
+        const { container } = panel(views, 0, { pending: ['Pitch Pickups'] });
+        const pendingRow = screen.getByText('Pitch Pickups: computing…').closest('tr')!;
+        expect(pendingRow.querySelector('[data-rank]')!.textContent).toBe('');
+        expect([...container.querySelectorAll('tbody tr [data-rank]')].map(cell => cell.textContent).filter(Boolean))
+            .toEqual(views.map((_, at) => `${at + 1}`));
+    });
+
+    it('while a run goes, puts a clock that arrives and ranks first at the top, and moves the others down one', () => {
+        const views = viewsOf(MILITARY_240);
+        const recommended = views[MILITARY_240.selected_index];
+        // the clocks before the recommended one was made, then with it
+        const before = views.filter(view => view !== recommended);
+        panel(before, 0, { pending: [recommended.label] });
+        const earlier = rowsOf(before);
+        cleanup();
+        panel(views, 0);
+        const later = rowsOf(views);
+        expect(later[0]).toEqual(['1', recommended.id]);
+        expect(later.slice(1)).toEqual(earlier.map(([rank, id]) => [`${Number(rank) + 1}`, id]));
     });
 });
 
@@ -204,14 +284,14 @@ describe('the full table of clocks', () => {
     it('has no Belt column and no help for one', () => {
         const views = viewsOf(AUTOMATION_240);
         show(<ClockAlternativesPanel comparison={{ allColumns: true, showUnstable: true }} onComparisonChange={() => {}}
-            alternatives={views} selectedIndex={AUTOMATION_240.selected_index} onSelect={() => {}} recommendedIndex={AUTOMATION_240.selected_index}
-            pickRule={null} isGenerating={false} />);
+            alternatives={views} selectedIndex={AUTOMATION_240.selected_index} onSelect={() => {}}            pickRule={null} />);
         const headers = screen.getAllByRole('columnheader').map(it => it.textContent);
-        expect(headers).toHaveLength(11);
+        expect(headers).toHaveLength(12);
+        expect(headers[0]).toBe('Rank');
         expect(headers.some(header => /belt/i.test(header ?? ''))).toBe(false);
         expect(screen.queryByRole('button', { name: /belt/i })).toBeNull();
         const firstRow = screen.getAllByRole('row').find(row => within(row).queryByRole('radio'))!;
-        expect(within(firstRow).getAllByRole('cell').concat(within(firstRow).queryAllByRole('rowheader'))).toHaveLength(11);
+        expect(within(firstRow).getAllByRole('cell').concat(within(firstRow).queryAllByRole('rowheader'))).toHaveLength(12);
     });
 });
 
@@ -221,8 +301,7 @@ describe('the words of the compare table', () => {
     const unstable = views.filter(view => view.verdict !== 'stable');
     const panel = (alternatives = views, showUnstable = true, selectedIndex = AUTOMATION_240.selected_index) => show(
         <ClockAlternativesPanel comparison={{ allColumns: false, showUnstable }} onComparisonChange={() => {}}
-            alternatives={alternatives} selectedIndex={selectedIndex} onSelect={() => {}} recommendedIndex={selectedIndex}
-            pickRule={null} isGenerating={false} />);
+            alternatives={alternatives} selectedIndex={selectedIndex} onSelect={() => {}}            pickRule={null} />);
 
     it('heads the row help\'s part on whether the clock works "Status"', async () => {
         const { user } = panel();

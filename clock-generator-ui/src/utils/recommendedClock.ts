@@ -17,10 +17,11 @@ type PickableClock = Pick<ClockAlternativeView, 'id' | 'verdict' | 'ranking' | '
     counts?: TargetCounts;
 };
 
-/** A row of the clock table: the clock and its index in the list, which selecting it goes by */
+/** A row of the clock table: the clock, its index in the list, which selecting it goes by, and its rank (1 first) */
 export interface ClockRow<T> {
     alternative: T;
     index: number;
+    rank: number;
 }
 
 /** Every player-facing string of the clock pick, in one place for the glossary */
@@ -32,18 +33,21 @@ export const RECOMMENDED_COPY = {
     backToRecommended: 'Back to recommended',
     backWhileGenerating: 'Back to best so far',
     unstableDivider: 'Clocks that are not Stable',
-    disclosureTitle: 'How clocks are chosen',
-    disclosure: [
-        'The simulator checks the blueprint\'s enable windows from a modeled cold start, including clock-phase checks where available. '
-            + 'Extended sampled-start checks are separate and optional; Model and tested starts reports what actually ran. '
-            + 'Clocks that hold are also assessed for recovery after a supply stop or an output blockage; an unavailable result is not a pass.',
-        'The clock picked for you is the one that holds the rate and has recovery, with the fewest wakeups; on a build '
-            + 'with a deadlock risk, the one '
-            + 'with the fewest wakeups of the clocks that hold the rate. If clocks tie, the one that goes back to its rate sooner, then the '
-            + 'one with fewer enable windows. If none qualifies, the stable clock that runs nearest over the setpoint. If there is none, the one '
-            + 'that runs nearest to the setpoint. On a build with a loop of machines, '
-            + 'whose wakeups depend on where its clock is when the build starts, their average over 12 start points is compared.',
+    /** The head of the column of each clock's place in the engine's order, and its help: the six keys, in order */
+    rank: 'Rank',
+    rankLead: 'The clocks are ranked by these, in order. Each one decides only between clocks that are equal on the ones before it.',
+    rankKeys: [
+        'It holds the setpoint and has recovery. On a build with a deadlock risk, it holds the setpoint. After these come '
+            + 'clocks rounded to whole ticks that run at most 0.1% fast, then clocks whose recovery could not be tried, then '
+            + 'stable clocks over the setpoint, then all other clocks.',
+        'It is nearer to the setpoint, over or under it.',
+        'It holds its output from the modeled cold start.',
+        'It has fewer wakeups. On a build with a loop of machines, the average over 12 start points is compared.',
+        'It goes back to its rate in fewer window cycles after a supply stop or an output blockage.',
+        'It has fewer enable windows.',
     ],
+    rankTie: 'Clocks that are equal on all six keep the order they were made in.',
+    rankFirst: 'Rank 1 is the recommended clock.',
     runSearched: 'The slower searches for fewer wakeups were run.',
     runSearchedWhenNeeded: 'The slower searches were only run if no other clock held the rate and had recovery, apart from the two that can still find fewer wakeups on a short clock.',
     provisional: 'More clocks are still being made, so this may change. ',
@@ -227,51 +231,46 @@ function nearestReason(alternatives: PickableClock[], pick: PickableClock, rate:
         + (holdsOverEquallyNear ? RECOMMENDED_COPY.nearestHolds : '');
 }
 
-/** The "This run" line of "How clocks are chosen": whether the searches ran */
-export function disclosureRunLine(rule: PickRule | null): string {
+/** The last line of the Rank column's help: whether the slower searches ran */
+export function searchesRunLine(rule: PickRule | null): string {
     return rule?.searchedForFewerWakeUps ? RECOMMENDED_COPY.runSearched : RECOMMENDED_COPY.runSearchedWhenNeeded;
 }
 
-/** The recommended clock's row first, the others in the order given */
-function recommendedFirst<T>(rows: ClockRow<T>[], recommendedIndex: number | null): ClockRow<T>[] {
-    const recommended = rows.filter(({ index }) => index === recommendedIndex);
-    return recommended.length === 0 ? rows : [...recommended, ...rows.filter(({ index }) => index !== recommendedIndex)];
+/**
+ * The clocks in the engine's order, as indexes into `alternatives`: the recommended clock first. The clocks are the
+ * worker's combination of every run so far, in the order it lists them, so ranking them as one run gives the order of
+ * that combination.
+ */
+export function rankOrderOf(alternatives: Pick<PickableClock, 'ranking'>[]): number[] {
+    return combineClockAlternativeRuns([{ signature: 'ranked', alternatives }], it => it.ranking).order;
 }
 
 /**
- * The rows of the clock table in two groups: the stable clocks, then the others under a divider, so showing the
- * unstable ones never moves a stable row. While the unstable ones are hidden (and something is stable) only the selected
- * and the recommended of them stay. Shown, the rows in `pinnedIds` (those that stayed while hidden) come first in the
- * group, so showing the others does not move them either; the rest follow in list order. The recommended clock is
- * first in its group, so the answer leads the table, unless `recommendedFirst` is false (a run is going).
+ * The rows of the clock table in two groups, the stable clocks (`isStable`), then the others under a divider, each row
+ * with its rank in the engine's order and each group sorted by it, so the ranks run straight through both groups. While
+ * the others are hidden (and something is stable) only the selected one and rank 1 of them stay. While a run adds
+ * clocks, the rows are sorted by the ranks so far.
  */
-export function partitionClockRows<T extends Pick<ClockAlternativeView, 'id' | 'verdict'>>(
+export function partitionClockRows<T extends Pick<ClockAlternativeView, 'ranking'>>(
     alternatives: T[],
     options: {
         selectedIndex: number;
-        recommendedIndex: number | null;
         showUnstable: boolean;
-        pinnedIds?: string[];
-        /** The recommended row first in its group (default); off while a run can still change the pick */
-        recommendedFirst?: boolean;
+        /** The Status column says Stable */
+        isStable: (alternative: T) => boolean;
     },
 ): { stable: ClockRow<T>[]; unstable: ClockRow<T>[]; unstableCount: number; hiddenCount: number; anyStable: boolean } {
-    const rows = alternatives.map((alternative, index) => ({ alternative, index }));
-    const stable = rows.filter(({ alternative }) => alternative.verdict === 'stable');
-    const allUnstable = rows.filter(({ alternative }) => alternative.verdict !== 'stable');
+    const rows = rankOrderOf(alternatives).map((index, at) => ({ alternative: alternatives[index], index, rank: at + 1 }));
+    const stable = rows.filter(({ alternative }) => options.isStable(alternative));
+    const allUnstable = rows.filter(({ alternative }) => !options.isStable(alternative));
     const anyStable = stable.length > 0;
-    const pinned = new Set(options.pinnedIds ?? []);
     // unstable clocks are hidden until asked for, unless nothing is stable: then they are all there is to look at
     const unstable = anyStable && !options.showUnstable
-        ? allUnstable.filter(({ index }) => index === options.selectedIndex || index === options.recommendedIndex)
-        : [
-            ...allUnstable.filter(({ alternative }) => pinned.has(alternative.id)),
-            ...allUnstable.filter(({ alternative }) => !pinned.has(alternative.id)),
-        ];
-    const lead = (group: ClockRow<T>[]) => options.recommendedFirst === false ? group : recommendedFirst(group, options.recommendedIndex);
+        ? allUnstable.filter(({ index, rank }) => index === options.selectedIndex || rank === 1)
+        : allUnstable;
     return {
-        stable: lead(stable),
-        unstable: lead(unstable),
+        stable,
+        unstable,
         unstableCount: allUnstable.length,
         hiddenCount: allUnstable.length - unstable.length,
         anyStable,
