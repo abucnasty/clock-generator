@@ -82,6 +82,35 @@ export function stateSentence(row: Pick<CheckedLaneRow, 'state' | 'sentence'>): 
     return words === undefined ? row.sentence : words(state.reason);
 }
 
+/**
+ * The sentence the lane table shows under a row's state, by the state's kind; null where it would only repeat the tab: a lane
+ * that holds says it in its label, unless copies wait at their join (`join_waits`), which the sentence adds; a full join
+ * where every copy misses the same count says it in the tab's headline, and keeps its sentence where the copies differ; a lane
+ * not run with the copies says it in its label, and the tests of the clock say why
+ */
+export function rowSentenceShown(row: Pick<CheckedLaneRow, 'state' | 'sentence'>): string | null {
+    const { state } = row;
+    switch (state.kind) {
+        case 'holds':
+            return state.join_waits === undefined ? null : stateSentence(row);
+        case 'join_full':
+            return state.copies.every(it => it.missed === state.copies[0].missed && it.swings === state.copies[0].swings) ? null : stateSentence(row);
+        case 'not_run':
+            // the label says it, and the tests above the table say why: one copy alone does not hold its rate
+            return null;
+        default:
+            return stateSentence(row);
+    }
+}
+
+/**
+ * Whether the tab shows the engine's line above the lane table: not where it only says that the copies were not run because
+ * one copy alone does not hold (the tests of the clock say it), with nothing after it (no plain output belt, no output chest)
+ */
+export function lineShown(clock: Pick<ClockAlternativeView, 'assessment'>, line: CheckedLanes['line']): boolean {
+    return !(clock.assessment.holds === false && !line.run_with_copies && line.plain_output_belts === 0 && line.output_chests.length === 0);
+}
+
 /** The lane of the build a row is of */
 export const laneOf = (lanes: readonly BuildLane[] | undefined, row: Pick<CheckedLaneRow, 'belt_id' | 'lane'>) =>
     lanes?.find(lane => lane.belt_id === row.belt_id && lane.lane === row.lane);
@@ -164,7 +193,7 @@ export const whyNotStableShowsCause = (why: Pick<WhyNotStable, 'cause'> | null |
 
 /**
  * The first sentence of what a saved run assumed: "Made for 9 copies of your build." for a clock kept before the engine gave
- * the build's lanes (a clock that gives them says it in the card, and what was checked on its Diagnostics); no word of the belts either way
+ * the build's lanes (for a clock that gives them the card's Makes says "all 9 copies", and Diagnostics what was checked); no word of the belts either way
  */
 export function madeForLead(saved: Pick<Config, 'setpoint'> | null, clock: Pick<ClockAlternativeView, 'assumptions'>): string {
     if (saved === null) return 'These results are for a saved build whose metadata is unavailable.';

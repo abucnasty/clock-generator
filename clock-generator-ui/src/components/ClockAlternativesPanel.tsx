@@ -4,7 +4,6 @@ import {
     Accordion,
     AccordionDetails,
     AccordionSummary,
-    Alert,
     Box,
     Button,
     Chip,
@@ -46,6 +45,9 @@ const DECIDERS_HEADER = 'Deciders';
 
 const formatTicks = (ticks: number) => Number.isInteger(ticks) ? `${ticks}` : ticks.toFixed(3);
 
+/** "8 clocks that are not Stable", "1 clock that is not Stable" */
+const notStable = (count: number) => `${count} ${count === 1 ? 'clock that is' : 'clocks that are'} not Stable`;
+
 /** Every string of the panel that is not the clocks' own or the pick's */
 const COMPARE_COPY = {
     heading: 'Compare other clocks',
@@ -54,7 +56,7 @@ const COMPARE_COPY = {
     clock: 'Clock',
     status: 'Status',
     howMadeHeading: 'How it is made',
-    worksHeading: 'Does it work?',
+    worksHeading: 'Status',
     swingsHelp: 'Total output swings each output cycle of each output machine, shared equally across its output inserters. '
         + 'Per-inserter counts may be fractional. The clock repeats after a whole number of output cycles (the window cycle).',
     signalsHelp: SIGNAL_DEFINITION + ' Counted per minute for one copy of the build, in the same run as the wakeups. No clock is ranked by signals.',
@@ -66,11 +68,9 @@ const COMPARE_COPY = {
         + 'another start point, with another count, so its figure is the average over 12 start points, and the table says so.',
     noneRecover: 'No clock qualifies as stable across its completed checks. Compare its modeled rate, recovery and sampled starts separately.',
     noneHold: 'None of the clocks tried holds the setpoint, so they are all listed.',
-    deadlock: 'The tests that stop a supply or block an output do not see this, so on this build they do not decide which clock '
-        + 'is selected for you: the clocks that hold the setpoint are ranked by their wakeups.',
     computing: (label: string) => `${label}: computing…`,
-    showUnstable: (hidden: number) => `Show ${hidden} unstable clock${hidden === 1 ? '' : 's'} that ${hidden === 1 ? 'was' : 'were'} tried`,
-    hideUnstable: (count: number) => `Hide ${count} unstable clock${count === 1 ? '' : 's'}`,
+    showUnstable: (hidden: number) => `Show ${notStable(hidden)}`,
+    hideUnstable: (count: number) => `Hide ${notStable(count)}`,
 };
 
 /** The icon beside the words of the compact table's Status: never the colour alone. Error has the red of a failed check */
@@ -209,8 +209,6 @@ export function ClockAlternativesPanel({
         { selectedIndex, recommendedIndex, showUnstable, pinnedIds, recommendedFirst: !isGenerating },
     );
     const anyHolds = alternatives.some(alternative => alternative.assessment.holds);
-    // of the build, so every clock has the same
-    const deadlockRisk = alternatives.find(alternative => alternative.deadlockRisk !== null)?.deadlockRisk ?? null;
     const copies = alternatives[0]?.copies ?? 1; // of the generation, so a stale table keeps its own number
     // a Makes column that says the same on every row is one line above the table instead
     const fold = allColumns ? null : foldedMakes([...stable, ...unstable].map(({ alternative }) => alternative));
@@ -248,8 +246,8 @@ export function ClockAlternativesPanel({
                     </Box>
                     {/* what is said beside the status: the rate, the reason code's words, or why the loss trials gave no answer */}
                     {status.detail && <Typography variant="body2" color="text.secondary" data-status-detail="">{status.detail}</Typography>}
+                    {/* the line that explains the clock's name stands on the card only */}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.secondary', typography: 'body2' }}>
-                        <span data-strategy-line="">{familyCopyOf(alternative)?.line ?? alternative.label}</span>
                         <HelpButton label={clockHelpName(fullClockName(alternative))}>
                             <StrategyHelp clock={alternative} />
                             <Typography variant="subtitle2" component="p" sx={{ mb: 0.5 }}>{COMPARE_COPY.howMadeHeading}</Typography>
@@ -360,11 +358,6 @@ export function ClockAlternativesPanel({
                     <Typography variant="body2">{disclosureRunLine(pickRule)}</Typography>
                 </AccordionDetails>
             </Accordion>
-            {deadlockRisk !== null && (
-                <Alert severity="warning" sx={{ mb: 1 }}>
-                    {deadlockRisk} {COMPARE_COPY.deadlock}
-                </Alert>
-            )}
             <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 2, rowGap: 0.5, mb: 0.5 }}>
                 {fold !== null && <Typography variant="body2" data-makes-fold="">{fold}</Typography>}
                 <Button

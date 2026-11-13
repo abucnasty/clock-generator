@@ -12,7 +12,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 ## [Unreleased]
 
 ### Added
-- ui: a Diagnostics tab shows the selected clock's shared lanes and why it is not stable
+- ui: a Diagnostics tab shows the selected clock's tests, shared lanes and why it is not stable
 - ui: the form sets each belt's flow direction and each lane's end, supply rate and sharing
 
 ### Removed
@@ -20,6 +20,12 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: the result's Belt pickups fact and the Belt column of the clock table are removed
 - ui: the clock selector and the install dialog no longer name the belt
 - ui: the input belts setting is removed; older builds load with their input lane ends stated
+- ui: Overview no longer has Why this clock
+- ui: the card drops its tuning and selection chips and the repeats in Simulation results
+- ui: the compare table's rows drop the line that explains the clock's name
+- ui: the Timeline drops the wakeups of one copy and the chart's key hint
+- ui: the install dialog's caption no longer names the Factorio version
+- ui: empty run overrides and empty Explanation labels are no longer shown
 
 ### Changed
 - generation: clocks with observed windows are found faster on large builds
@@ -36,6 +42,11 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: the card's How this was checked is now Simulation results
 - ui: the shared lanes' column of the copies' rates is now headed Planned for the copies
 - ui: the clock selector says a clock's status in place of Not stable
+- ui: the pickup sentence reads: the simulation assumes backpressure at the belt pickups
+- ui: the row help's Does it work? is now Status
+- ui: the compare table's group of other clocks is named Clocks that are not Stable
+- ui: a deadlock warning names only the two inserters; About this build says how it happens
+- ui: the output swing back-off report is in Model and tested starts, not a warning
 
 ### Fixed
 - ui: Paste from Factorio keeps where the next copy stands, as the export gives it

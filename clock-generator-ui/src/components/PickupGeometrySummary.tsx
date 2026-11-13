@@ -29,7 +29,7 @@ export function PickupGeometrySummary({ build, onEdit, busy = false, savedRun = 
         <Typography variant="body2">
             {geometry.unverified.length && !unverifiedOnly.length ? `${geometry.unverified.length} belt ${geometry.unverified.length === 1 ? 'pickup is not supported and blocks' : 'pickups are not supported and block'} generation.`
                 : geometry.unverified.length ? `${geometry.unverified.length} belt ${geometry.unverified.length === 1 ? 'pickup needs' : 'pickups need'} a supported capture before generation. Recorded unsupported or unclassified pickups are retained when this build is saved.`
-                : backedUp ? 'Saturated supply with captured pickup rules.'
+                : backedUp ? 'The simulation assumes backpressure at the belt pickups.'
                 : savedRun ? `Pickup type known for ${geometry.known === geometry.total ? `all ${geometry.total}` : `${geometry.known} of ${geometry.total}`} belt-fed ${geometry.total === 1 ? 'inserter' : 'inserters'}.`
                     : 'Straight belt is the default. Choose the belt shape and pickup approach.'}
         </Typography>

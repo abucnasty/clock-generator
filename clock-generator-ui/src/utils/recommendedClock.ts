@@ -31,7 +31,7 @@ export const RECOMMENDED_COPY = {
         + 'better: each one costs a little UPS.',
     backToRecommended: 'Back to recommended',
     backWhileGenerating: 'Back to best so far',
-    unstableDivider: 'Unstable clocks',
+    unstableDivider: 'Clocks that are not Stable',
     disclosureTitle: 'How clocks are chosen',
     disclosure: [
         'The simulator checks the blueprint\'s enable windows from a modeled cold start, including clock-phase checks where available. '

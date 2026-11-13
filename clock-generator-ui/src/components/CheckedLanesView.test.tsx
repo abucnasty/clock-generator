@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import type { CheckedLanes } from 'clock-generator/browser';
 import { names, show } from '../test/fixtures';
 import { AUTOMATION_240, checkedOf, ELECTROMAGNETIC_330, MILITARY_240, STATES, viewOf } from '../test/checkedLanesFixtures';
+import { rowSentenceShown } from '../utils/checkedLanes';
 import { DIAGNOSTICS_COPY } from '../utils/diagnostics';
 import { LaneDiagnostics, SharedLanesTable } from './CheckedLanesView';
 
@@ -16,13 +17,16 @@ const COLUMNS = ['Lane', 'Role', 'Item', 'End', 'Planned for the 9 copies', 'Sup
 /** The table's rows below its header, each as its cells' text */
 const bodyRows = (table: HTMLElement) => within(table).getAllByRole('row').slice(1);
 
+/** A row's State cell: the engine's label, then its sentence where the table shows it */
+const stateText = (row: CheckedLanes['rows'][number]) => row.label + (rowSentenceShown(row) ?? '');
+
 /** Where each text is in the rendered text, in the order given; -1 where it is not there */
 const placesIn = (text: string, parts: string[]) => parts.map(part => text.indexOf(part));
 
 describe('a clock without a cause', () => {
     const stable = checkedOf(AUTOMATION_240, 'time_study_windows');
 
-    it('says the engine\'s line, then the table open: no control, and not what it is made for (the card says it)', () => {
+    it('says the engine\'s line, then the table open: no control, and not what it is made for (Makes says all 9 copies)', () => {
         const { container } = show(<LaneDiagnostics clock={viewOf(AUTOMATION_240, 'time_study_windows')} />, { names: gameNames });
         expect(container.textContent).not.toContain('Made for 9 copies of your build.');
         expect(container.textContent!.indexOf(stable.line.sentence)).toBe(0);
@@ -31,22 +35,35 @@ describe('a clock without a cause', () => {
         expect(within(table).getAllByRole('columnheader').map(it => it.textContent)).toEqual(COLUMNS);
         const rows = bodyRows(table);
         expect(rows.map(row => within(row).getByRole('rowheader').textContent)).toEqual(stable.rows.map(row => `Belt ${row.belt_id}, lane ${row.lane}`));
+        // a lane that holds says it in its label: its sentence, "Every copy gets its items.", would repeat it; the output lane's
+        // sentence, where copies wait at their join, adds a fact
         rows.forEach((row, index) => {
-            expect(row.textContent).toContain(stable.rows[index].label);
-            expect(row.textContent).toContain(stable.rows[index].sentence);
+            expect(row.textContent!.endsWith(stateText(stable.rows[index]))).toBe(true);
+            if (rowSentenceShown(stable.rows[index]) === null) expect(row.textContent).not.toContain(stable.rows[index].sentence);
         });
-        expect(rows[0].textContent).toBe('Belt 1, lane 1InputIron gear wheelDead endtake 120 /s120 /slane capacity' + stable.rows[0].label + stable.rows[0].sentence);
+        expect(rows[0].textContent).toBe('Belt 1, lane 1InputIron gear wheelDead endtake 120 /s120 /slane capacity' + stable.rows[0].label);
         expect(rows[2].textContent).toBe('Belt 2, lane 1OutputAutomation science packInfiniteassumed from its roledrop 240 /son lanes 1 and 2—carries 240 /s'
             + stable.rows[2].label + stable.rows[2].sentence);
         expect(screen.getByText('3 lanes · all hold')).toBeTruthy();
     });
 
-    it('that was not run with the copies shows the engine\'s line for it and never "holds"', async () => {
+    it('that was not run with the copies as one copy alone does not hold: no line, the rows\' label alone, and never "holds"', async () => {
         const notRun = checkedOf(AUTOMATION_240, 'takt_batches_observed_swings_4');
         const { container } = show(<LaneDiagnostics clock={viewOf(AUTOMATION_240, 'takt_batches_observed_swings_4')} />, { names: gameNames });
-        expect(container.textContent).toContain(notRun.line.sentence);
-        expect(bodyRows(screen.getByRole('table'))).toHaveLength(3);
+        expect(container.textContent).not.toContain(notRun.line.sentence);
+        expect(container.querySelector('[data-checked-line]')).toBeNull();
+        const rows = bodyRows(screen.getByRole('table'));
+        expect(rows).toHaveLength(3);
+        for (const row of rows) expect(row.textContent!.endsWith('Not run with the copies')).toBe(true);
+        expect(container.textContent).not.toContain('so the copies are not run');
         expect(container.textContent).not.toMatch(/holds/i);
+    });
+
+    it('that was not run with the copies, with a sentence of the output chests after the line: the line as the engine gives it', async () => {
+        const notRun = checkedOf(ELECTROMAGNETIC_330, 'takt_batches_observed_swings_4');
+        expect(notRun.line.output_chests.length).toBeGreaterThan(0);
+        const { container } = show(<LaneDiagnostics clock={viewOf(ELECTROMAGNETIC_330, 'takt_batches_observed_swings_4')} />, { names: gameNames });
+        expect(container.querySelector('[data-checked-line]')!.textContent).toBe(notRun.line.sentence);
     });
 
     it('drops into chests: the engine\'s line names the chest, and no output lane has a row', async () => {
@@ -102,7 +119,7 @@ describe('a clock with a cause', () => {
         expect(screen.queryByRole('button', { name: 'What was checked' })).toBeNull();
         const rows = bodyRows(screen.getByRole('table', { name: 'Shared lanes' }));
         expect(rows.map(row => row.getAttribute('data-lane-state'))).toEqual(short.rows.map(row => row.state.kind));
-        rows.forEach((row, index) => expect(row.textContent).toContain(short.rows[index].label + short.rows[index].sentence));
+        rows.forEach((row, index) => expect(row.textContent).toContain(stateText(short.rows[index])));
     });
 
     it('of 216 ticks, at a full join, shows its headline and pictures: no spacing where the engine gives none', () => {
@@ -149,7 +166,7 @@ describe('every state has its row as the engine gives it', () => {
             const [shown] = bodyRows(screen.getByRole('table', { name: 'Shared lanes' }));
             expect(within(shown).getByRole('rowheader').textContent).toBe(`Belt ${row.belt_id}, lane ${row.lane}`);
             const state = within(shown).getAllByRole('cell').at(-1)!;
-            expect(state.textContent).toBe(row.label + row.sentence);
+            expect(state.textContent).toBe(stateText(row));
         });
     }
 });

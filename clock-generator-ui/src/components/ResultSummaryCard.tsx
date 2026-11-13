@@ -3,7 +3,7 @@ import { Alert, AlertTitle, Box, Button, Link, Typography } from '@mui/material'
 import { useEffect, useRef, type ReactNode, type RefObject } from 'react';
 import type { WhyNotStable } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../worker/types';
-import { rateVerbs, type TargetCounts } from '../utils/targetCounts';
+import { rateVerbs } from '../utils/targetCounts';
 import {
     clockBadges,
     differenceFromRecommended,
@@ -12,6 +12,7 @@ import {
     pickNameMeaning,
     recoversOf,
     signalsText,
+    statusOf,
     SUMMARY_COPY,
     wakeUpsText,
 } from '../utils/clockSummary';
@@ -21,12 +22,9 @@ import { RECOMMENDED_COPY, recommendationReason } from '../utils/recommendedCloc
 import { Panel } from './Panel';
 import { Disclosure } from './Disclosure';
 import { RecommendedChip } from './RecommendedChip';
-import type { GenerationAssumptions } from '../worker/types';
-import { REQUIRES_FACTORIO } from '../utils/installSteps';
-import { COLD_START, startCheckSummary } from '../utils/modelAssumptions';
 import { WHY_NOT_STABLE_TITLE } from '../utils/whyNotStable';
 import { useGameNames } from '../hooks/useGameNames';
-import { CHECKED_LANES_COPY, givesLanes, whyNotStableShowsCause } from '../utils/checkedLanes';
+import { whyNotStableShowsCause } from '../utils/checkedLanes';
 import { DIAGNOSTICS_COPY, hasDiagnostics } from '../utils/diagnostics';
 import { CauseHeadline } from './CheckedLanesView';
 
@@ -39,12 +37,9 @@ const CARD_COPY = {
     recovers: 'Recovery',
     detailsHeading: 'Simulation results',
     staleLine: 'These clocks are for an earlier build. Generate again for a clock for the build you have now.',
-    // the hold sentence of a clock with a loss on a shared lane: the clock-only check, which runs one copy
-    holdsOneCopyAlone: 'At steady state one copy alone keeps its rate: yes.',
 };
 
 interface ResultSummaryCardProps {
-    generationAssumptions?: GenerationAssumptions | null;
     alternatives: ClockAlternativeView[];
     selectedIndex: number;
     /** The clock the selection rule picks; null while there are none */
@@ -63,7 +58,7 @@ interface ResultSummaryCardProps {
     whyNotStable?: WhyNotStable | null;
     /** The clocks are for an earlier build */
     stale: boolean;
-    /** Saved build and inserter assumptions, shown inside the details disclosure. */
+    /** Saved build and inserter assumptions, shown inside the details disclosure; null where there are none to show */
     runAssumptions?: ReactNode;
     comparisonAction?: ReactNode;
 }
@@ -122,7 +117,8 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
                 >
                     {strategyNameOf(selected)}
                 </Typography>
-                <ClockChips clock={selected} />
+                {/* how the windows were made is said in the compare table's rows, the clock selector and the install dialog */}
+                <ClockChips clock={selected} settingsOnly />
                 <BadgeChips badges={clockBadges(alternatives, selectedIndex)} meanings={fewestDecidersMeaning(alternatives, selectedIndex)} />
                 {isRecommended && (
                     <RecommendedChip isGenerating={isGenerating} data-card-chip="" />
@@ -158,7 +154,8 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
                 <Fact label={CARD_COPY.signals} value={signals.value.replace(' a minute', '/min')} sub={signals.sub} />
                 <Fact label={CARD_COPY.recovers} value={recovers.value} icon={RECOVERS_ICON[recovers.kind]} />
             </Box>
-            {recovers.kind !== 'yes' && !props.rateWarning && <Typography variant="body2" sx={{ mt: 1 }}>{recovers.detail}</Typography>}
+            {/* on an Error card the reason beside the chip says it */}
+            {recovers.kind !== 'yes' && !props.rateWarning && statusOf(selected).kind !== 'error' && <Typography variant="body2" sx={{ mt: 1 }} data-recovery-detail="">{recovers.detail}</Typography>}
             {lossLimit && <Typography variant="body2" sx={{ mt: 1 }} data-loss-limit>{lossLimit}</Typography>}
         </>
     );
@@ -170,35 +167,13 @@ function fewestDecidersMeaning(alternatives: ClockAlternativeView[], index: numb
     return meaning ? { [SUMMARY_COPY.fewestDeciders]: meaning } : {};
 }
 
-/** Whether the clock keeps its rate at steady state, as a sentence */
-function holdStatusText(rate: string, holds: boolean | null | undefined, counts?: TargetCounts, sharedLaneLoss = false): string {
-    // on a loss on a shared lane the rate is of all the copies, and the yes of the clock-only check: one copy alone, no number
-    if (holds === true && sharedLaneLoss) return CARD_COPY.holdsOneCopyAlone;
-    if (holds === true) return `At steady state it keeps ${rateVerbs(counts).ing} ${rate}: yes.`;
-    if (holds === false) return 'At steady state it does not keep its rate.';
-    return 'Whether it keeps its rate at steady state is unavailable.';
-}
-
-function ClockExplanation(props: SelectedProps) {
+/** Why this clock is the pick, or how it differs from the pick; empty where there is no pick yet */
+function reasonOf(props: SelectedProps): string {
     const { alternatives, selectedIndex, recommendedIndex, isGenerating, selected } = props;
     const recommended = recommendedIndex === null ? undefined : alternatives[recommendedIndex];
-    const reason = selectedIndex === recommendedIndex
+    return selectedIndex === recommendedIndex
         ? recommendationReason(alternatives, recommendedIndex, !isGenerating && !props.stoppedEarly, props.stoppedEarly && !isGenerating)
         : recommended ? [pickNameMeaning(alternatives, selectedIndex), differenceFromRecommended(selected, recommended)].filter(Boolean).join(' ') : '';
-    const recovers = recoversOf(selected);
-    return <Box sx={{ display: 'grid', gap: 1 }}>
-        {reason && <Typography variant="body2" data-card-reason>{reason}</Typography>}
-        <Typography variant="body2" data-start-assumption>
-            {COLD_START} {startCheckSummary([selected], props.generationAssumptions ?? null)}
-        </Typography>
-        <Typography variant="body2" data-hold-status>
-            {holdStatusText(makesText(selected, selected.copies).value, selected.assessment.holds, selected.counts,
-                (selected.assessment.shared_lane_losses?.length ?? 0) > 0)}
-        </Typography>
-        {recovers.kind === 'yes' && <Typography variant="body2">{recovers.detail}</Typography>}
-        {props.runAssumptions}
-        <Typography variant="caption" color="text.secondary">{REQUIRES_FACTORIO}</Typography>
-    </Box>;
 }
 
 /**
@@ -228,6 +203,8 @@ export function ResultSummaryCard(props: ResultSummaryCardProps) {
 
     const recommended = props.recommendedIndex === null ? undefined : alternatives[props.recommendedIndex];
     const causeAbove = whyNotStableShowsCause(props.whyNotStable, recommended);
+    const reason = selected ? reasonOf({ ...props, selected }) : '';
+    const beltLine = selected?.beltLabel === '';
     return (
         <Panel title={CARD_COPY.heading} actions={selected ? props.comparisonAction : undefined} sx={{ '& > :last-child': { p: 1.5 } }} data-result-card="" data-build-anchor="selected-clock">
             {props.rateWarning && <Alert severity="warning" sx={{ mb: 1 }}>{props.rateWarning}</Alert>}
@@ -239,22 +216,20 @@ export function ResultSummaryCard(props: ResultSummaryCardProps) {
                     : props.whyNotStable.message}
             </Alert>}
             {props.stale && <Typography variant="body2" sx={{ mb: 1 }} data-card-stale>{CARD_COPY.staleLine}</Typography>}
-            {selected ? <>
+            {selected ? (
                 <ClockFacts {...props} selected={selected} nameRef={nameRef} />
-                {/* what was checked on the lanes the copies share is on Diagnostics; from an engine that gives the build's lanes, what they are made for */}
-                {givesLanes(selected) && <Typography variant="body2" sx={{ mt: 1.5 }} data-made-for="">{CHECKED_LANES_COPY.madeFor(selected.copies)}</Typography>}
-            </> : (
+            ) : (
                 <Typography variant="body2" color="text.secondary">{CARD_COPY.makingFirst}</Typography>
             )}
-            <Disclosure summary={CARD_COPY.detailsHeading} sx={{ mt: 1.5 }}>
+            {/* which tests ran and what they found is the Diagnostics tab's graphic; a fold with no line left is not drawn */}
+            {selected && (reason || props.runAssumptions || beltLine) && <Disclosure summary={CARD_COPY.detailsHeading} sx={{ mt: 1.5 }}>
                 <Box sx={{ display: 'grid', gap: 1, mt: 1 }}>
-                    {selected && <ClockExplanation {...props} selected={selected} />}
+                    {reason && <Typography variant="body2" data-card-reason>{reason}</Typography>}
+                    {props.runAssumptions}
                     {/* only where no clocked inserter picks up from a belt: the card's Belt fact says the rest */}
-                    {selected && selected.beltLabel === '' && (
-                        <Typography variant="body2" data-belt-line>{SUMMARY_COPY.beltLineNone}</Typography>
-                    )}
+                    {beltLine && <Typography variant="body2" data-belt-line>{SUMMARY_COPY.beltLineNone}</Typography>}
                 </Box>
-            </Disclosure>
+            </Disclosure>}
         </Panel>
     );
 }

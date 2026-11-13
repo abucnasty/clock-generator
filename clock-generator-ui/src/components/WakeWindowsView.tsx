@@ -195,7 +195,7 @@ function WakeWindowsViewComponent({ alternative, config, cycleView = false, head
                 ) : (
                     <>
                         <Typography id={hintId} variant="caption" color="text.secondary" component="p" sx={{ mb: 1 }}>
-                            Select an enable window for details. Use ↑ ↓ to change rows and ← → to step through enable windows.
+                            Select an enable window for details.
                         </Typography>
                         <WakeWindowsChart
                             range={inspection?.range}

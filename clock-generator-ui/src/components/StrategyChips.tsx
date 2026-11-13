@@ -2,12 +2,19 @@ import { Box, Chip, Tooltip, Typography } from '@mui/material';
 import type { ClockBadge } from '../utils/clockSummary';
 import { clockChipsOf, type NamedClock } from '../utils/strategyNames';
 
+/** The chips that say how the clock's windows were made */
+const HOW_MADE_CHIPS = new Set(['tuning_method', 'selection']);
+
 /**
  * What qualifies a clock's strategy, after its name: "· 2 output swings each output cycle · shared enable windows". Each is a few
  * words in the page's grey, with its line in the hover and for the keyboard.
  */
-export function ClockChips({ clock }: { clock: NamedClock }) {
-    const chips = clockChipsOf(clock);
+export function ClockChips({ clock, settingsOnly = false }: {
+    clock: NamedClock;
+    /** Only the chips of the clock's settings, without how its windows were made (tuning method and selection): the card's */
+    settingsOnly?: boolean;
+}) {
+    const chips = clockChipsOf(clock).filter(chip => !settingsOnly || !HOW_MADE_CHIPS.has(chip.id));
     if (chips.length === 0) return null;
     return (
         <>

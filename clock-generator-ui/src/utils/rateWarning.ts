@@ -52,6 +52,25 @@ export function rateWarningOf(
     return [of_the_clock, alternative.deadlockRisk].filter(part => part !== null).join(' ') || null;
 }
 
+/** The engine's note on a build with a deadlock risk (its insight), whose What names the two inserters and the machine */
+const DEADLOCK_RISK_NOTE = 'deadlock-risk';
+
+/**
+ * What the card and the install dialog warn of: as rateWarningOf, with the deadlock risk said as "Deadlock risk:" and the
+ * sentences that name the two inserters and the machine (the What of the engine's note on the risk). The note under
+ * "About this build" keeps how a deadlock comes about. A result without that note keeps the engine's whole text.
+ */
+export function cardWarningOf(
+    alternative: Pick<ClockAlternativeView, 'verdict' | 'assessment' | 'ranking' | 'deadlockRisk' | 'checkedLanes' | 'insights'> | undefined,
+): string | null {
+    if (!alternative) {
+        return null;
+    }
+    const note = alternative.deadlockRisk === null ? undefined : alternative.insights.find(insight => insight.id === DEADLOCK_RISK_NOTE);
+    const deadlock = note === undefined ? alternative.deadlockRisk : `Deadlock risk: ${note.what}`;
+    return [clockWarningOf(alternative), deadlock].filter(part => part !== null).join(' ') || null;
+}
+
 function clockWarningOf(
     alternative: Pick<ClockAlternativeView, 'verdict' | 'assessment' | 'ranking' | 'checkedLanes'>,
 ): string | null {

@@ -17,9 +17,7 @@ export function startCheckSummary(clocks: Pick<ClockAlternativeView, 'assessment
         + (missing > 0 ? ` Results for other starting states are unavailable for ${missing}.` : '');
 }
 
-/** The cold start every clock is tested from, for the card's details */
-export const COLD_START = 'Tested in the simulator from a cold start: full input, empty machines and inserters, the clock at its first tick. Rates are read at steady state.';
-/** The same, with what it does not promise, for the Overview */
+/** The cold start every clock is tested from, with what it does not promise, for the Overview */
 export const MODELED_START = 'Tested from a cold start: full input, empty machines and inserters, the clock at its first tick. The clock is planned on a separate copy of the build, and rates are read at steady state, so they do not promise the setpoint in the first window cycle, or from every state a running build can be in.';
 /** What the tests do not cover, last in the Overview's list */
 export const START_LIMITS = 'None of this covers every stock of items in a running build, the order you build it in, how much a real belt carries, or recovery in the game.';
@@ -46,7 +44,8 @@ export function modeledDetails(clock: ClockAlternativeView, itemLabel: (id: stri
                 + `${drop.inserterIds.map(id => entityInSentence('inserter', id, facts.entityNames)).join(', ')} on the belt.`
             : freeLaneDropText(entityInSentence('belt', drop.beltId, facts.entityNames))),
         ...facts.machineFuel.map(fuel => `${machine(fuel.machineId)}: imported fuel ${nameInSentence(itemLabel(fuel.fuel))}.`),
-        ...(facts.overrides !== undefined ? [`Explicit run overrides: ${JSON.stringify(facts.overrides)}.`] : []),
+        // only overrides that are there: an empty set says nothing
+        ...(facts.overrides !== undefined && Object.keys(facts.overrides).length > 0 ? [`Explicit run overrides: ${JSON.stringify(facts.overrides)}.`] : []),
     ];
 }
 

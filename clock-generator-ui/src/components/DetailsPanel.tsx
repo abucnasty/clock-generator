@@ -19,7 +19,8 @@ interface DetailsPanelProps {
 /** Findings are part of Overview directly, without another set of tabs. */
 export function DetailsPanel(props: DetailsPanelProps) {
     return <Box sx={{ mt: 2 }} data-details="" data-build-anchor="details">
-        <SwingBackoffReportDisplay report={props.swingBackoffReport} />
+        {/* a back-off that found a swing count that holds is in Model and tested starts */}
+        <SwingBackoffReportDisplay report={props.swingBackoffReport} shows="failed" />
         <InsightsPanel insights={props.insights} nothing={props.nothing}>
             {props.shiftOptions && <ShiftRangePanel options={props.shiftOptions} />}
         </InsightsPanel>

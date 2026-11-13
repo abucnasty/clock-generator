@@ -41,3 +41,19 @@ describe('an insight with a reason', () => {
         expect(screen.getByText('Explanation')).toBeTruthy();
     });
 });
+
+describe('a note with no explanation', () => {
+    // the note of a build whose lanes are exactly full, as the engine gives it: no why and no explanation
+    const exactlyFull = {
+        id: 'lanes-exactly-full', scope: 'build' as const, title: 'Both lanes of the belt are exactly full',
+        what: 'Both lanes of the automation science pack belt are exactly full at the setpoint.', why: '', explanation: '',
+    };
+
+    it('shows what it says and no Explanation label', () => {
+        const { container } = show(<InsightsPanel insights={[exactlyFull]} />);
+        expect(screen.getByText(exactlyFull.what)).toBeTruthy();
+        expect(screen.queryByText('Explanation')).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Why?' })).toBeNull();
+        expect(container.querySelector('[data-insight="lanes-exactly-full"]')!.textContent).toContain(exactlyFull.what);
+    });
+});

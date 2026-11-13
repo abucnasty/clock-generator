@@ -96,10 +96,10 @@ const isStartDependent = (clock: Pick<SummaryClock, 'assessment'>): boolean =>
 const rateText = (rate: number) => formatNumberText(rate);
 
 /** The rate a clock was made for: its own rate less how far it is off the target */
-const targetOf = (clock: Pick<SummaryClock, 'ranking' | 'assessment'>) =>
+export const targetOf = (clock: Pick<SummaryClock, 'ranking' | 'assessment'>) =>
     clock.assessment.items_per_second - clock.ranking.rate_off_target;
 
-const isOffTarget = (clock: Pick<SummaryClock, 'ranking'>) => Math.abs(clock.ranking.rate_off_target) >= MIN_OFF_TARGET;
+export const isOffTarget = (clock: Pick<SummaryClock, 'ranking'>) => Math.abs(clock.ranking.rate_off_target) >= MIN_OFF_TARGET;
 
 /** Wake-ups as the selection compares them: to a thousandth */
 const wakeUpsKey = (wakeUps: number | null) => wakeUps === null ? null : Math.round(wakeUps * 1000);

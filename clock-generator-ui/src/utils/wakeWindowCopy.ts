@@ -252,18 +252,18 @@ export function windowOrdinalText(index: number, count: number): string {
 }
 
 /**
- * Clock window cycle, rows and wake-ups of the clock: "Clock window cycle 600 ticks (10 s) · 14 inserters and 2 drills · 372 wake-ups a minute
- * for one copy"
+ * Clock window cycle and rows of the clock: "Window cycle time 600 ticks (10 s) · 14 inserters and 2 drills". The wakeups of one
+ * copy are the card's: they are said here only where the card has none ("Wakeups not counted") or where these rows are of the
+ * cold start's run and the card's figure the average of the start points ("372 wakeups a minute for one copy from a cold start").
  */
 export function summaryText(args: { windowCycleTicks: number; inserters: number; drills: number; wakeUps: number | null; fromColdStart?: boolean }): string {
     const counts = args.drills > 0
         ? `${plural(args.inserters, 'inserter', 'inserters')} and ${plural(args.drills, 'drill', 'drills')}`
         : plural(args.inserters, 'inserter', 'inserters');
     // where the clock's figure is the average of its start points, these rows are of the cold start's run
-    const wakeUps = args.wakeUps === null
-        ? 'Wakeups not counted'
-        : `${formatNumberText(args.wakeUps, { maxDecimals: 0 })} wakeups a minute for one copy${args.fromColdStart ? ' from a cold start' : ''}`;
-    return `Window cycle time ${windowCycleText(args.windowCycleTicks)} · ${counts} · ${wakeUps}`;
+    const wakeUps = args.wakeUps === null ? 'Wakeups not counted'
+        : args.fromColdStart ? `${formatNumberText(args.wakeUps, { maxDecimals: 0 })} wakeups a minute for one copy from a cold start` : null;
+    return [`Window cycle time ${windowCycleText(args.windowCycleTicks)}`, counts, wakeUps].filter(part => part !== null).join(' · ');
 }
 
 /**

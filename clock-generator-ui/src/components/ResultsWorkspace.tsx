@@ -8,6 +8,7 @@ import { useBuildSection } from '../hooks/useBuildViewContext';
 import { SelectedClockContext } from './SelectedClockContext';
 import { InserterAssumptions } from './InserterAssumptions';
 import { PickupGeometrySummary } from './PickupGeometrySummary';
+import { pickupGeometryOf } from '../utils/pickupGeometry';
 import type {
     LogMessage,
     DebugSteps,
@@ -18,8 +19,7 @@ import type {
 } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 import type { FuelViewData, GenerationAssumptions, ShiftOptionsView } from '../worker/types';
-import { freeLaneDropText, startCheckSummary } from '../utils/modelAssumptions';
-import { entityInSentence } from '../utils/entityLabel';
+import { startCheckSummary } from '../utils/modelAssumptions';
 import { ClockAlternativesPanel } from './ClockAlternativesPanel';
 import { DeeperSearchNotice } from './DeeperSearchNotice';
 import { DetailsPanel } from './DetailsPanel';
@@ -30,7 +30,7 @@ import { StaleResultsBanner } from './StaleResultsBanner';
 import { RunNotes } from './RunNotes';
 import { statusOf, wakeUpsText } from '../utils/clockSummary';
 import { fullClockName } from '../utils/strategyNames';
-import { rateWarningOf } from '../utils/rateWarning';
+import { cardWarningOf } from '../utils/rateWarning';
 import { whyNotStableOf } from '../utils/whyNotStable';
 import { madeForLead } from '../utils/checkedLanes';
 import { DIAGNOSTICS_COPY, notesOf } from '../utils/diagnostics';
@@ -133,7 +133,6 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
     }, [props.generatedFor]);
     const hasResults = props.alternatives.length > 0 || props.pending.length > 0;
     const selected = props.alternatives[props.selectedIndex];
-    const freeLaneBelts = selected?.assumptions?.outputDrops.filter(drop => drop.mode === 'free-lane').map(drop => drop.beltId) ?? [];
     const workspaceRef = useRef<HTMLDivElement>(null);
     const selectionAnchor = useRef<{ clock: ClockAlternativeView; top: number } | null>(null);
     const captureWorkspacePosition = (next: ClockAlternativeView | undefined) => {
@@ -190,7 +189,15 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
         const status = statusOf(clock);
         return status.kind === 'stable' ? null : status.text;
     };
-    const rateWarning = rateWarningOf(selected);
+    const rateWarning = cardWarningOf(selected);
+    // what a saved run assumed, in the card's Simulation results: a line, and the belt pickups where the build has some
+    const runLead = selected ? [
+        madeForLead(saved, selected),
+        selected.assumptions?.kickStarts.length ? `${selected.assumptions.kickStarts.length} modeled kick start(s).` : '',
+        selected.assumptions?.outputDrops.some(drop => drop.mode === 'shared-lanes') ? 'The drop positions you gave are used to space the output drops on the belt.' : '',
+        selected.assumptions?.machineFuel.length ? 'Imported machine fuel is in Why.' : '',
+    ].filter(Boolean).join(' ') : '';
+    const pickupsShown = saved !== null && saved !== undefined && pickupGeometryOf(saved).total > 0;
     // said of the whole run once it is done: while clocks still arrive, a stable one may yet come
     const whyNotStable = props.isRunning ? null
         : whyNotStableOf(props.alternatives, props.recommendedIndex, props.notMade);
@@ -226,7 +233,6 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
             )}
 
             <ResultSummaryCard
-                generationAssumptions={props.generationAssumptions}
                 alternatives={props.alternatives}
                 selectedIndex={props.selectedIndex}
                 recommendedIndex={props.recommendedIndex}
@@ -244,17 +250,10 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                     endIcon={<ExpandMore sx={{ transform: comparisonOpen ? 'rotate(180deg)' : 'none' }} />}>
                     Compare clocks
                 </Button></Box>}
-                runAssumptions={selected && <Box data-result-assumptions sx={{ overflowWrap: 'anywhere' }}>
-                    <Typography variant="body2">
-                        {madeForLead(saved, selected)}
-                        {selected.assumptions?.kickStarts.length ? ` ${selected.assumptions.kickStarts.length} modeled kick start(s).` : ''}
-                        {selected.assumptions?.outputDrops.some(drop => drop.mode === 'shared-lanes') ? ' The drop positions you gave are used to space the output drops on the belt.' : ''}
-                        {freeLaneBelts.length > 0 ? ` ${freeLaneDropText(freeLaneBelts.map(id => entityInSentence('belt', id, selected?.assumptions?.entityNames)).join(' and '))}` : ''}
-                        {selected.assumptions?.machineFuel.length ? ' Imported machine fuel is in Why.' : ''}
-                    </Typography>
-                    {saved?.inserters && <InserterAssumptions inserters={saved.inserters} />}
+                runAssumptions={selected && (runLead !== '' || pickupsShown) ? <Box data-result-assumptions sx={{ overflowWrap: 'anywhere' }}>
+                    {runLead !== '' && <Typography variant="body2">{runLead}</Typography>}
                     {saved && <PickupGeometrySummary build={saved} savedRun backedUp={selected.belt ? selected.belt.kind === 'backed_up' : selected.beltLabel === 'backed-up'} onEdit={props.staleFor ? undefined : props.onEditPickup} busy={props.isRunning} />}
-                </Box>}
+                </Box> : null}
             />
 
             <Box data-results-columns sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 1.5, '& > *': { minWidth: 0 } }}>
@@ -286,6 +285,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 {selected && <Box ref={workspaceRef} sx={{ scrollMarginTop: 'calc(var(--app-header-height, 0px) + 8px)' }}>
                     <SelectedClockContext selected={selected} detail={props.detail} onDetailChange={props.onDetailChange} onSelectClock={selectClockById}
                         generation={props.generationAssumptions}
+                        swingBackoffReport={props.swingBackoffReport}
                         clockSelector={selectableClocks.length > 1 && <TextField select
                             label={statusWord(selected) !== null ? `Clock · ${statusWord(selected)}` : props.selectedIndex === props.recommendedIndex ? 'Clock · Recommended' : 'Clock'} size="small"
                             value={props.selectedIndex} onChange={event => selectClock(Number(event.target.value))}

@@ -2,11 +2,11 @@ import { Tab, Tabs, Typography } from '@mui/material';
 import { lazy, Suspense, useState, type ReactNode } from 'react';
 import type { ClockTimelineWorkspaceProps } from './ClockTimelineWorkspace';
 import { Disclosure } from './Disclosure';
+import type { SwingBackoffReport } from 'clock-generator/browser';
 import type { ClockAlternativeView, GenerationAssumptions } from '../worker/types';
 import type { ResultDetail } from '../utils/resultsView';
 import { MODELED_START, START_LIMITS, modeledDetails, phaseChecksText, startCheckSummary } from '../utils/modelAssumptions';
 import { useGameNames } from '../hooks/useGameNames';
-import { lossLimitText, recoversOf } from '../utils/clockSummary';
 import { formatNumberText } from '../utils/numberText';
 import { FullscreenWorkspace } from './FullscreenWorkspace';
 import { tabProps } from '../utils/tabIds';
@@ -14,10 +14,11 @@ import { TabBody } from './TabBody';
 import { useBuildSection } from '../hooks/useBuildViewContext';
 import { DIAGNOSTICS_COPY } from '../utils/diagnostics';
 import { ClockDiagnostics } from './ClockDiagnostics';
+import { SwingBackoffReportDisplay } from './SwingBackoffReportDisplay';
 
 const ClockTimeline = lazy(() => import('./ClockTimelineWorkspace').then(module => ({ default: module.ClockTimelineWorkspace })));
 
-export function SelectedClockContext({ selected, detail, onDetailChange, onSelectClock, timelineProps, generation, assumptions, clockSelector, children }: {
+export function SelectedClockContext({ selected, detail, onDetailChange, onSelectClock, timelineProps, generation, assumptions, swingBackoffReport = null, clockSelector, children }: {
     selected: ClockAlternativeView;
     detail: ResultDetail;
     onDetailChange: (detail: ResultDetail) => void;
@@ -27,6 +28,8 @@ export function SelectedClockContext({ selected, detail, onDetailChange, onSelec
     clockSelector: ReactNode;
     generation: GenerationAssumptions | null;
     assumptions: ReactNode;
+    /** The output swing back-off of the selected clock: where it found a swing count that holds, said in Model and tested starts */
+    swingBackoffReport?: SwingBackoffReport | null;
     children: ReactNode;
 }) {
     const { itemLabel, recipeLabel } = useGameNames();
@@ -43,10 +46,6 @@ export function SelectedClockContext({ selected, detail, onDetailChange, onSelec
             <Tab label="Timeline" value="timeline" {...tabProps('result-context', 'timeline')} />
         </Tabs>
         <TabBody prefix="result-context" tab="overview" shown={detail === 'overview'}>
-            <Typography component="h3" variant="subtitle1" sx={{ fontWeight: 600 }}>Why this clock</Typography>
-            <Typography variant="body2" sx={{ my: 1, overflowWrap: 'anywhere' }}>{selected.description}</Typography>
-            <Typography variant="body2">The clock repeats every {formatNumberText(selected.simulationDurationTicks, { maxDecimals: 3 })} ticks ({formatNumberText(selected.simulationDurationTicks / 60, { maxDecimals: 2 })} s). In each repeat, each inserter is switched on in its own enable windows: {selected.inserterWindowCount} in all. An enable window can hold several swings, and a swing can finish in a later window, so the number of enable windows and the number of swings need not match.</Typography>
-            <Typography variant="body2" sx={{ mt: 1 }}>{[recoversOf(selected).detail, lossLimitText(selected, itemLabel)].filter(Boolean).join(' ')}</Typography>
             <Disclosure summary="Model and tested starts" open={assumptionsOpen} onToggle={setAssumptionsOpen} sx={{ mt: 1, overflowWrap: 'anywhere' }} data-model-assumptions="">
                 <Typography variant="body2" sx={{ mt: 1 }}>{MODELED_START}</Typography>
                 <Typography variant="body2" sx={{ mt: 1 }}>{startCheckSummary([selected], generation)}</Typography>
@@ -57,6 +56,7 @@ export function SelectedClockContext({ selected, detail, onDetailChange, onSelec
                 </Typography>)}
                 <Typography variant="body2" sx={{ mt: 1 }}>{START_LIMITS}</Typography>
                 {assumptions}
+                <SwingBackoffReportDisplay report={swingBackoffReport} shows="succeeded" />
             </Disclosure>
             {children}
         </TabBody>
