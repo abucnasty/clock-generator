@@ -194,6 +194,10 @@ _Avoid_: selected clock (for the generator's first-ranked clock), the pick
 **Selected clock**:
 The clock the user has chosen to see and copy. It is the recommended clock until the user chooses another one.
 
+**Rank**:
+The place of a clock in the generator's order for a build. Rank 1 is the recommended clock. A project technical noun:
+the game and STE have no entry for it.
+
 **Blueprint**:
 A clock as a Factorio blueprint string, with its wiring, which the user takes into the game.
 _Avoid_: export

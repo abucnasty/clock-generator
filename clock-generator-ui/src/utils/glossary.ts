@@ -43,6 +43,7 @@ export type GlossaryId =
     | 'your-configurations'
     | 'share-link'
     | 'clock'
+    | 'rank'
     | 'blueprint'
     | 'check'
     | 'enable-rule'
@@ -171,6 +172,11 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
         definition: 'The set of combinators that switches your inserters and mining drills on in their enable windows. It repeats '
             + 'every window cycle. The tool makes several and recommends one.',
         insteadOf: 'potential clock, alternative, candidate, solution',
+    },
+    {
+        id: 'rank',
+        term: 'rank',
+        definition: 'The place of a clock in the generator\'s order for a build. Rank 1 is the recommended clock.',
     },
     {
         id: 'blueprint',
