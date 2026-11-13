@@ -31,8 +31,11 @@ export function NoteLine({ mark, markLabel, title, chips, details, maxWidth = 's
     const Mark = mark === 'info' ? InfoOutlined : WarningAmber;
     return <Box>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 1.5, rowGap: 1 }}>
-            <Mark sx={{ color: `${mark}.main` }} titleAccess={markLabel} />
-            <Typography variant="body1" sx={{ fontWeight: 600 }}>{title}</Typography>
+            {/* the mark stays beside the title when a narrow window wraps it */}
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', columnGap: 1.5, flex: '0 1 auto', minWidth: 0 }}>
+                <Mark sx={{ color: `${mark}.main`, flexShrink: 0 }} titleAccess={markLabel} />
+                <Typography variant="body1" sx={{ fontWeight: 600 }}>{title}</Typography>
+            </Box>
             {chips}
             <Box sx={{ flexGrow: 1 }} />
             <Button size="small" color="inherit" variant="outlined" onClick={() => setOpen(true)}>{details}</Button>

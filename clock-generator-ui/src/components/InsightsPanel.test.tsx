@@ -199,6 +199,12 @@ describe('the notes on this clock, one line each', () => {
             .toEqual([NOTES.wakeUps.title, NOTES.backpressureLoss.title, NOTES.dropsLand.title]);
     });
 
+    it('gives a kind of note the site has no mark for an information mark', () => {
+        const note = { id: 'a-later-note', scope: 'clock' as const, title: 'A note the engine adds later', what: 'What it says.', why: '', explanation: '' };
+        show(<InsightsPanel insights={[note]} />);
+        expect(within(screen.getByRole('group', { name: note.title })).getByTitle('Information')).toBeDefined();
+    });
+
     it('says that nothing stands out, and no more, when the clock has no note', () => {
         const { container } = show(<InsightsPanel insights={[]} />);
         expect(container.textContent).toContain('Nothing stands out on this clock.');
@@ -228,6 +234,11 @@ describe('where the swings a clock moved can go', () => {
         expect(picture.compareDocumentPosition(words) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
         expect(within(window).getByText(/Earliest that works/)).toBeDefined();
         expect(within(window).getByText('• Machine 2 is at its insertion limit')).toBeDefined();
+    });
+
+    it('names the line after the swings it moved, for a clock that moved a round of swings', () => {
+        details({ ...options, moved: 'swings', plannedTicks: { start: 10, end: 30 }, movedDescription: 'inserter 1: battery' });
+        expect(within(screen.getByRole('group', { name: 'When the machines accept these swings' })).getByTitle('Information')).toBeDefined();
     });
 
     it('is no line, and the clock has nothing that stands out, where no place was tried', () => {
