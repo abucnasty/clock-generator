@@ -490,10 +490,9 @@ A time when one product of a build is not taken away. STE: BLOCKAGE (n), approve
 _Avoid_: jammed, jam, output loss
 
 **Recovery**:
-The clock goes back to its rate by itself after a supply stop or an output blockage. A noun only: write "the clock goes
-back to its rate", not "recovers" (STE does not approve recover (v)). Control theory: the disturbance response
-(IEC 351-46-13).
-_Avoid_: recovers, recover, get back
+The clock goes back to its rate by itself after a supply stop or an output blockage. The term is the noun, and the site
+can also say that a clock recovers. Control theory: the disturbance response (IEC 351-46-13).
+_Avoid_: get back
 
 **Disturbance**:
 An input from outside that pushes the build away from its setpoint: a supply stop, an output blockage, or a

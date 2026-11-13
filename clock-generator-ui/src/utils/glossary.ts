@@ -222,7 +222,7 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
         definition: 'In the simulator\'s loss trials, the clock goes back to its rate by itself. The trials are a supply stop '
             + 'and an output blockage. A clock that fails one loss is not tried on the others. '
             + 'This is separate from holding the modeled rate and from checks of other sampled starts.',
-        insteadOf: 'recovers, recover, gets back',
+        insteadOf: 'gets back',
     },
     {
         id: 'simulator',
