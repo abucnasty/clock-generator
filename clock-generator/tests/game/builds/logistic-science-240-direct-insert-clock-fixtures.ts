@@ -15,9 +15,9 @@ import {assertFeedBacksUp, PickupClockScenario} from "./pickup-clock-capture";
  * loader drains into a void chest (#442). The sample's scaffold is one copy. Two infinity chests put the inserters onto their belts through a
  * stack inserter each, and the belts end where the last inserter takes from them.
  *
- * The generator's selected clock for the config as it is (moving belts) runs on it, wired to the copy: the losses the build has are the
- * supply of inserters (cut from every belt) and the packs not taken away (the two loaders removed). The molten iron has no loss: no
- * belt or chest carries it.
+ * The generator's euclidean_swings clock for the config (the selected one until #595; made for a backed-up belt, since every lane of
+ * its input belts states a dead end) runs on it, wired to the copy: the losses the build has are the supply of inserters (cut from
+ * every belt) and the packs not taken away (the two loaders removed). The molten iron has no loss: no belt or chest carries it.
  */
 export interface LogisticDirectInsertClockCase {
     name: string;
@@ -65,7 +65,8 @@ export async function logisticDirectInsertClockScenario(variant: LogisticDirectI
         probe: {family: "logistic-science-240-direct-insert", stackSize: 4},
         controls: path.join(__dirname, "logistic-science-240-direct-insert-clock-controls.json"),
         assertHardware: recording => assertLogisticDirectInsertHardware(recording, config),
-        // the clock is made for moving belts, and in the game the scaffold's belts end closed: the lanes the inserters take from stand full
+        // the clock is made for a backed-up belt, as the config's dead ends state, and in the game the scaffold's belts end closed:
+        // the lanes the inserters take from stand full
         validateReport: assertFeedBacksUp,
     };
 }
