@@ -309,7 +309,7 @@
     {
       "source": {
         "type": "belt",
-        "id": 1,
+        "id": 5,
         "near_lane": 1,
         "pickup_length": 0.5,
         "pickup_layout": "over-hood-exit",
@@ -592,6 +592,27 @@
   "belts": [
     {
       "id": 1,
+      "type": "turbo-transport-belt",
+      "flow_direction": 4,
+      "lanes": [
+        {
+          "ingredient": "plastic-bar",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
+        },
+        {
+          "ingredient": "plastic-bar",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
+        }
+      ]
+    },
+    {
+      "id": 5,
       "type": "turbo-transport-belt",
       "flow_direction": 4,
       "lanes": [
