@@ -176,6 +176,75 @@ describe("combineClockAlternativeRuns", () => {
     });
 });
 
+describe("the order of combineClockAlternativeRuns", () => {
+    /** The ids from first to last in the order, each clock a run of its own, and the selected id */
+    const ordered = (runs: (ClockAlternativeRun<Ranked> | null)[]) => {
+        const { alternatives, selected_index, order } = combineClockAlternativeRuns(runs, it => it);
+        return { ids: order.map(index => alternatives[index].id), selected: alternatives[selected_index]?.id };
+    };
+    const orderOf = (clocks: Ranked[]) => ordered(clocks.map(it => ({ signature: it.id, alternatives: [it] })));
+
+    it.each<[string, Ranked[], string[]]>([
+        ["by the tier first: exact and tried, rounded, recovery not tried, stable over the setpoint, the rest", [
+            clock("rest", { meets_target_rate: false, rate_off_target: -0.001, wake_ups_per_minute: 0 }),
+            clock("stable-over", { meets_target_rate: false, stable_above_target: true, rate_off_target: 2, wake_ups_per_minute: 1 }),
+            clock("untried", { recovery_untried: true, wake_ups_per_minute: 2 }),
+            clock("rounded", { runs_fast: 0.0002, wake_ups_per_minute: 3 }),
+            clock("exact", { wake_ups_per_minute: 900 }),
+        ], ["exact", "rounded", "untried", "stable-over", "rest"]],
+        ["then the distance from the setpoint, to a thousandth, above as far as below", [
+            clock("far", { meets_target_rate: false, rate_off_target: -3 }),
+            clock("over", { meets_target_rate: false, rate_off_target: 2 }),
+            clock("near", { meets_target_rate: false, rate_off_target: 0.4 }),
+            clock("near-too", { meets_target_rate: false, rate_off_target: -0.4004 }),
+        ], ["near", "near-too", "over", "far"]],
+        ["then whether it holds its output", [
+            clock("drifts", { meets_target_rate: false, holds_expected_output: false, wake_ups_per_minute: 1 }),
+            clock("holds", { meets_target_rate: false, wake_ups_per_minute: 80 }),
+        ], ["holds", "drifts"]],
+        ["then the wakeups to a thousandth, a count before none", [
+            clock("not-counted", { wake_ups_per_minute: null, window_count: 1 }),
+            clock("more", { wake_ups_per_minute: 12 }),
+            clock("fewer", { wake_ups_per_minute: 8, window_count: 30 }),
+            clock("fewer-too", { wake_ups_per_minute: 8.0004, window_count: 20 }),
+        ], ["fewer-too", "fewer", "more", "not-counted"]],
+        ["then the window cycles to recover after a stop, a count before none", [
+            clock("untimed", { wake_ups_per_minute: 0, recovery_window_cycles: null, window_count: 1 }),
+            clock("slow", { wake_ups_per_minute: 0, recovery_window_cycles: 33, window_count: 2 }),
+            clock("fast", { wake_ups_per_minute: 0, recovery_window_cycles: 3, window_count: 9 }),
+        ], ["fast", "slow", "untimed"]],
+        ["then the enable windows", [
+            clock("more-windows", { window_count: 12 }),
+            clock("fewer-windows", { window_count: 9 }),
+        ], ["fewer-windows", "more-windows"]],
+        ["and the made order where they tie on every key", [
+            clock("first"), clock("second", { wake_ups_per_minute: 100.0004 }), clock("third"),
+        ], ["first", "second", "third"]],
+    ])("orders %s", (_, clocks, ids) => {
+        const { ids: order, selected } = orderOf(clocks);
+        expect(order).toEqual(ids);
+        // the first in the order is the selected clock
+        expect(selected).toBe(ids[0]);
+    });
+
+    it("orders every clock of the combined runs once, a run of shared windows and a deeper search's run among them", () => {
+        const runs: (ClockAlternativeRun<Ranked> | null)[] = [
+            { signature: "a", alternatives: [clock("a", { wake_ups_per_minute: 80 })], also: [{ signature: "a-shared", alternatives: [clock("a-shared", { wake_ups_per_minute: 60 })] }] },
+            null,
+            { signature: "a", alternatives: [clock("a-again", { wake_ups_per_minute: 0 })] },
+            { signature: "b", alternatives: [clock("b", { wake_ups_per_minute: 50 }), clock("b-rounded", { runs_fast: 0.0002, wake_ups_per_minute: 1 })] },
+        ];
+        expect(ordered(runs)).toEqual({ ids: ["b", "a-shared", "a", "b-rounded"], selected: "b" });
+        // a deeper search adds a run: the positions are of all the clocks together, not of each run
+        const deeper = [...runs, { signature: "c", alternatives: [clock("c", { wake_ups_per_minute: 55 })] }];
+        expect(ordered(deeper)).toEqual({ ids: ["b", "c", "a-shared", "a", "b-rounded"], selected: "b" });
+    });
+
+    it("is empty with no clock", () => {
+        expect(combineClockAlternativeRuns<Ranked>([null], it => it)).toEqual({ alternatives: [], selected_index: 0, order: [] });
+    });
+});
+
 // the car paste at 80.78/s: a clock whose losses could not be tried (its window cycle has no whole-tick repeat) was taken as
 // stable and beat every clock that was tried (U11)
 describe("a clock whose recovery could not be tried", () => {
