@@ -74,11 +74,11 @@
   },
   "generated-backed-up": {
    "recorded": {
-    "pr": 668,
-    "commit": "f659fb4b",
-    "frozen_head": "f659fb4b",
-    "note": "recorded under the protocol in game ticks on the per-hand windows' clock (#638)",
-    "clock_sha256": "33b1106a1400e708c0f571652e586c92366d44be45e9af309cde41333d6feb23",
+    "pr": 0,
+    "commit": "bb1598e8",
+    "frozen_head": "bb1598e8",
+    "note": "recorded under the protocol in game ticks on the engine of this head; pr is set when the PR is opened",
+    "clock_sha256": "7de289c785c103b91b175bb4d83d8bb2414d7081f9d1c1c41dc3a6e359485037",
     "clock_basis": "capture"
    },
    "native": {
@@ -110,25 +110,25 @@
      {
       "kind": "cut plastic-bar",
       "start": 10805,
-      "drop": 10968,
-      "release": 10968,
-      "recovered": 14733
+      "drop": 11053,
+      "release": 11053,
+      "recovered": 15234
      },
      {
       "kind": "block output and export",
-      "start": 14733,
-      "drop": 14782,
-      "release": 14782,
-      "recovered": 18418
+      "start": 15234,
+      "drop": 15285,
+      "release": 15285,
+      "recovered": 18920
      }
     ],
     "stock": {
      "lowest": 2,
-     "end": 12,
+     "end": 8,
      "holds": true
     },
     "result": "holds",
-    "ended": 18418
+    "ended": 18920
    },
    "generation": {
     "period": 24,
@@ -140,7 +140,7 @@
      "rate": 80,
      "supply": "backed_up"
     },
-    "clock_sha256": "33b1106a1400e708c0f571652e586c92366d44be45e9af309cde41333d6feb23"
+    "clock_sha256": "7de289c785c103b91b175bb4d83d8bb2414d7081f9d1c1c41dc3a6e359485037"
    }
   }
  }
