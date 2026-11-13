@@ -75,7 +75,7 @@ export const WAKEUP_DEFINITION: string = 'One time the game checks an inserter t
  * The signals a clock sends, in the user's words. A signal here is the game's: the output a decider combinator sends. It is
  * counted once for each enable window that opens on a decider, as the engine counts it (`signalsPerMinuteOf`).
  */
-export const SIGNAL_DEFINITION: string = 'A signal is the output a decider sends when one of its enable windows opens. It switches on every '
+const SIGNAL_DEFINITION: string ='A signal is the output a decider sends when one of its enable windows opens. It switches on every '
     + 'inserter wired to that decider. Inserters that share a decider share its signals. Each signal costs the game time. '
     + 'How a signal compares with a wakeup is not measured.';
 

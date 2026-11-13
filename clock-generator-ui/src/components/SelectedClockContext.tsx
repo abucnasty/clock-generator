@@ -18,14 +18,18 @@ import { SwingBackoffReportDisplay } from './SwingBackoffReportDisplay';
 
 const ClockTimeline = lazy(() => import('./ClockTimelineWorkspace').then(module => ({ default: module.ClockTimelineWorkspace })));
 
-export function SelectedClockContext({ selected, detail, onDetailChange, onSelectClock, timelineProps, generation, assumptions, swingBackoffReport = null, clockSelector, children }: {
+export function SelectedClockContext({ selected, detail: savedDetail, onDetailChange, onSelectClock, timelineProps, generation, assumptions, swingBackoffReport = null, diagnosticsBeside = false, children }: {
     selected: ClockAlternativeView;
     detail: ResultDetail;
     onDetailChange: (detail: ResultDetail) => void;
     /** Selects another clock by its id: the clock that the line of a cause on a shared lane names */
     onSelectClock?: (id: string) => void;
     timelineProps: Omit<ClockTimelineWorkspaceProps, 'selected' | 'fullscreen'>;
-    clockSelector: ReactNode;
+    /**
+     * Diagnostics stands in a column of its own beside the workspace (a wide page): it is no tab here, but in fullscreen,
+     * which covers that column
+     */
+    diagnosticsBeside?: boolean;
     generation: GenerationAssumptions | null;
     assumptions: ReactNode;
     /** The output swing back-off of the selected clock: where it found a swing count that holds, said in Model and tested starts */
@@ -34,15 +38,18 @@ export function SelectedClockContext({ selected, detail, onDetailChange, onSelec
 }) {
     const { itemLabel, recipeLabel } = useGameNames();
     const [fullscreen, setFullscreen] = useState(false);
+    const diagnosticsTab = !diagnosticsBeside || fullscreen;
+    // a saved Diagnostics, where it is no tab, shows Overview and stays saved, for the page at another width
+    const detail: ResultDetail = !diagnosticsTab && savedDetail === 'diagnostics' ? 'overview' : savedDetail;
     const [timelineVisited, setTimelineVisited] = useState(detail === 'timeline');
     if (detail === 'timeline' && !timelineVisited) setTimelineVisited(true);
     const [assumptionsOpen, setAssumptionsOpen] = useBuildSection('model-assumptions');
-    return <FullscreenWorkspace fullscreen={fullscreen} onFullscreenChange={setFullscreen} actions={clockSelector}>
+    return <FullscreenWorkspace fullscreen={fullscreen} onFullscreenChange={setFullscreen} actions={null}>
         {/* Above floating field labels (z-index 1) while the fullscreen body scrolls. */}
         <Tabs value={detail} onChange={(_, value: ResultDetail) => onDetailChange(value)} selectionFollowsFocus
             aria-label="Selected clock workspace" sx={{ ...(fullscreen && { position: 'sticky', top: -16, zIndex: 2, bgcolor: 'background.paper' }), borderBottom: 1, borderColor: 'divider', '& .MuiTab-root': { minWidth: 0, flex: 1 } }}>
             <Tab label="Overview" value="overview" {...tabProps('result-context', 'overview')} />
-            <Tab label={DIAGNOSTICS_COPY.tab} value="diagnostics" {...tabProps('result-context', 'diagnostics')} />
+            {diagnosticsTab && <Tab label={DIAGNOSTICS_COPY.tab} value="diagnostics" {...tabProps('result-context', 'diagnostics')} />}
             <Tab label="Timeline" value="timeline" {...tabProps('result-context', 'timeline')} />
         </Tabs>
         <TabBody prefix="result-context" tab="overview" shown={detail === 'overview'}>
@@ -60,10 +67,10 @@ export function SelectedClockContext({ selected, detail, onDetailChange, onSelec
             </Disclosure>
             {children}
         </TabBody>
-        <TabBody prefix="result-context" tab="diagnostics" shown={detail === 'diagnostics'} focusable>
+        {diagnosticsTab && <TabBody prefix="result-context" tab="diagnostics" shown={detail === 'diagnostics'} focusable>
             {/* mounted while shown: the pictures take the width of the panel */}
             {detail === 'diagnostics' && <ClockDiagnostics key={selected.id} clock={selected} onSelectClock={onSelectClock} />}
-        </TabBody>
+        </TabBody>}
         <TabBody prefix="result-context" tab="timeline" shown={detail === 'timeline'}>
             {(timelineVisited || detail === 'timeline') && <Suspense fallback={<Typography role="status">Loading timelines…</Typography>}>
                 <ClockTimeline {...timelineProps} selected={selected} fullscreen={fullscreen} />

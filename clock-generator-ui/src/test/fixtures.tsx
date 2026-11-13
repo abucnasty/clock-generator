@@ -3,7 +3,7 @@
  * given and a `_uuid` made from it; a test changes only what it is about: `machine(2, { recipe: 'copper-cable' })`.
  * Add a maker here once a second test needs the same row; `show()` renders inside the page's contexts.
  */
-import { render, type RenderOptions } from '@testing-library/react';
+import { act, render, type RenderOptions } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ChestType } from 'clock-generator/light';
 import type { ReactElement, ReactNode } from 'react';
@@ -66,6 +66,14 @@ function PageContext({ names, craftingMachines, announce, children }: PageContex
     if (craftingMachines) page = <CraftingMachinesContext value={craftingMachines}>{page}</CraftingMachinesContext>;
     if (announce) page = <MessageActionsContext.Provider value={{ notify: () => 0, dismiss: () => {}, announceMessage: () => {}, announce }}>{page}</MessageActionsContext.Provider>;
     return page;
+}
+
+/**
+ * Makes the page `width` pixels wide, as a media query reads it (happy-dom's window is 1024 wide). Call it again with
+ * 1024 after the test, or before the next render, so that the width does not leak into another test
+ */
+export function pageWidth(width: number) {
+    act(() => { (window as unknown as { happyDOM: { setViewport(size: { width: number; height: number }): void } }).happyDOM.setViewport({ width, height: 900 }); });
 }
 
 /** Renders `ui` as the page would, and gives a user to drive it: `const { user } = show(<Form … />, { names })` */

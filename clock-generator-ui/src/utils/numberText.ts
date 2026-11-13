@@ -109,12 +109,10 @@ export const SIGNALS_HEADER = `Signals/min (1${NBSP}copy)`;
 /** Clocks table header of what one copy's clock-only run moved in a window cycle */
 export const OUTPUT_PER_WINDOW_CYCLE_HEADER = `Output per window cycle (1${NBSP}copy)`;
 
-/** Clocks table header of the rate, which is the total for all the copies the clocks were made for */
-export function rateHeader(copies: number): string {
-    return copies !== 1 && !copiesProblem(copies) ? `Rate (items/s,${NBSP}all${NBSP}${copies}${NBSP}copies)` : 'Rate (items/s)';
-}
-
-/** The compact clocks table's header of the same rate, which says what the clock makes (or destroys, for a target that counts the item destroyed) */
+/**
+ * Clocks table header of the rate, which is the total for all the copies the clocks were made for, and says what the
+ * clock makes (or destroys, for a target that counts the item destroyed)
+ */
 export function makesHeader(copies: number, counts?: TargetCounts): string {
     const verb = rateVerbs(counts).title;
     return copies !== 1 && !copiesProblem(copies) ? `${verb} (items/s,${NBSP}all${NBSP}${copies}${NBSP}copies)` : `${verb} (items/s)`;

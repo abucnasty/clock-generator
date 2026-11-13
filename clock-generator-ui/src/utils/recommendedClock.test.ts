@@ -278,37 +278,30 @@ describe('partitionClockRows', () => {
     // in list order: 0 stable with 20 wakeups, 1 unstable 2/s short, 2 stable with 5, 3 no recovery 1/s short, 4 unstable 3/s short
     const clocks = [clock('a', { wake_ups_per_minute: 20 }), short('b', -2, false), clock('c', { wake_ups_per_minute: 5 }), short('d', -1), short('e', -3, false)];
     const isStable = (it: Clock) => it.verdict === 'stable';
-    /** The groups by the indexes of their rows with their ranks, and the counts */
-    const groups = (rows: Clock[], options: Omit<Options, 'isStable'>) => {
-        const { stable, unstable, ...counts } = partitionClockRows(rows, { ...options, isStable });
+    /** The groups by the indexes of their rows with their ranks */
+    const groups = (rows: Clock[], options: Omit<Options, 'isStable'> = {}) => {
+        const { stable, unstable } = partitionClockRows(rows, { ...options, isStable });
         const of = (group: typeof stable) => group.map(it => [it.index, it.rank]);
-        return { stable: of(stable), unstable: of(unstable), ...counts };
+        return { stable: of(stable), unstable: of(unstable) };
     };
 
-    // the options, then the stable and the other rows shown as [index, rank], and how many of the others are hidden
-    it.each<[string, Omit<Options, 'isStable'>, number[][], number[][], number]>([
-        ['puts the stable clocks first and the others after, each in the engine\'s order, numbered straight through',
-            { selectedIndex: 0, showUnstable: true }, [[2, 1], [0, 2]], [[3, 3], [1, 4], [4, 5]], 0],
-        ['keeps only the selected unstable clock while the others are hidden, with its rank',
-            { selectedIndex: 4, showUnstable: false }, [[2, 1], [0, 2]], [[4, 5]], 2],
-    ])('%s', (_, options, stable, unstable, hiddenCount) => {
-        expect(groups(clocks, options)).toEqual({ stable, unstable, unstableCount: 3, hiddenCount, anyStable: true });
+    it('puts the stable clocks first and every other after, each in the engine\'s order, numbered straight through', () => {
+        expect(groups(clocks)).toEqual({ stable: [[2, 1], [0, 2]], unstable: [[3, 3], [1, 4], [4, 5]] });
     });
 
-    it('keeps the recommended clock in view when it is not stable', () => {
+    it('lists the recommended clock in the other group when it is not stable', () => {
         // a build with a deadlock risk: a clock that holds the setpoint without recovery meets it, here with the fewest wakeups
         const deadlock = [clock('stable', { wake_ups_per_minute: 9 }), short('drifts', -1, false), clock('holds', { verdict: 'no recovery', wake_ups_per_minute: 2 })];
-        expect(groups(deadlock, { selectedIndex: 0, showUnstable: false }))
-            .toEqual({ stable: [[0, 2]], unstable: [[2, 1]], unstableCount: 2, hiddenCount: 1, anyStable: true });
+        expect(groups(deadlock)).toEqual({ stable: [[0, 2]], unstable: [[2, 1], [1, 3]] });
     });
 
     it('while a run goes, holds the rows: a clock that arrives and ranks first is added at the bottom of its group, the ranks of the others change in place', () => {
         const held = heldOrderOf([], clocks);
-        const before = groups(clocks, { selectedIndex: 0, showUnstable: true, held });
+        const before = groups(clocks, { held });
         expect(before.stable).toEqual([[2, 1], [0, 2]]);
         // the worker lists the clocks by their task, so the new one can come first in the list and move every index on one
         const after = [clock('new', { wake_ups_per_minute: 1 }), ...clocks];
-        const heldAfter = groups(after, { selectedIndex: 0, showUnstable: true, held: heldOrderOf(held, after) });
+        const heldAfter = groups(after, { held: heldOrderOf(held, after) });
         expect(heldAfter.stable).toEqual([[3, 2], [1, 3], [0, 1]]);
         expect(heldAfter.unstable).toEqual([[4, 4], [2, 5], [5, 6]]);
     });
@@ -316,23 +309,22 @@ describe('partitionClockRows', () => {
     it('while a run goes, adds a clock that is not stable at the bottom of the other group', () => {
         const held = heldOrderOf([], clocks);
         const after = [...clocks, short('near', -0.5)];
-        expect(groups(after, { selectedIndex: 0, showUnstable: true, held: heldOrderOf(held, after) }))
+        expect(groups(after, { held: heldOrderOf(held, after) }))
             .toMatchObject({ stable: [[2, 1], [0, 2]], unstable: [[3, 4], [1, 5], [4, 6], [5, 3]] });
     });
 
     it('sorts the rows by their ranks once the run has ended', () => {
         const after = [clock('new', { wake_ups_per_minute: 1 }), ...clocks];
-        expect(groups(after, { selectedIndex: 0, showUnstable: true })).toMatchObject({ stable: [[0, 1], [3, 2], [1, 3]], unstable: [[4, 4], [2, 5], [5, 6]] });
+        expect(groups(after)).toMatchObject({ stable: [[0, 1], [3, 2], [1, 3]], unstable: [[4, 4], [2, 5], [5, 6]] });
     });
 
     it('puts a clock the held order does not name after those it names, by rank', () => {
-        expect(groups(clocks, { selectedIndex: 0, showUnstable: true, held: ['a', 'e'] }))
+        expect(groups(clocks, { held: ['a', 'e'] }))
             .toMatchObject({ stable: [[0, 2], [2, 1]], unstable: [[4, 5], [3, 3], [1, 4]] });
     });
 
     it('shows every clock in one group when none is stable', () => {
-        expect(groups([short('far', -2), short('near', -1, false)], { selectedIndex: 1, showUnstable: false }))
-            .toEqual({ stable: [], unstable: [[1, 1], [0, 2]], unstableCount: 2, hiddenCount: 0, anyStable: false });
+        expect(groups([short('far', -2), short('near', -1, false)])).toEqual({ stable: [], unstable: [[1, 1], [0, 2]] });
     });
 });
 

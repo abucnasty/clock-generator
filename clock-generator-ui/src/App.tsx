@@ -1190,7 +1190,8 @@ function App() {
                     <MessageSlot active={!diagramFullscreen} />
                 </AppBar>
 
-                <Container component="main" maxWidth="xl" sx={{ py: 3, flexGrow: 1 }}>
+                {/* Results takes the whole width for its list, the selected clock and Diagnostics; Configure keeps its cap */}
+                <Container component="main" maxWidth={view === 'results' ? false : 'xl'} sx={{ py: 3, flexGrow: 1 }}>
                     {startupError ? (
                         <Alert severity="error" sx={{ mb: 2 }}>
                             The page could not start: {startupError}. Reload the page to try again.
@@ -1384,8 +1385,6 @@ function App() {
                                 onInstallClose={() => setInstallOpen(false)}
                                 onInstall={() => setInstallOpen(true)}
                                 copyLabel={copyLabel}
-                                comparison={buildContext.comparison}
-                                onComparisonChange={comparison => patchContext({ comparison })}
                                 wakeAsTable={buildContext.wakeAsTable}
                                 onWakeAsTableChange={wakeAsTable => patchContext({ wakeAsTable })}
                                 timeline={buildContext.timeline}

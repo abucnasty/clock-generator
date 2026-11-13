@@ -34,9 +34,22 @@ describe('per-build working context', () => {
 
     it('loads a view saved while the compare table had its "How clocks are chosen" fold, without the fold\'s state', () => {
         const read = (value: unknown) => readBuildViewContext({ getItem: () => JSON.stringify(value) }, 'one');
-        expect(read({ version: 1, view: 'results', sections: { 'comparison-help': true, 'comparison-open': true } }))
-            .toMatchObject({ view: 'results', sections: { 'comparison-open': true } });
+        expect(read({ version: 1, view: 'results', sections: { 'comparison-help': true, 'model-assumptions': true } }))
+            .toMatchObject({ view: 'results', sections: { 'model-assumptions': true } });
         expect(read({ version: 1, sections: { 'comparison-help': true } }).sections).toEqual({});
+    });
+
+    it('loads a view saved while the compare table folded under the card, without its fold, its columns or its hidden clocks', () => {
+        const read = (value: unknown) => readBuildViewContext({ getItem: () => JSON.stringify(value) }, 'one');
+        const loaded = read({ version: 1, view: 'results', resultDetail: 'diagnostics', sections: { 'comparison-open': true, advanced: true },
+            comparison: { allColumns: true, showUnstable: true }, position: { results: { anchor: 'comparison', offset: 120 } } });
+        expect(loaded).toEqual({ ...defaultBuildViewContext(), view: 'results', resultDetail: 'diagnostics', sections: { advanced: true },
+            position: { results: { anchor: 'comparison', offset: 120 } } });
+        expect('comparison' in loaded).toBe(false);
+        // and writes it back without them
+        const entries = new Map<string, string>();
+        writeBuildViewContext({ setItem: (key: string, value: string) => { entries.set(key, value); } }, 'one', loaded);
+        expect(entries.get(contextKeyOf('one'))).not.toMatch(/comparison-open|allColumns|showUnstable/);
     });
 
     it('rejects unsafe storage values and keeps navigation usable with denied storage', () => {
@@ -46,7 +59,7 @@ describe('per-build working context', () => {
         const loaded = read({ version: 1, view: 'unknown', resultDetail: 'install', sections: { advanced: true, selector: true },
             comparison: { allColumns: 'true', showUnstable: true }, position: { configure: { anchor: 'build', offset: 90000 }, results: { anchor: '#arbitrary', offset: 100 } },
             timeline: { sortMode: 'invented', statuses: { machine: ['WORKING', 'arbitrary'] } } });
-        expect(loaded).toMatchObject({ view: 'configure', resultDetail: 'timeline', sections: { advanced: true }, comparison: { allColumns: false, showUnstable: true }, position: { configure: { anchor: 'build', offset: 4000 } }, timeline: { sortMode: 'byType', statuses: { machine: ['WORKING'] } } });
+        expect(loaded).toMatchObject({ view: 'configure', resultDetail: 'timeline', sections: { advanced: true }, position: { configure: { anchor: 'build', offset: 4000 } }, timeline: { sortMode: 'byType', statuses: { machine: ['WORKING'] } } });
         expect(read({ version: 1, position: { configure: { anchor: 'build', offset: '100' } } }).position).toEqual({});
         const denied = { getItem: () => { throw new Error('denied'); }, setItem: () => { throw new Error('denied'); }, removeItem: () => { throw new Error('denied'); } };
         expect(readBuildViewContext(denied, 'one')).toEqual(defaultBuildViewContext());

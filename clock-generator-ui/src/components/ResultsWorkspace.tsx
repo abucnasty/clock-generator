@@ -1,10 +1,8 @@
-import { ExpandMore } from '@mui/icons-material';
-import { Alert, Box, Button, Collapse, MenuItem, Paper, TextField, Typography } from '@mui/material';
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Box, Button, Paper, Typography, useMediaQuery, useTheme } from '@mui/material';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Config, NotMadeClock } from 'clock-generator/browser';
 import type { ResultDetail } from '../utils/resultsView';
-import type { BuildViewContext, TimelineViewContext } from '../utils/buildViewContext';
-import { useBuildSection } from '../hooks/useBuildViewContext';
+import type { TimelineViewContext } from '../utils/buildViewContext';
 import { SelectedClockContext } from './SelectedClockContext';
 import { InserterAssumptions } from './InserterAssumptions';
 import { PickupGeometrySummary } from './PickupGeometrySummary';
@@ -20,7 +18,10 @@ import type {
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 import type { FuelViewData, GenerationAssumptions, ShiftOptionsView } from '../worker/types';
 import { startCheckSummary } from '../utils/modelAssumptions';
-import { ClockAlternativesPanel } from './ClockAlternativesPanel';
+import { CompareClocksDialog } from './ClockAlternativesPanel';
+import { ClockList } from './ClockList';
+import { ClockDiagnostics } from './ClockDiagnostics';
+import { Panel } from './Panel';
 import { DeeperSearchNotice } from './DeeperSearchNotice';
 import { DetailsPanel } from './DetailsPanel';
 import { InstallClockDialog } from './InstallClockDialog';
@@ -28,8 +29,6 @@ import { DeveloperToolsPanel } from './DeveloperToolsPanel';
 import { ResultSummaryCard } from './ResultSummaryCard';
 import { StaleResultsBanner } from './StaleResultsBanner';
 import { RunNotes } from './RunNotes';
-import { statusOf, wakeUpsText } from '../utils/clockSummary';
-import { fullClockName } from '../utils/strategyNames';
 import { cardWarningOf } from '../utils/rateWarning';
 import { whyNotStableOf } from '../utils/whyNotStable';
 import { madeForLead } from '../utils/checkedLanes';
@@ -39,7 +38,6 @@ import type { GeneratedFor } from '../utils/resultsStaleness';
 import type { PickRule } from '../utils/recommendedClock';
 import { deeperSearchNoticeOf } from '../utils/deeperSearch';
 import type { Problem } from '../utils/firstProblem';
-import { HANDS_TEXT } from '../utils/targetCounts';
 
 interface ResultsWorkspaceProps {
     onEditPickup?: (id: number) => void;
@@ -47,8 +45,6 @@ interface ResultsWorkspaceProps {
     onInstallClose: () => void;
     onInstall: () => void;
     copyLabel: string;
-    comparison: BuildViewContext['comparison'];
-    onComparisonChange(comparison: BuildViewContext['comparison']): void;
     wakeAsTable: boolean;
     onWakeAsTableChange(asTable: boolean): void;
     timeline: TimelineViewContext;
@@ -118,12 +114,16 @@ interface ResultsWorkspaceProps {
 }
 
 /**
- * Everything a generation produced, the answer first: the selected clock with its install steps, its wake windows,
- * the other clocks to compare it with, and the details of the selected clock. Developer tools, when they are on, last.
+ * Everything a generation produced: the clocks as a list on the left, which stays in view while the page scrolls, and the
+ * selected clock on the right, its card over its workspace; on a wide page (from 1536 px) Diagnostics is a third column
+ * beside them and no tab. On a phone the list stands above the card. The compare table of every clock opens over the
+ * page from the list. Developer tools, when they are on, last.
  */
 export function ResultsWorkspace(props: ResultsWorkspaceProps) {
-    const [comparisonOpen, setComparisonOpen] = useBuildSection('comparison-open');
-    const comparisonId = useId();
+    const theme = useTheme();
+    const twoColumns = useMediaQuery(theme.breakpoints.up('md'), { noSsr: true });
+    const wide = useMediaQuery(theme.breakpoints.up('xl'), { noSsr: true });
+    const [compareOpen, setCompareOpen] = useState(false);
     const saved = useMemo(() => {
         try {
             return props.generatedFor ? JSON.parse(props.generatedFor.key) as Config : null;
@@ -177,18 +177,6 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
         const delta = workspaceRef.current.getBoundingClientRect().top - anchor.top;
         if (Math.abs(delta) > 0.5) window.scrollBy({ top: delta, behavior: 'instant' });
     }, [selected]);
-    const selectableClocks = props.alternatives.map((clock, index) => ({ clock, index }))
-        .filter(({ clock, index }) => clock.verdict === 'stable' || index === props.selectedIndex);
-    const clockLabel = (clock: ClockAlternativeView) => [
-        clock.counts === 'destroyed' ? HANDS_TEXT.clock(clock.terminalSwingCount)
-            : `${clock.terminalSwingCount} ${clock.terminalSwingCount === 1 ? 'swing' : 'swings'}`,
-        wakeUpsText(clock).value.replace(' a minute', ' wakeups/min'),
-    ].join(' · ');
-    // the selector says a clock's status (statusOf) where it is not Stable: in the label before "Recommended", in a clock's line after it
-    const statusWord = (clock: ClockAlternativeView) => {
-        const status = statusOf(clock);
-        return status.kind === 'stable' ? null : status.text;
-    };
     const rateWarning = cardWarningOf(selected);
     // what a saved run assumed, in the card's Simulation results: a line, and the belt pickups where the build has some
     const runLead = selected ? [
@@ -208,6 +196,12 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
         isRunning: props.isRunning,
         stale: props.staleFor !== null,
     });
+
+    // the list shows while there are clocks, or a run that keeps the notice of Search deeper (and its focus) on the page
+    const listShown = hasResults || noticeKind === 'searching';
+    const diagnosticsBeside = wide && selected !== undefined;
+    const columns = !listShown || !twoColumns ? 'minmax(0, 1fr)'
+        : diagnosticsBeside ? '360px minmax(0, 1fr) minmax(0, 0.8fr)' : '360px minmax(0, 1fr)';
 
     return (
         <Box>
@@ -232,39 +226,17 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 </Paper>
             )}
 
-            <ResultSummaryCard
-                alternatives={props.alternatives}
-                selectedIndex={props.selectedIndex}
-                recommendedIndex={props.recommendedIndex}
-                onSelectRecommended={selectRecommended}
-                onShowDiagnostics={showDiagnostics}
-                isGenerating={props.isRunning}
-                stoppedEarly={props.stoppedEarly}
-                rateWarning={rateWarning}
-                whyNotStable={whyNotStable}
-                stale={props.staleFor !== null}
-                comparisonAction={<Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                    {props.blueprintString && <Button size="small" color="inherit" onClick={props.onInstall}>Install guide</Button>}
-                    <Button size="small" color="inherit" aria-expanded={comparisonOpen} aria-controls={comparisonId}
-                    onClick={() => setComparisonOpen(!comparisonOpen)}
-                    endIcon={<ExpandMore sx={{ transform: comparisonOpen ? 'rotate(180deg)' : 'none' }} />}>
-                    Compare clocks
-                </Button></Box>}
-                runAssumptions={selected && (runLead !== '' || pickupsShown) ? <Box data-result-assumptions sx={{ overflowWrap: 'anywhere' }}>
-                    {runLead !== '' && <Typography variant="body2">{runLead}</Typography>}
-                    {saved && <PickupGeometrySummary build={saved} savedRun backedUp={selected.belt ? selected.belt.kind === 'backed_up' : selected.beltLabel === 'backed-up'} onEdit={props.staleFor ? undefined : props.onEditPickup} busy={props.isRunning} />}
-                </Box> : null}
-            />
-
-            <Box data-results-columns sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 1.5, '& > *': { minWidth: 0 } }}>
-                <Collapse id={comparisonId} in={comparisonOpen || !selected} mountOnEnter timeout={150}>
-                    <ClockAlternativesPanel
-                        comparison={props.comparison}
-                        onComparisonChange={props.onComparisonChange}
+            <Box data-results-columns sx={{ display: 'grid', gridTemplateColumns: columns, columnGap: 2, rowGap: 1.5, alignItems: 'start', '& > *': { minWidth: 0 } }}>
+                {listShown && <Box data-clock-list-column="" sx={twoColumns ? {
+                    // in view while the selected clock scrolls; its own scroll where it is taller than the page
+                    position: 'sticky', top: 'calc(var(--app-header-height, 0px) + 8px)',
+                    maxHeight: 'calc(100vh - var(--app-header-height, 0px) - 16px)', overflowY: 'auto',
+                } : undefined}>
+                    <ClockList
                         alternatives={props.alternatives}
                         selectedIndex={props.selectedIndex}
                         onSelect={selectClock}
-                        pickRule={props.pickRule}
+                        onCompare={() => setCompareOpen(true)}
                         pending={props.pending}
                         running={props.isRunning}
                         notice={
@@ -276,49 +248,72 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                                 onSearchDeeper={props.onSearchDeeper}
                             />
                         }
-                        holdNotice={noticeKind === 'searching'}
                     />
-                </Collapse>
-
-                {/* brought into view below the sticky header */}
-                {selected && <Box ref={workspaceRef} sx={{ scrollMarginTop: 'calc(var(--app-header-height, 0px) + 8px)' }}>
-                    <SelectedClockContext selected={selected} detail={props.detail} onDetailChange={props.onDetailChange} onSelectClock={selectClockById}
-                        generation={props.generationAssumptions}
-                        swingBackoffReport={props.swingBackoffReport}
-                        clockSelector={selectableClocks.length > 1 && <TextField select
-                            label={statusWord(selected) !== null ? `Clock · ${statusWord(selected)}` : props.selectedIndex === props.recommendedIndex ? 'Clock · Recommended' : 'Clock'} size="small"
-                            value={props.selectedIndex} onChange={event => selectClock(Number(event.target.value))}
-                            slotProps={{ select: { renderValue: value => clockLabel(props.alternatives[Number(value)]) } }}
-                            sx={{ width: { xs: 280, sm: 380 }, maxWidth: '100%' }}>
-                            {selectableClocks.map(({ clock, index }) => <MenuItem key={clock.id} value={index}
-                                sx={{ display: 'block', whiteSpace: 'normal', maxWidth: { xs: 320, sm: 520 } }}>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                    {clockLabel(clock)}{index === props.recommendedIndex ? ' · Recommended' : statusWord(clock) !== null ? ` · ${statusWord(clock)}` : ''}
-                                </Typography>
-                                <Typography variant="caption" component="p" color="text.secondary">
-                                    {fullClockName(clock)}
-                                </Typography>
-                            </MenuItem>)}
-                        </TextField>}
-                        timelineProps={{
-                            config: saved,
-                            timeline: props.timeline, onTimelineChange: props.onTimelineChange,
-                            wakeAsTable: props.wakeAsTable, onWakeAsTableChange: props.onWakeAsTableChange,
-                            transferHistory: props.transferHistory, stateTransitionHistory: props.stateTransitionHistory,
-                            clockWindows: props.clockWindows,
-                        }}
-                        assumptions={saved?.inserters ? <InserterAssumptions inserters={saved.inserters} detailed /> : <Typography variant="body2">Saved inserter metadata unavailable.</Typography>}>
-                        <DetailsPanel
-                            insights={notesOf(selected).overview}
-                            nothing={notesOf(selected).diagnostics ? DIAGNOSTICS_COPY.overviewNothing : undefined}
-                            shiftOptions={props.shiftOptions}
-                            swingBackoffReport={props.swingBackoffReport}
-                            fuelView={props.fuelView}
-                            inserters={saved?.inserters}
-                        />
-                    </SelectedClockContext>
                 </Box>}
+
+                <Box sx={{ display: 'grid', rowGap: 1.5, alignContent: 'start', '& > *': { minWidth: 0 } }}>
+                    <ResultSummaryCard
+                        alternatives={props.alternatives}
+                        selectedIndex={props.selectedIndex}
+                        recommendedIndex={props.recommendedIndex}
+                        onSelectRecommended={selectRecommended}
+                        // beside the card, Diagnostics needs no link
+                        onShowDiagnostics={diagnosticsBeside ? undefined : showDiagnostics}
+                        isGenerating={props.isRunning}
+                        stoppedEarly={props.stoppedEarly}
+                        rateWarning={rateWarning}
+                        whyNotStable={whyNotStable}
+                        stale={props.staleFor !== null}
+                        actions={props.blueprintString && <Button size="small" color="inherit" onClick={props.onInstall}>Install guide</Button>}
+                        runAssumptions={selected && (runLead !== '' || pickupsShown) ? <Box data-result-assumptions sx={{ overflowWrap: 'anywhere' }}>
+                            {runLead !== '' && <Typography variant="body2">{runLead}</Typography>}
+                            {saved && <PickupGeometrySummary build={saved} savedRun backedUp={selected.belt ? selected.belt.kind === 'backed_up' : selected.beltLabel === 'backed-up'} onEdit={props.staleFor ? undefined : props.onEditPickup} busy={props.isRunning} />}
+                        </Box> : null}
+                    />
+
+                    {/* brought into view below the sticky header */}
+                    {selected && <Box ref={workspaceRef} sx={{ scrollMarginTop: 'calc(var(--app-header-height, 0px) + 8px)' }}>
+                        <SelectedClockContext selected={selected} detail={props.detail} onDetailChange={props.onDetailChange} onSelectClock={selectClockById}
+                            generation={props.generationAssumptions}
+                            swingBackoffReport={props.swingBackoffReport}
+                            diagnosticsBeside={diagnosticsBeside}
+                            timelineProps={{
+                                config: saved,
+                                timeline: props.timeline, onTimelineChange: props.onTimelineChange,
+                                wakeAsTable: props.wakeAsTable, onWakeAsTableChange: props.onWakeAsTableChange,
+                                transferHistory: props.transferHistory, stateTransitionHistory: props.stateTransitionHistory,
+                                clockWindows: props.clockWindows,
+                            }}
+                            assumptions={saved?.inserters ? <InserterAssumptions inserters={saved.inserters} detailed /> : <Typography variant="body2">Saved inserter metadata unavailable.</Typography>}>
+                            <DetailsPanel
+                                insights={notesOf(selected).overview}
+                                nothing={notesOf(selected).diagnostics ? DIAGNOSTICS_COPY.overviewNothing : undefined}
+                                shiftOptions={props.shiftOptions}
+                                swingBackoffReport={props.swingBackoffReport}
+                                fuelView={props.fuelView}
+                                inserters={saved?.inserters}
+                            />
+                        </SelectedClockContext>
+                    </Box>}
+                </Box>
+
+                {diagnosticsBeside && selected && (
+                    <Panel title={DIAGNOSTICS_COPY.tab} sx={{ mb: 0 }} data-diagnostics-column="">
+                        <ClockDiagnostics key={selected.id} clock={selected} onSelectClock={selectClockById} />
+                    </Panel>
+                )}
             </Box>
+
+            <CompareClocksDialog
+                open={compareOpen && props.alternatives.length > 0}
+                onClose={() => setCompareOpen(false)}
+                alternatives={props.alternatives}
+                selectedIndex={props.selectedIndex}
+                onSelect={selectClock}
+                pickRule={props.pickRule}
+                pending={props.pending}
+                running={props.isRunning}
+            />
 
             {selected && <InstallClockDialog open={props.installOpen} onClose={props.onInstallClose}
                 selected={selected} blueprintString={props.blueprintString} staleFor={props.staleFor}

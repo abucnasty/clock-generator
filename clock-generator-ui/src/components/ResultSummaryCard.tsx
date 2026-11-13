@@ -60,7 +60,8 @@ interface ResultSummaryCardProps {
     stale: boolean;
     /** Saved build and inserter assumptions, shown inside the details disclosure; null where there are none to show */
     runAssumptions?: ReactNode;
-    comparisonAction?: ReactNode;
+    /** At the right of the card's title bar: Install guide */
+    actions?: ReactNode;
 }
 
 /** A small, readable fact; context stays next to its value instead of filling a tile. */
@@ -206,7 +207,7 @@ export function ResultSummaryCard(props: ResultSummaryCardProps) {
     const reason = selected ? reasonOf({ ...props, selected }) : '';
     const beltLine = selected?.beltLabel === '';
     return (
-        <Panel title={CARD_COPY.heading} actions={selected ? props.comparisonAction : undefined} sx={{ '& > :last-child': { p: 1.5 } }} data-result-card="" data-build-anchor="selected-clock">
+        <Panel title={CARD_COPY.heading} actions={selected ? props.actions : undefined} sx={{ '& > :last-child': { p: 1.5 } }} data-result-card="" data-build-anchor="selected-clock">
             {props.rateWarning && <Alert severity="warning" sx={{ mb: 1 }}>{props.rateWarning}</Alert>}
             {props.whyNotStable && <Alert severity="warning" sx={{ mb: 1, '& .MuiAlert-message': { minWidth: 0, flex: 1 } }} data-why-not-stable={props.whyNotStable.cause}>
                 <AlertTitle>{WHY_NOT_STABLE_TITLE[props.whyNotStable.cause]}</AlertTitle>

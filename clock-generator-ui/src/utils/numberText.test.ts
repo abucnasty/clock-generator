@@ -10,7 +10,6 @@ import {
     machineNodeCraftLine,
     makesHeader,
     maxRateLabel,
-    rateHeader,
     shownNumberText,
     NUMBER_FIELD_INPUT_FORMAT,
     isUneditedPrecisionLoss,
@@ -103,8 +102,7 @@ describe('the clocks table headers', () => {
         [11, '(items/s,\u00a0all\u00a011\u00a0copies)'],
         [1, '(items/s)'],
         [0.5, '(items/s,\u00a0all\u00a00.5\u00a0copies)'],
-    ])('name the copies the rate and what the clock makes are the total of: %s', (copies, unit) => {
-        expect(rateHeader(copies)).toBe(`Rate ${unit}`);
+    ])('name the copies what the clock makes is the total of: %s', (copies, unit) => {
         expect(makesHeader(copies)).toBe(`Makes ${unit}`);
     });
 });

@@ -1,14 +1,14 @@
 // @vitest-environment happy-dom
 import { cleanup, screen, within } from '@testing-library/react';
 import { useState, type ComponentProps } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ClockAlternativeView } from '../worker/types';
-import { names, show } from '../test/fixtures';
+import { names, pageWidth, show } from '../test/fixtures';
 import { AUTOMATION_240, ELECTROMAGNETIC_330_TWO_SWINGS, MILITARY_240, viewsOf } from '../test/checkedLanesFixtures';
 import { defaultBuildViewContext } from '../utils/buildViewContext';
 import type { ResultDetail } from '../utils/resultsView';
-import { CLOCK_TABLE_NAME } from '../utils/a11yLabels';
-import { recommendedIndexOf } from '../utils/recommendedClock';
+import { rankOrderOf, recommendedIndexOf } from '../utils/recommendedClock';
+import { statusOf } from '../utils/clockSummary';
 import { fullClockName } from '../utils/strategyNames';
 import { ResultsWorkspace } from './ResultsWorkspace';
 
@@ -28,7 +28,7 @@ function Results({ alternatives, recommendedIndex, initialIndex, initialDetail, 
     const context = defaultBuildViewContext();
     const props: Props = {
         installOpen: false, onInstallClose: () => {}, onInstall: () => {}, copyLabel: 'Copy blueprint',
-        comparison: context.comparison, onComparisonChange: () => {}, wakeAsTable: false, onWakeAsTableChange: () => {},
+        wakeAsTable: false, onWakeAsTableChange: () => {},
         timeline: context.timeline, onTimelineChange: () => {},
         detail, onDetailChange: next => { onDetailChange(next); setDetail(next); },
         generatedFor: null, generationAssumptions: null, isRunning, error: null,
@@ -55,6 +55,8 @@ function results(alternatives: ClockAlternativeView[], recommendedIndex: number,
         onDetailChange={onDetailChange} onCardBackToRecommended={onCardBackToRecommended} swingBackoffReport={swingBackoffReport} />, { names: gameNames });
     return { ...view, onDetailChange, onCardBackToRecommended };
 }
+
+afterEach(() => pageWidth(1024));
 
 const tabs = () => within(screen.getByRole('tablist', { name: 'Selected clock workspace' })).getAllByRole('tab');
 const panel = (tab: string) => document.getElementById(`result-context-panel-${tab}`)!;
@@ -177,30 +179,7 @@ describe('the note on swings at other ticks than the plan', () => {
     });
 });
 
-describe('the workspace\'s clock selector', () => {
-    const military = viewsOf(MILITARY_240);
-    /** The selector's line of each clock it offers, as the open list shows it */
-    const linesOf = async (alternatives: ClockAlternativeView[]) => {
-        const { user } = results(alternatives, MILITARY_240.selected_index, MILITARY_240.selected_index);
-        await user.click(screen.getByRole('combobox'));
-        return within(screen.getByRole('listbox')).getAllByRole('option').map(option => option.querySelector('p, span')!.textContent);
-    };
-
-    it('says swings and wakeups of a clock made for a belt, and no belt word', async () => {
-        expect(military[MILITARY_240.selected_index].beltLabel).toBe('backed-up');
-        const lines = await linesOf(military);
-        expect(lines).toContain('2 swings · 634 wakeups/min · Recommended');
-        for (const line of lines) expect(line).not.toMatch(/Backed up|Moving| · $/);
-    });
-
-    it('says the same of a clock where no clocked inserter picks up from a belt, with no " · " left over', async () => {
-        const lines = await linesOf(military.map(view => ({ ...view, beltLabel: '', belt: undefined })));
-        expect(lines).toContain('2 swings · 634 wakeups/min · Recommended');
-        for (const line of lines) expect(line).not.toMatch(/None| · $/);
-    });
-});
-
-describe('the clock selector says the status of a clock that is not Stable', () => {
+describe('the list of clocks in place of the workspace\'s clock selector', () => {
     const military = viewsOf(MILITARY_240);
     const recommended = MILITARY_240.selected_index;
     /** The military clocks with clock `at` made to have `status`, as statusOf reads it */
@@ -219,34 +198,148 @@ describe('the clock selector says the status of a clock that is not Stable', () 
             default: return view;
         }
     });
-    /** The selector's label, and the lines of the clocks in the open list */
-    const selectorOf = async (alternatives: ClockAlternativeView[], selected: number) => {
-        const { user } = results(alternatives, recommended, selected);
-        const label = [...document.querySelectorAll('label')].find(it => it.textContent!.startsWith('Clock'))!.textContent;
-        await user.click(screen.getByRole('combobox'));
-        const options = within(screen.getByRole('listbox')).getAllByRole('option').map(option => option.querySelector('p, span')!.textContent!);
-        return { label, options };
-    };
+    const rowOf = (id: string) => document.querySelector<HTMLElement>(`[data-clock-list] [data-clock-row="${id}"]`)!;
 
-    it.each(['Underproduces', 'Overproduces', 'No recovery', 'Error', 'Start-dependent'])('%s: "Clock · %s", and its line ends with the word', async status => {
-        const { label, options } = await selectorOf(withStatus(0, status), 0);
-        expect(label).toBe(`Clock · ${status}`);
-        expect(options[0]).toBe(`2 swings · 765 wakeups/min · ${status}`);
-        expect(options.join('\n')).not.toContain('Not stable');
+    it('stands in place of the selector: the workspace has none, and the list selects the clock the card and the tabs show', async () => {
+        const { user, container } = results(military, recommended, recommended);
+        expect(screen.queryByRole('combobox')).toBeNull();
+        const other = military.findIndex((_, at) => at !== recommended);
+        await user.click(rowOf(military[other].id).querySelector('[data-clock-name]')!);
+        expect(container.querySelector('[data-result-card]')!.textContent).toContain(fullClockName(military[other]).split(' · ')[0]);
+        expect((within(container.querySelector<HTMLElement>('[data-clock-list]')!).getAllByRole('radio') as HTMLInputElement[])
+            .filter(radio => radio.checked).map(radio => radio.closest<HTMLElement>('[data-clock-row]')!.dataset.clockRow)).toEqual([military[other].id]);
     });
 
-    it('Stable: "Clock" with no word, and nothing after its line; the recommended clock "Clock · Recommended"', async () => {
-        const { label, options } = await selectorOf(military, 0);
-        expect(label).toBe('Clock');
-        expect(options[0]).toBe('2 swings · 765 wakeups/min');
+    it('says the swings and wakeups of a clock made for a belt, and no belt word; the recommended clock is rank 1', () => {
+        expect(military[recommended].beltLabel).toBe('backed-up');
+        results(military, recommended, recommended);
+        const row = rowOf(military[recommended].id);
+        expect(row.querySelector('[data-clock-swings]')!.textContent).toBe('2 swings');
+        expect(row.querySelector('[data-wake-ups]')!.textContent).toBe('634');
+        expect(row.querySelector('[data-rank]')!.textContent).toBe('1');
+        expect(document.querySelector('[data-clock-list]')!.textContent).not.toMatch(/Backed up|Moving/);
+    });
+
+    it.each(['Underproduces', 'Overproduces', 'No recovery', 'Error', 'Start-dependent'])('%s: the row says the word once, out loud, and the mark of its status', status => {
+        const clocks = withStatus(0, status);
+        results(clocks, recommended, 0);
+        const row = rowOf(clocks[0].id);
+        const spoken = row.querySelector('input')!.getAttribute('aria-label')!;
+        expect(spoken.split(status)).toHaveLength(2);
+        expect(row.querySelector('[data-status-mark]')!.getAttribute('data-status-mark')).toBe(statusOf(clocks[0]).kind);
+        // under the name, the rate where it makes too little or too much; the word otherwise
+        const line = row.querySelector('[data-clock-swings]')!.textContent!;
+        expect(line).toBe(['Underproduces', 'Overproduces'].includes(status) ? `2 swings · ${statusOf(clocks[0]).detail}` : `2 swings · ${status}`);
+        expect(document.body.textContent).not.toContain('Not stable');
+    });
+
+    it('Stable: no word under the name, the mark of Stable', () => {
+        results(military, recommended, 0);
+        const row = rowOf(military[0].id);
+        expect(row.querySelector('[data-clock-swings]')!.textContent).toBe('2 swings');
+        expect(row.querySelector('[data-status-mark]')!.getAttribute('data-status-mark')).toBe('stable');
+    });
+});
+
+describe('the compare table over the page', () => {
+    const views = viewsOf(AUTOMATION_240);
+    const index = AUTOMATION_240.selected_index;
+    const compare = () => screen.getByRole('button', { name: `Compare all ${views.length}` });
+
+    it('opens from the list, closes on Escape, and gives the focus back to the button', async () => {
+        const { user } = results(views, index, index);
+        expect(screen.queryByRole('dialog')).toBeNull();
+        await user.click(compare());
+        const window = screen.getByRole('dialog', { name: /^Compare clocks/ });
+        expect(within(window).getAllByRole('radio')).toHaveLength(views.length);
+        await user.keyboard('{Escape}');
+        await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+        expect(document.activeElement).toBe(compare());
+    });
+
+    it('closes from its close button, with the focus back on the button', async () => {
+        const { user } = results(views, index, index);
+        await user.click(compare());
+        await user.click(within(screen.getByRole('dialog', { name: /^Compare clocks/ })).getByRole('button', { name: 'Close' }));
+        await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+        expect(document.activeElement).toBe(compare());
+    });
+
+    it('selects the clock of a row it chooses, and stays open', async () => {
+        const { user, container } = results(views, index, index);
+        await user.click(compare());
+        const other = views.find(view => view.id === 'euclidean_swings')!;
+        await user.click(within(screen.getByRole('dialog', { name: /^Compare clocks/ })).getByRole('radio', { name: fullClockName(other) }));
+        expect(screen.getByRole('dialog', { name: /^Compare clocks/ })).toBeTruthy();
+        expect(container.querySelector('[data-result-card]')!.textContent).toContain(fullClockName(other).split(' · ')[0]);
+        expect((document.querySelector<HTMLInputElement>(`[data-clock-row="${other.id}"] input`)!).checked).toBe(true);
+    });
+});
+
+describe('Diagnostics beside the selected clock, from 1536 px', () => {
+    const views = viewsOf(AUTOMATION_240);
+    const index = views.findIndex(view => view.id === 'euclidean_swings');
+
+    it('is a column of its own and no tab from 1536 px, with no link to it on the card', () => {
+        pageWidth(1536);
+        const { container } = results(views, AUTOMATION_240.selected_index, index);
+        expect(tabs().map(tab => tab.textContent)).toEqual(['Overview', 'Timeline']);
+        const column = container.querySelector<HTMLElement>('[data-diagnostics-column]')!;
+        expect(column.querySelector('[data-cause-headline]')!.textContent).toBe(views[index].checkedLanes!.cause!.headline.text);
+        expect(within(container.querySelector<HTMLElement>('[data-result-card]')!).queryByRole('button', { name: 'See diagnostics' })).toBeNull();
+        expect(document.getElementById('result-context-panel-diagnostics')).toBeNull();
+        expect(container.querySelectorAll('[data-cause-headline]')).toHaveLength(1);
+    });
+
+    it('is a tab below 1536 px', () => {
+        pageWidth(1535);
+        const { container } = results(views, AUTOMATION_240.selected_index, index);
+        expect(tabs().map(tab => tab.textContent)).toEqual(['Overview', 'Diagnostics', 'Timeline']);
+        expect(container.querySelector('[data-diagnostics-column]')).toBeNull();
+    });
+
+    it('a saved Diagnostics view opens on Overview from 1536 px, and keeps Diagnostics saved for a narrower page', () => {
+        pageWidth(1536);
+        const { onDetailChange } = results(views, AUTOMATION_240.selected_index, index, 'diagnostics');
+        expect(tabs()[0].getAttribute('aria-selected')).toBe('true');
+        expect(panel('overview').hidden).toBe(false);
+        expect(onDetailChange).not.toHaveBeenCalled();
+        // the same saved view on a narrower page
         cleanup();
-        expect((await selectorOf(military, recommended)).label).toBe('Clock · Recommended');
+        pageWidth(1280);
+        results(views, AUTOMATION_240.selected_index, index, 'diagnostics');
+        expect(tabs()[1].textContent).toBe('Diagnostics');
+        expect(tabs()[1].getAttribute('aria-selected')).toBe('true');
     });
 
-    it('keeps the order of today: the status before Recommended in the label, Recommended before the status in a line', async () => {
-        const { label, options } = await selectorOf(withStatus(recommended, 'No recovery'), recommended);
-        expect(label).toBe('Clock · No recovery');
-        expect(options).toContain('2 swings · 634 wakeups/min · Recommended');
+    it('is a tab again in fullscreen, which covers the column', async () => {
+        pageWidth(1536);
+        const { user } = results(views, AUTOMATION_240.selected_index, index);
+        await user.click(screen.getByRole('button', { name: 'Open fullscreen' }));
+        expect(tabs().map(tab => tab.textContent)).toEqual(['Overview', 'Diagnostics', 'Timeline']);
+    });
+});
+
+describe('the page\'s columns', () => {
+    const views = viewsOf(AUTOMATION_240);
+    const index = AUTOMATION_240.selected_index;
+    const columns = (container: HTMLElement) => getComputedStyle(container.querySelector<HTMLElement>('[data-results-columns]')!).gridTemplateColumns;
+
+    it.each([[1920, '360px minmax(0, 1fr) minmax(0, 0.8fr)'], [1536, '360px minmax(0, 1fr) minmax(0, 0.8fr)'], [1280, '360px minmax(0, 1fr)'],
+        [900, '360px minmax(0, 1fr)'], [390, 'minmax(0, 1fr)']])('at %s px: %s', (width, template) => {
+        pageWidth(width);
+        const { container } = results(views, index, index);
+        expect(columns(container)).toBe(template);
+        // the list first: on a phone it stands above the card
+        const grid = container.querySelector<HTMLElement>('[data-results-columns]')!;
+        expect(grid.firstElementChild!.querySelector('[data-clock-list]')).not.toBeNull();
+    });
+
+    it('has no column for the list before anything is made', () => {
+        pageWidth(1920);
+        const { container } = results([], 0, 0);
+        expect(container.querySelector('[data-clock-list]')).toBeNull();
+        expect(columns(container)).toBe('minmax(0, 1fr)');
     });
 });
 
@@ -295,20 +388,20 @@ describe('the card\'s Simulation results', () => {
     });
 });
 
-describe('the compare table while a run goes', () => {
-    it('holds its rows while the run goes, and sorts them by rank when it ends', async () => {
+describe('the list while a run goes', () => {
+    it('holds its rows while the run goes, and sorts them by rank when it ends', () => {
         const views = viewsOf(MILITARY_240).map(withInstall);
         const recommended = views[MILITARY_240.selected_index];
         const before = views.filter(view => view !== recommended);
         const at = (clocks: ClockAlternativeView[], isRunning: boolean) => <Results alternatives={clocks} recommendedIndex={recommendedIndexOf(clocks)!}
             initialIndex={0} initialDetail="overview" onDetailChange={() => {}} onCardBackToRecommended={() => {}} isRunning={isRunning} />;
-        const { rerender, user } = show(at(before, true), { names: gameNames });
-        await user.click(screen.getByRole('button', { name: 'Compare clocks' }));
-        const firstRow = () => within(screen.getByRole('table', { name: CLOCK_TABLE_NAME })).getAllByRole('radio')[0].getAttribute('aria-label');
+        const { rerender } = show(at(before, true), { names: gameNames });
+        const firstRow = () => document.querySelector<HTMLElement>('[data-clock-list] [data-clock-row]')!.dataset.clockRow;
         const first = firstRow();
         rerender(at(views, true));
         expect(firstRow()).toBe(first);
         rerender(at(views, false));
-        expect(firstRow()).toBe(fullClockName(recommended));
+        expect(firstRow()).toBe(views[rankOrderOf(views)[0]].id);
+        expect(firstRow()).toBe(recommended.id);
     });
 });
