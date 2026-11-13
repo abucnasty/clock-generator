@@ -3152,6 +3152,7 @@
      "run_with_copies": true,
      "every_copy_gets_items": true,
      "output_belt": "none_waits",
+     "copies_trial_text": "Copper plate stops arriving at the entry of the copper plate lane, which the 9 copies share, and comes back. Copy 2 from the entry ends at 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 0, 32, 32, 32, 32 and 32 a window cycle, where one copy makes 32.",
      "sentence": "Checked with all 9 copies on the lanes they share. Every copy gets its items in the steady run, and no copy is held back at the output belt. Copper plate stops arriving at the entry of the copper plate lane, which the 9 copies share, and comes back. Copy 2 from the entry ends at 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 0, 32, 32, 32, 32 and 32 a window cycle, where one copy makes 32."
     },
     "rows": [

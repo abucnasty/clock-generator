@@ -3,7 +3,7 @@ import { screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { ClockAlternativeView } from '../worker/types';
 import { names, show } from '../test/fixtures';
-import { AUTOMATION_240, checkedOf, MILITARY_240, viewOf } from '../test/checkedLanesFixtures';
+import { AUTOMATION_240, checkedOf, ELECTROMAGNETIC_330, MILITARY_240, viewOf } from '../test/checkedLanesFixtures';
 import { MISSED_SWINGS_COPY } from '../utils/missedSwings';
 import { ClockDiagnostics } from './ClockDiagnostics';
 
@@ -48,11 +48,17 @@ describe('the Diagnostics tab holds exactly what each clock has', () => {
         expect(container.textContent).toContain(MISSED_SWINGS_COPY.pictureOne);
     });
 
-    it('a clock with no cause: the engine\'s line and the table, open', () => {
+    it('a clock with no cause where every test passes: no line, the table open', () => {
         const { container } = show(<ClockDiagnostics clock={viewOf(AUTOMATION_240, 'time_study_windows')} />, { names: gameNames });
-        expect(partsOf(container)).toEqual(['test-pipeline', 'checked-line', 'table']);
-        expect(afterTests(container).startsWith(checkedOf(AUTOMATION_240, 'time_study_windows').line.sentence)).toBe(true);
+        expect(partsOf(container)).toEqual(['test-pipeline', 'table']);
+        expect(afterTests(container)).not.toContain(checkedOf(AUTOMATION_240, 'time_study_windows').line.sentence);
         expect(screen.queryByRole('button')).toBeNull();
+    });
+
+    it('a clock with no cause that drops into chests: the sentence of the chests, then the table', () => {
+        const { container } = show(<ClockDiagnostics clock={viewOf(ELECTROMAGNETIC_330, 'takt_batches_observed')} />, { names: gameNames });
+        expect(partsOf(container)).toEqual(['test-pipeline', 'checked-line', 'table']);
+        expect(afterTests(container).startsWith(checkedOf(ELECTROMAGNETIC_330, 'takt_batches_observed').line.output_chests_text!)).toBe(true);
     });
 
     it('a build of one copy: one sentence', () => {

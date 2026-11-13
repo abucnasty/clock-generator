@@ -104,11 +104,13 @@ export function rowSentenceShown(row: Pick<CheckedLaneRow, 'state' | 'sentence'>
 }
 
 /**
- * Whether the tab shows the engine's line above the lane table: not where it only says that the copies were not run because
- * one copy alone does not hold (the tests of the clock say it), with nothing after it (no plain output belt, no output chest)
+ * The text the tab shows above the lane table: only the parts of the engine's line that the tests graphic, the headline and
+ * the lane rows do not say. These are the chests the output goes into and the detail of a disturbance trial on the copies
+ * that a copy is not back from, each where the line has it. Null where the line has neither.
  */
-export function lineShown(clock: Pick<ClockAlternativeView, 'assessment'>, line: CheckedLanes['line']): boolean {
-    return !(clock.assessment.holds === false && !line.run_with_copies && line.plain_output_belts === 0 && line.output_chests.length === 0);
+export function lineShownText(line: CheckedLanes['line']): string | null {
+    const parts = [line.output_chests_text, line.copies_trial_text].filter((part): part is string => part !== undefined);
+    return parts.length === 0 ? null : parts.join(' ');
 }
 
 /** The lane of the build a row is of */

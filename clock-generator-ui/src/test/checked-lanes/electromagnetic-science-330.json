@@ -149,6 +149,7 @@
        ]
       }
      ],
+     "output_chests_text": "The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack.",
      "run_with_copies": true,
      "every_copy_gets_items": true,
      "output_belt": null,
@@ -419,6 +420,7 @@
        ]
       }
      ],
+     "output_chests_text": "The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack.",
      "run_with_copies": true,
      "every_copy_gets_items": false,
      "output_belt": null,
@@ -1089,6 +1091,7 @@
        ]
       }
      ],
+     "output_chests_text": "The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack.",
      "run_with_copies": false,
      "every_copy_gets_items": null,
      "output_belt": null,
@@ -1226,6 +1229,7 @@
        ]
       }
      ],
+     "output_chests_text": "The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack.",
      "run_with_copies": false,
      "every_copy_gets_items": null,
      "output_belt": null,
@@ -1363,6 +1367,7 @@
        ]
       }
      ],
+     "output_chests_text": "The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack.",
      "run_with_copies": false,
      "every_copy_gets_items": null,
      "output_belt": null,
@@ -1500,6 +1505,7 @@
        ]
       }
      ],
+     "output_chests_text": "The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack.",
      "run_with_copies": false,
      "every_copy_gets_items": null,
      "output_belt": null,
@@ -1776,6 +1782,7 @@
        ]
       }
      ],
+     "output_chests_text": "The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack.",
      "run_with_copies": true,
      "every_copy_gets_items": false,
      "output_belt": null,
@@ -2456,6 +2463,7 @@
        ]
       }
      ],
+     "output_chests_text": "The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack.",
      "run_with_copies": false,
      "every_copy_gets_items": null,
      "output_belt": null,

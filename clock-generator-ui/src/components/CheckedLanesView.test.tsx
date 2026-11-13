@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import type { CheckedLanes } from 'clock-generator/browser';
 import { names, show } from '../test/fixtures';
 import { AUTOMATION_240, checkedOf, ELECTROMAGNETIC_330, MILITARY_240, STATES, viewOf } from '../test/checkedLanesFixtures';
-import { rowSentenceShown } from '../utils/checkedLanes';
+import { CHECKED_LANES_COPY, rowSentenceShown } from '../utils/checkedLanes';
 import { DIAGNOSTICS_COPY } from '../utils/diagnostics';
 import { LaneDiagnostics, SharedLanesTable } from './CheckedLanesView';
 
@@ -26,10 +26,12 @@ const placesIn = (text: string, parts: string[]) => parts.map(part => text.index
 describe('a clock without a cause', () => {
     const stable = checkedOf(AUTOMATION_240, 'time_study_windows');
 
-    it('says the engine\'s line, then the table open: no control, and not what it is made for (Makes says all 9 copies)', () => {
+    it('says no line where every test passes (the tests and the rows say it), then the table open: no control, and not what it is made for', () => {
         const { container } = show(<LaneDiagnostics clock={viewOf(AUTOMATION_240, 'time_study_windows')} />, { names: gameNames });
         expect(container.textContent).not.toContain('Made for 9 copies of your build.');
-        expect(container.textContent!.indexOf(stable.line.sentence)).toBe(0);
+        expect(container.querySelector('[data-checked-line]')).toBeNull();
+        expect(container.textContent).not.toContain(stable.line.sentence);
+        expect(container.textContent!.indexOf(CHECKED_LANES_COPY.whatWasChecked)).toBe(0);
         expect(screen.queryByRole('button')).toBeNull();
         const table = screen.getByRole('table', { name: 'Shared lanes' });
         expect(within(table).getAllByRole('columnheader').map(it => it.textContent)).toEqual(COLUMNS);
@@ -47,6 +49,14 @@ describe('a clock without a cause', () => {
         expect(screen.getByText('3 lanes · all hold')).toBeTruthy();
     });
 
+    it('whose copies are not back after a trial on the copies: the line is only the detail of that trial', async () => {
+        const trial = checkedOf(AUTOMATION_240, 'pitch_pickups');
+        expect(trial.line.copies_trial_text).toBeDefined();
+        const { container } = show(<LaneDiagnostics clock={viewOf(AUTOMATION_240, 'pitch_pickups')} />, { names: gameNames });
+        expect(container.querySelector('[data-checked-line]')!.textContent).toBe(trial.line.copies_trial_text);
+        expect(container.textContent).not.toContain('Checked with all 9 copies');
+    });
+
     it('that was not run with the copies as one copy alone does not hold: no line, the rows\' label alone, and never "holds"', async () => {
         const notRun = checkedOf(AUTOMATION_240, 'takt_batches_observed_swings_4');
         const { container } = show(<LaneDiagnostics clock={viewOf(AUTOMATION_240, 'takt_batches_observed_swings_4')} />, { names: gameNames });
@@ -59,26 +69,29 @@ describe('a clock without a cause', () => {
         expect(container.textContent).not.toMatch(/holds/i);
     });
 
-    it('that was not run with the copies, with a sentence of the output chests after the line: the line as the engine gives it', async () => {
+    it('that was not run with the copies and drops into chests: only the engine\'s sentence of the output chests', async () => {
         const notRun = checkedOf(ELECTROMAGNETIC_330, 'takt_batches_observed_swings_4');
         expect(notRun.line.output_chests.length).toBeGreaterThan(0);
         const { container } = show(<LaneDiagnostics clock={viewOf(ELECTROMAGNETIC_330, 'takt_batches_observed_swings_4')} />, { names: gameNames });
-        expect(container.querySelector('[data-checked-line]')!.textContent).toBe(notRun.line.sentence);
+        expect(container.querySelector('[data-checked-line]')!.textContent).toBe(notRun.line.output_chests_text);
+        expect(container.textContent).not.toContain(notRun.line.sentence);
     });
 
-    it('drops into chests: the engine\'s line names the chest, and no output lane has a row', async () => {
+    it('drops into chests: the line is only the engine\'s sentence that names the chest, and no output lane has a row', async () => {
         const chests = checkedOf(ELECTROMAGNETIC_330, 'takt_batches_observed');
         const { container } = show(<LaneDiagnostics clock={viewOf(ELECTROMAGNETIC_330, 'takt_batches_observed')} />, { names: gameNames });
-        expect(container.textContent).toContain(chests.line.sentence);
+        expect(container.querySelector('[data-checked-line]')!.textContent).toBe(chests.line.output_chests_text);
+        expect(container.textContent).not.toContain(chests.line.sentence);
         const rows = bodyRows(screen.getByRole('table', { name: 'Shared lanes' }));
         expect(rows.map(row => within(row).getAllByRole('cell')[0].textContent)).toEqual(['Input', 'Input']);
         expect(rows.map(row => within(row).getAllByRole('cell')[1].textContent)).toEqual(['Accumulator', 'Supercapacitor']);
     });
 
-    it('drops onto two plain output belts: two rows whose rate fits, each with the engine\'s sentence', async () => {
+    it('drops onto two plain output belts: no line, and two rows whose rate fits, each with the engine\'s sentence', async () => {
         const plain = checkedOf(MILITARY_240, 'coordinated_sources');
         const { container } = show(<LaneDiagnostics clock={viewOf(MILITARY_240, 'coordinated_sources')} />, { names: gameNames });
-        expect(container.textContent).toContain(plain.line.sentence);
+        expect(container.querySelector('[data-checked-line]')).toBeNull();
+        expect(container.textContent).not.toContain(plain.line.sentence);
         const fits = bodyRows(screen.getByRole('table')).filter(row => row.getAttribute('data-lane-state') === 'rate_fits');
         expect(fits.map(row => within(row).getByRole('rowheader').textContent)).toEqual(['Belt 1, lane 1', 'Belt 2, lane 1']);
         for (const [index, row] of fits.entries()) {

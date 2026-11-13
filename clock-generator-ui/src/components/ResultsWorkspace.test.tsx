@@ -74,7 +74,8 @@ describe('the workspace\'s tabs', () => {
         const stable = views[AUTOMATION_240.selected_index];
         results(views, AUTOMATION_240.selected_index, AUTOMATION_240.selected_index, 'diagnostics');
         expect(tabs()[1].getAttribute('aria-selected')).toBe('true');
-        expect(panel('diagnostics').textContent).toContain(stable.checkedLanes!.line.sentence);
+        // every test of the stable clock passes: no line above its table
+        expect(panel('diagnostics').textContent).not.toContain(stable.checkedLanes!.line.sentence);
         expect(within(panel('diagnostics')).getByRole('table', { name: 'Shared lanes' })).toBeTruthy();
     });
 });

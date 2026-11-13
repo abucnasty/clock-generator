@@ -5,7 +5,7 @@ import type { BuildLane, CheckedLaneRow, CheckedLanes, SharedLaneCause } from 'c
 import type { ClockAlternativeView } from '../worker/types';
 import { useGameNames } from '../hooks/useGameNames';
 import {
-    CHECKED_LANES_COPY, endText, laneOf, lanesCountText, laneText, lineShown, roleText, rowSentenceShown, stateTone, supplyText, togetherText, type StateTone,
+    CHECKED_LANES_COPY, endText, laneOf, lanesCountText, laneText, lineShownText, roleText, rowSentenceShown, stateTone, supplyText, togetherText, type StateTone,
 } from '../utils/checkedLanes';
 import { lanesShownOf } from '../utils/diagnostics';
 import { MissedSwingsPictures } from './MissedSwingsPictures';
@@ -151,17 +151,18 @@ interface LaneDiagnosticsProps {
 
 /**
  * What the Diagnostics tab of the selected clock shows of the lanes its copies share (lanesShownOf). A clock with a cause: its
- * headline and pictures, then the table. A clock with no cause: the engine's line, then the table. The table is open. A clock
- * with no checked lanes: one sentence.
+ * headline and pictures, then the table. A clock with no cause: the parts of the engine's line that nothing else on the tab
+ * says (lineShownText), where it has one, then the table. The table is open. A clock with no checked lanes: one sentence.
  */
 export function LaneDiagnostics({ clock, onSelectClock }: LaneDiagnosticsProps) {
     const lanes = clock.assumptions?.lanes;
     const shown = lanesShownOf(clock);
     if (shown.kind === 'sentence') return <Typography variant="body2" data-checked-lanes="" data-lanes-sentence="">{shown.text}</Typography>;
+    const line = shown.kind === 'line' ? lineShownText(shown.checked.line) : null;
     return <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 1 }} data-checked-lanes="">
         {shown.kind === 'cause'
             ? <SharedLaneCauseParts checked={shown.checked} lanes={lanes} onSelectClock={onSelectClock} />
-            : lineShown(clock, shown.checked.line) && <Typography variant="body2" data-checked-line="">{shown.checked.line.sentence}</Typography>}
+            : line !== null && <Typography variant="body2" data-checked-line="">{line}</Typography>}
         <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 1 }}>
             <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600, mb: 0.5 }}>{CHECKED_LANES_COPY.whatWasChecked}</Typography>
             <SharedLanesTable checked={shown.checked} lanes={lanes} level={3} />
