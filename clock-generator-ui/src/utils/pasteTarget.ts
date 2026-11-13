@@ -7,6 +7,8 @@ export interface TargetValues {
     recipe: string;
     items_per_second: number;
     copies: number;
+    /** Where the next copy stands; the export states it where the selection shows copies at one spacing */
+    copy_offset?: { x: number; y: number };
 }
 
 /** Decimals the target a paste fills in keeps */
@@ -14,7 +16,8 @@ const TARGET_DECIMALS = 3;
 
 /**
  * The target a paste fills in: the suggestion's rate floored to 3 decimals. The suggestion is the most the machines
- * make, so it is never rounded up past it, and float noise from the mod (1.8000000000000003) goes.
+ * make, so it is never rounded up past it, and float noise from the mod (1.8000000000000003) goes. The gap to the next
+ * copy comes with it where the export states one.
  */
 export function targetToFill(suggestion: SuggestedTarget): TargetValues {
     const scale = 10 ** TARGET_DECIMALS;
@@ -23,7 +26,9 @@ export function targetToFill(suggestion: SuggestedTarget): TargetValues {
     // lands above the true maximum (22.9689999…) takes the step back, so the target never asks for more than it
     const nudged = Math.floor(max * scale + 1e-6) / scale;
     const floored = nudged > max ? nudged - 1 / scale : nudged;
-    return { recipe: suggestion.target.recipe, items_per_second: Math.round(floored * scale) / scale, copies: suggestion.target.copies };
+    const { recipe, copies, copy_offset } = suggestion.target;
+    return { recipe, items_per_second: Math.round(floored * scale) / scale, copies,
+        ...(copy_offset !== undefined && { copy_offset: { x: copy_offset.x, y: copy_offset.y } }) };
 }
 
 /** "1 copy", "3 copies" */
