@@ -31,6 +31,18 @@ export function notesOf(clock: Pick<ClockAlternativeView, 'insights' | 'checkedL
     return { diagnostics: shown.find(insight => insight.id === UNSTABLE_NOTE), overview: shown.filter(insight => insight.id !== UNSTABLE_NOTE && shownInOverview(insight)) };
 }
 
+/**
+ * The note on why a clock is not stable as Diagnostics shows it. Of a clock whose status is Oscillates (the engine's
+ * reason `oscillation`), its What goes without its first sentence, the items the long run moved a window cycle on average:
+ * that is the expected output, so it reads as if the clock held it, and the chart above it shows each window cycle. What
+ * follows that sentence stays, and so does Why.
+ */
+export function diagnosticsNoteOf(note: ClockInsight, oscillates: boolean): ClockInsight {
+    if (!oscillates) return note;
+    const rest = note.what.split(/(?<=\.)\s+(?=[A-Z])/).slice(1).join(' ');
+    return { ...note, what: rest };
+}
+
 /** What Diagnostics shows of a clock's shared lanes */
 type LanesShown =
     | { kind: 'cause'; checked: CheckedLanes & { cause: SharedLaneCause } }

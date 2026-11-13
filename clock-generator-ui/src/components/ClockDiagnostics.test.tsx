@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import type { ClockInsight } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../worker/types';
 import { names, show } from '../test/fixtures';
 import { AUTOMATION_240, checkedOf, ELECTROMAGNETIC_330, MILITARY_240, viewOf } from '../test/checkedLanesFixtures';
@@ -137,6 +138,45 @@ describe('the chart of a clock whose status is Oscillates, after the tests', () 
     it('the first box says the status', () => {
         const { container } = show(<ClockDiagnostics clock={oscillatingOf(viewOf(AUTOMATION_240, 'time_study_windows'))} />, { names: gameNames });
         expect(container.querySelector('[data-test="one-copy"] [data-test-result]')!.textContent).toBe('Oscillates');
+    });
+
+    /** The engine's note on why a clock is not stable, of a clock whose long run makes the expected output on average */
+    const doesNotHold = (what: string): ClockInsight => ({
+        id: 'unstable', scope: 'clock', title: 'This clock does not hold the setpoint', what,
+        why: 'A clock has to work from wherever the machines happen to be when it starts, so it is simulated from several start points.',
+        explanation: 'Use a clock marked Stable.',
+    });
+    const MOVED = 'Driven only by its enable windows, the build moved 288 of 288 items a window cycle on average over a long run.';
+    const oscillatingWith = (note: ClockInsight) => {
+        const view = oscillatingOf(viewOf(AUTOMATION_240, 'time_study_windows'));
+        return { ...view, insights: [...view.insights, note] };
+    };
+
+    it('the note on why it is not stable keeps its title and its Why?, without the sentence of the items moved', async () => {
+        const { container, user } = show(<ClockDiagnostics clock={oscillatingWith(doesNotHold(MOVED))} />, { names: gameNames });
+        const note = container.querySelector<HTMLElement>('[data-insight="unstable"]')!;
+        expect(within(note).getByRole('heading', { level: 3, name: 'This clock does not hold the setpoint' })).toBeTruthy();
+        expect(note.textContent).not.toContain('Driven only by its enable windows');
+        expect(note.textContent).not.toContain('What');
+        await user.click(within(note).getByRole('button', { name: 'Why?' }));
+        expect(note.textContent).toContain('A clock has to work from wherever the machines happen to be when it starts');
+        expect(note.textContent).toContain('Use a clock marked Stable.');
+    });
+
+    it('the note keeps what the engine says after the sentence of the items moved', () => {
+        const repeats = 'The build repeats every 26 window cycles and moves 7488 of 7488 items over them.';
+        const { container } = show(<ClockDiagnostics clock={oscillatingWith(doesNotHold(`${MOVED} ${repeats}`))} />, { names: gameNames });
+        const note = container.querySelector<HTMLElement>('[data-insight="unstable"]')!;
+        expect(note.textContent).not.toContain('Driven only by its enable windows');
+        expect(note.textContent).toContain(`What${repeats}`);
+    });
+
+    it('a clock whose status is not Oscillates keeps the sentence of the items moved', () => {
+        const view = viewOf(MILITARY_240, 'takt_batches_observed_swings_4');
+        const { container } = show(<ClockDiagnostics clock={view} />, { names: gameNames });
+        const engine = view.insights.find(insight => insight.id === 'unstable')!;
+        expect(engine.what).toMatch(/^Driven only by its enable windows/);
+        expect(container.querySelector('[data-insight="unstable"]')!.textContent).toContain(`What${engine.what}`);
     });
 
     it('no chart for a clock without the engine\'s reason', () => {

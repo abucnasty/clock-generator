@@ -57,19 +57,21 @@ function Part({ label, children }: { label: string; children: ReactNode }) {
 
 /**
  * One finding: its title, what it is in a sentence, and the reasons behind "Why?", with its chart or table. A finding with no
- * "why" (that of a clock that overproduces) shows its explanation under what was found, with no "Why?"
+ * "why" (that of a clock that overproduces) shows its explanation under what was found, with no "Why?". A finding with no
+ * "what" (diagnosticsNoteOf) shows no What label, and its "Why?" stands where the sentence would.
  */
 export function InsightCard({ insight, level = 4 }: { insight: ClockInsight; level?: 3 | 4 }) {
     const { nameIdsIn } = useGameNames();
     const [open, setOpen] = useBuildSection(`insight:${insight.id}`);
     const reasonsId = useId();
     const hasWhy = insight.why !== '';
+    const hasWhat = insight.what !== '';
     // a note with no explanation shows no Explanation label
     const explanation = insight.explanation !== '' && <Part label={INSIGHTS_COPY.explanation}><Typography variant="body2">{nameIdsIn(insight.explanation)}</Typography></Part>;
     return (
         <Panel title={nameIdsIn(insight.title)} level={level} data-insight={insight.id}>
-            <Part label={INSIGHTS_COPY.what}>
-                <Typography variant="body2">{nameIdsIn(insight.what)}</Typography>
+            <Part label={hasWhat ? INSIGHTS_COPY.what : ''}>
+                {hasWhat && <Typography variant="body2">{nameIdsIn(insight.what)}</Typography>}
                 {hasWhy && <Button
                     size="small"
                     aria-expanded={open}
