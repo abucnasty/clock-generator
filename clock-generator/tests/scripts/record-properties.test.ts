@@ -118,9 +118,20 @@ describe('the property module', () => {
             expect(problem.message).toBe('verdict stable against survives false: stable only when it is not unstable and survives');
         });
 
+        it('stable-holds-and-survives-loss: a clock that holds on one copy and misses its rate with the copies gets the disturbance trials, and no problem', () => {
+            const report = check(made({ verdict: 'unstable', 'assessment.shared_lane_losses': [{ copy: 2 }], 'ranking.meets_target_rate': false }));
+            expect(report.problems).toEqual([]);
+        });
+
+        it('stable-holds-and-survives-loss: a clock that holds on one copy and gets no disturbance trial', () => {
+            const problem = only(check(made({ verdict: 'unstable', 'assessment.disturbance_trial': null, 'ranking.meets_target_rate': false })));
+            expect(problem).toEqual({ property: 'stable-holds-and-survives-loss', alternative: 'time_division_windows',
+                message: 'holds true and disturbance_trial not tried: a clock gets the disturbance trials exactly when one copy alone holds its rate' });
+        });
+
         it('stable-holds-and-survives-loss: a clock that does not hold is tried for the loss, and one that meets the target rate is not stable', () => {
             const unstable = check(made({ verdict: 'unstable', 'assessment.holds': false, 'ranking.meets_target_rate': false }));
-            expect(unstable.problems.map(it => it.message)).toEqual([expect.stringContaining('verdict unstable and disturbance_trial tried')]);
+            expect(unstable.problems.map(it => it.message)).toEqual(['holds false and disturbance_trial tried: a clock gets the disturbance trials exactly when one copy alone holds its rate']);
             const recovery = check(made({ verdict: 'no recovery', 'assessment.disturbance_trial': { survives: false } }));
             expect(recovery.problems.map(it => it.message)).toEqual(['meets the target rate with verdict no recovery']);
         });
