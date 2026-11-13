@@ -205,9 +205,11 @@ describe('the rate of a clock with a loss on a shared lane, in the list of clock
 
 describe('the Rank column: the engine\'s order', () => {
     const SAMPLES = { AUTOMATION_240, ELECTROMAGNETIC_330, ELECTROMAGNETIC_330_TWO_SWINGS, MILITARY_240 };
-    const panel = (alternatives: ClockAlternativeView[], selectedIndex: number, options: { allColumns?: boolean; showUnstable?: boolean; pending?: string[] } = {}) =>
-        show(<ClockAlternativesPanel comparison={{ allColumns: options.allColumns ?? false, showUnstable: options.showUnstable ?? true }} onComparisonChange={() => {}}
-            alternatives={alternatives} selectedIndex={selectedIndex} onSelect={() => {}} pickRule={null} pending={options.pending} />);
+    type Options = { allColumns?: boolean; showUnstable?: boolean; pending?: string[]; running?: boolean };
+    const panelOf = (alternatives: ClockAlternativeView[], selectedIndex: number, options: Options = {}) =>
+        <ClockAlternativesPanel comparison={{ allColumns: options.allColumns ?? false, showUnstable: options.showUnstable ?? true }} onComparisonChange={() => {}}
+            alternatives={alternatives} selectedIndex={selectedIndex} onSelect={() => {}} pickRule={null} pending={options.pending} running={options.running} />;
+    const panel = (alternatives: ClockAlternativeView[], selectedIndex: number, options: Options = {}) => show(panelOf(alternatives, selectedIndex, options));
     /** The rows of clocks from the top, each its rank and the id of its clock */
     const rowsOf = (alternatives: ClockAlternativeView[]) => screen.getAllByRole('radio').map(radio => {
         const row = radio.closest('tr')!;
@@ -265,18 +267,40 @@ describe('the Rank column: the engine\'s order', () => {
             .toEqual(views.map((_, at) => `${at + 1}`));
     });
 
-    it('while a run goes, puts a clock that arrives and ranks first at the top, and moves the others down one', () => {
+    describe('while a run goes, the rows hold still', () => {
         const views = viewsOf(MILITARY_240);
         const recommended = views[MILITARY_240.selected_index];
-        // the clocks before the recommended one was made, then with it
+        // the clocks before the recommended one was made
         const before = views.filter(view => view !== recommended);
-        panel(before, 0, { pending: [recommended.label] });
-        const earlier = rowsOf(before);
-        cleanup();
-        panel(views, 0);
-        const later = rowsOf(views);
-        expect(later[0]).toEqual(['1', recommended.id]);
-        expect(later.slice(1)).toEqual(earlier.map(([rank, id]) => [`${Number(rank) + 1}`, id]));
+
+        it('a clock that arrives and ranks first is added at the bottom of its group with rank 1; the ranks of the others change in place', () => {
+            const { rerender } = panel(before, 0, { pending: [recommended.label], running: true });
+            const earlier = rowsOf(before);
+            // the last clock is in, and no other is still being made: the run has not ended
+            rerender(panelOf(views, 0, { running: true }));
+            const later = rowsOf(views);
+            expect(later.filter(([, id]) => id !== recommended.id)).toEqual(earlier.map(([rank, id]) => [`${Number(rank) + 1}`, id]));
+            const arrived = screen.getByRole('radio', { name: fullClockName(recommended) }).closest('tr')!;
+            expect(arrived.querySelector('[data-rank]')!.textContent).toBe('1');
+            // the last row of its group: the divider, or nothing, under it
+            const next = arrived.nextElementSibling;
+            expect(next === null || next.textContent === RECOMMENDED_COPY.unstableDivider).toBe(true);
+            expect(later.at(0)![1]).not.toBe(recommended.id);
+        });
+
+        it('the rows are sorted by their ranks once the run has ended', () => {
+            const { rerender } = panel(before, 0, { running: true });
+            rerender(panelOf(views, 0, { running: true }));
+            rerender(panelOf(views, 0, { running: false }));
+            const order = rankOrderOf(views);
+            expect(rowsOf(views)).toEqual(order.map((index, at) => [`${at + 1}`, views[index].id]));
+        });
+
+        it('a table opened while a run goes shows the clocks made so far by their ranks', () => {
+            panel(before, 0, { running: true });
+            const order = rankOrderOf(before);
+            expect(rowsOf(before)).toEqual(order.map((index, at) => [`${at + 1}`, before[index].id]));
+        });
     });
 });
 

@@ -246,21 +246,43 @@ export function rankOrderOf(alternatives: Pick<PickableClock, 'ranking'>[]): num
 }
 
 /**
+ * The order of the clock table's rows while a run adds clocks, as the ids of the clocks: the order it held, of the clocks
+ * still there, then the clocks that arrived since, by their ranks. A table that holds nothing yet holds the clocks there by
+ * their ranks. The worker lists the clocks by their task, so a clock that arrives can move the index of every other one.
+ */
+export function heldOrderOf(held: readonly string[], alternatives: Pick<ClockAlternativeView, 'id' | 'ranking'>[]): string[] {
+    const ranked = rankOrderOf(alternatives).map(index => alternatives[index].id);
+    const there = new Set(ranked);
+    const kept = held.filter(id => there.has(id));
+    const keptIds = new Set(kept);
+    return [...kept, ...ranked.filter(id => !keptIds.has(id))];
+}
+
+/**
  * The rows of the clock table in two groups, the stable clocks (`isStable`), then the others under a divider, each row
  * with its rank in the engine's order and each group sorted by it, so the ranks run straight through both groups. While
  * the others are hidden (and something is stable) only the selected one and rank 1 of them stay. While a run adds
- * clocks, the rows are sorted by the ranks so far.
+ * clocks, each group is in the `held` order (heldOrderOf) and each row shows its rank so far.
  */
-export function partitionClockRows<T extends Pick<ClockAlternativeView, 'ranking'>>(
+export function partitionClockRows<T extends Pick<ClockAlternativeView, 'id' | 'ranking'>>(
     alternatives: T[],
     options: {
         selectedIndex: number;
         showUnstable: boolean;
         /** The Status column says Stable */
         isStable: (alternative: T) => boolean;
+        /** While a run adds clocks: the order of the rows, by clock id; a clock it does not name comes after, by rank */
+        held?: readonly string[];
     },
 ): { stable: ClockRow<T>[]; unstable: ClockRow<T>[]; unstableCount: number; hiddenCount: number; anyStable: boolean } {
-    const rows = rankOrderOf(alternatives).map((index, at) => ({ alternative: alternatives[index], index, rank: at + 1 }));
+    const ranked = rankOrderOf(alternatives).map((index, at) => ({ alternative: alternatives[index], index, rank: at + 1 }));
+    const { held } = options;
+    const placeOf = (order: readonly string[], id: string) => {
+        const at = order.indexOf(id);
+        return at === -1 ? order.length : at;
+    };
+    // a stable sort: the clocks the order does not name keep their ranks' order
+    const rows = held === undefined ? ranked : [...ranked].sort((a, b) => placeOf(held, a.alternative.id) - placeOf(held, b.alternative.id));
     const stable = rows.filter(({ alternative }) => options.isStable(alternative));
     const allUnstable = rows.filter(({ alternative }) => !options.isStable(alternative));
     const anyStable = stable.length > 0;

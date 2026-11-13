@@ -266,6 +266,7 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                         onSelect={selectClock}
                         pickRule={props.pickRule}
                         pending={props.pending}
+                        running={props.isRunning}
                         notice={
                             <DeeperSearchNotice
                                 kind={noticeKind}

@@ -14,7 +14,7 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import { Fragment, useId, type ReactNode } from 'react';
+import { Fragment, useId, useState, type ReactNode } from 'react';
 import type { BuildViewContext } from '../utils/buildViewContext';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 import { CLOCK_TABLE_NAME, CLOCK_TABLE_REGION, clockHelpName, termsHelpName } from '../utils/a11yLabels';
@@ -32,7 +32,7 @@ import { Panel } from './Panel';
 import { HANDS_TEXT } from '../utils/targetCounts';
 import { TermsList } from './TermsPopover';
 import { OUTPUT_PER_WINDOW_CYCLE_HEADER, SIGNALS_HEADER, WAKE_UPS_HEADER, formatNumberText, makesHeader, rateHeader } from '../utils/numberText';
-import { RECOMMENDED_COPY, partitionClockRows, searchesRunLine, type ClockRow, type PickRule } from '../utils/recommendedClock';
+import { RECOMMENDED_COPY, heldOrderOf, partitionClockRows, searchesRunLine, type ClockRow, type PickRule } from '../utils/recommendedClock';
 
 // fractional (subtick) window cycles are shown to 3 decimals
 /** The header of the column that counts a clock's decider combinators */
@@ -181,6 +181,11 @@ interface ClockAlternativesPanelProps {
     pickRule: PickRule | null;
     /** Labels of alternatives still being generated */
     pending?: string[];
+    /**
+     * A run is adding clocks: the rows hold still, a clock that arrives goes to the bottom of its group, and the rows are
+     * sorted by rank when it is false again. Not `pending`, which is empty between the stages of a run.
+     */
+    running?: boolean;
     /** Shown below the table: whether a deeper search is on offer */
     notice?: ReactNode;
     /** Keeps the panel, and so the notice, on screen while a generation has no clocks yet, so its focus is not lost */
@@ -221,7 +226,8 @@ const isStable = (alternative: ClockAlternativeView) => statusOf(alternative).ki
 /**
  * The other clocks of the generation, to compare with the one at the top: by default a compact table (the rank, the plain
  * name, what it makes, its wake-ups and whether it works), with every column one press away. The rows are in the engine's
- * order, the ranks numbered straight through the two groups. A row selects its clock.
+ * order, the ranks numbered straight through the two groups. While a run adds clocks the rows hold still, so that the
+ * clocks are seen to arrive: each at the bottom of its group, with its rank. A row selects its clock.
  */
 export function ClockAlternativesPanel({
     comparison,
@@ -231,6 +237,7 @@ export function ClockAlternativesPanel({
     onSelect,
     pickRule,
     pending = [],
+    running = false,
     notice,
     holdNotice = false,
 }: ClockAlternativesPanelProps) {
@@ -238,13 +245,20 @@ export function ClockAlternativesPanel({
     const setShowUnstable = (showUnstable: boolean) => onComparisonChange({ ...comparison, showUnstable });
     const setAllColumns = (next: boolean | ((shown: boolean) => boolean)) => onComparisonChange({ ...comparison, allColumns: typeof next === 'function' ? next(allColumns) : next });
     const tableId = useId();
+    // the order the rows hold while a run adds clocks, kept from the render before; none once the run has ended
+    const [held, setHeld] = useState<readonly string[]>([]);
+    const nextHeld = running ? heldOrderOf(held, alternatives) : [];
+    if (nextHeld.length !== held.length || nextHeld.some((id, at) => id !== held[at])) {
+        setHeld(nextHeld);
+    }
 
     if (alternatives.length === 0 && pending.length === 0 && !holdNotice) {
         return null;
     }
 
-    // while a run adds clocks, the rows are in the engine's order of the clocks made so far
-    const { stable, unstable, unstableCount, hiddenCount, anyStable } = partitionClockRows(alternatives, { selectedIndex, showUnstable, isStable });
+    // while a run adds clocks, the rows hold their order and show the ranks so far; after it, they are sorted by rank
+    const { stable, unstable, unstableCount, hiddenCount, anyStable } = partitionClockRows(alternatives,
+        { selectedIndex, showUnstable, isStable, held: running ? nextHeld : undefined });
     const anyHolds = alternatives.some(alternative => alternative.assessment.holds);
     const copies = alternatives[0]?.copies ?? 1; // of the generation, so a stale table keeps its own number
     // a Makes column that says the same on every row is one line above the table instead

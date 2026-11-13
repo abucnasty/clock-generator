@@ -7,6 +7,9 @@ import { names, show } from '../test/fixtures';
 import { AUTOMATION_240, ELECTROMAGNETIC_330_TWO_SWINGS, MILITARY_240, viewsOf } from '../test/checkedLanesFixtures';
 import { defaultBuildViewContext } from '../utils/buildViewContext';
 import type { ResultDetail } from '../utils/resultsView';
+import { CLOCK_TABLE_NAME } from '../utils/a11yLabels';
+import { recommendedIndexOf } from '../utils/recommendedClock';
+import { fullClockName } from '../utils/strategyNames';
 import { ResultsWorkspace } from './ResultsWorkspace';
 
 const gameNames = names({ 'iron-gear-wheel': 'Iron gear wheel', 'copper-plate': 'Copper plate', 'automation-science-pack': 'Automation science pack',
@@ -15,9 +18,10 @@ const gameNames = names({ 'iron-gear-wheel': 'Iron gear wheel', 'copper-plate': 
 type Props = ComponentProps<typeof ResultsWorkspace>;
 
 /** The results of a kept result as the page shows them, with the selection and the workspace's tab kept as the page keeps them */
-function Results({ alternatives, recommendedIndex, initialIndex, initialDetail, onDetailChange, onCardBackToRecommended, swingBackoffReport = null }: {
+function Results({ alternatives, recommendedIndex, initialIndex, initialDetail, onDetailChange, onCardBackToRecommended, swingBackoffReport = null, isRunning = false }: {
     alternatives: ClockAlternativeView[]; recommendedIndex: number; initialIndex: number; initialDetail: ResultDetail;
     onDetailChange: (detail: ResultDetail) => void; onCardBackToRecommended: () => void; swingBackoffReport?: Props['swingBackoffReport'];
+    isRunning?: boolean;
 }) {
     const [selectedIndex, setSelectedIndex] = useState(initialIndex);
     const [detail, setDetail] = useState(initialDetail);
@@ -27,7 +31,7 @@ function Results({ alternatives, recommendedIndex, initialIndex, initialDetail, 
         comparison: context.comparison, onComparisonChange: () => {}, wakeAsTable: false, onWakeAsTableChange: () => {},
         timeline: context.timeline, onTimelineChange: () => {},
         detail, onDetailChange: next => { onDetailChange(next); setDetail(next); },
-        generatedFor: null, generationAssumptions: null, isRunning: false, error: null,
+        generatedFor: null, generationAssumptions: null, isRunning, error: null,
         alternatives, selectedIndex, onSelect: setSelectedIndex, recommendedIndex,
         onCardBackToRecommended: () => { onCardBackToRecommended(); setSelectedIndex(recommendedIndex); },
         pickRule: null, pending: [], skippedSearches: [], notMade: [], searchedDeeper: false, keptOn: false, canSearchDeeper: true,
@@ -40,13 +44,14 @@ function Results({ alternatives, recommendedIndex, initialIndex, initialDetail, 
     return <ResultsWorkspace {...props} />;
 }
 
+/** With nothing to wire: the install dialog, closed, reads it */
+const withInstall = (clock: ClockAlternativeView): ClockAlternativeView => ({ ...clock, install: { book: false, wiring: [], drills: [], lines: {} } });
+
 function results(alternatives: ClockAlternativeView[], recommendedIndex: number, initialIndex: number, initialDetail: ResultDetail = 'overview',
     swingBackoffReport: Props['swingBackoffReport'] = null) {
     const onDetailChange = vi.fn();
     const onCardBackToRecommended = vi.fn();
-    // with nothing to wire: the install dialog, closed, reads it
-    const withInstall = alternatives.map(clock => ({ ...clock, install: { book: false, wiring: [], drills: [], lines: {} } }));
-    const view = show(<Results alternatives={withInstall} recommendedIndex={recommendedIndex} initialIndex={initialIndex} initialDetail={initialDetail}
+    const view = show(<Results alternatives={alternatives.map(withInstall)} recommendedIndex={recommendedIndex} initialIndex={initialIndex} initialDetail={initialDetail}
         onDetailChange={onDetailChange} onCardBackToRecommended={onCardBackToRecommended} swingBackoffReport={swingBackoffReport} />, { names: gameNames });
     return { ...view, onDetailChange, onCardBackToRecommended };
 }
@@ -287,5 +292,23 @@ describe('the card\'s Simulation results', () => {
         const model = panel('overview').querySelector('[data-model-assumptions]')!;
         expect(model.textContent).toContain('Tested from a cold start');
         expect(model.textContent).toContain('starting states');
+    });
+});
+
+describe('the compare table while a run goes', () => {
+    it('holds its rows while the run goes, and sorts them by rank when it ends', async () => {
+        const views = viewsOf(MILITARY_240).map(withInstall);
+        const recommended = views[MILITARY_240.selected_index];
+        const before = views.filter(view => view !== recommended);
+        const at = (clocks: ClockAlternativeView[], isRunning: boolean) => <Results alternatives={clocks} recommendedIndex={recommendedIndexOf(clocks)!}
+            initialIndex={0} initialDetail="overview" onDetailChange={() => {}} onCardBackToRecommended={() => {}} isRunning={isRunning} />;
+        const { rerender, user } = show(at(before, true), { names: gameNames });
+        await user.click(screen.getByRole('button', { name: 'Compare clocks' }));
+        const firstRow = () => within(screen.getByRole('table', { name: CLOCK_TABLE_NAME })).getAllByRole('radio')[0].getAttribute('aria-label');
+        const first = firstRow();
+        rerender(at(views, true));
+        expect(firstRow()).toBe(first);
+        rerender(at(views, false));
+        expect(firstRow()).toBe(fullClockName(recommended));
     });
 });
