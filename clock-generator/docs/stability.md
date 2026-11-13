@@ -49,6 +49,16 @@ The requested override alone is not evidence that a check completed. A null `ass
 
 The first check measures one window cycle, the eleventh after a cold start. A build whose state does not repeat with its clock moves different amounts in the window cycles that follow, so that one window cycle can be far from what the clock makes: on the processing unit circuit export sample the 1-swing clock moves 480 to 608 items in a window cycle of 528 ticks, 608 in the window cycle measured and 546 on average, and the game makes 546 (62.0 a second where the one window cycle said 69.09). A clock that fails its first check is therefore listed, ranked and described by the mean items a window cycle over the judged part of its long run, the figure a clock that fails the long run already gets, and its check says which it is (`as_built.output_basis`: `long-run mean`, or `one period` where the window cycle is too long for a long run). The check, the clocks that are made and every verdict are unchanged. The long run is made where the primary clock does not hold, since the rates rank the selection only where no clock holds. On the sample the clock with the highest rate by the mean is the 3-swing one (65.19 a second), which makes 66.4 in the game; the 1-swing clock the one window cycle favoured makes 62.0.
 
+### A clock whose output is uneven
+
+A clock can make its expected output on average and still be far off it in some window cycles. On a build with nine output inserters of 16 items a hand, one window cycle of the repeat makes 432 items and another makes 144, where 288 are expected and the tolerance is one hand. Its long run fails, so the clock does not hold, and its rate is the setpoint. The check of such a clock has a reason (`as_built.output_reason`), as a code with its numbers. The code is `oscillation` where all of these are true:
+
+- the long run of the check failed;
+- the mean output over the judged part of the long run is the expected output, to within the rate tolerance of the ranking (0.000001 items a second over all copies);
+- one or more judged bins are off the expected output by more than the tolerance of the long run.
+
+Its numbers are the expected output of a bin, the window cycles in a bin (1, or the repeat of a window cycle that is not a whole number of ticks), the tolerance, the output of each judged bin in order, and whether the repeat is proven, with its length in window cycles. The output is that of the output inserters of one copy, which is what the long run simulates. A judged part of more than 80 bins keeps only its highest and its lowest bin, with their places: 80 is the judged part of the usual long run of 120 window cycles. The code adds no verdict: the verdict, `holds`, the ranking and the selection are the same with it or without it, and the verification signature of a clock leaves it out. A check that fails before its long run (its first check, a start phase or a lane phase) has no code, and nor does one that fails under another order of the inserters that take from one machine. The web app gives such a clock the status Oscillates, with its numbers next to it, and draws the output of each bin on the Diagnostics tab.
+
 ### How a clock is tried for it
 
 Ordinary moving pickups are checked with independent phases on their two lanes, for both settled output and

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { ClockAlternativeView } from '../worker/types';
 import { cardWarningOf, copyBlueprintLabelOf, isBelowTarget, rateWarningOf } from './rateWarning';
 import { STALE_COPY_LABEL } from './resultsStaleness';
+import { oscillatingOf } from '../test/oscillationFixture';
+import { AUTOMATION_240, viewOf } from '../test/checkedLanesFixtures';
 
 type Clock = Pick<ClockAlternativeView, 'verdict' | 'assessment' | 'ranking' | 'deadlockRisk'>;
 
@@ -129,5 +131,18 @@ describe('the deadlock risk on the card and in the install dialog', () => {
     it('follows the clock\'s own warning, as before', () => {
         const short = { ...clock(192, -48), deadlockRisk: note, insights: [insight] };
         expect(cardWarningOf(short)).toBe(`${rateWarningOf({ ...short, deadlockRisk: null })} Deadlock risk: ${what}`);
+    });
+});
+
+describe('the line at the top of a clock whose status is Oscillates', () => {
+    it('says what the status means, in place of the line of a clock that does not hold', () => {
+        const oscillating = oscillatingOf(viewOf(AUTOMATION_240, 'time_study_windows'));
+        expect(rateWarningOf(oscillating)).toBe('This clock makes the setpoint on average, but not in every window cycle.');
+    });
+
+    it('keeps the line of a clock that does not hold where the clock is off the setpoint', () => {
+        const oscillating = oscillatingOf(viewOf(AUTOMATION_240, 'time_study_windows'));
+        const off = { ...oscillating, ranking: { ...oscillating.ranking, rate_off_target: -48 }, assessment: { ...oscillating.assessment, items_per_second: 192 } };
+        expect(rateWarningOf(off)).toContain('does not hold its expected output');
     });
 });

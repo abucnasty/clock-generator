@@ -1,4 +1,4 @@
-import type { SharedLaneReasonCode } from 'clock-generator/browser';
+import type { OscillationFacts, SharedLaneReasonCode } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../worker/types';
 import { formatNumberText } from './numberText';
 import { lossesOf, notTriedOf } from './rateWarning';
@@ -8,7 +8,7 @@ import { rateVerbs, type TargetCounts } from './targetCounts';
 
 /** The fields of a clock its summary is worked out from, so the tests need not build a whole view */
 export type SummaryClock = Pick<ClockAlternativeView, 'id' | 'label' | 'verdict' | 'ranking' | 'beltLabel' | 'deadlockRisk' | 'assessment' | 'deciders'>
-    & Partial<Pick<ClockAlternativeView, 'strategy' | 'roundedWindowCycleTicks' | 'roundedRunsFast' | 'checkedLanes' | 'asBuilt' | 'expectedOutputItems'>>
+    & Partial<Pick<ClockAlternativeView, 'strategy' | 'roundedWindowCycleTicks' | 'roundedRunsFast' | 'checkedLanes' | 'asBuilt' | 'expectedOutputItems' | 'copies'>>
     & { counts?: TargetCounts };
 
 /**
@@ -23,11 +23,19 @@ export const SUMMARY_COPY = {
     stable: 'Stable',
     underproduces: 'Underproduces',
     overproduces: 'Overproduces',
+    oscillates: 'Oscillates',
     noRecovery: 'No recovery',
     error: 'Error',
     startDependent: 'Start-dependent',
     // beside Underproduces or Overproduces off the setpoint: the rate it makes
     makesOf: (rate: string, target: string, counts?: TargetCounts) => `${rateVerbs(counts).third} ${rate}/s of ${target}/s`,
+    // beside Oscillates (oscillationWords): what the window cycles off the expected output make, and the repeat where it is proven
+    oscillatesThen: (verb: string, first: string, second: string, unit: string, expected: string) => `${verb} ${first} then ${second} items ${unit}, ${expected} expected`,
+    oscillatesRange: (verb: string, lowest: string, highest: string, unit: string, expected: string) => `${verb} ${lowest} to ${highest} items ${unit}, ${expected} expected`,
+    oscillatesRepeats: (windowCycles: number) => `repeats every ${formatNumberText(windowCycles)} window cycles`,
+    aWindowCycle: 'a window cycle',
+    eachWindowCycles: (windowCycles: number) => `each ${formatNumberText(windowCycles)} window cycles`,
+    oneCopyVerb: (verb: string) => `one copy ${verb}`,
     // beside Error: why the loss trials gave no answer, where the engine gives no reason of its own
     errorBaselineMissed: 'The run with no supply stop or output blockage did not make its expected output',
     errorNoResult: 'The loss trials gave no result',
@@ -36,6 +44,7 @@ export const SUMMARY_COPY = {
         ['Stable', 'It holds the setpoint, and it goes back to its rate by itself after a supply stop or an output blockage.'],
         ['Underproduces', 'It makes less than the setpoint.'],
         ['Overproduces', 'It makes more than the setpoint.'],
+        ['Oscillates', 'It makes the setpoint on average, but not in every window cycle.'],
         ['No recovery', 'It holds the setpoint, but it does not go back to its rate by itself after a supply stop or an output blockage.'],
         ['Error', 'The loss trials gave no answer. The line under the clock\'s name gives the reason.'],
         ['Start-dependent', 'It holds the setpoint from some start points and not from others.'],
@@ -73,6 +82,7 @@ export const SUMMARY_COPY = {
     differsNoRecovery: 'It does not go back to its rate after a supply stop or an output blockage.',
     differsUnderproduces: 'It underproduces.',
     differsOverproduces: 'It overproduces.',
+    differsOscillates: 'Its output is uneven.',
     differsNothing: 'It is not the recommended clock.',
     // the compare table
     foldedMakes: (count: number, rate: string, counts?: TargetCounts) => `All ${count} clocks ${rateVerbs(counts).base} ${rate}/s.`,
@@ -109,9 +119,32 @@ const isContender = (clock: SummaryClock) => clock.ranking.meets_target_rate;
 
 /** What a clock makes against the setpoint, in one word, and what is said beside it */
 interface OutputTerm {
-    term: typeof SUMMARY_COPY.stable | typeof SUMMARY_COPY.underproduces | typeof SUMMARY_COPY.overproduces;
-    /** "makes 180/s of 240/s" off the setpoint; the words for the engine's reason code on a shared-lane loss, where it gives one */
+    term: typeof SUMMARY_COPY.stable | typeof SUMMARY_COPY.underproduces | typeof SUMMARY_COPY.overproduces | typeof SUMMARY_COPY.oscillates;
+    /**
+     * "makes 180/s of 240/s" off the setpoint; the words for the engine's reason code on a shared-lane loss, where it gives
+     * one; the window cycles off the expected output beside Oscillates
+     */
     detail?: string;
+}
+
+/**
+ * The words beside Oscillates, from the engine's numbers (`as_built.output_reason`, code `oscillation`): what the bins off
+ * the expected output make and what a bin expects, and how often the run repeats where the repeat is proven. One bin high
+ * and one low, in the order they come: "makes 432 then 144 items a window cycle, 288 expected"; any other shape (more bins
+ * off, or a list the engine cut) by its lowest and highest bin: "makes 240 to 352 items a window cycle, 288 expected".
+ * The items are of one copy (the long run's), and a build of more copies says so: "one copy makes …".
+ */
+export function oscillationWords(facts: OscillationFacts, copies = 1, counts?: TargetCounts): string {
+    const verb = copies > 1 ? SUMMARY_COPY.oneCopyVerb(rateVerbs(counts).third) : rateVerbs(counts).third;
+    const unit = facts.window_cycles_per_bin === 1 ? SUMMARY_COPY.aWindowCycle : SUMMARY_COPY.eachWindowCycles(facts.window_cycles_per_bin);
+    const expected = formatNumberText(facts.expected);
+    const made = facts.made;
+    const off = made?.filter(items => Math.abs(items - facts.expected) > facts.tolerance) ?? [];
+    const words = off.length === 2 && (off[0] - facts.expected) * (off[1] - facts.expected) < 0
+        ? SUMMARY_COPY.oscillatesThen(verb, formatNumberText(off[0]), formatNumberText(off[1]), unit, expected)
+        : SUMMARY_COPY.oscillatesRange(verb, formatNumberText(made ? Math.min(...made) : facts.cut!.lowest.items),
+            formatNumberText(made ? Math.max(...made) : facts.cut!.highest.items), unit, expected);
+    return facts.proven && facts.repeat_window_cycles !== null ? `${words} · ${SUMMARY_COPY.oscillatesRepeats(facts.repeat_window_cycles)}` : words;
 }
 
 /**
@@ -119,9 +152,11 @@ interface OutputTerm {
  * the target (`ranking.runs_fast`: at most 0.1% over it) is Stable. Off the setpoint, by its steady run's rate:
  * below, Underproduces; above, Overproduces; with the rate beside it. At the setpoint, a clock that is not unstable is
  * Stable; an unstable one with a loss on a lane its copies share Underproduces, with the words for the engine's reason;
- * any other unstable one by its judged output against the expected output: above, Overproduces; else Underproduces.
+ * one whose long run makes the expected output on average with bins off it (the engine's reason `oscillation`) Oscillates,
+ * with its numbers; any other unstable one by its judged output against the expected output: above, Overproduces; else
+ * Underproduces.
  */
-export function outputTermOf(clock: Pick<SummaryClock, 'verdict' | 'ranking' | 'assessment' | 'checkedLanes' | 'asBuilt' | 'expectedOutputItems' | 'counts'>): OutputTerm {
+export function outputTermOf(clock: Pick<SummaryClock, 'verdict' | 'ranking' | 'assessment' | 'checkedLanes' | 'asBuilt' | 'expectedOutputItems' | 'counts' | 'copies'>): OutputTerm {
     if (clock.ranking.meets_target_rate && clock.ranking.runs_fast !== undefined) return { term: SUMMARY_COPY.stable };
     if (isOffTarget(clock)) {
         return { term: clock.ranking.rate_off_target < 0 ? SUMMARY_COPY.underproduces : SUMMARY_COPY.overproduces,
@@ -132,6 +167,8 @@ export function outputTermOf(clock: Pick<SummaryClock, 'verdict' | 'ranking' | '
         const code = clock.checkedLanes?.cause?.reason?.code;
         return { term: SUMMARY_COPY.underproduces, ...(code !== undefined && { detail: REASON_WORDS[code] }) };
     }
+    const reason = clock.asBuilt?.output_reason;
+    if (reason?.code === 'oscillation') return { term: SUMMARY_COPY.oscillates, detail: oscillationWords(reason.data, clock.copies, clock.counts) };
     const judged = clock.asBuilt?.actual_output_items;
     const above = judged !== undefined && clock.expectedOutputItems !== undefined && judged > clock.expectedOutputItems;
     return { term: above ? SUMMARY_COPY.overproduces : SUMMARY_COPY.underproduces };
@@ -148,11 +185,21 @@ export function attemptResultOf(attempt: { holds: boolean; actual_output_items: 
 
 /** A clock's status, as one word: which one, its word, and what is said beside it */
 export interface ClockStatus {
-    kind: 'start-dependent' | 'underproduces' | 'overproduces' | 'no-recovery' | 'error' | 'stable';
+    kind: 'start-dependent' | 'underproduces' | 'overproduces' | 'oscillates' | 'no-recovery' | 'error' | 'stable';
     text: string;
-    /** Beside Underproduces or Overproduces: the rate, or the words for the engine's reason code (outputTermOf); beside Error: its reason */
+    /**
+     * Beside Underproduces or Overproduces: the rate, or the words for the engine's reason code (outputTermOf); beside
+     * Oscillates: its numbers; beside Error: its reason
+     */
     detail?: string;
 }
+
+/** The kind of the status each term of outputTermOf reads, but Stable */
+const OUTPUT_KIND = {
+    [SUMMARY_COPY.underproduces]: 'underproduces',
+    [SUMMARY_COPY.overproduces]: 'overproduces',
+    [SUMMARY_COPY.oscillates]: 'oscillates',
+} as const satisfies Record<string, ClockStatus['kind']>;
 
 /**
  * Why the loss trials gave no answer, beside Error: the engine's reason where the trials could not be run
@@ -167,15 +214,14 @@ function errorReasonOf(clock: Pick<SummaryClock, 'assessment'>): string {
 
 /**
  * A clock's status: the one rule the card's chip, the compare table's Status and the full table's Status read. The first that
- * matches: it is start-dependent; it underproduces or overproduces (outputTermOf, with what is said beside it); it has no
- * recovery; its loss trials gave no answer (Error, with the reason); else it is Stable.
+ * matches: it is start-dependent; its output term is Underproduces, Overproduces or Oscillates (outputTermOf, with what is said beside it);
+ * it has no recovery; its loss trials gave no answer (Error, with the reason); else it is Stable.
  */
-export function statusOf(clock: Pick<SummaryClock, 'verdict' | 'ranking' | 'assessment' | 'checkedLanes' | 'asBuilt' | 'expectedOutputItems' | 'counts'>): ClockStatus {
+export function statusOf(clock: Pick<SummaryClock, 'verdict' | 'ranking' | 'assessment' | 'checkedLanes' | 'asBuilt' | 'expectedOutputItems' | 'counts' | 'copies'>): ClockStatus {
     if (isStartDependent(clock)) return { kind: 'start-dependent', text: SUMMARY_COPY.startDependent };
     const output = outputTermOf(clock);
     if (output.term !== SUMMARY_COPY.stable) {
-        return { kind: output.term === SUMMARY_COPY.underproduces ? 'underproduces' : 'overproduces', text: output.term,
-            ...(output.detail !== undefined && { detail: output.detail }) };
+        return { kind: OUTPUT_KIND[output.term], text: output.term, ...(output.detail !== undefined && { detail: output.detail }) };
     }
     const recovery = recoversOf(clock).kind;
     if (clock.verdict === 'no recovery' && recovery === 'no') return { kind: 'no-recovery', text: SUMMARY_COPY.noRecovery };
@@ -360,7 +406,8 @@ export function differenceFromRecommended(selected: SummaryClock, recommended: S
     } else if (selectedRecovery.kind === 'not-tested' && selected.assessment.holds && recommendedRecovery.kind !== 'not-tested') {
         sentences.push('Recovery results are unavailable for this clock.');
     } else if (termDiffers) {
-        sentences.push(selectedTerm === SUMMARY_COPY.overproduces ? SUMMARY_COPY.differsOverproduces : SUMMARY_COPY.differsUnderproduces);
+        sentences.push(selectedTerm === SUMMARY_COPY.overproduces ? SUMMARY_COPY.differsOverproduces
+            : selectedTerm === SUMMARY_COPY.oscillates ? SUMMARY_COPY.differsOscillates : SUMMARY_COPY.differsUnderproduces);
     }
     return sentences.length === 0 ? SUMMARY_COPY.differsNothing : sentences.slice(0, 2).join(' ');
 }

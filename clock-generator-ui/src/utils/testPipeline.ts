@@ -11,7 +11,7 @@ import { rateVerbs } from './targetCounts';
 
 /** The fields of a clock its tests are read from */
 export type PipelineClock = Pick<ClockAlternativeView, 'assessment' | 'ranking' | 'copies'>
-    & Partial<Pick<ClockAlternativeView, 'checkedLanes' | 'counts'>>;
+    & Partial<Pick<ClockAlternativeView, 'checkedLanes' | 'counts' | 'asBuilt'>>;
 
 /** What a box says of its test */
 export type TestState = 'passed' | 'failed' | 'not-run' | 'does-not-apply' | 'error';
@@ -78,12 +78,16 @@ function rateResult(clock: PipelineClock, rate: number): string {
         : TEST_PIPELINE_COPY.holds(text(target));
 }
 
-/** Test 1: one copy alone, the clock-only check (`assessment.holds`) */
+/**
+ * Test 1: one copy alone, the clock-only check (`assessment.holds`). Failed off the setpoint, its rate; at it, the status
+ * Oscillates where the engine gives its reason (`as_built.output_reason`, as the status reads it), else that it does not hold
+ */
 function oneCopyBox(clock: PipelineClock): TestBox {
     const box = { test: 'one-copy' as const, name: TEST_PIPELINE_COPY.oneCopy, detail: TEST_PIPELINE_COPY.steadyState };
     const rate = clock.assessment.items_per_second;
     if (clock.assessment.holds) return { ...box, state: 'passed', result: rateResult(clock, rate) };
-    const result = isOffTarget(clock) ? rateResult(clock, rate) : TEST_PIPELINE_COPY.doesNotHold;
+    const result = isOffTarget(clock) ? rateResult(clock, rate)
+        : clock.asBuilt?.output_reason?.code === 'oscillation' ? SUMMARY_COPY.oscillates : TEST_PIPELINE_COPY.doesNotHold;
     return { ...box, state: 'failed', result };
 }
 

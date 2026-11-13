@@ -62,6 +62,14 @@ describe("candidate verification identity", () => {
                 as_built: {...check, failed_pickup_phases: {"inserter:1": [4, 0]}}}}));
     });
 
+    it("leaves out the output reason, which is read off the same long run as the rest of the check", () => {
+        const check = {holds: false, actual_output_items: 288, start_phases_checked: 1, long_run_proven: true, failed_start_offset: 0};
+        const without = signature(config, {...result, stability_check: {...result.stability_check, as_built: check}});
+        const reason = {code: "oscillation" as const, data: {expected: 288, window_cycles_per_bin: 1, tolerance: 16, bins: 2, made: [432, 144],
+            proven: true, repeat_window_cycles: 2}};
+        expect(signature(config, {...result, stability_check: {...result.stability_check, as_built: {...check, output_reason: reason}}})).toBe(without);
+    });
+
     it("does not equate fractional AUTO fuel controls with whole-swing controls", async () => {
         const fuel = await loadConfigFromFile(TestConfigPaths.BIOCHAMBER_FUEL);
         const built = generateClockForConfig(fuel, options);

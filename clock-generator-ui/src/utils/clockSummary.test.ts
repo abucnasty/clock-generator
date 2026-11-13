@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ClockRanking, ClockVerdict } from 'clock-generator/browser';
+import type { ClockRanking, ClockVerdict, OscillationFacts } from 'clock-generator/browser';
 import { rateWarningOf } from './rateWarning';
 import { startCheckSummary } from './modelAssumptions';
 import {
@@ -15,6 +15,7 @@ import {
     recoversOf,
     lossLimitText,
     minutesAndSecondsText,
+    oscillationWords,
     pickNameMeaning,
     statusOf,
     wakeUpsText,
@@ -198,6 +199,74 @@ describe('outputTermOf', () => {
     it('says the rate with the verb of a target that counts the item destroyed', () => {
         const destroyed = { ...clock('a', { meets_target_rate: false, rate_off_target: -40 }), counts: 'destroyed' as const };
         expect(outputTermOf(destroyed).detail).toBe('destroys 200/s of 240/s');
+    });
+});
+
+/** The engine's numbers of a long run whose mean is the expected output and whose bins are uneven (`as_built.output_reason`) */
+function oscillation(made: number[] | null, options: Partial<OscillationFacts> = {}): OscillationFacts {
+    return { expected: 288, window_cycles_per_bin: 1, tolerance: 16, bins: made?.length ?? 90, proven: true, repeat_window_cycles: made?.length ?? 90,
+        ...(made !== null && { made }), ...options };
+}
+
+/** A clock at the setpoint that does not hold, whose long run has the numbers given */
+function oscillating(facts: OscillationFacts, copies = 1): SummaryClock {
+    return { ...clock('o', { verdict: 'unstable' }), copies, expectedOutputItems: 288,
+        asBuilt: { holds: false, actual_output_items: 288, start_phases_checked: 1, output_reason: { code: 'oscillation', data: facts } } };
+}
+
+/** 26 window cycles of 288 items, but those given */
+const repeatOf = (pairs: [number, number][]) => {
+    const made = new Array<number>(26).fill(288);
+    for (const [at, items] of pairs) made[at] = items;
+    return made;
+};
+
+describe('Oscillates: a clock whose long run makes the expected output on average, with window cycles off it', () => {
+    it.each<[string, OscillationFacts, number, string]>([
+        ['one high and one low window cycle, the repeat proven', oscillation(repeatOf([[1, 432], [17, 144]])), 1,
+            'makes 432 then 144 items a window cycle, 288 expected · repeats every 26 window cycles'],
+        ['one low then one high, in the order they come', oscillation(repeatOf([[3, 144], [9, 432]])), 1,
+            'makes 144 then 432 items a window cycle, 288 expected · repeats every 26 window cycles'],
+        ['several window cycles off: the lowest and the highest', oscillation(repeatOf([[0, 320], [3, 352], [9, 240], [20, 240]])), 1,
+            'makes 240 to 352 items a window cycle, 288 expected · repeats every 26 window cycles'],
+        ['two off on the same side: the lowest and the highest', oscillation(repeatOf([[1, 320], [2, 320], [5, 272], [6, 272], [7, 272], [8, 272]])), 1,
+            'makes 272 to 320 items a window cycle, 288 expected · repeats every 26 window cycles'],
+        ['a sampled run: no repeat said', oscillation(repeatOf([[1, 432], [17, 144]]), { proven: false, repeat_window_cycles: null }), 1,
+            'makes 432 then 144 items a window cycle, 288 expected'],
+        ['a list the engine cut: its highest and lowest', oscillation(null, { cut: { highest: { at: 5, items: 432 }, lowest: { at: 84, items: 144 } } }), 1,
+            'makes 144 to 432 items a window cycle, 288 expected · repeats every 90 window cycles'],
+        ['bins of a fractional window cycle\'s repeat', oscillation(repeatOf([[1, 432], [17, 144]]), { window_cycles_per_bin: 19, repeat_window_cycles: 26 * 19 }), 1,
+            'makes 432 then 144 items each 19 window cycles, 288 expected · repeats every 494 window cycles'],
+        ['a build of more copies: the items are of one copy', oscillation(repeatOf([[1, 432], [17, 144]])), 9,
+            'one copy makes 432 then 144 items a window cycle, 288 expected · repeats every 26 window cycles'],
+    ])('%s', (_, facts, copies, words) => {
+        expect(oscillationWords(facts, copies)).toBe(words);
+        expect(outputTermOf(oscillating(facts, copies))).toEqual({ term: 'Oscillates', detail: words });
+        expect(statusOf(oscillating(facts, copies))).toEqual({ kind: 'oscillates', text: 'Oscillates', detail: words });
+    });
+
+    it('says the verb of a target that counts the item destroyed', () => {
+        expect(oscillationWords(oscillation(repeatOf([[1, 432], [17, 144]])), 1, 'destroyed')).toMatch(/^destroys 432 then 144/);
+    });
+
+    it('comes after the rate off the setpoint and after a loss on a shared lane', () => {
+        const facts = oscillation(repeatOf([[1, 432], [17, 144]]));
+        const off = { ...oscillating(facts), ranking: { ...oscillating(facts).ranking, meets_target_rate: false, rate_off_target: -48 } };
+        off.assessment = { ...off.assessment, items_per_second: 192 };
+        expect(statusOf(off)).toEqual({ kind: 'underproduces', text: 'Underproduces', detail: 'makes 192/s of 240/s' });
+        expect(statusOf(withLoss(oscillating(facts))).kind).toBe('underproduces');
+    });
+
+    it('is the chip\'s word and the Status column\'s, and how a selected clock differs', () => {
+        const clocks = [clock('r'), oscillating(oscillation(repeatOf([[1, 432], [17, 144]])))];
+        expect(clockBadges(clocks, 1)).toEqual([{ kind: 'status', status: 'oscillates', text: 'Oscillates',
+            detail: 'makes 432 then 144 items a window cycle, 288 expected · repeats every 26 window cycles' }]);
+        expect(differenceFromRecommended(clocks[1], clocks[0])).toBe(SUMMARY_COPY.differsOscillates);
+    });
+
+    it('is not given without the engine\'s reason: Underproduces stays for a clock at the setpoint that does not hold', () => {
+        const plain = { ...clock('a', { verdict: 'unstable' }), asBuilt: { holds: false, actual_output_items: 288, start_phases_checked: 1 }, expectedOutputItems: 288 };
+        expect(statusOf(plain)).toEqual({ kind: 'underproduces', text: 'Underproduces' });
     });
 });
 
@@ -452,11 +521,11 @@ describe('statusOf: the one status the chip, the Status column and the full tabl
 describe('the help of the Status column', () => {
     it('names every status the column can show, each once', () => {
         const help = SUMMARY_COPY.statusHelp.map(([word, meaning]) => `${word}: ${meaning}`).join(' ');
-        for (const word of ['Stable', 'Underproduces', 'Overproduces', 'No recovery', 'Error', 'Start-dependent']) {
+        for (const word of ['Stable', 'Underproduces', 'Overproduces', 'Oscillates', 'No recovery', 'Error', 'Start-dependent']) {
             expect(help.split(word).length - 1, word).toBe(1);
         }
         expect(SUMMARY_COPY.statusHelp.map(([word]) => word)).toEqual([SUMMARY_COPY.stable, SUMMARY_COPY.underproduces, SUMMARY_COPY.overproduces,
-            SUMMARY_COPY.noRecovery, SUMMARY_COPY.error, SUMMARY_COPY.startDependent]);
+            SUMMARY_COPY.oscillates, SUMMARY_COPY.noRecovery, SUMMARY_COPY.error, SUMMARY_COPY.startDependent]);
     });
 });
 

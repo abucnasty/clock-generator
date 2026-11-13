@@ -3,6 +3,7 @@ import type { ClockAlternativeView } from '../worker/types';
 import { AUTOMATION_240, errorCaseViews, TRIALS_NOT_MADE_REASON, viewOf } from '../test/checkedLanesFixtures';
 import { SUMMARY_COPY } from './clockSummary';
 import { testPipelineOf, type TestBox } from './testPipeline';
+import { oscillatingOf } from '../test/oscillationFixture';
 
 /** Each box as "state: result | detail" */
 const said = (clock: ClockAlternativeView) => testPipelineOf(clock).map((box: TestBox) => `${box.state}: ${box.result} | ${box.detail}`);
@@ -93,5 +94,17 @@ describe('the tests of a clock, from the result\'s data', () => {
         const trial = stable.assessment.disturbance_trial!;
         const untried = { ...stable, assessment: { ...stable.assessment, disturbance_trial: { ...trial, on_copies: { ...trial.on_copies!, not_tried: 'out of memory' } } } };
         expect(said(untried)[2]).toBe('passed: One copy recovers | The copies could not be tried: out of memory.');
+    });
+});
+
+describe('the first box of a clock whose status is Oscillates', () => {
+    it('says the status, as the chip does, where the clock does not hold at the setpoint', () => {
+        expect(said(oscillatingOf(clock('time_study_windows')))[0]).toBe('failed: Oscillates | At steady state, from a cold start.');
+    });
+
+    it('says the rate first where the clock is off the setpoint', () => {
+        const off = oscillatingOf(clock('time_study_windows'));
+        const shown = { ...off, ranking: { ...off.ranking, rate_off_target: -48 }, assessment: { ...off.assessment, items_per_second: 192 } };
+        expect(said(shown)[0]).toBe('failed: Makes 192/s of 240/s | At steady state, from a cold start.');
     });
 });

@@ -64,8 +64,8 @@ export interface ClockRanking {
     window_count: number;
 }
 
-/** Items per second an alternative may be off the target rate by and still meet it */
-const TARGET_RATE_TOLERANCE = 1e-6;
+/** Items per second an alternative may be off the target rate by and still meet it (over all copies) */
+export const TARGET_RATE_TOLERANCE = 1e-6;
 
 /**
  * The share of the target rate a clock rounded down to whole ticks may run above it and still meet goal 1 (decided

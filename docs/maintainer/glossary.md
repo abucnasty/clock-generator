@@ -523,6 +523,17 @@ _Avoid_: Does not hold its rate (as the status), Misses the rate (as the status)
 The status of a clock that makes more than its setpoint. The site gives the rate of the clock next to it. The
 generator accepts some rounded clocks as at their setpoint. They run at most 0.1% fast and do not have this status. A project technical noun: the game and STE have no entry for it. Do not write overproduce as a verb.
 
+**Oscillates**:
+The status of a clock that makes its setpoint on average, but not in each window cycle. The output of one or more window
+cycles is off the expected output by more than the tolerance of one hand. The output is an **Oscillation**: it repeats
+with a period that the clock does not set. Next to the status, the site gives the window cycles that are off and the
+expected output, for example "makes 432 then 144 items a window cycle, 288 expected · repeats every 26 window cycles".
+It gives the repeat only when the generator proves it. The boundary with **Steady state**: an output that repeats over
+a whole number of window cycles is a steady state, and it is not constant. While each window cycle is within one hand of
+the expected output, the clock does not have this status. A project technical noun. Do not write oscillate as a verb
+for the clock.
+_Avoid_: Underproduces (as the status of a clock that makes its setpoint on average)
+
 **No recovery**:
 The status of a clock that holds its setpoint at steady state. After one or more disturbance trials, the clock has no
 recovery. A project technical noun: STE has no entry for recovery.

@@ -43,7 +43,7 @@ export function notTriedOf(alternative: Pick<ClockAlternativeView, 'assessment'>
  * at the target rate on a build without the risk.
  */
 export function rateWarningOf(
-    alternative: Pick<ClockAlternativeView, 'verdict' | 'assessment' | 'ranking' | 'deadlockRisk' | 'checkedLanes'> | undefined,
+    alternative: (Pick<ClockAlternativeView, 'verdict' | 'assessment' | 'ranking' | 'deadlockRisk' | 'checkedLanes'> & Partial<Pick<ClockAlternativeView, 'asBuilt'>>) | undefined,
 ): string | null {
     if (!alternative) {
         return null;
@@ -61,7 +61,7 @@ const DEADLOCK_RISK_NOTE = 'deadlock-risk';
  * "About this build" keeps how a deadlock comes about. A result without that note keeps the engine's whole text.
  */
 export function cardWarningOf(
-    alternative: Pick<ClockAlternativeView, 'verdict' | 'assessment' | 'ranking' | 'deadlockRisk' | 'checkedLanes' | 'insights'> | undefined,
+    alternative: (Pick<ClockAlternativeView, 'verdict' | 'assessment' | 'ranking' | 'deadlockRisk' | 'checkedLanes' | 'insights'> & Partial<Pick<ClockAlternativeView, 'asBuilt'>>) | undefined,
 ): string | null {
     if (!alternative) {
         return null;
@@ -72,7 +72,7 @@ export function cardWarningOf(
 }
 
 function clockWarningOf(
-    alternative: Pick<ClockAlternativeView, 'verdict' | 'assessment' | 'ranking' | 'checkedLanes'>,
+    alternative: Pick<ClockAlternativeView, 'verdict' | 'assessment' | 'ranking' | 'checkedLanes'> & Partial<Pick<ClockAlternativeView, 'asBuilt'>>,
 ): string | null {
     const warnings: string[] = [];
     if (alternative.assessment.start_dependence?.verdict === 'start-dependent') {
@@ -105,10 +105,16 @@ function clockWarningOf(
             + `${figure(target)}/s in the simulator.`);
     }
     if (alternative.assessment.holds === false) {
-        warnings.push('This clock does not hold its expected output in the modeled clock checks.');
+        // at the setpoint, a clock whose status is Oscillates (outputTermOf: the engine's reason `oscillation`) says what it means
+        const oscillates = alternative.asBuilt?.output_reason?.code === 'oscillation' && Math.abs(alternative.ranking.rate_off_target) < MIN_SHORTFALL
+            && (alternative.assessment.shared_lane_losses?.length ?? 0) === 0;
+        warnings.push(oscillates ? OSCILLATES_WARNING : 'This clock does not hold its expected output in the modeled clock checks.');
     }
     return warnings.join(' ') || null;
 }
+
+/** The line of a clock whose status is Oscillates, in place of the one of a clock that does not hold */
+const OSCILLATES_WARNING = 'This clock makes the setpoint on average, but not in every window cycle.';
 
 /** Whether a clock runs short of the target rate by enough to say so on the Copy button */
 export function isBelowTarget(alternative: Pick<ClockAlternativeView, 'ranking'> | undefined): boolean {

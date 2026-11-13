@@ -12,6 +12,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 ## [Unreleased]
 
 ### Added
+- ui: a clock that makes its rate only on average reads Oscillates, with an output chart
 - ui: a Diagnostics tab shows the selected clock's tests, shared lanes and why it is not stable
 - ui: the form sets each belt's flow direction and each lane's end, supply rate and sharing
 
