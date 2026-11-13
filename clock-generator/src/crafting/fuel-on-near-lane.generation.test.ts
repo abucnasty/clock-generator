@@ -24,6 +24,11 @@ describe("a clock of a build that takes fuel off the near lane of a belt", () =>
         expect(without.stability_check.as_built?.holds).toBe(false);
         const primary = planClockAlternatives(config, { logger: quiet }).primary!.alternatives[0];
         expect(primary.result.fuel_hand_room_ticks).toEqual({ "inserter:1": 6, "inserter:2": 6, "inserter:11": 6 });
+        // the description names the room and why the clock has it
+        expect(primary.description).toContain("The inserters (1, 2 and 11) that take bioflux and nutrients take fuel off the belt as well as an "
+            + "ingredient and stay enabled 6 more ticks after each enable window, on top of the room for one more hand: the fuel is on the lane "
+            + "nearest to them, so a hand of fuel comes whenever the fuel slot has room, and the hand the enable window is planned for comes a "
+            + "hand cycle later, and this clock did not hold the expected output without the room for it.");
         expect(primary.assessment.holds).toBe(true);
         expect(primary.result.stability_check.as_built?.actual_output_items).toBe(800);
     }, 300_000);

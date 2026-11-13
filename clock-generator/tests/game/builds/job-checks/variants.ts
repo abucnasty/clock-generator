@@ -13,16 +13,18 @@ const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 const selectedOf = (generated: ClockAlternativesResult): ClockAlternative => generated.alternatives[generated.selected_index];
 const byMaker = (generated: ClockAlternativesResult, maker: string): ClockAlternative => generated.alternatives.find(alternative => alternative.maker === maker)!;
 
-// Agricultural science with its belts backed up (AGRICULTURAL_SCIENCE_250_BACKED_UP). Three inserters take bioflux off a belt for their
-// biochambers, and the nutrients the biochambers burn. Without room for a hand of nutrients the windows of batched swings close on partly filled
-// hands of bioflux: recorded on the scaffold, 377 of 400 a window cycle.
+// Agricultural science with its belts backed up (AGRICULTURAL_SCIENCE_250_BACKED_UP). Three inserters (1, 2 and 11) take bioflux off a belt
+// for their biochambers, and the nutrients the biochambers burn, with the nutrients on their near lane. The batched swings do not hold the
+// expected output, so they are made again with room for the hand a hand of fuel delays (6 ticks each). That clock does not hold either,
+// and a clock made again is kept only where it holds: the batched swings are offered without the room, and their description names none.
+// The words of the room on a clock that keeps it: fuel-on-near-lane.generation.test.ts.
 const agriculturalBackedUp: JobCheck[] = [{
-    name: 'makes batched swings with room for a hand of fuel, as a clock for a backed-up belt',
+    name: 'offers the batched swings for a backed-up belt with no room for fuel, and their description names none',
     run: ({ generated }) => {
         const batched = byMaker(generated, 'planned-belt-slack');
         expect(batched.label).toBe('Takt Batches: 5 output swings each output cycle');
-        expect(batched.result.fuel_hand_room_ticks).toEqual({ 'inserter:1': 4, 'inserter:2': 4, 'inserter:11': 4 });
-        expect(batched.description).toContain('The inserters (1, 2 and 11) that take bioflux and nutrients take fuel off the belt as well as an ingredient and stay enabled 4 more ticks');
+        expect(batched.result.fuel_hand_room_ticks).toEqual({});
+        expect(batched.description).not.toContain('take fuel off the belt as well as an ingredient');
     },
 }];
 
