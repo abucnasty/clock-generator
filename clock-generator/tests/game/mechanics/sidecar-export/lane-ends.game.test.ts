@@ -23,8 +23,8 @@ const SCAFFOLD = ConfigPaths.GRENADE_240_FILLS_BELT_EXACTLY.replace(/\.json$/, "
 const TICKS = 600;
 const LANE_ITEMS = ["iron-plate", "copper-plate"] as const;
 
-type End = "dead_end" | "outlet" | "unknown";
-interface ExportedLane { ingredient: string; lane_end?: { kind: End; outlet_rate?: number }; consumption_per_second?: number }
+type End = "dead_end" | "infinite" | "unknown";
+interface ExportedLane { ingredient: string; lane_end?: Record<string, unknown>; consumption_per_second?: number }
 interface ExportedBelt { id: number; type: string; flow_direction?: number; lanes: ExportedLane[] }
 /** Lua writes an empty table as {} */
 interface CaseReport { name: string; belts: ExportedBelt[] | Record<string, never>; other_items?: (string[] | Record<string, never>)[] }
@@ -41,7 +41,7 @@ const EXPECTED: Record<string, { ends: [End, End] | null; flow_direction: number
     // the line goes on beyond the selection: the export does not see its end
     "runs-past-the-selection": { ends: ["unknown", "unknown"], flow_direction: 4 },
     // a loader as fast as the belt into an infinity chest that removes everything: nothing in view limits the lanes
-    "runs-on-into-a-loader-that-takes-everything": { ends: ["outlet", "outlet"], flow_direction: 4 },
+    "runs-on-into-a-loader-that-takes-everything": { ends: ["infinite", "infinite"], flow_direction: 4 },
     // a chest that fills up limits them, at a rate the export does not know
     "runs-on-into-a-loader-that-fills-a-chest": { ends: ["unknown", "unknown"], flow_direction: 4 },
     // the items run under the hood of an entrance without an exit and stop there
@@ -91,10 +91,9 @@ test("Sidecar exports the end of each lane and the way the items move for a belt
             expect(belt.lanes.map(lane => lane.ingredient), name).toEqual([...LANE_ITEMS]);
             expect(BeltConfigSchema.safeParse(belt).success, name).toBe(true);
             expect(belt.lanes.some(lane => lane.consumption_per_second !== undefined), name).toBe(false);
-            expect({ name, ends: expected.ends === null ? null : belt.lanes.map(lane => lane.lane_end?.kind),
-                outlet_rates: belt.lanes.map(lane => lane.lane_end?.outlet_rate) }).toEqual({ name,
-                ends: expected.ends === null ? null : expected.ends, outlet_rates: [undefined, undefined] });
-            if (expected.ends === null) expect(belt.lanes.map(lane => lane.lane_end), name).toEqual([undefined, undefined]);
+            // each end is its kind and nothing more
+            expect({ name, ends: belt.lanes.map(lane => lane.lane_end) }).toStrictEqual({ name,
+                ends: expected.ends === null ? [undefined, undefined] : expected.ends.map(kind => ({ kind })) });
             expect({ name, flow_direction: belt.flow_direction ?? null }).toEqual({ name, flow_direction: expected.flow_direction });
             if (expected.flows !== undefined) {
                 // in the game only the lane that goes on reaches the other belt, and the export's dead end is the other lane

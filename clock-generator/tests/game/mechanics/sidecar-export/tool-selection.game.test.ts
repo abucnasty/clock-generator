@@ -29,12 +29,12 @@ interface CaseReport { name: string; mode: "select" | "alt_select"; belts: numbe
  */
 const EXPECTED: Record<string, string[]> = {
     // the loader and its chest are in the selection, so the export sees that nothing in view limits the lanes
-    "line-into-a-loader-into-a-chest-that-removes-everything": ["outlet", "outlet"],
+    "line-into-a-loader-into-a-chest-that-removes-everything": ["infinite", "infinite"],
     // a chest that fills up limits them, at a rate the export does not know
     "line-into-a-loader-into-a-chest-that-keeps-what-it-gets": ["unknown", "unknown"],
 };
 
-test("Sidecar exports a line that ends in a loader into a chest that removes everything as an outlet, from a selection of its tool", async context => {
+test("Sidecar exports a line that ends in a loader into a chest that removes everything as an infinite end, from a selection of its tool", async context => {
     const factorio = process.env.FACTORIO_PATH;
     const save = process.env.FACTORIO_HARNESS_SAVE;
     context.skip(!factorio || !save || !fs.existsSync(save), "Factorio harness is not configured");
