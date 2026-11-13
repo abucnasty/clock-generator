@@ -141,6 +141,21 @@ it('keeps an out-of-order recycler machine target, byproduct belt, and bend capt
         pickup_layout: 'bend-right-upstream', pickup_capture: capture });
 });
 
+it('suggests no more than the output belt carries: nine automation science assemblers make 248.006 a second onto a belt of 240', async () => {
+    const machines = Array.from({ length: 9 }, (_, i) => ({ id: i + 1, recipe: 'automation-science-pack', crafting_speed: 68.890625,
+        productivity: 100, prototype: 'assembling-machine-3' }));
+    const pasted = await ask({
+        kind: 'pasted-entities', sidecar_version: LATEST_SIDECAR_VERSION, drills: [], chests: [], machines,
+        suggested_target: { recipe: 'automation-science-pack', items_per_second: 248.00625000000002, copies: 1 },
+        belts: [{ id: 2, type: 'turbo-transport-belt', lanes: [{ ingredient: 'automation-science-pack', stack_size: 4 }] }],
+        inserters: machines.map(machine => ({ id: machine.id, source: { type: 'machine', id: machine.id }, sink: { type: 'belt', id: 2 },
+            prototype: 'stack-inserter', quality: 'legendary' })),
+    });
+    expect(pasted.suggested_target).toEqual({ _tag: 'Some', value: {
+        target: { recipe: 'automation-science-pack', items_per_second: 240, copies: 1 }, source: 'mod',
+        belt_limit: { belt_id: 2, machines_per_second: 248.00625000000002 } } });
+});
+
 describe('repeated units: the real engine separates Check and generation recovery, the recomputed conversion and query failure', () => {
     /**
      * Eight gear assemblers between the same two belts, eight repeated units set as half a copy; as 4 copies they take 7

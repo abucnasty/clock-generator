@@ -219,6 +219,13 @@ describe("suggestedTargetOf, held to the belt the product is put on", () => {
         }
     });
 
+    it("keeps the reason for an export the sidecar already lowered to what the belt carries", () => {
+        const { machines, outputs } = pasted(9);
+        const lowered = { recipe: "automation-science-pack", items_per_second: 240, copies: 1 };
+        expect(O.toNullable(suggestedTargetOf(lowered, machines, outputs))).toEqual({ target: lowered, source: "mod",
+            belt_limit: { belt_id: 2, machines_per_second: from_mod(machines).items_per_second } });
+    });
+
     it("lowers it to a slower belt: a fast belt carries 120, which the engine's most for the build says too", () => {
         const { machines, outputs } = pasted(9, { type: "fast-transport-belt" });
         const suggested = O.toNullable(suggestedTargetOf(from_mod(machines), machines, outputs));

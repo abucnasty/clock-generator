@@ -166,7 +166,7 @@ end
 --- 3. The lanes are both lanes when the belt lists one, else the lanes that list the product, each at its stack size.
 ---@param product string The suggested product
 ---@param machines {id: number, recipe: string, places_results: boolean}[] The exported machines
----@param inserters {source: table, sink: table, filters: string[]|nil}[] The exported inserters, with their config ends
+---@param inserters {source: table, sink: table, filters: string[]|nil}[] The exported inserters, with their ends as the export gives them
 ---@param belts table<number, {belt_type: string, lanes: {ingredient: string|nil, stack_size: number}[]}> The exported belts by id
 ---@return {belt_id: number, items_per_second: number}|nil
 function suggested_target.output_belt(product, machines, inserters, belts)

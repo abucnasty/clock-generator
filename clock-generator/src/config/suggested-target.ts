@@ -168,14 +168,26 @@ function outputBeltOf(product: string, machines: readonly MachineConfiguration[]
  * every selected machine in it, and the conversion to copies keeps the rate, so the total is what the belt takes.
  */
 function heldToOutputBelt(suggestion: SuggestedTarget, machines: readonly MachineConfiguration[], outputs: PastedOutputs): SuggestedTarget {
-    const belt = outputBeltOf(suggestion.target.recipe, machines, outputs);
-    const made = suggestion.target.items_per_second;
-    if (belt === null || !(made > belt.items_per_second)) return suggestion;
+    const product = suggestion.target.recipe;
+    const belt = outputBeltOf(product, machines, outputs);
+    // what the machines make, from their facts too: a sidecar that holds its suggestion to the belt exports the belt's rate
+    const made = Math.max(suggestion.target.items_per_second, machinesRateOf(product, machines));
+    // a suggestion below the belt's rate is not the belt's doing, and stays as it is
+    if (belt === null || !(made > belt.items_per_second) || suggestion.target.items_per_second < belt.items_per_second) return suggestion;
     return {
         ...suggestion,
         target: { ...suggestion.target, items_per_second: belt.items_per_second },
         belt_limit: { belt_id: belt.belt_id, machines_per_second: made },
     };
+}
+
+/** What the pasted machines whose main product it is make of a product together at their maximum (rule 6 above) */
+function machinesRateOf(product: string, machines: readonly MachineConfiguration[]): number {
+    const by_recipe = new Map<string, MachineConfiguration[]>();
+    for (const machine of machines.filter(it => mainProductOf(it.recipe) === product)) {
+        by_recipe.set(machine.recipe, [...(by_recipe.get(machine.recipe) ?? []), machine]);
+    }
+    return [...by_recipe.entries()].reduce((sum, [recipe, of_recipe]) => sum + (recipeGroupOf(recipe, of_recipe)?.items_per_second ?? 0), 0);
 }
 
 /**

@@ -386,7 +386,7 @@ function validateEntries<T>(schema: z.ZodType<T>, entries: unknown, label: strin
 function pastedEntities(pasted: Extract<EngineQuery, { kind: 'pasted-entities' }>): PastedEntities {
     // IDs are already assigned by the mod
     const machines = validateEntries(clockGenerator.MachineConfigurationSchema, pasted.machines, 'machine');
-    // checked in this order, so the first entry the schema rejects is the one named
+    // in this order, so that the error names the first entry the schema rejects
     const drills = validateEntries(clockGenerator.MiningDrillConfigSchema, pasted.drills, 'drill');
     const inserters = validateEntries(clockGenerator.InserterConfigSchema, clockGenerator.sidecarPickupInserters(pasted.inserters, pasted.sidecar_version, pasted.pickup_warnings), 'inserter');
     const belts = validateEntries(clockGenerator.BeltConfigSchema, pasted.belts, 'belt');
