@@ -11,6 +11,8 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ## [Unreleased]
 
+## [0.29.1] - 2026-11-14
+
 ### Changed
 - generation: builds with many moving belt pickups now get their recovery checked
 
