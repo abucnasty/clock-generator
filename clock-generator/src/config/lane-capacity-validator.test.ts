@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { assertLaneCapacity, laneCapacityIssues, laneLoads, lanesExactlyFull, lanesExactlyFullWarning, lanesSharedByCopies, laneSharedByCopiesWarning, warnLanesSharedByCopies } from './lane-capacity-validator';
-import { FeasibilityError, LaneCapacityError } from './errors';
-import { Config } from './schema';
+import { assertLaneCapacity, describeOnePerCopyFeed, laneCapacityIssues, onePerCopyFeeds, laneLoads, laneRateIssues, lanesExactlyFull, lanesExactlyFullWarning, lanesSharedByCopies, laneSharedByCopiesWarning, sharedLaneSupplyIssues, warnLanesSharedByCopies } from './lane-capacity-validator';
+import { FeasibilityError, LaneCapacityError, LaneRateError, SharedLaneSupplyError } from './errors';
+import { Config, ConfigSchema } from './schema';
 import { validateConfig } from '../crafting/plan/validate-config';
 import { ConfigPaths } from './config-paths';
 import { loadConfigFromFile } from './loader';
@@ -25,6 +25,9 @@ const belt = (id: number, lanes: [string] | [string, string], type: Belt['type']
 
 const inserter = (id: number, source: Inserter['source'], sink: Inserter['sink']): Inserter => ({ id, source, sink });
 
+/** A belt whose lanes move on past the build: an infinite end on each */
+const moving = (belt: Belt): Belt => ({ ...belt, lanes: belt.lanes.map(lane => ({ ...lane, lane_end: { kind: 'infinite' } })) as Belt['lanes'] });
+
 /**
  * Gear assemblers (2 iron plates a gear) fed from belt 1 (or an infinity chest) and dropping onto belt 2: the plates taken are twice the gears
  * a second, the gears dropped the target. Fast enough for any target here.
@@ -35,7 +38,7 @@ const gears = (parts: { items_per_second: number; copies?: number; machines?: nu
     return {
         setpoint: { recipe: 'iron-gear-wheel', items_per_second: parts.items_per_second, copies: parts.copies ?? 1 },
         machines: machines.map(id => ({ id, recipe: 'iron-gear-wheel', productivity: 0, crafting_speed: 1000 })),
-        belts: [...(chest ? [] : [parts.input as Belt | undefined ?? belt(1, ['iron-plate'])]), parts.output ?? belt(2, ['iron-gear-wheel'])],
+        belts: [...(chest ? [] : [moving(parts.input as Belt | undefined ?? belt(1, ['iron-plate']))]), parts.output ?? belt(2, ['iron-gear-wheel'])],
         ...(chest ? { chests: [{ id: 1, type: 'infinity-chest' as const, item_filter: [{ item_name: 'iron-plate', request_count: 100 }] }] } : {}),
         inserters: machines.flatMap(id => [
             inserter(2 * id - 1, { type: chest ? 'chest' : 'belt', id: 1 }, { type: 'machine', id }),
@@ -97,7 +100,7 @@ describe('takes from a lane', () => {
             setpoint: { recipe: 'electronic-circuit', items_per_second, copies: 1 },
             machines: [{ id: 1, recipe: 'electronic-circuit', productivity: 0, crafting_speed: 1000 }],
             belts: [
-                { id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }, { ingredient: 'copper-cable', stack_size: cable_stack }] },
+                { id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4, lane_end: { kind: 'infinite' } }, { ingredient: 'copper-cable', stack_size: cable_stack, lane_end: { kind: 'infinite' } }] },
                 belt(2, ['electronic-circuit']),
             ],
             inserters: [inserter(1, { type: 'belt', id: 1 }, { type: 'machine', id: 1 }), inserter(2, { type: 'machine', id: 1 }, { type: 'belt', id: 2 })],
@@ -156,7 +159,7 @@ describe('drops onto a lane', () => {
         const config: Config = {
             setpoint: { recipe: 'iron-gear-wheel', items_per_second: 60, copies: 1 },
             machines: [{ id: 1, recipe: 'iron-gear-wheel', productivity: 0, crafting_speed: 1000 }],
-            belts: [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }, { ingredient: 'iron-gear-wheel', stack_size: 1 }] }],
+            belts: [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4, lane_end: { kind: 'infinite' } }, { ingredient: 'iron-gear-wheel', stack_size: 1 }] }],
             inserters: [inserter(1, { type: 'belt', id: 1 }, { type: 'machine', id: 1 }), inserter(2, { type: 'machine', id: 1 }, { type: 'belt', id: 1 })],
         };
         expect(issuesOf(config)).toEqual([
@@ -172,25 +175,59 @@ describe('copies', () => {
         ]);
     });
 
-    it('only warns when the copies summed are over capacity', () => {
+    it('refuses the takes of copies that share a lane above its supply rate', () => {
         // 3 copies of a unit that takes 96 plates a second of a lane of 120: 288 if they share it
         const config = gears({ items_per_second: 3 * 48, copies: 3 });
         expect(laneCapacityIssues(config)).toEqual([]);
-        expect(() => assertLaneCapacity(config)).not.toThrow();
-        expect(lanesSharedByCopies(config).map(issue => [issue.kind, issue.belt_id, issue.lanes, issue.items_per_second])).toEqual([['take', 1, [1], 96]]);
-        expect(laneSharedByCopiesWarning(config)).toBe('If the 3 copies share lane 1 of belt 1, they take 2.40 times what it carries '
-            + '(3 × 96 = 288 a second, of 120). The configuration cannot say yet whether its copies share these lanes, so this is only '
-            + 'a warning: a build whose copies have belts of their own is not affected.');
+        expect(lanesSharedByCopies(config)).toEqual([]);
+        expect(sharedLaneSupplyIssues(config)).toEqual([
+            { belt_id: 1, lanes: [1], inserter_ids: [1], copies: 3, per_copy: false, items_per_second: 96, supply_per_second: 120 },
+        ]);
+        expect(() => assertLaneCapacity(config)).toThrow(SharedLaneSupplyError);
+        expect(() => assertLaneCapacity(config)).toThrow('The 3 copies share lane 1 of belt 1. Together they take 3 × 96 = 288 a second '
+            + 'from it. Its supply rate is 120 a second. Set the lane to per copy if the copies do not share it. If they share it, use a smaller number of copies.');
+    });
+
+    it('holds the takes against a stated supply rate, and the takes of one copy against a lane that is per copy', () => {
+        const fed = (lane: Record<string, unknown>, copies: number) => {
+            const config = gears({ items_per_second: copies * 48, copies });
+            return { ...config, belts: config.belts.map(it => it.id !== 1 ? it : { ...it, lanes: [{ ...it.lanes[0], ...lane }] }) } as Config;
+        };
+        expect(sharedLaneSupplyIssues(fed({ sharing: 'per_copy' }, 3))).toEqual([]);
+        expect(sharedLaneSupplyIssues(fed({ supply_rate: 100 }, 1))).toEqual([]);
+        expect(() => assertLaneCapacity(fed({ sharing: 'per_copy', supply_rate: 90 }, 3))).toThrow('Lane 1 of belt 1 is per copy. '
+            + 'Each copy takes 96 a second from its lane, and the supply rate of the lane is 90 a second. Raise the supply rate, or lower the target.');
+        expect(() => assertLaneCapacity(fed({ supply_rate: 90 }, 1))).toThrow('The build takes 96 a second from lane 1 of belt 1, and its supply rate '
+            + 'is 90 a second. Raise the supply rate, or lower the target.');
+    });
+
+    it('refuses nothing at the supply rate summed, with fractional copies, or with one copy', () => {
+        // 2.5 copies of a unit taking 48 plates a second: 120, the lane's capacity
+        expect(() => assertLaneCapacity(gears({ items_per_second: 60, copies: 2.5 }))).not.toThrow();
+        expect(() => assertLaneCapacity(gears({ items_per_second: 60.5, copies: 2.5 }))).toThrow('Together they take 2.5 × 48.4 = 121 a second from it. Its supply rate is 120 a second.');
+        expect(() => assertLaneCapacity(gears({ items_per_second: 60, copies: 1 }))).not.toThrow();
+    });
+
+    it('only warns when the drops of the copies summed are over capacity, and not on a lane that is per copy', () => {
+        // 3 copies of a unit that drops 60 gears a second onto lane 1 of belt 2, of 120
+        const config = gears({ items_per_second: 3 * 60, copies: 3, drop_lane: 1, output: belt(2, ['iron-gear-wheel', 'iron-gear-wheel']) });
+        expect(lanesSharedByCopies(config).map(issue => [issue.kind, issue.belt_id, issue.lanes, issue.items_per_second])).toEqual([['drop', 2, [1], 60]]);
+        expect(laneSharedByCopiesWarning(config)).toBe('If the 3 copies share the iron gear wheel lane (lane 1 of belt 2), they drop 1.50 times what it carries '
+            + '(3 × 60 = 180 a second, of 120). This is only a warning. If each copy has a lane of its own, set the lane to per copy.');
         const warned: string[] = [];
         warnLanesSharedByCopies(config, { log: () => { }, warn: (message: string) => warned.push(message), error: () => { }, debug: () => { } });
         expect(warned).toEqual([laneSharedByCopiesWarning(config)]);
+        const own = { ...config, belts: config.belts.map(it => it.id !== 2 ? it : { ...it, lanes: it.lanes.map(lane => ({ ...lane, sharing: 'per_copy' as const })) as typeof it.lanes }) };
+        expect(laneSharedByCopiesWarning(own)).toBeNull();
     });
 
-    it('warns of nothing at capacity summed, with fractional copies, or with one copy', () => {
-        // 2.5 copies of a unit taking 48 plates a second: 120, the lane's capacity
-        expect(laneSharedByCopiesWarning(gears({ items_per_second: 60, copies: 2.5 }))).toBeNull();
-        expect(laneSharedByCopiesWarning(gears({ items_per_second: 60.5, copies: 2.5 }))).toContain('If the 2.5 copies share lane 1 of belt 1, they take 1.01 times what it carries (2.5 × 48.4 = 121 a second, of 120).');
-        expect(laneSharedByCopiesWarning(gears({ items_per_second: 60, copies: 1 }))).toBeNull();
+    it('warns of the drops of the copies onto a belt that states one lane, per copy: nothing says its other side is', () => {
+        // 3 copies of a unit that drops 100 gears a second onto belt 2, whose drops can land on both sides, of 240
+        const config = gears({ items_per_second: 3 * 100, copies: 3, input: 'chest' });
+        const own = { ...config, belts: config.belts.map(it => it.id !== 2 ? it : { ...it, lanes: [{ ...it.lanes[0], sharing: 'per_copy' as const }] }) } as Config;
+        for (const build of [config, own]) {
+            expect(lanesSharedByCopies(build).map(issue => [issue.kind, issue.belt_id, issue.lanes, issue.items_per_second])).toEqual([['drop', 2, [1, 2], 100]]);
+        }
     });
 
     it('gives no warning for a config whose plan cannot be made', () => {
@@ -203,15 +240,15 @@ describe('lanes exactly full', () => {
         // 2 copies of a unit that drops 120 gears a second on a belt of 2 x 120
         const config = gears({ items_per_second: 240, copies: 2 });
         expect(lanesExactlyFull(config).map(issue => [issue.kind, issue.belt_id, issue.lanes, issue.items_per_second, issue.capacity_per_second])).toEqual([['drop', 2, [1, 2], 120, 240]]);
-        expect(lanesExactlyFullWarning(config)).toBe('Both lanes of belt 2 are exactly full at the target: the 2 copies drop 2 × 120 = 240 a second onto lanes that carry 240. '
+        expect(lanesExactlyFullWarning(config)).toBe('Both lanes of the iron gear wheel belt (belt 2) are exactly full at the target: the 2 copies drop 2 × 120 = 240 a second onto lanes that carry 240. '
             + 'Nothing is left over, so every hand has to land in a gap the others leave, and a wait is not made up later.');
     });
 
     it('says so of one lane, and of a build of one copy', () => {
         const lane = gears({ items_per_second: 120, copies: 3, drop_lane: 1, output: belt(2, ['iron-gear-wheel', 'iron-gear-wheel']) });
-        expect(lanesExactlyFullWarning(lane)).toBe('Lane 1 of belt 2 is exactly full at the target: the 3 copies drop 3 × 40 = 120 a second onto a lane that carries 120. '
+        expect(lanesExactlyFullWarning(lane)).toBe('The iron gear wheel lane (lane 1 of belt 2) is exactly full at the target: the 3 copies drop 3 × 40 = 120 a second onto a lane that carries 120. '
             + 'Nothing is left over, so every hand has to land in a gap the others leave, and a wait is not made up later.');
-        expect(lanesExactlyFullWarning(gears({ items_per_second: 240 }))).toBe('Both lanes of belt 2 are exactly full at the target: the build drops 240 a second onto lanes that carry 240. '
+        expect(lanesExactlyFullWarning(gears({ items_per_second: 240 }))).toBe('Both lanes of the iron gear wheel belt (belt 2) are exactly full at the target: the build drops 240 a second onto lanes that carry 240. '
             + 'Nothing is left over, so every hand has to land in a gap the others leave, and a wait is not made up later.');
     });
 
@@ -258,11 +295,56 @@ describe('where it runs', () => {
     });
 
     it('refuses no sample with a lane over capacity in one unit', async () => {
-        for (const sample of [ConfigPaths.LDS_240, ConfigPaths.MILITARY_SCIENCE_120, ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK]) {
+        for (const sample of [ConfigPaths.LDS_240, ConfigPaths.MILITARY_SCIENCE_240, ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK]) {
             expect(laneCapacityIssues(await loadConfigFromFile(sample))).toEqual([]);
         }
-        expect(laneSharedByCopiesWarning(await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250))).toContain(
-            'If the 5 copies share lane 1 of belt 1, they take 1.50 times what it carries (5 × 36 = 180 a second, of 120).');
+        // agricultural science 250 gives each copy a bioflux lane of its own on each of its two belts: shared, its five copies
+        // would take 80 of 120 on belt 1 and 100 of 120 on belt 2, so neither is over its supply
+        const agricultural = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250);
+        expect(sharedLaneSupplyIssues(agricultural)).toEqual([]);
+        const shared = { ...agricultural, belts: agricultural.belts.map(belt => ({ ...belt,
+            lanes: belt.lanes.map(({ sharing: _sharing, ...lane }) => lane) as typeof belt.lanes })) } as Config;
+        expect(sharedLaneSupplyIssues(shared).map(issue => [issue.belt_id, issue.lanes, issue.items_per_second * issue.copies, issue.supply_per_second]))
+            .toEqual([]);
         expect(laneSharedByCopiesWarning(await loadConfigFromFile(ConfigPaths.ADVANCED_CIRCUIT_240))).toBeNull();
+    });
+});
+
+describe('the feed of a lane that is per copy', () => {
+    it('is what the inserters of one copy take from it, and none is told for a lane the copies share', () => {
+        const config = gears({ items_per_second: 3 * 48, copies: 3 });
+        const own = { ...config, belts: config.belts.map(it => it.id !== 1 ? it : { ...it, lanes: [{ ...it.lanes[0], sharing: 'per_copy' as const }] }) } as Config;
+        expect(onePerCopyFeeds(config)).toEqual([]);
+        expect(onePerCopyFeeds(own)).toEqual([{ belt_id: 1, lanes: [1], inserter_ids: [1], items_per_second: 96 }]);
+        expect(describeOnePerCopyFeed(onePerCopyFeeds(own)[0])).toBe('Lane 1 of belt 1 is per copy. The lane of each copy needs a supply rate '
+            + 'of at least 96 a second, which the inserters of one copy take from it.');
+    });
+});
+
+describe('the rates a lane states', () => {
+    const stated = (lane: Record<string, unknown>) => {
+        const config = gears({ items_per_second: 10 });
+        return { ...config, belts: config.belts.map(it => it.id !== 1 ? it : { ...it, lanes: [{ ...it.lanes[0], ...lane }] }) } as Config;
+    };
+
+    it('refuses a supply rate above what the lane can carry, and lets one at it through', () => {
+        expect(laneRateIssues(stated({ supply_rate: 120, lane_end: { kind: 'infinite' } }))).toEqual([]);
+        expect(laneRateIssues(stated({ supply_rate: 120.5, lane_end: { kind: 'infinite' } }))).toEqual([
+            { belt_id: 1, lane: 1, fact: 'supply rate', items_per_second: 120.5, capacity_per_second: 120 },
+        ]);
+        expect(() => assertLaneCapacity(stated({ supply_rate: 130 }))).toThrow(LaneRateError);
+        expect(() => assertLaneCapacity(stated({ supply_rate: 130 }))).toThrow('Lane 1 of belt 1 states a supply rate of 130 a second. '
+            + 'The lane can carry 120 a second. Lower the rate, or remove it to use what the lane can carry.');
+    });
+
+    it('refuses a lane end beside a consumption rate: the consumption rate states what leaves the end of an export lane', () => {
+        const config = gears({ items_per_second: 10 });
+        const exported = (lane: Record<string, unknown>) => ConfigSchema.safeParse({ ...config, belts: config.belts.map(it => it.id !== 2 ? it
+            : { ...it, strategy: 'export', lanes: [{ ...it.lanes[0], consumption_per_second: 5, ...lane }] }) });
+        expect(exported({}).success).toBe(true);
+        const refused = exported({ lane_end: { kind: 'dead_end' } });
+        expect(refused.success).toBe(false);
+        expect(refused.error?.issues.map(issue => [issue.path.join('.'), issue.message])).toEqual([['belts.1.lanes.0.lane_end',
+            'Lane 1 of belt 2 states a consumption rate and a lane end. The consumption rate states what leaves the end of the lane. Remove the lane end.']]);
     });
 });

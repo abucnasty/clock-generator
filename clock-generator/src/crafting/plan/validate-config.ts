@@ -3,6 +3,7 @@ import { Config } from "../../config";
 import type { TargetCounts } from "../../config/schema";
 import { assertInserterCoverage } from "../../config/inserter-coverage-validator";
 import { validateCopies } from "../../config/copies-validator";
+import { assertFlowAlongCopySpacing } from "../shared-lane-lanes";
 import { assertFeasible } from "../feasibility/assert-feasible";
 import { assertLaneCapacity } from "../../config/lane-capacity-validator";
 import { SimulationContext } from "../sequence/simulation-context";
@@ -32,8 +33,8 @@ export interface ConfigValidation {
 
 /**
  * Checks that a clock can be planned for the config and returns that plan, without generating any clock: every
- * ingredient and output has an inserter, the machines can reach the target rate, no belt lane is asked for more than it
- * carries, and every belt that is filled is planned for. Costs one prepare run (the machines crafting until output blocked; a second with the belts backed up
+ * ingredient and output has an inserter, no belt states a flow direction across the copy spacing, the machines can reach
+ * the target rate, no belt lane is asked for more than it carries, and every belt that is filled is planned for. Costs one prepare run (the machines crafting until output blocked; a second with the belts backed up
  * where they move, which the output swings are counted on) instead of the hundreds of simulations a generation does. Throws with the reason when the config is not valid.
  *
  * A generation can still end up with another plan than this one: it lowers the output swings when the planned
@@ -44,6 +45,7 @@ export function validateConfig(config: Config, options: { logger?: Logger; fract
     assertOutputTransferGenerationSupported(config);
     assertInserterCoverage(config);
     validateCopies(config);
+    assertFlowAlongCopySpacing(config);
     assertFeasible(config);
 
     const simulation_context = SimulationContext.fromConfig(config);

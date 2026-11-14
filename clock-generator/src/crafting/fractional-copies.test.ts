@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { TargetProductionRateConfigSchema, type Config } from "../config/schema";
 import { FactorioDataService } from "../data";
 import { fraction } from "../data-types/fraction";
-import { CopiesError } from "../config/errors";
+import { planRepeatedUnitConversion } from "../config/repeated-unit-conversion";
 import { validateCopies } from "../config/copies-validator";
 import { generateClockAlternatives, generateClockForConfig } from "./generate-blueprint";
 import { TargetProductionRate } from "./target-production-rate";
@@ -70,18 +70,15 @@ describe("the copies validator with a fractional number of copies", () => {
             { source: { type: "belt", id: 1 }, sink: { type: "machine", id }, stack_size: 1 },
             { source: { type: "machine", id }, sink: { type: "belt", id: 2 }, stack_size: 1 },
         ]),
-        belts: [{ id: 1, ...lane("iron-plate") }, { id: 2, ...lane("iron-gear-wheel") }],
+        belts: [{ id: 1, type: "transport-belt", lanes: [{ ingredient: "iron-plate", stack_size: 1, lane_end: { kind: "infinite" } }] }, { id: 2, ...lane("iron-gear-wheel") }],
     } as unknown as Config);
 
-    it("tells to set the copies to the exact product, 11 for 5.5 copies of two units", () => {
-        expect(() => validateCopies(twoUnits(5.5))).toThrow(CopiesError);
-        try {
-            validateCopies(twoUnits(5.5));
-        } catch (error) {
-            expect((error as Error).message).toContain("set setpoint.copies to 11 (now 5.5, times 2).");
-            expect((error as CopiesError).configured_copies).toBe(5.5);
-        }
-        expect(() => validateCopies(twoUnits(0.1))).toThrow("set setpoint.copies to 0.2 (now 0.1, times 2).");
+    // a config of two identical units is clocked as given; the one unit the conversion offers has the exact product of copies
+    it("offers the copies as the exact product, 11 for 5.5 copies of two units, and does not refuse them", () => {
+        expect(() => validateCopies(twoUnits(5.5))).not.toThrow();
+        const copiesOf = (copies: number) => { const plan = planRepeatedUnitConversion(twoUnits(copies)); return plan.kind === "available" ? plan.copies : plan.reason.code; };
+        expect(copiesOf(5.5)).toBe(11);
+        expect(copiesOf(0.1)).toBe(0.2);
     });
 
     it("does not refuse a config of one unit with 5.5 copies", () => {
@@ -92,6 +89,8 @@ describe("the copies validator with a fractional number of copies", () => {
 });
 
 describe("a clock for a fractional number of copies", () => {
+    // each copy takes its plates from a lane of its own: summed over 5.5 copies they are more than one lane of a
+    // transport belt gives
     const build = (copies: number, items_per_second: number): Config => ({
         setpoint: { recipe: "iron-gear-wheel", items_per_second, copies },
         machines: [{ id: 1, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 1 }],
@@ -100,7 +99,7 @@ describe("a clock for a fractional number of copies", () => {
             { id: 2, source: { type: "machine", id: 1 }, sink: { type: "belt", id: 2 }, stack_size: 1, filters: ["iron-gear-wheel"] },
         ],
         belts: [
-            { id: 1, type: "transport-belt", lanes: [{ ingredient: "iron-plate", stack_size: 1 }] },
+            { id: 1, type: "transport-belt", lanes: [{ ingredient: "iron-plate", stack_size: 1, sharing: "per_copy", lane_end: { kind: "infinite" } }] },
             { id: 2, type: "transport-belt", lanes: [{ ingredient: "iron-gear-wheel", stack_size: 1 }] },
         ],
     } as unknown as Config);

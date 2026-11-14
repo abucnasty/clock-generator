@@ -51,10 +51,28 @@ variable (351-48-02) is the input of a comparing element in closed-loop control,
 setpoint at the maximum rate of the build leaves no time for recovery (Janert p.22). The site's **Setpoint** panel.
 _Avoid_: target output, target rate, goal, control frequency (that is the window cycle time)
 
+**Secondary setpoint**:
+The rate at which entities outside the configuration take items off an export lane, in items per second. The
+configuration's `consumption_per_second` on the lane. It tells what leaves the end of the lane, so the lane states no
+lane end.
+A project technical noun, related to **Setpoint** (STE rule 1.6): STE approves SECONDARY (adj), and has no entry for
+setpoint.
+_Avoid_: export rate, consumption
+
 **Copies**:
 How many identical builds the user puts in the game; can be partial (0.5, 2.25). The site's **Copies** field. STE:
 COPY (n), approved.
 _Avoid_: units (as the count)
+
+**Full copy**:
+A copy that holds all the machines of the build. STE: FULL (adj) and COPY (n), approved.
+_Avoid_: whole copy (for a full copy)
+
+**Partial copy**:
+The copy that holds fewer of the machines of the build than the others: the fraction of the copies after the full
+copies. 3.5 copies are three full copies and one partial copy. A technical noun (STE rule 1.6): STE does not approve
+partial (adj), and gives NOT FULLY.
+_Avoid_: part copy, part (bare)
 
 **Configuration**:
 A build, with its setpoint and overrides: what the generator works from, what the site saves, and what
@@ -74,6 +92,91 @@ Assemble a build. Install a clock on a build: the whole procedure, put the bluep
 world; STE does not approve place (v).
 _Avoid_: build (v), place (v)
 
+## Lanes
+
+A lane is the game's transport line: each belt has two. The facts of a lane are stated on it in the configuration
+(`belts[].lanes[]`), and each one is optional. See [Lane ends](../../clock-generator/docs/belt-pickup/lane-ends.md).
+
+**Supply rate**:
+The items per second that come onto an input lane where it starts. The configuration's `supply_rate`. Without it,
+the supply rate is the capacity of the lane: on a turbo belt with stacks of 4, 120 items per second. STE: SUPPLY (n)
+and RATE (n), approved.
+
+**Lane role**:
+What the build does with a lane. **Input**: an inserter takes the item of the lane from it, and no inserter drops that
+item on it. **Output**: an inserter drops the item of the lane on it, and no inserter takes that item from it.
+**Buffer**: inserters drop the item on it and take the item from it. The generator finds the role from the
+inserters, item by item. The configuration does not state it. A lane with no item has the role of the other lane of
+its belt. A project technical noun (STE rule 1.6): STE approves ROLE (n), and has no entry for lane.
+_Avoid_: transport lane (a buffer lane)
+
+**Lane end**:
+What the items do at the downstream end of a lane: a **dead end**, an **infinite end**, or an **unknown end**. A
+fact of the build: it does not change while the build runs. The configuration's `lane_end`, by its `kind`. A lane
+that states no end gets one: from `overrides.backed_up_belts` if the configuration states it (deprecated: state the
+`lane_end` of each lane), else from its **lane role**. The page converts a build that states `backed_up_belts` when
+it loads it: each input or buffer lane that states no end gets the end that the field gave it, and the field goes. A project technical noun (STE rule 1.6): STE approves END (n), and has no entry for lane.
+
+**Dead end**:
+A lane end that stops the items. They stay on the lane until a hand takes them, so the lane is a standing queue. In the
+configuration: `"lane_end": {"kind": "dead_end"}`. The end of an input or a buffer lane that states no end, if the
+configuration does not state the deprecated `backed_up_belts`. A project technical noun (STE rule 1.6).
+
+**Infinite end**:
+The end of a lane that takes every item that reaches it, as an infinity chest does. On an input lane, the items that
+no hand takes move along all the copies and then off the lane. In the configuration: `"lane_end": {"kind": "infinite"}`. The output
+belt ends in an infinite end too. The end of an output lane that states no end, if the configuration does not
+state the deprecated `backed_up_belts`, and the end of each export lane. A project technical noun (STE rule 1.6): STE has no entry for infinite.
+_Avoid_: outlet, free outlet, passthrough
+
+**Unknown end**:
+The lane end of a lane when the configuration does not know its end. In the configuration:
+`"lane_end": {"kind": "unknown"}`. The generator checks the clock as a dead end and as an infinite end. The clock must
+hold under both. Only the Sidecar gives it, when it cannot see the end of a lane. It helps you find a problem. It is
+never a default: a lane that states no end gets a dead end or an infinite end. The samples state the end of each lane. STE: UNKNOWN (adj) and END (n), approved.
+
+**Lane sharing**:
+Whether all copies take from one lane, or each copy has a lane of its own. **Shared**: the inserters of every copy
+take from the lane. This is the default. **Per copy**: each copy has its own lane. The generator checks the inserters
+of one copy on it. The configuration's `sharing`: `shared` or `per_copy`. A project technical noun (STE rule 1.6).
+_Avoid_: shared by copies, one per copy
+
+**Flow direction**:
+The direction in which a belt flows. Both lanes of a belt flow in the same direction. The configuration's
+`flow_direction` on the belt: 0 north, 4 east, 8 south, 12 west. Without it, the generator checks the belt flowing in
+each direction along the copies. The clock must hold in both. STE: FLOW (n), FLOW (v) and DIRECTION (n), approved.
+_Avoid_: items move (for the way the belt flows)
+
+**Near lane**:
+The lane, 1 or 2, from which an inserter takes first, when its sink takes items from both lanes. At a side pickup
+(the inserter is adjacent to the belt), it is the lane nearest the inserter. At a front pickup of an underground end,
+no lane is nearer: the mirroring of the inserter selects the lane. Where both lanes carry the item that the
+inserter takes, the near lane gives it first. The far lane gives it only when the near lane has none in reach. The
+configuration's `source.near_lane`. A project technical noun (STE rule 1.6): STE approves NEAR (adj), and has no
+entry for lane.
+
+**Output belt**:
+The belts from the output inserters of the copies to the infinite end. The configuration's `output_belt`: a side
+belt, and stretches of belt in tiles. The run of the copies moves the stacks on it, and an output blockage shuts its
+infinite end. A project technical noun (STE rule 1.6): STE approves OUTPUT (n), and has no entry for belt.
+_Avoid_: output line (the game's `output_lines` are transport lines)
+
+**Side belt**:
+The belt that the output inserter of a copy drops on. It side-loads onto the output belt. The configuration's
+`output_belt.side_belt`. A project technical noun (STE rule 1.6): STE approves SIDE (n), and has no entry for belt.
+
+**Join**:
+A belt lane that goes onto another belt: a side load, or the splitter. At an output blockage, the belt lane is blocked
+from draining to the belt it joins. No configuration field has this name. A Factorio word, used as a technical noun
+(STE rule 1.6): the splitter "Splits and/or joins transport belts' cargo 1:1." STE does not approve join (v): BOND.
+
+**Target full**:
+The game's status of an inserter that cannot drop: the belt or chest that it drops into has no room
+(`waiting_for_space_in_destination`). The site uses it in a reason next to **Underproduces**: "Output swings blocked:
+target full". It is the reason when a join blocks the output swings of a copy. Not **Output full**, the game's status
+of a machine whose own output is full. A Factorio word, used as a technical noun (STE rule 1.6): STE has no entry for
+target.
+
 ## Clocks
 
 **Clock**:
@@ -90,6 +193,10 @@ _Avoid_: selected clock (for the generator's first-ranked clock), the pick
 
 **Selected clock**:
 The clock the user has chosen to see and copy. It is the recommended clock until the user chooses another one.
+
+**Rank**:
+The place of a clock in the generator's order for a build. Rank 1 is the recommended clock. A project technical noun:
+the game and STE have no entry for it.
 
 **Blueprint**:
 A clock as a Factorio blueprint string, with its wiring, which the user takes into the game.
@@ -165,11 +272,36 @@ runs over the end of the window cycle is one enable window. **Enable if** is the
 inserter.
 _Avoid_: wake window, active window, window (bare), enable range
 
-**Belt slack**:
-The ticks that an inserter stays enabled after its last pickup from a moving belt. A pickup that starts late can then
-still fill its hand. A project technical noun (STE rule 1.6): STE does not approve slack. The site shows
-it as "+4 ticks belt slack".
-_Avoid_: belt pickup slack, pickup slack, slack (bare)
+**Hand**:
+The items that an inserter holds. The game uses the word: the stack inserter's description says that inserters wait for
+their hand to be full. A full hand is the most that the inserter holds of an item. A technical noun: STE has no entry.
+
+**Swing**:
+One move of an inserter from its pickup to its drop. The game's data names the arm swing of an inserter. A loss on a lane
+is said in swings. It gives the swings that the inserter does not make. It compares them with its swings when no other copy
+is on the lane. A technical noun: STE has no entry.
+_Avoid_: a count of items or of crafts for a loss
+
+**Missed swing**:
+A swing that an inserter of a copy makes in the run of one copy alone and does not make in the run of the copies. A window
+cycle in which the inserter makes fewer swings than alone has as many missed swings. A project technical noun (STE rule 1.6).
+
+**Checked lane**:
+A lane that the copies share, as the result gives it for one clock: one row, with what the copies take or drop together
+and its state. The row says that the lane holds (the verb). Or it says that a copy has missed swings on it
+(**Swings missed on copy N**). The other states are **join full**, **takes less**, **rate fits** (it fits by its
+rate), **not checked** and **not run with the copies**. On a clock that is not stable on a shared lane, a lane that
+holds is **not the cause**. A project technical noun (STE rule 1.6).
+_Avoid_: Short (as the label of a row)
+
+**Room for one more hand**:
+Ticks that the generator adds at the end of each enable window of an inserter. It adds them where the inserter takes
+from a lane that is not a dead end. They are the ticks that one more hand takes to fill at one lane stack a tick: 4
+ticks for a hand of 16 from stacks of 4. On such a lane, an empty space or a take upstream can start a hand later than
+the generator planned. Without the room, the window closes on a hand that is not full. A lane with an unknown end gets
+the room. A side pickup of an item on both lanes of its belt gets no room. Its far lane gives what an empty space on
+its near lane does not give. A project term, as the code says it (`laneHandRoomTicks`).
+_Avoid_: belt slack, belt pickup slack, pickup slack, slack (bare)
 
 **Window cycle**:
 One complete sequence of all enable windows of a clock, after which the sequence starts again. STE: CYCLE (n), approved.
@@ -274,13 +406,22 @@ preloading (Janert p.103).
 _Avoid_: seed (the game's Yumako, Jellynut and Tree seed items, and the map seed), prime, bootstrap, kick-start (as a
 verb)
 
+**Backpressure**:
+An inserter takes from a source: a belt lane, a machine or a chest. With backpressure, the source holds what the hand
+needs at every swing. The inserter does not wait for items to be made or to arrive. Without backpressure, the inserter
+cannot fill its hand in time. It then picks up less than a full hand. The two entries below are the belt case and the
+machine case. A project technical noun (STE rule 1.6).
+_Avoid_: backed-up, backed up
+
 **Backpressure**, at a belt pickup:
-The belt is fully saturated. The tile in front of the inserter is a belt that does not move. A moving belt has no
-backpressure: the inserter waits for items to arrive. The code calls such a belt **backed-up**.
+The belt case of backpressure. The state of one lane at one tick: the lane in reach of the inserter is fully saturated
+and does not move. A lane that is moving at that tick has no backpressure: the inserter waits for items to arrive. The
+two lanes of a belt can be in different states. A lane can change its state from one tick to the next. A lane end is
+not a state: it is a fact of the build.
 
 **Backpressure**, at a machine:
-When the inserter must pick up, the output slot of the machine holds a full hand. A pickup of part of a hand is not
-backpressure.
+The machine case of backpressure. When the inserter must pick up, the output slot of the machine holds a full hand. A
+pickup of less than a full hand is not backpressure.
 
 **Steady state**:
 The condition after the startup period. The build repeats the same pattern in each window cycle, or in each whole
@@ -353,14 +494,14 @@ A time when one product of a build is not taken away. STE: BLOCKAGE (n), approve
 _Avoid_: jammed, jam, output loss
 
 **Recovery**:
-The clock goes back to its rate by itself after a supply stop or an output blockage. A noun only: write "the clock goes
-back to its rate", not "recovers" (STE does not approve recover (v)). Control theory: the disturbance response
-(IEC 351-46-13).
-_Avoid_: recovers, recover, get back
+The clock goes back to its rate by itself after a supply stop or an output blockage. The term is the noun, and the site
+can also say that a clock recovers. Control theory: the disturbance response (IEC 351-46-13).
+_Avoid_: get back
 
 **Disturbance**:
 An input from outside that pushes the build away from its setpoint: a supply stop, an output blockage, or a
-productivity bonus. A maintainer term: users see supply stop, output blockage and recovery. Control theory:
+productivity bonus. On a shared lane, the other copies take items too. The gaps that their pickups leave are a
+disturbance to one copy. A maintainer term: users read supply stop, output blockage, recovery and gap. Control theory:
 IEC 351-48-08; Janert p.113, p.278. Not the runtime API's segmented units that investigate "a disturbance".
 _Avoid_: backpressure loss
 
@@ -368,6 +509,43 @@ _Avoid_: backpressure loss
 A supply stop or an output blockage that the generator applies to each clock. The trials show whether the clock is
 stable. The code calls them backpressure losses (`backpressure_loss`).
 _Avoid_: backpressure loss trial
+
+## Statuses
+
+The site gives each clock one status. It shows the status on the card of the selected clock. It also shows it as a
+mark in the list of clocks, and in the **Status** column of the compare table. A stable clock has the status **Stable** (the entry **Stable**, under Control).
+Each status below is a technical noun (STE rule 1.6). Write it as the site shows it. Do not use it as a verb in your
+own text.
+
+**Underproduces**:
+The status of a clock that makes less than its setpoint. Next to it, the site gives the rate of the clock or the
+reason. An example of a rate: "makes 180/s of 240/s". A project technical noun: the game and STE have no entry for
+it. Do not write underproduce as a verb.
+_Avoid_: Does not hold its rate (as the status), Misses the rate (as the status)
+
+**Overproduces**:
+The status of a clock that makes more than its setpoint. The site gives the rate of the clock next to it. The
+generator accepts some rounded clocks as at their setpoint. They run at most 0.1% fast and do not have this status. A project technical noun: the game and STE have no entry for it. Do not write overproduce as a verb.
+
+**Oscillates**:
+The status of a clock that makes its setpoint on average, but not in each window cycle. The output of one or more window
+cycles is off the expected output by more than the tolerance of one hand. The output is an **Oscillation**: it repeats
+with a period that the clock does not set. Next to the status, the site gives the window cycles that are off and the
+expected output, for example "makes 432 then 144 items a window cycle, 288 expected · repeats every 26 window cycles".
+It gives the repeat only when the generator proves it. The boundary with **Steady state**: an output that repeats over
+a whole number of window cycles is a steady state, and it is not constant. While each window cycle is within one hand of
+the expected output, the clock does not have this status. A project technical noun. Do not write oscillate as a verb
+for the clock.
+_Avoid_: Underproduces (as the status of a clock that makes its setpoint on average)
+
+**No recovery**:
+The status of a clock that holds its setpoint at steady state. After one or more disturbance trials, the clock has no
+recovery. A project technical noun: STE has no entry for recovery.
+
+**Start-dependent**:
+The status of a clock that holds its setpoint from some starts only. The generator runs the other starts only if the
+configuration has `overrides.check_start_dependence`. A project technical noun: STE has no entry for dependent.
+_Avoid_: Depends on how it is started (as the status)
 
 ## Changes
 

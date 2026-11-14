@@ -1,4 +1,4 @@
-import { SAMPLE_BUILDS_DIR } from "../../helpers/fixture-paths";
+import { GameFixturePaths } from "../../helpers/fixture-paths";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -35,7 +35,7 @@ interface Placed { unit_number: number; config_id?: number; x: number; y: number
 
 /**
  * The game serves the takers of one machine output in one fixed order every tick (docs/simulator.md, "Two inserters that
- * take from one machine"). Which of them it puts first is not known from a config: the agricultural science scaffold is
+ * take from one machine"). Which of them it puts first is not known from a config: one copy of the agricultural science build is
  * built twice from the staged start, its inserters built in ascending and in descending config order, so the unit numbers
  * of each pair of egg takers come out the other way round while their places stay. If the one served first keeps its
  * place it is not the build order that decides; if it changes place with the order of the unit numbers, it is.
@@ -45,7 +45,7 @@ describe("the order the game serves the takers of one machine in", () => {
         context.skip(WHY_SKIPPED !== null, WHY_SKIPPED ?? undefined);
         scratch ??= KEEP ?? fs.mkdtempSync(path.join(os.tmpdir(), "taker-order-"));
         fs.mkdirSync(scratch, { recursive: true });
-        const scaffold = path.join(SAMPLE_BUILDS_DIR, "science", "agricultural", "agricultural-250.scaffold");
+        const scaffold = GameFixturePaths.AGRICULTURAL_SCIENCE_ONE_COPY;
         const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250);
         const log: string[] = [];
         const session = new CachedHarnessSession({ factorio: FACTORIO!, save: SAVE!, work_dir: path.join(scratch, "work"), timeout_seconds: 900, log: message => log.push(message) });

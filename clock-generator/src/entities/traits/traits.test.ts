@@ -70,7 +70,7 @@ describe("the hand and the timing of an inserter (docs/rules-of-the-game.md, An 
 describe("the timing floors of an inserter at a belt (mechanics/belts.md B8, B10, B23)", () => {
     const gears = { id: 1, recipe: "iron-gear-wheel", crafting_speed: 1, productivity: 0 };
     const inserterOf = (parts: Parts) => traitsOf(parts)["inserter:1"] as InserterTraits;
-    const fromBelt = (lanes: { ingredient: string; stack_size: number }[], prototype?: { prototype: string; quality: string }) => inserterOf({
+    const fromBelt = (lanes: { ingredient: string; stack_size: number; lane_end?: { kind: "infinite" } }[], prototype?: { prototype: string; quality: string }) => inserterOf({
         machines: [gears],
         belts: [{ id: 1, type: "turbo-transport-belt", lanes }],
         inserters: [{ id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 }, ...prototype }],
@@ -83,7 +83,7 @@ describe("the timing floors of an inserter at a belt (mechanics/belts.md B8, B10
 
     // one belt stack a tick: a hand of 16 off stacks of 3 takes 6 ticks, its last stack part used
     it("picks a hand up off a belt one stack a tick, the last stack rounded up", () => {
-        const inserter = fromBelt([{ ingredient: "iron-plate", stack_size: 3 }]);
+        const inserter = fromBelt([{ ingredient: "iron-plate", stack_size: 3, lane_end: { kind: "infinite" } }]);
         expect(inserter.timing.by_item).toEqual([{
             item: "iron-plate", source_lanes: ["belt:1/lane:1"], sink_lane: null, floor: { pickup: 6, drop: 1, cycle: 6 + 3 + 3 + 1 },
         }]);
@@ -91,13 +91,13 @@ describe("the timing floors of an inserter at a belt (mechanics/belts.md B8, B10
     });
 
     it("picks it up off the lane of the two that carries the item in larger stacks", () => {
-        const inserter = fromBelt([{ ingredient: "iron-plate", stack_size: 3 }, { ingredient: "iron-plate", stack_size: 4 }]);
+        const inserter = fromBelt([{ ingredient: "iron-plate", stack_size: 3, lane_end: { kind: "infinite" } }, { ingredient: "iron-plate", stack_size: 4, lane_end: { kind: "infinite" } }]);
         expect(inserter.timing.by_item[0].source_lanes).toEqual(["belt:1/lane:1", "belt:1/lane:2"]);
         expect(inserter.timing.by_item[0].floor.pickup).toBe(4);
     });
 
     it("has no floor off a belt for a kind not calibrated on belts, nor a ceiling", () => {
-        const inserter = fromBelt([{ ingredient: "iron-plate", stack_size: 4 }], { prototype: "fast-inserter", quality: "normal" });
+        const inserter = fromBelt([{ ingredient: "iron-plate", stack_size: 4, lane_end: { kind: "infinite" } }], { prototype: "fast-inserter", quality: "normal" });
         expect(inserter.timing.by_item[0].floor).toEqual({ pickup: null, drop: 1, cycle: null });
         expect(inserter.throughput.by_item[0].items_per_second_ceiling).toBeNull();
     });
@@ -143,7 +143,7 @@ describe("the automated insertion limits (rule 2, mechanics/machines.md section 
     });
 
     it("are 32 for the iron of the accumulator plant", async () => {
-        const plant = (await sampleTraits(ConfigPaths.ACCUMULATOR_640))["machine:1"] as MachineTraits;
+        const plant = (await sampleTraits(ConfigPaths.ACCUMULATOR_320))["machine:1"] as MachineTraits;
         expect(plant.input_limits.limits.find(limit => limit.item === "iron-plate")?.limit).toBe(32);
     });
 });

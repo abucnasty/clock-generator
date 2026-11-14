@@ -65,7 +65,6 @@ describe('generatedForOf', () => {
             key,
             recipe: 'logistic-science-pack',
             itemsPerSecond: 240,
-            beltQuestion: { ask: false, answer: 'moving' },
             generatedAt: 1_000,
         });
         expect(keyOf(config)).not.toBe(key);
@@ -86,7 +85,7 @@ const NEXT_DAY = new Date(2026, 9, 13, 9, 0).getTime();
 
 /** Clocks made at 14:02 for 240 logistic science packs a second */
 const madeFor = (fields: Partial<GeneratedFor> = {}): GeneratedFor =>
-    ({ key: '', recipe: 'logistic-science-pack', itemsPerSecond: 240, beltQuestion: { ask: false, answer: 'moving' }, generatedAt: MADE, ...fields });
+    ({ key: '', recipe: 'logistic-science-pack', itemsPerSecond: 240, generatedAt: MADE, ...fields });
 
 describe('madeAtText', () => {
     it.each([
@@ -117,8 +116,8 @@ describe('staleResultsMessage', () => {
     it('says the recipe by its game name when given a label function', () => {
         const label = (id: string) => (id === 'logistic-science-pack' ? 'Logistic science pack' : id);
         expect(staleResultsMessage(madeFor(), [], { ...options, recipeLabel: label })).toBe(
-            'These clocks are for Logistic science pack at 240/s, made at 14:02. Your build has changed since.');
-        expect(generatedForText(madeFor(), label)).toBe('Logistic science pack at 240/s');
+            'These clocks are for logistic science pack at 240/s, made at 14:02. Your build has changed since.');
+        expect(generatedForText(madeFor(), label)).toBe('logistic science pack at 240/s');
     });
 
     it('prints the rate with at most two decimals', () => {

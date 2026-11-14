@@ -1,5 +1,5 @@
 import { BeltConfig, ChestConfig, Config, InserterConfig, MiningDrillConfig } from './schema';
-import { CopiesError, CopiesUnit } from './errors';
+import { CopiesUnit } from './errors';
 import { assertInsertersInScope } from './inserter-scope';
 import { machineRuleOf } from './machine-prototype';
 
@@ -8,8 +8,9 @@ import { machineRuleOf } from './machine-prototype';
 // ============================================================================
 //
 // A config describes ONE unit and `setpoint.copies` says how many identical units exist. A config that itself
-// holds several identical units (each with its own machines and inserters) is refused, so that nobody plans hundreds
-// of redundant copies.
+// holds several identical units (each with its own machines and inserters) is clocked as it is given, every inserter
+// where it stands: the site offers the one unit with `copies` where the conversion can make it
+// (repeated-unit-conversion.ts), and says how the units differ where it cannot.
 //
 // A unit is a connected component of the graph whose nodes are the machines, the buffer chests and the mining drills,
 // and whose edges are the inserters between two nodes and the drill-to-machine and drill-to-chest links. Infinity chests (mocks of an
@@ -22,7 +23,7 @@ import { machineRuleOf } from './machine-prototype';
 // identical machines may therefore be told apart or not; either is acceptable, because the check only has to catch
 // the common mistake of a config that was written out copy by copy.
 //
-// The config is refused when the greatest common divisor g of the number of components of each signature is above 1:
+// The config holds copies when the greatest common divisor g of the number of components of each signature is above 1:
 // it is g copies of a smaller unit. Components that merely repeat are fine when some signature has another count
 // (two cable casters and one plastic plant are one unit of a build: {A, A, B} has a divisor of 1).
 
@@ -236,13 +237,9 @@ export function findRepeatedUnits(config: Config): RepeatedUnits {
 }
 
 /**
- * Throws a CopiesError when the config holds several identical units of a build, which it should describe once and
- * multiply with `setpoint.copies`.
+ * Checks what a build of copies needs of its inserters (`assertInsertersInScope`). A config that holds several identical
+ * units of a build is not refused: it is clocked as given (`findRepeatedUnits` names its copies).
  */
 export function validateCopies(config: Config): void {
     assertInsertersInScope(config);
-    const found = findRepeatedUnits(config);
-    if (found.gcd > 1) {
-        throw new CopiesError(found.copies, config.setpoint.copies);
-    }
 }

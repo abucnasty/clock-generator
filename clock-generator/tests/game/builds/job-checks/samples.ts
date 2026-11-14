@@ -91,14 +91,8 @@ const agriculturalScience: JobCheck[] = [
             expect(generated.alternatives.filter(a => /subtick|rounded/.test(a.label)).map(a => a.label)).toEqual([]);
         },
     },
-    {
-        name: 'the 5-swing clock leaves the inserters of the egg loop always on',
-        run: ({ generated }) => {
-            const five_swings = byMaker(generated, 'planned-belt-slack');
-            expect(five_swings.result.loop_windows?.inserter_ids.slice().sort()).toEqual(['inserter:10', 'inserter:9']);
-            expect(five_swings.result.loop_windows?.in_loop_ids).toBeUndefined();
-        },
-    },
+    // the 5-swing clock leaving the inserters of the egg loop always on is held on the sample's config before its five copies, where
+    // the loop's windows show: src/crafting/agricultural-science-loop-windows.generation.test.ts
     {
         name: 'can be run on its clock alone for a few periods, with what every machine and inserter holds after each tick',
         run: ({ config, generated }) => {
@@ -120,12 +114,12 @@ const agriculturalScience: JobCheck[] = [
 // The processing unit circuit export (PROCESSING_UNIT_80_CIRCUIT_EXPORT), a real cell (#189) at 80 processing units a second.
 const circuitExport: JobCheck[] = [
     {
-        name: 'Behavior: the explicit one-cycle plan is offered, in 24 ticks with 32 items, on a moving belt with 4 ticks of slack',
+        name: 'Behavior: the explicit one-cycle plan is offered, in 24 ticks with 32 items, on a backed-up belt',
         run: ({ generated }) => {
             const plan = byMaker(generated, 'planned-belt-slack');
             expect(plan, 'the explicit behavior plan is offered, independently of the selector').toBeDefined();
             expect(plan.result.stability_check.as_built).toMatchObject({ holds: true, actual_output_items: 32 });
-            expect(plan.belt).toEqual({ kind: 'moving', slack_ticks: [4] });
+            expect(plan.belt).toEqual({ kind: 'backed_up' });
         },
     },
     {
@@ -287,8 +281,8 @@ const lithium: JobCheck[] = [{
         for (const variant of lithiumSiloCases()) {
             const chosen = generated.alternatives.find(alternative => alternative.id === variant.alternative)!;
             expect(chosen.insights.filter(insight => insight.id === 'side-loaded-drop').map(insight => insight.what), variant.name).toEqual([
-                'Inserter 15 drops onto a 3 tile belt buffer that side-loads onto another belt. '
-                + 'Inserter 16 drops onto a 3 tile belt buffer that side-loads onto another belt.']);
+                'The inserter (inserter 15) that drops lithium plate drops onto a 3 tile belt buffer that side-loads onto another belt. '
+                + 'The inserter (inserter 16) that drops lithium plate drops onto a 3 tile belt buffer that side-loads onto another belt.']);
         }
     },
 }];
@@ -385,17 +379,18 @@ const grenade: JobCheck[] = [
         name: 'every alternative says the lanes of the belt are exactly full, and the selected clock\'s hands fit between each other',
         run: ({ generated }) => {
             for (const alternative of generated.alternatives) {
-                expect(alternative.insights.find(it => it.id === 'lanes-exactly-full')?.title).toBe('Both lanes of belt 1 are exactly full');
+                expect(alternative.insights.find(it => it.id === 'lanes-exactly-full')?.title).toBe('Both lanes of the grenade belt are exactly full');
                 expect(alternative.insights.find(it => it.id === 'drop-spacing')).toBeDefined();
             }
             // the two inserters of a row start in the same tick: the 14 hands of a row land on 14 tiles of the belt's cycle of 14
             const spacing = selectedOf(generated).insights.find(it => it.id === 'drop-spacing')!;
-            expect(spacing.title).toBe('Drops onto belt 1 fit between each other');
+            expect(spacing.title).toBe('Drops onto the grenade belt fit between each other');
             expect(spacing.table?.rows).toEqual([['1 and 2', '14', '12', '14', '0', '0'], ['7 and 8', '14', '12', '14', '0', '0']]);
             // and which spacings of the copies, and distances between a copy's inserters, would fit as well
-            expect(spacing.explanation).toContain('The belt moves 14 tiles a window cycle, so each hand lands on one of 14 tiles. With inserters 1 and 2 as they stand (3 tiles apart), '
+            expect(spacing.explanation).toContain('The belt moves 14 tiles a window cycle, so each hand lands on one of 14 tiles. With the inserters (1 and 2) that drop grenade as they stand (3 tiles apart), '
                 + 'the copies fit 12, 16, 18, 20, 22 or 24 tiles apart; 13, 15, 17, 19, 23 or 25 apart only with a copy\'s inserters 7 tiles apart; 14 or 21 apart never. '
-                + 'The same holds at any of these spacings plus 14. Starting inserter 2 16, 32 or 48 ticks after inserter 1 also fits (a tile every 8 ticks).');
+                + 'The same holds at any of these spacings plus 14. Starting the inserter (inserter 2) that drops grenade 16, 32 or 48 ticks after the inserter (inserter 1) '
+                + 'that drops grenade also fits (a tile every 8 ticks).');
         },
     },
 ];
@@ -411,7 +406,8 @@ const utility120: JobCheck[] = [
                 expect(alternative.deadlock_risks, alternative.id).toHaveLength(1);
                 const insight = alternative.insights.find(it => it.id === 'deadlock-risk');
                 expect(insight?.scope, alternative.id).toBe('build');
-                expect(insight?.what).toContain('Inserters 1 and 2 both bring low-density-structure to machine 1');
+                expect(insight?.what).toContain('The inserter that takes low density structure and flying robot frame and the inserter that takes low density structure '
+                    + 'and processing unit both bring low density structure to the assembling machine 3 that makes utility science pack');
             }
         },
     },
@@ -425,23 +421,23 @@ const utility120: JobCheck[] = [
     },
 ];
 
-// The logistic science sample (LOGISTIC_SCIENCE_240): its belts move, so every clock is made for a moving belt, none for a backed-up belt
+// The logistic science sample (LOGISTIC_SCIENCE_240): both lanes of its feed belt are dead ends, so every clock is made for a backed-up belt,
+// none for a moving belt
 const logistic: JobCheck[] = [
     {
-        name: 'makes batched swings for a moving belt, with 4 ticks of belt pickup slack inside its windows',
+        name: 'makes batched swings for a backed-up belt',
         run: ({ generated }) => {
             const batched = byMaker(generated, 'planned-belt-slack');
             expect(batched.label).toBe('Takt Batches: 4 output swings each output cycle');
-            // its two pickup windows a window cycle stay open 5 ticks after their last pickup: none are added (#595)
-            expect(batched.belt).toEqual({ kind: 'moving', slack_ticks: [4], inside: true });
-            expect(batched.description).toContain('Made for a moving belt. After its last pickup from the belt, an inserter stays enabled for 4 more ticks. These ticks are the belt slack.');
+            expect(batched.belt).toEqual({ kind: 'backed_up' });
+            expect(batched.description).toContain('Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup.');
         },
     },
     {
-        name: 'the clocks that hold the slack are made for a moving belt with 4 ticks',
+        name: 'the 2-swing and the derived clocks are made for a backed-up belt',
         run: ({ generated }) => {
-            expect(byMaker(generated, 'swings-2').belt).toEqual({ kind: 'moving', slack_ticks: [4] });
-            expect(byMaker(generated, 'derived').belt).toEqual({ kind: 'moving', slack_ticks: [4] });
+            expect(byMaker(generated, 'swings-2').belt).toEqual({ kind: 'backed_up' });
+            expect(byMaker(generated, 'derived').belt).toEqual({ kind: 'backed_up' });
         },
     },
     {

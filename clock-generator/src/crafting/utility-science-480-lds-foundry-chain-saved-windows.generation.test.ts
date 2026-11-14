@@ -76,23 +76,20 @@ describe("a saved clock for a shorter period, on the utility science 480 sample"
         expect(per_second).toBeCloseTo(480, 6);
     });
 
-    it("names the coal loss that settles into unequal periods, despite keeping the average target rate", () => {
+    it("gets back from the coal loss whose bins read 792 and 744: every window cycle on the clock holds 768", () => {
         const report = disturbanceTrialOf(config, result.clock_windows, WINDOW_CYCLE, result.stability_check.expected_output_items, quiet);
         const coal = report.losses.find(outcome => outcome.loss.kind === "supply" && outcome.loss.item === "coal")!;
-        const failures = coal.trials.filter(trial => !trial.recovers);
-        expect(failures).toHaveLength(1);
-        // Recovery requires each window cycle's exact output: a 768 average does not make the 792/744 window cycles pass that rule.
-        // The takers of one machine take in the order the game serves them (docs/simulator.md), which sets the cut and
-        // the share of each window cycle: before 0.23.0 the window cycles were 764/772, then 784/752 with the cut at 168.
-        expect(failures[0]).toMatchObject({cut_at: 84, restore_at: 130, loss_ticks: 718,
-            proven: true, ends_in: [792, 744, 792, 744]});
-        expect(failures[0].ends_in.reduce((sum, amount) => sum + amount, 0) / failures[0].ends_in.length).toBe(768);
+        // The bins start at the tick the coal is back, which is not where the clock counts 1: a hand drops on one side of a
+        // bin's edge or the other. The takers of one machine take in the order the game serves them (docs/simulator.md),
+        // which sets the cut and the share of each bin: before 0.23.0 the bins were 764/772, then 784/752 with the cut at 168.
+        const counted = coal.trials.filter(trial => trial.ends_in_on_the_clock !== undefined);
+        expect(counted).toHaveLength(1);
+        expect(counted[0]).toMatchObject({cut_at: 84, restore_at: 130, loss_ticks: 718, proven: true, recovers: true,
+            recovered_after_bins: 10, ends_in: [792, 744, 792, 744], ends_in_on_the_clock: [768, 768, 768, 768]});
+        expect(coal.recovers).toBe(true);
         const disturbance_trial = verdictOf(report);
-        // the losses after coal are not tried, and the failing trial is the last of its loss
-        expect(coal.trials[coal.trials.length - 1]).toBe(failures[0]);
-        expect(disturbance_trial).toEqual({survives: false, broken_by: ["coal stops arriving"], broken_at_other_lane_phases: [],
-            not_tried: ["utility science pack is not taken away"], recovered_after_window_cycles: null});
+        expect(disturbance_trial).toEqual({survives: true, broken_by: [], broken_at_other_lane_phases: [], recovered_after_window_cycles: 12});
         const verdict = clockVerdictOf({ holds: true, disturbance_trial, items_per_second: 480, wake_ups_per_minute: null, start_dependence: null });
-        expect(verdict).toBe("no recovery");
+        expect(verdict).toBe("stable");
     });
 });

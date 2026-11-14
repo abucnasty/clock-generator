@@ -106,12 +106,10 @@ describe('afterCheck', () => {
 describe('checkKeyOf', () => {
     const base = keyOf();
 
-    it('ignores the switches only the clock search reads', () => {
-        expect(keyOf(withOverrides({ search_for_fewer_wake_ups: true }))).toBe(base);
-        expect(keyOf(withOverrides({ backed_up_belts: true }))).toBe(base);
-        const both = configOf(withOverrides({ backed_up_belts: true, search_for_fewer_wake_ups: true }));
-        expect(both.overrides).toBeDefined();
-        expect(checkKeyOf(both)).toBe(base);
+    it('ignores the switch only the clock search reads', () => {
+        const searched = configOf(withOverrides({ search_for_fewer_wake_ups: true }));
+        expect(searched.overrides).toBeDefined();
+        expect(checkKeyOf(searched)).toBe(base);
         expect(configOf().overrides).toBeUndefined();
     });
 
@@ -131,7 +129,7 @@ describe('checkKeyOf', () => {
     });
 
     it('does not change the config it is given', () => {
-        const config = configOf(withOverrides({ lcm: 2, backed_up_belts: true }));
+        const config = configOf(withOverrides({ lcm: 2, search_for_fewer_wake_ups: true }));
         const before = structuredClone(config);
         checkKeyOf(config);
         expect(config).toEqual(before);

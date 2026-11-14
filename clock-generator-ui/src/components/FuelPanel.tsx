@@ -3,7 +3,8 @@ import { memo, useId } from 'react';
 import type { FuelInserterPlan, FuelLevelSeries, FuelMachinePlan } from 'clock-generator/browser';
 import type { FuelRunView, FuelSwing, FuelViewData } from '../worker/types';
 import { CHART_NAMES, SCROLL_REGION_NAMES } from '../utils/a11yLabels';
-import { entityLabel } from '../utils/entityLabel';
+import { entityInSentence, entityLabel, machineInSentence, sentenceStart } from '../utils/entityLabel';
+import { useGameNames } from '../hooks/useGameNames';
 import { FactorioIcon } from './FactorioIcon';
 import { ChartSwatch } from './BeltChart';
 import { GameName } from './GameName';
@@ -46,13 +47,20 @@ function exportedClockText(fuel: FuelViewData): string {
             : 'one clock for all of them would count further than a signal can hold.');
 }
 
-function RanOutAlert({ run }: { run: FuelRunView }) {
+/** A machine of the fuel view as a sentence names it: by its kind and recipe in the game's names (machineInSentence) */
+function useMachineInSentence(fuel: FuelViewData): (machine_number: number) => string {
+    const labels = useGameNames();
+    return machine_number => machineInSentence(machine_number, fuel.machines, labels);
+}
+
+function RanOutAlert({ fuel, run }: { fuel: FuelViewData; run: FuelRunView }) {
+    const machineNamed = useMachineInSentence(fuel);
     const span = `${run.durationTicks} ticks (${run.window_cycles} window cycles)`;
     const empty = run.levels.filter(levels => levels.empty_ticks > 0);
     if (empty.length > 0) {
         return (
             <Alert severity="error" sx={{ mb: 2 }}>
-                {empty.map(levels => `${entityLabel('machine', levels.machine_number)} ran out of fuel at tick ${levels.first_empty_tick} `
+                {empty.map(levels => `${sentenceStart(machineNamed(levels.machine_number))} ran out of fuel at tick ${levels.first_empty_tick} `
                     + `and had none for ${levels.empty_ticks} ticks`).join('; ')}
                 {` over the ${span} simulated.`}
             </Alert>
@@ -241,6 +249,7 @@ function FuelTimeline({ fuel, run }: { fuel: FuelViewData; run: FuelRunView }) {
     const LEVEL_COLOR = palette.skyBlue, WINDOW_COLOR = palette.lightGrey, SWING_COLOR = inserter[InserterStatus.SWING], EMPTY_COLOR = machine[MachineStatus.NO_FUEL];
     const { durationTicks } = run;
     const summaryId = useId();
+    const machineNamed = useMachineInSentence(fuel);
     const events: FuelEventRow[] = fuelEventRows(fuel);
     const markerInterval = Math.ceil(durationTicks / 10 / 100) * 100;
     const tickMarkers: number[] = [];
@@ -252,12 +261,12 @@ function FuelTimeline({ fuel, run }: { fuel: FuelViewData; run: FuelRunView }) {
         <>
             {run.levels.map(levels => (
                 <Typography key={levels.machine_id} id={`${summaryId}-machine-${levels.machine_number}`} variant="body2" sx={{ mb: 1.5 }}>
-                    {fuelTraceSummary(levels, durationTicks)}
+                    {fuelTraceSummary(levels, durationTicks, machineNamed(levels.machine_number))}
                 </Typography>
             ))}
             {fuel.plan.inserters.map(inserter => (
                 <Typography key={inserter.inserter_id} id={`${summaryId}-inserter-${inserter.inserter_number}`} variant="body2" sx={{ mb: 1.5 }}>
-                    Inserter {inserter.inserter_number} feeds Machine {inserter.machine_number}. Its fuel clock switches it on every {inserter.modulus} ticks,
+                    {sentenceStart(entityInSentence('inserter', inserter.inserter_number, fuel.entityNames))} feeds {machineNamed(inserter.machine_number)}. Its fuel clock switches it on every {inserter.modulus} ticks,
                     from tick {inserter.window.start} to {inserter.window.end} of that clock.
                     {' '}{(run.swings[inserter.inserter_id] ?? []).length} swings recorded over {durationTicks} ticks; Fuel events lists their start, end and items.
                 </Typography>
@@ -350,7 +359,7 @@ function FuelPanelComponent({ fuel }: FuelPanelProps) {
     const { plan, run } = fuel;
     return (
         <Box>
-            {run && <RanOutAlert run={run} />}
+            {run && <RanOutAlert fuel={fuel} run={run} />}
 
             {/* inside Results' Details, under its Fuel tab: the cards are a level below the section */}
             <Panel title="Fuel consumption" level={3}>

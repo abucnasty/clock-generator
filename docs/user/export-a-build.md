@@ -12,8 +12,9 @@ Use the sidecar mod to copy a build from Factorio to the clock generator site.
 - You have Factorio 2.1.
 - The mod **Clock Generator Sidecar** is installed and on. To install it, use the **Mods** menu of the game.
 - The build is assembled in the game, and each machine has a recipe.
-- The belts and chests that the inserters use have items on them or in them. The sidecar does not export an empty belt
-  or an empty chest.
+- The belts and chests that the inserters use have items on them or in them. The sidecar exports an empty belt only
+  if each inserter that puts items on it takes them from a machine and moves one item that the machine makes. It
+  exports an empty chest only if the items that go in and out show the item that it holds.
 
 ## Procedure
 
@@ -22,7 +23,7 @@ Use the sidecar mod to copy a build from Factorio to the clock generator site.
    The selection tool is in your hand.
 
 2. Drag to select an area that contains one copy of the build. Include all of its machines, inserters, belts, chests
-   and mining drills.
+   and mining drills. If a belt goes into a loader, include the loader and the chest that it fills.
 
    The **Clock Generator Sidecar** window opens. It shows the number of entities and the suggested target.
 
@@ -49,7 +50,9 @@ Use the sidecar mod to copy a build from Factorio to the clock generator site.
 ## Result
 
 The build is on the site. If the site had no setpoint before, the setpoint is the suggested target: the
-product of the build at the maximum rate of its machines. At the maximum rate, the clock has no time for recovery.
+product of the build at the maximum rate of its machines. If its output belt or a different part of the build cannot
+take that rate, the setpoint is the maximum that the build can hold, and the **Confirm Import from Factorio** dialog shows the limit. At the
+maximum rate, the clock has no time for recovery.
 To give the clock time for recovery, decrease the rate in **Setpoint**.
 
 ## Related information

@@ -59,7 +59,8 @@
       "lanes": [
         {
           "ingredient": "yumako-mash",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {"kind": "infinite"}
         }
       ]
     },
@@ -79,7 +80,8 @@
       "lanes": [
         {
           "ingredient": "nutrients",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {"kind": "infinite"}
         }
       ]
     }

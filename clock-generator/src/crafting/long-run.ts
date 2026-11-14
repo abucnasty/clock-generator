@@ -62,6 +62,8 @@ interface LongRunVerdict {
     /** Items the output inserters dropped in each judged bin */
     judged: number[];
     expected_per_bin: number;
+    /** Items a bin, and the judged span as a whole, may be off what it expects */
+    tolerance: number;
     /** Judged bins more than the tolerance off what a bin expects, by index into `judged` */
     off_bins: { index: number; items: number }[];
     total: number;
@@ -144,6 +146,7 @@ export function judgeProvenCycle(
         first_judged_tick,
         judged,
         expected_per_bin,
+        tolerance: hand,
         off_bins,
         total,
         expected_total,
@@ -209,10 +212,77 @@ export function judgeLongRun(
         first_judged_tick,
         judged,
         expected_per_bin,
+        tolerance,
         off_bins,
         total,
         expected_total,
         span_off,
         output_items_per_window_cycle: judged_window_cycles > 0 ? total / judged_window_cycles : expected_per_window_cycle,
     };
+}
+
+/**
+ * The most judged bins whose outputs a reason keeps one by one: the judged part of the usual long run, two thirds of its
+ * 120 window cycles (LONG_RUN_SETTLE_SHARE), so that every sampled long run of the usual length keeps them all. A
+ * longer judged part (a proven repeat of more bins, or a run made longer) keeps its highest and its lowest bin.
+ */
+export const OUTPUT_REASON_MAX_BINS = 80;
+
+/** One judged bin: its place in the judged part, from 0, and the items the output inserters dropped in it */
+export interface BinOutput {
+    at: number;
+    items: number;
+}
+
+/**
+ * The numbers of a long run whose mean output is the expected output while one or more of its bins are off it by more
+ * than the tolerance. The items are those the output inserters of the build that the long run simulates dropped: one
+ * copy's (the result's rates multiply them by the copies).
+ */
+export interface OscillationFacts {
+    /** Items a bin expects */
+    expected: number;
+    /** Window cycles in a bin: 1, or the repeat in whole ticks of a fractional window cycle */
+    window_cycles_per_bin: number;
+    /** Items a bin may be off what it expects */
+    tolerance: number;
+    /** Bins in the judged part */
+    bins: number;
+    /** The items of each judged bin, in order; absent where the judged part has more than OUTPUT_REASON_MAX_BINS bins */
+    made?: number[];
+    /** Where `made` is absent: the highest and the lowest bin (the first of each where several tie) */
+    cut?: { highest: BinOutput; lowest: BinOutput };
+    /** The judged bins are the proven repeat of the run (see judgeProvenCycle), not a sample */
+    proven: boolean;
+    /** Window cycles in that repeat; null where the run is a sample */
+    repeat_window_cycles: number | null;
+}
+
+/**
+ * Why the output of a clock is off its expected output where no rate says it, as a code (a closed list) and its numbers:
+ * - `oscillation`: the long run failed, its mean output is the expected output, and one or more of its bins are off it by
+ *   more than the long run's tolerance.
+ */
+export type OutputReason = { code: "oscillation"; data: OscillationFacts };
+
+/**
+ * The reason of a long run's verdict whose mean output is its expected output, to within `mean_tolerance` items a
+ * window cycle, while one or more of its bins are off it by more than its tolerance; undefined for any other verdict (one
+ * that keeps up, or whose mean is off). A bin off by more than the tolerance fails the long run, so a verdict with a
+ * reason never keeps up. `repeat_window_cycles` is the length of the proven repeat, null for a sample.
+ */
+export function outputReasonOf(verdict: LongRunVerdict, mean_tolerance: number, repeat_window_cycles: number | null): OutputReason | undefined {
+    if (verdict.off_bins.length === 0) return undefined;
+    const expected_per_window_cycle = verdict.expected_per_bin / verdict.window_cycles_per_bin;
+    if (Math.abs(verdict.output_items_per_window_cycle - expected_per_window_cycle) > mean_tolerance) return undefined;
+    const bins = verdict.judged.length;
+    const facts: OscillationFacts = { expected: verdict.expected_per_bin, window_cycles_per_bin: verdict.window_cycles_per_bin, tolerance: verdict.tolerance,
+        bins, proven: repeat_window_cycles !== null, repeat_window_cycles };
+    if (bins <= OUTPUT_REASON_MAX_BINS) return { code: "oscillation", data: { ...facts, made: [...verdict.judged] } };
+    let highest = 0, lowest = 0;
+    verdict.judged.forEach((items, index) => {
+        if (items > verdict.judged[highest]) highest = index;
+        if (items < verdict.judged[lowest]) lowest = index;
+    });
+    return { code: "oscillation", data: { ...facts, cut: { highest: { at: highest, items: verdict.judged[highest] }, lowest: { at: lowest, items: verdict.judged[lowest] } } } };
 }

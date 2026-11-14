@@ -70,7 +70,7 @@ describe('ruleSentenceOf', () => {
             'On while electromagnetic-science-pack in the source ≥ 32 or the source is Output full. Once on, it stays on until electromagnetic-science-pack in the source < the source\'s output block.',
         );
         expect(ruleSentenceOf(ELECTROMAGNETIC, ctx)).toBe(
-            'On while Electromagnetic science pack in the source ≥ 32 or the source is Output full. Once on, it stays on until Electromagnetic science pack in the source < the source\'s output block.',
+            'On while electromagnetic science pack in the source ≥ 32 or the source is Output full. Once on, it stays on until electromagnetic science pack in the source < the source\'s output block.',
         );
     });
 
@@ -89,13 +89,13 @@ describe('ruleSentenceOf', () => {
 
     it.each<[ValueReference, string]>([
         [{ type: 'CONSTANT', value: 7 }, '7'],
-        [{ type: 'INVENTORY_ITEM', entity: 'SINK', item_name: 'iron-plate' }, 'Iron plate in the destination'],
-        [{ type: 'AUTOMATED_INSERTION_LIMIT', entity: 'SINK', item_name: 'iron-plate' }, 'the destination\'s insertion limit for Iron plate'],
+        [{ type: 'INVENTORY_ITEM', entity: 'SINK', item_name: 'iron-plate' }, 'iron plate in the destination'],
+        [{ type: 'AUTOMATED_INSERTION_LIMIT', entity: 'SINK', item_name: 'iron-plate' }, 'the destination\'s insertion limit for iron plate'],
         [{ type: 'OUTPUT_BLOCK', entity: 'SOURCE' }, 'the source\'s output block'],
         [{ type: 'CRAFTING_PROGRESS', entity: 'SINK' }, 'the destination\'s crafting progress (%)'],
         [{ type: 'BONUS_PROGRESS', entity: 'SINK' }, 'the destination\'s bonus progress (%)'],
         [{ type: 'HAND_QUANTITY' }, 'items in its hand'],
-        [{ type: 'HAND_QUANTITY', item_name: 'iron-plate' }, 'Iron plate in its hand'],
+        [{ type: 'HAND_QUANTITY', item_name: 'iron-plate' }, 'iron plate in its hand'],
         [{ type: 'INSERTER_STACK_SIZE' }, 'its stack size'],
         [{ type: 'INVENTORY_ITEM', entity: 'SOURCE', item_name: '' }, `${RULE_COPY.noItem} in the source`],
     ])('names %j', (value, text) => {

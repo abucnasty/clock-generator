@@ -2,6 +2,7 @@ import {expect, test} from "vitest";
 import {ConfigSchema} from "./schema";
 import {BELT_PICKUP_LAYOUTS, pickupLengthForLayout} from "../common/belt-pickup-layout";
 import {SimulationContext} from "../crafting/sequence/simulation-context";
+import { isDeadEnd } from "../entities/traits/lane-facts";
 
 function config(source: object) {
     return {
@@ -9,6 +10,7 @@ function config(source: object) {
         machines: [{id: 1, recipe: "iron-gear-wheel", crafting_speed: 1, productivity: 0}],
         inserters: [{id: 1, source: {type: "belt", id: 1, ...source}, sink: {type: "machine", id: 1}}],
         belts: [{id: 1, type: "turbo-transport-belt", lanes: [{ingredient: "iron-plate", stack_size: 4}]}],
+        overrides: {backed_up_belts: false},
     };
 }
 
@@ -19,7 +21,7 @@ for (const layout of BELT_PICKUP_LAYOUTS) test(`explicit ${layout} layout suppli
         const input = SimulationContext.fromConfig(parsed).inserters[0].inserter_state.inserter;
         expect(input.pickup_layout).toBe(layout);
         expect(input.pickup_length).toBe(pickupLengthForLayout(layout));
-        expect(input.belt_supply).toBe(backed_up_belts ? "backed_up" : "moving");
+        expect(input.belt_lane_facts!.every(isDeadEnd)).toBe(backed_up_belts);
     }
 });
 

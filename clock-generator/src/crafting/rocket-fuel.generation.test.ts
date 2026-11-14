@@ -28,6 +28,13 @@ describe("generateClockForConfig", () => {
             expect(alternative(id).assessment.items_per_second).toBe(60);
         });
 
+        // the sample states no positions of its three bioflux inserters, which take from one lane: the distance between them is
+        // not known, so the lane is not run with them together, and its row says so
+        it("gives the bioflux lane the code of an unknown distance between its inserters", () => {
+            expect(alternative("derived").checked_lanes?.rows.find(row => row.belt_id === 1 && row.lane === 1)?.state)
+                .toEqual({ kind: "not_checked", reason: { code: "taker_spacing_unknown" } });
+        });
+
         it("clocks the fuel and seed inserters outside the plan", () => {
             const clocks = Object.values(alternative("planned-belt-slack").result.unplanned_inserter_clocks ?? {});
             expect(clocks.filter(clock => clock.kind === "fuel").length).toBe(3);

@@ -1,13 +1,10 @@
 import { Cancel, CheckCircle, RemoveCircleOutline } from '@mui/icons-material';
-import { Alert, AlertTitle, Box, Button, Typography } from '@mui/material';
+import { Alert, AlertTitle, Box, Button, Link, Typography } from '@mui/material';
 import { useEffect, useRef, type ReactNode, type RefObject } from 'react';
 import type { WhyNotStable } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../worker/types';
-import { rateVerbs, type TargetCounts } from '../utils/targetCounts';
+import { rateVerbs } from '../utils/targetCounts';
 import {
-    beltLine,
-    beltValue,
-    beltValueSub,
     clockBadges,
     differenceFromRecommended,
     lossLimitText,
@@ -15,20 +12,21 @@ import {
     pickNameMeaning,
     recoversOf,
     signalsText,
+    statusOf,
     SUMMARY_COPY,
     wakeUpsText,
 } from '../utils/clockSummary';
 import { familyCopyOf, strategyNameOf } from '../utils/strategyNames';
 import { BadgeChips, ClockChips } from './StrategyChips';
-import { RECOMMENDED_COPY, recommendationReason, type PickRule } from '../utils/recommendedClock';
+import { RECOMMENDED_COPY, recommendationReason } from '../utils/recommendedClock';
 import { Panel } from './Panel';
 import { Disclosure } from './Disclosure';
 import { RecommendedChip } from './RecommendedChip';
-import type { GenerationAssumptions } from '../worker/types';
-import { REQUIRES_FACTORIO } from '../utils/installSteps';
-import { COLD_START, startCheckSummary } from '../utils/modelAssumptions';
 import { WHY_NOT_STABLE_TITLE } from '../utils/whyNotStable';
 import { useGameNames } from '../hooks/useGameNames';
+import { whyNotStableShowsCause } from '../utils/checkedLanes';
+import { DIAGNOSTICS_COPY, hasDiagnostics } from '../utils/diagnostics';
+import { CauseHeadline } from './CheckedLanesView';
 
 /** Every string of the card that is not the clock's own, in one place */
 const CARD_COPY = {
@@ -37,21 +35,19 @@ const CARD_COPY = {
     wakeUps: 'Wakeups',
     signals: 'Signals',
     recovers: 'Recovery',
-    belt: 'Belt pickups',
-    detailsHeading: 'How this was checked',
+    detailsHeading: 'Simulation results',
     staleLine: 'These clocks are for an earlier build. Generate again for a clock for the build you have now.',
 };
 
 interface ResultSummaryCardProps {
-    generationAssumptions?: GenerationAssumptions | null;
     alternatives: ClockAlternativeView[];
     selectedIndex: number;
     /** The clock the selection rule picks; null while there are none */
     recommendedIndex: number | null;
     /** Selects the recommended clock and lets the selection follow it again */
     onSelectRecommended: () => void;
-    /** What the selection rule was given by the latest generation's config; null before one */
-    pickRule: PickRule | null;
+    /** Opens the Diagnostics tab of the selected clock and moves the focus there */
+    onShowDiagnostics?: () => void;
     /** More clocks may still arrive, so the recommendation is the best so far */
     isGenerating: boolean;
     /** The player stopped the run, so not every clock was tried and the recommendation is not final */
@@ -62,14 +58,10 @@ interface ResultSummaryCardProps {
     whyNotStable?: WhyNotStable | null;
     /** The clocks are for an earlier build */
     stale: boolean;
-    /**
-     * What the clocks assume of the belts, with the action for the other answer (2.4), in place of the card's own belt
-     * line; shown also before the first clock arrives
-     */
-    beltAction?: ReactNode;
-    /** Saved build and inserter assumptions, shown inside the details disclosure. */
+    /** Saved build and inserter assumptions, shown inside the details disclosure; null where there are none to show */
     runAssumptions?: ReactNode;
-    comparisonAction?: ReactNode;
+    /** At the right of the card's title bar: Install guide */
+    actions?: ReactNode;
 }
 
 /** A small, readable fact; context stays next to its value instead of filling a tile. */
@@ -96,6 +88,11 @@ const RECOVERS_ICON = {
 
 type SelectedProps = ResultSummaryCardProps & { selected: ClockAlternativeView };
 
+/** The link to the Diagnostics tab of the selected clock */
+function SeeDiagnostics({ onClick }: { onClick: () => void }) {
+    return <Link component="button" variant="body2" onClick={onClick} sx={{ verticalAlign: 'baseline' }} data-see-diagnostics="">{DIAGNOSTICS_COPY.see}</Link>;
+}
+
 /** The selected clock's name, why it is the one, and its four facts */
 function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingElement | null> }) {
     const { alternatives, selectedIndex, recommendedIndex, isGenerating, selected, nameRef } = props;
@@ -121,8 +118,9 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
                 >
                     {strategyNameOf(selected)}
                 </Typography>
-                <ClockChips clock={selected} />
-                <BadgeChips badges={clockBadges(alternatives, selectedIndex)} meanings={fewestDecidersMeaning(alternatives, selectedIndex, props.pickRule)} />
+                {/* how the windows were made is said in the compare table's rows, the clock selector and the install dialog */}
+                <ClockChips clock={selected} settingsOnly />
+                <BadgeChips badges={clockBadges(alternatives, selectedIndex)} meanings={fewestDecidersMeaning(alternatives, selectedIndex)} />
                 {isRecommended && (
                     <RecommendedChip isGenerating={isGenerating} data-card-chip="" />
                 )}
@@ -134,6 +132,10 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
                         {isGenerating ? RECOMMENDED_COPY.backWhileGenerating : RECOMMENDED_COPY.backToRecommended}
                     </Button>
                 )}
+                {/* why the clock is not stable stands on the workspace's Diagnostics tab */}
+                {props.onShowDiagnostics && hasDiagnostics(selected) && (
+                    <SeeDiagnostics onClick={props.onShowDiagnostics} />
+                )}
             </Box>
             <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }} data-strategy-line>
                 {familyCopyOf(selected)?.line ?? selected.label}
@@ -142,7 +144,7 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
             <Box
                 sx={{
                     display: 'grid',
-                    gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(5, minmax(0, 1fr))' },
+                    gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(4, minmax(0, 1fr))' },
                     columnGap: 2,
                     rowGap: 1,
                     mt: 1.5,
@@ -152,46 +154,27 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
                 <Fact label={CARD_COPY.wakeUps} value={wakeUps.value.replace(' a minute', '/min')} sub={wakeUps.sub} />
                 <Fact label={CARD_COPY.signals} value={signals.value.replace(' a minute', '/min')} sub={signals.sub} />
                 <Fact label={CARD_COPY.recovers} value={recovers.value} icon={RECOVERS_ICON[recovers.kind]} />
-                <Fact label={CARD_COPY.belt} value={beltValue(props.pickRule, selected.beltLabel)} sub={beltValueSub(props.pickRule, selected.beltLabel)} />
             </Box>
-            {recovers.kind !== 'yes' && !props.rateWarning && <Typography variant="body2" sx={{ mt: 1 }}>{recovers.detail}</Typography>}
+            {/* on an Error card the reason beside the chip says it */}
+            {recovers.kind !== 'yes' && !props.rateWarning && statusOf(selected).kind !== 'error' && <Typography variant="body2" sx={{ mt: 1 }} data-recovery-detail="">{recovers.detail}</Typography>}
             {lossLimit && <Typography variant="body2" sx={{ mt: 1 }} data-loss-limit>{lossLimit}</Typography>}
         </>
     );
 }
 
 /** What the chip Fewest deciders means, by the chip's text; nothing for any other clock */
-function fewestDecidersMeaning(alternatives: ClockAlternativeView[], index: number, rule: PickRule | null): Record<string, string> {
-    const meaning = pickNameMeaning(alternatives, index, rule);
+function fewestDecidersMeaning(alternatives: ClockAlternativeView[], index: number): Record<string, string> {
+    const meaning = pickNameMeaning(alternatives, index);
     return meaning ? { [SUMMARY_COPY.fewestDeciders]: meaning } : {};
 }
 
-/** Whether the clock keeps its rate at steady state, as a sentence */
-function holdStatusText(rate: string, holds: boolean | null | undefined, counts?: TargetCounts): string {
-    if (holds === true) return `At steady state it keeps ${rateVerbs(counts).ing} ${rate}: yes.`;
-    if (holds === false) return 'At steady state it does not keep its rate.';
-    return 'Whether it keeps its rate at steady state is unavailable.';
-}
-
-function ClockExplanation(props: SelectedProps) {
+/** Why this clock is the pick, or how it differs from the pick; empty where there is no pick yet */
+function reasonOf(props: SelectedProps): string {
     const { alternatives, selectedIndex, recommendedIndex, isGenerating, selected } = props;
     const recommended = recommendedIndex === null ? undefined : alternatives[recommendedIndex];
-    const reason = selectedIndex === recommendedIndex
-        ? recommendationReason(alternatives, recommendedIndex, props.pickRule, !isGenerating && !props.stoppedEarly, props.stoppedEarly && !isGenerating)
-        : recommended ? [pickNameMeaning(alternatives, selectedIndex, props.pickRule), differenceFromRecommended(selected, recommended)].filter(Boolean).join(' ') : '';
-    const recovers = recoversOf(selected);
-    return <Box sx={{ display: 'grid', gap: 1 }}>
-        {reason && <Typography variant="body2" data-card-reason>{reason}</Typography>}
-        <Typography variant="body2" data-start-assumption>
-            {COLD_START} {startCheckSummary([selected], props.generationAssumptions ?? null)}
-        </Typography>
-        <Typography variant="body2" data-hold-status>
-            {holdStatusText(makesText(selected, selected.copies).value, selected.assessment.holds, selected.counts)}
-        </Typography>
-        {recovers.kind === 'yes' && <Typography variant="body2">{recovers.detail}</Typography>}
-        {props.runAssumptions}
-        <Typography variant="caption" color="text.secondary">{REQUIRES_FACTORIO}</Typography>
-    </Box>;
+    return selectedIndex === recommendedIndex
+        ? recommendationReason(alternatives, recommendedIndex, !isGenerating && !props.stoppedEarly, props.stoppedEarly && !isGenerating)
+        : recommended ? [pickNameMeaning(alternatives, selectedIndex), differenceFromRecommended(selected, recommended)].filter(Boolean).join(' ') : '';
 }
 
 /**
@@ -219,30 +202,35 @@ export function ResultSummaryCard(props: ResultSummaryCardProps) {
         return null;
     }
 
-    // one tree for a run's start and for its clocks, so the belt action (2.4) stays mounted, and keeps the keyboard
-    // focus, when the run it starts empties the list of clocks
-    const showBeltAction = Boolean(props.beltAction) && (!selected || selected.beltLabel !== '');
+    const recommended = props.recommendedIndex === null ? undefined : alternatives[props.recommendedIndex];
+    const causeAbove = whyNotStableShowsCause(props.whyNotStable, recommended);
+    const reason = selected ? reasonOf({ ...props, selected }) : '';
+    const beltLine = selected?.beltLabel === '';
     return (
-        <Panel title={CARD_COPY.heading} actions={selected ? props.comparisonAction : undefined} sx={{ '& > :last-child': { p: 1.5 } }} data-result-card="" data-build-anchor="selected-clock">
+        <Panel title={CARD_COPY.heading} actions={selected ? props.actions : undefined} sx={{ '& > :last-child': { p: 1.5 } }} data-result-card="" data-build-anchor="selected-clock">
             {props.rateWarning && <Alert severity="warning" sx={{ mb: 1 }}>{props.rateWarning}</Alert>}
-            {props.whyNotStable && <Alert severity="warning" sx={{ mb: 1 }} data-why-not-stable={props.whyNotStable.cause}>
+            {props.whyNotStable && <Alert severity="warning" sx={{ mb: 1, '& .MuiAlert-message': { minWidth: 0, flex: 1 } }} data-why-not-stable={props.whyNotStable.cause}>
                 <AlertTitle>{WHY_NOT_STABLE_TITLE[props.whyNotStable.cause]}</AlertTitle>
-                {props.whyNotStable.message}
+                {/* the recommended clock's loss on a shared lane: its count line in place of the note's sentences on the same loss; the rest is on Diagnostics */}
+                {causeAbove && recommended?.checkedLanes?.cause
+                    ? <CauseHeadline cause={recommended.checkedLanes.cause} clock={recommended} />
+                    : props.whyNotStable.message}
             </Alert>}
             {props.stale && <Typography variant="body2" sx={{ mb: 1 }} data-card-stale>{CARD_COPY.staleLine}</Typography>}
-            {selected ? <ClockFacts {...props} selected={selected} nameRef={nameRef} /> : (
+            {selected ? (
+                <ClockFacts {...props} selected={selected} nameRef={nameRef} />
+            ) : (
                 <Typography variant="body2" color="text.secondary">{CARD_COPY.makingFirst}</Typography>
             )}
-            <Disclosure summary={CARD_COPY.detailsHeading} sx={{ mt: 1.5 }}>
+            {/* which tests ran and what they found is the Diagnostics tab's graphic; a fold with no line left is not drawn */}
+            {selected && (reason || props.runAssumptions || beltLine) && <Disclosure summary={CARD_COPY.detailsHeading} sx={{ mt: 1.5 }}>
                 <Box sx={{ display: 'grid', gap: 1, mt: 1 }}>
-                    {selected && <ClockExplanation {...props} selected={selected} />}
-                    {/* Keep this action mounted when its run temporarily empties the clock list. */}
-                    {selected && !showBeltAction && (
-                        <Typography variant="body2" data-belt-line>{beltLine(props.pickRule, selected.beltLabel)}</Typography>
-                    )}
-                    {showBeltAction && props.beltAction}
+                    {reason && <Typography variant="body2" data-card-reason>{reason}</Typography>}
+                    {props.runAssumptions}
+                    {/* only where no clocked inserter picks up from a belt: the card's Belt fact says the rest */}
+                    {beltLine && <Typography variant="body2" data-belt-line>{SUMMARY_COPY.beltLineNone}</Typography>}
                 </Box>
-            </Disclosure>
+            </Disclosure>}
         </Panel>
     );
 }

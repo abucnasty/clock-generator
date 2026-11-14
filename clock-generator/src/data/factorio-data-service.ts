@@ -1,6 +1,7 @@
 import { ContainerPrototype, CraftingMachinePrototype, FactorioData, Ingredient, InserterPrototype, InserterResearch, Item, ItemName, ItemPrototypeFields, MiningDrillSpec, QualityName, QualitySpec, Recipe, Resource, ResourceName, RocketSiloPrototype, TransportBeltPrototype } from "./factorio-data-types";
 import { MiningDrillType } from "../entities/drill/mining-drill";
 import assert from "../common/assert";
+import { setGameWords } from "../crafting/entity-name";
 
 export type EnrichedIngredient = Ingredient & {
     item: Item;
@@ -191,6 +192,11 @@ export class FactorioDataService {
         return typeof spoil_ticks === "number" && spoil_ticks > 0 ? spoil_ticks : null;
     }
 
+    /** Every mining drill prototype of the data, in its order */
+    public static getAllMiningDrills(): MiningDrillSpec[] {
+        return Object.values(this.getData()["mining-drill"]);
+    }
+
     public static getMiningDrillSpec(type: MiningDrillType): MiningDrillSpec {
         const spec = this.getData()["mining-drill"][type];
         assert(spec, `Mining drill spec for type ${type} was not found`);
@@ -220,6 +226,11 @@ export class FactorioDataService {
 
     public static getAllInserters(): InserterPrototype[] {
         return Object.values(this.getData().inserter);
+    }
+
+    /** Every transport belt prototype of the data, in the data's order */
+    public static getAllTransportBelts(): TransportBeltPrototype[] {
+        return Object.values(this.getData().transport_belt);
     }
 
     /** The transport belt prototype of that name; an unknown name is refused (own keys only) */
@@ -308,6 +319,15 @@ export class FactorioDataService {
         return Object.prototype.hasOwnProperty.call(names, id) ? names[id] : this.itemDisplayName(id);
     }
 
+    /**
+     * A recipe's game name for the middle of a sentence, its first letter lower case: "automation science pack" for
+     * "automation-science-pack", "rocket fuel from jelly" for "rocket-fuel-from-jelly"
+     */
+    public static recipeNameInSentence(id: string): string {
+        const name = this.recipeDisplayName(id);
+        return name.charAt(0).toLowerCase() + name.slice(1);
+    }
+
     /** Every crafting machine prototype of the data, in its order */
     public static getAllCraftingMachines(): CraftingMachinePrototype[] {
         return Object.values(this.getData().crafting_machine ?? {});
@@ -349,6 +369,11 @@ export class FactorioDataService {
     }
 
 }
+
+// every text names items, recipes and machines by the game's names where the data can be read (entity-name.ts, textWords)
+setGameWords(() => FactorioDataService.isAvailable()
+    ? { item: id => FactorioDataService.itemNameInSentence(id), recipe: id => FactorioDataService.recipeNameInSentence(id) }
+    : undefined);
 
 /** "iron-plate" as "Iron plate": the name of an id the data does not name */
 function displayNameOfId(id: string): string {

@@ -23,7 +23,7 @@ function clock(id: string, entries = 0): ClockAlternativeView {
 
 function results(key: string, { stopped = false, clocks = [clock('a')] } = {}): KeptResults {
     return {
-        generatedFor: { key, recipe: 'r', itemsPerSecond: 1, beltQuestion: { ask: false, answer: 'moving' }, generatedAt: 0 },
+        generatedFor: { key, recipe: 'r', itemsPerSecond: 1, generatedAt: 0 },
         generationAssumptions: { startDependenceRequested: false, complete: !stopped },
         alternatives: clocks,
         pickRule: null,

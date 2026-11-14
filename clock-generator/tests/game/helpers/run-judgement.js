@@ -120,4 +120,31 @@ function runHolds(native) {
         && (native.stock === null || native.stock?.holds === true);
 }
 
-module.exports = {judgeBaseline, runHolds};
+/**
+ * The baseline's whole clock cycles judged as judgeBaseline judges them, for some of the final machines only (a copy of a build of
+ * several): their products less the change in their output stock, against their own target. No stock guard: the lowest stock
+ * the record keeps is the whole build's. Null where judgeBaseline has no whole cycle to judge, or for a build judged by a count.
+ * @param {RunRecord} run
+ * @param {number} target products a second of these final machines, as exact as known
+ * @param {number[]} indices the final machines, as places in `run.finals`
+ */
+function judgeBaselineOfFinals(run, target, indices) {
+    const series = run.series, recorded = run.baseline;
+    if (!recorded || run.steady === undefined || !series || series.judged_by === "count") return null;
+    const steady = run.steady;
+    const cycles = list(series.cycles).filter(row => row.t >= steady && row.t <= steady + recorded.ticks);
+    if (cycles.length < 2 || cycles[0].t !== steady) return null;
+    const finals = list(run.finals);
+    const totals = (/** @type {SeriesRow} */ row) => ({
+        products: indices.reduce((sum, k) => sum + list(row.p)[k] * finals[k].worth, 0),
+        stock: indices.reduce((sum, k) => sum + (list(row.s)[k] ?? 0), 0),
+    });
+    const first = totals(cycles[0]), last = totals(cycles[cycles.length - 1]);
+    const ticks = cycles[cycles.length - 1].t - steady;
+    const items = last.products - first.products;
+    const net = items - (last.stock - first.stock);
+    const [n, d] = rateFraction(target);
+    return {ticks, items, expected: target * ticks / 60, stock_start: first.stock, stock_end: last.stock, net, meets: net * 60 * d >= n * ticks};
+}
+
+module.exports = {judgeBaseline, judgeBaselineOfFinals, runHolds};

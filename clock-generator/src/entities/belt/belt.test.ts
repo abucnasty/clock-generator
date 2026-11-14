@@ -310,17 +310,17 @@ describe("Belt.fromConfig", () => {
     // a name outside the schema's list is only possible for a config the schema did not read
     const beltOf = (type: string) => Belt.fromConfig({ id: 1, type, lanes: [{ ingredient: "iron-plate", stack_size: 4 }] } as BeltConfig)
 
-    // the prototype's speed in the game data, in tiles a tick, times 480
+    // the prototype's speed (belt-speed.ts, which belt-speed.test.ts ties to the game data), in tiles a tick, times 480
     test.each([
         ["transport-belt", BeltSpeed.TRANSPORT_BELT],
         ["fast-transport-belt", BeltSpeed.FAST_TRANSPORT_BELT],
         ["express-transport-belt", BeltSpeed.EXPRESS_TRANSPORT_BELT],
         ["turbo-transport-belt", BeltSpeed.TURBO_TRANSPORT_BELT],
-    ])("gives a %s the speed of its prototype in the game data: %i", (type, speed) => {
+    ])("gives a %s the speed of its prototype: %i", (type, speed) => {
         expect(beltOf(type).belt_speed).toBe(speed)
     })
 
-    test("refuses a belt the game data does not hold, as one without a speed", () => {
+    test("refuses a prototype that is not a belt of the game, as one without a speed", () => {
         expect(() => beltOf("stone-belt")).toThrow("Belt speed must be set before building a Belt")
     })
 })

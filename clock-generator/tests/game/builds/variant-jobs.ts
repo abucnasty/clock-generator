@@ -42,7 +42,7 @@ export function variantJobs(): VariantJob[] {
         { name: 'CHEMICAL_SCIENCE_240_SHARED_FOUNDRY_BACKED_UP', config: sample(ConfigPaths.CHEMICAL_SCIENCE_240_SHARED_FOUNDRY, backedUp),
             qualifies: 'decider-order.generation.test.ts' },
         { name: 'ROCKET_FUEL_60_JELLY_HANDS_15_BACKED_UP', config: sample(ConfigPaths.ROCKET_FUEL_60, config => backedUp(withJellyHandsOf15(config))),
-            qualifies: 'decider-order.generation.test.ts (fuel clocks of their own). The decider-order test also ran ACCUMULATOR_640 and IRON_BACTERIA_380_CULTIVATION with belts backed up: their samples already are, so their config jobs hold the same clocks' },
+            qualifies: 'decider-order.generation.test.ts (fuel clocks of their own). The decider-order test also ran ACCUMULATOR_320 and IRON_BACTERIA_380_CULTIVATION with belts backed up: their samples already are, so their config jobs hold the same clocks' },
         { name: 'AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING',
             config: sample(ConfigPaths.AUTOMATION_SCIENCE_240, config => ({ ...config, overrides: { ...config.overrides, terminal_swing_count: 1 } })),
             qualifies: 'per-job checks (job-checks/variants.ts): the sample no longer forces one output swing a cycle; no clock made without a search is stable with it' },

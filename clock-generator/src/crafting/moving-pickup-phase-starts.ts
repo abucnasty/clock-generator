@@ -4,13 +4,15 @@ import {BeltSpeed} from "../entities/belt";
 import {createEntityRegistryFromConfig, MovingPickupPhases} from "./sequence/simulation-context";
 
 /**
- * Bounded stock starts: vary both lanes of each ordinary moving pickup, one pickup at a time.
+ * Bounded stock starts: vary both lanes of each ordinary moving pickup, one pickup at a time. A pickup is moving where
+ * no lane of its belt ends in a dead end (an unknown end is read as an infinite end).
  * This does not enumerate simultaneous phase combinations across a conveyor network.
  */
 export function* movingPickupPhaseStarts(config: Config): Generator<MovingPickupPhases> {
     const registry = createEntityRegistryFromConfig(config);
     for (const inserter of registry.getAll().filter(Entity.isInserter)) {
-        if (inserter.belt_supply !== "moving") continue;
+        // the starts seed both lanes of the pickup as moving: a pickup with a lane that ends in a dead end has none
+        if (inserter.belt_lane_facts === undefined || inserter.belt_lane_facts.some(facts => facts.lane_end.kind === "dead_end")) continue;
         const source = registry.getSourceEntityOrThrow(inserter.entity_id);
         if (!Entity.isBelt(source)) continue;
         // Stacks are spaced 8 public units apart. Advance by one belt tick until the phase repeats.

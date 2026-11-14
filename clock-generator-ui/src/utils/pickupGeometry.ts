@@ -56,8 +56,7 @@ export function withDefaultPickupType(source: Source): Source {
 }
 
 export interface PickupBuild {
-    inserters: readonly { id?: number; source: { type: string; pickup_length?: number; pickup_layout?: BeltPickupLayout; pickup_capture?: Source['pickup_capture'] } }[];
-    overrides?: { backed_up_belts?: boolean };
+    inserters: readonly { id?: number; source: { type: string; id?: number; pickup_length?: number; pickup_layout?: BeltPickupLayout; pickup_capture?: Source['pickup_capture'] } }[];
 }
 
 export function pickupGeometryOf(build: PickupBuild) {
@@ -69,5 +68,5 @@ export function pickupGeometryOf(build: PickupBuild) {
     const missing = inputs.filter(({source}) => source.pickup_layout
         ? source.pickup_length !== pickupLengthForLayout(source.pickup_layout)
         : source.pickup_length !== 1).map(i => i.id);
-    return { total: inputs.length, known: inputs.filter(i => !missing.includes(i.id) && !unverified.includes(i.id)).length, missing, unverified, unsupported, backedUp: build.overrides?.backed_up_belts === true };
+    return { total: inputs.length, known: inputs.filter(i => !missing.includes(i.id) && !unverified.includes(i.id)).length, missing, unverified, unsupported };
 }

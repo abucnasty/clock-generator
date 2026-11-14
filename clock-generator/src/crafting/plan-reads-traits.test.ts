@@ -9,15 +9,14 @@ import { validateCopies } from "../config/copies-validator";
 import { Config } from "../config/schema";
 import Fraction, { fraction } from "../data-types/fraction";
 import { Belt, Entity, handSizeFor, isNeverBlockingSink, Machine, ReadableEntityRegistry } from "../entities";
-import { laneItemsPerSecond, laneStackFor } from "../entities/belt/belt";
-import { ConfigTraits } from "../entities/traits/build-traits";
+import { laneItemsPerSecond, laneStackFor } from "../entities/belt/belt-speed";
+import { ConfigTraits, laneFactsOfConfig } from "../entities/traits/build-traits";
 import { beltLanesOfFacts } from "../entities/traits/lane";
-import { laneFactsOf } from "../entities/traits/lane-facts";
 import { decimalOf, fractionOf } from "../entities/traits/ratio";
 import { SAMPLE_CONFIG_FILES } from "../entities/traits/sample-configs.fixture";
 import { handOfItem, machinesInOrder, mainProductRateOf, neverRefuses, traitsOf, traitsOfMachine } from "../entities/traits/traits-of";
 import { outputCapacityPerSecond } from "./alternatives";
-import { beltPickupSlackTicks, fuelHandRoomTicks } from "./clock";
+import { fuelHandRoomTicks } from "./clock";
 import { computeMachineTargetRates, MachineTargetRate } from "./machine-target-rates";
 import { OutputCyclePlan } from "./sequence/cycle/output-cycle";
 import type { EntityTransferCountMap } from "./sequence/cycle/swing-counts";
@@ -37,7 +36,7 @@ import { neverBlockingBranchesOf, TerminalBranch } from "./terminal-rate";
 // with toStrictEqual. Nothing is rounded.
 
 /** What the old derivations below gave, against the traits, summed over the configs */
-const checked = { configs: 0, derived: 0, machines: 0, results: 0, targets: 0, rates: 0, lanes: 0, loads: 0, sinks: 0, hands: 0, belt_inserters: 0 };
+const checked = { configs: 0, derived: 0, machines: 0, results: 0, targets: 0, rates: 0, lanes: 0, loads: 0, sinks: 0, hands: 0 };
 
 // ---------------------------------------------------------------------------------------------------------------------
 // The old derivations (before R21), as they were
@@ -162,28 +161,6 @@ function oldFuelHandRoomTicks(entity_registry: ReadableEntityRegistry): Map<stri
     return room;
 }
 
-/**
- * clock.ts beltPickupSlackTicks before R21, of the nominal hand. It reads each item's hand since; on every config here
- * the belt-fed inserters' hands equal their nominal hand, so the two agree (the per-item case: rules-of-the-game.test.ts)
- */
-function oldBeltPickupSlackTicks(entity_registry: ReadableEntityRegistry): Map<string, number> {
-    const slack = new Map<string, number>();
-    for (const entity of entity_registry.getAll()) {
-        if (!Entity.isInserter(entity)) {
-            continue;
-        }
-        const source = entity_registry.getEntityByIdOrThrow(entity.source.entity_id);
-        if (!Entity.isBelt(source)) {
-            continue;
-        }
-        const lanes = source.lanes.filter(lane => entity.filtered_items.has(lane.ingredient_name));
-        const lane_stack_size = Math.min(...(lanes.length > 0 ? lanes : source.lanes).map(lane => lane.stack_size));
-        const ticks = Math.ceil(entity.metadata.stack_size / lane_stack_size);
-        slack.set(entity.entity_id.id, Math.min(ticks, 16));
-    }
-    return slack;
-}
-
 // ---------------------------------------------------------------------------------------------------------------------
 // The checks
 // ---------------------------------------------------------------------------------------------------------------------
@@ -246,7 +223,7 @@ function checkHands(registry: ReadableEntityRegistry, traits: ConfigTraits): voi
 
 /** What a lane carries, lane by lane, and the capacity of every load of the lane check */
 function checkLanes(config: Config): void {
-    const facts = laneFactsOf(config);
+    const facts = laneFactsOfConfig(config);
     for (const belt of config.belts) {
         const lanes = beltLanesOfFacts(belt, facts);
         for (const lane of [1, 2]) {
@@ -287,10 +264,8 @@ function checkTerminalBranches(registry: ReadableEntityRegistry, traits: ConfigT
     }
 }
 
-/** The belt pickup slack and the room for a hand of fuel */
+/** The room for a hand of fuel */
 function checkBeltCounts(registry: ReadableEntityRegistry): void {
-    checked.belt_inserters += beltPickupSlackTicks(registry).size;
-    expect(beltPickupSlackTicks(registry), "belt pickup slack").toStrictEqual(oldBeltPickupSlackTicks(registry));
     expect(fuelHandRoomTicks(registry), "fuel hand room").toStrictEqual(oldFuelHandRoomTicks(registry));
 }
 
@@ -330,7 +305,6 @@ describe("the planner's reads of the traits", () => {
         expect(checked.machines).toBeGreaterThan(100);
         expect(checked.rates).toBeGreaterThan(100);
         expect(checked.loads).toBeGreaterThan(50);
-        expect(checked.belt_inserters).toBeGreaterThan(100);
         console.info(`planner reads held to the old derivations: ${JSON.stringify(checked)}`);
     });
 

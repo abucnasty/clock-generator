@@ -120,8 +120,8 @@ describe("a machine's crafting speed", () => {
 describe('a recipe the row\'s machine cannot make', () => {
     const notMade = (fields: Partial<MachineFormData>) => recipeNotMadeText(row(fields), data, name, id => id.replace(/-/g, ' '));
     it('is said on the row in the words of the game, with the machines that can', () => {
-        expect(notMade({ prototype: 'assembling-machine-1', recipe: 'lithium' })).toBe("Assembling machine 1 can't craft lithium. Machines that can: Chemical plant, Cryogenic plant.");
-        expect(notMade({ prototype: 'cryogenic-plant', recipe: 'iron-gear-wheel' })).toMatch(/^Cryogenic plant can't craft iron gear wheel\. Machines that can: Assembling machine 1, /);
+        expect(notMade({ prototype: 'assembling-machine-1', recipe: 'lithium' })).toBe("Assembling machine 1 can't craft lithium. Machines that can: chemical plant, cryogenic plant.");
+        expect(notMade({ prototype: 'cryogenic-plant', recipe: 'iron-gear-wheel' })).toMatch(/^Cryogenic plant can't craft iron gear wheel\. Machines that can: assembling machine 1, /);
     });
 
     it('is not said when the machine can, or when the machine or the recipe is not in the data', () => {

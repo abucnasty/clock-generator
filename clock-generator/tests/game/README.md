@@ -213,7 +213,8 @@ belong in `builds/`, and can reuse the mechanic fixture without copying its scaf
 
 Mechanic write-ups include native Factorio screenshots compressed to JPEG. These show the layout, rather than
 the probe's exact starting state or evidence of a timing rule. The [catalog](mechanics/screenshots.json) names
-the committed fixture blueprints and shared sample builds used by mechanics tests. No blueprints are duplicated.
+the committed mechanics fixture blueprints. No blueprints are duplicated. Pictures are of the mechanics fixtures
+only. A topic that uses a sample links to the sample's scaffold under `resources/config-samples/`.
 
 From `clock-generator/`, with the same `.env` configuration as game tests:
 
@@ -241,8 +242,7 @@ belong in the repository. Native PNGs, the minimal harness recordings and logs s
 
 For a new mechanic scaffold, add its blueprint and JPEG paths to the catalog, capture that case, inspect the image,
 and embed it with a descriptive caption in the fixture/topic README. Local `mechanics/**/*.txt` blueprints must
-have catalog entries; an offline helper test enforces this. Shared sample blueprints can have entries too, with
-their images in `mechanics/images/` and links from each topic using them. Increment `CAPTURE_RECIPE` in the script
+have catalog entries; an offline helper test enforces this. Increment `CAPTURE_RECIPE` in the script
 if changing framing or render defaults. Refresh after a Factorio graphics/version change even if blueprints match.
 
 ## Maintain an experiment

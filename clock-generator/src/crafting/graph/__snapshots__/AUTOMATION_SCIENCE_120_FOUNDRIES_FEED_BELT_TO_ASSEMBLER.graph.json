@@ -14,14 +14,14 @@
       "key": "belt:1/lane:1",
       "kind": "lane",
       "ports": [
-        "belt:1/lane:1#iron-gear-wheel"
+        "belt:1/lane:1#copper-plate"
       ]
     },
     {
       "key": "belt:1/lane:2",
       "kind": "lane",
       "ports": [
-        "belt:1/lane:2#copper-plate"
+        "belt:1/lane:2#iron-gear-wheel"
       ]
     },
     {
@@ -68,7 +68,7 @@
       "from_ports": [
         "machine:1"
       ],
-      "to": "belt:1/lane:1#iron-gear-wheel",
+      "to": "belt:1/lane:2#iron-gear-wheel",
       "lands_in": "lane",
       "hand": 16,
       "floor_cycle": 11,
@@ -88,7 +88,7 @@
       "from_ports": [
         "machine:2"
       ],
-      "to": "belt:1/lane:2#copper-plate",
+      "to": "belt:1/lane:1#copper-plate",
       "lands_in": "lane",
       "hand": 16,
       "floor_cycle": 11,
@@ -104,9 +104,9 @@
       "entity": "inserter:3",
       "group": "inserter:3",
       "item": "iron-gear-wheel",
-      "from": "belt:1/lane:1#iron-gear-wheel",
+      "from": "belt:1/lane:2#iron-gear-wheel",
       "from_ports": [
-        "belt:1/lane:1#iron-gear-wheel"
+        "belt:1/lane:2#iron-gear-wheel"
       ],
       "to": "machine:3",
       "lands_in": "ingredients",
@@ -124,9 +124,9 @@
       "entity": "inserter:3",
       "group": "inserter:3",
       "item": "copper-plate",
-      "from": "belt:1/lane:2#copper-plate",
+      "from": "belt:1/lane:1#copper-plate",
       "from_ports": [
-        "belt:1/lane:2#copper-plate"
+        "belt:1/lane:1#copper-plate"
       ],
       "to": "machine:3",
       "lands_in": "ingredients",
@@ -162,9 +162,9 @@
   "components": [],
   "order": [
     "machine:1",
-    "belt:1/lane:1#iron-gear-wheel",
+    "belt:1/lane:2#iron-gear-wheel",
     "machine:2",
-    "belt:1/lane:2#copper-plate",
+    "belt:1/lane:1#copper-plate",
     "machine:3",
     "belt:2/lane:1#automation-science-pack",
     "sink"

@@ -1,0 +1,26 @@
+{
+  "round_robin_polling_swings_2": { "window_cycle_ticks": 24, "windows": {
+    "inserter:1": [{"start": 6, "end": 22}],
+    "inserter:2": [{"start": 6, "end": 22}],
+    "inserter:3": [{"start": 22, "end": 23}, {"start": 0, "end": 14}],
+    "inserter:4": [{"start": 22, "end": 23}, {"start": 0, "end": 14}],
+    "inserter:5": [{"start": 14, "end": 23}],
+    "inserter:6": [{"start": 14, "end": 15}],
+    "inserter:7": [{"start": 14, "end": 15}],
+    "inserter:9": [{"start": 0, "end": 23}, {"start": 0, "end": 0}],
+    "inserter:10": [{"start": 6, "end": 7}],
+    "inserter:11": [{"start": 6, "end": 7}]
+  } },
+  "coordinated_sources": { "window_cycle_ticks": 48, "windows": {
+    "inserter:1": [{"start": 4, "end": 31}],
+    "inserter:2": [{"start": 4, "end": 31}],
+    "inserter:3": [{"start": 20, "end": 47}],
+    "inserter:4": [{"start": 20, "end": 47}],
+    "inserter:5": [{"start": 36, "end": 47}, {"start": 0, "end": 13}],
+    "inserter:6": [{"start": 36, "end": 45}],
+    "inserter:7": [{"start": 36, "end": 45}],
+    "inserter:9": [{"start": 0, "end": 47}, {"start": 0, "end": 0}],
+    "inserter:10": [{"start": 4, "end": 13}],
+    "inserter:11": [{"start": 37, "end": 46}]
+  } }
+}

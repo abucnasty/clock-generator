@@ -50,7 +50,6 @@ export function WakeWindowsTable({ rows, windowCycleTicks, mostWakeUpsId }: Wake
                     { header: WINDOWS_TABLE_HEADERS.ends, align: 'right', cell: ({ window }) => windowEndText(window) },
                     { header: WINDOWS_TABLE_HEADERS.lengthTicks, align: 'right', cell: ({ window }) => num(window.length) },
                     { header: WINDOWS_TABLE_HEADERS.lengthSeconds, align: 'right', cell: ({ window }) => num(ticksToSeconds(window.length)) },
-                    { header: WINDOWS_TABLE_HEADERS.slack, align: 'right', cell: ({ window }) => num(window.slackTicks) },
                 ]} />
         </Box>
     );

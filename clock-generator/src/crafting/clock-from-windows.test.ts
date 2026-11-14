@@ -50,7 +50,6 @@ describe("a clock built from windows that are given", () => {
     it("builds the windows as they are", () => {
         expect(result.simulation_duration.ticks).toBe(WINDOW_CYCLE);
         expect(result.clock_windows).toEqual(tightened);
-        expect(result.belt_pickup_slack_ticks).toEqual({});
     });
 
     it("checks the clock as the generator checks its own: it holds 240 a second from every start", () => {

@@ -2,8 +2,13 @@ import { Box, Button, Typography } from '@mui/material';
 import { OUT_OF_SCOPE_PICKUP_SCOPE, OUT_OF_SCOPE_PICKUPS, pickupGeometryOf, unsupportedPickupOf, type PickupBuild } from '../utils/pickupGeometry';
 
 /** Current builds default to straight belts; saved runs retain the assumptions they actually used. */
-export function PickupGeometrySummary({ build, onEdit, busy = false, savedRun = false }: {
+export function PickupGeometrySummary({ build, onEdit, busy = false, savedRun = false, backedUp }: {
     build: PickupBuild;
+    /**
+     * Every lane an inserter takes from ends in a dead end: the engine's belt of the clock shown, or the engine's reading
+     * of the build's lanes; null where the engine cannot tell (an import not yet placed, a form it cannot read yet)
+     */
+    backedUp: boolean | null;
     onEdit?: (id: number) => void;
     busy?: boolean;
     savedRun?: boolean;
@@ -24,9 +29,9 @@ export function PickupGeometrySummary({ build, onEdit, busy = false, savedRun = 
         <Typography variant="body2">
             {geometry.unverified.length && !unverifiedOnly.length ? `${geometry.unverified.length} belt ${geometry.unverified.length === 1 ? 'pickup is not supported and blocks' : 'pickups are not supported and block'} generation.`
                 : geometry.unverified.length ? `${geometry.unverified.length} belt ${geometry.unverified.length === 1 ? 'pickup needs' : 'pickups need'} a supported capture before generation. Recorded unsupported or unclassified pickups are retained when this build is saved.`
-                : geometry.backedUp ? 'Backed-up input belts · Saturated supply with captured pickup rules.'
-                : savedRun ? `Moving input belts · Pickup type known for ${geometry.known === geometry.total ? `all ${geometry.total}` : `${geometry.known} of ${geometry.total}`} belt-fed ${geometry.total === 1 ? 'inserter' : 'inserters'}.`
-                    : 'Moving input belts · Straight belt is the default. Choose the belt shape and pickup approach.'}
+                : backedUp ? 'The simulation assumes backpressure at the belt pickups.'
+                : savedRun ? `Pickup type known for ${geometry.known === geometry.total ? `all ${geometry.total}` : `${geometry.known} of ${geometry.total}`} belt-fed ${geometry.total === 1 ? 'inserter' : 'inserters'}.`
+                    : 'Straight belt is the default. Choose the belt shape and pickup approach.'}
         </Typography>
         {geometry.unsupported.length > 0 && <Typography variant="body2" color="text.secondary">
             Not supported: Inserter {detailsOf(geometry.unsupported).join(', ')}. {OUT_OF_SCOPE_PICKUP_SCOPE}

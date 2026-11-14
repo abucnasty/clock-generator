@@ -22,7 +22,6 @@ export interface BuildViewContext {
     resultDetail: ResultDetail;
     detailsTab: DetailsTab;
     sections: Record<string, boolean>;
-    comparison: { allColumns: boolean; showUnstable: boolean };
     wakeAsTable: boolean;
     diagramDetailed: boolean;
     timeline: TimelineViewContext;
@@ -31,13 +30,15 @@ export interface BuildViewContext {
     position: Partial<Record<'configure' | 'results', { anchor: BuildAnchor; offset: number }>>;
 }
 const ANCHORS: BuildAnchor[] = ['configure', 'target', 'build', 'advanced', 'results', 'selected-clock', 'comparison', 'clock-context', 'details', 'developer'];
-const SECTIONS = ['advanced', 'transfer-plan', 'insights-build', 'comparison-help', 'comparison-open', 'model-assumptions'];
+// a view saved before the clocks were a list keeps `comparison` (the table's columns and fold) and the section
+// 'comparison-open': both are dropped as unknown, so the page opens with the list and the compare table closed
+const SECTIONS = ['advanced', 'transfer-plan', 'insights-build', 'model-assumptions'];
 const KINDS: EntityClickType[] = ['machine', 'inserter', 'belt', 'chest', 'drill'];
 const MAX_OFFSET = 4000;
 const MAX_TEXT = 2_000_000;
 export function defaultBuildViewContext(): BuildViewContext {
     return { version: 1, view: 'configure', configView: 'list', resultDetail: 'timeline', detailsTab: 'insights', sections: {},
-        comparison: { allColumns: false, showUnstable: false }, wakeAsTable: false, diagramDetailed: true,
+        wakeAsTable: false, diagramDetailed: true,
         timeline: { viewMode: 'simplified', sortMode: 'byType', filters: { machine: true, inserter: true, drill: true },
             statuses: { machine: Object.keys(MACHINE_STATUS_COLORS), inserter: Object.keys(INSERTER_STATUS_COLORS), drill: Object.keys(DRILL_STATUS_COLORS), categories: Object.keys(CATEGORY_COLORS) } },
         entity: null, entityConfigKey: null, position: {} };
@@ -54,7 +55,7 @@ function validateBuildViewContext(value: unknown): BuildViewContext {
     const d = defaultBuildViewContext();
     const v = record(value);
     if (v.version !== 1) return d;
-    const comparison = record(v.comparison), entity = record(v.entity), timeline = record(v.timeline);
+    const entity = record(v.entity), timeline = record(v.timeline);
     const filters = record(timeline.filters), statuses = record(timeline.statuses);
     const allowed = { machine: MACHINE_STATUS_COLORS, inserter: INSERTER_STATUS_COLORS, drill: DRILL_STATUS_COLORS, categories: CATEGORY_COLORS };
     for (const key of Object.keys(d.timeline.statuses) as (keyof typeof allowed)[]) {
@@ -71,10 +72,9 @@ function validateBuildViewContext(value: unknown): BuildViewContext {
     const resultDetail = v.resultDetail === 'wake' || v.resultDetail === 'install' ? 'timeline'
         : v.resultDetail === 'why' && v.detailsTab === 'blueprint' ? 'timeline'
         : v.resultDetail === 'why' ? 'overview'
-        : oneOf(v.resultDetail, ['overview', 'timeline'], d.resultDetail);
+        : oneOf(v.resultDetail, ['overview', 'diagnostics', 'timeline'], d.resultDetail);
     return { ...d, view: oneOf(v.view, ['configure', 'results'], d.view), configView: oneOf(v.configView, ['list', 'diagram'], d.configView),
         resultDetail, detailsTab: oneOf(v.detailsTab, ['insights', 'fuel', 'blueprint'], d.detailsTab), sections,
-        comparison: { allColumns: bool(comparison.allColumns, false), showUnstable: bool(comparison.showUnstable, false) },
         wakeAsTable: bool(v.wakeAsTable, false), diagramDetailed: bool(v.diagramDetailed, true),
         timeline: { ...d.timeline, ...(timeline.inspection ? { inspection: validInspection(timeline.inspection) } : {}), viewMode: oneOf(timeline.viewMode, ['simplified', 'detailed'], 'simplified'), sortMode: oneOf(timeline.sortMode, ['byType', 'byRelationship'], 'byType'),
             filters: { machine: bool(filters.machine, true), inserter: bool(filters.inserter, true), drill: bool(filters.drill, true) } },

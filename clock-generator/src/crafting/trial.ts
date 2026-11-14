@@ -10,13 +10,14 @@ import { Logger, defaultLogger } from "../common/logger";
 import { StockDetail, StockRecording } from "./machine-stock";
 import { WakeUps, wakeUpsOfStock } from "./wake-ups";
 import { InserterCounters, inserterEnds, wakeUpsAndCountersOfStock } from "./inserter-counters";
-import { judgeCounterSpan, judgeLongRun, judgeProvenCycle, LONG_RUN_MAX_TICKS, LONG_RUN_SETTLE_SHARE, longRunWindowCycles, wholeOutputRepeats } from "./long-run";
-import { DisturbanceTrial, DisturbanceTrialOptions, DisturbanceTrialReport, DisturbanceTrialVerdict, disturbanceTrialsOf, ExcessLoss, LATE_AFTER_WINDOW_CYCLES, LossOutcome, lossLimitOf, MAX_RECOVERY_WINDOW_CYCLES, reportOf, verdictOf } from "./disturbance-trial";
-import { SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForWindowCycle, withBeltPickupSlack } from "./clock";
+import { judgeCounterSpan, judgeLongRun, judgeProvenCycle, LONG_RUN_MAX_TICKS, LONG_RUN_SETTLE_SHARE, longRunWindowCycles, OutputReason, outputReasonOf, wholeOutputRepeats } from "./long-run";
+import { DisturbanceTrial, DisturbanceTrialOptions, DisturbanceTrialReport, DisturbanceTrialVerdict, disturbanceTrialsOf, ExcessLoss, LATE_AFTER_WINDOW_CYCLES, LossOutcome, lossLimitOf, MAX_RECOVERY_WINDOW_CYCLES, reportOf, type SkippedTrial, verdictOf, withEveryTrialCounted } from "./disturbance-trial";
+import { SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForWindowCycle, withWindowsLengthened } from "./clock";
 import type { SubtickWindowCycle } from "../common/subtick-window-cycle";
 import { canonicalKey, currentRunMemo } from "./plan/run-memo";
-import { wholeCounterOf } from "./plan/clock-window-cycle-limit";
+import { LOSS_TRIAL_BUDGET_TICKS, wholeCounterOf } from "./plan/clock-window-cycle-limit";
 import { assessTargetProduction, TargetProduction } from "./target-production";
+import { TARGET_RATE_TOLERANCE } from "./rank";
 import { BlueprintGenerationResult, BuildRun, FractionalSwings, LCM_STABILITY_TOLERANCE, SIMULATION_BUDGET_TICKS, RunOptions, fractionalSwingsOf, SimulationStabilityCheck, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, coldControlledTrialBuild, unclockedRun, provenRepeatBin, runBuild, trialRunOf, withInserterClocks } from "./plan/unclocked-run";
 import { SimulationTick } from "./runner/simulation-tick";
 import { simulationStateKey } from "./runner/steady-state";
@@ -37,6 +38,8 @@ import { TakerOrder, takerOrderName, independentTakerOrdersToCheck } from "../si
 import { verificationPlanningConfigOf, verificationTerminalCountOf } from "./round-robin-polling-primitive-policy";
 import { CIRCUIT_LATENCY_TICKS } from "../common/rule-constants";
 import { WakeUpsFromStarts, hasStockTheClockDoesNotSet, wakeUpsFromStarts } from "./wake-ups-from-starts";
+import type { ClockSharedLaneLoss } from "./shared-lane-verdict";
+import { LossTrialEstimate, lossTrialEstimateOf } from "./loss-trial-estimate";
 
 /**
  * Number of clock start offsets the as-built check tries. Depending on how the clock lines up with the
@@ -71,6 +74,11 @@ export interface ClockAssessment {
      * that does not repeat in whole ticks. Absent when they were tried, or the clock does not hold.
      */
     disturbance_trial_not_tried?: string;
+    /**
+     * Where the trials were not run for a reason the generator gives a code for, the code and its numbers, for the web app to
+     * word; beside `disturbance_trial_not_tried`. Absent where they were run, or not run for another reason.
+     */
+    disturbance_trial_not_tried_reason?: DisturbanceTrialNotTriedReason;
     /** Items per second the exported clock moved in its clock-only run, over all copies; the target when it holds */
     items_per_second: number;
     /**
@@ -84,7 +92,8 @@ export interface ClockAssessment {
     wake_ups_per_minute: number | null;
     /**
      * Signals a minute its window deciders send, beside the wake-ups (see `signalsPerMinuteOf`): one for each enable window of a
-     * decider that opens. Null when the clock had no long run; absent where it was not counted. Nothing ranks a clock by it.
+     * decider that opens. Null when the clock had no long run; absent where it was not counted. Of clocks equal on wake-ups the
+     * selection puts the one with fewer first (`ClockRanking.signals_per_minute`).
      */
     signals_per_minute?: number | null;
     /**
@@ -101,6 +110,13 @@ export interface ClockAssessment {
      */
     start_dependence: StartDependence | null;
     /**
+     * On a build whose copies share a belt lane the shared-lane model decides (shared-lane-verdict.ts): the takers of the
+     * copies that lose swings on it, the worst first; or, where the check could not run, one loss that says the lanes could
+     * not be checked and why (`SharedLanesNotChecked`). A clock with any is unstable. Absent where there are none: no such
+     * lane, or a clock that does not hold its expected output.
+     */
+    shared_lane_losses?: ClockSharedLaneLoss[];
+    /**
      * #516's two-hop bound on the windows of a clock with windows for a loop of machines (`loop_windows` of its result): the
      * margins of what the loop's sources leave for its inserters and of the stock its machines hold over the longest gap
      * between its windows (see loop-stock-bound.ts). A report: no clock is kept, dropped or ranked by it. Absent on any other
@@ -113,7 +129,8 @@ export interface ClockAssessment {
  * The one word for a clock (GOALS.md, "Backpressure Loss"): stable when it holds its expected output and gets back to
  * it by itself after every backpressure loss of its build (and, when the start dependence was checked, reaches it from every
  * start); no recovery when it holds and does not get back from some
- * loss; unstable when it does not hold or fails the sampled-start check. A clock the losses could not be tried on keeps
+ * loss; unstable when it does not hold, fails the sampled-start check, or a copy loses swings on a lane the copies share
+ * (`shared_lane_losses`). A clock the losses could not be tried on keeps
  * the word of what it holds, stable, and `disturbance_trial_not_tried` says why they were not: it ranks below every
  * clock tried and getting back, and above every clock tried and not (`recoveryUntried`, rank.ts).
  */
@@ -122,7 +139,8 @@ export type ClockVerdict = "stable" | "no recovery" | "unstable";
 export function clockVerdictOf(assessment: ClockAssessment): ClockVerdict {
     // a clock that reaches its target from some starts only is not one to rely on: it is listed as unstable here, and
     // named start-dependent by `start_dependence`
-    if (!assessment.holds || (assessment.start_dependence !== null && assessment.start_dependence.verdict !== "stable")) {
+    if (!assessment.holds || (assessment.start_dependence !== null && assessment.start_dependence.verdict !== "stable")
+        || (assessment.shared_lane_losses?.length ?? 0) > 0) {
         return "unstable";
     }
     return assessment.disturbance_trial?.survives === false ? "no recovery" : "stable";
@@ -190,6 +208,14 @@ export interface AsBuiltStabilityCheck {
     clock_tick_at_first_judged?: number;
     /** Clock window cycles in the repeating cycle the proven long run was judged on */
     long_run_cycle_window_cycles?: number;
+    /**
+     * Why the check failed where no rate says it, as a code with its numbers (`OutputReason`, long-run.ts): `oscillation`
+     * where the check's own long run failed with its mean output at the expected output and one or more bins off it by
+     * more than its tolerance. A report: no verdict, ranking or selection reads it, and the verification signature leaves
+     * it out. Absent on any other check: one that failed before its long run (its first check, a start phase), under
+     * another taker order, or whose long run failed otherwise.
+     */
+    output_reason?: OutputReason;
     /**
      * Under the strict target amount, on a proven long run: what the build moved short of its target before the proven
      * repeat starts (`orbit_start_window_cycle`, window cycles of the long run). A loss of the start-up, not of the rate: the
@@ -468,6 +494,8 @@ function longRunOfFreeRunningBuild(
     stock: StockRecording;
     /** The judged bins repeat forever: the verdict is a proof of the build's eternity, not a sample of 120 window cycles */
     proven: boolean;
+    /** Where the mean output is the expected output and one or more bins are off it by more than the tolerance (`outputReasonOf`) */
+    output_reason: OutputReason | undefined;
     /** Clock window cycles in the proven repeating cycle; null when the run never repeated */
     cycle_window_cycles: number | null;
     /** Tick of the run the first judged bin starts at, for judging the same window the verdict is of */
@@ -544,6 +572,10 @@ function longRunOfFreeRunningBuild(
     }
     const stock = run.machine_stock!;
     const proven = run.state_repeat !== undefined;
+    const cycle_window_cycles = run.state_repeat === undefined ? null : run.state_repeat.cycle_bins * run.state_repeat.window_cycles_per_bin;
+    // the mean is the expected output to within the rate tolerance of the ranking, which is over all the copies: the
+    // long run is of one copy
+    const output_reason = outputReasonOf(verdict, TARGET_RATE_TOLERANCE * window_cycle_ticks / 60 / (config.setpoint.copies ?? 1), cycle_window_cycles);
     const start_up_shortfall = proven ? startUpShortfallOf(held, verdict.first_judged_tick, window_cycle_ticks, expected_output_items) : undefined;
     // the exports are judged in the bins of the output: a belt with a consumption rate has to receive it in every bin
     const exported = exportedItemsOf(registry, output_ids);
@@ -571,7 +603,8 @@ function longRunOfFreeRunningBuild(
         span_items: verdict.total - verdict.expected_total,
         stock,
         proven,
-        cycle_window_cycles: run.state_repeat === undefined ? null : run.state_repeat.cycle_bins * run.state_repeat.window_cycles_per_bin,
+        output_reason,
+        cycle_window_cycles,
         first_judged_tick: verdict.first_judged_tick,
         // only where every clock ran on from the warm-up: a clock that started again with the recording (one of p/q ticks)
         // stands at no one tick a replay from the cold start reaches
@@ -648,9 +681,8 @@ export function clockFromWindows(
     swings: FractionalSwings = {},
 ): BlueprintGenerationResult {
     const plan = unclockedRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, { logger, ...swings });
-    // the windows are built as they are: nothing is added to them, so the clock goes without belt pickup slack, and the
-    // inserters of a loop without windows stay always enabled
-    const clock = clockOfPlan(plan, { belt_pickup_slack: "never" });
+    // the windows are built as they are: nothing is added to them, and the inserters of a loop without windows stay always enabled
+    const clock = clockOfPlan(plan, { lane_hand_room: "never" });
     const windows = new Map(Object.entries(clock_windows).map(([entity_id, ranges]) =>
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     const result = checkedClock(plan, clock, windows, { logger, verify_as_built: true, loop_windows: false });
@@ -677,8 +709,11 @@ export function disturbanceTrialOf(
     expected_output_items: number,
     logger: Logger = defaultLogger,
     options: Omit<DisturbanceTrialOptions, "loss" | "window_cycle_ticks" | "expected_output_items"> = {},
-    /** Called before the run of each loss, the one with nothing cut included */
-    on_loss?: (loss: DisturbanceTrial, index: number, total: number) => void,
+    /**
+     * Called before each run of a loss, the one with nothing cut included: from the modeled start (`start` 1), from each other
+     * lane phase, and in each other order of the takers, of `starts` in all (as lossTrialEstimateOfClock counts them)
+     */
+    on_loss?: (loss: DisturbanceTrial, index: number, total: number, start: number, starts: number) => void,
     /** Options of one loss over `options`, where a loss is tried in a way of its own (see resultLossOptionsOf) */
     options_for?: (loss: DisturbanceTrial) => Partial<DisturbanceTrialOptions>,
     /** The excesses of results that come by chance the clock is tried with too, after the losses (randomExcessLossesOf) */
@@ -690,27 +725,35 @@ export function disturbanceTrialOf(
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     const check_config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
     // each loss on a run of its own, so that a clock one loss breaks is not broken for the next
-    const outcomeOf = (loss: DisturbanceTrialOptions["loss"], phases?: MovingPickupPhases, order?: TakerOrder): LossOutcome => runClockOnBuild(check_config, windows, window_cycle_ticks, logger, {
+    const runOf = (loss: DisturbanceTrialOptions["loss"], phases?: MovingPickupPhases, order?: TakerOrder, skipped?: readonly SkippedTrial[]): LossOutcome => runClockOnBuild(check_config, windows, window_cycle_ticks, logger, {
         ...swings,
         factorio_states: false,
         moving_pickup_phases: phases,
         ...(order !== undefined && { competing_takers_order: order }),
-        disturbance_trial: { loss_limit_ticks: loss_limit?.ticks, ...options, ...options_for?.(loss), loss, window_cycle_ticks, expected_output_items },
+        disturbance_trial: { loss_limit_ticks: loss_limit?.ticks, ...options, ...options_for?.(loss), loss, window_cycle_ticks, expected_output_items,
+            ...(skipped !== undefined && { skipped_trials: skipped }) },
     }).disturbance_trial!;
+    // a loss the clock does not recover from has every trial of its plan counted (withEveryTrialCounted)
+    const outcomeOf = (loss: DisturbanceTrialOptions["loss"], phases?: MovingPickupPhases, order?: TakerOrder): LossOutcome =>
+        withEveryTrialCounted(runOf(loss, phases, order), skipped => runOf(loss, phases, order, skipped));
     const phase_starts = [...movingPickupPhaseStarts(config)];
     const registry = createEntityRegistryFromConfig(config);
     const losses: DisturbanceTrial[] = [...disturbanceTrialsOf(registry, config.setpoint.recipe), ...excesses];
     // a build whose items spoil is tried with losses shorter than its loss limit only
     const loss_limit = lossLimitOf(registry);
+    // arithmetic on the windows: counted here for the starts the progress names, run below only where every loss is got back from
+    const taker_orders = otherTakerOrdersOf(check_config, windows, window_cycle_ticks);
+    const starts = 1 + phase_starts.length + taker_orders.length;
     const tried = (loss: DisturbanceTrial, index: number): LossOutcome => {
-        on_loss?.(loss, index, losses.length + 1);
+        on_loss?.(loss, index, losses.length + 1, 1, starts);
         const canonical = outcomeOf(loss);
         if (!canonical.recovers || phase_starts.length === 0) return canonical;
         let ticks = canonical.ticks, recovery = canonical.recovered_after_bins!, stopped = canonical.stopped_after_ticks;
-        for (const [index, phases] of phase_starts.entries()) {
+        for (const [at, phases] of phase_starts.entries()) {
+            on_loss?.(loss, index, losses.length + 1, 2 + at, starts);
             const outcome = outcomeOf(loss, phases);
             ticks += outcome.ticks;
-            if (!outcome.recovers) return {...outcome, ticks, pickup_phase_starts_checked: index + 1,
+            if (!outcome.recovers) return {...outcome, ticks, pickup_phase_starts_checked: at + 1,
                 failed_pickup_phases: Object.fromEntries(phases)};
             recovery = Math.max(recovery, outcome.recovered_after_bins!);
             stopped = stopped === null || outcome.stopped_after_ticks === null ? null : Math.max(stopped, outcome.stopped_after_ticks);
@@ -738,13 +781,14 @@ export function disturbanceTrialOf(
     // from everything under the default order is tried so, a loss at a time and no further than its first failure: one
     // that does not already fails its verdict.
     const other_orders = undisturbed.recovers && outcomes.length === losses.length && outcomes.every(it => it.recovers)
-        ? otherTakerOrdersOf(check_config, windows, window_cycle_ticks) : [];
+        ? taker_orders : [];
     let judged = undisturbed;
     if (other_orders.length > 0) {
         const all: LossOutcome[] = [undisturbed, ...outcomes];
         const runs: DisturbanceTrialOptions["loss"][] = [{ kind: "none" }, ...losses];
-        orders: for (const order of other_orders) {
+        orders: for (const [order_at, order] of other_orders.entries()) {
             for (let at = 0; at < all.length; at++) {
+                on_loss?.(runs[at], at, losses.length + 1, 2 + phase_starts.length + order_at, starts);
                 const outcome = outcomeOf(runs[at], undefined, order);
                 const before = all[at];
                 if (!outcome.recovers) {
@@ -1260,6 +1304,9 @@ export function runAsBuiltCheck(
                 if (long_run.export_shortfalls !== undefined) {
                     check.export_shortfalls = long_run.export_shortfalls;
                 }
+                if (long_run.output_reason !== undefined) {
+                    check.output_reason = long_run.output_reason;
+                }
             } else if (long_run === null && strict) {
                 // a window cycle too long for a long run: the final check has the span its first check measured
                 const amount = measuredAmountOf(result.stability_check);
@@ -1651,51 +1698,51 @@ export interface AsBuiltRun {
     stock?: StockRecording;
 }
 
-export interface BeltPickupSlackDecision {
+export interface LaneHandRoomDecision {
     helps: boolean;
     /**
-     * The check that decided for the slack, with the exact windows it ran on: a caller checking the same windows
+     * The check that decided for the room, with the exact windows it ran on: a caller checking the same windows
      * reuses it instead of running the identical check again (see checkedClock). Null when no check ran, or when
-     * the slack is left out.
+     * the room is left out.
      */
     verified: { windows: Map<string, OpenRange[]>; run: AsBuiltRun } | null;
 }
 
 /**
- * Slack lets a belt-fed inserter finish a late pickup, but in a short window cycle it can also leave time for an
- * extra swing when the machine is not at its insertion limit. `helps` is false only when the clock-only check
- * passes without the slack but not with it, or lands further from the expected output with it. The config is
- * checked with `derive_clock_windows` off, which only `generateClockForConfig` reads: the run is the same as
- * on the config as given.
+ * The room for one more hand (laneHandRoomTicks) lets a hand that starts late fill inside its window, but in a short
+ * window cycle it can also leave time for a hand the plan does not have when the machine is not at its insertion
+ * limit. `helps` is false only when the clock-only check passes without the room but not with it, or lands further
+ * from the expected output with it. The config is checked with `derive_clock_windows` off, which only
+ * `generateClockForConfig` reads: the run is the same as on the config as given.
  */
-export function beltPickupSlackTrial(
+export function laneHandRoomTrial(
     config: Config,
     windows: Map<string, OpenRange[]>,
-    slack: Map<string, number>,
+    room: Map<string, number>,
     window_cycle_ticks: number,
     expected_output: number,
     logger: Logger,
     /** How the clock's runs plan, as the clock was planned (`fractionalSwingsOf`) */
     swings: FractionalSwings = {},
-): BeltPickupSlackDecision {
-    if (Array.from(slack.values()).every(ticks => ticks === 0) || !Number.isInteger(window_cycle_ticks)) {
+): LaneHandRoomDecision {
+    if (Array.from(room.values()).every(ticks => ticks === 0) || !Number.isInteger(window_cycle_ticks)) {
         return { helps: true, verified: null };
     }
     const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
-    const slacked = withBeltPickupSlack(windows, slack, window_cycle_ticks);
+    const with_room_windows = withWindowsLengthened(windows, room, window_cycle_ticks);
     const check = (checked: Map<string, OpenRange[]>) => runAsBuiltCheck(base_config, checked, window_cycle_ticks, logger, AS_BUILT_START_PHASES, undefined,
         FREE_RUNNING_CHECK_TICKS, undefined, false, "loop-windows", swings);
-    const with_slack = check(slacked);
-    if (with_slack.check.holds) {
-        return { helps: true, verified: { windows: slacked, run: with_slack } };
+    const with_room = check(with_room_windows);
+    if (with_room.check.holds) {
+        return { helps: true, verified: { windows: with_room_windows, run: with_room } };
     }
-    const without_slack = check(windows).check;
-    logger.log(`Belt slack: clock-only actual with=${with_slack.check.actual_output_items} without=${without_slack.actual_output_items} expected=${expected_output}`);
-    if (without_slack.holds) {
+    const without_room = check(windows).check;
+    logger.log(`Room for one hand: clock-only actual with=${with_room.check.actual_output_items} without=${without_room.actual_output_items} expected=${expected_output}`);
+    if (without_room.holds) {
         return { helps: false, verified: null };
     }
-    const helps = Math.abs(with_slack.check.actual_output_items - expected_output) <= Math.abs(without_slack.actual_output_items - expected_output);
-    return { helps, verified: helps ? { windows: slacked, run: with_slack } : null };
+    const helps = Math.abs(with_room.check.actual_output_items - expected_output) <= Math.abs(without_room.actual_output_items - expected_output);
+    return { helps, verified: helps ? { windows: with_room_windows, run: with_room } : null };
 }
 
 /**
@@ -1802,7 +1849,27 @@ export function startDependenceVerdictOf(
 }
 
 /** What the backpressure loss trials of a clock found, or why they could not be run on it */
-export type DisturbanceTrialAssessment = Pick<ClockAssessment, "disturbance_trial" | "disturbance_trial_not_tried">;
+export type DisturbanceTrialAssessment = Pick<ClockAssessment, "disturbance_trial" | "disturbance_trial_not_tried" | "disturbance_trial_not_tried_reason">;
+
+/**
+ * Why the disturbance trials of a clock were not run, as a code and its numbers. `loss_trials_over_budget`: their estimate
+ * (lossTrialEstimateOfClock) is over LOSS_TRIAL_BUDGET_TICKS, which `budget` is.
+ */
+export type DisturbanceTrialNotTriedReason = { code: "loss_trials_over_budget"; data: LossTrialEstimate & { budget: number } };
+
+/** The reason the trials of a clock are not run where their estimate is over the budget; null where it is not, or where there is none */
+function overBudgetOf(planned_on: Config, result: BlueprintGenerationResult, logger: Logger): DisturbanceTrialNotTriedReason | null {
+    let estimate: LossTrialEstimate | null;
+    try {
+        estimate = lossTrialEstimateOfClock(planned_on, result);
+    } catch (error) {
+        // the trials are run as before, and fail there if they cannot be run
+        logger.log(`Loss trials could not be counted before they run: ${error instanceof Error ? error.message : String(error)}`);
+        return null;
+    }
+    return estimate === null || estimate.ticks <= LOSS_TRIAL_BUDGET_TICKS ? null
+        : { code: "loss_trials_over_budget", data: { ...estimate, budget: LOSS_TRIAL_BUDGET_TICKS } };
+}
 
 /**
  * Tries a clock that holds its expected output for backpressure loss. When the trials cannot be run on it, which is
@@ -1841,11 +1908,19 @@ function triedDisturbanceTrial(
     // the config the clock was planned on has its output swings each output cycle
     const config = verificationPlanningConfigOf(planned_on, result);
     const quiet: Logger = { log: () => { }, warn: () => { }, error: logger.error.bind(logger), debug: () => { } };
+    // trials that plan more ticks than the budget are not run: the clock keeps the verdict of what it holds
+    const over = overBudgetOf(planned_on, result, logger);
+    if (over !== null) {
+        const reason = `its loss trials are ${over.data.ticks.toLocaleString("en-US")} ticks, more than the budget of ${over.data.budget.toLocaleString("en-US")}`;
+        logger.log(`Loss trials not made: ${reason} (${over.data.losses} losses, ${over.data.starts} starts, ${over.data.trials} trials)`);
+        return { disturbance_trial: null, disturbance_trial_not_tried: reason, disturbance_trial_not_tried_reason: over };
+    }
     // a build with results that come by chance is tried with the backlog of them its margins say it takes up, too
     const excess = result.random_margins === undefined ? null : excessLossOf(result.random_margins.crafting);
     try {
         return { disturbance_trial: verdictOf(disturbanceTrialOf(config, result.clock_windows, result.simulation_duration.ticks,
-            result.stability_check.expected_output_items, quiet, {}, (_loss, index, total) => report?.(`Trying loss trial ${index + 1}/${total}`),
+            result.stability_check.expected_output_items, quiet, {}, (_loss, index, total, start, starts) =>
+                report?.(`Trying loss trial ${index + 1}/${total}${starts > 1 ? `, start ${start}/${starts}` : ""}`),
             result.exhaust === undefined ? undefined : resultLossOptionsOf(result.exhaust.plans), excess === null ? [] : [excess],
             fractionalSwingsOf(result.output_cycle_plan))) };
     } catch (error) {
@@ -1854,6 +1929,33 @@ function triedDisturbanceTrial(
         logger.log(`Loss trials could not be made: ${reason}`);
         return { disturbance_trial: null, disturbance_trial_not_tried: reason };
     }
+}
+
+/**
+ * What the disturbance trials of a clock plan to simulate (loss-trial-estimate.ts), counted before they run, on the config,
+ * losses and starts they run on (triedDisturbanceTrial, disturbanceTrialOf). Null where the output of the clock cannot be
+ * counted by the window cycle (a fractional window cycle with no subtick clock): the trials refuse such a clock themselves.
+ */
+export function lossTrialEstimateOfClock(planned_on: Config, result: BlueprintGenerationResult): LossTrialEstimate | null {
+    const window_cycle_ticks = result.simulation_duration.ticks;
+    const repeat = Number.isInteger(window_cycle_ticks) ? null : subtickClockForWindowCycle(window_cycle_ticks);
+    const bin = Number.isInteger(window_cycle_ticks) ? { ticks: window_cycle_ticks, window_cycles: 1 }
+        : repeat === null ? null : { ticks: repeat.window_cycle_ticks, window_cycles: repeat.scale };
+    if (bin === null) return null;
+    const config = verificationPlanningConfigOf(planned_on, result);
+    const excess = result.random_margins === undefined ? null : excessLossOf(result.random_margins.crafting);
+    const options_for = result.exhaust === undefined ? undefined : resultLossOptionsOf(result.exhaust.plans);
+    const losses: DisturbanceTrial[] = [{ kind: "none" }, ...disturbanceTrialsOf(createEntityRegistryFromConfig(config), config.setpoint.recipe),
+        ...(excess === null ? [] : [excess])];
+    const windows = new Map(Object.entries(result.clock_windows).map(([entity_id, ranges]) =>
+        [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
+    const check_config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
+    const starts = 1 + [...movingPickupPhaseStarts(config)].length + otherTakerOrdersOf(check_config, windows, window_cycle_ticks).length;
+    return lossTrialEstimateOf(losses.map(loss => {
+        const options = loss.kind === "none" ? {} : options_for?.(loss) ?? {};
+        return { kind: loss.kind, ...(options.fixed_loss_ticks !== undefined && { fixed_loss_ticks: options.fixed_loss_ticks }),
+            ...(options.max_recovery_window_cycles !== undefined && { max_recovery_window_cycles: options.max_recovery_window_cycles }) };
+    }), starts, bin);
 }
 
 /**
@@ -2006,12 +2108,20 @@ export function fractionalSwingsChangeChecksOf(planned_on: Config, result: Bluep
 export function clockVerificationSignature(config: Config, result: BlueprintGenerationResult): string {
     const verification = verificationConfigOf(config, result);
     return canonicalVerificationJson({ config: verification.config, fractional_swings: verification.fractional_swings, window_cycle_ticks: result.simulation_duration.ticks, windows: result.clock_windows,
-        belt_kind: result.belt?.kind ?? null, belt_pickup_slack_left_out: result.belt_pickup_slack_left_out,
+        belt_kind: result.belt?.kind ?? null,
         expected_output: result.stability_check.expected_output_items,
         base_cycle_ticks: result.output_cycle_plan.total_duration.ticks,
         transfer_plan: result.serializable_transfer_plan,
         inserter_clocks: result.unplanned_inserter_clocks,
-        check: result.stability_check.as_built ?? result.stability_check });
+        check: withoutOutputReason(result.stability_check.as_built) ?? result.stability_check });
+}
+
+/** A check without its output reason: the reason is read off the same long run as the rest of the check, and adds nothing to tell two clocks apart */
+function withoutOutputReason(check: AsBuiltStabilityCheck | undefined): AsBuiltStabilityCheck | undefined {
+    if (check?.output_reason === undefined) return check;
+    const rest = { ...check };
+    delete rest.output_reason;
+    return rest;
 }
 
 /**

@@ -7,7 +7,7 @@ import { encodeBlueprintFile } from "../../../src/blueprints/serde";
 import { ConfigPaths } from "../../../src/config/config-paths";
 import { loadConfigFromFile } from "../../../src/config/loader";
 import { generateClockAlternatives } from "../../../src/crafting/generate-blueprint";
-import { HarnessOptions, HarnessResult, HarnessSession, recordInFactorio, Seed } from "../../../src/harness/factorio-harness";
+import { builtCopies, clockWindowCycleTicks, HarnessOptions, HarnessResult, HarnessSession, partCopiesOf, recordInFactorio, Seed } from "../../../src/harness/factorio-harness";
 import { outputInserters, outputPerWindowCycle, recipesMaking } from "../../../src/harness/recording-output";
 import { composeProbeSource } from "../helpers/probe-source";
 import { clockHash, readControls } from "./clock-controls";
@@ -46,6 +46,8 @@ const WHY_SKIPPED = !FACTORIO ? "FACTORIO_PATH is not set to a Factorio executab
     : null;
 
 const SAMPLES = path.join(SAMPLE_BUILDS_DIR);
+/** abucnasty's whole chemical science build, both sides, with the clock it came with (a blueprint string, as he gave it) */
+const CHEMICAL_SCIENCE_WHOLE_BUILD = path.join(__dirname, "chemical-science-240-shared-foundry-full-build.blueprint");
 /**
  * The game tests' protocol, timed in game ticks (tests/game/helpers/lua/steady.lua; scaffold-recordings-probe.lua): a build
  * settles until its final machines have made the target over the trailing minute and no less than one clock cycle earlier
@@ -115,11 +117,20 @@ interface ScaffoldBuild {
     /**
      * How many times the scaffold holds the config (default 1): a build of several copies that share belts. The harness is told
      * (`HarnessOptions.copies`) and wires the clock to every copy; what the build has to make in a window cycle and in the settle's
-     * window is that of one copy times this, and every row of copies (output inserters at one height) is judged on its own too,
-     * the whole build against the target times the copies over the config's copies. The simulator's entity-by-entity comparison and
+     * window is that of one copy times this, and every row of copies (output inserters at one height) and every copy (found as the
+     * harness finds them to wire the clock) is judged on its own too, the whole build against the target times the copies over the
+     * config's copies. The simulator's entity-by-entity comparison and
      * the wake-ups are of one copy and are not made for such a build.
      */
     copies?: number;
+    /**
+     * The build's own clock, kept as the blueprint has it (a clock described "Clock for ...", which the recorder cuts the
+     * recording by), in place of the clock the generator selects; with the copies it leaves short in the game, by number as
+     * the copies are found (the order of their lowest machine ids), and why. An expected shortfall: it shows that the check of
+     * each copy sees a copy the others starve, where the build's total hides it. Nothing is asserted of steady state or of the
+     * total; every other copy is held to its target.
+     */
+    own_clock?: { short_copies: number[]; why: string };
     /**
      * The build is recorded from the staged start of the harness, as the simulator runs it: the belts are saturated first,
      * then every inserter of the cell and the clock are placed in one tick, with the machines empty but for the egg loop,
@@ -129,8 +140,13 @@ interface ScaffoldBuild {
      * is compared with the simulator on what follows the first third of each.
      */
     staged_start?: {
-        /** The window cycles of the recording that move less than the expected output, as the game showed them (the first is left out): where each starts, and the items it moved */
-        dips: { start: number; items: number }[];
+        /**
+         * The window cycles of the recording that move less than the expected output, as the game showed them (the first is left
+         * out): where each starts, and the items it moved. In a build of copies each names its copy (as the copies are found:
+         * the order of their lowest machine ids) and the items that copy moved; its row and the whole build are then short by
+         * as much in that window cycle.
+         */
+        dips: { start: number; items: number; copy?: number }[];
         /** What the game and the simulator still differ in after the first third of each, as the comparison words it */
         open_issues: string[];
     };
@@ -158,23 +174,32 @@ const LOGISTIC_INSERTER_CRAFTING_WAKE_UPS_OPEN = "the wake-ups of the inserter c
     + "with the game's order of service and the production the same (#586, an accepted 0.27.0 gap)";
 
 const BUILDS: Record<string, ScaffoldBuild> = {
+    // abucnasty's build of five copies (2026-11-10), 10 tiles apart in one row. Two input lines run east past the copies,
+    // bioflux on the left lane and nutrients on the right: the upper one feeds the nutrient biochambers, the lower one the
+    // science biochambers, weaving north and south between them, so the science biochamber's pickup has the nutrients on its
+    // near lane in the second and fourth copy from the west and the bioflux in the others; the config states one near lane,
+    // the nutrients (lane 2). Each line ends at a splitter into timed belts and void chests; the config states its lanes as
+    // dead ends. Each copy puts its packs into a void chest. 50 a second a copy, 250 over five.
     "agricultural science": {
         scaffold: path.join(SAMPLES, "science", "agricultural", "agricultural-250.scaffold"),
         config: ConfigPaths.AGRICULTURAL_SCIENCE_250,
         // the egg loop cannot start itself, so the egg machines are given eggs to begin with
         seed: [{ target: { recipe: "pentapod-egg" }, item: "pentapod-egg", count: 200 }],
         warmup_ticks: 300,
-        // Recorded 2026-10-24 on batched swings (Takt Batches: 5 output swings each output cycle) with windows on the two inserters that take eggs
-        // out of the loop into the science biochamber (ticks 23 to 46 of every 96) and on the two of the loop itself (31 to 80
-        // and 79 to 128 of every 96): 400 in every one of 74 window cycles after the staged start, and the simulator moves what the
-        // game moved through every inserter and machine; so did the family cuts (64 window cycles, then back at 400 from the
-        // first or second window cycle after each cut). The same that day with only the first two on windows, and with all four
-        // always on. The 2-swing clock selected before (recorded 2026-10-16) was one hand short in window cycles 8 and 9 of the
-        // settling after the staged start. Since 0.27.0 it selects shifted swings (Takt Batches: 5 output swings each output cycle), recorded
-        // 2026-11-03 from the staged start to steady state and a minute more: one window cycle of the settling short (320 at tick
-        // 1,440), 400 in every other.
+        copies: 5,
+        // Recorded 2026-11-11 at Factorio 2.1.24 on Time-Study Windows (1 output swing each output cycle, a window cycle of 480
+        // ticks, clock 8de16d68), twice, from the staged start to steady state and a minute more (22 window cycles): both
+        // recordings short in the same window cycles of the settling, on the same copies, by the same items. Copies by x from the
+        // west, as the copies are found: copies 1, 3 and 5 have the bioflux on the pickup's near lane, copies 2 and 4 the
+        // nutrients. Every copy moves 400 in every window cycle from tick 2,880 on (16 window cycles), and the machines run at the
+        // config's speed and productivity. Before the build of five copies the sample's one copy was recorded from the staged
+        // start on other clocks (2026-10-24, 2026-11-03); those values belong to the one-copy build.
         staged_start: {
-            dips: [{ start: 1440, items: 320 }],
+            dips: [
+                { start: 480, items: 368, copy: 2 }, { start: 480, items: 368, copy: 4 }, { start: 480, items: 368, copy: 5 },
+                { start: 960, items: 368, copy: 1 }, { start: 960, items: 368, copy: 3 },
+                { start: 2400, items: 384, copy: 2 }, { start: 2400, items: 384, copy: 4 },
+            ],
             open_issues: [],
         },
         wake_ups_open: AGRICULTURAL_SCIENCE_WAKE_UPS_OPEN,
@@ -184,20 +209,29 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     // selected, the same clock as with belts that move (recorded 2026-10-24: 400 in every one of 74 window cycles, no
     // difference between the game and the simulator); the 2-swing clock was while a loss of nutrients broke batched
     // swings (2026-10-10 to 2026-10-14), and again while its nutrients trials dipped a hand late in their 40 window cycles,
-    // until such a trial ran on (2026-10-24)
+    // until such a trial ran on (2026-10-24). That was the one-copy build. On the five copies the lanes are dead ends, the
+    // clocks are made for backed-up belts either way, and the same clock is selected as with belts that move (Time-Study
+    // Windows, clock 8de16d68): recorded 2026-11-11 at Factorio 2.1.24, 400 on each of the five copies in each of the 7
+    // window cycles checked
     "agricultural science (belts are backed up)": {
         scaffold: path.join(SAMPLES, "science", "agricultural", "agricultural-250.scaffold"),
         config: ConfigPaths.AGRICULTURAL_SCIENCE_250,
         seed: [{ target: { recipe: "pentapod-egg" }, item: "pentapod-egg", count: 200 }],
         warmup_ticks: 300,
         backed_up_belts: true,
+        copies: 5,
         wake_ups_open: AGRICULTURAL_SCIENCE_WAKE_UPS_OPEN,
     },
+    // abucnasty's build of nine copies (2026-11-11), 9 tiles apart in one row on one input belt whose two lanes are dead
+    // ends (gears left, copper right). The copies' packs go onto one shared line into a loader and a void chest: copies 1-4
+    // and 6-8 side-load from short stubs, copy 5 drops onto the line, and copy 9 joins it through a splitter. 26.67 a second
+    // a copy, 240 over nine. The scaffold before was one copy.
     "automation science": {
         scaffold: path.join(SAMPLES, "science", "automation", "automation-240.scaffold"),
         config: ConfigPaths.AUTOMATION_SCIENCE_240,
         seed: [],
         warmup_ticks: 3600,
+        copies: 9,
     },
     // its selected clock has no belt pickup slack: full-hand output swings, which the simulator holds stable without it
     "automation science (belts are backed up)": {
@@ -206,6 +240,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [],
         warmup_ticks: 3600,
         backed_up_belts: true,
+        copies: 9,
     },
     "automation science with a belted buffer": {
         scaffold: path.join(SAMPLES, "science", "automation", "automation-120-foundries-feed-belt-to-assembler.scaffold"),
@@ -250,10 +285,11 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     },
     // An accepted 0.27.0 gap (#586): the game serves the inserters in the simulator's order and the production is exact; the
     // wake-ups differ
-    // One of the three copies of the inserter build given 2026-10-21, 240 inserters a second over the three: an
-    // inserter assembler (4 speed modules, 8 beacons) fed plates by two furnaces and gears by a gear assembler, which two
-    // more furnaces feed, all legendary. Each pair of furnaces takes its ore from a line of its own; the ore, so the
-    // plates, gears and the circuits from infinity chests, is uncommon. The output inserter runs all the time.
+    // The first of the three copies of the inserter build, 240 inserters a second over the three, as abucnasty gave it
+    // (2026-11-10): an inserter assembler (4 speed modules, 8 beacons) fed plates by two furnaces and gears by a gear
+    // assembler (5 beacons), which two more furnaces feed, all legendary. Each pair of furnaces takes its ore from a line
+    // of its own; the ore and the circuits come from infinity chests, normal. The ore lines and the circuit belt end at an
+    // underground entrance with nothing beyond; the product goes into a void chest. The output inserter runs all the time.
     "logistic science with inserter crafting": {
         scaffold: path.join(SAMPLES, "intermediates", "inserter-crafting", "inserter-crafting-240-shared-signal-clock.scaffold"),
         config: ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK,
@@ -308,16 +344,50 @@ const BUILDS: Record<string, ScaffoldBuild> = {
                 + "inserter moves the same items in the game and the simulator",
         },
     },
+    // abucnasty's whole chemical science build (#725, 2026-11-09), as he gave it: both mirrored sides, 22 science and 22 engine
+    // machines and 6 pipe foundries on the centre line 18 tiles apart, 5 whole blocks of the config and a half block at the east
+    // end (a pipe foundry, the engine machine above and below it and the science machine each feeds), and two foundries at the
+    // west end that cast the gears and the steel of both engine lines. Every input line ends in an underground entrance with
+    // nothing beyond; the packs of both sides go onto one belt into a void chest. The config's 5.5 copies: 5 whole copies and
+    // the part copy the generator lays out on the shared lanes (the first taker of each lane, with what it needs: half a block),
+    // held to its share, half a copy's packs. The half block's pipe foundry has 5 beacons where the others have 8 (199.75 against
+    // 236.78, computed from the blueprint); the config does not say it. Engine line 3 holds gears on the lane taken first,
+    // where the config states steel: a difference not yet confirmed, and the config is as committed.
+    "chemical science with a shared foundry (abucnasty's whole build, 5.5 copies)": {
+        scaffold: CHEMICAL_SCIENCE_WHOLE_BUILD,
+        config: ConfigPaths.CHEMICAL_SCIENCE_240_SHARED_FOUNDRY,
+        seed: [],
+        warmup_ticks: 3600,
+        copies: 5.5,
+    },
+    // The same build on the clock it came with (made for one side of the build by the generator of 0.28.1, Coordinated Sources,
+    // 352 ticks): it opens the advanced circuit takers of all the copies of a side together, and the dead-ended circuit lane
+    // refills too late for the copy where the refill's edge stands, which makes too few packs (#725, measured in the game then:
+    // 22, 12 and 30 of 32 in turn). Recorded 2026-11-11 at Factorio 2.1.24: the third science machine of each side from the
+    // west moves 464 of 704 over the recording, and its copy, the second, 224, 192, 224 of its 256 in turn; every other copy
+    // its target, the part copy 128, the build 1,376 or 1,344 of 1,408. An expected shortfall, kept as the proof that the check
+    // of each copy sees it.
+    "chemical science with a shared foundry (abucnasty's whole build on the clock it came with)": {
+        scaffold: CHEMICAL_SCIENCE_WHOLE_BUILD,
+        config: ConfigPaths.CHEMICAL_SCIENCE_240_SHARED_FOUNDRY,
+        seed: [],
+        warmup_ticks: 3600,
+        copies: 5.5,
+        own_clock: { short_copies: [2], why: "the circuit lane refills too late for one copy on each side (#725)" },
+    },
     // One electromagnetic plant (legendary, five legendary productivity modules, 12 legendary beacons) on accumulators and
     // supercapacitors from one belt, its fluids from infinity pipes: 11 copies of it make 330 a second. A fully automatic config
-    // (no override). The config's crafting speed is 109.475, what 12 beacons give in the game. Recorded 2026-10-16 on the same
-    // batched swings clock (window cycle 704) with the output inserters on AUTO: from a staged start (empty machines) 288 in the first
-    // window cycle and 352 in each of the 50 after; on this test's start (warm-up and settle) 352 in every window cycle checked.
+    // (no override). The config's crafting speed is 109.475, what 12 beacons give in the game. The config states the copies 10 tiles
+    // apart and both lanes of the belt as dead ends. The scaffold is abucnasty's two-copy blueprint at 10 tiles tiled to all 11
+    // copies (its shared beacon columns, underground belts and infinity pipes are that blueprint's own): one belt from two stack
+    // inserters a lane at infinity chests, running east past the 11 plants and ending in an underground entrance with nothing
+    // beyond. Before, the scaffold was one copy: 1,056 in every window cycle checked on the selected clock (window cycle 2,112).
     "electromagnetic science": {
         scaffold: path.join(SAMPLES, "science", "electromagnetic", "electromagnetic-330.scaffold"),
         config: ConfigPaths.ELECTROMAGNETIC_SCIENCE_330,
         seed: [],
         warmup_ticks: 3600,
+        copies: 11,
         wake_ups_open: "the game counts the first output inserter 0 wake-ups a minute, as it is never shown waiting, and the simulator 15.36, as it shows "
             + "both output inserters waiting on the machine in 1.56% of the ticks; the build moves its expected output in every period (recorded 2026-11-01: "
             + "25.6 a minute in all in the game, 41.0 in the simulator, 35.8 a minute of arm-away alarms on either side)",
@@ -337,11 +407,17 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         warmup_ticks: 3600,
         backed_up_belts: true,
     },
+    // abucnasty's two copies of the build (2026-11-10), 9 tiles apart in one row: each a legendary utility science assembler (4
+    // legendary productivity modules, 10 legendary beacons: 63.0078) taking flying robot frames from one turbo belt and low density
+    // structures and processing units (one lane each) from another; both belts come from stack inserters at infinity chests, run
+    // east past the two copies and end at an underground entrance with nothing beyond. The packs go onto a belt into a void chest.
+    // 17.14 a second a copy, 120 over seven.
     "utility science with processing units and low density structures on one belt": {
         scaffold: path.join(SAMPLES, "science", "utility", "utility-120-processing-unit-and-lds-on-one-belt.scaffold"),
         config: ConfigPaths.UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT,
         seed: [],
         warmup_ticks: 3600,
+        copies: 2,
     },
     "utility science with processing units and low density structures on one belt (belts are backed up)": {
         scaffold: path.join(SAMPLES, "science", "utility", "utility-120-processing-unit-and-lds-on-one-belt.scaffold"),
@@ -349,6 +425,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [],
         warmup_ticks: 3600,
         backed_up_belts: true,
+        copies: 2,
     },
     "low density structure": {
         scaffold: path.join(SAMPLES, "intermediates", "lds", "lds-240.scaffold"),
@@ -356,13 +433,18 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [],
         warmup_ticks: 3600,
     },
-    // The build of issue 152: two electromagnetic plants, two cryogenic plants and two foundries, 640 a second over 18
-    // copies, all of it from machine to machine. The clock 0.9.0 selected made 512 to 544 of its 576 a window cycle here.
+    // abucnasty's build of nine copies (2026-11-10), 16 tiles apart in one row: each copy is two electromagnetic plants, two
+    // cryogenic plants and two foundries, all of it from machine to machine, the fluids from infinity pipes. The upper plants
+    // drop onto one line and the lower plants onto another; on each line the drops of the first four copies are side-loaded onto
+    // the other lane before the last five drop, and the line ends in a loader into a void chest. 35.56 a second a copy, 320 over
+    // nine. The scaffold before was the build of issue 152 (one copy of 18 at 640 a second), where the clock 0.9.0 selected
+    // made 512 to 544 of its 576 a window cycle.
     "accumulator": {
-        scaffold: path.join(SAMPLES, "intermediates", "accumulator", "accumulator-640.scaffold"),
-        config: ConfigPaths.ACCUMULATOR_640,
+        scaffold: path.join(SAMPLES, "intermediates", "accumulator", "accumulator-320.scaffold"),
+        config: ConfigPaths.ACCUMULATOR_320,
         seed: [],
         warmup_ticks: 3600,
+        copies: 9,
     },
     // The lithium plate build: two cryogenic plants fill a rocket silo taken as a chest, and six furnaces empty it;
     // 80 a second from one copy. The warm-up fills the silo, which the config exports empty.
@@ -419,11 +501,12 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [],
         warmup_ticks: 3600,
     },
-    // The owner's production science build (2026-11-05): one science assembler (legendary, 63.0078) fed rails by a rail assembler
-    // (5 beacons, 46.7969), whose steel comes from one foundry and whose iron sticks come from another, both on molten iron from
-    // infinity pipes; a drill drops stone straight into the rail assembler. Electric furnaces and productivity modules come on one
-    // backed-up turbo belt (one lane each) from two infinity chests and one inserter takes both; the packs go onto a moving belt
-    // into a void chest. 17.14 a second from one copy, 120 over seven.
+    // abucnasty's production science build (2026-11-05), one copy of it as abucnasty gave it (2026-11-10): one science assembler
+    // (legendary, 63.0078) fed rails by a rail assembler (four legendary speed modules, 2 beacons: 46.3713), whose steel comes from
+    // one foundry and whose iron sticks come from another, both on molten iron from infinity pipes; a drill drops stone straight
+    // into the rail assembler. Electric furnaces and productivity modules come on one turbo belt (one lane each) from two infinity
+    // chests; it ends at an underground entrance with nothing beyond, and one inserter takes both. The packs go onto a belt that
+    // runs through an underground belt to a loader into a void chest. 17.14 a second from one copy, 120 over seven, 10 tiles apart.
     "production science with a drill into the rail assembler": {
         scaffold: path.join(SAMPLES, "science", "production", "production-120-two-belts.scaffold"),
         config: ConfigPaths.PRODUCTION_SCIENCE_120_TWO_BELTS,
@@ -440,27 +523,30 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [],
         warmup_ticks: 3600,
     },
-    // The owner's military science build (2026-11-05): a science assembler (66.0253) fed grenades by a grenade assembler (57.8125)
-    // that takes iron from a foundry (112.244) and coal from a belt of its own (both lanes, six infinity chests); stone walls and
-    // piercing rounds come on one backed-up belt, one lane each. The packs go onto a moving belt into a void chest. 24 a second from
-    // one copy, 120 over five.
-    "military science with grenades": {
-        scaffold: path.join(SAMPLES, "science", "military", "military-120.scaffold"),
-        config: ConfigPaths.MILITARY_SCIENCE_120,
+    // abucnasty's military science build (2026-11-09), the whole of it: five copies 9 tiles apart, each a mirrored pair around one
+    // foundry (a military science assembler fed grenades by a grenade assembler above the foundry, and the same below it), 48 a second
+    // a copy, 240 over the five. Each half has a belt of stone walls and piercing rounds and a coal belt from stack inserters at
+    // infinity chests, both ending in a dead end, and a packs belt into a void chest. Each half's coal comes on two belts that three
+    // priority splitters join, which the config does not model: it gives each copy coal lanes of its own.
+    "military science with grenades (five mirrored pairs)": {
+        scaffold: path.join(SAMPLES, "science", "military", "military-240.scaffold"),
+        config: ConfigPaths.MILITARY_SCIENCE_240,
         seed: [],
         warmup_ticks: 3600,
-        wake_ups_open: "the game counts 90.0 wake-ups a minute and the simulator 181.1: the two coal inserters into the grenade assembler "
-            + "(inserters 4 and 6) are not woken in the game, which leaves 22.5 a minute of each uncounted as an arm away, and 45.3 a minute "
-            + "each in the simulator; the other four inserters count 22.5 against 22.6 (2026-11-05), with the production the same",
+        copies: 5,
     },
-    // The owner's flying robot frame build (2026-11-05): one assembler (legendary, 68.8906) taking engine units and steel from one
-    // backed-up turbo belt and batteries and circuits from another, four infinity chests in all; the frames go onto a moving belt
-    // into a void chest. 6.67 a second from one copy, 160 over twenty-four.
-    "flying robot frames": {
-        scaffold: path.join(SAMPLES, "intermediates", "flying-robot-frame", "flying-robot-frame-160.scaffold"),
-        config: ConfigPaths.FLYING_ROBOT_FRAME_160,
+    // abucnasty's flying robot frame build (2026-11-09): 12 legendary assemblers (68.8906) in two rows of 6, 6 tiles apart. Each
+    // input belt is one line that runs past one row, turns, runs back past the other row and ends in a dead end: steel and
+    // engine units on one, circuits and batteries on the other, from stack inserters at infinity chests. 8 of the 12 copies take
+    // steel and engine units from an underground belt's half tile. Each row puts its frames onto a belt of its own into a void
+    // chest. The config is the whole build: 80 a second over 12 copies, 6.67 a copy. The full design is two of these builds,
+    // mirrored, 160 a second.
+    "flying robot frames (12 assemblers in two rows)": {
+        scaffold: path.join(SAMPLES, "intermediates", "flying-robot-frame", "flying-robot-frame-80.scaffold"),
+        config: ConfigPaths.FLYING_ROBOT_FRAME_80,
         seed: [],
         warmup_ticks: 3600,
+        copies: 12,
     },
     // The owner's electric furnace build (2026-11-05): an electric furnace assembler (57.8125) taking steel from a foundry (185),
     // stone bricks from three furnaces (80.0375) that each have a drill of their own dropping stone into them (speed bonuses 15.3075,
@@ -493,6 +579,15 @@ interface SteadyReport {
 }
 
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
+
+/**
+ * What a row of output inserters of a build of copies moves at the least in a window cycle: one copy's output times the
+ * row's output inserters over the output inserters of one copy. A copy with one output inserter gives its row the whole
+ * of its output; a copy with an output inserter in each of two rows gives each row half of it.
+ */
+function rowTarget(copy_output: number, row_output_inserters: number, copy_output_inserters: number): number {
+    return Math.round(copy_output * row_output_inserters / copy_output_inserters * 1e6) / 1e6;
+}
 
 let scratch: string | null = null;
 /** The one game the builds are watched in, each built in the place of the one before it */
@@ -529,7 +624,7 @@ afterAll(async () => {
     }
 }, 60_000);
 
-/** The clocks the values of three builds belong to (scaffold-recordings-clock-pins.json); clock-controls.test.ts checks the selection against the record, and clock-belt.generation.test.ts the build with backed-up belts */
+/** The clocks the values of eight builds belong to (scaffold-recordings-clock-pins.json); clock-controls.test.ts checks the selection against the record, and clock-belt.generation.test.ts the build with backed-up belts */
 const clockPins = readControls<{ cases: Record<string, { config: string; backed_up_belts: boolean; clock_sha256: string }> }>("scaffold-recordings-clock-pins.json").cases;
 
 test("every build with a pinned clock is a build of this file", () => {
@@ -543,7 +638,10 @@ test("every build with a pinned clock is a build of this file", () => {
 // one build at a time: each test waits for its own recording before the next starts
 describe.sequential("the selected clock holds the target rate in Factorio", () => {
     for (const [name, build] of Object.entries(BUILDS)) {
-        test(`one copy of the ${name} build moves the expected output every clock period`, async context => {
+        const title = build.own_clock
+            ? `the ${name} build leaves copy ${build.own_clock.short_copies.join(", ")} short, as it is known to, and every other copy at its target`
+            : `one copy of the ${name} build moves the expected output every clock period`;
+        test(title, async context => {
             context.skip(WHY_SKIPPED !== null, WHY_SKIPPED ?? undefined);
             if (KEEP) {
                 fs.mkdirSync(KEEP, { recursive: true });
@@ -553,8 +651,11 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
 
             const loaded = await loadConfigFromFile(build.config);
             const config = build.backed_up_belts ? { ...loaded, overrides: { ...loaded.overrides, backed_up_belts: true } } : loaded;
-            const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
-            const selected = alternatives[selected_index];
+            const blueprint = fs.readFileSync(build.scaffold, "utf-8").trim();
+            // the build's own clock is kept and nothing is generated; else the clock the generator selects
+            const generated = build.own_clock ? null : generateClockAlternatives(config, { logger: quiet });
+            const selected = generated?.alternatives[generated.selected_index];
+            if (selected) {
             if (build.backed_up_belts) {
                 expect(selected.belt, `the selected clock (${selected.label}) is made without belt pickup slack`).toEqual({ kind: "backed_up" });
             }
@@ -565,32 +666,43 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             // a clock of fractional swings can leave the rate a hair off the whole number (240 reads 239.99999999999997)
             expect(selected.assessment.items_per_second, `the selected clock (${selected.label}) reaches the target rate in the simulator`)
                 .toBeCloseTo(config.setpoint.items_per_second, 6);
+            }
 
             // A fractional window cycle is built as a subtick clock, which counts the whole ticks after which the window cycle
             // repeats (1728 for 19 window cycles of 90.947): that is the window cycle the recording is cut into, and what it has
             // to move is what that many ticks ask for.
-            const subtick = selected.result.subtick;
-            const window_cycle_ticks = subtick?.clock.window_cycle_ticks ?? selected.result.simulation_duration.ticks;
+            const subtick = selected?.result.subtick;
+            const window_cycle_ticks = selected ? subtick?.clock.window_cycle_ticks ?? selected.result.simulation_duration.ticks : clockWindowCycleTicks(blueprint);
+            expect(window_cycle_ticks, "the build's own clock is a clock the recorder reads (\"Clock for ...\")").not.toBeNull();
+            if (window_cycle_ticks === null) return;
             context.skip(!build.staged_start && window_cycle_ticks > MAX_RECORDED_WINDOW_CYCLE,
                 `the selected clock counts ${window_cycle_ticks} ticks, over the ${MAX_RECORDED_WINDOW_CYCLE} ticks one period of a recording may take`);
             // a subtick clock's repeat and a rate per copy can leave a float a hair off the whole number of items
             const copies = build.copies ?? 1;
+            const recipes = [...recipesMaking(config, config.setpoint.recipe)];
+            const finals_per_copy = config.machines.filter(machine => recipes.includes(machine.recipe)).length;
+            // a count with a fraction is whole copies and one part copy, held to its share of a copy's output (partCopiesOf, the
+            // generator's part copy); the build's output and its final machines are the whole copies' and the part copy's
+            const whole_copies = Math.floor(copies + 1e-9);
+            const part = copies - whole_copies > 1e-9 ? partCopiesOf(config)[0] : undefined;
+            expect(part !== undefined || copies === whole_copies, `the config has a part copy for the ${copies - whole_copies} of a copy the build holds`).toBe(true);
+            const counted_copies = whole_copies + (part?.share ?? 0);
+            const part_finals = part ? config.machines.filter(machine => recipes.includes(machine.recipe) && part.ids.has(`machine:${machine.id}`)).length : 0;
             const expected_per_copy = Math.round(config.setpoint.items_per_second / config.setpoint.copies * window_cycle_ticks / 60 * 1e6) / 1e6;
-            const expected = Math.round(expected_per_copy * copies * 1e6) / 1e6;
+            const expected = Math.round(expected_per_copy * counted_copies * 1e6) / 1e6;
             // what the machines that make the target item have to finish over the trailing minute for steady state
-            const expected_per_window = Math.round(config.setpoint.items_per_second / config.setpoint.copies * copies * WINDOW_TICKS / 60 * 1e6) / 1e6;
+            const expected_per_window = Math.round(config.setpoint.items_per_second / config.setpoint.copies * counted_copies * WINDOW_TICKS / 60 * 1e6) / 1e6;
             // the clock with its schedule as the generator made it, which the harness wires without reading descriptions
-            const exported = subtick ?? selected.result;
+            const exported = selected ? subtick ?? selected.result : null;
             // the dips and issues this build expects were seen on one clock: on another they say nothing
-            if (clockPins[name]) {
-                expect(clockHash(exported), `the selected clock (${selected.label}) is not the one the values of ${name} were recorded on (scaffold-recordings-clock-pins.json)`)
+            if (clockPins[name] && exported) {
+                expect(clockHash(exported), `the selected clock (${selected!.label}) is not the one the values of ${name} were recorded on (scaffold-recordings-clock-pins.json)`)
                     .toBe(clockPins[name].clock_sha256);
             }
-            const clock = { blueprint: encodeBlueprintFile({ blueprint: exported.blueprint }), schedule: exported.schedule };
+            const clock = exported ? { blueprint: encodeBlueprintFile({ blueprint: exported.blueprint }), schedule: exported.schedule } : undefined;
             // the probe ends the settle at steady state (a staged start: cuts the recording a minute after it); it writes its
             // report into the game's script-output, which the build has a folder of its own for (all builds share the one game
             // watched)
-            const recipes = [...recipesMaking(config, config.setpoint.recipe)];
             const probe = composeProbeSource(path.join(__dirname, "scaffold-recordings-probe.lua"), {
                 window: WINDOW_TICKS, expected: expected_per_window, recipes, item: config.setpoint.recipe, cap: SETTLE_CAP_TICKS,
                 output: STEADY_REPORT, staged: !!build.staged_start, ticks: SETTLE_CAP_TICKS,
@@ -603,7 +715,7 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                 result = await record({
                     factorio: FACTORIO!,
                     save: SAVE!,
-                    blueprint: fs.readFileSync(build.scaffold, "utf-8").trim(),
+                    blueprint,
                     out: `${base}.json`,
                     // a clock longer than a minute: a tick more than its window cycle, so the recorder holds a whole window cycle between two wraps
                     ticks: build.staged_start ? SETTLE_CAP_TICKS : Math.max(RECORDED_TICKS, window_cycle_ticks + 1),
@@ -613,7 +725,8 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                     staged_start: build.staged_start ? {} : undefined,
                     clock,
                     config,
-                    copies: build.copies,
+                    // the copies are named to wire a generated clock to each; the build's own clock is wired as it came
+                    copies: clock ? build.copies : undefined,
                     unclocked: false,
                     game_speed: UNWATCHED_SPEED,
                     watch: WATCH,
@@ -642,8 +755,9 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             // recording and judged on what follows its first third, moves what the game moved through every inserter
             // and finishes what it finished in every machine (asserted below, once the evidence is kept)
             // (a build of copies has no run of one copy to compare entity by entity)
-            const simulated_run = simulateRecording(config, selected.result.clock_windows, selected.result.simulation_duration.ticks, result.recording.sample_count * 1.5, window_cycle_ticks);
-            const compared = copies > 1 ? null : compareRecordings(
+            const simulated_run = selected && copies === 1
+                ? simulateRecording(config, selected.result.clock_windows, selected.result.simulation_duration.ticks, result.recording.sample_count * 1.5, window_cycle_ticks) : null;
+            const compared = simulated_run === null ? null : compareRecordings(
                 {
                     recording: result.recording,
                     match: matchRecordingToConfig(result.recording, config),
@@ -658,53 +772,110 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             const row_of = new Map(inserter_positions.map(it => [it.unit_number, it.y]));
             const output_unit_numbers = outputInserters(result.recording, recipesMaking(config, config.setpoint.recipe)).map(it => it.unit_number!);
             const row_ys = Array.from(new Set(output_unit_numbers.map(unit => row_of.get(unit)))).filter((y): y is number => y !== undefined).sort((a, b) => a - b);
+            const outputs = outputInserters(result.recording, recipesMaking(config, config.setpoint.recipe));
+            /** What the given output inserters moved in each window cycle, as the game recorded their hands */
+            const movedPerWindowCycle = (members: typeof outputs) => window_cycles.map(window_cycle => ({ start: window_cycle.start, end: window_cycle.end, items: members.reduce((sum, inserter) => {
+                const held = inserter.samples.held_count;
+                let moved = 0;
+                for (let i = Math.max(window_cycle.start, 1); i < window_cycle.end; i++) {
+                    if (held[i] < held[i - 1]) moved += held[i - 1] - held[i];
+                }
+                return sum + moved;
+            }, 0) }));
             const rows = copies > 1 ? row_ys.map(y => {
-                const members = outputInserters(result.recording, recipesMaking(config, config.setpoint.recipe)).filter(it => row_of.get(it.unit_number!) === y);
-                return {
-                    y, output_inserters: members.length,
-                    per_window_cycle: window_cycles.map(window_cycle => ({ start: window_cycle.start, end: window_cycle.end, items: members.reduce((sum, inserter) => {
-                        const held = inserter.samples.held_count;
-                        let moved = 0;
-                        for (let i = Math.max(window_cycle.start, 1); i < window_cycle.end; i++) {
-                            if (held[i] < held[i - 1]) moved += held[i - 1] - held[i];
-                        }
-                        return sum + moved;
-                    }, 0) })),
-                };
+                const members = outputs.filter(it => row_of.get(it.unit_number!) === y);
+                return { y, output_inserters: members.length, per_window_cycle: movedPerWindowCycle(members) };
             }) : [];
+            // a build of copies: what each copy moved in each window cycle, the copies found as the harness found them to wire the
+            // clock (machines that inserters join, matched to the config one by one), in the order of their lowest machine ids, and
+            // the part copy last, with its share of a copy's output as its target
+            const found = copies > 1 ? builtCopies({
+                config: result.recording.config,
+                inserters: Object.fromEntries(result.recording.inserters.map(row => [row.id, row])),
+                machines: Object.fromEntries(result.recording.machines.map(row => [row.id, row])),
+            }, config, copies) : null;
+            const per_copy = (found?.inserters ?? []).map((unit_numbers, index) => {
+                const units = new Set(unit_numbers.values());
+                const members = outputs.filter(it => units.has(it.unit_number!));
+                const is_part = found!.part?.index === index;
+                const target = Math.round(expected_per_copy * (is_part ? found!.part!.share : 1) * 1e6) / 1e6;
+                return { copy: index + 1, part: is_part, target, output_inserters: members.length, per_window_cycle: movedPerWindowCycle(members) };
+            });
             if (KEEP) {
-                fs.writeFileSync(`${base}.simulated.json`, JSON.stringify(simulated_run));
+                if (simulated_run) fs.writeFileSync(`${base}.simulated.json`, JSON.stringify(simulated_run));
                 fs.writeFileSync(`${base}.meta.json`, JSON.stringify({
-                    name, label: selected.label, verdict: selected.verdict, period: window_cycle_ticks, expected, clock_windows: selected.result.clock_windows,
-                    simulation_ticks: selected.result.simulation_duration.ticks, backed_up_belts: !!build.backed_up_belts,
+                    name, label: selected?.label ?? "the build's own clock", verdict: selected?.verdict ?? null, period: window_cycle_ticks, expected,
+                    clock_windows: selected?.result.clock_windows ?? null, simulation_ticks: selected?.result.simulation_duration.ticks ?? null, backed_up_belts: !!build.backed_up_belts,
                     staged_start: !!build.staged_start, issues: compared?.issues ?? [], config, harness_build: result.build,
-                    harness_start: result.start, periods: window_cycles, steady, copies, expected_per_copy, rows,
+                    harness_start: result.start, periods: window_cycles, steady, copies, expected_per_copy, rows, per_copy,
                 }, null, 1));
             }
-            // the build reached steady state in the game, within the ticks it may take
+            // the build reached steady state in the game, within the ticks it may take (the build's own clock that leaves a copy short need not)
             expect(steady.error, "the probe failed in the game").toBeUndefined();
-            expect(steady.steady, `the build did not reach steady state within ${SETTLE_CAP_TICKS} ticks (${steady.result ?? "the game ended first"})`).toBeDefined();
-            // the machines the probe counted are those of the config that make the target item (one copy)
+            if (!build.own_clock) {
+                expect(steady.steady, `the build did not reach steady state within ${SETTLE_CAP_TICKS} ticks (${steady.result ?? "the game ended first"})`).toBeDefined();
+            }
+            // the machines the probe counted are those of the config that make the target item, in every whole copy and the part copy
             expect(Array.isArray(steady.finals) ? steady.finals : [], "the final machines the probe counts")
-                .toHaveLength(config.machines.filter(machine => recipes.includes(machine.recipe)).length * copies);
+                .toHaveLength(finals_per_copy * whole_copies + part_finals);
             expect(window_cycles.length, `the recording of ${result.recording.sample_count} ticks holds a whole clock period`).toBeGreaterThan(0);
             // the first window cycle is left out: the build may still be settling into the clock. A clock that counts over a minute is
             // recorded over one window cycle, which is checked whole: the settle ended at steady state
             const checked = window_cycles.length > 1 ? window_cycles.slice(1) : window_cycles;
             const wrong_length = checked.filter(it => it.end - it.start !== window_cycle_ticks);
-            expect(wrong_length, `every one of the ${checked.length} periods checked lasts ${window_cycle_ticks} ticks, as the generated clock does`).toEqual([]);
+            expect(wrong_length, `every one of the ${checked.length} periods checked lasts ${window_cycle_ticks} ticks, as the clock does`).toEqual([]);
+            /** The window cycles checked of a copy in which it moved less than its target */
+            const shortOf = (copy: typeof per_copy[number]) => (copy.per_window_cycle.length > 1 ? copy.per_window_cycle.slice(1) : copy.per_window_cycle)
+                .filter(it => it.items < copy.target - 1e-6).map(it => ({ start: it.start, items: it.items }));
+            if (build.own_clock) {
+                // the copies the build's own clock leaves short, and no other: the check of each copy sees what the total hides
+                expect(per_copy.length, `the build holds ${copies} copies`).toBe(Math.ceil(copies - 1e-9));
+                expect(per_copy.filter(copy => shortOf(copy).length > 0).map(copy => copy.copy),
+                    `the copies short of their target in a window cycle checked (${per_copy.map(copy => `${copy.copy}: ${shortOf(copy).map(it => it.items).join("/") || "none"}`).join("; ")})`)
+                    .toEqual(build.own_clock.short_copies);
+                return;
+            }
             if (copies > 1) {
-                // 100% or more of the target, each row on its own (copies of the row at one height) and the whole build; recorded raw
+                // the dips a staged start of this build was recorded with, each of one copy: that copy, its row and the whole build are
+                // short by as much in that window cycle, and in no other
+                const dips = build.staged_start?.dips ?? [];
+                const row_of_copy = (found?.inserters ?? []).map(unit_numbers => {
+                    const units = new Set(unit_numbers.values());
+                    return outputs.filter(it => units.has(it.unit_number!)).map(it => row_of.get(it.unit_number!))[0];
+                });
+                /** The window cycles a set of copies is short in, by the dips of those copies, against what they move in all */
+                const shortBy = (copy_numbers: number[], full: number) => Array.from(new Set(dips.filter(dip => copy_numbers.includes(dip.copy!)).map(dip => dip.start)))
+                    .sort((a, b) => a - b)
+                    .map(start => ({ start, items: dips.filter(dip => dip.start === start && copy_numbers.includes(dip.copy!))
+                        .reduce((items, dip) => items - (expected_per_copy - dip.items), full) }));
+                // 100% or more of the target, each row on its own (copies of the row at one height) and the whole build; recorded raw.
+                // A build whose copies all stand in one row is one row, whose share is the whole build's output.
                 const per_row = config.setpoint.copies;
-                expect(rows.length, `the output inserters of the build stand in rows (heights: ${row_ys.join(", ")})`).toBeGreaterThan(1);
+                expect(rows.length, `the output inserters of the build stand in one row or more (heights: ${row_ys.join(", ")})`).toBeGreaterThanOrEqual(1);
+                const wholes = per_copy.filter(copy => !copy.part);
+                const copy_output_inserters = wholes[0]?.output_inserters ?? 0;
+                expect(wholes.map(copy => copy.output_inserters),
+                    `the build's ${output_unit_numbers.length} output inserters are the same number in each of its ${wholes.length} whole copies`).toEqual(wholes.map(() => copy_output_inserters));
+                expect(copy_output_inserters).toBeGreaterThan(0);
                 for (const row of rows) {
-                    const row_expected = Math.round(expected_per_copy * (output_unit_numbers.filter(unit => row_of.get(unit) === row.y).length) * 1e6) / 1e6;
+                    const row_expected = rowTarget(expected_per_copy, row.output_inserters, copy_output_inserters);
                     const row_checked = row.per_window_cycle.length > 1 ? row.per_window_cycle.slice(1) : row.per_window_cycle;
+                    const row_copies = row_of_copy.flatMap((y, index) => y === row.y ? [index + 1] : []);
                     expect(row_checked.map(it => ({ start: it.start, items: it.items })).filter(it => it.items < row_expected - 1e-6),
-                        `every one of the ${row_checked.length} periods checked of the row at y=${row.y} (${row.output_inserters} output inserters, ${per_row} copies wanted) moves ${row_expected} items of ${config.setpoint.recipe} or more`).toEqual([]);
+                        `every one of the ${row_checked.length} periods checked of the row at y=${row.y} (${row.output_inserters} output inserters, ${per_row} copies wanted) moves ${row_expected} items of ${config.setpoint.recipe} or more`
+                        + (dips.length > 0 ? ", but those its copies were short in after the staged start" : "")).toEqual(shortBy(row_copies, row_expected));
+                }
+                // each copy on its own: a copy the others starve on a lane they share is short here, whatever the rows and the build make;
+                // the part copy against its share
+                expect(per_copy.length, `the build holds ${copies} copies`).toBe(Math.ceil(copies - 1e-9));
+                for (const copy of per_copy) {
+                    expect(shortOf(copy), `every period checked of ${copy.part ? "the part copy" : "copy"} ${copy.copy} of ${copies} moves ${copy.target} items of ${config.setpoint.recipe} or more`
+                        + (dips.length > 0 ? ", but those it was short in after the staged start" : ""))
+                        .toEqual(dips.filter(dip => dip.copy === copy.copy).map(dip => ({ start: dip.start, items: dip.items })));
                 }
                 expect(checked.filter(it => it.items < expected - 1e-6).map(it => ({ start: it.start, items: it.items })),
-                    `every one of the ${checked.length} periods checked moves ${expected} items of ${config.setpoint.recipe} or more over the ${copies} copies`).toEqual([]);
+                    `every one of the ${checked.length} periods checked moves ${expected} items of ${config.setpoint.recipe} or more over the ${copies} copies`
+                    + (dips.length > 0 ? ", but those its copies were short in after the staged start" : "")).toEqual(shortBy(per_copy.map(copy => copy.copy), expected));
                 return;
             }
             const short = checked.filter(it => it.items !== expected);
@@ -712,7 +883,8 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                 `every one of the ${checked.length} periods checked moves ${expected} items of ${config.setpoint.recipe}`
                 + (build.staged_start ? ", but those the game was short in after the staged start" : "")).toEqual(build.staged_start?.dips ?? []);
 
-            // goal 2: the long run of the selected clock counts the wake-ups the game shows
+            // goal 2: the long run of the selected clock counts the wake-ups the game shows (a build of one copy, on a generated clock)
+            if (!selected || !compared) throw new Error("a build of one copy is recorded on the selected clock");
             const simulated = selected.result.stability_check.as_built?.wake_ups?.wake_ups_per_minute;
             const recorded = wakeUpsOfRecording(result.recording, matchRecordingToConfig(result.recording, config), 0, result.recording.sample_count, config).wake_ups_per_minute;
             expect(simulated, `the long run of the selected clock (${selected.label}) counted its wake-ups`).toBeDefined();

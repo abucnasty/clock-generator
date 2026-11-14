@@ -19,7 +19,7 @@ describe("generateClockForConfig", () => {
         const verified = async (path: string) => generateClockForConfig(await loadConfigFromFile(path), { verify_as_built: true, logger: quiet });
         rocket_fuel = await verified(ConfigPaths.ROCKET_FUEL_60);
         fuel_inserter = await verified(TestConfigPaths.BIOCHAMBER_FUEL);
-        flying_robot_frame = generateClockForConfig(await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME_160), { logger: quiet });
+        flying_robot_frame = generateClockForConfig(await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME_80), { logger: quiet });
     });
 
     describe("a machine with a by-product", () => {

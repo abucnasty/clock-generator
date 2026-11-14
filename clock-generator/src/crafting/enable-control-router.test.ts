@@ -204,7 +204,7 @@ describe("the reasons a clock exports", () => {
     });
 
     it("say that an inserter the run never swung has no window to read", async () => {
-        const sample = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME_160);
+        const sample = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME_80);
         const result = generateClockForConfig({ ...sample, overrides: { ...sample.overrides, terminal_swing_count: 2 } }, { logger: quiet });
         expect(result.always_on_reasons).toEqual({ "inserter:2": { kind: "no-swing" } });
         // a clock whose windows come from a run that moved everything leaves nothing on

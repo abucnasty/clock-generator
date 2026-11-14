@@ -22,6 +22,7 @@ import type {
 } from '../hooks/useConfigForm';
 import { isBufferChest, isContainerChest, isInfinityChest } from '../hooks/useConfigForm';
 import { chestTypeIcon } from '../utils/configForm/formData';
+import type { FormLaneFacts } from '../utils/laneFacts';
 import type { BufferChestFormData } from '../hooks/useConfigForm';
 import type { RecipeInfo } from '../hooks/useSimulationWorker';
 import { chestLabel, entityLabel } from '../utils/entityLabel';
@@ -82,6 +83,10 @@ export interface EntityEditDialogProps {
     onDeleteBelt?: (index: number) => void;
     onDeleteChest?: (index: number) => void;
     onDeleteDrill?: (index: number) => void;
+    /** The lanes of a belt being edited as the engine reads them; none, only what the belt states shows */
+    laneFactsOf?: (belt: BeltFormData) => FormLaneFacts | null;
+    /** The copies of the build: a lane's sharing is asked where there is more than one */
+    copies?: number;
 }
 
 // ---- Drill section ----
@@ -170,6 +175,8 @@ export function EntityEditDialog({
     outputTransfersLoading = false,
     onFixOutput,
     onEditInserter,
+    laneFactsOf,
+    copies = 1,
 }: EntityEditDialogProps) {
     const { itemLabel } = useGameNames();
     const geometryHelpId = useId();
@@ -419,6 +426,7 @@ export function EntityEditDialog({
                                 onChange={type => updateDraft(entityIndex, { type })} sx={{ width: '100%' }} />
                             <BeltStrategyField belt={draft as BeltFormData} dialog onChange={update => updateDraft(entityIndex, update)} />
                             <BeltLaneFields belt={draft as BeltFormData} itemNames={itemNames} readOnly={hasImportedBeltDrops(inserters, draft.id)} dialog
+                                facts={laneFactsOf?.(draft as BeltFormData) ?? null} copies={copies}
                                 onChange={update => updateDraft(entityIndex, update)} />
                         </Box>
                     )}

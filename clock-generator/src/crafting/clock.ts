@@ -5,6 +5,7 @@ import { pickupLaneLength } from "../common/belt-pickup-layout";
 import { backpressureHandGrabTicks } from "../state/backpressure-pickup-lane";
 import { CIRCUIT_LATENCY_TICKS } from "../common/rule-constants";
 import { stacksOf } from "../entities/traits/timing";
+import { isDeadEnd } from "../entities/traits/lane-facts";
 
 
 
@@ -43,7 +44,7 @@ export { subtickClockForWindowCycle as subtickClockForWindowCycle } from "../com
  * (agricultural science in the game: 377 of 400 a window cycle).
  *
  * It is not given to every such inserter: the ticks can also let a hand in that the plan does not have. A clock gets
- * it when it does not hold the expected output without (see withFuelHandRoomWhereNeeded). Belt pickup slack is as long.
+ * it when it does not hold the expected output without (see withFuelHandRoomWhereNeeded).
  */
 export function fuelHandRoomTicks(entity_registry: ReadableEntityRegistry): Map<string, number> {
     const room = new Map<string, number>();
@@ -68,34 +69,91 @@ export function fuelHandRoomTicks(entity_registry: ReadableEntityRegistry): Map<
 }
 
 /**
- * Ticks added to the end of each belt-fed inserter's window. In game, a grab from a full belt can stall while a
- * gap left by an upstream inserter passes the pickup point, so the window must outlast a late pickup or the
- * inserter is disabled holding a partial hand. Sized as one more full-hand pickup (one lane stack per tick) of the hand
- * it moves of the item on the lane.
+ * Ticks added to the end of each window of an inserter that takes fuel for its machine off a belt as well as an
+ * ingredient, with the fuel on the lane nearest to it, on top of its room for one more hand (laneHandRoomTicks): room for
+ * the hand that a hand of fuel delays. Its hand cycle, less the tick a window stays open after its last planned hand is
+ * full, less the room for one more hand: 6 for a hand cycle of 11 and a room of 4.
+ *
+ * An empty hand takes the near lane's item whenever the machine takes it, so with the fuel there a hand of fuel comes
+ * whenever the fuel slot has room, and the planned hand comes a whole hand cycle later. A window that ends 1 tick after
+ * the planned last hand is full, plus the room for one more hand, closes on that hand before it fills. With this room
+ * such a window ends where the delayed hand is full, a hand cycle after the planned last hand, and closes before the
+ * arm is back for a hand after it. The ticks are the same on every window of the inserter, whatever its end already
+ * holds. Absent where the room for one more hand already fills the hand cycle, and for an inserter whose near
+ * lane carries the ingredient: its hand of fuel waits behind the planned hands.
  */
-const MAX_BELT_PICKUP_SLACK_TICKS = 16;
+export function delayedHandRoomTicks(entity_registry: ReadableEntityRegistry): Map<string, number> {
+    const lane_hand_room = laneHandRoomTicks(entity_registry);
+    const room = new Map<string, number>();
+    for (const id of fuelHandRoomTicks(entity_registry).keys()) {
+        const lane_room = lane_hand_room.get(id);
+        const inserter = entity_registry.getAll().find(entity => entity.entity_id.id === id);
+        if (lane_room === undefined || inserter === undefined || !Entity.isInserter(inserter) || inserter.near_lane === undefined) {
+            continue;
+        }
+        const source = entity_registry.getEntityByIdOrThrow(inserter.source.entity_id);
+        const sink = entity_registry.getEntityByIdOrThrow(inserter.sink.entity_id);
+        if (!Entity.isBelt(source) || !Entity.isMachine(sink) || source.lanes[inserter.near_lane - 1]?.ingredient_name !== sink.fuel_slot?.fuel.item_name) {
+            continue;
+        }
+        const ticks = inserter.animation.total.ticks - 1 - lane_room;
+        if (ticks > 0) {
+            room.set(id, ticks);
+        }
+    }
+    return room;
+}
 
+/**
+ * The ticks added to each window of an inserter that takes fuel for its machine off a belt as well as an ingredient,
+ * where a clock is made again for its fuel (see withFuelHandRoomWhereNeeded): room for a hand of fuel where its windows
+ * get no room for one more hand (fuelHandRoomTicks), which holds the fuel's hand already where they do; and where they
+ * do and the fuel is on its near lane, room for the hand the fuel delays (delayedHandRoomTicks). Empty for a build with
+ * neither.
+ */
+export function fuelRoomTicks(entity_registry: ReadableEntityRegistry): Map<string, number> {
+    const lane_hand_room = laneHandRoomTicks(entity_registry);
+    return new Map([
+        ...Array.from(fuelHandRoomTicks(entity_registry)).filter(([id]) => !lane_hand_room.has(id)),
+        ...delayedHandRoomTicks(entity_registry),
+    ]);
+}
 
-export function beltPickupSlackTicks(entity_registry: ReadableEntityRegistry): Map<string, number> {
-    const slack = new Map<string, number>();
+/**
+ * Ticks added to the end of each window of an inserter that picks up from a belt: room for one more hand, the ticks that
+ * hand takes to fill at one lane stack a tick (4 for a hand of 16 from stacks of 4). A takeover upstream or a gap passing
+ * the pickup can start a hand later than in the planning run, and a window without the room closes on a partly filled
+ * hand. The hand is the one it moves of each item it takes, and the lane whose fill takes longest sets the ticks. The
+ * end of the lane changes nothing: a dead end gets the room as a lane that flows on does (on a lane with backpressure it
+ * comes after the ticks a hand takes from the lanes at rest, see backpressureHandTicks). Absent for an inserter that
+ * does not take from a belt.
+ *
+ * Absent as well for a side pickup (a pickup with no layout named is one, on a straight belt) that takes an item both
+ * lanes of its belt carry: its hand takes from the lane nearest it first and from the far lane when the near one gives
+ * nothing (BeltHandPickup), so the far lane gives the hand what a gap on the near lane withholds. A pickup of any other
+ * layout, and a side pickup of an item on one lane only, keeps the room.
+ */
+export function laneHandRoomTicks(entity_registry: ReadableEntityRegistry): Map<string, number> {
+    const room = new Map<string, number>();
     for (const entity of entity_registry.getAll()) {
-        if (!Entity.isInserter(entity)) {
+        if (!Entity.isInserter(entity) || entity.belt_lane_facts === undefined) {
             continue;
         }
         const source = entity_registry.getEntityByIdOrThrow(entity.source.entity_id);
         if (!Entity.isBelt(source)) {
             continue;
         }
-        const lanes = source.lanes.filter(lane => entity.filtered_items.has(lane.ingredient_name));
-        // the timing floor's count (one belt stack a tick) of its hand of each item it takes (its Hand trait's `by_item`,
-        // as handSizeFor reads it: its nominal hand for an item it does not carry), the slowest lane's fill
-        const ticks = Math.max(...(lanes.length > 0 ? lanes : source.lanes)
-            .map(lane => stacksOf(handSizeFor(entity, lane.ingredient_name), lane.stack_size)));
-        slack.set(entity.entity_id.id, Math.min(ticks, MAX_BELT_PICKUP_SLACK_TICKS));
+        const taken = source.lanes.filter(lane => entity.filtered_items.has(lane.ingredient_name));
+        const side_pickup = (entity.pickup_layout ?? "side-straight").startsWith("side-");
+        if (side_pickup && taken.length === 2 && taken[0].ingredient_name === taken[1].ingredient_name) {
+            continue;
+        }
+        // the lanes of the items it takes; of a belt none of whose items it takes, every lane (its nominal hand)
+        const lanes = taken.length > 0 ? taken : source.lanes;
+        room.set(entity.entity_id.id, Math.max(...lanes.map(lane => stacksOf(handSizeFor(entity, lane.ingredient_name), lane.stack_size))));
     }
-    return slack;
+    return room;
 }
-
 
 /**
  * The ticks a hand off a lane with backpressure takes to fill from the lanes at rest, by belt-fed inserter id, where the belt
@@ -108,7 +166,8 @@ export function beltPickupSlackTicks(entity_registry: ReadableEntityRegistry): M
 export function backpressureHandTicks(entity_registry: ReadableEntityRegistry): Map<string, number> {
     const hand_ticks = new Map<string, number>();
     for (const entity of entity_registry.getAll()) {
-        if (!Entity.isInserter(entity) || entity.belt_supply !== "backed_up") {
+        // a hand waits at rest only where every lane it may take from ends in a dead end
+        if (!Entity.isInserter(entity) || entity.belt_lane_facts?.every(isDeadEnd) !== true) {
             continue;
         }
         const source = entity_registry.getEntityByIdOrThrow(entity.source.entity_id);
@@ -158,14 +217,15 @@ export function withWindowsAtLeast(
     return result;
 }
 
-export function withBeltPickupSlack(
+/** Windows lengthened at their end by the ticks given, by key (whole-tick window cycles only) */
+export function withWindowsLengthened(
     windows: Map<string, OpenRange[]>,
-    slack: Map<string, number>,
+    ticks_by_key: ReadonlyMap<string, number>,
     window_cycle_ticks: number,
 ): Map<string, OpenRange[]> {
     const result = new Map<string, OpenRange[]>();
     for (const [key, ranges] of windows) {
-        const ticks = slack.get(key) ?? 0;
+        const ticks = ticks_by_key.get(key) ?? 0;
         if (ticks === 0 || !Number.isInteger(window_cycle_ticks)) {
             result.set(key, ranges);
             continue;
@@ -202,26 +262,18 @@ export function shiftRangesForCircuitLatency(ranges: OpenRange[], window_cycle_t
 /**
  * The belt supply a clock is designed for. Moving pickups time reachable stacks; supply with backpressure refills reachable
  * stacks at belt speed, and its windows last as long as a hand takes from the lanes at rest (see backpressureHandTicks).
- * Moving clocks add slack for late pickups (see "Wake-ups, the measure for goal 2" in GOALS.md).
+ * How long a pickup from a moving lane takes is the simulation's: a window gets no ticks beyond those of the plan.
  */
 export type ClockBelt =
-    /**
-     * Belt pickup slack lengthened the windows of its belt-fed inserters, by these ticks (each value once, ascending); with
-     * `inside`, the windows stay open these ticks after their last pickup already and none were added (slackInsideWindows)
-     */
-    | { kind: "moving"; slack_ticks: number[]; inside?: true }
-    /** Its belt-fed inserters have the windows they need on a belt with backpressure */
+    /** Some input lane of the build is not a dead end */
+    | { kind: "moving" }
+    /** Every input lane is a dead end: its belt-fed inserters have the windows they need on a belt with backpressure */
     | { kind: "backed_up" };
 
-/** "moving (+4 ticks)" or "backed-up"; empty when no inserter with windows picks up from a belt */
+/** "moving" or "backed-up"; empty when no inserter with windows picks up from a belt */
 export function clockBeltLabel(belt: ClockBelt | null): string {
     if (belt === null) {
         return "";
     }
-    if (belt.kind === "backed_up") {
-        return "backed-up";
-    }
-    const [first, last] = [belt.slack_ticks[0], belt.slack_ticks[belt.slack_ticks.length - 1]];
-    // a clock with the slack inside its windows shows the same: the ticks it stays enabled after its last pickup
-    return `moving (+${first === last ? first : `${first}–${last}`} tick${last === 1 ? "" : "s"})`;
+    return belt.kind === "backed_up" ? "backed-up" : "moving";
 }

@@ -31,6 +31,7 @@ export {
     isBufferChest,
     isContainerChest,
     isInfinityChest,
+    laneFieldUpdate,
 } from '../utils/configForm/formData';
 export type {
     BeltFormData,

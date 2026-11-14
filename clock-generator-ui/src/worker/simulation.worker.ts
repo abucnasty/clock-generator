@@ -1,5 +1,4 @@
 import { missingDataSections, type InternalError } from '../utils/internalError';
-import { repeatedUnitsProblem } from '../utils/repeatedUnitsProblem';
 /**
  * Web Worker for running clock-generator simulation.
  *
@@ -9,8 +8,12 @@ import { repeatedUnitsProblem } from '../utils/repeatedUnitsProblem';
  */
 
 import type { z } from 'zod';
-import type { ClockAlternativeRun, Config, CopiesError, DebugSteps, LogMessage, Logger, NotMadeClock, SearchRangeEdge } from 'clock-generator/browser';
+import type { LaneRole } from 'clock-generator/light';
+import type { ClockAlternativeRun, Config, DebugSteps, LogMessage, Logger, MachineToName, NotMadeClock, SearchRangeEdge } from 'clock-generator/browser';
 import { parseFormConfig } from './formConfig';
+import { laneRolesAnswer } from './laneRoles';
+import { convertBeltSetting } from '../utils/beltSettingConversion';
+import { laneTakersOf } from '../utils/laneTakers';
 import { installFactsOf } from './installFacts';
 import { createReadyGate } from './requestGate';
 import { NO_NAMES, hiddenRecipeIds, type GameNames } from '../utils/gameNames';
@@ -81,7 +84,7 @@ function shiftOptionsOf(result: ClockAlternativeRun['alternatives'][number]['res
         chosenIndex: search.picked.row,
         chosenShiftTicks: search.picked.setting,
         movedDescription: shifted
-            ? (search.moved ?? []).map(it => `${it.entity_id.type} ${it.entity_id.number}: ${it.item_names.join(', ')}`).join('; ')
+            ? (search.moved ?? []).map(it => `${it.entity_id.type} ${it.entity_id.number}: ${it.item_names.map(clockGenerator.textWords().item).join(', ')}`).join('; ')
             : `output swing ${search.picked.row}`,
         plannedTicks: shifted ? search.planned_ticks ?? null : null,
         rows: Array.from(rows.values()),
@@ -90,14 +93,21 @@ function shiftOptionsOf(result: ClockAlternativeRun['alternatives'][number]['res
     };
 }
 
+/** The machines of a config as its texts name them: number, prototype and recipe */
+function machinesToName(config: Config): MachineToName[] {
+    return config.machines.map(machine => ({ id: machine.id, ...(machine.prototype !== undefined && { prototype: machine.prototype }), recipe: machine.recipe }));
+}
+
 /** The fuel plan with the part of the fuel run the page draws: the fuel levels and the fuel inserters' swings */
-function fuelViewOf(result: ClockAlternativeRun['alternatives'][number]['result']): FuelViewData | null {
+function fuelViewOf(result: ClockAlternativeRun['alternatives'][number]['result'], config: Config): FuelViewData | null {
     if (!result.fuel_plan) {
         return null;
     }
     const view = result.fuel_consumption_view;
     return {
         plan: result.fuel_plan,
+        machines: machinesToName(config),
+        entityNames: clockGenerator.entityNamesInSentence(config),
         run: view ? {
             window_cycles: view.window_cycles,
             durationTicks: view.duration_ticks,
@@ -117,6 +127,11 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
     if (!run) {
         return null;
     }
+    // the belts, inserters, chests and drills as the texts name them, by their items (the engine's entity-name.ts)
+    const names = clockGenerator.buildToNameOf(config);
+    const entityNames = clockGenerator.entityNamesInSentence(config);
+    // every lane of the build once, which the rows of a clock's checked lanes are read with
+    const lanes = clockGenerator.buildLanesOf(config);
     const alternatives: ClockAlternativeView[] = run.alternatives.map(({ result, ...alternative }) => ({
         id: alternative.id,
         label: alternative.label,
@@ -126,6 +141,12 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         rankingWindowCount: alternative.ranking_window_count,
         assessment: alternative.assessment,
         assumptions: {
+            machines: machinesToName(config),
+            entityNames,
+            lanes,
+            laneTakers: laneTakersOf(config),
+            machineOfInserter: Object.fromEntries(config.inserters.flatMap((inserter, index) =>
+                inserter.sink.type === 'machine' ? [[inserter.id ?? index + 1, inserter.sink.id]] : [])),
             kickStarts: result.machine_facts.flatMap(machine => machine.facts.inputs
                 .filter(input => clockGenerator.FactorioDataService.findRecipeOrThrow(machine.facts.recipe).results.some(output => output.name === input.item_name))
                 .map(input => ({ machineId: machine.entity_id, item: input.item_name,
@@ -143,7 +164,9 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         ...(config.setpoint.counts === 'destroyed' && { counts: 'destroyed' as const }),
         verdict: alternative.verdict,
         ranking: alternative.ranking,
-        deadlockRisk: clockGenerator.deadlockRiskNote(alternative.deadlock_risks),
+        deadlockRisk: clockGenerator.deadlockRiskNote(alternative.deadlock_risks, names),
+        ...(alternative.checked_lanes !== undefined && { checkedLanes: alternative.checked_lanes }),
+        ...(alternative.shared_lane_loss_note !== undefined && { sharedLaneLossNote: alternative.shared_lane_loss_note }),
         beltLabel: clockGenerator.clockBeltLabel(alternative.belt),
         belt: alternative.belt,
         asBuilt: result.stability_check.as_built ?? null,
@@ -155,10 +178,9 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         transferHistory: result.serializable_transfer_history,
         // the columns go as they are, copied by the structured clone (never transferred: alternatives share them)
         stateTransitionHistory: clockGenerator.toPortable(result.serializable_state_transition_history),
-        fuelView: fuelViewOf(result),
+        fuelView: fuelViewOf(result, config),
         clockWindows: result.clock_windows,
         alwaysOnReasons: result.always_on_reasons ?? {},
-        beltPickupSlackTicks: result.belt_pickup_slack_ticks,
         insights: alternative.insights,
         shiftOptions: shiftOptionsOf(result),
         simulationDurationTicks: result.simulation_duration.ticks,
@@ -167,6 +189,7 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
         swingBackoffReport: result.swing_backoff_report ?? null,
         inserterClocks: result.unplanned_inserter_clocks ?? {},
         backedUpBelts: alternative.belt?.kind === 'backed_up' || (alternative.belt === null && config.overrides?.backed_up_belts === true),
+        replayReadsConfig: true,
     }));
     // the same clock made with shared windows, listed after it
     const also = run.also?.flatMap(it => toRunView(it, config) ?? []);
@@ -177,7 +200,6 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
 /** Runs one plan or task with streamed logs and progress; errors are posted instead of thrown */
 function runStreaming(
     runId: number,
-    config: Config,
     debugSteps: DebugSteps,
     streamLogs: boolean,
     work: (options: import('clock-generator/browser').GenerateClockOptions) => WorkerResponse,
@@ -213,7 +235,7 @@ function runStreaming(
         flushLogs();
         postResponse(response);
     } catch (error) {
-        const failure = failureOf(error, config, 'Generate failed');
+        const failure = failureOf(error, 'Generate failed');
         postResponse({
             type: 'error',
             runId,
@@ -225,14 +247,17 @@ function runStreaming(
 function handleValidate(requestId: number, config: Config): void {
     try {
         requireValidConfig(config);
-        postResponse({ type: 'validated', requestId, validation: clockGenerator.validateConfig(config) });
+        const validation = clockGenerator.validateConfig(config);
+        // a build of several identical copies is clocked as given; Build check notes it, with one copy where it can be offered
+        const repeated = clockGenerator.findRepeatedUnits(config);
+        const recovery = repeated.gcd > 1 ? repeatedUnitsRecoveryOf(repeated.copies, config) : undefined;
+        postResponse({ type: 'validated', requestId, validation, ...(recovery && { recovery }) });
     } catch (error) {
-        const { message, recovery } = failureOf(error, config, 'Check failed');
+        const { message } = failureOf(error, 'Check failed');
         postResponse({
             type: 'validation-failed',
             requestId,
             message,
-            recovery,
             internal: isEngineRefusal(error) ? undefined : internalErrorOf(error),
             diagnostics: error instanceof clockGenerator.InserterCoverageError
                 ? error.issues.map(issue => ({ kind: 'coverage' as const, issue }))
@@ -263,7 +288,6 @@ function isEngineRefusal(error: unknown): boolean {
     if (!(error instanceof Error)) return false;
     if (error instanceof clockGenerator.ConfigValidationError
         || error instanceof clockGenerator.InserterCoverageError
-        || error instanceof clockGenerator.CopiesError
         || error instanceof clockGenerator.FeasibilityError
         || error instanceof clockGenerator.LaneCapacityError
         || error instanceof clockGenerator.AssertionError) return true;
@@ -297,7 +321,6 @@ function checkRepeatedUnitConversion(config: Config): CheckedRepeatedUnitConvers
         // structural diagnosis.
         if (!(error instanceof clockGenerator.ConfigValidationError)
             && !(error instanceof clockGenerator.InserterCoverageError)
-            && !(error instanceof clockGenerator.CopiesError)
             && !(error instanceof clockGenerator.FeasibilityError)
             && !(error instanceof clockGenerator.AssertionError)) throw error;
         return { kind: 'unavailable', stage: 'check', reason: { code: 'candidate-check-failed',
@@ -305,28 +328,20 @@ function checkRepeatedUnitConversion(config: Config): CheckedRepeatedUnitConvers
     }
 }
 
-function repeatedUnitsRecoveryOf(error: CopiesError, config: Config): RepeatedUnitsRecovery {
+function repeatedUnitsRecoveryOf(units: readonly { machine_ids: readonly number[] }[], config: Config): RepeatedUnitsRecovery {
     const checked = checkRepeatedUnitConversion(config);
     return {
         kind: 'repeated-units', sourceConfigKey: JSON.stringify(config),
-        detectedCopies: error.units.length, configuredCopies: config.setpoint.copies,
-        units: error.units.map(unit => ({ machine_ids: [...unit.machine_ids] })),
+        detectedCopies: units.length, configuredCopies: config.setpoint.copies,
+        units: units.map(unit => ({ machine_ids: [...unit.machine_ids] })),
         conversion: checked.kind === 'available'
             ? { kind: 'available', multiplicity: checked.plan.multiplicity, copies: checked.plan.copies }
             : { kind: 'unavailable', stage: checked.stage, code: checked.reason.code, message: checked.reason.message },
     };
 }
 
-/** A recovery-query failure must still settle the original Check/run, with its real error and no capability. */
-function failureOf(error: unknown, config: Config, fallback: string): { message: string; stack?: string; recovery?: RepeatedUnitsRecovery } {
-    if (error instanceof clockGenerator.CopiesError) {
-        try {
-            return { message: repeatedUnitsProblem(error), stack: error.stack, recovery: repeatedUnitsRecoveryOf(error, config) };
-        } catch (failure) {
-            return { message: failure instanceof Error ? failure.message : 'The engine could not check the conversion to copies.',
-                stack: failure instanceof Error ? failure.stack : undefined };
-        }
-    }
+/** The message of a failed Check or run, with its stack */
+function failureOf(error: unknown, fallback: string): { message: string; stack?: string } {
     return { message: error instanceof Error ? error.message : fallback, stack: error instanceof Error ? error.stack : undefined };
 }
 
@@ -366,19 +381,55 @@ function validateEntries<T>(schema: z.ZodType<T>, entries: unknown, label: strin
 function pastedEntities(pasted: Extract<EngineQuery, { kind: 'pasted-entities' }>): PastedEntities {
     // IDs are already assigned by the mod
     const machines = validateEntries(clockGenerator.MachineConfigurationSchema, pasted.machines, 'machine');
+    // in this order, so that the error names the first entry the schema rejects
+    const drills = validateEntries(clockGenerator.MiningDrillConfigSchema, pasted.drills, 'drill');
+    const inserters = validateEntries(clockGenerator.InserterConfigSchema, clockGenerator.sidecarPickupInserters(pasted.inserters, pasted.sidecar_version, pasted.pickup_warnings), 'inserter');
+    const belts = validateEntries(clockGenerator.BeltConfigSchema, pasted.belts, 'belt');
+    const chests = validateEntries(clockGenerator.ChestConfigSchema, pasted.chests, 'chest');
     return {
         machines,
         picked_machines: machines.filter((machine, index) => machine.prototype !== undefined && !hasPrototype(Array.isArray(pasted.machines) ? pasted.machines[index] : undefined))
             .map(machine => machine.id),
-        drills: validateEntries(clockGenerator.MiningDrillConfigSchema, pasted.drills, 'drill'),
-        inserters: validateEntries(clockGenerator.InserterConfigSchema, clockGenerator.sidecarPickupInserters(pasted.inserters, pasted.sidecar_version, pasted.pickup_warnings), 'inserter'),
-        belts: validateEntries(clockGenerator.BeltConfigSchema, pasted.belts, 'belt'),
-        chests: validateEntries(clockGenerator.ChestConfigSchema, pasted.chests, 'chest'),
+        drills,
+        inserters,
+        belts,
+        chests,
         guidance: clockGenerator.checkSidecarImport(pasted.sidecar_version, machines, undefined,
             Array.isArray(pasted.chests) ? pasted.chests : [], Array.isArray(pasted.inserters) ? pasted.inserters : [],
             Array.isArray(pasted.drills) ? pasted.drills : []),
-        suggested_target: clockGenerator.suggestedTargetOf(pasted.suggested_target, machines),
+        // held to the belt the product is put on and to the engine's most for the whole build, where they are lower
+        suggested_target: clockGenerator.suggestedTargetOf(pasted.suggested_target, machines, { inserters, belts }, { chests, drills }),
     };
+}
+
+/**
+ * The roles of the lanes of a build, as the engine's lane facts give them, for the conversion of the former belt setting.
+ * A machine with no recipe stops the engine from reading any role; the roles are then read without such machines and the
+ * inserters at them, so a lane only those inserters use has no role. A build the engine cannot read at all has none.
+ */
+function rolesForConversion(config: unknown): { of: (belt_id: number, lane: 1 | 2) => LaneRole | null } {
+    const read = (it: unknown) => {
+        const facts = clockGenerator.laneFactsOfConfig(it as Config);
+        return { of: (belt_id: number, lane: 1 | 2) => facts.of(belt_id, lane).role };
+    };
+    try {
+        return read(config);
+    } catch {
+        try {
+            const build = config as Config;
+            const kept = build.machines.filter(machine => machine.recipe !== '');
+            const ids = new Set(kept.map(machine => machine.id));
+            const atKept = (end: { type: string; id: number }) => end.type !== 'machine' || ids.has(end.id);
+            return read({ ...build, machines: kept, inserters: build.inserters.filter(inserter => atKept(inserter.source) && atKept(inserter.sink)) });
+        } catch {
+            return { of: () => null };
+        }
+    }
+}
+
+/** `config` with the former belt setting turned into lane ends; as it is where it states none */
+function withoutBeltSetting<C>(config: C): C {
+    return (convertBeltSetting(config as never, rolesForConversion(config)) as C | null) ?? config;
 }
 
 const hasPrototype = (machine: unknown): boolean => typeof machine === 'object' && machine !== null && 'prototype' in machine && machine.prototype !== undefined;
@@ -395,16 +446,25 @@ function savedConfig(config: unknown): EngineAnswers['saved-config'] {
             ? { ...(machine as object), _prototype_source: 'recipe' } : machine) }
         : form;
     const result = parseFormConfig(clockGenerator.ConfigSchema, marked);
-    return { problem: result.success ? null : result.error.message, form: marked };
+    return result.success ? { problem: null, form: withoutBeltSetting(marked) } : { problem: result.error.message, form: marked };
 }
 
 /** An imported config file, which can hold what the form exports, e.g. an inserter end left unset; a former type is read as the machine */
-function configFile(config: unknown): Config {
+function configFile(config: unknown): EngineAnswers['config-file'] {
     const result = parseFormConfig(clockGenerator.ConfigSchema, clockGenerator.migrateMachineTypes(config));
     if (!result.success) {
         throw new clockGenerator.ConfigValidationError(result.error);
     }
-    return result.data;
+    return withoutBeltSetting(result.data);
+}
+
+/** The inserters a note on lanes is about, each once, in order; none where the lanes cannot be read, as the note then says nothing */
+function insertersOf(lanes: () => readonly { inserter_ids: readonly number[] }[]): number[] {
+    try {
+        return [...new Set(lanes().flatMap(lane => lane.inserter_ids))].sort((a, b) => a - b);
+    } catch {
+        return [];
+    }
 }
 
 function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
@@ -423,15 +483,20 @@ function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
             // what is out of scope is refused before coverage, as Check does: read as built, a blacklist or a side stream
             // would be explained as a missing inserter
             const refusal = clockGenerator.insertersScopeProblem(query.config);
-            const pickupNotTested = clockGenerator.beltPickupNotTestedNote(clockGenerator.uncalibratedBeltPickups(query.config));
+            // the data of the side-loaded drops and the untested pickups, which the site words; the words of the others, with
+            // the inserters they are about
+            const pickupsNotTested = clockGenerator.uncalibratedBeltPickups(query.config);
             const laneSharedByCopies = clockGenerator.laneSharedByCopiesWarning(query.config);
-            const sideLoadedDrop = clockGenerator.sideLoadedDropWarning(query.config);
+            const laneSharedByCopiesInserters = laneSharedByCopies === null ? [] : insertersOf(() => clockGenerator.lanesSharedByCopies(query.config));
+            const sideLoadedDrops = clockGenerator.sideLoadedDrops(query.config);
             const lanesExactlyFull = clockGenerator.lanesExactlyFullWarning(query.config);
+            const lanesExactlyFullInserters = lanesExactlyFull === null ? [] : insertersOf(() => clockGenerator.lanesExactlyFull(query.config));
             const copyGapNeeded = clockGenerator.copyGapNeededNote(query.config);
             const dropRoom = clockGenerator.dropRoomNote(query.config);
             const machinePrototypes = clockGenerator.machinePrototypeIssues(query.config);
             const refusal_inserters = clockGenerator.beltPickupSinkRefusal(query.config)?.inserter_ids ?? [];
-            return { issues: refusal === null ? liveCoverage(query.config) : [], refusal, refusal_inserters, pickupNotTested, laneSharedByCopies, sideLoadedDrop, lanesExactlyFull, copyGapNeeded, dropRoom, machinePrototypes };
+            return { issues: refusal === null ? liveCoverage(query.config) : [], refusal, refusal_inserters, pickupsNotTested, laneSharedByCopies,
+                laneSharedByCopiesInserters, sideLoadedDrops, lanesExactlyFull, lanesExactlyFullInserters, copyGapNeeded, dropRoom, machinePrototypes };
         }
         case 'machine-target-rates':
             return clockGenerator.computeMachineTargetRates(query.config);
@@ -444,6 +509,8 @@ function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
             };
         case 'repeated-unit-conversion':
             return checkRepeatedUnitConversion(query.config);
+        case 'lane-roles':
+            return laneRolesAnswer(query.config, clockGenerator.laneFactsOfConfig(query.config));
         case 'saved-config':
             return savedConfig(query.config);
         case 'config-file':
@@ -465,9 +532,11 @@ function handleQuery(requestId: number, query: EngineQuery): void {
     }
 }
 
-function handlePlan(runId: number, config: Config, debugSteps: DebugSteps, streamLogs: boolean): void {
-    runStreaming(runId, config, debugSteps, streamLogs, (options) => {
-        requireValidConfig(config);
+function handlePlan(runId: number, given: Config, debugSteps: DebugSteps, streamLogs: boolean): void {
+    runStreaming(runId, debugSteps, streamLogs, (options) => {
+        requireValidConfig(given);
+        // the build that is clocked, which the clocks and their views are of: outside supply gets no window
+        const config = clockGenerator.withoutOutsideSupply(given);
         const notMade: NotMadeClock[] = [];
         // the tasks go out as soon as the primary clock is made: the pool runs them while this worker assesses it
         const plan = clockGenerator.planClockAlternatives(config, { ...options, on_not_made: clock => notMade.push(clock) }, (context, tasks, primarySignature) => postResponse({
@@ -480,7 +549,7 @@ function handlePlan(runId: number, config: Config, debugSteps: DebugSteps, strea
 
 function handleTask(
     runId: number,
-    config: Config,
+    given: Config,
     debugSteps: DebugSteps,
     streamLogs: boolean,
     context: import('clock-generator/browser').ClockAlternativeContext,
@@ -488,13 +557,16 @@ function handleTask(
     assessedSignatures: string[] = [],
     coordinatedSources?: import('clock-generator/browser').CoordinatedSourcesInput,
 ): void {
-    runStreaming(runId, config, debugSteps, streamLogs, (options) => {
-        requireValidConfig(config);
+    runStreaming(runId, debugSteps, streamLogs, (options) => {
+        requireValidConfig(given);
+        // the build that is clocked, which the clocks and their views are of: outside supply gets no window
+        const config = clockGenerator.withoutOutsideSupply(given);
         const notMade: NotMadeClock[] = [];
         // the per-branch clock is made from the parts of the runs before it, not from the context
+        const onNotMade = (clock: NotMadeClock) => notMade.push(clock);
         const run = coordinatedSources !== undefined
-            ? clockGenerator.runCoordinatedSourcesTask(config, coordinatedSources, options, assessedSignatures)
-            : clockGenerator.runClockAlternativeTask(config, context, taskId, { ...options, on_not_made: clock => notMade.push(clock) }, assessedSignatures);
+            ? clockGenerator.runCoordinatedSourcesTask(config, coordinatedSources, { ...options, on_not_made: onNotMade }, assessedSignatures)
+            : clockGenerator.runClockAlternativeTask(config, context, taskId, { ...options, on_not_made: onNotMade }, assessedSignatures);
         return { type: 'task-completed', runId, taskId, run: toRunView(run, config), notMade };
     });
 }

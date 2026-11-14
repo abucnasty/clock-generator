@@ -26,4 +26,8 @@ export const GameFixturePaths = {
     TURBO_BELT_DROP: path.join(ENGINE_ROOT, "tests/game/mechanics/belt-drop/fixtures/turbo-stacks"),
     SPLITTER: path.join(PICKUP, "splitter"),
     SPLITTER_TWO_INSERTERS: path.join(PICKUP, "splitter-two-inserters"),
+    /** One copy of the agricultural science build, the staged-start tests' own build (the sample's scaffold until it became five copies) */
+    AGRICULTURAL_SCIENCE_ONE_COPY: path.join(ENGINE_ROOT, "tests/game/mechanics/staged-start/fixtures/agricultural-science-one-copy.scaffold"),
+    /** Rows of gear assemblers on one dead-end belt of iron plate, `gear-row-<machines>-at-<pitch>.scaffold`, the pitch the tiles from one assembler's input inserter to the next */
+    INPUT_LANE_GAP: path.join(ENGINE_ROOT, "tests/game/mechanics/input-lane-gap/fixtures"),
 };

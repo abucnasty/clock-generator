@@ -20,12 +20,13 @@ export interface GhostWindow {
  * machine's list stays on it, and the machine's next alarm gives it a ghost wakeup (`GhostWakeUp`). The window that
  * closed last before each ghost wakeup of the run closes before the inserter went to sleep, or before it took the hand it
  * held then: its update in that tick then finds it disabled with its hand empty and its arm home, and it goes on no list.
- * Where that leaves the window nothing, it is dropped.
+ * Where that leaves the window nothing, it is dropped, but an inserter keeps its windows as they are where every one of
+ * them would be dropped.
  *
  * Read off the run of the clock (`stock`, with the ghost wakeups of its judged part): an inserter whose last enabled
  * update is in tick c (it shows disabled from c on) and went to sleep in tick s (or took its hand in tick q) needs its
  * last enabled update in tick s - 1 (q - 1), so its window closes c - s + 1 (c - q + 1) ticks earlier. Not for the
- * inserters in `fixed` (the windows of a moving belt's slack, of a loop), for a hand taken before its window opened, or
+ * inserters in `fixed` (the windows with room for a hand of fuel, of a loop), for a hand taken before its window opened, or
  * where the run's switch-offs do not line up with the windows. Null where no window changes.
  */
 export function windowsWithoutGhostWakeUps(
@@ -97,6 +98,7 @@ export function windowsWithoutGhostWakeUps(
         }
         if (!usable || shifts.size === 0) continue;
         const kept: OpenRange[] = [];
+        const shaped_of: GhostWindow[] = [];
         ranges.forEach((range, index) => {
             const shift = shifts.get(index);
             if (shift === undefined) {
@@ -106,8 +108,14 @@ export function windowsWithoutGhostWakeUps(
             const end = range.end_inclusive - shift.ticks;
             const window = end >= range.start_inclusive ? OpenRange.from(range.start_inclusive, end) : null;
             if (window !== null) kept.push(window);
-            shaped.push({ inserter_id: id, window: range, shaped: window, ghost_wake_ups: shift.ghosts });
+            shaped_of.push({ inserter_id: id, window: range, shaped: window, ghost_wake_ups: shift.ghosts });
         });
+        // an inserter with no enable window is not under the clock: it runs all the time, so the clock checked is not the one shaped
+        if (kept.length === 0) {
+            left?.(id, "shaping would leave it no enable window");
+            continue;
+        }
+        shaped.push(...shaped_of);
         result.set(id, kept);
     }
     return shaped.length === 0 ? null : { windows: result, shaped };

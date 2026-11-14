@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ConfigSchema, type Config } from 'clock-generator/browser';
-import { readConfigFile } from '../hooks/usePersistedConfigForm';
+import { readConfigFile, readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
 import { parseFormConfig } from '../worker/formConfig';
 import { configToFormData, formDataToConfig } from './configForm/configMapping';
+import { beltStrategyUpdate } from './configForm/formData';
 import { copiesProblem } from './copiesProblem';
 import {
     canShare,
@@ -273,6 +274,43 @@ describe('shared builds through the real file and worker boundary', () => {
         // Metadata is independent of the Copies refinement; keep its full presence/value matrix once.
         if (copies === 0.0625) expect(metadataOf(exported.inserters)).toStrictEqual(metadataOf(JSON.parse(original).inserters));
         expect(JSON.stringify(config)).toBe(original);
+    });
+
+    it('keeps the lane facts and the way a belt moves when the build is opened, edited elsewhere, saved and shared again', async () => {
+        const lanes = [
+            { ingredient: 'iron-plate', stack_size: 4, supply_rate: 120.7, lane_end: { kind: 'dead_end' }, sharing: 'per_copy' },
+            { ingredient: 'copper-plate', stack_size: 4, lane_end: { kind: 'infinite' } },
+        ];
+        // what leaves the end of an export lane is its consumption: it states no lane end beside it
+        const exportLane = { ingredient: 'iron-plate', stack_size: 4, consumption_per_second: 5, sharing: 'shared' };
+        const build = smallBuild();
+        const config = { ...build, inserters: [{ source: { type: 'belt', id: 1 }, sink: { type: 'machine', id: 1 }, stack_size: 16 }, ...build.inserters],
+            belts: [
+                { id: 1, type: 'turbo-transport-belt', flow_direction: 12, lanes },
+                { id: 2, type: 'turbo-transport-belt', strategy: 'export', lanes: [exportLane] },
+            ] } as unknown as Config;
+        /** The form of a link as the site opens it: decoded, read as a file, checked against the config schema at the worker boundary */
+        const open = async (link: { version: string; data: string }) => {
+            const decoded = await decodeShareLink(link);
+            if (decoded.kind !== 'build') throw new Error(`Expected a decoded build, not ${decoded.problem}`);
+            const file = readConfigFile(JSON.stringify(decoded.config));
+            expect(ConfigSchema.safeParse(file).success).toBe(true);
+            const parsed = parseFormConfig(ConfigSchema, file);
+            expect(parsed.success).toBe(true);
+            return configToFormData(parsed.data!);
+        };
+        const form = await open(await linkTo(config, 'Lanes'));
+        // another field edited, and the export belt switched to normal, which drops its consumption only
+        const edited = { ...form, machines: form.machines.map(machine => ({ ...machine, crafting_speed: 3 })),
+            belts: form.belts.map(belt => belt.strategy === 'export' ? { ...belt, ...beltStrategyUpdate(belt, 'normal') } : belt) };
+        const saved = readSavedConfig(serializeConfig(edited));
+        expect(saved).not.toBeNull();
+        const reopened = formDataToConfig(await open(await linkTo(formDataToConfig(saved!), 'Lanes')));
+        const { consumption_per_second: _c, ...normalLane } = exportLane;
+        void _c;
+        expect(reopened.belts.map(belt => belt.lanes)).toEqual([lanes, [normalLane]]);
+        expect(reopened.belts.map(belt => belt.flow_direction)).toEqual([12, undefined]);
+        expect(reopened.machines.every(machine => machine.crafting_speed === 3)).toBe(true);
     });
 
     it('rejects malformed decoded config at the worker boundary even with editable Copies', async () => {

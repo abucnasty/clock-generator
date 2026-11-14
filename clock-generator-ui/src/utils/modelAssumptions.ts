@@ -1,5 +1,5 @@
 import type { ClockAlternativeView, GenerationAssumptions } from '../worker/types';
-import { entityLabel } from './entityLabel';
+import { entityInSentence, machineInSentence, nameInSentence, sentenceStart } from './entityLabel';
 
 /** Only actual outcomes count as evaluated; the requested flag and null are never successful checks. */
 export function startCheckSummary(clocks: Pick<ClockAlternativeView, 'assessment'>[], generation: GenerationAssumptions | null): string {
@@ -17,12 +17,10 @@ export function startCheckSummary(clocks: Pick<ClockAlternativeView, 'assessment
         + (missing > 0 ? ` Results for other starting states are unavailable for ${missing}.` : '');
 }
 
-/** The cold start every clock is tested from, for the card's details */
-export const COLD_START = 'Tested in the simulator from a cold start: full input, empty machines and inserters, the clock at its first tick. Rates are read at steady state.';
-/** The same, with what it does not promise, for the Overview */
+/** The cold start every clock is tested from, with what it does not promise, for the Overview */
 export const MODELED_START = 'Tested from a cold start: full input, empty machines and inserters, the clock at its first tick. The clock is planned on a separate copy of the build, and rates are read at steady state, so they do not promise the setpoint in the first window cycle, or from every state a running build can be in.';
 /** What the tests do not cover, last in the Overview's list */
-export const START_LIMITS = 'None of this covers every stock of items in a running build, the order you build it in, how much a real belt carries, or recovery in the game. Belt slack is a rule of thumb, not a check of what the belt carries.';
+export const START_LIMITS = 'None of this covers every stock of items in a running build, the order you build it in, how much a real belt carries, or recovery in the game.';
 /** How many other places in its window cycle the clock was tried from */
 export const phaseChecksText = (checked: number | undefined): string => checked === undefined
     ? 'How many other places in its window cycle the clock was tried from is unavailable.'
@@ -32,20 +30,22 @@ export const phaseChecksText = (checked: number | undefined): string => checked 
 export const freeLaneDropText = (belt: string): string =>
     `Where the output inserters drop onto ${belt} was not given, so each is treated as dropping onto its own stretch of empty belt; two that share a belt in the game could get in each other's way.`;
 
-export function modeledDetails(clock: ClockAlternativeView, itemLabel: (id: string) => string = (id) => id): string[] {
+/** What the model assumed of the selected clock's build; a machine by its kind and recipe in the game's names (machineInSentence) */
+export function modeledDetails(clock: ClockAlternativeView, itemLabel: (id: string) => string = (id) => id,
+    recipeLabel: (id: string) => string = (id) => id): string[] {
     const facts = clock.assumptions;
     if (!facts) return [];
+    const machine = (id: number | string) => sentenceStart(machineInSentence(id, facts.machines, { itemLabel, recipeLabel }));
     return [
-        ...facts.kickStarts.map(seed => {
-            const id = /^machine:(\d+)$/.exec(seed.machineId);
-            const machine = id ? entityLabel('machine', Number(id[1])) : seed.machineId;
-            return `${machine} gets a kick start of ${seed.items} ${itemLabel(seed.item)}. Losing those items is a separate recovery question.`;
-        }),
+        ...facts.kickStarts.map(seed =>
+            `${machine(seed.machineId)} gets a kick start of ${seed.items} ${nameInSentence(itemLabel(seed.item))}. Losing those items is a separate recovery question.`),
         ...facts.outputDrops.map(drop => drop.mode === 'shared-lanes'
-            ? `${entityLabel('belt', drop.beltId)}: the drop positions you gave are used to space the drops of ${drop.inserterIds.map(id => entityLabel('inserter', id)).join(', ')} on the belt.`
-            : freeLaneDropText(entityLabel('belt', drop.beltId))),
-        ...facts.machineFuel.map(machine => `${entityLabel('machine', machine.machineId)}: imported fuel ${itemLabel(machine.fuel)}.`),
-        ...(facts.overrides !== undefined ? [`Explicit run overrides: ${JSON.stringify(facts.overrides)}.`] : []),
+            ? `${sentenceStart(entityInSentence('belt', drop.beltId, facts.entityNames))}: the drop positions you gave are used to space the drops of `
+                + `${drop.inserterIds.map(id => entityInSentence('inserter', id, facts.entityNames)).join(', ')} on the belt.`
+            : freeLaneDropText(entityInSentence('belt', drop.beltId, facts.entityNames))),
+        ...facts.machineFuel.map(fuel => `${machine(fuel.machineId)}: imported fuel ${nameInSentence(itemLabel(fuel.fuel))}.`),
+        // only overrides that are there: an empty set says nothing
+        ...(facts.overrides !== undefined && Object.keys(facts.overrides).length > 0 ? [`Explicit run overrides: ${JSON.stringify(facts.overrides)}.`] : []),
     ];
 }
 

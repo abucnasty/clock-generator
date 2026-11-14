@@ -77,13 +77,12 @@ describe("generateClockForConfig", () => {
             expect(observed.result.clock_windows["inserter:8"]).toBeUndefined();
         });
 
-        // belt pickup slack is not given to a window cycle that is not a whole number of ticks (GOALS.md, the belt a clock is made for)
-        it("names every clock a backed-up belt clock on its clock of 90.947 ticks, the subtick one and the rounded one, and counts none as having left the slack out", () => {
+        // the belt a clock is made for follows the config's lanes, whatever its window cycle: these lanes are not dead ends
+        it("names every clock a moving belt clock on its clock of 90.947 ticks, the subtick one and the rounded one", () => {
             expect(alternatives.length).toBeGreaterThan(0);
-            expect(alternatives.map(a => a.belt)).toEqual(alternatives.map(() => ({ kind: "backed_up" })));
+            expect(alternatives.map(a => a.belt)).toEqual(alternatives.map(() => ({ kind: "moving" })));
             expect(alternatives.some(a => a.id.endsWith("_subtick"))).toBe(true);
-            expect(alternatives.every(a => a.ranking.matches_belt_choice)).toBe(true);
-            expect(alternatives[0].description).toContain("The belt slack is not given to a clock whose window cycle time is not a whole number of ticks");
+            expect(alternatives[0].description).toContain("Made for a moving belt.");
         });
     });
 

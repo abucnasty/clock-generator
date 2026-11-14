@@ -1,14 +1,13 @@
-// node scripts/clock-only.js <KEY> <swings|-> <never|always|auto> <window cycles> <output inserter id> [options]
+// node scripts/clock-only.js <KEY> <swings|-> <window cycles> <output inserter id> [options]
 // Makes batched swings for a sample and runs the clock on its own, as the blueprint does in game.
 //   <swings>     output swings per cycle to force, - for the planned count
-//   <never|...>  belt pickup slack
 //   --windows '<json>'           windows to run instead, by entity id: {"inserter:11":[{"start":0,"end":42}]}
 //   --hands <inserter> <machine> every hand that inserter drops, a line a window cycle: where in which of its windows
 //                                it started to fill, grew, was full and dropped, and what the machine held then.
 //                                Long lines: pipe through `cut -c1-900`.
 // Prints the windows and what the output inserter dropped in each window cycle.
 const args = process.argv.slice(2);
-const [key, swings, slack, window_cycles, out] = args;
+const [key, swings, window_cycles, out] = args;
 const option = name => { const at = args.indexOf(name); return at < 0 ? null : args.slice(at + 1); };
 const { dist, quiet, loadSample } = require("./lib");
 const { generateClockForConfig, simulateClockOnly } = dist("crafting/generate-blueprint.js");
@@ -18,7 +17,7 @@ const { generateClockForConfig, simulateClockOnly } = dist("crafting/generate-bl
     if (swings !== "-") {
         config.overrides = { ...config.overrides, terminal_swing_count: Number(swings) };
     }
-    const result = generateClockForConfig(config, { logger: quiet, belt_pickup_slack: slack });
+    const result = generateClockForConfig(config, { logger: quiet });
     const window_cycle_ticks = result.simulation_duration.ticks;
     const override = option("--windows");
     const windows = { ...result.clock_windows, ...(override ? JSON.parse(override[0]) : {}) };

@@ -1,14 +1,20 @@
 import { useState } from 'react';
-import { Alert, AlertTitle, Button, Chip, Typography } from '@mui/material';
+import { Alert, AlertTitle, Box, Button, Chip, Typography } from '@mui/material';
 import type { SwingAttemptResult, SwingBackoffReport } from 'clock-generator/browser';
+import { attemptResultOf } from '../utils/clockSummary';
 import { AppDialog } from './AppDialog';
 import { DataTable } from './DataTable';
 
 interface SwingBackoffReportDisplayProps {
     report: SwingBackoffReport | null;
+    /**
+     * Which report this place shows: "succeeded", the swing count that holds, in plain text inside Model and tested starts;
+     * "failed", none found, as the alert on Overview
+     */
+    shows: 'succeeded' | 'failed';
 }
 
-export function SwingBackoffReportDisplay({ report }: SwingBackoffReportDisplayProps) {
+export function SwingBackoffReportDisplay({ report, shows }: SwingBackoffReportDisplayProps) {
     const [open, setOpen] = useState(false);
 
     if (!report || !report.triggered) {
@@ -16,28 +22,37 @@ export function SwingBackoffReportDisplay({ report }: SwingBackoffReportDisplayP
     }
 
     const isSuccess = report.stable_terminal_swing_count !== null;
+    if (isSuccess !== (shows === 'succeeded')) {
+        return null;
+    }
     const allAttempts: SwingAttemptResult[] = [report.initial_attempt, ...report.attempts];
 
     const summaryText = isSuccess
         ? `Output swings reduced from ${report.initial_terminal_swing_count} → ${report.stable_terminal_swing_count} so the clock holds the rate`
         : `No swing count that holds the rate was found (started at ${report.initial_terminal_swing_count}); original result used`;
 
+    const details = (
+        <Button color="inherit" size="small" onClick={() => setOpen(true)}>
+            View Details
+        </Button>
+    );
+
     return (
         <>
-            <Alert
-                severity={isSuccess ? 'warning' : 'error'}
-                sx={{ mt: 2 }}
-                action={
-                    <Button color="inherit" size="small" onClick={() => setOpen(true)}>
-                        View Details
-                    </Button>
-                }
-            >
-                <AlertTitle>
-                    {isSuccess ? 'Output Swing Backoff Triggered' : 'Output Swing Backoff Failed'}
-                </AlertTitle>
-                <Typography variant="body2">{summaryText}</Typography>
-            </Alert>
+            {isSuccess ? (
+                <Box sx={{ mt: 1 }} data-swing-backoff="">
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>Output Swing Backoff Triggered</Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 1 }}>
+                        <Typography variant="body2">{summaryText}</Typography>
+                        {details}
+                    </Box>
+                </Box>
+            ) : (
+                <Alert severity="error" sx={{ mt: 2 }} action={details}>
+                    <AlertTitle>Output Swing Backoff Failed</AlertTitle>
+                    <Typography variant="body2">{summaryText}</Typography>
+                </Alert>
+            )}
 
             <AppDialog open={open} onClose={() => setOpen(false)} closeButton dividers
                 title={isSuccess ? 'Output Swing Backoff Report' : 'Output Swing Backoff Failed'}>
@@ -68,7 +83,7 @@ export function SwingBackoffReportDisplay({ report }: SwingBackoffReportDisplayP
                         </> },
                         { header: 'Actual Items', align: 'right', cell: attempt => attempt.actual_output_items },
                         { header: 'Expected Items', align: 'right', cell: attempt => attempt.expected_output_items },
-                        { header: 'Result', align: 'center', cell: attempt => <Chip label={attempt.holds ? 'Holds the rate' : 'Does not hold it'}
+                        { header: 'Result', align: 'center', cell: attempt => <Chip label={attemptResultOf(attempt)}
                             color={attempt.holds ? 'success' : 'error'} size="small" variant="outlined" /> },
                     ]} />
             </AppDialog>

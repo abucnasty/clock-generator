@@ -1,19 +1,18 @@
 import { ClockWindowCycleLimitError, type SwingWindowCycleRejection } from "./plan/clock-window-cycle-limit";
 import { wholeSwingWindowCyclesBelow } from "./whole-swing-window-cycles";
 import { Config } from "../config";
+import { withoutOutsideSupply } from "../config/outside-supply";
 import { defaultLogger } from "../common/logger";
 import { roundRobinPollingClock } from "./candidates/round-robin-polling";
 import { timeStudyWindowsClock } from "./candidates/time-study-windows";
 import { exhaustClockOfPlan } from "./candidates/exhaust-clock";
-import { BlueprintGenerationResult, GenerateClockOptions, UnclockedRun, PlannedClock, SwingAttemptResult, SwingBackoffReport, checkedClock, clockOfPlan, clockOfWindows, unclockedRun, slackInsideWindows } from "./plan/unclocked-run";
+import { BlueprintGenerationResult, GenerateClockOptions, UnclockedRun, PlannedClock, SwingAttemptResult, SwingBackoffReport, checkedClock, clockOfPlan, clockOfWindows, handRoomInsideWindows, unclockedRun } from "./plan/unclocked-run";
 import { type GhostWindow, windowsWithoutGhostWakeUps } from "./plan/ghost-windows";
 import { ghostWakeUpsOfStock } from "./wake-ups";
 import { inserterEnds } from "./inserter-counters";
 import { LONG_RUN_SETTLE_SHARE } from "./long-run";
-import { beltPickupSlackTicks } from "./clock";
 import type { AsBuiltRun } from "./trial";
 import { ArithmeticWindowsNotApplicable, batchedSwingsWindowsByArithmetic } from "./plan/batched-arithmetic";
-import { sharedLaneShortened } from "./plan/shared-lane-guard";
 import { estimatedOutputSwings } from "./plan/output-swing-estimate";
 import { disturbanceTrialVerdictOf } from "./trial";
 import { OpenRange } from "../data-types";
@@ -38,13 +37,15 @@ export function terminalCountForAlternativePlanning(result: Pick<BlueprintGenera
  * With `options.shared_windows` it makes only the clock of the grouped hands with shared windows; where there is none the result does not hold.
  *
  * @param config The configuration for the simulation
- * @param options Optional generation options (debug, logger, the clock-only check, belt pickup slack, …)
+ * @param options Optional generation options (debug, logger, the clock-only check, …)
  * @returns The generated blueprint and related metadata
  */
 export function generateClockForConfig(
-    config: Config,
+    given: Config,
     options: GenerateClockOptions = {}
 ): BlueprintGenerationResult {
+    // the build that is clocked: outside supply gets no window (outside-supply.ts)
+    const config = withoutOutsideSupply(given);
     if (config.overrides?.derive_clock_windows) {
         return timeStudyWindowsClock(config, options, "prefer_planned");
     }
@@ -59,7 +60,7 @@ export function generateClockForConfig(
         if (options.verify_as_built !== true) throw new Error("shared enable windows are made for a clock that is checked as built");
         const shared = roundRobinPollingClock(plan, options);
         if (shared !== null && shared.stability_check.holds) return shared;
-        const unmade = clockOfPlan(plan, { ...options, belt_pickup_slack: "always" });
+        const unmade = clockOfPlan(plan, { ...options, lane_hand_room: "always" });
         const unchecked = checkedClock(plan, unmade, unmade.windows, { ...options, verify_as_built: false, modulo_blueprint: false, fuel_consumption_view: false });
         return { ...unchecked, stability_check: { ...unchecked.stability_check, holds: false } };
     }
@@ -75,8 +76,8 @@ export function generateClockForConfig(
         const arithmetic = options.verify_as_built === true ? arithmeticWindowsOf(plan) : null;
         const primary = arithmetic === null ? planned : arithmeticBesidePlanned(made, plan, planned, arithmetic, options);
         if (options.verify_as_built !== true) return primary;
-        // then the planning run's windows with the slack they hold already, where they wake fewer than that
-        const inside = withSlackInside(made, plan, planned, primary, options);
+        // then the planning run's windows with the room for one hand they hold already, where they wake fewer than that
+        const inside = withHandRoomInside(made, plan, primary, options);
         // and last its windows shaped against ghost wakeups, where that wakes fewer
         return withoutGhostWakeUps(made, inside, options);
     }
@@ -90,8 +91,7 @@ export function generateClockForConfig(
 
 /**
  * The batched-swings windows of the plan made by arithmetic (batched-arithmetic.ts), where the arithmetic has a rule for
- * the build, they are not the planning run's own and the copies do not share a belt they shorten (shared-lane-guard.ts);
- * null elsewhere, the reason logged
+ * the build and they are not the planning run's own; null elsewhere, the reason logged
  */
 function arithmeticWindowsOf(plan: UnclockedRun): Map<string, OpenRange[]> | null {
     const { run } = plan;
@@ -101,11 +101,6 @@ function arithmeticWindowsOf(plan: UnclockedRun): Map<string, OpenRange[]> | nul
             always_enabled_by_config: run.always_enabled_by_config });
         if (sameWindows(windows, plan.unslacked_windows)) {
             plan.logger.log("Enable windows by arithmetic: the unclocked run's own");
-            return null;
-        }
-        const shared = sharedLaneShortened(plan.config, windows, plan.unslacked_windows);
-        if (shared !== null) {
-            plan.logger.log(`Enable windows by arithmetic: not used, ${shared}`);
             return null;
         }
         return windows;
@@ -154,7 +149,7 @@ function arithmeticBesidePlanned(clocks: MadeClocks, plan: UnclockedRun, planned
     if (!made.stability_check.holds || made_wake_ups === undefined || planned_wake_ups === undefined || !(made_wake_ups < planned_wake_ups)) {
         return planned;
     }
-    const survives = (result: BlueprintGenerationResult) => disturbanceTrialVerdictOf(plan.config, result, plan.logger).disturbance_trial?.survives === true;
+    const survives = (result: BlueprintGenerationResult) => disturbanceTrialVerdictOf(plan.config, result, plan.logger, options.on_progress_detail).disturbance_trial?.survives === true;
     if (!survives(made) && survives(planned)) {
         plan.logger.log("Enable windows by arithmetic: fewer wakeups, but the clock does not go back to its rate by itself after a supply stop or an output blockage, as the planned one does");
         return planned;
@@ -165,22 +160,22 @@ function arithmeticBesidePlanned(clocks: MadeClocks, plan: UnclockedRun, planned
 
 /**
  * The primary clock so far (the planned clock, or the clock by arithmetic beside it), or the planned windows with the
- * belt pickup slack they hold already (`slackInsideWindows`) in place of the slack added after them, where every
- * belt-fed window stays open the slack's ticks after its last pickup: the clock made so where it holds as built, wakes
- * its inserters fewer times a minute than the primary and gets back from every backpressure loss the primary gets back
- * from. The slack added after such a window lets the arm, back from its last drop,
- * start a hand the plan does not have, and where that hand waits at its machine it costs a wake-up; it can also join two
- * windows of a window cycle into one (the logistic science sample's two pickup windows of 176 ticks: 20.57 wake-ups a minute
- * with the slack inside, 61.71 joined by the slack added; docs/wake-ups.md).
+ * room for one hand they hold already (`handRoomInsideWindows`) in place of the room added after them, where every
+ * window with the room stays open its ticks after its last pickup: the clock made so where it holds as built, wakes its
+ * inserters fewer times a minute than the primary and gets back from every backpressure loss the primary gets back
+ * from. The room added after such a window lets the arm, back from its last drop, start a hand the plan does not have,
+ * and where that hand waits at its machine it costs a wake-up; it can also join two windows of a window cycle into one
+ * (the logistic science sample's two pickup windows of 176 ticks: 20.57 wake-ups a minute with the room inside, 61.71
+ * joined by the room added; docs/wake-ups.md).
  */
-function withSlackInside(made: MadeClocks, plan: UnclockedRun, planned: BlueprintGenerationResult, primary: BlueprintGenerationResult,
+function withHandRoomInside(made: MadeClocks, plan: UnclockedRun, primary: BlueprintGenerationResult,
     options: GenerateClockOptions): BlueprintGenerationResult {
-    if (options.belt_pickup_slack !== "always" || planned.belt?.kind !== "moving" || slackInsideWindows(plan) === null) {
+    if (options.lane_hand_room !== "always" || !Number.isInteger(plan.run.duration.ticks) || handRoomInsideWindows(plan) === null) {
         return primary;
     }
     // checked on a copy of the plan: the check writes the as-built result into the stability check of the plan it is given
     const own: UnclockedRun = { ...plan, run: { ...plan.run, stability_check: { ...plan.run.stability_check, as_built: undefined } } };
-    const clock = clockOfPlan(own, { ...options, belt_pickup_slack: "inside" });
+    const clock = clockOfPlan(own, { ...options, lane_hand_room: "inside" });
     const inside = checkedAndKept(made, own, clock, clock.windows, options);
     const wake_ups = (result: BlueprintGenerationResult) => result.stability_check.as_built?.wake_ups?.wake_ups_per_minute;
     const inside_wake_ups = wake_ups(inside), primary_wake_ups = wake_ups(primary);
@@ -188,12 +183,12 @@ function withSlackInside(made: MadeClocks, plan: UnclockedRun, planned: Blueprin
         || !(inside_wake_ups < primary_wake_ups)) {
         return primary;
     }
-    const survives = (result: BlueprintGenerationResult) => disturbanceTrialVerdictOf(plan.config, result, plan.logger).disturbance_trial?.survives === true;
+    const survives = (result: BlueprintGenerationResult) => disturbanceTrialVerdictOf(plan.config, result, plan.logger, options.on_progress_detail).disturbance_trial?.survives === true;
     if (!survives(inside) && survives(primary)) {
-        plan.logger.log("Belt slack inside the enable windows: fewer wakeups, but the clock does not go back to its rate by itself after a supply stop or an output blockage, as the primary one does");
+        plan.logger.log("Room for one hand inside the enable windows: fewer wakeups, but the clock does not go back to its rate by itself after a supply stop or an output blockage, as the primary one does");
         return primary;
     }
-    plan.logger.log(`Belt slack inside the enable windows: the primary clock (${inside_wake_ups.toFixed(2)} against ${primary_wake_ups.toFixed(2)} wakeups a minute)`);
+    plan.logger.log(`Room for one hand inside the enable windows: the primary clock (${inside_wake_ups.toFixed(2)} against ${primary_wake_ups.toFixed(2)} wakeups a minute)`);
     return inside;
 }
 
@@ -220,8 +215,8 @@ function checkedAndKept(made: MadeClocks, plan: UnclockedRun, clock: PlannedCloc
  * whose switch-off left its inserter asleep on a machine's list in the primary's clock-only run closes before the
  * inserter went to sleep or took the hand it held, or is dropped where that leaves it nothing. The clock made so where it
  * holds as built, wakes its inserters fewer times a minute than the primary and gets back from every backpressure loss
- * the primary gets back from. The windows of an inserter that picks up from a moving belt keep their belt pickup slack,
- * and the windows of a loop are left as they are.
+ * the primary gets back from. The windows with room for one more hand or for a hand of fuel, the windows of a loop, and
+ * the windows of an inserter that would keep none, are left as they are.
  */
 function withoutGhostWakeUps(made: MadeClocks, primary: BlueprintGenerationResult, options: GenerateClockOptions): BlueprintGenerationResult {
     const kept = made.get(primary);
@@ -238,7 +233,7 @@ function withoutGhostWakeUps(made: MadeClocks, primary: BlueprintGenerationResul
         return primary;
     }
     const fixed = new Set([
-        ...(clock.belt?.kind === "moving" ? beltPickupSlackTicks(plan.run.simulation_context.entity_registry).keys() : []),
+        ...clock.lane_hand_room.keys(),
         ...clock.fuel_hand_room.keys(),
         ...primary.loop_windows?.inserter_ids ?? [],
     ]);
@@ -289,7 +284,7 @@ function withoutGhostWakeUps(made: MadeClocks, primary: BlueprintGenerationResul
     if (best === primary) {
         return primary;
     }
-    const survives = (it: BlueprintGenerationResult) => disturbanceTrialVerdictOf(plan.config, it, plan.logger).disturbance_trial?.survives === true;
+    const survives = (it: BlueprintGenerationResult) => disturbanceTrialVerdictOf(plan.config, it, plan.logger, options.on_progress_detail).disturbance_trial?.survives === true;
     if (!survives(best) && survives(primary)) {
         plan.logger.log(`Enable windows shaped against ghost wakeups (${textOf(moved)}): fewer wakeups, but the clock does not go back to its rate by itself after a supply stop or an output blockage, as the primary one does`);
         return primary;

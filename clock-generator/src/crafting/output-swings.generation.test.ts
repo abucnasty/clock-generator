@@ -4,7 +4,8 @@ import { loadConfigFromFile, parseConfig } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { EntityId } from "../entities";
 import { OpenRange } from "../data-types";
-import { entityRouteProblems, productionScienceSharedPickup, withSearches } from "./generate-blueprint-test-helpers";
+import { entityRouteProblems, productionScienceSharedPickup, quiet, withSearches } from "./generate-blueprint-test-helpers";
+import { clockOfPlan, unclockedRun } from "./plan/unclocked-run";
 import { transitionsOf } from "./sequence/compact-history";
 
 describe("generateClockForConfig", () => {
@@ -121,11 +122,13 @@ describe("generateClockForConfig", () => {
                 });
 
                 // the windows follow the settled state of the run from the staged start (empty machines): one window
-                // for inserter 1 and two for inserter 3; the prepared build gave 53-69 and four windows
+                // for inserter 1 and two for inserter 3; the prepared build gave 53-69 and four windows. Inserter 3's
+                // windows hold the room for one more hand; inserter 1 takes from the side the frames both lanes of its
+                // belt carry, so its window gets no such room and closes 4 ticks sooner
                 it("observed windows follow each inserter's activity", () => {
                     expect(windowsOf("derived")).toEqual({
                         "inserter:2": [{ start: 1, end: 49 }, { start: 169, end: 209 }],
-                        "inserter:1": [{ start: 194, end: 209 }],
+                        "inserter:1": [{ start: 194, end: 205 }],
                         "inserter:3": [{ start: 26, end: 63 }, { start: 194, end: 220 }],
                     });
                 });
@@ -135,12 +138,37 @@ describe("generateClockForConfig", () => {
 
     // One machine, two output hands and nine input hands per 288 ticks. Clocks for it are easy to get to the
     // expected output in one simulated window cycle without the build actually repeating that window cycle.
-    describe("FLYING_ROBOT_FRAME_160 clock-only check", async () => {
-        // The sample as it was before it took the lanes of the build (2026-11-05): no near lane on the belt inserters, the
-        // output belt's lanes the processing unit and the frame. With the build's own lanes the planned clock is unstable
-        // (the selected clock, the observed windows, is not), and the checks below, which need a stable planned clock to
-        // shift and to cut, would have nothing to look at.
-        const config = structuredClone(await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME_160));
+    describe("the title of the insight of a clock that does not hold the setpoint", () => {
+        it("says it underproduces below the expected output, and overproduces above it", async () => {
+            const result = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.STONE_BRICK_120_DRILL_DIRECT_INSERT), { logger: quiet });
+            const titleOf = (id: string) => result.alternatives.find(it => it.id === id)!.insights.find(it => it.id === "unstable");
+            // 7 and 8 output swings forced over the setpoint: the build moves more items than the expected output
+            for (const id of ["takt_batches_observed_swings_7", "takt_batches_observed_swings_8"]) {
+                const insight = titleOf(id)!;
+                expect(insight.title).toBe("This clock overproduces");
+                // only what was measured: no reason, and one thing to do
+                expect(insight.why).toBe("");
+                expect(insight.explanation).toBe("Use a clock marked Stable.");
+                const [, moved, expected] = /moved ([\d.]+) of (\d+) items/.exec(insight.what)!;
+                expect(Number(moved)).toBeGreaterThan(Number(expected));
+            }
+        });
+    });
+
+    describe("FLYING_ROBOT_FRAME_80 clock-only check", async () => {
+        // One copy of the sample at its rate per copy. Every lane has an infinite end and the belt inserters have no near lane.
+        // The output belt's lanes carry the processing unit and the frame. The checks below test the window cycle of one
+        // machine, not lanes that copies share. They need a stable planned clock to shift and to cut.
+        const sample = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME_80);
+        const config = structuredClone(sample);
+        config.setpoint.items_per_second = sample.setpoint.items_per_second / sample.setpoint.copies;
+        config.setpoint.copies = 1;
+        delete config.setpoint.copy_offset;
+        for (const belt of config.belts) {
+            for (const lane of belt.lanes) {
+                lane.lane_end = { kind: "infinite" };
+            }
+        }
         for (const inserter of config.inserters) {
             if (inserter.source.type === "belt") {
                 delete inserter.source.near_lane;
@@ -206,23 +234,23 @@ describe("generateClockForConfig", () => {
             it("says how much time the machine has to spare", () => {
                 expect(insight("planned-belt-slack", "spare-time")).toMatchObject({
                     scope: "build",
-                    title: "Machine 1 (flying-robot-frame) has 9 ticks to spare each window cycle",
-                    table: { rows: [["Machine 1 (flying-robot-frame)", "279", "9", "17.4"]] },
+                    title: "The assembling machine 3 that makes flying robot frame has 9 ticks to spare each window cycle",
+                    table: { rows: [["assembling machine 3 that makes flying robot frame", "279", "9", "17.4"]] },
                 });
             });
 
             it("lists every ingredient's insertion limit and hands per period", () => {
                 expect(insight("planned-belt-slack", "insertion-limits")?.table?.rows).toEqual([
-                    ["Machine 1 (flying-robot-frame)", "steel-plate", "1", "6", "Inserter 2", "16", "1"],
-                    ["Machine 1 (flying-robot-frame)", "electric-engine-unit", "1", "6", "Inserter 2", "16", "1"],
-                    ["Machine 1 (flying-robot-frame)", "electronic-circuit", "3", "18", "Inserter 3", "16", "3"],
-                    ["Machine 1 (flying-robot-frame)", "battery", "2", "12", "Inserter 3", "16", "2"],
+                    ["assembling machine 3 that makes flying robot frame", "steel-plate", "1", "6", "inserter that takes steel plate and electric engine unit", "16", "1"],
+                    ["assembling machine 3 that makes flying robot frame", "electric-engine-unit", "1", "6", "inserter that takes steel plate and electric engine unit", "16", "1"],
+                    ["assembling machine 3 that makes flying robot frame", "electronic-circuit", "3", "18", "inserter that takes electronic circuit and battery", "16", "3"],
+                    ["assembling machine 3 that makes flying robot frame", "battery", "2", "12", "inserter that takes electronic circuit and battery", "16", "2"],
                 ]);
-                expect(insight("planned-belt-slack", "insertion-limits")?.what).toContain("takes electronic-circuit only while it holds fewer than 18");
+                expect(insight("planned-belt-slack", "insertion-limits")?.what).toContain("takes electronic circuit only while it holds fewer than 18");
             });
 
             it("says how long a full output hand takes", () => {
-                expect(insight("planned-belt-slack", "output-hand")?.title).toBe("A full hand of flying-robot-frame takes 139.4 ticks to make");
+                expect(insight("planned-belt-slack", "output-hand")?.title).toBe("A full hand of flying robot frame takes 139.4 ticks to make");
             });
 
             // the clock-only run from the staged start drops at 7, 151 where the plan had 5, 149: within the 4 ticks the
@@ -239,7 +267,10 @@ describe("generateClockForConfig", () => {
                 const ids = insightsOf("swings-2").map(it => it.id);
                 expect(ids).toContain("unstable");
                 expect(ids).not.toContain("spare-time");
+                expect(insight("swings-2", "unstable")?.title).toBe("This clock underproduces");
                 expect(insight("swings-2", "unstable")?.what).toContain("moved 16 of 32 items in a window cycle");
+                expect(insight("swings-2", "unstable")?.why).toMatch(/it cannot catch up\.$/);
+                expect(insight("swings-2", "unstable")?.explanation).toMatch(/^Use a clock marked Stable\. If none is, lower the setpoint/);
                 expect(insight("swings-2", "insertion-limits")?.table?.rows).toHaveLength(4);
             });
         });
@@ -307,8 +338,8 @@ describe("generateClockForConfig", () => {
                         { entity_id: EntityId.forInserter(3), item_names: ["battery", "electronic-circuit"] },
                     ],
                 });
-                expect(shifted.description).toContain("The swings planned in clock ticks 145–181 (inserter 1: flying-robot-frame; "
-                    + "inserter 3: battery, electronic-circuit) start 25 ticks earlier than planned.");
+                expect(shifted.description).toContain("The swings planned in clock ticks 145–181 (the inserter that drops flying robot frame; "
+                    + "the inserter that takes electronic circuit and battery) start 25 ticks earlier than planned.");
                 expect(shifted.result.clock_windows).toEqual({
                     "inserter:1": [{ start: 1, end: 13 }, { start: 120, end: 132 }],
                     "inserter:2": [{ start: 13, end: 37 }],
@@ -331,24 +362,26 @@ describe("generateClockForConfig", () => {
                 expect(shifted.result.search!.earliest).toEqual({
                     setting: -65,
                     is_search_limit: false,
-                    notes: ["Inserter 3 waits 10 ticks for Machine 1 (flying-robot-frame) to drop below its insertion limit for electronic-circuit"],
+                    notes: ["The inserter that takes electronic circuit and battery waits 10 ticks for the assembling machine 3 that makes flying robot frame to drop below its insertion limit for electronic circuit"],
                 });
                 expect(shifted.result.search!.latest).toEqual({
                     setting: 35, // 60 with the untrimmed windows, 45 from the prepared build
                     is_search_limit: false,
                     // full output while its output is at the block, then short of ingredients: one 9 tick stop
-                    notes: ["Machine 1 (flying-robot-frame) is out of ingredients for 9 ticks until these swings arrive"],
+                    notes: ["The assembling machine 3 that makes flying robot frame is out of ingredients for 9 ticks until these swings arrive"],
                 });
             });
 
-            it("keeps the planned windows of the first cycle and the planned window lengths", () => {
+            // the search shifts the plan's windows with the room for one more hand added after them; the primary may
+            // be a variant with the room inside its windows, which are shorter by that room
+            it("keeps the planned windows of the first cycle and the window lengths of the plan it shifts", () => {
                 const lengths = (windows: typeof shifted.result.clock_windows) => Object.fromEntries(
                     Object.entries(windows).map(([key, ranges]) => [key, ranges.map(range => range.end - range.start)]));
-                // the primary keeps the belt pickup slack inside its windows (#595); the shifted clock adds it after them
-                expect(primary.result.belt).toEqual({ kind: "moving", slack_ticks: [4], inside: true });
-                const added = (key: string) => shifted.result.belt_pickup_slack_ticks[key] ?? 0;
-                expect(lengths(shifted.result.clock_windows)).toEqual(Object.fromEntries(Object.entries(lengths(primary.result.clock_windows))
-                    .map(([key, ranges]) => [key, ranges.map(length => length + added(key))])));
+                const options = { logger: quiet, lane_hand_room: "always" as const };
+                const plan = unclockedRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, options);
+                const shifted_plan = Object.fromEntries(Array.from(clockOfPlan(plan, options).windows,
+                    ([key, ranges]) => [key, ranges.map(range => ({ start: range.start_inclusive, end: range.end_inclusive }))]));
+                expect(lengths(shifted.result.clock_windows)).toEqual(lengths(shifted_plan));
                 expect(shifted.inserter_window_count).toBe(primary.inserter_window_count);
             });
         });

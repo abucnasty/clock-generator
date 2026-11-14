@@ -24,6 +24,8 @@ import { migrateMiningProductivityLevelStep } from "./migrate-mining-productivit
 import { migrateMachineTypeStep } from "./migrate-machine-type";
 import { FactorioDataService } from "../data/factorio-data-service";
 import { machinePlacesResults } from "./machine-prototype";
+import { OutputBeltSchema, outputBeltProblems } from "./output-belt";
+import { withoutOutletWords } from "./infinite-end";
 
 /**
  * The results of a recipe that a rocket silo used as a machine's result target keeps in its input slots: those its fixed
@@ -132,7 +134,7 @@ export type MachineConfiguration = z.infer<typeof MachineConfigurationSchema>;
  *     inside a unit;
  *   - the belts are shared between the units: every unit takes from and drops onto the same belt lanes.
  *   A config that itself holds several identical units (copies of one unit side by side, each with its own inserters)
- *   is refused with a CopiesError: describe one unit and set `copies` to the number of units instead.
+ *   is clocked as given, every inserter where it stands; one unit with `copies` set to the number of units is simpler.
  */
 /** What a target's rate counts: the item made and taken out, or the item taken in and destroyed */
 export const TARGET_COUNTS = ["made", "destroyed"] as const;
@@ -143,7 +145,10 @@ export const TargetProductionRateConfigSchema = z.object({
     items_per_second: z.number().positive().describe("The rate of the setpoint for all copies together, in items per second."),
     copies: z.number().positive().refine(isShortDecimalCopies, {
         message: COPIES_DECIMAL_ERROR,
-    }).describe("The number of identical builds in the game, which can be partial, for example 2.25."),
+    }).describe("The number of identical builds in the game, which can be partial, for example 2.25. "
+        + "The fraction is a part copy: on each lane that the copies share, it holds that fraction of a copy's inserters, with the machines that they feed. "
+        + "In the check of the shared lanes, a machine of the part copy is held to its share of a whole copy's target "
+        + "([stability](../../clock-generator/docs/stability.md#copies-that-share-a-lane))."),
     /**
      * Where the next copy stands from this one, in tiles and in the coordinates of the exported positions. It lets the
      * result check whether the copies' drops onto a shared belt fit between each other (config/drop-spacing.ts); nothing
@@ -569,9 +574,46 @@ const BeltTypeSchema = z.enum([
     BeltType.TURBO_TRANSPORT_BELT
 ]);
 
+/**
+ * What happens to an item at the downstream end of a lane, as `LaneEnd` in entities/traits/lane-facts.ts has it. A dead
+ * end holds the items until a hand takes them; an infinite end takes every item that reaches it, at the lane's capacity
+ * (which follows the belt and the stack size); "unknown" is an end that the build does not show. The words of the lane
+ * end before the infinite end are refused (infinite-end.ts).
+ */
+const LaneEndConfigSchema = withoutOutletWords(z.discriminatedUnion("kind", [
+    z.object({
+        kind: z.literal("dead_end").describe("dead_end: the lane stops, and the items stay on it until a hand takes them."),
+    }),
+    z.object({
+        kind: z.literal("infinite").describe("infinite: the lane continues, and every item that no hand takes moves on, as into an infinity chest."),
+    }),
+    z.object({
+        kind: z.literal("unknown").describe("unknown: the configuration does not know the end of the lane."),
+    }),
+]));
+
+/**
+ * The way the items on a belt move along the row of copies, as a cardinal direction of the game (DirectionSchema): 0 north,
+ * 4 east, 8 south, 12 west. Where the belt turns at a pickup, it is the way of the run past the copies, not of the pickup
+ * piece.
+ */
+const BeltFlowDirectionConfigSchema = z.union([z.literal(0), z.literal(4), z.literal(8), z.literal(12)]);
+
+/** Whether every copy of the unit takes from the same lane, or each copy has a lane of its own (`LaneSharing`) */
+const LaneSharingConfigSchema = z.enum(["shared", "per_copy"]);
+
+/**
+ * One lane of a belt. The lane facts (`supply_rate`, `lane_end`, `sharing`) are optional, and each one is read alone:
+ * a fact that the lane does not state is derived as entities/traits/lane-facts.ts `laneFactsOf` says. The way the items
+ * move is the belt's `flow_direction`: both lanes of a belt move the same way. A field without a
+ * default, so that a config that states none is written back without them.
+ */
 const BeltLaneConfigSchema = z.object({
     ingredient: z.string().describe("The name of the item on the lane."),
     stack_size: z.number().int().positive().describe("The number of items in each stack on the lane."),
+    supply_rate: z.number().positive().optional().describe("The items per second that come onto the lane where it starts. The default is the lane's capacity."),
+    lane_end: LaneEndConfigSchema.optional().describe("The end of the lane. Without it, the deprecated backed_up_belts sets the end if the configuration states it. If not, the role of the lane sets the end: an input or a buffer lane is a dead end, an output lane is an infinite end."),
+    sharing: LaneSharingConfigSchema.optional().describe("shared (default): all copies take from this lane. per_copy: each copy has a lane of its own."),
 });
 
 const ExportBeltLaneConfigSchema = BeltLaneConfigSchema.extend({
@@ -583,6 +625,7 @@ const NormalBeltConfigSchema = z.object({
     id: z.number().int().positive().describe("The number that identifies the belt in the configuration."),
     type: BeltTypeSchema.describe("The prototype name of the belt."),
     strategy: z.literal(BeltStrategy.NORMAL).optional().describe("normal (default): only the build takes items off the belt."),
+    flow_direction: BeltFlowDirectionConfigSchema.optional().describe("The direction in which the belt flows along the row of copies: 0 north, 4 east, 8 south, 12 west. Without it, the check runs the items in the two directions along the copies. A direction across copy_offset, on a lane that the copies share, is refused."),
     lanes: z.union([
         z.tuple([BeltLaneConfigSchema]),
         z.tuple([BeltLaneConfigSchema, BeltLaneConfigSchema])
@@ -593,6 +636,7 @@ const ExportBeltConfigSchema = z.object({
     id: z.number().int().positive().describe("The number that identifies the belt in the configuration."),
     type: BeltTypeSchema.describe("The prototype name of the belt."),
     strategy: z.literal(BeltStrategy.EXPORT).describe("export: entities outside the configuration also take items off the belt."),
+    flow_direction: BeltFlowDirectionConfigSchema.optional().describe("The direction in which the belt flows along the row of copies: 0 north, 4 east, 8 south, 12 west. Without it, the check runs the items in the two directions along the copies. A direction across copy_offset, on a lane that the copies share, is refused."),
     lanes: z.union([
         z.tuple([ExportBeltLaneConfigSchema]),
         z.tuple([ExportBeltLaneConfigSchema, ExportBeltLaneConfigSchema])
@@ -780,14 +824,11 @@ export const ConfigOverridesSchema = z.preprocess(renameLoopSeedItemsToKickStart
      * speed, so a hand takes the stacks in reach a tick each and then waits for the belt to bring the rest. Geometry is
      * retained independently of this rule.
      *
-     * A clock is made for a moving belt by default: each window of an inserter that picks up from a belt stays open
-     * a few ticks longer (belt pickup slack), and a clock without it is only selected when no clock with it holds the
-     * target rate. When enabled, a clock is made without the slack and the one with the fewest wake-ups is selected.
-     * A clock that does not hold the expected output without the slack is listed as unstable.
-     *
-     * @default false
+     * Where it is true, every lane that states no lane end is a dead end (an export lane apart: an infinite end); where it
+     * is false, every such lane is an infinite end. Without it, the role of each such lane gives its end (lane-facts.ts).
+     * The simulation times each pickup from the lane as it is.
      */
-    backed_up_belts: z.boolean().optional().describe("Whether the input belts are backed up at the pickup, so that the clocks have no belt slack."),
+    backed_up_belts: z.boolean().optional().describe("Deprecated. State the lane_end of each lane instead. true: each lane without a lane_end is a dead end. false: each such lane is an infinite end. Without it, the role of the lane sets the end."),
     /**
      * Run the four searches for every build: observed windows, uneven output swings, shifted swings and full-hand
      * output swings. They take most of the time of a generation.
@@ -811,6 +852,15 @@ export const ConfigOverridesSchema = z.preprocess(renameLoopSeedItemsToKickStart
      * @default false
      */
     check_start_dependence: z.boolean().optional().describe("Whether the generator tests each clock from more starts than the cold start."),
+    /**
+     * Make the disturbance trials again on the copies that share a lane, where the copies share one: a supply stop closes
+     * the entry of each shared lane that carries the item, so that the lane drains, and after each trial every copy has to
+     * be back at the expected output of one copy. Made for a clock that gets back from every loss on one copy and keeps
+     * every copy at its target on the shared lanes. Set false to try one copy only.
+     *
+     * @default true
+     */
+    disturbance_trials_on_copies: z.boolean().optional().describe("Whether the generator makes the disturbance trials again on the copies that share a lane."),
     /**
      * Items of its own product a machine whose recipe makes its own ingredient (pentapod eggs) is given once when a clock
      * starts on the staged scaffold: the loop cannot start itself, so the scaffold's machines get their kick start by hand.
@@ -855,8 +905,19 @@ export const ConfigSchema = z.preprocess(renameTargetOutputToSetpoint, z.preproc
     inserters: z.array(InserterConfigSchema).describe("The inserters of the build."),
     belts: z.array(BeltConfigSchema).describe("The belts of the build."),
     chests: z.array(ChestConfigSchema).optional().describe("The chests of the build, and the cars, tanks, cargo wagons and rocket silos that it uses as chests."),
-    overrides: ConfigOverridesSchema.optional().describe("Settings that replace what the generator chooses for the configuration.")
+    overrides: ConfigOverridesSchema.optional().describe("Settings that replace what the generator chooses for the configuration."),
+    /**
+     * The belts from the copies' output inserters to the infinite end, in tiles (config/output-belt.ts). The run of the copies
+     * moves the output on it (crafting/output-belt-run.ts).
+     */
+    output_belt: OutputBeltSchema.optional().describe("The output belt: the side belt that each copy's output inserter drops on, and the stretches "
+        + "of belt from the copies to the infinite end, in tiles. The run of the copies moves the output on it, and an output blockage shuts its infinite end."),
 }).superRefine((config, context) => {
+    if (config.output_belt !== undefined) {
+        for (const problem of outputBeltProblems(config.output_belt, config.setpoint.copy_offset)) {
+            context.addIssue({ code: "custom", path: ["output_belt", ...problem.path], message: problem.message });
+        }
+    }
     config.inserters.forEach((inserter, index) => {
         if (inserter.source.type === TargetType.BELT && !inserter.source.pickup_capture) {
             const problem = pickupLayoutProblem(inserter.source);
@@ -926,6 +987,15 @@ export const ConfigSchema = z.preprocess(renameTargetOutputToSetpoint, z.preproc
             context.addIssue({ code: "custom", path: ["drills", "configs", index, "overrides", "enable_control"],
                 message: `Drill ${drill.id} drops into a chest; its override can be AUTO, CLOCKED or ALWAYS, not ${mode}` });
         }
+    });
+    // what leaves the end of an export lane is its consumption: a lane end beside it would say the same twice, or two things
+    config.belts.forEach((belt, belt_index) => {
+        (belt.lanes as readonly { consumption_per_second?: number; lane_end?: unknown }[]).forEach((lane, lane_index) => {
+            if (lane.consumption_per_second === undefined || lane.lane_end === undefined) return;
+            context.addIssue({ code: "custom", path: ["belts", belt_index, "lanes", lane_index, "lane_end"],
+                message: `Lane ${lane_index + 1} of belt ${belt.id} states a consumption rate and a lane end. The consumption rate `
+                    + "states what leaves the end of the lane. Remove the lane end." });
+        });
     });
     // a drop spot is all or none per belt: the lane rule needs every stack on it
     const dropping = config.inserters.flatMap((inserter, index) =>

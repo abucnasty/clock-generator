@@ -25,8 +25,6 @@ export interface WakeWindow {
     /** What is drawn: one bar, or two for a window that wraps (from `start` to the end of the window cycle, then from 0) */
     segments: TickSpan[];
     wraps: boolean;
-    /** Ticks at the end of the window that are belt slack; 0 when none */
-    slackTicks: number;
 }
 
 export type WakeWindowRowMode = 'windows' | 'always-on' | 'own-clock' | 'never';
@@ -56,6 +54,11 @@ export interface WakeWindowRow {
     mode: WakeWindowRowMode;
     /** Why the clock leaves it always on, when the engine says; only on a row in 'always-on' mode */
     alwaysOnReason?: AlwaysOnReason;
+    /**
+     * The drill or inserter that the reason names, by its items ("the inserter that takes iron ore", the engine's names);
+     * absent where the reason names none, or the names were not carried
+     */
+    alwaysOnNamed?: string;
     ownClock?: OwnClock;
     /** Ticks of the window cycle it is on: the windows' lengths, the whole window cycle when always on */
     onTicks: number;
@@ -67,8 +70,16 @@ export interface WakeWindowRow {
 
 export type WakeWindowSource = Pick<
     ClockAlternativeView,
-    'clockWindows' | 'stateTransitionHistory' | 'asBuilt' | 'fuelView' | 'beltPickupSlackTicks' | 'simulationDurationTicks' | 'alwaysOnReasons'
->;
+    'clockWindows' | 'stateTransitionHistory' | 'asBuilt' | 'fuelView' | 'simulationDurationTicks' | 'alwaysOnReasons'
+> & Partial<Pick<ClockAlternativeView, 'assumptions'>>;
+
+/** The drill or inserter that a drill's always-on reason names, by its items, from the names the engine carried */
+function alwaysOnNamedOf(reason: AlwaysOnReason | undefined, entityNames: Readonly<Record<string, string>> | undefined): string | undefined {
+    if (reason?.kind !== 'chest-drill') return undefined;
+    const why = reason.why;
+    const id = why.kind === 'other-drill' ? `drill:${why.drill_number}` : why.kind === 'filler' || why.kind === 'taker-without-window' ? `inserter:${why.inserter_number}` : undefined;
+    return id === undefined ? undefined : entityNames?.[id];
+}
 
 const TICKS_PER_SECOND = 60;
 
@@ -88,7 +99,7 @@ export function windowLengthTicks(window: Pick<WakeWindow, 'segments'>): number 
 function windowOf(segments: TickSpan[]): WakeWindow {
     const first = segments[0];
     const last = segments[segments.length - 1];
-    const window = { start: first.start, end: last.end, segments, wraps: segments.length > 1, slackTicks: 0 };
+    const window = { start: first.start, end: last.end, segments, wraps: segments.length > 1 };
     return { ...window, length: windowLengthTicks(window) };
 }
 
@@ -128,28 +139,6 @@ export function coverage(windows: readonly WakeWindow[], window_cycle_ticks: num
     return Math.min(1, ticks / window_cycle_ticks);
 }
 
-/** What to draw of a window, in order: the solid part, then the belt slack at its end, split where it wraps */
-export function drawnSpans(window: WakeWindow): (TickSpan & { slack: boolean })[] {
-    let slackLeft = window.slackTicks;
-    const spans: (TickSpan & { slack: boolean })[] = [];
-    // walk back from the window's last tick: the slack is the end of the window, which is in the last segment
-    for (let index = window.segments.length - 1; index >= 0; index -= 1) {
-        const segment = window.segments[index];
-        const length = segment.end - segment.start + 1;
-        const slack = Math.min(slackLeft, length);
-        slackLeft -= slack;
-        const parts: (TickSpan & { slack: boolean })[] = [];
-        if (slack < length) {
-            parts.push({ start: segment.start, end: segment.end - slack, slack: false });
-        }
-        if (slack > 0) {
-            parts.push({ start: segment.end - slack + 1, end: segment.end, slack: true });
-        }
-        spans.unshift(...parts);
-    }
-    return spans;
-}
-
 /** One bar of a track: a segment of a window, or several windows too narrow to tell apart, merged */
 interface DrawnBar {
     /** The window it draws; the first of them for merged windows */
@@ -157,7 +146,6 @@ interface DrawnBar {
     merged: boolean;
     start: number;
     end: number;
-    spans: (TickSpan & { slack: boolean })[];
 }
 
 /**
@@ -166,16 +154,12 @@ interface DrawnBar {
  * (`keep`) is never merged. Only the drawing merges: the windows and their text are unchanged.
  */
 export function barsToDraw(windows: readonly WakeWindow[], minTicks: number, keep: number | null): DrawnBar[] {
-    const pieces = windows.flatMap((window, windowIndex) => {
-        const spans = drawnSpans(window);
-        return window.segments.map(segment => ({
-            windowIndex,
-            merged: false,
-            start: segment.start,
-            end: segment.end,
-            spans: spans.filter(span => span.start >= segment.start && span.end <= segment.end),
-        }));
-    }).sort((a, b) => a.start - b.start);
+    const pieces = windows.flatMap((window, windowIndex) => window.segments.map(segment => ({
+        windowIndex,
+        merged: false,
+        start: segment.start,
+        end: segment.end,
+    }))).sort((a, b) => a.start - b.start);
     const tiny = (bar: DrawnBar) => bar.windowIndex !== keep && bar.end - bar.start + 1 < minTicks;
     const bars: DrawnBar[] = [];
     for (const piece of pieces) {
@@ -183,7 +167,6 @@ export function barsToDraw(windows: readonly WakeWindow[], minTicks: number, kee
         if (previous && tiny(previous) && tiny(piece) && piece.start - previous.end - 1 < minTicks) {
             previous.merged = true;
             previous.end = piece.end;
-            previous.spans = [{ start: previous.start, end: piece.end, slack: false }];
         } else {
             bars.push(piece);
         }
@@ -224,7 +207,6 @@ export function buildWakeWindowRows(alternative: WakeWindowSource, options: read
     const wakeUpsById = new Map(wakeUps?.inserters.map(inserter => [inserter.inserter_id, inserter.wake_ups_per_minute]) ?? []);
     const ownClocks = new Map(alternative.fuelView?.plan.inserters.map(inserter => [inserter.inserter_id, inserter]) ?? []);
     const ids = new Set([...entities.keys(), ...Object.keys(alternative.clockWindows), ...wakeUpsById.keys(), ...ownClocks.keys()]);
-    const wholeTicks = Number.isInteger(window_cycle_ticks);
 
     const rows: WakeWindowRow[] = [];
     for (const id of ids) {
@@ -237,9 +219,7 @@ export function buildWakeWindowRows(alternative: WakeWindowSource, options: read
         const entity = entities.get(id);
         const raw = alternative.clockWindows[id];
         const ownClockPlan = ownClocks.get(id);
-        const slack = wholeTicks ? alternative.beltPickupSlackTicks?.[id] ?? 0 : 0;
-        const windows = raw === undefined ? [] : normalizeWindows(raw, window_cycle_ticks)
-            .map(window => ({ ...window, slackTicks: Math.max(0, Math.min(slack, window.length)) }));
+        const windows = raw === undefined ? [] : normalizeWindows(raw, window_cycle_ticks);
 
         let mode: WakeWindowRowMode;
         if (raw !== undefined) {
@@ -283,6 +263,10 @@ export function buildWakeWindowRows(alternative: WakeWindowSource, options: read
             windows,
             mode,
             ...(mode === 'always-on' && alternative.alwaysOnReasons?.[id] ? { alwaysOnReason: alternative.alwaysOnReasons[id] } : {}),
+            ...(() => {
+                const named = mode === 'always-on' ? alwaysOnNamedOf(alternative.alwaysOnReasons?.[id], alternative.assumptions?.entityNames) : undefined;
+                return named === undefined ? {} : { alwaysOnNamed: named };
+            })(),
             ...(ownClock ? { ownClock } : {}),
             onTicks,
             onShare,

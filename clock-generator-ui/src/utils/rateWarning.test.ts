@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { ClockAlternativeView } from '../worker/types';
-import { copyBlueprintLabelOf, isBelowTarget, rateWarningOf } from './rateWarning';
+import { cardWarningOf, copyBlueprintLabelOf, isBelowTarget, rateWarningOf } from './rateWarning';
 import { STALE_COPY_LABEL } from './resultsStaleness';
+import { oscillatingOf } from '../test/oscillationFixture';
+import { AUTOMATION_240, viewOf } from '../test/checkedLanesFixtures';
 
 type Clock = Pick<ClockAlternativeView, 'verdict' | 'assessment' | 'ranking' | 'deadlockRisk'>;
 
@@ -85,5 +87,62 @@ describe('a clock rounded down to whole ticks that meets the target rate', () =>
         expect(rateWarningOf(rounded)).toBe('This clock’s window cycle time is rounded down to whole ticks, so it runs 0.02% fast: '
             + '9.972/s for the 9.97/s requested, within the 0.1% a rounded clock may run and what the machines can make.');
         expect(copyBlueprintLabelOf(rounded, false)).toBe('Copy blueprint');
+    });
+});
+
+describe('a clock off the setpoint that has a loss on a shared lane', () => {
+    // no sample has one: the rate the warning and the label say is what all the copies made together, the target the setpoint
+    const off: Pick<ClockAlternativeView, 'verdict' | 'assessment' | 'ranking' | 'deadlockRisk' | 'checkedLanes'> = {
+        ...clock(192, -48, false),
+        verdict: 'unstable',
+        assessment: { items_per_second: 192, shared_lane_losses: [{}] } as ClockAlternativeView['assessment'],
+        checkedLanes: { copies_made: { items_per_second: 187.25, window_cycles: 30 } } as ClockAlternativeView['checkedLanes'],
+    };
+
+    it('says the copies\' rate against the setpoint, and so does the Copy label', () => {
+        expect(rateWarningOf(off)).toContain('it runs at 187.25/s; requested 240/s in the simulator.');
+        expect(copyBlueprintLabelOf(off, false)).toBe('Copy blueprint (187.25/s, below setpoint)');
+    });
+
+    it('says the clock-only rate where the result has no rate of the copies, as before', () => {
+        const older = { ...off, checkedLanes: undefined };
+        expect(rateWarningOf(older)).toContain('it runs at 192/s; requested 240/s in the simulator.');
+        expect(copyBlueprintLabelOf(older, false)).toBe('Copy blueprint (192/s, below setpoint)');
+    });
+});
+
+describe('the deadlock risk on the card and in the install dialog', () => {
+    const what = 'Inserters 1 and 2 both bring iron plate to the machine 3 that makes gears; inserter 1 also brings coal.';
+    const note = `Deadlock risk: ${what} An inserter that starts picking up an item the other has already filled the machine with holds its hand.`;
+    const insight = { id: 'deadlock-risk', scope: 'build' as const, title: 'This build has a deadlock risk: two inserters bring the same item', what, why: 'Why.', explanation: 'Explanation.' };
+    const risky = { ...clock(240, 0, true), deadlockRisk: note, insights: [insight] };
+
+    it('is "Deadlock risk:" and the What of the engine\'s note on it; the Copy button\'s warning keeps the whole text', () => {
+        expect(cardWarningOf(risky)).toBe(`Deadlock risk: ${what}`);
+        expect(rateWarningOf(risky)).toBe(note);
+    });
+
+    it('keeps the engine\'s whole text on a result without the note, and says nothing on a build without the risk', () => {
+        expect(cardWarningOf({ ...risky, insights: [] })).toBe(note);
+        expect(cardWarningOf({ ...clock(240, 0, true), insights: [insight] })).toBeNull();
+        expect(cardWarningOf(undefined)).toBeNull();
+    });
+
+    it('follows the clock\'s own warning, as before', () => {
+        const short = { ...clock(192, -48), deadlockRisk: note, insights: [insight] };
+        expect(cardWarningOf(short)).toBe(`${rateWarningOf({ ...short, deadlockRisk: null })} Deadlock risk: ${what}`);
+    });
+});
+
+describe('the line at the top of a clock whose status is Oscillates', () => {
+    it('says what the status means, in place of the line of a clock that does not hold', () => {
+        const oscillating = oscillatingOf(viewOf(AUTOMATION_240, 'time_study_windows'));
+        expect(rateWarningOf(oscillating)).toBe('This clock makes the setpoint on average, but not in every window cycle.');
+    });
+
+    it('keeps the line of a clock that does not hold where the clock is off the setpoint', () => {
+        const oscillating = oscillatingOf(viewOf(AUTOMATION_240, 'time_study_windows'));
+        const off = { ...oscillating, ranking: { ...oscillating.ranking, rate_off_target: -48 }, assessment: { ...oscillating.assessment, items_per_second: 192 } };
+        expect(rateWarningOf(off)).toContain('does not hold its expected output');
     });
 });

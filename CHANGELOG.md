@@ -11,11 +11,71 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ## [Unreleased]
 
+### Added
+- ui: a clock that makes its rate only on average reads Oscillates, with an output chart
+- ui: a Diagnostics tab shows the selected clock's tests, shared lanes and why it is not stable
+- ui: the form sets each belt's flow direction and each lane's end, supply rate and sharing
+- ui: the Terms list defines rank
+- ui: the Sidecar exports an empty output belt with the item its machines make
+
 ### Removed
 - ui: the Never on override is removed; older files and links load with Auto
+- ui: the result's Belt pickups fact and the Belt column of the clock table are removed
+- ui: the install dialog no longer names the belt
+- ui: the input belts setting is removed; older builds load with their input lane ends stated
+- ui: Overview no longer has Why this clock
+- ui: the card drops its tuning and selection chips and the repeats in Simulation results
+- ui: the compare table's rows drop the line that explains the clock's name
+- ui: the Timeline drops the wakeups of one copy and the chart's key hint
+- ui: the install dialog's caption no longer names the Factorio version
+- ui: empty run overrides and empty Explanation labels are no longer shown
+- ui: Overview's notes on the clock no longer say that swings land off the plan
+- ui: Diagnostics of an Oscillates clock no longer says the items moved on average
+- ui: the workspace's clock selector is removed; the list of clocks selects the clock
+- ui: the compare table's Show all columns, its Rate column and its hidden clocks are removed
 
 ### Changed
+- generation: loss trials above a tick budget are not run; progress names their loss and start
+- ui: Results shows the clocks as a list beside the selected clock, using the whole width
+- ui: Compare all opens the compare table over the page; a row selects its clock
+- ui: the compare table has every column where it fits, else a details row per clock
+- ui: from 1536 px wide, Diagnostics stands beside the selected clock and is no tab
+- ui: each note on the selected clock is one line, and Details opens the rest
+- ui: the compare table ranks the clocks in a Rank column, without chips or fold
+- ui: the compare table's rows hold still during a run and sort when it ends
+- ui: each Build check advisory is one line with its inserters, and Details opens the rest
 - generation: clocks with observed windows are found faster on large builds
+- ui: the input belts setting still works in configuration files and is deprecated
+- generation: 0.28 Moving builds, stating no lane end, now get dead ends on input lanes
+- ui: a rounded clock that meets the target reads Stable, not Overproduces
+- ui: each clock's status shows on its card and in the Status column, Stable included
+- ui: Underproduces and Overproduces replace the statuses Does not hold its rate and Misses the rate
+- ui: the status Recovery unavailable is now Error, with its reason beside it
+- ui: the note on a clock that overproduces says only what was measured
+- ui: a clock that loses swings on a shared lane shows what all its copies make
+- ui: a shared lane where a copy misses swings reads Swings missed, not Short
+- ui: the Works? column is now Status and says the same word as the card's chip
+- ui: the card's How this was checked is now Simulation results
+- ui: the shared lanes' column of the copies' rates is now headed Planned for the copies
+- ui: the pickup sentence reads: the simulation assumes backpressure at the belt pickups
+- ui: the row help's Does it work? is now Status
+- ui: the compare table's group of other clocks is named Clocks that are not Stable
+- ui: a deadlock warning names only the two inserters; About this build says how it happens
+- ui: the output swing back-off report is in Model and tested starts, not a warning
+- generation: of clocks with equal wakeups, the one with fewer signals per minute is recommended
+- ui: one copy with Copies is offered for builds fed from chests, leaving the chests out
+- generation: inserters that fill a belt from a chest nothing fills get no enable window
+- generation: a lane several inserters of one copy take from is tested from their positions
+- generation: a build that holds identical copies is clocked as given, no longer refused
+- ui: Build check notes a build of identical copies and offers the simpler version
+- ui: Diagnostics of a build of one copy names each inserter and its machine
+- ui: Diagnostics counts how many supply stops or output blockages a clock recovers from
+
+### Fixed
+- ui: Paste from Factorio keeps where the next copy stands, as the export gives it
+- ui: Use simpler version fills Next copy stands on builds with symmetric copies
+- ui: Copy's warning no longer stays open over the result after Generate
+- ui: Paste from Factorio suggests no more than the build can hold, and names the limit
 
 ## [0.28.1] - 2026-11-07
 

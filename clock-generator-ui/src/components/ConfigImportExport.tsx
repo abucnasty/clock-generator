@@ -22,8 +22,7 @@ import { applyPaste, pastePreview, type ImportSelections, type PasteReferenceWar
 import { InserterDetails } from './InserterDetails';
 import { Disclosure } from './Disclosure';
 import { chestTypesText } from '../utils/pasteText';
-import { pickupGeometryOf } from '../utils/pickupGeometry';
-import { entityLabel } from '../utils/entityLabel';
+import { entityLabel, nameInSentence } from '../utils/entityLabel';
 import { buildFileName } from '../utils/buildLibrary';
 import { configKeyOf } from '../utils/resultsStaleness';
 import { nameWithId } from '../utils/gameNames';
@@ -74,7 +73,8 @@ interface PendingImport extends PastedEntities {
     repeatedSourceKey?: string;
     originalSelections?: ImportSelections;
     /** The Target Output the paste can fill in, and where it came from; null when it could not tell */
-    fill: { values: TargetValues; source: SuggestedTarget['source'] } | null;
+    fill: { values: TargetValues; source: SuggestedTarget['source']; beltLimit?: SuggestedTarget['belt_limit'];
+        buildLimit?: SuggestedTarget['build_limit'] } | null;
 }
 
 /** What the intro card starts in here */
@@ -349,7 +349,9 @@ export function ConfigImportExport({
         }
         if (request !== pasteRequestRef.current) return null;
         const suggestion = Option.toNullable(validated.suggested_target);
-        const fill = suggestion ? { values: targetToFill(suggestion), source: suggestion.source } : null;
+        const fill = suggestion ? { values: targetToFill(suggestion), source: suggestion.source,
+            ...(suggestion.belt_limit !== undefined && { beltLimit: suggestion.belt_limit }),
+            ...(suggestion.build_limit !== undefined && { buildLimit: suggestion.build_limit }) } : null;
         confirmOpenerRef.current = document.activeElement;
         setPendingImport({ ...validated, fill, pickupWarnings: read.pickupWarnings });
         // everything there is, except a target the player has already set; the first exports had machines only
@@ -725,14 +727,14 @@ export function ConfigImportExport({
                             belts: candidate.belts,
                             chests: candidate.chests ?? [],
                             drills: candidate.drills?.configs ?? [],
-                            fill: { values: candidate.setpoint, source: pendingImport.fill!.source },
+                            fill: { ...pendingImport.fill!, values: candidate.setpoint },
                         });
                         // The explicit simplify action also accepts its displayed Copies change.
                         setImportSelections(current => ({ ...current, target: true }));
                     }} />}
                 {pendingImport && !pendingImport.reduction && (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                        <PickupGeometrySummary build={{ inserters: prospectiveInserters, overrides: currentForm.overrides }} />
+                        <PickupGeometrySummary build={{ inserters: prospectiveInserters }} backedUp={null} />
                         {importSelections.inserters && pendingImport.pickupWarnings?.map(warning => <Typography key={warning.inserter_id} variant="body2" color="text.secondary">
                             Captured Inserter {warning.inserter_id}: {pickupCaptureWarningMessage(warning.reason)}
                         </Typography>)}
@@ -754,7 +756,7 @@ export function ConfigImportExport({
                                     label={targetRowLabel(pendingImport.fill.values, recipeLabel)}
                                 />
                                 <Typography id={TARGET_CAPTION_ID} variant="body2" color="text.secondary" sx={{ ml: 4 }}>
-                                    {targetRowCaption(pendingImport.fill.source)}
+                                    {targetRowCaption(pendingImport.fill.source, pendingImport.fill.beltLimit, pendingImport.fill.buildLimit)}
                                     {currentTarget.recipe !== '' && ` ${replacesTargetNote(currentTarget, recipeLabel)}`}
                                 </Typography>
                                 {maximumTargetNote(pendingImport.fill.source) && <Typography id={TARGET_MAXIMUM_ID} variant="body2" color="text.secondary" sx={{ ml: 4 }}>
@@ -811,13 +813,11 @@ export function ConfigImportExport({
                             </>
                         )}
                         <Disclosure summary="Import details" data-import-assumptions="" sx={{ mt: 1 }}>
-                            {pickupGeometryOf({ inserters: prospectiveInserters, overrides: currentForm.overrides }).total > 0
-                                && <Typography variant="body2">Your input belt setting (moving or backed up) stays as it is.</Typography>}
                             <Box sx={{ mt: 1 }}>
                                 <InserterDetails inserters={prospectiveInserters} />
                                 {prospectiveInserters.flatMap((inserter, i) => inserter.sink.type === 'belt' && inserter.sink.drop
                                     ? [<Typography key={`drop-${i}`} variant="body2">Inserter {inserter.id ?? i + 1}: imported drop on Belt {inserter.sink.id}, lane {inserter.sink.drop.lane}, position {inserter.sink.drop.position} (read-only).</Typography>] : [])}
-                                {prospectiveMachines.flatMap(machine => machine.fuel === undefined ? [] : [<Typography key={`fuel-${machine.id}`} variant="body2" title={nameWithId(itemLabel(machine.fuel), machine.fuel)}>Machine {machine.id}: imported fuel {itemLabel(machine.fuel)} (read-only).</Typography>])}
+                                {prospectiveMachines.flatMap(machine => machine.fuel === undefined ? [] : [<Typography key={`fuel-${machine.id}`} variant="body2" title={nameWithId(itemLabel(machine.fuel), machine.fuel)}>Machine {machine.id}: imported fuel {nameInSentence(itemLabel(machine.fuel))} (read-only).</Typography>])}
                                 {currentForm.overrides && <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>Retained run overrides: {JSON.stringify(currentForm.overrides)}.</Typography>}
                             </Box>
                         </Disclosure>

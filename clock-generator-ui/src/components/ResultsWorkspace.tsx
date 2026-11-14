@@ -1,13 +1,12 @@
-import { ExpandMore } from '@mui/icons-material';
-import { Alert, Box, Button, Collapse, MenuItem, Paper, TextField, Typography } from '@mui/material';
-import { useId, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
+import { Alert, Box, Button, Paper, Typography, useMediaQuery, useTheme } from '@mui/material';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Config, NotMadeClock } from 'clock-generator/browser';
 import type { ResultDetail } from '../utils/resultsView';
-import type { BuildViewContext, TimelineViewContext } from '../utils/buildViewContext';
-import { useBuildSection } from '../hooks/useBuildViewContext';
+import type { TimelineViewContext } from '../utils/buildViewContext';
 import { SelectedClockContext } from './SelectedClockContext';
 import { InserterAssumptions } from './InserterAssumptions';
 import { PickupGeometrySummary } from './PickupGeometrySummary';
+import { pickupGeometryOf } from '../utils/pickupGeometry';
 import type {
     LogMessage,
     DebugSteps,
@@ -18,9 +17,11 @@ import type {
 } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 import type { FuelViewData, GenerationAssumptions, ShiftOptionsView } from '../worker/types';
-import { freeLaneDropText, startCheckSummary } from '../utils/modelAssumptions';
-import { entityLabel } from '../utils/entityLabel';
-import { ClockAlternativesPanel } from './ClockAlternativesPanel';
+import { startCheckSummary } from '../utils/modelAssumptions';
+import { CompareClocksDialog } from './ClockAlternativesPanel';
+import { ClockList } from './ClockList';
+import { ClockDiagnostics } from './ClockDiagnostics';
+import { Panel } from './Panel';
 import { DeeperSearchNotice } from './DeeperSearchNotice';
 import { DetailsPanel } from './DetailsPanel';
 import { InstallClockDialog } from './InstallClockDialog';
@@ -28,15 +29,15 @@ import { DeveloperToolsPanel } from './DeveloperToolsPanel';
 import { ResultSummaryCard } from './ResultSummaryCard';
 import { StaleResultsBanner } from './StaleResultsBanner';
 import { RunNotes } from './RunNotes';
-import { SUMMARY_COPY, beltValue, wakeUpsText } from '../utils/clockSummary';
-import { fullClockName } from '../utils/strategyNames';
-import { rateWarningOf } from '../utils/rateWarning';
+import { cardWarningOf } from '../utils/rateWarning';
 import { whyNotStableOf } from '../utils/whyNotStable';
+import { madeForLead } from '../utils/checkedLanes';
+import { DIAGNOSTICS_COPY, notesOf } from '../utils/diagnostics';
+import { tabIds } from '../utils/tabIds';
 import type { GeneratedFor } from '../utils/resultsStaleness';
 import type { PickRule } from '../utils/recommendedClock';
 import { deeperSearchNoticeOf } from '../utils/deeperSearch';
 import type { Problem } from '../utils/firstProblem';
-import { HANDS_TEXT } from '../utils/targetCounts';
 
 interface ResultsWorkspaceProps {
     onEditPickup?: (id: number) => void;
@@ -44,8 +45,6 @@ interface ResultsWorkspaceProps {
     onInstallClose: () => void;
     onInstall: () => void;
     copyLabel: string;
-    comparison: BuildViewContext['comparison'];
-    onComparisonChange(comparison: BuildViewContext['comparison']): void;
     wakeAsTable: boolean;
     onWakeAsTableChange(asTable: boolean): void;
     timeline: TimelineViewContext;
@@ -112,20 +111,19 @@ interface ResultsWorkspaceProps {
     copied: boolean;
     /** The copy every Copy button shares */
     onCopy: () => void;
-    /**
-     * What the clocks assume of the input belts, with the action for the other answer (2.4's BeltAssumptionLine), shown in
-     * the card in place of its own belt line
-     */
-    beltAction?: ReactNode;
 }
 
 /**
- * Everything a generation produced, the answer first: the selected clock with its install steps, its wake windows,
- * the other clocks to compare it with, and the details of the selected clock. Developer tools, when they are on, last.
+ * Everything a generation produced: the clocks as a list on the left, which stays in view while the page scrolls, and the
+ * selected clock on the right, its card over its workspace; on a wide page (from 1536 px) Diagnostics is a third column
+ * beside them and no tab. On a phone the list stands above the card. The compare table of every clock opens over the
+ * page from the list. Developer tools, when they are on, last.
  */
 export function ResultsWorkspace(props: ResultsWorkspaceProps) {
-    const [comparisonOpen, setComparisonOpen] = useBuildSection('comparison-open');
-    const comparisonId = useId();
+    const theme = useTheme();
+    const twoColumns = useMediaQuery(theme.breakpoints.up('md'), { noSsr: true });
+    const wide = useMediaQuery(theme.breakpoints.up('xl'), { noSsr: true });
+    const [compareOpen, setCompareOpen] = useState(false);
     const saved = useMemo(() => {
         try {
             return props.generatedFor ? JSON.parse(props.generatedFor.key) as Config : null;
@@ -135,7 +133,6 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
     }, [props.generatedFor]);
     const hasResults = props.alternatives.length > 0 || props.pending.length > 0;
     const selected = props.alternatives[props.selectedIndex];
-    const freeLaneBelts = selected?.assumptions?.outputDrops.filter(drop => drop.mode === 'free-lane').map(drop => drop.beltId) ?? [];
     const workspaceRef = useRef<HTMLDivElement>(null);
     const selectionAnchor = useRef<{ clock: ClockAlternativeView; top: number } | null>(null);
     const captureWorkspacePosition = (next: ClockAlternativeView | undefined) => {
@@ -154,6 +151,25 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
         captureWorkspacePosition(props.recommendedIndex === null ? undefined : props.alternatives[props.recommendedIndex]);
         props.onCardBackToRecommended();
     };
+    // the card's "See diagnostics": the Diagnostics tab of the clock, the workspace brought into view, the focus on the tab's panel
+    const [diagnosticsAsked, setDiagnosticsAsked] = useState(0);
+    const diagnosticsFocusPending = useRef(false);
+    const showDiagnostics = () => {
+        props.onDetailChange('diagnostics');
+        diagnosticsFocusPending.current = true;
+        setDiagnosticsAsked(asked => asked + 1);
+    };
+    // once the tab is shown, wherever the page keeps which tab is shown
+    useEffect(() => {
+        if (!diagnosticsFocusPending.current || props.detail !== 'diagnostics') return;
+        diagnosticsFocusPending.current = false;
+        workspaceRef.current?.scrollIntoView?.({ block: 'start' });
+        document.getElementById(tabIds('result-context', 'diagnostics').panel)?.focus({ preventScroll: true });
+    }, [diagnosticsAsked, props.detail]);
+    const selectClockById = (id: string) => {
+        const index = props.alternatives.findIndex(clock => clock.id === id);
+        if (index >= 0) selectClock(index);
+    };
     useLayoutEffect(() => {
         const anchor = selectionAnchor.current;
         selectionAnchor.current = null;
@@ -161,18 +177,18 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
         const delta = workspaceRef.current.getBoundingClientRect().top - anchor.top;
         if (Math.abs(delta) > 0.5) window.scrollBy({ top: delta, behavior: 'instant' });
     }, [selected]);
-    const selectableClocks = props.alternatives.map((clock, index) => ({ clock, index }))
-        .filter(({ clock, index }) => clock.verdict === 'stable' || index === props.selectedIndex);
-    const clockLabel = (clock: ClockAlternativeView) => [
-        clock.counts === 'destroyed' ? HANDS_TEXT.clock(clock.terminalSwingCount)
-            : `${clock.terminalSwingCount} ${clock.terminalSwingCount === 1 ? 'swing' : 'swings'}`,
-        wakeUpsText(clock).value.replace(' a minute', ' wakeups/min'),
-        clock.beltLabel ? beltValue(props.pickRule, clock.beltLabel) : '',
-    ].filter(Boolean).join(' · ');
-    const rateWarning = rateWarningOf(selected);
+    const rateWarning = cardWarningOf(selected);
+    // what a saved run assumed, in the card's Simulation results: a line, and the belt pickups where the build has some
+    const runLead = selected ? [
+        madeForLead(saved, selected),
+        selected.assumptions?.kickStarts.length ? `${selected.assumptions.kickStarts.length} modeled kick start(s).` : '',
+        selected.assumptions?.outputDrops.some(drop => drop.mode === 'shared-lanes') ? 'The drop positions you gave are used to space the output drops on the belt.' : '',
+        selected.assumptions?.machineFuel.length ? 'Imported machine fuel is in Why.' : '',
+    ].filter(Boolean).join(' ') : '';
+    const pickupsShown = saved !== null && saved !== undefined && pickupGeometryOf(saved).total > 0;
     // said of the whole run once it is done: while clocks still arrive, a stable one may yet come
     const whyNotStable = props.isRunning ? null
-        : whyNotStableOf(props.alternatives, props.recommendedIndex, saved?.overrides?.backed_up_belts === true, props.notMade);
+        : whyNotStableOf(props.alternatives, props.recommendedIndex, props.notMade);
     const noticeKind = deeperSearchNoticeOf({
         searchesSkipped: props.skippedSearches.length > 0,
         searchedDeeper: props.searchedDeeper,
@@ -180,6 +196,12 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
         isRunning: props.isRunning,
         stale: props.staleFor !== null,
     });
+
+    // the list shows while there are clocks, or a run that keeps the notice of Search deeper (and its focus) on the page
+    const listShown = hasResults || noticeKind === 'searching';
+    const diagnosticsBeside = wide && selected !== undefined;
+    const columns = !listShown || !twoColumns ? 'minmax(0, 1fr)'
+        : diagnosticsBeside ? '360px minmax(0, 1fr) minmax(0, 0.8fr)' : '360px minmax(0, 1fr)';
 
     return (
         <Box>
@@ -204,51 +226,21 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 </Paper>
             )}
 
-            <ResultSummaryCard
-                generationAssumptions={props.generationAssumptions}
-                alternatives={props.alternatives}
-                selectedIndex={props.selectedIndex}
-                recommendedIndex={props.recommendedIndex}
-                onSelectRecommended={selectRecommended}
-                pickRule={props.pickRule}
-                isGenerating={props.isRunning}
-                stoppedEarly={props.stoppedEarly}
-                rateWarning={rateWarning}
-                whyNotStable={whyNotStable}
-                stale={props.staleFor !== null}
-                beltAction={props.beltAction}
-                comparisonAction={<Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                    {props.blueprintString && <Button size="small" color="inherit" onClick={props.onInstall}>Install guide</Button>}
-                    <Button size="small" color="inherit" aria-expanded={comparisonOpen} aria-controls={comparisonId}
-                    onClick={() => setComparisonOpen(!comparisonOpen)}
-                    endIcon={<ExpandMore sx={{ transform: comparisonOpen ? 'rotate(180deg)' : 'none' }} />}>
-                    Compare clocks
-                </Button></Box>}
-                runAssumptions={selected && <Box data-result-assumptions sx={{ overflowWrap: 'anywhere' }}>
-                    <Typography variant="body2">
-                        {saved ? `Made for ${saved.setpoint.copies} ${saved.setpoint.copies === 1 ? 'copy' : 'copies'} of your build${selected.beltLabel === '' ? '' : `, with the input belts ${saved.overrides?.backed_up_belts ? 'backed up' : 'moving'}`}.` : 'These results are for a saved build whose metadata is unavailable.'}
-                        {selected.assumptions?.kickStarts.length ? ` ${selected.assumptions.kickStarts.length} modeled kick start(s).` : ''}
-                        {selected.assumptions?.outputDrops.some(drop => drop.mode === 'shared-lanes') ? ' The drop positions you gave are used to space the output drops on the belt.' : ''}
-                        {freeLaneBelts.length > 0 ? ` ${freeLaneDropText(freeLaneBelts.map(id => entityLabel('belt', id)).join(' and '))}` : ''}
-                        {selected.assumptions?.machineFuel.length ? ' Imported machine fuel is in Why.' : ''}
-                    </Typography>
-                    {saved?.inserters && <InserterAssumptions inserters={saved.inserters} />}
-                    {saved && <PickupGeometrySummary build={saved} savedRun onEdit={props.staleFor ? undefined : props.onEditPickup} busy={props.isRunning} />}
-                </Box>}
-            />
-
-            <Box data-results-columns sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 1.5, '& > *': { minWidth: 0 } }}>
-                <Collapse id={comparisonId} in={comparisonOpen || !selected} mountOnEnter timeout={150}>
-                    <ClockAlternativesPanel
-                        comparison={props.comparison}
-                        onComparisonChange={props.onComparisonChange}
+            <Box data-results-columns sx={{ display: 'grid', gridTemplateColumns: columns, columnGap: 2, rowGap: 1.5, alignItems: 'start', '& > *': { minWidth: 0 } }}>
+                {listShown && <Box data-clock-list-column="" sx={twoColumns ? {
+                    // in view while the selected clock scrolls, between the sticky header (8 px under it) and the fixed
+                    // footer (48 px from sm up) with the page's 24 px above it, so that it fits at the end of the page too;
+                    // its own scroll where it is taller than that
+                    position: 'sticky', top: 'calc(var(--app-header-height, 0px) + 8px)',
+                    maxHeight: 'calc(100vh - var(--app-header-height, 0px) - 48px - env(safe-area-inset-bottom) - 32px)', overflowY: 'auto',
+                } : undefined}>
+                    <ClockList
                         alternatives={props.alternatives}
                         selectedIndex={props.selectedIndex}
                         onSelect={selectClock}
-                        recommendedIndex={props.recommendedIndex}
-                        pickRule={props.pickRule}
-                        isGenerating={props.isRunning}
+                        onCompare={() => setCompareOpen(true)}
                         pending={props.pending}
+                        running={props.isRunning}
                         notice={
                             <DeeperSearchNotice
                                 kind={noticeKind}
@@ -258,49 +250,76 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                                 onSearchDeeper={props.onSearchDeeper}
                             />
                         }
-                        holdNotice={noticeKind === 'searching'}
                     />
-                </Collapse>
-
-                {selected && <Box ref={workspaceRef}>
-                    <SelectedClockContext selected={selected} detail={props.detail} onDetailChange={props.onDetailChange}
-                        generation={props.generationAssumptions}
-                        clockSelector={selectableClocks.length > 1 && <TextField select
-                            label={selected.verdict !== 'stable' ? 'Clock · Not stable' : props.selectedIndex === props.recommendedIndex ? 'Clock · Recommended' : 'Clock'} size="small"
-                            value={props.selectedIndex} onChange={event => selectClock(Number(event.target.value))}
-                            slotProps={{ select: { renderValue: value => clockLabel(props.alternatives[Number(value)]) } }}
-                            sx={{ width: { xs: 280, sm: 380 }, maxWidth: '100%' }}>
-                            {selectableClocks.map(({ clock, index }) => <MenuItem key={clock.id} value={index}
-                                sx={{ display: 'block', whiteSpace: 'normal', maxWidth: { xs: 320, sm: 520 } }}>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                    {clockLabel(clock)}{index === props.recommendedIndex ? ' · Recommended' : clock.verdict !== 'stable' ? ' · Not stable' : ''}
-                                </Typography>
-                                <Typography variant="caption" component="p" color="text.secondary">
-                                    {fullClockName(clock)}{!clock.ranking.matches_belt_choice ? ` · ${SUMMARY_COPY.noBeltSlack}` : ''}
-                                </Typography>
-                            </MenuItem>)}
-                        </TextField>}
-                        timelineProps={{
-                            config: saved,
-                            timeline: props.timeline, onTimelineChange: props.onTimelineChange,
-                            wakeAsTable: props.wakeAsTable, onWakeAsTableChange: props.onWakeAsTableChange,
-                            transferHistory: props.transferHistory, stateTransitionHistory: props.stateTransitionHistory,
-                            clockWindows: props.clockWindows,
-                        }}
-                        assumptions={saved?.inserters ? <InserterAssumptions inserters={saved.inserters} detailed /> : <Typography variant="body2">Saved inserter metadata unavailable.</Typography>}>
-                        <DetailsPanel
-                            insights={selected.insights}
-                            shiftOptions={props.shiftOptions}
-                            swingBackoffReport={props.swingBackoffReport}
-                            fuelView={props.fuelView}
-                        />
-                    </SelectedClockContext>
                 </Box>}
+
+                <Box sx={{ display: 'grid', rowGap: 1.5, alignContent: 'start', '& > *': { minWidth: 0 } }}>
+                    <ResultSummaryCard
+                        alternatives={props.alternatives}
+                        selectedIndex={props.selectedIndex}
+                        recommendedIndex={props.recommendedIndex}
+                        onSelectRecommended={selectRecommended}
+                        // beside the card, Diagnostics needs no link
+                        onShowDiagnostics={diagnosticsBeside ? undefined : showDiagnostics}
+                        isGenerating={props.isRunning}
+                        stoppedEarly={props.stoppedEarly}
+                        rateWarning={rateWarning}
+                        whyNotStable={whyNotStable}
+                        stale={props.staleFor !== null}
+                        actions={props.blueprintString && <Button size="small" color="inherit" onClick={props.onInstall}>Install guide</Button>}
+                        runAssumptions={selected && (runLead !== '' || pickupsShown) ? <Box data-result-assumptions sx={{ overflowWrap: 'anywhere' }}>
+                            {runLead !== '' && <Typography variant="body2">{runLead}</Typography>}
+                            {saved && <PickupGeometrySummary build={saved} savedRun backedUp={selected.belt ? selected.belt.kind === 'backed_up' : selected.beltLabel === 'backed-up'} onEdit={props.staleFor ? undefined : props.onEditPickup} busy={props.isRunning} />}
+                        </Box> : null}
+                    />
+
+                    {/* brought into view below the sticky header */}
+                    {selected && <Box ref={workspaceRef} sx={{ scrollMarginTop: 'calc(var(--app-header-height, 0px) + 8px)' }}>
+                        <SelectedClockContext selected={selected} detail={props.detail} onDetailChange={props.onDetailChange} onSelectClock={selectClockById}
+                            generation={props.generationAssumptions}
+                            swingBackoffReport={props.swingBackoffReport}
+                            diagnosticsBeside={diagnosticsBeside}
+                            timelineProps={{
+                                config: saved,
+                                timeline: props.timeline, onTimelineChange: props.onTimelineChange,
+                                wakeAsTable: props.wakeAsTable, onWakeAsTableChange: props.onWakeAsTableChange,
+                                transferHistory: props.transferHistory, stateTransitionHistory: props.stateTransitionHistory,
+                                clockWindows: props.clockWindows,
+                            }}
+                            assumptions={saved?.inserters ? <InserterAssumptions inserters={saved.inserters} detailed /> : <Typography variant="body2">Saved inserter metadata unavailable.</Typography>}>
+                            <DetailsPanel
+                                insights={notesOf(selected).overview}
+                                nothing={notesOf(selected).diagnostics ? DIAGNOSTICS_COPY.overviewNothing : undefined}
+                                shiftOptions={props.shiftOptions}
+                                swingBackoffReport={props.swingBackoffReport}
+                                fuelView={props.fuelView}
+                                inserters={saved?.inserters}
+                            />
+                        </SelectedClockContext>
+                    </Box>}
+                </Box>
+
+                {diagnosticsBeside && selected && (
+                    <Panel title={DIAGNOSTICS_COPY.tab} sx={{ mb: 0 }} data-diagnostics-column="">
+                        <ClockDiagnostics key={selected.id} clock={selected} onSelectClock={selectClockById} />
+                    </Panel>
+                )}
             </Box>
+
+            <CompareClocksDialog
+                open={compareOpen && props.alternatives.length > 0}
+                onClose={() => setCompareOpen(false)}
+                alternatives={props.alternatives}
+                selectedIndex={props.selectedIndex}
+                onSelect={selectClock}
+                pickRule={props.pickRule}
+                pending={props.pending}
+                running={props.isRunning}
+            />
 
             {selected && <InstallClockDialog open={props.installOpen} onClose={props.onInstallClose}
                 selected={selected} blueprintString={props.blueprintString} staleFor={props.staleFor}
-                copyLabel={props.copyLabel} copied={props.copied} onCopy={props.onCopy} pickRule={props.pickRule} />}
+                copyLabel={props.copyLabel} copied={props.copied} onCopy={props.onCopy} />}
 
             {/* Debug logging remains opt-in; timelines are available in the normal workspace. */}
             {props.developerTools && (

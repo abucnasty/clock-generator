@@ -20,7 +20,7 @@
         "belt": "belt:1",
         "lane": 1,
         "listed": true,
-        "item": "iron-gear-wheel",
+        "item": "copper-plate",
         "stack": 4,
         "belt_prototype": "turbo-transport-belt",
         "tiles_per_tick": 0.125,
@@ -29,7 +29,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -46,7 +46,7 @@
         "belt": "belt:1",
         "lane": 2,
         "listed": true,
-        "item": "copper-plate",
+        "item": "iron-gear-wheel",
         "stack": 4,
         "belt_prototype": "turbo-transport-belt",
         "tiles_per_tick": 0.125,
@@ -55,7 +55,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -397,7 +397,7 @@
       "group": "inserter:1",
       "item": "iron-gear-wheel",
       "from": "machine:1",
-      "to": "belt:1/lane:1",
+      "to": "belt:1/lane:2",
       "from_lanes": [],
       "lands_in": "lane",
       "hand": {
@@ -452,7 +452,7 @@
       "group": "inserter:2",
       "item": "copper-plate",
       "from": "machine:2",
-      "to": "belt:1/lane:2",
+      "to": "belt:1/lane:1",
       "from_lanes": [],
       "lands_in": "lane",
       "hand": {
@@ -506,10 +506,10 @@
       "entity": "inserter:3",
       "group": "inserter:3",
       "item": "iron-gear-wheel",
-      "from": "belt:1/lane:1",
+      "from": "belt:1/lane:2",
       "to": "machine:3",
       "from_lanes": [
-        "belt:1/lane:1"
+        "belt:1/lane:2"
       ],
       "lands_in": "ingredients",
       "hand": {
@@ -564,10 +564,10 @@
       "entity": "inserter:3",
       "group": "inserter:3",
       "item": "copper-plate",
-      "from": "belt:1/lane:2",
+      "from": "belt:1/lane:1",
       "to": "machine:3",
       "from_lanes": [
-        "belt:1/lane:2"
+        "belt:1/lane:1"
       ],
       "lands_in": "ingredients",
       "hand": {

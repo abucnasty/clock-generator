@@ -50,7 +50,7 @@ describe('pickup type edits and saved assumptions', () => {
         for (const type of ['side-straight', 'side-exit'] as const) {
             expect(withPickupType(restored, type)).toBe(restored);
         }
-        expect(pickupGeometryOf({ ...config, overrides: { backed_up_belts: true } })).toMatchObject({ known: 0, unverified: [1], unsupported: [1] });
+        expect(pickupGeometryOf(config)).toMatchObject({ known: 0, unverified: [1], unsupported: [1] });
     });
     it('counts only the reasons the engine refuses as out of scope', () => {
         for (const reason of ['bend', 'inline', 'unsupported', 'merge', 'supply-unknown']) {
@@ -98,52 +98,6 @@ describe('pickup type edits and saved assumptions', () => {
             { id: 7, source: withPickupType(source, 'side-straight') }, { id: 9, source },
             { source: { type: 'machine' } }, { source: { type: 'belt' } },
         ];
-        expect(pickupGeometryOf({ inserters })).toEqual({ total: 3, known: 1, missing: [9, 4], unverified: [], unsupported: [], backedUp: false });
-        expect(pickupGeometryOf({ inserters, overrides: { backed_up_belts: true } }).backedUp).toBe(true);
-    });
-});
-
-it('requires an explicit layout for an old manual underground and retains it through export/reload', () => {
-    const source: Source = { type: 'belt', id: 1, pickup_length: 0.5 };
-    expect(pickupTypeOf(source)).toBe('underground');
-    for (const layout of ['side-entrance', 'side-exit', 'front-entrance', 'front-exit', 'over-hood-exit'] as const) {
-        const selected = withPickupType(source, layout);
-        expect(selected).toMatchObject({ pickup_length: 0.5, pickup_layout: layout });
-        expect(configToFormData(formDataToConfig(buildFrom(selected))).inserters[0].source).toEqual(selected);
-    }
-});
-
-it('requires recapture for an old positive underground declaration instead of allowing a manual upgrade', () => {
-    const source: Source = { type: 'belt', id: 1, pickup_length: 0.5, pickup_capture: supported(1, { entity_type: 'underground-belt' }) };
-    expect(pickupTypeOf(source)).toBe('unverified');
-    expect(withPickupType(source, 'side-entrance')).toBe(source);
-    expect(pickupGeometryOf({ inserters: [{ id: 1, source }] }).unverified).toEqual([1]);
-});
-
-describe('measured right-bend pickup', () => {
-    const measured = supported(3, { entity_name: 'turbo-transport-belt', sidecar_version: '0.15.0' });
-    const captured: Source = { type: 'belt', id: 1, near_lane: 1, pickup_length: 1, pickup_layout: 'bend-right-upstream', pickup_capture: measured };
-
-    it('retains measured geometry and capture provenance through file save and reload', () => {
-        const restored = reloaded(formDataToConfig(buildFrom(captured)));
-        expect(restored.inserters[0].source).toEqual(captured);
-        expect(pickupTypeOf(restored.inserters[0].source)).toBe('bend-right-upstream');
-        expect(pickupGeometryOf(restored)).toMatchObject({ known: 1, missing: [], unverified: [] });
-        expect(withPickupType(captured, 'bend-right-upstream').pickup_capture).toEqual(captured.pickup_capture);
-    });
-
-    it('sets the measured lane on manual selection without retaining a different physical capture', () => {
-        const straight: Source = { ...captured, near_lane: 2, pickup_layout: 'side-straight', pickup_capture: { ...measured, model_version: 2 } };
-        const bend = withPickupType(straight, 'bend-right-upstream');
-        expect(bend).toEqual({ type: 'belt', id: 1, near_lane: 1, pickup_length: 1, pickup_layout: 'bend-right-upstream' });
-        expect(straight.near_lane).toBe(2);
-        expect(withPickupType(captured, 'side-straight')).not.toHaveProperty('pickup_capture');
-    });
-
-    it('requires recapture of a saved unsupported bend before it can use the supported layout', () => {
-        const source: Source = { ...captured, pickup_capture: { status: 'unsupported', entity_type: 'transport-belt', reason: 'bend', sidecar_version: '0.14.0' } };
-        expect(withPickupType(source, 'bend-right-upstream')).toBe(source);
-        expect(pickupTypeOf(source)).toBe('unverified');
-        expect(pickupGeometryOf({ inserters: [{ id: 4, source }] })).toMatchObject({ known: 0, unverified: [4] });
+        expect(pickupGeometryOf({ inserters })).toEqual({ total: 3, known: 1, missing: [9, 4], unverified: [], unsupported: [] });
     });
 });

@@ -1,10 +1,11 @@
 import { chestName, ChestType } from "../common/entity-types";
-import { FactorioDataService, ItemName } from "../data";
+import { ItemName } from "../data";
 import { Chest, Entity } from "../entities";
 import { InserterState } from "../state";
 import { isEmptiedByTheBuild, itemsCarried } from "./disturbance-trial";
 import type { SimulationContext } from "./sequence/simulation-context";
 import { ContainerStorage } from "../simulation/components/container-storage";
+import { textWords } from "./entity-name";
 
 /**
  * A chest the build puts its output into that nothing takes from and that has no room for it any more, where a run
@@ -56,7 +57,7 @@ export function fullOutputChestsOf(context: SimulationContext, output_inserters:
             chest_type: chest.chest_type,
             name: chestName(chest.chest_type, sink.entity_id.number),
             item,
-            item_label: FactorioDataService.itemNameInSentence(item),
+            item_label: textWords().item(item),
             held: sink.getCurrentQuantity(item),
             capacity: sink.getCapacity(item),
             inserter_ids: [state.inserter.entity_id.number],

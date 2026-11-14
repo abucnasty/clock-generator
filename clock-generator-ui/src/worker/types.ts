@@ -6,6 +6,8 @@ import type {
     AlwaysOnReasons,
     AsBuiltStabilityCheck,
     BeltConfigSchema,
+    BuildLane,
+    CheckedLanes,
     ChestConfigSchema,
     ClockAssessment,
     ClockRanking,
@@ -18,6 +20,7 @@ import type {
     InserterCoverageIssue,
     MachineConfigurationSchema,
     MachinePrototypeIssue,
+    MachineToName,
     MiningDrillConfigSchema,
     Option,
     ClockAlternativeContext,
@@ -44,10 +47,14 @@ import type {
     RepeatedUnitConversionReasonCode,
     RecordTimelineRequest,
     TimelineRecording,
+    UncalibratedBeltPickup,
 } from 'clock-generator/browser';
+import type { SideLoadedDropFact } from '../utils/advisory';
 import type { ClockInstallFacts } from './installFacts';
 import type { GameNames } from '../utils/gameNames';
 import type { TargetCounts } from '../utils/targetCounts';
+import type { LaneRole } from 'clock-generator/light';
+import type { LaneTakers } from '../utils/laneTakers';
 
 /** One swing of a fuel inserter into a fuel slot, in ticks of the fuel run */
 export interface FuelSwing {
@@ -73,6 +80,13 @@ export interface FuelRunView {
 /** Fuel is outside the transfer plan: what the burner machines use, the fuel clocks exported for them, and a run of them */
 export interface FuelViewData {
     plan: FuelPlan;
+    /** The machines of the build, which the texts name by their kind and recipe; missing from views kept before they were carried */
+    machines?: MachineToName[];
+    /**
+     * The names a sentence gives the build's belts, inserters, chests and drills by entity id ("inserter:3"), by their items in
+     * the game's names (the engine's entityNamesInSentence); missing from views kept before they were carried
+     */
+    entityNames?: Record<string, string>;
     /** Null when the run was not made */
     run: FuelRunView | null;
 }
@@ -145,6 +159,17 @@ export interface ClockAlternativeView {
      * item to a machine, and what can come of it. Null for a build without one.
      */
     deadlockRisk: string | null;
+    /**
+     * What was checked on each lane the copies share (the engine's `checked_lanes`): the rows, the line and, for a clock that is
+     * not stable on a shared lane, the parts of its cause; its "what changes it" names another clock of the generation once the
+     * page has them all (`withOtherClocks`). Absent for a build of one copy, and from clocks kept before it was carried.
+     */
+    checkedLanes?: CheckedLanes;
+    /**
+     * The sentences of `description` on a loss on the lanes the copies share, word for word (the engine's
+     * `shared_lane_loss_note`); missing where it has none, and from clocks kept before it was carried
+     */
+    sharedLaneLossNote?: string;
     /** The belt the clock is made for: "moving (+4 ticks)" or "backed-up"; empty when no clocked inserter picks up from a belt */
     beltLabel: string;
     /** The same belt as the engine gives it; missing from clocks kept before it was carried */
@@ -166,8 +191,6 @@ export interface ClockAlternativeView {
     clockWindows: SerializableClockWindows;
     /** Why the clock leaves an inserter or drill always on, by entity id; missing from clocks kept before it was carried */
     alwaysOnReasons?: AlwaysOnReasons;
-    /** Ticks of belt pickup slack at the end of each window, by inserter id */
-    beltPickupSlackTicks: Record<string, number>;
     /** What the simulation found that is worth explaining about the build and this clock */
     insights: ClockInsight[];
     /** Null unless this clock moved a output cycle or an output swing */
@@ -187,9 +210,37 @@ export interface ClockAlternativeView {
     inserterClocks?: RecordTimelineRequest['inserter_clocks'];
     /** The belt timing actually used by this alternative, including clocks for the other belt setting. */
     backedUpBelts?: boolean;
+    /**
+     * True for a clock of an engine that gives each lane its end from the config alone (a lane that states none, by its
+     * role or by the config's switch), so that its replay reads the saved config as it is; missing from clocks kept before
+     */
+    replayReadsConfig?: true;
 }
 
 export interface ClockModelAssumptions {
+    /** The machines of the build, which the texts name by their kind and recipe; missing from views kept before they were carried */
+    machines?: MachineToName[];
+    /**
+     * The names a sentence gives the build's belts, inserters, chests and drills by entity id ("inserter:3"), by their items in
+     * the game's names (the engine's entityNamesInSentence); missing from views kept before they were carried
+     */
+    entityNames?: Record<string, string>;
+    /**
+     * Every lane of the build, once: its item, role, end and where the end comes from, sharing and supply (the engine's
+     * `buildLanesOf`); missing from views kept before they were carried
+     */
+    lanes?: BuildLane[];
+    /**
+     * The machine each inserter that puts into one puts into, by the inserter's number: what the texts on a build of one copy
+     * name an inserter with ("Inserter 8 into machine 2"); missing from views kept before it was carried
+     */
+    machineOfInserter?: Record<number, number>;
+    /**
+     * The inserters that take each lane's item from its belt, in order along the belt with their places (laneTakers.ts): what a
+     * build of one copy draws a bar for, beside the takers the engine's result names (those that miss swings); missing from
+     * views kept before it was carried
+     */
+    laneTakers?: LaneTakers[];
     kickStarts: { machineId: string; item: string; items: number }[];
     outputDrops: { beltId: number; inserterIds: number[]; mode: 'shared-lanes' | 'free-lane' }[];
     overrides: Config['overrides'];
@@ -275,6 +326,8 @@ export interface ValidatedResponse {
     type: 'validated';
     requestId: number;
     validation: ConfigValidation;
+    /** The copies a build of several identical copies holds, which Check clocks as given, and whether one copy can be offered */
+    recovery?: RepeatedUnitsRecovery;
 }
 
 export interface ValidationFailedResponse {
@@ -442,6 +495,8 @@ export type EngineQuery =
     | { kind: 'output-transfers'; config: Config }
     | { kind: 'inserter-coverage'; config: Config }
     | { kind: 'repeated-unit-conversion'; config: Config }
+    /** The role of each lane the belts of a config state, as the engine reads it from what the inserters carry */
+    | { kind: 'lane-roles'; config: Config }
     /** The form state saved in localStorage, migrated but not yet checked against the config schema */
     | { kind: 'saved-config'; config: unknown }
     /**
@@ -461,19 +516,30 @@ export type EngineQuery =
         suggested_target: unknown;
     };
 
+/** A lane of a belt of the config and its role, as the engine reads it (the light entry's `laneRolesOf`) */
+export interface LaneRoleOfLane {
+    belt_id: number;
+    lane: 1 | 2;
+    role: LaneRole | null;
+}
+
 export interface LiveCoverage {
     issues: InserterCoverageIssue[];
     refusal: string | null;
     /** The ids of the inserters `refusal` names, when it is the one for inserters that take from a belt into anything but a machine; else empty */
     refusal_inserters: number[];
-    /** The engine's warning for belt pickups outside 16-item hands on 4-item belt stacks, which does not block generation */
-    pickupNotTested: string | null;
+    /** The engine's belt pickups outside 16-item hands on 4-item belt stacks, which the site words; they do not block generation */
+    pickupsNotTested: UncalibratedBeltPickup[];
     /** The engine's warning for belt lanes that the copies, summed, would ask for more than they carry; it does not block */
     laneSharedByCopies: string | null;
-    /** The engine's note for drops marked as side-loading onto another belt, a known limit; it does not block */
-    sideLoadedDrop: string | null;
+    /** The inserters that drop onto those lanes; empty without the warning */
+    laneSharedByCopiesInserters: number[];
+    /** The engine's drops marked as side-loading onto another belt, a known limit, which the site words; they do not block */
+    sideLoadedDrops: SideLoadedDropFact[];
     /** The engine's note for drops that fill the lanes of a belt exactly, which does not block */
     lanesExactlyFull: string | null;
+    /** The inserters whose drops fill those lanes; empty without the note */
+    lanesExactlyFullInserters: number[];
     /** The engine's note that the copies' gap is needed to check their drops onto a belt, which does not block */
     copyGapNeeded: string | null;
     /** The engine's note on whether the copies' drops fit between each other at the window cycle estimated from the settings, shown under the gap between copies */
@@ -498,6 +564,8 @@ export interface EngineAnswers {
      */
     'inserter-coverage': LiveCoverage;
     'repeated-unit-conversion': CheckedRepeatedUnitConversion;
+    /** Each lane the belts state, belt by belt and lane 1 first, with its role; null where no inserter takes or drops its item */
+    'lane-roles': LaneRoleOfLane[];
     /** Why the saved config cannot be used; null when it can */
     /**
      * The saved form state with each machine's former type read as its machine, to load in its place, and why it cannot

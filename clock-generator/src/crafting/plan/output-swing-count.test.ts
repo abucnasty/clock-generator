@@ -3,6 +3,7 @@ import { Config } from "../../config";
 import { ConfigPaths } from "../../config/config-paths";
 import { loadConfigFromFile } from "../../config/loader";
 import { validateConfig } from "./validate-config";
+import { withEveryLaneEnd } from "../../entities/traits/lane-ends";
 import { pickupClockCase, pickupClockConfig } from "../../../tests/game/builds/pickup-clock-speed-coverage";
 
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
@@ -22,6 +23,13 @@ describe("output swings each output cycle of a build on moving belts", () => {
         expect(validateConfig(backed_up, { logger: quiet }).output_swings_per_cycle).toBe(5);
         expect(validateConfig(moving, { logger: quiet }).output_swings_per_cycle).toBe(5);
         expect(validateConfig(moving, { logger: quiet }).counts).toBe("made");
+    });
+
+    it("counts them so where the lanes state an infinite end, as where the switch says the belts move", () => {
+        const { backed_up_belts: _switch, ...overrides } = moving.overrides ?? {};
+        void _switch;
+        const stating_infinite: Config = { ...withEveryLaneEnd(moving, "infinite"), overrides };
+        expect(validateConfig(stating_infinite, { logger: quiet }).output_swings_per_cycle).toBe(5);
     });
 
     it("keeps the build's own count for fractional swings, which are that count rather than capped by it", () => {

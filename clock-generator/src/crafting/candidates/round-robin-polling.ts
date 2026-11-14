@@ -1,13 +1,12 @@
 import { OpenRange } from "../../data-types";
 import { Entity, EntityId, handSizeFor, Inserter, isNeverBlockingSink, Machine, MiningDrill, miningDrillMaxInsertion, ReadableEntityRegistry } from "../../entities";
-import { everyInputLaneIsDeadEnd } from "../../entities/traits/lane-facts";
 import { DRILL_ITEMS_PER_SWING } from "../planner/balance";
 import { EntityTransferCountMap, type OutputPath } from "../sequence/cycle/swing-counts";
 import { SwingDistribution } from "../sequence/cycle/swing-distribution";
-import { BlueprintGenerationResult, GenerateClockOptions, GuardedTaker, UnclockedRun, checkedClock, clockOfPlan, fractionalSwingsOf, unclockedRun } from "../plan/unclocked-run";
+import { BlueprintGenerationResult, GenerateClockOptions, GuardedTaker, UnclockedRun, checkedClock, clockBeltOf, clockOfPlan, fractionalSwingsOf, unclockedRun } from "../plan/unclocked-run";
 import { alwaysEnabledInserters, isByProductOnlyInserter, unplannedInserterClocks, type InserterClock } from "../sequence/unplanned-inserter-clock";
-import { ClockBelt, beltPickupSlackTicks } from "../clock";
 import { disturbanceTrialVerdictOf, runClockOnBuild } from "../trial";
+import { laneHandRoomTicks } from "../clock";
 import { DropTieBreak, dropTieBreak } from "../../config/drop-spacing";
 import { TurnGroup } from "../turn-groups";
 import type { AlwaysOnReason } from "../enable-control-router";
@@ -320,8 +319,8 @@ export function roundRobinPollingCycles(entity_registry: ReadableEntityRegistry,
  *   takes a hand while it holds less than its insertion limit, so an inserter whose `h` hands a window cycle follow each
  *   other without reaching the limit (`computeMaxSwingsPerSubCycle`) moves them all in one window that opens at the tick
  *   its first hand starts. The window is long enough to start every hand the machine can take, `S` of them, and no
- *   longer: `(S - 1) x cycle + 2` ticks (the last hand starts inside it, and a combinator takes a tick), and the belt
- *   pickup slack more where it picks up from a belt. `S` is `h + 1` where the machine's limit refuses another hand after
+ *   longer: `(S - 1) x cycle + 2` ticks (the last hand starts inside it, and a combinator takes a tick), and the room for
+ *   one more hand more where it picks up from a belt (laneHandRoomTicks). `S` is `h + 1` where the machine's limit refuses another hand after
  *   `h` (room for at most `h + 1`), and `h` where it would take it (more room than that: another hand is a surplus) and
  *   the surplus guard is on for it: for every such inserter that takes from a machine or a chest (`surplus_guard`), or only
  *   for those the extra start would leave busy all the time (`per_taker_guard`);
@@ -358,13 +357,11 @@ export function roundRobinPollingWindows(
     swing_counts: EntityTransferCountMap,
     recipe_lcm: number,
     window_cycle_ticks: number,
-    /** Whether a window that picks up from a belt has the belt pickup slack (a clock for a moving belt); not on belts with backpressure */
-    with_belt_slack: boolean = true,
     options: RoundRobinPollingOptions = DEFAULT_OPTIONS,
     /** Where the output inserters stand on a shared belt: among groupings that serve the sources equally, the one whose hands fit on the belt */
     drop_tie_break: DropTieBreak | null = null,
 ): Map<string, OpenRange[]> {
-    return roundRobinPollingPlan(entity_registry, swing_counts, recipe_lcm, window_cycle_ticks, with_belt_slack, options, drop_tie_break).windows;
+    return roundRobinPollingPlan(entity_registry, swing_counts, recipe_lcm, window_cycle_ticks, options, drop_tie_break).windows;
 }
 
 /** The windows of `roundRobinPollingWindows` and the groups that take turns in them */
@@ -393,7 +390,6 @@ export function roundRobinPollingPlan(
     swing_counts: EntityTransferCountMap,
     recipe_lcm: number,
     window_cycle_ticks: number,
-    with_belt_slack: boolean = true,
     options: RoundRobinPollingOptions = DEFAULT_OPTIONS,
     drop_tie_break: DropTieBreak | null = null,
     composition?: RoundRobinPollingComposition,
@@ -415,7 +411,7 @@ export function roundRobinPollingPlan(
         }
     }
     const inserters = entities.filter(Entity.isInserter).filter(it => !composition?.retained_clocks.has(it.entity_id.id));
-    const belt_slack = with_belt_slack ? beltPickupSlackTicks(entity_registry) : new Map<string, number>();
+    const lane_hand_room = laneHandRoomTicks(entity_registry);
 
     const outputHands = (inserter: Inserter): number => {
         const transfer = transfers.get(inserter.entity_id.id);
@@ -486,14 +482,14 @@ export function roundRobinPollingPlan(
                 items += hands * hand;
                 items_of.set(item.item_name, (items_of.get(item.item_name) ?? 0) + hands * hand);
             }
-            const slack = EntityId.isBelt(source.entity_id) ? belt_slack.get(inserter.entity_id.id) ?? 0 : 0;
+            const room = EntityId.isBelt(source.entity_id) ? lane_hand_room.get(inserter.entity_id.id) ?? 0 : 0;
             const surplus_kept = more_room_than_a_hand_over && !EntityId.isBelt(source.entity_id);
             // per taker, the guard is for a taker the extra start would leave busy all window cycle (`open_all_window_cycle`, below)
-            const busy_with_extra_start = count * cycle + WINDOW_MARGIN_TICKS + slack + INPUT_OFFSET_TICKS >= window_cycle_ticks;
+            const busy_with_extra_start = count * cycle + WINDOW_MARGIN_TICKS + room + INPUT_OFFSET_TICKS >= window_cycle_ticks;
             const guarded = surplus_kept && (options.surplus_guard
                 || (options.per_taker_guard === true && busy_with_extra_start && options.unguarded_sinks?.has(sink.entity_id.id) !== true));
             const starts = guarded ? count : count + 1;
-            takers.push({ inserter, source: source.entity_id, sink: sink.entity_id, items, items_of, window_ticks: (starts - 1) * cycle + WINDOW_MARGIN_TICKS + slack,
+            takers.push({ inserter, source: source.entity_id, sink: sink.entity_id, items, items_of, window_ticks: (starts - 1) * cycle + WINDOW_MARGIN_TICKS + room,
                 ...(guarded && { guarded_hands: count }) });
         } else if (EntityId.isMachine(source.entity_id) && EntityId.isChest(sink.entity_id) && chests_taken_from.has(sink.entity_id.id)) {
             // it takes what the machine made, and the chest takes every hand: one swing more than the hands, and the draw is not tested
@@ -820,16 +816,10 @@ export function finishedClock(
     /** How far the clock-only check goes, and who is given it (see checkedClock); the whole check by default */
     check: Pick<NonNullable<Parameters<typeof checkedClock>[4]>, "through" | "on_as_built"> = {},
 ): BlueprintGenerationResult {
-    // the windows carry the belt pickup slack themselves (on a moving belt); the clock names the belt they are made for
-    const exported = clockOfPlan(made, { ...options, belt_pickup_slack: "always" });
-    const slack = beltPickupSlackTicks(made.run.simulation_context.entity_registry);
-    const belt_fed = Array.from(windows.keys()).filter(id => slack.has(id));
-    const moving = !everyInputLaneIsDeadEnd(made.config);
-    const belt: ClockBelt | null = belt_fed.length === 0 ? null
-        : moving ? { kind: "moving", slack_ticks: Array.from(new Set(belt_fed.map(id => slack.get(id)!))).sort((a, b) => a - b) } : { kind: "backed_up" };
-    const named = { ...exported, ...(constructed === undefined ? {} : { random_margins: constructed.random_margins }),
-        belt, belt_pickup_slack_left_out: false, turns,
-        applied_belt_pickup_slack: moving ? Object.fromEntries(belt_fed.map(id => [id, slack.get(id)!])) : {} };
+    // the windows carry the room for one hand themselves (see roundRobinPollingWindows); the clock names the belt they are made for
+    const exported = clockOfPlan(made, { ...options, lane_hand_room: "always" });
+    const belt = clockBeltOf(made.config, made.run.simulation_context.entity_registry, windows);
+    const named = { ...exported, ...(constructed === undefined ? {} : { random_margins: constructed.random_margins }), belt, turns };
     const result = checkedClock(made, named, windows, { ...options, verify_as_built: true }, { left_open, ...check });
     // the check of the plan's run is the same object for every clock made from the plan, and the next clock's check
     // overwrites it: this clock keeps a copy of its own
@@ -877,7 +867,7 @@ export function roundRobinPollingClock(
             let planned: RoundRobinPollingPlan;
             try {
                 planned = roundRobinPollingPlan(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks,
-                    made.config.overrides?.backed_up_belts !== true, way, drops, undefined, line => plan.logger.log(`Round-Robin Polling: ${line}`));
+                    way, drops, undefined, line => plan.logger.log(`Round-Robin Polling: ${line}`));
             } catch (error) {
                 // a turn without room is this way's: another way may place the turns with room
                 if (!(error instanceof TurnWithoutRoom)) throw error;

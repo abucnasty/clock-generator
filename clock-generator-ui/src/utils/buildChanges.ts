@@ -1,6 +1,6 @@
 import type { Config } from 'clock-generator/browser';
 import type { ChestType } from 'clock-generator/light';
-import { entityLabelIn, type LabelKind } from './entityLabel';
+import { entityLabelIn, nameInSentence, type LabelKind } from './entityLabel';
 import { COUNTS_TEXT, countsLabel, countsOf } from './targetCounts';
 
 /** A rate or count as the sentences print it: at most two decimals, no trailing zeros */
@@ -25,20 +25,56 @@ const KINDS: { kind: LabelKind; many: string; of: (config: Config) => { id?: num
 ];
 
 /** The overrides with words of their own; any other is "Advanced Overrides" */
-const OWN_OVERRIDES = ['backed_up_belts', 'search_for_fewer_wake_ups'];
+const OWN_OVERRIDES = ['search_for_fewer_wake_ups'];
 
 /** The parts of a config this file names a change in; anything else that changed is "other settings" */
 const NAMED_PARTS = ['setpoint', 'machines', 'inserters', 'belts', 'chests', 'drills', 'overrides'];
 
-const beltsText = (config: Config) => (config.overrides?.backed_up_belts === true ? 'backed up' : 'moving');
+/** A lane's stated end in the change list's words */
+const END_TEXT: Record<string, string> = { dead_end: 'Dead end', infinite: 'Infinite', unknown: 'Unknown' };
+const NOT_STATED = 'not stated';
+
+type BeltOfConfig = Config['belts'][number];
+type LaneOfConfig = { ingredient: string; lane_end?: { kind: string } };
+const lanesOf = (belt: BeltOfConfig) => belt.lanes as readonly LaneOfConfig[];
+/** A belt without its lanes' stated ends, for whether anything else of it changed */
+const withoutEnds = (belt: BeltOfConfig) => ({ ...belt, lanes: lanesOf(belt).map(({ lane_end: _end, ...lane }) => { void _end; return lane; }) });
+
+/**
+ * "Lane end of the iron gear wheel lane (Dead end → Infinite)" for each lane of a belt whose stated end changed, the
+ * lane by its item, and by its belt too where the item is on more than one lane; the belts whose only change is lane
+ * ends, which are then not named again
+ */
+function laneEndChanges(generated: BeltOfConfig[], current: BeltOfConfig[], itemLabel: (id: string) => string): { changes: string[]; beltsWithEndsOnly: Set<number> } {
+    const changes: string[] = [];
+    const beltsWithEndsOnly = new Set<number>();
+    const lanesWithItem = (item: string) => current.flatMap(lanesOf).filter(lane => lane.ingredient === item).length;
+    current.forEach((belt, index) => {
+        const before = generated[index];
+        if (before === undefined || before.id !== belt.id) return;
+        const lanes = lanesOf(belt);
+        const own: string[] = [];
+        lanes.forEach((lane, laneIndex) => {
+            const was = lanesOf(before)[laneIndex];
+            if (was === undefined || was.ingredient !== lane.ingredient || was.lane_end?.kind === lane.lane_end?.kind) return;
+            const name = lane.ingredient === '' ? `lane ${laneIndex + 1} of Belt ${belt.id}`
+                : `the ${nameInSentence(itemLabel(lane.ingredient))} lane${lanesWithItem(lane.ingredient) > 1 ? ` of Belt ${belt.id}` : ''}`;
+            const text = (end?: { kind: string }) => end === undefined ? NOT_STATED : END_TEXT[end.kind] ?? end.kind;
+            own.push(`Lane end of ${name} (${text(was.lane_end)} → ${text(lane.lane_end)})`);
+        });
+        if (own.length > 0 && same(withoutEnds(before), withoutEnds(belt))) beltsWithEndsOnly.add(belt.id);
+        changes.push(...own);
+    });
+    return { changes, beltsWithEndsOnly };
+}
 const onOff = (on: boolean) => (on ? 'on' : 'off');
 
 /** "Inserters (5 → 4)" when the count changed, else "Inserter 3" or "Inserters 3, 5" for the ones that changed */
-function entityChanges(kind: LabelKind, many: string, generated: { id?: number }[], current: { id?: number }[]): string | null {
+function entityChanges(kind: LabelKind, many: string, generated: { id?: number }[], current: { id?: number }[], unnamed: ReadonlySet<number> = new Set()): string | null {
     if (generated.length !== current.length) {
         return `${many} (${generated.length} → ${current.length})`;
     }
-    const ids = current.flatMap((entity, i) => (same(entity, generated[i]) ? [] : [entity.id ?? i + 1]));
+    const ids = current.flatMap((entity, i) => (same(entity, generated[i]) || unnamed.has(entity.id ?? i + 1) ? [] : [entity.id ?? i + 1]));
     if (ids.length === 0) {
         return null;
     }
@@ -50,15 +86,16 @@ function entityChanges(kind: LabelKind, many: string, generated: { id?: number }
 /**
  * What changed in the build since the clocks were made for `generated`, in the form's words and in the form's order:
  * "Recipe (logistic-science-pack → automation-science-pack)", "Items per second (240 → 200)", "Copies (1 → 2)", "Counts (Items made → Items destroyed)", then
- * per kind of entity (a drill's productivity is its own), drills turned on or off, the belt answer, the deeper search, the other overrides, and
+ * per kind of entity (a drill's productivity is its own) with the lane ends that changed after the belts, drills turned on or off, the deeper search, the other overrides, and
  * "other settings" for anything else. `recipeLabel` gives a recipe's game name.
  */
-export function buildChangesOf(generated: Config, current: Config, recipeLabel: (id: string) => string = (id) => id): string[] {
+export function buildChangesOf(generated: Config, current: Config, recipeLabel: (id: string) => string = (id) => id,
+    itemLabel: (id: string) => string = (id) => id): string[] {
     const changes: string[] = [];
     const before = generated.setpoint;
     const after = current.setpoint;
     if (before.recipe !== after.recipe) {
-        changes.push(`Recipe (${recipeLabel(before.recipe)} → ${recipeLabel(after.recipe)})`);
+        changes.push(`Recipe (${nameInSentence(recipeLabel(before.recipe))} → ${nameInSentence(recipeLabel(after.recipe))})`);
     }
     if (before.items_per_second !== after.items_per_second) {
         changes.push(`Items per second (${figure(before.items_per_second)} → ${figure(after.items_per_second)})`);
@@ -69,17 +106,19 @@ export function buildChangesOf(generated: Config, current: Config, recipeLabel: 
     if (countsOf(before) !== countsOf(after)) {
         changes.push(`${COUNTS_TEXT.label} (${countsLabel(countsOf(before))} → ${countsLabel(countsOf(after))})`);
     }
+    const ends = generated.belts.length === current.belts.length ? laneEndChanges(generated.belts, current.belts, itemLabel)
+        : { changes: [], beltsWithEndsOnly: new Set<number>() };
     for (const { kind, many, of } of KINDS) {
-        const change = entityChanges(kind, many, of(generated), of(current));
+        const change = entityChanges(kind, many, of(generated), of(current), kind === 'belt' ? ends.beltsWithEndsOnly : undefined);
         if (change) {
             changes.push(change);
+        }
+        if (kind === 'belt') {
+            changes.push(...ends.changes);
         }
     }
     if (Boolean(generated.drills) !== Boolean(current.drills) && !changes.some((it) => it.startsWith('Drills'))) {
         changes.push(`Mining drills (${onOff(Boolean(generated.drills))} → ${onOff(Boolean(current.drills))})`);
-    }
-    if (beltsText(generated) !== beltsText(current)) {
-        changes.push(`Input belts (${beltsText(generated)} → ${beltsText(current)})`);
     }
     const deeperBefore = generated.overrides?.search_for_fewer_wake_ups === true;
     const deeperAfter = current.overrides?.search_for_fewer_wake_ups === true;
@@ -102,8 +141,9 @@ export function buildChangesOf(generated: Config, current: Config, recipeLabel: 
  * The changes as the stale banner and the Copy-old dialog list them: at most `max`, the last of them with "and N more"
  * when there are more ("Inserter 3 and 2 more changes")
  */
-export function buildChangesText(generated: Config, current: Config, max = 3, recipeLabel?: (id: string) => string): string[] {
-    const changes = buildChangesOf(generated, current, recipeLabel);
+export function buildChangesText(generated: Config, current: Config, max = 3, recipeLabel?: (id: string) => string,
+    itemLabel?: (id: string) => string): string[] {
+    const changes = buildChangesOf(generated, current, recipeLabel, itemLabel);
     if (changes.length <= max) {
         return changes;
     }

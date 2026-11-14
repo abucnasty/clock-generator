@@ -133,7 +133,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -159,7 +159,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -176,7 +176,7 @@
         "belt": "belt:4",
         "lane": 1,
         "listed": true,
-        "item": "inserter",
+        "item": "",
         "stack": 4,
         "belt_prototype": "turbo-transport-belt",
         "tiles_per_tick": 0.125,
@@ -185,7 +185,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -202,7 +202,7 @@
         "belt": "belt:4",
         "lane": 2,
         "listed": true,
-        "item": "",
+        "item": "inserter",
         "stack": 4,
         "belt_prototype": "turbo-transport-belt",
         "tiles_per_tick": 0.125,
@@ -211,7 +211,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -1101,10 +1101,10 @@
       "entity": "inserter:8",
       "group": "inserter:8",
       "item": "inserter",
-      "from": "belt:4/lane:1",
+      "from": "belt:4/lane:2",
       "to": "machine:5",
       "from_lanes": [
-        "belt:4/lane:1"
+        "belt:4/lane:2"
       ],
       "lands_in": "ingredients",
       "hand": {

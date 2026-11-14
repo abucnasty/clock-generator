@@ -39,6 +39,36 @@ advantage. Retain game-backed examples as regression controls. No strategy has b
 
 The trial transcripts and local benchmark tables behind this audit (#257) were not kept in the repository.
 
+## Coordinated Sources
+
+Coordinated Sources is the router that gives the inserters of each source the enable windows of another clock of the build
+(`src/crafting/candidates/coordinated-sources.ts`). A source is a machine, belt or chest that inserters take from. The generator makes
+it after every other clock, on the window cycle of the clock they recommend. It composes it from the stable clocks of the build and the
+ways of the grouped hands construction. Each of these is a part. A part's windows are repeated where its window cycle divides the shared
+one. A part whose window cycle does not divide it gives no windows.
+
+The generator takes the windows of a part in one of two ways:
+
+- **The whole part.** The part's clock on the shared window cycle has a long run that is counted: its own check where its window cycle
+  is the shared one, else the check of its windows repeated over the shared window cycle. Then every source can take the part's windows.
+- **One source at a time.** Where the part's clock fails that check, or its own long run was not counted, the generator tries each source
+  alone. It takes the recommended clock and changes only the windows of the inserters of that source to the part's windows. If that clock
+  holds to the long run (the check that counts the wakeups of every clock), that source can take the part's windows. The other sources
+  cannot. A source whose windows a part before it gave already is not tried again.
+
+This costs at most one more check up to the long run for each source of each part that fails as a whole. The generator then sets the
+sources one at a time, from the output upstream, and keeps the setting with the smallest number of wakeups for the full clock. A clock it
+makes is checked as every other clock: the clock-only check from every start, the long run, the margin of one tick, the lanes the copies
+share, and the disturbance trials on one copy and on the copies.
+
+Where it makes no clock, or makes a clock that is the same as a clock made before it, the result has an entry for Coordinated Sources in
+`not_made`. Its reason is why no clock was made (for example "the local choice keeps the recommended clock") or "Made, and the same clock
+as one made before it, which is listed." Then "Not taken:" names each part whose windows the generator did not take, with why: a window
+cycle that does not divide the shared one, an own clock whose long run was not counted, or a clock that does not hold on the shared
+window cycle (where it fails, and the items against those expected). For a part tried one source at a time, it names each source whose
+windows did not hold, with what the recommended clock with only those windows did, and the sources whose windows were taken. Where no
+clock holds, the `why_not_stable` message lists it with the other clocks not made ([stability](stability.md)).
+
 ## Shipped and explored strategies
 
 `STRATEGY_STATUS` in `src/crafting/explore.ts` lists every strategy the alternatives can run, each as `shipped` or `explored`. A shipped

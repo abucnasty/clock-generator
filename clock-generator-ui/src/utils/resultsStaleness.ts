@@ -1,6 +1,6 @@
 import type { Config } from 'clock-generator/browser';
-import { beltQuestionOf, type BeltQuestion } from './beltQuestion';
 import type { TargetCounts } from './targetCounts';
+import { nameInSentence } from './entityLabel';
 
 /** Label of every button that copies the blueprint of clocks made for an earlier build */
 export const STALE_COPY_LABEL = 'Copy old clock…';
@@ -15,8 +15,8 @@ export const STALE_BLUEPRINT_NOTE = 'The blueprint is hidden because your build 
 export const STALE_GENERATE_AGAIN = 'Generate again';
 
 /**
- * What a generation was for: the key of its config, the target recipe and rate the clocks were made for, the belt
- * question as the config answered it, and when the generation started (ms since the epoch)
+ * What a generation was for: the key of its config, the target recipe and rate the clocks were made for, and when the
+ * generation started (ms since the epoch)
  */
 export interface GeneratedFor {
     key: string;
@@ -24,7 +24,6 @@ export interface GeneratedFor {
     itemsPerSecond: number;
     /** What the rate counts, when it is the item destroyed; none, the item made */
     counts?: TargetCounts;
-    beltQuestion: BeltQuestion;
     generatedAt: number;
 }
 
@@ -42,7 +41,6 @@ export function generatedForOf(config: Config, at: number = Date.now()): Generat
         recipe: config.setpoint.recipe,
         itemsPerSecond: config.setpoint.items_per_second,
         ...(config.setpoint.counts === 'destroyed' && { counts: 'destroyed' as const }),
-        beltQuestion: beltQuestionOf(config),
         generatedAt: at,
     };
 }
@@ -53,11 +51,12 @@ export function isStale(generatedFor: GeneratedFor | null, currentKey: string): 
 }
 
 /**
- * "{recipe} at {rate}/s", for the sentences that say what the clocks were made for ("Iron ore at 400/s destroyed" for a
- * target that counts the item destroyed); `recipeLabel` gives the recipe's game name
+ * "{recipe} at {rate}/s", for the sentences that say what the clocks were made for ("iron ore at 400/s destroyed" for a
+ * target that counts the item destroyed); `recipeLabel` gives the recipe's game name, which a sentence writes with its first
+ * letter lower case
  */
 export function generatedForText({ recipe, itemsPerSecond, counts }: GeneratedFor, recipeLabel: (id: string) => string = (id) => id): string {
-    return `${recipeLabel(recipe)} at ${Number(itemsPerSecond.toFixed(2)).toString()}/s${counts === 'destroyed' ? ' destroyed' : ''}`;
+    return `${nameInSentence(recipeLabel(recipe))} at ${Number(itemsPerSecond.toFixed(2)).toString()}/s${counts === 'destroyed' ? ' destroyed' : ''}`;
 }
 
 /** "made at 14:02" for clocks made today, "made on 12 Oct" for clocks made before, in the player's own format */

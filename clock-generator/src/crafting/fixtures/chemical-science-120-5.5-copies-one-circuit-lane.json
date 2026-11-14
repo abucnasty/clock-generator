@@ -1,0 +1,381 @@
+{
+  "setpoint": {
+    "recipe": "chemical-science-pack",
+    "items_per_second": 120,
+    "copies": 5.5,
+    "copy_offset": {
+      "x": 18,
+      "y": 0
+    }
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "chemical-science-pack",
+      "productivity": 100,
+      "crafting_speed": 66.0253125,
+      "prototype": "assembling-machine-3",
+      "quality": "legendary",
+      "recipe_quality": "normal",
+      "position": {
+        "x": -719.5,
+        "y": -225.5
+      }
+    },
+    {
+      "id": 2,
+      "recipe": "chemical-science-pack",
+      "productivity": 100,
+      "crafting_speed": 66.0253125,
+      "prototype": "assembling-machine-3",
+      "quality": "legendary",
+      "recipe_quality": "normal",
+      "position": {
+        "x": -709.5,
+        "y": -225.5
+      }
+    },
+    {
+      "id": 3,
+      "recipe": "engine-unit",
+      "productivity": 100,
+      "crafting_speed": 49.0859375,
+      "prototype": "assembling-machine-3",
+      "quality": "legendary",
+      "recipe_quality": "normal",
+      "position": {
+        "x": -717.5,
+        "y": -221.5
+      }
+    },
+    {
+      "id": 4,
+      "recipe": "engine-unit",
+      "productivity": 100,
+      "crafting_speed": 49.0859375,
+      "prototype": "assembling-machine-3",
+      "quality": "legendary",
+      "recipe_quality": "normal",
+      "position": {
+        "x": -711.5,
+        "y": -221.5
+      }
+    },
+    {
+      "id": 5,
+      "recipe": "casting-pipe",
+      "productivity": 50,
+      "crafting_speed": 236.75,
+      "prototype": "foundry",
+      "quality": "legendary",
+      "recipe_quality": "normal",
+      "position": {
+        "x": -714.5,
+        "y": -216.5
+      }
+    }
+  ],
+  "inserters": [
+    {
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "belt",
+        "id": 3,
+        "drop_capture": {
+          "status": "side-loaded",
+          "tiles": 12,
+          "sidecar_version": "0.15.0"
+        },
+        "belt_direction": 4
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "filters": [
+        "chemical-science-pack"
+      ],
+      "position": {
+        "x": -720.5,
+        "y": -227.5
+      },
+      "direction": 8,
+      "id": 1
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 2
+      },
+      "sink": {
+        "type": "belt",
+        "id": 3,
+        "drop_capture": {
+          "status": "side-loaded",
+          "tiles": 2,
+          "sidecar_version": "0.15.0"
+        },
+        "belt_direction": 4
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "filters": [
+        "chemical-science-pack"
+      ],
+      "position": {
+        "x": -710.5,
+        "y": -227.5
+      },
+      "direction": 8,
+      "id": 2
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 2,
+        "near_lane": 1,
+        "pickup_length": 1,
+        "pickup_layout": "side-straight",
+        "pickup_capture": {
+          "status": "supported",
+          "model": "belt",
+          "model_version": 2,
+          "entity_type": "transport-belt",
+          "entity_name": "turbo-transport-belt",
+          "sidecar_version": "0.15.0"
+        }
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": -720.5,
+        "y": -223.5
+      },
+      "direction": 8,
+      "id": 3
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": -718.5,
+        "y": -223.5
+      },
+      "direction": 8,
+      "id": 4
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 4
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": -710.5,
+        "y": -223.5
+      },
+      "direction": 8,
+      "id": 5
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 2,
+        "near_lane": 1,
+        "pickup_length": 1,
+        "pickup_layout": "side-straight",
+        "pickup_capture": {
+          "status": "supported",
+          "model": "belt",
+          "model_version": 2,
+          "entity_type": "transport-belt",
+          "entity_name": "turbo-transport-belt",
+          "sidecar_version": "0.15.0"
+        }
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": -708.5,
+        "y": -223.5
+      },
+      "direction": 8,
+      "id": 6
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 1,
+        "near_lane": 1,
+        "pickup_length": 1,
+        "pickup_layout": "side-straight",
+        "pickup_capture": {
+          "status": "supported",
+          "model": "belt",
+          "model_version": 2,
+          "entity_type": "transport-belt",
+          "entity_name": "turbo-transport-belt",
+          "sidecar_version": "0.15.0"
+        }
+      },
+      "sink": {
+        "type": "machine",
+        "id": 3
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": -718.5,
+        "y": -219.5
+      },
+      "direction": 8,
+      "id": 7
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 5
+      },
+      "sink": {
+        "type": "machine",
+        "id": 3
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": -716.5,
+        "y": -219.5
+      },
+      "direction": 8,
+      "id": 8
+    },
+    {
+      "source": {
+        "type": "machine",
+        "id": 5
+      },
+      "sink": {
+        "type": "machine",
+        "id": 4
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": -712.5,
+        "y": -219.5
+      },
+      "direction": 8,
+      "id": 9
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 1,
+        "near_lane": 1,
+        "pickup_length": 1,
+        "pickup_layout": "side-straight",
+        "pickup_capture": {
+          "status": "supported",
+          "model": "belt",
+          "model_version": 2,
+          "entity_type": "transport-belt",
+          "entity_name": "turbo-transport-belt",
+          "sidecar_version": "0.15.0"
+        }
+      },
+      "sink": {
+        "type": "machine",
+        "id": 4
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": -710.5,
+        "y": -219.5
+      },
+      "direction": 8,
+      "id": 10
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "iron-gear-wheel",
+          "stack_size": 4,
+          "lane_end": {"kind": "infinite"}
+        },
+        {
+          "ingredient": "steel-plate",
+          "stack_size": 4,
+          "lane_end": {"kind": "infinite"}
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "advanced-circuit",
+          "stack_size": 4,
+          "lane_end": {"kind": "infinite"}
+        },
+        {
+          "ingredient": "sulfur",
+          "stack_size": 4,
+          "lane_end": {"kind": "infinite"}
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "chemical-science-pack",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "",
+          "stack_size": 4
+        }
+      ]
+    }
+  ],
+  "chests": []
+}

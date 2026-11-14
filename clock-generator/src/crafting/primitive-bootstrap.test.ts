@@ -225,7 +225,6 @@ describe('verified primitive bootstrap orchestration', () => {
     it.each([
         ['shared-only request', () => config(), { ...options, shared_windows: true }],
         ['derived windows', () => config({ derive_clock_windows: true }), options],
-        ['disabled belt slack', () => config(), { ...options, belt_pickup_slack: 'never' as const }],
         ['fuel hand room', () => config(), { ...options, fuel_hand_room: true }],
     ] as const)('does not bootstrap with %s', (_name, makeConfig, actualOptions) => {
         const candidate = makeConfig();

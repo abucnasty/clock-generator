@@ -134,20 +134,20 @@ describe('a drill into a chest stays always enabled', () => {
     it('where another drill fills the same chest with the same item', () => {
         const because = always(build({ second_drill: true })).always_enabled_because!;
         expect(because).toEqual({ kind: 'other-drill', drill_number: 2, item: 'iron-ore' });
-        expect(chestDrillBecause(because)).toBe('drill 2 fills the same chest with iron-ore too');
+        expect(chestDrillBecause(because)).toBe('drill 2 fills the same chest with iron ore too');
     });
 
     it('where an inserter fills the same chest with the same item', () => {
         const because = always(build({ filler: true })).always_enabled_because!;
         expect(because).toEqual({ kind: 'filler', inserter_number: 5, item: 'iron-ore' });
-        expect(chestDrillBecause(because)).toBe('inserter 5 fills the same chest with iron-ore too');
+        expect(chestDrillBecause(because)).toBe('inserter 5 fills the same chest with iron ore too');
     });
 
     it('where a taker of the chest has no window', () => {
         const windows = windowsOf({ 'inserter:2': [[28, 41]] });
         const because = always(build(), windows).always_enabled_because!;
         expect(because).toEqual({ kind: 'taker-without-window', inserter_number: 1, item: 'iron-ore' });
-        expect(chestDrillBecause(because)).toBe('inserter 1 takes iron-ore out of the chest with no enable window');
+        expect(chestDrillBecause(because)).toBe('inserter 1 takes iron ore out of the chest with no enable window');
     });
 });
 

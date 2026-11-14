@@ -81,25 +81,49 @@ it('collects field problems before coverage, retaining engine order, game names 
     expect(issues.slice(2).map(issue => issue.coverage)).toEqual([output, input]);
 });
 
-// the engine's wording passes through as it is: each row's name stands in for it
+const pickup = { inserter_id: 1, belt_id: 1, item: 'iron-plate', lane_stack_sizes: [2], hand_size: null, item_stack_size: null };
+const drops = [{ inserter_id: 11, tiles: 2 }, { inserter_id: 12, tiles: 2 }];
+
+// each advisory is the engine's data, or its words with the inserters they are about; the line is the site's words for its kind
 it.each([
-    ['warning for a belt pickup whose timing is not tested', 'pickupNotTested', 'belt-pickup-not-tested', 'warning', 'calibration'],
-    ['warning for lanes the copies would share over capacity', 'laneSharedByCopies', 'lanes-shared-by-copies', 'warning', 'lanes'],
-    ['note for a drop that side-loads onto another belt', 'sideLoadedDrop', 'side-loaded-drop', 'warning', 'drop'],
-    ['note for lanes the drops fill exactly', 'lanesExactlyFull', 'lanes-exactly-full', 'info', 'lanes'],
-    ['note for the missing gap between copies', 'copyGapNeeded', 'copy-gap-needed', 'info', 'drop'],
-] as const)('lists the engine %s as advice that never blocks generation', (text, field, id, severity, source) => {
-    const advice: BuildValidationIssue = { id, text, severity, blocksGeneration: false, source, target: { kind: 'validation-issue', id } };
-    expect(buildValidationIssues({ ...none, [field]: text })).toEqual([advice]);
-    expect(buildValidationIssues({ ...none, [field]: null })).toEqual([]);
+    ['a belt pickup whose timing is not tested', { pickupsNotTested: [pickup] }, 'belt-pickup-not-tested', 'warning', 'calibration',
+        'Belt pickup not tested', { kind: 'pickup-not-tested', pickups: [pickup] }],
+    ['lanes the copies would share over capacity', { laneSharedByCopies: 'Over', laneSharedByCopiesInserters: [2, 5] }, 'lanes-shared-by-copies', 'warning', 'lanes',
+        'Copies drop more than a shared lane carries', { kind: 'lanes-shared-by-copies', inserters: [2, 5], text: 'Over' }],
+    ['a drop that side-loads onto another belt', { sideLoadedDrops: drops }, 'side-loaded-drop', 'warning', 'drop',
+        'Drops onto a belt that side-loads', { kind: 'side-loaded-drop', drops }],
+    ['lanes the drops fill exactly', { lanesExactlyFull: 'Full', lanesExactlyFullInserters: [3] }, 'lanes-exactly-full', 'info', 'lanes',
+        'Lanes exactly full', { kind: 'lanes-exactly-full', inserters: [3], text: 'Full' }],
+    ['the missing gap between copies', { copyGapNeeded: 'Gap' }, 'copy-gap-needed', 'info', 'drop',
+        'Copies may drop onto the same belt', { kind: 'copy-gap-needed', text: 'Gap' }],
+] as const)('lists %s as one advisory line that never blocks generation', (_name, input, id, severity, source, text, advisory) => {
+    const advice: BuildValidationIssue = { id, text, severity, blocksGeneration: false, source, advisory, target: { kind: 'validation-issue', id } };
+    expect(buildValidationIssues({ ...none, ...input })).toEqual([advice]);
+});
+
+it('lists no advisory where the engine has nothing to say', () => {
+    expect(buildValidationIssues({ ...none, pickupsNotTested: [], laneSharedByCopies: null, laneSharedByCopiesInserters: [], sideLoadedDrops: [],
+        lanesExactlyFull: null, copyGapNeeded: null, machinePrototypes: [] })).toEqual([]);
+});
+
+it('lists the machines of one kind of prototype warning as one line, and each kind as its own', () => {
+    const issue = (machine_id: number, kind: 'unknown-prototype' | 'recipe-not-made') => ({ machine_id, kind, message: `${kind} ${machine_id}` });
+    const issues = buildValidationIssues({ ...none, machines: [{ id: 1 }, { id: 2 }, { id: 3 }],
+        machinePrototypes: [issue(1, 'recipe-not-made'), issue(2, 'unknown-prototype'), issue(3, 'recipe-not-made')] });
+    expect(issues.map(({ id, text, severity, blocksGeneration, advisory }) => ({ id, text, severity, blocksGeneration, advisory }))).toEqual([
+        { id: 'machine-prototype:recipe-not-made', text: "Machine can't craft its recipe", severity: 'warning', blocksGeneration: false,
+            advisory: { kind: 'machine-prototype', problem: 'recipe-not-made', machines: [{ machine_id: 1, message: 'recipe-not-made 1' }, { machine_id: 3, message: 'recipe-not-made 3' }] } },
+        { id: 'machine-prototype:unknown-prototype', text: 'Not a crafting machine of the game data', severity: 'warning', blocksGeneration: false,
+            advisory: { kind: 'machine-prototype', problem: 'unknown-prototype', machines: [{ machine_id: 2, message: 'unknown-prototype 2' }] } },
+    ]);
 });
 
 it('keeps advice beside an error and other advice, the error still blocking and the advice still not', () => {
-    const both = buildValidationIssues({ ...none, pickupNotTested: 'Not tested', failure: { message: 'Independent simulation refusal' } });
+    const both = buildValidationIssues({ ...none, pickupsNotTested: [pickup], failure: { message: 'Independent simulation refusal' } });
     expect(both.map(({ source, blocksGeneration }) => ({ source, blocksGeneration })))
         .toEqual([{ source: 'engine', blocksGeneration: true }, { source: 'calibration', blocksGeneration: false }]);
-    expect(buildValidationIssues({ ...none, lanesExactlyFull: 'Full', copyGapNeeded: 'Gap' }).map(issue => [issue.id, issue.text]))
-        .toEqual([['lanes-exactly-full', 'Full'], ['copy-gap-needed', 'Gap']]);
+    expect(buildValidationIssues({ ...none, lanesExactlyFull: 'Full', copyGapNeeded: 'Gap' }).map(issue => issue.id))
+        .toEqual(['lanes-exactly-full', 'copy-gap-needed']);
 });
 
 const opening = "No clock can hold this build's target:";
@@ -145,4 +169,12 @@ it.each([
     const issues = buildValidationIssues({ ...none, machines: [{ id: 5 }, { id: 8 }], inserters: [inserter(4)], belts: [{ id: 9 }],
         chests: [empty], failure: { message: 'x', diagnostics: [{ kind: 'field', path, message: 'Required' }] } });
     expect(issues.at(-1)?.text).toBe(text);
+});
+
+// a build of several identical copies is clocked as given: Build check notes it, and the note never blocks generation
+it('notes a build of identical copies as an advisory of its own, which does not block generation', () => {
+    const [note] = buildValidationIssues({ ...none, repeatedCopies: 'This build holds 9 identical copies.' });
+    expect(note).toMatchObject({ id: 'repeated-copies', source: 'copies', severity: 'info', blocksGeneration: false,
+        text: 'This build holds 9 identical copies.' });
+    expect(buildValidationIssues({ ...none, repeatedCopies: null })).toEqual([]);
 });

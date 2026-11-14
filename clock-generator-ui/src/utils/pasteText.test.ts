@@ -35,9 +35,9 @@ describe('inserterDetailLines', () => {
             .toEqual(['Inserters 1 to 4: Legendary stack inserters, 16 items at a time, no filter.']);
         expect(inserterDetailLines([stack(1, { filters: ['iron-plate'] }), stack(2, { filters: ['steel-plate'] }), stack(3, { filters: ['steel-plate'] }),
             stack(4, { filters: ['iron-plate'] }), stack(5, { filters: ['iron-ore'] })], label)).toEqual([
-            'Inserters 1 and 4: Legendary stack inserters, 16 items at a time, filter Iron plate.',
-            'Inserters 2 and 3: Legendary stack inserters, 16 items at a time, filter Steel plate.',
-            'Inserter 5: Legendary stack inserter, 16 items at a time, filter Iron ore.',
+            'Inserters 1 and 4: Legendary stack inserters, 16 items at a time, filter iron plate.',
+            'Inserters 2 and 3: Legendary stack inserters, 16 items at a time, filter steel plate.',
+            'Inserter 5: Legendary stack inserter, 16 items at a time, filter iron ore.',
         ]);
     });
     it('says what the export left out and the generator assumed, and an enable rule set by hand', () => {
@@ -60,7 +60,7 @@ describe('importedAsOneUnitText', () => {
     it('names the container a drill drops into, and what to do', () => {
         expect(importedAsOneUnitText(proof('unsupported-boundary', 'A drill into a chest is not supported in a repeated unit.'), config)).toEqual({
             what: 'This export holds 2 identical copies of a build. They can\'t be split into copies yet because a drill drops into a car, so it comes in as one build.',
-            next: 'Check will not run on it like this. Select one complete group in Factorio, export it again, and set Copies to 2.',
+            next: 'It is clocked as one build. For fewer entities to calculate, select one complete group in Factorio, export it again, and set Copies to 2.',
         });
         const silo = { ...config, chests: [{ id: 2, type: 'infinity-chest' }] } as unknown as Config;
         expect(importedAsOneUnitText(proof('unsupported-boundary', 'x'), silo).what).toContain('because a drill drops into an infinity chest,');

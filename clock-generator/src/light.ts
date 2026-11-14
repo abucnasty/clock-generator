@@ -1,6 +1,8 @@
 /**
  * The values of the browser exports that need neither the simulation, the game data nor zod: the enum-like
- * constants, the status categories, the clock ranking and fp-ts's Option.
+ * constants, the status categories, the clock ranking, the lane facts of a config (a lane's capacity from the engine's
+ * belt speeds, its role from the items the caller says each inserter carries), the other clock that a clock's checked lanes
+ * name in "what changes it" and fp-ts's Option.
  *
  * A page that runs the generator in a web worker can take its values on the main thread from here, and only types
  * from `browser.ts`, so the generator itself is bundled once, in the worker. The "light entry" test in
@@ -21,6 +23,11 @@ export {
 export { EntityType } from "./entities/entity-type";
 
 export { machineCanMake, machineForRecipe, machineForRule } from "./entities/machine/machine-rule";
+
+export { machineNameInText, machineNameOf } from "./crafting/machine-name";
+export type { MachineToName, MachineWords } from "./crafting/machine-name";
+export { beltNameInText, capitalized, chestNameInText, drillNameInText, entityNameOf, inserterNameInText, insertersInSentence, laneNameInText, lanesInSentence, NO_BUILD, theName } from "./crafting/entity-name";
+export type { BuildToName, ItemWords, TextWords } from "./crafting/entity-name";
 export type { CraftingMachineRuleFacts, NamedCraftingMachine } from "./entities/machine/machine-rule";
 export { prototypeTraitsOf } from "./entities/traits/prototype-traits";
 export type { CraftingMachineTraitFacts, PrototypeTraits } from "./entities/traits/prototype-traits";
@@ -36,11 +43,20 @@ export type {
 
 export { StatusCategory, statusToCategory } from "./state/status-category";
 
-export { combineClockAlternativeRuns, searchesAreNeeded, searchesToRun } from "./crafting/rank";
+export { combineClockAlternativeRuns, searchesAreNeeded, searchesToRun, signalsKey } from "./crafting/rank";
 
 export { coordinatedSourcesInputOf } from "./crafting/candidates/coordinated-sources-parts";
 
 export { whyNotStable, whyNotStableClockOf } from "./crafting/why-not-stable";
+
+export { withOtherClocks } from "./crafting/other-clocks";
+
+export { everyInputLaneIsDeadEnd, withEveryLaneEnd } from "./entities/traits/lane-ends";
+export { beltLaneFactsOf } from "./entities/traits/lane-facts";
+export type { BeltLaneFacts, FlowDirection, LaneEnd, LaneSharing } from "./entities/traits/lane-facts";
+export { laneRolesOf } from "./entities/traits/lane-role";
+export type { CarriedItemsOf, LaneRole, LaneRolesOfBuild } from "./entities/traits/lane-role";
+export type { Ratio } from "./entities/traits/ratio";
 
 export * as Option from "fp-ts/Option";
 

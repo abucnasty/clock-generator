@@ -88,7 +88,10 @@ export interface InserterFormData {
     _forced_always?: true;
 }
 
-export interface BeltLaneFormData {
+/** The lane facts a lane of the config may state; a fact the lane does not state is left out, never written as a default */
+type LaneFactsFormData = Pick<Config['belts'][number]['lanes'][number], 'supply_rate' | 'lane_end' | 'sharing'>;
+
+export interface BeltLaneFormData extends LaneFactsFormData {
     ingredient: string;
     stack_size: number;
     /** Export belts only: items per second taken off this lane by consumers outside the config */
@@ -103,6 +106,8 @@ export interface BeltFormData {
     _uuid: string;
     type: 'transport-belt' | 'fast-transport-belt' | 'express-transport-belt' | 'turbo-transport-belt';
     strategy?: BeltStrategyFormValue;
+    /** The way the items on both lanes move along the copies; left out where the config states none */
+    flow_direction?: Config['belts'][number]['flow_direction'];
     lanes: [BeltLaneFormData] | [BeltLaneFormData, BeltLaneFormData];
 }
 
@@ -110,19 +115,33 @@ export const BELT_FORM_DEFAULT_TYPE = 'turbo-transport-belt';
 export const BELT_FORM_DEFAULT_STACK_SIZE = 4;
 
 export const BELT_STRATEGIES: { value: BeltStrategyFormValue; label: string; description: string }[] = [
-    { value: 'normal', label: 'Normal', description: 'Endless: always has items to pick up and room to drop onto.' },
+    { value: 'normal', label: 'Normal', description: 'Each lane\'s end is the one it states. A lane that states none has the end its role gives: a dead end where an inserter takes from it, an infinite end where the build only drops onto it.' },
     { value: 'export', label: 'Export', description: 'Normal, plus a consumption rate per lane for machines outside this configuration. Inserters filling the lane are clocked for that rate.' },
 ];
 
 export const LANE_CONSUMPTION_TOOLTIP =
     'Items per second taken off this lane by machines outside this configuration. Inserters filling the lane are planned for this rate.';
 
-/** Switching a belt to normal drops the lane consumption rates only export belts have */
+/**
+ * A lane with one field set; undefined takes the field away, so the lane states nothing of it. A consumption rate states
+ * what leaves the end of an export lane, which the config may not state beside a lane end: a lane that gets one drops its
+ * lane end (a lane with one shows no Lane end field)
+ */
+export function laneFieldUpdate<K extends keyof BeltLaneFormData>(lane: BeltLaneFormData, field: K, value: BeltLaneFormData[K] | undefined): BeltLaneFormData {
+    const updated: BeltLaneFormData = { ...lane, [field]: value };
+    const drop = value === undefined ? field : field === 'consumption_per_second' ? 'lane_end' : null;
+    if (drop === null) return updated;
+    const { [drop]: _dropped, ...rest } = updated;
+    void _dropped;
+    return rest as BeltLaneFormData;
+}
+
+/** Switching a belt to normal drops the lane consumption rates only export belts have, and keeps every other lane field */
 export function beltStrategyUpdate(belt: BeltFormData, strategy: BeltStrategyFormValue): Partial<BeltFormData> {
     if (strategy === 'export') {
         return { strategy };
     }
-    const lanes = belt.lanes.map((lane) => ({ ingredient: lane.ingredient, stack_size: lane.stack_size })) as BeltFormData['lanes'];
+    const lanes = belt.lanes.map(({ consumption_per_second: _c, ...lane }) => { void _c; return lane; }) as BeltFormData['lanes'];
     return { strategy: undefined, lanes };
 }
 
@@ -287,6 +306,8 @@ export interface ConfigFormData {
         configs: DrillFormData[];
     };
     overrides?: Config['overrides'];
+    /** The output belt as the config states it: the site keeps it and has no editor for it */
+    output_belt?: Config['output_belt'];
 }
 
 export const createDefaultConfig = (): ConfigFormData => ({

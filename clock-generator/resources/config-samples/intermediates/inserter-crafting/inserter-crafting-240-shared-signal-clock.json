@@ -2,7 +2,11 @@
   "setpoint": {
     "recipe": "inserter",
     "items_per_second": 240,
-    "copies": 3
+    "copies": 3,
+    "copy_offset": {
+      "x": 9,
+      "y": 0
+    }
   },
   "machines": [
     {
@@ -30,14 +34,14 @@
       "id": 4,
       "recipe": "iron-gear-wheel",
       "productivity": 100,
-      "crafting_speed": 40.3125,
+      "crafting_speed": 44.921875,
       "prototype": "assembling-machine-3"
     },
     {
       "id": 5,
       "recipe": "iron-plate",
       "productivity": 50,
-      "crafting_speed": 86.1655,
+      "crafting_speed": 91.875,
       "prototype": "electric-furnace"
     },
     {
@@ -213,28 +217,42 @@
     {
       "id": 1,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
           "ingredient": "iron-ore",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         },
         {
           "ingredient": "iron-ore",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         }
       ]
     },
     {
       "id": 2,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
           "ingredient": "electronic-circuit",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         },
         {
           "ingredient": "electronic-circuit",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         }
       ]
     },
@@ -251,14 +269,21 @@
     {
       "id": 4,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
           "ingredient": "iron-ore",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         },
         {
           "ingredient": "iron-ore",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         }
       ]
     }

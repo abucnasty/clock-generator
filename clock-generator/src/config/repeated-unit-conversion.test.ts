@@ -5,17 +5,20 @@ import { planRepeatedUnitConversion } from './repeated-unit-conversion';
 import { validateConfig } from '../crafting/plan/validate-config';
 import { FeasibilityError } from './errors';
 
-/** Actual free-lane gear build: four total items/s requires the multiplied Copies after extraction. */
+/**
+ * Actual free-lane gear build: 3.5 total items/s requires the multiplied Copies after extraction. The copies take 7 plates
+ * a second from the plate lane they share, of the 7.5 it gets.
+ */
 function eightUnits(): Config {
     return {
-        setpoint: { recipe: 'iron-gear-wheel', items_per_second: 4, copies: 0.5 },
+        setpoint: { recipe: 'iron-gear-wheel', items_per_second: 3.5, copies: 0.5 },
         machines: Array.from({ length: 8 }, (_, i) => ({ id: i + 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 })),
         inserters: Array.from({ length: 8 }, (_, i) => [
             { id: 2 * i + 1, source: { type: 'belt' as const, id: 1, near_lane: 1 as const }, sink: { type: 'machine' as const, id: i + 1 }, stack_size: 1, filters: ['iron-plate'] },
             { id: 2 * i + 2, source: { type: 'machine' as const, id: i + 1 }, sink: { type: 'belt' as const, id: 2 }, stack_size: 1, filters: ['iron-gear-wheel'] },
         ]).flat(),
         belts: [
-            { id: 1, type: 'transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1 }] },
+            { id: 1, type: 'transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1, lane_end: { kind: 'infinite' } }] },
             { id: 2, type: 'transport-belt', lanes: [{ ingredient: 'iron-gear-wheel', stack_size: 1 }] },
         ], chests: [], overrides: { check_start_dependence: false, kick_start_items: 0 },
     } as Config;
@@ -60,6 +63,58 @@ describe('complete repeated-unit conversion', () => {
         delete missing.inserters[3].position;
         const unplaced = planRepeatedUnitConversion(missing);
         expect(unplaced.kind === 'available' && unplaced.candidate.setpoint.copy_offset).toBeUndefined();
+    });
+
+    /**
+     * Two copies of two gear machines and a faster one, each machine with an inserter from the plate belt and one onto the
+     * gear belt; `xs` gives where the machines stand, in the order they are listed: three of the first copy, three of the
+     * second. Each inserter stands beside its machine, `side` tiles along the belt (the drop beside it on the other side).
+     */
+    function twoCopies(xs: number[], side: number[] = xs.map(() => 1)): Config {
+        const speeds = [1, 1, 2, 1, 1, 2];
+        return {
+            setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+            machines: xs.map((x, i) => ({ id: i + 1, recipe: 'iron-gear-wheel', crafting_speed: speeds[i], productivity: 0, position: { x, y: 3 } })),
+            inserters: xs.flatMap((x, i) => [
+                { id: 2 * i + 1, source: { type: 'belt' as const, id: 1 }, sink: { type: 'machine' as const, id: i + 1 }, position: { x, y: 1 } },
+                { id: 2 * i + 2, source: { type: 'machine' as const, id: i + 1 }, sink: { type: 'belt' as const, id: 2 }, position: { x: x + side[i], y: 5 } },
+            ]),
+            belts: [
+                { id: 1, type: 'transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1 }] },
+                { id: 2, type: 'transport-belt', lanes: [{ ingredient: 'iron-gear-wheel', stack_size: 1 }] },
+            ], chests: [],
+        } as Config;
+    }
+    const offsetOf = (config: Config) => {
+        const plan = planRepeatedUnitConversion(config);
+        expect(plan).toMatchObject({ kind: 'available', multiplicity: 2 });
+        return plan.kind === 'available' ? plan.candidate.setpoint.copy_offset : 'unavailable';
+    };
+
+    it('pairs the members of the copies by their places, not by the order they are listed in', () => {
+        // blueprint order: the second copy listed as the first is
+        expect(offsetOf(twoCopies([0, 6, 3, 18, 24, 21]))).toEqual({ x: 18, y: 0 });
+        // mirror order: the second copy's two gear machines listed the other way round
+        expect(offsetOf(twoCopies([0, 6, 3, 24, 18, 21]))).toEqual({ x: 18, y: 0 });
+    });
+
+    it('keeps a stated gap the copies agree with and reads the gap again where they do not', () => {
+        const stated = (offset: { x: number; y: number }) => {
+            const source = twoCopies([0, 6, 3, 24, 18, 21]);
+            source.setpoint.copy_offset = offset;
+            return source;
+        };
+        expect(offsetOf(stated({ x: 18, y: 0 }))).toEqual({ x: 18, y: 0 });
+        // a gap stated for other copies (one machine each, 6 tiles apart) is not the gap of the copies found
+        expect(offsetOf(stated({ x: 6, y: 0 }))).toEqual({ x: 18, y: 0 });
+    });
+
+    it('gives no gap between copies that are mirrored against each other', () => {
+        // the second copy is the first turned east to west: the faster machine and the drops stand on the other side
+        const mirrored = twoCopies([0, 6, 12, 30, 24, 18], [1, 1, 1, -1, -1, -1]);
+        expect(offsetOf(mirrored)).toBeUndefined();
+        mirrored.setpoint.copy_offset = { x: 18, y: 0 };
+        expect(offsetOf(mirrored)).toBeUndefined();
     });
 
     it('retains the complete composite GCD unit, internal buffers/drills, fuel, rules and nontrivial ID maps', () => {
@@ -121,6 +176,120 @@ describe('complete repeated-unit conversion', () => {
         const subsystem = eightUnits();
         subsystem.inserters.push({ id: 17, source: { type: 'belt', id: 1 }, sink: { type: 'belt', id: 2 } });
         expect(planRepeatedUnitConversion(subsystem)).toMatchObject({ kind: 'unavailable', reason: { code: 'unassigned-entities' } });
+    });
+
+    /** The eight gear copies with their plate belt filled by inserters from chests: two infinity chests and a buffer chest */
+    function fedUnits(): Config {
+        const source = eightUnits();
+        source.belts[0].lanes[0].lane_end = { kind: 'dead_end' };
+        source.chests = [
+            { id: 1, type: 'infinity-chest', item_filter: [{ item_name: 'iron-plate', request_count: 100 }] },
+            { id: 2, type: 'buffer-chest', storage_size: 48, item_filter: 'iron-plate' },
+            { id: 3, type: 'infinity-chest', item_filter: [{ item_name: 'iron-plate', request_count: 100 }] },
+        ];
+        source.inserters.push(
+            { id: 17, source: { type: 'chest', id: 1 }, sink: { type: 'belt', id: 1 }, stack_size: 1, filters: ['iron-plate'] },
+            { id: 18, source: { type: 'chest', id: 2 }, sink: { type: 'belt', id: 1 }, stack_size: 1, filters: ['iron-plate'] },
+            { id: 19, source: { type: 'chest', id: 3 }, sink: { type: 'belt', id: 1 }, stack_size: 1, filters: ['iron-plate'] },
+        );
+        return source;
+    }
+    /** The same with the two infinity chests alone */
+    function infinityFedUnits(): Config {
+        const source = fedUnits();
+        source.chests = source.chests!.filter(chest => chest.id !== 2);
+        source.inserters = source.inserters.filter(inserter => inserter.id !== 18);
+        return source;
+    }
+
+    it('leaves out the inserters that fill a belt from a chest nothing drops into, with their chests', () => {
+        const source = fedUnits();
+        // every copy also takes coal from a chest of its own: an inserter from a chest into a machine is part of its copy
+        source.chests!.push(...Array.from({ length: 8 }, (_, i) => ({ id: 4 + i, type: 'infinity-chest' as const, item_filter: [{ item_name: 'coal', request_count: 50 }] })));
+        source.inserters.push(...Array.from({ length: 8 }, (_, i) => ({ id: 20 + i, source: { type: 'chest' as const, id: 4 + i }, sink: { type: 'machine' as const, id: i + 1 }, stack_size: 1, filters: ['coal'] })));
+        // where the copies share the belt, the place an inserter from outside drops at couples no copies
+        [16, 17, 18].forEach(index => { source.inserters[index].sink = { type: 'belt', id: 1, drop: { lane: 1, position: -0.5 } }; });
+        const plan = planRepeatedUnitConversion(source);
+        expect(plan.kind).toBe('available');
+        if (plan.kind !== 'available') return;
+        expect(plan.multiplicity).toBe(8);
+        // one copy written by hand: its machine, its three inserters and its coal chest; the belt counts as supplied
+        const byHand: Config = {
+            ...source,
+            setpoint: { ...source.setpoint, copies: 4 },
+            machines: [source.machines[0]],
+            inserters: [{ ...source.inserters[0], id: 1 }, { ...source.inserters[1], id: 2 }, { ...source.inserters[19], id: 3, source: { type: 'chest', id: 1 } }],
+            chests: [{ ...source.chests![3], id: 1 }],
+        };
+        expect(plan.candidate).toEqual(byHand);
+        expect(plan.retained.inserters.map(it => it.sourceIndex)).toEqual([0, 1, 19]);
+        expect(plan.retained.chests.map(it => it.sourceIndex)).toEqual([3]);
+    });
+
+    it('passes Check on the one copy without the inserters from infinity chests', () => {
+        const source = infinityFedUnits();
+        const plan = planRepeatedUnitConversion(source);
+        expect(plan.kind).toBe('available');
+        if (plan.kind !== 'available') return;
+        expect(plan.candidate.inserters).toEqual(source.inserters.slice(0, 2));
+        expect(plan.candidate.chests).toEqual([]);
+        expect(plan.candidate.belts).toEqual(source.belts);
+        expect(() => validateConfig(plan.candidate)).not.toThrow();
+    });
+
+    it('leaves out a chest nothing refers to, and still refuses a belt nothing refers to', () => {
+        const unreferenced = eightUnits();
+        unreferenced.chests = [
+            { id: 1, type: 'infinity-chest', item_filter: [], remove_unfiltered_items: true },
+            { id: 2, type: 'buffer-chest', storage_size: 48, item_filter: 'iron-plate' },
+        ];
+        const plan = planRepeatedUnitConversion(unreferenced);
+        expect(plan).toMatchObject({ kind: 'available', multiplicity: 8 });
+        expect(plan.kind === 'available' && plan.candidate.chests).toEqual([]);
+        const belt = eightUnits();
+        belt.belts.push({ id: 3, type: 'transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1 }] });
+        expect(planRepeatedUnitConversion(belt)).toEqual({ kind: 'unavailable', reason: { code: 'unassigned-entities',
+            message: 'An unreferenced belt or infinity chest cannot be assigned to a complete copy.' } });
+    });
+
+    it('keeps the refusal when something drops into the chest an inserter fills the belt from', () => {
+        const unassigned = { kind: 'unavailable', reason: { code: 'unassigned-entities', message: 'An inserter belongs to a subsystem without a machine.' } };
+        // an inserter from the gear belt into the infinity chest
+        const intoInfinity = infinityFedUnits();
+        intoInfinity.inserters.push({ id: 20, source: { type: 'belt', id: 2 }, sink: { type: 'chest', id: 1 } });
+        expect(planRepeatedUnitConversion(intoInfinity)).toEqual(unassigned);
+        // an inserter of a copy into the infinity chest: the chest is part of the build's flow
+        const fromCopy = infinityFedUnits();
+        fromCopy.inserters.splice(1, 1, { ...fromCopy.inserters[1], sink: { type: 'chest', id: 1 } });
+        expect(planRepeatedUnitConversion(fromCopy)).toEqual({ kind: 'unavailable', reason: { code: 'unsupported-boundary',
+            message: 'Infinity chests are supported only as external sources.' } });
+        // an inserter into the buffer chest
+        const intoBuffer = fedUnits();
+        intoBuffer.inserters.push({ id: 20, source: { type: 'belt', id: 2 }, sink: { type: 'chest', id: 2 } });
+        expect(planRepeatedUnitConversion(intoBuffer)).toEqual({ kind: 'unavailable', reason: { code: 'unassigned-entities',
+            message: 'A buffer chest or drill belongs to a subsystem without a machine.' } });
+    });
+
+    it('does not set aside an inserter from a chest that drops into anything but a belt', () => {
+        const unassigned = { kind: 'unavailable', reason: { code: 'unassigned-entities', message: 'An inserter belongs to a subsystem without a machine.' } };
+        // from the infinity chest into a car
+        const intoCar = infinityFedUnits();
+        intoCar.chests!.push({ id: 4, type: 'car' });
+        intoCar.inserters.push({ id: 20, source: { type: 'chest', id: 3 }, sink: { type: 'chest', id: 4 } });
+        expect(planRepeatedUnitConversion(intoCar)).toEqual(unassigned);
+        // from the infinity chest into the buffer chest
+        const intoChest = fedUnits();
+        intoChest.inserters.push({ id: 20, source: { type: 'chest', id: 3 }, sink: { type: 'chest', id: 2 } });
+        expect(planRepeatedUnitConversion(intoChest)).toEqual({ kind: 'unavailable', reason: { code: 'unassigned-entities',
+            message: 'A buffer chest or drill belongs to a subsystem without a machine.' } });
+    });
+
+    it('refuses a belt that only an inserter from outside fills', () => {
+        const source = infinityFedUnits();
+        source.belts.push({ id: 3, type: 'transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1 }] });
+        source.inserters.push({ id: 20, source: { type: 'chest', id: 3 }, sink: { type: 'belt', id: 3 } });
+        expect(planRepeatedUnitConversion(source)).toEqual({ kind: 'unavailable', reason: { code: 'unassigned-entities',
+            message: 'An unreferenced belt or infinity chest cannot be assigned to a complete copy.' } });
     });
 
     it('refuses units of a machine that places its results into a container', () => {
