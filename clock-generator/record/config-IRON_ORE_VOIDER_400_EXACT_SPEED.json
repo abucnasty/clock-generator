@@ -15,7 +15,7 @@
     "inserter:6": "0-6,10-16,19-25,29-35,38-44,48-54,58-64,67-73,77-83,86-92,96-102,106-112,115-121,125-131,134-140"
   },
   "alternatives": [
-    {"id": "takt_batches_observed", "verdict": "no recovery", "holds": true, "rate": 400, "supply": null, "window_cycle_ticks": 144, "wake_ups": 25.175, "descriptions_cut": 0, "clock_sha256": "03bcb4e36bed9a642955cc3d81070986a1869af6f9bd34cb17f1ff49505e885e", "windows_sha256": "0d62a9ff2ee8eb1a181eb2dbe194109a127feb2c78be69d21a3d83ee002a6b33", "results_sha256": "aa2be79db00c68ec221166a68ebac2687298238f69bcfbf8cf909c531559c53b"},
-    {"id": "time_division_windows", "verdict": "stable", "holds": true, "rate": 400, "supply": null, "window_cycle_ticks": 144, "wake_ups": 0, "descriptions_cut": 0, "clock_sha256": "719cfc482830f08461177b8cd086e39d44271fdf480c4767780adfc0a7d90d61", "windows_sha256": "697ceea34661a16ef20eaa11b3ae4aa41730c0ee363ba5c8dbfe5af1bb73a944", "results_sha256": "7f9ccde23949c98a72101c6bcc05b181c145c608ecc2a351b217ba82ef4ea016"}
+    {"id": "takt_batches_observed", "verdict": "no recovery", "holds": true, "rate": 400, "supply": null, "window_cycle_ticks": 144, "wake_ups": 25.175, "descriptions_cut": 0, "clock_sha256": "03bcb4e36bed9a642955cc3d81070986a1869af6f9bd34cb17f1ff49505e885e", "windows_sha256": "0d62a9ff2ee8eb1a181eb2dbe194109a127feb2c78be69d21a3d83ee002a6b33", "results_sha256": "a567e15da592b00c38a1a6b879b9fc0b7ae09b1cd4bb4b5536c04c18a0a3b0ae"},
+    {"id": "time_division_windows", "verdict": "stable", "holds": true, "rate": 400, "supply": null, "window_cycle_ticks": 144, "wake_ups": 0, "descriptions_cut": 0, "clock_sha256": "719cfc482830f08461177b8cd086e39d44271fdf480c4767780adfc0a7d90d61", "windows_sha256": "697ceea34661a16ef20eaa11b3ae4aa41730c0ee363ba5c8dbfe5af1bb73a944", "results_sha256": "fc39a4cbaaa53f8244cd2bfbec3c1dd3cd938e4b14d6bba75ab316dcd9d594df"}
   ]
 }

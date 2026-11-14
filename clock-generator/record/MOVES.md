@@ -8,6 +8,11 @@ a line that names the reason and lists the jobs. A pull request that moves no re
 CI checks this file: the "Record check" fails when a selected clock got worse than in the base and its job key is not in the lines the pull
 request adds to this file.
 
+## The loss trials run from the cold start only
+No recommended clock, verdict, rate, wakeups or clock hash moved.
+- all 86 jobs: `results_sha256` of every clock that holds, because the verdict no longer carries the always-empty `broken_at_other_lane_phases` (338 clocks)
+- front-front-exit-turbo-mirrored-moving-config-different-items, front-front-exit-turbo-unmirrored-moving-config-different-items, pickup-electromagnetic-turbo-underground-entrance-moving, pickup-electromagnetic-turbo-underground-exit-moving (takt_batches_observed, takt_batches_observed_swings_2): back in 3 window cycles after a loss, was 5. The 5 came from a start at another lane phase; the loss trials no longer run from one
+
 ## The record holds no hash of a clock's text (#749)
 The record format is clock-record-3: a clock no longer has `text_sha256`, so a change of a description, such as the "Made by" line or the engine's version, moves no record file. `clock_sha256` hashes what the combinators do. No selection, rate, window, wakeup, `clock_sha256`, `windows_sha256` or `results_sha256` moved.
 - all 86 jobs: the format line, and `text_sha256` of every clock, removed
