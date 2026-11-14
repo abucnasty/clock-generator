@@ -81,6 +81,38 @@ describe('canonical repeated-unit form application', () => {
         expect(applyRepeatedUnitConversion({ ...form, setpoint: { ...form.setpoint, items_per_second: 5 } }, plan)).toBeNull();
         expect(form).toEqual(before);
     });
+
+    it('keeps the inserters that fill the input belt from chests once, with their chests', () => {
+        const form = configToFormData({
+            setpoint: { recipe: 'iron-gear-wheel', items_per_second: 2, copies: 1 },
+            machines: Array.from({ length: 4 }, (_, i) => ({ id: i + 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 })),
+            belts: [
+                { id: 1, type: 'transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1, lane_end: { kind: 'dead_end' } }] },
+                { id: 2, type: 'transport-belt', lanes: [{ ingredient: 'iron-gear-wheel', stack_size: 1 }] },
+            ],
+            chests: [
+                { type: ChestType.INFINITY_CHEST, id: 1, item_filter: [{ item_name: 'iron-plate', request_count: 100 }] },
+                { type: ChestType.INFINITY_CHEST, id: 2, item_filter: [{ item_name: 'iron-plate', request_count: 100 }] },
+            ],
+            inserters: [
+                { id: 1, source: { type: 'chest', id: 1 }, sink: { type: 'belt', id: 1 }, filters: ['iron-plate'] },
+                { id: 2, source: { type: 'chest', id: 2 }, sink: { type: 'belt', id: 1 }, filters: ['iron-plate'] },
+                ...Array.from({ length: 4 }, (_, i) => [
+                    { id: 2 * i + 3, source: { type: 'belt' as const, id: 1 }, sink: { type: 'machine' as const, id: i + 1 }, filters: ['iron-plate'] },
+                    { id: 2 * i + 4, source: { type: 'machine' as const, id: i + 1 }, sink: { type: 'belt' as const, id: 2 }, filters: ['iron-gear-wheel'] },
+                ]).flat(),
+            ],
+        } as Config);
+        const plan = planRepeatedUnitConversion(formDataToConfig(form));
+        expect(plan.kind).toBe('available');
+        if (plan.kind !== 'available') return;
+        const next = applyRepeatedUnitConversion(form, plan)!;
+        expect(next).not.toBeNull();
+        expect(next.chests.map(it => it._uuid)).toEqual(form.chests.map(it => it._uuid));
+        expect(next.inserters.map(it => it._uuid)).toEqual(form.inserters.slice(0, 4).map(it => it._uuid));
+        expect(next.setpoint.copies).toBe(4);
+        expect(formDataToConfig(next)).toEqual(plan.candidate);
+    });
 });
 
 describe('a config that states its output belt', () => {
