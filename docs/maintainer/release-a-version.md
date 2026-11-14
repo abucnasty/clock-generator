@@ -48,6 +48,8 @@ Release the work on `master`: the clock generator, the site and, if its version 
 The merge starts `release.yml`. After the tests, the gate shows `release`. The `release` job makes the tag
 `v<version>` and the GitHub release, and the `production` job deploys the tag to production. If the sidecar version is
 new, the `sidecar` job uploads it to the mod portal. If neither version is new, the `release` job stops with an error.
+The `production` and `sidecar` jobs start also when the `tests` job did not start because a pull request passed the tests
+on the same files. Check that both jobs ran in the run: a skipped job there is a fault.
 
 ## Related information
 

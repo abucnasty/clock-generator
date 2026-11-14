@@ -12,6 +12,9 @@ then.
 
 - The latest tag exists, and it was made by a release after the pull request that added this route. A push runs the
   workflow file of the pushed commit. A tag that is older does not have the gate.
+- The `release.yml` of the latest tag has the `if` lines of the `production` and `sidecar` jobs with `!cancelled()`. A tag
+  that is older skips both jobs when the `tests` job did not start because a pull request passed the tests. If the tag
+  is older, copy the two `if` lines from `master` into the fix (step 3). Then the merge runs the new lines.
 - You can make a branch and a pull request. abucnasty merges both pull requests.
 
 ## Procedure
@@ -50,8 +53,9 @@ then.
 ## Result
 
 The merge in step 6 starts `release.yml` on `hotfix/<version>`. After the tests, the gate shows `hotfix`. The `release` job
-makes the tag and the GitHub release, and the `production` job deploys the tag to production. `master` has the fix and
-the version after step 7.
+makes the tag and the GitHub release, and the `production` job deploys the tag to production. If the sidecar version is
+new, the `sidecar` job uploads it. These jobs start also when the `tests` job did not start because a pull request passed
+the tests on the same files. `master` has the fix and the version after step 7.
 
 ## Related information
 

@@ -20,6 +20,10 @@ name: Release
 #   users use is deployed from that tag, after the release exists.
 # - A sidecar version that the mod portal does not have is published by publish-sidecar.yml, which this workflow calls.
 # - A merge where neither version is new fails: a release that releases nothing is a mistake.
+# The `production` and `sidecar` jobs run when the `release` job succeeded, whether the `tests` job ran or was skipped as
+# already tested. Each job here that needs another has a status function in its `if` (`!cancelled()`): without one, GitHub
+# adds `success()`, and a skipped `tests` job further up the chain would skip the job.
+# clock-generator/tests/scripts/release-workflow.test.ts checks that.
 #
 # The site is the Cloudflare Worker clock-generator (clock-generator-ui/wrangler.jsonc), at https://clock.abucnasty.dev.
 # Only this workflow deploys it: production with `wrangler deploy`, the preview of master with
@@ -167,7 +171,9 @@ jobs:
     # released tag again
     name: Deploy to production
     needs: release
-    if: needs.release.outputs.released == 'true' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master')
+    # `release` ran and succeeded. The explicit status function matters: without one GitHub adds `success()`, which is false
+    # when `tests`, further up the chain, was skipped as already tested, and the job would be skipped on most releases.
+    if: ${{ !cancelled() && needs.release.result == 'success' && (needs.release.outputs.released == 'true' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master')) }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -223,7 +229,8 @@ jobs:
     # The sidecar mod, only when its version is new on the mod portal
     name: Publish the sidecar
     needs: release
-    if: needs.release.outputs.sidecar == 'true'
+    # as for `production`: `release` succeeded, whether `tests` ran or was skipped as already tested
+    if: ${{ !cancelled() && needs.release.result == 'success' && needs.release.outputs.sidecar == 'true' }}
     uses: ./.github/workflows/publish-sidecar.yml
     permissions:
       contents: read
