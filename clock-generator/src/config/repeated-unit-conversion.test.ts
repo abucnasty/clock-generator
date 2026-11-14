@@ -65,6 +65,58 @@ describe('complete repeated-unit conversion', () => {
         expect(unplaced.kind === 'available' && unplaced.candidate.setpoint.copy_offset).toBeUndefined();
     });
 
+    /**
+     * Two copies of two gear machines and a faster one, each machine with an inserter from the plate belt and one onto the
+     * gear belt; `xs` gives where the machines stand, in the order they are listed: three of the first copy, three of the
+     * second. Each inserter stands beside its machine, `side` tiles along the belt (the drop beside it on the other side).
+     */
+    function twoCopies(xs: number[], side: number[] = xs.map(() => 1)): Config {
+        const speeds = [1, 1, 2, 1, 1, 2];
+        return {
+            setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+            machines: xs.map((x, i) => ({ id: i + 1, recipe: 'iron-gear-wheel', crafting_speed: speeds[i], productivity: 0, position: { x, y: 3 } })),
+            inserters: xs.flatMap((x, i) => [
+                { id: 2 * i + 1, source: { type: 'belt' as const, id: 1 }, sink: { type: 'machine' as const, id: i + 1 }, position: { x, y: 1 } },
+                { id: 2 * i + 2, source: { type: 'machine' as const, id: i + 1 }, sink: { type: 'belt' as const, id: 2 }, position: { x: x + side[i], y: 5 } },
+            ]),
+            belts: [
+                { id: 1, type: 'transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1 }] },
+                { id: 2, type: 'transport-belt', lanes: [{ ingredient: 'iron-gear-wheel', stack_size: 1 }] },
+            ], chests: [],
+        } as Config;
+    }
+    const offsetOf = (config: Config) => {
+        const plan = planRepeatedUnitConversion(config);
+        expect(plan).toMatchObject({ kind: 'available', multiplicity: 2 });
+        return plan.kind === 'available' ? plan.candidate.setpoint.copy_offset : 'unavailable';
+    };
+
+    it('pairs the members of the copies by their places, not by the order they are listed in', () => {
+        // blueprint order: the second copy listed as the first is
+        expect(offsetOf(twoCopies([0, 6, 3, 18, 24, 21]))).toEqual({ x: 18, y: 0 });
+        // mirror order: the second copy's two gear machines listed the other way round
+        expect(offsetOf(twoCopies([0, 6, 3, 24, 18, 21]))).toEqual({ x: 18, y: 0 });
+    });
+
+    it('keeps a stated gap the copies agree with and reads the gap again where they do not', () => {
+        const stated = (offset: { x: number; y: number }) => {
+            const source = twoCopies([0, 6, 3, 24, 18, 21]);
+            source.setpoint.copy_offset = offset;
+            return source;
+        };
+        expect(offsetOf(stated({ x: 18, y: 0 }))).toEqual({ x: 18, y: 0 });
+        // a gap stated for other copies (one machine each, 6 tiles apart) is not the gap of the copies found
+        expect(offsetOf(stated({ x: 6, y: 0 }))).toEqual({ x: 18, y: 0 });
+    });
+
+    it('gives no gap between copies that are mirrored against each other', () => {
+        // the second copy is the first turned east to west: the faster machine and the drops stand on the other side
+        const mirrored = twoCopies([0, 6, 12, 30, 24, 18], [1, 1, 1, -1, -1, -1]);
+        expect(offsetOf(mirrored)).toBeUndefined();
+        mirrored.setpoint.copy_offset = { x: 18, y: 0 };
+        expect(offsetOf(mirrored)).toBeUndefined();
+    });
+
     it('retains the complete composite GCD unit, internal buffers/drills, fuel, rules and nontrivial ID maps', () => {
         const source: Config = {
             setpoint: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },

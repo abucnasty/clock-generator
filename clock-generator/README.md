@@ -135,7 +135,10 @@ inserters written out twice or more, joined by no inserter) is refused and told 
 (`src/config/copies-validator.ts`). Describe the smallest repeating unit of a build, not a whole block of it.
 The site offers to make that one copy (`src/config/repeated-unit-conversion.ts`). An inserter that takes from a chest
 and drops onto a belt, in no copy, fills the belt for all copies: it is kept once, with its chest. When something drops
-into that chest, the chest is part of the build and the site does not make the copy.
+into that chest, the chest is part of the build and the site does not make the copy. Where the next copy stands
+(`setpoint.copy_offset`) is read from the positions of the copies: each entity is paired with the entity of its kind at
+the same place in the next copy, whatever order they are listed in. Copies that are not moved copies of each other
+(one mirrored) get no gap, and a gap the configuration states is kept only where the copies agree with it.
 `copies` may be fractional, such as 5.5: the build then holds a partial block, and its rate is planned as that fraction of
 one block's (5.5 copies of a block of 4 assemblers making 240 a second means one block makes 480/11 a second). The unit
 itself is still whole, with identical units, no inserter between them and shared belts. The number is read as an exact

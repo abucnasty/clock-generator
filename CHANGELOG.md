@@ -64,6 +64,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ### Fixed
 - ui: Paste from Factorio keeps where the next copy stands, as the export gives it
+- ui: Use simpler version fills Next copy stands on builds with symmetric copies
 - ui: Copy's warning no longer stays open over the result after Generate
 - ui: Paste from Factorio suggests no more than the build can hold, and names the limit
 

@@ -189,11 +189,12 @@ function analyze(config: Config): Analysis {
     return { rows, ids, components, componentOf, users, feeders };
 }
 
-type Place = { x: number; y: number } | undefined;
+/** Where a member of a copy stands, with its kind: a machine, chest or drill, or an inserter */
+type Place = { kind: NodeKind | 'inserter'; at: { x: number; y: number } | undefined };
 
 /**
  * The witness explicitly labels every local member and every private resource alias. Where the members stand is no part of
- * it (copies stand apart); it comes back beside it, in the order of the witness, for the gap between copies.
+ * it (copies stand apart); it comes back beside it, with each member's kind, for the gap between copies.
  */
 function witness(config: Config, analysis: Analysis, component: Component): { proof: unknown; places: Place[] } {
     const local = new Map<string, string>();
@@ -214,7 +215,8 @@ function witness(config: Config, analysis: Analysis, component: Component): { pr
         const { id: _id, position: _position, ...rest } = row as Row & { position?: { x: number; y: number } };
         return { ownIdPresent: own(row, 'id'), record: rest };
     };
-    const placed = (rows: Row[]): void => rows.forEach(row => places.push((row as Row & { position?: { x: number; y: number } }).position));
+    const placed = (kind: Place['kind'], rows: Row[]): void =>
+        rows.forEach(row => places.push({ kind, at: (row as Row & { position?: { x: number; y: number } }).position }));
     const end = (endpoint: End): unknown => {
         const key = keyOf(endpoint.type, endpoint.id);
         let label: unknown = local.get(key);
@@ -241,8 +243,8 @@ function witness(config: Config, analysis: Analysis, component: Component): { pr
             const sink = config.inserters[index].sink;
             return keyOf(sink.type, sink.id);
         });
-    placed(machines); placed(chests); placed(drills);
-    placed(executionOrder.map(index => config.inserters[index]));
+    placed('machine', machines); placed('chest', chests); placed('drill', drills);
+    placed('inserter', executionOrder.map(index => config.inserters[index]));
     const inserters = executionOrder.map(index => {
         const ins = config.inserters[index];
         return withoutId({ ...ins, source: end(ins.source), sink: end(ins.sink) } as Row);
@@ -272,24 +274,28 @@ function equalWitness(a: unknown, b: unknown): boolean {
 const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
 
 /**
- * Where the next copy stands from the one before it: the same step from every member of a unit to its counterpart in the
- * next, for every unit of every group. None when a member has no place or the steps differ.
+ * Where the next copy stands from the one before it: the same step from every member of a copy to its counterpart in the
+ * next. The members of a copy, from every unit of every group, are paired by kind and then by place (x, then y), not by the
+ * order they are listed in: a copy moved along keeps that order, so a copy listed in another order (one that is symmetric
+ * inside, listed from the other side) still pairs. None when a member has no place or the steps differ, as between copies
+ * mirrored against each other.
  */
 function copyOffsetOf(groups: Iterable<{ places: Place[] }[]>, multiplicity: number): { x: number; y: number } | undefined {
-    let offset: { x: number; y: number } | undefined;
+    const copies: Place[][] = Array.from({ length: multiplicity }, () => []);
     for (const group of groups) {
         const step = group.length / multiplicity;
-        for (let unit = 0; unit < step; unit++) {
-            for (let copy = 1; copy < multiplicity; copy++) {
-                const before = group[unit + (copy - 1) * step].places, after = group[unit + copy * step].places;
-                for (let member = 0; member < before.length; member++) {
-                    const a = before[member], b = after[member];
-                    if (a === undefined || b === undefined) return undefined;
-                    const moved = { x: Number((b.x - a.x).toFixed(6)), y: Number((b.y - a.y).toFixed(6)) };
-                    if (offset === undefined) offset = moved;
-                    else if (offset.x !== moved.x || offset.y !== moved.y) return undefined;
-                }
-            }
+        group.forEach((unit, index) => copies[Math.floor(index / step)].push(...unit.places));
+    }
+    if (copies.some(copy => copy.some(member => member.at === undefined))) return undefined;
+    const sorted = copies.map(copy => [...copy].sort((a, b) => a.kind.localeCompare(b.kind) || a.at!.x - b.at!.x || a.at!.y - b.at!.y));
+    let offset: { x: number; y: number } | undefined;
+    for (let copy = 1; copy < multiplicity; copy++) {
+        const before = sorted[copy - 1], after = sorted[copy];
+        for (let member = 0; member < before.length; member++) {
+            const a = before[member].at!, b = after[member].at!;
+            const moved = { x: Number((b.x - a.x).toFixed(6)), y: Number((b.y - a.y).toFixed(6)) };
+            if (offset === undefined) offset = moved;
+            else if (offset.x !== moved.x || offset.y !== moved.y) return undefined;
         }
     }
     return offset !== undefined && (offset.x !== 0 || offset.y !== 0) ? offset : undefined;
@@ -382,7 +388,10 @@ export function planRepeatedUnitConversion(config: Config): RepeatedUnitConversi
         });
         const copies = multipliedCopies(config.setpoint.copies, multiplicity);
         candidate.setpoint.copies = copies;
-        // where the next copy stands, read from the places of the copies; a config that had copies already says nothing of it
+        // where the next copy stands, read from the places of the copies; a config that had copies already says nothing of it.
+        // A stated copy_offset (pasted from the export) may be the gap of other copies than the ones found here, so it is
+        // kept only where the copies found stand that far apart, which is the gap read here: one they do not agree with is
+        // replaced by it, and one they cannot confirm (a member without a place, copies mirrored) is left out
         const offset = config.setpoint.copies === 1 ? copyOffsetOf(groups.values(), multiplicity) : undefined;
         delete candidate.setpoint.copy_offset;
         if (offset !== undefined) candidate.setpoint.copy_offset = offset;
