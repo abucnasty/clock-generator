@@ -69,6 +69,7 @@ const LANE_REASON_WORDS: { [C in LaneNotCheckedReason['code']]: (reason: Extract
     check_stopped: reason => `The lanes its copies share could not be checked: ${reason.data.message}${/[.!?]$/.test(reason.data.message) ? '' : '.'}`,
     output_belt_not_run: () => 'The output belt is run with the copies only together with a lane they take from, and no such lane is run.',
     lane_not_in_model: () => 'The check of the shared lanes does not run this lane.',
+    taker_spacing_unknown: () => 'Not every inserter on this lane has a position, so the distance between them is not known.',
 };
 
 /**

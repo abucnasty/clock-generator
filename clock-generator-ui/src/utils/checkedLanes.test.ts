@@ -132,6 +132,14 @@ describe('the words of a lane not checked or not run with the copies', () => {
         }
     });
 
+    // the engine's row of a lane of one copy whose inserters do not all have positions (checked-lanes.ts in the engine)
+    it('say on the lane\'s row that the distance between its inserters is not known', () => {
+        const sentence = 'Not every inserter on this lane has a position, so the distance between them is not known.';
+        const row = { belt_id: 1, lane: 1, together: null, state: { kind: 'not_checked', reason: { code: 'taker_spacing_unknown' } }, label: 'Not checked', sentence } as const;
+        expect(rowSentenceShown(row)).toBe(sentence);
+        expect(stateTone(row.state)).toBe('quiet');
+    });
+
     it('show the sentence of a result whose reason is a sentence (an older engine)', () => {
         const row = { state: { kind: 'not_checked', reason: 'The check of the shared lanes does not run this lane.' }, sentence: 'The check of the shared lanes does not run this lane.' };
         expect(stateSentence(row as unknown as Parameters<typeof stateSentence>[0])).toBe(row.sentence);
