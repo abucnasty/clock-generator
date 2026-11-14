@@ -53,7 +53,8 @@ describe("a run's sealed state transition history, read back", () => {
             backed_up_belts ? { ...config, overrides: { ...config.overrides, backed_up_belts } } : config, { logger: quiet }));
         expectReadBackAsBefore(recorded);
         read_back.push(...recorded.flatMap(({ sealed }) => expandStateTransitionHistory(sealed).entities));
-    });
+        // a whole generation with its loss trials: 30 s for the belt-fed build on a desktop, twice that on the GitHub runner
+    }, 240_000);
 
     it("equals what was serialized before over two periods, and without the game's states", async () => {
         const config = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE_330);

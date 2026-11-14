@@ -75,7 +75,7 @@ describe("a composed clock made and not stable on a lane the copies share", () =
         const composed = generated.not_made.find(it => it.id === "per-branch");
         expect(composed).toMatchObject({ label: "Coordinated Sources" });
         expect(composed!.reason).toMatch(/^Made on 352 ticks and not stable\. It is not stable on a lane its copies share\. The advanced circuit lane \(lane 1 of belt 1\) ends in an infinite end\. The 5\.5 copies take advanced circuit from it\./);
-    }, 300_000);
+    });
 });
 
 // AUTOMATION_SCIENCE_240: 9 copies take iron gear wheel and copper plate from the two dead-ended lanes of belt 1. Under
