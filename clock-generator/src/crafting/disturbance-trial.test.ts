@@ -229,22 +229,21 @@ describe("the losses a build whose items spoil is tried with", () => {
 
 // Automation science: copper plates and gear wheels off one belt into a machine, the packs onto another
 describe("the verdict of a clock's losses", () => {
-    const outcome = (loss: LossOutcome["loss"], recovers: boolean, failed_pickup_phases?: LossOutcome["failed_pickup_phases"]): LossOutcome => ({
+    const outcome = (loss: LossOutcome["loss"], recovers: boolean): LossOutcome => ({
         loss, bin_ticks: 100, window_cycles_per_bin: 1, expected_per_bin: 10, trials: [], planned_trials: 16, recovers,
-        recovered_after_bins: recovers ? 1 : null, stopped_after_ticks: 50, ticks: 1000, ...(failed_pickup_phases && { failed_pickup_phases }),
+        recovered_after_bins: recovers ? 1 : null, stopped_after_ticks: 50, ticks: 1000,
     });
 
-    it("names the losses it does not get back from, and apart those it only misses from another lane phase of a moving belt", () => {
+    it("names the losses it does not get back from", () => {
         const report = reportOf(100, 10, outcome({ kind: "none" }, true), [
             outcome({ kind: "supply", item: "coal" }, false),
             outcome({ kind: "supply", item: "iron-plate" }, true),
-            outcome({ kind: "supply", item: "copper-plate" }, false, { "inserter:2": [1, 5] }),
+            outcome({ kind: "supply", item: "copper-plate" }, false),
             outcome({ kind: "output", item: "iron-gear-wheel" }, true),
         ]);
         expect(verdictOf(report)).toEqual({
             survives: false,
             broken_by: ["coal stops arriving", "copper plate stops arriving"],
-            broken_at_other_lane_phases: ["copper plate stops arriving"],
             recovered_after_window_cycles: null,
         });
     });
@@ -256,7 +255,6 @@ describe("the verdict of a clock's losses", () => {
         expect(verdictOf(report)).toEqual({
             survives: false,
             broken_by: ["coal stops arriving"],
-            broken_at_other_lane_phases: [],
             not_tried: ["iron plate stops arriving", "iron gear wheel is not taken away"],
             recovered_after_window_cycles: null,
         });
@@ -270,9 +268,9 @@ describe("the verdict of a clock's losses", () => {
         expect(notTriedSentence(undefined)).toBe("");
     });
 
-    it("has none apart for a clock that gets back from every loss", () => {
+    it("names none for a clock that gets back from every loss", () => {
         const report = reportOf(100, 10, outcome({ kind: "none" }, true), [outcome({ kind: "supply", item: "coal" }, true)]);
-        expect(verdictOf(report)).toEqual({ survives: true, broken_by: [], broken_at_other_lane_phases: [], recovered_after_window_cycles: 1 });
+        expect(verdictOf(report)).toEqual({ survives: true, broken_by: [], recovered_after_window_cycles: 1 });
     });
 });
 
@@ -354,8 +352,7 @@ describe("the trials of a loss that breaks a clock, as numbers", () => {
     it("are in the verdict for each loss that breaks the clock, in the order of the losses it does not recover from, and absent from a clock that recovers", () => {
         const none = outcome({ kind: "none" }, [trial(0, 0, false, true)], 1);
         const coal = { ...outcome({ kind: "supply", item: "coal" }, [trial(0, 1900, true, true), trial(18, 1900, true, false)]), every_trial: { run: 16, recovered: 13 } };
-        const copper = { ...outcome({ kind: "supply", item: "copper-plate" }, [trial(36, 1900, true, false)]), failed_pickup_phases: { "inserter:2": [1, 5] as const },
-            every_trial: { run: 16, recovered: 0 } };
+        const copper = { ...outcome({ kind: "supply", item: "copper-plate" }, [trial(36, 1900, true, false)]), every_trial: { run: 16, recovered: 0 } };
         const verdict = verdictOf(reportOf(72, 10, none, [coal, outcome({ kind: "supply", item: "iron-plate" }, stopped), copper]));
         expect(verdict.broken_by).toEqual(["coal stops arriving", "copper plate stops arriving"]);
         expect(verdict.trial_counts?.map(it => [it.loss.items[0], it.planned, it.run, it.recovered])).toEqual([["coal", 16, 16, 13], ["copper-plate", 16, 16, 0]]);
