@@ -134,7 +134,7 @@ export type MachineConfiguration = z.infer<typeof MachineConfigurationSchema>;
  *     inside a unit;
  *   - the belts are shared between the units: every unit takes from and drops onto the same belt lanes.
  *   A config that itself holds several identical units (copies of one unit side by side, each with its own inserters)
- *   is refused with a CopiesError: describe one unit and set `copies` to the number of units instead.
+ *   is clocked as given, every inserter where it stands; one unit with `copies` set to the number of units is simpler.
  */
 /** What a target's rate counts: the item made and taken out, or the item taken in and destroyed */
 export const TARGET_COUNTS = ["made", "destroyed"] as const;

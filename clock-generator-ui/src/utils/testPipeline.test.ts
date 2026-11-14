@@ -66,6 +66,13 @@ describe('the tests of a clock, from the result\'s data', () => {
         expect(said({ ...clock('takt_batches_observed_swings_4'), copies: 1, checkedLanes: undefined })[1]).toBe('does-not-apply: Does not apply | The build has one copy.');
     });
 
+    // a build of one copy whose inserters take from one lane: the engine checks the lane with all of them, and the box shows it
+    it('a build of one copy with several inserters on a lane: the second test shows the check of the lane', () => {
+        const loss = { ...clock('takt_batches_observed'), copies: 1 };
+        expect(said(loss)[1]).toBe('failed: Makes 234.07/s of 240/s | On the lanes several of its inserters take from.');
+        expect(said({ ...clock('time_study_windows'), copies: 1 })[1]).toBe('passed: Holds 240/s | On the lanes several of its inserters take from.');
+    });
+
     it('no run with the copies where no lane they take from is run: the second test does not apply', () => {
         const stable = clock('time_study_windows');
         const notRun = { ...stable, checkedLanes: { ...stable.checkedLanes!, line: { ...stable.checkedLanes!.line, run_with_copies: false } } };

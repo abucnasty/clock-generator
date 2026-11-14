@@ -314,6 +314,8 @@ export interface ValidatedResponse {
     type: 'validated';
     requestId: number;
     validation: ConfigValidation;
+    /** The copies a build of several identical copies holds, which Check clocks as given, and whether one copy can be offered */
+    recovery?: RepeatedUnitsRecovery;
 }
 
 export interface ValidationFailedResponse {

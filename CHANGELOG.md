@@ -65,6 +65,8 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: one copy with Copies is offered for builds fed from chests, leaving the chests out
 - generation: inserters that fill a belt from a chest nothing fills get no enable window
 - generation: a lane that several inserters of one copy take from is checked with all of them
+- generation: a build that holds identical copies is clocked as given, no longer refused
+- ui: Build check notes a build of identical copies and offers the simpler version where it can
 
 ### Fixed
 - ui: Paste from Factorio keeps where the next copy stands, as the export gives it

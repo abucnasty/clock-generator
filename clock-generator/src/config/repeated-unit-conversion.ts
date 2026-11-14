@@ -1,6 +1,5 @@
 import { Config, ConfigSchema } from './schema';
-import { findRepeatedUnits, validateCopies } from './copies-validator';
-import { CopiesError } from './errors';
+import { findRepeatedUnits } from './copies-validator';
 import { outsideSupplyOf } from './outside-supply';
 import { fraction } from '../data-types/fraction';
 import { orderByMachineDependencies } from '../common/order-by-machine-dependencies';
@@ -389,8 +388,7 @@ export function planRepeatedUnitConversion(config: Config): RepeatedUnitConversi
         if (offset !== undefined) candidate.setpoint.copy_offset = offset;
         if (!ConfigSchema.safeParse(candidate).success) refuse('copies-not-representable', 'The multiplied Copies value is outside the supported schema.');
         analyze(candidate);
-        try { validateCopies(candidate); } catch (error) {
-            if (!(error instanceof CopiesError)) throw error;
+        if (findRepeatedUnits(candidate).gcd > 1) {
             refuse('candidate-still-repeated', 'The retained composition still contains repetition under the existing Copies check.');
         }
         return { kind: 'available', sourceConfigKey: JSON.stringify(config), multiplicity,

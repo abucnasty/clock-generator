@@ -773,7 +773,7 @@ function recordedBuildOf(config: Config, options: RunOptions, debug: MutableDebu
     // Throws InserterCoverageError if any machine ingredient or output lacks an inserter.
     assertOutputTransferGenerationSupported(config);
     assertInserterCoverage(config);
-    // Throws CopiesError if the config holds several identical units where it should describe one and set copies.
+    // Throws where an inserter is out of the scope a build of copies needs; a config of several identical units is clocked as given.
     validateCopies(config);
     // Throws FlowAcrossCopySpacingError if a belt states that its items move across the copy spacing, on a lane the copies share.
     assertFlowAlongCopySpacing(config);

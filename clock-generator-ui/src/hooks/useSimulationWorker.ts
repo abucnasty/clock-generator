@@ -30,7 +30,8 @@ export type { ClockAlternativeView, RecipeInfo } from '../worker/types';
 export type ValidationState =
     | { status: 'none' }
     | { status: 'running'; config: Config }
-    | { status: 'valid'; config: Config; validation: ConfigValidation }
+    /** `recovery`: the build holds several identical copies, clocked as given; whether one copy with Copies can be offered */
+    | { status: 'valid'; config: Config; validation: ConfigValidation; recovery?: RepeatedUnitsRecovery }
     /** `crashed`: the check's worker stopped, so the build was not judged; Generate checks again */
     | { status: 'invalid'; config: Config; message: string; crashed?: boolean; recovery?: RepeatedUnitsRecovery;
         diagnostics?: ValidationDiagnostic[];
@@ -542,7 +543,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
             if (requested && requested.requestId === response.requestId) {
                 checkRunningRef.current = false;
                 setValidation(response.type === 'validated'
-                    ? { status: 'valid', config: requested.config, validation: response.validation }
+                    ? { status: 'valid', config: requested.config, validation: response.validation, ...(response.recovery && { recovery: response.recovery }) }
                     : { status: 'invalid', config: requested.config, message: response.message, recovery: response.recovery, diagnostics: response.diagnostics,
                         ...(response.internal ? { crashed: true, internal: response.internal } : {}) });
                 pendingChecks.settle(response.requestId, response.type === 'validated'

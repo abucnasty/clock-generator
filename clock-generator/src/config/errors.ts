@@ -1,5 +1,4 @@
 import { ZodError } from "zod";
-import { fraction } from "../data-types/fraction";
 
 /**
  * Represents a single validation error with user-friendly details.
@@ -289,38 +288,6 @@ export class BeltPickupSinkError extends Error {
 /** The machines of one unit of a build, as found by the copies validator */
 export interface CopiesUnit {
     machine_ids: number[];
-}
-
-/**
- * A config holds several identical units of a build, where it should describe one unit and set
- * `setpoint.copies`.
- */
-export class CopiesError extends Error {
-    /** The identical copies found, each with the machine ids of its unit; one entry per copy */
-    public readonly units: CopiesUnit[];
-    /** The number of identical copies the config holds */
-    public readonly copies_found: number;
-    /** `setpoint.copies` of the config as given */
-    public readonly configured_copies: number;
-
-    constructor(units: CopiesUnit[], configuredCopies: number) {
-        super(CopiesError.formatMessage(units, configuredCopies));
-        this.name = 'CopiesError';
-        this.units = units;
-        this.copies_found = units.length;
-        this.configured_copies = configuredCopies;
-    }
-
-    private static formatMessage(units: CopiesUnit[], configuredCopies: number): string {
-        const found = units.length;
-        const size = units[0]?.machine_ids.length ?? 0;
-        const listed = units
-            .map((unit, i) => `copy ${i + 1}: machines ${unit.machine_ids.join(', ')}`)
-            .join('; ');
-        return `The configuration holds ${found} identical copies of a build of ${size} machine${size === 1 ? '' : 's'} `
-            + `(${listed}). Describe one copy and set setpoint.copies to ${fraction(configuredCopies).multiply(found).toDecimal()} `
-            + `(now ${configuredCopies}, times ${found}).`;
-    }
 }
 
 // ============================================================================

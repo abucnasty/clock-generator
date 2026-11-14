@@ -38,7 +38,8 @@ export const TEST_PIPELINE_COPY = {
     makesOf: (rate: string, target: string, verb: string) => `${verb} ${rate}/s of ${target}/s`,
     doesNotHold: 'Does not hold its rate',
     steadyState: 'At steady state, from a cold start.',
-    onSharedLanes: 'On the lanes the copies share.',
+    /** Where the test ran: the lanes the copies share, or in a build of one copy the lanes several of its inserters take from */
+    onSharedLanes: (copies: number) => copies > 1 ? 'On the lanes the copies share.' : 'On the lanes several of its inserters take from.',
     notRun: 'Not run',
     oneCopyFails: 'One copy alone does not hold its rate.',
     doesNotApply: 'Does not apply',
@@ -98,14 +99,15 @@ function lanesNotChecked(clock: PipelineClock): { reason: string } | undefined {
 }
 
 /**
- * Test 2: all the copies together on the lanes they share. Does not apply to a build of one copy; not run where one copy
+ * Test 2: all the copies together on the lanes they share, or every inserter of a build of one copy on the lanes several of
+ * them take from. Does not apply to a build of one copy with no such lane; not run where one copy
  * alone does not hold; failed on a loss on a shared lane (`shared_lane_losses`); an error where the check stopped with one;
  * does not apply where no lane the copies take from is run (`checked_lanes.line.run_with_copies` false while one copy holds)
  */
 function allCopiesBox(clock: PipelineClock): TestBox {
     const box = { test: 'all-copies' as const, name: TEST_PIPELINE_COPY.allCopies(clock.copies) };
     const checked = clock.checkedLanes;
-    // the engine checks no lane of a build of one copy, whatever one copy does
+    // the engine checks no lane of a build of one copy where no two of its inserters take from one lane
     if ((checked === undefined || checked === null) && clock.copies <= 1) {
         return { ...box, state: 'does-not-apply', result: TEST_PIPELINE_COPY.doesNotApply, detail: TEST_PIPELINE_COPY.oneCopyBuild };
     }
@@ -113,11 +115,11 @@ function allCopiesBox(clock: PipelineClock): TestBox {
     const stopped = lanesNotChecked(clock);
     if (stopped) return { ...box, state: 'error', result: TEST_PIPELINE_COPY.noResult, detail: TEST_PIPELINE_COPY.lanesNotChecked(stopped.reason) };
     if ((clock.assessment.shared_lane_losses?.length ?? 0) > 0) {
-        return { ...box, state: 'failed', result: rateResult(clock, shownRateOf(clock)), detail: TEST_PIPELINE_COPY.onSharedLanes };
+        return { ...box, state: 'failed', result: rateResult(clock, shownRateOf(clock)), detail: TEST_PIPELINE_COPY.onSharedLanes(clock.copies) };
     }
     if (checked === undefined || checked === null) return { ...box, state: 'not-run', result: TEST_PIPELINE_COPY.notRun, detail: TEST_PIPELINE_COPY.keptBefore };
     if (!checked.line.run_with_copies) return { ...box, state: 'does-not-apply', result: TEST_PIPELINE_COPY.doesNotApply, detail: TEST_PIPELINE_COPY.noLaneRun };
-    return { ...box, state: 'passed', result: rateResult(clock, shownRateOf(clock)), detail: TEST_PIPELINE_COPY.onSharedLanes };
+    return { ...box, state: 'passed', result: rateResult(clock, shownRateOf(clock)), detail: TEST_PIPELINE_COPY.onSharedLanes(clock.copies) };
 }
 
 /**

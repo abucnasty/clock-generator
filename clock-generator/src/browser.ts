@@ -67,7 +67,6 @@ export {
     BeltPickupSinkInserter,
     ConfigValidationError,
     ConfigValidationIssue,
-    CopiesError,
     CopiesUnit,
     FeasibilityError,
     FeasibilityIssue,

@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import { findRepeatedUnits, validateCopies } from './copies-validator';
-import { CopiesError } from './errors';
 import { parseConfig } from './loader';
 import { Config } from './schema';
 
@@ -39,7 +38,8 @@ const pair = (first: number, second: number) => [
 ];
 
 describe('validateCopies', () => {
-    it('refuses two identical machine-to-machine pairs and names the machines of each copy', () => {
+    // a config of several identical units is clocked as given: the copies are found, for the site's note, and not refused
+    it('finds two identical machine-to-machine pairs and names the machines of each copy, and does not refuse them', () => {
         const c = config({
             machines: [machine(1, 'copper-cable'), machine(2, 'electronic-circuit'), machine(3, 'copper-cable'), machine(4, 'electronic-circuit')],
             inserters: [...pair(1, 2), ...pair(3, 4)],
@@ -50,15 +50,7 @@ describe('validateCopies', () => {
         expect(found.gcd).toBe(2);
         expect(found.copies).toEqual([{ machine_ids: [1, 2] }, { machine_ids: [3, 4] }]);
 
-        expect(() => validateCopies(c)).toThrow(CopiesError);
-        try {
-            validateCopies(c);
-        } catch (e) {
-            expect((e as CopiesError).message).toBe(
-                'The configuration holds 2 identical copies of a build of 2 machines (copy 1: machines 1, 2; copy 2: machines 3, 4). '
-                + 'Describe one copy and set setpoint.copies to 6 (now 3, times 2).');
-            expect((e as CopiesError).units).toEqual([{ machine_ids: [1, 2] }, { machine_ids: [3, 4] }]);
-        }
+        expect(() => validateCopies(c)).not.toThrow();
     });
 
     it('finds copies that stand in different places: positions are not a setting', () => {
@@ -74,13 +66,14 @@ describe('validateCopies', () => {
         expect(findRepeatedUnits(c).copies).toEqual([{ machine_ids: [1, 2] }, { machine_ids: [3, 4] }]);
     });
 
-    it('tells a writer with copies = 1 to set copies to 2', () => {
+    it('does not refuse a config of copies 1 that holds two identical units', () => {
         const c = config({
             machines: [machine(1, 'copper-cable'), machine(2, 'electronic-circuit'), machine(3, 'copper-cable'), machine(4, 'electronic-circuit')],
             inserters: [...pair(1, 2), ...pair(3, 4)],
             belts: [belt(1, 'copper-plate'), belt(2, 'electronic-circuit')],
         });
-        expect(() => validateCopies(c)).toThrow('set setpoint.copies to 2 (now 1, times 2)');
+        expect(findRepeatedUnits(c).gcd).toBe(2);
+        expect(() => validateCopies(c)).not.toThrow();
     });
 
     it('ignores ids and listing order when comparing units', () => {
@@ -92,7 +85,7 @@ describe('validateCopies', () => {
         expect(findRepeatedUnits(c).copies).toEqual([{ machine_ids: [2, 7] }, { machine_ids: [5, 9] }]);
     });
 
-    it('refuses three identical single machines fed from a belt and dropping onto a belt of the same spec', () => {
+    it('finds three identical single machines fed from a belt and dropping onto a belt of the same spec', () => {
         const c = config({
             machines: [machine(1, 'iron-gear-wheel'), machine(2, 'iron-gear-wheel'), machine(3, 'iron-gear-wheel')],
             inserters: [
@@ -103,8 +96,8 @@ describe('validateCopies', () => {
             belts: [belt(1, 'iron-plate'), belt(2, 'iron-plate'), belt(3, 'iron-gear-wheel'), belt(4, 'iron-gear-wheel'), belt(5, 'iron-gear-wheel')],
         });
         expect(findRepeatedUnits(c).gcd).toBe(3);
-        expect(() => validateCopies(c)).toThrow(
-            'The configuration holds 3 identical copies of a build of 1 machine (copy 1: machines 1; copy 2: machines 2; copy 3: machines 3).');
+        expect(findRepeatedUnits(c).copies).toEqual([{ machine_ids: [1] }, { machine_ids: [2] }, { machine_ids: [3] }]);
+        expect(() => validateCopies(c)).not.toThrow();
     });
 
     it('does not refuse units that repeat while another unit appears another number of times', () => {

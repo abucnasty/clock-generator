@@ -114,6 +114,9 @@ function cannotSplitBecause(checked: UnavailableConversion, config: Config): str
     return `because ${lowerFirst(withoutWindowCycle(message))}`;
 }
 
+/** The title of the box, and of the Build check note, for a build of several copies that is clocked as one build */
+export const IMPORTED_AS_ONE_BUILD = 'Imported as one build';
+
 /** The two paragraphs of the "Imported as one unit" box; the box shows only for an export of several copies */
 export function importedAsOneUnitText(checked: UnavailableConversion, config: Config): { what: string; next: string } {
     const because = cannotSplitBecause(checked, config);
@@ -121,6 +124,6 @@ export function importedAsOneUnitText(checked: UnavailableConversion, config: Co
         what: because === null
             ? `This export holds ${checked.repeatedGroups} groups that look alike. We couldn't prove they are identical, so it comes in as one build.`
             : `This export holds ${checked.repeatedGroups} identical copies of a build. They can't be split into copies yet ${because}, so it comes in as one build.`,
-        next: `Check will not run on it like this. Select one complete group in Factorio, export it again, and set Copies to ${checked.repeatedGroups}.`,
+        next: `It is clocked as one build. For fewer entities to calculate, select one complete group in Factorio, export it again, and set Copies to ${checked.repeatedGroups}.`,
     };
 }
