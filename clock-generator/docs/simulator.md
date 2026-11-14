@@ -66,7 +66,7 @@ Supply comes from the lane ends ([Lane ends](belt-pickup/lane-ends.md)). A lane 
 input lane is a dead end. The deprecated `overrides.backed_up_belts` gives each lane that states no end an end: `true`
 a dead end, `false` an infinite end. State the `lane_end` of each lane instead.
 The simulator retains the pickup length in both cases. Moving supply models reachable stacks, holes and partial
-stacks; ordinary backed-up supply additionally stops and compresses stacks at its closed endpoint.
+stacks; ordinary supply with backpressure additionally stops and compresses stacks at its closed endpoint.
 Older `non_moving_belts` config settings migrate to `backed_up_belts` on import. New configs and exports use only
 `backed_up_belts`; if both keys are present, the new key takes precedence. Saved results retain their run's assumptions. Older manual underground configs must choose a layout;
 physical approach cannot be recovered from half-tile reach alone.

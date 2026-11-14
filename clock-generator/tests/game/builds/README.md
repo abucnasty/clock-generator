@@ -344,7 +344,7 @@ hash is `builtClockIdentity` of the build's blueprint, recomputed by `clock-cont
   pin, and for the runs started at the window cycle's beginning by `clock-controls.test.ts` against the record's selection)
   and `recorded_clock_sha256` (checked by the game test).
 - Eight scaffold-recordings builds expect values that belong to one clock (agricultural science having no dip and no
-  difference after its staged start, agricultural science with backed-up belts having no difference, what each of the
+  difference after its staged start, agricultural science with backpressure on the belts having no difference, what each of the
   nine copies of automation science moves, the moved inserters of chemical science with a shared foundry, what each of
   the 11 copies of electromagnetic science moves, what each row of military science with grenades moves, what the one copy of
   production science with a drill into the rail assembler moves, and what each of the two copies of utility science with
