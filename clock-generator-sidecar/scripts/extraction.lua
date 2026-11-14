@@ -67,6 +67,33 @@ local function drop_candidates(entity)
     })
 end
 
+---What an inserter drops into ("drop") or takes from ("pickup"): the game's drop_target or pickup_target when it has
+---one, else the one entity on the tile under its drop or pickup position that the export has a type for (a belt piece,
+---a machine, a chest); nil when that tile has none, or more than one
+---@param inserter LuaEntity
+---@param which "drop"|"pickup"
+---@return LuaEntity|nil
+function extraction.inserter_end(inserter, which)
+    local target = inserter[which .. "_target"]
+    if target and target.valid then
+        return target
+    end
+    local at = inserter[which .. "_position"]
+    local x, y = math.floor(at.x), math.floor(at.y)
+    local found = nil
+    for _, candidate in pairs(inserter.surface.find_entities_filtered({
+        area = { { x + 0.01, y + 0.01 }, { x + 0.99, y + 0.99 } },
+    })) do
+        if candidate ~= inserter and candidate.unit_number and helpers.get_target_type(candidate) then
+            if found then
+                return nil
+            end
+            found = candidate
+        end
+    end
+    return found
+end
+
 ---Extract data from a mining drill
 ---@param entity LuaEntity
 ---@return DrillData|nil
@@ -420,7 +447,7 @@ local function extract_inserter_data(entity)
 
     -- Get source (pickup target)
     local source = nil
-    local pickup_target = entity.pickup_target
+    local pickup_target = extraction.inserter_end(entity, "pickup")
     if pickup_target and pickup_target.valid then
         local target_type = helpers.get_target_type(pickup_target)
         if target_type then
@@ -442,7 +469,7 @@ local function extract_inserter_data(entity)
 
     -- Get sink (drop target)
     local sink = nil
-    local drop_target = entity.drop_target
+    local drop_target = extraction.inserter_end(entity, "drop")
     if drop_target and drop_target.valid then
         local target_type = helpers.get_target_type(drop_target)
         if target_type then
@@ -614,6 +641,165 @@ local function extract_machine_data(entity, selected_unit_numbers)
     return extract_crafting_machine_data(entity, selected_unit_numbers), "machine"
 end
 
+-- Empty output belts
+
+---The belt pieces an inserter's drop onto an empty belt is read on: the kinds the lanes of a belt with items are read on
+---(transport belts and underground belts), and splitters, whose lines only name the item
+local DROP_PIECE_TYPES = { ["transport-belt"] = true, ["underground-belt"] = true, ["splitter"] = true }
+
+---The item an inserter puts on a belt, from what it takes from: an exported crafting machine whose recipe makes one
+---item product, which a blacklist must not name; or, through a whitelist, the one item product of the recipe that the
+---whitelist names. Nil when it takes from anything else, or when none or more than one item is left.
+---@param inserter LuaEntity
+---@param result ExtractionResult The machines extracted so far
+---@return string|nil
+local function drop_line_item(inserter, result)
+    local source = extraction.inserter_end(inserter, "pickup")
+    if not (source and source.valid and source.unit_number) then
+        return nil
+    end
+    local machine = result.machines[result.unit_number_to_id[source.unit_number] or 0]
+    local products = machine and recipe_items(machine.recipe, "products")
+    if not products then
+        return nil
+    end
+    -- the filters as the export reads them (extract_inserter_data): only while they are switched on
+    local filters, mode = {}, nil
+    if (inserter.filter_slot_count or 0) > 0 and inserter.use_filters then
+        for index = 1, inserter.filter_slot_count do
+            local filter = inserter.get_filter(index)
+            if filter and filter.name then filters[filter.name] = true end
+        end
+        if next(filters) then mode = inserter.inserter_filter_mode end
+    end
+    local only, count = nil, 0
+    for name in pairs(products) do
+        if mode ~= "whitelist" or filters[name] then
+            only, count = name, count + 1
+        end
+    end
+    if count ~= 1 or (mode == "blacklist" and filters[only]) then
+        return nil
+    end
+    return only
+end
+
+---Points read along a splitter's transport line to find the line nearest a drop position
+local LINE_SAMPLES = 32
+
+---The way each direction a belt piece faces runs, y pointing south
+local RUN = {
+    [defines.direction.north] = { x = 0, y = -1 },
+    [defines.direction.east] = { x = 1, y = 0 },
+    [defines.direction.south] = { x = 0, y = 1 },
+    [defines.direction.west] = { x = -1, y = 0 },
+}
+
+---The transport line of a belt piece an inserter's drop lands on. Its side is the side of the drop tile's centre that
+---the drop position is on, looking the way the piece faces, on a curve too (the way it faces is the way it puts its
+---items out). A drop on that centre line, from in front of the piece or behind it, lands on the right side, or on the
+---left side for a mirrored inserter; on a curve it takes the side of the centre that the drop position is on looking the
+---way the items come in, mirrored or not. On a splitter it is the line of that side, of the two halves, that passes nearest
+---the drop position; on a belt or an underground belt it is line 1 or 2 (a drop onto an underground entrance from its
+---side lands on the entrance's line 3 or 4 of the same side, which line 1 or 2 runs into). Measured for straight belts,
+---curves, both underground ends and a splitter, from the side, from in front and from behind, mirrored and not
+---(Factorio 2.1.24). A function of the module so that the game test of the export can hold it against where the game
+---puts the first item.
+---@param inserter LuaEntity
+---@param piece LuaEntity The belt piece it drops onto
+---@return number|nil index The transport line's index in the piece; nil for a piece that faces no way of the four
+function extraction.drop_line(inserter, piece)
+    local run = RUN[piece.direction]
+    if not run then
+        return nil
+    end
+    local drop = inserter.drop_position
+    local dx, dy = drop.x - (math.floor(drop.x) + 0.5), drop.y - (math.floor(drop.y) + 0.5)
+    local left = dx * run.y - dy * run.x
+    if math.abs(left) < 1 / 256 and piece.type == "transport-belt" and piece.belt_shape ~= "straight" then
+        -- on a curve, looking the way the items come in
+        local incoming = RUN[(piece.direction + (piece.belt_shape == "right" and 12 or 4)) % 16]
+        left = dx * incoming.y - dy * incoming.x
+    end
+    local side
+    if math.abs(left) < 1 / 256 then
+        side = inserter.mirroring and 1 or 2
+    else
+        side = left > 0 and 1 or 2
+    end
+    if piece.type ~= "splitter" then
+        return side
+    end
+    local best, best_distance = nil, math.huge
+    for index = side, piece.get_max_transport_line_index(), 2 do
+        local length = piece.get_transport_line(index).line_length
+        for step = 0, LINE_SAMPLES do
+            local at = piece.get_line_item_position(index, length * step / LINE_SAMPLES)
+            local distance = (at.x - drop.x) ^ 2 + (at.y - drop.y) ^ 2
+            if distance < best_distance then
+                best, best_distance = index, distance
+            end
+        end
+    end
+    return best
+end
+
+---The sides of the transport lines that items put on a line of a belt piece run onto, over the selected pieces: the
+---line itself, the pieces whose line is the same line of the game (it spans pieces), and the lines it puts its items
+---onto, through undergrounds, side-loads and splitters, onwards. Lines of transport belts and underground belts give
+---their side (1 left, 2 right, as the export reads the lanes); lines of other pieces give `other`.
+---@param piece LuaEntity
+---@param index number The transport line's index in the piece
+---@param pieces table<number, LuaEntity> The belt pieces of the export by unit number
+---@return {[1]: true|nil, [2]: true|nil, other: true|nil}
+local function lines_reached(piece, index, pieces)
+    local reached = {}
+    local seen = {}
+    local queue = { { piece = piece, index = index } }
+    local head = 1
+    while queue[head] and head <= drop_merge.MAX_STEPS do
+        local at = queue[head]
+        head = head + 1
+        local key = at.piece.unit_number .. ":" .. at.index
+        if not seen[key] then
+            seen[key] = true
+            if at.piece.type == "transport-belt" or at.piece.type == "underground-belt" then
+                reached[at.index % 2 == 1 and 1 or 2] = true
+            else
+                reached.other = true
+            end
+            local line = at.piece.get_transport_line(at.index)
+            local outputs = line.output_lines
+            local near = { at.piece }
+            local ok, neighbours = pcall(function() return at.piece.belt_neighbours end)
+            if ok and type(neighbours) == "table" then
+                for _, list in pairs(neighbours) do
+                    for _, other in pairs(list) do table.insert(near, other) end
+                end
+            end
+            if at.piece.type == "underground-belt" then
+                local ok_partner, partner = pcall(function() return at.piece.underground_belt_neighbour end)
+                if ok_partner and partner then table.insert(near, partner) end
+            end
+            for _, other in ipairs(near) do
+                if other.valid and other.unit_number and pieces[other.unit_number] then
+                    for other_index = 1, other.get_max_transport_line_index() do
+                        local candidate = other.get_transport_line(other_index)
+                        local follows = candidate.line_equals(line)
+                        for _, output in pairs(outputs) do
+                            follows = follows or candidate.line_equals(output)
+                        end
+                        if follows then
+                            table.insert(queue, { piece = other, index = other_index })
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return reached
+end
+
 -- Main Extraction Orchestrator
 --- - Extract data from all selected entities, separating machines, drills, inserters, and belts
 ---@param entities LuaEntity[]
@@ -752,37 +938,37 @@ function extraction.extract_all_entities(entities, force)
         table.insert(belts_pieces[root], pieces[unit_number])
     end
 
-    -- An empty output-only belt has no contents to identify. A single active whitelist filter can identify its item
-    -- when the selected source machine produces it and the inserter drops onto a selected straight belt. Retain only
-    -- the sole item when no selected inserter picks from this belt; no physical pickup lane is inferred.
+    -- An empty belt that inserters only drop onto (an output belt whose inserters have not swung yet, such as inserters
+    -- held by a circuit condition) has no contents to read. It gets the item of the machines its inserters take from
+    -- (drop_line_item) on the lanes their drops reach (lines_reached), as the belt would read once items had run onto
+    -- it. A belt that a selected inserter picks up from gets nothing, nor does a belt that one of the inserters dropping
+    -- onto it says nothing of (its item or its line is not known).
     local inferred_belt_items = {} -- root unit number -> item-name set
+    local inferred_belt_lines = {} -- root unit number -> {[1]: true|nil, [2]: true|nil, other: true|nil}
+    local belt_unknown_drops = {} -- root unit number -> true
     local belt_has_pickups = {} -- root unit number -> true
     local pickup_pieces = {} -- unit_number of a belt piece an inserter picks up from -> true
     for _, inserter in pairs(entities) do
-        local source = inserter.valid and inserter.type == "inserter" and inserter.pickup_target
+        local source = inserter.valid and inserter.type == "inserter" and extraction.inserter_end(inserter, "pickup")
         if source and source.valid and source.unit_number and pieces[source.unit_number] then
             belt_has_pickups[find(source.unit_number)] = true
             pickup_pieces[source.unit_number] = true
         end
     end
     for _, inserter in pairs(entities) do
-        if inserter.valid and inserter.type == "inserter" and inserter.use_filters
-            and inserter.inserter_filter_mode == "whitelist" then
-            local filter, filter_count = nil, 0
-            for index = 1, inserter.filter_slot_count or 0 do
-                local candidate = inserter.get_filter(index)
-                if candidate and candidate.name then filter, filter_count = candidate, filter_count + 1 end
-            end
-            local source, sink = inserter.pickup_target, inserter.drop_target
-            if filter_count == 1 and filter and source and source.valid and source.unit_number
-                and sink and sink.valid and sink.type == "transport-belt" and sink.belt_shape == "straight"
-                and sink.unit_number and selected_unit_numbers[sink.unit_number] and pieces[sink.unit_number] then
-                local machine = result.machines[result.unit_number_to_id[source.unit_number] or 0]
-                local products = machine and recipe_items(machine.recipe, "products")
-                if products and products[filter.name] then
-                    local root = find(sink.unit_number)
-                    inferred_belt_items[root] = inferred_belt_items[root] or {}
-                    inferred_belt_items[root][filter.name] = true
+        local sink = inserter.valid and inserter.type == "inserter" and extraction.inserter_end(inserter, "drop")
+        if sink and sink.valid and sink.unit_number and pieces[sink.unit_number] then
+            local root = find(sink.unit_number)
+            local item = DROP_PIECE_TYPES[sink.type] and drop_line_item(inserter, result)
+            local line = item and extraction.drop_line(inserter, sink)
+            if not line then
+                belt_unknown_drops[root] = true
+            else
+                inferred_belt_items[root] = inferred_belt_items[root] or {}
+                inferred_belt_items[root][item] = true
+                inferred_belt_lines[root] = inferred_belt_lines[root] or {}
+                for key in pairs(lines_reached(sink, line, pieces)) do
+                    inferred_belt_lines[root][key] = true
                 end
             end
         end
@@ -822,11 +1008,17 @@ function extraction.extract_all_entities(entities, force)
         end
 
         local inference = inferred_belt_items[root]
-        if inference and next(ingredient_set) == nil and not lane_ingredient[1] and not lane_ingredient[2] and not belt_has_pickups[root] then
+        if inference and next(ingredient_set) == nil and not lane_ingredient[1] and not lane_ingredient[2]
+            and not belt_has_pickups[root] and not belt_unknown_drops[root] then
             local item, count = nil, 0
             for name in pairs(inference) do item, count = name, count + 1 end
             if count == 1 then
+                -- as the lanes read below: a lane of a transport belt or an underground belt the drops reach carries
+                -- the item; lines of splitters only name it
                 ingredient_set[item] = true
+                for lane = 1, 2 do
+                    if inferred_belt_lines[root][lane] then lane_ingredient[lane] = item end
+                end
             end
         end
 
@@ -835,8 +1027,8 @@ function extraction.extract_all_entities(entities, force)
             table.insert(ingredients, ingredient)
         end
         table.sort(ingredients)
-        -- a belt with nothing on it is not described, as before: an inserter that takes from it or drops onto it is left
-        -- out of the export (see resolve_target_id in export.lua)
+        -- a belt with nothing on it, and no item from the inserters that drop onto it, is not described: an inserter that
+        -- takes from it or drops onto it is left out of the export (see resolve_target_id in export.lua)
         if #ingredients > 0 then
             local lanes = {}
             if not lane_ingredient[1] and not lane_ingredient[2] then
@@ -921,14 +1113,15 @@ function extraction.extract_all_entities(entities, force)
                 -- Only a pickup without a pickup_problem (a bend, a splitter, an inline pickup) is checked, so those keep
                 -- their reason.
                 if data.source and data.source.type == "belt" and not data.source.pickup_problem then
-                    data.source.supply_problem = pickup_supply.problem(entity.pickup_target)
+                    data.source.supply_problem = pickup_supply.problem(extraction.inserter_end(entity, "pickup"))
                 end
                 -- A drop whose stream side-loads onto a belt that is fed from behind, within the selected belt pieces, is
                 -- marked with the tiles to the merge.
-                if data.sink and data.sink.type == "belt" and entity.drop_target then
-                    data.sink.side_load_tiles = drop_merge.tiles(entity.drop_target, pieces)
+                local drop_piece = data.sink and data.sink.type == "belt" and extraction.inserter_end(entity, "drop")
+                if drop_piece then
+                    data.sink.side_load_tiles = drop_merge.tiles(drop_piece, pieces)
                     -- the way the belt runs at the drop tile, for the order of the drops along it
-                    data.sink.belt_direction = entity.drop_target.direction
+                    data.sink.belt_direction = drop_piece.direction
                 end
                 table.insert(result.inserters, data)
             end

@@ -34,8 +34,9 @@ local function resolve_target_id(target, result, is_sink, options)
     end
     
     if not target_id then
-        -- An end without an id (an empty belt or chest, a machine that is not exported such as a lab, anything outside
-        -- the selection) leaves the inserter out: pointing it at belt, chest or machine 1 would name some other entity.
+        -- An end without an id (an empty belt or chest whose item the inserters around it do not give, a machine that is
+        -- not exported such as a lab, anything outside the selection) leaves the inserter out: pointing it at belt, chest
+        -- or machine 1 would name some other entity.
         -- Only the recorder keeps an inserter that drops onto an empty belt or into an empty chest: an output belt is
         -- often empty when a build is recorded, and a recording is matched to its config by the type of what an
         -- inserter drops into, never by its id (ExportOptions).

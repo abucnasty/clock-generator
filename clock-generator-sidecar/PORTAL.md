@@ -9,8 +9,9 @@ Use the sidecar mod to copy a build from Factorio to the clock generator site.
 - You have Factorio 2.1.
 - The mod **Clock Generator Sidecar** is installed and on. To install it, use the **Mods** menu of the game.
 - The build is assembled in the game, and each machine has a recipe.
-- The belts and chests that the inserters use have items on them or in them. The sidecar does not export an empty belt
-  or an empty chest.
+- The belts and chests that the inserters use have items on them or in them. The sidecar exports an empty belt only
+  if each inserter that puts items on it takes them from a machine and moves one item that the machine makes. It
+  exports an empty chest only if the items that go in and out show the item that it holds.
 
 ### Procedure
 
@@ -171,7 +172,8 @@ such inserter, with the cause. This is also correct for a mining drill if the en
 
 The sidecar does not export:
 
-- An empty belt.
+- An empty belt, if an inserter takes items from it, or if an inserter that puts items on it does not move one item
+  that a machine makes.
 - An empty chest, if the items that go in and out do not show the item that it holds.
 - A machine that has no recipe, or a lab.
 

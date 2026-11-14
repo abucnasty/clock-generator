@@ -123,7 +123,8 @@ such inserter, with the cause. This is also correct for a mining drill if the en
 
 The sidecar does not export:
 
-- An empty belt.
+- An empty belt, if an inserter takes items from it, or if an inserter that puts items on it does not move one item
+  that a machine makes.
 - An empty chest, if the items that go in and out do not show the item that it holds.
 - A machine that has no recipe, or a lab.
 
