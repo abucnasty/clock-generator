@@ -1,14 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import type { ClockRanking, ClockVerdict } from 'clock-generator/browser';
+import type { ClockRanking, ClockVerdict, OscillationFacts } from 'clock-generator/browser';
 import { rateWarningOf } from './rateWarning';
 import { startCheckSummary } from './modelAssumptions';
-import { RECOMMENDED_COPY, type PickRule } from './recommendedClock';
 import {
+    REASON_WORDS,
     SUMMARY_COPY,
-    beltCellText,
-    beltLine,
-    beltValue,
-    beltValueSub,
+    attemptResultOf,
+    outputTermOf,
     clockBadges,
     signalsText,
     differenceFromRecommended,
@@ -17,11 +15,13 @@ import {
     recoversOf,
     lossLimitText,
     minutesAndSecondsText,
+    oscillationWords,
     pickNameMeaning,
+    statusOf,
     wakeUpsText,
-    worksOf,
     type SummaryClock,
 } from './clockSummary';
+import { AUTOMATION_240, ELECTROMAGNETIC_330_TWO_SWINGS, viewOf, viewsOf } from '../test/checkedLanesFixtures';
 
 const TARGET = 240;
 
@@ -43,7 +43,6 @@ function clock(id: string, options: ClockOptions = {}): SummaryClock {
         meets_target_rate: true,
         rate_off_target: 0,
         holds_expected_output: true,
-        matches_belt_choice: true,
         wake_ups_per_minute: 10,
         window_count: 4,
         ...ranking,
@@ -77,7 +76,7 @@ describe('sampled starts remain separate from rate and recovery', () => {
                 starts: ['cold', 'ascending'].map((id, i) => ({ id, label: id, reaches_target: i === 0,
                     output_items_per_window_cycle: i === 0 ? 240 : 120, cycle: null, off_bins: null, span_items: null, long_run_keeps_up: i === 0 })) } };
         expect(nameOf([dependent], 'dependent')).toEqual([SUMMARY_COPY.startDependent]);
-        expect(worksOf(dependent)).toEqual({ kind: 'caution', text: SUMMARY_COPY.worksStartDependent });
+        expect(statusOf(dependent)).toEqual({ kind: 'start-dependent', text: 'Start-dependent' });
         expect(recoversOf(dependent)).toMatchObject({ kind: 'yes', value: SUMMARY_COPY.recoversYes });
         expect(rateWarningOf(dependent)).toContain('some sampled starts');
         expect(rateWarningOf(dependent)).not.toContain('240 of 240');
@@ -91,63 +90,201 @@ describe('sampled starts remain separate from rate and recovery', () => {
         // the loss trials' baseline missed its output: no cause, so no verdict on recovery
         const baseline = clock('baseline', { verdict: 'no recovery', meets_target_rate: false, loss: { broken_by: [] } });
         expect(recoversOf(baseline)).toMatchObject({ value: SUMMARY_COPY.recoversUnavailable, detail: SUMMARY_COPY.recoversBaselineUnavailableDetail });
-        expect(nameOf([baseline], 'baseline')).toEqual([SUMMARY_COPY.recoveryUnavailable]);
-        expect(worksOf(baseline)).toEqual({ kind: 'caution', text: SUMMARY_COPY.recoveryUnavailable });
+        expect(nameOf([baseline], 'baseline')).toEqual([SUMMARY_COPY.error]);
+        expect(statusOf(baseline)).toEqual({ kind: 'error', text: 'Error', detail: SUMMARY_COPY.errorBaselineMissed });
         expect(differenceFromRecommended(baseline, clock('recommended'))).toBe('Recovery results are unavailable for this clock.');
     });
 });
 
 describe('clockBadges', () => {
-    const { fewestWakeUps, fewestDeciders } = SUMMARY_COPY;
+    const { fewestWakeUps, fewestDeciders, stable } = SUMMARY_COPY;
 
     // the chips asked of each clock, by id: the recommended clock has its own chip, so none for what it has fewest of
     it.each<[string, SummaryClock[], Record<string, string[]>]>([
         ['gives the fewest-wakeups chip to a tied clock that is not the recommended one, not to the recommended one',
-            [clock('a', { wake_ups_per_minute: 8.0001 }), clock('b', { wake_ups_per_minute: 8 })], { a: [], b: [fewestWakeUps] }],
-        ['gives no chip to a clock with more wakeups',
-            [clock('a', { wake_ups_per_minute: 12 }), clock('b', { wake_ups_per_minute: 8 })], { a: [], b: [] }],
+            [clock('a', { wake_ups_per_minute: 8.0001 }), clock('b', { wake_ups_per_minute: 8 })], { a: [stable], b: [stable, fewestWakeUps] }],
+        ['gives only Stable to a clock with more wakeups',
+            [clock('a', { wake_ups_per_minute: 12 }), clock('b', { wake_ups_per_minute: 8 })], { a: [stable], b: [stable] }],
         ['gives the fewest-deciders chip to a clock with more wakeups but the fewest deciders',
             [clock('a', { wake_ups_per_minute: 8, window_count: 6, deciders: 10 }), clock('b', { wake_ups_per_minute: 12, window_count: 3, deciders: 6 })],
-            { b: [fewestDeciders], a: [] }],
+            { b: [stable, fewestDeciders], a: [stable] }],
         ['does not give Fewest deciders to a clock that only ties the recommended clock', [
             clock('a', { wake_ups_per_minute: 8, window_count: 6, deciders: 4 }),
             clock('b', { wake_ups_per_minute: 12, window_count: 6, deciders: 4 }),
             clock('c', { wake_ups_per_minute: 15, window_count: 3, deciders: 6 }),
-        ], { a: [], b: [], c: [] }],
+        ], { a: [stable], b: [stable], c: [stable] }],
         ['does not give Fewest deciders to a clock that only ties a clock tied for the fewest wakeups', [
             clock('a', { wake_ups_per_minute: 8.0001, window_count: 6, deciders: 8 }),
             clock('b', { wake_ups_per_minute: 8, window_count: 6, deciders: 4 }),
             clock('c', { wake_ups_per_minute: 15, window_count: 6, deciders: 4 }),
-        ], { a: [], b: [fewestWakeUps], c: [] }],
+        ], { a: [stable], b: [stable, fewestWakeUps], c: [stable] }],
         ['gives Fewest deciders to a clock that has fewer than the recommended clock and every clock with the fewest wakeups', [
             clock('a', { wake_ups_per_minute: 8, window_count: 6, deciders: 5 }),
             clock('b', { wake_ups_per_minute: 12, window_count: 6, deciders: 4 }),
             clock('c', { wake_ups_per_minute: 15, window_count: 6, deciders: 4 }),
-        ], { b: [fewestDeciders], c: [fewestDeciders] }],
-        ['says No belt slack for a clock that does not match the belt, even with the fewest wakeups',
-            [clock('a', { wake_ups_per_minute: 12 }), clock('b', { wake_ups_per_minute: 2, matches_belt_choice: false, beltLabel: 'backed-up' })],
-            { b: [SUMMARY_COPY.noBeltSlack], a: [] }],
-        ['says a clock that has no recovery, or does not hold its rate, so', [
+        ], { b: [stable, fewestDeciders], c: [stable, fewestDeciders] }],
+        ['says a clock that has no recovery, or underproduces, so', [
             clock('a'),
             clock('b', { verdict: 'no recovery', meets_target_rate: false }),
             clock('c', { verdict: 'unstable', meets_target_rate: false, holds_expected_output: false }),
-        ], { b: [SUMMARY_COPY.worksNoRecovery], c: [SUMMARY_COPY.unstable] }],
-        ['says the rate a clock off the setpoint misses, below or above, before its verdict', [
+        ], { b: [SUMMARY_COPY.noRecovery], c: [SUMMARY_COPY.underproduces] }],
+        ['says that a clock off the setpoint underproduces or overproduces, before its verdict', [
             clock('a'),
             clock('below', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48 }),
             clock('above', { meets_target_rate: false, rate_off_target: 12.5 }),
-        ], { below: [SUMMARY_COPY.worksOffTarget('192')], above: [SUMMARY_COPY.worksOffTarget('252.5')] }],
-        ['does not say a rate less than half a hundredth off', [clock('a', { rate_off_target: -0.004 })], { a: [] }],
-        ['gives a clock with a deadlock risk that holds the rate no recovery chip, as its verdict does not decide', [
+        ], { below: [SUMMARY_COPY.underproduces], above: [SUMMARY_COPY.overproduces] }],
+        ['does not say a rate less than half a hundredth off', [clock('a', { rate_off_target: -0.004 })], { a: [stable] }],
+        ['gives a clock with a deadlock risk that meets the target the status the rule gives, as the Status column does', [
             clock('a', { verdict: 'no recovery', deadlock: true, wake_ups_per_minute: 6 }),
             clock('b', { verdict: 'stable', deadlock: true, wake_ups_per_minute: 9, window_count: 5 }),
-        ], { a: [], b: [] }],
+        ], { a: [SUMMARY_COPY.noRecovery], b: [stable] }],
+        ['says No recovery, never Stable, of a clock with no recovery', [clock('a', { verdict: 'no recovery' })], { a: [SUMMARY_COPY.noRecovery] }],
+        ['says Stable of a rounded clock that runs fast and meets the target', [clock('a', { rate_off_target: 0.24, runs_fast: 0.001 })], { a: [stable] }],
+        ['says Error, not Stable, of a clock that meets the target whose recovery gave no answer, as the Status column does',
+            [clock('a', { loss: null })], { a: [SUMMARY_COPY.error] }],
     ])('%s', (_, clocks, names) => {
         expect(Object.fromEntries(Object.keys(names).map(id => [id, nameOf(clocks, id)]))).toEqual(names);
     });
 
     it('is empty for an index with no clock', () => {
         expect(clockBadges([], 0)).toEqual([]);
+    });
+
+    it('gives the status chip what outputTermOf gives, with what is said beside it', () => {
+        expect(clockBadges([clock('below', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48 })], 0))
+            .toEqual([{ kind: 'status', status: 'underproduces', text: 'Underproduces', detail: 'makes 192/s of 240/s' }]);
+        expect(clockBadges([withLoss(clock('a', { verdict: 'unstable' }), 'belt_gaps')], 0))
+            .toEqual([{ kind: 'status', status: 'underproduces', text: 'Underproduces', detail: 'Missed pickups due to belt gaps' }]);
+        expect(clockBadges([clock('a')], 0)).toEqual([{ kind: 'status', status: 'stable', text: 'Stable' }]);
+    });
+});
+
+/** A clock with a loss on a lane its copies share, and the reason code of its cause where one is given */
+function withLoss(base: SummaryClock, code?: 'belt_gaps'): SummaryClock {
+    return { ...base, assessment: { ...base.assessment, shared_lane_losses: [{} as never] },
+        checkedLanes: { cause: { ...(code !== undefined && { reason: { code, data: { missed: 6, with_gap: 3 } } }) } } as never };
+}
+
+describe('outputTermOf', () => {
+    it.each<[string, SummaryClock, ReturnType<typeof outputTermOf>]>([
+        ['is Stable for a stable clock at the setpoint', clock('a'), { term: 'Stable' }],
+        ['is Stable for a clock with no recovery at the setpoint: its own chip says that', clock('a', { verdict: 'no recovery' }), { term: 'Stable' }],
+        ['is Underproduces below the setpoint, with the rate', clock('a', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48 }),
+            { term: 'Underproduces', detail: 'makes 192/s of 240/s' }],
+        ['is Overproduces above the setpoint, with the rate, whatever the verdict', clock('a', { verdict: 'unstable', meets_target_rate: false, rate_off_target: 10 }),
+            { term: 'Overproduces', detail: 'makes 250/s of 240/s' }],
+        ['is Overproduces for a stable clock over the setpoint', clock('a', { meets_target_rate: false, rate_off_target: 12.5, stable_above_target: true }),
+            { term: 'Overproduces', detail: 'makes 252.5/s of 240/s' }],
+        ['is Stable for a rounded clock that runs fast and meets the target by the selection\'s rule', clock('a', { rate_off_target: 0.24, runs_fast: 0.001 }),
+            { term: 'Stable' }],
+        ['is Overproduces for a rounded clock that runs fast and does not meet the target', clock('a', { meets_target_rate: false, rate_off_target: 0.24 }),
+            { term: 'Overproduces', detail: 'makes 240.24/s of 240/s' }],
+        ['is Underproduces at the setpoint with a loss on a shared lane, with the words for its reason code',
+            withLoss(clock('a', { verdict: 'unstable' }), 'belt_gaps'), { term: 'Underproduces', detail: 'Missed pickups due to belt gaps' }],
+        ['is Underproduces at the setpoint with a loss on a shared lane and no reason code, with nothing beside it',
+            withLoss(clock('a', { verdict: 'unstable' })), { term: 'Underproduces' }],
+        ['is Overproduces at the setpoint with no shared-lane loss where the judged output is above the expected output',
+            { ...clock('a', { verdict: 'unstable' }), asBuilt: { actual_output_items: 352 } as never, expectedOutputItems: 336 }, { term: 'Overproduces' }],
+        ['is Underproduces at the setpoint with no shared-lane loss where the judged output is below the expected output',
+            { ...clock('a', { verdict: 'unstable' }), asBuilt: { actual_output_items: 320 } as never, expectedOutputItems: 336 }, { term: 'Underproduces' }],
+        // neither number decides (no clock of the samples comes here): Underproduces, as the verdict unstable said before
+        ['is Underproduces at the setpoint with no shared-lane loss where the judged output is not known',
+            { ...clock('a', { verdict: 'unstable' }), asBuilt: null, expectedOutputItems: 336 }, { term: 'Underproduces' }],
+        ['is Underproduces at the setpoint with no shared-lane loss where the judged output is the expected output',
+            { ...clock('a', { verdict: 'unstable' }), asBuilt: { actual_output_items: 336 } as never, expectedOutputItems: 336 }, { term: 'Underproduces' }],
+    ])('%s', (_, given, expected) => {
+        expect(outputTermOf(given)).toEqual(expected);
+    });
+
+    it('says the rate with the verb of a target that counts the item destroyed', () => {
+        const destroyed = { ...clock('a', { meets_target_rate: false, rate_off_target: -40 }), counts: 'destroyed' as const };
+        expect(outputTermOf(destroyed).detail).toBe('destroys 200/s of 240/s');
+    });
+});
+
+/** The engine's numbers of a long run whose mean is the expected output and whose bins are uneven (`as_built.output_reason`) */
+function oscillation(made: number[] | null, options: Partial<OscillationFacts> = {}): OscillationFacts {
+    return { expected: 288, window_cycles_per_bin: 1, tolerance: 16, bins: made?.length ?? 90, proven: true, repeat_window_cycles: made?.length ?? 90,
+        ...(made !== null && { made }), ...options };
+}
+
+/** A clock at the setpoint that does not hold, whose long run has the numbers given */
+function oscillating(facts: OscillationFacts, copies = 1): SummaryClock {
+    return { ...clock('o', { verdict: 'unstable' }), copies, expectedOutputItems: 288,
+        asBuilt: { holds: false, actual_output_items: 288, start_phases_checked: 1, output_reason: { code: 'oscillation', data: facts } } };
+}
+
+/** 26 window cycles of 288 items, but those given */
+const repeatOf = (pairs: [number, number][]) => {
+    const made = new Array<number>(26).fill(288);
+    for (const [at, items] of pairs) made[at] = items;
+    return made;
+};
+
+describe('Oscillates: a clock whose long run makes the expected output on average, with window cycles off it', () => {
+    it.each<[string, OscillationFacts, number, string]>([
+        ['one high and one low window cycle, the repeat proven', oscillation(repeatOf([[1, 432], [17, 144]])), 1,
+            'makes 432 then 144 items a window cycle, 288 expected · repeats every 26 window cycles'],
+        ['one low then one high, in the order they come', oscillation(repeatOf([[3, 144], [9, 432]])), 1,
+            'makes 144 then 432 items a window cycle, 288 expected · repeats every 26 window cycles'],
+        ['several window cycles off: the lowest and the highest', oscillation(repeatOf([[0, 320], [3, 352], [9, 240], [20, 240]])), 1,
+            'makes 240 to 352 items a window cycle, 288 expected · repeats every 26 window cycles'],
+        ['two off on the same side: the lowest and the highest', oscillation(repeatOf([[1, 320], [2, 320], [5, 272], [6, 272], [7, 272], [8, 272]])), 1,
+            'makes 272 to 320 items a window cycle, 288 expected · repeats every 26 window cycles'],
+        ['a sampled run: no repeat said', oscillation(repeatOf([[1, 432], [17, 144]]), { proven: false, repeat_window_cycles: null }), 1,
+            'makes 432 then 144 items a window cycle, 288 expected'],
+        ['a list the engine cut: its highest and lowest', oscillation(null, { cut: { highest: { at: 5, items: 432 }, lowest: { at: 84, items: 144 } } }), 1,
+            'makes 144 to 432 items a window cycle, 288 expected · repeats every 90 window cycles'],
+        ['bins of a fractional window cycle\'s repeat', oscillation(repeatOf([[1, 432], [17, 144]]), { window_cycles_per_bin: 19, repeat_window_cycles: 26 * 19 }), 1,
+            'makes 432 then 144 items each 19 window cycles, 288 expected · repeats every 494 window cycles'],
+        ['a build of more copies: the items are of one copy', oscillation(repeatOf([[1, 432], [17, 144]])), 9,
+            'one copy makes 432 then 144 items a window cycle, 288 expected · repeats every 26 window cycles'],
+    ])('%s', (_, facts, copies, words) => {
+        expect(oscillationWords(facts, copies)).toBe(words);
+        expect(outputTermOf(oscillating(facts, copies))).toEqual({ term: 'Oscillates', detail: words });
+        expect(statusOf(oscillating(facts, copies))).toEqual({ kind: 'oscillates', text: 'Oscillates', detail: words });
+    });
+
+    it('says the verb of a target that counts the item destroyed', () => {
+        expect(oscillationWords(oscillation(repeatOf([[1, 432], [17, 144]])), 1, 'destroyed')).toMatch(/^destroys 432 then 144/);
+    });
+
+    it('comes after the rate off the setpoint and after a loss on a shared lane', () => {
+        const facts = oscillation(repeatOf([[1, 432], [17, 144]]));
+        const off = { ...oscillating(facts), ranking: { ...oscillating(facts).ranking, meets_target_rate: false, rate_off_target: -48 } };
+        off.assessment = { ...off.assessment, items_per_second: 192 };
+        expect(statusOf(off)).toEqual({ kind: 'underproduces', text: 'Underproduces', detail: 'makes 192/s of 240/s' });
+        expect(statusOf(withLoss(oscillating(facts))).kind).toBe('underproduces');
+    });
+
+    it('is the chip\'s word and the Status column\'s, and how a selected clock differs', () => {
+        const clocks = [clock('r'), oscillating(oscillation(repeatOf([[1, 432], [17, 144]])))];
+        expect(clockBadges(clocks, 1)).toEqual([{ kind: 'status', status: 'oscillates', text: 'Oscillates',
+            detail: 'makes 432 then 144 items a window cycle, 288 expected · repeats every 26 window cycles' }]);
+        expect(differenceFromRecommended(clocks[1], clocks[0])).toBe(SUMMARY_COPY.differsOscillates);
+    });
+
+    it('is not given without the engine\'s reason: Underproduces stays for a clock at the setpoint that does not hold', () => {
+        const plain = { ...clock('a', { verdict: 'unstable' }), asBuilt: { holds: false, actual_output_items: 288, start_phases_checked: 1 }, expectedOutputItems: 288 };
+        expect(statusOf(plain)).toEqual({ kind: 'underproduces', text: 'Underproduces' });
+    });
+});
+
+describe('attemptResultOf', () => {
+    it('says a swing count that holds holds the rate, and one that does not underproduces or overproduces by its output', () => {
+        expect(attemptResultOf({ holds: true, actual_output_items: 32, expected_output_items: 32 })).toBe('Holds the rate');
+        expect(attemptResultOf({ holds: false, actual_output_items: 16, expected_output_items: 32 })).toBe('Underproduces');
+        expect(attemptResultOf({ holds: false, actual_output_items: 352, expected_output_items: 336 })).toBe('Overproduces');
+    });
+});
+
+describe('REASON_WORDS', () => {
+    it('has the words for each reason code the engine gives', () => {
+        expect(Object.keys(REASON_WORDS).sort()).toEqual(['belt_gaps', 'target_full', 'unknown']);
+        expect(REASON_WORDS.belt_gaps).toBe('Missed pickups due to belt gaps');
+        expect(REASON_WORDS.target_full).not.toBe('');
+        // a loss with no diagnostic: the chip stands alone
+        expect(REASON_WORDS.unknown).toBe('');
     });
 });
 
@@ -156,25 +293,21 @@ describe('pickNameMeaning', () => {
         clock('a', { wake_ups_per_minute: 8, window_count: 6, deciders: 10 }),
         clock('b', { wake_ups_per_minute: 12, window_count: 3, deciders: 6 }),
     ];
-    const meaning = (clocks: SummaryClock[], id: string, rule: PickRule | null = null) =>
-        pickNameMeaning(clocks, clocks.findIndex(it => it.id === id), rule);
-    /** The pick's reason for the clock with the fewest deciders of these contenders, on a moving belt unless told otherwise */
-    const reason = (contenders: string, belt = RECOMMENDED_COPY.beltMoving) =>
-        `Fewest deciders of the clocks that ${contenders}${belt}. This is the least wiring to do by hand.`;
+    const meaning = (clocks: SummaryClock[], id: string) => pickNameMeaning(clocks, clocks.findIndex(it => it.id === id));
+    /** The pick's reason for the clock with the fewest deciders of these contenders */
+    const reason = (contenders: string) => `Fewest deciders of the clocks that ${contenders}. This is the least wiring to do by hand.`;
     const recover = 'keep making 240/s and go back to it after a stop';
 
     // what is said of clock b
-    it.each<[string, SummaryClock[], PickRule | null, string]>([
+    it.each<[string, SummaryClock[], string]>([
         ['says what Fewest deciders is for, in the words of the pick\'s reason',
-            [clock('a', { wake_ups_per_minute: 8, deciders: 10, beltLabel: '' }), clock('b', { wake_ups_per_minute: 12, deciders: 6, beltLabel: '' })], null, reason(recover, '')],
-        ['names the moving belt the clocks are made for, as the reason does', decidersAndWakeUps(), null, reason(recover)],
-        ['names the backed-up belts the build asks for, as the reason does',
-            decidersAndWakeUps(), { backedUpBelts: true, searchedForFewerWakeUps: false }, reason(recover, RECOMMENDED_COPY.beltBackedUp)],
+            [clock('a', { wake_ups_per_minute: 8, deciders: 10, beltLabel: '' }), clock('b', { wake_ups_per_minute: 12, deciders: 6, beltLabel: '' })], reason(recover)],
+        ['names no belt, as the reason does not', decidersAndWakeUps(), reason(recover)],
         ['says the clocks that hold the rate on a build with a deadlock risk, as the reason does',
             [clock('a', { wake_ups_per_minute: 8, deciders: 10, deadlock: true }), clock('b', { wake_ups_per_minute: 12, deciders: 6, deadlock: true })],
-            null, reason('hold 240/s')],
-    ])('%s', (_, clocks, rule, expected) => {
-        expect(meaning(clocks, 'b', rule)).toBe(expected);
+            reason('hold 240/s')],
+    ])('%s', (_, clocks, expected) => {
+        expect(meaning(clocks, 'b')).toBe(expected);
     });
 
     it('has nothing to say of a clock without the chip', () => {
@@ -218,7 +351,12 @@ describe('recoversOf', () => {
         expect(recoversOf(untried).detail).toContain(`: ${reason}.`);
     });
 
-    it('says not tested for a clock that does not hold its rate', () => {
+    it('says why from the engine\'s code where its loss trials were over the budget, not from its message', () => {
+        const untried = overBudget(clock('a'));
+        expect(recoversOf(untried).detail).toBe(SUMMARY_COPY.recoversNotTriedDetail(SUMMARY_COPY.lossTrialsOverBudget('749,813,760', '200,000,000')));
+    });
+
+    it('says not tested for a clock that underproduces', () => {
         expect(recoversOf(clock('a', { verdict: 'unstable' }))).toMatchObject({ kind: 'not-tested', value: SUMMARY_COPY.recoversNotTested });
     });
 });
@@ -277,38 +415,6 @@ describe('makesText and wakeUpsText', () => {
     });
 });
 
-describe('beltLine, beltValue and beltValueSub', () => {
-    const moving = { backedUpBelts: false, searchedForFewerWakeUps: false };
-    const backedUp = { backedUpBelts: true, searchedForFewerWakeUps: false };
-    const { beltLineMoving, beltLineBackedUp, beltLineNoSlack, beltMoving, beltBackedUp, beltNoSlackSub } = SUMMARY_COPY;
-
-    // the line, the tile's word and the line under it
-    it.each<[string, PickRule | null, string, string, string, string | undefined]>([
-        ['says moving for a clock made for a moving belt', moving, 'moving (+4 ticks)', beltLineMoving, beltMoving, undefined],
-        ['says backed up when the build says so', backedUp, 'moving (+4 ticks)', beltLineBackedUp, beltBackedUp, undefined],
-        // #457: a clock made without belt slack in a run for moving belts was checked on moving belts
-        ['says moving, without belt slack, for a clock without slack in a run for moving belts', moving, 'backed-up', beltLineNoSlack, beltMoving, beltNoSlackSub],
-        ['says backed up for a clock without slack when the rule is not known', null, 'backed-up', beltLineBackedUp, beltBackedUp, undefined],
-        ['says there is no belt when no clocked inserter picks up from one', moving, '', SUMMARY_COPY.beltLineNone, SUMMARY_COPY.beltNone, SUMMARY_COPY.beltNoneSub],
-        ['says there is no belt without a rule either', null, '', SUMMARY_COPY.beltLineNone, SUMMARY_COPY.beltNone, SUMMARY_COPY.beltNoneSub],
-        ['goes by the label alone without a rule', null, 'moving (+2 ticks)', beltLineMoving, beltMoving, undefined],
-    ])('%s', (_, rule, label, line, value, sub) => {
-        expect([beltLine(rule, label), beltValue(rule, label), beltValueSub(rule, label)]).toEqual([line, value, sub]);
-    });
-});
-
-describe('beltCellText', () => {
-    it('says the belt in the belt question\'s words, with the slack', () => {
-        expect(beltCellText('moving (+4 ticks)')).toBe(SUMMARY_COPY.beltCellMoving('+4 ticks'));
-        expect(beltCellText('moving (+2–4 ticks)')).toBe(SUMMARY_COPY.beltCellMoving('+2–4 ticks'));
-        expect(beltCellText('backed-up')).toBe(SUMMARY_COPY.beltBackedUp);
-        expect(beltCellText('backed-up', { backedUpBelts: true, searchedForFewerWakeUps: false })).toBe(SUMMARY_COPY.beltBackedUp);
-        // in a run for moving belts, a clock without slack was checked on moving belts
-        expect(beltCellText('backed-up', { backedUpBelts: false, searchedForFewerWakeUps: false })).toBe(SUMMARY_COPY.beltCellNoSlack);
-        expect(beltCellText('')).toBe('');
-    });
-});
-
 describe('differenceFromRecommended', () => {
     const recommended = clock('r', { wake_ups_per_minute: 10 });
     const offRate = { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48, wake_ups_per_minute: 30 } as const;
@@ -317,9 +423,12 @@ describe('differenceFromRecommended', () => {
 
     it.each<[string, SummaryClock, string]>([
         ['says the rate first', clock('s', offRate), `${SUMMARY_COPY.differsRate('192', '240')} ${wakes('20 more times')}`],
+        ['says that a clock at the setpoint underproduces', withLoss(clock('s', { verdict: 'unstable' })), SUMMARY_COPY.differsUnderproduces],
+        ['says that a clock at the setpoint overproduces',
+            { ...clock('s', { verdict: 'unstable' }), asBuilt: { actual_output_items: 352 } as never, expectedOutputItems: 336 }, SUMMARY_COPY.differsOverproduces],
         // one time, not one times
         ['says one more wakeup', clock('s', { wake_ups_per_minute: 11 }), wakes('1 more time')],
-        ['says fewer wakeups, then the belt', clock('s', { wake_ups_per_minute: 4, matches_belt_choice: false }), `${wakes('6 fewer times')} ${SUMMARY_COPY.differsBelt}`],
+        ['says fewer wakeups', clock('s', { wake_ups_per_minute: 4 }), wakes('6 fewer times')],
         ['says nothing of wakeups that round to the same', clock('s', { wake_ups_per_minute: 10.2 }), SUMMARY_COPY.differsNothing],
         ['says nothing of uncounted wakeups', clock('s', { wake_ups_per_minute: null }), SUMMARY_COPY.differsNothing],
         ['says when it does not recover', clock('s', { verdict: 'no recovery' }), SUMMARY_COPY.differsNoRecovery],
@@ -328,7 +437,7 @@ describe('differenceFromRecommended', () => {
     });
 
     it('keeps to two sentences', () => {
-        const selected = clock('s', { ...offRate, matches_belt_choice: false });
+        const selected = clock('s', { ...offRate, verdict: 'no recovery' });
         expect(differenceFromRecommended(selected, recommended).match(/\./g)?.length).toBe(2);
     });
 });
@@ -361,29 +470,138 @@ describe('foldedMakes', () => {
     });
 });
 
-describe('worksOf', () => {
-    it.each<[string, SummaryClock, ReturnType<typeof worksOf>]>([
-        ['says yes for a clock that holds the rate and recovers, made for the belt asked for', clock('a'), { kind: 'yes', text: SUMMARY_COPY.worksYes }],
-        ['says a clock for backed-up belts is only for them', clock('a', { matches_belt_choice: false }), { kind: 'caution', text: SUMMARY_COPY.worksBackedUpBelts }],
-        ['names the rate a clock that holds a rate misses, before whether it recovers',
-            clock('a', { verdict: 'no recovery', meets_target_rate: false, rate_off_target: -48 }), { kind: 'no', text: SUMMARY_COPY.worksOffTarget('192') }],
-        ['calls a clock that does not hold its rate unstable, whatever rate it runs at',
-            clock('a', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48 }), { kind: 'no', text: SUMMARY_COPY.worksUnstable }],
-        ['calls a clock that does not hold its rate unstable at the target rate too', clock('b', { verdict: 'unstable' }), { kind: 'no', text: SUMMARY_COPY.worksUnstable }],
-        ['says a clock that does not recover so, before its belt',
-            clock('a', { verdict: 'no recovery', matches_belt_choice: false }), { kind: 'caution', text: SUMMARY_COPY.worksNoRecovery }],
+/** A clock with a result of an older engine or a trial that stopped: no recovery result, and the engine's reason where it gives one */
+function untried(base: SummaryClock, reason?: string): SummaryClock {
+    return { ...base, assessment: { ...base.assessment, disturbance_trial: null, ...(reason !== undefined && { disturbance_trial_not_tried: reason }) } };
+}
+
+/** A clock whose loss trials were not run since their estimate is over the budget: the engine's code and numbers, and a message the site does not show */
+function overBudget(base: SummaryClock): SummaryClock {
+    const untriedClock = untried(base, 'the message of the engine');
+    return { ...untriedClock, assessment: { ...untriedClock.assessment, disturbance_trial_not_tried_reason: { code: 'loss_trials_over_budget',
+        data: { losses: 7, starts: 144, trials: 16_272, ticks: 749_813_760, budget: 200_000_000 } } } };
+}
+
+describe('statusOf: the one status the chip, the Status column and the full table say', () => {
+    it.each<[string, SummaryClock, ReturnType<typeof statusOf>]>([
+        ['is Stable for a clock that holds the rate and recovers', clock('a'), { kind: 'stable', text: 'Stable' }],
+        ['says that a clock under the setpoint underproduces, before whether it recovers',
+            clock('a', { verdict: 'no recovery', meets_target_rate: false, rate_off_target: -48 }), { kind: 'underproduces', text: 'Underproduces', detail: 'makes 192/s of 240/s' }],
+        ['says that a clock whose verdict is unstable underproduces below the setpoint',
+            clock('a', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48 }), { kind: 'underproduces', text: 'Underproduces', detail: 'makes 192/s of 240/s' }],
+        ['says that a clock whose verdict is unstable overproduces above the setpoint',
+            clock('a', { verdict: 'unstable', meets_target_rate: false, rate_off_target: 10 }), { kind: 'overproduces', text: 'Overproduces', detail: 'makes 250/s of 240/s' }],
+        ['is Stable for a rounded clock that runs fast and meets the target, as for any clock that meets it',
+            clock('a', { rate_off_target: 0.24, runs_fast: 0.001 }), { kind: 'stable', text: 'Stable' }],
+        ['says that a stable clock above the setpoint that does not meet the target overproduces',
+            clock('a', { meets_target_rate: false, rate_off_target: 12.5, stable_above_target: true }), { kind: 'overproduces', text: 'Overproduces', detail: 'makes 252.5/s of 240/s' }],
+        ['says that a clock whose verdict is unstable underproduces at the target rate too', withLoss(clock('b', { verdict: 'unstable' })), { kind: 'underproduces', text: 'Underproduces' }],
+        ['says No recovery of a clock that does not recover', clock('a', { verdict: 'no recovery' }), { kind: 'no-recovery', text: 'No recovery' }],
+        ['says No recovery of a clock with a deadlock risk that meets the target: no special case',
+            clock('a', { verdict: 'no recovery', deadlock: true }), { kind: 'no-recovery', text: 'No recovery' }],
+        ['says that a clock underproduces before its recovery gave no answer', untried(clock('a', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48 })),
+            { kind: 'underproduces', text: 'Underproduces', detail: 'makes 192/s of 240/s' }],
+        ['says Error with the engine\'s reason, as data, where the loss trials could not be run',
+            untried(clock('a'), 'the build has no loss to try'), { kind: 'error', text: 'Error', detail: 'the build has no loss to try' }],
+        ['says Error with the words for the engine\'s code, before its message, where the loss trials were over the budget', overBudget(clock('a')),
+            { kind: 'error', text: 'Error', detail: SUMMARY_COPY.lossTrialsOverBudget('749,813,760', '200,000,000') }],
+        ['says Error where the run with nothing cut did not make its expected output',
+            clock('a', { loss: { survives: false, broken_by: [] } }), { kind: 'error', text: 'Error', detail: SUMMARY_COPY.errorBaselineMissed }],
+        ['says Error where there is no recovery result', untried(clock('a')), { kind: 'error', text: 'Error', detail: SUMMARY_COPY.errorNoResult }],
+        ['says Error, not Stable, of a clock that is not unstable and whose recovery gave no answer', untried(clock('a'), 'stopped'),
+            { kind: 'error', text: 'Error', detail: 'stopped' }],
+        ['says Error of a clock with no recovery whose trials gave no answer', untried(clock('a', { verdict: 'no recovery' })),
+            { kind: 'error', text: 'Error', detail: SUMMARY_COPY.errorNoResult }],
     ])('%s', (_, result, expected) => {
-        expect(worksOf(result)).toEqual(expected);
+        expect(statusOf(result)).toEqual(expected);
+    });
+
+    it('says Start-dependent of a clock that is start-dependent, whatever else it is', () => {
+        const dependent = clock('a', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48 });
+        dependent.assessment = { ...dependent.assessment, start_dependence: { verdict: 'start-dependent', expected_output_items: 240, starts: [] } };
+        expect(statusOf(dependent)).toEqual({ kind: 'start-dependent', text: 'Start-dependent' });
+    });
+
+    it('gives the chip and the Status column the same word, from the one rule', () => {
+        const clocks = [clock('a'), clock('b', { verdict: 'no recovery' }), untried(clock('c'), 'stopped'),
+            clock('d', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -48 })];
+        expect(clocks.map((_, i) => clockBadges(clocks, i)[0])).toEqual(clocks.map(it => {
+            const { kind, ...status } = statusOf(it);
+            return { kind: 'status', status: kind, ...status };
+        }));
+    });
+});
+
+describe('the help of the Status column', () => {
+    it('names every status the column can show, each once', () => {
+        const help = SUMMARY_COPY.statusHelp.map(([word, meaning]) => `${word}: ${meaning}`).join(' ');
+        for (const word of ['Stable', 'Underproduces', 'Overproduces', 'Oscillates', 'No recovery', 'Error', 'Start-dependent']) {
+            expect(help.split(word).length - 1, word).toBe(1);
+        }
+        expect(SUMMARY_COPY.statusHelp.map(([word]) => word)).toEqual([SUMMARY_COPY.stable, SUMMARY_COPY.underproduces, SUMMARY_COPY.overproduces,
+            SUMMARY_COPY.oscillates, SUMMARY_COPY.noRecovery, SUMMARY_COPY.error, SUMMARY_COPY.startDependent]);
     });
 });
 
 describe('SUMMARY_COPY', () => {
     it('uses the glossary words, not the old ones', () => {
         const texts = Object.values(SUMMARY_COPY)
-            .map(it => typeof it === 'string' ? it : (it as (...args: unknown[]) => string)('2', '3'));
+            .flatMap(it => typeof it === 'string' ? [it] : Array.isArray(it) ? it.flat() : [(it as (...args: unknown[]) => string)('2', '3')]);
         for (const text of texts) {
             expect(text).not.toMatch(/potential|backpressure|hands?\b|transfer|starved|jammed|wake window|wake-up/i);
             expect(text.length).toBeGreaterThan(0);
         }
+    });
+});
+
+// the rate the engine gives for all the copies on their shared lanes (checked_lanes.copies_made), read from its own results
+describe('the rate of a clock with a loss on a shared lane: what all the copies made together', () => {
+    const takt = viewOf(AUTOMATION_240, 'takt_batches_observed');
+    const stable = viewOf(AUTOMATION_240, 'time_study_windows');
+    /** The same clock from an older result, which has no rate of the copies */
+    const older = (view: SummaryClock): SummaryClock => ({ ...view, checkedLanes: { ...view.checkedLanes!, copies_made: undefined } });
+
+    it('is the Makes figure of the 216-tick clock: 234.07/s, all 9 copies; the stable clock keeps 240/s', () => {
+        expect(makesText(takt, 9)).toEqual({ value: '234.07/s', sub: 'all 9 copies' });
+        expect(makesText(stable, 9)).toEqual({ value: '240/s', sub: 'all 9 copies' });
+    });
+
+    it('is said where the selected clock differs from the recommended one, in place of "It underproduces."', () => {
+        expect(differenceFromRecommended(takt, stable)).toBe(`${SUMMARY_COPY.differsRate('234.07', '240')} It wakes inserters 109 fewer times a minute than the recommended clock.`);
+        expect(differenceFromRecommended(viewOf(AUTOMATION_240, 'euclidean_swings'), stable)).toBe(`${SUMMARY_COPY.differsRate('238.77', '240')} It wakes inserters 301 fewer times a minute than the recommended clock.`);
+    });
+
+    it('keeps clocks with different rates out of the folded line: electromagnetic science 330 with 2 swings', () => {
+        const views = viewsOf(ELECTROMAGNETIC_330_TWO_SWINGS);
+        // every clock has a loss; the clock-only runs all make 330/s
+        expect(views.every(view => view.assessment.items_per_second === 330 && (view.assessment.shared_lane_losses?.length ?? 0) > 0)).toBe(true);
+        expect(foldedMakes(views)).toBeNull();
+        // the three with the same rate at two decimals fold
+        const same = views.filter(view => view.checkedLanes!.copies_made!.items_per_second.toFixed(2) === '318.59');
+        expect(same.length).toBe(3);
+        expect(foldedMakes(same)).toBe(SUMMARY_COPY.foldedMakes(3, '318.59'));
+    });
+
+    it('does not change the status, the words beside it or the term the differs sentence leaves out', () => {
+        expect(outputTermOf(takt)).toEqual({ term: SUMMARY_COPY.underproduces, detail: REASON_WORDS.target_full });
+        expect(statusOf(takt)).toEqual({ kind: 'underproduces', text: SUMMARY_COPY.underproduces, detail: REASON_WORDS.target_full });
+    });
+
+    it('is the clock-only rate on a clock of an older result without the rate of the copies, as before', () => {
+        expect(makesText(older(takt), 9).value).toBe('240/s');
+        expect(differenceFromRecommended(older(takt), stable)).toBe('It wakes inserters 109 fewer times a minute than the recommended clock. It underproduces.');
+        expect(foldedMakes(viewsOf(ELECTROMAGNETIC_330_TWO_SWINGS).map(older))).toBe(SUMMARY_COPY.foldedMakes(6, '330'));
+    });
+
+    it('is the clock-only rate on a clock without a loss, and on one the copies were not run for', () => {
+        expect(makesText(viewOf(AUTOMATION_240, 'pitch_pickups'), 9).value).toBe('240/s');
+        expect(makesText(viewOf(AUTOMATION_240, 'takt_batches_observed_swings_4'), 9).value).toBe('180/s');
+    });
+
+    it('is beside the chip of a clock off the setpoint that has a loss: "makes" the copies\' rate', () => {
+        const off = { ...withLoss(clock('a', { verdict: 'unstable', meets_target_rate: false, rate_off_target: -60 })) };
+        const measured: SummaryClock = { ...off, checkedLanes: { ...off.checkedLanes!, copies_made: { items_per_second: 171.5, window_cycles: 30 } } };
+        expect(outputTermOf(measured)).toEqual({ term: SUMMARY_COPY.underproduces, detail: 'makes 171.5/s of 240/s' });
+        expect(outputTermOf(off)).toEqual({ term: SUMMARY_COPY.underproduces, detail: 'makes 180/s of 240/s' });
     });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { judgeLongRun, longRunWindowCycles, WindowCycleRepeat } from "./long-run";
+import { judgeLongRun, judgeProvenCycle, longRunWindowCycles, OUTPUT_REASON_MAX_BINS, outputReasonOf, WindowCycleRepeat } from "./long-run";
 
 /**
  * What an output inserter holds after each tick when it drops a hand at the given positions of every window cycle.
@@ -174,6 +174,67 @@ describe("judging the long run of a clock", () => {
 
         it("does not hold a span that loses a hand of every inserter in one period out of five", () => {
             expect(judgeLongRun(series(window_cycle_ticks => window_cycle_ticks % 5 === 0), TICKS, 90.947, null, EXPECTED, 16).keeps_up).toBe(false);
+        });
+    });
+
+    describe("the reason of a long run whose mean is the expected output and whose bins are uneven", () => {
+        // one output inserter that drops what a window cycle of 72 ticks makes in one drop: 288 expected, a hand of 16
+        const WINDOW = 72;
+        const dropsOf = (outputs: readonly number[]) => {
+            const held = new Array<number>(outputs.length * WINDOW).fill(0);
+            outputs.forEach((items, index) => { held[index * WINDOW + 4] = items; });
+            return [held];
+        };
+        const proven = (outputs: readonly number[]) =>
+            judgeProvenCycle(dropsOf(outputs), outputs.length * WINDOW, { bin_ticks: WINDOW, window_cycles_per_bin: 1, from_bin: 0, cycle_bins: outputs.length }, 288, 16);
+        const repeat = (pairs: [number, number][]) => {
+            const outputs = new Array<number>(26).fill(288);
+            for (const [index, items] of pairs) outputs[index] = items;
+            return outputs;
+        };
+
+        it("gives the code with every bin where one bin is high and another low", () => {
+            const outputs = repeat([[1, 432], [17, 144]]);
+            const verdict = proven(outputs);
+            expect(verdict.keeps_up).toBe(false);
+            expect(outputReasonOf(verdict, 1e-9, 26)).toEqual({ code: "oscillation", data: { expected: 288, window_cycles_per_bin: 1, tolerance: 16, bins: 26,
+                made: outputs, proven: true, repeat_window_cycles: 26 } });
+        });
+
+        it("gives the code where several bins are off and the mean is the expected output", () => {
+            const outputs = repeat([[0, 320], [3, 352], [9, 240], [20, 240]]);
+            expect(outputReasonOf(proven(outputs), 1e-9, 26)?.data.made).toEqual(outputs);
+        });
+
+        it("gives no code where the mean is below the expected output", () => {
+            const verdict = proven(repeat([[1, 432], [17, 128]]));
+            expect(verdict.keeps_up).toBe(false);
+            expect(outputReasonOf(verdict, 1e-9, 26)).toBeUndefined();
+        });
+
+        it("gives no code where every bin is within the tolerance", () => {
+            // a bin a hand high and another a hand low: within a hand, but the long run fails nowhere
+            expect(outputReasonOf(proven(repeat([[1, 304], [17, 272]])), 1e-9, 26)).toBeUndefined();
+        });
+
+        it("gives no code where the long run passes", () => {
+            const verdict = proven(repeat([]));
+            expect(verdict.keeps_up).toBe(true);
+            expect(outputReasonOf(verdict, 1e-9, 26)).toBeUndefined();
+        });
+
+        it("gives the code on a sampled run, with no repeat proven, and the tolerance the run judged by", () => {
+            const outputs = Array.from({ length: 120 }, (_, index) => index === 60 ? 432 : index === 70 ? 144 : 288);
+            const verdict = judgeLongRun(dropsOf(outputs), 120 * WINDOW, WINDOW, null, 288, 16);
+            expect(verdict.judged).toHaveLength(80);
+            expect(outputReasonOf(verdict, 1e-9, null)?.data).toMatchObject({ bins: 80, tolerance: 16, proven: false, repeat_window_cycles: null, made: outputs.slice(40) });
+        });
+
+        it(`keeps only the highest and the lowest bin of more than ${OUTPUT_REASON_MAX_BINS} bins, with their places`, () => {
+            const outputs = Array.from({ length: 90 }, (_, index) => [5, 7].includes(index) ? 432 : [84, 86].includes(index) ? 144 : 288);
+            const reason = outputReasonOf(proven(outputs), 1e-9, 90);
+            expect(reason?.data.made).toBeUndefined();
+            expect(reason?.data).toMatchObject({ bins: 90, cut: { highest: { at: 5, items: 432 }, lowest: { at: 84, items: 144 } } });
         });
     });
 

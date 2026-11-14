@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { assumptionsText, freeLaneDropText, phaseChecksText } from './modelAssumptions';
+import type { ClockAlternativeView } from '../worker/types';
+import { assumptionsText, freeLaneDropText, modeledDetails, phaseChecksText } from './modelAssumptions';
 
 describe('assumptionsText', () => {
     const none = { count: 4, missingType: 0, missingQuality: 0, automatic: 0, unavailable: 0 };
@@ -24,5 +25,41 @@ describe('the model texts', () => {
     it('says how many other places in its window cycle the clock was tried from', () => {
         expect(phaseChecksText(12)).toBe('The clock was also tried from 12 other places in its window cycle. More starting states can be sampled separately.');
         expect(phaseChecksText(undefined)).toBe('How many other places in its window cycle the clock was tried from is unavailable.');
+    });
+
+    it('names a machine with a kick start or an imported fuel by its kind and its recipe', () => {
+        const machines = [{ id: 3, prototype: 'biochamber', recipe: 'pentapod-egg' }, { id: 4, prototype: 'biochamber', recipe: 'pentapod-egg' },
+            { id: 5, prototype: 'biochamber', recipe: 'agricultural-science-pack' }];
+        const assumptions = { machines, kickStarts: [{ machineId: 'machine:3', item: 'pentapod-egg', items: 84 }], outputDrops: [], overrides: undefined,
+            machineFuel: [{ machineId: 5, fuel: 'nutrients' }] };
+        const words = (id: string) => ({ biochamber: 'Biochamber', 'pentapod-egg': 'Pentapod egg', 'agricultural-science-pack': 'Agricultural science pack',
+            nutrients: 'Nutrients' } as Record<string, string>)[id] ?? id;
+        expect(modeledDetails({ assumptions } as unknown as ClockAlternativeView, words, words)).toEqual([
+            'The biochamber (machine 3) that makes pentapod egg gets a kick start of 84 pentapod egg. Losing those items is a separate recovery question.',
+            'The biochamber that makes agricultural science pack: imported fuel nutrients.',
+        ]);
+        const before = { ...assumptions, machines: undefined };
+        expect(modeledDetails({ assumptions: before } as unknown as ClockAlternativeView, words, words)[0]).toMatch(/^Machine 3 gets a kick start/);
+    });
+    it('names the belt and the inserters of an output drop by their items, from the names the engine carried', () => {
+        const outputDrops = [{ beltId: 1, inserterIds: [1, 2], mode: 'shared-lanes' as const }, { beltId: 2, inserterIds: [3], mode: 'free-lane' as const }];
+        const entityNames = { 'belt:1': 'grenade belt', 'inserter:1': 'inserter (inserter 1) that drops grenade', 'inserter:2': 'inserter (inserter 2) that drops grenade',
+            'belt:2': 'coal belt' };
+        const assumptions = { kickStarts: [], outputDrops, overrides: undefined, machineFuel: [], entityNames };
+        expect(modeledDetails({ assumptions } as unknown as ClockAlternativeView)).toEqual([
+            'The grenade belt: the drop positions you gave are used to space the drops of the inserter (inserter 1) that drops grenade, '
+                + 'the inserter (inserter 2) that drops grenade on the belt.',
+            freeLaneDropText('the coal belt'),
+        ]);
+        // a view kept before the names were carried
+        expect(modeledDetails({ assumptions: { ...assumptions, entityNames: undefined } } as unknown as ClockAlternativeView)[0]).toMatch(/^Belt 1: .* Inserter 1, Inserter 2 on the belt\.$/);
+    });
+
+    it('says the run overrides only where there are some: an empty set says nothing', () => {
+        const assumptions = { kickStarts: [], outputDrops: [], machineFuel: [] };
+        expect(modeledDetails({ assumptions: { ...assumptions, overrides: {} } } as unknown as ClockAlternativeView)).toEqual([]);
+        expect(modeledDetails({ assumptions: { ...assumptions, overrides: undefined } } as unknown as ClockAlternativeView)).toEqual([]);
+        expect(modeledDetails({ assumptions: { ...assumptions, overrides: { terminal_swing_count: 3 } } } as unknown as ClockAlternativeView))
+            .toEqual(['Explicit run overrides: {"terminal_swing_count":3}.']);
     });
 });

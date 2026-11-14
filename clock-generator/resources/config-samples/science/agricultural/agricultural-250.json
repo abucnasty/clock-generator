@@ -2,7 +2,11 @@
   "setpoint": {
     "recipe": "agricultural-science-pack",
     "items_per_second": 250,
-    "copies": 5
+    "copies": 5,
+    "copy_offset": {
+      "x": 10,
+      "y": 0
+    }
   },
   "machines": [
     {
@@ -173,8 +177,8 @@
       "id": 11,
       "source": {
         "type": "belt",
-        "id": 1,
-        "near_lane": 1
+        "id": 2,
+        "near_lane": 2
       },
       "sink": {
         "type": "machine",
@@ -199,14 +203,42 @@
     {
       "id": 1,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
           "ingredient": "bioflux",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         },
         {
           "ingredient": "nutrients",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "turbo-transport-belt",
+      "flow_direction": 4,
+      "lanes": [
+        {
+          "ingredient": "bioflux",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
+        },
+        {
+          "ingredient": "nutrients",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         }
       ]
     }

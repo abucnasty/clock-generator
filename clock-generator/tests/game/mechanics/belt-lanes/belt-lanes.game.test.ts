@@ -47,6 +47,8 @@ describe("the recorder samples the belt lane under an inserter", () => {
             seed: [],
             clock: { blueprint: encodeBlueprintFile({ blueprint: exported.blueprint }), schedule: exported.schedule },
             config,
+            // the scaffold is abucnasty's build of nine copies of the config
+            copies: 9,
             unclocked: false,
             game_speed: 1000,
             watch: false,

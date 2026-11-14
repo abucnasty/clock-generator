@@ -30,6 +30,11 @@ describe('targetToFill', () => {
         expect(targetToFill({ target: { recipe: 'iron-gear-wheel', items_per_second: 2, copies: 3 }, source: 'mod' }))
             .toEqual({ recipe: 'iron-gear-wheel', items_per_second: 2, copies: 3 });
     });
+
+    it('keeps the gap to the next copy where the export states one', () => {
+        expect(targetToFill({ target: { recipe: 'iron-gear-wheel', items_per_second: 2, copies: 1, copy_offset: { x: 0, y: -7 } }, source: 'mod' }))
+            .toEqual({ recipe: 'iron-gear-wheel', items_per_second: 2, copies: 1, copy_offset: { x: 0, y: -7 } });
+    });
 });
 
 describe('the words of the Setpoint row', () => {
@@ -47,9 +52,25 @@ describe('the words of the Setpoint row', () => {
         expect(targetRowCaption('inferred')).toMatch(/^Estimated maximum output of the imported machines\. .*lower the rate in the Setpoint panel after importing\./);
     });
 
+    it('says when the rate is lowered to what the output belt carries, and what the machines make', () => {
+        const limit = { belt_id: 2, machines_per_second: 248.00625000000002 };
+        expect(targetRowCaption('mod', limit)).toBe('From the Factorio export, lowered to what Belt 2 carries. '
+            + 'The machines make up to 248.006/s. You can lower the rate after importing.');
+        expect(targetRowCaption('inferred', limit)).toBe('Estimated from the imported machines, lowered to what Belt 2 carries. '
+            + 'The machines make up to 248.006/s. You can lower the rate in the Setpoint panel after importing.');
+    });
+
+    it('names the limit of the build that lowered the rate, in the engine\'s words', () => {
+        const limit = { machines_per_second: 248.00625000000002, text: 'At most 60 a second of copper plate reaches the machines that need it.' };
+        expect(targetRowCaption('mod', undefined, limit)).toBe('From the Factorio export, lowered to the most the build can hold. '
+            + 'At most 60 a second of copper plate reaches the machines that need it.');
+        expect(targetRowCaption('inferred', undefined, { ...limit, text: null })).toBe('Estimated from the imported machines, lowered to the most '
+            + 'the build can hold. The machines make up to 248.006/s. You can lower the rate in the Setpoint panel after importing.');
+    });
+
     it('says which target it replaces', () => {
         expect(replacesTargetNote({ recipe: 'logistic-science-pack', items_per_second: 240, copies: 11 }, name))
-            .toBe('Tick to replace your current target (Logistic science pack at 240/s).');
+            .toBe('Tick to replace your current target (logistic science pack at 240/s).');
     });
 
     it('says what to do when it could not tell', () => {

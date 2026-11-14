@@ -137,7 +137,7 @@ export function constructPrimitiveRoundRobinPolling(config: Config): PrimitiveRo
         const options: RoundRobinPollingOptions = { share_windows, feeder_offset, surplus_guard, ...(output_room && { output_room }) };
         try {
             const plan = roundRobinPollingPlan(registry, cycle.entity_transfer_map, grouped_cycles, window_cycle_ticks,
-                config.overrides?.backed_up_belts !== true, options, null, composition);
+                options, null, composition);
             for (const [id, ranges] of plan.windows) for (const range of ranges) {
                 if (!Number.isInteger(range.start_inclusive) || !Number.isInteger(range.end_inclusive)
                     || range.start_inclusive < 0 || range.end_inclusive < range.start_inclusive || range.end_inclusive >= window_cycle_ticks) {

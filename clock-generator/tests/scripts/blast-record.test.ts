@@ -16,11 +16,11 @@ afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
 const sha = (c: string) => c.repeat(64);
 const run = (...args: string[]) => spawnSync('python3', [record, ...args], { encoding: 'utf8' });
 
-interface Edit { id?: string; maker?: string; verdict?: string; holds?: boolean; rate?: number; window_cycle_ticks?: number; wake_ups?: number; clock?: string; windows?: Record<string, { start: number; end: number }[]> }
+interface Edit { id?: string; maker?: string; verdict?: string; holds?: boolean; rate?: number; window_cycle_ticks?: number; wake_ups?: number; clock?: string; text?: string; windows?: Record<string, { start: number; end: number }[]> }
 /** An alternative as the blast writes it (the fields the record reads, and the heavy ones it leaves out) */
 const alternative = (e: Edit = {}) => ({
     id: e.id ?? 'even-hands', ...(e.maker !== undefined && { maker: e.maker }), verdict: e.verdict ?? 'stable', holds: e.holds ?? true, rate: e.rate ?? 640, supply: null, window_cycle_ticks: e.window_cycle_ticks ?? 972,
-    wake_ups: e.wake_ups ?? 889.0718254784936, clock_sha256: e.clock ?? sha('a'), text_sha256: sha('2'), descriptions_cut: 0,
+    wake_ups: e.wake_ups ?? 889.0718254784936, clock_sha256: e.clock ?? sha('a'), text_sha256: e.text ?? sha('2'), descriptions_cut: 0,
     windows_sha256: sha('7'), windows: e.windows ?? { 'inserter:1': [{ start: 0, end: 10 }, { start: 54, end: 64 }], 'drill:1': [] },
     results_sha256: sha('3'), results: { label: sha('1'), assessment: sha('9') },
 });
@@ -67,12 +67,13 @@ describe('record.py write', () => {
         const dir = written({ A: jobFile('A') });
         const text = fs.readFileSync(path.join(dir, 'config-A.json'), 'utf8');
         const body = JSON.parse(text);
-        expect(body).toMatchObject({ format: 'clock-record-2', job: 'config-A', group: 'config', name: 'A', config_sha256: sha('c'), job_results_sha256: sha('5'), selected: 'even-hands' });
+        expect(body).toMatchObject({ format: 'clock-record-3', job: 'config-A', group: 'config', name: 'A', config_sha256: sha('c'), job_results_sha256: sha('5'), selected: 'even-hands' });
         expect(body.selected_windows).toEqual({ 'inserter:1': '0-10,54-64', 'drill:1': '' });
         expect(body.alternatives.map((a: any) => a.id)).toEqual(['even-hands', 'plain']);
-        expect(Object.keys(body.alternatives[0])).toEqual(['id', 'verdict', 'holds', 'rate', 'supply', 'window_cycle_ticks', 'wake_ups', 'descriptions_cut', 'clock_sha256', 'windows_sha256', 'text_sha256', 'results_sha256']);
+        expect(Object.keys(body.alternatives[0])).toEqual(['id', 'verdict', 'holds', 'rate', 'supply', 'window_cycle_ticks', 'wake_ups', 'descriptions_cut', 'clock_sha256', 'windows_sha256', 'results_sha256']);
         expect(body.alternatives[0].wake_ups).toBe(889.072);
         expect(text).not.toContain('seconds');
+        expect(text).not.toContain('text_sha256');
         expect(text).not.toContain('"results"');
         expect(text.endsWith('}\n')).toBe(true);
     });
@@ -114,6 +115,15 @@ describe('record.py check', () => {
         const done = run('check', '--dir', dir, side({ A: slower, B: jobFile('B') }));
         expect(done.status).toBe(0);
         expect(done.stdout).toContain('2 jobs, 4 alternatives: no difference');
+    });
+
+    it('passes on a job file that differs only in text_sha256: the record holds no hash of a clock\'s text', () => {
+        const dir = written({ A: jobFile('A'), B: jobFile('B') });
+        const moved = jobFile('A', [alternative({ text: sha('f') }), alternative({ id: 'plain', verdict: 'unstable', clock: sha('b'), text: sha('e') })]);
+        const done = run('check', '--dir', dir, side({ A: moved, B: jobFile('B') }));
+        expect(done.status, done.stdout).toBe(0);
+        expect(done.stdout).toContain('2 jobs, 4 alternatives: no difference');
+        expect(done.stdout).not.toContain('text_sha256');
     });
 
     it('fails on one changed field of the record with a table of job, field, before and after', () => {
@@ -429,27 +439,38 @@ describe('record.py worse (the never-worse rule)', () => {
         expect(fs.readFileSync(summary, 'utf8')).toContain('### Never worse: 1 selected clocks got worse and are not named in MOVES.md');
     });
 
-    /** The record folder as the format before the window cycle time was named wrote it: clock-record-1, `period` */
-    const asRecord1 = (dir: string) => {
+    /** The record folder as an older format wrote it: its format line, `text_sha256` in every alternative (clock-record-1 and 2 held it),
+     * and for clock-record-1 `period` where the window cycle time is */
+    const asOld = (dir: string, format: 'clock-record-1' | 'clock-record-2') => {
         const old = folder();
         fs.mkdirSync(old);
         for (const file of fs.readdirSync(dir)) {
-            const text = fs.readFileSync(path.join(dir, file), 'utf8').replace('"clock-record-2"', '"clock-record-1"').split('"window_cycle_ticks"').join('"period"');
-            fs.writeFileSync(path.join(old, file), text);
+            const body = JSON.parse(fs.readFileSync(path.join(dir, file), 'utf8'));
+            body.format = format;
+            body.alternatives = body.alternatives.map((a: Record<string, unknown>) => {
+                const entries = Object.entries({ ...a, text_sha256: sha('2') }).map(([f, v]) => [format === 'clock-record-1' && f === 'window_cycle_ticks' ? 'period' : f, v]);
+                return Object.fromEntries(entries);
+            });
+            fs.writeFileSync(path.join(old, file), JSON.stringify(body));
         }
         return old;
     };
+    const asRecord1 = (dir: string) => asOld(dir, 'clock-record-1');
 
-    it('reads a base record in clock-record-1: the same verdict as the base in clock-record-2, and no worse rows for an unmoved record', () => {
+    it('reads a base record in clock-record-1 or clock-record-2: the same verdict as the base in clock-record-3, and no worse rows for an unmoved record', () => {
         const dir = base();
-        const old = asRecord1(dir);
-        expect(fs.readFileSync(path.join(old, 'config-A.json'), 'utf8')).toContain('"period": 972');
-        expect(worse(old, dir).status).toBe(0);
-        const edit = { verdict: 'no recovery', clock: sha('e') } as const;
-        const done = worse(old, change(alternative(edit)), '## Something else (#1)\n- config-B: faster\n');
-        expect(done.status, done.stdout).toBe(1);
-        expect(done.stdout.split('\n').find(line => line.startsWith('config-A'))!.split(/\s{2,}/)).toEqual(['config-A', 'verdict', 'stable', 'no recovery', 'NO']);
-        expect(worse(old, change(alternative(edit)), '- config-A: no recovery\n').status).toBe(0);
+        for (const format of ['clock-record-1', 'clock-record-2'] as const) {
+            const old = asOld(dir, format);
+            const text = fs.readFileSync(path.join(old, 'config-A.json'), 'utf8');
+            expect(text).toContain('"text_sha256"');
+            expect(text).toContain(format === 'clock-record-1' ? '"period":972' : '"window_cycle_ticks":972');
+            expect(worse(old, dir).status).toBe(0);
+            const edit = { verdict: 'no recovery', clock: sha('e') } as const;
+            const done = worse(old, change(alternative(edit)), '## Something else (#1)\n- config-B: faster\n');
+            expect(done.status, done.stdout).toBe(1);
+            expect(done.stdout.split('\n').find(line => line.startsWith('config-A'))!.split(/\s{2,}/)).toEqual(['config-A', 'verdict', 'stable', 'no recovery', 'NO']);
+            expect(worse(old, change(alternative(edit)), '- config-A: no recovery\n').status).toBe(0);
+        }
     });
 
     it('refuses a base record in a format it does not know', () => {
@@ -478,7 +499,7 @@ describe('the committed record', () => {
         expect(files.length).toBeGreaterThan(0);
         for (const file of files) {
             const body = JSON.parse(fs.readFileSync(path.join(recordDir, file), 'utf8'));
-            expect(body.format, file).toBe('clock-record-2');
+            expect(body.format, file).toBe('clock-record-3');
             expect(body.job, file).toBe(file.replace(/\.json$/, ''));
             expect(`${body.group}-${body.name}`, file).toBe(body.job);
             expect(body.config_sha256, file).toMatch(/^[0-9a-f]{64}$/);
@@ -486,7 +507,8 @@ describe('the committed record', () => {
             expect(body.alternatives.map((a: any) => a.id), file).toContain(body.selected);
             expect(new Set(body.alternatives.map((a: any) => a.id)).size, file).toBe(body.alternatives.length);
             for (const a of body.alternatives) {
-                for (const f of ['clock_sha256', 'windows_sha256', 'text_sha256', 'results_sha256']) expect(a[f], `${file} ${a.id}`).toMatch(/^[0-9a-f]{64}$/);
+                for (const f of ['clock_sha256', 'windows_sha256', 'results_sha256']) expect(a[f], `${file} ${a.id}`).toMatch(/^[0-9a-f]{64}$/);
+                expect(a, `${file} ${a.id}`).not.toHaveProperty('text_sha256');
             }
         }
     });

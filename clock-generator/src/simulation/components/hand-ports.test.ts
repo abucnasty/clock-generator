@@ -86,7 +86,7 @@ describe("a hand's ports", () => {
         const [first, second] = state.inserter.belt_lane_facts!;
         state.inserter.belt_lane_facts = [
             { ...first, lane_end: { kind: "dead_end" } },
-            { ...second, lane_end: { kind: "outlet", outlet_rate: second.supply_rate } },
+            { ...second, lane_end: { kind: "infinite" } },
         ];
         bind(state, source, gears());
         const stocks = source.pickupsOf(state.entity_id.id)!;

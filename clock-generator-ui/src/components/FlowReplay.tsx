@@ -26,6 +26,7 @@ import { useFlowFitBounds } from '../hooks/useFlowFitBounds';
 import { useFlowPortUpdates } from '../hooks/useFlowPortUpdates';
 import { FlowTileBackground } from './FlowTileBackground';
 import { FlowFitButton } from './FlowFitButton';
+import { nameInSentence } from '../utils/entityLabel';
 
 const NODE_HEIGHT = 168;
 const number = (value: number) => formatNumberText(value, { maxDecimals: 2 });
@@ -69,11 +70,11 @@ function ReplayNode({ data }: NodeProps<Node<ReplayData>>) {
                 '& img': { flexShrink: 0 },
                 '& .MuiTypography-root': { minWidth: 0, lineHeight: 1.25, display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden', overflowWrap: 'anywhere' },
             }}>
-                {ins ? <>{snapshot.handItem && <FactorioIcon name={snapshot.handItem} size={20} alt="" />}<Typography variant="caption" title={snapshot.hand ? `Holding ${number(snapshot.hand)} ${snapshot.handItem ? itemLabel(snapshot.handItem) : 'items'}` : undefined}>{snapshot.hand ? `Holding ${number(snapshot.hand)} ${snapshot.handItem ? itemLabel(snapshot.handItem) : 'items'}` : 'Empty hand'}</Typography></>
+                {ins ? <>{snapshot.handItem && <FactorioIcon name={snapshot.handItem} size={20} alt="" />}<Typography variant="caption" title={snapshot.hand ? `Holding ${number(snapshot.hand)} ${snapshot.handItem ? nameInSentence(itemLabel(snapshot.handItem)) : 'items'}` : undefined}>{snapshot.hand ? `Holding ${number(snapshot.hand)} ${snapshot.handItem ? nameInSentence(itemLabel(snapshot.handItem)) : 'items'}` : 'Empty hand'}</Typography></>
                     : snapshot.produced !== undefined ? <Typography variant="caption">{number(snapshot.produced)} made since tick 0</Typography>
                     : <Typography variant="caption">{snapshot.inventory.slice(0, 2).map(stock => `${stock.value} ${stock.item ? itemLabel(stock.item) : stock.unit}`).join(' · ')}</Typography>}
             </Box>
-            <Typography variant="caption" component="div" title={data.effects.map(effect => `${effect.kind}: ${number(effect.amount)} ${effect.item ? itemLabel(effect.item) : 'items'}`).join('; ')} sx={{ fontWeight: 700, lineHeight: 1.2, height: 18, display: 'flex', alignItems: 'start', overflow: 'hidden' }}>
+            <Typography variant="caption" component="div" title={data.effects.map(effect => `${effect.kind}: ${number(effect.amount)} ${effect.item ? nameInSentence(itemLabel(effect.item)) : 'items'}`).join('; ')} sx={{ fontWeight: 700, lineHeight: 1.2, height: 18, display: 'flex', alignItems: 'start', overflow: 'hidden' }}>
                 {data.effects.length ? data.effects.slice(0, 2).map(effect => <Box component="span" key={`${effect.kind}:${effect.item}`} sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, mr: 0.5 }}>{effect.item && <FactorioIcon name={effect.item} size={14} alt={itemLabel(effect.item)} />}{`${effect.kind === 'produce' ? '+' : effect.kind === 'pickup' ? '↑' : '↓'}${number(effect.amount)}`}</Box>) : ' '}
             </Typography>
         </Box>
@@ -172,7 +173,7 @@ function ReplayContent({ config, recording, tick, inspection, cycleTicks, onTick
         const action = transfers[0]?.kind === 'pickup' ? 'Pickup' : 'Delivery';
         const route = `${from.replace(':', ' ')} to ${to.replace(':', ' ')}`;
         const description = active
-            ? `${action} at tick ${tick}: ${amounts.map(value => `${number(value.amount)} ${value.item ? itemLabel(value.item) : 'items'}`).join(', ')}; ${route}`
+            ? `${action} at tick ${tick}: ${amounts.map(value => `${number(value.amount)} ${value.item ? nameInSentence(itemLabel(value.item)) : 'items'}`).join(', ')}; ${route}`
             : trail ? `Recent swing on ${route} between ticks ${frame.recentStart} and ${tick - 1}; no swing at tick ${tick}` : route;
         const style = flowRouteStyle(tokens, active ? 'transfer' : trail ? 'recent' : highlighted ? 'selected' : 'neutral');
         return { ...edge, type: 'transfer', label: undefined, ariaLabel: description, data: { amounts, description, flowRoute: routes.get(edge.id) },

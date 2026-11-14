@@ -2,7 +2,11 @@
   "setpoint": {
     "recipe": "utility-science-pack",
     "items_per_second": 120,
-    "copies": 7
+    "copies": 7,
+    "copy_offset": {
+      "x": 9,
+      "y": 0
+    }
   },
   "machines": [
     {
@@ -18,7 +22,8 @@
       "id": 1,
       "source": {
         "type": "belt",
-        "id": 1
+        "id": 1,
+        "near_lane": 2
       },
       "sink": {
         "type": "machine",
@@ -68,14 +73,21 @@
     {
       "id": 1,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
           "ingredient": "flying-robot-frame",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         },
         {
           "ingredient": "flying-robot-frame",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         }
       ]
     },
@@ -92,14 +104,21 @@
     {
       "id": 3,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
           "ingredient": "low-density-structure",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         },
         {
           "ingredient": "processing-unit",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         }
       ]
     }

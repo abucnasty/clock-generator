@@ -9,11 +9,14 @@ import { ClockGeneratorTags } from "../blueprints/components";
 import { encodeBlueprintFile } from "../blueprints/serde";
 import { Config } from "../config";
 import { ClockSchedule } from "../crafting/blueprint";
+import { sharedLaneRunsOf } from "../crafting/shared-lane-verdict";
+import { EntityId } from "../entities/entity-id";
 import { matchCopies } from "../verification/entity-copies";
 import { matchRecordingToConfig } from "../verification/entity-matching";
 import { BuiltClock, blueprintWithNamedClock, recordingOfBuiltClock } from "./built-clock";
 import { parseRecording, Recording } from "../verification/recording";
 import { RconClient } from "./rcon";
+import { recipesMaking } from "./recording-output";
 import {
     CacheEnvironment, RECORDING_CACHE_PROTOCOL, RecordingCacheKey, describedRecordingKey, recordingCacheDir, recordingCacheMode, restoreRecording,
     storeRecording,
@@ -148,7 +151,7 @@ export interface HarnessOptions {
      * For a probe that times its run in game ticks (a clock's window cycle can be far longer than the run)
      */
     record_at_once?: boolean;
-    /** Scratch folder for Factorio's write data; a temporary folder that is removed afterwards when absent */
+    /** Scratch folder for Factorio's write data; when absent, a folder made under `scratchRoot` and removed afterwards */
     work_dir?: string;
     /** Speed the game is set to as the build is built; absent, it stays what it is, as someone watching may have set it */
     game_speed?: number;
@@ -383,6 +386,16 @@ async function freeUdpPort(): Promise<number> {
  * A write-data folder of its own for the game: the save, the mods of this repository and the mods that ship with
  * the game. Nothing in the Factorio install or the player's own saves and mods is written to.
  */
+/**
+ * Where the scratch folders of a run are made: `TMPDIR` when it is set, else the user's cache folder. The system's temporary
+ * folder is often kept in memory, and a run that is killed leaves its folder behind.
+ */
+async function scratchRoot(): Promise<string> {
+    const root = process.env.TMPDIR ?? path.join(os.homedir(), ".cache", "clock-generator");
+    await fs.mkdir(root, { recursive: true });
+    return root;
+}
+
 async function prepareWorkDir(work_dir: string, executable: string, save: string): Promise<{ config: string; save: string; settings: string }> {
     const data_dir = factorioDataDir(executable);
     const mods_dir = path.join(work_dir, "mods");
@@ -537,10 +550,53 @@ export function scheduledDrillIds(blueprint: string): number[] {
     return Array.from(new Set(entities.flatMap(scheduledDrillIdsOf))).sort((a, b) => a - b);
 }
 
+/** A part copy of the config: the entities it holds (as `EntityId` names them) and the share of a whole copy's output it is held to */
+export interface PartCopy {
+    ids: ReadonlySet<string>;
+    share: number;
+}
+
+/**
+ * The part copies of the config, as the generator lays them out on the lanes its copies share (`sharedLaneRunsOf`, one for
+ * each way it lays them out that gives another part): where `copies` has a fraction, the upstream share of the takers of
+ * each shared lane, rounded up for each taker, with the machines they feed, the inserters that feed those and the
+ * inserters that take their results. None for a whole number of copies or a config whose copies share no lane.
+ *
+ * Its share is the generator's rule for a part copy's machine (shared-lane-verdict.ts, `machineShareOf`): a machine is held to
+ * its whole target times the share of its takers (the inserters that take from it) that the part copy holds; the part copy's
+ * output is that of its final machines (those making the target item), against all the final machines of a whole copy. Here a
+ * taker counts as one, where the generator weighs each by what it moves in the output cycle: the same where a final machine's
+ * takers move alike (one output inserter a machine, as in every build of copies recorded so far).
+ */
+export function partCopiesOf(config: Config): PartCopy[] {
+    const fraction = config.setpoint.copies - Math.floor(config.setpoint.copies);
+    if (fraction < FRACTION_EPSILON) return [];
+    const parts = new Map<string, ReadonlySet<string>>();
+    for (const reading of sharedLaneRunsOf(config).readings) {
+        for (const layout of reading.layouts) {
+            const part = layout.copies.later.find((later): later is ReadonlySet<string> => later !== "whole");
+            if (part) parts.set(JSON.stringify([...part].sort()), part);
+        }
+    }
+    const finals = config.machines.filter(machine => recipesMaking(config, config.setpoint.recipe).has(machine.recipe));
+    const inserter_ids = config.inserters.map((inserter, index) => ({ inserter, id: EntityId.forInserter(inserter.id ?? index + 1).id }));
+    return Array.from(parts.values()).map(ids => {
+        const held = finals.filter(machine => ids.has(EntityId.forMachine(machine.id).id)).map(machine => {
+            const takers = inserter_ids.filter(({ inserter }) => inserter.source.type === "machine" && inserter.source.id === machine.id);
+            return takers.length === 0 ? 1 : takers.filter(({ id }) => ids.has(id)).length / takers.length;
+        });
+        return { ids, share: held.reduce((sum, share) => sum + share, 0) / finals.length };
+    });
+}
+
+/** A fraction of copies smaller than this is none: `copies` is read as a float */
+const FRACTION_EPSILON = 1e-9;
+
 /**
  * The build as a recording without samples, matched to the config by structure, as a recording is: as one copy of the
  * config, whatever else the build holds, unless the test names the copies the build holds (see HarnessOptions.copies),
- * which are then found and counted
+ * which are then found and counted. A count with a fraction is that many whole copies and one part copy of the config
+ * (`partCopiesOf`), which comes last in `copies`.
  */
 function matchBuild(described: any, config: Config, named_copies?: number) {
     const as_recording = parseRecording({
@@ -560,14 +616,42 @@ function matchBuild(described: any, config: Config, named_copies?: number) {
     });
     if (named_copies === undefined) {
         const match = matchRecordingToConfig(as_recording, config);
-        return { as_recording, match, copies: [match] };
+        return { as_recording, match, copies: [match], part: null };
     }
-    const { copies, merged } = matchCopies(as_recording, config);
-    if (copies.length !== named_copies) {
-        throw new Error(`The test says the build holds the config ${named_copies} time${named_copies === 1 ? "" : "s"}, and the build holds it ${copies.length}: `
-            + "a copy is a group of machines that inserters move items between, with a machine for every machine of the config");
+    const whole = Math.floor(named_copies + FRACTION_EPSILON);
+    if (named_copies - whole < FRACTION_EPSILON) {
+        const { copies, merged } = matchCopies(as_recording, config);
+        if (copies.length !== named_copies) {
+            throw new Error(`The test says the build holds the config ${named_copies} time${named_copies === 1 ? "" : "s"}, and the build holds it ${copies.length}: `
+                + "a copy is a group of machines that inserters move items between, with a machine for every machine of the config");
+        }
+        return { as_recording, match: merged, copies, part: null };
     }
-    return { as_recording, match: merged, copies };
+    const configured = config.setpoint.copies;
+    if (Math.abs((named_copies - whole) - (configured - Math.floor(configured))) > FRACTION_EPSILON) {
+        throw new Error(`The test says the build holds the config ${named_copies} times, and the config's copies are ${configured}: `
+            + "a part copy is the fraction of a copy the config's copies have");
+    }
+    const parts = partCopiesOf(config);
+    if (parts.length === 0) {
+        throw new Error(`The test says the build holds the config ${named_copies} times, and the config has no part copy: its copies share no lane`);
+    }
+    const found = matchCopies(as_recording, config, parts.map(part => part.ids));
+    const recipes = new Set(config.machines.map(machine => machine.recipe));
+    const others = (found.others ?? []).filter(group => group.machines.some(machine => recipes.has(machine.recipe)));
+    const part_count = found.parts!.length;
+    if (found.copies.length !== whole || part_count !== 1) {
+        const numbers = (ids: ReadonlySet<string>, of: (id: number) => EntityId, count: number) =>
+            Array.from({ length: count }, (_, index) => index + 1).filter(id => ids.has(of(id).id)).join(", ");
+        const of_part = (ids: ReadonlySet<string>) => `machines ${numbers(ids, id => EntityId.forMachine(id), Math.max(0, ...config.machines.map(machine => machine.id)))}; `
+            + `inserters ${numbers(ids, id => EntityId.forInserter(id), config.inserters.length)}`;
+        throw new Error(`The test says the build holds the config ${named_copies} times: ${whole} whole copies and one part copy (${parts.map(part => of_part(part.ids)).join(" or ")}). `
+            + `It found ${found.copies.length} whole copies and ${part_count === 0 ? "no part copy" : `${part_count} part copies`}`
+            + (others.length > 0 ? `, and ${others.length} group${others.length === 1 ? "" : "s"} of the config's recipes that ${others.length === 1 ? "is" : "are"} neither: `
+                + others.map(group => `${group.machines.length} machines: ${group.machines.map(machine => machine.recipe).sort().join(", ")}`).join("; ") : ""));
+    }
+    const part = parts.find(it => it.ids === found.parts![0].ids)!;
+    return { as_recording, match: found.merged, copies: [...found.copies, found.parts![0].match], part: { index: whole, ...part } };
 }
 
 /**
@@ -610,8 +694,16 @@ export function matchBuiltInserters(described: any, config: Config): Map<number,
  * machine ids. Without the count the build is one copy and anything beyond the config is left for buildPartsMissingFromConfig.
  */
 export function matchBuiltCopies(described: any, config: Config, named_copies?: number): Map<number, number>[] {
-    const { as_recording, copies } = matchBuild(described, config, named_copies);
-    return copies.map(match => {
+    return builtCopies(described, config, named_copies).inserters;
+}
+
+/**
+ * The copies of the build as matchBuiltCopies finds them, and the part copy among them where the count has a fraction: its
+ * place (the last), the config entities it holds and the share of a whole copy's output it is held to (`partCopiesOf`)
+ */
+export function builtCopies(described: any, config: Config, named_copies?: number): { inserters: Map<number, number>[]; part: (PartCopy & { index: number }) | null } {
+    const { as_recording, copies, part } = matchBuild(described, config, named_copies);
+    return { part, inserters: copies.map(match => {
         const unit_numbers = new Map<number, number>();
         for (const inserter of as_recording.inserters) {
             const config_id = match.inserters.get(inserter.id);
@@ -620,7 +712,7 @@ export function matchBuiltCopies(described: any, config: Config, named_copies?: 
             }
         }
         return unit_numbers;
-    });
+    }) };
 }
 
 /**
@@ -666,8 +758,11 @@ function matchedChests(recording: Recording, config: Config, match: { inserters:
     return chests;
 }
 
-/** What the mod is told of the inserters a clock enables: per config id the unit number of its inserter, a list of them where the build has copies */
-function clockInserters(copies: Map<number, number>[]): Record<string, number | number[]> {
+/**
+ * What the mod is told of the inserters a clock enables: per config id the unit number of its inserter, a list of them where
+ * the build has copies; an inserter that a part copy does not hold is in the lists of the whole copies only
+ */
+export function clockInserters(copies: Map<number, number>[]): Record<string, number | number[]> {
     if (copies.length === 1) {
         return Object.fromEntries(copies[0]);
     }
@@ -696,6 +791,11 @@ const BELT_ENTITY_TYPES = new Set(["transport-belt", "underground-belt", "splitt
  * - a loader on a machine of the config, which moves items like an inserter that is always enabled.
  * Inserters between belts and chests only, such as the ones that feed a scaffold's belt, and machines with other
  * recipes are the scaffold's own and not the config's business.
+ * So is a group of machines outside the config that inserters join to each other, when it holds a machine with a recipe
+ * the config does not have and no inserter joins it to a machine of the config: it makes something else beside the copies
+ * (furnaces and a gear assembler that feed a foundry, say), and nothing of it moves items of the config's machines. A group
+ * of the config's recipes alone, a whole copy more than the config has among them, cannot be told from a copy that no clock
+ * holds, and is refused.
  */
 export function buildPartsMissingFromConfig(described: any, config: Config, named_copies?: number): BuildPartMissingFromConfig[] {
     if (described.movers === undefined) {
@@ -735,8 +835,9 @@ export function buildPartsMissingFromConfig(described: any, config: Config, name
 
     const missing: BuildPartMissingFromConfig[] = [];
     const config_recipes = new Set(config.machines.map(machine => machine.recipe));
+    const builds_own = machinesOfBuildOwnGroups(Object.values<any>(described.movers.inserters ?? {}), config_machines, other_machines, config_recipes);
     for (const machine of as_recording.machines) {
-        if (!match.machines.has(machine.id) && config_recipes.has(machine.recipe)) {
+        if (!match.machines.has(machine.id) && config_recipes.has(machine.recipe) && !(machine.unit_number !== undefined && builds_own.has(machine.unit_number))) {
             const configured = config.machines.filter(it => it.recipe === machine.recipe).length;
             missing.push({
                 kind: "machine",
@@ -768,6 +869,46 @@ export function buildPartsMissingFromConfig(described: any, config: Config, name
         }
     }
     return missing;
+}
+
+/**
+ * Unit numbers of the machines outside the config that are the build's own (see buildPartsMissingFromConfig): the groups of
+ * them that inserters join machine to machine, where a group holds a recipe the config does not have and no inserter joins
+ * one of its machines to a machine of the config
+ */
+function machinesOfBuildOwnGroups(
+    inserters: { pickup?: { unit_number?: number }; drop?: { unit_number?: number } }[],
+    config_machines: Map<number, number>,
+    other_machines: Map<number, string>,
+    config_recipes: Set<string>,
+): Set<number> {
+    const group_of = new Map<number, number>(Array.from(other_machines.keys()).map(unit_number => [unit_number, unit_number]));
+    const root = (unit_number: number): number => {
+        let at = unit_number;
+        while (group_of.get(at) !== at) at = group_of.get(at)!;
+        return at;
+    };
+    const joined_to_config = new Set<number>();
+    for (const { pickup, drop } of inserters) {
+        const ends = [pickup?.unit_number, drop?.unit_number];
+        const [a, b] = ends.map(unit_number => unit_number !== undefined && other_machines.has(unit_number) ? unit_number : undefined);
+        if (a !== undefined && b !== undefined) {
+            group_of.set(root(a), root(b));
+        }
+        const to_config = ends.some(unit_number => unit_number !== undefined && config_machines.has(unit_number));
+        for (const end of [a, b]) {
+            if (end !== undefined && to_config) joined_to_config.add(end);
+        }
+    }
+    const groups = new Map<number, { machines: number[]; own_recipe: boolean; joined: boolean }>();
+    for (const [unit_number, recipe] of other_machines) {
+        const group = groups.get(root(unit_number)) ?? { machines: [], own_recipe: false, joined: false };
+        group.machines.push(unit_number);
+        group.own_recipe ||= recipe !== undefined && recipe !== "" && !config_recipes.has(recipe);
+        group.joined ||= joined_to_config.has(unit_number);
+        groups.set(root(unit_number), group);
+    }
+    return new Set(Array.from(groups.values()).filter(group => group.own_recipe && !group.joined).flatMap(group => group.machines));
 }
 
 /** The error for a build with parts the config does not have */
@@ -894,8 +1035,9 @@ function assertBuildOptions(options: BuildOptions): void {
     if (options.clock && !options.config) {
         throw new Error("A clock needs the config it was generated from, to find the inserters its combinators name");
     }
-    if (options.copies !== undefined && (!Number.isInteger(options.copies) || options.copies < 1 || !options.clock)) {
-        throw new Error("`copies` is a whole number of copies of the config that a generated clock is wired to: it needs a clock");
+    if (options.copies !== undefined && (!(options.copies >= 1) || !options.clock)) {
+        throw new Error("`copies` is how many copies of the config a generated clock is wired to, at least one copy: a whole number, or whole "
+            + "copies and one part copy with the fraction of the config's copies: it needs a clock");
     }
     if (options.built_clock && (options.unclocked || options.staged_start)) {
         throw new Error("A named clock of the build is kept or replaced: it cannot be asked for with an unclocked run or a staged start");
@@ -953,7 +1095,7 @@ export class HarnessSession {
     /** Starts the game and, to watch, opens it with graphics and waits for that to join */
     static async start(options: SessionOptions): Promise<HarnessSession> {
         const executable = await resolveFactorioExecutable(options.factorio);
-        const work_dir = path.resolve(options.work_dir ?? await fs.mkdtemp(path.join(os.tmpdir(), "clock-generator-harness-")));
+        const work_dir = path.resolve(options.work_dir ?? await fs.mkdtemp(path.join(await scratchRoot(), "clock-generator-harness-")));
         await fs.mkdir(work_dir, { recursive: true });
         const files = await prepareWorkDir(work_dir, executable, options.save);
         const deadline = Date.now() + options.timeout_seconds * 1000;
@@ -1148,16 +1290,18 @@ export class HarnessSession {
         let clock: { blueprint: string; inserters: Record<string, number | number[]>; drills?: Record<string, number | number[]> } | undefined;
         if (options.clock && options.config) {
             const described = await this.call("harness_describe");
-            const copies = matchBuiltCopies(described, options.config, options.copies);
+            const { inserters: copies, part } = builtCopies(described, options.config, options.copies);
             const scheduled = scheduledInserterIds(options.clock.schedule);
-            const missing = copies.flatMap((unit_numbers, copy) => scheduled.filter(id => !unit_numbers.has(id)).map(id => ({ id, copy })));
+            // a part copy holds some of the config's inserters: the clock is wired to those of them it names
+            const of_copy = (copy: number) => part !== null && copy === part.index ? scheduled.filter(id => part.ids.has(EntityId.forInserter(id).id)) : scheduled;
+            const missing = copies.flatMap((unit_numbers, copy) => of_copy(copy).filter(id => !unit_numbers.has(id)).map(id => ({ id, copy })));
             if (missing.length > 0) {
                 throw new Error(`The clock names inserters ${Array.from(new Set(missing.map(it => it.id))).join(", ")} of the config, which match no inserter of the build`
                     + `${copies.length > 1 ? ` in copy ${Array.from(new Set(missing.map(it => it.copy + 1))).join(", ")} of ${copies.length}` : ""}. `
                     + "Belt inserters are matched by what lies on their belt, so a longer warm-up may help.");
             }
             if (copies.length > 1) {
-                options.log(`The build holds the config ${copies.length} times: the clock is wired to each copy`);
+                options.log(`The build holds the config ${options.copies} times: the clock is wired to each copy${part !== null ? ", and to the part copy's inserters" : ""}`);
             }
             const not_in_config = buildPartsMissingFromConfig(described, options.config, options.copies);
             if (not_in_config.length > 0) {
@@ -1552,7 +1696,7 @@ export class CachedHarnessSession {
             const session = await HarnessSession.start(quiet);
             try {
                 for (const [index, before] of this.answered.entries()) {
-                    this.replay_dir ??= await fs.mkdtemp(path.join(os.tmpdir(), "clock-generator-replay-"));
+                    this.replay_dir ??= await fs.mkdtemp(path.join(await scratchRoot(), "clock-generator-replay-"));
                     await session.record({ ...before.options, out: path.join(this.replay_dir, `described-${index}.json`), log: () => { } });
                 }
                 return await session.describeBuild({ ...options, log: () => { } });
@@ -1574,7 +1718,7 @@ export class CachedHarnessSession {
 
     private async replayAnswered(session: HarnessSession): Promise<void> {
         for (; this.played < this.answered.length; this.played++) {
-            this.replay_dir ??= await fs.mkdtemp(path.join(os.tmpdir(), "clock-generator-replay-"));
+            this.replay_dir ??= await fs.mkdtemp(path.join(await scratchRoot(), "clock-generator-replay-"));
             await session.record({ ...this.answered[this.played].options, out: path.join(this.replay_dir, `${this.played}.json`), log: () => { } });
         }
     }

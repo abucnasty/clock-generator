@@ -6,11 +6,13 @@ import type { RepeatedUnitsRecovery } from '../worker/types';
 import type { BuildValidationIssue } from '../utils/buildValidation';
 import type { TargetCounts } from '../utils/targetCounts';
 import type { FocusTarget } from '../utils/firstProblem';
+import { AdvisoryLine } from './AdvisoryLine';
 import { CheckErrorAlert } from './CheckErrorAlert';
 import { MissingInserterAlert } from './MissingInserterAlert';
 import { OutputChestAlert } from './OutputChestAlert';
 import { ValidationPanel } from './ValidationPanel';
 import { entityLabel } from '../utils/entityLabel';
+import { IMPORTED_AS_ONE_BUILD } from '../utils/pasteText';
 
 export function BuildValidationPanel({ issues, machines, belts, chests, inserters, outputTransfers, onApplyFix, fixUnavailable,
     onSwitchType, onEnableRemoval, onReview, onReviewInserter, recovery, conversionPending, onConvert, counts, focusTargets = true }: {
@@ -29,14 +31,25 @@ export function BuildValidationPanel({ issues, machines, belts, chests, inserter
     counts?: TargetCounts;
     focusTargets?: boolean;
 }) {
-    return <ValidationPanel issues={issues} focusTargets={focusTargets}>{issue => issue.chest ? <OutputChestAlert embedded focusTargets={false} chests={[issue.chest.chest]} inserters={inserters}
+    return <ValidationPanel issues={issues} focusTargets={focusTargets}>{issue => issue.advisory
+                    ? <AdvisoryLine advisory={issue.advisory} severity={issue.severity} inserters={inserters} machines={machines}
+                        onReviewInserter={onReviewInserter} onReviewMachine={id => onReview({ kind: 'machine-recipe', machineId: id })} />
+                    : issue.chest ? <OutputChestAlert embedded focusTargets={false} chests={[issue.chest.chest]} inserters={inserters}
                     onSwitchType={(_index, type, disposal) => onSwitchType(issue.chest!.index, type, disposal)}
                     onEnableRemoval={() => onEnableRemoval(issue.chest!.index)} />
                     : issue.coverage ? <>
                         <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>{issue.text}</Typography>
                         <MissingInserterAlert embedded focusTargets={false} issues={[issue.coverage]} machines={machines} belts={belts} chests={chests}
                             onApplyFix={onApplyFix} fixUnavailable={fixUnavailable} outputTransfers={outputTransfers} onEnableRemoval={onEnableRemoval} />
-                    </> : issue.source === 'engine' ? <>
+                    </> : issue.source === 'copies' ? (recovery?.conversion.kind === 'available'
+                        // the one copy offered, as Check offered it: the copies found and the step that makes it
+                        ? <CheckErrorAlert embedded message={issue.text} recovery={recovery} counts={counts}
+                            machineCount={machines.length} conversionPending={conversionPending} onConvert={onConvert} />
+                        : <>
+                            <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>{IMPORTED_AS_ONE_BUILD}</Typography>
+                            <Typography variant="body2">{issue.text}</Typography>
+                        </>)
+                    : issue.source === 'engine' ? <>
                         <CheckErrorAlert embedded message={issue.text} recovery={recovery} counts={counts}
                             machineCount={machines.length} conversionPending={conversionPending} onConvert={onConvert} />
                         {/* the inserters the refusal names, each one a step to its row */}

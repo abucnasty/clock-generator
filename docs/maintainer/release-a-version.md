@@ -30,28 +30,18 @@ Release the work on `master`: the clock generator, the site and, if its version 
 5. In `CHANGELOG.md`, change the section `[Unreleased]` to the new version, with the date. Add an empty section
    `[Unreleased]` above it.
 
-6. Make the record again.
+6. Do not make the record again. The record holds no hash of the text of a clock, and the version of the engine is in
+   that text only, so the bump moves no file in `clock-generator/record/`. The pull request has no change in that folder.
+   If the "Record check" of the pull request shows a difference, stop. Do not merge the pull request.
 
-   ```bash
-   cd clock-generator
-   BLAST_GROUPS=config,pickup,overhood,front,blocked,containers,variants bash scripts/blast/blast.sh run .. <out>
-   bash scripts/blast/blast.sh record write <out>
-   bash scripts/blast/blast.sh record check <out>
-   ```
-
-   Only the `text_sha256` field of the jobs can change, because the blueprint has the version of the engine. If a
-   different field changes, stop. Do not open the pull request.
-
-7. Add the entry `Release x.y.z` to `clock-generator/record/MOVES.md`.
-
-8. Open a pull request into `master`. Give it the title `release: x.y.z, <summary>` and use the template
+7. Open a pull request into `master`. Give it the title `release: x.y.z, <summary>` and use the template
    `.github/PULL_REQUEST_TEMPLATE/release.md`.
 
    ```bash
    gh pr create --base master --head release/<slug> --title "release: x.y.z, <summary>" --body-file <file>
    ```
 
-9. When the required checks are correct, abucnasty merges the pull request.
+8. When the required checks are correct, abucnasty merges the pull request.
 
 ## Result
 

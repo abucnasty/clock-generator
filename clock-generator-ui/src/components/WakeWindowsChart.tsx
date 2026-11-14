@@ -3,7 +3,7 @@ import { TimelineAxis } from './BeltChart';
 import type { Theme } from '@mui/material/styles';
 import { themeTokens } from '../theme/runtimeTokens';
 import { Box, Typography } from '@mui/material';
-import { BedtimeOutlined, Loop, MoreTime, TimerOutlined, ToggleOnOutlined, TrendingUp } from '@mui/icons-material';
+import { BedtimeOutlined, Loop, TimerOutlined, ToggleOnOutlined, TrendingUp } from '@mui/icons-material';
 import {
     memo,
     useCallback,
@@ -26,7 +26,6 @@ import {
 } from '../utils/wakeWindows';
 import {
     modeText,
-    BELT_SLACK_EXPLANATION,
     onShareText,
     rowSummary,
     wakeUpsRowText,
@@ -48,7 +47,6 @@ export const WAKE_TRACK_COLOR = '#8c8c8c';
  * selection in Highlight
  */
 export const FORCED_COLORS = '@media (forced-colors: active)';
-export const SLACK_BACKGROUND_FORCED = 'repeating-linear-gradient(45deg, CanvasText 0 3px, transparent 3px 6px)';
 
 const TRACK_HEIGHT = 32;
 const BAR_HEIGHT = 16;
@@ -90,13 +88,6 @@ const barSx = {
 } as const;
 const solidSx = {
     minWidth: '1px', boxSizing: 'border-box', bgcolor: 'var(--wake-color)', [FORCED_COLORS]: { bgcolor: 'CanvasText' },
-} as const;
-const slackSx = {
-    minWidth: '1px',
-    boxSizing: 'border-box',
-    background: 'repeating-linear-gradient(135deg, var(--wake-color) 0 3px, #000000 3px 6px)',
-    border: '1px solid var(--wake-color)',
-    [FORCED_COLORS]: { background: SLACK_BACKGROUND_FORCED, borderColor: 'CanvasText' },
 } as const;
 
 interface TrackProps {
@@ -144,14 +135,7 @@ function Track({ row, range, tick, marks, selectedIndex, ticksPerPx, onTap }: Tr
                         }}
                         sx={barSx}
                     >
-                        {bar.spans.filter(part => part.end + 1 > start && part.start < end).map(span => (
-                            <Box
-                                key={span.start}
-                                data-wake-slack={span.slack ? 'true' : undefined}
-                                style={{ flex: `${Math.min(end, span.end + 1) - Math.max(start, span.start)} 1 0` }}
-                                sx={span.slack ? slackSx : solidSx}
-                            />
-                        ))}
+                        <Box style={{ flex: '1 1 0' }} sx={solidSx} />
                     </Box>
                 );
             })}
@@ -164,7 +148,6 @@ function Track({ row, range, tick, marks, selectedIndex, ticksPerPx, onTap }: Tr
 const NOTE_ICONS: Record<WatchNoteKind, ComponentType<{ fontSize?: 'inherit'; 'aria-hidden'?: boolean }>> = {
     // a switch that is on, not an (i): that is the help control's look
     'mostly-on': ToggleOnOutlined,
-    slack: MoreTime,
     short: TimerOutlined,
     wraps: Loop,
     'most-woken': TrendingUp,
@@ -173,7 +156,7 @@ const NOTE_ICONS: Record<WatchNoteKind, ComponentType<{ fontSize?: 'inherit'; 'a
 };
 
 function WatchNotes(props: { row: WakeWindowRow; windowCycleTicks: number; mostWakeUpsId: string | null; indent: string | number }) {
-    const notes = watchNotes(props.row, { windowCycleTicks: props.windowCycleTicks, mostWakeUpsId: props.mostWakeUpsId }).filter(note => note.id !== 'slack');
+    const notes = watchNotes(props.row, { windowCycleTicks: props.windowCycleTicks, mostWakeUpsId: props.mostWakeUpsId });
     if (notes.length === 0) {
         return null;
     }
@@ -227,7 +210,6 @@ const gridColumnsOf = (wide: boolean) => (wide ? `${LABEL_COLUMN_PX}px minmax(0,
 /** One inserter or drill: its name, track and numbers, the details of its selected window, its notes */
 const WakeWindowsRow = memo(function WakeWindowsRow(props: RowProps) {
     const { row, windowCycleTicks, selectedIndex, onSelect } = props;
-    const slackTicks = row.windows.reduce((max, window) => Math.max(max, window.slackTicks), 0);
     const { itemLabel } = useGameNames();
     const indent = props.wide ? `${LABEL_COLUMN_PX + COLUMN_GAP_PX}px` : 0;
 
@@ -312,8 +294,6 @@ const WakeWindowsRow = memo(function WakeWindowsRow(props: RowProps) {
                 <Box sx={{ gridArea: 'label', minWidth: 0 }}>
                     <Box sx={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', columnGap: 1 }}>
                         <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.primary' }}>{row.label}</Typography>
-                        {slackTicks > 0 && <Typography component="span" variant="caption" color="text.secondary" title={BELT_SLACK_EXPLANATION}
-                            aria-label={`${slackTicks} ticks of belt slack`} data-wake-slack>{`+${slackTicks} ${slackTicks === 1 ? 'tick' : 'ticks'}`}</Typography>}
                     </Box>
                     {(row.items.length > 0 || row.route) && (
                         <Typography variant="caption" color="text.secondary" component="div" sx={{ overflowWrap: 'anywhere' }}>

@@ -9,6 +9,14 @@ import { SubtickWindowCycle, subtickClockForWindowCycle } from "../../common/sub
 export const SIMULATION_BUDGET_TICKS = 500_000;
 
 /**
+ * The most ticks the disturbance trials of one clock may plan (lossTrialEstimateOfClock, trial.ts): a clock whose trials
+ * plan more is not tried, and the result says so with the numbers (`loss_trials_over_budget`). A guard against a generation
+ * that runs for an hour, not a proof: the largest estimate of a clock of the record's jobs is 69 M ticks (the productivity
+ * module build, 81 s), and a chemical science build with two-lane express pickups plans 644 M (each loss from 144 starts).
+ */
+export const LOSS_TRIAL_BUDGET_TICKS = 200_000_000;
+
+/**
  * The whole counter a clock of this window cycle is checked over (p ticks, q window cycles), which one run must then hold: its p/q
  * where the window cycle is fractional and p is under SIMULATION_BUDGET_TICKS. Null for a whole-tick window cycle, and for a counter
  * one run cannot hold (`counterOverLimitOf`), whose clock keeps the sampled checks of one window cycle.

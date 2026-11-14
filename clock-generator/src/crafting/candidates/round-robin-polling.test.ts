@@ -16,7 +16,7 @@ const windowsOf = (config: Config, by_drops = false) => {
     const plan = unclockedRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false, terminal_swing_count: 1 } }, { logger: quiet });
     const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
     const drops = by_drops ? dropTieBreak(config, duration.ticks) : null;
-    return () => roundRobinPollingWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, true, undefined, drops);
+    return () => roundRobinPollingWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, undefined, drops);
 };
 /** The ticks at which each output inserter of a window set starts its hand */
 const outputStarts = (windows: Map<string, { start_inclusive: number }[]>) =>
@@ -51,7 +51,7 @@ describe("hands in groups", () => {
         const plan = unclockedRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false, terminal_swing_count: 1 } }, { logger: quiet });
         const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
         const turnsOf = (drops: ReturnType<typeof dropTieBreak> | null) =>
-            roundRobinPollingPlan(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, true, undefined, drops).turns;
+            roundRobinPollingPlan(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, undefined, drops).turns;
         // dealt out by ids: the machines alternate between the two groups
         expect(turnsOf(null)).toEqual([
             { start: 0, entity_ids: ["inserter:1", "inserter:7", "inserter:4", "inserter:6", "drill:1", "drill:3"] },
@@ -123,7 +123,7 @@ describe("hands in groups", () => {
     });
 
     it("does not apply to a build of machines that hand products on by several hands a period", async () => {
-        const accumulator = await loadConfigFromFile(ConfigPaths.ACCUMULATOR_640);
+        const accumulator = await loadConfigFromFile(ConfigPaths.ACCUMULATOR_320);
         expect(windowsOf(accumulator)).toThrow(RoundRobinPollingNotApplicable);
     });
 });
@@ -149,22 +149,23 @@ describe("hands in a chain of machines", () => {
         const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
         expect(duration.ticks).toBe(168);
         // the way the sample's clock is made: a hand's worth for the plastic, whose foundries would keep a surplus hand, and the compact order
-        const windows = roundRobinPollingWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, true,
+        const windows = roundRobinPollingWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks,
             { surplus_guard: true, feeder_offset: 1, share_windows: false });
         // three hands of 12 ticks onto the belt; then, as the last of them starts, the units and frames (two hands of 11, a third start the
-        // limit refuses, and the belt pickup slack of 4); the low density structure behind them (two hands of 8 and a third start); the plastic
-        // a tick after it (four hands of 8: no more than four) and the coal after that (two hands of 11 and a third start, and the slack)
+        // limit refuses, and the room for one more hand, 4); the low density structure behind them (two hands of 8 and a third start); the plastic
+        // a tick after it (four hands of 8: no more than four) and the coal after that (two hands of 11 and a third start; coal comes on both
+        // lanes, so the far lane fills what the near one withholds and the window has no room for one more hand)
         for (const id of [3, 4, 9, 13, 18, 21, 24, 27]) expect(ranges(windows, `inserter:${id}`)).toEqual([[0, 36]]);
         for (const id of [1, 2, 14, 15, 16, 17, 28, 29]) expect(ranges(windows, `inserter:${id}`)).toEqual([[26, 53]]);
         for (const id of [5, 6, 7, 8, 22, 23, 25, 26]) expect(ranges(windows, `inserter:${id}`)).toEqual([[54, 71]]);
         for (const id of [10, 12, 19, 20]) expect(ranges(windows, `inserter:${id}`)).toEqual([[55, 80]]);
-        expect(ranges(windows, "inserter:11")).toEqual([[56, 83]]);
+        expect(ranges(windows, "inserter:11")).toEqual([[56, 79]]);
     });
 
     it("has no groups that take turns: one group serves the chain", () => {
         const plan = unclockedRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false, lcm: 1 } }, { logger: quiet });
         const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
-        const made = roundRobinPollingPlan(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, true,
+        const made = roundRobinPollingPlan(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks,
             { surplus_guard: true, feeder_offset: 1, share_windows: false });
         expect(made.windows.size).toBeGreaterThan(0);
         expect(made.turns).toEqual([]);
@@ -173,7 +174,7 @@ describe("hands in a chain of machines", () => {
     it("keeps the extra start per taker where it leaves no taker busy: the plastic's four hands and a start are 34 of 168 ticks", () => {
         const plan = unclockedRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false, lcm: 1 } }, { logger: quiet });
         const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
-        const windows = roundRobinPollingWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, true,
+        const windows = roundRobinPollingWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks,
             { surplus_guard: false, per_taker_guard: true, feeder_offset: 1, share_windows: false });
         // the guard for every taker gives the plastic 26 ticks (above); per taker it is not busy with the fifth start, so it keeps it
         for (const id of [10, 12, 19, 20]) expect(ranges(windows, `inserter:${id}`)).toEqual([[55, 88]]);
@@ -198,12 +199,12 @@ describe("hands that fill the cycle", () => {
         const plan = unclockedRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false, lcm: 1, terminal_swing_count: 1 } }, { logger: quiet });
         const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
         expect(duration.ticks).toBe(24);
-        const windows = roundRobinPollingWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, true,
+        const windows = roundRobinPollingWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks,
             { surplus_guard: false, feeder_offset: 1, share_windows: false });
         // three hands of 8 ticks and a start more are 26 ticks: the circuits into the processing unit machines (3, 4, 7, 8), the iron and
         // the cable into the circuit machines (5, 6, 13, 14, 15, 18, 19, 20) are busy all the time
         for (const id of [3, 4, 5, 6, 7, 8, 13, 14, 15, 18, 19, 20]) expect(windows.has(`inserter:${id}`)).toBe(false);
-        // the advanced circuits: one hand and a start more (10 ticks), after the circuits' place in the order; the plastic a hand of 11, a start more, and the pickup slack
+        // the advanced circuits: one hand and a start more (10 ticks), after the circuits' place in the order; the plastic a hand of 11, a start more, and the room for one more hand
         for (const id of [2, 9]) expect(ranges(windows, `inserter:${id}`)).toEqual([[4, 13]]);
         // the cable and circuits into the advanced circuit machines, in the same place a tick later
         for (const id of [11, 12, 21, 22]) expect(ranges(windows, `inserter:${id}`)).toEqual([[5, 14]]);
@@ -215,7 +216,7 @@ describe("hands that fill the cycle", () => {
         const plan = unclockedRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false, lcm: 1, terminal_swing_count: 1 } }, { logger: quiet });
         const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
         const made = (guard: { surplus_guard: boolean; per_taker_guard?: boolean }) => roundRobinPollingPlan(simulation_context.entity_registry,
-            swing_counts, recipe_lcm, duration.ticks, true, { ...guard, feeder_offset: 1, share_windows: false });
+            swing_counts, recipe_lcm, duration.ticks, { ...guard, feeder_offset: 1, share_windows: false });
         const length = (windows: Map<string, { start_inclusive: number; end_inclusive: number }[]>, id: number) =>
             windows.get(`inserter:${id}`)!.reduce((sum, range) => sum + range.end_inclusive - range.start_inclusive + 1, 0);
         const per_taker = made({ surplus_guard: false, per_taker_guard: true });
@@ -234,14 +235,14 @@ describe("hands that fill the cycle", () => {
             expect(length(per_taker.windows, id)).toBe(10);
             expect(length(every_taker.windows, id)).toBe(10);
         }
-        // the plastic comes from a belt: never guarded (one hand of 11, a start more and the pickup slack)
+        // the plastic comes from a belt: never guarded (one hand of 11, a start more and the room for one more hand)
         for (const id of [1, 10]) expect(length(per_taker.windows, id)).toBe(length(every_taker.windows, id));
     });
 
     it("leaves the takers into the machines it is told enabled as before: the remake for the processing unit machines (2, 3)", () => {
         const plan = unclockedRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false, lcm: 1, terminal_swing_count: 1 } }, { logger: quiet });
         const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
-        const made = roundRobinPollingPlan(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, true,
+        const made = roundRobinPollingPlan(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks,
             { surplus_guard: false, per_taker_guard: true, unguarded_sinks: new Set(["machine:2", "machine:3"]), feeder_offset: 16, share_windows: false });
         // the circuits into the processing unit machines keep their extra start, which leaves them busy all the time
         expect(made.busy).toEqual(["inserter:3", "inserter:4", "inserter:7", "inserter:8"]);
@@ -254,7 +255,7 @@ describe("hands that fill the cycle", () => {
     it("names the guarded takers with the tick their window opens, and splits each into a tick at each of its three picks", () => {
         const plan = unclockedRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false, lcm: 1, terminal_swing_count: 1 } }, { logger: quiet });
         const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
-        const made = roundRobinPollingPlan(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, true,
+        const made = roundRobinPollingPlan(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks,
             { surplus_guard: false, per_taker_guard: true, unguarded_sinks: new Set(["machine:2", "machine:3"]), feeder_offset: 16, share_windows: false });
         // the iron and the cable into the circuit machines: three hands of 8 ticks; the circuits into the processing unit machines are not
         // guarded (busy), nor the takers that keep their start more
@@ -278,7 +279,7 @@ describe("hands that fill the cycle", () => {
         const plan = unclockedRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false, lcm: 1, terminal_swing_count: 1 } }, { logger: quiet });
         const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
         const made = (options: { surplus_guard: boolean; per_taker_guard?: boolean; share_windows: boolean }) => roundRobinPollingPlan(
-            simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, true, { ...options, feeder_offset: 1 });
+            simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, { ...options, feeder_offset: 1 });
         expect(made({ surplus_guard: false, share_windows: false }).guarded).toEqual([]);
         // the guard for every taker: the ones it gives a window of their hands alone are named; shared windows run longer than their hands
         expect(made({ surplus_guard: true, share_windows: false }).guarded.length).toBeGreaterThan(0);
@@ -291,7 +292,7 @@ describe("hands that fill the cycle", () => {
     it("gives the inserters that open on the same tick one window, the longest of them, where windows are shared", () => {
         const plan = unclockedRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false, lcm: 1, terminal_swing_count: 1 } }, { logger: quiet });
         const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
-        const windows = roundRobinPollingWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, true,
+        const windows = roundRobinPollingWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks,
             { surplus_guard: false, feeder_offset: 1, share_windows: true });
         // the cable and circuits (10 ticks) and the plastic and iron (17) open together, and are one window of 17
         for (const id of [1, 10, 11, 12, 21, 22]) expect(ranges(windows, `inserter:${id}`)).toEqual([[5, 21]]);
@@ -334,16 +335,16 @@ describe("takers of one machine that it cannot serve together", () => {
         // 11.69, against two hands of 16
         expect(outputAtWindow(plant, "supercapacitor", 30, 10)).toBeCloseTo(11.6875, 3);
         for (const feeder_offset of [16, 1]) {
-            const windows = roundRobinPollingWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, true,
+            const windows = roundRobinPollingWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks,
                 { surplus_guard: false, feeder_offset, share_windows: false });
             // both fill a science plant whose output (4, 3) swings at 0, so the chain would open them in the same ticks; the one into machine 1 keeps
             // its place and the one into machine 2 opens 20 ticks after it
-            expect(ranges(windows, "inserter:7")).toEqual([[19, 28]]);
-            expect(ranges(windows, "inserter:6")).toEqual([[39, 39], [0, 8]]);
+            expect(ranges(windows, "inserter:7")).toEqual([[15, 24]]);
+            expect(ranges(windows, "inserter:6")).toEqual([[35, 39], [0, 4]]);
             // the hand out of each science plant keeps its place in its plant's turn: machine 2's (3) swings 20 ticks after machine 1's (4)
             expect(ranges(windows, "inserter:4")).toEqual([[0, 0]]);
             expect(ranges(windows, "inserter:3")).toEqual([[20, 20]]);
-            for (const id of [5, 8]) expect(ranges(windows, `inserter:${id}`)).toEqual([[2, 18]]);
+            for (const id of [5, 8]) expect(ranges(windows, `inserter:${id}`)).toEqual([[2, 14]]);
         }
     });
 
@@ -366,7 +367,7 @@ describe("takers of one machine that it cannot serve together", () => {
         const science = registry.getEntityByIdOrThrow(EntityId.forMachine(2)) as Machine;
         // 0.41 packs a tick (89.625 / 600 x 2.75); it takes no ingredients from 12 packs, so a turn needs it under 11
         expect(science.output.outputBlock.ingredients_blocked_at).toBe(12);
-        // machine 2's turn opens at 39, its hand out (3) started at 20: 19 ticks, 7.80 packs
+        // a turn of machine 2 that opens at 39 (it opens at 35 in this sample's clock), its hand out (3) started at 20: 19 ticks, 7.80 packs
         expect(heldAtTurn(science, 39, [20], 40)).toBeCloseTo(7.8048, 3);
         expect(roomAtTurn(science, heldAtTurn(science, 39, [20], 40))).toBe(true);
         // left at 0 with machine 1's, the hand out would have started 39 ticks before the turn: 16.02 packs, the plant at its block
@@ -377,26 +378,26 @@ describe("takers of one machine that it cannot serve together", () => {
         expect(roomAtTurn(science, 10.99)).toBe(true);
     });
 
-    it("does not offer a way whose turns open while their plants hold their block: at 300% productivity 19 ticks make 11.35 packs", () => {
-        const faster = { ...config, machines: config.machines.map(it => it.recipe === "electromagnetic-science-pack" ? { ...it, productivity: 300 } : it) };
+    it("does not offer a way whose turns open while their plants hold their block: at 400% productivity 15 ticks make 11.2 packs", () => {
+        const faster = { ...config, machines: config.machines.map(it => it.recipe === "electromagnetic-science-pack" ? { ...it, productivity: 400 } : it) };
         const plan = unclockedRun({ ...faster, overrides: { ...faster.overrides, derive_clock_windows: false } }, { logger: quiet });
         const { simulation_context, swing_counts, recipe_lcm, duration } = plan.run;
         for (const feeder_offset of [16, 1]) {
-            const made = () => roundRobinPollingWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks, true,
+            const made = () => roundRobinPollingWindows(simulation_context.entity_registry, swing_counts, recipe_lcm, duration.ticks,
                 { surplus_guard: false, feeder_offset, share_windows: false });
             expect(made).toThrow(TurnWithoutRoom);
-            expect(made).toThrow("machine:2 would still hold about 11.4 electromagnetic-science-pack when its turn to take supercapacitor "
+            expect(made).toThrow("machine:2 would still hold about 11.2 electromagnetic-science-pack when its turn to take supercapacitor "
                 + "from machine:3 begins, and it takes no ingredients from 12 electromagnetic-science-pack: that turn would bring it nothing");
         }
     });
 });
 
-// The accumulator build (ACCUMULATOR_640): the iron foundry (3) fills the accumulator plants (1, 2) through inserters 3 and 4 and the
+// The accumulator build (ACCUMULATOR_320): the iron foundry (3) fills the accumulator plants (1, 2) through inserters 3 and 4 and the
 // battery plants (4, 5) through inserters 5 and 7, a hand of 16 each. In its batched swings clock of 54 ticks each pair has a window
 // of 18 ticks a window cycle.
 describe("the takers of a machine into machines of other recipes", () => {
     it("are reported beside the turn decision, which they do not change", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.ACCUMULATOR_640);
+        const config = await loadConfigFromFile(ConfigPaths.ACCUMULATOR_320);
         const plan = unclockedRun({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, { logger: quiet });
         const registry = plan.run.simulation_context.entity_registry;
         const foundry = registry.getEntityByIdOrThrow(EntityId.forMachine(3)) as Machine;

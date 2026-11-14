@@ -20,7 +20,9 @@
     {
       "key": "belt:1/lane:2",
       "kind": "lane",
-      "ports": []
+      "ports": [
+        "belt:1/lane:2#logistic-science-pack"
+      ]
     },
     {
       "key": "belt:2/lane:1",
@@ -111,6 +113,7 @@
   ],
   "components": [],
   "order": [
+    "belt:1/lane:2#logistic-science-pack",
     "belt:2/lane:1#transport-belt",
     "belt:2/lane:2#inserter",
     "machine:1",

@@ -23,9 +23,6 @@ export interface InstallStep {
     detail: string;
 }
 
-/** The version the blueprints need: the else outputs of a decider combinator, which the clocks use, came with 2.1 */
-export const REQUIRES_FACTORIO = 'The blueprint needs Factorio 2.1 or later.';
-
 /** Every player-facing string of the install steps */
 export const INSTALL_COPY = {
     heading: 'Put it in your game',

@@ -1,11 +1,14 @@
 import type { SuggestedTarget } from 'clock-generator/browser';
 import { formatNumberText } from './numberText';
+import { entityLabel, nameInSentence } from './entityLabel';
 
 /** A target output, as the form and the export hold it */
 export interface TargetValues {
     recipe: string;
     items_per_second: number;
     copies: number;
+    /** Where the next copy stands; the export states it where the selection shows copies at one spacing */
+    copy_offset?: { x: number; y: number };
 }
 
 /** Decimals the target a paste fills in keeps */
@@ -13,7 +16,8 @@ const TARGET_DECIMALS = 3;
 
 /**
  * The target a paste fills in: the suggestion's rate floored to 3 decimals. The suggestion is the most the machines
- * make, so it is never rounded up past it, and float noise from the mod (1.8000000000000003) goes.
+ * make, so it is never rounded up past it, and float noise from the mod (1.8000000000000003) goes. The gap to the next
+ * copy comes with it where the export states one.
  */
 export function targetToFill(suggestion: SuggestedTarget): TargetValues {
     const scale = 10 ** TARGET_DECIMALS;
@@ -22,7 +26,9 @@ export function targetToFill(suggestion: SuggestedTarget): TargetValues {
     // lands above the true maximum (22.9689999…) takes the step back, so the target never asks for more than it
     const nudged = Math.floor(max * scale + 1e-6) / scale;
     const floored = nudged > max ? nudged - 1 / scale : nudged;
-    return { recipe: suggestion.target.recipe, items_per_second: Math.round(floored * scale) / scale, copies: suggestion.target.copies };
+    const { recipe, copies, copy_offset } = suggestion.target;
+    return { recipe, items_per_second: Math.round(floored * scale) / scale, copies,
+        ...(copy_offset !== undefined && { copy_offset: { x: copy_offset.x, y: copy_offset.y } }) };
 }
 
 /** "1 copy", "3 copies" */
@@ -36,8 +42,28 @@ export function targetRowLabel(target: TargetValues, name: (id: string) => strin
     return `Setpoint: ${name(target.recipe)}, up to ${formatNumberText(target.items_per_second, { maxDecimals: TARGET_DECIMALS })}/s, ${copiesText(target.copies)}`;
 }
 
-/** Where the suggestion came from, and that it is a ceiling */
-export function targetRowCaption(source: SuggestedTarget['source']): string {
+/**
+ * Where the suggestion came from, and that it is a ceiling. Where it is lowered to what the belt the product is put on
+ * carries, it says so, with what the machines make. Where it is lowered to the most the build can hold, it gives the
+ * engine's words for the limit that decided it (`targetRateMaxOf`'s `limit`), or what the machines make where it has none.
+ */
+export function targetRowCaption(source: SuggestedTarget['source'], beltLimit?: SuggestedTarget['belt_limit'],
+    buildLimit?: SuggestedTarget['build_limit']): string {
+    const from = source === 'mod' ? 'From the Factorio export' : 'Estimated from the imported machines';
+    const after = source === 'mod' ? 'You can lower the rate after importing.' : 'You can lower the rate in the Setpoint panel after importing.';
+    if (buildLimit !== undefined) {
+        return buildLimit.text !== null
+            ? `${from}, lowered to the most the build can hold. ${buildLimit.text}`
+            : `${from}, lowered to the most the build can hold. The machines make up to `
+                + `${formatNumberText(buildLimit.machines_per_second, { maxDecimals: TARGET_DECIMALS })}/s. ${after}`;
+    }
+    if (beltLimit !== undefined) {
+        const lowered = `lowered to what ${entityLabel('belt', beltLimit.belt_id)} carries. The machines make up to `
+            + `${formatNumberText(beltLimit.machines_per_second, { maxDecimals: TARGET_DECIMALS })}/s.`;
+        return source === 'mod'
+            ? `From the Factorio export, ${lowered} You can lower the rate after importing.`
+            : `Estimated from the imported machines, ${lowered} You can lower the rate in the Setpoint panel after importing.`;
+    }
     return source === 'mod'
         ? 'From the Factorio export. This is the maximum output; you can lower the rate after importing.'
         : 'Estimated maximum output of the imported machines. You can lower the rate in the Setpoint panel after importing.';
@@ -53,7 +79,7 @@ export function maximumTargetNote(source: SuggestedTarget['source']): string | n
 
 /** Said under the row when Target Output is already set, so the row starts unticked */
 export function replacesTargetNote(current: TargetValues, name: (id: string) => string): string {
-    return `Tick to replace your current target (${name(current.recipe)} at ${formatNumberText(current.items_per_second)}/s).`;
+    return `Tick to replace your current target (${nameInSentence(name(current.recipe))} at ${formatNumberText(current.items_per_second)}/s).`;
 }
 
 export const NO_TARGET_NOTE = 'Could not tell what the build makes. Set the setpoint after importing.';

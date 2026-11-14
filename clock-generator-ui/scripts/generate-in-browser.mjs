@@ -172,7 +172,7 @@ async function repairOutputFocusAt(browser, url) {
             if (fullscreenMode) await page.getByRole('button', { name: 'Fullscreen', exact: true }).click();
             const diagram = fullscreenMode ? page.getByRole('dialog', { name: 'Flow Diagram' }) : page;
             const sourceNode = diagram.getByRole('group', {
-                name: 'Machine 1, makes Processing unit recycling, puts its results into Machine 2', exact: true,
+                name: 'Machine 1, makes processing unit recycling, puts its results into Machine 2', exact: true,
             });
             await sourceNode.waitFor();
             await sourceNode.click();

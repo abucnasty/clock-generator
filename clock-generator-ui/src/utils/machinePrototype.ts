@@ -1,6 +1,7 @@
 import { machineCanMake, machineForRecipe, prototypeTraitsOf } from 'clock-generator/light';
 import type { CraftingMachineData, CraftingMachineInfo } from '../worker/types';
 import type { MachineFormData } from './configForm/formData';
+import { nameInSentence } from './entityLabel';
 
 /** Before the lookups arrive: no machine to pick yet */
 export const NO_CRAFTING_MACHINES: CraftingMachineData = { machines: [], recipeCategories: {} };
@@ -141,7 +142,7 @@ export function recipeNotMadeText(row: Pick<MachineFormData, 'prototype' | 'reci
     const machine = craftingMachineOf(data, row.prototype);
     const categories = data.recipeCategories[row.recipe];
     if (machine === undefined || categories === undefined || machineCanMake(machine, categories)) return undefined;
-    const can = machinesThatMake(row.recipe, data).map(it => machineName(it.name));
-    return `${machineName(machine.name)} can't craft ${recipeName(row.recipe)}. `
+    const can = machinesThatMake(row.recipe, data).map(it => nameInSentence(machineName(it.name)));
+    return `${machineName(machine.name)} can't craft ${nameInSentence(recipeName(row.recipe))}. `
         + (can.length === 0 ? 'No machine of the game data can.' : `Machines that can: ${can.join(', ')}.`);
 }

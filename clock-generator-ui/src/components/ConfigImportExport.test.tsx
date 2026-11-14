@@ -46,7 +46,7 @@ it('shows capture diagnostics alongside prospective pickup coverage, only while 
     incoming.belts = [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }, { ingredient: 'iron-plate', stack_size: 4 }] }];
     const { user } = Render();
     await paste({ machines: incoming.machines, inserters: incoming.inserters, belts: incoming.belts, pickup_warnings: [{ inserter_id: 1, reason: 'bend' }] });
-    expect(screen.getByText(/^Moving input belts/)).toBeDefined();
+    expect(screen.getByText(/^Straight belt is the default/)).toBeDefined();
     expect(screen.getByText(/pickup is on a belt bend/)).toBeDefined();
     await user.click(category('Inserters'));
     expect(screen.queryByText(/pickup is on a belt bend/)).toBeNull();

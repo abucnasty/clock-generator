@@ -3,7 +3,7 @@ import type { ShiftRangeEdge } from '../worker/types';
 import type { ShiftOptionsView } from '../worker/types';
 import { useChartColors } from '../hooks/useChartColors';
 import { SCROLL_REGION_NAMES } from '../utils/a11yLabels';
-import { Panel } from './Panel';
+import { ClockNoteFrame } from './ClockNoteLine';
 import { ScrollX } from './ScrollX';
 
 const ROW_HEIGHT = 18;
@@ -57,8 +57,9 @@ function EdgeReasons({ title, edge }: { title: string; edge: ShiftRangeEdge }) {
 }
 
 /**
- * Every place tried for the swings a clock moved, drawn along one axis of ticks from the planned start,
- * so the range the machines accept is visible next to the one place the clock uses.
+ * Every place tried for the swings a clock moved, drawn along one axis of ticks from the planned start, so the range the
+ * machines accept is visible next to the one place the clock uses: one of the notes on the clock, as a line whose window
+ * holds the drawing, then the words.
  */
 export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
     const { palette, clock: USED_COLOR } = useChartColors();
@@ -70,6 +71,7 @@ export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
     if (all.length === 0) {
         return null;
     }
+    const title = options.moved === 'swings' ? 'When the machines accept these swings' : 'Where the output swing can go';
 
     // one cell per checked shift, as wide as the smallest gap between two of them
     const gaps = options.rows.flatMap(row => row.shifts.slice(1).map((shift, index) => shift.shift_ticks - row.shifts[index].shift_ticks));
@@ -84,21 +86,8 @@ export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
     const plannedChecked = options.rows.some(row => row.shifts.some(shift => shift.shift_ticks === 0));
 
     return (
-        <Panel title={options.moved === 'swings' ? 'When the machines accept these swings' : 'Where the output swing can go'} level={4}>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                {options.moved === 'swings' && options.plannedTicks
-                    ? <>This clock moves the swings planned in clock ticks {options.plannedTicks.start}–{options.plannedTicks.end} ({options.movedDescription}) together, </>
-                    : <>This clock moves {options.movedDescription} </>}
-                {describeShift(options.chosenShiftTicks)} than planned.
-                {range && range.from !== range.to && (
-                    <> Places from {describeShift(range.from)} to {describeShift(range.to)} work, checked every {cell} ticks.</>
-                )}
-                {options.moved === 'swings' && (
-                    <> A machine accepts an input swing once it is below its insertion limit and before it runs out, and an output swing can leave once a full hand is ready.</>
-                )}
-                {' '}Each place was checked with the clock-only simulation from 12 start points; the one in use was confirmed from 112.
-            </Typography>
-
+        <ClockNoteFrame mark="info" title={title}>
+            <Box data-shift-chart="">
             <ScrollX label={SCROLL_REGION_NAMES.shiftRange} minWidth={SHIFT_CHART_MIN_WIDTH} tickRoom sx={{ py: '3px' /* room for the planned-start line, which sticks out 3px above and below a row */ }}>
             {options.rows.map(row => (
                 <Box key={row.index} sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
@@ -156,13 +145,6 @@ export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
             </Box>
             </ScrollX>
 
-            {options.earliest && options.latest && (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 1 }}>
-                    <EdgeReasons title="Earliest that works" edge={options.earliest} />
-                    <EdgeReasons title="Latest that works" edge={options.latest} />
-                </Box>
-            )}
-
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 1 }}>
                 {[
                     { label: 'Works', swatch: { bgcolor: WORKS_COLOR } },
@@ -181,6 +163,28 @@ export function ShiftRangePanel({ options }: ShiftRangePanelProps) {
                     </Typography>
                 </Box>
             </Box>
-        </Panel>
+            </Box>
+
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                {options.moved === 'swings' && options.plannedTicks
+                    ? <>This clock moves the swings planned in clock ticks {options.plannedTicks.start}–{options.plannedTicks.end} ({options.movedDescription}) together, </>
+                    : <>This clock moves {options.movedDescription} </>}
+                {describeShift(options.chosenShiftTicks)} than planned.
+                {range && range.from !== range.to && (
+                    <> Places from {describeShift(range.from)} to {describeShift(range.to)} work, checked every {cell} ticks.</>
+                )}
+                {options.moved === 'swings' && (
+                    <> A machine accepts an input swing once it is below its insertion limit and before it runs out, and an output swing can leave once a full hand is ready.</>
+                )}
+                {' '}Each place was checked with the clock-only simulation from 12 start points; the one in use was confirmed from 112.
+            </Typography>
+
+            {options.earliest && options.latest && (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 1 }}>
+                    <EdgeReasons title="Earliest that works" edge={options.earliest} />
+                    <EdgeReasons title="Latest that works" edge={options.latest} />
+                </Box>
+            )}
+        </ClockNoteFrame>
     );
 }

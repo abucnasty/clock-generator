@@ -16,8 +16,8 @@ import {PickupClockScenario} from "./pickup-clock-capture";
  */
 const FOLDER = path.dirname(ConfigPaths.UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN);
 
-/** The id of the alternative the generated clock is: the 168-tick one, which the rule for hands in groups makes stable */
-export const GENERATED_ALTERNATIVE = "round_robin_polling";
+/** The id of the alternative the generated clock is: the per-branch clock of 168 ticks, which takes the coal inserter's windows from a part one source at a time */
+export const GENERATED_ALTERNATIVE = "coordinated_sources";
 
 /** The scaffold has the five inserters that bring the supplies onto the belts (chest to belt), which the config does not have */
 const SCAFFOLD_FEEDERS = 5;

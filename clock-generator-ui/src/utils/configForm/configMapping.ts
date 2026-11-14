@@ -87,6 +87,7 @@ export function configToFormData(imported: Config, prototypeSource?: MachineForm
             _uuid: crypto.randomUUID(),
             type: b.type,
             ...(b.strategy !== undefined && { strategy: b.strategy }),
+            ...(b.flow_direction !== undefined && { flow_direction: b.flow_direction }),
             lanes: b.lanes as [BeltLaneFormData] | [BeltLaneFormData, BeltLaneFormData],
         })),
         chests: (imported.chests ?? []).map((raw): ChestFormData => {
@@ -141,6 +142,8 @@ export function configToFormData(imported: Config, prototypeSource?: MachineForm
             }
             : undefined,
         overrides: imported.overrides,
+        // the output belt has no editor: it is kept as it was stated
+        ...(imported.output_belt !== undefined && { output_belt: imported.output_belt }),
     };
 }
 

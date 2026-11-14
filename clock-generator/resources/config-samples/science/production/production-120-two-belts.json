@@ -2,7 +2,11 @@
   "setpoint": {
     "recipe": "production-science-pack",
     "items_per_second": 120,
-    "copies": 7
+    "copies": 7,
+    "copy_offset": {
+      "x": 10,
+      "y": 0
+    }
   },
   "machines": [
     {
@@ -16,7 +20,7 @@
       "id": 2,
       "recipe": "rail",
       "productivity": 0,
-      "crafting_speed": 46.796875,
+      "crafting_speed": 46.37125,
       "prototype": "assembling-machine-3"
     },
     {
@@ -106,6 +110,10 @@
         "id": 1
       },
       "stack_size": 16,
+      "filters": [
+        "productivity-module",
+        "electric-furnace"
+      ],
       "id": 5
     }
   ],
@@ -127,14 +135,21 @@
     {
       "id": 2,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
           "ingredient": "productivity-module",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         },
         {
           "ingredient": "electric-furnace",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         }
       ]
     }

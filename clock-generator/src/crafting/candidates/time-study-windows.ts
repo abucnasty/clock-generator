@@ -5,7 +5,7 @@ import { OpenRange } from "../../data-types";
 import { EntityId } from "../../entities";
 import { InventoryTransferHistory } from "../sequence/inventory-transfer-history";
 import { Logger } from "../../common/logger";
-import { withBeltPickupSlack } from "../clock";
+import { withWindowsLengthened } from "../clock";
 import { BlueprintGenerationResult, GenerateClockOptions, TrialRun, alwaysEnabledByConfig, clockOfPlan, clockOnlyRunOf, exportClock, unclockedRun, windowsFromHistory } from "../plan/unclocked-run";
 import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, FULL_CHECK_START_PHASES, runAsBuiltCheck, runClockOnBuild, trialWithLoopWindows } from "../trial";
 import { pitchPickupsTransferWindows } from "./pitch-pickups";
@@ -57,7 +57,7 @@ function deriveClockWindows(
     config: Config,
     planned_history: InventoryTransferHistory,
     output_inserter_ids: Set<string>,
-    belt_pickup_slack: Map<string, number>,
+    lane_hand_room: Map<string, number>,
     window_cycle_ticks: number,
     logger: Logger,
     report?: (detail: string) => void,
@@ -69,12 +69,12 @@ function deriveClockWindows(
     const drill_ids = new Set(Array.from(planned_history.keys()).filter(EntityId.isDrill).map(it => it.id));
     const drill_windows = new Map(Array.from(planned_windows).filter(([key]) => drill_ids.has(key)));
 
-    const planned = deriveTimeStudyWindows(base_config, output_windows, drill_windows, output_inserter_ids, belt_pickup_slack, window_cycle_ticks, "planned output", logger, report);
+    const planned = deriveTimeStudyWindows(base_config, output_windows, drill_windows, output_inserter_ids, lane_hand_room, window_cycle_ticks, "planned output", logger, report);
     if (planned.windows !== null || planned.even_output_windows === null) {
         return planned;
     }
     // Bunched output swings (e.g. a double swing then a long gap) can leave a partial stack in hand when the window closes
-    const even = deriveTimeStudyWindows(base_config, planned.even_output_windows, drill_windows, output_inserter_ids, belt_pickup_slack, window_cycle_ticks, "evenly spaced output", logger, report);
+    const even = deriveTimeStudyWindows(base_config, planned.even_output_windows, drill_windows, output_inserter_ids, lane_hand_room, window_cycle_ticks, "evenly spaced output", logger, report);
     if (even.windows !== null) {
         return even;
     }
@@ -105,7 +105,8 @@ export function deriveTimeStudyWindows(
     output_windows: Map<string, OpenRange[]>,
     drill_windows: Map<string, OpenRange[]>,
     output_inserter_ids: Set<string>,
-    belt_pickup_slack: Map<string, number>,
+    /** The room for one more hand of each inserter that picks up from a belt (laneHandRoomTicks), added to its windows */
+    lane_hand_room: Map<string, number>,
     window_cycle_ticks: number,
     label: string,
     logger: Logger,
@@ -146,7 +147,7 @@ export function deriveTimeStudyWindows(
     const { picked, pick, tried } = search<number, QuickTrial & { windows: Map<string, OpenRange[]>; result: TrialRun; run: AsBuiltRun }, Confirmed>({
         candidates: DERIVED_WINDOW_END_PADDING_CANDIDATES,
         quick: padding => {
-            const windows = withBeltPickupSlack(paddedWindows(unpadded, busy_windows.keys(), padding, window_cycle_ticks), belt_pickup_slack, window_cycle_ticks);
+            const windows = withWindowsLengthened(paddedWindows(unpadded, busy_windows.keys(), padding, window_cycle_ticks), lane_hand_room, window_cycle_ticks);
             report?.(`Trying ${ticks(padding)}`);
             const trial = quickTrial(base_config, windows, window_cycle_ticks, logger, true);
             logger.log(`Derived enable windows (${label}): end padding ${padding} -> actual=${trial.result.stability_check.actual_output_items} holds=${trial.holds}`);
@@ -179,8 +180,8 @@ export function deriveTimeStudyWindows(
  *
  * The clock-only checks made here of the windows observed and of the planned windows judge each moving lane-phase
  * start over its repeating cycle (see runAsBuiltCheck): the windows are read off a run from one lane phase, so they can
- * hold their first window cycle from another and still fall short every few window cycles. The plan's belt pickup slack is decided
- * as for any planned clock (see clockOfPlan).
+ * hold their first window cycle from another and still fall short every few window cycles. The plan's room for one more
+ * hand is decided as for any planned clock (see clockOfPlan).
  */
 export function timeStudyWindowsClock(
     config: Config,
@@ -229,13 +230,13 @@ export function timeStudyWindowsClock(
     }
 
     const uneven = mode !== "moved_output_swing" ? null : movedOutputSwingWindows(
-        config, final_history, output_inserter_ids, clock.belt_pickup_slack, duration.ticks,
+        config, final_history, output_inserter_ids, clock.lane_hand_room, duration.ticks,
         Math.min(...output_machine_state_machines.map(it => it.machine_state.machine.crafting_rate.ticks_per_craft)),
         logger, options.on_progress_detail);
     // without a moved swing that works there is nothing to export; plain observed windows are their own alternative
     const derived: Omit<TimeStudyWindows, "even_output_windows" | "search"> & { search?: SearchReport } = mode === "moved_output_swing"
         ? uneven ?? { windows: null, end_padding_ticks: null, verification: null, as_built: null }
-        : deriveClockWindows(config, final_history, output_inserter_ids, clock.belt_pickup_slack, duration.ticks, logger, options.on_progress_detail);
+        : deriveClockWindows(config, final_history, output_inserter_ids, clock.lane_hand_room, duration.ticks, logger, options.on_progress_detail);
     const report: TimeStudyWindowsReport = {
         succeeded: derived.windows !== null,
         kept_planned_windows: false,

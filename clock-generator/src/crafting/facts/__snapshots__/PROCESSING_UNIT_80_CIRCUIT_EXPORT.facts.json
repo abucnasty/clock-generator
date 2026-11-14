@@ -29,7 +29,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -55,7 +55,59 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "belt:5/lane:1",
+      "kind": "lane",
+      "entity": "belt:5",
+      "lane": {
+        "key": "belt:5/lane:1",
+        "belt": "belt:5",
+        "lane": 1,
+        "listed": true,
+        "item": "plastic-bar",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "backed_up",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "belt:5/lane:2",
+      "kind": "lane",
+      "entity": "belt:5",
+      "lane": {
+        "key": "belt:5/lane:2",
+        "belt": "belt:5",
+        "lane": 2,
+        "listed": true,
+        "item": "plastic-bar",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -1638,11 +1690,11 @@
       "entity": "inserter:10",
       "group": "inserter:10",
       "item": "plastic-bar",
-      "from": "belt:1/lane:1",
+      "from": "belt:5/lane:1",
       "to": "machine:7",
       "from_lanes": [
-        "belt:1/lane:1",
-        "belt:1/lane:2"
+        "belt:5/lane:1",
+        "belt:5/lane:2"
       ],
       "lands_in": "ingredients",
       "hand": {

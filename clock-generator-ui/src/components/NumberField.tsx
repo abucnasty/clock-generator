@@ -38,6 +38,8 @@ interface NumberFieldProps extends BaseNumberField.Root.Props {
     preserveInputOnBlur?: boolean;
     /** The input's name, for a field with no label of its own to show; `aria-label` would land on the wrapper */
     inputAriaLabel?: string;
+    /** The label always above the field, so that the placeholder shows while the field is empty and not focused */
+    shrinkLabel?: boolean;
 }
 
 export function NumberField({
@@ -56,6 +58,7 @@ export function NumberField({
     displayDecimals = FIELD_DECIMALS,
     preserveInputOnBlur = false,
     inputAriaLabel,
+    shrinkLabel,
     ...other
 }: NumberFieldProps) {
     let id = React.useId();
@@ -136,7 +139,7 @@ export function NumberField({
             )}
         >
             <SSRInitialFilled {...other} min={min} max={max} />
-            <InputLabel htmlFor={id}>{label}</InputLabel>
+            <InputLabel htmlFor={id} shrink={shrinkLabel || undefined}>{label}</InputLabel>
             <BaseNumberField.Input
                 id={id}
                 placeholder={placeholder}
@@ -152,6 +155,7 @@ export function NumberField({
                     return (
                         <OutlinedInput
                             label={label}
+                            notched={shrinkLabel || undefined}
                             inputRef={props.ref}
                             value={shown}
                             onBlur={(e) => {

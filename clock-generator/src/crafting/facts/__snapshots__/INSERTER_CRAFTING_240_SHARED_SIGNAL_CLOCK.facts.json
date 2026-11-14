@@ -29,7 +29,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -55,7 +55,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -81,7 +81,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -107,7 +107,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -185,7 +185,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -211,7 +211,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -538,25 +538,25 @@
         "recipe_or_resource": "iron-gear-wheel",
         "prototype": "assembling-machine-3",
         "prototype_type": "assembling-machine",
-        "speed": 40.3125,
+        "speed": 44.921875,
         "energy_required": 0.5,
-        "ticks_per_craft": 0.7441860465116279,
-        "crafts_per_tick": 1.34375,
+        "ticks_per_craft": 0.6678260869565218,
+        "crafts_per_tick": 1.4973958333333333,
         "productivity": 100,
         "bonus_per_craft": 1,
-        "ticks_per_bonus": 0.7441860465116279,
+        "ticks_per_bonus": 0.6678260869565218,
         "inputs": [
           {
             "item": "iron-plate",
             "per_craft": 2,
-            "per_second": 161.25,
-            "per_tick": 2.6875
+            "per_second": 179.6875,
+            "per_tick": 2.9947916666666665
           }
         ],
-        "insertion_duration_ticks": 35.72093023255814,
+        "insertion_duration_ticks": 33.391304347826086,
         "crafts_per_second": {
-          "numerator": 645,
-          "denominator": 8
+          "numerator": 2875,
+          "denominator": 32
         }
       },
       "yield": {
@@ -573,8 +573,8 @@
               "denominator": 1
             },
             "per_second": {
-              "numerator": 645,
-              "denominator": 4
+              "numerator": 2875,
+              "denominator": 16
             },
             "main": true,
             "stochastic": false
@@ -584,11 +584,11 @@
         "payouts_count_as_finishes": true
       },
       "input_limits": {
-        "overload_multiplier": 96,
+        "overload_multiplier": 100,
         "limits": [
           {
             "item": "iron-plate",
-            "limit": 192,
+            "limit": 200,
             "kind": "ingredient"
           }
         ]
@@ -599,8 +599,8 @@
           {
             "item": "iron-gear-wheel",
             "rule": "overload",
-            "ingredients_blocked_at": 96,
-            "held_limit": 96,
+            "ingredients_blocked_at": 100,
+            "held_limit": 100,
             "stack": 100
           }
         ]
@@ -634,25 +634,25 @@
         "recipe_or_resource": "iron-plate",
         "prototype": "electric-furnace",
         "prototype_type": "furnace",
-        "speed": 86.1655,
+        "speed": 91.875,
         "energy_required": 3.2,
-        "ticks_per_craft": 2.2282700152613284,
-        "crafts_per_tick": 0.4487786458333333,
+        "ticks_per_craft": 2.089795918367347,
+        "crafts_per_tick": 0.478515625,
         "productivity": 50,
         "bonus_per_craft": 0.5,
-        "ticks_per_bonus": 1.1141350076306642,
+        "ticks_per_bonus": 1.0448979591836736,
         "inputs": [
           {
             "item": "iron-ore",
             "per_craft": 1,
-            "per_second": 26.92671875,
-            "per_tick": 0.4487786458333333
+            "per_second": 28.7109375,
+            "per_tick": 0.478515625
           }
         ],
-        "insertion_duration_ticks": 49.02194033574923,
+        "insertion_duration_ticks": 48.76190476190476,
         "crafts_per_second": {
-          "numerator": 172331,
-          "denominator": 6400
+          "numerator": 3675,
+          "denominator": 128
         }
       },
       "yield": {
@@ -669,8 +669,8 @@
               "denominator": 2
             },
             "per_second": {
-              "numerator": 516993,
-              "denominator": 12800
+              "numerator": 11025,
+              "denominator": 256
             },
             "main": true,
             "stochastic": false
@@ -680,11 +680,11 @@
         "payouts_count_as_finishes": true
       },
       "input_limits": {
-        "overload_multiplier": 33,
+        "overload_multiplier": 35,
         "limits": [
           {
             "item": "iron-ore",
-            "limit": 33,
+            "limit": 35,
             "kind": "ingredient"
           }
         ]

@@ -72,5 +72,6 @@
       ]
     }
   ],
-  "chests": []
+  "chests": [],
+  "overrides": {"backed_up_belts": false}
 }

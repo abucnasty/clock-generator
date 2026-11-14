@@ -85,7 +85,7 @@
           "stack_size": 4
         },
         {
-          "ingredient": "",
+          "ingredient": "logistic-science-pack",
           "stack_size": 4
         }
       ]
@@ -93,14 +93,21 @@
     {
       "id": 2,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
           "ingredient": "transport-belt",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         },
         {
           "ingredient": "inserter",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         }
       ]
     }

@@ -1,5 +1,4 @@
 import { ZodError } from "zod";
-import { fraction } from "../data-types/fraction";
 
 /**
  * Represents a single validation error with user-friendly details.
@@ -291,38 +290,6 @@ export interface CopiesUnit {
     machine_ids: number[];
 }
 
-/**
- * A config holds several identical units of a build, where it should describe one unit and set
- * `setpoint.copies`.
- */
-export class CopiesError extends Error {
-    /** The identical copies found, each with the machine ids of its unit; one entry per copy */
-    public readonly units: CopiesUnit[];
-    /** The number of identical copies the config holds */
-    public readonly copies_found: number;
-    /** `setpoint.copies` of the config as given */
-    public readonly configured_copies: number;
-
-    constructor(units: CopiesUnit[], configuredCopies: number) {
-        super(CopiesError.formatMessage(units, configuredCopies));
-        this.name = 'CopiesError';
-        this.units = units;
-        this.copies_found = units.length;
-        this.configured_copies = configuredCopies;
-    }
-
-    private static formatMessage(units: CopiesUnit[], configuredCopies: number): string {
-        const found = units.length;
-        const size = units[0]?.machine_ids.length ?? 0;
-        const listed = units
-            .map((unit, i) => `copy ${i + 1}: machines ${unit.machine_ids.join(', ')}`)
-            .join('; ');
-        return `The configuration holds ${found} identical copies of a build of ${size} machine${size === 1 ? '' : 's'} `
-            + `(${listed}). Describe one copy and set setpoint.copies to ${fraction(configuredCopies).multiply(found).toDecimal()} `
-            + `(now ${configuredCopies}, times ${found}).`;
-    }
-}
-
 // ============================================================================
 // Lane Capacity Validation Types
 // ============================================================================
@@ -386,6 +353,116 @@ export class LaneCapacityError extends Error {
         return `A belt lane is asked for more than it carries at the target: ${issues.map(describeLaneOverCapacity).join(' ')} `
             + "A lane carries half its belt's items a second times its stack size. Lower the target, or move inserters to "
             + 'another lane or belt.';
+    }
+}
+
+/** A rate a lane of the config states above what the lane can carry */
+export interface LaneRateIssue {
+    belt_id: number;
+    lane: number;
+    fact: 'supply rate';
+    items_per_second: number;
+    /** Items a second the lane can carry: half the belt's speed times the lane's stack size */
+    capacity_per_second: number;
+}
+
+/** "Lane 1 of belt 2 states a supply rate of 130 a second. The lane can carry 120 a second." */
+export function describeLaneRate(issue: LaneRateIssue): string {
+    return `Lane ${issue.lane} of belt ${issue.belt_id} states a supply rate of `
+        + `${formatRate(issue.items_per_second, issue.capacity_per_second)} a second. The lane can carry ${formatRate(issue.capacity_per_second)} a second.`;
+}
+
+/** A lane of the config states a supply rate that the lane cannot carry */
+export class LaneRateError extends Error {
+    public readonly issues: LaneRateIssue[];
+
+    constructor(issues: LaneRateIssue[]) {
+        super(`${issues.map(describeLaneRate).join(' ')} Lower the rate, or remove it to use what the lane can carry.`);
+        this.name = 'LaneRateError';
+        this.issues = issues;
+    }
+}
+
+/** A set of lanes of a belt the copies take more from, summed, than the lanes get */
+export interface SharedLaneSupplyIssue {
+    belt_id: number;
+    lanes: number[];
+    /** The inserters of one unit that take from only these lanes */
+    inserter_ids: number[];
+    copies: number;
+    /** Whether every lane of the set is per copy: then one copy's takes are held against one copy's lanes */
+    per_copy: boolean;
+    /** Items a second those inserters take at the target, in one unit */
+    items_per_second: number;
+    /** Items a second the lanes get: for the copies together, or for one copy where the lanes are per copy */
+    supply_per_second: number;
+}
+
+/** Whether the takes of the copies add up on the lanes: they share them, and there is more than one copy */
+const summedOverCopies = (issue: SharedLaneSupplyIssue): boolean => !issue.per_copy && issue.copies > 1;
+
+/** "The 5 copies share lane 1 of belt 2. Together they take 5 × 60 = 300 a second from it. Its supply rate is 120 a second." */
+export function describeSharedLaneSupply(issue: SharedLaneSupplyIssue): string {
+    const one = issue.lanes.length === 1;
+    const lanes = describeLanes(issue);
+    const Lanes = `${lanes.charAt(0).toUpperCase()}${lanes.slice(1)}`;
+    if (!summedOverCopies(issue)) {
+        return issue.per_copy && issue.copies > 1
+            ? `${Lanes} ${one ? 'is' : 'are'} per copy. Each copy takes ${formatRate(issue.items_per_second, issue.supply_per_second)} a second from ${one ? 'its lane' : 'its lanes'}, `
+                + `and the supply rate of ${one ? 'the lane' : 'the lanes'} is ${formatRate(issue.supply_per_second)} a second.`
+            : `The build takes ${formatRate(issue.items_per_second, issue.supply_per_second)} a second from ${lanes}, `
+                + `and ${one ? 'its' : 'their'} supply rate is ${formatRate(issue.supply_per_second)} a second.`;
+    }
+    const summed = issue.items_per_second * issue.copies;
+    return `The ${issue.copies} copies share ${lanes}. Together they take ${issue.copies} × `
+        + `${formatRate(issue.items_per_second)} = ${formatRate(summed, issue.supply_per_second)} a second from ${one ? 'it' : 'them'}. `
+        + `${one ? 'Its' : 'Their'} supply rate is ${formatRate(issue.supply_per_second)} a second.`;
+}
+
+/** The copies take more from lanes they share than the lanes get, so no clock can hold the target */
+export class SharedLaneSupplyError extends Error {
+    public readonly issues: SharedLaneSupplyIssue[];
+
+    constructor(issues: SharedLaneSupplyIssue[]) {
+        super(`${issues.map(describeSharedLaneSupply).join(' ')} `
+            + (issues.some(summedOverCopies) ? 'Set the lane to per copy if the copies do not share it. If they share it, use a smaller number of copies.'
+                : 'Raise the supply rate, or lower the target.'));
+        this.name = 'SharedLaneSupplyError';
+        this.issues = issues;
+    }
+}
+
+/** A belt whose stated flow direction is across the copy spacing, with the lanes of it that the copies share */
+export interface FlowAcrossCopySpacingIssue {
+    belt_id: number;
+    /** The belt's `flow_direction` as the config states it */
+    flow_direction: 0 | 4 | 8 | 12;
+    lanes: (1 | 2)[];
+}
+
+const DIRECTION_WORDS = { 0: 'north', 4: 'east', 8: 'south', 12: 'west' } as const;
+
+/**
+ * A belt states that its items move across the copy spacing, on a lane the copies share: the copies stand along one axis
+ * (`copy_offset`) and the belt runs along the other, so the copies cannot stand one after the other along its lanes.
+ */
+export class FlowAcrossCopySpacingError extends Error {
+    public readonly issues: FlowAcrossCopySpacingIssue[];
+
+    constructor(issues: FlowAcrossCopySpacingIssue[], copyOffset: { x: number; y: number }) {
+        super(FlowAcrossCopySpacingError.formatMessage(issues, copyOffset));
+        this.name = 'FlowAcrossCopySpacingError';
+        this.issues = issues;
+    }
+
+    private static formatMessage(issues: FlowAcrossCopySpacingIssue[], offset: { x: number; y: number }): string {
+        // across a cardinal flow, the offset has no part along it: it lies on the other axis
+        const axis = offset.y === 0 ? 'x' : 'y';
+        const along = axis === 'x' ? '4 (east) or 12 (west)' : '0 (north) or 8 (south)';
+        const belts = issues.map(issue => `Belt ${issue.belt_id} states flow_direction ${issue.flow_direction} (${DIRECTION_WORDS[issue.flow_direction]}), `
+            + `and the copies share ${describeLanes({ belt_id: issue.belt_id, lanes: issue.lanes })}.`);
+        return `${belts.join(' ')} That is across the copy spacing: copy_offset (${offset.x}, ${offset.y}) puts the copies along ${axis}. `
+            + `State the way the belt flows along the row of copies, ${along}, or remove flow_direction from the belt.`;
     }
 }
 

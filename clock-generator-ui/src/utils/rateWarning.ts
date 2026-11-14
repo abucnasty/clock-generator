@@ -1,5 +1,6 @@
 import type { ClockAlternativeView } from '../worker/types';
 import { STALE_COPY_LABEL } from './resultsStaleness';
+import { shownRateOf } from './shownRate';
 
 /** A rate as the sentences about it print it: at most two decimals, no trailing zeros ("192", "12.5", "0.33") */
 const figure = (rate: number) => Number(rate.toFixed(2)).toString();
@@ -42,7 +43,7 @@ export function notTriedOf(alternative: Pick<ClockAlternativeView, 'assessment'>
  * at the target rate on a build without the risk.
  */
 export function rateWarningOf(
-    alternative: Pick<ClockAlternativeView, 'verdict' | 'assessment' | 'ranking' | 'deadlockRisk'> | undefined,
+    alternative: (Pick<ClockAlternativeView, 'verdict' | 'assessment' | 'ranking' | 'deadlockRisk' | 'checkedLanes'> & Partial<Pick<ClockAlternativeView, 'asBuilt'>>) | undefined,
 ): string | null {
     if (!alternative) {
         return null;
@@ -51,8 +52,27 @@ export function rateWarningOf(
     return [of_the_clock, alternative.deadlockRisk].filter(part => part !== null).join(' ') || null;
 }
 
+/** The engine's note on a build with a deadlock risk (its insight), whose What names the two inserters and the machine */
+const DEADLOCK_RISK_NOTE = 'deadlock-risk';
+
+/**
+ * What the card and the install dialog warn of: as rateWarningOf, with the deadlock risk said as "Deadlock risk:" and the
+ * sentences that name the two inserters and the machine (the What of the engine's note on the risk). The note under
+ * "About this build" keeps how a deadlock comes about. A result without that note keeps the engine's whole text.
+ */
+export function cardWarningOf(
+    alternative: (Pick<ClockAlternativeView, 'verdict' | 'assessment' | 'ranking' | 'deadlockRisk' | 'checkedLanes' | 'insights'> & Partial<Pick<ClockAlternativeView, 'asBuilt'>>) | undefined,
+): string | null {
+    if (!alternative) {
+        return null;
+    }
+    const note = alternative.deadlockRisk === null ? undefined : alternative.insights.find(insight => insight.id === DEADLOCK_RISK_NOTE);
+    const deadlock = note === undefined ? alternative.deadlockRisk : `Deadlock risk: ${note.what}`;
+    return [clockWarningOf(alternative), deadlock].filter(part => part !== null).join(' ') || null;
+}
+
 function clockWarningOf(
-    alternative: Pick<ClockAlternativeView, 'verdict' | 'assessment' | 'ranking'>,
+    alternative: Pick<ClockAlternativeView, 'verdict' | 'assessment' | 'ranking' | 'checkedLanes'> & Partial<Pick<ClockAlternativeView, 'asBuilt'>>,
 ): string | null {
     const warnings: string[] = [];
     if (alternative.assessment.start_dependence?.verdict === 'start-dependent') {
@@ -68,26 +88,33 @@ function clockWarningOf(
                 ? 'No usable recovery result is available for this clock.'
                 : 'Recovery could not be assessed: the simulator baseline for the loss trials was off its expected output.');
     }
-    const { items_per_second } = alternative.assessment;
+    // the rate the page shows (shownRateOf); the target is the assessment's rate less how far it is off it
+    const items_per_second = shownRateOf(alternative);
+    const target = alternative.assessment.items_per_second - alternative.ranking.rate_off_target;
     const runsFast = alternative.ranking.runs_fast;
     if (runsFast !== undefined) {
         warnings.push(`This clock’s window cycle time is rounded down to whole ticks, so it runs ${fastPercent(runsFast)} fast: `
             // to three decimals: a rate 0.1% fast prints as the target at two
-            + `${Number(items_per_second.toFixed(3))}/s for the ${Number((items_per_second - alternative.ranking.rate_off_target).toFixed(3))}/s requested, `
+            + `${Number(items_per_second.toFixed(3))}/s for the ${Number(target.toFixed(3))}/s requested, `
             + 'within the 0.1% a rounded clock may run and what the machines can make.');
     } else if (alternative.ranking.stable_above_target === true) {
-        const target = items_per_second - alternative.ranking.rate_off_target;
         warnings.push(`This clock runs over the setpoint: ${figure(items_per_second)}/s for the ${figure(target)}/s requested, `
             + `${fastPercent(alternative.ranking.rate_off_target / target)} over, in the simulator.`);
     } else if (Math.abs(alternative.ranking.rate_off_target) >= MIN_SHORTFALL) {
         warnings.push(`This clock’s output rate differs from the setpoint: it runs at ${figure(items_per_second)}/s; requested `
-            + `${figure(items_per_second - alternative.ranking.rate_off_target)}/s in the simulator.`);
+            + `${figure(target)}/s in the simulator.`);
     }
     if (alternative.assessment.holds === false) {
-        warnings.push('This clock does not hold its expected output in the modeled clock checks.');
+        // at the setpoint, a clock whose status is Oscillates (outputTermOf: the engine's reason `oscillation`) says what it means
+        const oscillates = alternative.asBuilt?.output_reason?.code === 'oscillation' && Math.abs(alternative.ranking.rate_off_target) < MIN_SHORTFALL
+            && (alternative.assessment.shared_lane_losses?.length ?? 0) === 0;
+        warnings.push(oscillates ? OSCILLATES_WARNING : 'This clock does not hold its expected output in the modeled clock checks.');
     }
     return warnings.join(' ') || null;
 }
+
+/** The line of a clock whose status is Oscillates, in place of the one of a clock that does not hold */
+const OSCILLATES_WARNING = 'This clock makes the setpoint on average, but not in every window cycle.';
 
 /** Whether a clock runs short of the target rate by enough to say so on the Copy button */
 export function isBelowTarget(alternative: Pick<ClockAlternativeView, 'ranking'> | undefined): boolean {
@@ -103,7 +130,7 @@ export function isBelowTarget(alternative: Pick<ClockAlternativeView, 'ranking'>
  * "Copy blueprint" otherwise. The other warnings are shown by the button's colour, its icon and its tooltip.
  */
 export function copyBlueprintLabelOf(
-    alternative: Pick<ClockAlternativeView, 'assessment' | 'ranking'> | undefined,
+    alternative: Pick<ClockAlternativeView, 'assessment' | 'ranking' | 'checkedLanes'> | undefined,
     stale: boolean,
     running = false,
 ): string {
@@ -112,7 +139,7 @@ export function copyBlueprintLabelOf(
     }
     const label = running ? COPY_CURRENT_BEST_LABEL : COPY_BLUEPRINT_LABEL;
     if (alternative && isBelowTarget(alternative)) {
-        return `${label} (${figure(alternative.assessment.items_per_second)}/s, below setpoint)`;
+        return `${label} (${figure(shownRateOf(alternative))}/s, below setpoint)`;
     }
     return label;
 }

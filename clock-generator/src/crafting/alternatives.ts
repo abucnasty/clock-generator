@@ -2,6 +2,7 @@ import assert from "../common/assert";
 import type { TargetCounts } from "../config/schema";
 import { fraction } from "../data-types/fraction";
 import { Config } from "../config";
+import { withoutOutsideSupply } from "../config/outside-supply";
 import { warnUncalibratedBeltPickups } from "../config/pickup-calibration";
 import { warnLanesSharedByCopies } from "../config/lane-capacity-validator";
 import { warnSideLoadedDrops } from "../config/side-loaded-drop";
@@ -10,16 +11,15 @@ import { Entity, EntityId } from "../entities";
 import { FactorioBlueprint } from "../blueprints/blueprint";
 import { withNetwork } from "./inserter-counters";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
-import { everyInputLaneIsDeadEnd } from "../entities/traits/lane-facts";
 import { decimalOf } from "../entities/traits/ratio";
 import { machinesInOrder, traitsOf } from "../entities/traits/traits-of";
 import { Logger, defaultLogger } from "../common/logger";
 import { DisturbanceTrialVerdict } from "./disturbance-trial";
 import { SharedItemDeadlockRisk, sharedItemDeadlockRisks } from "./deadlock-risk";
-import { disturbanceTrialInsight, beltPickupNotTestedInsights, chestDrillInsights, ClockInsight, clockInsights, deadlockRiskInsight, dropSpacingInsights, lanesExactlyFullInsights, sideLoadedDropInsights, startDependenceInsight, withWakeUpsFromStarts } from "./insights";
+import { disturbanceTrialInsight, beltPickupNotTestedInsights, chestDrillInsights, ClockInsight, clockInsights, deadlockRiskInsight, dropSpacingInsights, lanesExactlyFullInsights, onePerCopyFeedInsights, assumedCopySpacingInsights, droppedOntoSharedLaneInsights, sideLoadedDropInsights, startDependenceInsight, withWakeUpsFromStarts } from "./insights";
 import { chestDrillFallbackConfig, ChestDrillClock, hasPlannedChestDrill } from "./chest-drill-windows";
 import { chestDrillReasons, EntityRouteError, entityRoutesOf } from "./enable-control-router";
-import { ClockBelt, clockBeltLabel, fuelHandRoomTicks } from "./clock";
+import { ClockBelt, clockBeltLabel, delayedHandRoomTicks, fuelRoomTicks } from "./clock";
 import { timeDivisionWindowsClock } from "./candidates/time-division-windows";
 import { pitchPickupsClock } from "./candidates/pitch-pickups";
 import { perHandWindowsClock } from "./candidates/round-robin-polling";
@@ -31,11 +31,11 @@ import { primitiveRoundRobinPollingConfigSupported } from "./candidates/round-ro
 import { MAX_OBSERVED_WINDOWS_WINDOW_CYCLE_TICKS, swingCountsListed } from "./planner/window-cycles";
 import { SecondaryPlanningInvariantError, secondaryPlanningCountOf, verificationPlanningConfigOf, withSecondaryPlanningProvenance, type SecondaryPlanningCount } from "./round-robin-polling-primitive-policy";
 import { collectingParts, coordinatedSourcesInputOf, type CoordinatedSourcesInput, type CoordinatedSourcesPart } from "./candidates/coordinated-sources-parts";
-import { coordinatedSourcesClock } from "./candidates/coordinated-sources";
+import { coordinatedSourcesClock, withNotAdmitted, type NotAdmittedPart } from "./candidates/coordinated-sources";
 import { BlueprintGenerationResult, clockedByConfig, GenerateClockOptions, SimulationStabilityCheck, fractionalStartOf, fractionalSwingsOf } from "./plan/unclocked-run";
 import { EntityTransferCountMap } from "./sequence/cycle/swing-counts";
 import { withRunMemo } from "./plan/run-memo";
-import { ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, ROUNDED_CLOCK_MAX_FAST, RoundedClock, roundedRateAllowed, searchesToRun, searchesAreNeeded } from "./rank";
+import { clockCost, ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, ROUNDED_CLOCK_MAX_FAST, RoundedClock, roundedRateAllowed, searchesToRun, searchesAreNeeded } from "./rank";
 import { TargetProductionRate } from "./target-production-rate";
 import { loopStockBoundOf } from "./candidates/loop-stock-bound";
 import { AsBuiltStabilityCheck, DisturbanceTrialAssessment, disturbanceTrialVerdictOf, ClockAssessment, ClockVerdict, clockVerdictOf, clockVerificationSignature, FREE_RUNNING_CHECK_TICKS, fractionalSwingsChangeChecksOf, LOOP_WINDOW_CHECK_TICKS, roundedClockTrial, startDependenceVerdictOf, wakeUpsFromStartsOf, withSettledOutput } from "./trial";
@@ -47,6 +47,11 @@ import { signalsPerMinuteOf } from "./clock-signals";
 import { START_DEPENDENCE_NOT_CHECKED, StartDependence, startDependenceNote } from "./start-dependence";
 import { NotMadeClock, notTriedSentence, WhyNotStable, whyNotStable, whyNotStableClockOf } from "./why-not-stable";
 import { DEFAULT_KICK_START_ITEMS } from "./runner/cold-start";
+import { ClockSharedLaneLoss, fewerCopiesThatHold, isNotChecked, judgeSharedLanes, SharedLaneJudgement, sharedLanesNotChecked } from "./shared-lane-verdict";
+import { buildLanesOf, BuildLane, CheckedLanes, checkedLanesOf, withOtherClocks } from "./checked-lanes";
+import { buildToNameOf, entityNamesInSentence } from "./build-names";
+import { capitalized, drillNameInText, insertersInSentence, textWords } from "./entity-name";
+import { copiesDisturbanceTrial, CopiesTrialVerdict } from "./shared-lane-trial";
 
 
 export interface ClockAlternative {
@@ -81,6 +86,17 @@ export interface ClockAlternative {
     strategy: ClockStrategy;
     /** For a clock of a window cycle that is not whole, exported rounded down to whole ticks: how it runs against the target */
     rounded?: RoundedClock;
+    /**
+     * What was checked on each lane the copies share (checked-lanes.ts): the rows, the line, and for a clock that is not
+     * stable on a shared lane the parts of its cause; absent for a build of one copy
+     */
+    checked_lanes?: CheckedLanes;
+    /**
+     * The sentences of the description on a loss on the lanes its copies share, word for word as the description has them
+     * after a space ("It is not stable on a lane its copies share. ..."), so that a page that shows the parts of the cause
+     * can leave them out; absent where the description has none
+     */
+    shared_lane_loss_note?: string;
     result: BlueprintGenerationResult;
 }
 
@@ -92,6 +108,11 @@ export interface ClockAlternativesResult {
      * or the one nearest to the target rate when none meets it
      */
     selected_index: number;
+    /**
+     * Every alternative in the selection's order, as indexes into `alternatives`: `selected_index` first, of equals the
+     * first listed first (combineClockAlternativeRuns). A position, not a score.
+     */
+    order: number[];
     /**
      * The labels of the searches that were not run, because a clock made without one can be selected as stable and
      * they were not among those that can still improve on it (see `searchesToRun`); empty when all ran.
@@ -111,6 +132,8 @@ export interface ClockAlternativesResult {
     why_not_stable: WhyNotStable | null;
     /** The clocks of the explored strategies and whether the best of them beats the selected clock; set only when `explore_strategies` asks for it */
     explored?: ExploredClocks;
+    /** Every lane of the build, once: its item, role, end and where the end comes from, sharing and supply (checked-lanes.ts) */
+    lanes?: BuildLane[];
 }
 
 /** The alternatives one generation run exports (a subtick and a rounded clock for a fractional window cycle) */
@@ -177,7 +200,7 @@ export interface ClockAlternativesPlan {
 }
 
 /** The options Round-Robin Polling with a shorter window cycle is verified with, as the primary alternative's (see primaryDefinition) */
-const SMALL_BATCHES_OPTIONS: GenerateClockOptions = { verify_as_built: true, belt_pickup_slack: "always" };
+const SMALL_BATCHES_OPTIONS: GenerateClockOptions = { verify_as_built: true, lane_hand_room: "always" };
 
 
 /**
@@ -324,28 +347,28 @@ const BATCHED_SWINGS_DESCRIPTION = "The swing schedule the generator plans for t
     + "inserter waiting on its machine's inventory, and each inserter's enable windows are the ticks it moved items. Swings are "
     + "grouped into batches that match the output cycle.";
 
-/** True when an inserter of the build takes fuel for its machine off a belt as well as an ingredient */
+/**
+ * True when an inserter of the build takes fuel for its machine off a belt as well as an ingredient and a clock made again
+ * gives it room (fuelRoomTicks): where its windows get no room for one more hand (a side pickup of an item both lanes
+ * carry), or where they do and the fuel is on its near lane
+ */
 function takesFuelOffABelt(config: Config): boolean {
-    return fuelHandRoomTicks(createEntityRegistryFromConfig(config)).size > 0;
+    return fuelRoomTicks(createEntityRegistryFromConfig(config)).size > 0;
 }
 
 /**
- * For a config whose belts have backpressure at their pickups. A clock is then made without belt pickup slack, and some clocks do not hold
- * the expected output that way, also on the simulator's belt.
- *
- * Such a clock is made again with room for a hand of fuel in the windows of the inserters that take fuel off a belt
- * as well as an ingredient (`withFuelHandRoom`, which gives nothing for a build without one), and that one is kept
- * when it holds. It is still a clock for a belt with backpressure: the room is what the fuel needs there. A clock
- * that does not hold either way is offered as it is, without the slack: until 2026-10-10 it was made again with the
- * slack, which no selected clock of any sample needed once the simulator took from the nearest lane of a belt first.
+ * A clock that does not hold the expected output is made again with room for its fuel in the windows of the inserters
+ * that take fuel off a belt as well as an ingredient (`withFuelHandRoom`, which gives nothing for a build without one,
+ * see fuelRoomTicks), and that one is kept when it holds. The fuel slot asks for a hand in any window, whatever the lane
+ * does. A clock that does not hold either way is offered as it is.
  */
-function withFuelHandRoomWhereNeeded(
+export function withFuelHandRoomWhereNeeded(
     withoutRoom: () => BlueprintGenerationResult,
     withFuelHandRoom: () => BlueprintGenerationResult | undefined,
 ): BlueprintGenerationResult {
     const result = withoutRoom();
     // the room changes nothing where no clocked inserter picks up from a belt, or in a window cycle of part ticks
-    if (holds(result) || result.belt?.kind !== "backed_up" || !Number.isInteger(result.simulation_duration.ticks)) {
+    if (holds(result) || result.belt === null || !Number.isInteger(result.simulation_duration.ticks)) {
         return result;
     }
     try {
@@ -361,10 +384,8 @@ function withFuelHandRoomWhereNeeded(
 function primaryDefinition(config: Config, options: GenerateClockOptions, report?: (detail: string) => void): AlternativeDefinition {
     const generate = (belt_config: Config, fuel_hand_room: boolean = false) => generateClockWithSwingBackoff(
         { ...belt_config, overrides: { ...belt_config.overrides, derive_clock_windows: false } },
-        { ...options, verify_as_built: true, belt_pickup_slack: "always", fuel_hand_room, on_progress_detail: report });
-    const result = everyInputLaneIsDeadEnd(config)
-        ? withFuelHandRoomWhereNeeded(() => generate(config), () => takesFuelOffABelt(config) ? generate(config, true) : undefined)
-        : generate(config);
+        { ...options, verify_as_built: true, lane_hand_room: "always", fuel_hand_room, on_progress_detail: report });
+    const result = withFuelHandRoomWhereNeeded(() => generate(config), () => takesFuelOffABelt(config) ? generate(config, true) : undefined);
     if (result.exhaust !== undefined) {
         return { id: RESULTS_IN_TURN_ID, label: nameOf("exhaust"), description: RESULTS_IN_TURN_DESCRIPTION, strategy: "exhaust", run: () => result };
     }
@@ -383,47 +404,60 @@ function primaryDefinition(config: Config, options: GenerateClockOptions, report
     };
 }
 
-/** A sentence for an alternative's description about the belt its clock is made for, and why */
+/**
+ * The entities whose swings a shifted cycle moved, by their names (entity-name.ts): "the inserters (1 and 2) that drop
+ * chemical science pack; the inserter that takes advanced circuit and sulfur". An entity the build does not name has its
+ * number and the items of its moved swings: "inserter 4: chemical science pack".
+ */
+function movedNamed(moved: readonly { entity_id: { type: string; number: number }; item_names: readonly string[] }[], build: ReturnType<typeof buildToNameOf>): string {
+    const inserters = moved.filter(it => it.entity_id.type === "inserter").map(it => it.entity_id.number);
+    const items = (ids: readonly string[]) => ids.map(textWords().item).join(", ");
+    const named = insertersInSentence(inserters, build).text;
+    const parts = /(^|and |, )inserters? \d/.test(named) || inserters.length === 0
+        ? moved.filter(it => it.entity_id.type === "inserter").map(it => `inserter ${it.entity_id.number}: ${items(it.item_names)}`)
+        : named.split(/, (?=the )| and (?=the )/);
+    const others = moved.filter(it => it.entity_id.type !== "inserter").map(it => it.entity_id.type === "drill" && build.drills.some(drill => drill.id === it.entity_id.number)
+        ? `the ${drillNameInText(it.entity_id.number, build)}` : `${it.entity_id.type} ${it.entity_id.number}: ${items(it.item_names)}`);
+    return [...parts, ...others].join("; ");
+}
+
+/** Sentences for an alternative's description about the belt its clock is made for, and the room for a hand of fuel */
 function beltNote(config: Config, result: BlueprintGenerationResult): string {
     const { belt } = result;
     if (belt === null) {
         return "";
     }
-    if (belt.kind === "moving") {
-        // the slack is the ticks after the last pickup: added after the window, or inside it already (slackInsideWindows)
-        const [first, last] = [belt.slack_ticks[0], belt.slack_ticks[belt.slack_ticks.length - 1]];
-        const ticks = first === last ? `${first} more tick${first === 1 ? "" : "s"}` : `${first}–${last} more ticks`;
-        const pickup = " Reachable moving stacks are timed using the pickup geometry (straight belt by default). "
-            + "The remaining belt slack is margin for late starts and gaps; sparse upstream supply is not simulated.";
-        return ` Made for a moving belt. After its last pickup from the belt, an inserter stays enabled for ${ticks}. `
-            + "These ticks are the belt slack. On a moving belt, a pickup can start after the usual tick. The belt slack lets the "
-            + `inserter fill its hand.${pickup}`;
-    }
-    const backpressure_note = " Made for a backed-up belt: its belt inserters get only the enable windows they need with backed-up supply at the pickup, "
-        + "without belt slack. On a moving belt an inserter can be switched off holding a partial hand.";
-    if (everyInputLaneIsDeadEnd(config)) {
-        const room = Object.entries(result.fuel_hand_room_ticks);
-        const config_ids = config.inserters.map((inserter, index) => inserter.id ?? index + 1);
-        const inserter_ids = new Map(config_ids.map(id => [EntityId.forInserter(id).id, id]));
-        const ids = room.map(([key]) => inserter_ids.get(key));
-        const fuel = room.length === 0 ? ""
-            : ` ${ids.length === 1 ? `Inserter ${ids[0]} takes` : `Inserters ${ids.slice(0, -1).join(", ")} and ${ids[ids.length - 1]} take`} fuel off the belt as `
-            + `well as an ingredient and stay${ids.length === 1 ? "s" : ""} enabled ${room[0][1]} more ticks after each enable window, the ticks a hand of fuel takes to fill: `
-            + "the fuel slot asks for a hand in any enable window, ahead of the hands the enable window is planned for, and this clock did not hold "
-            + "the expected output without the room for it.";
-        return `${backpressure_note} The configuration says the input belts are backed up, so it goes without the belt slack.${fuel}`;
-    }
-    if (!Number.isInteger(result.simulation_duration.ticks)) {
-        return `${backpressure_note} The belt slack is not given to a clock whose window cycle time is not a whole number of ticks.`;
-    }
-    return `${backpressure_note} This clock did not hold the expected output with the belt slack, so it is only selected for you when no clock for a moving belt holds the setpoint.`;
+    const made_for = belt.kind === "moving"
+        ? " Made for a moving belt. The pickup geometry times each pickup from the belt (a straight belt by default)."
+        : " Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. "
+            + "On a moving belt, an inserter can be switched off with a partial hand.";
+    const room = Object.entries(result.fuel_hand_room_ticks);
+    const config_ids = config.inserters.map((inserter, index) => inserter.id ?? index + 1);
+    const inserter_ids = new Map(config_ids.map(id => [EntityId.forInserter(id).id, id]));
+    // the inserters with the fuel on their near lane get room for the hand it delays, the others for a hand of fuel
+    const delayed = room.length === 0 ? new Map<string, number>() : delayedHandRoomTicks(createEntityRegistryFromConfig(config));
+    const build = buildToNameOf(config);
+    const sentence = (entries: [string, number][], why: string) => {
+        if (entries.length === 0) return "";
+        const ids = entries.map(([key]) => inserter_ids.get(key)!);
+        const named = insertersInSentence(ids, build);
+        return ` ${capitalized(named.text)} ${named.plural ? "take" : "takes"} fuel off the belt as `
+            + `well as an ingredient and stay${ids.length === 1 ? "s" : ""} enabled ${entries[0][1]} more ticks after each enable window, ${why}, `
+            + "and this clock did not hold the expected output without the room for it.";
+    };
+    const fuel = sentence(room.filter(([key]) => !delayed.has(key)), "the ticks a hand of fuel takes to fill: the fuel slot asks for a hand in any "
+        + "enable window, ahead of the hands the enable window is planned for")
+        + sentence(room.filter(([key]) => delayed.has(key)), "on top of the room for one more hand: the fuel is on the lane nearest to "
+        + `${room.filter(([key]) => delayed.has(key)).length === 1 ? "it" : "them"}, so a hand of fuel comes whenever the fuel slot has room, and the hand `
+        + "the enable window is planned for comes a hand cycle later");
+    return made_for + fuel;
 }
 
 /**
  * Every alternative after the primary one. `known_stable` answers from runs that already finished, so the full-hand
- * alternative only re-simulates a planned run when it was not generated yet (e.g. in another worker). With belts that
- * do not move, a clock that does not hold is made again with room for a hand of fuel where the build has an inserter
- * that takes fuel off a belt (see withFuelHandRoomWhereNeeded).
+ * alternative only re-simulates a planned run when it was not generated yet (e.g. in another worker). A clock that does
+ * not hold is made again with room for a hand of fuel where the build has an inserter that takes fuel off a belt (see
+ * withFuelHandRoomWhereNeeded).
  */
 function alternativeDefinitions(
     config: Config,
@@ -459,7 +493,7 @@ function alternativeDefinitionsWithFuelHandRoom(
     known_stable: (id: string) => boolean | undefined,
 ): AlternativeDefinition[] {
     let definitions = alternativeDefinitionsFor(config, context, quiet, known_stable);
-    if (everyInputLaneIsDeadEnd(config) && takesFuelOffABelt(config)) {
+    if (takesFuelOffABelt(config)) {
         const with_fuel_hand_room = alternativeDefinitionsFor(config, context, { ...quiet, fuel_hand_room: true }, known_stable);
         definitions = definitions.map(definition => {
             const with_room = with_fuel_hand_room.find(it => it.id === definition.id);
@@ -604,7 +638,7 @@ function alternativeDefinitionsFor(
                 + "and a shift passes.",
             run: () => {
                 // one search at the planned swing count, like uneven output swings
-                const result = phaseShiftedBatchClock(base_config, { ...quiet, belt_pickup_slack: "always" });
+                const result = phaseShiftedBatchClock(base_config, { ...quiet, lane_hand_room: "always" });
                 assert(result.search?.kind === "shifted cycle" && result.search.picked !== null, `no ${nameOf("phase_shifted_batch")} passes the clock-only check`);
                 return result;
             },
@@ -643,7 +677,7 @@ function alternativeDefinitionsFor(
                 + `surplus. Other inserters keep the enable windows of ${TAKT_BATCHES}.`,
             run: () => {
                 // input windows come from the first planned run whose clock passes, most batched first
-                const full_hand: GenerateClockOptions = { ...quiet, belt_pickup_slack: "always" };
+                const full_hand: GenerateClockOptions = { ...quiet, lane_hand_room: "always" };
                 if (context.primary_stable) {
                     return generateClockWithSwingBackoff(base_config, full_hand, pitchPickupsClock);
                 }
@@ -689,6 +723,18 @@ function asBuiltNotes(as_built: AsBuiltStabilityCheck | undefined, expected_outp
     return notes;
 }
 
+/**
+ * The verdict of the disturbance trials of a clock with those on the copies that share a lane: a new verdict, the one of the
+ * trials of one copy unchanged (a memo keeps it). A loss after which a copy is not back makes it one the clock does not get
+ * back from.
+ */
+function withCopiesTrial(verdict: DisturbanceTrialVerdict | null, copies: CopiesTrialVerdict | null): DisturbanceTrialVerdict | null {
+    if (verdict === null || copies === null) return verdict;
+    // the window cycles to be back stay those of one copy, which the ranking reads; the copies' are in `on_copies`
+    if (copies.survives) return { ...verdict, on_copies: copies };
+    return { ...verdict, survives: false, broken_by: [...verdict.broken_by, `${copies.broken_by} on the copies that share a lane`], recovered_after_window_cycles: null, on_copies: copies };
+}
+
 /** A sentence for an alternative's description about the losses its clock does not get back from, or why none was tried */
 function disturbanceTrialNote(verdict: DisturbanceTrialVerdict | null, not_tried: string | undefined): string {
     if (verdict === null) {
@@ -698,7 +744,8 @@ function disturbanceTrialNote(verdict: DisturbanceTrialVerdict | null, not_tried
         return "";
     }
     return verdict.broken_by.length === 0 ? " It was off its expected output in the run used for the loss trials, so it is not counted as stable."
-        : ` It is not stable: the build does not go back to its expected output by itself under this clock after ${verdict.broken_by.join(", or after ")}.${notTriedSentence(verdict.not_tried)}`;
+        : ` It is not stable: the build does not go back to its expected output by itself under this clock after ${verdict.broken_by.join(", or after ")}.${notTriedSentence(verdict.not_tried)}`
+            + (verdict.on_copies?.text === undefined ? "" : ` ${verdict.on_copies.text}`);
 }
 
 
@@ -780,7 +827,7 @@ function alternativePart(config: Config, alternative: ClockAlternative): Coordin
     const { result } = alternative;
     const { overrides } = verificationPlanningConfigOf(config, result);
     return {
-        name: alternative.id, alternative_id: alternative.id, verdict: alternative.verdict,
+        name: alternative.id, alternative_id: alternative.id, verdict: alternative.verdict, wake_ups_per_minute: clockCost(alternative.ranking),
         window_cycle_ticks: result.simulation_duration.ticks, windows: result.clock_windows,
         counted: result.stability_check.as_built?.wake_ups !== undefined,
         ...(result.always_on_reasons !== undefined && { always_on: result.always_on_reasons }),
@@ -912,9 +959,10 @@ function runAlternativeOf(
     let held = holds(result);
     const completed = result.primitive_round_robin_polling?.verification;
     const cached = completed?.signature === signature ? { disturbance_trial: completed.disturbance_trial,
-        disturbance_trial_not_tried: undefined, start_dependence: completed.start_dependence } : verification_cache?.get(signature);
+        disturbance_trial_not_tried: undefined, disturbance_trial_not_tried_reason: undefined, start_dependence: completed.start_dependence } : verification_cache?.get(signature);
     let loss: DisturbanceTrialAssessment = cached
-        ? { disturbance_trial: cached.disturbance_trial, disturbance_trial_not_tried: cached.disturbance_trial_not_tried }
+        ? { disturbance_trial: cached.disturbance_trial, disturbance_trial_not_tried: cached.disturbance_trial_not_tried,
+            ...(cached.disturbance_trial_not_tried_reason !== undefined && { disturbance_trial_not_tried_reason: cached.disturbance_trial_not_tried_reason }) }
         : held ? disturbanceTrialVerdictOf(definition.planned_on ?? config, result, logger, report) : { disturbance_trial: null };
     let used = definition;
     // the inserters of a loop on windows: a clock that does not meet goal 1 with them is made again with the loop's own
@@ -994,6 +1042,8 @@ function runAlternativeOf(
         verification_cache?.set(signature, {...loss, start_dependence});
     }
     const deadlock_risks = sharedItemDeadlockRisks(entity_registry);
+    // the belts, inserters, chests and drills as the texts name them (entity-name.ts)
+    const build_names = buildToNameOf(config);
     const planning_note = actual_output_items === expected_output_items ? ""
         : ` The planning simulation moved ${actual_output_items} of ${expected_output_items} items each window cycle; `
         + "stability is judged by the clock-only check, which runs the enable windows of the blueprint.";
@@ -1002,7 +1052,7 @@ function runAlternativeOf(
         : ` Output swing ${search.picked!.row} starts ${Math.abs(search.picked!.setting)} ticks ${search.picked!.setting < 0 ? "earlier" : "later"} than planned.`;
     const shifted_note = search?.kind !== "shifted cycle" ? ""
         : ` The swings planned in clock ticks ${search.planned_ticks!.start}–${search.planned_ticks!.end} (`
-        + search.moved!.map(it => `${it.entity_id.type} ${it.entity_id.number}: ${it.item_names.join(", ")}`).join("; ")
+        + movedNamed(search.moved!, build_names)
         + `) start ${Math.abs(search.picked!.setting)} ticks ${search.picked!.setting < 0 ? "earlier" : "later"} than planned.`;
     const { belt } = result;
     const belt_note = beltNote(config, result);
@@ -1052,6 +1102,74 @@ function runAlternativeOf(
         }
         return from_starts_of.get(trial)!;
     };
+    /**
+     * The takers of the copies that lose swings on a lane they share (see shared-lane-verdict.ts), made once per trial, of
+     * the clock it runs and on the config it is verified on: only of a clock that holds its expected output, which alone
+     * the lanes can keep from being stable. Where the check cannot run, the loss that says so (`sharedLaneLossesOf`).
+     */
+    const shared_lane_checks_of = new Map<Trial, SharedLaneCheck>();
+    const sharedLaneCheck = (trial: Trial): SharedLaneCheck | null => {
+        if (!trial.held) return null;
+        if (!shared_lane_checks_of.has(trial)) {
+            const on = used.planned_on ?? config;
+            shared_lane_checks_of.set(trial, sharedLaneCheckOf(() => judgeSharedLanes({ ...on, overrides: { ...on.overrides, terminal_swing_count: trial.result.used_terminal_swing_count } },
+                trial.result.clock_windows, trial.clock_window_cycle, logger), label, logger));
+        }
+        return shared_lane_checks_of.get(trial)!;
+    };
+    const sharedLaneLosses = (trial: Trial): readonly ClockSharedLaneLoss[] => sharedLaneCheck(trial)?.losses ?? [];
+    /**
+     * What was checked on the lanes the copies share (checked-lanes.ts), made once per trial: from the check of the shared
+     * lanes, and for a clock that loses swings there, the runs with fewer copies on the lanes (`fewerCopiesThatHold`)
+     */
+    const checked_lanes_of = new Map<Trial, CheckedLanes | null>();
+    const checkedLanes = (trial: Trial, copies_trial: CopiesTrialVerdict | null): CheckedLanes | null => {
+        if (!checked_lanes_of.has(trial)) {
+            const on = used.planned_on ?? config;
+            const check = sharedLaneCheck(trial);
+            const judgement = check?.judgement ?? null;
+            const with_swings = { ...on, overrides: { ...on.overrides, terminal_swing_count: trial.result.used_terminal_swing_count } };
+            let fewer: ReturnType<typeof fewerCopiesThatHold> = null;
+            if (judgement !== null && judgement.losses.length > 0) {
+                try {
+                    fewer = fewerCopiesThatHold(with_swings, trial.result.clock_windows, trial.clock_window_cycle, logger);
+                } catch (error) {
+                    if (isInternalError(error)) throw error;
+                    logger.warn(`Clock "${label}": the runs with fewer copies on the shared lanes could not be made: ${error instanceof Error ? error.message : String(error)}`);
+                }
+            }
+            const stopped = check?.losses.find(isNotChecked);
+            checked_lanes_of.set(trial, checkedLanesOf({ config: on, holds: trial.held,
+                judged: stopped !== undefined ? { stopped } : judgement, window_cycle_ticks: trial.clock_window_cycle, copies_trial, fewer }));
+        }
+        return checked_lanes_of.get(trial)!;
+    };
+    /**
+     * The disturbance trials on the copies that share a lane (see shared-lane-trial.ts), made once per trial: only of a clock
+     * that holds, gets back from every loss on one copy and loses no swings on the shared lanes, unless the config switches
+     * them off (`overrides.disturbance_trials_on_copies`); null where they are not made
+     */
+    const copies_trials_of = new Map<Trial, CopiesTrialVerdict | null>();
+    const copiesTrial = (trial: Trial, shared_lane_losses: readonly ClockSharedLaneLoss[]): CopiesTrialVerdict | null => {
+        if (config.overrides?.disturbance_trials_on_copies === false || !trial.held || shared_lane_losses.length > 0
+            || trial.loss.disturbance_trial?.survives !== true) return null;
+        if (!copies_trials_of.has(trial)) {
+            const on = used.planned_on ?? config;
+            let tried: CopiesTrialVerdict | null;
+            try {
+                tried = copiesDisturbanceTrial({ ...on, overrides: { ...on.overrides, terminal_swing_count: trial.result.used_terminal_swing_count } },
+                    trial.result.clock_windows, trial.clock_window_cycle, trial.result.stability_check.expected_output_items, logger);
+            } catch (error) {
+                if (isInternalError(error)) throw error;
+                const reason = error instanceof Error ? error.message : String(error);
+                logger.warn(`Clock "${label}": the disturbance trials on the copies that share a lane could not be made: ${reason}`);
+                // the clock keeps the verdict of one copy, and the result says why the copies were not tried
+                tried = { survives: true, lanes: [], expected_output_items: trial.result.stability_check.expected_output_items, recovered_after_window_cycles: null, not_tried: reason };
+            }
+            copies_trials_of.set(trial, tried);
+        }
+        return copies_trials_of.get(trial)!;
+    };
     /** The trial of a clock rounded down to whole ticks on its own window cycle, where one is made (below) */
     let rounded_trial: Trial | null = null;
     /** The alternative for a trial of the clock: its notes, insights, assessment and ranking */
@@ -1059,6 +1177,8 @@ function runAlternativeOf(
         /** What this listing of the clock adds to the settings of its strategy: a subtick clock, a clock rounded down */
         listing?: ListingSettings }): ClockAlternative => {
         const tried_as = trial;
+        const shared_lane_losses = sharedLaneLosses(trial);
+        const copies_trial = copiesTrial(trial, shared_lane_losses);
         // a clock that fails its first check is listed by the mean of its long run, not the one window cycle measured
         const settled_check = (settle_unstable ?? !held) ? settledStability(trial) : trial.result.stability_check;
         // the counters of its inserters learn which decider switches each from the blueprint it is listed with
@@ -1067,33 +1187,42 @@ function runAlternativeOf(
         trial = { ...trial, result: { ...trial.result, stability_check: settled } };
         row = { ...row, result: { ...row.result, stability_check: settled } };
         const { as_built } = trial.result.stability_check;
-        const { disturbance_trial, disturbance_trial_not_tried } = trial.loss;
+        const { disturbance_trial_not_tried, disturbance_trial_not_tried_reason } = trial.loss;
+        const disturbance_trial = withCopiesTrial(trial.loss.disturbance_trial, copies_trial);
         const start_dependence_note = trial.start_dependence === null ? null
             : startDependenceNote(trial.start_dependence, items => itemsPerSecondOverCopies(items, trial.clock_window_cycle, copies));
+        const loss_note = sharedLaneLossNote(shared_lane_losses);
         const description = withResolvedName(definition, definition.description, strategy) + moved_note + shifted_note + belt_note + planning_note + asBuiltNotes(as_built, expected_output_items)
-            + disturbanceTrialNote(disturbance_trial, disturbance_trial_not_tried)
+            + disturbanceTrialNote(disturbance_trial, disturbance_trial_not_tried) + loss_note
             + (start_dependence_note === null ? "" : ` ${start_dependence_note[0].toUpperCase()}${start_dependence_note.slice(1)}`) + row.description_suffix;
         // what a clock that holds says about the build is read from it, whether it gets back from a loss or not
         const insights = [
-            ...clockInsights(trial.result, trial.held, config.overrides?.kick_start_items ?? DEFAULT_KICK_START_ITEMS),
+            ...clockInsights(trial.result, trial.held, config.machines, config.overrides?.kick_start_items ?? DEFAULT_KICK_START_ITEMS, build_names),
             ...(disturbance_trial !== null && !disturbance_trial.survives ? [disturbanceTrialInsight(disturbance_trial, expected_output_items)] : []),
-            ...(deadlock_risks.length > 0 ? [deadlockRiskInsight(deadlock_risks)] : []),
+            ...(deadlock_risks.length > 0 ? [deadlockRiskInsight(deadlock_risks, build_names)] : []),
             ...beltPickupNotTestedInsights(config),
             ...sideLoadedDropInsights(config),
             ...lanesExactlyFullInsights(config),
+            ...onePerCopyFeedInsights(config),
+            ...assumedCopySpacingInsights(config),
+            ...droppedOntoSharedLaneInsights(config),
             ...dropSpacingInsights(trial.result, config),
             ...(start_dependence_note !== null && trial.start_dependence !== null ? [startDependenceInsight(start_dependence_note, trial.start_dependence)] : []),
-            ...chestDrillInsights(trial.result),
+            ...chestDrillInsights(trial.result, build_names),
         ];
         // what the exported clock moved in its clock-only run, not the target, which is the same for every alternative
         const achieved_output_items = as_built?.actual_output_items ?? trial.result.stability_check.actual_output_items;
         const assessment: ClockAssessment = { holds: trial.held, disturbance_trial, ...(disturbance_trial_not_tried !== undefined && { disturbance_trial_not_tried }),
+            ...(disturbance_trial_not_tried_reason !== undefined && { disturbance_trial_not_tried_reason }),
             items_per_second: itemsPerSecondOverCopies(achieved_output_items, trial.clock_window_cycle, copies),
             wake_ups_per_minute: as_built?.wake_ups?.wake_ups_per_minute ?? null,
             signals_per_minute: as_built?.wake_ups === undefined ? null : signalsPerMinuteOf(as_built.counters, row.result.blueprint, row.result.chest_drills, trial.clock_window_cycle),
-            start_dependence: trial.start_dependence, ...loopStockBoundOf(config, row.result, trial.clock_window_cycle) };
+            start_dependence: trial.start_dependence, ...(shared_lane_losses.length > 0 && { shared_lane_losses: [...shared_lane_losses] }),
+            ...loopStockBoundOf(config, row.result, trial.clock_window_cycle) };
         const listed_strategy = strategyListedAs(strategy, row.listing ?? {});
+        const checked_lanes = checkedLanes(tried_as, copies_trial);
         const clock = { id: alternativeIdOf(listed_strategy, definition), maker: row.id, label: row.label, description, result: row.result, ...(row.rounded && { rounded: row.rounded }),
+            ...(checked_lanes !== null && { checked_lanes }), ...(loss_note !== "" && { shared_lane_loss_note: loss_note.trimStart() }),
             inserter_window_count, deciders: windowDeciderCount(row.result.blueprint), ranking_window_count, assessment, verdict: clockVerdictOf(assessment), deadlock_risks, belt, insights,
             strategy: listed_strategy };
         const ranking = rankingOf(clock, config);
@@ -1174,6 +1303,50 @@ function runAlternativeOf(
     })] };
 }
 
+/**
+ * The sentence for a clock under which a copy loses swings on a lane the copies share, or is short as its side belt is full
+ * at its join onto the output belt, or whose shared lanes could not be checked, with a space before it; empty for any other
+ */
+function sharedLaneLossNote(losses: readonly ClockSharedLaneLoss[]): string {
+    if (losses.length === 0) return "";
+    const loss = losses[0];
+    if (isNotChecked(loss)) return ` It is not counted as stable. ${loss.text}`;
+    return loss.join_full !== undefined ? ` It is not stable on its output belt. ${loss.text}` : ` It is not stable on a lane its copies share. ${loss.text}`;
+}
+
+/**
+ * The shared-lane losses of one clock as `judge` (the check of the lanes its copies share) finds them, the log line
+ * written. Where the check stops with an error, the clock is not taken to hold on those lanes: its one loss says that
+ * they could not be checked, and why. An internal error of the generator fails the generation.
+ */
+export function sharedLaneLossesOf(judge: () => SharedLaneJudgement, label: string, logger: Logger): readonly ClockSharedLaneLoss[] {
+    return sharedLaneCheckOf(judge, label, logger).losses;
+}
+
+/** The check of a clock's shared lanes: its losses as `sharedLaneLossesOf` gives them, and the judgement where the check ran */
+interface SharedLaneCheck {
+    losses: readonly ClockSharedLaneLoss[];
+    judgement: SharedLaneJudgement | null;
+}
+
+/** `sharedLaneLossesOf` with the judgement kept, for the rows of the result (checked-lanes.ts) */
+function sharedLaneCheckOf(judge: () => SharedLaneJudgement, label: string, logger: Logger): SharedLaneCheck {
+    let judged: SharedLaneJudgement;
+    try {
+        judged = judge();
+    } catch (error) {
+        if (isInternalError(error)) throw error;
+        const reason = error instanceof Error ? error.message : String(error);
+        logger.warn(`Clock "${label}": the lanes its copies share could not be checked: ${reason}`);
+        return { losses: [sharedLanesNotChecked(reason)], judgement: null };
+    }
+    if (judged.lanes.length > 0) {
+        logger.log(`Clock "${label}": the shared lanes ${judged.lanes.join(", ")}: the refill arithmetic says ${judged.fast_check_passes ? "they refill in time" : "they may run short"}; `
+            + `with every copy on them, ${judged.losses.length === 0 ? "no copy loses swings" : `${judged.losses.length} takers lose swings`}`);
+    }
+    return { losses: judged.losses, judgement: judged };
+}
+
 /** A share as a percentage the labels print: "0.02%", "1.14%", "under 0.01%" */
 function fastPercent(share: number): string {
     const percent = share * 100;
@@ -1202,7 +1375,7 @@ export function planClockAlternatives(
      */
     on_tasks?: (context: ClockAlternativeContext, tasks: ClockAlternativeTask[], primary_signature: string) => void,
 ): ClockAlternativesPlan {
-    return withRunMemo(() => planPrimaryAndTasks(config, options, on_tasks));
+    return withRunMemo(() => planPrimaryAndTasks(withoutOutsideSupply(config), options, on_tasks));
 }
 
 function planPrimaryAndTasks(
@@ -1257,10 +1430,10 @@ function planPrimaryAndTasks(
  * add: its first plan starts where the machines' crafts put it, at the primary's own count, whole, with every inserter's
  * hands a cycle whole, so that it is the primary's plan; the primary held on that first plan, with nothing tried after
  * it (no lower count, no window cycle limit, no room for fuel, no loop windows, no chest drill windows to fall back from), so
- * the alternative's run, which keeps belt pickup slack where the clock holds with it, makes the same clock; and its
+ * the alternative's run, which keeps the room for one hand where the clock holds with it, makes the same clock; and its
  * checks are those of the primary's, which planning them with fractional swings does not change. Then its clock is the
- * primary's, and is merged into it. Where the primary keeps the slack inside its windows (`withSlackInside`), the
- * alternative's run makes the same windows with the slack added after them, which the primary beats on wake-ups: it is
+ * primary's, and is merged into it. Where the primary keeps the room inside its windows (`withHandRoomInside`), the
+ * alternative's run makes the same windows with the room added after them, which the primary beats on wake-ups: it is
  * left out as well.
  */
 function fractionalMakesThePrimary(config: Config, primary: AlternativeDefinition, result: BlueprintGenerationResult): boolean {
@@ -1269,7 +1442,7 @@ function fractionalMakesThePrimary(config: Config, primary: AlternativeDefinitio
     return primary.id === "planned-belt-slack" && holds(result) && config.setpoint.counts !== "destroyed"
         && config.overrides?.terminal_swing_count === undefined
         && report !== undefined && !report.triggered && report.window_cycle_limit_pruning === undefined && report.primitive_grouped_attempt === undefined
-        && !(everyInputLaneIsDeadEnd(config) && takesFuelOffABelt(config))
+        && !takesFuelOffABelt(config)
         && result.loop_windows === undefined && !hasPlannedChestDrill(config)
         && start !== undefined && Number.isInteger(start) && start === result.used_terminal_swing_count
         && EntityTransferCountMap.lcm(result.output_cycle_plan.entity_transfer_map) === 1
@@ -1301,7 +1474,7 @@ export function runClockAlternativeTask(
     /** Signatures of clocks other runs assess, as the primary alternative's (see planClockAlternatives) */
     assessed_signatures: readonly string[] = [],
 ): ClockAlternativeRun | null {
-    return withRunMemo(() => runTask(config, context, task_id, options, assessed_signatures));
+    return withRunMemo(() => runTask(withoutOutsideSupply(config), context, task_id, options, assessed_signatures));
 }
 
 function runTask(
@@ -1328,23 +1501,47 @@ const COORDINATED_SOURCES_DESCRIPTION = "The inserters of each source use the en
 /**
  * Makes the per-branch clock (candidates/coordinated-sources.ts) from the parts of the runs before it and the clock they recommend
  * (`coordinatedSourcesInputOf`), checked as every alternative is; listed only where it is stable and another clock than those runs'
- * (`assessed_signatures`). Null where there is nothing to compose: it is not a clock that could not be made.
+ * (`assessed_signatures`). A clock made that is not stable is not listed: it goes to `options.on_not_made` with what its check
+ * found, and the task gives null. Null also where there is nothing to compose, and where the clock composed is one of those runs':
+ * each goes to `options.on_not_made` too, with the parts whose windows were not taken and why.
  */
 export function runCoordinatedSourcesTask(
-    config: Config,
+    given: Config,
     input: CoordinatedSourcesInput,
     options: GenerateClockOptions = {},
     assessed_signatures: readonly string[] = [],
 ): ClockAlternativeRun | null {
     return withRunMemo(() => {
+        const config = withoutOutsideSupply(given);
         const logger = options.logger ?? defaultLogger;
         const quiet = quietOptions(options, logger, options.on_progress_detail);
         const beside_sources = input.parts.find(part => part.alternative_id === input.recommended_id)?.strategy;
+        let not_admitted: readonly NotAdmittedPart[] = [];
+        const on_not_made = options.on_not_made === undefined ? undefined
+            : (clock: NotMadeClock) => options.on_not_made!({ ...clock, reason: withNotAdmitted(clock.reason, not_admitted) });
         const run = runAlternativeOf({ id: COORDINATED_SOURCES_MAKER, label: COORDINATED_SOURCES_LABEL, description: COORDINATED_SOURCES_DESCRIPTION, strategy: "coordinated_sources",
-            ...(beside_sources !== undefined && { beside_sources }), run: () => coordinatedSourcesClock(config, input, { ...quiet, logger }) }, config, logger, options.on_progress_detail, new Set(assessed_signatures), undefined, undefined, false);
+            ...(beside_sources !== undefined && { beside_sources }), run: () => coordinatedSourcesClock(config, input, { ...quiet, logger }, it => { not_admitted = it; }) },
+            config, logger, options.on_progress_detail, new Set(assessed_signatures), undefined, on_not_made, false);
         const listed = run?.alternatives.filter(it => it.verdict === "stable") ?? [];
+        if (run !== null && run.alternatives.length === 0) {
+            on_not_made?.({ id: COORDINATED_SOURCES_MAKER, label: COORDINATED_SOURCES_LABEL, reason: "Made, and the same clock as one made before it, which is listed." });
+        }
+        if (run !== null && run.alternatives.length > 0 && listed.length === 0) {
+            options.on_not_made?.({ id: COORDINATED_SOURCES_MAKER, label: COORDINATED_SOURCES_LABEL, reason: notStableReason(run.alternatives) });
+        }
         return run === null || listed.length === 0 ? null : { ...run, alternatives: listed };
     });
+}
+
+/** What the check found of a clock made that is not stable, for its entry in `not_made`: each alternative made, on its window cycle */
+function notStableReason(alternatives: readonly ClockAlternative[]): string {
+    return alternatives.map(({ id, result, assessment }) => {
+        const found = (assessment.holds ? "" : " It does not reach its expected output.")
+            + (assessment.start_dependence !== null && assessment.start_dependence.verdict !== "stable" ? " It does not reach it from every start." : "")
+            + sharedLaneLossNote(assessment.shared_lane_losses ?? [])
+            + (assessment.disturbance_trial?.survives === false ? " It does not get back from a loss." : "");
+        return `${alternatives.length > 1 ? `${id}: m` : "M"}ade on ${Number(result.simulation_duration.ticks.toFixed(3))} ticks and not stable.${found}`;
+    }).join(" ");
 }
 
 /** The signatures of every run and the runs listed after it, for a run that must not make one of their clocks again */
@@ -1377,7 +1574,7 @@ export function startDependenceSummary(config: Config, alternatives: readonly Pi
 }
 
 /**
- * Generates the same config several ways (batched swings with and without belt pickup slack, derived
+ * Generates the same config several ways (batched swings, derived
  * per-craft windows, fractional swings toggled, lower output swing counts, full-hand output) and checks each
  * with the clock-only simulation from several start phases. Alternatives with identical windows are listed once.
  *
@@ -1393,7 +1590,7 @@ export function generateClockAlternatives(
     config: Config,
     options: GenerateClockOptions = {}
 ): ClockAlternativesResult {
-    return withRunMemo(() => generateAllAlternatives(config, options));
+    return withRunMemo(() => generateAllAlternatives(withoutOutsideSupply(config), options));
 }
 
 function generateAllAlternatives(config: Config, options: GenerateClockOptions): ClockAlternativesResult {
@@ -1417,8 +1614,9 @@ function generateAllAlternatives(config: Config, options: GenerateClockOptions):
     // Request-local: a new generation (or changed config/data) never inherits another run's verdict.
     const verification_cache = new Map<string, VerificationAssessment>();
     if (plan.primary?.alternatives[0]) {
-        const {disturbance_trial, disturbance_trial_not_tried, start_dependence} = plan.primary.alternatives[0].assessment;
-        verification_cache.set(plan.primary.signature, {disturbance_trial, disturbance_trial_not_tried, start_dependence});
+        const {disturbance_trial, disturbance_trial_not_tried, disturbance_trial_not_tried_reason, start_dependence} = plan.primary.alternatives[0].assessment;
+        verification_cache.set(plan.primary.signature, {disturbance_trial, disturbance_trial_not_tried,
+            ...(disturbance_trial_not_tried_reason !== undefined && { disturbance_trial_not_tried_reason }), start_dependence});
     }
     const known_stable = (id: string) => stable_by_id.get(id);
     const all_definitions = runnable(alternativeDefinitions(config, plan.context, quietOptions(options, logger, report), known_stable), options);
@@ -1466,7 +1664,7 @@ function generateAllAlternatives(config: Config, options: GenerateClockOptions):
         current_step = COORDINATED_SOURCES_LABEL;
         total++;
         report();
-        runs.push(runCoordinatedSourcesTask(config, coordinatedSourcesInputOf(runs, recommended.id), { ...options, on_progress_detail: report }, signaturesOf(runs)));
+        runs.push(runCoordinatedSourcesTask(config, coordinatedSourcesInputOf(runs, recommended.id), { ...options, on_progress_detail: report, on_not_made }, signaturesOf(runs)));
         completed++;
     }
 
@@ -1476,9 +1674,12 @@ function generateAllAlternatives(config: Config, options: GenerateClockOptions):
 
     current_step = "Done";
     report();
-    const combined = combineClockAlternativeRuns(runs, it => it.ranking);
+    const ranked = combineClockAlternativeRuns(runs, it => it.ranking);
+    // each clock's "what changes it" names another clock of this result that holds with all the copies (checked-lanes.ts)
+    const combined = { ...ranked, alternatives: withOtherClocks(ranked.alternatives, ranked.selected_index, config.setpoint.copies) };
     return {
         ...combined,
+        lanes: buildLanesOf(config),
         skipped_searches: not_searched.map(it => it.label),
         ...startDependenceSummary(config, combined.alternatives),
         not_made,
@@ -1522,7 +1723,7 @@ function exploredRuns(input: {
     if (isExplored("coordinated_sources") && input.recommended_id !== undefined) {
         report(COORDINATED_SOURCES_LABEL);
         made(COORDINATED_SOURCES_MAKER, runCoordinatedSourcesTask(config, coordinatedSourcesInputOf(input.shipped, input.recommended_id),
-            { ...options, on_progress_detail: report }, shipped_signatures));
+            { ...options, on_progress_detail: report, on_not_made: undefined }, shipped_signatures));
     }
     return { runs, same_as_shipped };
 }
@@ -1538,7 +1739,7 @@ export function whyNotStableOf(
         as_built: alternative.result.stability_check.as_built, expected_output_items: alternative.result.stability_check.expected_output_items }));
     return whyNotStable(clocks, selected_index, {
         target_items_per_second: config.setpoint.items_per_second,
-        backed_up_belts: everyInputLaneIsDeadEnd(config),
         not_made,
+        entity_names: entityNamesInSentence(config),
     });
 }

@@ -2,7 +2,11 @@
   "setpoint": {
     "recipe": "automation-science-pack",
     "items_per_second": 240,
-    "copies": 9
+    "copies": 9,
+    "copy_offset": {
+      "x": 9,
+      "y": 0
+    }
   },
   "machines": [
     {
@@ -18,7 +22,7 @@
       "source": {
         "type": "belt",
         "id": 1,
-        "near_lane": 1
+        "near_lane": 2
       },
       "sink": {
         "type": "machine",
@@ -50,14 +54,21 @@
     {
       "id": 1,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
-          "ingredient": "copper-plate",
-          "stack_size": 4
+          "ingredient": "iron-gear-wheel",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         },
         {
-          "ingredient": "iron-gear-wheel",
-          "stack_size": 4
+          "ingredient": "copper-plate",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         }
       ]
     },
@@ -73,5 +84,51 @@
     }
   ],
   "chests": [],
-  "overrides": {}
+  "overrides": {},
+  "output_belt": {
+    "side_belt": {
+      "lane": "right",
+      "tiles": 2,
+      "left_curves": 1
+    },
+    "stretches": [
+      {
+        "points": [
+          { "side_load": [1, 2, 3, 4], "lane": "right", "layout": "side-exit" },
+          { "tiles": 2, "right_curves": 1 }
+        ]
+      },
+      {
+        "points": [
+          { "side_load": { "stretch": 1 }, "lane": "left", "layout": "side-entrance" },
+          { "tiles": 7, "drop": 5, "lane": "right" },
+          { "tiles": 11, "left_curves": 1, "right_curves": 1, "side_load": [6, 7, 8], "lane": "right", "layout": "side-exit" },
+          { "tiles": 16, "splitter_input": "right" }
+        ]
+      },
+      {
+        "points": [
+          { "drop": 9, "lane": "left" },
+          { "tiles": 16, "left_curves": 1, "right_curves": 3, "splitter_input": "left" }
+        ]
+      },
+      {
+        "points": [
+          { "splitter_output": "right" },
+          { "tiles": 1, "side_load": { "stretch": 5 }, "lane": "right", "layout": "side-straight" },
+          { "tiles": 2, "lane_end": { "kind": "infinite" } }
+        ]
+      },
+      {
+        "points": [
+          { "splitter_output": "left" },
+          { "tiles": 12, "left_curves": 5 }
+        ]
+      }
+    ],
+    "splitter": {
+      "input_priority": "right",
+      "output_priority": "right"
+    }
+  }
 }

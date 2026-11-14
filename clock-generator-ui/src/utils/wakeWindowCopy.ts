@@ -4,6 +4,7 @@
  */
 import type { AlwaysOnReason } from 'clock-generator/browser';
 import { absurd } from 'fp-ts/function';
+import { theName } from 'clock-generator/light';
 import { WAKEUP_DEFINITION } from './glossary';
 import { formatNumberText } from './numberText';
 import type { OwnClock, WakeWindow, WakeWindowRow } from './wakeWindows';
@@ -49,8 +50,6 @@ export const TERMS = [
 
 export const LEGEND_LABEL = 'Legend';
 export const LEGEND_WINDOW = 'Enable window';
-export const LEGEND_SLACK = 'Belt slack at the end of an enable window';
-export const BELT_SLACK_EXPLANATION = 'Belt slack: “+N ticks” marks the hatched tail already included in each enable window, allowing a late pickup from a moving belt to finish.';
 export const LEGEND_SELECTED = 'Selected enable window';
 export const LEGEND_TRACK = 'One window cycle';
 
@@ -88,7 +87,6 @@ export const WINDOWS_TABLE_HEADERS = {
     ends: 'Ends at tick',
     lengthTicks: 'Length (ticks)',
     lengthSeconds: 'Length (s)',
-    slack: 'Belt slack (ticks)',
 } as const;
 export const NO_WINDOWS_TEXT = 'None of the inserters and drills of this clock has an enable window.';
 
@@ -143,7 +141,7 @@ function rowDetailText(row: Pick<WakeWindowRow, 'items' | 'route'>, itemLabel: (
  * Why the clock leaves an inserter or drill always on, in the words of the glossary: "Always on: its swings fill the
  * whole window cycle (24 ticks), so a wake window would never switch it off". The old words when the engine gives none.
  */
-function alwaysOnText(reason: AlwaysOnReason | undefined): string {
+function alwaysOnText(reason: AlwaysOnReason | undefined, named?: string): string {
     if (reason === undefined) {
         return ALWAYS_ON_TEXT;
     }
@@ -159,23 +157,26 @@ function alwaysOnText(reason: AlwaysOnReason | undefined): string {
         case 'no-swing':
             return 'Always on: it made no swing in the run the enable windows are read from, so the clock has no window for it';
         case 'chest-drill':
-            return `Always on: ${chestDrillWhyText(reason.why)}`;
+            return `Always on: ${chestDrillWhyText(reason.why, named)}`;
         default:
             return absurd(reason);
     }
 }
 
 /** Why nothing can time a drill into a chest */
-function chestDrillWhyText(why: Extract<AlwaysOnReason, { kind: 'chest-drill' }>['why']): string {
+function chestDrillWhyText(why: Extract<AlwaysOnReason, { kind: 'chest-drill' }>['why'], named?: string): string {
+    // the drill or inserter by its items where the engine's names were carried: "the drill that mines iron ore"
+    const drill = (number: number) => named === undefined ? `drill ${num(number)}` : theName(named);
+    const inserter = (number: number) => named === undefined ? `inserter ${num(number)}` : theName(named);
     switch (why.kind) {
         case 'other-drill':
-            return `drill ${num(why.drill_number)} fills the same chest with the same item, so the clock cannot time this drill on its own`;
+            return `${drill(why.drill_number)} fills the same chest with the same item, so the clock cannot time this drill on its own`;
         case 'filler':
-            return `inserter ${num(why.inserter_number)} fills the same chest with the same item, so the clock cannot time this drill on its own`;
+            return `${inserter(why.inserter_number)} fills the same chest with the same item, so the clock cannot time this drill on its own`;
         case 'no-taker':
             return 'no inserter takes its item out of its chest, so there is nothing to time it by';
         case 'taker-without-window':
-            return `inserter ${num(why.inserter_number)} takes its item out of its chest and has no enable window, so there is nothing to time it by`;
+            return `${inserter(why.inserter_number)} takes its item out of its chest and has no enable window, so there is nothing to time it by`;
         case 'no-take':
             return 'no enable window takes its item out of its chest, so there is nothing to time it by';
         case 'no-room':
@@ -199,10 +200,10 @@ function ownClockText(clock: OwnClock): string {
 }
 
 /** The words that stand in for a row's bars, or null when it has bars */
-export function modeText(row: Pick<WakeWindowRow, 'mode' | 'ownClock' | 'alwaysOnReason'>): string | null {
+export function modeText(row: Pick<WakeWindowRow, 'mode' | 'ownClock' | 'alwaysOnReason' | 'alwaysOnNamed'>): string | null {
     switch (row.mode) {
         case 'always-on':
-            return alwaysOnText(row.alwaysOnReason);
+            return alwaysOnText(row.alwaysOnReason, row.alwaysOnNamed);
         case 'never':
             return NEVER_TEXT;
         case 'own-clock':
@@ -251,23 +252,23 @@ export function windowOrdinalText(index: number, count: number): string {
 }
 
 /**
- * Clock window cycle, rows and wake-ups of the clock: "Clock window cycle 600 ticks (10 s) · 14 inserters and 2 drills · 372 wake-ups a minute
- * for one copy"
+ * Clock window cycle and rows of the clock: "Window cycle time 600 ticks (10 s) · 14 inserters and 2 drills". The wakeups of one
+ * copy are the card's: they are said here only where the card has none ("Wakeups not counted") or where these rows are of the
+ * cold start's run and the card's figure the average of the start points ("372 wakeups a minute for one copy from a cold start").
  */
 export function summaryText(args: { windowCycleTicks: number; inserters: number; drills: number; wakeUps: number | null; fromColdStart?: boolean }): string {
     const counts = args.drills > 0
         ? `${plural(args.inserters, 'inserter', 'inserters')} and ${plural(args.drills, 'drill', 'drills')}`
         : plural(args.inserters, 'inserter', 'inserters');
     // where the clock's figure is the average of its start points, these rows are of the cold start's run
-    const wakeUps = args.wakeUps === null
-        ? 'Wakeups not counted'
-        : `${formatNumberText(args.wakeUps, { maxDecimals: 0 })} wakeups a minute for one copy${args.fromColdStart ? ' from a cold start' : ''}`;
-    return `Window cycle time ${windowCycleText(args.windowCycleTicks)} · ${counts} · ${wakeUps}`;
+    const wakeUps = args.wakeUps === null ? 'Wakeups not counted'
+        : args.fromColdStart ? `${formatNumberText(args.wakeUps, { maxDecimals: 0 })} wakeups a minute for one copy from a cold start` : null;
+    return [`Window cycle time ${windowCycleText(args.windowCycleTicks)}`, counts, wakeUps].filter(part => part !== null).join(' · ');
 }
 
 /**
  * A row's accessible name, everything the row shows: "Inserter 3, Iron plate: Belt 1 to Machine 2. 2 windows: ticks
- * 0–28 and 212–240, the last 4 ticks of each are belt slack. On for 10% of the window cycle. Wake-ups/min: 12.3."
+ * 0–28 and 212–240. On for 10% of the window cycle. Wake-ups/min: 12.3."
  */
 export function rowSummary(
     row: WakeWindowRow,
@@ -281,9 +282,7 @@ export function rowSummary(
         parts.push(`${mode}.`);
     } else {
         const ticks = listText(row.windows.map(windowTicksText), SUMMARY_WINDOWS);
-        const slack = Math.max(0, ...row.windows.map(window => window.slackTicks));
-        const slackText = slack > 0 ? `, the last ${ticksText(slack)} of each are belt slack` : '';
-        parts.push(`${plural(row.windows.length, 'enable window', 'enable windows')}: ticks ${ticks}${slackText}.`);
+        parts.push(`${plural(row.windows.length, 'enable window', 'enable windows')}: ticks ${ticks}.`);
     }
     parts.push(`On for ${percentText(row.onShare)} of the window cycle of ${windowCycleText(windowCycleTicks)}.`);
     parts.push(`${wakeUpsRowText(row)}.`);
@@ -295,8 +294,8 @@ export function rowSummary(
 }
 
 /**
- * The details of a selected wake window: "Wake window 2 of 3: ticks 212–240 (29 ticks, 0.48 s), of which the last 4 ticks are
- * belt slack. The inserter reacts 2 ticks after the wake window opens."
+ * The details of a selected wake window: "Wake window 2 of 3: ticks 212–240 (29 ticks, 0.48 s). The inserter reacts 2 ticks
+ * after the wake window opens."
  */
 export function windowDetails(row: WakeWindowRow, index: number, windowCycleTicks: number): string {
     const window = row.windows[index];
@@ -306,11 +305,8 @@ export function windowDetails(row: WakeWindowRow, index: number, windowCycleTick
     const where = window.wraps
         ? `ticks ${num(window.start)}–${num(window.end)}, past the end of the window cycle of ${windowCycleText(windowCycleTicks)} and on from tick 0`
         : `ticks ${num(window.start)}–${num(window.end)}`;
-    const slack = window.slackTicks > 0
-        ? `, of which the last ${ticksText(window.slackTicks)} ${window.slackTicks === 1 ? 'is' : 'are'} belt slack`
-        : '';
     const reacts = `The ${row.kind} reacts ${ticksText(CIRCUIT_LATENCY_TICKS)} after the enable window opens.`;
-    return `${windowOrdinalText(index, row.windows.length)}: ${where} (${lengthText(window.length)})${slack}. ${reacts}`;
+    return `${windowOrdinalText(index, row.windows.length)}: ${where} (${lengthText(window.length)}). ${reacts}`;
 }
 
 /** What the live region says when a window is selected */
@@ -318,7 +314,7 @@ export function selectionAnnouncement(row: WakeWindowRow, index: number, windowC
     return `${row.label}. ${windowDetails(row, index, windowCycleTicks)}`;
 }
 
-export type WatchNoteKind = 'mostly-on' | 'slack' | 'short' | 'wraps' | 'most-woken' | 'never-woken';
+export type WatchNoteKind = 'mostly-on' | 'short' | 'wraps' | 'most-woken' | 'never-woken';
 
 /** What to watch for in a row, in the glossary's terms; empty for a row with nothing to say */
 export function watchNotes(
@@ -333,14 +329,6 @@ export function watchNotes(
                 text: `On for ${percentText(row.onShare)} of the window cycle, so the clock switches this one on almost all the time. `
                     // leans on the provisional wake-up definition: the first line to revisit when it changes
                     + 'The wakeups it saves are few.',
-            });
-        }
-        const slack = Math.max(0, ...row.windows.map(window => window.slackTicks));
-        if (slack > 0) {
-            notes.push({
-                id: 'slack',
-                text: `+${ticksText(slack)}: the last ${ticksText(slack)} of each enable window ${slack === 1 ? 'is' : 'are'} belt slack, `
-                    + 'so a late pickup from a moving belt can still finish.',
             });
         }
         const short = row.windows

@@ -23,7 +23,7 @@ const window_cycle_ticks = 128, warmup = 10;
  */
 async function shiftedRocketFuel(): Promise<Config> {
     const config = await loadConfigFromFile(ConfigPaths.ROCKET_FUEL_60);
-    const generated = generateClockForConfig(config, { logger, belt_pickup_slack: "always" });
+    const generated = generateClockForConfig(config, { logger });
     const clocks = unplannedInserterClocks(createEntityRegistryFromConfig(config), window_cycle_ticks);
     for (const [id, serialized] of Object.entries(generated.unplanned_inserter_clocks ?? {})) {
         const clock = clocks.get(id)!;

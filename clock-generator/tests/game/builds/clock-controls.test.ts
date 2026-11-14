@@ -196,10 +196,11 @@ const RECORD_LINKS: Record<string, RecordLink & {runs?: boolean}> = {
     "electromagnetic-science-330-drained-end-clock-controls.json": {jobOf: config("ELECTROMAGNETIC_SCIENCE_330")},
     "grenade-clock-controls.json": {jobOf: config("GRENADE_240_FILLS_BELT_EXACTLY")},
     // the game tests of these four families record the clock each fixture names, selected until the per-branch clock (#699), which
-    // is recommended over it since and was recorded on the sample's scaffold with record-clock.js
+    // is recommended over it since and was recorded on the sample's scaffold with record-clock.js; the inserter build's three
+    // copies record the per-branch clock itself, the selection
     "inserter-crafting-240-shared-signal-clock-controls.json": {
         jobOf: name => name === "generated-backed-up-one-copy" ? variant("INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK_BACKED_UP") : "config-INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK",
-        offered: ["generated-three-copies", "generated-backed-up-one-copy"]},
+        offered: ["generated-backed-up-one-copy"]},
     "iron-ore-voider-400-clock-controls.json": {
         jobOf: name => name === "ore-voider-exact-speed" ? "config-IRON_ORE_VOIDER_400_EXACT_SPEED" : "config-IRON_ORE_VOIDER_400_OVERBEACONED", runs: true},
     "iron-plate-80-car-chest-clock-controls.json": {

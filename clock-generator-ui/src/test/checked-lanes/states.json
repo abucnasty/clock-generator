@@ -1,0 +1,939 @@
+{
+ "join_full": {
+  "from": "science/automation/automation-240.json, clock takt_batches_observed",
+  "copies": 9,
+  "row": {
+   "belt_id": 2,
+   "lane": 1,
+   "together": {
+    "kind": "drop",
+    "items_per_second": 240,
+    "lanes": [
+     1,
+     2
+    ],
+    "carries_per_second": 240
+   },
+   "state": {
+    "kind": "join_full",
+    "copies": [
+     {
+      "copy": 4,
+      "missed": 42,
+      "swings": 378,
+      "held_hands": 84,
+      "hands": 336
+     },
+     {
+      "copy": 8,
+      "missed": 42,
+      "swings": 378,
+      "held_hands": 84,
+      "hands": 336
+     }
+    ]
+   },
+   "label": "Join full on copies 4 and 8",
+   "sentence": "42 of 378 swings missed, on each."
+  },
+  "lanes": [
+   {
+    "belt_id": 1,
+    "lane": 1,
+    "item": "iron-gear-wheel",
+    "role": "input",
+    "end": "dead_end",
+    "end_given_by": "lane",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   },
+   {
+    "belt_id": 1,
+    "lane": 2,
+    "item": "copper-plate",
+    "role": "input",
+    "end": "dead_end",
+    "end_given_by": "lane",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   },
+   {
+    "belt_id": 2,
+    "lane": 1,
+    "item": "automation-science-pack",
+    "role": "output",
+    "end": "infinite",
+    "end_given_by": "role",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   }
+  ]
+ },
+ "takes_less": {
+  "from": "science/automation/automation-240.json, clock takt_batches_observed",
+  "copies": 9,
+  "row": {
+   "belt_id": 1,
+   "lane": 1,
+   "together": {
+    "kind": "take",
+    "items_per_second": 120,
+    "lanes": [
+     1
+    ]
+   },
+   "state": {
+    "kind": "takes_less",
+    "copies": [
+     {
+      "copy": 4,
+      "missed": 21,
+      "swings": 189,
+      "without_output_belt": {
+       "copy": 4,
+       "missed": 11,
+       "swings": 189
+      }
+     },
+     {
+      "copy": 8,
+      "missed": 21,
+      "swings": 189
+     }
+    ]
+   },
+   "label": "Copies 4 and 8 take less",
+   "sentence": "They wait for the output belt. Without the output belt, copy 4 still misses 11 of 189 swings here."
+  },
+  "lanes": [
+   {
+    "belt_id": 1,
+    "lane": 1,
+    "item": "iron-gear-wheel",
+    "role": "input",
+    "end": "dead_end",
+    "end_given_by": "lane",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   },
+   {
+    "belt_id": 1,
+    "lane": 2,
+    "item": "copper-plate",
+    "role": "input",
+    "end": "dead_end",
+    "end_given_by": "lane",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   },
+   {
+    "belt_id": 2,
+    "lane": 1,
+    "item": "automation-science-pack",
+    "role": "output",
+    "end": "infinite",
+    "end_given_by": "role",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   }
+  ]
+ },
+ "short": {
+  "from": "science/automation/automation-240.json, clock euclidean_swings",
+  "copies": 9,
+  "row": {
+   "belt_id": 1,
+   "lane": 1,
+   "together": {
+    "kind": "take",
+    "items_per_second": 120,
+    "lanes": [
+     1
+    ]
+   },
+   "state": {
+    "kind": "short",
+    "copies": [
+     {
+      "copy": 2,
+      "missed": 3,
+      "swings": 65
+     }
+    ]
+   },
+   "label": "Swings missed on copy 2",
+   "sentence": "Copy 2 misses 3 of 65 swings."
+  },
+  "lanes": [
+   {
+    "belt_id": 1,
+    "lane": 1,
+    "item": "iron-gear-wheel",
+    "role": "input",
+    "end": "dead_end",
+    "end_given_by": "lane",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   },
+   {
+    "belt_id": 1,
+    "lane": 2,
+    "item": "copper-plate",
+    "role": "input",
+    "end": "dead_end",
+    "end_given_by": "lane",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   },
+   {
+    "belt_id": 2,
+    "lane": 1,
+    "item": "automation-science-pack",
+    "role": "output",
+    "end": "infinite",
+    "end_given_by": "role",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   }
+  ]
+ },
+ "holds/not_the_cause/join_waits": {
+  "from": "science/automation/automation-240.json, clock euclidean_swings",
+  "copies": 9,
+  "row": {
+   "belt_id": 2,
+   "lane": 1,
+   "together": {
+    "kind": "drop",
+    "items_per_second": 240,
+    "lanes": [
+     1,
+     2
+    ],
+    "carries_per_second": 240
+   },
+   "state": {
+    "kind": "holds",
+    "not_the_cause": true,
+    "steady_run_only": false,
+    "join_waits": [
+     {
+      "copy": 1,
+      "held_hands": 0,
+      "hands": 130
+     },
+     {
+      "copy": 2,
+      "held_hands": 0,
+      "hands": 124
+     },
+     {
+      "copy": 3,
+      "held_hands": 0,
+      "hands": 130
+     },
+     {
+      "copy": 4,
+      "held_hands": 0,
+      "hands": 130
+     },
+     {
+      "copy": 5,
+      "held_hands": 0,
+      "hands": 130
+     },
+     {
+      "copy": 6,
+      "held_hands": 0,
+      "hands": 130
+     },
+     {
+      "copy": 7,
+      "held_hands": 0,
+      "hands": 130
+     },
+     {
+      "copy": 8,
+      "held_hands": 0,
+      "hands": 130
+     },
+     {
+      "copy": 9,
+      "held_hands": 0,
+      "hands": 130
+     }
+    ]
+   },
+   "label": "Not the cause",
+   "sentence": "No copy waits at its join."
+  },
+  "lanes": [
+   {
+    "belt_id": 1,
+    "lane": 1,
+    "item": "iron-gear-wheel",
+    "role": "input",
+    "end": "dead_end",
+    "end_given_by": "lane",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   },
+   {
+    "belt_id": 1,
+    "lane": 2,
+    "item": "copper-plate",
+    "role": "input",
+    "end": "dead_end",
+    "end_given_by": "lane",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   },
+   {
+    "belt_id": 2,
+    "lane": 1,
+    "item": "automation-science-pack",
+    "role": "output",
+    "end": "infinite",
+    "end_given_by": "role",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   }
+  ]
+ },
+ "holds": {
+  "from": "science/automation/automation-240.json, clock time_study_windows",
+  "copies": 9,
+  "row": {
+   "belt_id": 1,
+   "lane": 1,
+   "together": {
+    "kind": "take",
+    "items_per_second": 120,
+    "lanes": [
+     1
+    ]
+   },
+   "state": {
+    "kind": "holds",
+    "not_the_cause": false,
+    "steady_run_only": false
+   },
+   "label": "Holds",
+   "sentence": "Every copy gets its items."
+  },
+  "lanes": [
+   {
+    "belt_id": 1,
+    "lane": 1,
+    "item": "iron-gear-wheel",
+    "role": "input",
+    "end": "dead_end",
+    "end_given_by": "lane",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   },
+   {
+    "belt_id": 1,
+    "lane": 2,
+    "item": "copper-plate",
+    "role": "input",
+    "end": "dead_end",
+    "end_given_by": "lane",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   },
+   {
+    "belt_id": 2,
+    "lane": 1,
+    "item": "automation-science-pack",
+    "role": "output",
+    "end": "infinite",
+    "end_given_by": "role",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   }
+  ]
+ },
+ "holds/join_waits": {
+  "from": "science/automation/automation-240.json, clock time_study_windows",
+  "copies": 9,
+  "row": {
+   "belt_id": 2,
+   "lane": 1,
+   "together": {
+    "kind": "drop",
+    "items_per_second": 240,
+    "lanes": [
+     1,
+     2
+    ],
+    "carries_per_second": 240
+   },
+   "state": {
+    "kind": "holds",
+    "not_the_cause": false,
+    "steady_run_only": false,
+    "join_waits": [
+     {
+      "copy": 1,
+      "held_hands": 0,
+      "hands": 384
+     },
+     {
+      "copy": 2,
+      "held_hands": 0,
+      "hands": 384
+     },
+     {
+      "copy": 3,
+      "held_hands": 0,
+      "hands": 384
+     },
+     {
+      "copy": 4,
+      "held_hands": 128,
+      "hands": 384
+     },
+     {
+      "copy": 5,
+      "held_hands": 0,
+      "hands": 384
+     },
+     {
+      "copy": 6,
+      "held_hands": 0,
+      "hands": 384
+     },
+     {
+      "copy": 7,
+      "held_hands": 0,
+      "hands": 384
+     },
+     {
+      "copy": 8,
+      "held_hands": 128,
+      "hands": 384
+     },
+     {
+      "copy": 9,
+      "held_hands": 0,
+      "hands": 384
+     }
+    ]
+   },
+   "label": "Holds",
+   "sentence": "Copies 4 and 8 wait for room at their join in 128 of their 384 swings. No swing is missed."
+  },
+  "lanes": [
+   {
+    "belt_id": 1,
+    "lane": 1,
+    "item": "iron-gear-wheel",
+    "role": "input",
+    "end": "dead_end",
+    "end_given_by": "lane",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   },
+   {
+    "belt_id": 1,
+    "lane": 2,
+    "item": "copper-plate",
+    "role": "input",
+    "end": "dead_end",
+    "end_given_by": "lane",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   },
+   {
+    "belt_id": 2,
+    "lane": 1,
+    "item": "automation-science-pack",
+    "role": "output",
+    "end": "infinite",
+    "end_given_by": "role",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   }
+  ]
+ },
+ "not_run": {
+  "from": "science/automation/automation-240.json, clock takt_batches_observed_swings_4",
+  "copies": 9,
+  "row": {
+   "belt_id": 1,
+   "lane": 1,
+   "together": {
+    "kind": "take",
+    "items_per_second": 120,
+    "lanes": [
+     1
+    ]
+   },
+   "state": {
+    "kind": "not_run",
+    "reason": {
+     "code": "one_copy_does_not_hold"
+    }
+   },
+   "label": "Not run with the copies",
+   "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+  },
+  "lanes": [
+   {
+    "belt_id": 1,
+    "lane": 1,
+    "item": "iron-gear-wheel",
+    "role": "input",
+    "end": "dead_end",
+    "end_given_by": "lane",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   },
+   {
+    "belt_id": 1,
+    "lane": 2,
+    "item": "copper-plate",
+    "role": "input",
+    "end": "dead_end",
+    "end_given_by": "lane",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   },
+   {
+    "belt_id": 2,
+    "lane": 1,
+    "item": "automation-science-pack",
+    "role": "output",
+    "end": "infinite",
+    "end_given_by": "role",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   }
+  ]
+ },
+ "holds/steady_run_only": {
+  "from": "science/automation/automation-240.json, clock pitch_pickups",
+  "copies": 9,
+  "row": {
+   "belt_id": 1,
+   "lane": 1,
+   "together": {
+    "kind": "take",
+    "items_per_second": 120,
+    "lanes": [
+     1
+    ]
+   },
+   "state": {
+    "kind": "holds",
+    "not_the_cause": false,
+    "steady_run_only": true
+   },
+   "label": "Holds",
+   "sentence": "Every copy gets its items in the steady run."
+  },
+  "lanes": [
+   {
+    "belt_id": 1,
+    "lane": 1,
+    "item": "iron-gear-wheel",
+    "role": "input",
+    "end": "dead_end",
+    "end_given_by": "lane",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   },
+   {
+    "belt_id": 1,
+    "lane": 2,
+    "item": "copper-plate",
+    "role": "input",
+    "end": "dead_end",
+    "end_given_by": "lane",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   },
+   {
+    "belt_id": 2,
+    "lane": 1,
+    "item": "automation-science-pack",
+    "role": "output",
+    "end": "infinite",
+    "end_given_by": "role",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   }
+  ]
+ },
+ "holds/steady_run_only/join_waits": {
+  "from": "science/automation/automation-240.json, clock pitch_pickups",
+  "copies": 9,
+  "row": {
+   "belt_id": 2,
+   "lane": 1,
+   "together": {
+    "kind": "drop",
+    "items_per_second": 240,
+    "lanes": [
+     1,
+     2
+    ],
+    "carries_per_second": 240
+   },
+   "state": {
+    "kind": "holds",
+    "not_the_cause": false,
+    "steady_run_only": true,
+    "join_waits": [
+     {
+      "copy": 1,
+      "held_hands": 0,
+      "hands": 130
+     },
+     {
+      "copy": 2,
+      "held_hands": 0,
+      "hands": 130
+     },
+     {
+      "copy": 3,
+      "held_hands": 0,
+      "hands": 130
+     },
+     {
+      "copy": 4,
+      "held_hands": 0,
+      "hands": 130
+     },
+     {
+      "copy": 5,
+      "held_hands": 0,
+      "hands": 130
+     },
+     {
+      "copy": 6,
+      "held_hands": 0,
+      "hands": 130
+     },
+     {
+      "copy": 7,
+      "held_hands": 0,
+      "hands": 130
+     },
+     {
+      "copy": 8,
+      "held_hands": 0,
+      "hands": 130
+     },
+     {
+      "copy": 9,
+      "held_hands": 0,
+      "hands": 130
+     }
+    ]
+   },
+   "label": "Holds",
+   "sentence": "No copy waits at its join in the steady run."
+  },
+  "lanes": [
+   {
+    "belt_id": 1,
+    "lane": 1,
+    "item": "iron-gear-wheel",
+    "role": "input",
+    "end": "dead_end",
+    "end_given_by": "lane",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   },
+   {
+    "belt_id": 1,
+    "lane": 2,
+    "item": "copper-plate",
+    "role": "input",
+    "end": "dead_end",
+    "end_given_by": "lane",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   },
+   {
+    "belt_id": 2,
+    "lane": 1,
+    "item": "automation-science-pack",
+    "role": "output",
+    "end": "infinite",
+    "end_given_by": "role",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   }
+  ]
+ },
+ "rate_fits": {
+  "from": "science/military/military-240.json, clock round_robin_polling",
+  "copies": 5,
+  "row": {
+   "belt_id": 1,
+   "lane": 1,
+   "together": {
+    "kind": "drop",
+    "items_per_second": 120,
+    "lanes": [
+     1,
+     2
+    ],
+    "carries_per_second": 240
+   },
+   "state": {
+    "kind": "rate_fits",
+    "drop_per_second": 120,
+    "carries_per_second": 240
+   },
+   "label": "Rate fits",
+   "sentence": "The 5 copies together drop no more than this lane carries. Not simulated: a copy that drops onto a belt that already carries the other copies' items."
+  },
+  "lanes": [
+   {
+    "belt_id": 1,
+    "lane": 1,
+    "item": "military-science-pack",
+    "role": "output",
+    "end": "infinite",
+    "end_given_by": "lane",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   },
+   {
+    "belt_id": 2,
+    "lane": 1,
+    "item": "military-science-pack",
+    "role": "output",
+    "end": "infinite",
+    "end_given_by": "lane",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   },
+   {
+    "belt_id": 3,
+    "lane": 1,
+    "item": "stone-wall",
+    "role": "input",
+    "end": "dead_end",
+    "end_given_by": "lane",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   },
+   {
+    "belt_id": 3,
+    "lane": 2,
+    "item": "piercing-rounds-magazine",
+    "role": "input",
+    "end": "dead_end",
+    "end_given_by": "lane",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   },
+   {
+    "belt_id": 4,
+    "lane": 1,
+    "item": "piercing-rounds-magazine",
+    "role": "input",
+    "end": "dead_end",
+    "end_given_by": "lane",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   },
+   {
+    "belt_id": 4,
+    "lane": 2,
+    "item": "stone-wall",
+    "role": "input",
+    "end": "dead_end",
+    "end_given_by": "lane",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   },
+   {
+    "belt_id": 5,
+    "lane": 1,
+    "item": "coal",
+    "role": "input",
+    "end": "dead_end",
+    "end_given_by": "lane",
+    "sharing": "per_copy",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   },
+   {
+    "belt_id": 5,
+    "lane": 2,
+    "item": "coal",
+    "role": "input",
+    "end": "dead_end",
+    "end_given_by": "lane",
+    "sharing": "per_copy",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   },
+   {
+    "belt_id": 6,
+    "lane": 1,
+    "item": "coal",
+    "role": "input",
+    "end": "dead_end",
+    "end_given_by": "lane",
+    "sharing": "per_copy",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   },
+   {
+    "belt_id": 6,
+    "lane": 2,
+    "item": "coal",
+    "role": "input",
+    "end": "dead_end",
+    "end_given_by": "lane",
+    "sharing": "per_copy",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   }
+  ]
+ },
+ "not_checked": {
+  "from": "checkedLanesOf on three copies that take iron plate off a belt they drop iron gear wheels onto",
+  "copies": 3,
+  "row": {
+   "belt_id": 1,
+   "lane": 1,
+   "together": {
+    "kind": "take",
+    "items_per_second": 6,
+    "lanes": [
+     1
+    ]
+   },
+   "state": {
+    "kind": "not_checked",
+    "reason": {
+     "code": "build_drops_onto_belt"
+    }
+   },
+   "label": "Not checked",
+   "sentence": "The build drops items onto this belt, and the check of a shared lane does not run those drops yet."
+  },
+  "lanes": [
+   {
+    "belt_id": 1,
+    "lane": 1,
+    "item": "iron-plate",
+    "role": "input",
+    "end": "dead_end",
+    "end_given_by": "role",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   },
+   {
+    "belt_id": 1,
+    "lane": 2,
+    "item": "iron-gear-wheel",
+    "role": "output",
+    "end": "infinite",
+    "end_given_by": "role",
+    "sharing": "shared",
+    "supply_rate": 120,
+    "supply_rate_by_default": true,
+    "capacity": 120
+   }
+  ],
+  "insights": [
+   {
+    "id": "shared-lane-not-checked-1-1",
+    "scope": "build",
+    "title": "The iron plate lane is not checked with every copy on it",
+    "what": "The iron plate lane is not checked with every copy on it. The build drops items onto this belt, and the check of a shared lane does not run those drops yet.",
+    "why": "",
+    "explanation": ""
+   },
+   {
+    "id": "shared-lane-not-checked-1-2",
+    "scope": "build",
+    "title": "The iron gear wheel lane is not checked with every copy on it",
+    "what": "The iron gear wheel lane is not checked with every copy on it. The build drops items onto this belt, and the check of a shared lane does not run those drops yet.",
+    "why": "",
+    "explanation": ""
+   }
+  ]
+ }
+}

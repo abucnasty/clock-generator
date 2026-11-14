@@ -67,22 +67,28 @@ export {
     BeltPickupSinkInserter,
     ConfigValidationError,
     ConfigValidationIssue,
-    CopiesError,
     CopiesUnit,
     FeasibilityError,
     FeasibilityIssue,
     FeasibilityRule,
+    FlowAcrossCopySpacingError,
+    FlowAcrossCopySpacingIssue,
     InserterCoverageError,
     InserterCoverageIssue,
     InserterCoverageIssueKind,
     InserterFixOption,
     LaneCapacityError,
     LaneCapacityIssue,
+    LaneRateError,
+    LaneRateIssue,
+    SharedLaneSupplyError,
+    SharedLaneSupplyIssue,
 } from './config/errors';
 
 export { validateCopies, findRepeatedUnits } from './config/copies-validator';
 export type { RepeatedUnits } from './config/copies-validator';
 export { planRepeatedUnitConversion } from './config/repeated-unit-conversion';
+export { withoutOutsideSupply } from './config/outside-supply';
 export { AssertionError } from './common/assert';
 export type {
     ConversionEntityKind, RetainedConversionEntity, RetainedConversionEntities,
@@ -97,7 +103,9 @@ export {
 } from './config/inserter-coverage-validator';
 export { insertersScopeProblem, beltPickupSinkRefusal } from './config/inserter-scope';
 export { uncalibratedBeltPickups, beltPickupNotTestedNote } from './config/pickup-calibration';
-export { laneCapacityIssues, lanesExactlyFullWarning, lanesSharedByCopies, laneSharedByCopiesWarning } from './config/lane-capacity-validator';
+export { laneCapacityIssues, lanesExactlyFull, lanesExactlyFullWarning, lanesSharedByCopies, laneSharedByCopiesWarning } from './config/lane-capacity-validator';
+// the facts of each lane of a config, its end and its role among them, as the engine reads them
+export { laneFactsOfConfig } from './entities/traits/build-traits';
 export { copyGapNeededNote } from './config/drop-spacing';
 export { dropRoomNote } from './crafting/drop-room-note';
 export { sideLoadedDrops, sideLoadedDropWarning } from './config/side-loaded-drop';
@@ -111,6 +119,7 @@ export type { MachinePrototypeIssue } from './config/machine-prototype';
 // ============================================================================
 
 export type { ClockStrategy, StrategyId, StrategyRef } from "./crafting/clock-strategy";
+export type { DisturbanceTrialNotTriedReason } from "./crafting/trial";
 export { catalogRowOf, routerRowOf, settingChipsOf, strategyRowOf } from "./crafting/strategy-catalog";
 export type { StrategyCatalogRow, TuningMethod, Selection, EnableControlStrategyRouter, EnableControl, SourceControl, ClockRouting, ClockSettings, SettingChip, OutputCountSetting, WindowCycleSetting, SharedWindowsSetting, LoopsSetting, DrillWindowsSetting, BeltPickupSetting } from "./crafting/strategy-catalog";
 export {
@@ -329,10 +338,18 @@ export type { MachineTargetRate } from './crafting/machine-target-rates';
 export { targetRateMaxOf } from './crafting/feasibility/max-rate';
 export type { TargetRateMax } from './crafting/feasibility/max-rate';
 export type { ClockInsight, MachineFactsEntry, SwingComparison } from './crafting/insights';
-export type { DisturbanceTrialVerdict } from './crafting/disturbance-trial';
+export type { DisturbanceTrialVerdict, TrialCount } from './crafting/disturbance-trial';
+export type { OscillationFacts, OutputReason } from './crafting/long-run';
 export { whyNotStable, whyNotStableClockOf } from './crafting/why-not-stable';
 export type { NotMadeClock, SpareTime, WhyNotStable, WhyNotStableBuild, WhyNotStableCause, WhyNotStableClock } from './crafting/why-not-stable';
+export { buildLanesOf, withOtherClocks } from './crafting/checked-lanes';
+export type { BuildLane, CausePart, CheckedLaneRow, CheckedLanes, CheckedLaneState, CheckedLine, CopyMissed, LaneEndGivenBy, LaneNotCheckedReason, LaneTogether, MissedInWindowCycle, MissedSwingCause, MissedSwings, SharedLaneCause, SharedLaneReason, SharedLaneReasonCode } from './crafting/checked-lanes';
 export { deadlockRiskNote } from './crafting/deadlock-risk';
+export { machineNameInText, machineNameOf } from './crafting/machine-name';
+export type { MachineToName, MachineWords } from './crafting/machine-name';
+export { beltNameInText, capitalized, chestNameInText, drillNameInText, entityNameOf, inserterNameInText, insertersInSentence, laneNameInText, lanesInSentence, NO_BUILD, textWords, theName } from './crafting/entity-name';
+export type { BuildToName, ItemWords, TextWords } from './crafting/entity-name';
+export { buildToNameOf, entityNamesInSentence } from './crafting/build-names';
 export type { SharedItemDeadlockRisk } from './crafting/deadlock-risk';
 export { DEFAULT_KICK_START_ITEMS } from './crafting/runner/cold-start';
 

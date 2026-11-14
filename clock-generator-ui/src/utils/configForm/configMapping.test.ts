@@ -4,8 +4,10 @@ import { ChestType } from 'clock-generator/light';
 import { build, inserter } from '../../test/fixtures';
 import { parseFormConfig } from '../../worker/formConfig';
 import { configToFormData, formDataToConfig } from './configMapping';
-import { machineIconName, type ConfigFormData } from './formData';
+import { laneFieldUpdate, machineIconName, type ConfigFormData } from './formData';
 import { applyRepeatedUnitConversion } from './repeatedUnitConversion';
+import { readSavedConfig } from '../../hooks/usePersistedConfigForm';
+import { decodeShareLink, encodeShareLink, readShareHash } from '../shareLink';
 
 const imported = {
     setpoint: { recipe: 'electronic-circuit', items_per_second: 10, copies: 1 },
@@ -79,6 +81,71 @@ describe('canonical repeated-unit form application', () => {
         expect(applyRepeatedUnitConversion({ ...form, setpoint: { ...form.setpoint, items_per_second: 5 } }, plan)).toBeNull();
         expect(form).toEqual(before);
     });
+
+    it('leaves out the inserters that fill the input belt from chests, with their chests', () => {
+        const form = configToFormData({
+            setpoint: { recipe: 'iron-gear-wheel', items_per_second: 2, copies: 1 },
+            machines: Array.from({ length: 4 }, (_, i) => ({ id: i + 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 })),
+            belts: [
+                { id: 1, type: 'transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1, lane_end: { kind: 'dead_end' } }] },
+                { id: 2, type: 'transport-belt', lanes: [{ ingredient: 'iron-gear-wheel', stack_size: 1 }] },
+            ],
+            chests: [
+                { type: ChestType.INFINITY_CHEST, id: 1, item_filter: [{ item_name: 'iron-plate', request_count: 100 }] },
+                { type: ChestType.INFINITY_CHEST, id: 2, item_filter: [{ item_name: 'iron-plate', request_count: 100 }] },
+            ],
+            inserters: [
+                { id: 1, source: { type: 'chest', id: 1 }, sink: { type: 'belt', id: 1 }, filters: ['iron-plate'] },
+                { id: 2, source: { type: 'chest', id: 2 }, sink: { type: 'belt', id: 1 }, filters: ['iron-plate'] },
+                ...Array.from({ length: 4 }, (_, i) => [
+                    { id: 2 * i + 3, source: { type: 'belt' as const, id: 1 }, sink: { type: 'machine' as const, id: i + 1 }, filters: ['iron-plate'] },
+                    { id: 2 * i + 4, source: { type: 'machine' as const, id: i + 1 }, sink: { type: 'belt' as const, id: 2 }, filters: ['iron-gear-wheel'] },
+                ]).flat(),
+            ],
+        } as Config);
+        const plan = planRepeatedUnitConversion(formDataToConfig(form));
+        expect(plan.kind).toBe('available');
+        if (plan.kind !== 'available') return;
+        const next = applyRepeatedUnitConversion(form, plan)!;
+        expect(next).not.toBeNull();
+        expect(next.chests).toEqual([]);
+        expect(next.inserters.map(it => it._uuid)).toEqual(form.inserters.slice(2, 4).map(it => it._uuid));
+        expect(next.setpoint.copies).toBe(4);
+        expect(formDataToConfig(next)).toEqual(plan.candidate);
+    });
+});
+
+describe('a config that states its output belt', () => {
+    // the site has no editor for the section: it keeps it as it was stated, as it keeps a car or a silo
+    const output_belt = {
+        side_belt: { lane: 'right', tiles: 2, left_curves: 1 },
+        stretches: [{ points: [{ side_load: [1], lane: 'right', layout: 'side-exit' }, { tiles: 3, lane_end: { kind: 'infinite' } }] }],
+    };
+    // the machines without the former `type`, which the schema reads only with the game data
+    const config = importedWith({ output_belt, machines: imported.machines.map(({ id, recipe, productivity, crafting_speed }) =>
+        ({ id, recipe, productivity, crafting_speed })) });
+
+    it('is checked by the engine as stated', () => {
+        const parsed = ConfigSchema.safeParse(config);
+        expect(parsed.error?.issues ?? []).toEqual([]);
+        expect(parsed.data!.output_belt).toEqual(output_belt);
+        expect(parseFormConfig(ConfigSchema, config).data!.output_belt).toEqual(output_belt);
+    });
+
+    it('keeps the section unchanged through the form, a saved build and a share link', async () => {
+        const form = configToFormData(config);
+        expect(form.output_belt).toEqual(output_belt);
+        expect(formDataToConfig(form).output_belt).toEqual(output_belt);
+        expect(formDataToConfig(readSavedConfig(JSON.stringify(form))!).output_belt).toEqual(output_belt);
+        const link = await encodeShareLink({ name: null, config: formDataToConfig(form) }, 'https://example.test/');
+        const shared = await decodeShareLink(readShareHash(link.slice(link.indexOf('#'))) as { version: string; data: string });
+        expect(shared.kind === 'build' && (shared.config as Config).output_belt).toEqual(output_belt);
+    });
+
+    it('leaves a config without it without it', () => {
+        expect('output_belt' in configToFormData(imported)).toBe(false);
+        expect('output_belt' in formDataToConfig(configToFormData(imported))).toBe(false);
+    });
 });
 
 describe('configToFormData', () => {
@@ -126,7 +193,7 @@ describe('configToFormData', () => {
         expect(strict.success).toBe(false);
         expect(!strict.success && strict.error.issues.some(issue => issue.code === 'custom' && issue.params?.editable_chest_settings === true)).toBe(true);
         const parsed = parseFormConfig(ConfigSchema, raw);
-        expect(parsed.success).toBe(true);
+        expect(parsed.error?.issues ?? []).toEqual([]);
         if (!parsed.success) return;
         expect(parsed.data.chests?.[0]).not.toHaveProperty('item_filter');
         const form = configToFormData(parsed.data);
@@ -185,6 +252,17 @@ describe('what goes through the form and back as the config gave it', () => {
             inserters: [{ id: 1, source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 1, belt_direction: 12 }, stack_size: 16,
                 position: { x: 1.5, y: 2.5 }, direction: 8 }],
         }, c => [c.setpoint.copy_offset, c.inserters[0].sink], true],
+        ['the lane facts of a normal and an export belt, and the way a belt moves', {
+            belts: [
+                { id: 1, type: 'turbo-transport-belt', flow_direction: 4, lanes: [
+                    { ingredient: 'iron-plate', stack_size: 4, supply_rate: 88, lane_end: { kind: 'dead_end' }, sharing: 'per_copy' },
+                    { ingredient: 'copper-plate', stack_size: 4, lane_end: { kind: 'unknown' } },
+                ] },
+                { id: 2, type: 'turbo-transport-belt', strategy: 'export', lanes: [
+                    { ingredient: 'electronic-circuit', stack_size: 4, consumption_per_second: 5, sharing: 'shared' },
+                ] },
+            ],
+        }, c => c.belts.map(belt => [belt.flow_direction, belt.lanes]), true],
         ['cars, tanks, cargo wagons and rocket silos', {
             chests: [
                 { id: 1, type: ChestType.CAR, slot_filters: [{ slot: 1, item: 'iron-plate' }], contents: [{ slot: 2, item: 'coal', count: 50 }] },
@@ -197,6 +275,15 @@ describe('what goes through the form and back as the config gave it', () => {
         const config = importedWith(fields), expected = structuredClone(kept(config)), form = configToFormData(config);
         if (inForm) expect(kept(form)).toEqual(expected);
         expect(kept(formDataToConfig(form))).toEqual(expected);
+    });
+});
+
+describe('a lane edited in the form', () => {
+    it('drops its lane end when it gets a consumption rate, which states what leaves the end of an export lane', () => {
+        const lane = { ingredient: 'iron-plate', stack_size: 4, lane_end: { kind: 'dead_end' as const }, sharing: 'per_copy' as const };
+        expect(laneFieldUpdate(lane, 'consumption_per_second', 5)).toEqual({ ingredient: 'iron-plate', stack_size: 4, sharing: 'per_copy', consumption_per_second: 5 });
+        expect(laneFieldUpdate(lane, 'consumption_per_second', undefined)).toEqual({ ...lane, consumption_per_second: undefined });
+        expect(laneFieldUpdate(lane, 'stack_size', 2)).toEqual({ ...lane, stack_size: 2 });
     });
 });
 

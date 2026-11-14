@@ -1,0 +1,405 @@
+{
+  "schema": 1,
+  "sample": "MILITARY_SCIENCE_240",
+  "target": {
+    "item": "military-science-pack",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 48,
+      "denominator": 1
+    }
+  },
+  "nodes": [
+    {
+      "key": "belt:1/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:1/lane:1#military-science-pack"
+      ]
+    },
+    {
+      "key": "belt:1/lane:2",
+      "kind": "lane",
+      "ports": []
+    },
+    {
+      "key": "belt:2/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:2/lane:1#military-science-pack"
+      ]
+    },
+    {
+      "key": "belt:2/lane:2",
+      "kind": "lane",
+      "ports": []
+    },
+    {
+      "key": "belt:3/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:3/lane:1#stone-wall"
+      ]
+    },
+    {
+      "key": "belt:3/lane:2",
+      "kind": "lane",
+      "ports": [
+        "belt:3/lane:2#piercing-rounds-magazine"
+      ]
+    },
+    {
+      "key": "belt:4/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:4/lane:1#piercing-rounds-magazine"
+      ]
+    },
+    {
+      "key": "belt:4/lane:2",
+      "kind": "lane",
+      "ports": [
+        "belt:4/lane:2#stone-wall"
+      ]
+    },
+    {
+      "key": "belt:5/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:5/lane:1#coal"
+      ]
+    },
+    {
+      "key": "belt:5/lane:2",
+      "kind": "lane",
+      "ports": [
+        "belt:5/lane:2#coal"
+      ]
+    },
+    {
+      "key": "belt:6/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:6/lane:1#coal"
+      ]
+    },
+    {
+      "key": "belt:6/lane:2",
+      "kind": "lane",
+      "ports": [
+        "belt:6/lane:2#coal"
+      ]
+    },
+    {
+      "key": "machine:1",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:2",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:3",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:4",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "machine:5",
+      "kind": "machine",
+      "ports": []
+    },
+    {
+      "key": "sink",
+      "kind": "sink",
+      "ports": []
+    }
+  ],
+  "edges": [
+    {
+      "key": "inserter:1/military-science-pack",
+      "via": "inserter",
+      "entity": "inserter:1",
+      "group": "inserter:1",
+      "item": "military-science-pack",
+      "from": "machine:1",
+      "from_ports": [
+        "machine:1"
+      ],
+      "to": "belt:1/lane:1#military-science-pack",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": "output-lane"
+    },
+    {
+      "key": "inserter:2/military-science-pack",
+      "via": "inserter",
+      "entity": "inserter:2",
+      "group": "inserter:2",
+      "item": "military-science-pack",
+      "from": "machine:2",
+      "from_ports": [
+        "machine:2"
+      ],
+      "to": "belt:2/lane:1#military-science-pack",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": "output-lane"
+    },
+    {
+      "key": "inserter:3/grenade",
+      "via": "inserter",
+      "entity": "inserter:3",
+      "group": "inserter:3",
+      "item": "grenade",
+      "from": "machine:3",
+      "from_ports": [
+        "machine:3"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:4/grenade",
+      "via": "inserter",
+      "entity": "inserter:4",
+      "group": "inserter:4",
+      "item": "grenade",
+      "from": "machine:4",
+      "from_ports": [
+        "machine:4"
+      ],
+      "to": "machine:2",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:5/stone-wall",
+      "via": "inserter",
+      "entity": "inserter:5",
+      "group": "inserter:5",
+      "item": "stone-wall",
+      "from": "belt:3/lane:1#stone-wall",
+      "from_ports": [
+        "belt:3/lane:1#stone-wall"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:5/piercing-rounds-magazine",
+      "via": "inserter",
+      "entity": "inserter:5",
+      "group": "inserter:5",
+      "item": "piercing-rounds-magazine",
+      "from": "belt:3/lane:2#piercing-rounds-magazine",
+      "from_ports": [
+        "belt:3/lane:2#piercing-rounds-magazine"
+      ],
+      "to": "machine:1",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:6/stone-wall",
+      "via": "inserter",
+      "entity": "inserter:6",
+      "group": "inserter:6",
+      "item": "stone-wall",
+      "from": "belt:4/lane:2#stone-wall",
+      "from_ports": [
+        "belt:4/lane:2#stone-wall"
+      ],
+      "to": "machine:2",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:6/piercing-rounds-magazine",
+      "via": "inserter",
+      "entity": "inserter:6",
+      "group": "inserter:6",
+      "item": "piercing-rounds-magazine",
+      "from": "belt:4/lane:1#piercing-rounds-magazine",
+      "from_ports": [
+        "belt:4/lane:1#piercing-rounds-magazine"
+      ],
+      "to": "machine:2",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:7/coal",
+      "via": "inserter",
+      "entity": "inserter:7",
+      "group": "inserter:7",
+      "item": "coal",
+      "from": "belt:5/lane:1#coal",
+      "from_ports": [
+        "belt:5/lane:1#coal",
+        "belt:5/lane:2#coal"
+      ],
+      "to": "machine:3",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:8/coal",
+      "via": "inserter",
+      "entity": "inserter:8",
+      "group": "inserter:8",
+      "item": "coal",
+      "from": "belt:6/lane:2#coal",
+      "from_ports": [
+        "belt:6/lane:1#coal",
+        "belt:6/lane:2#coal"
+      ],
+      "to": "machine:4",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:9/iron-plate",
+      "via": "inserter",
+      "entity": "inserter:9",
+      "group": "inserter:9",
+      "item": "iron-plate",
+      "from": "machine:5",
+      "from_ports": [
+        "machine:5"
+      ],
+      "to": "machine:3",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:10/iron-plate",
+      "via": "inserter",
+      "entity": "inserter:10",
+      "group": "inserter:10",
+      "item": "iron-plate",
+      "from": "machine:5",
+      "from_ports": [
+        "machine:5"
+      ],
+      "to": "machine:4",
+      "lands_in": "ingredients",
+      "hand": 16,
+      "floor_cycle": 8,
+      "ceiling": {
+        "numerator": 120,
+        "denominator": 1
+      },
+      "terminal": null
+    }
+  ],
+  "components": [],
+  "order": [
+    "belt:3/lane:1#stone-wall",
+    "belt:3/lane:2#piercing-rounds-magazine",
+    "belt:4/lane:1#piercing-rounds-magazine",
+    "belt:4/lane:2#stone-wall",
+    "belt:5/lane:1#coal",
+    "belt:5/lane:2#coal",
+    "belt:6/lane:1#coal",
+    "belt:6/lane:2#coal",
+    "machine:5",
+    "machine:3",
+    "machine:1",
+    "belt:1/lane:1#military-science-pack",
+    "machine:4",
+    "machine:2",
+    "belt:2/lane:1#military-science-pack",
+    "sink"
+  ],
+  "shared": {
+    "out": [
+      {
+        "at": "machine:5",
+        "item": "iron-plate",
+        "edges": [
+          "inserter:9/iron-plate",
+          "inserter:10/iron-plate"
+        ]
+      }
+    ],
+    "in": [],
+    "lanes": []
+  },
+  "terminal": [
+    "inserter:1/military-science-pack",
+    "inserter:2/military-science-pack"
+  ]
+}

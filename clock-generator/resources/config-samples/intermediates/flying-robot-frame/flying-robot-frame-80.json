@@ -1,0 +1,130 @@
+{
+  "setpoint": {
+    "recipe": "flying-robot-frame",
+    "items_per_second": 80,
+    "copies": 12,
+    "copy_offset": {
+      "x": 6,
+      "y": 0
+    }
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "flying-robot-frame",
+      "productivity": 100,
+      "crafting_speed": 68.890625,
+      "prototype": "assembling-machine-3"
+    }
+  ],
+  "inserters": [
+    {
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "flying-robot-frame"
+      ],
+      "id": 1
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 2,
+        "near_lane": 2
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "steel-plate",
+        "electric-engine-unit"
+      ],
+      "id": 2
+    },
+    {
+      "source": {
+        "type": "belt",
+        "id": 5,
+        "near_lane": 1
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "stack_size": 16,
+      "filters": [
+        "electronic-circuit",
+        "battery"
+      ],
+      "id": 3
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "flying-robot-frame",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "turbo-transport-belt",
+      "flow_direction": 4,
+      "lanes": [
+        {
+          "ingredient": "steel-plate",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
+        },
+        {
+          "ingredient": "electric-engine-unit",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "turbo-transport-belt",
+      "flow_direction": 4,
+      "lanes": [
+        {
+          "ingredient": "electronic-circuit",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
+        },
+        {
+          "ingredient": "battery",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
+        }
+      ]
+    }
+  ],
+  "chests": []
+}

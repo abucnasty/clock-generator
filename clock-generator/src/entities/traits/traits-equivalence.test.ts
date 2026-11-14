@@ -5,7 +5,7 @@ import { Config } from "../../config/schema";
 import { BeltHandPickup } from "../../simulation/components/belt-hand-pickup";
 import { lossLimitOf } from "../../crafting/disturbance-trial";
 import { SimulationContext } from "../../crafting/sequence/simulation-context";
-import { laneItemsPerSecond, laneStackFor } from "../belt/belt";
+import { laneItemsPerSecond, laneStackFor } from "../belt/belt-speed";
 import { Chest } from "../chest/chest";
 import { directMachineInsertionLimit, miningDrillMaxInsertion } from "../drill/mining-drill-ext";
 import { Entity } from "../entity";

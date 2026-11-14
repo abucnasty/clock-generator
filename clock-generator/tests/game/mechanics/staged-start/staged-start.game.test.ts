@@ -1,4 +1,4 @@
-import { SAMPLE_BUILDS_DIR } from "../../helpers/fixture-paths";
+import { GameFixturePaths } from "../../helpers/fixture-paths";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -29,7 +29,7 @@ describe("a staged start builds the inserters of the cell in one tick, after the
         context.skip(WHY_SKIPPED !== null, WHY_SKIPPED ?? undefined);
         scratch ??= fs.mkdtempSync(path.join(os.tmpdir(), "staged-start-"));
 
-        const scaffold = path.join(SAMPLE_BUILDS_DIR, "science", "agricultural", "agricultural-250.scaffold");
+        const scaffold = GameFixturePaths.AGRICULTURAL_SCIENCE_ONE_COPY;
         const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250);
         const log: string[] = [];
         const session = new CachedHarnessSession({ factorio: FACTORIO!, save: SAVE!, work_dir: path.join(scratch, "work"), timeout_seconds: 900, log: message => log.push(message) });

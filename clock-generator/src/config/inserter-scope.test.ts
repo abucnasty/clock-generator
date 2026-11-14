@@ -17,7 +17,7 @@ const base = () => ({
         { id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 }, stack_size: 16 },
         { id: 2, source: { type: "machine", id: 1 }, sink: { type: "chest", id: 1 }, stack_size: 16 },
     ],
-    belts: [{ id: 1, type: "turbo-transport-belt", lanes: [{ ingredient: "iron-plate", stack_size: 4 }] }],
+    belts: [{ id: 1, type: "turbo-transport-belt", lanes: [{ ingredient: "iron-plate", stack_size: 4, lane_end: { kind: "infinite" } }] }],
     chests: [{ id: 1, type: "infinity-chest", item_filter: [], remove_unfiltered_items: true }],
 });
 /** The base build with the given fields set on its belt-fed inserter (1) or its machine-to-chest inserter (2) */

@@ -17,6 +17,12 @@ interface ImpFixture {
     clock_windows: Record<string, { start: number; end: number }[]>;
 }
 const fixture = JSON.parse(readFileSync(path.join(__dirname, "fixtures/imp-sampled-output.json"), "utf8")) as ImpFixture;
+/** The archived config with the infinite ends of its sulfur and coal lanes stated (belts 1 and 3); the file keeps its archived bytes */
+function archivedConfig(): unknown {
+    const config = structuredClone(fixture.config) as { belts: { id: number; lanes: { lane_end?: { kind: string } }[] }[] };
+    for (const belt of config.belts) if (belt.id === 1 || belt.id === 3) belt.lanes[0].lane_end = { kind: "infinite" };
+    return config;
+}
 const sha = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 
 // RI1's exact archived chain-b plan. This is Behavior characterization, independent of the generator's
@@ -31,7 +37,7 @@ describe("the archived imp plan's sampled output shortfall", () => {
 
     beforeAll(async () => {
         // Parse the ordinary config with its loader; do not synthesize secondary-planning provenance.
-        const config = await parseConfig(JSON.stringify(fixture.config));
+        const config = await parseConfig(JSON.stringify(archivedConfig()));
         const prepared = { ...config, overrides: { ...config.overrides,
             lcm: fixture.used_lcm, terminal_swing_count: fixture.used_terminal_swing_count } };
         const windows = new Map(Object.entries(fixture.clock_windows).map(([id, ranges]) =>

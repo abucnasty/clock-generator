@@ -5,26 +5,27 @@ import { loadConfigFromFile } from "../../config/loader";
 import type { Config } from "../../config/schema";
 import { ConfigSchema } from "../../config/schema";
 import { assertFeasible } from "./assert-feasible";
+import { sharedLaneSupplyIssues } from "../../config/lane-capacity-validator";
 import { targetRateMaxOf } from "./max-rate";
 
 const withRate = (config: Config, items_per_second: number): Config =>
     ConfigSchema.parse({ ...config, setpoint: { ...config.setpoint, items_per_second } });
 
-/** Whether the feasibility pass refuses the config */
+/** Whether the feasibility pass refuses the config, or the copies take more from a lane they share than it gets */
 function refused(config: Config): boolean {
     try {
         assertFeasible(config);
-        return false;
     } catch (error) {
         if (error instanceof FeasibilityError) return true;
         throw error;
     }
+    return sharedLaneSupplyIssues(config).length > 0;
 }
 
 /** The most one copy's target can be, over all copies, rounded down to the thousandth as a player types it */
 const typedMax = (config: Config, max: number): number => Math.floor(max * config.setpoint.copies * 1000) / 1000;
 
-describe("the most a target can be agrees with the feasibility pass over the samples", () => {
+describe("the most a target can be agrees with the feasibility pass and the shared-lane refusal over the samples", () => {
     const samples = Object.entries(ConfigPaths);
     it.each(samples)("%s: the pass accepts the maximum and refuses above it", async (_key, file) => {
         const config = await loadConfigFromFile(file) as Config;

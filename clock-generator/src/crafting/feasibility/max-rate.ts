@@ -1,8 +1,10 @@
 /**
- * The most a build's target rate can be before the feasibility pass refuses it: the same cuts, asked for the largest
- * target none of them is above. One source of truth for the page's "At most N/s" and the engine's refusal.
+ * The most a build's target rate can be before the feasibility pass or the check of the lanes the copies share refuses
+ * it: the same cuts and the same lanes, asked for the largest target none of them is above. One source of truth for the
+ * page's "At most N/s" and the engine's refusals.
  */
-import { describeFeasibilityIssue } from "../../config/errors";
+import { describeFeasibilityIssue, SharedLaneSupplyError } from "../../config/errors";
+import { sharedLaneSupplyIssues, sharedLaneSupplyOf, laneLoads } from "../../config/lane-capacity-validator";
 import type { Config } from "../../config/schema";
 import Fraction, { fraction } from "../../data-types/fraction";
 import type { PlannerFacts } from "../../data-types/planner-facts";
@@ -20,7 +22,7 @@ export interface TargetRateMax {
     readonly per_copy: Ratio;
     /** `per_copy` as a decimal */
     readonly per_copy_per_second: number;
-    /** The cut that stops the target there, as the pass names it ("C7 inserters") */
+    /** The cut that stops the target there, as the pass names it ("C7 inserters"), or "shared lane" for the copies' takes from a lane they share */
     readonly cut: string;
     /** What that cut says of the config's own target, as a player reads it, where the target is above the maximum; else null */
     readonly limit: string | null;
@@ -62,10 +64,32 @@ export function targetRateMaxOf(config: Config): TargetRateMax | null {
         if (tightest === null || tightest.ratio.subtract(1).getNumerator !== 0) return null;
         // the maximum is the target at which no cut is refused: it holds, and a hair above it does not
         if (cutsAt(facts, per_copy).some(refuses)) return null;
+        const shared = sharedLaneMaxOf(config, fractionOf(facts.target.per_copy));
+        if (shared !== null && above(per_copy, shared)) {
+            const issues = sharedLaneSupplyIssues(config);
+            return { per_copy: ratioOf(shared), per_copy_per_second: shared.toDecimal(), cut: "shared lane",
+                limit: issues.length > 0 ? new SharedLaneSupplyError(issues).message : null };
+        }
         const configured = cutsAt(facts, fractionOf(facts.target.per_copy)).find(cut => cut.name === tightest!.cut.name);
         const limit = configured !== undefined && refuses(configured) ? configured.issues().map(describeFeasibilityIssue).join(" ") : null;
         return { per_copy: ratioOf(per_copy), per_copy_per_second: per_copy.toDecimal(), cut: tightest.cut.name, limit };
     } catch {
         return null;
     }
+}
+
+/**
+ * The largest target per copy at which the copies take no more from any set of lanes they share than the lanes get
+ * (`sharedLaneSupplyIssues`): a lane's takes follow the target, so each set's bound is the configured target scaled by
+ * its supply over the copies' takes. Null where no lane bounds it or the config's target is not above 0.
+ */
+function sharedLaneMaxOf(config: Config, per_copy: Fraction): Fraction | null {
+    if (!(per_copy.getNumerator > 0)) return null;
+    const copies = fraction(config.setpoint.copies);
+    let least: Fraction | null = null;
+    for (const load of laneLoads(config).filter(load => load.kind === "take" && load.items_per_second.getNumerator > 0)) {
+        const bound = per_copy.multiply(sharedLaneSupplyOf(config, load)).divide(load.items_per_second.multiply(copies));
+        if (least === null || above(least, bound)) least = bound;
+    }
+    return least;
 }

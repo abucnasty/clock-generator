@@ -15,9 +15,9 @@
       "key": "group:1",
       "members": [
         "machine:1",
-        "belt:1/lane:1#iron-gear-wheel",
+        "belt:1/lane:2#iron-gear-wheel",
         "machine:2",
-        "belt:1/lane:2#copper-plate",
+        "belt:1/lane:1#copper-plate",
         "machine:3",
         "belt:2/lane:1#automation-science-pack"
       ],

@@ -25,6 +25,20 @@
       ]
     },
     {
+      "key": "belt:2/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:2/lane:1#bioflux"
+      ]
+    },
+    {
+      "key": "belt:2/lane:2",
+      "kind": "lane",
+      "ports": [
+        "belt:2/lane:2#nutrients"
+      ]
+    },
+    {
       "key": "machine:1",
       "kind": "machine",
       "ports": []
@@ -304,17 +318,17 @@
       "terminal": null
     },
     {
-      "key": "inserter:11/bioflux",
+      "key": "inserter:11/nutrients",
       "via": "inserter",
       "entity": "inserter:11",
       "group": "inserter:11",
-      "item": "bioflux",
-      "from": "belt:1/lane:1#bioflux",
+      "item": "nutrients",
+      "from": "belt:2/lane:2#nutrients",
       "from_ports": [
-        "belt:1/lane:1#bioflux"
+        "belt:2/lane:2#nutrients"
       ],
       "to": "machine:5",
-      "lands_in": "ingredients",
+      "lands_in": "fuel",
       "hand": 16,
       "floor_cycle": 11,
       "ceiling": {
@@ -324,17 +338,17 @@
       "terminal": null
     },
     {
-      "key": "inserter:11/nutrients",
+      "key": "inserter:11/bioflux",
       "via": "inserter",
       "entity": "inserter:11",
       "group": "inserter:11",
-      "item": "nutrients",
-      "from": "belt:1/lane:2#nutrients",
+      "item": "bioflux",
+      "from": "belt:2/lane:1#bioflux",
       "from_ports": [
-        "belt:1/lane:2#nutrients"
+        "belt:2/lane:1#bioflux"
       ],
       "to": "machine:5",
-      "lands_in": "fuel",
+      "lands_in": "ingredients",
       "hand": 16,
       "floor_cycle": 11,
       "ceiling": {
@@ -393,6 +407,8 @@
   "order": [
     "belt:1/lane:1#bioflux",
     "belt:1/lane:2#nutrients",
+    "belt:2/lane:1#bioflux",
+    "belt:2/lane:2#nutrients",
     "machine:1",
     "machine:2",
     "loop:1",
@@ -467,8 +483,7 @@
         "item": "bioflux",
         "edges": [
           "inserter:1/bioflux",
-          "inserter:2/bioflux",
-          "inserter:11/bioflux"
+          "inserter:2/bioflux"
         ]
       },
       {
@@ -476,8 +491,7 @@
         "item": "nutrients",
         "edges": [
           "inserter:1/nutrients",
-          "inserter:2/nutrients",
-          "inserter:11/nutrients"
+          "inserter:2/nutrients"
         ]
       }
     ]

@@ -43,8 +43,14 @@ export type Item = {
  */
 export type ItemPrototypeFields = Pick<Game.ItemPrototype, "hidden" | "fuel_value" | "fuel_categories" | "spoil_result" | "quality_affects_spoil_ticks">
 
-/** A mining drill prototype, with the manifest's fields of its class (resources/filter-raw.js keeps these) */
-export interface MiningDrillSpec extends Omit<Game.MiningDrillPrototype, "type" | "name"> {
+/** The tiles an entity takes on the map, across and down as it stands unturned (resources/filter-raw.js, tileSize) */
+export interface TileSize {
+  tile_width: number
+  tile_height: number
+}
+
+/** A mining drill prototype, with the manifest's fields of its class and its tiles (resources/filter-raw.js keeps these) */
+export interface MiningDrillSpec extends Omit<Game.MiningDrillPrototype, "type" | "name">, TileSize {
   type: "mining-drill"
   name: MiningDrillType
   mining_speed: number
@@ -135,7 +141,7 @@ export interface RocketSiloPrototype extends Omit<Game.RocketSiloPrototype, "nam
  */
 export interface CraftingMachinePrototype extends Pick<Game.AssemblingMachinePrototype, "hidden" | "minable"
   | "crafting_speed_quality_multiplier" | "effect_receiver" | "allowed_effects" | "module_slots" | "quality_affects_module_slots"
-  | "module_slots_quality_bonus" | "energy_usage_quality_multiplier" | "quality_affects_energy_usage" | "fixed_recipe"> {
+  | "module_slots_quality_bonus" | "energy_usage_quality_multiplier" | "quality_affects_energy_usage" | "fixed_recipe">, TileSize {
   name: string
   /** The prototype's type in the game: a furnace picks its recipe from what it is given; an assembling machine is set to one */
   type: "assembling-machine" | "furnace"

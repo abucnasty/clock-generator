@@ -19,7 +19,7 @@ const EXAMPLES = [
     { id: 'utility-science', path: 'science/utility/utility-120.json' },
     { id: 'chemical-science', path: 'science/chemical/chemical-240-shared-foundry.json' },
     { id: 'electromagnetic-science', path: 'science/electromagnetic/electromagnetic-330.json' },
-    { id: 'military-science', path: 'science/military/military-120.json' },
+    { id: 'military-science', path: 'science/military/military-240.json' },
     { id: 'production-science', path: 'science/production/production-120-two-belts.json' },
     { id: 'metallurgic-science', path: 'science/metallurgic/metallurgic-45.json' },
     { id: 'agriculture-science', path: 'science/agricultural/agricultural-250.json' },

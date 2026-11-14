@@ -20,9 +20,7 @@
     {
       "key": "belt:1/lane:2",
       "kind": "lane",
-      "ports": [
-        "belt:1/lane:2#advanced-circuit"
-      ]
+      "ports": []
     },
     {
       "key": "belt:2/lane:1",
@@ -93,8 +91,7 @@
       "item": "advanced-circuit",
       "from": "belt:1/lane:1#advanced-circuit",
       "from_ports": [
-        "belt:1/lane:1#advanced-circuit",
-        "belt:1/lane:2#advanced-circuit"
+        "belt:1/lane:1#advanced-circuit"
       ],
       "to": "machine:1",
       "lands_in": "ingredients",
@@ -261,7 +258,6 @@
   "components": [],
   "order": [
     "belt:1/lane:1#advanced-circuit",
-    "belt:1/lane:2#advanced-circuit",
     "belt:2/lane:2#electric-furnace",
     "machine:2",
     "drill:1",

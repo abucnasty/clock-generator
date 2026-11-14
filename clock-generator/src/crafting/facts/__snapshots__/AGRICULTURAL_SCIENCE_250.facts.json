@@ -29,7 +29,7 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -62,7 +62,73 @@
           "numerator": 120,
           "denominator": 1
         },
-        "supply": "moving",
+        "supply": "backed_up",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [
+          {
+            "item": "nutrients",
+            "spoil_ticks": 18000,
+            "quality_affects_spoil_ticks": true,
+            "spoil_result": "spoilage"
+          }
+        ],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "belt:2/lane:1",
+      "kind": "lane",
+      "entity": "belt:2",
+      "lane": {
+        "key": "belt:2/lane:1",
+        "belt": "belt:2",
+        "lane": 1,
+        "listed": true,
+        "item": "bioflux",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "backed_up",
+        "export_per_second": null
+      },
+      "spoilage": {
+        "items": [
+          {
+            "item": "bioflux",
+            "spoil_ticks": 432000,
+            "quality_affects_spoil_ticks": true,
+            "spoil_result": "spoilage"
+          }
+        ],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "belt:2/lane:2",
+      "kind": "lane",
+      "entity": "belt:2",
+      "lane": {
+        "key": "belt:2/lane:2",
+        "belt": "belt:2",
+        "lane": 2,
+        "listed": true,
+        "item": "nutrients",
+        "stack": 4,
+        "belt_prototype": "turbo-transport-belt",
+        "tiles_per_tick": 0.125,
+        "belt_speed": 60,
+        "items_per_second_ceiling": {
+          "numerator": 120,
+          "denominator": 1
+        },
+        "supply": "backed_up",
         "export_per_second": null
       },
       "spoilage": {
@@ -1504,17 +1570,17 @@
       "enable_latency_ticks": 2
     },
     {
-      "key": "inserter:11/bioflux",
+      "key": "inserter:11/nutrients",
       "via": "inserter",
       "entity": "inserter:11",
       "group": "inserter:11",
-      "item": "bioflux",
-      "from": "belt:1/lane:1",
+      "item": "nutrients",
+      "from": "belt:2/lane:2",
       "to": "machine:5",
       "from_lanes": [
-        "belt:1/lane:1"
+        "belt:2/lane:2"
       ],
-      "lands_in": "ingredients",
+      "lands_in": "fuel",
       "hand": {
         "prototype": "stack-inserter",
         "quality": "legendary",
@@ -1522,8 +1588,8 @@
         "nominal": 16,
         "research": 16,
         "items": [
-          "bioflux",
-          "nutrients"
+          "nutrients",
+          "bioflux"
         ],
         "full_hand": {
           "at_placing_source": true,
@@ -1562,17 +1628,17 @@
       "enable_latency_ticks": 2
     },
     {
-      "key": "inserter:11/nutrients",
+      "key": "inserter:11/bioflux",
       "via": "inserter",
       "entity": "inserter:11",
       "group": "inserter:11",
-      "item": "nutrients",
-      "from": "belt:1/lane:2",
+      "item": "bioflux",
+      "from": "belt:2/lane:1",
       "to": "machine:5",
       "from_lanes": [
-        "belt:1/lane:2"
+        "belt:2/lane:1"
       ],
-      "lands_in": "fuel",
+      "lands_in": "ingredients",
       "hand": {
         "prototype": "stack-inserter",
         "quality": "legendary",
@@ -1580,8 +1646,8 @@
         "nominal": 16,
         "research": 16,
         "items": [
-          "bioflux",
-          "nutrients"
+          "nutrients",
+          "bioflux"
         ],
         "full_hand": {
           "at_placing_source": true,
@@ -1802,14 +1868,14 @@
       "group": "inserter:11",
       "edges": [
         {
-          "edge": "inserter:11/bioflux",
-          "item": "bioflux",
+          "edge": "inserter:11/nutrients",
+          "item": "nutrients",
           "hand": 16,
           "floor_cycle": 11
         },
         {
-          "edge": "inserter:11/nutrients",
-          "item": "nutrients",
+          "edge": "inserter:11/bioflux",
+          "item": "bioflux",
           "hand": 16,
           "floor_cycle": 11
         }

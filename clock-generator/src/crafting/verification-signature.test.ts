@@ -7,9 +7,13 @@ import {generateClockForConfig} from "./generate-clock";
 import {generateClockAlternatives, planClockAlternatives, runClockAlternativeTask} from "./alternatives";
 import {plannedFractionally, quiet} from "./generate-blueprint-test-helpers";
 import * as trial from "./trial";
+import * as planning from "./plan/unclocked-run";
 
 const options = {logger: quiet, verify_as_built: false, fuel_consumption_view: false, factorio_states: false, modulo_blueprint: false};
 const signature = trial.clockVerificationSignature;
+/** Windows by inserter, in one text whatever the order of the inserters */
+const windowsKey = (windows: Record<string, { start: number; end: number }[]>) =>
+    JSON.stringify(Object.entries(windows).sort(([a], [b]) => a.localeCompare(b)).map(([id, ranges]) => [id, ranges.map(range => [range.start, range.end])]));
 let config: Config;
 let result: ReturnType<typeof generateClockForConfig>;
 beforeAll(async () => {
@@ -49,7 +53,6 @@ describe("candidate verification identity", () => {
             expected_output_items: result.stability_check.expected_output_items + 1}})).not.toBe(original);
         expect(signature(config, {...result, unplanned_inserter_clocks: {"inserter:1": {
             kind: "fuel", modulus: 19, own_clock: true, window: {start: 0, end: 1}}}})).not.toBe(original);
-        expect(signature(config, {...result, belt_pickup_slack_left_out: !result.belt_pickup_slack_left_out})).not.toBe(original);
         expect(signature(config, {...result, stability_check: {...result.stability_check,
             as_built: {holds: false, actual_output_items: 0, start_phases_checked: 2, failed_start_offset: 17}}})).not.toBe(original);
         const check = {holds: false, actual_output_items: 0, start_phases_checked: 1};
@@ -57,6 +60,14 @@ describe("candidate verification identity", () => {
             as_built: {...check, failed_pickup_phases: {"inserter:1": [0, 4]}}}}))
             .not.toBe(signature(config, {...result, stability_check: {...result.stability_check,
                 as_built: {...check, failed_pickup_phases: {"inserter:1": [4, 0]}}}}));
+    });
+
+    it("leaves out the output reason, which is read off the same long run as the rest of the check", () => {
+        const check = {holds: false, actual_output_items: 288, start_phases_checked: 1, long_run_proven: true, failed_start_offset: 0};
+        const without = signature(config, {...result, stability_check: {...result.stability_check, as_built: check}});
+        const reason = {code: "oscillation" as const, data: {expected: 288, window_cycles_per_bin: 1, tolerance: 16, bins: 2, made: [432, 144],
+            proven: true, repeat_window_cycles: 2}};
+        expect(signature(config, {...result, stability_check: {...result.stability_check, as_built: {...check, output_reason: reason}}})).toBe(without);
     });
 
     it("does not equate fractional AUTO fuel controls with whole-swing controls", async () => {
@@ -86,15 +97,26 @@ describe("request-local duplicate verification", () => {
     it("assesses a matching primary only once and still supplies a valid run for dependency checks", async () => {
         const logistic = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240);
         const recovery = vi.spyOn(trial, "disturbanceTrialVerdictOf");
+        const planned = vi.spyOn(planning, "clockOfPlan");
         const generated = generateClockAlternatives(logistic, {logger: quiet});
         const keys = recovery.mock.calls.map(([config, result]) => signature(config, result));
         expect(keys.length).toBeGreaterThan(1);
-        // the clocks of the windows made by arithmetic, of the planned windows with the belt pickup slack inside them and of
-        // the windows shaped against ghost wakeups are tried while the primary windows are chosen (generate-clock.ts), before
-        // the alternative is assessed; the run memo serves the second ask, so theirs are the keys asked twice
+        // the clocks of the windows made by arithmetic, of the planning run's windows with the room for one hand they hold
+        // already (laneHandRoomTicks gives each belt pickup of the sample the room, so its windows are tried with the room
+        // inside them as well as added after them) and of the windows shaped against ghost wakeups are tried while the primary
+        // windows are chosen (generate-clock.ts), before the alternative is assessed; the run memo serves the second ask, so
+        // theirs are the keys asked twice
         const repeated = keys.filter((key, index) => keys.indexOf(key) !== index);
+        // the windows of the clocks made with the room inside them (clockOfPlan, lane_hand_room "inside")
+        const inside = new Set(planned.mock.calls.flatMap(([, room], index) => {
+            if (room?.lane_hand_room !== "inside") return [];
+            const made: planning.PlannedClock = planned.mock.results[index].value;
+            return [windowsKey(Object.fromEntries(Array.from(made.windows, ([id, ranges]) =>
+                [id, ranges.map(range => ({start: range.start_inclusive, end: range.end_inclusive}))])))];
+        }));
+        expect(inside.size).toBeGreaterThan(0);
         const chosen = recovery.mock.calls.filter(([, result]) => result.window_maker === "arithmetic"
-            || (result.belt?.kind === "moving" && result.belt.inside === true) || result.ghost_wakeup_windows !== undefined)
+            || inside.has(windowsKey(result.clock_windows)) || result.ghost_wakeup_windows !== undefined)
             .map(([config, result]) => signature(config, result));
         expect(repeated).toHaveLength(3);
         expect(chosen).toEqual(expect.arrayContaining(repeated));
@@ -117,7 +139,7 @@ describe("request-local duplicate verification", () => {
     it("lets the worker API skip recovery of a matching primary without changing its completed assessment", async () => {
         // military science: logistic science's primary keeps the belt pickup slack inside its windows, which a run of
         // fractional swings does not make (alternatives.ts, fractionalMakesThePrimary)
-        const military = await loadConfigFromFile(ConfigPaths.MILITARY_SCIENCE_120);
+        const military = await loadConfigFromFile(ConfigPaths.MILITARY_SCIENCE_240);
         const plan = planClockAlternatives(military, {logger: quiet});
         const recovery = vi.spyOn(trial, "disturbanceTrialVerdictOf");
         // the plan leaves the fractional task out here, as one that makes the primary clock again: made anyway, it is that duplicate

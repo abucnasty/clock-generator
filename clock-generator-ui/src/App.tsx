@@ -19,7 +19,7 @@ import type { ChestType, Config, DebugSteps, InserterCoverageIssue, InserterFixO
 import { useSimulationWorker } from './hooks/useSimulationWorker';
 import { useStartupTimeout } from './hooks/useStartupTimeout';
 import { useConfigForm, type BuildMutationSnapshot } from './hooks/useConfigForm';
-import type { InserterFormData } from './hooks/useConfigForm';
+import type { BeltFormData, InserterFormData } from './hooks/useConfigForm';
 import { useInserterValidation } from './hooks/useInserterValidation';
 import { useOutputTransfers } from './hooks/useOutputTransfers';
 import { useAnnounce, useDismissMessage, useNotify } from './hooks/useMessages';
@@ -51,6 +51,7 @@ import { OpenSharedBuildDialog } from './components/OpenSharedBuildDialog';
 import { BuildValidationPanel } from './components/BuildValidationPanel';
 import { outputChestIssues } from './utils/outputChestIssues';
 import { buildValidationIssues, isRefused, navigateToOutputRouteRepair, refusedInserterIdsOf } from './utils/buildValidation';
+import { importedAsOneUnitText } from './utils/pasteText';
 import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
 import { BuildPanel, type BuildView } from './components/BuildPanel';
 import { PanelSection } from './components/Panel';
@@ -64,8 +65,6 @@ import { StaleCopyDialog } from './components/StaleCopyDialog';
 import { ManualBlueprintDialog } from './components/ManualBlueprintDialog';
 import { CheckErrorAlert } from './components/CheckErrorAlert';
 import { CheckPlanSection } from './components/CheckPlanSection';
-import { BeltAssumption } from './components/BeltAssumption';
-import { BeltAssumptionLine } from './components/BeltAssumptionLine';
 import { WorkflowBar, type WorkflowView } from './components/WorkflowBar';
 import { barNoteOf, focusBarNote, focusProblemTarget, needsListView, problemsOf, PROBLEM_TEXT, type FocusTarget, type Problem } from './utils/firstProblem';
 import { afterCheck, checkChipOf, checkKeyOf, checkStatusOf, decideCheckOnly, decideGenerate, startsRun } from './utils/checkThenGenerate';
@@ -75,8 +74,10 @@ import { configKeyOf, isStale } from './utils/resultsStaleness';
 import { withDeeperSearch } from './utils/deeperSearch';
 import { familyCopyOf, fullClockName } from './utils/strategyNames';
 import { ANNOUNCEMENTS } from './utils/workflowAnnouncement';
-import { BELT_COPY, beltQuestionOf, backedUpBeltsFor, backedUpBeltsHint, withBeltAnswer, type BeltAnswer } from './utils/beltQuestion';
 import { PickupGeometrySummary } from './components/PickupGeometrySummary';
+import { useLaneFacts } from './hooks/useLaneFacts';
+import { draftLaneFactsOf, inputLaneEnds } from './utils/laneFacts';
+import { asksCopyOffset } from './utils/copyOffset';
 import { PROGRESS_NAMES } from './utils/a11yLabels';
 import { chestLabel, entityLabel } from './utils/entityLabel';
 import { NO_DEBUG_STEPS, developerToolsInitial, readDeveloperTools, writeDeveloperTools } from './utils/developerTools';
@@ -343,6 +344,9 @@ function App() {
     // null until the engine has looked for missing inserters; until then the check catches them
     const checkedCoverage = useInserterValidation(engineConfig, isInitialized);
     const { transfers: outputTransfers, generationIssues: outputGenerationIssues, updating: outputTransfersLoading } = useOutputTransfers(engineConfig, isInitialized);
+    // the lanes as the engine reads them: each lane's role, and the end of a lane that states none
+    const { facts: laneFacts, roles: laneRoles } = useLaneFacts(engineConfig, isInitialized);
+    const inputEnds = inputLaneEnds(laneFacts);
     // the header's height, so that what is focused and scrolled to is not left under it
     const headerRef = useRef<HTMLElement>(null);
     useStickyHeaderHeight(headerRef);
@@ -371,8 +375,8 @@ function App() {
     // what changed since the clocks on screen were made, for the stale banner and the Copy-old dialog
     const recipeLabel = useCallback((id: string) => recipeName(gameNames, id), [gameNames]);
     const staleChanges = useMemo(
-        () => (staleFor ? buildChangesText(JSON.parse(staleFor.key) as Config, engineConfig, 3, recipeLabel) : []),
-        [staleFor, engineConfig, recipeLabel],
+        () => (staleFor ? buildChangesText(JSON.parse(staleFor.key) as Config, engineConfig, 3, recipeLabel, (id) => itemName(gameNames, id)) : []),
+        [staleFor, engineConfig, recipeLabel, gameNames],
     );
     // the key of the form as last rendered: a build replaced as a whole still has it when its replacement is handled
     const configKeyRef = useRef(configKey);
@@ -432,11 +436,17 @@ function App() {
     // likewise a check, except that the switches only the clock search reads leave it current
     const checkKey = useMemo(() => checkKeyOf(engineConfig), [engineConfig]);
     const checkStatus = checkStatusOf(validation, checkKey);
-    // whether the clocks can get belt slack, and what the form says of the input belts
-    const beltQuestion = useMemo(
-        () => beltQuestionOf({ inserters: config.inserters, belts: config.belts, overrides: config.overrides }),
-        [config.inserters, config.belts, config.overrides]
-    );
+    // a build of several identical copies, which Check clocks as given: the Build check note, with one copy where it can be offered
+    const repeatedCopies = validation.status === 'valid' && checkStatus === 'valid' && validation.recovery?.sourceConfigKey === configKey
+        ? validation.recovery : undefined;
+    const repeatedCopiesText = useMemo(() => {
+        if (repeatedCopies === undefined) return null;
+        const conversion = repeatedCopies.conversion;
+        if (conversion.kind === 'available') return `This build holds ${conversion.multiplicity} identical copies.`;
+        const text = importedAsOneUnitText({ stage: conversion.stage, reason: { code: conversion.code, message: conversion.message },
+            repeatedGroups: repeatedCopies.detectedCopies }, engineConfig);
+        return `${text.what} ${text.next}`;
+    }, [repeatedCopies, engineConfig]);
 
     // the selected clock as the bar, the card and the announcements name it
     const selectedClock = alternatives[selectedAlternativeIndex];
@@ -544,15 +554,16 @@ function App() {
             machinesMax,
         }).concat(outputGenerationIssues.map(issue => ({ text: issue.message,
                     target: { kind: 'machine-result-target', machineId: issue.machine_id } as FocusTarget }))),
-        coverage: checkedCoverage?.issues ?? [], scopeRefusal: checkedCoverage?.refusal, scopeRefusalInserters: checkedCoverage?.refusal_inserters, pickupNotTested: checkedCoverage?.pickupNotTested, laneSharedByCopies: checkedCoverage?.laneSharedByCopies,
-        sideLoadedDrop: checkedCoverage?.sideLoadedDrop, lanesExactlyFull: checkedCoverage?.lanesExactlyFull, copyGapNeeded: checkedCoverage?.copyGapNeeded,
-        machinePrototypes: checkedCoverage?.machinePrototypes?.map(issue => ({ ...issue, message: nameIdsInText(gameNames, issue.message) })), chests: config.chests, inserters: config.inserters, machines: config.machines, belts: config.belts, chestIssues,
+        coverage: checkedCoverage?.issues ?? [], scopeRefusal: checkedCoverage?.refusal, scopeRefusalInserters: checkedCoverage?.refusal_inserters, pickupsNotTested: checkedCoverage?.pickupsNotTested,
+        laneSharedByCopies: checkedCoverage?.laneSharedByCopies, laneSharedByCopiesInserters: checkedCoverage?.laneSharedByCopiesInserters, sideLoadedDrops: checkedCoverage?.sideLoadedDrops,
+        lanesExactlyFull: checkedCoverage?.lanesExactlyFull, lanesExactlyFullInserters: checkedCoverage?.lanesExactlyFullInserters, copyGapNeeded: checkedCoverage?.copyGapNeeded,
+        machinePrototypes: checkedCoverage?.machinePrototypes?.map(issue => ({ ...issue, message: nameIdsInText(gameNames, issue.message) })), repeatedCopies: repeatedCopiesText, chests: config.chests, inserters: config.inserters, machines: config.machines, belts: config.belts, chestIssues,
         coverageText: issue => (issue.kind === 'missing_input_inserter' ? PROBLEM_TEXT.missingInput : PROBLEM_TEXT.missingOutput)(
             issue.machine_id, issue.item_name, id => itemName(gameNames, id)),
         failure: validation.status === 'invalid' && checkStatus === 'invalid' && !validation.crashed
             ? { message: validation.message, diagnostics: validation.diagnostics }
             : error && errorRecovery?.sourceConfigKey === configKey ? { message: error } : undefined,
-    }), [config.setpoint, config.machines, config.chests, config.inserters, config.belts, checkedCoverage, chestIssues, machinesMax, gameNames, validation, checkStatus, error, errorRecovery, configKey, outputGenerationIssues]);
+    }), [config.setpoint, config.machines, config.chests, config.inserters, config.belts, checkedCoverage, chestIssues, machinesMax, gameNames, validation, checkStatus, error, errorRecovery, configKey, outputGenerationIssues, repeatedCopiesText]);
     const problems = useMemo(() => validationIssues.filter(issue => issue.blocksGeneration), [validationIssues]);
     // the inserters the engine's refusal names, live or from the last check: their rows are outlined while it stands
     const refusedInserterIds = useMemo(() => refusedInserterIdsOf(problems), [problems]);
@@ -762,31 +773,6 @@ function App() {
         setView('results');
     }), [runChecked, runSimulation, runDebugSteps, runStreamLogs, setView]);
 
-    // Moving stores nothing, BackedUp `backed_up_belts: true`
-    const handleBeltAnswer = useCallback(
-        (answer: BeltAnswer) => updateOverrides('backed_up_belts', backedUpBeltsFor(answer)),
-        [updateOverrides]
-    );
-    // Results' "Generate again": checked first as Generate is, then the answer is set on the form and the clocks are
-    // made for the build with it (a check is not changed by the answer, so one for the build as it was stays current)
-    const handleSwitchBelts = useCallback((answer: BeltAnswer) => {
-        if (busy) {
-            return;
-        }
-        runChecked((config) => {
-            if (beltQuestionOf(config).answer !== answer) {
-                handleBeltAnswer(answer);
-            }
-            runSimulation(withBeltAnswer(config, answer), runDebugSteps, runStreamLogs);
-            setView('results');
-        });
-    }, [busy, runChecked, handleBeltAnswer, runSimulation, runDebugSteps, runStreamLogs, setView]);
-    // the clocks on screen, read for backed-up belts; nothing while they may still change
-    const beltAssumption = generatedFor?.beltQuestion ?? null;
-    const beltHint = useMemo(
-        () => busy || beltAssumption === null ? null : backedUpBeltsHint(alternatives, recommendedIndex, beltAssumption.answer),
-        [busy, beltAssumption, alternatives, recommendedIndex]
-    );
 
     // the actions that throw part of the build away offer Undo, just before they are applied
     const undoable = useMemo(() => {
@@ -876,6 +862,9 @@ function App() {
         onAddBelt: addBelt,
         onAddChest: addChest,
         onAddDrill: addDrill,
+        // the dialog's belt shows the Lanes fields of the Belts section, with the engine's facts of the belt it edits
+        laneFactsOf: (draft: BeltFormData) => draftLaneFactsOf(draft, config.belts, laneRoles, config.overrides),
+        copies: config.setpoint.copies,
     };
     const handleExcludeChange = useCallback((items: string[]) => {
         // an out-of-date plan numbers the inserters as they were, which a delete or reorder has since moved
@@ -910,8 +899,9 @@ function App() {
     const checkRecovery = validation.status === 'invalid' && checkStatus === 'invalid' && !validation.crashed
         && validation.recovery?.sourceConfigKey === configKey ? validation.recovery : undefined;
     const generationRecovery = errorRecovery?.sourceConfigKey === configKey ? errorRecovery : undefined;
-    const conversionRecovery = checkRecovery ?? generationRecovery;
-    const conversionIsNextStep = view === 'configure' && !busy && conversionRecovery?.conversion.kind === 'available'
+    const conversionRecovery = checkRecovery ?? generationRecovery ?? repeatedCopies;
+    // only a build that cannot be clocked as it is has the conversion as its next step: one of copies is clocked as given
+    const conversionIsNextStep = view === 'configure' && !busy && (checkRecovery ?? generationRecovery)?.conversion.kind === 'available'
         && !(validation.status === 'invalid' && validation.crashed === true);
     const handleConvertRepeatedUnit = useCallback(async () => {
         if (!isInitialized || busy || conversionPendingRef.current || conversionRecovery?.conversion.kind !== 'available'
@@ -1213,7 +1203,8 @@ function App() {
                     <MessageSlot active={!diagramFullscreen} />
                 </AppBar>
 
-                <Container component="main" maxWidth="xl" sx={{ py: 3, flexGrow: 1 }}>
+                {/* Results takes the whole width for its list, the selected clock and Diagnostics; Configure keeps its cap */}
+                <Container component="main" maxWidth={view === 'results' ? false : 'xl'} sx={{ py: 3, flexGrow: 1 }}>
                     {startupError ? (
                         <Alert severity="error" sx={{ mb: 2 }}>
                             The page could not start: {startupError}. Reload the page to try again.
@@ -1261,13 +1252,14 @@ function App() {
                                 onCountsChange={(counts) => updateSetpoint('counts', counts === 'made' ? undefined : counts)}
                                 onCopiesChange={(value) => updateSetpoint('copies', value)}
                                 copyOffset={config.setpoint.copy_offset}
-                                showCopyOffset={config.setpoint.copies > 1 && config.inserters.some(inserter => inserter.sink.type === 'belt' && inserter.position !== undefined)}
+                                showCopyOffset={asksCopyOffset(config.setpoint)}
                                 onCopyOffsetChange={(value) => updateSetpoint('copy_offset', value)}
                                 copyOffsetNote={checkedCoverage?.dropRoom}
                             />
 
                             <BuildPanel view={configView} onViewChange={setConfigView}>
-                                <PickupGeometrySummary build={config} onEdit={reviewPickup} busy={busy} />
+                                <PickupGeometrySummary build={config} onEdit={reviewPickup} busy={busy}
+                                    backedUp={inputEnds === null ? null : inputEnds.infinite + inputEnds.unknown === 0 && inputEnds.dead_end > 0} />
                                 <BuildValidationPanel issues={validationIssues} machines={config.machines} belts={config.belts} chests={config.chests} inserters={config.inserters} outputTransfers={outputTransfers}
                                     onApplyFix={handleInserterFix} fixUnavailable={fixUnavailable} onSwitchType={undoable.switchChestType} onEnableRemoval={undoable.enableChestRemoval}
                                     onReview={goToTarget} onReviewInserter={editOutputInserter} recovery={conversionRecovery} conversionPending={conversionPending} onConvert={handleConvertRepeatedUnit} counts={targetCounts} />
@@ -1306,8 +1298,9 @@ function App() {
                                                 onRemove={undoable.removeBelt}
                                                 onReorder={undoable.reorderBelts}
                                                 onDuplicate={duplicate.belts}
-                                                beltQuestion={beltQuestion}
-                                                onBeltAnswer={handleBeltAnswer}
+                                                laneFacts={laneFacts}
+                                                copies={config.setpoint.copies}
+                                                outputBelt={config.output_belt}
                                             />
                                             <ChestsForm
                                                 chests={config.chests}
@@ -1348,12 +1341,6 @@ function App() {
                                             {...flowDiagramProps}
                                             onRequestFullscreen={openDiagramFullscreen}
                                         />
-                                        {/* the Belts section is not drawn here, so the belt question gets one of its own */}
-                                        {beltQuestion.ask && (
-                                            <PanelSection level={3} title={BELT_COPY.diagramHeading} sx={{ mt: 2 }} data-belt-question-diagram="">
-                                                <BeltAssumption answer={beltQuestion.answer} onChange={handleBeltAnswer} />
-                                            </PanelSection>
-                                        )}
                                     </Box>
                                 )}
 
@@ -1411,8 +1398,6 @@ function App() {
                                 onInstallClose={() => setInstallOpen(false)}
                                 onInstall={() => setInstallOpen(true)}
                                 copyLabel={copyLabel}
-                                comparison={buildContext.comparison}
-                                onComparisonChange={comparison => patchContext({ comparison })}
                                 wakeAsTable={buildContext.wakeAsTable}
                                 onWakeAsTableChange={wakeAsTable => patchContext({ wakeAsTable })}
                                 timeline={buildContext.timeline}
@@ -1460,15 +1445,6 @@ function App() {
                                 pickGone={pickGone}
                                 copied={copy.copied}
                                 onCopy={() => { cancelRestore(); copy.request(); }}
-                                // only when the run asked the belt question; otherwise the card says the belt itself
-                                beltAction={beltAssumption?.ask ? (
-                                    <BeltAssumptionLine
-                                        assumption={beltAssumption}
-                                        hint={beltHint}
-                                        busy={busy}
-                                        onSwitch={handleSwitchBelts}
-                                    />
-                                ) : undefined}
                             />
                         </Box>
                         </>

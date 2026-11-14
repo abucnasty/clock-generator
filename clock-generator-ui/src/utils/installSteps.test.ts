@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { INSTALL_COPY, REQUIRES_FACTORIO, firstLineOf, installSteps, wiringList, wiringRowKey, type InstallStep, type InstallStepId } from './installSteps';
+import { INSTALL_COPY, firstLineOf, installSteps, wiringList, wiringRowKey, type InstallStep, type InstallStepId } from './installSteps';
 
 type Input = Parameters<typeof installSteps>[0];
 const detailOf = (steps: InstallStep[], id: InstallStepId) => steps.find(it => it.id === id)?.detail ?? '';
@@ -33,7 +33,6 @@ describe('installSteps', () => {
         const [{ title, detail }] = installSteps(plain);
         expect(title).toContain('Factorio 2.1');
         expect(detail).toContain('Factorio 2.1');
-        expect(REQUIRES_FACTORIO).toBe('The blueprint needs Factorio 2.1 or later.');
     });
 
     it.each<[string, Input, InstallStepId, string[]]>([

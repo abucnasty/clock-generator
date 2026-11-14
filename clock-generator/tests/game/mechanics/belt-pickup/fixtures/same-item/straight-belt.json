@@ -64,5 +64,6 @@
       "item_filter": [],
       "remove_unfiltered_items": true
     }
-  ]
+  ],
+  "overrides": {"backed_up_belts": false}
 }

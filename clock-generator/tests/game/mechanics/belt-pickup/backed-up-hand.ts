@@ -6,6 +6,7 @@ import { SimulationContext } from "../../../../src/crafting/sequence/simulation-
 import { bindHandPorts } from "../../../../src/simulation/components/hand-ports";
 import { EntityState } from "../../../../src/state";
 import { GameFixturePaths } from "../../helpers/fixture-paths";
+import { isDeadEnd } from "../../../../src/entities/traits/lane-facts";
 
 export const BACKED_UP_GEOMETRIES = ["straight-belt", "underground-entrance", "underground-exit"] as const;
 export const BACKED_UP_ITEMS = ["accumulator", "supercapacitor"] as const;
@@ -35,7 +36,7 @@ export function simulatedHand(config: Config): string {
     }).pickup;
     const configured = config.inserters.find(inserter => inserter.source.type === "belt")!;
     expect(input.inserter.pickup_length).toBe(configured.source.type === "belt" ? configured.source.pickup_length : undefined);
-    expect(input.inserter.belt_supply).toBe("backed_up");
+    expect(input.inserter.belt_lane_facts!.every(isDeadEnd)).toBe(true);
     // binding the pickup port registers the inserter's pickup lanes on the belt
     expect([...source.lanes[0].pickupIds()].length).toBe(1);
     const grabs: number[] = [];

@@ -49,14 +49,14 @@
     {
       "key": "belt:4/lane:1",
       "kind": "lane",
-      "ports": [
-        "belt:4/lane:1#inserter"
-      ]
+      "ports": []
     },
     {
       "key": "belt:4/lane:2",
       "kind": "lane",
-      "ports": []
+      "ports": [
+        "belt:4/lane:2#inserter"
+      ]
     },
     {
       "key": "machine:1",
@@ -236,9 +236,9 @@
       "entity": "inserter:8",
       "group": "inserter:8",
       "item": "inserter",
-      "from": "belt:4/lane:1#inserter",
+      "from": "belt:4/lane:2#inserter",
       "from_ports": [
-        "belt:4/lane:1#inserter"
+        "belt:4/lane:2#inserter"
       ],
       "to": "machine:5",
       "lands_in": "ingredients",
@@ -254,7 +254,7 @@
   "components": [],
   "order": [
     "belt:3/lane:1#inserter",
-    "belt:4/lane:1#inserter",
+    "belt:4/lane:2#inserter",
     "machine:1",
     "machine:4",
     "machine:3",

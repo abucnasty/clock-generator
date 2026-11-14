@@ -37,7 +37,7 @@ function fakeClock(id: string, { entries = 0, blueprint = 100 }: { entries?: num
 
 function fakeResults(key: string, { stopped = false, clocks = [fakeClock('a'), fakeClock('b')] }: { stopped?: boolean; clocks?: ClockAlternativeView[] } = {}): KeptResults {
     return {
-        generatedFor: { key, recipe: 'r', itemsPerSecond: 1, beltQuestion: { ask: false, answer: 'moving' }, generatedAt: 0 },
+        generatedFor: { key, recipe: 'r', itemsPerSecond: 1, generatedAt: 0 },
         generationAssumptions: { startDependenceRequested: false, complete: !stopped },
         alternatives: clocks,
         pickRule: null,
