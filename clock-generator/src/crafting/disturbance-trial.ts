@@ -17,10 +17,10 @@
  * the build has stopped leaves the machines part empty or part full, which one that runs its course never does.
  * One run makes the trials of a loss one after the other.
  *
- * A run of a loss stops at the first trial that does not get back. For a loss the clock does not get back from, the trials
- * after it are then run too (withEveryTrialCounted), so that the result counts every trial of the loss. The losses of a
- * clock stop at the first it does not get back from (see disturbanceTrialOf): the clock does not recover whatever the
- * rest do, and the losses left are reported as not tried. A clock that gets back from everything runs every trial once.
+ * A run of a loss stops at the first trial that the clock does not recover from. For such a loss, the trials after it are
+ * then run too (withEveryTrialCounted), so that the result counts every trial of the loss. The losses of a clock stop at
+ * the first it does not recover from (see disturbanceTrialOf): the clock does not recover whatever the rest do, and the
+ * losses left are reported as not tried. A clock that recovers from everything runs every trial once.
  */
 import assert from "../common/assert";
 import { SimulationTick } from "./runner/simulation-tick";
@@ -365,7 +365,7 @@ export interface LossTrial {
     /**
      * Where in the window cycle the item went: ticks from the start of the trials, in their bin. The trials start at a
      * tick the clock counts 1 (clockCountsOneAt; so on every run of four samples, 2026-11-14), so this is the tick of the
-     * window cycle from 0, not the value the clock reads (that is one more). The item is gone from the tick after.
+     * window cycle from 0. The item is gone from the tick after.
      */
     cut_at: number;
     /** Where in the window cycle it came back */
