@@ -1,5 +1,5 @@
 {
-  "format": "clock-record-2",
+  "format": "clock-record-3",
   "job": "pickup-same-item-turbo-underground-exit-moving",
   "group": "pickup",
   "name": "same-item-turbo-underground-exit-moving",
@@ -11,9 +11,9 @@
     "inserter:2": "13-32"
   },
   "alternatives": [
-    {"id": "takt_batches_observed", "verdict": "stable", "holds": true, "rate": 6, "supply": "moving", "window_cycle_ticks": 160, "wake_ups": 22.642, "descriptions_cut": 0, "clock_sha256": "67586738fd72ddcf75d0dee7ccba1a473add933ce6509302569e10bb0f297a0d", "windows_sha256": "11ce9406d1b47862e0d3c799042b7f131e13e2ab002c95cd755cda7841a3adff", "text_sha256": "0e5ae92f9832ab716c4eb5e222dd5da7d2fc7f13ab8f3e8bfca943f2ce6bdda5", "results_sha256": "ce15e1d015c79757751269c22c44740c52cdee99028c940723d0a8a7604dea5e"},
-    {"id": "time_study_windows", "verdict": "stable", "holds": true, "rate": 6, "supply": "moving", "window_cycle_ticks": 160, "wake_ups": 45.283, "descriptions_cut": 0, "clock_sha256": "212fe1bff2f656b903d58aac647d02f38464d289aafd780d394236ae88871a94", "windows_sha256": "6b47a5c5840798f3198057aa1ce23c83d05cc068f6d34d825fa866dd9e5c99f0", "text_sha256": "94d02462caaa7eb7fcebdd792aef404b593e4a0f376db06302ec3395ebe29a05", "results_sha256": "e6e1d06033154980a02adfac0c5edeb6f1adf0cdae552f1b65ae2e4aca9d7826"},
-    {"id": "takt_batches_observed_swings_2", "verdict": "unstable", "holds": false, "rate": 3, "supply": "moving", "window_cycle_ticks": 320, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "b2efe86b34ba0f103f50954ada8392cadd1b181eebc98a23f955b60850ad0419", "windows_sha256": "18e9867a03783db064347229c3c7f818de38e9d9c595aa28d4eb75e98eab366b", "text_sha256": "32387848be2a7f4674d89baef150a329b6fe66cab149057b02b00e348109c2da", "results_sha256": "639aa6ea5b5259a99b841853fed8dd1a55af23f996fba5ccc9f8773c0894cbd1"},
-    {"id": "takt_batches_observed_swings_3", "verdict": "unstable", "holds": false, "rate": 2, "supply": "moving", "window_cycle_ticks": 480, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "eb8d4f7fc9624179a5aacdb0cb0ce327dc66f17d6ea00a8825da2cc283ca814c", "windows_sha256": "567384b72a5c91b4118ef83258f68adddbea6f441d5228167455d0f1a63d3604", "text_sha256": "d828f0f8ddaf2e4577312abe2fa332a69ec5c02a9cff845e03277011601547bd", "results_sha256": "25e68e865c497284746e9efc92174822204ae33651af345b98e33cd311b9d084"}
+    {"id": "takt_batches_observed", "verdict": "stable", "holds": true, "rate": 6, "supply": "moving", "window_cycle_ticks": 160, "wake_ups": 22.642, "descriptions_cut": 0, "clock_sha256": "67586738fd72ddcf75d0dee7ccba1a473add933ce6509302569e10bb0f297a0d", "windows_sha256": "11ce9406d1b47862e0d3c799042b7f131e13e2ab002c95cd755cda7841a3adff", "results_sha256": "ce15e1d015c79757751269c22c44740c52cdee99028c940723d0a8a7604dea5e"},
+    {"id": "time_study_windows", "verdict": "stable", "holds": true, "rate": 6, "supply": "moving", "window_cycle_ticks": 160, "wake_ups": 45.283, "descriptions_cut": 0, "clock_sha256": "212fe1bff2f656b903d58aac647d02f38464d289aafd780d394236ae88871a94", "windows_sha256": "6b47a5c5840798f3198057aa1ce23c83d05cc068f6d34d825fa866dd9e5c99f0", "results_sha256": "e6e1d06033154980a02adfac0c5edeb6f1adf0cdae552f1b65ae2e4aca9d7826"},
+    {"id": "takt_batches_observed_swings_2", "verdict": "unstable", "holds": false, "rate": 3, "supply": "moving", "window_cycle_ticks": 320, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "b2efe86b34ba0f103f50954ada8392cadd1b181eebc98a23f955b60850ad0419", "windows_sha256": "18e9867a03783db064347229c3c7f818de38e9d9c595aa28d4eb75e98eab366b", "results_sha256": "639aa6ea5b5259a99b841853fed8dd1a55af23f996fba5ccc9f8773c0894cbd1"},
+    {"id": "takt_batches_observed_swings_3", "verdict": "unstable", "holds": false, "rate": 2, "supply": "moving", "window_cycle_ticks": 480, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "eb8d4f7fc9624179a5aacdb0cb0ce327dc66f17d6ea00a8825da2cc283ca814c", "windows_sha256": "567384b72a5c91b4118ef83258f68adddbea6f441d5228167455d0f1a63d3604", "results_sha256": "25e68e865c497284746e9efc92174822204ae33651af345b98e33cd311b9d084"}
   ]
 }

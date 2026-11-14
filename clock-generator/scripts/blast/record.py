@@ -50,17 +50,21 @@ hold (expected texts, deciders, always-on reasons, the fuel view). `check` fails
 that failed; it fails on a job file with no `checks`, one the module could not run on, or one judged by another version of the module, as it
 does for the properties (--allow-unchecked lists them and goes on).
 
-The format (clock-record-2) is documented in clock-generator/record/README.md. Field names are stable: a new field is a new
-format number. `worse` still reads a base record in clock-record-1, whose alternatives name the window cycle time `period`.
+The format (clock-record-3) is documented in clock-generator/record/README.md. Field names are stable: a new field, or one less, is a new
+format number. `worse` still reads a base record in clock-record-1 (its alternatives name the window cycle time `period`) and in
+clock-record-2 (its alternatives hold `text_sha256`, the hash of a clock's text, which the record no longer holds). The job files of a
+blast still hold `text_sha256`, so that `blast.sh compare` can count the clocks whose text alone changed; the record leaves it out, so
+a change of a description moves no record file.
 """
 import glob, hashlib, json, os, re, sys
 
-FORMAT = 'clock-record-2'
-# the formats a base record may be in: clock-record-1 named the window cycle time of an alternative `period`
-BASE_FORMATS = ('clock-record-1', FORMAT)
+FORMAT = 'clock-record-3'
+# the formats a base record may be in: clock-record-1 named the window cycle time of an alternative `period`; clock-record-2 held the
+# hash of the clock's text (`text_sha256`), which clock-record-3 leaves out
+BASE_FORMATS = ('clock-record-1', 'clock-record-2', FORMAT)
 # the fields of an alternative, in the order they are written
 ALTERNATIVE_FIELDS = ['id', 'verdict', 'holds', 'rate', 'supply', 'window_cycle_ticks', 'wake_ups', 'descriptions_cut', 'clock_sha256',
-                      'windows_sha256', 'text_sha256', 'results_sha256']
+                      'windows_sha256', 'results_sha256']
 # wake-ups a minute are written to this many decimals: the record is read by people, and the results digest holds the rest
 WAKE_UP_DECIMALS = 3
 
@@ -296,14 +300,17 @@ def load_record(directory):
 
 def load_base_record(directory):
     """the committed records of the base's folder, {job key: record}, each in the current format: a clock-record-1 file (the format of a
-    base from before the window cycle time was named) has `period` in its alternatives, which is read as `window_cycle_ticks`"""
+    base from before the window cycle time was named) has `period` in its alternatives, which is read as `window_cycle_ticks`; a file of
+    clock-record-1 or clock-record-2 has `text_sha256` in its alternatives, which the current format leaves out"""
     out = load_record(directory)
     for key, record in out.items():
         if record.get('format') not in BASE_FORMATS:
-            die(f"{key}: the base record is in format {record.get('format')!r}; this reads {' and '.join(BASE_FORMATS)}")
+            die(f"{key}: the base record is in format {record.get('format')!r}; this reads {', '.join(BASE_FORMATS)}")
         if record['format'] != FORMAT and 'alternatives' in record:
-            alternatives = [{('window_cycle_ticks' if f == 'period' else f): v for f, v in a.items()} for a in record['alternatives']]
+            alternatives = [{('window_cycle_ticks' if f == 'period' else f): v for f, v in a.items() if f != 'text_sha256'} for a in record['alternatives']]
             out[key] = {**record, 'format': FORMAT, 'alternatives': alternatives}
+        elif record['format'] != FORMAT:
+            out[key] = {**record, 'format': FORMAT}
     return out
 
 

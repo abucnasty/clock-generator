@@ -8,6 +8,10 @@ a line that names the reason and lists the jobs. A pull request that moves no re
 CI checks this file: the "Record check" fails when a selected clock got worse than in the base and its job key is not in the lines the pull
 request adds to this file.
 
+## The record holds no hash of a clock's text (#NUMBER)
+The record format is clock-record-3: a clock no longer has `text_sha256`, so a change of a description, such as the "Made by" line or the engine's version, moves no record file. `clock_sha256` hashes what the combinators do. No selection, rate, window, wakeup, `clock_sha256`, `windows_sha256` or `results_sha256` moved.
+- all 86 jobs: the format line, and `text_sha256` of every clock, removed
+
 ## A loss that breaks a clock gives the count of its trials that recover (#748)
 - config-AGRICULTURAL_SCIENCE_250, variants-AGRICULTURAL_SCIENCE_250_BACKED_UP (moved_output_swing, takt_batches_observed_swings_1), config-AUTOMATION_SCIENCE_240 (pitch_pickups, takt_batches_swings_1), variants-AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING (pitch_pickups, time_study_windows), config-UTILITY_SCIENCE_120 (takt_batches_observed, takt_batches_observed_swings_1), config-IRON_ORE_VOIDER_400_EXACT_SPEED (takt_batches_observed): `results_sha256` only, on clocks that a disturbance trial leaves short. Their assessment now carries the trials planned, run and recovered for each loss that breaks them. No recommended clock, verdict, rate, wakeups or clock hash moved.
 
