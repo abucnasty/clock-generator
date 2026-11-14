@@ -8,6 +8,9 @@ a line that names the reason and lists the jobs. A pull request that moves no re
 CI checks this file: the "Record check" fails when a selected clock got worse than in the base and its job key is not in the lines the pull
 request adds to this file.
 
+## A loss that breaks a clock gives the count of its trials that recover (feature/trial-count)
+- config-AGRICULTURAL_SCIENCE_250, variants-AGRICULTURAL_SCIENCE_250_BACKED_UP (moved_output_swing, takt_batches_observed_swings_1), config-AUTOMATION_SCIENCE_240 (pitch_pickups, takt_batches_swings_1), variants-AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING (pitch_pickups, time_study_windows), config-UTILITY_SCIENCE_120 (takt_batches_observed, takt_batches_observed_swings_1), config-IRON_ORE_VOIDER_400_EXACT_SPEED (takt_batches_observed): `results_sha256` only, on clocks that a disturbance trial leaves short. Their assessment now carries the trials planned, run and recovered for each loss that breaks them. No recommended clock, verdict, rate, wakeups or clock hash moved.
+
 ## Clocks equal on wakeups rank by fewer signals a minute (feature/rank-signals-tie)
 - config-PROCESSING_UNIT_15_CHEST_FED: recommends euclidean_swings, stable, 56.25 wakeups a minute, 159.33 signals a minute, back in 1 window cycle after a loss, 17 enable windows, window cycle 384 (was takt_batches_observed, stable, 56.25, 168.75 signals a minute, 1 window cycle, 6 enable windows, window cycle 128). The two are equal on wakeups, so the one with fewer signals a minute ranks first. Accepted by abucnasty
 
