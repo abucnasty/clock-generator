@@ -11,7 +11,7 @@ import { StockDetail, StockRecording } from "./machine-stock";
 import { WakeUps, wakeUpsOfStock } from "./wake-ups";
 import { InserterCounters, inserterEnds, wakeUpsAndCountersOfStock } from "./inserter-counters";
 import { judgeCounterSpan, judgeLongRun, judgeProvenCycle, LONG_RUN_MAX_TICKS, LONG_RUN_SETTLE_SHARE, longRunWindowCycles, OutputReason, outputReasonOf, wholeOutputRepeats } from "./long-run";
-import { DisturbanceTrial, DisturbanceTrialOptions, DisturbanceTrialReport, DisturbanceTrialVerdict, disturbanceTrialsOf, ExcessLoss, LATE_AFTER_WINDOW_CYCLES, LossOutcome, lossLimitOf, MAX_RECOVERY_WINDOW_CYCLES, reportOf, verdictOf } from "./disturbance-trial";
+import { DisturbanceTrial, DisturbanceTrialOptions, DisturbanceTrialReport, DisturbanceTrialVerdict, disturbanceTrialsOf, ExcessLoss, LATE_AFTER_WINDOW_CYCLES, LossOutcome, lossLimitOf, MAX_RECOVERY_WINDOW_CYCLES, reportOf, type SkippedTrial, verdictOf, withEveryTrialCounted } from "./disturbance-trial";
 import { SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForWindowCycle, withWindowsLengthened } from "./clock";
 import type { SubtickWindowCycle } from "../common/subtick-window-cycle";
 import { canonicalKey, currentRunMemo } from "./plan/run-memo";
@@ -716,13 +716,17 @@ export function disturbanceTrialOf(
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     const check_config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
     // each loss on a run of its own, so that a clock one loss breaks is not broken for the next
-    const outcomeOf = (loss: DisturbanceTrialOptions["loss"], phases?: MovingPickupPhases, order?: TakerOrder): LossOutcome => runClockOnBuild(check_config, windows, window_cycle_ticks, logger, {
+    const runOf = (loss: DisturbanceTrialOptions["loss"], phases?: MovingPickupPhases, order?: TakerOrder, skipped?: readonly SkippedTrial[]): LossOutcome => runClockOnBuild(check_config, windows, window_cycle_ticks, logger, {
         ...swings,
         factorio_states: false,
         moving_pickup_phases: phases,
         ...(order !== undefined && { competing_takers_order: order }),
-        disturbance_trial: { loss_limit_ticks: loss_limit?.ticks, ...options, ...options_for?.(loss), loss, window_cycle_ticks, expected_output_items },
+        disturbance_trial: { loss_limit_ticks: loss_limit?.ticks, ...options, ...options_for?.(loss), loss, window_cycle_ticks, expected_output_items,
+            ...(skipped !== undefined && { skipped_trials: skipped }) },
     }).disturbance_trial!;
+    // a loss the clock does not recover from has every trial of its plan counted (withEveryTrialCounted)
+    const outcomeOf = (loss: DisturbanceTrialOptions["loss"], phases?: MovingPickupPhases, order?: TakerOrder): LossOutcome =>
+        withEveryTrialCounted(runOf(loss, phases, order), skipped => runOf(loss, phases, order, skipped));
     const phase_starts = [...movingPickupPhaseStarts(config)];
     const registry = createEntityRegistryFromConfig(config);
     const losses: DisturbanceTrial[] = [...disturbanceTrialsOf(registry, config.setpoint.recipe), ...excesses];

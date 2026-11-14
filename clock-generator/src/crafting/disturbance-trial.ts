@@ -17,11 +17,12 @@
  * the build has stopped leaves the machines part empty or part full, which one that runs its course never does.
  * One run makes the trials of a loss one after the other.
  *
- * A clock is not tried further than it has to be. The trials of a loss stop at the first that does not get back, and
- * the losses of a clock at the first it does not get back from (see disturbanceTrialOf): the clock does not recover
- * whatever the rest do, and the losses left are reported as not tried. A clock that gets back from everything runs
- * every trial.
+ * A run of a loss stops at the first trial that the clock does not recover from. For such a loss, the trials after it are
+ * then run too (withEveryTrialCounted), so that the result counts every trial of the loss. The losses of a clock stop at
+ * the first it does not recover from (see disturbanceTrialOf): the clock does not recover whatever the rest do, and the
+ * losses left are reported as not tried. A clock that recovers from everything runs every trial once.
  */
+import assert from "../common/assert";
 import { SimulationTick } from "./runner/simulation-tick";
 import { atRateFrom, branchesScaledTo, cycleAtRate, firstBinAtRate, type BranchBins, type TerminalBranch } from "./terminal-rate";
 import { FactorioDataService, ItemName } from "../data";
@@ -123,6 +124,76 @@ export function lossTrialsPartOfTheWay(
 ): LossTrialPlan[] {
     return shares.filter(share => share < 1).flatMap(share => places.map(place =>
         ({ cut_at: Math.floor(place * bin_ticks), loss_ticks: Math.max(1, Math.ceil(share * stops_after_ticks)) })));
+}
+
+/**
+ * How many trials a loss has, as runLossTrials plans them: one with nothing cut; an excess, or a loss of fixed ticks, one at
+ * each place; any other loss one at each place that runs its course (one at the first place where `shares` has no 1) and one
+ * at each place for each share under 1. A run stops at the first trial that does not recover; withEveryTrialCounted runs
+ * the rest.
+ */
+export function plannedTrialsOf(loss: DisturbanceTrial, places: readonly number[], shares: readonly number[], fixed_loss_ticks?: number): number {
+    if (loss.kind === "none") return 1;
+    if (loss.kind === "excess" || fixed_loss_ticks !== undefined) return places.length;
+    return (shares.includes(1) ? places.length : 1) + places.length * shares.filter(share => share < 1).length;
+}
+
+/**
+ * The trials of a loss that breaks a clock, as numbers: those its plan has, those run (every trial of the plan, see
+ * withEveryTrialCounted: `run` equals `planned`), those the build recovers from, and the first it does not recover from.
+ * The counts are of the run that broke it: at the lanes' modeled phase, or from the first lane phase, the first order of
+ * the takers or the first run of the copies under which the clock does not recover.
+ */
+export interface TrialCount {
+    /** The loss: a supply stop, an output blockage or an excess of results that come by chance, and its items */
+    loss: { kind: "supply" | "output" | "excess"; items: ItemName[] };
+    planned: number;
+    run: number;
+    recovered: number;
+    /**
+     * The first trial the build does not recover from: where in the window cycle it was cut (LossTrial.cut_at), how long
+     * the item was gone, and whether the loss was to last until the build had stopped
+     */
+    first_not_recovered: { cut_at: number; loss_ticks: number; until_stopped: boolean };
+}
+
+/** The trials of a loss as numbers (TrialCount); null for a loss the clock recovers from, or one with no trial */
+export function trialCountOf(outcome: Pick<LossOutcome, "loss" | "trials" | "planned_trials" | "recovers" | "every_trial">): TrialCount | null {
+    const loss = outcome.loss;
+    const first = outcome.trials.find(trial => !trial.recovers);
+    if (outcome.recovers || loss.kind === "none" || first === undefined) return null;
+    return {
+        loss: { kind: loss.kind, items: loss.kind === "excess" ? excessItems(loss) : [loss.item] },
+        planned: outcome.planned_trials,
+        run: outcome.every_trial?.run ?? outcome.trials.length,
+        recovered: outcome.every_trial?.recovered ?? outcome.trials.filter(trial => trial.recovers).length,
+        first_not_recovered: { cut_at: first.cut_at, loss_ticks: first.loss_ticks, until_stopped: first.until_stopped },
+    };
+}
+
+/**
+ * A loss the clock does not recover from, with every trial of its plan run: the run of the loss stops at the first trial
+ * that does not recover, so `rerun` runs the loss again from the same start with each trial that did not recover left out
+ * (DisturbanceTrialOptions.skipped_trials), as often as a trial after them does not recover. The runs are the same up to
+ * the trial left out, so the trial after it starts from the state the build was in before that trial began: the state of
+ * the run at the end of the last bin of the trial before (at the end of the warm-up, before the first trial), as if that
+ * loss had not happened. The outcome stays the one given (its trials up to the first that does not recover, which the
+ * verdict names), with `every_trial` and the ticks of the runs added. A loss it recovers from is given back as it is, and
+ * `rerun` is not called.
+ */
+export function withEveryTrialCounted(outcome: LossOutcome, rerun: (skipped: readonly SkippedTrial[]) => LossOutcome): LossOutcome {
+    if (outcome.recovers || outcome.loss.kind === "none") return outcome;
+    const skipped: SkippedTrial[] = [];
+    let last = outcome;
+    let ticks = outcome.ticks;
+    for (let failed = last.trials.find(trial => !trial.recovers); failed !== undefined; failed = last.trials.find(trial => !trial.recovers)) {
+        // each run leaves out one more trial of the plan: at most as many runs as it has trials
+        assert(skipped.length < outcome.planned_trials, `The trials of ${lossId(outcome.loss)} do not end after the ${outcome.planned_trials} planned`);
+        skipped.push({ plan_index: failed.plan_index, stopped_after_ticks: failed.stopped_after_ticks });
+        last = rerun(skipped);
+        ticks += last.ticks;
+    }
+    return { ...outcome, ticks, every_trial: { run: last.trials.length + skipped.length, recovered: last.trials.length } };
 }
 
 /** A loss ends at the latest after this many window cycles, whether the build has stopped or not */
@@ -254,6 +325,19 @@ export interface DisturbanceTrialOptions {
      * each of those lanes that carries the item, and the output of each copy is judged on its own
      */
     copies?: CopiesOnSharedLanes;
+    /**
+     * Trials of the plan that are not run (by their place in the plan, LossTrial.plan_index): the next trial starts from the
+     * state the run was in before such a trial, at the end of the last bin of the trial before it (or at the start of the
+     * trials), as the build would be had that loss not happened. Each keeps the ticks it took to stop, for the lengths of the
+     * trials that end part of the way (see withEveryTrialCounted).
+     */
+    skipped_trials?: readonly SkippedTrial[];
+}
+
+/** A trial of a plan that a run of the loss leaves out (DisturbanceTrialOptions.skipped_trials) */
+export interface SkippedTrial {
+    plan_index: number;
+    stopped_after_ticks: number | null;
 }
 
 /**
@@ -276,7 +360,13 @@ export interface CopyAfterLoss {
 }
 
 export interface LossTrial {
-    /** Where in the window cycle the item went, in ticks */
+    /** The trial's place in the plan of the loss, from 0 */
+    plan_index: number;
+    /**
+     * Where in the window cycle the item went: ticks from the start of the trials, in their bin. The trials start at a
+     * tick the clock counts 1 (clockCountsOneAt; so on every run of four samples, 2026-11-14), so this is the tick of the
+     * window cycle from 0. The item is gone from the tick after.
+     */
     cut_at: number;
     /** Where in the window cycle it came back */
     restore_at: number;
@@ -344,6 +434,10 @@ export interface LossOutcome {
     expected_per_bin: number;
     /** Trials from the canonical start, or the first lane-phase start that fails, up to the first that does not recover. */
     trials: LossTrial[];
+    /** The trials the loss has: each place in the window cycle for each length (plannedTrialsOf); `trials` stops at the first that does not recover */
+    planned_trials: number;
+    /** Where the trials after the first that does not recover were run too (withEveryTrialCounted): every trial planned, and those the build recovers from */
+    every_trial?: { run: number; recovered: number };
     /** Every trial recovers at every checked lane-phase start. */
     recovers: boolean;
     /** The most bins a trial took to be back at the expected output; null when one does not recover */
@@ -648,7 +742,7 @@ function placeExcess(context: SimulationContext, loss: ExcessLoss): void {
 /**
  * Runs the trials of one loss on a build that is running on its clock, and leaves it wherever the last one ends. The
  * trials stop at the first that does not get back to the expected output: the loss is one the clock does not recover
- * from, and the trials after it would say nothing more.
+ * from. The trials after it are run by a run of their own that leaves it out (`skipped_trials`, withEveryTrialCounted).
  *
  * @param context the build on its clock windows, warmed up
  * @param output_inserters the inserters whose drops are the output of the build
@@ -793,7 +887,20 @@ export function runLossTrials(
 
     const supply = switchOf(context, loss, copies);
     const trials: LossTrial[] = [];
+    const skipped = new Map((options.skipped_trials ?? []).map(it => [it.plan_index, it] as const));
+    // the trials that end part of the way, planned once those that run their course are done (or left out)
+    const planPartOfTheWay = (index: number) => {
+        if (part_of_the_way_planned || index !== plans.length - 1) return;
+        part_of_the_way_planned = true;
+        const stops = [...trials.map(trial => trial.stopped_after_ticks), ...[...skipped.values()].filter(it => it.plan_index <= index).map(it => it.stopped_after_ticks)];
+        const stops_after_ticks = Math.max(...stops.map(stopped => stopped ?? max_loss_ticks));
+        plans.push(...lossTrialsPartOfTheWay(bin.ticks, stops_after_ticks, places, shares));
+    };
     for (let index = 0; index < plans.length; index++) {
+        if (skipped.has(index)) {
+            planPartOfTheWay(index);
+            continue;
+        }
         const plan = plans[index];
         const until_stopped = "restore_at" in plan;
         let loss_ticks = 0;
@@ -929,6 +1036,7 @@ export function runLossTrials(
             judged = { ...judged, recovers: false, recovered_after_bins: null };
         }
         trials.push({
+            plan_index: index,
             cut_at: plan.cut_at,
             restore_at,
             until_stopped,
@@ -946,11 +1054,7 @@ export function runLossTrials(
         if (!trials[trials.length - 1].recovers) {
             break;
         }
-        if (!part_of_the_way_planned && index === plans.length - 1) {
-            part_of_the_way_planned = true;
-            const stops_after_ticks = Math.max(...trials.map(trial => trial.stopped_after_ticks ?? max_loss_ticks));
-            plans.push(...lossTrialsPartOfTheWay(bin.ticks, stops_after_ticks, places, shares));
-        }
+        planPartOfTheWay(index);
     }
 
     const recovers = trials.every(trial => trial.recovers);
@@ -962,6 +1066,7 @@ export function runLossTrials(
         window_cycles_per_bin: bin.window_cycles,
         expected_per_bin,
         trials,
+        planned_trials: plannedTrialsOf(loss, places, shares, fixed),
         recovers,
         recovered_after_bins: recovers ? Math.max(...trials.map(trial => trial.recovered_after_bins ?? 0)) : null,
         stopped_after_ticks: never_stopped ? null : Math.max(0, ...ran_their_course.map(trial => trial.stopped_after_ticks ?? 0)),
@@ -1047,9 +1152,12 @@ export interface DisturbanceTrialVerdict {
      * made.
      */
     on_copies?: CopiesTrialVerdict;
+    /** The trials of each loss of one copy that breaks the clock, as numbers, in the order of `broken_by`; absent where none breaks it */
+    trial_counts?: TrialCount[];
 }
 
 export function verdictOf(report: DisturbanceTrialReport): DisturbanceTrialVerdict {
+    const trial_counts = report.losses.flatMap(outcome => trialCountOf(outcome) ?? []);
     return {
         survives: report.survives,
         broken_by: report.losses.filter(outcome => !outcome.recovers).map(outcome => lossLabel(outcome.loss)),
@@ -1062,5 +1170,6 @@ export function verdictOf(report: DisturbanceTrialReport): DisturbanceTrialVerdi
         ...(report.not_tried.length > 0 && { not_tried: report.not_tried.map(lossLabel) }),
         recovered_after_window_cycles: report.recovered_after_window_cycles,
         ...(report.loss_limit !== null && { loss_limit: report.loss_limit }),
+        ...(trial_counts.length > 0 && { trial_counts }),
     };
 }

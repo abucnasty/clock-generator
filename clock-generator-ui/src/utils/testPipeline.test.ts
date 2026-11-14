@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { ClockAlternativeView } from '../worker/types';
 import { AUTOMATION_240, errorCaseViews, TRIALS_NOT_MADE_REASON, viewOf } from '../test/checkedLanesFixtures';
 import { SUMMARY_COPY } from './clockSummary';
-import { testPipelineOf, type TestBox } from './testPipeline';
+import type { TrialCount } from 'clock-generator/browser';
+import { testPipelineOf, trialCountText, type TestBox } from './testPipeline';
 import { oscillatingOf } from '../test/oscillationFixture';
 
 /** Each box as "state: result | detail" */
@@ -132,6 +133,53 @@ describe('the tests of a clock, from the result\'s data', () => {
         const trial = stable.assessment.disturbance_trial!;
         const untried = { ...stable, assessment: { ...stable.assessment, disturbance_trial: { ...trial, on_copies: { ...trial.on_copies!, not_tried: 'out of memory' } } } };
         expect(said(untried)[2]).toBe('passed: One copy recovers | The copies could not be tried: out of memory.');
+    });
+});
+
+describe('the trials of a loss that breaks the clock, as numbers under the loss of inputs', () => {
+    const label = (id: string) => ({ 'copper-plate': 'Copper plate', 'automation-science-pack': 'Automation science pack', 'iron-ore': 'Iron ore' })[id] ?? id;
+    const copper = (run: number, recovered: number, first: TrialCount['first_not_recovered'], planned = 16): TrialCount =>
+        ({ loss: { kind: 'supply', items: ['copper-plate'] }, planned, run, recovered, first_not_recovered: first });
+    const countsOf = (view: ClockAlternativeView) => testPipelineOf(view, label)[2].counts;
+    /** The clock with the counts in its trials of one copy, or on the copies, as the engine gives them */
+    const withCounts = (view: ClockAlternativeView, trial_counts: TrialCount[], on: 'one copy' | 'copies') => {
+        const trial = view.assessment.disturbance_trial!;
+        const disturbance_trial = on === 'one copy' ? { ...trial, trial_counts } : { ...trial, on_copies: { ...trial.on_copies!, trial_counts } };
+        return { ...view, assessment: { ...view.assessment, disturbance_trial } } as ClockAlternativeView;
+    };
+
+    // the 72-tick clock of the sample's nine copies: on the copies, 14 of the 16 copper plate stops recover, and the 13th is the
+    // first that does not (the engine's trial_counts, 2026-11-14)
+    it('on the copies: how many of all the stops it recovers from, and the first it does not, by its tick in the window cycle and its length', () => {
+        const pitch = withCounts(clock('pitch_pickups'), [copper(16, 14, { cut_at: 0, loss_ticks: 1371, until_stopped: false })], 'copies');
+        expect(said(pitch)[2]).toBe('failed: The copies do not recover | One copy alone recovers.');
+        expect(countsOf(pitch)).toEqual(['Recovers from 14 of 16 copper plate supply stops. Not from the stop at tick 0 of the window cycle, for 1371 ticks.']);
+    });
+
+    it('on one copy: a stop that runs its course, an output blockage, and one line for each loss that breaks the clock', () => {
+        const blockage: TrialCount = { loss: { kind: 'output', items: ['automation-science-pack'] }, planned: 16, run: 16, recovered: 0,
+            first_not_recovered: { cut_at: 0, loss_ticks: 216, until_stopped: true } };
+        const one = withCounts(clock('takt_batches_swings_1'), [copper(16, 2, { cut_at: 36, loss_ticks: 1944, until_stopped: true }), blockage], 'one copy');
+        expect(said(one)[2]).toBe('failed: One copy does not recover | It does not go back to its rate by itself.');
+        expect(countsOf(one)).toEqual([
+            'Recovers from 2 of 16 copper plate supply stops. Not from the stop at tick 36 of the window cycle, until the build stops.',
+            'Recovers from 0 of 16 automation science pack output blockages. Not from the blockage at tick 0 of the window cycle, until the build stops.',
+        ]);
+    });
+
+    it('counts over every trial, one loss and more, and gives an excess no length', () => {
+        const all = copper(16, 15, { cut_at: 18, loss_ticks: 466, until_stopped: false });
+        expect(trialCountText(all, label)).toBe('Recovers from 15 of 16 copper plate supply stops. Not from the stop at tick 18 of the window cycle, for 466 ticks.');
+        const excess: TrialCount = { loss: { kind: 'excess', items: ['iron-ore'] }, planned: 4, run: 4, recovered: 1, first_not_recovered: { cut_at: 18, loss_ticks: 0, until_stopped: false } };
+        expect(trialCountText(excess, label)).toBe('Recovers from 1 of 4 iron ore excesses. Not from the excess at tick 18 of the window cycle.');
+        const one: TrialCount = { ...excess, planned: 1, run: 1, recovered: 0 };
+        expect(trialCountText(one, label)).toBe('Recovers from 0 of 1 iron ore excess. Not from the excess at tick 18 of the window cycle.');
+    });
+
+    it('shows nothing new for a clock that recovers, or a result made before the count', () => {
+        expect(countsOf(clock('time_study_windows'))).toBeUndefined();
+        expect(countsOf(clock('pitch_pickups'))).toBeUndefined();
+        expect(countsOf(clock('takt_batches_swings_1'))).toBeUndefined();
     });
 });
 
