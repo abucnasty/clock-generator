@@ -1,4 +1,4 @@
-import type { OscillationFacts, SharedLaneReasonCode } from 'clock-generator/browser';
+import type { DisturbanceTrialNotTriedReason, OscillationFacts, SharedLaneReasonCode } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../worker/types';
 import { formatNumberText } from './numberText';
 import { lossesOf, notTriedOf } from './rateWarning';
@@ -39,6 +39,8 @@ export const SUMMARY_COPY = {
     // beside Error: why the loss trials gave no answer, where the engine gives no reason of its own
     errorBaselineMissed: 'The run with no supply stop or output blockage did not make its expected output',
     errorNoResult: 'The loss trials gave no result',
+    // beside Error, and after "Recovery could not be tried in the simulator:": the engine's code loss_trials_over_budget
+    lossTrialsOverBudget: (ticks: string, budget: string) => `Its loss trials are ${ticks} ticks, more than the budget of ${budget}`,
     // the help of the Status column: each status the column can show, once
     statusHelp: [
         ['Stable', 'It holds the setpoint, and it goes back to its rate by itself after a supply stop or an output blockage.'],
@@ -205,14 +207,31 @@ const OUTPUT_KIND = {
     [SUMMARY_COPY.oscillates]: 'oscillates',
 } as const satisfies Record<string, ClockStatus['kind']>;
 
+/** A count of ticks with its thousands grouped, as the browser groups them: "633,472,000" */
+const ticksText = (ticks: number) => new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(ticks);
+
+/**
+ * The words for each code the engine gives for loss trials it did not run (`disturbance_trial_not_tried_reason`): one entry
+ * for every code, so that the build fails on a code with no words
+ */
+const NOT_TRIED_WORDS: { [Code in DisturbanceTrialNotTriedReason['code']]: (data: Extract<DisturbanceTrialNotTriedReason, { code: Code }>['data']) => string } = {
+    loss_trials_over_budget: data => SUMMARY_COPY.lossTrialsOverBudget(ticksText(data.ticks), ticksText(data.budget)),
+};
+
+/** Why the loss trials of a clock were not run: the words for the engine's code where it gives one, else its message; undefined where they were run */
+export function notTriedReasonOf(clock: Pick<SummaryClock, 'assessment'>): string | undefined {
+    const reason = clock.assessment.disturbance_trial_not_tried_reason;
+    return reason !== undefined ? NOT_TRIED_WORDS[reason.code](reason.data) : clock.assessment.disturbance_trial_not_tried;
+}
+
 /**
  * Why the loss trials gave no answer, beside Error: the engine's reason where the trials could not be run
- * (`disturbance_trial_not_tried`, as data); that the run with nothing cut did not make its expected output; or that there is
- * no recovery result
+ * (`notTriedReasonOf`); that the run with nothing cut did not make its expected output; or that there is no recovery result
  */
 function errorReasonOf(clock: Pick<SummaryClock, 'assessment'>): string {
     if (clock.assessment.disturbance_trial?.survives === false) return SUMMARY_COPY.errorBaselineMissed;
-    if (clock.assessment.disturbance_trial == null && clock.assessment.disturbance_trial_not_tried) return clock.assessment.disturbance_trial_not_tried;
+    const notTried = notTriedReasonOf(clock);
+    if (clock.assessment.disturbance_trial == null && notTried) return notTried;
     return SUMMARY_COPY.errorNoResult;
 }
 
@@ -297,7 +316,7 @@ export function recoversOf(clock: Pick<SummaryClock, 'verdict' | 'assessment'>):
     if (loss?.survives === true) return { kind: 'yes', value: SUMMARY_COPY.recoversYes, detail: SUMMARY_COPY.recoversYesDetail };
     if (loss?.survives === false && loss.broken_by.length > 0) return { kind: 'no', value: SUMMARY_COPY.recoversNo, detail: SUMMARY_COPY.recoversNoDetail(lossesOf(clock), notTriedOf(clock)) };
     if (loss?.survives === false) return { kind: 'not-tested', value: SUMMARY_COPY.recoversUnavailable, detail: SUMMARY_COPY.recoversBaselineUnavailableDetail };
-    const notTried = clock.assessment.disturbance_trial_not_tried;
+    const notTried = notTriedReasonOf(clock);
     return { kind: 'not-tested', value: clock.assessment.holds ? SUMMARY_COPY.recoversUnavailable : SUMMARY_COPY.recoversNotTested,
         detail: notTried !== undefined ? SUMMARY_COPY.recoversNotTriedDetail(notTried) : SUMMARY_COPY.recoversNotTestedDetail };
 }

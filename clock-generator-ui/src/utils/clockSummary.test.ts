@@ -351,6 +351,11 @@ describe('recoversOf', () => {
         expect(recoversOf(untried).detail).toContain(`: ${reason}.`);
     });
 
+    it('says why from the engine\'s code where its loss trials were over the budget, not from its message', () => {
+        const untried = overBudget(clock('a'));
+        expect(recoversOf(untried).detail).toBe(SUMMARY_COPY.recoversNotTriedDetail(SUMMARY_COPY.lossTrialsOverBudget('749,813,760', '200,000,000')));
+    });
+
     it('says not tested for a clock that underproduces', () => {
         expect(recoversOf(clock('a', { verdict: 'unstable' }))).toMatchObject({ kind: 'not-tested', value: SUMMARY_COPY.recoversNotTested });
     });
@@ -470,6 +475,13 @@ function untried(base: SummaryClock, reason?: string): SummaryClock {
     return { ...base, assessment: { ...base.assessment, disturbance_trial: null, ...(reason !== undefined && { disturbance_trial_not_tried: reason }) } };
 }
 
+/** A clock whose loss trials were not run since their estimate is over the budget: the engine's code and numbers, and a message the site does not show */
+function overBudget(base: SummaryClock): SummaryClock {
+    const untriedClock = untried(base, 'the message of the engine');
+    return { ...untriedClock, assessment: { ...untriedClock.assessment, disturbance_trial_not_tried_reason: { code: 'loss_trials_over_budget',
+        data: { losses: 7, starts: 144, trials: 16_272, ticks: 749_813_760, budget: 200_000_000 } } } };
+}
+
 describe('statusOf: the one status the chip, the Status column and the full table say', () => {
     it.each<[string, SummaryClock, ReturnType<typeof statusOf>]>([
         ['is Stable for a clock that holds the rate and recovers', clock('a'), { kind: 'stable', text: 'Stable' }],
@@ -491,6 +503,8 @@ describe('statusOf: the one status the chip, the Status column and the full tabl
             { kind: 'underproduces', text: 'Underproduces', detail: 'makes 192/s of 240/s' }],
         ['says Error with the engine\'s reason, as data, where the loss trials could not be run',
             untried(clock('a'), 'the build has no loss to try'), { kind: 'error', text: 'Error', detail: 'the build has no loss to try' }],
+        ['says Error with the words for the engine\'s code, before its message, where the loss trials were over the budget', overBudget(clock('a')),
+            { kind: 'error', text: 'Error', detail: SUMMARY_COPY.lossTrialsOverBudget('749,813,760', '200,000,000') }],
         ['says Error where the run with nothing cut did not make its expected output',
             clock('a', { loss: { survives: false, broken_by: [] } }), { kind: 'error', text: 'Error', detail: SUMMARY_COPY.errorBaselineMissed }],
         ['says Error where there is no recovery result', untried(clock('a')), { kind: 'error', text: 'Error', detail: SUMMARY_COPY.errorNoResult }],
