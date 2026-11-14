@@ -8,7 +8,7 @@ a line that names the reason and lists the jobs. A pull request that moves no re
 CI checks this file: the "Record check" fails when a selected clock got worse than in the base and its job key is not in the lines the pull
 request adds to this file.
 
-## The record holds no hash of a clock's text (#NUMBER)
+## The record holds no hash of a clock's text (#749)
 The record format is clock-record-3: a clock no longer has `text_sha256`, so a change of a description, such as the "Made by" line or the engine's version, moves no record file. `clock_sha256` hashes what the combinators do. No selection, rate, window, wakeup, `clock_sha256`, `windows_sha256` or `results_sha256` moved.
 - all 86 jobs: the format line, and `text_sha256` of every clock, removed
 
