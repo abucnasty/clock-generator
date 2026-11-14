@@ -62,9 +62,11 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: a deadlock warning names only the two inserters; About this build says how it happens
 - ui: the output swing back-off report is in Model and tested starts, not a warning
 - generation: of clocks with equal wakeups, the one with fewer signals per minute is recommended
+- ui: one copy with Copies is offered for builds fed from chests, leaving the chests out
 
 ### Fixed
 - ui: Paste from Factorio keeps where the next copy stands, as the export gives it
+- ui: Use simpler version fills Next copy stands on builds with symmetric copies
 - ui: Copy's warning no longer stays open over the result after Generate
 - ui: Paste from Factorio suggests no more than the build can hold, and names the limit
 
