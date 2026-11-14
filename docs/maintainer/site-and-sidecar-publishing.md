@@ -39,6 +39,13 @@ If the tree is tested, the `tests` job does not start. The `release` and `previe
 when they did not start because the tree is tested. They do not start when the tests failed or were cancelled. If the
 script finds no artifact, or cannot read GitHub, the tests run as before.
 
+The `production` and `sidecar` jobs need the `release` job. They start when the `release` job succeeded, also when the
+`tests` job did not start because the tree is tested. They do not start when the `release` job failed, was skipped or
+was cancelled. Their `if` lines have a status function (`!cancelled()`) for this reason. Without one, GitHub adds
+`success()`, and a `tests` job that did not start would stop these jobs. The test
+`clock-generator/tests/scripts/release-workflow.test.ts` checks that each job of `release.yml` that needs another job has
+a status function.
+
 The tree of a squash merge is the same as the tree of the merge commit of the pull request only when `master` did not
 change after that run. If `master` changed, bring the branch up to date, wait for the new run of `test.yml`, and then
 merge. A start of `release.yml` by hand does no lookup, and its tests always run.
