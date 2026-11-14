@@ -337,7 +337,7 @@ function firstClockSpan(
 /**
  * The orders of the inserters that take one product from one machine that a clock is checked under besides the default
  * one (`takerOrdersToCheck`): the game serves them in one fixed order that a config does not tell (see TakerOrder), so a
- * clock holds and recovers only where it does under each. Settled by arithmetic on the windows: only takers enabled in
+ * clock holds only where it does under each (its loss trials run under the default order alone). Settled by arithmetic on the windows: only takers enabled in
  * the same tick can be served one before the other, so the orders are those of the most takers of one product enabled
  * together (an inserter on no window is enabled all the time). Empty where no two are, as for a build without competing
  * takers, which is checked as before; takers that take turns in windows apart need no other order.
