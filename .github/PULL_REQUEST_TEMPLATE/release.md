@@ -13,7 +13,7 @@
 - [ ] UAT on the preview of `master`: {who tested which builds, and when}
 - [ ] Generator bumped in `clock-generator` and `clock-generator-ui`, with both lock files
 - [ ] Changelog section dated
-- [ ] Record regenerated: only `text_sha256` moved, and `MOVES.md` has a `Release x.y.z` entry
+- [ ] Record unchanged: the pull request changes no file in `clock-generator/record/`
 - [ ] Sidecar bumped in `info.json`, `changelog.txt` and `LATEST_SIDECAR_VERSION`, or not shipping
 
 ## Impact

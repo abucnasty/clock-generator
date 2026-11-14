@@ -305,8 +305,8 @@ release ships all of it.
 3. Bump the generator version in `clock-generator` and `clock-generator-ui`, with their lock files. If the sidecar ships,
    bump its three places: `info.json`, the newest entry of `changelog.txt` and `LATEST_SIDECAR_VERSION`.
 4. Date the section of the version in the changelogs: `[Unreleased]` becomes the version.
-5. Regenerate the [record](#the-record-of-the-blast-jobs). Only `text_sha256` may move, because the blueprint carries the
-   engine version. Add a `Release x.y.z` entry to `MOVES.md`. Any other move stops the pull request.
+5. Do not regenerate the [record](#the-record-of-the-blast-jobs): it holds no hash of a clock's text, so the version bump moves
+   no file in it. The pull request changes no file in `clock-generator/record/`. A move of the record stops the pull request.
 6. Open a pull request into `master` titled `release: x.y.z, ...`, with the `release.md` template.
 7. abucnasty merges it. The merge releases.
 
@@ -317,7 +317,7 @@ A hotfix ships one fix on the commit that was deployed last (the latest tag), wi
 1. Make the branch `hotfix/<version>` from the latest tag, for example
    `git push origin v0.28.1:refs/heads/hotfix/0.28.2`.
 2. Make the branch `fix/<slug>` from `hotfix/<version>`. Put in it the fix, the patch bump (both packages and lock files),
-   the dated section of the changelog and the regenerated record (as in step 5 of a release).
+   the dated section of the changelog. The patch bump moves no record file (as in step 5 of a release).
 3. Open a pull request into `hotfix/<version>` titled `hotfix: <version>, ...`, with the `change.md` template.
    Its merge releases that commit.
 4. Bring `hotfix/<version>` into `master` with a pull request titled `chore: bring <version> into master` and a merge commit.
