@@ -1,3 +1,4 @@
+import type { SerializableClockWindows } from '../../src/crafting/clock';
 import type { Config } from '../../src/config/schema';
 
 /** Where a row of gear assemblers stands and what it makes (`gearRow`) */
@@ -71,4 +72,16 @@ export function gearRow(options: GearRowOptions): Config {
         chests: [...feeder_chests, ...output_chests],
         overrides: {},
     } as Config;
+}
+
+/**
+ * The enable windows of the clock that the generator weighs as `euclidean_swings` for a row (`gearRow`) of 2 or 3
+ * assemblers, whatever the pitch: the output inserters open in ticks 1 to 24 and the input inserters in ticks 29 to 92, of a
+ * window cycle of 96 ticks for 2 assemblers and of 144 ticks for 3. The input inserter of assembler k is inserter 5 + 2k and
+ * its output inserter is 6 + 2k, from k = 0, after the four feeders.
+ */
+export function gearRowEuclideanWindows(machines: number): SerializableClockWindows {
+    return Object.fromEntries(Array.from({ length: machines }, (_, index) => [
+        [`inserter:${5 + 2 * index}`, [{ start: 29, end: 92 }]], [`inserter:${6 + 2 * index}`, [{ start: 1, end: 24 }]],
+    ]).flat());
 }

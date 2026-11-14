@@ -28,9 +28,10 @@ tile row  -5   C C C C                            C = infinity chest of iron pla
 ```
 
 The [scaffolds](fixtures/) differ in the count of assemblers and the pitch only: `gear-row-<assemblers>-at-<pitch>.scaffold`.
-A pitch of 3 puts the assemblers side by side. Every assembler has the same crafting speed, which the Lua script reads from the
-game. The scaffolds are blueprints made with factorio-draftsman; the [config](../../../configs/gear-row.ts) is the one the
-Sidecar exports from them, with the setpoint added.
+A pitch of 3 puts the assemblers side by side. Every assembler has the same crafting speed, 18.75, which the game reported for
+the three-assembler scaffold (the Sidecar's export of it). The scaffolds are written by a script and checked with
+factorio-draftsman (no overlap, every entity known). The [config](../../../configs/gear-row.ts) is written by hand in the shape of
+that export, with the setpoint added; the harness matches the build to it, and the test stops on a mismatch.
 
 ## The clocks
 
@@ -98,14 +99,21 @@ row in the engine; the game was run on the rows of the table above only):
 | 3, 20 a second each | 244 | 244 | 274 | 305 | 335 | holds |
 | 4, 15 a second each | 183 | 244 | 274 | 305 | 335 | holds |
 
-Each cell is out of 366. The flagged pitches end at 7 tiles. The clock opens the input inserters for 64 ticks at once, which
+Each number is out of 366. The flagged pitches end at 7 tiles. The clock opens the input inserters for 64 ticks at once, which
 is 8 tiles of belt at 8 ticks a tile: the match is noted, not tried in the game.
 
 ## Limits
 
-- **The same clock, not the same build.** In other builds the miss has shown at some start phases only. The row here shows it at
-  every phase, with its clock. Why a phase matters in those builds is not established here.
-- **One lane, one item.** The row has one lane of plate. A build with two lanes on one belt is not measured here.
+- **Not the build in which the miss was first seen.** There it showed at some start phases only. The row here shows it at every
+  phase, with a clock that is not the one the generator selects. Why a phase matters in that build is not established here.
+- **A row of nine with two lanes is not pinned.** Nine assemblers making automation science pack (no productivity, a crafting
+  speed of 73.98, 2 or 4 feeders for each lane) on one belt of copper and gears, 9 and 6 tiles apart, do not make the target with the
+  clock the generator selects (`takt_batches`, 144 ticks, which the engine calls stable): in the window of ticks 1,728 to 6,912
+  the first 4 assemblers make 1,152 crafts and the last 5 make 576 at 9 tiles, and the first 6 and the last 3 at 6 tiles, at
+  every phase. The second assembler holds. With the 216-tick `time_study_windows`, which the engine flags for assemblers 2 to 5 at
+  9 tiles, the second makes 768 to 896 of 1,152 and the fourth to ninth make 384; at 6 tiles it is start-dependent (768 or 1,152
+  for assemblers 2 to 9). The reason is not established, so no row of nine is pinned.
+- **One lane, one item.** The row here has one lane of plate.
 - **The smallest row** that can show it has 2 assemblers: one inserter makes the gap and another finds it. In the engine a row
   of 2 shows it at a pitch of 3 and 4; the game was run at 3 only.
 - **One crafting speed, one belt tier.** The numbers are for turbo belts and an assembler with a crafting speed of 18.75.

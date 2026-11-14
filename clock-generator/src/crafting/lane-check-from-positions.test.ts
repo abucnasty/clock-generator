@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { automationRow } from "../../tests/configs/automation-row";
-import { gearRow } from "../../tests/configs/gear-row";
+import { gearRow, gearRowEuclideanWindows } from "../../tests/configs/gear-row";
 import { quiet } from "./generate-blueprint-test-helpers";
 import { flowsAcrossCopySpacing, modelLanesOf, takenTogether } from "./shared-lane-lanes";
 import { sharedLaneLayoutOf } from "./shared-lane-model";
@@ -53,12 +53,8 @@ describe("the input-lane check from the positions of the takers", () => {
 // loses 61 of the 366 swings of the first one's run alone: the same 5 in 6. Both rows are of one copy, with no copy spacing: the
 // check runs on the positions of the inserters alone. This is the pin that fails if the check is skipped for a build of one copy.
 describe("the input-lane check on a row of one copy, as the game measured it", () => {
-    // the windows of the clock the generator weighs as "euclidean_swings" for each row: outputs open 1-24, inputs 29-92, in a
-    // window cycle of 96 ticks for two assemblers and of 144 ticks for three; the input and output inserters of assembler k are
-    // inserters 5 + 2k and 6 + 2k from 0, after the four feeders
-    const windows = (machines: number) => Object.fromEntries(Array.from({ length: machines }, (_, index) => [
-        [`inserter:${5 + 2 * index}`, [{ start: 29, end: 92 }]], [`inserter:${6 + 2 * index}`, [{ start: 1, end: 24 }]],
-    ]).flat());
+    // the windows of the clock the generator weighs as "euclidean_swings" for each row (the game test checks that it makes them)
+    const windows = gearRowEuclideanWindows;
     const judged = (machines: number, pitch: number, gears_each: number, window_cycle: number) =>
         judgeSharedLanes(gearRow({ machines, pitch, items_per_second_each: gears_each }), windows(machines), window_cycle, quiet);
     const lost = (machines: number, pitch: number, gears_each: number, window_cycle: number) =>

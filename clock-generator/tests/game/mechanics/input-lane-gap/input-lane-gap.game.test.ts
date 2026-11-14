@@ -7,7 +7,7 @@ import { expect, test } from "vitest";
 import { encodeBlueprintFile } from "../../../../src/blueprints/serde";
 import { generateClockAlternatives } from "../../../../src/crafting/generate-blueprint";
 import { recordInFactorio } from "../../../../src/harness/factorio-harness";
-import { gearRow } from "../../../configs/gear-row";
+import { gearRow, gearRowEuclideanWindows } from "../../../configs/gear-row";
 
 const quiet = { log() {}, info() {}, warn() {}, error() {}, debug() {} };
 
@@ -73,6 +73,8 @@ for (const row of ROWS) test(row.name, async context => {
         const generated = generateClockAlternatives(config, { logger: quiet });
         const alternative = row.clock === SELECTED ? generated.alternatives[generated.selected_index] : generated.alternatives.find(it => it.id === EUCLIDEAN)!;
         expect(alternative.result.simulation_duration.ticks, "the clock").toBe(row.window_cycle);
+        // the windows that the unit test of the engine's lane check judges (src/crafting/lane-check-from-positions.test.ts)
+        if (row.clock === EUCLIDEAN) expect(alternative.result.clock_windows, "the windows of the clock").toEqual(gearRowEuclideanWindows(row.machines));
         const total = 1 + row.phases.reduce((sum, phase) => sum + phase + 1 + TRIAL_TICKS, 0);
         const work_dir = path.join(scratch, "game");
         await recordInFactorio({
