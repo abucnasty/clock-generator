@@ -60,7 +60,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: the compare table's group of other clocks is named Clocks that are not Stable
 - ui: a deadlock warning names only the two inserters; About this build says how it happens
 - ui: the output swing back-off report is in Model and tested starts, not a warning
-- ui: one copy with Copies is offered for builds whose input belt is filled from chests
+- ui: one copy with Copies is offered for builds fed from chests, leaving the chests out
 
 ### Fixed
 - ui: Paste from Factorio keeps where the next copy stands, as the export gives it

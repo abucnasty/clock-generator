@@ -61,8 +61,6 @@ interface Analysis {
     components: Component[];
     componentOf: Map<string, number>;
     users: Map<string, Set<number>>;
-    /** The inserters that fill a belt from a chest nothing drops into, outside every copy: kept once, as they are */
-    feeders: number[];
 }
 
 /** Validate every reference and assign every row, including machine-free subsystems. */
@@ -123,9 +121,10 @@ function analyze(config: Config): Analysis {
         if (!ids.machines.has(drill.target.id)) refuse('invalid-references', `Missing drill target ${drill.target.id}.`);
         join(keyOf('drill', drill.id), keyOf('machine', drill.target.id));
     });
-    // An inserter that takes from a chest nothing drops into and drops onto a belt, in no machine's subsystem, fills the belt
-    // from outside the copies. A chest something drops into (an inserter, a machine that places its results, a drill) is
-    // part of the build's flow, and an inserter from it is not set aside.
+    // An inserter that takes from a chest nothing drops into and drops onto a belt, in no machine's subsystem, is supply from
+    // outside the copies: it and its chest are left out of the one copy, and the belt counts as supplied, as its lanes state.
+    // So is a chest nothing refers to. A chest something drops into (an inserter, a machine that places its results, a
+    // drill) is part of the build's flow, and an inserter from it is not left out.
     const filled = new Set<string>([
         ...config.inserters.filter(ins => ins.sink.type === 'chest').map(ins => keyOf('chest', ins.sink.id)),
         ...config.machines.flatMap(machine => machine.result_target?.type === 'chest' ? [keyOf('chest', machine.result_target.id)] : []),
@@ -133,11 +132,9 @@ function analyze(config: Config): Analysis {
     ]);
     const fillsBelt = (ins: Config['inserters'][number]): boolean =>
         ins.source.type === 'chest' && ins.sink.type === 'belt' && !filled.has(keyOf('chest', ins.source.id));
-    // a buffer chest alone in its subsystem, that such inserters and nothing else take from
-    const feederChest = (nodes: Set<string>): boolean => nodes.size === 1 && [...nodes].every(key => {
-        const takers = config.inserters.filter(ins => keyOf(ins.source.type, ins.source.id) === key);
-        return key.startsWith('chest:') && takers.length > 0 && takers.every(fillsBelt);
-    });
+    // a buffer chest alone in its subsystem, that such inserters alone take from, or that nothing refers to
+    const outsideChest = (nodes: Set<string>): boolean => nodes.size === 1 && [...nodes].every(key => key.startsWith('chest:')
+        && !filled.has(key) && config.inserters.every(ins => keyOf(ins.source.type, ins.source.id) !== key || fillsBelt(ins)));
     const groups = new Map<string, Set<string>>();
     for (const key of parent.keys()) {
         const root = find(key);
@@ -147,7 +144,7 @@ function analyze(config: Config): Analysis {
     const components: Component[] = [...groups.values()].flatMap(nodes => {
         const machines = config.machines.filter(row => nodes.has(keyOf('machine', row.id)));
         if (machines.length === 0) {
-            if (feederChest(nodes)) return [];
+            if (outsideChest(nodes)) return [];
             refuse('unassigned-entities', 'A buffer chest or drill belongs to a subsystem without a machine.');
         }
         return [{ nodes, inserters: [], minimumMachine: Math.min(...machines.map(row => row.id)) }];
@@ -157,12 +154,12 @@ function analyze(config: Config): Analysis {
     const users = new Map<string, Set<number>>();
     config.belts.forEach(row => users.set(keyOf('belt', row.id), new Set()));
     config.chests?.filter(row => row.type === 'infinity-chest').forEach(row => users.set(keyOf('chest', row.id), new Set()));
-    const feeders: number[] = [];
+    const outside = new Set<number>();
     config.inserters.forEach((ins, index) => {
         const ends = [ins.source, ins.sink];
         const touching = ends.map(end => componentOf.get(keyOf(end.type, end.id))).filter((it): it is number => it !== undefined);
         if (touching.length === 0 && fillsBelt(ins)) {
-            feeders.push(index);
+            outside.add(index);
             return;
         }
         if (touching.length === 0) refuse('unassigned-entities', 'An inserter belongs to a subsystem without a machine.');
@@ -174,19 +171,21 @@ function analyze(config: Config): Analysis {
             refuse('unsupported-boundary', 'Infinity chests are supported only as external sources.');
         }
     });
-    const fedFrom = new Set(feeders.map(index => keyOf('chest', config.inserters[index].source.id)));
     for (const [key, usedBy] of users) {
-        if (usedBy.size === 0 && fedFrom.has(key)) continue;
+        // an infinity chest no copy uses: nothing drops into it here (an inserter that did belongs to a copy, or is refused
+        // above), so it is supply from outside or nothing at all, and is left out
+        if (usedBy.size === 0 && key.startsWith('chest:')) continue;
         if (usedBy.size === 0) refuse('unassigned-entities', 'An unreferenced belt or infinity chest cannot be assigned to a complete copy.');
         if (key.startsWith('belt:')) {
             const belt = config.belts[ids.belts.get(Number(key.slice(5)))!];
             if (belt.strategy === 'export') refuse('unsupported-boundary', 'Export belts have fixed external demand and cannot be converted automatically.');
-            if (usedBy.size > 1 && config.inserters.some(ins => ins.sink.type === 'belt' && ins.sink.id === belt.id && ins.sink.drop !== undefined)) {
+            if (usedBy.size > 1 && config.inserters.some((ins, index) => !outside.has(index)
+                && ins.sink.type === 'belt' && ins.sink.id === belt.id && ins.sink.drop !== undefined)) {
                 refuse('unsupported-boundary', 'A shared belt has coupled drop coordinates. Select one complete copy in Factorio.');
             }
         }
     }
-    return { rows, ids, components, componentOf, users, feeders };
+    return { rows, ids, components, componentOf, users };
 }
 
 /** Where a member of a copy stands, with its kind: a machine, chest or drill, or an inserter */
@@ -346,8 +345,6 @@ export function planRepeatedUnitConversion(config: Config): RepeatedUnitConversi
                 component.inserters.forEach(index => keptInserters.add(index));
             });
         }
-        // the inserters that fill a belt from outside the copies feed it for every copy: kept once, with their chests
-        analysis.feeders.forEach(index => keptInserters.add(index));
         const keptResources = new Set<string>();
         keptInserters.forEach(index => {
             const ins = config.inserters[index];

@@ -202,40 +202,54 @@ describe('complete repeated-unit conversion', () => {
         return source;
     }
 
-    it('keeps the inserters that fill a belt from a chest nothing drops into once, outside the copies', () => {
+    it('leaves out the inserters that fill a belt from a chest nothing drops into, with their chests', () => {
         const source = fedUnits();
         // every copy also takes coal from a chest of its own: an inserter from a chest into a machine is part of its copy
         source.chests!.push(...Array.from({ length: 8 }, (_, i) => ({ id: 4 + i, type: 'infinity-chest' as const, item_filter: [{ item_name: 'coal', request_count: 50 }] })));
         source.inserters.push(...Array.from({ length: 8 }, (_, i) => ({ id: 20 + i, source: { type: 'chest' as const, id: 4 + i }, sink: { type: 'machine' as const, id: i + 1 }, stack_size: 1, filters: ['coal'] })));
+        // where the copies share the belt, the place an inserter from outside drops at couples no copies
+        [16, 17, 18].forEach(index => { source.inserters[index].sink = { type: 'belt', id: 1, drop: { lane: 1, position: -0.5 } }; });
         const plan = planRepeatedUnitConversion(source);
         expect(plan.kind).toBe('available');
         if (plan.kind !== 'available') return;
         expect(plan.multiplicity).toBe(8);
-        // one copy written by hand: its machine, its three inserters and its coal chest, with the feeders and their chests once
+        // one copy written by hand: its machine, its three inserters and its coal chest; the belt counts as supplied
         const byHand: Config = {
             ...source,
             setpoint: { ...source.setpoint, copies: 4 },
             machines: [source.machines[0]],
-            inserters: [
-                { ...source.inserters[0], id: 1 }, { ...source.inserters[1], id: 2 },
-                { ...source.inserters[16], id: 3 }, { ...source.inserters[17], id: 4 }, { ...source.inserters[18], id: 5 },
-                { ...source.inserters[19], id: 6, source: { type: 'chest', id: 4 } },
-            ],
-            chests: source.chests!.slice(0, 4),
+            inserters: [{ ...source.inserters[0], id: 1 }, { ...source.inserters[1], id: 2 }, { ...source.inserters[19], id: 3, source: { type: 'chest', id: 1 } }],
+            chests: [{ ...source.chests![3], id: 1 }],
         };
         expect(plan.candidate).toEqual(byHand);
-        expect(plan.retained.inserters.map(it => it.sourceIndex)).toEqual([0, 1, 16, 17, 18, 19]);
-        expect(plan.retained.chests.map(it => it.sourceIndex)).toEqual([0, 1, 2, 3]);
+        expect(plan.retained.inserters.map(it => it.sourceIndex)).toEqual([0, 1, 19]);
+        expect(plan.retained.chests.map(it => it.sourceIndex)).toEqual([3]);
     });
 
-    it('passes Check on the one copy with its feeders from infinity chests', () => {
+    it('passes Check on the one copy without the inserters from infinity chests', () => {
         const source = infinityFedUnits();
         const plan = planRepeatedUnitConversion(source);
         expect(plan.kind).toBe('available');
         if (plan.kind !== 'available') return;
-        expect(plan.candidate.inserters).toEqual([...source.inserters.slice(0, 2), { ...source.inserters[16], id: 3 }, { ...source.inserters[17], id: 4, source: { type: 'chest', id: 2 } }]);
-        expect(plan.candidate.chests).toEqual([source.chests![0], { ...source.chests![1], id: 2 }]);
+        expect(plan.candidate.inserters).toEqual(source.inserters.slice(0, 2));
+        expect(plan.candidate.chests).toEqual([]);
+        expect(plan.candidate.belts).toEqual(source.belts);
         expect(() => validateConfig(plan.candidate)).not.toThrow();
+    });
+
+    it('leaves out a chest nothing refers to, and still refuses a belt nothing refers to', () => {
+        const unreferenced = eightUnits();
+        unreferenced.chests = [
+            { id: 1, type: 'infinity-chest', item_filter: [], remove_unfiltered_items: true },
+            { id: 2, type: 'buffer-chest', storage_size: 48, item_filter: 'iron-plate' },
+        ];
+        const plan = planRepeatedUnitConversion(unreferenced);
+        expect(plan).toMatchObject({ kind: 'available', multiplicity: 8 });
+        expect(plan.kind === 'available' && plan.candidate.chests).toEqual([]);
+        const belt = eightUnits();
+        belt.belts.push({ id: 3, type: 'transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1 }] });
+        expect(planRepeatedUnitConversion(belt)).toEqual({ kind: 'unavailable', reason: { code: 'unassigned-entities',
+            message: 'An unreferenced belt or infinity chest cannot be assigned to a complete copy.' } });
     });
 
     it('keeps the refusal when something drops into the chest an inserter fills the belt from', () => {
@@ -270,7 +284,7 @@ describe('complete repeated-unit conversion', () => {
             message: 'A buffer chest or drill belongs to a subsystem without a machine.' } });
     });
 
-    it('keeps the refusal of an inserter that fills a belt no copy takes from', () => {
+    it('refuses a belt that only an inserter from outside fills', () => {
         const source = infinityFedUnits();
         source.belts.push({ id: 3, type: 'transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1 }] });
         source.inserters.push({ id: 20, source: { type: 'chest', id: 3 }, sink: { type: 'belt', id: 3 } });

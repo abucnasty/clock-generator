@@ -82,7 +82,7 @@ describe('canonical repeated-unit form application', () => {
         expect(form).toEqual(before);
     });
 
-    it('keeps the inserters that fill the input belt from chests once, with their chests', () => {
+    it('leaves out the inserters that fill the input belt from chests, with their chests', () => {
         const form = configToFormData({
             setpoint: { recipe: 'iron-gear-wheel', items_per_second: 2, copies: 1 },
             machines: Array.from({ length: 4 }, (_, i) => ({ id: i + 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 })),
@@ -108,8 +108,8 @@ describe('canonical repeated-unit form application', () => {
         if (plan.kind !== 'available') return;
         const next = applyRepeatedUnitConversion(form, plan)!;
         expect(next).not.toBeNull();
-        expect(next.chests.map(it => it._uuid)).toEqual(form.chests.map(it => it._uuid));
-        expect(next.inserters.map(it => it._uuid)).toEqual(form.inserters.slice(0, 4).map(it => it._uuid));
+        expect(next.chests).toEqual([]);
+        expect(next.inserters.map(it => it._uuid)).toEqual(form.inserters.slice(2, 4).map(it => it._uuid));
         expect(next.setpoint.copies).toBe(4);
         expect(formDataToConfig(next)).toEqual(plan.candidate);
     });

@@ -134,8 +134,9 @@ and the belts shared between them. A config that itself holds several identical 
 inserters written out twice or more, joined by no inserter) is refused and told to describe one copy and set `copies`
 (`src/config/copies-validator.ts`). Describe the smallest repeating unit of a build, not a whole block of it.
 The site offers to make that one copy (`src/config/repeated-unit-conversion.ts`). An inserter that takes from a chest
-and drops onto a belt, in no copy, fills the belt for all copies: it is kept once, with its chest. When something drops
-into that chest, the chest is part of the build and the site does not make the copy. Where the next copy stands
+and drops onto a belt, in no copy, is supply from outside the copies: the one copy leaves it and its chest out, and the
+belt counts as supplied, as its lanes state. A chest that nothing refers to is left out too. When something drops into
+the chest, the chest is part of the build and the site does not make the copy. Where the next copy stands
 (`setpoint.copy_offset`) is read from the positions of the copies: each entity is paired with the entity of its kind at
 the same place in the next copy, whatever order they are listed in. Copies that are not moved copies of each other
 (one mirrored) get no gap, and a gap the configuration states is kept only where the copies agree with it.
