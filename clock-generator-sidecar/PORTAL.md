@@ -1,4 +1,4 @@
-Export a Factorio build as text for the **Clock Generator** website: <https://clock-generator-self.vercel.app>
+Export a Factorio build as text for the **Clock Generator** website: <https://clock.abucnasty.dev>
 
 ## Export a build from Factorio
 

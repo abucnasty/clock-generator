@@ -11,9 +11,8 @@ The variables, secrets and inputs that the workflows in `.github/workflows/` rea
 
 | Name | Type | Read by | Values that have an effect | When it is not set |
 | --- | --- | --- | --- | --- |
-| `VERCEL_TOKEN` | Secret: a token of the Vercel account | `release.yml`: `production`, `preview` | None | `production` stops with an error. `preview` shows a warning, does not deploy and does not show an error. |
-| `VERCEL_ORG_ID` | Secret: from `.vercel/repo.json` or `.vercel/project.json` after `vercel link` | `release.yml`: `production`, `preview` | None | The same as `VERCEL_TOKEN`. |
-| `VERCEL_PROJECT_ID` | Secret: from `.vercel/repo.json` or `.vercel/project.json` after `vercel link` | `release.yml`: `production`, `preview` | None | The same as `VERCEL_TOKEN`. |
+| `CLOUDFLARE_API_TOKEN` | Secret: an API token of the Cloudflare account, made from the template **Edit Cloudflare Workers** for the account and the zone `abucnasty.dev`. Workers Scripts Edit attaches the custom domain | `release.yml`: `production`, `preview` | None | `production` stops with an error. `preview` shows a warning, does not upload and does not show an error. |
+| `CLOUDFLARE_ACCOUNT_ID` | Secret: the account ID on the overview page of the Cloudflare dashboard | `release.yml`: `production`, `preview` | None | The same as `CLOUDFLARE_API_TOKEN`. |
 | `FACTORIO_MOD_API_KEY` | Secret of the `mod-portal` environment | `publish-sidecar.yml`, called by `release.yml`: `publish-sidecar`, step "Upload to the mod portal" | None | The upload step stops with an error. The step starts only when the mod portal does not have the version of the sidecar. |
 | `GITHUB_TOKEN` | Secret that GitHub Actions gives to each run | `release.yml`: `release`, as `GH_TOKEN`, with the permissions `contents: write` and `pull-requests: read`. `production` reads the latest GitHub release with it. `publish-sidecar.yml`: `publish-sidecar`, as `GH_TOKEN`, for the gate of a start by hand | None | Not possible: GitHub Actions always sets it. |
 | `generation` | Input of `test.yml`: `true` or `false` | `test.yml`: `changes` (Changed files), `generation` (Gen summary) | `true`: the generation tests start, also when the changes are only documentation. `release.yml` gives `true`. | A start of `test.yml` by hand: `true`. A start from a different workflow: `false`. A pull request has no input: see the checks. |

@@ -12,7 +12,7 @@ const { version } = require("../package.json") as { version: string };
 export const GENERATOR = {
     name: "Clock Generator",
     version,
-    site: "https://clock-generator-self.vercel.app",
+    site: "https://clock.abucnasty.dev",
     source: "https://github.com/abucnasty/clock-generator",
 } as const;
 

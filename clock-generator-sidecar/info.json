@@ -4,8 +4,8 @@
     "title": "Clock Generator Sidecar",
     "author": "abucnasty",
     "contact": "https://github.com/abucnasty/clock-generator",
-    "homepage": "https://clock-generator-self.vercel.app",
-    "description": "Export a build's machines, inserters, belts, chests, mining drills, cars, wagons and rocket silos as text for the Clock Generator website (clock-generator-self.vercel.app), which makes a circuit clock that switches your inserters and mining drills on only when needed.",
+    "homepage": "https://clock.abucnasty.dev",
+    "description": "Export a build's machines, inserters, belts, chests, mining drills, cars, wagons and rocket silos as text for the Clock Generator website (clock.abucnasty.dev), which makes a circuit clock that switches your inserters and mining drills on only when needed.",
     "factorio_version": "2.1",
     "dependencies": []
 }

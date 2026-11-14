@@ -21,16 +21,18 @@ name: Release
 # - A sidecar version that the mod portal does not have is published by publish-sidecar.yml, which this workflow calls.
 # - A merge where neither version is new fails: a release that releases nothing is a mistake.
 #
-# Vercel deploys nothing by itself, not master and not a pull request (vercel.json switches that off); this
-# workflow does.
+# The site is the Cloudflare Worker clock-generator (clock-generator-ui/wrangler.jsonc), at https://clock.abucnasty.dev.
+# Only this workflow deploys it: production with `wrangler deploy`, the preview of master with
+# `wrangler versions upload --preview-alias master`, which production does not change. (vercel.json now only redirects
+# the old address, clock-generator-self.vercel.app; this workflow no longer deploys to Vercel.)
 # "Run workflow" (or `gh workflow run release.yml`) is for recovery: it deploys the latest released tag to production
 # again, for a run that failed part way. It never makes a tag or a release.
 # Nothing is released or deployed unless the tests pass: the unit and generation tests, the UI build and the UI's
 # Generate in a browser of test.yml. Those tests passed either in this run or, for the same tree, in a pull request. A run by
 # hand looks nothing up: its tests always run.
 #
-# The deployments need three secrets: VERCEL_TOKEN (a token of the Vercel account), VERCEL_ORG_ID and
-# VERCEL_PROJECT_ID (both in .vercel/repo.json or .vercel/project.json after `vercel link`). See "Versioning" in the README.
+# The deployments need two secrets: CLOUDFLARE_API_TOKEN (a Cloudflare API token that can edit Workers scripts and the
+# routes and DNS of the abucnasty.dev zone) and CLOUDFLARE_ACCOUNT_ID. See docs/maintainer/workflow-variables-and-secrets.md.
 on:
   push:
     branches:
@@ -44,8 +46,9 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  # the wrangler CLI that deploys the site, pinned
+  WRANGLER_VERSION: 4.161.0
 
 jobs:
   lookup:
@@ -169,12 +172,12 @@ jobs:
     permissions:
       contents: read
     env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
-      - name: Check the Vercel secrets
+      - name: Check the Cloudflare secrets
         run: |
-          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
-            echo "::error::VERCEL_TOKEN, VERCEL_ORG_ID and VERCEL_PROJECT_ID have to be set as secrets to deploy to production. Set them, then run this workflow by hand."
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID have to be set as secrets to deploy to production. Set them, then run this workflow by hand."
             exit 1
           fi
 
@@ -203,12 +206,18 @@ jobs:
       - name: Build and deploy
         env:
           TAG: ${{ steps.tag.outputs.tag }}
+        working-directory: clock-generator-ui
         run: |
-          npm install --global vercel@61.1.0
-          vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
-          vercel build --prod --token="$VERCEL_TOKEN"
-          URL=$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")
-          echo "Deployed $TAG to production: $URL" >> "$GITHUB_STEP_SUMMARY"
+          # a tag from before the move to Cloudflare has no Worker to deploy: it went to Vercel
+          if [ ! -f wrangler.jsonc ]; then
+            echo "::error::$TAG has no clock-generator-ui/wrangler.jsonc: it was released before the site moved to Cloudflare, and this workflow deploys only to Cloudflare. Release a version that has it."
+            exit 1
+          fi
+          npm ci
+          npm run build
+          npm install --global "wrangler@$WRANGLER_VERSION"
+          wrangler deploy
+          echo "Deployed $TAG to production: https://clock.abucnasty.dev" >> "$GITHUB_STEP_SUMMARY"
 
   sidecar:
     # The sidecar mod, only when its version is new on the mod portal
@@ -228,31 +237,45 @@ jobs:
     if: ${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/master' && (needs.tests.result == 'success' || (needs.tests.result == 'skipped' && needs.lookup.outputs.tested == 'true')) }}
     runs-on: ubuntu-latest
     env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
-      - name: Check the Vercel secrets
-        id: vercel
+      - name: Check the Cloudflare secrets
+        id: cloudflare
         run: |
-          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
-            echo "::warning::No preview of master: VERCEL_TOKEN, VERCEL_ORG_ID and VERCEL_PROJECT_ID are not set as secrets."
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::warning::No preview of master: CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID are not set as secrets."
             echo "ready=false" >> "$GITHUB_OUTPUT"
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
           fi
 
       - uses: actions/checkout@v4
-        if: steps.vercel.outputs.ready == 'true'
+        if: steps.cloudflare.outputs.ready == 'true'
 
       - uses: actions/setup-node@v4
-        if: steps.vercel.outputs.ready == 'true'
+        if: steps.cloudflare.outputs.ready == 'true'
         with:
           node-version: 24
 
-      - name: Build and deploy
-        if: steps.vercel.outputs.ready == 'true'
+      # A version of the Worker that is not deployed: production keeps serving its own. Its address is the alias
+      # master-clock-generator.<account subdomain>.workers.dev, which each push to master moves to its own version.
+      - name: Build and upload
+        if: steps.cloudflare.outputs.ready == 'true'
+        working-directory: clock-generator-ui
+        env:
+          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-output.json
         run: |
-          npm install --global vercel@61.1.0
-          vercel pull --yes --environment=preview --token="$VERCEL_TOKEN"
-          vercel build --token="$VERCEL_TOKEN"
-          URL=$(vercel deploy --prebuilt --token="$VERCEL_TOKEN")
-          echo "Preview of master at ${GITHUB_SHA::7}: $URL" >> "$GITHUB_STEP_SUMMARY"
+          set -o pipefail
+          npm ci
+          npm run build
+          npm install --global "wrangler@$WRANGLER_VERSION"
+          # a version needs a Worker: before its first deployment (docs/maintainer/redeploy-the-site-by-hand.md) there is none
+          if ! wrangler versions upload --preview-alias master --message "master at ${GITHUB_SHA::7}" 2>&1 | tee "$RUNNER_TEMP/upload.log"; then
+            if grep -q "does not yet exist" "$RUNNER_TEMP/upload.log"; then
+              echo "::warning::No preview of master: the Worker clock-generator has never been deployed. Deploy it once (docs/maintainer/redeploy-the-site-by-hand.md)."
+              exit 0
+            fi
+            exit 1
+          fi
+          URL=$(jq -r 'select(.type == "version-upload") | .preview_alias_url // .preview_url // empty' "$WRANGLER_OUTPUT_FILE_PATH" | tail -n 1)
+          echo "Preview of master at ${GITHUB_SHA::7}: ${URL:-no address (are Version URLs on for the Worker?)}" >> "$GITHUB_STEP_SUMMARY"

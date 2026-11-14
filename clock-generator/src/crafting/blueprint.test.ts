@@ -257,17 +257,17 @@ describe("the target rate in a blueprint", async () => {
         expect(rocket_fuel.description).toBe([
             "Setpoint: 60 [item=rocket-fuel] per second",
             "Window cycle time: 128 ticks",
-            `Made by Clock Generator ${GENERATOR.version}: https://clock-generator-self.vercel.app`,
+            `Made by Clock Generator ${GENERATOR.version}: https://clock.abucnasty.dev`,
             "Source: https://github.com/abucnasty/clock-generator",
         ].join("\n"));
     });
 
     it("says on the clock decider which generator made it, in its last line and in its tags", () => {
         const clock = (rocket_fuel.entities ?? []).find(entity => (entity.player_description ?? "").startsWith("Clock for"))!;
-        expect((clock.player_description ?? "").split("\n").at(-1)).toBe(`Made by Clock Generator ${GENERATOR.version}: clock-generator-self.vercel.app`);
+        expect((clock.player_description ?? "").split("\n").at(-1)).toBe(`Made by Clock Generator ${GENERATOR.version}: clock.abucnasty.dev`);
         expect(clock.tags).toEqual({ clock_generator: { generator: {
             name: "Clock Generator", version: GENERATOR.version,
-            site: "https://clock-generator-self.vercel.app", source: "https://github.com/abucnasty/clock-generator",
+            site: "https://clock.abucnasty.dev", source: "https://github.com/abucnasty/clock-generator",
         } } });
         expect(GENERATOR.version).toBe(JSON.parse(fs.readFileSync(path.join(__dirname, "../../package.json"), "utf8")).version);
     });

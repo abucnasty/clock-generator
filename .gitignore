@@ -44,6 +44,9 @@ vite.config.ts.timestamp-*
 # the link to the Vercel project that `vercel link` writes, with the ids of the account and the project
 .vercel
 
+# what `wrangler dev` keeps between runs, in clock-generator-ui
+.wrangler
+
 # local environment files; `npm run test:game` reads clock-generator/.env, made from the example next to it
 .env*
 !.env.example

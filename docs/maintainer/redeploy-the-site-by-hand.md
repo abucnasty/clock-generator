@@ -10,9 +10,11 @@ before its end.
 
 ## Before you start
 
-- The secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` are set.
+- The secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are set.
 - The version to deploy has a GitHub release, and it is the latest GitHub release. You cannot deploy a previous
   version: rollback is not available.
+- The latest GitHub release has `clock-generator-ui/wrangler.jsonc`. A version from before the move to Cloudflare
+  does not have it, and the `production` job stops with an error.
 
 ## Procedure
 
@@ -31,7 +33,7 @@ deploy.
 
 2. Open the summary of the workflow run.
 
-   The summary shows `Deployed v<version> to production` and the address.
+   The summary shows `Deployed v<version> to production` and the address, `https://clock.abucnasty.dev`.
 
 ## Result
 
@@ -44,3 +46,4 @@ in GitHub (**Re-run failed jobs**).
 
 - [How the site and the sidecar are published](site-and-sidecar-publishing.md)
 - [Workflow variables and secrets](workflow-variables-and-secrets.md)
+- [Move the site to Cloudflare](move-the-site-to-cloudflare.md)

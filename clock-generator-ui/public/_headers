@@ -1,0 +1,6 @@
+# Cloudflare's headers for the files of the site (wrangler.jsonc), copied into dist/ by Vite and not served itself.
+# Vite gives every file under /assets/ a hash of its content in its name, so a browser keeps it for a year and never
+# asks again. Every other file (index.html, data-filtered.json, the examples, the icons) keeps Cloudflare's default,
+# `public, max-age=0, must-revalidate`: the browser asks each time whether it changed, so a release shows at once.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

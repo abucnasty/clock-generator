@@ -42,6 +42,8 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: the compare table's rows hold still during a run and sort when it ends
 - ui: each Build check advisory is one line with its inserters, and Details opens the rest
 - generation: clocks with observed windows are found faster on large builds
+- blueprint: clocks name the site at its new address, clock.abucnasty.dev
+- ui: the site is now at clock.abucnasty.dev; builds saved at the old address stay there
 - generation: 0.28 Moving builds, stating no lane end, now get dead ends on input lanes
 - ui: a rounded clock that meets the target reads Stable
 - ui: each clock's status shows on its card and in the Status column, which replaces Works?
