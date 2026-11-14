@@ -9,6 +9,7 @@
   <topicref href="release-a-version.md" format="mdita" type="task"/>
   <topicref href="ship-a-hotfix.md" format="mdita" type="task"/>
   <topicref href="redeploy-the-site-by-hand.md" format="mdita" type="task"/>
+  <topicref href="move-the-site-to-cloudflare.md" format="mdita" type="task"/>
   <topicref href="workflow-variables-and-secrets.md" format="mdita" type="reference"/>
   <topicref href="configuration-file-fields.md" format="mdita" type="reference"/>
 </map>

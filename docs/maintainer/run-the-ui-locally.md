@@ -9,7 +9,7 @@ Start the site on your computer, with the engine of your copy of the repository.
 
 ## Before you start
 
-- Node.js is installed. No other tool is necessary: not Factorio, not the sidecar and not Vercel.
+- Node.js is installed. No other tool is necessary: not Factorio, not the sidecar and not Cloudflare.
 - You have a clone of the repository.
 
 ## Procedure

@@ -6,7 +6,7 @@ gives you a blueprint of decider combinators that clock the inserters, so the bu
 as few inserter wakeups as it can. It lists the clocks it could make, says which hold the rate and go back to it by themselves after a
 supply stop or an output blockage, and selects one.
 
-Use it on the site: <https://clock-generator-self.vercel.app>. The source is at
+Use it on the site: <https://clock.abucnasty.dev>. The source is at
 <https://github.com/abucnasty/clock-generator>.
 
 ## Repository
@@ -70,14 +70,15 @@ releases nothing; only a merge does. On a release or hotfix merge, a version wit
 A merge where neither the generator nor the sidecar has a new version fails. The steps are in
 [Releasing](CONTRIBUTING.md#releasing).
 
-The same workflow deploys the site. Vercel deploys nothing by itself, not `master` and not a pull request:
-`vercel.json` switches that off. The site users use is deployed when a version is released, from
+The same workflow deploys the site, a Cloudflare Worker with static assets (`clock-generator-ui/wrangler.jsonc`);
+Cloudflare deploys nothing by itself. The site users use is deployed when a version is released, from
 the commit of its tag and after its GitHub release exists, so `master` can run ahead of what users have. A fix
 reaches them with a release or a hotfix: a version bump and its changelog section.
-Every merge to `master` is also deployed as a preview, with its address in the summary of the workflow run; the
-UAT of a release runs there. The deployments need the secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`;
-the two ids are in `.vercel/repo.json` (or `.vercel/project.json`) after `vercel link`. Starting the workflow by hand
-(a recovery) deploys the latest released tag again; it never makes a release.
+Every merge to `master` is also uploaded as a preview, with its address in the summary of the workflow run; the
+UAT of a release runs there. The deployments need the secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`
+([Workflow variables and secrets](docs/maintainer/workflow-variables-and-secrets.md)). Starting the workflow by hand
+(a recovery) deploys the latest released tag again; it never makes a release. The old address on Vercel only redirects
+to the new one (`vercel.json`, deployed by hand: [Move the site to Cloudflare](docs/maintainer/move-the-site-to-cloudflare.md)).
 
 The `clock-generator-sidecar` mod has a version of its own. Bump its `info.json`, add the version to its
 `changelog.txt`, and set `LATEST_SIDECAR_VERSION` in `clock-generator/src/config/sidecar-version.ts` to match; a test
