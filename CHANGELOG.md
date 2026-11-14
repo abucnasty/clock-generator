@@ -64,6 +64,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - generation: of clocks with equal wakeups, the one with fewer signals per minute is recommended
 - ui: one copy with Copies is offered for builds fed from chests, leaving the chests out
 - generation: inserters that fill a belt from a chest nothing fills get no enable window
+- generation: a lane that several inserters of one copy take from is checked with all of them
 
 ### Fixed
 - ui: Paste from Factorio keeps where the next copy stands, as the export gives it

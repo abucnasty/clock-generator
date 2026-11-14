@@ -87,8 +87,9 @@ export function describeCopiesShort(loss: DisturbanceTrial, lanes: readonly stri
             + `upstream backs up from there. Then the infinite end opens again. ${ends}`;
     }
     const where = loss.kind === "supply"
-        ? ` at the entry of ${lanesInSentence(lanes.map(key => { const [belt_id, lane] = key.split("/").map(Number); return { belt_id, lane }; }), build)}, which the ${copies} copies share`
-        : ` from the ${copies} copies`;
+        ? ` at the entry of ${lanesInSentence(lanes.map(key => { const [belt_id, lane] = key.split("/").map(Number); return { belt_id, lane }; }), build)}, `
+            + (copies > 1 ? `which the ${copies} copies share` : "which several inserters of the build take from")
+        : copies > 1 ? ` from the ${copies} copies` : " from the build";
     const back = loss.kind === "supply" ? "comes back" : "is taken away again";
     return `${label[0].toUpperCase()}${label.slice(1)}${where}, and ${back}. ${ends}`;
 }

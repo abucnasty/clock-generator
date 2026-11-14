@@ -1,6 +1,6 @@
 import type { Config } from "../config/schema";
 import { laneLoads } from "../config/lane-capacity-validator";
-import { laneFactsOfConfig } from "../entities/traits/build-traits";
+import { carriedItemsOf, laneFactsOfConfig } from "../entities/traits/build-traits";
 import { beltLaneFactsOf, LaneEnd, LaneSharing } from "../entities/traits/lane-facts";
 import type { LaneRole } from "../entities/traits/lane-role";
 import { fractionOf, Ratio } from "../entities/traits/ratio";
@@ -8,6 +8,7 @@ import { buildToNameOf } from "./build-names";
 import { capitalized, chestNameInText, inserterNameInText, lanesInSentence, listedInText, textWords, theName, type BuildToName } from "./entity-name";
 import { machineNameInText } from "./machine-name";
 import { figure } from "./other-clocks";
+import { takenTogether } from "./shared-lane-lanes";
 import type { CopiesTrialVerdict } from "./shared-lane-trial";
 import { droppedOntoSharedLanes, isNotChecked, sharedLanesNotChecked, type SharedLanesNotChecked, type MissedInWindowCycle, type MissedSwingCause, type MissedSwingStops, type SharedLaneJudgement, type SharedLaneLoss,
     type SharedLaneLossFacts, type TakerSwings, type CopiesMade } from "./shared-lane-verdict";
@@ -257,10 +258,18 @@ export function buildLanesOf(config: Config): BuildLane[] {
     });
 }
 
-/** The lanes that have a row: those the copies share, with an item and a role */
+/**
+ * The lanes that have a row: those the copies share, with an item and a role, that two or more inserters use, counting
+ * those of every copy: the takers of a lane the build takes from (`takenTogether`), the inserters that drop onto an output
+ * lane. A build of one copy has a row for a lane only where several of its inserters use it.
+ */
 export function sharedLanesOf(config: Config, lanes: readonly BuildLane[] = buildLanesOf(config)): BuildLane[] {
-    if (!(config.setpoint.copies > 1)) return [];
-    return lanes.filter(lane => lane.sharing === "shared" && lane.item !== "" && lane.role !== null);
+    const carried = lanes.some(lane => lane.role === "output") ? carriedItemsOf(config) : null;
+    const droppers = (lane: BuildLane) => config.inserters.filter((inserter, index) =>
+        inserter.sink.type === "belt" && inserter.sink.id === lane.belt_id && carried!(index).has(lane.item)).length;
+    const together = (lane: BuildLane) => lane.role === "output"
+        ? droppers(lane) * Math.ceil(config.setpoint.copies) >= 2 : takenTogether(config, lane.belt_id, lane.lane);
+    return lanes.filter(lane => lane.sharing === "shared" && lane.item !== "" && lane.role !== null && together(lane));
 }
 
 /** The belts the config's output inserters drop the target's item onto, and the chests they or the machines put it into */
@@ -411,14 +420,14 @@ const OUTPUT_BELT_NOT_RUN ="The output belt is run with the copies only together
 
 /**
  * The rows, the line and the parts of the cause of one clock, from its check of the lanes its copies share (see the
- * module's description); null for a build of one copy
+ * module's description); null for a build of one copy with no lane that several of its inserters use (`sharedLanesOf`)
  */
 export function checkedLanesOf(input: CheckedLanesInput): CheckedLanes | null {
     const { config, holds, judged, window_cycle_ticks, copies_trial, fewer } = input;
     const copies = config.setpoint.copies;
-    if (!(copies > 1)) return null;
-    const build = buildToNameOf(config);
     const lanes = sharedLanesOf(config);
+    if (!(copies > 1) && lanes.length === 0) return null;
+    const build = buildToNameOf(config);
     let loads: ReturnType<typeof laneLoads> | null;
     try {
         loads = laneLoads(config);
@@ -520,7 +529,7 @@ function lineOf(input: { config: Config; build: BuildToName; rows: readonly Chec
         : output_belt === "waits_none_misses" ? ", and no copy misses a swing at the output belt" : ", and no copy is held back at the output belt";
     const trial = trial_failed && copies_trial?.text !== undefined ? ` ${copies_trial.text}` : "";
     return { ...base, run_with_copies: true, every_copy_gets_items: short_copies.length === 0, output_belt, ...(trial !== "" && { copies_trial_text: trial.trimStart() }),
-        sentence: `Checked with all ${figure(copies)} copies on the lanes they share. ${items}${at_belt}.${plain}${chests}${trial}` };
+        sentence: `${copies > 1 ? `Checked with all ${figure(copies)} copies on the lanes they share.` : "Checked with every inserter on the lanes several of them take from."} ${items}${at_belt}.${plain}${chests}${trial}` };
 }
 
 /** "the inserter of copy 2 that takes iron gear wheel and copper plate": the name of an inserter with its copy */

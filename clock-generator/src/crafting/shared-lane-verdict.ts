@@ -22,7 +22,7 @@ import { targetInsertersOf, targetItemOf, targetMachinesOf } from "./sequence/cy
 import { createEntityRegistryFromConfig, SimulationContext } from "./sequence/simulation-context";
 import { buildToNameOf } from "./build-names";
 import { capitalized, inserterNameInText, theName, lanesInSentence, NO_BUILD, textWords, type BuildToName } from "./entity-name";
-import { droppedOnto, ModelLane, modelLanesOf, takenLanesOf } from "./shared-lane-lanes";
+import { droppedOnto, ModelLane, modelLanesOf, takenLanesOf, takenTogether } from "./shared-lane-lanes";
 import { DropRecorder, HandDropped, LaidOutLane, LaneRow, recordInserters, runOnSharedLanes, SharedLaneLayout, sharedLaneLayoutOf } from "./shared-lane-model";
 import type { OutputBeltRun } from "./output-belt-run";
 import { TargetProductionRate } from "./target-production-rate";
@@ -33,8 +33,9 @@ import { longRunWindowCyclesOf, runClockOnBuild } from "./trial";
  * and inserters, `copy_offset` apart along the lanes they share; each such lane runs tick by tick with every copy's
  * takers on it, whatever its end (crafting/shared-lane-model.ts). A copy that loses swings there fails the clock.
  *
- * The lanes judged: every lane a belt pickup takes from that the copies share (`sharing`, more than one copy), under its
- * end; a lane of unknown end is run as a dead end and as an infinite end in turn, and the clock has to hold under both. A
+ * The lanes judged: every lane a belt pickup takes from that the copies share (`sharing`) and that two or more takers take
+ * from, counting those of every copy (`takenTogether`): the takers of several copies, or several takers of a build of one
+ * copy, each where its position puts it, under its end; a lane of unknown end is run as a dead end and as an infinite end in turn, and the clock has to hold under both. A
  * lane of unknown end that the copies do not share is run with the takers of one copy on it as a dead end (the run of one
  * copy reads it as an infinite end). A belt the build drops onto is left out: its entry would be the drops, which the
  * model does not run (`droppedOntoSharedLanes`).
@@ -473,19 +474,20 @@ export interface CopiesMade {
  * as not checked
  */
 export function droppedOntoSharedLanes(config: Config): { belt_id: number; lane: 1 | 2 }[] {
-    if (!(config.setpoint.copies > 1)) return [];
     const facts = laneFactsOfConfig(config);
     const dropped = droppedOnto(config);
-    return takenLanesOf(config).filter(({ belt_id, lane }) => dropped.has(belt_id) && facts.of(belt_id, lane).sharing === "shared");
+    return takenLanesOf(config).filter(({ belt_id, lane }) => dropped.has(belt_id) && facts.of(belt_id, lane).sharing === "shared"
+        && takenTogether(config, belt_id, lane));
 }
 
 /**
  * The spacing the check of the shared lanes puts the copies at on each lane they share, where the config does not give
  * `copy_offset`: the copy's length from its positions, or the width of a copy (`sharedLaneLayoutOf`). Empty where the
- * config gives it, or no lane is shared.
+ * config gives it, where it has one copy, or no lane is shared.
  */
 export function assumedCopySpacings(config: Config): { belt_id: number; lane: 1 | 2; tiles: number }[] {
-    if (config.setpoint.copy_offset !== undefined) return [];
+    // the spacing places the copies after the first: a build of one copy has none to place, whatever its takers
+    if (config.setpoint.copy_offset !== undefined || !(config.setpoint.copies > 1)) return [];
     const lanes = modelLanesOf(config).filter(lane => lane.shared);
     if (lanes.length === 0) return [];
     try {
