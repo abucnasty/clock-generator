@@ -11,6 +11,8 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-11-14
+
 ### Added
 - generation: copies are run together on the lanes they share, each belt lane by lane
 - ui: a clock that makes its rate only on average reads Oscillates, with an output chart

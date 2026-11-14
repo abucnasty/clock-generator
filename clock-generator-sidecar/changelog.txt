@@ -1,4 +1,15 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.16.0
+Date: 2026-11-14
+  Features:
+    - exports each belt lane's end and the belt's flow direction
+    - exports the spacing of the copies along a belt
+    - exports an empty output belt with the item its machines make
+    - selects loaders, so a belt into a chest that removes everything exports as an outlet
+  Changes:
+    - suggests a target no higher than the output belt carries or the build can hold, and says why
+    - names the Clock Generator site at its new address, clock.abucnasty.dev
+---------------------------------------------------------------------------------------------------
 Version: 0.15.1
 Date: 2026-11-04
   Bugfixes:
