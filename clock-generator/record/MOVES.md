@@ -8,6 +8,9 @@ a line that names the reason and lists the jobs. A pull request that moves no re
 CI checks this file: the "Record check" fails when a selected clock got worse than in the base and its job key is not in the lines the pull
 request adds to this file.
 
+## Clocks equal on wakeups rank by fewer signals a minute (feature/rank-signals-tie)
+- config-PROCESSING_UNIT_15_CHEST_FED: recommends euclidean_swings, stable, 56.25 wakeups a minute, 159.33 signals a minute, back in 1 window cycle after a loss, 17 enable windows, window cycle 384 (was takt_batches_observed, stable, 56.25, 168.75 signals a minute, 1 window cycle, 6 enable windows, window cycle 128). The two are equal on wakeups, so the one with fewer signals a minute ranks first. Accepted by abucnasty
+
 ## The record on the current engine (chore/record-on-current-engine)
 Every job generated on this head and set against master's record (a744c3ea). Master judged a clock on one copy; the engine now also runs the copies on the lanes they share, and the samples state their lanes. abucnasty accepted the moves as corrections. A commit named after "bisected" was found by running the job at each commit; "inferred" means the same sample and the same end value as a bisected job, not run; "cause not bisected" means no commit was found for it.
 - config-AUTOMATION_SCIENCE_240: recommends time_study_windows, 300.696 wakeups a minute, window cycle 216 (was takt_batches_observed_swings_2, 50.174, window cycle 72). Master's clock loses swings once the copies run on their shared lanes: copy 2 misses 9 of its 65 copper plate swings. Bisected: 6fcf557f (the shared-lane check on every copy), then 96b303ce and b02c0017. A stable clock at about 253.6 wakeups a minute is not tried (#741)
