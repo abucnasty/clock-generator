@@ -86,7 +86,8 @@ export interface ClockAssessment {
     wake_ups_per_minute: number | null;
     /**
      * Signals a minute its window deciders send, beside the wake-ups (see `signalsPerMinuteOf`): one for each enable window of a
-     * decider that opens. Null when the clock had no long run; absent where it was not counted. Nothing ranks a clock by it.
+     * decider that opens. Null when the clock had no long run; absent where it was not counted. Of clocks equal on wake-ups the
+     * selection puts the one with fewer first (`ClockRanking.signals_per_minute`).
      */
     signals_per_minute?: number | null;
     /**

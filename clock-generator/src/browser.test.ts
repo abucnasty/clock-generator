@@ -72,6 +72,7 @@ describe("the light entry", () => {
         expect([...files].sort()).toEqual([
             "common/assert.ts",
             "common/belt-pickup-layout.ts",
+            "common/compare-by.ts",
             "common/enable-control-types.ts",
             "common/entity-types.ts",
             "config/copies-value.ts",

@@ -1,5 +1,5 @@
 import type { Config } from 'clock-generator/browser';
-import { combineClockAlternativeRuns } from 'clock-generator/light';
+import { combineClockAlternativeRuns, signalsKey } from 'clock-generator/light';
 import type { ClockAlternativeView } from '../worker/types';
 import { shownRateOf } from './shownRate';
 import { rateVerbs, type TargetCounts } from './targetCounts';
@@ -33,7 +33,7 @@ export const RECOMMENDED_COPY = {
     backToRecommended: 'Back to recommended',
     backWhileGenerating: 'Back to best so far',
     unstableDivider: 'Clocks that are not Stable',
-    /** The head of the column of each clock's place in the engine's order, and its help: the six keys, in order */
+    /** The head of the column of each clock's place in the engine's order, and its help: the seven keys, in order */
     rank: 'Rank',
     rankLead: 'The clocks are ranked by these, in order. Each one decides only between clocks that are equal on the ones before it.',
     rankKeys: [
@@ -43,10 +43,11 @@ export const RECOMMENDED_COPY = {
         'It is nearer to the setpoint, over or under it.',
         'It holds its output from the modeled cold start.',
         'It has fewer wakeups. On a build with a loop of machines, the average over 12 start points is compared.',
+        'It has fewer signals.',
         'It goes back to its rate in fewer window cycles after a supply stop or an output blockage.',
         'It has fewer enable windows.',
     ],
-    rankTie: 'Clocks that are equal on all six keep the order they were made in.',
+    rankTie: 'Clocks that are equal on all seven keep the order they were made in.',
     rankFirst: 'Rank 1 is the recommended clock.',
     runSearched: 'The slower searches for fewer wakeups were run.',
     runSearchedWhenNeeded: 'The slower searches were only run if no other clock held the rate and had recovery, apart from the two that can still find fewer wakeups on a short clock.',
@@ -65,14 +66,16 @@ export const RECOMMENDED_COPY = {
     wakeUpsNotCounted: (contenders: string) =>
         `Fewest enable windows among ${contenders}. Wakeups could not be counted for them.`,
     tieOnWakeUps: (others: number) =>
-        ` ${othersText(others)} on wakeups, so the one with fewer enable windows was picked.`,
+        ` ${othersText(others)} on wakeups and signals, so the one with fewer enable windows was picked.`,
     tieOnWakeUpsUncounted: (others: number) =>
-        ` ${othersText(others)} on wakeups, so the one with fewer enable windows was picked, not counting the `
+        ` ${othersText(others)} on wakeups and signals, so the one with fewer enable windows was picked, not counting the `
         + 'extra enable windows that only cut wakeups.',
+    tieOnSignals: (others: number) =>
+        ` ${othersText(others)} on wakeups, so the one with fewer signals was picked.`,
     tieOnRecovery: (others: number) =>
-        ` ${othersText(others)} on wakeups, so the one that goes back to its rate sooner after a supply stop or an output blockage was picked.`,
+        ` ${othersText(others)} on wakeups and signals, so the one that goes back to its rate sooner after a supply stop or an output blockage was picked.`,
     tieOnWindows: (others: number) =>
-        ` ${othersText(others)} on wakeups and enable windows, so the first one in the list is shown.`,
+        ` ${othersText(others)} on wakeups, signals and enable windows, so the first one in the list is shown.`,
     recoveryDoesNotDecide: ' The recovery trials do not decide on this build.',
     noneHolds: (rate: string, deadlock: boolean) => deadlock ? `No clock holds ${rate}/s.` : `No clock holds ${rate}/s and has recovery.`,
     atRateHolds: (rate: string, fewest: boolean) =>
@@ -178,19 +181,25 @@ function reasonOf(alternatives: PickableClock[], pick: PickableClock): string {
 }
 
 /**
- * What decided between the pick and those of `others` with as many wake-ups: the windows, or the order. The selection
- * counts the windows without the output feeders' (the inserters that feed the machine the output is taken from); when
- * the table's column does not show the pick with fewer, the sentence says so.
+ * What decided between the pick and those of `others` with as many wake-ups: the signals, the recovery, the windows, or
+ * the order. The selection counts the windows without the output feeders' (the inserters that feed the machine the output
+ * is taken from); when the table's column does not show the pick with fewer, the sentence says so.
  */
 function tieOf(pick: PickableClock, others: PickableClock[]): string {
     const wakeUps = wakeUpsKey(pick.ranking.wake_ups_per_minute);
     const tiedOnWakeUps = others.filter(other => wakeUpsKey(other.ranking.wake_ups_per_minute) === wakeUps);
-    // of equals on wake-ups the one that gets back from a loss sooner is picked, before the windows decide
-    const recovery = (clock: PickableClock) => clock.ranking.recovery_window_cycles ?? Infinity;
-    if (tiedOnWakeUps.length > 0 && tiedOnWakeUps.every(other => recovery(other) > recovery(pick))) {
-        return RECOMMENDED_COPY.tieOnRecovery(tiedOnWakeUps.length);
+    // of equals on wake-ups the one whose deciders send fewer signals is picked, as the engine compares them
+    const signals = (clock: PickableClock) => signalsKey(clock.ranking);
+    if (tiedOnWakeUps.length > 0 && tiedOnWakeUps.every(other => signals(other) > signals(pick))) {
+        return RECOMMENDED_COPY.tieOnSignals(tiedOnWakeUps.length);
     }
-    const tiedOnRecovery = tiedOnWakeUps.filter(other => recovery(other) === recovery(pick));
+    const tiedOnSignals = tiedOnWakeUps.filter(other => signals(other) === signals(pick));
+    // then the one that gets back from a loss sooner, before the windows decide
+    const recovery = (clock: PickableClock) => clock.ranking.recovery_window_cycles ?? Infinity;
+    if (tiedOnSignals.length > 0 && tiedOnSignals.every(other => recovery(other) > recovery(pick))) {
+        return RECOMMENDED_COPY.tieOnRecovery(tiedOnSignals.length);
+    }
+    const tiedOnRecovery = tiedOnSignals.filter(other => recovery(other) === recovery(pick));
     const tiedOnWindows = tiedOnRecovery.filter(other => other.ranking.window_count === pick.ranking.window_count);
     if (tiedOnWindows.length > 0) {
         return RECOMMENDED_COPY.tieOnWindows(tiedOnWindows.length);

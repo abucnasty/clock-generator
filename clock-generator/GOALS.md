@@ -27,7 +27,7 @@ The detail is in [docs/stability.md](docs/stability.md).
 
 On a build with a loop of machines, or a machine that makes its own ingredient, goal 2 is measured on a clock's mean wakeups over a fixed set of starts: the config's cold start with the clock at twelve evenly spaced places in its window cycle, the kick start as the config says (decided 2026-10-24: with windows on its loop the iron bacteria sample's wakeups move 2 to 5 times with the start). Every other build keeps the one figure of its cold start for now (decided 2026-10-24: in the simulator their wakeups depend on where the clock stands too, and in the game less so).
 
-Among clocks in the same setpoint and belt-supply ranks, wakeups are compared to the nearest 0.001 per minute. Equal counts prefer fewer window cycles simulated for recovery, then fewer windows; remaining ties keep the first clock listed. This tie-break does not change the priority of goal 1.
+Among clocks in the same setpoint and belt-supply ranks, wakeups are compared to the nearest 0.001 per minute. Equal counts prefer fewer signals per minute (compared the same way), then fewer window cycles simulated for recovery, then fewer windows; remaining ties keep the first clock listed. This tie-break does not change the priority of goal 1.
 
 The detail is in [docs/wake-ups.md](docs/wake-ups.md).
 

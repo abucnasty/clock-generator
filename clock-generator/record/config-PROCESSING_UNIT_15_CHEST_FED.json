@@ -4,11 +4,11 @@
   "group": "config",
   "name": "PROCESSING_UNIT_15_CHEST_FED",
   "config_sha256": "cbe20287dce2cbc05a203255870fb17156364e17226b87d796dd10a3eba12430",
-  "job_results_sha256": "b288428618e5adafa9e00564bd9aa77d74973690469d0ce06879f327d4948126",
-  "selected": "takt_batches_observed",
+  "job_results_sha256": "557bd54ae160f26da07015c76fecf76d8bcbcc8acdeddf3566c34d2b1d05efc8",
+  "selected": "euclidean_swings",
   "selected_windows": {
-    "inserter:2": "1-9,65-73",
-    "inserter:1": "1-14,17-22,25-46,65-102"
+    "inserter:1": "50-87,98-111,114-119,122-183,242-255,258-263,266-327,338-351,354-359,362-375,378-383",
+    "inserter:2": "50-58,98-106,146-154,242-250,290-298,338-346"
   },
   "alternatives": [
     {"id": "takt_batches_observed", "verdict": "stable", "holds": true, "rate": 15, "supply": null, "window_cycle_ticks": 128, "wake_ups": 56.25, "descriptions_cut": 0, "clock_sha256": "7efe5bd2133251b24f53621b13f86a3f8a0cb5e877a09a1795d27640d4586406", "windows_sha256": "166be6ff5e8214753554c3c39df3a4fc6b9f904acc5656e46c4423320c786841", "text_sha256": "5f29a3bbea310329add631d7d288b16d403480f39f3499e541e34d6d631aa226", "results_sha256": "65ebefddff946d91a02686836d5947eb371fc29cdb2a0d20401030337397a9a9"},

@@ -234,7 +234,7 @@ describe('the Rank column: the engine\'s order', () => {
         expect(views[order[0]].id).toBe(result.clocks[result.selected_index].id);
     });
 
-    it('heads the column Rank, with a help that lists the six keys in order, the tie, rank 1 and whether the slower searches ran', async () => {
+    it('heads the column Rank, with a help that lists the seven keys in order, the tie, rank 1 and whether the slower searches ran', async () => {
         const { user } = table(viewsOf(AUTOMATION_240), 0, NARROW, { pickRule: { searchedForFewerWakeUps: true } });
         const header = screen.getAllByRole('columnheader').find(head => head.textContent === 'Rank')!;
         await user.click(within(header).getByRole('button', { name: 'About Rank' }));
