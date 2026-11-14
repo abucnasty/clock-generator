@@ -4,11 +4,9 @@
  * again.
  *
  * - **Moving lane phases:** the clock is made for a moving belt and holds from the modeled start, but falls short from
- *   another lane phase of the belt: at the start (`as_built.failed_pickup_phases`), or only after a loss
- *   (`disturbance_trial.broken_at_other_lane_phases` holds every loss it does not get back from).
+ *   another lane phase of the belt at the start (`as_built.failed_pickup_phases`).
  * - **Taker order:** two or more inserters take one product from one machine, and the clock holds the target rate with them
- *   served in one order and not in another (`as_built.failed_taker_order`), or gets back after a loss in one order only
- *   (`disturbance_trial.broken_under_other_taker_orders`, told with the losses that it does not get back from).
+ *   served in one order and not in another (`as_built.failed_taker_order`).
  * - **Output chest full:** the build puts its output into a chest nothing takes from, and where the run that failed the
  *   clock ended the chest had no room left for it: the same chest the web form warns can fill up.
  * - **Export belt short:** the clock moves the target, and a belt with a consumption rate gets less than its consumers
@@ -69,7 +67,7 @@ export interface WhyNotStableClock {
     /** Stable over the target rate, which the selection picks where none meets goal 1 (`ClockRanking.stable_above_target`) */
     stable_above_target?: boolean;
     assessment: Pick<ClockAssessment, "holds" | "items_per_second" | "shared_lane_losses"> & {
-        disturbance_trial: Pick<DisturbanceTrialVerdict, "survives" | "broken_by" | "broken_at_other_lane_phases" | "broken_under_other_taker_orders" | "not_tried"> | null;
+        disturbance_trial: Pick<DisturbanceTrialVerdict, "survives" | "broken_by" | "not_tried"> | null;
     };
     /** Whether the clock is made for a moving belt (some input lane is not a dead end) */
     moving_belt: boolean;
@@ -215,15 +213,6 @@ function movingLanePhases(clock: WhyNotStableClock, build: WhyNotStableBuild): W
                 + `${shortfall ? `: from such a start it moves ${shortfall}` : ""}. ${in_the_game}`,
         };
     }
-    const loss = clock.assessment.disturbance_trial;
-    const other_phases = loss?.broken_at_other_lane_phases ?? [];
-    if (clock.verdict === "no recovery" && loss !== null && loss.broken_by.length > 0 && loss.broken_by.every(it => other_phases.includes(it))) {
-        return {
-            cause: "moving lane phases",
-            message: `${lead} and goes back to it by itself from there after every supply stop and output blockage, but not when the lanes come back in another `
-                + `phase after ${lossList(loss.broken_by)}. ${in_the_game}`,
-        };
-    }
     return null;
 }
 
@@ -268,22 +257,9 @@ function spareTimeSentence(spare: SpareTime | null): string {
         + "go back to its rate. That is too little to make up what it lost.";
 }
 
-function noRecovery(clock: WhyNotStableClock, build: WhyNotStableBuild): WhyNotStable {
+function noRecovery(clock: WhyNotStableClock): WhyNotStable {
     const broken_by = clock.assessment.disturbance_trial?.broken_by ?? [];
-    const other_phases = clock.assessment.disturbance_trial?.broken_at_other_lane_phases ?? [];
-    const other_orders = clock.assessment.disturbance_trial?.broken_under_other_taker_orders ?? [];
-    const at_the_start = broken_by.filter(it => !other_phases.includes(it) && !other_orders.includes(it));
-    const elsewhere = broken_by.filter(it => other_phases.includes(it));
-    const in_another_order = broken_by.filter(it => other_orders.includes(it));
-    const after = (first: boolean) => first ? "after" : "After";
-    const sentences = [
-        ...(at_the_start.length > 0 ? [`does not go back to it by itself after ${lossList(at_the_start)}.`] : []),
-        ...(elsewhere.length > 0 ? [`${after(at_the_start.length === 0)} ${lossList(elsewhere)} it goes back to it by itself from the `
-            + "modeled start, but not when a moving belt's lanes come back in another phase."] : []),
-        ...(in_another_order.length > 0 ? [`${after(at_the_start.length === 0 && elsewhere.length === 0)} ${lossList(in_another_order)} it goes back to it by itself when `
-            + `${competingTakersNamed(clock, build)} are served in one order, but not in another. ${ORDER_IN_THE_GAME}`] : []),
-    ];
-    const losses = sentences.length > 0 ? sentences.join(" ")
+    const losses = broken_by.length > 0 ? `does not go back to it by itself after ${lossList(broken_by)}.`
         : "was off its expected output in the run the loss trials are made on, so whether it goes back to it by itself after a supply stop or an output blockage is not known.";
     return {
         cause: "no recovery",
@@ -446,5 +422,5 @@ export function whyNotStable(clocks: readonly WhyNotStableClock[], selected_inde
         ?? sharedLaneShort(clock)
         ?? takerOrder(clock, build)
         ?? movingLanePhases(clock, build)
-        ?? (clock.verdict === "no recovery" && at_target ? noRecovery(clock, build) : nothingHolds(clock, build));
+        ?? (clock.verdict === "no recovery" && at_target ? noRecovery(clock) : nothingHolds(clock, build));
 }

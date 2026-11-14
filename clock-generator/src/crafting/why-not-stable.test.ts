@@ -10,7 +10,7 @@ function clock(overrides: Partial<WhyNotStableClock> = {}): WhyNotStableClock {
         label: "Takt Batches: 2 output swings each output cycle",
         verdict: "stable",
         meets_target_rate: true,
-        assessment: { holds: true, items_per_second: 7.5, disturbance_trial: { survives: true, broken_by: [], broken_at_other_lane_phases: [] } },
+        assessment: { holds: true, items_per_second: 7.5, disturbance_trial: { survives: true, broken_by: [] } },
         moving_belt: false,
         expected_output_items: 176,
         as_built_output: { items: 176 },
@@ -22,11 +22,11 @@ function clock(overrides: Partial<WhyNotStableClock> = {}): WhyNotStableClock {
 }
 
 /** A clock that holds the target and does not get back after the `broken_by` losses */
-function noRecovery(broken_by: string[], other_phases: string[] = [], overrides: Partial<WhyNotStableClock> = {}): WhyNotStableClock {
+function noRecovery(broken_by: string[], overrides: Partial<WhyNotStableClock> = {}): WhyNotStableClock {
     return clock({
         verdict: "no recovery",
         meets_target_rate: false,
-        assessment: { holds: true, items_per_second: 7.5, disturbance_trial: { survives: false, broken_by, broken_at_other_lane_phases: other_phases } },
+        assessment: { holds: true, items_per_second: 7.5, disturbance_trial: { survives: false, broken_by } },
         ...overrides,
     });
 }
@@ -37,7 +37,7 @@ describe("why the selected clock does not meet goal 1", () => {
     it("is not said of a clock that meets it", () => {
         expect(whyNotStable([clock()], 0, moving)).toBeNull();
         // on a build with a deadlock risk a clock that does not recover meets it too (see ClockRanking.meets_target_rate)
-        expect(whyNotStable([noRecovery(["coal stops arriving"], [], { meets_target_rate: true })], 0, moving)).toBeNull();
+        expect(whyNotStable([noRecovery(["coal stops arriving"], { meets_target_rate: true })], 0, moving)).toBeNull();
         expect(whyNotStable([], 0, moving)).toBeNull();
     });
 
@@ -81,39 +81,20 @@ describe("why the selected clock does not meet goal 1", () => {
             .toContain("when inserters 5, 7, 22 and 25 are served in one order");
     });
 
-    it("is no recovery for a clock that gets back after a loss with the takers of one machine served in one order only", () => {
-        const clock_of = noRecovery(["coal stops arriving"], [], { competing_takers: [["inserter:6", "inserter:7"]] });
-        clock_of.assessment.disturbance_trial!.broken_under_other_taker_orders = ["coal stops arriving"];
-        expect(whyNotStable([clock_of], 0, moving)?.message).toContain("holds the setpoint, but after coal stops arriving it goes back "
-            + "to it by itself when inserters 6 and 7 are served in one order, but not in another. The game serves inserters that take from one "
-            + "machine in a fixed order, which the configuration does not tell, so the build can fall short.");
-    });
-
-    it("is the moving lane phases of a moving-belt clock that gets back from every loss from the modeled start only", () => {
-        const losses = ["accumulator stops arriving", "electromagnetic science pack is not taken away"];
-        expect(whyNotStable([noRecovery(losses, losses, { moving_belt: true, label: "Time-Study Windows: 3 output swings each output cycle" })], 0, moving)).toEqual({
-            cause: "moving lane phases",
-            message: "The recommended clock (Time-Study Windows: 3 output swings each output cycle) is made for a moving belt. It holds the setpoint "
-                + "from the modeled start and goes back to it by itself from there after every supply stop and output blockage, but not when the lanes come back in "
-                + "another phase after accumulator stops arriving, or after electromagnetic science pack is not taken away. In the "
-                + "game a belt's lanes reach the pickups in whatever phase they happen to have, so the build can fall short.",
-        });
-    });
-
     it("is no recovery for a clock that holds the target and does not get back after the losses it names", () => {
         expect(whyNotStable([noRecovery(["coal stops arriving"])], 0, moving)).toEqual({
             cause: "no recovery",
             message: "The recommended clock (Takt Batches: 2 output swings each output cycle) holds the setpoint, but does not go back to "
                 + "it by itself after coal stops arriving. A buffer, or a faster machine, lets it catch up.",
         });
-        // a moving-belt clock that misses a loss from the modeled start itself is no recovery too
-        expect(whyNotStable([noRecovery(["tungsten ore stops arriving"], [], { moving_belt: true })], 0, moving)?.cause).toBe("no recovery");
+        // a moving-belt clock that misses a loss is no recovery too: the loss trials run from the cold start only
+        expect(whyNotStable([noRecovery(["tungsten ore stops arriving"], { moving_belt: true })], 0, moving)?.cause).toBe("no recovery");
     });
 
     it("names the losses that were not tried once one broke the clock", () => {
-        const stopped = noRecovery(["coal stops arriving"], [], {
+        const stopped = noRecovery(["coal stops arriving"], {
             assessment: { holds: true, items_per_second: 7.5, disturbance_trial: { survives: false, broken_by: ["coal stops arriving"],
-                broken_at_other_lane_phases: [], not_tried: ["iron plate stops arriving", "iron gear wheel is not taken away"] } },
+                not_tried: ["iron plate stops arriving", "iron gear wheel is not taken away"] } },
         });
         expect(whyNotStable([stopped], 0, moving)?.message).toBe("The recommended clock (Takt Batches: 2 output swings each output cycle) holds "
             + "the setpoint, but does not go back to it by itself after coal stops arriving. Not tried, since one failure is enough: "
@@ -127,19 +108,9 @@ describe("why the selected clock does not meet goal 1", () => {
         expect(message).not.toContain("coal");
     });
 
-    it("tells both causes of a moving-belt clock that misses one loss from the modeled start and another only from other lane phases", () => {
-        const several = noRecovery(["tungsten ore stops arriving", "coal stops arriving"], ["coal stops arriving"], { moving_belt: true });
-        expect(whyNotStable([several], 0, moving)).toEqual({
-            cause: "no recovery",
-            message: "The recommended clock (Takt Batches: 2 output swings each output cycle) holds the setpoint, but does not go back to "
-                + "it by itself after tungsten ore stops arriving. After coal stops arriving it goes back to it by itself from the modeled start, "
-                + "but not when a moving belt's lanes come back in another phase. A buffer, or a faster machine, lets it catch up.",
-        });
-    });
-
     it("adds the spare time of a machine that takes longer to make up a period than a build is given to get back", () => {
         const spare = (spare_ticks: number, working_ticks: number) => whyNotStable(
-            [noRecovery(["tungsten ore stops arriving"], [], { spare_time: { machine: "the foundry that makes metallurgic-science-pack", spare_ticks, working_ticks, recovery_window_cycles: 40 } })],
+            [noRecovery(["tungsten ore stops arriving"], { spare_time: { machine: "the foundry that makes metallurgic-science-pack", spare_ticks, working_ticks, recovery_window_cycles: 40 } })],
             0, moving)!.message;
         expect(spare(1, 319)).toContain("after tungsten ore stops arriving. The foundry that makes metallurgic-science-pack crafts 319 ticks of a window cycle "
             + "and has 1 tick to spare: making up one window cycle it lost takes it 319 window cycles, more than the 40 a build is given to go back to its rate. "
@@ -189,14 +160,14 @@ describe("why the selected clock does not meet goal 1", () => {
     it("is nothing holds for a stable clock off the target, and for one that does not recover at another rate", () => {
         expect(whyNotStable([clock({ meets_target_rate: false, assessment: { holds: true, items_per_second: 7.4, disturbance_trial: null } })], 0, moving)?.message)
             .toContain("moves 7.4 a second, 0.1 under the target.");
-        expect(whyNotStable([noRecovery(["coal stops arriving"], [], { assessment: { holds: true, items_per_second: 8,
-            disturbance_trial: { survives: false, broken_by: ["coal stops arriving"], broken_at_other_lane_phases: [] } } })], 0, moving)?.cause).toBe("nothing holds");
+        expect(whyNotStable([noRecovery(["coal stops arriving"], { assessment: { holds: true, items_per_second: 8,
+            disturbance_trial: { survives: false, broken_by: ["coal stops arriving"] } } })], 0, moving)?.cause).toBe("nothing holds");
     });
 
     // Thaeln's cell 07: the stable observed windows clock over the target is selected before an unstable one under it
     it("is nothing holds for a stable clock over the target, selected before nearer ones, with how far over it runs", () => {
         const over = clock({ label: "Time-Study Windows: 6 output swings each output cycle", meets_target_rate: false, stable_above_target: true,
-            assessment: { holds: true, items_per_second: 82.286, disturbance_trial: { survives: true, broken_by: [], broken_at_other_lane_phases: [] } } });
+            assessment: { holds: true, items_per_second: 82.286, disturbance_trial: { survives: true, broken_by: [] } } });
         expect(whyNotStable([over], 0, { target_items_per_second: 80.41875, not_made: [] })).toEqual({
             cause: "nothing holds",
             message: "No clock holds the setpoint of 80.42 a second. The recommended one, Time-Study Windows: 6 output swings each output cycle, is "

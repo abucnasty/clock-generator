@@ -125,6 +125,7 @@ its timing is not tested. Measuring them is follow-up F7.
 | Blocked output behind a belt drop, chest-fed: throughput and recovery, stack sizes 1–4 | Tested | Tested | Tested | Tested |
 
 The mismatches: the express moving side underground entrance and exit hold and have recovery in the game, where the generator says "no recovery" from lane phase [1,5], which the capture cannot set up (#269); the front exit on a moving config holds and has recovery in the game at express and normal, where the generator says "no recovery" and "unstable" from lane phases of a moving belt, which the exit's backed-up belt does not have (#274). Each verdict is the cautious side.
+The "no recovery" verdicts are of the engines of those recordings: since 2026-11-14 the loss trials run from the cold start only, so the generator no longer tries a loss from another lane phase, and these builds' verdicts now are not recorded here.
 
 The ordinary clocks are verified on **48 configurations** across all four speeds
 (`tests/game/builds/pickup-clock-controls.json`, each entry with the PR that recorded it): the recapture after the belt
@@ -147,7 +148,7 @@ takes from the lanes at rest, and these fixtures select a stable clock for backe
 generator no longer makes the clock planned with the belts moving for a backed-up config. Their fully backed-up cold-start controls alternate 144/208 items at offset 1287 as fixed-window simulator
 checks. The two express moving underground defaults are
 observed windows at 3 output swings, made for moving supply (#269): exact baseline and recovery in the game, while the
-generator says "no recovery", its disturbance trials failing from lane phase [1,5] alone, which the capture cannot set up
+generator said "no recovery", its disturbance trials failing from lane phase [1,5] alone, which the capture cannot set up
 (`lane-phase-controls.json`). Through this half-tile pickup the game moves 704 to 716 a window cycle with
 every inserter always enabled, the plant's own limit: the pickup was never the bound. The clock before, made for
 backed-up supply, moved 352 a window cycle under moving supply, in the model as in the game. The #265 recapture's own clocks (43 of 48 exact,
@@ -166,7 +167,7 @@ own, every belt-fed window as long as a hand takes from the lanes at rest; recor
 window cycle as well and gets back after every cut. **A moving config on
 the front exit is safe on this layout:** the input stands on the exit's output tile, so the belt is backed up in the
 game whatever the config says, and the clock made for moving belts holds exactly and has recovery at every tier. That
-includes the express clocks the generator calls "no recovery" and the normal ones it calls "unstable", both judged
+includes the express clocks the generator called "no recovery" and the normal ones it calls "unstable", both judged
 from moving lane-phase starts ([1,5] or [5,1]; [0,3]) this exit cannot have; at normal it moves the 176 the
 backed-up config's own clock misses.
 
@@ -325,7 +326,7 @@ with two overlapping detailed window cycles of the recorder. Electromagnetic tar
 All 24 gear configurations hold 16 gears / 160 ticks through their baseline and recovery windows. Forty-four
 ordinary defaults are correctly marked stable, the two normal backed-up undergrounds among them since #456; the two
 normal moving undergrounds are rejected on lane phases the game fails from too (#266), and the two express moving
-undergrounds keep a cautious "no recovery" from a lane phase the capture cannot set up (#269). Four
+undergrounds kept a cautious "no recovery" from a lane phase the capture cannot set up (#269), before the loss trials ran from the cold start only. Four
 additional cold-start controls cover both normal backed-up undergrounds at offsets
 0 and 1287, matching all 16 output window cycles each. A full lane can still move: these controls verify stationary
 initial stock and empty machines/hands before comparing the simulator. The [build report](../../tests/game/builds/README.md)
@@ -338,7 +339,7 @@ one window cycle of 48 items among four of 64 items, despite the generator's sta
 The [bounded native trace](../../tests/game/builds/lane-phase-controls.json) shows the interrupted
 lane shift by half a stack interval while the other lane keeps its phase. The existing pickup kernel reproduces
 this output pattern with separate lane phases. The mirrored express default similarly goes back to 96/112
-rather than 112 items per 1,120 ticks. Clock verification now varies lane phases for both output and recovery.
+rather than 112 items per 1,120 ticks. Clock verification then varied lane phases for both output and recovery; since 2026-11-14 it varies them for output only, and the loss trials run from the cold start.
 The [32 operating controls](../../tests/game/builds/over-hood-clock-history-controls.json) (#254) cover all four speeds, both
 mirroring states and supplies, and same/different ingredients: 21 meet exact baseline and recovery output,
 including all 16 same-item cases; eight already receive unstable/no-recovery verdicts; these three receive

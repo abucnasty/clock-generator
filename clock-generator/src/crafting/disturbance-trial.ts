@@ -141,8 +141,8 @@ export function plannedTrialsOf(loss: DisturbanceTrial, places: readonly number[
 /**
  * The trials of a loss that breaks a clock, as numbers: those its plan has, those run (every trial of the plan, see
  * withEveryTrialCounted: `run` equals `planned`), those the build recovers from, and the first it does not recover from.
- * The counts are of the run that broke it: at the lanes' modeled phase, or from the first lane phase, the first order of
- * the takers or the first run of the copies under which the clock does not recover.
+ * The counts are of the run that broke it: from the cold start on one copy, or the first run of the copies under which
+ * the clock does not recover.
  */
 export interface TrialCount {
     /** The loss: a supply stop, an output blockage or an excess of results that come by chance, and its items */
@@ -432,27 +432,19 @@ export interface LossOutcome {
     /** Clock window cycles in a bin */
     window_cycles_per_bin: number;
     expected_per_bin: number;
-    /** Trials from the canonical start, or the first lane-phase start that fails, up to the first that does not recover. */
+    /** Trials from the cold start, up to the first that does not recover */
     trials: LossTrial[];
     /** The trials the loss has: each place in the window cycle for each length (plannedTrialsOf); `trials` stops at the first that does not recover */
     planned_trials: number;
     /** Where the trials after the first that does not recover were run too (withEveryTrialCounted): every trial planned, and those the build recovers from */
     every_trial?: { run: number; recovered: number };
-    /** Every trial recovers at every checked lane-phase start. */
+    /** Every trial recovers */
     recovers: boolean;
     /** The most bins a trial took to be back at the expected output; null when one does not recover */
     recovered_after_bins: number | null;
     /** The most ticks the build went on after a cut, over the trials that ran their course; null when it had not stopped at the cap in one of them */
     stopped_after_ticks: number | null;
-    /** Additional lane-phase starts checked after the canonical start. */
-    pickup_phase_starts_checked?: number;
-    /** First failing lane-phase start; values are public 1/32-tile units, keyed by inserter ID. */
-    failed_pickup_phases?: Record<string, readonly [number, number]>;
-    /** Orders of the inserters that take one product from one machine the loss was tried under, the default included; absent where there are none */
-    taker_orders_checked?: number;
-    /** The order of those inserters under which the build did not get back, after it did under the default ("ascending") */
-    failed_taker_order?: string;
-    /** Ticks simulated across all checked starts. */
+    /** Ticks simulated for the trials of the loss */
     ticks: number;
 }
 
@@ -1128,20 +1120,9 @@ export interface DisturbanceTrialVerdict {
     broken_by: string[];
     /**
      * The losses that were not tried, as lossLabel words them, since an earlier loss already showed that the clock does
-     * not recover: the ones after the first that it does not get back from at the modeled phase. Absent when every loss
-     * was tried.
+     * not recover: the ones after the first that it does not get back from. Absent when every loss was tried.
      */
     not_tried?: string[];
-    /**
-     * The losses of `broken_by` it gets back from at the lanes' modeled phase, and not from a start where a moving lane
-     * comes back in another phase (the loss's `failed_pickup_phases`). Absent from results made before it was kept.
-     */
-    broken_at_other_lane_phases?: string[];
-    /**
-     * The losses of `broken_by` it gets back from with the inserters that take one product from one machine served in the
-     * default order, and not in another (the loss's `failed_taker_order`). Absent where there are none.
-     */
-    broken_under_other_taker_orders?: string[];
     /** The most window cycles it took to be back at the expected output over all trials; null when it does not survive */
     recovered_after_window_cycles: number | null;
     /** For a build whose items spoil: the losses were shorter than this (lossLimitOf); absent for any other build */
@@ -1161,12 +1142,6 @@ export function verdictOf(report: DisturbanceTrialReport): DisturbanceTrialVerdi
     return {
         survives: report.survives,
         broken_by: report.losses.filter(outcome => !outcome.recovers).map(outcome => lossLabel(outcome.loss)),
-        broken_at_other_lane_phases: report.losses.filter(outcome => !outcome.recovers && outcome.failed_pickup_phases !== undefined)
-            .map(outcome => lossLabel(outcome.loss)),
-        ...(report.losses.some(outcome => !outcome.recovers && outcome.failed_taker_order !== undefined) && {
-            broken_under_other_taker_orders: report.losses.filter(outcome => !outcome.recovers && outcome.failed_taker_order !== undefined)
-                .map(outcome => lossLabel(outcome.loss)),
-        }),
         ...(report.not_tried.length > 0 && { not_tried: report.not_tried.map(lossLabel) }),
         recovered_after_window_cycles: report.recovered_after_window_cycles,
         ...(report.loss_limit !== null && { loss_limit: report.loss_limit }),

@@ -88,7 +88,7 @@ describe("a saved clock for a shorter period, on the utility science 480 sample"
             recovered_after_bins: 10, ends_in: [792, 744, 792, 744], ends_in_on_the_clock: [768, 768, 768, 768]});
         expect(coal.recovers).toBe(true);
         const disturbance_trial = verdictOf(report);
-        expect(disturbance_trial).toEqual({survives: true, broken_by: [], broken_at_other_lane_phases: [], recovered_after_window_cycles: 12});
+        expect(disturbance_trial).toEqual({survives: true, broken_by: [], recovered_after_window_cycles: 12});
         const verdict = clockVerdictOf({ holds: true, disturbance_trial, items_per_second: 480, wake_ups_per_minute: null, start_dependence: null });
         expect(verdict).toBe("stable");
     });
