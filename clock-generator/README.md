@@ -131,12 +131,15 @@ build without a clock, for recording it in the game.
 A config describes one copy of a build, and `setpoint.copies` says how many identical copies stand side by side:
 the generator plans one and multiplies its rate. The copies are assumed identical, with no inserter from one to another,
 and the belts shared between them. A config that itself holds several identical copies (the same machines and
-inserters written out twice or more, joined by no inserter) is refused and told to describe one copy and set `copies`
-(`src/config/copies-validator.ts`). Describe the smallest repeating unit of a build, not a whole block of it.
-The site offers to make that one copy (`src/config/repeated-unit-conversion.ts`). An inserter that takes from a chest
+inserters written out twice or more, joined by no inserter) is clocked as it is given, every inserter where it stands
+(`src/config/copies-validator.ts` finds the copies). One copy with `copies` is simpler and quicker to generate: the
+site's Build check notes the copies and offers to make that one copy (`src/config/repeated-unit-conversion.ts`), or says
+why it cannot. An inserter that takes from a chest
 and drops onto a belt, in no copy, is supply from outside the copies: the one copy leaves it and its chest out, and the
 belt counts as supplied, as its lanes state. A chest that nothing refers to is left out too. When something drops into
-the chest, the chest is part of the build and the site does not make the copy. Where the next copy stands
+the chest, the chest is part of the build and the site does not make the copy. A clock of a build clocks none of that
+supply either (`src/config/outside-supply.ts`): such an inserter gets no enable window and no combinator, so in the game
+it stays as built, always enabled, and the belt it drops onto is an input belt, supplied as its lanes state. Where the next copy stands
 (`setpoint.copy_offset`) is read from the positions of the copies: each entity is paired with the entity of its kind at
 the same place in the next copy, whatever order they are listed in. Copies that are not moved copies of each other
 (one mirrored) get no gap, and a gap the configuration states is kept only where the copies agree with it.

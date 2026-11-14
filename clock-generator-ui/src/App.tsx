@@ -51,6 +51,7 @@ import { OpenSharedBuildDialog } from './components/OpenSharedBuildDialog';
 import { BuildValidationPanel } from './components/BuildValidationPanel';
 import { outputChestIssues } from './utils/outputChestIssues';
 import { buildValidationIssues, isRefused, navigateToOutputRouteRepair, refusedInserterIdsOf } from './utils/buildValidation';
+import { importedAsOneUnitText } from './utils/pasteText';
 import { ConfigFlowDiagram } from './components/ConfigFlowDiagram';
 import { BuildPanel, type BuildView } from './components/BuildPanel';
 import { PanelSection } from './components/Panel';
@@ -435,6 +436,17 @@ function App() {
     // likewise a check, except that the switches only the clock search reads leave it current
     const checkKey = useMemo(() => checkKeyOf(engineConfig), [engineConfig]);
     const checkStatus = checkStatusOf(validation, checkKey);
+    // a build of several identical copies, which Check clocks as given: the Build check note, with one copy where it can be offered
+    const repeatedCopies = validation.status === 'valid' && checkStatus === 'valid' && validation.recovery?.sourceConfigKey === configKey
+        ? validation.recovery : undefined;
+    const repeatedCopiesText = useMemo(() => {
+        if (repeatedCopies === undefined) return null;
+        const conversion = repeatedCopies.conversion;
+        if (conversion.kind === 'available') return `This build holds ${conversion.multiplicity} identical copies.`;
+        const text = importedAsOneUnitText({ stage: conversion.stage, reason: { code: conversion.code, message: conversion.message },
+            repeatedGroups: repeatedCopies.detectedCopies }, engineConfig);
+        return `${text.what} ${text.next}`;
+    }, [repeatedCopies, engineConfig]);
 
     // the selected clock as the bar, the card and the announcements name it
     const selectedClock = alternatives[selectedAlternativeIndex];
@@ -545,13 +557,13 @@ function App() {
         coverage: checkedCoverage?.issues ?? [], scopeRefusal: checkedCoverage?.refusal, scopeRefusalInserters: checkedCoverage?.refusal_inserters, pickupsNotTested: checkedCoverage?.pickupsNotTested,
         laneSharedByCopies: checkedCoverage?.laneSharedByCopies, laneSharedByCopiesInserters: checkedCoverage?.laneSharedByCopiesInserters, sideLoadedDrops: checkedCoverage?.sideLoadedDrops,
         lanesExactlyFull: checkedCoverage?.lanesExactlyFull, lanesExactlyFullInserters: checkedCoverage?.lanesExactlyFullInserters, copyGapNeeded: checkedCoverage?.copyGapNeeded,
-        machinePrototypes: checkedCoverage?.machinePrototypes?.map(issue => ({ ...issue, message: nameIdsInText(gameNames, issue.message) })), chests: config.chests, inserters: config.inserters, machines: config.machines, belts: config.belts, chestIssues,
+        machinePrototypes: checkedCoverage?.machinePrototypes?.map(issue => ({ ...issue, message: nameIdsInText(gameNames, issue.message) })), repeatedCopies: repeatedCopiesText, chests: config.chests, inserters: config.inserters, machines: config.machines, belts: config.belts, chestIssues,
         coverageText: issue => (issue.kind === 'missing_input_inserter' ? PROBLEM_TEXT.missingInput : PROBLEM_TEXT.missingOutput)(
             issue.machine_id, issue.item_name, id => itemName(gameNames, id)),
         failure: validation.status === 'invalid' && checkStatus === 'invalid' && !validation.crashed
             ? { message: validation.message, diagnostics: validation.diagnostics }
             : error && errorRecovery?.sourceConfigKey === configKey ? { message: error } : undefined,
-    }), [config.setpoint, config.machines, config.chests, config.inserters, config.belts, checkedCoverage, chestIssues, machinesMax, gameNames, validation, checkStatus, error, errorRecovery, configKey, outputGenerationIssues]);
+    }), [config.setpoint, config.machines, config.chests, config.inserters, config.belts, checkedCoverage, chestIssues, machinesMax, gameNames, validation, checkStatus, error, errorRecovery, configKey, outputGenerationIssues, repeatedCopiesText]);
     const problems = useMemo(() => validationIssues.filter(issue => issue.blocksGeneration), [validationIssues]);
     // the inserters the engine's refusal names, live or from the last check: their rows are outlined while it stands
     const refusedInserterIds = useMemo(() => refusedInserterIdsOf(problems), [problems]);
@@ -887,8 +899,9 @@ function App() {
     const checkRecovery = validation.status === 'invalid' && checkStatus === 'invalid' && !validation.crashed
         && validation.recovery?.sourceConfigKey === configKey ? validation.recovery : undefined;
     const generationRecovery = errorRecovery?.sourceConfigKey === configKey ? errorRecovery : undefined;
-    const conversionRecovery = checkRecovery ?? generationRecovery;
-    const conversionIsNextStep = view === 'configure' && !busy && conversionRecovery?.conversion.kind === 'available'
+    const conversionRecovery = checkRecovery ?? generationRecovery ?? repeatedCopies;
+    // only a build that cannot be clocked as it is has the conversion as its next step: one of copies is clocked as given
+    const conversionIsNextStep = view === 'configure' && !busy && (checkRecovery ?? generationRecovery)?.conversion.kind === 'available'
         && !(validation.status === 'invalid' && validation.crashed === true);
     const handleConvertRepeatedUnit = useCallback(async () => {
         if (!isInitialized || busy || conversionPendingRef.current || conversionRecovery?.conversion.kind !== 'available'

@@ -67,7 +67,6 @@ export {
     BeltPickupSinkInserter,
     ConfigValidationError,
     ConfigValidationIssue,
-    CopiesError,
     CopiesUnit,
     FeasibilityError,
     FeasibilityIssue,
@@ -89,6 +88,7 @@ export {
 export { validateCopies, findRepeatedUnits } from './config/copies-validator';
 export type { RepeatedUnits } from './config/copies-validator';
 export { planRepeatedUnitConversion } from './config/repeated-unit-conversion';
+export { withoutOutsideSupply } from './config/outside-supply';
 export { AssertionError } from './common/assert';
 export type {
     ConversionEntityKind, RetainedConversionEntity, RetainedConversionEntities,

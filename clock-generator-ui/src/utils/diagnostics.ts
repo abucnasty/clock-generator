@@ -26,7 +26,7 @@ const UNSTABLE_NOTE = 'unstable';
  * The notes of a clock, by where they stand: the note on why it is not stable on Diagnostics, every other note in Overview
  * but the one on swings at other ticks than the plan (clockNotes.ts)
  */
-export function notesOf(clock: Pick<ClockAlternativeView, 'insights' | 'checkedLanes'>): { diagnostics: ClockInsight | undefined; overview: ClockInsight[] } {
+export function notesOf(clock: Pick<ClockAlternativeView, 'insights' | 'checkedLanes'> & Partial<Pick<ClockAlternativeView, 'copies'>>): { diagnostics: ClockInsight | undefined; overview: ClockInsight[] } {
     const shown = insightsShown(clock);
     return { diagnostics: shown.find(insight => insight.id === UNSTABLE_NOTE), overview: shown.filter(insight => insight.id !== UNSTABLE_NOTE && shownInOverview(insight)) };
 }

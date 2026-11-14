@@ -1,5 +1,4 @@
 import { missingDataSections, type InternalError } from '../utils/internalError';
-import { repeatedUnitsProblem } from '../utils/repeatedUnitsProblem';
 /**
  * Web Worker for running clock-generator simulation.
  *
@@ -10,10 +9,11 @@ import { repeatedUnitsProblem } from '../utils/repeatedUnitsProblem';
 
 import type { z } from 'zod';
 import type { LaneRole } from 'clock-generator/light';
-import type { ClockAlternativeRun, Config, CopiesError, DebugSteps, LogMessage, Logger, MachineToName, NotMadeClock, SearchRangeEdge } from 'clock-generator/browser';
+import type { ClockAlternativeRun, Config, DebugSteps, LogMessage, Logger, MachineToName, NotMadeClock, SearchRangeEdge } from 'clock-generator/browser';
 import { parseFormConfig } from './formConfig';
 import { laneRolesAnswer } from './laneRoles';
 import { convertBeltSetting } from '../utils/beltSettingConversion';
+import { laneTakersOf } from '../utils/laneTakers';
 import { installFactsOf } from './installFacts';
 import { createReadyGate } from './requestGate';
 import { NO_NAMES, hiddenRecipeIds, type GameNames } from '../utils/gameNames';
@@ -144,6 +144,9 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
             machines: machinesToName(config),
             entityNames,
             lanes,
+            laneTakers: laneTakersOf(config),
+            machineOfInserter: Object.fromEntries(config.inserters.flatMap((inserter, index) =>
+                inserter.sink.type === 'machine' ? [[inserter.id ?? index + 1, inserter.sink.id]] : [])),
             kickStarts: result.machine_facts.flatMap(machine => machine.facts.inputs
                 .filter(input => clockGenerator.FactorioDataService.findRecipeOrThrow(machine.facts.recipe).results.some(output => output.name === input.item_name))
                 .map(input => ({ machineId: machine.entity_id, item: input.item_name,
@@ -197,7 +200,6 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
 /** Runs one plan or task with streamed logs and progress; errors are posted instead of thrown */
 function runStreaming(
     runId: number,
-    config: Config,
     debugSteps: DebugSteps,
     streamLogs: boolean,
     work: (options: import('clock-generator/browser').GenerateClockOptions) => WorkerResponse,
@@ -233,7 +235,7 @@ function runStreaming(
         flushLogs();
         postResponse(response);
     } catch (error) {
-        const failure = failureOf(error, config, 'Generate failed');
+        const failure = failureOf(error, 'Generate failed');
         postResponse({
             type: 'error',
             runId,
@@ -245,14 +247,17 @@ function runStreaming(
 function handleValidate(requestId: number, config: Config): void {
     try {
         requireValidConfig(config);
-        postResponse({ type: 'validated', requestId, validation: clockGenerator.validateConfig(config) });
+        const validation = clockGenerator.validateConfig(config);
+        // a build of several identical copies is clocked as given; Build check notes it, with one copy where it can be offered
+        const repeated = clockGenerator.findRepeatedUnits(config);
+        const recovery = repeated.gcd > 1 ? repeatedUnitsRecoveryOf(repeated.copies, config) : undefined;
+        postResponse({ type: 'validated', requestId, validation, ...(recovery && { recovery }) });
     } catch (error) {
-        const { message, recovery } = failureOf(error, config, 'Check failed');
+        const { message } = failureOf(error, 'Check failed');
         postResponse({
             type: 'validation-failed',
             requestId,
             message,
-            recovery,
             internal: isEngineRefusal(error) ? undefined : internalErrorOf(error),
             diagnostics: error instanceof clockGenerator.InserterCoverageError
                 ? error.issues.map(issue => ({ kind: 'coverage' as const, issue }))
@@ -283,7 +288,6 @@ function isEngineRefusal(error: unknown): boolean {
     if (!(error instanceof Error)) return false;
     if (error instanceof clockGenerator.ConfigValidationError
         || error instanceof clockGenerator.InserterCoverageError
-        || error instanceof clockGenerator.CopiesError
         || error instanceof clockGenerator.FeasibilityError
         || error instanceof clockGenerator.LaneCapacityError
         || error instanceof clockGenerator.AssertionError) return true;
@@ -317,7 +321,6 @@ function checkRepeatedUnitConversion(config: Config): CheckedRepeatedUnitConvers
         // structural diagnosis.
         if (!(error instanceof clockGenerator.ConfigValidationError)
             && !(error instanceof clockGenerator.InserterCoverageError)
-            && !(error instanceof clockGenerator.CopiesError)
             && !(error instanceof clockGenerator.FeasibilityError)
             && !(error instanceof clockGenerator.AssertionError)) throw error;
         return { kind: 'unavailable', stage: 'check', reason: { code: 'candidate-check-failed',
@@ -325,28 +328,20 @@ function checkRepeatedUnitConversion(config: Config): CheckedRepeatedUnitConvers
     }
 }
 
-function repeatedUnitsRecoveryOf(error: CopiesError, config: Config): RepeatedUnitsRecovery {
+function repeatedUnitsRecoveryOf(units: readonly { machine_ids: readonly number[] }[], config: Config): RepeatedUnitsRecovery {
     const checked = checkRepeatedUnitConversion(config);
     return {
         kind: 'repeated-units', sourceConfigKey: JSON.stringify(config),
-        detectedCopies: error.units.length, configuredCopies: config.setpoint.copies,
-        units: error.units.map(unit => ({ machine_ids: [...unit.machine_ids] })),
+        detectedCopies: units.length, configuredCopies: config.setpoint.copies,
+        units: units.map(unit => ({ machine_ids: [...unit.machine_ids] })),
         conversion: checked.kind === 'available'
             ? { kind: 'available', multiplicity: checked.plan.multiplicity, copies: checked.plan.copies }
             : { kind: 'unavailable', stage: checked.stage, code: checked.reason.code, message: checked.reason.message },
     };
 }
 
-/** A recovery-query failure must still settle the original Check/run, with its real error and no capability. */
-function failureOf(error: unknown, config: Config, fallback: string): { message: string; stack?: string; recovery?: RepeatedUnitsRecovery } {
-    if (error instanceof clockGenerator.CopiesError) {
-        try {
-            return { message: repeatedUnitsProblem(error), stack: error.stack, recovery: repeatedUnitsRecoveryOf(error, config) };
-        } catch (failure) {
-            return { message: failure instanceof Error ? failure.message : 'The engine could not check the conversion to copies.',
-                stack: failure instanceof Error ? failure.stack : undefined };
-        }
-    }
+/** The message of a failed Check or run, with its stack */
+function failureOf(error: unknown, fallback: string): { message: string; stack?: string } {
     return { message: error instanceof Error ? error.message : fallback, stack: error instanceof Error ? error.stack : undefined };
 }
 
@@ -537,9 +532,11 @@ function handleQuery(requestId: number, query: EngineQuery): void {
     }
 }
 
-function handlePlan(runId: number, config: Config, debugSteps: DebugSteps, streamLogs: boolean): void {
-    runStreaming(runId, config, debugSteps, streamLogs, (options) => {
-        requireValidConfig(config);
+function handlePlan(runId: number, given: Config, debugSteps: DebugSteps, streamLogs: boolean): void {
+    runStreaming(runId, debugSteps, streamLogs, (options) => {
+        requireValidConfig(given);
+        // the build that is clocked, which the clocks and their views are of: outside supply gets no window
+        const config = clockGenerator.withoutOutsideSupply(given);
         const notMade: NotMadeClock[] = [];
         // the tasks go out as soon as the primary clock is made: the pool runs them while this worker assesses it
         const plan = clockGenerator.planClockAlternatives(config, { ...options, on_not_made: clock => notMade.push(clock) }, (context, tasks, primarySignature) => postResponse({
@@ -552,7 +549,7 @@ function handlePlan(runId: number, config: Config, debugSteps: DebugSteps, strea
 
 function handleTask(
     runId: number,
-    config: Config,
+    given: Config,
     debugSteps: DebugSteps,
     streamLogs: boolean,
     context: import('clock-generator/browser').ClockAlternativeContext,
@@ -560,8 +557,10 @@ function handleTask(
     assessedSignatures: string[] = [],
     coordinatedSources?: import('clock-generator/browser').CoordinatedSourcesInput,
 ): void {
-    runStreaming(runId, config, debugSteps, streamLogs, (options) => {
-        requireValidConfig(config);
+    runStreaming(runId, debugSteps, streamLogs, (options) => {
+        requireValidConfig(given);
+        // the build that is clocked, which the clocks and their views are of: outside supply gets no window
+        const config = clockGenerator.withoutOutsideSupply(given);
         const notMade: NotMadeClock[] = [];
         // the per-branch clock is made from the parts of the runs before it, not from the context
         const onNotMade = (clock: NotMadeClock) => notMade.push(clock);

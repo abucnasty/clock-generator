@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { TargetProductionRateConfigSchema, type Config } from "../config/schema";
 import { FactorioDataService } from "../data";
 import { fraction } from "../data-types/fraction";
-import { CopiesError } from "../config/errors";
+import { planRepeatedUnitConversion } from "../config/repeated-unit-conversion";
 import { validateCopies } from "../config/copies-validator";
 import { generateClockAlternatives, generateClockForConfig } from "./generate-blueprint";
 import { TargetProductionRate } from "./target-production-rate";
@@ -73,15 +73,12 @@ describe("the copies validator with a fractional number of copies", () => {
         belts: [{ id: 1, type: "transport-belt", lanes: [{ ingredient: "iron-plate", stack_size: 1, lane_end: { kind: "infinite" } }] }, { id: 2, ...lane("iron-gear-wheel") }],
     } as unknown as Config);
 
-    it("tells to set the copies to the exact product, 11 for 5.5 copies of two units", () => {
-        expect(() => validateCopies(twoUnits(5.5))).toThrow(CopiesError);
-        try {
-            validateCopies(twoUnits(5.5));
-        } catch (error) {
-            expect((error as Error).message).toContain("set setpoint.copies to 11 (now 5.5, times 2).");
-            expect((error as CopiesError).configured_copies).toBe(5.5);
-        }
-        expect(() => validateCopies(twoUnits(0.1))).toThrow("set setpoint.copies to 0.2 (now 0.1, times 2).");
+    // a config of two identical units is clocked as given; the one unit the conversion offers has the exact product of copies
+    it("offers the copies as the exact product, 11 for 5.5 copies of two units, and does not refuse them", () => {
+        expect(() => validateCopies(twoUnits(5.5))).not.toThrow();
+        const copiesOf = (copies: number) => { const plan = planRepeatedUnitConversion(twoUnits(copies)); return plan.kind === "available" ? plan.copies : plan.reason.code; };
+        expect(copiesOf(5.5)).toBe(11);
+        expect(copiesOf(0.1)).toBe(0.2);
     });
 
     it("does not refuse a config of one unit with 5.5 copies", () => {

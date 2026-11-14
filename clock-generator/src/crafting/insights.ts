@@ -572,9 +572,11 @@ export function assumedCopySpacingInsights(config: Config): ClockInsight[] {
 export function droppedOntoSharedLaneInsights(config: Config): ClockInsight[] {
     const lanes = droppedOntoSharedLanes(config);
     const build = lanes.length === 0 ? NO_BUILD : buildToNameOf(config);
+    // a build of one copy has its lane checked with every inserter that takes from it, not with copies
+    const every = config.setpoint.copies > 1 ? "every copy" : "every inserter that takes from it";
     return lanes.map(({ belt_id, lane }) => ({ id: `shared-lane-not-checked-${belt_id}-${lane}`, scope: "build" as const,
-        title: `${capital(lanesInSentence([{ belt_id, lane }], build))} is not checked with every copy on it`,
-        what: `${capital(lanesInSentence([{ belt_id, lane }], build))} is not checked with every copy on it. The build drops items onto this belt, and the check of a `
+        title: `${capital(lanesInSentence([{ belt_id, lane }], build))} is not checked with ${every} on it`,
+        what: `${capital(lanesInSentence([{ belt_id, lane }], build))} is not checked with ${every} on it. The build drops items onto this belt, and the check of a `
             + "shared lane does not run those drops yet.",
         why: "", explanation: "" }));
 }

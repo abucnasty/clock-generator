@@ -2,6 +2,7 @@ import assert from "../common/assert";
 import type { TargetCounts } from "../config/schema";
 import { fraction } from "../data-types/fraction";
 import { Config } from "../config";
+import { withoutOutsideSupply } from "../config/outside-supply";
 import { warnUncalibratedBeltPickups } from "../config/pickup-calibration";
 import { warnLanesSharedByCopies } from "../config/lane-capacity-validator";
 import { warnSideLoadedDrops } from "../config/side-loaded-drop";
@@ -1372,7 +1373,7 @@ export function planClockAlternatives(
      */
     on_tasks?: (context: ClockAlternativeContext, tasks: ClockAlternativeTask[], primary_signature: string) => void,
 ): ClockAlternativesPlan {
-    return withRunMemo(() => planPrimaryAndTasks(config, options, on_tasks));
+    return withRunMemo(() => planPrimaryAndTasks(withoutOutsideSupply(config), options, on_tasks));
 }
 
 function planPrimaryAndTasks(
@@ -1471,7 +1472,7 @@ export function runClockAlternativeTask(
     /** Signatures of clocks other runs assess, as the primary alternative's (see planClockAlternatives) */
     assessed_signatures: readonly string[] = [],
 ): ClockAlternativeRun | null {
-    return withRunMemo(() => runTask(config, context, task_id, options, assessed_signatures));
+    return withRunMemo(() => runTask(withoutOutsideSupply(config), context, task_id, options, assessed_signatures));
 }
 
 function runTask(
@@ -1503,12 +1504,13 @@ const COORDINATED_SOURCES_DESCRIPTION = "The inserters of each source use the en
  * each goes to `options.on_not_made` too, with the parts whose windows were not taken and why.
  */
 export function runCoordinatedSourcesTask(
-    config: Config,
+    given: Config,
     input: CoordinatedSourcesInput,
     options: GenerateClockOptions = {},
     assessed_signatures: readonly string[] = [],
 ): ClockAlternativeRun | null {
     return withRunMemo(() => {
+        const config = withoutOutsideSupply(given);
         const logger = options.logger ?? defaultLogger;
         const quiet = quietOptions(options, logger, options.on_progress_detail);
         const beside_sources = input.parts.find(part => part.alternative_id === input.recommended_id)?.strategy;
@@ -1586,7 +1588,7 @@ export function generateClockAlternatives(
     config: Config,
     options: GenerateClockOptions = {}
 ): ClockAlternativesResult {
-    return withRunMemo(() => generateAllAlternatives(config, options));
+    return withRunMemo(() => generateAllAlternatives(withoutOutsideSupply(config), options));
 }
 
 function generateAllAlternatives(config: Config, options: GenerateClockOptions): ClockAlternativesResult {

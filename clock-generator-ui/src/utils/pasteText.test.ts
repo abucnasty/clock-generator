@@ -60,7 +60,7 @@ describe('importedAsOneUnitText', () => {
     it('names the container a drill drops into, and what to do', () => {
         expect(importedAsOneUnitText(proof('unsupported-boundary', 'A drill into a chest is not supported in a repeated unit.'), config)).toEqual({
             what: 'This export holds 2 identical copies of a build. They can\'t be split into copies yet because a drill drops into a car, so it comes in as one build.',
-            next: 'Check will not run on it like this. Select one complete group in Factorio, export it again, and set Copies to 2.',
+            next: 'It is clocked as one build. For fewer entities to calculate, select one complete group in Factorio, export it again, and set Copies to 2.',
         });
         const silo = { ...config, chests: [{ id: 2, type: 'infinity-chest' }] } as unknown as Config;
         expect(importedAsOneUnitText(proof('unsupported-boundary', 'x'), silo).what).toContain('because a drill drops into an infinity chest,');

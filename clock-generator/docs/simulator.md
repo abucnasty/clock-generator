@@ -283,7 +283,10 @@ The result also lists the spacings of the copies (from the width of a copy for o
 
 A clock is made on one copy of the build. Where the copies take from the same lane (a lane's `sharing`, default
 `shared`), each clock that holds is run once more with every copy built, each with its own machines, chests,
-drills and inserters on the clock of the config's own (`src/crafting/shared-lane-model.ts`). The copies stand in a row,
+drills and inserters on the clock of the config's own (`src/crafting/shared-lane-model.ts`). So is a lane that two or
+more inserters of a build of one copy take from: it runs with all of them on it, each where its position puts it. Where
+one of them has no position, the distance between them is not known: the lane does not run with them together, and its
+row gives the code `taker_spacing_unknown`. The copies stand in a row,
 `setpoint.copy_offset` apart along each lane they share. Without it, a copy's length comes from its positions. Without
 positions, its length is the longer side of its widest machine or drill. The result says the spacing it assumed. Each
 shared lane runs tick by tick with every copy's takers on it (`src/state/shared-lane.ts`): stacks come on at the

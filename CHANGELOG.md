@@ -63,6 +63,11 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: the output swing back-off report is in Model and tested starts, not a warning
 - generation: of clocks with equal wakeups, the one with fewer signals per minute is recommended
 - ui: one copy with Copies is offered for builds fed from chests, leaving the chests out
+- generation: inserters that fill a belt from a chest nothing fills get no enable window
+- generation: a lane several inserters of one copy take from is tested from their positions
+- generation: a build that holds identical copies is clocked as given, no longer refused
+- ui: Build check notes a build of identical copies and offers the simpler version
+- ui: Diagnostics of a build of one copy names each inserter and its machine
 
 ### Fixed
 - ui: Paste from Factorio keeps where the next copy stands, as the export gives it

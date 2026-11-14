@@ -54,6 +54,7 @@ import type { ClockInstallFacts } from './installFacts';
 import type { GameNames } from '../utils/gameNames';
 import type { TargetCounts } from '../utils/targetCounts';
 import type { LaneRole } from 'clock-generator/light';
+import type { LaneTakers } from '../utils/laneTakers';
 
 /** One swing of a fuel inserter into a fuel slot, in ticks of the fuel run */
 export interface FuelSwing {
@@ -229,6 +230,17 @@ export interface ClockModelAssumptions {
      * `buildLanesOf`); missing from views kept before they were carried
      */
     lanes?: BuildLane[];
+    /**
+     * The machine each inserter that puts into one puts into, by the inserter's number: what the texts on a build of one copy
+     * name an inserter with ("Inserter 8 into machine 2"); missing from views kept before it was carried
+     */
+    machineOfInserter?: Record<number, number>;
+    /**
+     * The inserters that take each lane's item from its belt, in order along the belt with their places (laneTakers.ts): what a
+     * build of one copy draws a bar for, beside the takers the engine's result names (those that miss swings); missing from
+     * views kept before it was carried
+     */
+    laneTakers?: LaneTakers[];
     kickStarts: { machineId: string; item: string; items: number }[];
     outputDrops: { beltId: number; inserterIds: number[]; mode: 'shared-lanes' | 'free-lane' }[];
     overrides: Config['overrides'];
@@ -314,6 +326,8 @@ export interface ValidatedResponse {
     type: 'validated';
     requestId: number;
     validation: ConfigValidation;
+    /** The copies a build of several identical copies holds, which Check clocks as given, and whether one copy can be offered */
+    recovery?: RepeatedUnitsRecovery;
 }
 
 export interface ValidationFailedResponse {

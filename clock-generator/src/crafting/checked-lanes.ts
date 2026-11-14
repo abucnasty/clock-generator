@@ -1,6 +1,6 @@
 import type { Config } from "../config/schema";
 import { laneLoads } from "../config/lane-capacity-validator";
-import { laneFactsOfConfig } from "../entities/traits/build-traits";
+import { carriedItemsOf, laneFactsOfConfig } from "../entities/traits/build-traits";
 import { beltLaneFactsOf, LaneEnd, LaneSharing } from "../entities/traits/lane-facts";
 import type { LaneRole } from "../entities/traits/lane-role";
 import { fractionOf, Ratio } from "../entities/traits/ratio";
@@ -8,6 +8,7 @@ import { buildToNameOf } from "./build-names";
 import { capitalized, chestNameInText, inserterNameInText, lanesInSentence, listedInText, textWords, theName, type BuildToName } from "./entity-name";
 import { machineNameInText } from "./machine-name";
 import { figure } from "./other-clocks";
+import { modelLanesOf, takenTogether, takerSpacingUnknown } from "./shared-lane-lanes";
 import type { CopiesTrialVerdict } from "./shared-lane-trial";
 import { droppedOntoSharedLanes, isNotChecked, sharedLanesNotChecked, type SharedLanesNotChecked, type MissedInWindowCycle, type MissedSwingCause, type MissedSwingStops, type SharedLaneJudgement, type SharedLaneLoss,
     type SharedLaneLossFacts, type TakerSwings, type CopiesMade } from "./shared-lane-verdict";
@@ -78,9 +79,12 @@ export type CheckedLaneState =
  * - `build_drops_onto_belt`: the build drops items onto the belt, and the check does not run those drops;
  * - `check_stopped`: the check of the shared lanes stopped with an error, whose message is kept as it is;
  * - `output_belt_not_run`: the output belt is run only with a lane the copies take from, and none is run;
- * - `lane_not_in_model`: the check of the shared lanes does not run the lane.
+ * - `lane_not_in_model`: the check of the shared lanes does not run the lane;
+ * - `taker_spacing_unknown`: in a build of one copy, the inserters that take from the lane do not all have positions, so
+ *   the distance between them is not known and the lane is not run with them together (`takerSpacingUnknown`).
  */
 export type LaneNotCheckedReason =
+    | { code: "taker_spacing_unknown" }
     | { code: "one_copy_does_not_hold" }
     | { code: "drop_rate_unknown" }
     | { code: "drops_more_than_lane_carries"; data: { copies: number } }
@@ -257,10 +261,18 @@ export function buildLanesOf(config: Config): BuildLane[] {
     });
 }
 
-/** The lanes that have a row: those the copies share, with an item and a role */
+/**
+ * The lanes that have a row: those the copies share, with an item and a role, that two or more inserters use, counting
+ * those of every copy: the takers of a lane the build takes from (`takenTogether`), the inserters that drop onto an output
+ * lane. A build of one copy has a row for a lane only where several of its inserters use it.
+ */
 export function sharedLanesOf(config: Config, lanes: readonly BuildLane[] = buildLanesOf(config)): BuildLane[] {
-    if (!(config.setpoint.copies > 1)) return [];
-    return lanes.filter(lane => lane.sharing === "shared" && lane.item !== "" && lane.role !== null);
+    const carried = lanes.some(lane => lane.role === "output") ? carriedItemsOf(config) : null;
+    const droppers = (lane: BuildLane) => config.inserters.filter((inserter, index) =>
+        inserter.sink.type === "belt" && inserter.sink.id === lane.belt_id && carried!(index).has(lane.item)).length;
+    const together = (lane: BuildLane) => lane.role === "output"
+        ? droppers(lane) * Math.ceil(config.setpoint.copies) >= 2 : takenTogether(config, lane.belt_id, lane.lane);
+    return lanes.filter(lane => lane.sharing === "shared" && lane.item !== "" && lane.role !== null && together(lane));
 }
 
 /** The belts the config's output inserters drop the target's item onto, and the chests they or the machines put it into */
@@ -400,8 +412,11 @@ function laneNotCheckedText(reason: LaneNotCheckedReason): string {
         case "check_stopped": return sharedLanesNotChecked(reason.data.message).text;
         case "output_belt_not_run": return OUTPUT_BELT_NOT_RUN;
         case "lane_not_in_model": return NOT_IN_MODEL;
+        case "taker_spacing_unknown": return SPACING_UNKNOWN;
     }
 }
+
+const SPACING_UNKNOWN = "Not every inserter on this lane has a position, so the distance between them is not known.";
 
 const NOT_RUN = "The clock does not hold its output on one copy, so the copies are not run.";
 const DROPPED_ONTO = "The build drops items onto this belt, and the check of a shared lane does not run those drops yet.";
@@ -411,14 +426,14 @@ const OUTPUT_BELT_NOT_RUN ="The output belt is run with the copies only together
 
 /**
  * The rows, the line and the parts of the cause of one clock, from its check of the lanes its copies share (see the
- * module's description); null for a build of one copy
+ * module's description); null for a build of one copy with no lane that several of its inserters use (`sharedLanesOf`)
  */
 export function checkedLanesOf(input: CheckedLanesInput): CheckedLanes | null {
     const { config, holds, judged, window_cycle_ticks, copies_trial, fewer } = input;
     const copies = config.setpoint.copies;
-    if (!(copies > 1)) return null;
-    const build = buildToNameOf(config);
     const lanes = sharedLanesOf(config);
+    if (!(copies > 1) && lanes.length === 0) return null;
+    const build = buildToNameOf(config);
     let loads: ReturnType<typeof laneLoads> | null;
     try {
         loads = laneLoads(config);
@@ -430,7 +445,9 @@ export function checkedLanesOf(input: CheckedLanesInput): CheckedLanes | null {
     const stated_output_belt = config.output_belt !== undefined && ends.belts.size === 1 ? [...ends.belts][0] : undefined;
     const judgement = judged !== null && !("stopped" in judged) ? judged : null;
     const stopped = judged !== null && "stopped" in judged ? judged.stopped : null;
-    const run = holds && judgement !== null && judgement.simulated;
+    // a build of one copy is run with its inserters together only on a lane they share: a lane of unknown end that is not,
+    // run as one copy alone, does not count
+    const run = holds && judgement !== null && judgement.simulated && (copies > 1 || modelLanesOf(config).some(lane => lane.shared));
     const ran_lanes = new Set(judgement?.lanes ?? []);
     const losses = (judgement?.losses ?? []).filter(loss => !isNotChecked(loss));
     const facts = judgement?.loss_facts ?? [];
@@ -444,6 +461,8 @@ export function checkedLanesOf(input: CheckedLanesInput): CheckedLanes | null {
         const together = togetherOf(config, lane, loads);
         const plain_output = lane.role === "output" && lane.belt_id !== stated_output_belt;
         const state = ((): CheckedLaneState => {
+            // a fact of the build, whatever the clock
+            if (lane.role !== "output" && takerSpacingUnknown(config, lane.belt_id, lane.lane)) return { kind: "not_checked", reason: { code: "taker_spacing_unknown" } };
             if (!holds) return { kind: "not_run", reason: { code: "one_copy_does_not_hold" } };
             if (plain_output) {
                 if (together === null || together.carries_per_second === undefined) return { kind: "not_checked", reason: { code: "drop_rate_unknown" } };
@@ -520,7 +539,7 @@ function lineOf(input: { config: Config; build: BuildToName; rows: readonly Chec
         : output_belt === "waits_none_misses" ? ", and no copy misses a swing at the output belt" : ", and no copy is held back at the output belt";
     const trial = trial_failed && copies_trial?.text !== undefined ? ` ${copies_trial.text}` : "";
     return { ...base, run_with_copies: true, every_copy_gets_items: short_copies.length === 0, output_belt, ...(trial !== "" && { copies_trial_text: trial.trimStart() }),
-        sentence: `Checked with all ${figure(copies)} copies on the lanes they share. ${items}${at_belt}.${plain}${chests}${trial}` };
+        sentence: `${copies > 1 ? `Checked with all ${figure(copies)} copies on the lanes they share.` : "Checked with every inserter on the lanes several of them take from."} ${items}${at_belt}.${plain}${chests}${trial}` };
 }
 
 /** "the inserter of copy 2 that takes iron gear wheel and copper plate": the name of an inserter with its copy */

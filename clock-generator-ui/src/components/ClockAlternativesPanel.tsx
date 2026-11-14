@@ -175,7 +175,7 @@ function ClockNameCell({ alternative }: { alternative: ClockAlternativeView }) {
                         </Typography>
                         <Typography variant="body2" color="text.secondary">{statusDetail(alternative)}</Typography>
                         {/* a clock not stable on a lane its copies share: its headline; Diagnostics of the selected clock shows the parts */}
-                        {alternative.checkedLanes?.cause && <Box sx={{ mt: 1.5 }}><CauseHeadline cause={alternative.checkedLanes.cause} /></Box>}
+                        {alternative.checkedLanes?.cause && <Box sx={{ mt: 1.5 }}><CauseHeadline cause={alternative.checkedLanes.cause} clock={alternative} /></Box>}
                     </HelpButton>
                 </Box>} />
             </Box>

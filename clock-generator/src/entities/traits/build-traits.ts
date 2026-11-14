@@ -1,4 +1,5 @@
 import { machinePlacesResults } from "../../config/machine-prototype";
+import { withoutOutsideSupply } from "../../config/outside-supply";
 import { BeltConfig, ChestConfig, Config, InserterConfig, MachineConfiguration, MiningDrillConfig } from "../../config/schema";
 import { FactorioDataService } from "../../data";
 import { BeltSpeed, Lane, lanesOf } from "../belt/belt";
@@ -250,7 +251,9 @@ function laneRolesOfConfig(config: Config): LaneRolesOfBuild {
     ]);
     const kept = roles_by_fields.get(key);
     if (kept !== undefined) return kept;
-    const roles = laneRolesOf(config, carriedItemsOf(config));
+    // the build that is clocked: outside supply puts nothing onto a lane of the build's own (outside-supply.ts)
+    const clocked = withoutOutsideSupply(config);
+    const roles = laneRolesOf(clocked, carriedItemsOf(clocked));
     if (roles_by_fields.size >= 256) roles_by_fields.clear();
     roles_by_fields.set(key, roles);
     return roles;

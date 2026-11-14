@@ -23,8 +23,9 @@ export interface BuildValidationIssue extends Problem {
      * summed would ask a lane for more than it carries; 'machine': its warning that a machine's prototype disagrees with its
      * type or cannot make its recipe; 'drop': its note that a drop side-loads onto another belt. Each shown as an advisory line.
      * 'refusal': one problem of the refusal of a build no clock can hold, which is a refusal of the build as a whole.
+     * 'copies': the note that the build holds several identical copies, which it is clocked as.
      */
-    source: 'field' | 'coverage' | 'chest' | 'engine' | 'calibration' | 'lanes' | 'drop' | 'machine' | 'refusal';
+    source: 'field' | 'coverage' | 'chest' | 'engine' | 'calibration' | 'lanes' | 'drop' | 'machine' | 'refusal' | 'copies';
     fieldTarget?: FocusTarget;
     /** The sentence that opens the problems of one refusal, shown once above them */
     lead?: string;
@@ -139,6 +140,8 @@ interface Input {
     copyGapNeeded?: string | null;
     /** The live warnings for machines whose prototype disagrees with their type or cannot make their recipe: advice, never blocking */
     machinePrototypes?: readonly MachinePrototypeIssue[];
+    /** The live note that the build holds several identical copies, clocked as given: its words. Never blocking */
+    repeatedCopies?: string | null;
     failure?: { message: string; diagnostics?: ValidationDiagnostic[] };
 }
 
@@ -221,6 +224,10 @@ export function buildValidationIssues(input: Input): BuildValidationIssue[] {
     if (input.lanesExactlyFull) {
         advise('lanes-exactly-full', 'info', 'lanes',
             { kind: 'lanes-exactly-full', inserters: [...input.lanesExactlyFullInserters ?? []], text: input.lanesExactlyFull });
+    }
+    if (input.repeatedCopies) {
+        add({ id: 'repeated-copies', text: input.repeatedCopies, severity: 'info', blocksGeneration: false, source: 'copies',
+            target: { kind: 'validation-issue', id: 'repeated-copies' } });
     }
     if (input.copyGapNeeded) {
         advise('copy-gap-needed', 'info', 'drop', { kind: 'copy-gap-needed', text: input.copyGapNeeded });

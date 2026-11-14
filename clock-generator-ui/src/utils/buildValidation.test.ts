@@ -170,3 +170,11 @@ it.each([
         chests: [empty], failure: { message: 'x', diagnostics: [{ kind: 'field', path, message: 'Required' }] } });
     expect(issues.at(-1)?.text).toBe(text);
 });
+
+// a build of several identical copies is clocked as given: Build check notes it, and the note never blocks generation
+it('notes a build of identical copies as an advisory of its own, which does not block generation', () => {
+    const [note] = buildValidationIssues({ ...none, repeatedCopies: 'This build holds 9 identical copies.' });
+    expect(note).toMatchObject({ id: 'repeated-copies', source: 'copies', severity: 'info', blocksGeneration: false,
+        text: 'This build holds 9 identical copies.' });
+    expect(buildValidationIssues({ ...none, repeatedCopies: null })).toEqual([]);
+});

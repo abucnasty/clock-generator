@@ -1,6 +1,6 @@
 import { Config, ConfigSchema } from './schema';
-import { findRepeatedUnits, validateCopies } from './copies-validator';
-import { CopiesError } from './errors';
+import { findRepeatedUnits } from './copies-validator';
+import { outsideSupplyOf } from './outside-supply';
 import { fraction } from '../data-types/fraction';
 import { orderByMachineDependencies } from '../common/order-by-machine-dependencies';
 
@@ -121,20 +121,14 @@ function analyze(config: Config): Analysis {
         if (!ids.machines.has(drill.target.id)) refuse('invalid-references', `Missing drill target ${drill.target.id}.`);
         join(keyOf('drill', drill.id), keyOf('machine', drill.target.id));
     });
-    // An inserter that takes from a chest nothing drops into and drops onto a belt, in no machine's subsystem, is supply from
-    // outside the copies: it and its chest are left out of the one copy, and the belt counts as supplied, as its lanes state.
-    // So is a chest nothing refers to. A chest something drops into (an inserter, a machine that places its results, a
-    // drill) is part of the build's flow, and an inserter from it is not left out.
-    const filled = new Set<string>([
-        ...config.inserters.filter(ins => ins.sink.type === 'chest').map(ins => keyOf('chest', ins.sink.id)),
-        ...config.machines.flatMap(machine => machine.result_target?.type === 'chest' ? [keyOf('chest', machine.result_target.id)] : []),
-        ...(config.drills?.configs ?? []).flatMap(drill => drill.target.type === 'chest' ? [keyOf('chest', drill.target.id)] : []),
-    ]);
-    const fillsBelt = (ins: Config['inserters'][number]): boolean =>
-        ins.source.type === 'chest' && ins.sink.type === 'belt' && !filled.has(keyOf('chest', ins.source.id));
+    // Outside supply (outside-supply.ts) is supply from outside the copies: its inserters and their chests are left out of
+    // the one copy, and the belt counts as supplied, as its lanes state. So is a chest nothing refers to. A chest something
+    // drops into (an inserter, a machine that places its results, a drill) is part of the build's flow, and an inserter from
+    // it is not left out.
+    const supply = outsideSupplyOf(config);
     // a buffer chest alone in its subsystem, that such inserters alone take from, or that nothing refers to
-    const outsideChest = (nodes: Set<string>): boolean => nodes.size === 1 && [...nodes].every(key => key.startsWith('chest:')
-        && !filled.has(key) && config.inserters.every(ins => keyOf(ins.source.type, ins.source.id) !== key || fillsBelt(ins)));
+    const outsideChest = (nodes: Set<string>): boolean => nodes.size === 1
+        && [...nodes].every(key => key.startsWith('chest:') && supply.chests.has(Number(key.slice('chest:'.length))));
     const groups = new Map<string, Set<string>>();
     for (const key of parent.keys()) {
         const root = find(key);
@@ -158,7 +152,7 @@ function analyze(config: Config): Analysis {
     config.inserters.forEach((ins, index) => {
         const ends = [ins.source, ins.sink];
         const touching = ends.map(end => componentOf.get(keyOf(end.type, end.id))).filter((it): it is number => it !== undefined);
-        if (touching.length === 0 && fillsBelt(ins)) {
+        if (touching.length === 0 && supply.inserters.has(index)) {
             outside.add(index);
             return;
         }
@@ -394,8 +388,7 @@ export function planRepeatedUnitConversion(config: Config): RepeatedUnitConversi
         if (offset !== undefined) candidate.setpoint.copy_offset = offset;
         if (!ConfigSchema.safeParse(candidate).success) refuse('copies-not-representable', 'The multiplied Copies value is outside the supported schema.');
         analyze(candidate);
-        try { validateCopies(candidate); } catch (error) {
-            if (!(error instanceof CopiesError)) throw error;
+        if (findRepeatedUnits(candidate).gcd > 1) {
             refuse('candidate-still-repeated', 'The retained composition still contains repetition under the existing Copies check.');
         }
         return { kind: 'available', sourceConfigKey: JSON.stringify(config), multiplicity,

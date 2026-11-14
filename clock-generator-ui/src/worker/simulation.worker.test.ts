@@ -188,7 +188,7 @@ it('suggests the most the build can hold where an input lane allows less than th
     expect(most?.limit).toBeNull();
 });
 
-describe('repeated units: the real engine separates Check and generation recovery, the recomputed conversion and query failure', () => {
+describe('repeated units: Check clocks them as given and offers the recomputed conversion; query failure', () => {
     /**
      * Eight gear assemblers between the same two belts, eight repeated units set as half a copy; as 4 copies they take 7
      * plates a second from the plate lane they share, of the 7.5 it gets
@@ -216,11 +216,26 @@ describe('repeated units: the real engine separates Check and generation recover
         inserters: [source.inserters[0], { ...source.inserters[1], sink: { type: 'chest', id: 7 } }],
         chests: [{ id: 7, type: 'infinity-chest', item_filter: [] }] };
 
+    /** The 8 units as one copy, as an export of all of them gives it: 3.5 a second of the 7.5 plates the lane brings */
+    const whole: Config = { ...source, setpoint: { ...source.setpoint, copies: 1 } };
+
+    // a build of 8 repeated units passes Check: it is clocked as given, and the copies come with the one copy that can be offered
+    it('Check passes on 8 units and offers them as 8 copies, and leaves the config as it was', async () => {
+        const before = structuredClone(whole);
+        expect(await send({ type: 'validate', requestId: 6, config: whole })).toMatchObject({ type: 'validated', requestId: 6, recovery: { kind: 'repeated-units',
+            sourceConfigKey: JSON.stringify(whole), detectedCopies: 8, configuredCopies: 1, conversion: { kind: 'available', multiplicity: 8, copies: 8 } } });
+        expect(whole).toEqual(before);
+    });
+
+    // as given at half a copy, the 8 units ask 14 plates a second of the 7.5: Check refuses the target, not the copies
+    it('Check refuses 8 units at half a copy for their target, as one copy of them', async () => {
+        expect(await send({ type: 'validate', requestId: 7, config: source })).toMatchObject({ type: 'validation-failed', requestId: 7,
+            message: expect.stringContaining("No clock can hold this build's setpoint of 3.5 a second over 0.5 copies") });
+    });
+
     it.each([
-        { why: 'the recovery of 8 units as 4 copies', config: source, failure: { recovery: { kind: 'repeated-units',
-            sourceConfigKey: JSON.stringify(source), detectedCopies: 8, configuredCopies: 0.5, conversion: { kind: 'available', multiplicity: 8, copies: 4 } } } },
-        { why: 'no recovery for an unknown inserter', config: invalidPrototype,
-            failure: { message: expect.stringContaining('not-an-inserter'), recovery: undefined } },
+        { why: 'the message for an unknown inserter', config: invalidPrototype,
+            failure: { message: expect.stringContaining('not-an-inserter') } },
         { why: 'a field diagnostic on the chest filter', config: emptyOutput,
             failure: { diagnostics: [{ kind: 'field', path: ['chests', 0, 'item_filter'], message: expect.stringContaining('Remove unfiltered items') }] } },
         { why: 'a coverage diagnostic for no outputs', config: { ...source, inserters: [] },
@@ -229,13 +244,6 @@ describe('repeated units: the real engine separates Check and generation recover
         const before = structuredClone(config);
         expect(await send({ type: 'validate', requestId: 6, config })).toMatchObject({ type: 'validation-failed', requestId: 6, ...failure });
         expect(config).toEqual(before);
-    });
-
-    it('generation stops with the same recovery, as an error of the run, and leaves the config as it was', async () => {
-        const before = structuredClone(source);
-        expect(await send({ type: 'plan', runId: 1, config: source, debugSteps: noDebug, streamLogs: false }))
-            .toMatchObject({ type: 'error', runId: 1, recovery: { conversion: { kind: 'available', copies: 4 } } });
-        expect(source).toEqual(before);
     });
 
     it.each([
@@ -526,6 +534,11 @@ it('passes on what was checked on the shared lanes of each clock, and every lane
     expect(clock.assumptions.lanes?.map(lane => [lane.belt_id, lane.lane, lane.role, lane.sharing])).toEqual([
         [1, 1, 'output', 'shared'], [2, 1, 'output', 'shared'], [3, 1, 'input', 'shared'], [3, 2, 'input', 'shared'], [4, 1, 'input', 'shared'],
         [4, 2, 'input', 'shared'], [5, 1, 'input', 'per_copy'], [5, 2, 'input', 'per_copy'], [6, 1, 'input', 'per_copy'], [6, 2, 'input', 'per_copy']]);
+    // the machine each inserter that puts into one puts into, by the inserter's number: what a build of one copy names its inserters with
+    const config = JSON.parse(militarySample) as Config;
+    const expected = config.inserters.flatMap((inserter, index) => inserter.sink.type === 'machine' ? [[inserter.id ?? index + 1, inserter.sink.id]] : []);
+    expect(expected.length).toBeGreaterThan(0);
+    expect(Object.entries(clock.assumptions.machineOfInserter ?? {}).map(([id, machine]) => [Number(id), machine])).toEqual(expected);
 }, 30_000);
 
 describe('a build that states no lane end and no belt setting', () => {

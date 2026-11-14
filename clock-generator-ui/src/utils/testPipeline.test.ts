@@ -59,11 +59,49 @@ describe('the tests of a clock, from the result\'s data', () => {
         ]);
     });
 
-    it('a build of one copy: the copies together do not apply, whatever one copy does', () => {
+    it('a build of one copy: the inserters together do not apply where no lane is used by several, whatever one copy does', () => {
         const one = { ...clock('time_study_windows'), copies: 1, checkedLanes: undefined };
-        expect(namesOf(one)[1]).toBe('All copies together');
-        expect(said(one)[1]).toBe('does-not-apply: Does not apply | The build has one copy.');
-        expect(said({ ...clock('takt_batches_observed_swings_4'), copies: 1, checkedLanes: undefined })[1]).toBe('does-not-apply: Does not apply | The build has one copy.');
+        expect(namesOf(one)[1]).toBe('Inserters together');
+        expect(said(one)[1]).toBe('does-not-apply: Does not apply | No lane is used by several inserters.');
+        expect(said({ ...clock('takt_batches_observed_swings_4'), copies: 1, checkedLanes: undefined })[1]).toBe('does-not-apply: Does not apply | No lane is used by several inserters.');
+        // one copy that does not hold: the clock alone, and the test that comes after it does not run
+        expect(said({ ...clock('takt_batches_observed_swings_4'), copies: 1 })).toEqual([
+            'failed: Makes 180/s of 240/s | At steady state, from a cold start.',
+            'not-run: Not run | The clock alone does not hold its rate.',
+            'not-run: Not run | The clock alone does not hold its rate.',
+        ]);
+    });
+
+    it('a build of fewer than one copy keeps the words of copies', () => {
+        const part = { ...clock('time_study_windows'), copies: 0.5, checkedLanes: undefined };
+        expect(namesOf(part)[1]).toBe('All copies together');
+        expect(said(part)[1]).toBe('does-not-apply: Does not apply | The build has one copy.');
+    });
+
+    // a build of one copy whose inserters take from one lane: the engine checks the lane with all of them, and the box shows it
+    it('a build of one copy with several inserters on a lane: the second test shows the check of the lane', () => {
+        const loss = { ...clock('takt_batches_observed'), copies: 1 };
+        expect(namesOf(loss)).toEqual(['Clock alone', 'Inserters together', 'Loss of inputs']);
+        expect(said(loss)[1]).toBe('failed: Makes 234.07/s of 240/s | On the lanes several of its inserters take from.');
+        expect(said({ ...clock('time_study_windows'), copies: 1 })[1]).toBe('passed: Holds 240/s | On the lanes several of its inserters take from.');
+    });
+
+    it('a build of one copy that loses swings on its lane: the loss trials say it is the inserters together that are not tried', () => {
+        expect(said({ ...clock('takt_batches_observed'), copies: 1 })[2]).toBe('passed: Recovers alone | The inserters together are not tried: they do not hold their rate.');
+    });
+
+    it('a build of one copy: the trials on the inserters together that could not be made or do not recover', () => {
+        const stable = { ...clock('time_study_windows'), copies: 1 };
+        const trial = stable.assessment.disturbance_trial!;
+        const withCopies = (on_copies: object) => ({ ...stable, assessment: { ...stable.assessment, disturbance_trial: { ...trial, on_copies } } }) as ClockAlternativeView;
+        expect(said(withCopies({ ...trial.on_copies!, not_tried: 'out of memory' }))[2]).toBe('passed: Recovers alone | The inserters together could not be tried: out of memory.');
+        expect(said(withCopies({ ...trial.on_copies!, survives: false }))[2]).toBe('failed: The inserters together do not recover | It recovers alone.');
+    });
+
+    it('a build of one copy where no lane they take from is run: the second test says so in the words of inserters', () => {
+        const stable = { ...clock('time_study_windows'), copies: 1 };
+        const notRun = { ...stable, checkedLanes: { ...stable.checkedLanes!, line: { ...stable.checkedLanes!.line, run_with_copies: false } } };
+        expect(said(notRun)[1]).toBe('does-not-apply: Does not apply | No lane several inserters take from is run.');
     });
 
     it('no run with the copies where no lane they take from is run: the second test does not apply', () => {
