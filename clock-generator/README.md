@@ -133,6 +133,9 @@ the generator plans one and multiplies its rate. The copies are assumed identica
 and the belts shared between them. A config that itself holds several identical copies (the same machines and
 inserters written out twice or more, joined by no inserter) is refused and told to describe one copy and set `copies`
 (`src/config/copies-validator.ts`). Describe the smallest repeating unit of a build, not a whole block of it.
+The site offers to make that one copy (`src/config/repeated-unit-conversion.ts`). An inserter that takes from a chest
+and drops onto a belt, in no copy, fills the belt for all copies: it is kept once, with its chest. When something drops
+into that chest, the chest is part of the build and the site does not make the copy.
 `copies` may be fractional, such as 5.5: the build then holds a partial block, and its rate is planned as that fraction of
 one block's (5.5 copies of a block of 4 assemblers making 240 a second means one block makes 480/11 a second). The unit
 itself is still whole, with identical units, no inserter between them and shared belts. The number is read as an exact
