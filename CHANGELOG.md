@@ -16,6 +16,8 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ### Changed
 - generation: clocks with observed windows are found faster on large builds
+- blueprint: clocks name the site at its new address, clock.abucnasty.dev
+- ui: the site is now at clock.abucnasty.dev; builds saved at the old address stay there
 
 ## [0.28.1] - 2026-11-07
 

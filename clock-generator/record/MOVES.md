@@ -8,6 +8,10 @@ a line that names the reason and lists the jobs. A pull request that moves no re
 CI checks this file: the "Record check" fails when a selected clock got worse than in the base and its job key is not in the lines the pull
 request adds to this file.
 
+## The site moves to clock.abucnasty.dev (feature/host-on-cloudflare)
+Every clock blueprint names the site in its text, so the `text_sha256` of each clock moves with the address, from clock-generator-self.vercel.app to clock.abucnasty.dev. No selection, rate, window, wakeup, cut description or results digest moved.
+- all 86 jobs: `text_sha256` of every clock, for the site's address in the blueprint text
+
 ## Release 0.28.1 (fix/ios-startup-hang)
 Every clock blueprint carries the engine's version, so the `text_sha256` of each clock moves with the bump from 0.28.0 to 0.28.1. No selection, rate, window or wakeup moved.
 - all 86 jobs: `text_sha256` of every clock, for the version in the blueprint text

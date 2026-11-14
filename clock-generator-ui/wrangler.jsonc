@@ -1,0 +1,21 @@
+// The site on Cloudflare: a Worker named clock-generator with no code of its own, which serves the files of `npm run build`
+// (dist/) as static assets. release.yml deploys it with the wrangler CLI from this folder (`wrangler deploy` for
+// production, `wrangler versions upload --preview-alias master` for the preview of master); see
+// docs/maintainer/site-and-sidecar-publishing.md. public/_headers, copied into dist/, sets how long browsers keep a file.
+{
+  "name": "clock-generator",
+  "compatibility_date": "2026-11-10",
+  "assets": {
+    "directory": "./dist",
+    // No client routes: the page is /, and a shared build is in the hash. An unknown path is a 404, as it was on Vercel.
+    "not_found_handling": "none"
+  },
+  // The public address. A custom domain: wrangler deploy creates its DNS record and certificate on the abucnasty.dev
+  // zone, which is in the same Cloudflare account.
+  "routes": [{ "pattern": "clock.abucnasty.dev", "custom_domain": true }],
+  // Not at clock-generator.<account subdomain>.workers.dev as well: users have one address.
+  "workers_dev": false,
+  // The preview of master: `wrangler versions upload --preview-alias master` gives it the address
+  // master-clock-generator.<account subdomain>.workers.dev, which production does not change.
+  "preview_urls": true
+}

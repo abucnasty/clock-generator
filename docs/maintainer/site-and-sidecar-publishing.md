@@ -6,16 +6,17 @@ id: site-and-sidecar-publishing
 # How the site and the sidecar are published
 
 Two workflows send the clock generator to its users. `release.yml` releases the clock generator and deploys the site
-to Vercel. It also calls `publish-sidecar.yml`, which uploads the sidecar to the Factorio mod portal. `release.yml`
+to Cloudflare, at <https://clock.abucnasty.dev>. It also calls `publish-sidecar.yml`, which uploads the sidecar to the Factorio mod portal. `release.yml`
 starts the tests of `test.yml` first, unless a pull request already passed them on the same files (see
 [Tests that a pull request already passed](#tests-that-a-pull-request-already-passed)). If a test is not correct, the
 workflow does not release, deploy or upload.
 
 ## A push to master
 
-Each push to `master` starts `release.yml`. Its `preview` job deploys `master` as a preview deployment, at a different
-address. The summary of the workflow run shows the address. A preview deployment does not change the site of the
-users. The UAT of a release uses this address.
+Each push to `master` starts `release.yml`. Its `preview` job uploads `master` as a version of the Worker that is not
+deployed, with `wrangler versions upload --preview-alias master`. Its address is
+`master-clock-generator.<account subdomain>.workers.dev`, and the summary of the workflow run shows it. A preview does
+not change the site of the users. The UAT of a release uses this address.
 
 ## Tests that a pull request already passed
 
@@ -90,10 +91,28 @@ that is not a release or a hotfix does not upload it. The tests of the release a
 The upload contains only the zip file. The long description on the page of the mod is
 `clock-generator-sidecar/PORTAL.md`. After a release of the sidecar, paste it into the mod portal by hand.
 
-## Vercel
+## Cloudflare
 
-The git deployments of Vercel are off: `vercel.json` sets `git.deploymentEnabled` to `false`. Thus Vercel does not
-deploy `master` or a pull request. Only `release.yml` deploys the site.
+The site is the Cloudflare Worker `clock-generator`. It has no code: it serves the files of `npm run build` in
+`clock-generator-ui/dist` as static assets. Its configuration is `clock-generator-ui/wrangler.jsonc`. The custom domain
+`clock.abucnasty.dev` is on the zone `abucnasty.dev` of the same Cloudflare account. The Worker has no `workers.dev`
+address. Only `release.yml` deploys the site: Cloudflare does not deploy from git.
+
+The site has one page, `/`. A shared build is in the hash of the address, thus an unknown path gets the status 404.
+`clock-generator-ui/public/_headers` gives the files in `/assets/` a cache time of one year, because Vite puts a hash of
+the content in their names. All other files, `index.html` too, keep the default of Cloudflare: the browser asks for
+each change.
+
+## The old address
+
+Up to 0.28.1, the site was on Vercel, at `https://clock-generator-self.vercel.app`. Blueprints from those versions and
+the sidecar 0.15.1 and older show that address. The workflows do not deploy to Vercel. `vercel.json` has only a redirect
+of each path at the old address to the same path at the new address, and a manual deployment puts it on Vercel (see
+[Move the site to Cloudflare](move-the-site-to-cloudflare.md)). A browser keeps the hash of the address through a
+redirect, thus an old shared link opens its build at the new address.
+
+The browser keeps **Your builds** and the settings for each address. The builds that a user saved at the old address do
+not move to the new address.
 
 ## No rollback
 
@@ -105,4 +124,5 @@ previous version. Users get a change only in a new version.
 - [Release a version](release-a-version.md)
 - [Ship a hotfix](ship-a-hotfix.md)
 - [Redeploy the site by hand](redeploy-the-site-by-hand.md)
+- [Move the site to Cloudflare](move-the-site-to-cloudflare.md)
 - [Workflow variables and secrets](workflow-variables-and-secrets.md)
