@@ -213,7 +213,7 @@ export function ResultSummaryCard(props: ResultSummaryCardProps) {
                 <AlertTitle>{WHY_NOT_STABLE_TITLE[props.whyNotStable.cause]}</AlertTitle>
                 {/* the recommended clock's loss on a shared lane: its count line in place of the note's sentences on the same loss; the rest is on Diagnostics */}
                 {causeAbove && recommended?.checkedLanes?.cause
-                    ? <CauseHeadline cause={recommended.checkedLanes.cause} />
+                    ? <CauseHeadline cause={recommended.checkedLanes.cause} clock={recommended} />
                     : props.whyNotStable.message}
             </Alert>}
             {props.stale && <Typography variant="body2" sx={{ mb: 1 }} data-card-stale>{CARD_COPY.staleLine}</Typography>}

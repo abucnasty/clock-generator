@@ -1,6 +1,8 @@
 import { withOtherClocks } from 'clock-generator/light';
 import type { BuildLane, CheckedLaneRow, CheckedLanes, CheckedLaneState, ClockInsight, Config, LaneNotCheckedReason, WhyNotStable } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../worker/types';
+import { entityLabel, nameInSentence } from './entityLabel';
+import type { InserterNamer } from './inserterNames';
 import { formatNumberText } from './numberText';
 
 /**
@@ -18,7 +20,7 @@ export const CHECKED_LANES_COPY = {
         role: 'Role',
         item: 'Item',
         end: 'End',
-        together: (copies: number) => `Planned for the ${formatNumberText(copies)} copies`,
+        together: (copies: number) => copies === 1 ? 'Planned for all inserters' : `Planned for the ${formatNumberText(copies)} copies`,
         supply: 'Supply rate',
         state: 'State',
     },
@@ -61,13 +63,16 @@ export function supplyText(row: CheckedLaneRow, lane: BuildLane | undefined): { 
  * The words of why a lane was not checked or not run with the copies, for each code the engine gives (`state.reason`): one
  * entry for every code, so that a code with no words fails the build
  */
-const LANE_REASON_WORDS: { [C in LaneNotCheckedReason['code']]: (reason: Extract<LaneNotCheckedReason, { code: C }>) => string } = {
-    one_copy_does_not_hold: () => 'The clock does not hold its output on one copy, so the copies are not run.',
+const LANE_REASON_WORDS: { [C in LaneNotCheckedReason['code']]: (reason: Extract<LaneNotCheckedReason, { code: C }>, oneCopy: boolean) => string } = {
+    one_copy_does_not_hold: (_, oneCopy) => oneCopy ? 'The clock does not hold its output with the inserters alone, so they are not run together.'
+        : 'The clock does not hold its output on one copy, so the copies are not run.',
     drop_rate_unknown: () => "The build's drop rate onto this lane is not known.",
-    drops_more_than_lane_carries: reason => `The ${formatNumberText(reason.data.copies)} copies together drop more than this lane carries.`,
+    drops_more_than_lane_carries: (reason, oneCopy) => oneCopy ? 'The inserters together drop more than this lane carries.'
+        : `The ${formatNumberText(reason.data.copies)} copies together drop more than this lane carries.`,
     build_drops_onto_belt: () => 'The build drops items onto this belt, and the check of a shared lane does not run those drops yet.',
-    check_stopped: reason => `The lanes its copies share could not be checked: ${reason.data.message}${/[.!?]$/.test(reason.data.message) ? '' : '.'}`,
-    output_belt_not_run: () => 'The output belt is run with the copies only together with a lane they take from, and no such lane is run.',
+    check_stopped: (reason, oneCopy) => `The lanes ${oneCopy ? 'several inserters take from' : 'its copies share'} could not be checked: ${reason.data.message}${/[.!?]$/.test(reason.data.message) ? '' : '.'}`,
+    output_belt_not_run: (_, oneCopy) => oneCopy ? 'The output belt is run only together with a lane the inserters take from, and no such lane is run.'
+        : 'The output belt is run with the copies only together with a lane they take from, and no such lane is run.',
     lane_not_in_model: () => 'The check of the shared lanes does not run this lane.',
 };
 
@@ -75,11 +80,64 @@ const LANE_REASON_WORDS: { [C in LaneNotCheckedReason['code']]: (reason: Extract
  * The sentence of a row's state: for a lane not checked or not run with the copies, the words for its reason's code; else,
  * and for a result of an older engine whose reason is a sentence, the engine's
  */
-export function stateSentence(row: Pick<CheckedLaneRow, 'state' | 'sentence'>): string {
+export function stateSentence(row: Pick<CheckedLaneRow, 'state' | 'sentence'>, oneCopy?: OneCopyRow): string {
     const { state } = row;
+    if (oneCopy && state.kind !== 'not_checked' && state.kind !== 'not_run') return oneCopySentence(state, oneCopy);
     if ((state.kind !== 'not_checked' && state.kind !== 'not_run') || typeof state.reason !== 'object' || state.reason === null) return row.sentence;
-    const words = LANE_REASON_WORDS[state.reason.code] as ((reason: LaneNotCheckedReason) => string) | undefined;
-    return words === undefined ? row.sentence : words(state.reason);
+    const words = LANE_REASON_WORDS[state.reason.code] as ((reason: LaneNotCheckedReason, oneCopy: boolean) => string) | undefined;
+    return words === undefined ? row.sentence : words(state.reason, oneCopy !== undefined);
+}
+
+/** What a row of a build of one copy is worded with: the inserters' names, the cause's takers, and the item of the row's lane */
+export interface OneCopyRow {
+    named: InserterNamer;
+    takers: readonly { inserter_id: number; items: readonly { item: string; missed: number; swings: number }[] }[];
+    item: string | undefined;
+}
+
+const figure = (value: number) => formatNumberText(value);
+
+/**
+ * The sentence of a row of a build of one copy, in the page's words from the row's numbers: the engine's sentences are about
+ * copies. A lane with missed swings names each inserter that misses on it, where the cause gives it; else only the count.
+ */
+function oneCopySentence(state: Exclude<CheckedLaneState, { kind: 'not_checked' | 'not_run' }>, one: OneCopyRow): string {
+    switch (state.kind) {
+        case 'holds': {
+            const steady = state.steady_run_only ? ' in the steady run' : '';
+            if (state.join_waits === undefined) return `Every inserter gets its items${steady}.`;
+            const waiting = state.join_waits.filter(it => it.held_hands > 0);
+            if (waiting.length === 0) return `No inserter waits at its join${steady}.`;
+            const held = waiting.reduce((sum, it) => sum + it.held_hands, 0), hands = waiting.reduce((sum, it) => sum + it.hands, 0);
+            return `The output inserters wait for room at their join in ${figure(held)} of ${figure(hands)} swings${steady}. No swing is missed.`;
+        }
+        case 'short': {
+            const missed = state.copies.reduce((sum, it) => sum + it.missed, 0), swings = state.copies.reduce((sum, it) => sum + it.swings, 0);
+            const own = one.takers.flatMap(taker => taker.items.filter(it => it.item === one.item && it.missed > 0).map(it => ({ id: taker.inserter_id, ...it })));
+            if (own.length === 0 || own.reduce((sum, it) => sum + it.missed, 0) !== missed) return `${figure(missed)} of ${figure(swings)} swings missed.`;
+            return own.map(it => `${one.named(it.id)} misses ${figure(it.missed)} of ${figure(it.swings)} swings.`.replace(/^./, first => first.toUpperCase())).join(' ');
+        }
+        case 'join_full':
+            return `${figure(state.copies.reduce((sum, it) => sum + it.missed, 0))} of ${figure(state.copies.reduce((sum, it) => sum + it.swings, 0))} swings missed.`;
+        case 'takes_less': {
+            const still = state.copies.flatMap(it => it.without_output_belt !== undefined && it.without_output_belt.missed > 0 ? [it.without_output_belt] : []);
+            return 'They wait for the output belt.' + (still.length === 0 ? '' : ` Without the output belt, the inserters still miss ${figure(still.reduce((sum, it) => sum + it.missed, 0))} of ${figure(still.reduce((sum, it) => sum + it.swings, 0))} swings here.`);
+        }
+        case 'rate_fits':
+            return 'The inserters together drop no more than this lane carries. Not simulated: items that already lie on the belt where they drop.';
+    }
+}
+
+/** The label of a row's state: the engine's, and for a build of one copy the page's, as the engine's name copies */
+export function stateLabelOf(row: Pick<CheckedLaneRow, 'state' | 'label'>, oneCopy: boolean): string {
+    if (!oneCopy) return row.label;
+    switch (row.state.kind) {
+        case 'short': return 'Swings missed';
+        case 'join_full': return 'Join full';
+        case 'takes_less': return 'Inserters take less';
+        case 'not_run': return 'Not run together';
+        default: return row.label;
+    }
 }
 
 /**
@@ -88,18 +146,18 @@ export function stateSentence(row: Pick<CheckedLaneRow, 'state' | 'sentence'>): 
  * where every copy misses the same count says it in the tab's headline, and keeps its sentence where the copies differ; a lane
  * not run with the copies says it in its label, and the tests of the clock say why
  */
-export function rowSentenceShown(row: Pick<CheckedLaneRow, 'state' | 'sentence'>): string | null {
+export function rowSentenceShown(row: Pick<CheckedLaneRow, 'state' | 'sentence'>, oneCopy?: OneCopyRow): string | null {
     const { state } = row;
     switch (state.kind) {
         case 'holds':
-            return state.join_waits === undefined ? null : stateSentence(row);
+            return state.join_waits === undefined ? null : stateSentence(row, oneCopy);
         case 'join_full':
-            return state.copies.every(it => it.missed === state.copies[0].missed && it.swings === state.copies[0].swings) ? null : stateSentence(row);
+            return state.copies.every(it => it.missed === state.copies[0].missed && it.swings === state.copies[0].swings) ? null : stateSentence(row, oneCopy);
         case 'not_run':
             // the label says it, and the tests above the table say why: one copy alone does not hold its rate
             return null;
         default:
-            return stateSentence(row);
+            return stateSentence(row, oneCopy);
     }
 }
 
@@ -109,8 +167,16 @@ export function rowSentenceShown(row: Pick<CheckedLaneRow, 'state' | 'sentence'>
  * that a copy is not back from, each where the line has it. Null where the line has neither.
  */
 export function lineShownText(line: CheckedLanes['line']): string | null {
-    const parts = [line.output_chests_text, line.copies_trial_text].filter((part): part is string => part !== undefined);
+    // a build of one copy: the chests by their labels, as the engine's text says "a chest of each copy"
+    const chests = line.copies === 1 && line.output_chests.length > 0
+        ? `The output goes into ${listOf(line.output_chests.map(it => nameInSentence(entityLabel('chest', it.chest_id))))}.` : line.output_chests_text;
+    const parts = [chests, line.copies_trial_text].filter((part): part is string => part !== undefined);
     return parts.length === 0 ? null : parts.join(' ');
+}
+
+/** "a", "a and b", "a, b and c" */
+function listOf(parts: readonly string[]): string {
+    return parts.length < 2 ? parts.join('') : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
 }
 
 /** The lane of the build a row is of */
@@ -132,7 +198,7 @@ export function stateTone(state: CheckedLaneState): StateTone {
 }
 
 /** A state in the heading's count */
-function countWord(state: CheckedLaneState): string {
+function countWord(state: CheckedLaneState, oneCopy: boolean): string {
     switch (state.kind) {
         case 'holds': return state.not_the_cause ? 'not the cause' : 'hold';
         case 'short': return 'with missed swings';
@@ -140,14 +206,14 @@ function countWord(state: CheckedLaneState): string {
         case 'takes_less': return 'take less';
         case 'rate_fits': return 'by rate only';
         case 'not_checked': return 'not checked';
-        case 'not_run': return 'not run with the copies';
+        case 'not_run': return oneCopy ? 'not run together' : 'not run with the copies';
     }
 }
 
 /** The heading's count: "3 lanes · all hold", "6 lanes · 4 hold · 2 by rate only", "3 lanes · 1 join full · 2 take less" */
-export function lanesCountText(rows: readonly CheckedLaneRow[]): string {
+export function lanesCountText(rows: readonly CheckedLaneRow[], oneCopy = false): string {
     const counts = new Map<string, number>();
-    for (const row of rows) counts.set(countWord(row.state), (counts.get(countWord(row.state)) ?? 0) + 1);
+    for (const row of rows) counts.set(countWord(row.state, oneCopy), (counts.get(countWord(row.state, oneCopy)) ?? 0) + 1);
     const lanes = `${rows.length} ${rows.length === 1 ? 'lane' : 'lanes'}`;
     if (counts.size === 1) {
         const [word] = counts.keys();
@@ -182,11 +248,27 @@ export function descriptionShown(clock: Pick<ClockAlternativeView, 'description'
     return clock.checkedLanes?.cause && note ? clock.description.replace(` ${note}`, '') : clock.description;
 }
 
-/** The insights of a clock without those a row of its checked lanes states: a lane not checked as the build drops onto it */
-export function insightsShown(clock: Pick<ClockAlternativeView, 'insights' | 'checkedLanes'>): ClockInsight[] {
+/** The column of the drop spacing note that says how far apart the copies stand, where it has a figure for no row */
+const COPY_GAP_COLUMN = 'Tiles between copies';
+
+/** A note's table without the column on the gap between copies, where the build has one copy and the column holds a dash on every row */
+function withoutCopyGap(insight: ClockInsight): ClockInsight {
+    const table = insight.table;
+    const at = table?.columns.indexOf(COPY_GAP_COLUMN) ?? -1;
+    if (table === undefined || at < 0 || table.rows.some(row => row[at] !== '-')) return insight;
+    const without = <T,>(cells: T[]) => cells.filter((_, index) => index !== at);
+    return { ...insight, table: { columns: without(table.columns), rows: table.rows.map(without) } };
+}
+
+/**
+ * The insights of a clock without those a row of its checked lanes states: a lane not checked as the build drops onto it; and,
+ * for a build of one copy, with no column on the gap between copies in a table that has none to give
+ */
+export function insightsShown(clock: Pick<ClockAlternativeView, 'insights' | 'checkedLanes'> & Partial<Pick<ClockAlternativeView, 'copies'>>): ClockInsight[] {
     const notChecked = new Set((clock.checkedLanes?.rows ?? []).filter(row => row.state.kind === 'not_checked')
         .map(row => `shared-lane-not-checked-${row.belt_id}-${row.lane}`));
-    return notChecked.size === 0 ? clock.insights : clock.insights.filter(insight => !notChecked.has(insight.id));
+    const kept = notChecked.size === 0 ? clock.insights : clock.insights.filter(insight => !notChecked.has(insight.id));
+    return clock.copies === 1 ? kept.map(withoutCopyGap) : kept;
 }
 
 /** Whether the note on why no clock is stable is of the recommended clock's loss on a shared lane, whose count line it then shows */
