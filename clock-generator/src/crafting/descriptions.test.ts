@@ -159,7 +159,7 @@ describe("the description of the clock", () => {
             not_clocked: { inserters: [], drills: [] } })).toEqual([
             "Clock for [item=iron-plate] 120/s over 7 copies (17.143/s each). Period 336 ticks; counts 1–336",
             "Wire every other combinator's output to the inserters and drills it names, in every copy; set them Enable if Anything > 0, drills with Read resources off",
-            `Made by Clock Generator ${GENERATOR.version}: clock-generator-self.vercel.app`,
+            `Made by Clock Generator ${GENERATOR.version}: clock.abucnasty.dev`,
         ]);
     });
 
@@ -168,7 +168,7 @@ describe("the description of the clock", () => {
             window_cycle_text: "Period 72 ticks; counts 1–72", drills: false, not_clocked: { inserters, drills: [1] } });
         expect(lines([5, 8, 11]).slice(2)).toEqual([
             "Not on the clock, so not wired: inserters 5, 8, 11; drill 1",
-            `Made by Clock Generator ${GENERATOR.version}: clock-generator-self.vercel.app`,
+            `Made by Clock Generator ${GENERATOR.version}: clock.abucnasty.dev`,
         ]);
         // too many to fit: left out, and the generator's line stays last
         const many = lines(Array.from({ length: 120 }, (_, index) => index + 1));

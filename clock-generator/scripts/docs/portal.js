@@ -13,7 +13,7 @@ const { REPO_ROOT, writeOrCheck } = require("./generated-file");
 const TOPICS = ["docs/user/export-a-build.md", "docs/user/sidecar-export-contents.md"];
 const PORTAL = "clock-generator-sidecar/PORTAL.md";
 
-const HEADER = "Export a Factorio build as text for the **Clock Generator** website: <https://clock-generator-self.vercel.app>";
+const HEADER = "Export a Factorio build as text for the **Clock Generator** website: <https://clock.abucnasty.dev>";
 const FOOTER = "Source and bug reports: <https://github.com/abucnasty/clock-generator>";
 
 /** A link that leaves the page: a scheme (https:, mailto:) */

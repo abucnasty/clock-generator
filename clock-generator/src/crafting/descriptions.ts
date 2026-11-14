@@ -327,7 +327,7 @@ export function turnLine(group: number, groups: number, turn: OpenRange[], windo
         + "Its combinators stand together, in the order of the turn.";
 }
 
-/** The line that says which generator made a clock, the clock decider's last: "Made by Clock Generator 0.20.0: clock-generator-self.vercel.app" */
+/** The line that says which generator made a clock, the clock decider's last: "Made by Clock Generator 0.20.0: clock.abucnasty.dev" */
 export function generatorLine(): string {
     return `Made by ${GENERATOR.name} ${GENERATOR.version}: ${GENERATOR_SITE_TEXT}`;
 }
