@@ -35,15 +35,27 @@ const takesItem = (inserter: Config["inserters"][number], item: string): boolean
     || (inserter.filter_mode === "blacklist" ? !inserter.filters.includes(item) : inserter.filters.includes(item));
 
 /** The inserters of the config that take the item of a lane of a belt from it (its takers): none where the lane has no item */
-function takersOf(config: Config, belt_id: number, lane: 1 | 2): number {
+function takersOf(config: Config, belt_id: number, lane: 1 | 2): Config["inserters"] {
     const item = config.belts.find(belt => belt.id === belt_id)?.lanes[lane - 1]?.ingredient;
-    if (item === undefined || item === "") return 0;
-    return config.inserters.filter(inserter => inserter.source.type === "belt" && inserter.source.id === belt_id && takesItem(inserter, item)).length;
+    if (item === undefined || item === "") return [];
+    return config.inserters.filter(inserter => inserter.source.type === "belt" && inserter.source.id === belt_id && takesItem(inserter, item));
 }
 
 /** The lanes a belt pickup of the config takes an item from: each belt's lanes with an item and a taker of it */
 export function takenLanesOf(config: Config): { belt_id: number; lane: 1 | 2 }[] {
-    return config.belts.flatMap(belt => ([1, 2] as const).flatMap(lane => takersOf(config, belt.id, lane) > 0 ? [{ belt_id: belt.id, lane }] : []));
+    return config.belts.flatMap(belt => ([1, 2] as const).flatMap(lane => takersOf(config, belt.id, lane).length > 0 ? [{ belt_id: belt.id, lane }] : []));
+}
+
+/**
+ * Whether the distance between the takers of a lane is not known: in a build of one copy, a lane that several takers take
+ * from and at least one of them has no position. The model does not run such a lane with its takers together
+ * (`modelLanesOf`), and its row says why (`taker_spacing_unknown`, checked-lanes.ts). With more than one copy the copies
+ * stand apart by `copy_offset` or the width of a copy, and the takers of a copy without positions a tile apart
+ * (shared-lane-model.ts).
+ */
+export function takerSpacingUnknown(config: Config, belt_id: number, lane: 1 | 2): boolean {
+    const takers = takersOf(config, belt_id, lane);
+    return !(config.setpoint.copies > 1) && takers.length >= 2 && takers.some(inserter => inserter.position === undefined);
 }
 
 /**
@@ -53,7 +65,7 @@ export function takenLanesOf(config: Config): { belt_id: number; lane: 1 | 2 }[]
  * where their positions put them (shared-lane-model.ts). A build of one copy with one taker of the lane has none.
  */
 export function takenTogether(config: Config, belt_id: number, lane: 1 | 2): boolean {
-    return takersOf(config, belt_id, lane) * Math.ceil(config.setpoint.copies) >= 2;
+    return takersOf(config, belt_id, lane).length * Math.ceil(config.setpoint.copies) >= 2;
 }
 
 /** The lanes the model judges (see shared-lane-verdict.ts) */
@@ -63,7 +75,8 @@ export function modelLanesOf(config: Config): ModelLane[] {
     return takenLanesOf(config).flatMap(({ belt_id, lane }) => {
         if (dropped.has(belt_id)) return [];
         const lane_facts = facts.of(belt_id, lane);
-        const shared = lane_facts.sharing === "shared" && takenTogether(config, belt_id, lane);
+        // a lane of one copy whose takers' distance is not known is not run with them together: as one copy alone, where its end is unknown
+        const shared = lane_facts.sharing === "shared" && takenTogether(config, belt_id, lane) && !takerSpacingUnknown(config, belt_id, lane);
         if (!shared && lane_facts.lane_end.kind !== "unknown") return [];
         return [{ belt_id, lane, shared, stated: lane_facts.lane_end, flow: lane_facts.flow_direction }];
     });

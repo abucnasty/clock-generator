@@ -8,7 +8,7 @@ import { buildToNameOf } from "./build-names";
 import { capitalized, chestNameInText, inserterNameInText, lanesInSentence, listedInText, textWords, theName, type BuildToName } from "./entity-name";
 import { machineNameInText } from "./machine-name";
 import { figure } from "./other-clocks";
-import { takenTogether } from "./shared-lane-lanes";
+import { modelLanesOf, takenTogether, takerSpacingUnknown } from "./shared-lane-lanes";
 import type { CopiesTrialVerdict } from "./shared-lane-trial";
 import { droppedOntoSharedLanes, isNotChecked, sharedLanesNotChecked, type SharedLanesNotChecked, type MissedInWindowCycle, type MissedSwingCause, type MissedSwingStops, type SharedLaneJudgement, type SharedLaneLoss,
     type SharedLaneLossFacts, type TakerSwings, type CopiesMade } from "./shared-lane-verdict";
@@ -79,9 +79,12 @@ export type CheckedLaneState =
  * - `build_drops_onto_belt`: the build drops items onto the belt, and the check does not run those drops;
  * - `check_stopped`: the check of the shared lanes stopped with an error, whose message is kept as it is;
  * - `output_belt_not_run`: the output belt is run only with a lane the copies take from, and none is run;
- * - `lane_not_in_model`: the check of the shared lanes does not run the lane.
+ * - `lane_not_in_model`: the check of the shared lanes does not run the lane;
+ * - `taker_spacing_unknown`: in a build of one copy, the inserters that take from the lane do not all have positions, so
+ *   the distance between them is not known and the lane is not run with them together (`takerSpacingUnknown`).
  */
 export type LaneNotCheckedReason =
+    | { code: "taker_spacing_unknown" }
     | { code: "one_copy_does_not_hold" }
     | { code: "drop_rate_unknown" }
     | { code: "drops_more_than_lane_carries"; data: { copies: number } }
@@ -409,8 +412,11 @@ function laneNotCheckedText(reason: LaneNotCheckedReason): string {
         case "check_stopped": return sharedLanesNotChecked(reason.data.message).text;
         case "output_belt_not_run": return OUTPUT_BELT_NOT_RUN;
         case "lane_not_in_model": return NOT_IN_MODEL;
+        case "taker_spacing_unknown": return SPACING_UNKNOWN;
     }
 }
+
+const SPACING_UNKNOWN = "Not every inserter on this lane has a position, so the distance between them is not known.";
 
 const NOT_RUN = "The clock does not hold its output on one copy, so the copies are not run.";
 const DROPPED_ONTO = "The build drops items onto this belt, and the check of a shared lane does not run those drops yet.";
@@ -439,7 +445,9 @@ export function checkedLanesOf(input: CheckedLanesInput): CheckedLanes | null {
     const stated_output_belt = config.output_belt !== undefined && ends.belts.size === 1 ? [...ends.belts][0] : undefined;
     const judgement = judged !== null && !("stopped" in judged) ? judged : null;
     const stopped = judged !== null && "stopped" in judged ? judged.stopped : null;
-    const run = holds && judgement !== null && judgement.simulated;
+    // a build of one copy is run with its inserters together only on a lane they share: a lane of unknown end that is not,
+    // run as one copy alone, does not count
+    const run = holds && judgement !== null && judgement.simulated && (copies > 1 || modelLanesOf(config).some(lane => lane.shared));
     const ran_lanes = new Set(judgement?.lanes ?? []);
     const losses = (judgement?.losses ?? []).filter(loss => !isNotChecked(loss));
     const facts = judgement?.loss_facts ?? [];
@@ -453,6 +461,8 @@ export function checkedLanesOf(input: CheckedLanesInput): CheckedLanes | null {
         const together = togetherOf(config, lane, loads);
         const plain_output = lane.role === "output" && lane.belt_id !== stated_output_belt;
         const state = ((): CheckedLaneState => {
+            // a fact of the build, whatever the clock
+            if (lane.role !== "output" && takerSpacingUnknown(config, lane.belt_id, lane.lane)) return { kind: "not_checked", reason: { code: "taker_spacing_unknown" } };
             if (!holds) return { kind: "not_run", reason: { code: "one_copy_does_not_hold" } };
             if (plain_output) {
                 if (together === null || together.carries_per_second === undefined) return { kind: "not_checked", reason: { code: "drop_rate_unknown" } };

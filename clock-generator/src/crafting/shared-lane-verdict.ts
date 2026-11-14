@@ -22,7 +22,7 @@ import { targetInsertersOf, targetItemOf, targetMachinesOf } from "./sequence/cy
 import { createEntityRegistryFromConfig, SimulationContext } from "./sequence/simulation-context";
 import { buildToNameOf } from "./build-names";
 import { capitalized, inserterNameInText, theName, lanesInSentence, NO_BUILD, textWords, type BuildToName } from "./entity-name";
-import { droppedOnto, ModelLane, modelLanesOf, takenLanesOf, takenTogether } from "./shared-lane-lanes";
+import { droppedOnto, ModelLane, modelLanesOf, takenLanesOf, takenTogether, takerSpacingUnknown } from "./shared-lane-lanes";
 import { DropRecorder, HandDropped, LaidOutLane, LaneRow, recordInserters, runOnSharedLanes, SharedLaneLayout, sharedLaneLayoutOf } from "./shared-lane-model";
 import type { OutputBeltRun } from "./output-belt-run";
 import { TargetProductionRate } from "./target-production-rate";
@@ -35,7 +35,8 @@ import { longRunWindowCyclesOf, runClockOnBuild } from "./trial";
  *
  * The lanes judged: every lane a belt pickup takes from that the copies share (`sharing`) and that two or more takers take
  * from, counting those of every copy (`takenTogether`): the takers of several copies, or several takers of a build of one
- * copy, each where its position puts it, under its end; a lane of unknown end is run as a dead end and as an infinite end in turn, and the clock has to hold under both. A
+ * copy, each where its position puts it, under its end. A lane of a build of one copy whose takers do not all have positions
+ * is not run with them together (`takerSpacingUnknown`). A lane of unknown end is run as a dead end and as an infinite end in turn, and the clock has to hold under both. A
  * lane of unknown end that the copies do not share is run with the takers of one copy on it as a dead end (the run of one
  * copy reads it as an infinite end). A belt the build drops onto is left out: its entry would be the drops, which the
  * model does not run (`droppedOntoSharedLanes`).
@@ -477,7 +478,7 @@ export function droppedOntoSharedLanes(config: Config): { belt_id: number; lane:
     const facts = laneFactsOfConfig(config);
     const dropped = droppedOnto(config);
     return takenLanesOf(config).filter(({ belt_id, lane }) => dropped.has(belt_id) && facts.of(belt_id, lane).sharing === "shared"
-        && takenTogether(config, belt_id, lane));
+        && takenTogether(config, belt_id, lane) && !takerSpacingUnknown(config, belt_id, lane));
 }
 
 /**

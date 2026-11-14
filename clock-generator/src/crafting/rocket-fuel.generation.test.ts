@@ -22,19 +22,17 @@ describe("generateClockForConfig", () => {
             expect(entityRouteProblemsOf(sample.config, sample)).toEqual([]);
         });
 
-        it.each(["planned-belt-slack", "fractional", "shifted-swings"])("%s is stable as built", (id) => {
+        it.each(["planned-belt-slack", "fractional", "derived", "shifted-swings"])("%s is stable as built", (id) => {
             expect(alternative(id).verdict).toBe("stable");
             expect(alternative(id).result.stability_check.as_built?.holds).toBe(true);
             expect(alternative(id).assessment.items_per_second).toBe(60);
         });
 
-        // the three bioflux inserters take from one lane: the loss of inputs is tried with the three of them on it, and after a
-        // stop of the bioflux the derived clock stays at 96 of its 128 items a window cycle (no game recording of it yet)
-        it("derived holds as built and does not get back from a bioflux stop with its three bioflux inserters on one lane", () => {
-            expect(alternative("derived").result.stability_check.as_built?.holds).toBe(true);
-            expect(alternative("derived").assessment.items_per_second).toBe(60);
-            expect(alternative("derived").verdict).toBe("no recovery");
-            expect(alternative("derived").assessment.disturbance_trial?.on_copies?.survives).toBe(false);
+        // the sample states no positions of its three bioflux inserters, which take from one lane: the distance between them is
+        // not known, so the lane is not run with them together, and its row says so
+        it("gives the bioflux lane the code of an unknown distance between its inserters", () => {
+            expect(alternative("derived").checked_lanes?.rows.find(row => row.belt_id === 1 && row.lane === 1)?.state)
+                .toEqual({ kind: "not_checked", reason: { code: "taker_spacing_unknown" } });
         });
 
         it("clocks the fuel and seed inserters outside the plan", () => {
