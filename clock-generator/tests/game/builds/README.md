@@ -208,7 +208,7 @@ no longer makes. All six hold their target and have recovery after each of the t
 | --- | --- | --- |
 | Stable, exact baseline and recovery | 44 | The recommended clock works under its configured supply. This includes turbo straight moving, whose earlier clock over-produced in two early window cycles from the coverage protocol's calibration state; the clock since #266 runs exact from the first window cycle. It also includes the normal backed-up underground entrance/exit (#275): their backed-up belts refill the pickup slower than a stack a tick, every clock planned for backed-up supply misses (the subtick clock before moved 96, 128, 128 against 176 natively, matching its holds false), and the clock for backed-up belts whose belt-fed windows last as long as a hand takes from the lanes at rest holds (#456, #479); the cold-start controls below still check the simulator against the measured starts with fixed windows |
 | Exact baseline and recovery in these steady-state recordings, generator says unstable | 2 | Normal moving underground entrance/exit: the generator finds the clock failing from cold lane phase [3,0], and the game never settles from it either, nor from four other phases, among them the exit's natural one, where it cycles at 143 a window cycle against 176 ("Normal underground lane phases" below). The steady-state runs started at a phase that holds |
-| Exact baseline and recovery, generator says no recovery | 2 | Express moving underground entrance/exit (#269): every loss the generator tries fails from lane phase [1,5] alone, which the capture cannot set up ([lane-phase-controls.json](lane-phase-controls.json), `recovery_phase`). Their clocks before, made for backed-up belts, moved 352 a window cycle against 528 under moving supply; with every inserter always enabled the game moves 704 to 716 through this pickup |
+| Exact baseline and recovery, generator said no recovery | 2 | Express moving underground entrance/exit (#269): the generator said no recovery because every loss it tried failed from lane phase [1,5] alone, which the capture cannot set up. The loss trials now run from the cold start alone; the generator selects a stable clock for each (time-study windows, 3 output swings, back in 2 window cycles after a loss), and no recording of it is kept among the controls. Their clocks before, made for belts with backpressure, moved 352 a window cycle against 528 under moving supply; with every inserter always enabled the game moves 704 to 716 through this pickup |
 
 No failing captured ordinary default is marked stable for its actual supply. These checks do not close broader
 startup timing or over-the-hood operating clocks.
@@ -221,8 +221,8 @@ The record (`pickup-*` jobs, checked against these controls by `clock-controls.t
 these native controls for the nine fixtures of `belt-pickup-clock-cases.ts`, each the only one to take its path through
 the generator; `belt-pickup-clock-mechanics.test.ts` checks the recorded figures of all 48 against the simulator without
 generating. A build whose steady-state recording holds while the generator finds a failing cold lane phase has
-to fail at the pinned phase, and one whose recording holds and has recovery while the generator says "no recovery" has to
-fail every loss it fails from its pinned lane phase. A measured shortfall on any build still fails, and where a clock was recorded under
+to fail at the pinned phase (the pin's `as_built`; none of the 12 pins has one now). The loss trials run from the cold start
+alone, so a "no recovery" verdict is not set against a lane phase. A measured shortfall on any build still fails, and where a clock was recorded under
 its own supply, a baseline miss has to make the generator's own holds verdict false. Fresh generation also
 saves the selected rate, required supply and clock id in `generation-selection.json` when that metadata
 is available in its cache.
