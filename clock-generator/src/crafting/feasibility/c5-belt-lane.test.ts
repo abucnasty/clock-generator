@@ -16,7 +16,7 @@ const science: Config = {
         { id: 1, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 1000 },
         { id: 2, recipe: "automation-science-pack", productivity: 0, crafting_speed: 10000 },
     ],
-    belts: [belt(2, [lane("iron-gear-wheel")])],
+    belts: [belt(2, [lane("iron-gear-wheel", { lane_end: { kind: "infinite" } })])],
     chests: [infinityChest(1, ["iron-plate", "copper-plate"]), infinityChest(2, ["iron-gear-wheel"]), infinityChest(3, ["automation-science-pack"])],
     inserters: [
         ...[1, 2, 3, 4, 5].map(id => inserter(id, { type: "chest", id: 1 }, { type: "machine", id: 1 })),

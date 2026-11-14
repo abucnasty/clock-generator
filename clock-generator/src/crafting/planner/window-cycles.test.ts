@@ -26,7 +26,7 @@ describe("the output swing counts listed beside the main clock", () => {
 
 describe("the main-period choices of a build", () => {
     it("military science: 4 swings of 160 ticks a cycle, every hand whole; the counts around it from today's cycle plan", async () => {
-        const { plan } = await planOfSample(ConfigPaths.MILITARY_SCIENCE_120);
+        const { plan } = await planOfSample(ConfigPaths.MILITARY_SCIENCE_240);
         expect(plan.groups[0].window_cycles.map(brief)).toEqual([
             [4, "main", 160, "kept"],
             [5, "higher", 800, "kept"],
@@ -57,7 +57,7 @@ describe("the main-period choices of a build", () => {
     });
 
     it("an alternative's count whose cycle the cycle plan refuses is listed with its reason, as its run fails today", async () => {
-        const { plan } = await planOfSample(ConfigPaths.FLYING_ROBOT_FRAME_160);
+        const { plan } = await planOfSample(ConfigPaths.FLYING_ROBOT_FRAME_80);
         const fractional = plan.groups[0].window_cycles.find(choice => choice.listed_as === "fractional")!;
         expect(fractional).toMatchObject({ swings: null, fractional: true, pruned: { rule: "cycle-refused" } });
         expect("pruned" in fractional && fractional.pruned.rule === "cycle-refused" && fractional.pruned.terms.reason)

@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import type { Config } from "../config/schema";
-import { combineClockAlternativeRuns, generateClockAlternatives, COORDINATED_SOURCES_MAKER, simulateClockOnly, type BlueprintGenerationResult } from "../crafting/generate-blueprint";
+import { generateClockAlternatives, COORDINATED_SOURCES_MAKER, simulateClockOnly, type BlueprintGenerationResult } from "../crafting/generate-blueprint";
 import type { StockRecording } from "../crafting/machine-stock";
 import { returnTicksOf, wakeUpsOfStock } from "../crafting/wake-ups";
 import { createEntityRegistryFromConfig } from "../crafting/sequence/simulation-context";
@@ -11,10 +11,10 @@ import { buildDifferences, compareRecordings, formatRecordingComparison } from "
 import { expandChangeList, type Recording } from "./recording";
 import { wakeUpsOfRecording } from "./recording-wake-ups";
 import { matchOfSimulatedRecording, recordingOfStock, SIMULATED_TICK_TO_CLOCK_POSITION, simulateRecording } from "./simulated-recording";
-import { quiet } from "../crafting/generate-blueprint-test-helpers";
+import { quiet, withoutSharedLaneFacts } from "../crafting/generate-blueprint-test-helpers";
 
 /**
- * Automation science on the clock that is selected for it (full-hand output swings): a belt inserter into one machine
+ * Automation science on its full-hand output swings clock: a belt inserter into one machine
  * and an output inserter onto a belt, on a clock of 72 ticks
  */
 const WINDOW_CYCLES = 60;
@@ -27,11 +27,15 @@ let simulated: Recording;
 
 beforeAll(async () => {
     // the recording these tests read is of the clock with one output swing a cycle; the sample is automatic, so it is forced on this copy
-    const sample = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
+    // The sample states that both lanes of its input belt end in a dead end. On such a lane the full-hand clock gives the input
+    // inserter no room for one more hand, so the inserter never waits with a part hand on its machine's list. These tests count
+    // the wake-ups of that wait, so this copy keeps a lane that flows on, as the sample had before it stated its ends.
+    const sample = withoutSharedLaneFacts(await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240));
     config = { ...sample, overrides: { ...sample.overrides, terminal_swing_count: 1 } };
-    // the clock the generator recommends from today's makers: the per-branch clock composed from them wakes none of these inserters
+    // the full-hand clock, which these tests count wake-ups and states on: the per-branch clock composed from today's makers wakes
+    // none of these inserters, and Euclidean Swings, which holds without the room for one more hand, wakes none either
     const made = generateClockAlternatives(config, { logger: quiet }).alternatives.filter(it => it.maker !== COORDINATED_SOURCES_MAKER);
-    result = made[combineClockAlternativeRuns([{ signature: "", alternatives: made }], it => it.ranking).selected_index].result;
+    result = made.find(it => it.id === "pitch_pickups")!.result;
     window_cycle_ticks = result.simulation_duration.ticks;
     stock = simulateClockOnly(config, result.clock_windows, window_cycle_ticks, WINDOW_CYCLES, quiet);
     simulated = recordingOfStock(stock, config, window_cycle_ticks);
@@ -277,7 +281,7 @@ describe("a recorded build that is not the build of the config", () => {
     const differences = (recording: Recording, of: Config = config) => buildDifferences(recording, matchOfSimulatedRecording(recording), of);
 
     it("finds nothing where the build is as the config says", () => {
-        expect(differences(recordedWith({ near_lane: 1 }))).toEqual([]);
+        expect(differences(recordedWith({ near_lane: 2 }))).toEqual([]);
     });
 
     it("finds nothing in a recording that does not name the nearest lane, as those of an older recorder", () => {
@@ -285,13 +289,13 @@ describe("a recorded build that is not the build of the config", () => {
     });
 
     it("reports an inserter with another stack size than the config gives it", () => {
-        expect(differences(recordedWith({ stack_size: 12, near_lane: 1 }))).toEqual([
+        expect(differences(recordedWith({ stack_size: 12, near_lane: 2 }))).toEqual([
             "Inserter 1 (belt 1 -> machine 1) has a stack size of 12 in the recorded build and 16 in the config.",
         ]);
     });
 
     it("reports an inserter that is nearest to the lane of the item the config has it take second", () => {
-        expect(differences(recordedWith({ near_lane: 2 }))).toEqual([
+        expect(differences(recordedWith({ near_lane: 1 }))).toEqual([
             "Inserter 1 (belt 1 -> machine 1) is nearest to the lane of iron-gear-wheel in the recorded build and takes it before copper-plate; "
             + "the config has it take copper-plate first. Set near_lane on its source to the lane of iron-gear-wheel.",
         ]);
@@ -300,12 +304,12 @@ describe("a recorded build that is not the build of the config", () => {
     it("goes by the order of the filters for a config that names no nearest lane", () => {
         const unnamed: Config = structuredClone(config);
         unnamed.inserters[0].source = { type: "belt", id: 1 };
-        expect(differences(recordedWith({ near_lane: 1 }), unnamed)).toEqual([]);
-        expect(differences(recordedWith({ near_lane: 2 }), unnamed)).toHaveLength(1);
+        expect(differences(recordedWith({ near_lane: 2 }), unnamed)).toEqual([]);
+        expect(differences(recordedWith({ near_lane: 1 }), unnamed)).toHaveLength(1);
     });
 
     it("is the first thing a comparison reports", () => {
-        const recording = recordedWith({ stack_size: 12, near_lane: 1 });
+        const recording = recordedWith({ stack_size: 12, near_lane: 2 });
         const report = compareRecordings(compared(recording), compared(simulated), config);
         expect(report.issues[0]).toBe("The config does not describe the recorded build. Inserter 1 (belt 1 -> machine 1) has a stack size of 12 in the recorded build and 16 in the config.");
     });

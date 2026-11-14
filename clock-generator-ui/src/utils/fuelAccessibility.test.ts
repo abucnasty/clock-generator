@@ -37,6 +37,10 @@ describe('Fuel text equivalents', () => {
     it('summarizes displayed fuel quantities with exact duration and zero empty ticks', () => {
         expect(fuelTraceSummary(levels({ burned: 82.09359999999995 }), 25)).toBe('Machine 1, over 25 ticks: fuel started at 4 items and ended at 3 items. Minimum 1 items; maximum 4 items. 7.5 items inserted; 82.094 items burned (fuel amounts rounded for display). 0 ticks with no fuel.');
     });
+    it('names the machine as a sentence does where it is given', () => {
+        expect(fuelTraceSummary(levels(), 25, 'the Biochamber that makes Rocket fuel from jelly'))
+            .toMatch(/^The Biochamber that makes Rocket fuel from jelly, over 25 ticks: fuel started at 4 items/);
+    });
     it('preserves first empty tick zero and never claims sampled bin boundaries are exact', () => {
         const text = fuelTraceSummary(levels({ empty_ticks: 2, first_empty_tick: 0, min: [0, 1, 0] }), 25);
         expect(text).toContain('2 ticks with no fuel. First empty tick: 0.');

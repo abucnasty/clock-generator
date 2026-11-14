@@ -55,9 +55,12 @@ The package has three entries (`exports` in `package.json`):
 - `clock-generator/browser` (`src/browser.ts`): the config schema and parsers, the generator, the blueprint encoding and
   the types, without Node built-ins. It does not read the game data: call `FactorioDataService.initialize(data)` with
   the contents of `data-filtered.json` (the UI fetches it) before generating.
-- `clock-generator/light` (`src/light.ts`): the constants, status categories, clock ranking and `Option`, without the
-  simulation, the game data or zod. The UI's main thread takes its values from here and only types from `browser`, so
-  the generator is bundled once, in its web worker.
+- `clock-generator/light` (`src/light.ts`): the constants, status categories, clock ranking, the lane facts of a config
+  (each lane's supply rate, capacity, end and sharing and its belt's flow direction, `beltLaneFactsOf`; whether every
+  input lane is a dead end) and `Option`, without the simulation, the game data or zod. A lane's capacity comes from
+  the engine's belt speeds (`src/entities/belt/belt-speed.ts`), which a test ties to the game data. The UI's main
+  thread takes its values from here and only types from `browser`, so the generator is bundled once, in its web
+  worker.
 
 A file of your own under `src/` that imports modules directly, not through `index.ts`, imports
 `./data/factorio-data-file` itself, as `verify-recording.ts` and `record-in-factorio.ts` do.
@@ -128,8 +131,18 @@ build without a clock, for recording it in the game.
 A config describes one copy of a build, and `setpoint.copies` says how many identical copies stand side by side:
 the generator plans one and multiplies its rate. The copies are assumed identical, with no inserter from one to another,
 and the belts shared between them. A config that itself holds several identical copies (the same machines and
-inserters written out twice or more, joined by no inserter) is refused and told to describe one copy and set `copies`
-(`src/config/copies-validator.ts`). Describe the smallest repeating unit of a build, not a whole block of it.
+inserters written out twice or more, joined by no inserter) is clocked as it is given, every inserter where it stands
+(`src/config/copies-validator.ts` finds the copies). One copy with `copies` is simpler and quicker to generate: the
+site's Build check notes the copies and offers to make that one copy (`src/config/repeated-unit-conversion.ts`), or says
+why it cannot. An inserter that takes from a chest
+and drops onto a belt, in no copy, is supply from outside the copies: the one copy leaves it and its chest out, and the
+belt counts as supplied, as its lanes state. A chest that nothing refers to is left out too. When something drops into
+the chest, the chest is part of the build and the site does not make the copy. A clock of a build clocks none of that
+supply either (`src/config/outside-supply.ts`): such an inserter gets no enable window and no combinator, so in the game
+it stays as built, always enabled, and the belt it drops onto is an input belt, supplied as its lanes state. Where the next copy stands
+(`setpoint.copy_offset`) is read from the positions of the copies: each entity is paired with the entity of its kind at
+the same place in the next copy, whatever order they are listed in. Copies that are not moved copies of each other
+(one mirrored) get no gap, and a gap the configuration states is kept only where the copies agree with it.
 `copies` may be fractional, such as 5.5: the build then holds a partial block, and its rate is planned as that fraction of
 one block's (5.5 copies of a block of 4 assemblers making 240 a second means one block makes 480/11 a second). The unit
 itself is still whole, with identical units, no inserter between them and shared belts. The number is read as an exact
@@ -388,6 +401,91 @@ The sidecar mod exports it for an inserter beside a straight belt, and the inser
 field for it. Without it the items are taken in the order of the inserter's `filters`, or of the machine's
 ingredients when it has none.
 
+### Output belt
+
+`output_belt` states the belts from the output inserters of the copies to the infinite end, in tiles. A join is a belt lane
+that goes onto another belt. It is a side load or the splitter. Where a config states the section, the run of the
+copies moves the output stacks on it in each tick. The stacks go from each copy's side belt through the joins to the
+infinite end. When a copy's side belt is full at its join, the copy holds its hand. An output blockage shuts the infinite end: the
+belt lane is blocked from draining to the belt it joins, and every lane upstream backs up from there. The engine
+calculates each tick from the tiles ([simulator](docs/simulator.md#the-output-belt-of-the-copies)). A config without the
+section runs as before.
+
+- `side_belt`: the belt that the output inserter of each copy drops on. All the copies that have a side belt have the
+  same one. `lane` is the lane that the inserter drops on. `tiles` is the steps from the drop tile to the side load.
+  `left_curves` and `right_curves` are the curves after the drop tile.
+- `stretches`: each stretch is a run of belt. It starts where items come onto it. Its `points` are in the direction
+  of travel. Stretch 1 is the first in the list.
+- `splitter`: `input_priority` and `output_priority`, each `"left"` or `"right"`.
+
+A point is a tile where something occurs. It states one of these:
+
+- `side_load`: a list of the copies with a side belt onto this tile, or `{"stretch": n}` for a stretch onto it. State
+  each side load one time, at the point that takes it. Give `lane`, the lane that takes the items, and
+  `layout`: `side-straight` (a straight belt), `side-entrance` (an underground entrance) or `side-exit` (an underground
+  exit).
+- `drop`: the copy with an output inserter that drops onto this tile, with its `lane`.
+- `splitter_input`: the input of the splitter that the stretch ends in. `splitter_output`: the output that it starts at.
+- `lane_end: {"kind": "infinite"}`: the infinite end, on the last point of its stretch.
+- Only `tiles` and curves: the last point of a stretch that side-loads onto another stretch. A `side_load` names it.
+
+`tiles` is the number of steps from the previous point to this point. Count the steps as the sidecar counts them for
+`drop_capture.tiles`:
+
+- One step for each belt entity: a belt, a curve or an end of an underground pair.
+- The tiles between the two ends of an underground pair.
+- One step for the tile that a stretch side-loads onto, one for the splitter and one for the infinite end.
+
+After a list of copies, count from the last copy in the list. The copies of a list are `setpoint.copy_offset` apart
+along the stretch.
+`left_curves` and `right_curves` are the curves between the two points. The lanes are `"left"` and `"right"` in the
+direction of travel.
+
+The automation science sample of 240 per second (`AUTOMATION_SCIENCE_240`) states its output belt so:
+
+```json
+"output_belt": {
+  "side_belt": { "lane": "right", "tiles": 2, "left_curves": 1 },
+  "stretches": [
+    { "points": [
+      { "side_load": [1, 2, 3, 4], "lane": "right", "layout": "side-exit" },
+      { "tiles": 2, "right_curves": 1 } ] },
+    { "points": [
+      { "side_load": { "stretch": 1 }, "lane": "left", "layout": "side-entrance" },
+      { "tiles": 7, "drop": 5, "lane": "right" },
+      { "tiles": 11, "left_curves": 1, "right_curves": 1, "side_load": [6, 7, 8], "lane": "right", "layout": "side-exit" },
+      { "tiles": 16, "splitter_input": "right" } ] },
+    { "points": [
+      { "drop": 9, "lane": "left" },
+      { "tiles": 16, "left_curves": 1, "right_curves": 3, "splitter_input": "left" } ] },
+    { "points": [
+      { "splitter_output": "right" },
+      { "tiles": 1, "side_load": { "stretch": 5 }, "lane": "right", "layout": "side-straight" },
+      { "tiles": 2, "lane_end": { "kind": "infinite" } } ] },
+    { "points": [
+      { "splitter_output": "left" },
+      { "tiles": 12, "left_curves": 5 } ] }
+  ],
+  "splitter": { "input_priority": "right", "output_priority": "right" }
+}
+```
+
+Copies 1 to 4 side-load onto the underground exits of stretch 1, 9 tiles apart. Stretch 1 goes onto the left lane of
+stretch 2 at an underground entrance. Copy 5 drops onto stretch 2, and copies 6 to 8 side-load onto it. Copy 9 drops at
+the start of stretch 3. The two stretches go into the splitter. Stretch 4, the right output, goes to the infinite end.
+Stretch 5, the left output, turns back. It side-loads onto the first tile of stretch 4.
+
+The generator does not accept these output belts. Each message tells what to state:
+
+- A stretch that starts with nothing that supplies it: a belt that comes onto the output belt from outside the build.
+- No infinite end, or more than one.
+- Two side loads onto one tile.
+- A side load onto the lane that the hood of an underground closes. An exit lets the lane on the side of the items go
+  through. An entrance lets the other lane go through.
+- A last point with only its run when no `side_load` names its stretch.
+- A splitter with no priority, or with `"none"`.
+- A field that the section does not have.
+
 ### Enable Control Overrides
 
 You can override the automatic enable control logic for individual inserters and drills. This is useful when you want to manually specify when an entity should be enabled during the crafting cycle.
@@ -456,26 +554,25 @@ Both overrides are optional; `window_cycle_ticks` defaults to the output cycle d
 For a moving belt input, set `pickup_length` on the inserter's `source`: `1` for the exposed line on a straight
 belt or `0.5` at either underground endpoint. Sidecar 0.9.0 exports this automatically for inserters beside those
 pieces. Omitted `pickup_length` defaults to `1`, including in older configs. Moving supply uses reachable-stack
-timing; `overrides.backed_up_belts: true` selects backed-up supply independently of the physical geometry. See [pickup timing](docs/simulator.md#picking-up-from-moving-belts-and-underground-endpoints).
+timing; a dead end on each input lane (`lane_end`) selects supply with backpressure independently of the physical geometry. See [pickup timing](docs/simulator.md#picking-up-from-moving-belts-and-underground-endpoints).
 
 ### Configuration Overrides
 
 - `terminal_swing_count`: force the output swings per cycle, instead of the count the plan works out
 - `lcm`: override the LCM calculation for the cycle length
-- `backed_up_belts`: items back up at the input pickups and upstream supply refills the gaps, making one stack available each pickup tick (default false)
+- `backed_up_belts`: deprecated; state the `lane_end` of each lane instead. `true` makes each lane that states no end a dead end, `false` an infinite end
 - `search_for_fewer_wake_ups`: run the four searches for every build (default false)
 - `check_start_dependence`: try every clock from other starts than the cold start too, and name the clocks that reach their target from some starts only (default false; see `docs/stability.md`, "Start dependence")
 - `kick_start_items`: items a machine that makes its own ingredient (pentapod eggs) is given once when a clock starts (default 200, the same kick start as the harness gives)
 
 `src/config/schema.ts` (`ConfigOverridesSchema`) lists the others. Older files using `non_moving_belts` migrate to
-`backed_up_belts` on import; if both are present, `backed_up_belts` takes precedence. New configs and exports use
-only `backed_up_belts`.
+`backed_up_belts` on import; if both are present, `backed_up_belts` takes precedence. The page converts either into
+lane ends when it loads a build.
 
 ```json
 "overrides": {
   "terminal_swing_count": 4,
   "lcm": 12,
-  "backed_up_belts": true,
   "search_for_fewer_wake_ups": true
 }
 ```
@@ -486,10 +583,10 @@ The simulator assumes saturated input supply. Moving supply times the stacks wit
 
 Every clock names the belt it is made for:
 
-- **moving**: each window of an inserter that picks up from a belt stays open a few ticks longer, long enough for one more full hand at one belt stack a tick (`+4 ticks` for a hand of 16 from stacks of 4). This is belt slack: extra margin for late pickups on top of the simulated reachable-stack timing. Sparse upstream supply is not simulated.
-- **backed-up belt**: the belt inserters get only the windows they need with backed-up supply at the pickup. A clock made for moving belts drops the slack when it does not hold the expected output with it, and is then listed as made for a backed-up belt. A clock with a window cycle time that is not a whole number of ticks (a subtick clock) never gets the slack, and is not ranked behind other clocks for it.
+- **moving**: some input lane of the build is not a dead end. The simulator times each pickup from the stacks the hand reaches on the moving lane. Each window of an inserter that picks up from a lane that is not a dead end gets room for one more hand. The room is the ticks that hand takes at one lane stack a tick (`+4 ticks` for a hand of 16 from stacks of 4).
+- **backed-up belt**: every input lane is a dead end. The belt inserters get the windows they need with backpressure at the pickup.
 
-Clocks are made only for the belts the build is set to. By default (moving) a clock without the slack is only selected for you when no clock with the slack holds the setpoint; no clock is made for backed-up belts as well. Set `backed_up_belts: true` (the Belts section's "Backed up" answer in the UI) when your belts are backed up: each clock is made without the slack, and the one with the fewest wakeups is selected. A clock that does not hold the expected output that way is first made again with room for a hand of fuel: each window of an inserter that takes fuel off the belt as well as an ingredient stays open the ticks a hand of fuel takes to fill (`+4 ticks` for a hand of 16 from stacks of 4), because the fuel slot asks for a hand at any tick, ahead of the hands the window is planned for. That is still a backed-up belt clock, and its description names the inserters. A clock that does not hold with the room either, or has no such inserter, is listed as unstable: it is not made again with the slack. Of the samples, agricultural science selects its batched swings with room for a hand of fuel.
+The belt a clock is made for does not change how it ranks. An input lane that states no `lane_end` is a dead end; state `{"kind": "infinite"}` on a lane whose items move on past the build. A clock that does not hold the expected output is first made again with room for a hand of fuel: each window of an inserter that takes fuel off the belt as well as an ingredient stays open the ticks a hand of fuel takes to fill (`+4 ticks` for a hand of 16 from stacks of 4), because the fuel slot asks for a hand at any tick, ahead of the hands the window is planned for. Its description names the inserters. A clock that does not hold with the room either, or has no such inserter, is listed as unstable.
 
 #### Searching for fewer wakeups
 
@@ -532,7 +629,7 @@ A search can still find a stable clock with fewer wakeups than the one selected.
 src/
 ├── index.ts          # Node entry: the browser entry plus the game data from resources/
 ├── browser.ts        # Browser entry
-├── light.ts          # Light entry: constants, status categories, clock ranking
+├── light.ts          # Light entry: constants, status categories, clock ranking, lane ends
 ├── record-in-factorio.ts # npm run record
 ├── verify-recording.ts   # npm run verify
 ├── common/           # Shared constants (entity types, enable control types), logger

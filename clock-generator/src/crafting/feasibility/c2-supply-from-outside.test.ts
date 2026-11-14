@@ -11,7 +11,7 @@ import { belt, feasibilityOfConfig, infinityChest, inserter, lane, withTarget } 
 const gears: Config = {
     setpoint: { recipe: "iron-gear-wheel", items_per_second: 60, copies: 1 },
     machines: [{ id: 1, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 1000 }],
-    belts: [belt(1, [lane("iron-plate")])],
+    belts: [belt(1, [lane("iron-plate", { lane_end: { kind: "infinite" } })])],
     chests: [infinityChest(2, ["iron-gear-wheel"])],
     inserters: [
         inserter(1, { type: "belt", id: 1 }, { type: "machine", id: 1 }),

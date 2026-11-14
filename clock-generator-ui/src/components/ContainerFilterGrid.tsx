@@ -5,7 +5,7 @@ import { useGameNames } from '../hooks/useGameNames';
 import { useAnnounce } from '../hooks/useMessages';
 import { BLOCK_MARKERS, containerSlotCount, isBlockMarker, paintSlotFilters, shownSlotFilter, slotCounts, slotCountsText, slotRange } from '../utils/containerSlotFilters';
 import type { SlotContainerFormData, SlotFilterFormData } from '../utils/configForm/formData';
-import { chestLabel } from '../utils/entityLabel';
+import { chestLabel, nameInSentence } from '../utils/entityLabel';
 import { FactorioIcon } from './FactorioIcon';
 import { FilterItemPicker } from './FilterItemPicker';
 import { ItemSelector } from './ItemSelector';
@@ -59,7 +59,7 @@ export function ContainerFilterGrid({ chest, itemNames, onChange }: Props) {
         if (!stroke) return;
         const finish = () => {
             onChange(paintSlotFilters(filters, slotRange(stroke.from, stroke.to), stroke.item));
-            announce(`Filtered slots ${Math.min(stroke.from, stroke.to)} to ${Math.max(stroke.from, stroke.to)} to ${itemLabel(stroke.item)}, ${name}.`);
+            announce(`Filtered slots ${Math.min(stroke.from, stroke.to)} to ${Math.max(stroke.from, stroke.to)} to ${nameInSentence(itemLabel(stroke.item))}, ${name}.`);
             setStroke(null);
         };
         const cancel = () => setStroke(null);
@@ -78,12 +78,12 @@ export function ContainerFilterGrid({ chest, itemNames, onChange }: Props) {
 
     const paint = (slots: number[], item: string | null = brush) => {
         onChange(paintSlotFilters(filters, slots, item));
-        announce(`${item ? `Set ${itemLabel(item)} on` : 'Cleared'} ${slots.length} ${slots.length === 1 ? 'slot' : 'slots'}, ${name}.`);
+        announce(`${item ? `Set ${nameInSentence(itemLabel(item))} on` : 'Cleared'} ${slots.length} ${slots.length === 1 ? 'slot' : 'slots'}, ${name}.`);
     };
     const copy = (slot: number) => {
         const item = bySlot.get(slot) || null;
         setBrush(item);
-        announce(item ? `Copied ${itemLabel(item)}. Click or drag to apply it to other slots.` : 'This slot has no filter. Choose an item first.');
+        announce(item ? `Copied ${nameInSentence(itemLabel(item))}. Click or drag to apply it to other slots.` : 'This slot has no filter. Choose an item first.');
     };
     const paste = (slot: number) => {
         if (brush) paint([slot]);

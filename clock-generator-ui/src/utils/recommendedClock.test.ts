@@ -3,14 +3,16 @@ import type { ClockRanking, ClockVerdict, Config } from 'clock-generator/browser
 import { combineClockAlternativeRuns } from 'clock-generator/light';
 import {
     RECOMMENDED_COPY,
-    disclosureRunLine,
-    groupClockRowsByBelt,
+    heldOrderOf,
     partitionClockRows,
     pickRuleOf,
+    rankOrderOf,
     recommendationReason,
     recommendedIndexOf,
+    searchesRunLine,
     type PickRule,
 } from './recommendedClock';
+import { ELECTROMAGNETIC_330_TWO_SWINGS, viewsOf } from '../test/checkedLanesFixtures';
 
 interface Clock {
     id: string;
@@ -43,7 +45,6 @@ function clock(id: string, options: ClockOptions = {}): Clock {
         meets_target_rate: true,
         rate_off_target: 0,
         holds_expected_output: true,
-        matches_belt_choice: true,
         wake_ups_per_minute: 10,
         window_count: 4,
         ...ranking,
@@ -68,9 +69,8 @@ const short = (id: string, off: number, holds = true, options: ClockOptions = {}
     ...options,
 });
 
-const MOVING: PickRule = { backedUpBelts: false, searchedForFewerWakeUps: false };
-const BACKED_UP: PickRule = { backedUpBelts: true, searchedForFewerWakeUps: false };
-const SEARCHED: PickRule = { backedUpBelts: false, searchedForFewerWakeUps: true };
+const WHEN_NEEDED: PickRule = { searchedForFewerWakeUps: false };
+const SEARCHED: PickRule = { searchedForFewerWakeUps: true };
 
 /** The id of the clock the rule picks from `clocks`; null for none */
 const picked = (clocks: Clock[]) => {
@@ -79,18 +79,16 @@ const picked = (clocks: Clock[]) => {
 };
 
 /** The reason for the clock the rule picks from `clocks`, after the run */
-const reason = (clocks: Clock[], rule: PickRule | null = MOVING) =>
-    recommendationReason(clocks, recommendedIndexOf(clocks), rule, true);
+const reason = (clocks: Clock[]) =>
+    recommendationReason(clocks, recommendedIndexOf(clocks), true);
 
 describe('recommendedIndexOf', () => {
-    const wrongBelt = clock('slackless', { matches_belt_choice: false, wake_ups_per_minute: 2 });
-
     it.each<[string, Clock[], string | null]>([
         ['is null for no clocks', [], null],
         ['picks the fewest wakeups among the clocks that keep making the rate',
             [clock('a', { wake_ups_per_minute: 12 }), short('near', 0.5), clock('b', { wake_ups_per_minute: 8 })], 'b'],
-        ['puts a clock not made for the belt behind one that is', [wrongBelt, clock('moving', { wake_ups_per_minute: 9 })], 'moving'],
-        ['picks a clock not made for the belt when no such clock holds the rate', [wrongBelt, short('near', 1)], 'slackless'],
+        ['picks the fewest wakeups whatever belt a clock takes from', [clock('backed', { beltLabel: 'backed-up', wake_ups_per_minute: 2 }),
+            clock('moving', { wake_ups_per_minute: 9 })], 'backed'],
         ['picks the nearest to the target rate when none holds it', [short('far', -3), short('near', 0.4), short('above', 2)], 'near'],
         ['breaks a tie on wakeups with the fewest windows', [clock('a', { window_count: 6 }), clock('b', { window_count: 3 })], 'b'],
         ['breaks a tie on windows too with the first listed', [clock('first'), clock('second')], 'first'],
@@ -102,7 +100,7 @@ describe('recommendedIndexOf', () => {
         const runs = [
             { signature: 'batched', alternatives: [clock('a', { wake_ups_per_minute: 15 }), short('b', 1)] },
             { signature: 'uneven', alternatives: [clock('c', { wake_ups_per_minute: 7, window_count: 9 })] },
-            { signature: 'shifted', alternatives: [clock('d', { wake_ups_per_minute: 7, window_count: 5 }), clock('e', { matches_belt_choice: false, wake_ups_per_minute: 1 })] },
+            { signature: 'shifted', alternatives: [clock('d', { wake_ups_per_minute: 7, window_count: 5 }), short('e', 1)] },
         ];
         const engine = combineClockAlternativeRuns([runs[2], null, runs[0], runs[1]], it => it.ranking);
         expect(recommendedIndexOf(engine.alternatives)).toBe(engine.selected_index);
@@ -119,15 +117,14 @@ describe('recommendedIndexOf', () => {
 });
 
 describe('recommendationReason', () => {
-    const { beltMoving, tieKindMoving, recoveryDoesNotDecide, mayFailOnMovingBelt } = RECOMMENDED_COPY;
+    const { recoveryDoesNotDecide } = RECOMMENDED_COPY;
     const { fewestWakeUps, wakeUpsNotCounted, tieOnWakeUps, tieOnWakeUpsUncounted, tieOnWindows } = RECOMMENDED_COPY;
     // the clocks a pick at 240/s is compared with: those that keep making it and recover, or with a deadlock risk those that hold it
     const recovering = 'the clocks that keep making 240/s and go back to it after a stop';
     const holding = 'the clocks that hold 240/s';
     const others = [clock('b', { wake_ups_per_minute: 20 }), clock('c', { wake_ups_per_minute: 30 })];
-    // the reason for the pick of [clock('a'), ...others], and with backed-up belts
-    const fewest = 'Fewest wakeups of the clocks that keep making 240/s and go back to it after a stop on a moving belt.';
-    const fewestBackedUp = 'Fewest wakeups of the clocks that keep making 240/s and go back to it after a stop with backed-up belts.';
+    // the reason for the pick of [clock('a'), ...others]: no build-wide belt answer, whatever belt the clocks are made for
+    const fewest = 'Fewest wakeups of the clocks that keep making 240/s and go back to it after a stop.';
 
     /** `text` is `expected`, in sentences one space apart */
     const sentences = (text: string, expected: string) => {
@@ -136,61 +133,53 @@ describe('recommendationReason', () => {
         expect(text).not.toMatch(/\.[A-Z]/);
     };
     /** The reason for the pick from `clocks` is `expected` */
-    const says = (_: string, clocks: Clock[], expected: string, rule?: PickRule | null) => sentences(reason(clocks, rule), expected);
+    const says = (_: string, clocks: Clock[], expected: string) => sentences(reason(clocks), expected);
 
-    it.each<[string, Clock[], string, (PickRule | null)?]>([
-        ['says the pick has the fewest wakeups among the clocks that keep making the rate and go back to it after a stop on a moving belt', [clock('a'), ...others], fewest],
+    it.each<[string, Clock[], string]>([
+        ['says the pick has the fewest wakeups among the clocks that keep making the rate and go back to it after a stop', [clock('a'), ...others], fewest],
         ['says "hold" only on a build with a deadlock risk, where a clock that holds the rate counts without recovering',
-            [clock('a', { deadlock: true }), clock('b', { deadlock: true, wake_ups_per_minute: 20 })], fewestWakeUps(holding, beltMoving)],
+            [clock('a', { deadlock: true }), clock('b', { deadlock: true, wake_ups_per_minute: 20 })], fewestWakeUps(holding)],
         ['adds that the recovery trials do not decide for a clock that holds the rate without recovering',
             [clock('a', { deadlock: true, verdict: 'no recovery' }), clock('b', { deadlock: true, wake_ups_per_minute: 20 })],
-            fewestWakeUps(holding, beltMoving) + recoveryDoesNotDecide],
-        ['says the belts are backed up when the build says so', [clock('a', { beltLabel: 'backed-up' }), ...others], fewestBackedUp, BACKED_UP],
-        ['leaves the belt out when no clocked inserter picks up from a belt', [clock('a', { beltLabel: '' }), ...others], fewestWakeUps(recovering, '')],
-        ['leaves the belt out for a subtick clock, made for a backed-up belt, on a build with moving belts',
-            [clock('subtick', { beltLabel: 'backed-up' }), ...others], fewestWakeUps(recovering, '')],
-        ['does not change with the search mode, which only changes which clocks there are', [clock('a'), ...others], fewest, SEARCHED],
-        ['reads a missing rule as moving belts', [clock('a'), ...others], fewest, null],
-        ['says how many clocks for a moving belt tie on wakeups and that the one with fewer enable windows was picked: one',
-            [clock('a', { window_count: 3 }), clock('b', { wake_ups_per_minute: 10.0004 }), ...others], fewest + tieOnWakeUps(1, tieKindMoving)],
-        ['says how many clocks for a moving belt tie on wakeups and that the one with fewer enable windows was picked: 2',
-            [clock('a', { window_count: 3 }), clock('b'), clock('c', { window_count: 8 })], fewest + tieOnWakeUps(2, tieKindMoving)],
+            fewestWakeUps(holding) + recoveryDoesNotDecide],
+        ['names no belt for a clock made for a backed-up belt', [clock('a', { beltLabel: 'backed-up' }), ...others], fewest],
+        ['names no belt when no clocked inserter picks up from a belt', [clock('a', { beltLabel: '' }), ...others], fewestWakeUps(recovering)],
+        ['says how many clocks tie on wakeups and that the one with fewer enable windows was picked: one',
+            [clock('a', { window_count: 3 }), clock('b', { wake_ups_per_minute: 10.0004 }), ...others], fewest + tieOnWakeUps(1)],
+        ['says how many clocks tie on wakeups and that the one with fewer enable windows was picked: 2',
+            [clock('a', { window_count: 3 }), clock('b'), clock('c', { window_count: 8 })], fewest + tieOnWakeUps(2)],
         ['says the windows are counted without the extra ones when the table does not show the pick with fewer',
-            [clock('a', { window_count: 3, shownWindows: 7 }), clock('b', { window_count: 4, shownWindows: 6 })], fewest + tieOnWakeUpsUncounted(1, tieKindMoving)],
-        ['leaves the belt out of the tie with backed-up belts', [clock('a', { window_count: 3, beltLabel: 'backed-up' }), clock('b', { beltLabel: 'backed-up' })],
-            fewestBackedUp + tieOnWakeUps(1, ''), BACKED_UP],
-        ['says the first listed was picked when the windows tie too', [clock('a'), clock('b'), ...others], fewest + tieOnWindows(1, tieKindMoving)],
+            [clock('a', { window_count: 3, shownWindows: 7 }), clock('b', { window_count: 4, shownWindows: 6 })], fewest + tieOnWakeUpsUncounted(1)],
+        ['says the first listed was picked when the windows tie too', [clock('a'), clock('b'), ...others], fewest + tieOnWindows(1)],
         ['says when the pick is the only clock that holds the rate and recovers',
-            [short('b', 1), clock('a'), short('c', -1)], 'The only clock that holds 240/s and has recovery on a moving belt.'],
+            [short('b', 1), clock('a'), short('c', -1)], 'The only clock that holds 240/s and has recovery.'],
         ['says when the pick is the only clock that holds the rate on a build with a deadlock risk',
-            [clock('a', { deadlock: true }), short('b', 1)], 'The only clock that holds 240/s on a moving belt.'],
+            [clock('a', { deadlock: true }), short('b', 1)], 'The only clock that holds 240/s.'],
         ['goes by the windows when the wakeups were not counted',
-            [clock('a', { wake_ups_per_minute: null, window_count: 3 }), clock('b', { wake_ups_per_minute: null })], wakeUpsNotCounted(recovering, beltMoving)],
+            [clock('a', { wake_ups_per_minute: null, window_count: 3 }), clock('b', { wake_ups_per_minute: null })], wakeUpsNotCounted(recovering)],
     ])('%s', says);
 
-    describe('a clock made for backed-up belts, picked because none for a moving belt meets the rate', () => {
-        const backedUp = (id: string, options: ClockOptions = {}) =>
-            clock(id, { matches_belt_choice: false, beltLabel: 'backed-up', ...options });
-        const { backedUpOnly, backedUpFewestWakeUps } = RECOMMENDED_COPY;
-        const none = 'No clock with belt slack holds 240/s and has recovery.';
 
-        it.each<[string, Clock[], string]>([
-            ['says it is the only one when it is', [backedUp('slackless'), short('b', 1)], none + backedUpOnly + mayFailOnMovingBelt],
-            ['says it has the fewest wakeups of those that do', [backedUp('a', { wake_ups_per_minute: 30 }), backedUp('b'), short('c', 1)],
-                none + backedUpFewestWakeUps + mayFailOnMovingBelt],
-            ['says what broke a tie on wakeups', [backedUp('a', { window_count: 3 }), backedUp('b')],
-                none + backedUpFewestWakeUps + tieOnWakeUps(1, '') + mayFailOnMovingBelt],
-            ['adds the recovery note on a build with a deadlock risk', [backedUp('a', { deadlock: true, verdict: 'no recovery' })],
-                'No clock with belt slack holds 240/s.' + backedUpOnly + mayFailOnMovingBelt + recoveryDoesNotDecide],
-        ])('%s', says);
+    // Pitch Pickups of 1 swing and Takt Batches of 2 swings at 452 wakeups a minute: 138 signals against 100
+    it('says the pick sends fewer signals when it ties on wakeups with clocks that send more, whatever their recovery', () => {
+        const pick = clock('fewer', { wake_ups_per_minute: 452, signals_per_minute: 100, recovery_window_cycles: 10 });
+        const more = clock('more', { wake_ups_per_minute: 452, signals_per_minute: 138, recovery_window_cycles: 6 });
+        sentences(recommendationReason([more, pick], 1, true, false),
+            'Fewest wakeups of the clocks that keep making 240/s and go back to it after a stop.' + RECOMMENDED_COPY.tieOnSignals(1));
+    });
+
+    it('goes on to the recovery when the clocks tie on wakeups and signals', () => {
+        const pick = clock('fast', { wake_ups_per_minute: 0, signals_per_minute: 50, recovery_window_cycles: 3 });
+        const slow = clock('slow', { wake_ups_per_minute: 0, signals_per_minute: 50.0004, recovery_window_cycles: 33 });
+        sentences(recommendationReason([slow, pick], 1, true, false),
+            'Fewest wakeups of the clocks that keep making 240/s and go back to it after a stop.' + RECOMMENDED_COPY.tieOnRecovery(1));
     });
 
     it('says the pick recovers sooner when it ties on wakeups with clocks that take longer to get back', () => {
         const pick = clock('fast', { wake_ups_per_minute: 0, recovery_window_cycles: 3, window_count: 9 });
         const slow = clock('slow', { wake_ups_per_minute: 0, recovery_window_cycles: 33, window_count: 2 });
-        sentences(recommendationReason([pick, slow], 0, MOVING, true, false),
-            'Fewest wakeups of the clocks that keep making 240/s and go back to it after a stop on a moving belt.'
-            + RECOMMENDED_COPY.tieOnRecovery(1, RECOMMENDED_COPY.tieKindMoving));
+        sentences(recommendationReason([pick, slow], 0, true, false),
+            'Fewest wakeups of the clocks that keep making 240/s and go back to it after a stop.' + RECOMMENDED_COPY.tieOnRecovery(1));
     });
 
     describe('when no clock meets the rate', () => {
@@ -222,17 +211,17 @@ describe('recommendationReason', () => {
         ['says the pick may change while clocks are still being made', false, RECOMMENDED_COPY.provisional],
         ['says a better clock may not have been made after a run the player stopped', true, RECOMMENDED_COPY.stopped],
     ])('%s', (_, stopped, lead) => {
-        sentences(recommendationReason([clock('a'), ...others], 0, MOVING, false, stopped), lead + fewest);
+        sentences(recommendationReason([clock('a'), ...others], 0, false, stopped), lead + fewest);
     });
 
     it('is empty when nothing is recommended', () => {
-        expect(recommendationReason([], null, MOVING, true)).toBe('');
-        expect(recommendationReason([clock('a')], null, MOVING, false)).toBe('');
+        expect(recommendationReason([], null, true)).toBe('');
+        expect(recommendationReason([clock('a')], null, false)).toBe('');
     });
 
     it('prints the target rate as the rate warning does', () => {
         const at = (rate: number) => reason([{ ...clock('a'), assessment: { items_per_second: rate } }]);
-        expect([at(240), at(12.5), at(1 / 3)]).toEqual(['240', '12.5', '0.33'].map(rate => `The only clock that holds ${rate}/s and has recovery on a moving belt.`));
+        expect([at(240), at(12.5), at(1 / 3)]).toEqual(['240', '12.5', '0.33'].map(rate => `The only clock that holds ${rate}/s and has recovery.`));
     });
 });
 
@@ -241,102 +230,130 @@ describe('RECOMMENDED_COPY', () => {
         expect(RECOMMENDED_COPY).toMatchObject({ chipWhileGenerating: 'Best so far', backWhileGenerating: 'Back to best so far' });
     });
 
-    it('says in "How clocks are chosen" what is picked on a build with a deadlock risk', () => {
-        expect(RECOMMENDED_COPY.disclosure[1]).toContain('on a build with a deadlock risk, the one with the fewest wakeups of the clocks that hold the rate');
+    it('says in the help of the Rank column what ranks first on a build with a deadlock risk', () => {
+        expect(RECOMMENDED_COPY.rankKeys[0]).toContain('On a build with a deadlock risk, it holds the setpoint.');
+    });
+
+    it('names the seven keys of the engine\'s order in the help of the Rank column, in order, and rank 1 as the recommended clock', () => {
+        const { rankKeys, rankFirst, rankTie } = RECOMMENDED_COPY;
+        expect(rankKeys).toHaveLength(7);
+        // the tier, the distance from the setpoint, holding the output, the wakeups, the signals, the recovery, the enable windows
+        ['rounded to whole ticks', 'nearer to the setpoint', 'holds its output', 'fewer wakeups', 'fewer signals', 'fewer window cycles', 'fewer enable windows']
+            .forEach((words, key) => expect(rankKeys[key]).toContain(words));
+        expect(rankTie).toBe('Clocks that are equal on all seven keep the order they were made in.');
+        expect(rankFirst).toBe('Rank 1 is the recommended clock.');
     });
 
     it('says one other clock is level with the pick, and 2 other clocks are', () => {
-        const { tieOnWakeUps, tieKindMoving } = RECOMMENDED_COPY;
-        expect(tieOnWakeUps(1, '')).toContain(' One other clock is level with it ');
-        expect(tieOnWakeUps(1, tieKindMoving)).toContain(' One other clock for a moving belt is level with it ');
-        expect(tieOnWakeUps(2, tieKindMoving)).toContain(' 2 other clocks for a moving belt are level with it ');
+        const { tieOnWakeUps } = RECOMMENDED_COPY;
+        expect(tieOnWakeUps(1)).toContain(' One other clock is level with it ');
+        expect(tieOnWakeUps(2)).toContain(' 2 other clocks are level with it ');
     });
 });
 
-describe('disclosureRunLine', () => {
-    it('says the belt the clocks were made for and whether the searches ran', () => {
-        const { runMovingBelts: moving, runBackedUpBelts: backedUp, runSearched: searched, runSearchedWhenNeeded: whenNeeded } = RECOMMENDED_COPY;
-        expect(disclosureRunLine(MOVING)).toBe(`${moving} ${whenNeeded}`);
-        expect(disclosureRunLine(BACKED_UP)).toBe(`${backedUp} ${whenNeeded}`);
-        expect(disclosureRunLine(SEARCHED)).toBe(`${moving} ${searched}`);
-        expect(disclosureRunLine({ backedUpBelts: true, searchedForFewerWakeUps: true })).toBe(`${backedUp} ${searched}`);
-        expect(disclosureRunLine(null)).toBe(disclosureRunLine(MOVING));
+describe('searchesRunLine', () => {
+    it('says whether the searches ran, and names no belt', () => {
+        const { runSearched: searched, runSearchedWhenNeeded: whenNeeded } = RECOMMENDED_COPY;
+        expect(searchesRunLine(WHEN_NEEDED)).toBe(whenNeeded);
+        expect(searchesRunLine(SEARCHED)).toBe(searched);
+        expect(searchesRunLine(null)).toBe(whenNeeded);
     });
 });
 
 describe('pickRuleOf', () => {
-    it('reads the belts and the search mode from the overrides', () => {
+    it('reads the search mode from the overrides, and nothing of the belts', () => {
         const config = (overrides?: Config['overrides']) => ({ overrides }) as Config;
-        expect(pickRuleOf(config())).toEqual(MOVING);
-        expect(pickRuleOf(config({ backed_up_belts: true }))).toEqual(BACKED_UP);
+        expect(pickRuleOf(config())).toEqual(WHEN_NEEDED);
+        expect(pickRuleOf(config({ backed_up_belts: true }))).toEqual(WHEN_NEEDED);
         expect(pickRuleOf(config({ search_for_fewer_wake_ups: true }))).toEqual(SEARCHED);
-        expect(pickRuleOf(config({ backed_up_belts: false, search_for_fewer_wake_ups: false }))).toEqual(MOVING);
+    });
+});
+
+describe('rankOrderOf', () => {
+    it('is the engine\'s order of the clocks, the recommended clock first', () => {
+        const clocks = [short('near', 0.5), clock('more', { wake_ups_per_minute: 12 }), clock('fewest', { wake_ups_per_minute: 8 }), short('far', -3)];
+        expect(rankOrderOf(clocks).map(index => clocks[index].id)).toEqual(['fewest', 'more', 'near', 'far']);
+        expect(rankOrderOf(clocks)[0]).toBe(recommendedIndexOf(clocks));
+        expect(rankOrderOf([])).toEqual([]);
+    });
+
+    it('is the order of the engine\'s combination of every run, as the worker lists the clocks', () => {
+        const runs = [
+            { signature: 'batched', alternatives: [clock('a', { wake_ups_per_minute: 15 }), short('b', 1)] },
+            { signature: 'uneven', alternatives: [clock('c', { wake_ups_per_minute: 7, window_count: 9 })] },
+            { signature: 'shifted', alternatives: [clock('d', { wake_ups_per_minute: 7, window_count: 5 }), short('e', 1)] },
+        ];
+        const engine = combineClockAlternativeRuns([runs[2], null, runs[0], runs[1]], it => it.ranking);
+        expect(rankOrderOf(engine.alternatives)).toEqual(engine.order);
     });
 });
 
 describe('partitionClockRows', () => {
     type Options = Parameters<typeof partitionClockRows>[1];
-    const rowsOf = (verdicts: ClockVerdict[]) => verdicts.map((verdict, index) => ({ id: `clock-${index}`, verdict }));
-    // 0 stable, 1 unstable, 2 stable, 3 no recovery, 4 unstable
-    const clocks = rowsOf(['stable', 'unstable', 'stable', 'no recovery', 'unstable']);
-    const indexes = (rows: { index: number }[]) => rows.map(it => it.index);
-    /** The groups by the indexes of their rows, and the counts */
-    const groups = (rows: ReturnType<typeof rowsOf>, options: Options) => {
-        const { stable, unstable, ...counts } = partitionClockRows(rows, options);
-        return { stable: indexes(stable), unstable: indexes(unstable), ...counts };
+    // in list order: 0 stable with 20 wakeups, 1 unstable 2/s short, 2 stable with 5, 3 no recovery 1/s short, 4 unstable 3/s short
+    const clocks = [clock('a', { wake_ups_per_minute: 20 }), short('b', -2, false), clock('c', { wake_ups_per_minute: 5 }), short('d', -1), short('e', -3, false)];
+    const isStable = (it: Clock) => it.verdict === 'stable';
+    /** The groups by the indexes of their rows with their ranks */
+    const groups = (rows: Clock[], options: Omit<Options, 'isStable'> = {}) => {
+        const { stable, unstable } = partitionClockRows(rows, { ...options, isStable });
+        const of = (group: typeof stable) => group.map(it => [it.index, it.rank]);
+        return { stable: of(stable), unstable: of(unstable) };
     };
 
-    // the options, then the stable and the other rows shown and how many of the others are hidden
-    it.each<[string, Options, number[], number[], number]>([
-        ['puts the stable clocks first and the others after, each in list order, with no recovery among the others',
-            { selectedIndex: 0, recommendedIndex: 0, showUnstable: true }, [0, 2], [1, 3, 4], 0],
-        ['keeps only the selected and the recommended unstable clocks while the others are hidden',
-            { selectedIndex: 4, recommendedIndex: 0, showUnstable: false }, [0, 2], [4], 2],
-        ['keeps the recommended clock when it is not stable', { selectedIndex: 0, recommendedIndex: 3, showUnstable: false }, [0, 2], [3], 2],
-        ['puts the recommended clock first in its group, the others in list order',
-            { selectedIndex: 0, recommendedIndex: 2, showUnstable: true }, [2, 0], [1, 3, 4], 0],
-        ['keeps list order while a run can still change the pick',
-            { selectedIndex: 0, recommendedIndex: 2, showUnstable: true, recommendedFirst: false }, [0, 2], [1, 3, 4], 0],
-    ])('%s', (_, options, stable, unstable, hiddenCount) => {
-        expect(groups(clocks, options)).toEqual({ stable, unstable, unstableCount: 3, hiddenCount, anyStable: true });
+    it('puts the stable clocks first and every other after, each in the engine\'s order, numbered straight through', () => {
+        expect(groups(clocks)).toEqual({ stable: [[2, 1], [0, 2]], unstable: [[3, 3], [1, 4], [4, 5]] });
     });
 
-    it('keeps the rows that stayed while hidden first under the divider once the others are shown (utility science)', () => {
-        // unstable rows at 2 and 3 come before the recommended no-recovery row at 5 in the list
-        const utility = rowsOf(['stable', 'stable', 'unstable', 'unstable', 'stable', 'no recovery', 'unstable']);
-        // the other rows with `selectedIndex` selected while hidden, then shown with those that stayed pinned
-        const hiddenThenShown = (selectedIndex: number) => {
-            const hidden = partitionClockRows(utility, { selectedIndex, recommendedIndex: 5, showUnstable: false }).unstable;
-            const pinnedIds = hidden.map(row => row.alternative.id);
-            return [indexes(hidden), indexes(partitionClockRows(utility, { selectedIndex, recommendedIndex: 5, showUnstable: true, pinnedIds }).unstable)];
-        };
-        expect(hiddenThenShown(0)).toEqual([[5], [5, 2, 3, 6]]);
-        // with an unstable row selected too, both stay in place, the recommended first
-        expect(hiddenThenShown(3)).toEqual([[5, 3], [5, 3, 2, 6]]);
+    it('lists the recommended clock in the other group when it is not stable', () => {
+        // a build with a deadlock risk: a clock that holds the setpoint without recovery meets it, here with the fewest wakeups
+        const deadlock = [clock('stable', { wake_ups_per_minute: 9 }), short('drifts', -1, false), clock('holds', { verdict: 'no recovery', wake_ups_per_minute: 2 })];
+        expect(groups(deadlock)).toEqual({ stable: [[0, 2]], unstable: [[2, 1], [1, 3]] });
+    });
+
+    it('while a run goes, holds the rows: a clock that arrives and ranks first is added at the bottom of its group, the ranks of the others change in place', () => {
+        const held = heldOrderOf([], clocks);
+        const before = groups(clocks, { held });
+        expect(before.stable).toEqual([[2, 1], [0, 2]]);
+        // the worker lists the clocks by their task, so the new one can come first in the list and move every index on one
+        const after = [clock('new', { wake_ups_per_minute: 1 }), ...clocks];
+        const heldAfter = groups(after, { held: heldOrderOf(held, after) });
+        expect(heldAfter.stable).toEqual([[3, 2], [1, 3], [0, 1]]);
+        expect(heldAfter.unstable).toEqual([[4, 4], [2, 5], [5, 6]]);
+    });
+
+    it('while a run goes, adds a clock that is not stable at the bottom of the other group', () => {
+        const held = heldOrderOf([], clocks);
+        const after = [...clocks, short('near', -0.5)];
+        expect(groups(after, { held: heldOrderOf(held, after) }))
+            .toMatchObject({ stable: [[2, 1], [0, 2]], unstable: [[3, 4], [1, 5], [4, 6], [5, 3]] });
+    });
+
+    it('sorts the rows by their ranks once the run has ended', () => {
+        const after = [clock('new', { wake_ups_per_minute: 1 }), ...clocks];
+        expect(groups(after)).toMatchObject({ stable: [[0, 1], [3, 2], [1, 3]], unstable: [[4, 4], [2, 5], [5, 6]] });
+    });
+
+    it('puts a clock the held order does not name after those it names, by rank', () => {
+        expect(groups(clocks, { held: ['a', 'e'] }))
+            .toMatchObject({ stable: [[0, 2], [2, 1]], unstable: [[4, 5], [3, 3], [1, 4]] });
     });
 
     it('shows every clock in one group when none is stable', () => {
-        expect(groups(rowsOf(['unstable', 'no recovery']), { selectedIndex: 1, recommendedIndex: 1, showUnstable: false }))
-            .toEqual({ stable: [], unstable: [1, 0], unstableCount: 2, hiddenCount: 0, anyStable: false });
+        expect(groups([short('far', -2), short('near', -1, false)])).toEqual({ stable: [], unstable: [[1, 1], [0, 2]] });
     });
 });
 
-describe('belt grouping after global eligibility', () => {
-    it('retains original indexes, recommendation order and selected exceptions without exposing hidden clocks in another belt group', () => {
-        const clocks = [
-            clock('stable', { verdict: 'stable', matches_belt_choice: true }),
-            clock('hidden-other-belt', { verdict: 'unstable', matches_belt_choice: false }),
-            clock('selected-other-belt', { verdict: 'unstable', matches_belt_choice: false }),
-            clock('recommended', { verdict: 'stable', matches_belt_choice: true }),
-        ];
-        const rows = partitionClockRows(clocks, { selectedIndex: 2, recommendedIndex: 3, showUnstable: false });
-        const stable = groupClockRowsByBelt(rows.stable);
-        const other = groupClockRowsByBelt(rows.unstable);
-        expect(stable.matches.map(row => row.index)).toEqual([3, 0]);
-        expect(other.requiresChange.map(row => row.index)).toEqual([2]);
-        expect(other.requiresChange[0]).toBe(rows.unstable[0]);
-        expect(stable.requiresChange).toEqual([]);
-        expect(rows.hiddenCount).toBe(1);
+describe('heldOrderOf', () => {
+    const clocks = [clock('a', { wake_ups_per_minute: 20 }), clock('b', { wake_ups_per_minute: 5 }), short('c', -1)];
+
+    it.each<[string, string[], Clock[], string[]]>([
+        ['holds the clocks there when the table first shows them by their ranks', [], clocks, ['b', 'a', 'c']],
+        ['keeps the order it holds and adds the clocks that arrived after them, by rank', ['a', 'c'],
+            [clock('new', { wake_ups_per_minute: 1 }), ...clocks, clock('later', { wake_ups_per_minute: 2 })], ['a', 'c', 'new', 'later', 'b']],
+        ['drops a clock that is no longer there: a new run starts with none', ['a', 'b', 'c'], [], []],
+        ['is the same order when nothing arrived', ['c', 'a', 'b'], clocks, ['c', 'a', 'b']],
+    ])('%s', (_, held, alternatives, expected) => {
+        expect(heldOrderOf(held, alternatives)).toEqual(expected);
     });
 });
 
@@ -344,5 +361,21 @@ describe('RECOMMENDED_COPY.intro', () => {
     it('names the card a row is shown in by its heading, Selected clock (#658)', () => {
         expect(RECOMMENDED_COPY.intro).toContain('show it in Selected clock above');
         expect(RECOMMENDED_COPY.intro).not.toContain('Your clock');
+    });
+});
+
+describe('the reason of a recommended clock with a loss on a shared lane', () => {
+    const views = viewsOf(ELECTROMAGNETIC_330_TWO_SWINGS);
+    const index = ELECTROMAGNETIC_330_TWO_SWINGS.selected_index;
+
+    it('says the rate all the copies made together, not the setpoint as its rate: electromagnetic science 330 with 2 swings', () => {
+        expect(recommendedIndexOf(views)).toBe(index);
+        expect(views[index].checkedLanes!.copies_made!.items_per_second).toBeCloseTo(318.79, 2);
+        expect(recommendationReason(views, index, true)).toBe('No clock holds 330/s and has recovery. This one runs at 318.79/s with the fewest wakeups.');
+    });
+
+    it('says the setpoint where the result has no rate of the copies (an older result), as before', () => {
+        const older = views.map(view => ({ ...view, checkedLanes: { ...view.checkedLanes!, copies_made: undefined } }));
+        expect(recommendationReason(older, index, true)).toBe('No clock holds 330/s and has recovery. This one runs at 330/s with the fewest wakeups.');
     });
 });

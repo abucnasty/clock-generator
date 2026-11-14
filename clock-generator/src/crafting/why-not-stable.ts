@@ -1,6 +1,6 @@
 /**
  * Why the selected clock does not meet goal 1 (GOALS.md: hold the target rate and get back to it after a loss), in one
- * of five causes, each told from what the alternatives already carry: no search is added and nothing is generated
+ * of the causes below, each told from what the alternatives already carry: no search is added and nothing is generated
  * again.
  *
  * - **Moving lane phases:** the clock is made for a moving belt and holds from the modeled start, but falls short from
@@ -13,6 +13,8 @@
  *   clock ended the chest had no room left for it: the same chest the web form warns can fill up.
  * - **Export belt short:** the clock moves the target, and a belt with a consumption rate gets less than its consumers
  *   take; the same words name the belt, the item and both rates.
+ * - **Shared lane short:** it holds the rate on one copy, and a copy loses swings on a lane the copies share
+ *   (`assessment.shared_lane_losses`), or those lanes could not be checked: the message then says so, and why.
  * - **No recovery:** it holds the rate, and does not get back to it after the losses it names.
  * - **Nothing holds:** it does not hold the rate; the nearest clock is selected, and the clocks that could not be made
  *   are listed with their reasons.
@@ -20,6 +22,7 @@
  * The UI calls this on its own view of the clocks, so the same words show there as in the result.
  */
 import type { DisturbanceTrialVerdict } from "./disturbance-trial";
+import { capitalized, theName } from "./entity-name";
 import type { ClockBelt } from "./clock";
 import type { ExportShortfall } from "./export-delivery";
 import type { ResultsTaken } from "./results-taken";
@@ -28,7 +31,7 @@ import type { ClockInsight } from "./insights";
 import type { ClockRanking } from "./rank";
 import type { AsBuiltStabilityCheck, ClockAssessment, ClockVerdict } from "./trial";
 
-export type WhyNotStableCause = "taker order" | "moving lane phases" | "output chest full" | "export belt short" | "results not taken out" | "no recovery" | "nothing holds";
+export type WhyNotStableCause = "taker order" | "moving lane phases" | "output chest full" | "export belt short" | "results not taken out" | "shared lane short" | "join full" | "no recovery" | "nothing holds";
 
 export interface WhyNotStable {
     cause: WhyNotStableCause;
@@ -45,7 +48,10 @@ export interface NotMadeClock {
 
 /** What the build's tightest machine has to spare a window cycle (the spare-time insight) */
 export interface SpareTime {
-    /** "Machine 3 (metallurgic-science-pack)" */
+    /**
+     * The machine as a sentence names it, by its kind and recipe (machine-name.ts): "the foundry that makes
+     * metallurgic-science-pack"; "Machine 3 (metallurgic-science-pack)" in results made before
+     */
     machine: string;
     spare_ticks: number;
     /** The ticks of a window cycle it crafts */
@@ -62,10 +68,10 @@ export interface WhyNotStableClock {
     meets_target_rate: boolean;
     /** Stable over the target rate, which the selection picks where none meets goal 1 (`ClockRanking.stable_above_target`) */
     stable_above_target?: boolean;
-    assessment: Pick<ClockAssessment, "holds" | "items_per_second"> & {
+    assessment: Pick<ClockAssessment, "holds" | "items_per_second" | "shared_lane_losses"> & {
         disturbance_trial: Pick<DisturbanceTrialVerdict, "survives" | "broken_by" | "broken_at_other_lane_phases" | "broken_under_other_taker_orders" | "not_tried"> | null;
     };
-    /** Whether the clock is made for a moving belt (its belt pickups have belt pickup slack) */
+    /** Whether the clock is made for a moving belt (some input lane is not a dead end) */
     moving_belt: boolean;
     /** The lane phases, by inserter, of the first lane-phase start that fell short after the modeled start held */
     failed_pickup_phases?: Record<string, readonly [number, number]>;
@@ -128,8 +134,8 @@ const MIN_OFF_TARGET = 0.005;
 const figure = (value: number) => Number(value.toFixed(2)).toString();
 
 /** "Inserter 2" or "inserters 2 and 4", from "inserter:2"-style keys */
-function insertersOf(phases: Record<string, readonly [number, number]>): string {
-    return insertersNumbered(Object.keys(phases).map(key => key.replace(/^inserter:/, "")));
+function insertersOf(phases: Record<string, readonly [number, number]>, build: Pick<WhyNotStableBuild, "entity_names">): string {
+    return insertersNamed(Object.keys(phases), build);
 }
 
 /** "inserter 2" or "inserters 2 and 4", from the inserters' numbers */
@@ -161,31 +167,51 @@ function shortfallOf(clock: WhyNotStableClock): string {
     return `${figure(output.items)} of ${clock.expected_output_items} items a window cycle`;
 }
 
-/** What the config says of its belts and its target, which every clock of a generation shares */
+/** What the config says of its target, which every clock of a generation shares */
 export interface WhyNotStableBuild {
     /** The target over all copies, as the clocks' rates are */
     target_items_per_second: number;
-    /** The config says its input belts are backed up (`overrides.backed_up_belts`) */
-    backed_up_belts: boolean;
     not_made: readonly NotMadeClock[];
+    /**
+     * The names a sentence gives the build's belts, inserters and chests, by entity id ("inserter:3"): by their items, in
+     * the game's names in a sentence (entity-name.ts). Where an entity has none, the sentence gives its number.
+     */
+    entity_names?: Readonly<Record<string, string>>;
 }
 
-/** Said of a moving-belt clock on a config whose belts move; not promised, since no clock is generated to show it */
-const BACKED_UP_MAY_HOLD = " If the input belts back up at their pickups, answer Backed up for the belts and generate again: "
-    + "a clock may hold then.";
+/** "a", "a and b", "a, b and c" */
+const listedNumbers = (values: readonly string[]) => values.length <= 1 ? values.join("") : `${values.slice(0, -1).join(", ")} and ${values[values.length - 1]}`;
+
+/** "the inserter that takes coal and the inserter (inserter 6) that moves battery", or "inserters 2 and 4" where the names are not carried */
+function insertersNamed(ids: readonly (string | number)[], build: Pick<WhyNotStableBuild, "entity_names">): string {
+    const numbers = ids.map(id => String(id).replace(/^inserter:/, ""));
+    const names = numbers.map(number => build.entity_names?.[`inserter:${number}`]);
+    if (names.every((name): name is string => name !== undefined)) {
+        // the alike, which have their numbers, said once: "the inserters (1 and 2) that drop grenade"
+        const groups = new Map<string, string[]>();
+        for (const [index, name] of names.entries()) {
+            const alike = /^inserter \(inserter \d+\) that (takes|drops|moves) (.*)$/.exec(name);
+            const key = alike === null ? name : `${alike[1].slice(0, -1)} ${alike[2]}`;
+            groups.set(key, [...groups.get(key) ?? [], alike === null ? name : numbers[index]]);
+        }
+        const the = [...groups].map(([key, group]) => group.length === 1 && key === group[0] ? theName(key)
+            : group.length === 1 ? theName(names[numbers.indexOf(group[0])]) : `the inserters (${listedNumbers(group)}) that ${key}`);
+        return listedNumbers(the);
+    }
+    return insertersNumbered(numbers);
+}
 
 function movingLanePhases(clock: WhyNotStableClock, build: WhyNotStableBuild): WhyNotStable | null {
     if (!clock.moving_belt) {
         return null;
     }
     const lead = `The recommended clock (${clock.label}) is made for a moving belt. It holds the setpoint from the modeled start`;
-    const in_the_game = "In the game a belt's lanes reach the pickups in whatever phase they happen to have, so the build can fall short."
-        + (build.backed_up_belts ? "" : BACKED_UP_MAY_HOLD);
+    const in_the_game = "In the game a belt's lanes reach the pickups in whatever phase they happen to have, so the build can fall short.";
     if (clock.verdict === "unstable" && clock.failed_pickup_phases !== undefined) {
         const shortfall = shortfallOf(clock);
         return {
             cause: "moving lane phases",
-            message: `${lead}, but not when the lanes reach ${insertersOf(clock.failed_pickup_phases)} in another phase`
+            message: `${lead}, but not when the lanes reach ${insertersOf(clock.failed_pickup_phases, build)} in another phase`
                 + `${shortfall ? `: from such a start it moves ${shortfall}` : ""}. ${in_the_game}`,
         };
     }
@@ -206,19 +232,19 @@ const ORDER_IN_THE_GAME = "The game serves inserters that take from one machine 
     + "so the build can fall short.";
 
 /** "inserters 6 and 7", or "inserters 6, 7, 22 and 25" for several machines; "the inserters that take from one machine" when not known */
-function competingTakersNamed(clock: WhyNotStableClock): string {
+function competingTakersNamed(clock: WhyNotStableClock, build: Pick<WhyNotStableBuild, "entity_names">): string {
     const ids = (clock.competing_takers ?? []).flat().map(id => id.replace(/^inserter:/, ""));
-    return ids.length > 1 ? insertersNumbered(Array.from(new Set(ids))) : "the inserters that take from one machine";
+    return ids.length > 1 ? insertersNamed(Array.from(new Set(ids)), build) : "the inserters that take from one machine";
 }
 
-function takerOrder(clock: WhyNotStableClock): WhyNotStable | null {
+function takerOrder(clock: WhyNotStableClock, build: WhyNotStableBuild): WhyNotStable | null {
     if (clock.verdict !== "unstable" || clock.failed_taker_order === undefined) {
         return null;
     }
     const shortfall = shortfallOf(clock);
     return {
         cause: "taker order",
-        message: `The recommended clock (${clock.label}) holds the setpoint when ${competingTakersNamed(clock)} are served in one order, `
+        message: `The recommended clock (${clock.label}) holds the setpoint when ${competingTakersNamed(clock, build)} are served in one order, `
             + `but not in another${shortfall ? `: then it moves ${shortfall}` : ""}. ${ORDER_IN_THE_GAME}`,
     };
 }
@@ -237,12 +263,12 @@ function spareTimeSentence(spare: SpareTime | null): string {
     }
     const ticks = figure(spare.spare_ticks);
     const window_cycles = Number.isFinite(make_up_window_cycles) ? `${Math.ceil(make_up_window_cycles)} window cycles` : "forever";
-    return ` ${spare.machine} crafts ${figure(spare.working_ticks)} ticks of a window cycle and has ${ticks} ${ticks === "1" ? "tick" : "ticks"} `
+    return ` ${spare.machine.charAt(0).toUpperCase()}${spare.machine.slice(1)} crafts ${figure(spare.working_ticks)} ticks of a window cycle and has ${ticks} ${ticks === "1" ? "tick" : "ticks"} `
         + `to spare: making up one window cycle it lost takes it ${window_cycles}, more than the ${spare.recovery_window_cycles} a build is given to `
         + "go back to its rate. That is too little to make up what it lost.";
 }
 
-function noRecovery(clock: WhyNotStableClock): WhyNotStable {
+function noRecovery(clock: WhyNotStableClock, build: WhyNotStableBuild): WhyNotStable {
     const broken_by = clock.assessment.disturbance_trial?.broken_by ?? [];
     const other_phases = clock.assessment.disturbance_trial?.broken_at_other_lane_phases ?? [];
     const other_orders = clock.assessment.disturbance_trial?.broken_under_other_taker_orders ?? [];
@@ -255,7 +281,7 @@ function noRecovery(clock: WhyNotStableClock): WhyNotStable {
         ...(elsewhere.length > 0 ? [`${after(at_the_start.length === 0)} ${lossList(elsewhere)} it goes back to it by itself from the `
             + "modeled start, but not when a moving belt's lanes come back in another phase."] : []),
         ...(in_another_order.length > 0 ? [`${after(at_the_start.length === 0 && elsewhere.length === 0)} ${lossList(in_another_order)} it goes back to it by itself when `
-            + `${competingTakersNamed(clock)} are served in one order, but not in another. ${ORDER_IN_THE_GAME}`] : []),
+            + `${competingTakersNamed(clock, build)} are served in one order, but not in another. ${ORDER_IN_THE_GAME}`] : []),
     ];
     const losses = sentences.length > 0 ? sentences.join(" ")
         : "was off its expected output in the run the loss trials are made on, so whether it goes back to it by itself after a supply stop or an output blockage is not known.";
@@ -302,10 +328,10 @@ function notMadeOf(build: WhyNotStableBuild): string {
 const count = (value: number) => value.toLocaleString("en-US");
 
 /** "Chest 1 fills up. Nothing takes any electromagnetic science pack out of it, so it holds 9,600 of 9,600 and inserters 1 and 2 have nowhere to drop." */
-function fullChestSentence(chest: FullOutputChest): string {
-    const inserters = chest.inserter_ids.map(String);
-    return `${chest.name} fills up. Nothing takes any ${chest.item_label} out of it, so it holds ${count(chest.held)} of ${count(chest.capacity)} `
-        + `and ${insertersNumbered(inserters)} ${inserters.length === 1 ? "has" : "have"} nowhere to drop.`;
+function fullChestSentence(chest: FullOutputChest, build: WhyNotStableBuild): string {
+    const named = build.entity_names?.[`chest:${chest.chest_id}`];
+    return `${named === undefined ? chest.name : capitalized(theName(named))} fills up. Nothing takes any ${chest.item_label} out of it, so it holds ${count(chest.held)} of ${count(chest.capacity)} `
+        + `and ${insertersNamed(chest.inserter_ids, build)} ${chest.inserter_ids.length === 1 ? "has" : "have"} nowhere to drop.`;
 }
 
 /**
@@ -318,38 +344,42 @@ function outputChestFull(clock: WhyNotStableClock, build: WhyNotStableBuild): Wh
     }
     return {
         cause: "output chest full",
-        message: `No clock holds the setpoint of ${figure(build.target_items_per_second)} a second: ${clock.full_output_chests.map(fullChestSentence).join(" ")} `
+        message: `No clock holds the setpoint of ${figure(build.target_items_per_second)} a second: ${clock.full_output_chests.map(chest => fullChestSentence(chest, build)).join(" ")} `
             + `${nearestOf(clock, build)} Use an infinity chest, or add an inserter that takes the items out, and generate again.${notMadeOf(build)}`,
     };
 }
 
 /** "Belt 2 gets 73.4 a second of electronic circuit, and 80 a second is taken off it (inserters 16 and 17 fill it)." The game's names of items have no plural. */
-function exportShortfallSentence(short: ExportShortfall): string {
-    return `Belt ${short.belt_id} gets ${figure(short.delivered_per_second)} a second of ${short.item_label}, and ${figure(short.expected_per_second)} a second `
-        + `is taken off it (${insertersNumbered(short.inserter_ids.map(String))} fill${short.inserter_ids.length === 1 ? "s" : ""} it).`;
+function exportShortfallSentence(short: ExportShortfall, build: WhyNotStableBuild): string {
+    const named = build.entity_names?.[`belt:${short.belt_id}`];
+    return `${named === undefined ? `Belt ${short.belt_id}` : theName(named)} gets ${figure(short.delivered_per_second)} a second of ${short.item_label}, and ${figure(short.expected_per_second)} a second `
+        + `is taken off it (${insertersNamed(short.inserter_ids, build)} fill${short.inserter_ids.length === 1 ? "s" : ""} it).`;
 }
 
 /**
  * The failing clock moves the target (`at_target`) and a belt with a consumption rate receives less than that rate: the line that
  * takes the items off the belt runs dry, whatever the target says
  */
-function exportBeltShort(clock: WhyNotStableClock, at_target: boolean): WhyNotStable | null {
+function exportBeltShort(clock: WhyNotStableClock, at_target: boolean, build: WhyNotStableBuild): WhyNotStable | null {
     if (clock.export_shortfalls.length === 0 || !at_target) {
         return null;
     }
     return {
         cause: "export belt short",
-        message: `The recommended clock (${clock.label}) moves ${figure(clock.assessment.items_per_second)} a second, but ${clock.export_shortfalls.map(exportShortfallSentence).join(" ")}`,
+        message: `The recommended clock (${clock.label}) moves ${figure(clock.assessment.items_per_second)} a second, but ${clock.export_shortfalls.map((short, index) => index === 0 ? exportShortfallSentence(short, build) : capitalized(exportShortfallSentence(short, build))).join(" ")}`,
     };
 }
 
-/** "Machine 1 waited 240 ticks with a result its container had no room for." and "Inserter 10 took 52 of the 107 holmium ore the crafts gave." */
-function resultsTakenSentences(taken: ResultsTaken): string[] {
-    const machine = taken.machine_id.replace(/^machine:/, "Machine ");
+/**
+ * "The recycler that makes scrap recycling waited 240 ticks with a result its container had no room for." and "Inserter 10
+ * took 52 of the 107 holmium ore the crafts gave." A result made before the machine's name was kept names it by its number.
+ */
+function resultsTakenSentences(taken: ResultsTaken, build: WhyNotStableBuild): string[] {
+    const machine = taken.machine_name !== undefined ? `The ${taken.machine_name}` : taken.machine_id.replace(/^machine:/, "Machine ");
     return [
         ...(taken.waiting_ticks > 0 ? [`${machine} waited ${count(taken.waiting_ticks)} ticks with a result its container had no room for.`] : []),
-        ...taken.takers.filter(it => it.short).map(it => (`${insertersNumbered(it.inserter_ids.map(id => id.replace(/^inserter:/, "")))} took `
-            + `${count(it.taken_items)} of the ${count(Math.round(it.expected_items))} ${(it.item_labels ?? it.items).join(" and ")} the crafts gave.`).replace(/^i/, "I")),
+        ...taken.takers.filter(it => it.short).map(it => capitalized(`${insertersNamed(it.inserter_ids, build)} took `
+            + `${count(it.taken_items)} of the ${count(Math.round(it.expected_items))} ${(it.item_labels ?? it.items).join(" and ")} the crafts gave.`)),
     ];
 }
 
@@ -357,8 +387,8 @@ function resultsTakenSentences(taken: ResultsTaken): string[] {
  * The failing clock brings in the target, and the results of a machine that places them into a container were not all
  * taken out as they came: the container fills up in the end, whatever the rate says now
  */
-function resultsNotTaken(clock: WhyNotStableClock, at_target: boolean): WhyNotStable | null {
-    const sentences = (clock.results_taken ?? []).flatMap(resultsTakenSentences);
+function resultsNotTaken(clock: WhyNotStableClock, at_target: boolean, build: WhyNotStableBuild): WhyNotStable | null {
+    const sentences = (clock.results_taken ?? []).flatMap(taken => resultsTakenSentences(taken, build));
     if (sentences.length === 0 || !at_target) {
         return null;
     }
@@ -366,6 +396,36 @@ function resultsNotTaken(clock: WhyNotStableClock, at_target: boolean): WhyNotSt
         cause: "results not taken out",
         message: `The recommended clock (${clock.label}) brings in ${figure(clock.assessment.items_per_second)} a second, but its results are not all `
             + `taken out as they come: ${sentences.join(" ")}`,
+    };
+}
+
+/**
+ * The clock holds the setpoint on one copy, and a copy loses swings on a lane the copies share: that copy gets too few
+ * items, whatever the run of one copy says
+ */
+function sharedLaneShort(clock: WhyNotStableClock): WhyNotStable | null {
+    const loss = clock.assessment.shared_lane_losses?.[0];
+    if (clock.verdict !== "unstable" || loss === undefined) {
+        return null;
+    }
+    // read here without the check's module, which the light entry does not load
+    if ("kind" in loss && loss.kind === "not_checked") {
+        return {
+            cause: "shared lane short",
+            message: `The recommended clock (${clock.label}) holds the setpoint on one copy, but it is not counted as stable: ${loss.text[0].toLowerCase()}${loss.text.slice(1)}`,
+        };
+    }
+    if ("join_full" in loss && loss.join_full !== undefined) {
+        return {
+            cause: "join full",
+            message: `The recommended clock (${clock.label}) holds the setpoint on one copy, but not on its output belt. ${loss.text} `
+                + "A clock needs output swings that the side belt takes in time, or the side belt needs more room before its join.",
+        };
+    }
+    return {
+        cause: "shared lane short",
+        message: `The recommended clock (${clock.label}) holds the setpoint on one copy, but not on a lane its copies share. ${loss.text} `
+            + "A clock needs enable windows that give the lane more time, or each copy needs a lane of its own.",
     };
 }
 
@@ -381,9 +441,10 @@ export function whyNotStable(clocks: readonly WhyNotStableClock[], selected_inde
     // a clock that does not recover is told so when it holds the target itself, not another rate
     const at_target = Math.abs(clock.assessment.items_per_second - build.target_items_per_second) < MIN_OFF_TARGET;
     return outputChestFull(clock, build)
-        ?? exportBeltShort(clock, at_target)
-        ?? resultsNotTaken(clock, at_target)
-        ?? takerOrder(clock)
+        ?? exportBeltShort(clock, at_target, build)
+        ?? resultsNotTaken(clock, at_target, build)
+        ?? sharedLaneShort(clock)
+        ?? takerOrder(clock, build)
         ?? movingLanePhases(clock, build)
-        ?? (clock.verdict === "no recovery" && at_target ? noRecovery(clock) : nothingHolds(clock, build));
+        ?? (clock.verdict === "no recovery" && at_target ? noRecovery(clock, build) : nothingHolds(clock, build));
 }

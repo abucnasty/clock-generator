@@ -13,9 +13,15 @@ import { quiet } from "./generate-blueprint-test-helpers";
 afterEach(() => vi.restoreAllMocks());
 
 const fixture = JSON.parse(readFileSync(path.join(__dirname, "fixtures/imp-sampled-output.json"), "utf8"));
+/** The archived config with the infinite ends of its sulfur and coal lanes stated (belts 1 and 3); the file keeps its archived bytes */
+function archivedConfig(): unknown {
+    const config = structuredClone(fixture.config) as { belts: { id: number; lanes: { lane_end?: { kind: string } }[] }[] };
+    for (const belt of config.belts) if (belt.id === 1 || belt.id === 3) belt.lanes[0].lane_end = { kind: "infinite" };
+    return config;
+}
 
 async function preparedFixture() {
-    const config = await parseConfig(JSON.stringify(fixture.config));
+    const config = await parseConfig(JSON.stringify(archivedConfig()));
     return {
         config: { ...config, overrides: { ...config.overrides,
             lcm: fixture.used_lcm, terminal_swing_count: fixture.used_terminal_swing_count } },

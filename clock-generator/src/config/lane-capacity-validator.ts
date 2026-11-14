@@ -1,13 +1,17 @@
 import Fraction, { fraction } from '../data-types/fraction';
 import { Entity, handSizeFor } from '../entities';
 import { beltLanesOfFacts, LaneTrait } from '../entities/traits/lane';
-import { laneFactsOf } from '../entities/traits/lane-facts';
+import { laneFactsOfConfig } from '../entities/traits/build-traits';
+import { LaneFactsOfBuild } from '../entities/traits/lane-facts';
 import { fractionOf } from '../entities/traits/ratio';
+import { beltSpeedOf, laneItemsPerSecond, laneStackFor } from '../entities/belt/belt-speed';
 import type { Logger } from '../common/logger';
 import { OutputCyclePlan } from '../crafting/sequence/cycle/output-cycle';
 import { createEntityRegistryFromConfig } from '../crafting/sequence/simulation-context';
 import { TargetProductionRate } from '../crafting/target-production-rate';
-import { describeLanes, formatRate, LaneCapacityError, LaneCapacityIssue, LaneFlowKind } from './errors';
+import { buildToNameOf } from '../crafting/build-names';
+import { capitalized, lanesInSentence, type BuildToName } from '../crafting/entity-name';
+import { describeLanes, formatRate, LaneCapacityError, LaneCapacityIssue, LaneFlowKind, LaneRateError, LaneRateIssue, SharedLaneSupplyError, SharedLaneSupplyIssue } from './errors';
 import { Config } from './schema';
 
 // ============================================================================
@@ -26,9 +30,10 @@ import { Config } from './schema';
 // Each set of lanes of a belt is checked against the flows that can only use lanes of that set, so a config is refused
 // only when no split of the flows over the lanes fits.
 //
-// The config describes one unit and the schema has every copy use the same lanes, but real builds feed their copies
-// from belts of their own. So a lane over capacity in one unit is refused, and a lane over capacity only once the
-// copies are summed is a warning.
+// The config describes one unit, and a lane says whether the copies share it or each copy has one of its own (its
+// `sharing`). A lane over capacity in one unit is refused. What the copies take from lanes they share is summed and
+// refused above what the lanes get, their supply rate; what they drop onto lanes they share is summed and only warned
+// of above capacity.
 
 /** One unit's flow of items onto or off belt lanes, by one inserter */
 interface LaneFlow {
@@ -51,6 +56,23 @@ export interface LaneLoad {
 }
 
 const above = (a: Fraction, b: Fraction): boolean => a.subtract(b).getNumerator > 0;
+
+/**
+ * The lanes, by place in the belt's `lanes`, that an inserter's drop of an item can land on: its `drop.lane` when it has
+ * one, else the lanes that list the item. A belt that lists one lane says nothing of the side an inserter drops on
+ * (`drop.lane` is 1 there even on the right lane), so its drops can fill both.
+ */
+export function dropLanesOf(belt: Pick<Config['belts'][number], 'lanes'>, sink: { drop?: { lane: 1 | 2 } }, item: string): number[] {
+    if (belt.lanes.length === 1) return [1, 2];
+    if (sink.drop !== undefined) return [sink.drop.lane];
+    return belt.lanes.flatMap((lane, index) => lane.ingredient === item ? [index + 1] : []);
+}
+
+/** What a set of lanes of a belt carries at most, items a second: each lane's capacity at its stack size */
+export function lanesCapacityOf(belt: Config['belts'][number], lanes: readonly number[]): Fraction {
+    const belt_speed = beltSpeedOf(belt.type);
+    return lanes.reduce((sum, lane) => sum.add(laneItemsPerSecond(belt_speed, laneStackFor(belt, lane))), fraction(0));
+}
 
 /** The flows of one unit at the target, from the planner's transfer plan */
 function laneFlowsOf(config: Config): LaneFlow[] {
@@ -75,9 +97,7 @@ function laneFlowsOf(config: Config): LaneFlow[] {
             const sink = inserter.sink;
             const onto = sink.type === 'belt' ? config.belts.find(it => it.id === sink.id) : undefined;
             if (onto !== undefined && sink.type === 'belt') {
-                // a belt that lists one lane says nothing of the side an inserter drops on (`drop.lane` is 1 there
-                // even on the right lane), so its drops can fill both
-                const lanes = onto.lanes.length === 1 ? [1, 2] : sink.drop !== undefined ? [sink.drop.lane] : listing(onto);
+                const lanes = dropLanesOf(onto, sink, item.item_name);
                 if (lanes.length > 0) flows.push({ inserter_id, belt_id: onto.id, kind: 'drop', lanes, items_per_second });
             }
         }
@@ -97,7 +117,7 @@ export function laneLoads(config: Config): LaneLoad[] {
         const key = `${flow.belt_id}|${flow.kind}`;
         groups.set(key, [...(groups.get(key) ?? []), flow]);
     }
-    const lane_facts = laneFactsOf(config);
+    const lane_facts = laneFactsOfConfig(config);
     for (const group of groups.values()) {
         const { belt_id, kind } = group[0];
         const belt = config.belts.find(it => it.id === belt_id)!;
@@ -147,11 +167,23 @@ export function laneCapacityIssues(config: Config): LaneCapacityIssue[] {
     return overCapacity(laneLoads(config), fraction(1)).map(load => asIssue(load, config.setpoint.copies));
 }
 
-/** The lanes within capacity in one unit that are over it once every copy uses them, which is only a warning */
+/**
+ * Whether every lane of a set is per copy, so that the copies do not add up on it. The side a belt that states one
+ * lane does not state has no facts, so nothing says it is per copy: the copies' drops that land there add up.
+ */
+const onePerCopy = (facts: LaneFactsOfBuild, load: Pick<LaneLoad, 'belt_id' | 'lanes'>): boolean =>
+    load.lanes.every(lane => facts.lanesOf(load.belt_id)[lane - 1]?.sharing === 'per_copy');
+
+/**
+ * The drops within capacity in one unit that are over it once every copy drops onto the lanes, which is only a warning;
+ * lanes that are per copy are left out. What the copies take from the lanes they share is refused instead
+ * (`sharedLaneSupplyIssues`).
+ */
 export function lanesSharedByCopies(config: Config): LaneCapacityIssue[] {
     const copies = fraction(config.setpoint.copies);
     if (!above(copies, fraction(1))) return [];
-    const loads = laneLoads(config);
+    const facts = laneFactsOfConfig(config);
+    const loads = laneLoads(config).filter(load => load.kind === 'drop' && !onePerCopy(facts, load));
     const refused = overCapacity(loads, fraction(1));
     const touches = (load: LaneLoad) => refused.some(other => other.belt_id === load.belt_id && other.kind === load.kind
         && other.lanes.some(lane => load.lanes.includes(lane)));
@@ -169,10 +201,28 @@ export function lanesExactlyFull(config: Config): LaneCapacityIssue[] {
     return alone.map(load => asIssue(load, config.setpoint.copies));
 }
 
-/** "Both lanes of belt 1 are exactly full at the target: the 7 copies drop 7 × 34.29 = 240 a second onto lanes that carry 240. ..." */
-export function describeLanesExactlyFull(issue: LaneCapacityIssue): string {
+/**
+ * How a note names the lanes of an issue: by their items (entity-name.ts), with their numbers always where `numbered` (a
+ * note of the form, which the user finds the row by); by their numbers where no build is given
+ */
+export interface LaneNames {
+    build: BuildToName;
+    numbered: boolean;
+}
+
+/** The lanes of an issue in a sentence: "the grenade belt's lanes", "lane 1 of belt 1" without names */
+function lanesNamed(issue: Pick<LaneCapacityIssue, 'lanes' | 'belt_id'>, names: LaneNames | undefined): string {
+    return names === undefined ? describeLanes(issue)
+        : lanesInSentence(issue.lanes.map(lane => ({ belt_id: issue.belt_id, lane })), names.build, { numbered: names.numbered });
+}
+
+/** The names of a config's lanes for a note of the form: by their items, with their numbers */
+const formNames = (config: Config): LaneNames => ({ build: buildToNameOf(config), numbered: true });
+
+/** "Both lanes of the grenade belt are exactly full at the target: the 7 copies drop 7 × 34.29 = 240 a second onto lanes that carry 240. ..." */
+export function describeLanesExactlyFull(issue: LaneCapacityIssue, names?: LaneNames): string {
     const one = issue.lanes.length === 1;
-    const lanes = describeLanes(issue);
+    const lanes = lanesNamed(issue, names);
     const drops = issue.copies === 1
         ? `the build drops ${formatRate(issue.items_per_second)}`
         : `the ${issue.copies} copies drop ${issue.copies} × ${formatRate(issue.items_per_second)} = ${formatRate(issue.items_per_second * issue.copies, issue.capacity_per_second)}`;
@@ -182,24 +232,24 @@ export function describeLanesExactlyFull(issue: LaneCapacityIssue): string {
 }
 
 /** The note for drops that fill their lanes exactly, the same in the log, the result and the live editor; null when none do */
-export function lanesExactlyFullNote(issues: readonly LaneCapacityIssue[]): string | null {
-    return issues.length === 0 ? null : issues.map(describeLanesExactlyFull).join(' ');
+export function lanesExactlyFullNote(issues: readonly LaneCapacityIssue[], names?: LaneNames): string | null {
+    return issues.length === 0 ? null : issues.map(issue => describeLanesExactlyFull(issue, names)).join(' ');
 }
 
 /** The note for a config's lanes filled exactly by its drops, read from the config alone: null when the plan cannot be made */
 export function lanesExactlyFullWarning(config: Config): string | null {
     try {
-        return lanesExactlyFullNote(lanesExactlyFull(config));
+        return lanesExactlyFullNote(lanesExactlyFull(config), formNames(config));
     } catch {
         return null;
     }
 }
 
-/** "If the 3 copies share lane 1 of belt 1, they take 1.46 times what it carries (3 × 48 = 144 a second, of 99)." */
-export function describeLaneSharedByCopies(issue: LaneCapacityIssue): string {
+/** "If the 3 copies share the iron plate lane (lane 1 of belt 1), they take 1.46 times what it carries (3 × 48 = 144 a second, of 99)." */
+export function describeLaneSharedByCopies(issue: LaneCapacityIssue, names?: LaneNames): string {
     const total = issue.items_per_second * issue.copies;
     const one = issue.lanes.length === 1;
-    return `If the ${issue.copies} copies share ${describeLanes(issue)}, they ${issue.kind} ${(total / issue.capacity_per_second).toFixed(2)} `
+    return `If the ${issue.copies} copies share ${lanesNamed(issue, names)}, they ${issue.kind} ${(total / issue.capacity_per_second).toFixed(2)} `
         + `times what ${one ? 'it carries' : 'they carry'} (${issue.copies} × ${formatRate(issue.items_per_second)} = `
         + `${formatRate(total, issue.capacity_per_second)} a second, of ${formatRate(issue.capacity_per_second)}).`;
 }
@@ -208,18 +258,18 @@ export function describeLaneSharedByCopies(issue: LaneCapacityIssue): string {
  * The warning for lanes that only the copies summed ask too much of, the same in the log and in the live editor; null
  * when there are none.
  */
-export function lanesSharedByCopiesNote(issues: readonly LaneCapacityIssue[]): string | null {
+export function lanesSharedByCopiesNote(issues: readonly LaneCapacityIssue[], names?: LaneNames): string | null {
     if (issues.length === 0) {
         return null;
     }
-    return `${issues.map(describeLaneSharedByCopies).join(' ')} The configuration cannot say yet whether its copies share these `
-        + 'lanes, so this is only a warning: a build whose copies have belts of their own is not affected.';
+    return `${issues.map(issue => describeLaneSharedByCopies(issue, names)).join(' ')} This is only a warning. If each copy has a lane of its own, `
+        + 'set the lane to per copy.';
 }
 
 /** The warning for a config's lanes shared by its copies, read from the config alone: null when the plan cannot be made */
 export function laneSharedByCopiesWarning(config: Config): string | null {
     try {
-        return lanesSharedByCopiesNote(lanesSharedByCopies(config));
+        return lanesSharedByCopiesNote(lanesSharedByCopies(config), formNames(config));
     } catch {
         return null;
     }
@@ -233,13 +283,101 @@ export function warnLanesSharedByCopies(config: Config, logger: Logger): void {
     }
 }
 
+/** A lane, or both lanes of a belt that carry one item, that is per copy, and what one copy takes from it */
+export interface OnePerCopyFeed {
+    belt_id: number;
+    lanes: number[];
+    inserter_ids: number[];
+    /** Items a second the inserters of one copy take from it at the target: the supply rate each copy's lane needs */
+    items_per_second: number;
+}
+
 /**
- * Throws a LaneCapacityError when one unit's inserters take from, or drop onto, a belt lane more items a second than it
- * carries. Call it once the planner has accepted the target, so that its own refusals come first.
+ * The lanes that are per copy, each with the supply rate it needs: what the inserters of one copy take from it at the
+ * target. A set of both lanes of a belt is listed only where both carry the same item, so that a take can use either.
+ */
+export function onePerCopyFeeds(config: Config): OnePerCopyFeed[] {
+    const facts = laneFactsOfConfig(config);
+    return laneLoads(config).filter(load => load.kind === 'take' && onePerCopy(facts, load)).filter(load => {
+        if (load.lanes.length === 1) return true;
+        const items = config.belts.find(belt => belt.id === load.belt_id)!.lanes.map(lane => lane.ingredient);
+        return items.length === 2 && items[0] === items[1];
+    }).map(load => ({ belt_id: load.belt_id, lanes: load.lanes, inserter_ids: load.inserter_ids, items_per_second: load.items_per_second.toDecimal() }));
+}
+
+/** "The coal lane is per copy. The lane of each copy needs a supply rate of at least 36 a second, which the inserters of one copy take from it." */
+export function describeOnePerCopyFeed(feed: OnePerCopyFeed, names?: LaneNames): string {
+    const one = feed.lanes.length === 1;
+    const lanes = lanesNamed(feed, names);
+    return `${capitalized(lanes)} ${one ? 'is' : 'are'} per copy. ${one ? 'The lane' : 'The lanes'} of each copy `
+        + `${one ? 'needs' : 'need'} a supply rate of at least ${formatRate(feed.items_per_second)} a second, which the inserters of one copy take from ${one ? 'it' : 'them'}.`;
+}
+
+/** The lanes whose stated supply rate is above what the lane can carry */
+export function laneRateIssues(config: Pick<Config, 'belts'>): LaneRateIssue[] {
+    const issues: LaneRateIssue[] = [];
+    for (const belt of config.belts) {
+        const belt_speed = beltSpeedOf(belt.type);
+        belt.lanes.forEach((lane, index) => {
+            const capacity = laneItemsPerSecond(belt_speed, laneStackFor(belt, index + 1));
+            const rate = lane.supply_rate;
+            if (rate !== undefined && above(fraction(rate), capacity)) {
+                issues.push({ belt_id: belt.id, lane: index + 1, fact: 'supply rate', items_per_second: rate, capacity_per_second: capacity.toDecimal() });
+            }
+        });
+    }
+    return issues;
+}
+
+/** What a set of lanes gets for every copy together: each lane's supply rate, once for each copy on a lane that is per copy */
+export function sharedLaneSupplyOf(config: Config, load: LaneLoad): Fraction {
+    const copies = fraction(config.setpoint.copies);
+    const facts = laneFactsOfConfig(config);
+    return load.lanes.reduce((sum, lane) => {
+        const lane_facts = facts.of(load.belt_id, lane as 1 | 2);
+        return sum.add(fractionOf(lane_facts.supply_rate).multiply(lane_facts.sharing === 'per_copy' ? copies : fraction(1)));
+    }, fraction(0));
+}
+
+/**
+ * The lanes the copies take more from, summed, than the lanes get: their supply rate, once for a lane the copies share
+ * and once for each copy on a lane that is per copy. A set of lanes whose excess a smaller set already shows is left
+ * out.
+ */
+export function sharedLaneSupplyIssues(config: Config): SharedLaneSupplyIssue[] {
+    const copies = fraction(config.setpoint.copies);
+    const facts = laneFactsOfConfig(config);
+    const found: SharedLaneSupplyIssue[] = [];
+    const shown: LaneLoad[] = [];
+    for (const load of laneLoads(config).filter(load => load.kind === 'take')) {
+        const supply = sharedLaneSupplyOf(config, load);
+        const inside = (other: LaneLoad) => other.belt_id === load.belt_id && other.lanes.every(lane => load.lanes.includes(lane));
+        if (!above(load.items_per_second.multiply(copies), supply) || shown.some(inside)) continue;
+        shown.push(load);
+        found.push({ belt_id: load.belt_id, lanes: load.lanes, inserter_ids: load.inserter_ids, copies: config.setpoint.copies,
+            per_copy: onePerCopy(facts, load), items_per_second: load.items_per_second.toDecimal(),
+            supply_per_second: (onePerCopy(facts, load) ? supply.divide(copies) : supply).toDecimal() });
+    }
+    return found;
+}
+
+/**
+ * Throws when a lane cannot give or carry what the config asks of it: a stated supply rate above what the lane can
+ * carry (LaneRateError); one unit's inserters taking from, or dropping onto, a lane more items a second than it
+ * carries (LaneCapacityError); the copies taking from lanes they share more than the lanes get (SharedLaneSupplyError).
+ * Call it once the planner has accepted the target, so that its own refusals come first.
  */
 export function assertLaneCapacity(config: Config): void {
+    const rates = laneRateIssues(config);
+    if (rates.length > 0) {
+        throw new LaneRateError(rates);
+    }
     const issues = laneCapacityIssues(config);
     if (issues.length > 0) {
         throw new LaneCapacityError(issues);
+    }
+    const shared = sharedLaneSupplyIssues(config);
+    if (shared.length > 0) {
+        throw new SharedLaneSupplyError(shared);
     }
 }

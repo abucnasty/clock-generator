@@ -1,4 +1,5 @@
 import { Config } from "../config";
+import { withoutOutsideSupply } from "../config/outside-supply";
 import { EntityId } from "../entities";
 import { OpenRange } from "../data-types";
 import { Logger } from "../common/logger";
@@ -39,7 +40,9 @@ export function recordSimulationTimeline(request: RecordTimelineRequest): Timeli
             || request.settle_ticks > request.window_cycle_ticks * Math.floor((SIMULATION_BUDGET_TICKS - 1) / request.window_cycle_ticks))) {
         throw new Error("This window cycle time cannot be recorded safely.");
     }
-    const config = { ...request.config, overrides: { ...request.config.overrides, terminal_swing_count: request.terminal_swing_count, derive_clock_windows: false } };
+    // the build that was clocked: outside supply has no window and is not run (outside-supply.ts)
+    const clocked = withoutOutsideSupply(request.config);
+    const config = { ...clocked, overrides: { ...clocked.overrides, terminal_swing_count: request.terminal_swing_count, derive_clock_windows: false } };
     const logger: Logger = { log() {}, warn() {}, error() {}, debug() {} };
     const settling = request.mode !== "clock" ? {} : request.settle_ticks !== undefined ? {settle_ticks: request.settle_ticks}
         : request.settle_window_cycles !== undefined && request.settle_window_cycles > 0 ? {settle_window_cycles: Math.floor(request.settle_window_cycles)} : {};

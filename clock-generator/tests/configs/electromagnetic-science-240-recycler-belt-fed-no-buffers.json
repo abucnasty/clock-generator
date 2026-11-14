@@ -323,11 +323,13 @@
       "lanes": [
         {
           "ingredient": "accumulator",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {"kind": "infinite"}
         },
         {
           "ingredient": "accumulator",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {"kind": "infinite"}
         }
       ]
     },
@@ -337,7 +339,8 @@
       "lanes": [
         {
           "ingredient": "processing-unit",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {"kind": "infinite"}
         },
         {
           "ingredient": "",
@@ -361,11 +364,13 @@
       "lanes": [
         {
           "ingredient": "superconductor",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {"kind": "infinite"}
         },
         {
           "ingredient": "holmium-plate",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {"kind": "infinite"}
         }
       ]
     },
@@ -375,7 +380,8 @@
       "lanes": [
         {
           "ingredient": "battery",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {"kind": "infinite"}
         },
         {
           "ingredient": "",

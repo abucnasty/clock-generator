@@ -3,6 +3,8 @@ import { Entity, handSizeFor } from "../entities";
 import { createEntityRegistryFromConfig } from "../crafting/sequence/simulation-context";
 import { LaneTraffic } from "../state/lane-traffic";
 import type { Config } from "./schema";
+import { buildToNameOf } from "../crafting/build-names";
+import { beltNameInText, inserterNameInText, insertersInSentence, NO_BUILD, theName, type BuildToName } from "../crafting/entity-name";
 
 // ============================================================================
 // Where the drops of output inserters land on a shared belt
@@ -79,7 +81,27 @@ const listed = (values: readonly (string | number)[], word = "and"): string =>
     values.length <= 1 ? values.join("") : `${values.slice(0, -1).join(", ")} ${word} ${values[values.length - 1]}`;
 const capital = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 const tiles = (value: number) => String(Number(value.toFixed(2)));
-const inserterWords = (ids: readonly number[]) => `${ids.length === 1 ? "inserter" : "inserters"} ${listed(ids)}`;
+/**
+ * How the drop texts name the inserters and the belts: by their items (entity-name.ts), with their numbers always where
+ * `numbered` (a note of the form); by their numbers with `NO_NAMES`
+ */
+export interface DropNames {
+    build: BuildToName;
+    numbered: boolean;
+}
+
+/** No names: the inserters and belts by their numbers */
+const NO_NAMES: DropNames = { build: NO_BUILD, numbered: false };
+
+/** "the inserters (1 and 2) that drop grenade", "inserters 1 and 2" without names */
+const inserterWords = (ids: readonly number[], names: DropNames = NO_NAMES) =>
+    insertersInSentence(ids, names.build, { numbered: names.numbered }).text;
+/** "the inserter that drops grenade", "inserter 2" without names */
+const inserterWord = (id: number, names: DropNames = NO_NAMES) => theName(inserterNameInText(id, names.build, { numbered: names.numbered }));
+/** "the grenade belt", "belts 1 and 2" */
+const beltWords = (ids: readonly number[], names: DropNames = NO_NAMES) => names.build === NO_BUILD
+    ? (ids.length === 1 ? `belt ${ids[0]}` : `belts ${listed(ids)}`)
+    : listed(ids.map(id => theName(beltNameInText(id, names.build, { numbered: names.numbered }))));
 
 /** The step from one copy to the next along a line */
 function copyStepOf(config: Config, axis: "x" | "y"): CopyStep | null {
@@ -508,19 +530,19 @@ function fittingStart(config: Config, line: DropLine, step: CopyStep | null, sen
 // ----------------------------------------------------------------------------
 
 /** The sentence about where the inserters of the clock start their hands: "Inserter 1 starts at tick 6 and inserter 2 at tick 62." */
-function startsSentence(line: DropSpacingLine): string {
+function startsSentence(line: DropSpacingLine, names: DropNames): string {
     const ticksText = (ticks: number[]) => `${ticks.length === 1 ? "tick" : "ticks"} ${listed(ticks.map(tick => tiles(tick)))}`;
     const same = line.starts.every(it => it.ticks.join() === line.starts[0].ticks.join());
-    if (same) return `${capital(inserterWords(line.starts.map(it => it.inserter_id)))} start at ${ticksText(line.starts[0].ticks)}.`;
-    const pieces = line.starts.map((it, index) => `inserter ${it.inserter_id}${index === 0 ? " starts" : ""} at ${ticksText(it.ticks)}`);
+    if (same) return `${capital(inserterWords(line.starts.map(it => it.inserter_id), names))} start at ${ticksText(line.starts[0].ticks)}.`;
+    const pieces = line.starts.map((it, index) => `${inserterWord(it.inserter_id, names)}${index === 0 ? " starts" : ""} at ${ticksText(it.ticks)}`);
     return `${capital(listed(pieces))}.`;
 }
 
 const handsWord = (count: number) => `${count} ${count === 1 ? "hand" : "hands"}`;
 
 /** "Inserters 1 and 2 of the 7 copies" or, for one copy, "Inserters 1 and 2" */
-const whoOf = (line: DropSpacingLine, copies: number) =>
-    `${inserterWords(line.inserter_ids)}${copies > 1 ? ` of the ${copies} copies` : ""}`;
+const whoOf = (line: DropSpacingLine, copies: number, names: DropNames) =>
+    `${inserterWords(line.inserter_ids, names)}${copies > 1 ? ` of the ${copies} copies` : ""}`;
 
 /** A list of at most MAX_LISTED numbers, "12, 16 or 24", with "and others" where there are more */
 const listedSpacings = (values: readonly number[], word = "or"): string =>
@@ -538,45 +560,45 @@ export function crowdedText(crowded: { hands: number; belt_tiles: number; hand_t
  * inserters 7 tiles apart; 14 or 21 apart never. The same holds at any of these spacings plus 14. Starting inserter 2 16, 32 or 48 ticks
  * after inserter 1 also fits (a tile every 8 ticks)."
  */
-export function describeDropRoom(room: DropRoom): string {
+export function describeDropRoom(room: DropRoom, names: DropNames = NO_NAMES): string {
     if (room.crowded !== null) return crowdedText(room.crowded, room.copies);
     const lead = Number.isInteger(room.belt_tiles) && room.hand_tiles === 1
         ? `The belt moves ${tiles(room.belt_tiles)} tiles a window cycle, so each hand lands on one of ${tiles(room.belt_tiles)} tiles.`
         : `The belt moves ${tiles(room.belt_tiles)} tiles a window cycle, and a hand takes ${tiles(room.hand_tiles)} of a tile.`;
-    const stand = room.pair !== null ? `With inserters ${room.pair.first} and ${room.pair.second} as they stand (${tiles(room.pair.apart)} tiles apart)` : "With the inserters as they stand";
+    const stand = room.pair !== null ? `With ${inserterWords([room.pair.first, room.pair.second], names)} as they stand (${tiles(room.pair.apart)} tiles apart)` : "With the inserters as they stand";
     const clauses: string[] = [room.fits.length > 0 ? `the copies fit ${listedSpacings(room.fits)} tiles apart`
         : `the copies fit at no spacing from ${room.low} to ${room.high} tiles`];
     for (const group of room.only_with) clauses.push(`${listedSpacings(group.spacings)} apart only with a copy's inserters ${listedSpacings(group.apart)} tiles apart`);
     if (room.never.length > 0) clauses.push(`${listedSpacings(room.never)} apart never`);
     const later = room.pair !== null && room.starts_after.length > 0
-        ? ` Starting inserter ${room.pair.second} ${listed(room.starts_after.map(tick => String(tick)), "or")} ticks after inserter ${room.pair.first} also fits (a tile every ${tiles(room.ticks_per_tile)} ticks).`
+        ? ` Starting ${inserterWord(room.pair.second, names)} ${listed(room.starts_after.map(tick => String(tick)), "or")} ticks after ${inserterWord(room.pair.first, names)} also fits (a tile every ${tiles(room.ticks_per_tile)} ticks).`
         : "";
     const plus = room.loop !== null ? ` The same holds at any of these spacings plus ${room.loop}.` : "";
     return `${lead} ${stand}, ${clauses.join("; ")}.${plus}${later}`;
 }
 
 /** The text a result gives of the drops onto the shared belt, as an insight's pieces */
-export function describeDropSpacing(spacing: DropSpacing): { fits: boolean; title: string; what: string; why: string; explanation: string } {
+export function describeDropSpacing(spacing: DropSpacing, names: DropNames = NO_NAMES): { fits: boolean; title: string; what: string; why: string; explanation: string } {
     const fits = spacing.lines.every(line => line.fits);
     const belts = [...new Set(spacing.lines.map(line => line.belt_id))];
-    const belt = belts.length === 1 ? `belt ${belts[0]}` : `belts ${listed(belts)}`;
+    const belt = beltWords(belts, names);
     const window_cycle = `In every window cycle of ${tiles(spacing.window_cycle_ticks)} ticks`;
     const sentences: string[] = [];
     spacing.lines.forEach((line, index) => {
         const first = spacing.lines[0];
         if (line.fits) {
             if (index === 0) {
-                sentences.push(`${window_cycle}, ${whoOf(line, spacing.copies)} drop ${handsWord(line.hands)} onto ${belt}, and each hand lands on a stretch of belt of its own, so none waits.`);
+                sentences.push(`${window_cycle}, ${whoOf(line, spacing.copies, names)} drop ${handsWord(line.hands)} onto ${belt}, and each hand lands on a stretch of belt of its own, so none waits.`);
             } else if (first.fits && line.hands === first.hands) {
-                sentences.push(`${capital(inserterWords(line.inserter_ids))} do the same${line.facing === (first.facing + 8) % 16 ? " on the other side of the belt" : ""}.`);
+                sentences.push(`${capital(inserterWords(line.inserter_ids, names))} do the same${line.facing === (first.facing + 8) % 16 ? " on the other side of the belt" : ""}.`);
             } else {
-                sentences.push(`${capital(whoOf(line, spacing.copies))} drop ${handsWord(line.hands)} onto ${belt}, and each hand lands on a stretch of belt of its own.`);
+                sentences.push(`${capital(whoOf(line, spacing.copies, names))} drop ${handsWord(line.hands)} onto ${belt}, and each hand lands on a stretch of belt of its own.`);
             }
         } else {
             const lead = index === 0 || spacing.lines[index - 1].fits ? `${window_cycle}, ` : "";
-            const who = lead === "" ? capital(whoOf(line, spacing.copies)) : whoOf(line, spacing.copies);
+            const who = lead === "" ? capital(whoOf(line, spacing.copies, names)) : whoOf(line, spacing.copies, names);
             sentences.push(`${lead}${who} drop ${handsWord(line.hands)} onto ${belt}. ${line.pairs} ${line.pairs === 1 ? "pair" : "pairs"} of them land on each other, `
-                + `and the later hand of each pair waits, the longest ${tiles(line.longest_wait)} ticks. ${startsSentence(line)}`);
+                + `and the later hand of each pair waits, the longest ${tiles(line.longest_wait)} ticks. ${startsSentence(line, names)}`);
         }
     });
     const closing = spacing.gap !== null
@@ -587,7 +609,7 @@ export function describeDropSpacing(spacing: DropSpacing): { fits: boolean; titl
         : `A tile of a belt lane holds ${4 * spacing.lane_stack} items at stack size ${spacing.lane_stack}, and a hand of ${spacing.hand} takes ${tiles(hand_tiles)} of a tile.`;
     const why = `${tile} A hand dropped where items already lie waits until they have moved on, so the hands of all the copies have to land in the gaps the others leave.`;
     const uncheckedText = `${spacing.gap !== null ? ` ${DROP_SPACING_COPIES_ALIKE}` : ""}${spacing.unchecked.length > 0 ? ` ${DROP_SPACING_UNCHECKED}` : ""}`;
-    const roomText = spacing.room === undefined ? "" : ` ${describeDropRoom(spacing.room)}`;
+    const roomText = spacing.room === undefined ? "" : ` ${describeDropRoom(spacing.room, names)}`;
     if (fits) {
         return {
             fits, title: `Drops onto ${belt} fit between each other`, what: `${sentences.join(" ")} ${closing}`, why,
@@ -598,8 +620,8 @@ export function describeDropSpacing(spacing: DropSpacing): { fits: boolean; titl
     const parts: string[] = [];
     if (spacing.fitting_start !== undefined) {
         const start = spacing.fitting_start;
-        const moves = start.ticks.length > 0 ? `inserter ${start.inserter_id} starting at tick ${listed(start.ticks, "or")}` : "";
-        const together = start.same_as !== undefined ? `at the same tick as inserter ${start.same_as}` : "";
+        const moves = start.ticks.length > 0 ? `${inserterWord(start.inserter_id, names)} starting at tick ${listed(start.ticks, "or")}` : "";
+        const together = start.same_as !== undefined ? `at the same tick as ${inserterWord(start.same_as, names)}` : "";
         parts.push([moves, together].filter(it => it !== "").join(", or "));
     }
     const fit = parts.length > 0 ? ` The hands would fit with ${parts.join(", or with ")}.` : "";
@@ -633,6 +655,7 @@ export function copyGapNeededNote(config: Config): string | null {
     }
     if (lines.length === 0) return null;
     const belts = [...new Set(lines.map(line => line.belt_id))].sort(pair);
-    return `The ${config.setpoint.copies} copies may drop onto the same ${belts.length === 1 ? `belt ${belts[0]}` : `belts ${listed(belts)}`}. `
+    const named = beltWords(belts, { build: buildToNameOf(config), numbered: true });
+    return `The ${config.setpoint.copies} copies may drop onto ${belts.length === 1 ? named.replace(/^the /, "the same ") : `the same belts: ${named}`}. `
         + "Say how far apart they stand to check whether their drops fit between each other.";
 }

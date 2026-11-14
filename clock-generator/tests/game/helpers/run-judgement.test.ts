@@ -1,5 +1,5 @@
 import {describe, expect, it} from "vitest";
-import {judgeBaseline, runHolds} from "./run-judgement";
+import {judgeBaseline, judgeBaselineOfFinals, runHolds} from "./run-judgement";
 
 // one final machine worth 1 a product, 10 products a 60-tick cycle (10 a second), steady state at tick 3,600, a baseline of
 // 3,600 ticks: 60 whole cycles, then the end of the run at 7,200
@@ -65,5 +65,27 @@ describe("judgeBaseline", () => {
 
     it("refuses a summary recorded before the stock guard", () => {
         expect(runHolds({result: "holds", baseline: {meets: true}, disturbances: [], stock: undefined as never})).toBe(false);
+    });
+});
+
+describe("judgeBaselineOfFinals", () => {
+    // two final machines of two copies, 10 products a 60-tick cycle wanted of each: the first makes them, the second makes 9 and
+    // keeps one more in its output stock in the last cycle
+    const run = record(k => k * 10, () => 5, 5);
+    const two = {...run, finals: [{unit_number: 1, recipe: "r", worth: 1}, {unit_number: 2, recipe: "r", worth: 1}],
+        series: {...run.series, cycles: run.series.cycles.map(row => {
+            const k = (row.t - 3600) / 60;
+            return {...row, p: [k * 10, k * 9], s: [5, 5 + (k === 60 ? 1 : 0)]};
+        })}};
+
+    it("judges the whole cycles of the named final machines by their net output", () => {
+        expect(judgeBaselineOfFinals(two, 10, [0])).toEqual({ticks: 3600, items: 600, expected: 600, stock_start: 5, stock_end: 5, net: 600, meets: true});
+        expect(judgeBaselineOfFinals(two, 10, [1])).toEqual({ticks: 3600, items: 540, expected: 600, stock_start: 5, stock_end: 6, net: 539, meets: false});
+        expect(judgeBaselineOfFinals(two, 20, [0, 1])?.meets).toBe(false);
+    });
+
+    it("has nothing to judge without a whole clock cycle or for a build judged by a count", () => {
+        expect(judgeBaselineOfFinals({...two, series: {...two.series, cycles: two.series.cycles.slice(0, 1)}}, 10, [0])).toBeNull();
+        expect(judgeBaselineOfFinals({...two, series: {...two.series, judged_by: "count" as const}}, 10, [0])).toBeNull();
     });
 });

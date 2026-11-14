@@ -2,59 +2,75 @@ import { Tab, Tabs, Typography } from '@mui/material';
 import { lazy, Suspense, useState, type ReactNode } from 'react';
 import type { ClockTimelineWorkspaceProps } from './ClockTimelineWorkspace';
 import { Disclosure } from './Disclosure';
+import type { SwingBackoffReport } from 'clock-generator/browser';
 import type { ClockAlternativeView, GenerationAssumptions } from '../worker/types';
 import type { ResultDetail } from '../utils/resultsView';
 import { MODELED_START, START_LIMITS, modeledDetails, phaseChecksText, startCheckSummary } from '../utils/modelAssumptions';
 import { useGameNames } from '../hooks/useGameNames';
-import { lossLimitText, recoversOf } from '../utils/clockSummary';
 import { formatNumberText } from '../utils/numberText';
 import { FullscreenWorkspace } from './FullscreenWorkspace';
 import { tabProps } from '../utils/tabIds';
 import { TabBody } from './TabBody';
 import { useBuildSection } from '../hooks/useBuildViewContext';
+import { DIAGNOSTICS_COPY } from '../utils/diagnostics';
+import { ClockDiagnostics } from './ClockDiagnostics';
+import { SwingBackoffReportDisplay } from './SwingBackoffReportDisplay';
 
 const ClockTimeline = lazy(() => import('./ClockTimelineWorkspace').then(module => ({ default: module.ClockTimelineWorkspace })));
 
-export function SelectedClockContext({ selected, detail, onDetailChange, timelineProps, generation, assumptions, clockSelector, children }: {
+export function SelectedClockContext({ selected, detail: savedDetail, onDetailChange, onSelectClock, timelineProps, generation, assumptions, swingBackoffReport = null, diagnosticsBeside = false, children }: {
     selected: ClockAlternativeView;
     detail: ResultDetail;
     onDetailChange: (detail: ResultDetail) => void;
+    /** Selects another clock by its id: the clock that the line of a cause on a shared lane names */
+    onSelectClock?: (id: string) => void;
     timelineProps: Omit<ClockTimelineWorkspaceProps, 'selected' | 'fullscreen'>;
-    clockSelector: ReactNode;
+    /**
+     * Diagnostics stands in a column of its own beside the workspace (a wide page): it is no tab here, but in fullscreen,
+     * which covers that column
+     */
+    diagnosticsBeside?: boolean;
     generation: GenerationAssumptions | null;
     assumptions: ReactNode;
+    /** The output swing back-off of the selected clock: where it found a swing count that holds, said in Model and tested starts */
+    swingBackoffReport?: SwingBackoffReport | null;
     children: ReactNode;
 }) {
-    const { itemLabel } = useGameNames();
+    const { itemLabel, recipeLabel } = useGameNames();
     const [fullscreen, setFullscreen] = useState(false);
+    const diagnosticsTab = !diagnosticsBeside || fullscreen;
+    // a saved Diagnostics, where it is no tab, shows Overview and stays saved, for the page at another width
+    const detail: ResultDetail = !diagnosticsTab && savedDetail === 'diagnostics' ? 'overview' : savedDetail;
     const [timelineVisited, setTimelineVisited] = useState(detail === 'timeline');
     if (detail === 'timeline' && !timelineVisited) setTimelineVisited(true);
     const [assumptionsOpen, setAssumptionsOpen] = useBuildSection('model-assumptions');
-    return <FullscreenWorkspace fullscreen={fullscreen} onFullscreenChange={setFullscreen} actions={clockSelector}>
+    return <FullscreenWorkspace fullscreen={fullscreen} onFullscreenChange={setFullscreen} actions={null}>
         {/* Above floating field labels (z-index 1) while the fullscreen body scrolls. */}
         <Tabs value={detail} onChange={(_, value: ResultDetail) => onDetailChange(value)} selectionFollowsFocus
             aria-label="Selected clock workspace" sx={{ ...(fullscreen && { position: 'sticky', top: -16, zIndex: 2, bgcolor: 'background.paper' }), borderBottom: 1, borderColor: 'divider', '& .MuiTab-root': { minWidth: 0, flex: 1 } }}>
             <Tab label="Overview" value="overview" {...tabProps('result-context', 'overview')} />
+            {diagnosticsTab && <Tab label={DIAGNOSTICS_COPY.tab} value="diagnostics" {...tabProps('result-context', 'diagnostics')} />}
             <Tab label="Timeline" value="timeline" {...tabProps('result-context', 'timeline')} />
         </Tabs>
         <TabBody prefix="result-context" tab="overview" shown={detail === 'overview'}>
-            <Typography component="h3" variant="subtitle1" sx={{ fontWeight: 600 }}>Why this clock</Typography>
-            <Typography variant="body2" sx={{ my: 1, overflowWrap: 'anywhere' }}>{selected.description}</Typography>
-            <Typography variant="body2">The clock repeats every {formatNumberText(selected.simulationDurationTicks, { maxDecimals: 3 })} ticks ({formatNumberText(selected.simulationDurationTicks / 60, { maxDecimals: 2 })} s). In each repeat, each inserter is switched on in its own enable windows: {selected.inserterWindowCount} in all. An enable window can hold several swings, and a swing can finish in a later window, so the number of enable windows and the number of swings need not match.</Typography>
-            <Typography variant="body2" sx={{ mt: 1 }}>{[recoversOf(selected).detail, lossLimitText(selected, itemLabel)].filter(Boolean).join(' ')}</Typography>
             <Disclosure summary="Model and tested starts" open={assumptionsOpen} onToggle={setAssumptionsOpen} sx={{ mt: 1, overflowWrap: 'anywhere' }} data-model-assumptions="">
                 <Typography variant="body2" sx={{ mt: 1 }}>{MODELED_START}</Typography>
                 <Typography variant="body2" sx={{ mt: 1 }}>{startCheckSummary([selected], generation)}</Typography>
-                {modeledDetails(selected, itemLabel).map(line => <Typography key={line} variant="body2" sx={{ mt: 1 }}>{line}</Typography>)}
+                {modeledDetails(selected, itemLabel, recipeLabel).map(line => <Typography key={line} variant="body2" sx={{ mt: 1 }}>{line}</Typography>)}
                 <Typography variant="body2" sx={{ mt: 1 }}>{phaseChecksText(selected.asBuilt?.start_phases_checked)}</Typography>
                 {selected.assessment.start_dependence?.starts.map(start => <Typography key={start.id} variant="body2" sx={{ mt: 0.5 }}>
                     {start.label}: {start.reaches_target ? 'reaches target' : 'does not reach target'}{start.output_items_per_window_cycle === null ? '; steady-state rate unavailable' : `; ${formatNumberText(start.output_items_per_window_cycle)} items per window cycle`}.
                 </Typography>)}
                 <Typography variant="body2" sx={{ mt: 1 }}>{START_LIMITS}</Typography>
                 {assumptions}
+                <SwingBackoffReportDisplay report={swingBackoffReport} shows="succeeded" />
             </Disclosure>
             {children}
         </TabBody>
+        {diagnosticsTab && <TabBody prefix="result-context" tab="diagnostics" shown={detail === 'diagnostics'} focusable>
+            {/* mounted while shown: the pictures take the width of the panel */}
+            {detail === 'diagnostics' && <ClockDiagnostics key={selected.id} clock={selected} onSelectClock={onSelectClock} />}
+        </TabBody>}
         <TabBody prefix="result-context" tab="timeline" shown={detail === 'timeline'}>
             {(timelineVisited || detail === 'timeline') && <Suspense fallback={<Typography role="status">Loading timelines…</Typography>}>
                 <ClockTimeline {...timelineProps} selected={selected} fullscreen={fullscreen} />

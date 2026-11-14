@@ -8,8 +8,8 @@ import { transitionsOf } from "../sequence/compact-history";
 /**
  * The transforms of a clock's windows: pure functions from windows to windows. Each candidate of a search is one of
  * these at one setting (a padding, a shift, an offset), and the search (search.ts) tries them with the trial of a
- * clock. Nothing here runs the build. Belt pickup slack and fuel hand room are the one transform that lives with the
- * clock, `withBeltPickupSlack` in clock.ts, since the belt a clock is made for is read off it.
+ * clock. Nothing here runs the build. The room for a hand of fuel is the one transform that lives with the clock,
+ * `withWindowsLengthened` in clock.ts.
  */
 
 /** Every window of the inserters named lengthened at its end by `padding` ticks, up to the end of the window cycle */

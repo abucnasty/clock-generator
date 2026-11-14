@@ -5,7 +5,8 @@ import { loadConfigFromFile } from "./config/loader";
 import { Entity, ReadableEntityRegistry } from "./entities";
 import { Lane } from "./entities/belt/belt";
 import { createEntityRegistryFromConfig } from "./crafting/sequence/simulation-context";
-import { actsInTheTickTheBlockIsLifted, beltPickupSlackTicks, fuelHandRoomTicks, miningDrillMaxInsertion, nearestLaneFirst } from "./rules-of-the-game";
+import { actsInTheTickTheBlockIsLifted, delayedHandRoomTicks, fuelHandRoomTicks, fuelRoomTicks, laneHandRoomTicks, miningDrillMaxInsertion, nearestLaneFirst } from "./rules-of-the-game";
+import { TestConfigPaths } from "../tests/configs/paths";
 
 /**
  * The tables of recorded cases of the rules of the game that have no table elsewhere (see rules-of-the-game.ts for
@@ -95,25 +96,103 @@ describe("the rules of the game", () => {
         });
     });
 
-    describe("belt pickup slack", () => {
-        // one more full hand at one belt stack a tick: 4 for a hand of 16 from stacks of 4
-        it("is the ticks one more full hand takes, for every inserter that picks up from a belt", async () => {
-            const registry = await registryOf(ConfigPaths.LOGISTIC_SCIENCE_240);
-            const slack = beltPickupSlackTicks(registry);
-            const belt_fed = registry.getAll().filter(Entity.isInserter).filter(it => Entity.isBelt(registry.getEntityByIdOrThrow(it.source.entity_id)));
-            expect(belt_fed.length).toBeGreaterThan(0);
-            expect(Array.from(slack.keys()).sort()).toEqual(belt_fed.map(it => it.entity_id.id).sort());
-            expect(new Set(slack.values())).toEqual(new Set([4]));
+    describe("room for one more hand", () => {
+        type LaneEnd = { kind: "dead_end" } | { kind: "unknown" } | { kind: "infinite" };
+        // one inserter of a hand of `hand` that takes iron plates off lane 1 and copper cable off lane 2 of a turbo belt
+        const roomOf = (lanes: { iron_stack: number; iron_end?: LaneEnd; cable_stack?: number; cable_end?: LaneEnd },
+            hand = 16, backed_up_belts = false) => laneHandRoomTicks(createEntityRegistryFromConfig(ConfigSchema.parse({
+            setpoint: { recipe: "electronic-circuit", items_per_second: 1, copies: 1 },
+            machines: [{ id: 1, recipe: "electronic-circuit", crafting_speed: 1, productivity: 0 }],
+            inserters: [
+                { id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 }, stack_size: hand },
+                { id: 2, source: { type: "machine", id: 1 }, sink: { type: "chest", id: 1 }, stack_size: 16 },
+            ],
+            belts: [{ id: 1, type: "turbo-transport-belt", lanes: [
+                { ingredient: "iron-plate", stack_size: lanes.iron_stack, ...(lanes.iron_end !== undefined && { lane_end: lanes.iron_end }) },
+                { ingredient: "copper-cable", stack_size: lanes.cable_stack ?? lanes.iron_stack, ...(lanes.cable_end !== undefined && { lane_end: lanes.cable_end }) },
+            ] }],
+            chests: [{ id: 1, type: "infinity-chest", item_filter: [], remove_unfiltered_items: true }],
+            overrides: { backed_up_belts },
+        }))).get("inserter:1");
+
+        it("is the ticks one more hand takes at one lane stack a tick: 4 for a hand of 16 from stacks of 4", () => {
+            expect(roomOf({ iron_stack: 4 })).toBe(4);
         });
 
-        // the hand it moves of the item on the lane, not its nominal hand: an item that stacks under the nominal hand, or a
-        // hand rounded to whole stacks of a belt it drops on, fills in fewer ticks
-        it("is the ticks of its hand of the item on the lane: 2 for a hand of 8 from stacks of 4", async () => {
-            const registry = await registryOf(ConfigPaths.LOGISTIC_SCIENCE_240);
-            const inserter = registry.getAll().filter(Entity.isInserter).find(it => Entity.isBelt(registry.getEntityByIdOrThrow(it.source.entity_id)))!;
-            expect(inserter.metadata.stack_size).toBe(16);
-            inserter.hand_sizes = new Map(Array.from(inserter.filtered_items, item => [item, 8]));
-            expect(beltPickupSlackTicks(registry).get(inserter.entity_id.id)).toBe(2);
+        it("is sized by the hand and the lane's stack, not a fixed count: 3 for a hand of 12 from stacks of 4, 16 for a hand of 16 from stacks of 1", () => {
+            expect(roomOf({ iron_stack: 4 }, 12)).toBe(3);
+            expect(roomOf({ iron_stack: 1 })).toBe(16);
+        });
+
+        it("is given on a lane that is a dead end, stated or set by backed_up_belts", () => {
+            expect(roomOf({ iron_stack: 4, iron_end: { kind: "dead_end" }, cable_end: { kind: "dead_end" } })).toBe(4);
+            expect(roomOf({ iron_stack: 4 }, 16, true)).toBe(4);
+        });
+
+        it("is set by every lane it takes from, a dead end or not, the slowest fill of those", () => {
+            expect(roomOf({ iron_stack: 4, iron_end: { kind: "dead_end" }, cable_stack: 1 })).toBe(16);
+            expect(roomOf({ iron_stack: 4, cable_stack: 1, cable_end: { kind: "dead_end" } })).toBe(16);
+        });
+
+        // a hand on a dead end can start later than in the planning run as well (it waits for its machine, or a hand
+        // upstream empties the lane before it), so the end of the lane changes nothing of the room
+        describe("of a pickup from a dead end, as of a pickup from a lane that flows on", () => {
+            const dead_end: LaneEnd = { kind: "dead_end" }, infinite: LaneEnd = { kind: "infinite" };
+            it.each<[string, { iron_stack: number; cable_stack?: number }, number]>([
+                ["two items, one on each lane", { iron_stack: 4 }, 16],
+                ["a hand of 12", { iron_stack: 4 }, 12],
+                ["stacks of 1", { iron_stack: 1 }, 16],
+                ["the slower lane sets it", { iron_stack: 4, cable_stack: 1 }, 16],
+            ])("is the same: %s", (_, lanes, hand) => {
+                const room = roomOf({ ...lanes, iron_end: dead_end, cable_end: dead_end }, hand);
+                expect(room).toBe(roomOf({ ...lanes, iron_end: infinite, cable_end: infinite }, hand));
+                expect(room).toBeDefined();
+            });
+        });
+
+        // the end is not known, so the lane can move: the room is given as on a lane that is not a dead end
+        it("is given on a lane whose end is unknown", () => {
+            expect(roomOf({ iron_stack: 4, iron_end: { kind: "unknown" }, cable_end: { kind: "unknown" } }, 16, true)).toBe(4);
+        });
+
+        describe("of a side pickup that takes an item both lanes carry", () => {
+            // one inserter of a hand of 16 that takes off a turbo belt of stacks of 4 into a machine making iron gear
+            // wheels (it takes iron plates only); a pickup with no layout named is a side pickup on a straight belt
+            const roomOfLanes = (lanes: [string, string], pickup: { pickup_layout?: "front-exit"; pickup_length?: 0.5 } = {},
+                lane_end?: LaneEnd) => laneHandRoomTicks(createEntityRegistryFromConfig(ConfigSchema.parse({
+                setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+                machines: [{ id: 1, recipe: "iron-gear-wheel", crafting_speed: 1, productivity: 0 }],
+                inserters: [
+                    { id: 1, source: { type: "belt", id: 1, ...pickup }, sink: { type: "machine", id: 1 }, stack_size: 16 },
+                    { id: 2, source: { type: "machine", id: 1 }, sink: { type: "chest", id: 1 }, stack_size: 16 },
+                ],
+                belts: [{ id: 1, type: "turbo-transport-belt", lanes: lanes.map(ingredient =>
+                    ({ ingredient, stack_size: 4, lane_end: lane_end ?? { kind: "infinite" } })) }],
+                chests: [{ id: 1, type: "infinity-chest", item_filter: [], remove_unfiltered_items: true }],
+            }))).get("inserter:1");
+
+            it("is none: the far lane gives the hand what a gap on the near lane withholds", () => {
+                expect(roomOfLanes(["iron-plate", "iron-plate"])).toBeUndefined();
+            });
+
+            it("is given where the item is on one lane only", () => {
+                expect(roomOfLanes(["iron-plate", "coal"])).toBe(4);
+                expect(roomOfLanes(["coal", "iron-plate"])).toBe(4);
+            });
+
+            it("is given where it takes two items, one on each lane", () => {
+                expect(roomOf({ iron_stack: 4 })).toBe(4);
+            });
+
+            it("is given at a pickup that is not a side pickup, an underground exit picked up from the front", () => {
+                expect(roomOfLanes(["iron-plate", "iron-plate"], { pickup_layout: "front-exit", pickup_length: 0.5 })).toBe(4);
+            });
+
+            it("is as on a lane that flows on where both lanes are dead ends: none at a side pickup, given at any other", () => {
+                expect(roomOfLanes(["iron-plate", "iron-plate"], {}, { kind: "dead_end" })).toBeUndefined();
+                expect(roomOfLanes(["iron-plate", "iron-plate"], { pickup_layout: "front-exit", pickup_length: 0.5 }, { kind: "dead_end" })).toBe(4);
+                expect(roomOfLanes(["iron-plate", "coal"], {}, { kind: "dead_end" })).toBe(4);
+            });
         });
     });
 
@@ -123,6 +202,50 @@ describe("the rules of the game", () => {
         it("is the ticks a hand of fuel takes to fill, for an inserter that takes fuel off a belt as well as an ingredient", async () => {
             const registry = await registryOf(ConfigPaths.AGRICULTURAL_SCIENCE_250);
             expect(Object.fromEntries(fuelHandRoomTicks(registry))).toEqual({ "inserter:1": 4, "inserter:2": 4, "inserter:11": 4 });
+        });
+    });
+
+    describe("room for the hand a hand of fuel delays", () => {
+        // agricultural science with the nutrients on the near lane, in the simulator (the game takes the same order): a hand of nutrients
+        // filled at 228-231, swung, dropped at 235 and was back at 238; the bioflux hand planned for 228-231 would have
+        // filled at 239-242, and the window, 1 tick after the planned hand was full and 4 of room for one more hand, closed at 236
+        it("is the hand cycle less the tick after the planned last hand is full, less the room for one more hand: 6 of 11", async () => {
+            const registry = await registryOf(TestConfigPaths.AGRICULTURAL_SCIENCE_50_FUEL_ON_NEAR_LANE);
+            const lane_room = laneHandRoomTicks(registry);
+            const room = delayedHandRoomTicks(registry);
+            expect(Object.fromEntries(room)).toEqual({ "inserter:1": 6, "inserter:2": 6, "inserter:11": 6 });
+            for (const [id, ticks] of room) {
+                const inserter = registry.getAll().filter(Entity.isInserter).find(it => it.entity_id.id === id)!;
+                const { pickup, rotation, drop, total } = inserter.animation;
+                expect([pickup.ticks, rotation.ticks, drop.ticks, total.ticks]).toEqual([4, 3, 1, 11]);
+                expect(ticks).toBe(total.ticks - 1 - lane_room.get(id)!);
+                // the window ends a hand cycle after the planned last hand is full: no further hand can begin in it
+                expect(ticks).toBeLessThan(total.ticks);
+                expect(1 + lane_room.get(id)! + ticks).toBe(total.ticks);
+            }
+            // a clock made again for its fuel gets it in place of the room for a hand of fuel, which the room for one more hand holds
+            expect(Object.fromEntries(fuelRoomTicks(registry))).toEqual(Object.fromEntries(room));
+        });
+
+        it("is none where the ingredient is on the near lane: the hand of fuel waits behind the planned hands", async () => {
+            // the sample's config before its five copies: inserter 11 takes bioflux off its near lane; inserters 1 and 2 have the nutrients there
+            expect(Object.fromEntries(delayedHandRoomTicks(await registryOf(TestConfigPaths.AGRICULTURAL_SCIENCE_250_BIOFLUX_ON_NEAR_LANE)))).toEqual({ "inserter:1": 6, "inserter:2": 6 });
+            const iron_bacteria = await registryOf(ConfigPaths.IRON_BACTERIA_380_CULTIVATION);
+            expect(Object.fromEntries(fuelHandRoomTicks(iron_bacteria))).toEqual({ "inserter:9": 4, "inserter:10": 4 });
+            expect(delayedHandRoomTicks(iron_bacteria).size).toBe(0);
+            expect(fuelRoomTicks(iron_bacteria).size).toBe(0);
+        });
+
+        it("is none for an inserter that takes two ingredients off one belt, whatever its near lane", async () => {
+            // utility science: inserter 2 takes processing units and low density structures off belt 2, neither a fuel
+            for (const near_lane of [1, 2] as const) {
+                const config = structuredClone(await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_120));
+                config.inserters[1].source = { ...config.inserters[1].source as Extract<typeof config.inserters[1]["source"], { type: "belt" }>, near_lane };
+                const registry = createEntityRegistryFromConfig(config);
+                expect(laneHandRoomTicks(registry).get("inserter:2")).toBe(4);
+                expect(delayedHandRoomTicks(registry).size).toBe(0);
+                expect(fuelRoomTicks(registry).size).toBe(0);
+            }
         });
     });
 });

@@ -23,16 +23,27 @@ beforeAll(() => {
     out = fs.mkdtempSync(path.join(os.tmpdir(), 'export-clock-'));
     run = spawnSync('node', [script('export-clock.js'), 'AUTOMATION_SCIENCE_240', `--out=${out}`, '--alternative=selected', '--always-on'], { cwd: root, encoding: 'utf-8' });
 }, 120_000);
+/**
+ * The clock the generator selects for the sample: the one folder the export writes besides the always-on arm. The export is
+ * what these tests check; which clock is selected is the generator's, and the record pins it.
+ */
+const selectedFolder = (): string => {
+    const folders = new Set((read(out, 'written.json').files as string[]).filter(file => file.includes(path.sep)).map(file => file.split(path.sep)[0]));
+    folders.delete('always-on');
+    expect([...folders], 'one clock is exported besides the always-on arm').toHaveLength(1);
+    return [...folders][0];
+};
 afterAll(() => fs.rmSync(out, { recursive: true, force: true }));
 
 describe('export-clock.js on automation science', () => {
     it('writes the selected clock where place-clocks reads it, with the tag on each schedule combinator', () => {
         expect(run.status, String(run.stderr)).toBe(0);
-        const arm = read(out, 'takt_batches_observed_swings_2', 'arm.json');
-        expect(arm).toMatchObject({ alternative: { id: 'takt_batches_observed_swings_2' }, selected: true, always_on: false, verdict: 'stable', holds: true, recovers: true, config: 'AUTOMATION_SCIENCE_240' });
+        const selected = selectedFolder();
+        const arm = read(out, selected, 'arm.json');
+        expect(arm).toMatchObject({ alternative: { id: selected }, selected: true, always_on: false, verdict: 'stable', holds: true, recovers: true, config: 'AUTOMATION_SCIENCE_240' });
         expect(arm.wake_ups_per_minute).toBeGreaterThan(0);
-        const clock = read(out, 'takt_batches_observed_swings_2', 'automation-240.json');
-        expect(clock.selected).toMatchObject({ id: 'takt_batches_observed_swings_2', verdict: 'stable' });
+        const clock = read(out, selected, 'automation-240.json');
+        expect(clock.selected).toMatchObject({ id: selected, verdict: 'stable' });
         expect(clock.window_cycle_ticks).toBe(arm.window_cycle_ticks);
         expect(clock.counted_ticks).toBeGreaterThan(0);
         const combinators = clock.schedule.inserter_combinators as { entity_number: number; inserter_ids: number[] }[];
@@ -48,7 +59,7 @@ describe('export-clock.js on automation science', () => {
     });
 
     it('writes the always-on arm as one combinator wired to the same inserters', () => {
-        const clock = read(out, 'takt_batches_observed_swings_2', 'automation-240.json');
+        const clock = read(out, selectedFolder(), 'automation-240.json');
         const on = read(out, 'always-on', 'automation-240.json');
         const ids = clock.schedule.inserter_combinators.flatMap((it: { inserter_ids: number[] }) => it.inserter_ids).sort();
         expect(on.schedule.inserter_combinators).toHaveLength(1);

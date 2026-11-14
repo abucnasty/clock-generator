@@ -1,6 +1,6 @@
 import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
 import grenadeSample from '../../../clock-generator/resources/config-samples/intermediates/grenade/grenade-240-fills-belt-exactly.json?raw';
-import militarySample from '../../../clock-generator/resources/config-samples/science/military/military-120.json?raw';
+import militarySample from '../../../clock-generator/resources/config-samples/science/military/military-240.json?raw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LATEST_SIDECAR_VERSION, type Config, type DebugSteps } from 'clock-generator/browser';
 import type { EngineAnswers, EngineQuery, LiveCoverage, PastedEntities, PrimaryCompletedResponse, ValidationFailedResponse, WorkerRequest, WorkerResponse } from './types';
@@ -9,6 +9,11 @@ import { configToFormData, formDataToConfig } from '../utils/configForm/configMa
 import { createDefaultConfig } from '../utils/configForm/formData';
 import { applyPaste } from '../utils/pastePreview';
 import { buildValidationIssues, refusedInserterIdsOf, type ValidationDiagnostic } from '../utils/buildValidation';
+import { timelineRequestFor } from '../utils/timelineRequest';
+import { Option } from 'clock-generator/light';
+import { targetToFill } from '../utils/pasteTarget';
+import { isTargetAboveMax, rateMaxOf } from '../utils/targetRateLimit';
+import type { ClockAlternativeView } from './types';
 
 /** Every response the worker posted in this test, in order */
 let posted: WorkerResponse[];
@@ -38,14 +43,15 @@ async function ask<K extends EngineQuery['kind']>(query: Extract<EngineQuery, { 
 const coverageOf = (config: Config) => ask({ kind: 'inserter-coverage', config });
 
 /** A live answer with nothing to say */
-const nothingLive: LiveCoverage = { issues: [], refusal: null, refusal_inserters: [], pickupNotTested: null, laneSharedByCopies: null, sideLoadedDrop: null,
-    lanesExactlyFull: null, copyGapNeeded: null, dropRoom: null, machinePrototypes: [] };
+const nothingLive: LiveCoverage = { issues: [], refusal: null, refusal_inserters: [], pickupsNotTested: [], laneSharedByCopies: null, laneSharedByCopiesInserters: [],
+    sideLoadedDrops: [], lanesExactlyFull: null, lanesExactlyFullInserters: [], copyGapNeeded: null, dropRoom: null, machinePrototypes: [] };
 
 /** The issues the App lists for a live answer, folded in as App.tsx does it, for a build with no field problems or chest issues */
 const listed = (live: LiveCoverage, machines: { id: number }[], failure?: { message: string; diagnostics?: ValidationDiagnostic[] }) => buildValidationIssues({
     fieldProblems: [], chests: [], inserters: [], chestIssues: [], machines, failure,
-    coverage: live.issues, scopeRefusal: live.refusal, scopeRefusalInserters: live.refusal_inserters, pickupNotTested: live.pickupNotTested, laneSharedByCopies: live.laneSharedByCopies,
-    sideLoadedDrop: live.sideLoadedDrop, lanesExactlyFull: live.lanesExactlyFull, copyGapNeeded: live.copyGapNeeded,
+    coverage: live.issues, scopeRefusal: live.refusal, scopeRefusalInserters: live.refusal_inserters, pickupsNotTested: live.pickupsNotTested,
+    laneSharedByCopies: live.laneSharedByCopies, laneSharedByCopiesInserters: live.laneSharedByCopiesInserters, sideLoadedDrops: live.sideLoadedDrops,
+    lanesExactlyFull: live.lanesExactlyFull, lanesExactlyFullInserters: live.lanesExactlyFullInserters, copyGapNeeded: live.copyGapNeeded,
     machinePrototypes: live.machinePrototypes, coverageText: issue => `${issue.kind} ${issue.item_name}`,
 });
 
@@ -139,17 +145,63 @@ it('keeps an out-of-order recycler machine target, byproduct belt, and bend capt
         pickup_layout: 'bend-right-upstream', pickup_capture: capture });
 });
 
-describe('repeated units: the real engine separates Check and generation recovery, the recomputed conversion and query failure', () => {
-    /** Eight gear assemblers between the same two belts, eight repeated units set as half a copy */
+it('suggests no more than the output belt carries: nine automation science assemblers make 248.006 a second onto a belt of 240', async () => {
+    const machines = Array.from({ length: 9 }, (_, i) => ({ id: i + 1, recipe: 'automation-science-pack', crafting_speed: 68.890625,
+        productivity: 100, prototype: 'assembling-machine-3' }));
+    const pasted = await ask({
+        kind: 'pasted-entities', sidecar_version: LATEST_SIDECAR_VERSION, drills: [], chests: [], machines,
+        suggested_target: { recipe: 'automation-science-pack', items_per_second: 248.00625000000002, copies: 1 },
+        belts: [{ id: 2, type: 'turbo-transport-belt', lanes: [{ ingredient: 'automation-science-pack', stack_size: 4 }] }],
+        inserters: machines.map(machine => ({ id: machine.id, source: { type: 'machine', id: machine.id }, sink: { type: 'belt', id: 2 },
+            prototype: 'stack-inserter', quality: 'legendary' })),
+    });
+    expect(pasted.suggested_target).toEqual({ _tag: 'Some', value: {
+        target: { recipe: 'automation-science-pack', items_per_second: 240, copies: 1 }, source: 'mod',
+        belt_limit: { belt_id: 2, machines_per_second: 248.00625000000002 } } });
+});
+
+it('suggests the most the build can hold where an input lane allows less than the output belt, and the page then finds no rate above it', async () => {
+    const machines = Array.from({ length: 9 }, (_, i) => ({ id: i + 1, recipe: 'automation-science-pack', crafting_speed: 68.890625,
+        productivity: 100, prototype: 'assembling-machine-3' }));
+    const pickup = { type: 'belt', id: 1, near_lane: 2, pickup_length: 1, pickup_layout: 'side-straight', pickup_capture: { status: 'supported',
+        entity_type: 'transport-belt', entity_name: 'fast-transport-belt', sidecar_version: LATEST_SIDECAR_VERSION, model: 'belt', model_version: 2 } };
+    const pasted = await ask({
+        kind: 'pasted-entities', sidecar_version: LATEST_SIDECAR_VERSION, drills: [], chests: [], machines,
+        suggested_target: { recipe: 'automation-science-pack', items_per_second: 248.00625000000002, copies: 1 },
+        // a fast input belt: 60 a second of each ingredient, so the build holds at most 120 a second
+        belts: [{ id: 1, type: 'fast-transport-belt', flow_direction: 4, lanes: [{ ingredient: 'iron-gear-wheel', stack_size: 4, lane_end: { kind: 'dead_end' } },
+            { ingredient: 'copper-plate', stack_size: 4, lane_end: { kind: 'dead_end' } }] },
+            { id: 2, type: 'turbo-transport-belt', lanes: [{ ingredient: 'automation-science-pack', stack_size: 4 }] }],
+        inserters: machines.flatMap(machine => [
+            { id: 2 * machine.id - 1, source: pickup, sink: { type: 'machine', id: machine.id }, prototype: 'stack-inserter', quality: 'legendary', stack_size: 16 },
+            { id: 2 * machine.id, source: { type: 'machine', id: machine.id }, sink: { type: 'belt', id: 2 }, prototype: 'stack-inserter', quality: 'legendary', stack_size: 16 },
+        ]),
+    });
+    const suggestion = Option.toNullable(pasted.suggested_target)!;
+    expect(suggestion.target.items_per_second).toBe(120);
+    expect(suggestion.belt_limit).toBeUndefined();
+    expect(suggestion.build_limit?.text).toMatch(/^At most 60 a second of (copper plate|iron gear wheel) reaches the machines that need it/);
+    const config = formDataToConfig(pastedAndSaved(pasted));
+    config.setpoint = targetToFill(suggestion);
+    const most = await ask({ kind: 'target-rate-max', config });
+    expect(isTargetAboveMax(config.setpoint.items_per_second, config.setpoint.copies, rateMaxOf(null, { max: most, current: true }))).toBe(false);
+    expect(most?.limit).toBeNull();
+});
+
+describe('repeated units: Check clocks them as given and offers the recomputed conversion; query failure', () => {
+    /**
+     * Eight gear assemblers between the same two belts, eight repeated units set as half a copy; as 4 copies they take 7
+     * plates a second from the plate lane they share, of the 7.5 it gets
+     */
     const source: Config = {
-        setpoint: { recipe: 'iron-gear-wheel', items_per_second: 4, copies: 0.5 },
+        setpoint: { recipe: 'iron-gear-wheel', items_per_second: 3.5, copies: 0.5 },
         machines: Array.from({ length: 8 }, (_, i) => ({ id: i + 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 })),
         inserters: Array.from({ length: 8 }, (_, i) => [
             { id: 2 * i + 1, source: { type: 'belt' as const, id: 1 }, sink: { type: 'machine' as const, id: i + 1 }, stack_size: 1, filters: ['iron-plate'] },
             { id: 2 * i + 2, source: { type: 'machine' as const, id: i + 1 }, sink: { type: 'belt' as const, id: 2 }, stack_size: 1, filters: ['iron-gear-wheel'] },
         ]).flat(),
         belts: [
-            { id: 1, type: 'transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1 }] },
+            { id: 1, type: 'transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1, lane_end: { kind: 'infinite' } }] },
             { id: 2, type: 'transport-belt', lanes: [{ ingredient: 'iron-gear-wheel', stack_size: 1 }] },
         ], chests: [],
     } as Config;
@@ -164,11 +216,26 @@ describe('repeated units: the real engine separates Check and generation recover
         inserters: [source.inserters[0], { ...source.inserters[1], sink: { type: 'chest', id: 7 } }],
         chests: [{ id: 7, type: 'infinity-chest', item_filter: [] }] };
 
+    /** The 8 units as one copy, as an export of all of them gives it: 3.5 a second of the 7.5 plates the lane brings */
+    const whole: Config = { ...source, setpoint: { ...source.setpoint, copies: 1 } };
+
+    // a build of 8 repeated units passes Check: it is clocked as given, and the copies come with the one copy that can be offered
+    it('Check passes on 8 units and offers them as 8 copies, and leaves the config as it was', async () => {
+        const before = structuredClone(whole);
+        expect(await send({ type: 'validate', requestId: 6, config: whole })).toMatchObject({ type: 'validated', requestId: 6, recovery: { kind: 'repeated-units',
+            sourceConfigKey: JSON.stringify(whole), detectedCopies: 8, configuredCopies: 1, conversion: { kind: 'available', multiplicity: 8, copies: 8 } } });
+        expect(whole).toEqual(before);
+    });
+
+    // as given at half a copy, the 8 units ask 14 plates a second of the 7.5: Check refuses the target, not the copies
+    it('Check refuses 8 units at half a copy for their target, as one copy of them', async () => {
+        expect(await send({ type: 'validate', requestId: 7, config: source })).toMatchObject({ type: 'validation-failed', requestId: 7,
+            message: expect.stringContaining("No clock can hold this build's setpoint of 3.5 a second over 0.5 copies") });
+    });
+
     it.each([
-        { why: 'the recovery of 8 units as 4 copies', config: source, failure: { recovery: { kind: 'repeated-units',
-            sourceConfigKey: JSON.stringify(source), detectedCopies: 8, configuredCopies: 0.5, conversion: { kind: 'available', multiplicity: 8, copies: 4 } } } },
-        { why: 'no recovery for an unknown inserter', config: invalidPrototype,
-            failure: { message: expect.stringContaining('not-an-inserter'), recovery: undefined } },
+        { why: 'the message for an unknown inserter', config: invalidPrototype,
+            failure: { message: expect.stringContaining('not-an-inserter') } },
         { why: 'a field diagnostic on the chest filter', config: emptyOutput,
             failure: { diagnostics: [{ kind: 'field', path: ['chests', 0, 'item_filter'], message: expect.stringContaining('Remove unfiltered items') }] } },
         { why: 'a coverage diagnostic for no outputs', config: { ...source, inserters: [] },
@@ -177,13 +244,6 @@ describe('repeated units: the real engine separates Check and generation recover
         const before = structuredClone(config);
         expect(await send({ type: 'validate', requestId: 6, config })).toMatchObject({ type: 'validation-failed', requestId: 6, ...failure });
         expect(config).toEqual(before);
-    });
-
-    it('generation stops with the same recovery, as an error of the run, and leaves the config as it was', async () => {
-        const before = structuredClone(source);
-        expect(await send({ type: 'plan', runId: 1, config: source, debugSteps: noDebug, streamLogs: false }))
-            .toMatchObject({ type: 'error', runId: 1, recovery: { conversion: { kind: 'available', copies: 4 } } });
-        expect(source).toEqual(before);
     });
 
     it.each([
@@ -222,7 +282,7 @@ it('replays detailed activity through the real worker query without changing the
         inserters: [
             { source: { type: 'belt', id: 1 }, sink: { type: 'machine', id: 1 }, stack_size: 1 },
             { source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 1 }, stack_size: 1 },
-        ], belts: [{ id: 1, type: 'transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1 }] }],
+        ], belts: [{ id: 1, type: 'transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1, lane_end: { kind: 'infinite' } }] }],
         chests: [{ id: 1, type: 'infinity-chest', item_filter: [{ item_name: 'iron-gear-wheel', request_count: 1 }] }],
     } as Config;
     const before = JSON.stringify(config);
@@ -242,7 +302,7 @@ describe('a captured inserter kind, quality and filter mode', () => {
             { source: pickup, sink: { type: 'machine', id: 1 }, prototype: 'stack-inserter', quality: 'legendary', stack_size: 16, ...input },
             { source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 1 }, prototype: 'fast-inserter', quality: 'normal', stack_size: 4, ...output },
         ],
-        belts: [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }] }],
+        belts: [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4, lane_end: { kind: 'infinite' } }] }],
         chests: [{ id: 1, type: 'infinity-chest', remove_unfiltered_items: true }],
     });
     /** Paste into a new build, save it and reload it the way the page does */
@@ -300,9 +360,9 @@ describe('inserters that take from a belt into chests (#650)', () => {
             { id: 5, source: { type: 'belt', id: 3, pickup_length: 1 }, sink: { type: 'chest', id: 3 } },
         ],
         belts: [
-            { id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4 }] },
-            { id: 2, type: 'turbo-transport-belt', lanes: [{ ingredient: 'steel-plate', stack_size: 4 }] },
-            { id: 3, type: 'turbo-transport-belt', lanes: [{ ingredient: 'stone', stack_size: 4 }] },
+            { id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4, lane_end: { kind: 'infinite' } }] },
+            { id: 2, type: 'turbo-transport-belt', lanes: [{ ingredient: 'steel-plate', stack_size: 4, lane_end: { kind: 'infinite' } }] },
+            { id: 3, type: 'turbo-transport-belt', lanes: [{ ingredient: 'stone', stack_size: 4, lane_end: { kind: 'infinite' } }] },
         ],
         chests: [
             { id: 1, type: 'infinity-chest', item_filter: [], remove_unfiltered_items: true },
@@ -351,40 +411,43 @@ describe('live advice on a gear assembler, which does not block', () => {
             { id: 1, source: { type: 'belt', id: 1, pickup_length: 1 }, sink: { type: 'machine', id: 1 } },
             { id: 2, source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 1 } },
         ],
-        belts: [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size }] }],
+        belts: [{ id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size, lane_end: { kind: 'infinite' } }] }],
         chests: [{ id: 1, type: 'infinity-chest', item_filter: [], remove_unfiltered_items: true }],
     } as Config);
-    /** The engine's warning for gears({ stack_size: 2 }), live and in the generation log */
-    const pickupNotTested = 'Not tested: Inserter 1 picks up iron-plate from belt 1 in 2-item belt stacks. Belt pickup timing is calibrated '
+    /** The engine's warning for gears({ stack_size: 2 }) in the generation log */
+    const pickupNotTested = 'Not tested: The inserter (inserter 1) that takes iron plate picks up iron plate from the iron plate belt (belt 1) in 2-item belt stacks. Belt pickup timing is calibrated '
         + 'with 16-item hands on 4-item belt stacks only; at other belt stack sizes and hand sizes it has not been compared with the '
         + 'game, so the clock may not match the game.';
 
-    it.each([
-        { name: 'a belt pickup of untested timing', config: gears({ stack_size: 2 }), field: 'pickupNotTested', source: 'calibration',
-            warning: pickupNotTested },
-        // 100 copies of a gear assembler, each taking 1.5 iron plates a second, if they shared a lane that carries 120
-        { name: 'a lane the copies ask too much of', config: gears({ items_per_second: 75, copies: 100 }),
-            field: 'laneSharedByCopies', source: 'lanes',
-            warning: 'If the 100 copies share lane 1 of belt 1, they take 1.25 times what it carries (100 × 1.5 = 150 a second, of 120). '
-                + 'The configuration cannot say yet whether its copies share these lanes, so this is only a warning: a build whose copies have '
-                + 'belts of their own is not affected.' },
-    ] as const)('warns live of $name, and Check goes on', async ({ config, field, source, warning }) => {
+    it('warns live of a belt pickup of untested timing with the engine\'s data, which the site words, and Check goes on', async () => {
+        const config = gears({ stack_size: 2 });
         const live = await coverageOf(config);
-        expect(live).toEqual({ ...nothingLive, [field]: warning });
-        expect(listed(live, config.machines).map(({ source, severity, blocksGeneration, text }) => ({ source, severity, blocksGeneration, text })))
-            .toEqual([{ source, severity: 'warning', blocksGeneration: false, text: warning }]);
+        const pickups = [{ inserter_id: 1, belt_id: 1, item: 'iron-plate', lane_stack_sizes: [2], hand_size: null, item_stack_size: null }];
+        expect(live).toEqual({ ...nothingLive, pickupsNotTested: pickups });
+        expect(listed(live, config.machines).map(({ source, severity, blocksGeneration, text, advisory }) => ({ source, severity, blocksGeneration, text, advisory })))
+            .toEqual([{ source: 'calibration', severity: 'warning', blocksGeneration: false, text: 'Belt pickup not tested', advisory: { kind: 'pickup-not-tested', pickups } }]);
         expect(await send({ type: 'validate', requestId: 61, config })).toMatchObject({ type: 'validated' });
+    });
+
+    it('refuses at Check the copies taking more from a lane they share than it gets, and warns of nothing live', async () => {
+        // 100 copies of a gear assembler, each taking 1.5 iron plates a second, from a lane they share that gets 120
+        const config = gears({ items_per_second: 75, copies: 100 });
+        expect(await coverageOf(config)).toEqual(nothingLive);
+        expect(await send({ type: 'validate', requestId: 62, config })).toMatchObject({ type: 'validation-failed',
+            message: expect.stringContaining('The 100 copies share lane 1 of belt 1. Together they take 100 × 1.5 = 150 a second from it. '
+                + 'Its supply rate is 120 a second. Set the lane to per copy if the copies do not share it. If they share it, use a smaller number of copies.') });
     });
 
     it('says nothing of a pickup from 4-item belt stacks, and notes a drop the Sidecar marked as side-loading', async () => {
         expect(await coverageOf(gears())).toEqual(nothingLive);
-        // the live answer carries the note as the log and the result say it, and blocks nothing
+        // the live answer carries the engine's data, which the site words; it blocks nothing
         const fed = gears();
         const marked = { ...fed, inserters: [fed.inserters[0], { ...fed.inserters[1], sink: { type: 'belt', id: 2, drop_capture: { status: 'side-loaded', tiles: 3 } } }],
             belts: [...fed.belts, { id: 2, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-gear-wheel', stack_size: 4 }] }] } as Config;
-        expect((await coverageOf(marked)).sideLoadedDrop).toBe('Inserter 2 drops onto a 3 tile belt buffer that side-loads onto another belt. '
-            + 'The clock may make less in the game than shown here, most of all when these inserters are switched on at the same time as others '
-            + 'that drop onto the belt. Give each of these drops a belt of its own, or check the clock in the game.');
+        const live = await coverageOf(marked);
+        expect(live.sideLoadedDrops).toEqual([{ inserter_id: 2, tiles: 3 }]);
+        expect(listed(live, marked.machines).map(({ text, blocksGeneration }) => ({ text, blocksGeneration })))
+            .toEqual([{ text: 'Drops onto a belt that side-loads', blocksGeneration: false }]);
     });
 
     it('logs the untested belt pickup in generation, as it warns of it live, and makes the clock with it as an insight', async () => {
@@ -430,8 +493,9 @@ it("gives the crafting machines, fills a prototype's rule on import and paste, a
     const live = await coverageOf({ ...config, machines: [{ ...furnace, prototype: 'cryogenic-plant' }] } as Config);
     expect(live.machinePrototypes.map(issue => issue.kind)).toEqual(['recipe-not-made']);
     expect(listed({ ...nothingLive, machinePrototypes: live.machinePrototypes }, [{ id: 1 }])
-        .map(({ source, severity, blocksGeneration, fieldTarget }) => ({ source, severity, blocksGeneration, fieldTarget })))
-        .toEqual([{ source: 'machine', severity: 'warning', blocksGeneration: false, fieldTarget: { kind: 'machine-recipe', machineId: 1 } }]);
+        .map(({ source, severity, blocksGeneration, advisory }) => ({ source, severity, blocksGeneration, advisory })))
+        .toEqual([{ source: 'machine', severity: 'warning', blocksGeneration: false,
+            advisory: { kind: 'machine-prototype', problem: 'recipe-not-made', machines: [{ machine_id: 1, message: live.machinePrototypes[0].message }] } }]);
 });
 
 it('says live whether the copies\' drops fit at the gap given, for the period estimated from the settings', async () => {
@@ -440,13 +504,16 @@ it('says live whether the copies\' drops fit at the gap given, for the period es
         return coverageOf({ ...grenade, setpoint: { ...grenade.setpoint, copy_offset } });
     };
     const lead = "At about 112 ticks a window cycle (estimated from the setpoint: one output hand at the machine's rate), the hands of the 7 copies";
-    expect((await live({ x: 12, y: 0 })).dropRoom).toBe(`${lead} fit between each other on belt 1, if the inserters of a copy start together. `
+    expect((await live({ x: 12, y: 0 })).dropRoom).toBe(`${lead} fit between each other on the grenade belt (belt 1), if the inserters of a copy start together. `
         + 'They would also fit with the copies 16, 18, 20, 22 or 24 tiles apart, and at any of these plus 14. This assumes every copy drops onto the belt the way this one does.');
-    expect((await live({ x: 13, y: 0 })).dropRoom).toBe(`${lead} land on each other on belt 1, if the inserters of a copy start together, and some of them wait for room. `
+    expect((await live({ x: 13, y: 0 })).dropRoom).toBe(`${lead} land on each other on the grenade belt (belt 1), if the inserters of a copy start together, and some of them wait for room. `
         + 'They would fit with the copies 12, 16, 18, 20, 22 or 24 tiles apart, or 13 tiles apart with the inserters of a copy 7 tiles apart, and at any of these plus 14. This assumes every copy drops onto the belt the way this one does.');
     const without = await live(undefined);
     expect(without.dropRoom).toBeNull();
     expect(without.copyGapNeeded).not.toBeNull();
+    // the note on the lanes the copies fill exactly comes with the inserters it is about, the chips of its line: the four
+    // that drop onto the grenade belt
+    expect({ note: without.lanesExactlyFull !== null, inserters: without.lanesExactlyFullInserters }).toEqual({ note: true, inserters: [1, 2, 7, 8] });
 });
 
 // A real plan of five copies: about 2 s alone, over vitest's 5 s default on a loaded CI runner. Fewer copies make no shared-windows clock.
@@ -455,6 +522,85 @@ it('passes on the clock made with shared windows after the clock it shares, with
     expect(primary?.alternatives.map(it => [it.id, it.deciders])).toEqual([['round_robin_polling', 5]]);
     expect(primary?.also?.flatMap(run => run.alternatives.map(it => [it.id, it.deciders, it.verdict]))).toEqual([['round_robin_polling_shared', 4, 'stable']]);
 }, 30_000);
+
+// a real plan of five copies, as above
+it('passes on what was checked on the shared lanes of each clock, and every lane of the build', async () => {
+    const { primary } = await primaryOf(JSON.parse(militarySample) as Config);
+    const [clock] = primary!.alternatives;
+    expect(clock.checkedLanes?.line).toMatchObject({ run_with_copies: true, copies: 5, plain_output_belts: 2 });
+    expect(clock.checkedLanes?.rows.map(row => [row.belt_id, row.lane, row.state.kind])).toEqual([
+        [1, 1, 'rate_fits'], [2, 1, 'rate_fits'], [3, 1, 'holds'], [3, 2, 'holds'], [4, 1, 'holds'], [4, 2, 'holds']]);
+    // the coal lanes are one per copy: in the list of lanes, with no row
+    expect(clock.assumptions.lanes?.map(lane => [lane.belt_id, lane.lane, lane.role, lane.sharing])).toEqual([
+        [1, 1, 'output', 'shared'], [2, 1, 'output', 'shared'], [3, 1, 'input', 'shared'], [3, 2, 'input', 'shared'], [4, 1, 'input', 'shared'],
+        [4, 2, 'input', 'shared'], [5, 1, 'input', 'per_copy'], [5, 2, 'input', 'per_copy'], [6, 1, 'input', 'per_copy'], [6, 2, 'input', 'per_copy']]);
+    // the machine each inserter that puts into one puts into, by the inserter's number: what a build of one copy names its inserters with
+    const config = JSON.parse(militarySample) as Config;
+    const expected = config.inserters.flatMap((inserter, index) => inserter.sink.type === 'machine' ? [[inserter.id ?? index + 1, inserter.sink.id]] : []);
+    expect(expected.length).toBeGreaterThan(0);
+    expect(Object.entries(clock.assumptions.machineOfInserter ?? {}).map(([id, machine]) => [Number(id), machine])).toEqual(expected);
+}, 30_000);
+
+describe('a build that states no lane end and no belt setting', () => {
+    /** The military sample with no lane end and no belt setting stated: the engine gives each lane the end of its role */
+    const statingNothing = () => {
+        const sample = JSON.parse(militarySample) as Config;
+        const { backed_up_belts: _switch, ...overrides } = sample.overrides ?? {};
+        void _switch;
+        const belts = sample.belts.map(belt => ({ ...belt, lanes: belt.lanes.map(lane => {
+            const stated: { lane_end?: unknown } = { ...lane };
+            delete stated.lane_end;
+            return stated;
+        }) }));
+        return { ...sample, overrides, belts } as Config;
+    };
+
+    it('reads as backed up, loaded and generated with the belt setting untouched', async () => {
+        const loaded = formDataToConfig(readSavedConfig(serializeConfig(configToFormData(statingNothing())))!);
+        expect(loaded.overrides?.backed_up_belts).toBeUndefined();
+        const { primary } = await primaryOf(loaded);
+        expect(primary?.alternatives.map(it => [it.beltLabel, it.backedUpBelts, it.replayReadsConfig])).toEqual([['backed-up', true, true]]);
+    }, 30_000);
+});
+
+describe("a clock's replay", () => {
+    // one input lane states an infinite end, another input lane and the output lane state nothing
+    const mixed = {
+        setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+        machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }, { id: 2, recipe: 'copper-cable', crafting_speed: 1, productivity: 0 }],
+        inserters: [
+            { source: { type: 'belt', id: 1 }, sink: { type: 'machine', id: 1 } },
+            { source: { type: 'belt', id: 2 }, sink: { type: 'machine', id: 2 } },
+            { source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 3 } },
+        ],
+        belts: [
+            { id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 4, lane_end: { kind: 'infinite' } }] },
+            { id: 2, type: 'turbo-transport-belt', lanes: [{ ingredient: 'copper-plate', stack_size: 4 }] },
+            { id: 3, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-gear-wheel', stack_size: 4 }] },
+        ],
+    } as Config;
+    const clock = { simulationDurationTicks: 100, terminalSwingCount: 2, clockWindows: {}, fuelView: null } as unknown as ClockAlternativeView;
+    const endsOf = async (config: Config) => {
+        const { laneFactsOfConfig } = await import('clock-generator/browser');
+        const facts = laneFactsOfConfig(config);
+        return config.belts.map(belt => facts.lanesOf(belt.id).map(lane => lane.lane_end.kind));
+    };
+
+    it('gives each lane of a clock of this engine the end its generation gave it, whatever belt the clock was made for', async () => {
+        const generation = await endsOf(mixed);
+        expect(generation).toEqual([['infinite'], ['dead_end'], ['infinite']]);
+        for (const made_for of [{ beltLabel: 'moving', backedUpBelts: false }, { beltLabel: 'backed-up', backedUpBelts: true }]) {
+            const request = timelineRequestFor(mixed, { ...clock, ...made_for, replayReadsConfig: true }, 'clock');
+            expect(await endsOf(request!.config)).toEqual(generation);
+        }
+    });
+
+    it('gives a clock kept before the belt it was made for on every lane, a lane that states its end too', async () => {
+        const request = timelineRequestFor(mixed, { ...clock, beltLabel: 'backed-up', backedUpBelts: true }, 'clock');
+        expect(request?.config.overrides?.backed_up_belts).toBeUndefined();
+        expect(await endsOf(request!.config)).toEqual([['dead_end'], ['dead_end'], ['dead_end']]);
+    });
+});
 
 it('posts the state transitions in columns with their own reasons, which a structured clone carries and which read back the same', async () => {
     const completed = await primaryOf(JSON.parse(grenadeSample) as Config);

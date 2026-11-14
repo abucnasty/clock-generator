@@ -25,7 +25,7 @@ The accepted changes shipped in **engine/UI 0.19.0** and **Sidecar 0.11.0** (202
 - Geometry and supply motion are separate. Omitted `pickup_length` defaults to **1**; undergrounds use **0.5**.
   Moving is the default. Ordinary backed-up supply retains finite stock, stops stacks at the endpoint and
   refills holes at belt speed.
-- Replenishment depends on topology. Closing a final outlet does not guarantee permanent local saturation when
+- Replenishment depends on topology. Closing the last exit of a lane does not guarantee permanent local saturation when
   other consumers can reopen a route.
 
 ## Belt-speed coverage
@@ -186,7 +186,7 @@ simulator makes up the machine's surplus that the game had already put onto the 
 output within a few window cycles (the game 0 to 5 window cycles after the window cycle of the release, the simulator 1 to 6, neither always
 first), and every window cycle the captures judge, from 6 or 10 window cycles after the release, is the same number in game and
 simulator in all 120 (the four that miss there miss alike). The generator's own disturbance trials, run with a belt that
-fills to an outlet 10 or 25 tiles past the drop (a scratch rule patch), change no recommended clock, selection, or verdict
+fills to an infinite end 10 or 25 tiles past the drop (a scratch rule patch), change no recommended clock, selection, or verdict
 of any clock in the 208 sample and fixture jobs of the blast, nor in these 16 configurations: no verdict depends
 on the instant hold, and the simulator keeps it ([simulator](../simulator.md#a-stack-inserter-dropping-onto-a-moving-lane)).
 

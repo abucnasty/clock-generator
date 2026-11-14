@@ -5,6 +5,7 @@ import { machineCanMake, machineRuleOfPrototype, placesResultsItself } from "../
 import { MachineType } from "../entities/machine/machine-type";
 import { modelledBurnerOf } from "../entities/traits/energy";
 import type { Config, MachineConfiguration } from "./schema";
+import { textWords } from "../crafting/entity-name";
 
 /**
  * The simulation rule of a machine of the config, internal to the engine: its prototype's (machine-rule.ts), else the
@@ -59,12 +60,12 @@ export function machinePrototypeIssues(config: Pick<Config, "machines">): Machin
         }
         const recipe = FactorioDataService.findRecipe(machine.recipe);
         if (recipe !== null && !machineCanMake(prototype, recipe.categories)) {
-            // in the game's words: "Assembling machine 1 can't craft Lithium. Machines that can: Cryogenic plant."
+            // as the game says it, in the names of a sentence: "assembling machine 1 can't craft lithium. Machines that can: cryogenic plant."
             const can = FactorioDataService.getAllCraftingMachines().filter(it => machineCanMake(it, recipe.categories))
-                .map(it => FactorioDataService.itemDisplayName(it.name));
+                .map(it => textWords().item(it.name));
             issues.push({ machine_id: machine.id, kind: "recipe-not-made",
-                message: `Machine ${machine.id}: ${FactorioDataService.itemDisplayName(machine.prototype)} can't craft `
-                    + `${FactorioDataService.recipeDisplayName(machine.recipe)}. `
+                message: `Machine ${machine.id}: ${textWords().item(machine.prototype)} can't craft `
+                    + `${textWords().recipe(machine.recipe)}. `
                     + (can.length === 0 ? "No machine of the game data can. " : `Machines that can: ${can.join(", ")}. `)
                     + "The clock is made as configured, but the game does not let this machine be set to the recipe." });
         }

@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { generateClockForConfig, drawWindowTicks, type BlueprintGenerationResult } from "./generate-blueprint";
+import { generateClockForConfig, drawWindowTicks, planClockAlternatives, type BlueprintGenerationResult } from "./generate-blueprint";
+import { clockIdentity } from "./clock-identity";
 import { loadConfigFromFile } from "../config/loader";
-import { ConfigPaths } from "../config/config-paths";
+import { TestConfigPaths } from "../../tests/configs/paths";
 import type { Config } from "../config/schema";
 import { Entity } from "../entities";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
@@ -17,7 +18,9 @@ describe("generateClockForConfig", () => {
     // test that ranks the alternatives with and without them takes minutes, so it is in a file of its own:
     // agricultural-science-loop-windows-ranking.generation.test.ts.
     describe("agricultural science: windows for the inserters of the egg loop and those that take out of it", async () => {
-        const sample = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250);
+        // the sample's config before it stated its build of five copies: on the five-copy config the 5-swing clock holds without
+        // windows on the loop, so the windows of the loop do not show there
+        const sample = await loadConfigFromFile(TestConfigPaths.AGRICULTURAL_SCIENCE_250_BIOFLUX_ON_NEAR_LANE);
         const five_swings = (config: Config): Config => ({ ...config, overrides: { ...config.overrides, terminal_swing_count: 5 } });
         const out_of_the_loop = ["inserter:10", "inserter:9"];
         const of_the_loop = ["inserter:5", "inserter:8"];
@@ -72,6 +75,16 @@ describe("generateClockForConfig", () => {
                 expect(Object.keys(looped.clock_windows)).not.toContain(id);
                 expect(looped.always_on_reasons?.[id]).toEqual({ kind: "loop" });
             }
+        });
+
+        // the clock the alternatives list as batched swings (made by planned-belt-slack) at the config's own 5 output swings is this
+        // clock, and leaves the inserters of the egg loop always on: held for the sample's job until the sample stated its five copies
+        it("is the clock the alternatives make as batched swings, with windows on 9 and 10 and the inserters of the loop always on", () => {
+            const batched = planClockAlternatives(sample, { logger: quiet }).primary!.alternatives[0];
+            expect(batched.maker).toBe("planned-belt-slack");
+            expect(clockIdentity(batched.result)).toEqual(clockIdentity(looped));
+            expect(batched.result.loop_windows?.inserter_ids.slice().sort()).toEqual(["inserter:10", "inserter:9"]);
+            expect(batched.result.loop_windows?.in_loop_ids).toBeUndefined();
         });
 
         // The science biochamber's output is taken in 5 windows of 37 ticks (ticks 0 to 36 of every 96), and is under its

@@ -1,8 +1,8 @@
--- Run a clock on the inserter build under the game tests' protocol (steady.lua): three copies on ore lines that are drained (the
--- lines run on past the last copy into loaders and void chests), with the hand-made clock or a generated one; or the sample's one
--- copy (options.assemblers = 1), whose ore lines and circuit belts end closed. The disturbances:
--- iron ore removed from every belt until the output falls, the output loader nearest the assemblers' row removed until it
--- falls and rebuilt, circuits removed from every belt until it falls.
+-- Run a clock on the inserter build under the game tests' protocol (steady.lua): three copies on ore lines that end as the build's
+-- do (past the last copy the near lane of each stops, the far lane goes on to two furnaces of the build's belt foundry), with the
+-- hand-made clock or a generated one; or the sample's one copy (options.assemblers = 1), whose ore lines and circuit belts end
+-- closed. The disturbances: iron ore removed from every belt until the output falls, the loaders the product lines end in removed
+-- until it falls and rebuilt, circuits removed from every belt until it falls.
 local entities, surface, _, settle = ...
 local assemblers = {}
 for _, e in pairs(entities) do
@@ -27,14 +27,6 @@ end
 local before = research()
 force.belt_stack_size_bonus = options.stackSize - 1
 assert(force.belt_stack_size_bonus == options.stackSize - 1 and research() == before)
-local row = assemblers[1].position.y
-local loader, loader_index
-for index, e in pairs(entities) do
-    if e.valid and e.type == "loader" and (not loader or math.abs(e.position.y - row) < math.abs(loader.position.y - row)) then
-        loader, loader_index = e, index
-    end
-end
-local spec = {name = loader.name, position = loader.position, direction = loader.direction, force = loader.force, type = loader.loader_type}
 local cuts = {"iron-ore", "electronic-circuit"}
 -- the belt tiles the belt-fed inserters pick up from, and what their lanes hold: read at steady state and 20 ticks later
 local pickups = {}
@@ -63,10 +55,22 @@ local function line_end(belt)
         if current.type == "underground-belt" and current.belt_to_ground_type == "input" then nxt = exit_of(current)
         else nxt = current.belt_neighbours.outputs[1] end
         if nxt == nil then return {closed = true, tiles = tiles} end
-        if nxt.type ~= "transport-belt" and nxt.type ~= "underground-belt" then return {closed = false, tiles = tiles, ends_in = nxt.name} end
+        if nxt.type ~= "transport-belt" and nxt.type ~= "underground-belt" then return {closed = false, tiles = tiles, ends_in = nxt.name}, nxt end
         current = nxt
     end
     return {closed = false, tiles = 400, ends_in = "a line longer than 400 tiles"}
+end
+-- the loaders the product lines end in (the belt line each output inserter drops onto, followed to its end), by their index in
+-- the build's entities
+local product_loaders = {}
+for _, output in ipairs(outputs) do
+    local _, last = line_end(output.drop_target)
+    assert(last and last.type == "loader", "the product line of each assembler ends in a loader")
+    for index, e in pairs(entities) do
+        if e.valid and e.unit_number == last.unit_number and not product_loaders[index] then
+            product_loaders[index] = {name = e.name, position = e.position, direction = e.direction, force = e.force, type = e.loader_type}
+        end
+    end
 end
 local function read_feed()
     local out = {}
@@ -87,9 +91,10 @@ end
 local started = game.tick
 local report = {events = {}, initial = {
     speed = options.speed, reach = options.reach,
-    stack_size = force.belt_stack_size_bonus + 1, loader = {x = loader.position.x, y = loader.position.y},
+    stack_size = force.belt_stack_size_bonus + 1, loaders = {},
     crafting_speed = {}}}
 for k, m in ipairs(assemblers) do report.initial.crafting_speed[k] = m.crafting_speed end
+for _, spec in pairs(product_loaders) do table.insert(report.initial.loaders, {x = spec.position.x, y = spec.position.y}) end
 local function event(t, action) table.insert(report.events, {tick = t, action = action}) end
 local function cut(item)
     return {
@@ -109,9 +114,15 @@ local function cut(item)
 end
 local block = {
     kind = "block output",
-    start = function(t) entities[loader_index].destroy() event(t, "block-output") end,
-    -- the recorder reads the build after the probe: the rebuilt loader takes the old one's place
-    release = function(t) entities[loader_index] = assert(surface.create_entity(spec)) event(t, "restore-output") end,
+    start = function(t)
+        for index in pairs(product_loaders) do entities[index].destroy() end
+        event(t, "block-output")
+    end,
+    -- the recorder reads the build after the probe: each rebuilt loader takes the old one's place
+    release = function(t)
+        for index, spec in pairs(product_loaders) do entities[index] = assert(surface.create_entity(spec)) end
+        event(t, "restore-output")
+    end,
 }
 steady.run{
     finals = steady.final_machines(entities, options.recipes, options.item), clock = steady.clock(entities),

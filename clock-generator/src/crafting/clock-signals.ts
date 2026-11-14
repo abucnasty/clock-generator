@@ -16,7 +16,8 @@ import type { InserterCounters } from "./inserter-counters";
  *   for all of them but a window that finds one still enabled;
  * - a decider that switches drills of a chest sends one signal for each window the drills have in a window cycle.
  *
- * Null where the clock had no long run to count on. Nothing ranks or judges a clock by it (ranking stays the wake-ups).
+ * Null where the clock had no long run to count on. The selection compares it only between clocks equal on wake-ups
+ * (`ClockRanking.signals_per_minute`); nothing judges a clock by it.
  */
 export function signalsPerMinuteOf(
     counters: InserterCounters | undefined,

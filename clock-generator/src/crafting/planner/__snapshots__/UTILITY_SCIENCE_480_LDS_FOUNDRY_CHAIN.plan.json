@@ -29,6 +29,10 @@
     {
       "vertex": "belt:5/lane:1#coal",
       "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:5/lane:2#coal",
+      "kind": "nothing-drops-on"
     }
   ],
   "groups": [

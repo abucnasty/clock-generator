@@ -2,7 +2,11 @@
   "setpoint": {
     "recipe": "chemical-science-pack",
     "items_per_second": 240,
-    "copies": 5.5
+    "copies": 5.5,
+    "copy_offset": {
+      "x": 18,
+      "y": 0
+    }
   },
   "machines": [
     {
@@ -315,56 +319,84 @@
     {
       "id": 1,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
           "ingredient": "advanced-circuit",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         },
         {
           "ingredient": "sulfur",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         }
       ]
     },
     {
       "id": 2,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
           "ingredient": "sulfur",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         },
         {
           "ingredient": "advanced-circuit",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         }
       ]
     },
     {
       "id": 3,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
           "ingredient": "steel-plate",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         },
         {
           "ingredient": "iron-gear-wheel",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         }
       ]
     },
     {
       "id": 4,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
           "ingredient": "iron-gear-wheel",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         },
         {
           "ingredient": "steel-plate",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         }
       ]
     },

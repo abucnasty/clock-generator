@@ -1,6 +1,6 @@
 import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
 import { describe, expect, it } from 'vitest';
-import { computeMachineFacts, ConfigSchema, FactorioDataService, FeasibilityError, targetRateMaxOf, validateConfig, type Config } from 'clock-generator/browser';
+import { computeMachineFacts, ConfigSchema, FactorioDataService, FeasibilityError, SharedLaneSupplyError, targetRateMaxOf, validateConfig, type Config } from 'clock-generator/browser';
 import oreVoiderExact from '../../../clock-generator/resources/config-samples/recycling/iron-ore/iron-ore-voider-400-exact-speed.json';
 import oreVoiderOverbeaconed from '../../../clock-generator/resources/config-samples/recycling/iron-ore/iron-ore-voider-400-overbeaconed.json';
 import { configToFormData } from './configForm/configMapping';
@@ -19,8 +19,11 @@ function refusalOf(config: Config): unknown {
     return undefined;
 }
 
-/** One gear machine, with hands of 4 so that its inserters carry more than it makes and the machine is what limits the target */
-function build(copies: number, items_per_second: number, crafting_speed: number) {
+/**
+ * One gear machine, with hands of 4 so that its inserters carry more than it makes and the machine is what limits the
+ * target; each copy has a plate lane of its own, so that the copies' takes from it limit nothing
+ */
+function build(copies: number, items_per_second: number, crafting_speed: number, sharing: 'per_copy' | 'shared' = 'per_copy') {
     return ConfigSchema.parse({
         setpoint: { recipe: 'iron-gear-wheel', copies, items_per_second },
         machines: [{ id: 1, recipe: 'iron-gear-wheel', productivity: 0, crafting_speed }],
@@ -29,11 +32,26 @@ function build(copies: number, items_per_second: number, crafting_speed: number)
             { source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 2 }, stack_size: 4, filters: ['iron-gear-wheel'] },
         ],
         belts: [
-            { id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1 }] },
+            { id: 1, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1, sharing, lane_end: { kind: 'infinite' } }] },
             { id: 2, type: 'turbo-transport-belt', lanes: [{ ingredient: 'iron-gear-wheel', stack_size: 1 }] },
         ],
     });
 }
+
+describe('the most the field allows knows the copies\' takes from a lane they share', () => {
+    it.each([2.25, 5.5])('stops %s copies sharing one plate lane at its supply rate, and the engine refuses a hair above', copies => {
+        // 2 plates a gear, of a lane of 30 a second: the copies may make 15 gears a second together, below the 10 a
+        // second each copy's machine makes
+        const config = build(copies, 20, 5, 'shared');
+        const max = targetRateMaxOf(config)!;
+        expect(max.cut).toBe('shared lane');
+        expect(max.per_copy_per_second * copies).toBeCloseTo(15, 9);
+        expect(max.limit).toMatch(/^The [0-9.]+ copies share lane 1 of belt 1\./);
+        const at = (rate: number) => refusalOf(build(copies, rate, 5, 'shared'));
+        expect(at(15)).toBeUndefined();
+        expect(at(15.001)).toBeInstanceOf(SharedLaneSupplyError);
+    });
+});
 
 describe('target capacity agrees with actual engine validation', () => {
     it.each([0.5, 2.25, 5.5, 0.001, 0.0625])('accepts the exact maximum and rejects an excess with %s Copies', copies => {
@@ -191,7 +209,7 @@ describe('over the samples, a target the field allows is never refused by a feas
         return parsed.success ? [{ file, config: parsed.data }] : [];
     });
     const refusedByFeasibility = (config: Config): boolean => {
-        try { validateConfig(config); return false; } catch (error) { return error instanceof FeasibilityError; }
+        try { validateConfig(config); return false; } catch (error) { return error instanceof FeasibilityError || error instanceof SharedLaneSupplyError; }
     };
 
     let checked = 0;

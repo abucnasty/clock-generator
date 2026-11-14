@@ -340,17 +340,25 @@ function gui.create(player, player_data, result)
     })
 
     -- The target the JSON suggests, so it can be checked before pasting
-    local suggested = export.suggested_target(result)
+    local suggested, belt_limit = export.suggested_target(result)
     if suggested then
         local item = prototypes.item[suggested.recipe]
         local product = suggested.recipe
         if item then
             product = { "", "[item=" .. suggested.recipe .. "] ", item.localised_name }
         end
+        -- lowered to what the belt the product is put on carries: says so, with what the machines make
+        local caption = { "clock-generator-sidecar.suggested-target", product, string.format("%.2f", suggested.items_per_second) }
+        local tooltip = { "clock-generator-sidecar.suggested-target-tooltip" }
+        if belt_limit then
+            caption = { "clock-generator-sidecar.suggested-target-belt", product, string.format("%.2f", suggested.items_per_second),
+                string.format("%.2f", belt_limit.machines_per_second) }
+            tooltip = { "clock-generator-sidecar.suggested-target-belt-tooltip" }
+        end
         local suggested_label = frame.add({
             type = "label",
-            caption = { "clock-generator-sidecar.suggested-target", product, string.format("%.2f", suggested.items_per_second) },
-            tooltip = { "clock-generator-sidecar.suggested-target-tooltip" }
+            caption = caption,
+            tooltip = tooltip
         })
         suggested_label.style.single_line = false
         suggested_label.style.maximal_width = 600

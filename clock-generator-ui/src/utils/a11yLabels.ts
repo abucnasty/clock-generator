@@ -92,7 +92,7 @@ export function clockHelpName(clockLabel: string): string {
     return `About ${clockLabel}`;
 }
 
-/** The (i) by a clock table header, which opens the Terms with that column's terms first: "Terms for Works?" */
+/** The (i) by a clock table header, which opens the Terms with that column's terms first: "Terms for Wakeups/min (1 copy)" */
 export function termsHelpName(column: string): string {
     return `Terms for ${column}`;
 }

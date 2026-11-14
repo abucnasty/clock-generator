@@ -49,7 +49,7 @@ const LOOPS: Readonly<Record<string, readonly (readonly string[])[]>> = {
  * "from outside: 4 edges").
  */
 const TERMINAL: Readonly<Record<string, number>> = {
-    ACCUMULATOR_640: 2,
+    ACCUMULATOR_320: 2,
     ADVANCED_CIRCUIT_240: 2,
     ADVANCED_CIRCUIT_230: 2,
     AGRICULTURAL_SCIENCE_250: 1,
@@ -58,7 +58,7 @@ const TERMINAL: Readonly<Record<string, number>> = {
     CHEMICAL_SCIENCE_240_SHARED_FOUNDRY: 4,
     ELECTRIC_FURNACE_20: 1,
     ELECTROMAGNETIC_SCIENCE_330: 2,
-    FLYING_ROBOT_FRAME_160: 1,
+    FLYING_ROBOT_FRAME_80: 1,
     ROCKET_FUEL_60: 3,
     IRON_BACTERIA_380_CULTIVATION: 4,
     LOGISTIC_SCIENCE_240: 1,
@@ -66,7 +66,7 @@ const TERMINAL: Readonly<Record<string, number>> = {
     INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK: 1,
     LDS_240: 4,
     METALLURGIC_SCIENCE_45: 1,
-    MILITARY_SCIENCE_120: 1,
+    MILITARY_SCIENCE_240: 2,
     PROCESSING_UNIT_15_CHEST_FED: 1,
     PRODUCTION_SCIENCE_120_TWO_BELTS: 1,
     IRON_PLATE_80_CAR_CHEST: 2,

@@ -1,6 +1,7 @@
 import type { FuelLevelSeries } from 'clock-generator/browser';
 import type { FuelViewData } from '../worker/types';
 import { formatNumberText } from './numberText';
+import { sentenceStart } from './entityLabel';
 
 export interface FuelEventRow {
     inserterNumber: number;
@@ -38,10 +39,14 @@ export function fuelSampledEmptyIntervals(levels: FuelLevelSeries, durationTicks
     return intervals;
 }
 
-export function fuelTraceSummary(levels: FuelLevelSeries, durationTicks: number): string {
+/**
+ * The fuel trace of one machine in words; `machine` names it as a sentence does ("the Biochamber that makes Rocket fuel
+ * from jelly", machineInSentence), "Machine 1" without it
+ */
+export function fuelTraceSummary(levels: FuelLevelSeries, durationTicks: number, machine = `Machine ${levels.machine_number}`): string {
     const intervals = fuelSampledEmptyIntervals(levels, durationTicks);
     const quantity = (value: number) => formatNumberText(value, { maxDecimals: 3 });
-    return `Machine ${levels.machine_number}, over ${durationTicks} ticks: fuel started at ${quantity(levels.start_level)} items and ended at ${quantity(levels.end_level)} items. `
+    return `${sentenceStart(machine)}, over ${durationTicks} ticks: fuel started at ${quantity(levels.start_level)} items and ended at ${quantity(levels.end_level)} items. `
         + `Minimum ${quantity(levels.min_level)} items; maximum ${quantity(levels.max_level)} items. ${quantity(levels.inserted)} items inserted; ${quantity(levels.burned)} items burned (fuel amounts rounded for display). `
         + `${levels.empty_ticks} ticks with no fuel.`
         + (levels.first_empty_tick !== null ? ` First empty tick: ${levels.first_empty_tick}.` : '')

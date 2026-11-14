@@ -20,8 +20,12 @@ targeted commands and screenshot regeneration. Screenshots are layout references
 - [Belt drop lane](belt-drop-lane/README.md): the lane an inserter drops on, from each side and each end of a belt running in each direction, against the simulator's two lane choices.
 - [Control latency](control-latency/README.md): a decider switching inserters waiting at a chest, in sleep at a machine, over a belt, in pairs and while moving; inserters woken by a take or a craft.
 - [Drop spacing](drop-spacing/README.md): the hands of several copies on one belt lane, why a pitch and an offset make them fit or collide.
+- [Belt join](belt-join/README.md): side loads and splitters of turbo belts, every stack's line and position in every tick, against the engine's join model.
+- [Input lane gap](input-lane-gap/README.md): rows of assemblers on one dead-end belt of iron plate, and the second assembler that finds the gap the first one's hand made: the crafts it loses in the game, against the engine's lane check from the inserters' places.
 
-The [screenshot catalog](screenshots.json) references 14 local fixture blueprints and 3 shared sample
-blueprints. Their [generated provenance](screenshots.generated.json) records source hashes, Factorio version,
+The mechanics game tests are run again only when the Factorio version changes; their offline replays run in `npm test`.
+
+The [screenshot catalog](screenshots.json) references 18 mechanics fixture blueprints. Pictures are of the
+mechanics fixtures only; a topic that uses a sample links to the sample's scaffold. Their [generated provenance](screenshots.generated.json) records source hashes, Factorio version,
 framing and compressed image sizes. Run `npm run screenshots -- --all` from `clock-generator/` to backfill missing
 or stale images, or `--case=<id>` to capture one.

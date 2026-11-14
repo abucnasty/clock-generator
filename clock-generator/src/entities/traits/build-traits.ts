@@ -1,4 +1,5 @@
 import { machinePlacesResults } from "../../config/machine-prototype";
+import { withoutOutsideSupply } from "../../config/outside-supply";
 import { BeltConfig, ChestConfig, Config, InserterConfig, MachineConfiguration, MiningDrillConfig } from "../../config/schema";
 import { FactorioDataService } from "../../data";
 import { BeltSpeed, Lane, lanesOf } from "../belt/belt";
@@ -17,7 +18,8 @@ import { drillEnergy, EnergyTrait, machineEnergy } from "./energy";
 import { HandTrait, inserterHand } from "./hand";
 import { InputLimitsTrait, machineInputLimits } from "./input-limits";
 import { beltLanesOfFacts, LaneTrait } from "./lane";
-import { laneFactsOf } from "./lane-facts";
+import { LaneFactsOfBuild, laneFactsOf } from "./lane-facts";
+import { CarriedItemsOf, LaneRolesOfBuild, laneRolesOf } from "./lane-role";
 import { LoopTrait, machineLoop } from "./loop";
 import { machineOutputBlock, OutputBlockTrait } from "./output-block";
 import { drillPlacement, machinePlacement, PlacementTarget, PlacementTrait } from "./placement";
@@ -173,7 +175,7 @@ function inserterTraitsOf(
         sink_lane_of,
         ...(hands.belt_drop === undefined || sink.type !== EntityType.BELT ? {} : {
             belt_drop: {
-                // the belt's speed from its prototype in the game data
+                // the belt's speed from its prototype (belt-speed.ts)
                 belt_speed: sink_lane_traits[0].belt_speed as BeltSpeed,
                 belt_stack_size: hands.belt_drop.belt_stack_size as BeltStackSize,
                 inserter_stack_size: hands.belt_drop.inserter_stack_size,
@@ -192,12 +194,83 @@ function inserterTraitsOf(
 }
 
 /**
+ * The ends an inserter of the config reads, from the game data: each belt's lanes, each machine's traits and products,
+ * each chest with the items put into it, and the view inserterEndItems reads them through
+ */
+function endsOf(config: Config) {
+    const belt_lanes = new Map<number, readonly Lane[]>();
+    config.belts.forEach((belt: BeltConfig) => belt_lanes.set(belt.id, lanesOf(belt)));
+
+    const machines = new Map<number, MachineTraits>();
+    config.machines.forEach(machine => machines.set(machine.id, machineTraitsOf(machine)));
+
+    const outputsOf = (id: number) => machines.get(id)?.yield.results.map(result => result.item) ?? [];
+    const put_into: PutIntoView = {
+        machineOutputs: outputsOf,
+        beltItems: id => (belt_lanes.get(id) ?? []).map(lane => lane.ingredient_name),
+    };
+    const chests = new Map<number, Chest>();
+    const items_put_into = new Map<number, ReturnType<typeof itemsPutInto>>();
+    (config.chests ?? []).forEach((chest_config: ChestConfig) => {
+        const items_put_in = itemsPutInto(config, chest_config.id, put_into);
+        items_put_into.set(chest_config.id, items_put_in);
+        chests.set(chest_config.id, Chest.fromConfig(chest_config, items_put_in));
+    });
+
+    const view: InserterEndView = {
+        beltLanes: id => belt_lanes.get(id) ?? [],
+        machineOutputs: outputsOf,
+        machineInputs: id => machines.get(id)?.input_limits.limits.map(limit => limit.item) ?? [],
+        chestGives: id => chests.get(id)?.getItemFilters() ?? [],
+        chestAccepts: (id, item) => chests.get(id)?.acceptsItem(item) ?? false,
+    };
+    return { belt_lanes, machines, outputsOf, chests, items_put_into, view };
+}
+
+/** The items each inserter of the config carries (carriedItems), by its place in the config's list, from the game data */
+export function carriedItemsOf(config: Config, view: InserterEndView = endsOf(config).view): CarriedItemsOf {
+    const carried = config.inserters.map(inserter => {
+        const { source_items, sink_items } = inserterEndItems(inserter.source, inserter.sink, view);
+        return carriedItems(source_items, sink_items, inserter.filters);
+    });
+    return index => carried[index] ?? new Set();
+}
+
+/**
+ * The roles of the lanes of a config, worked out once for each set of the fields they depend on: the belts' items, the
+ * machines, chests and drills, and each inserter's ends and filters. A search asks for the lane facts of thousands of
+ * trial configs that differ in other fields only (5,392 to 11,679 calls a generation of the three largest samples, on
+ * one such set), and working out what the inserters carry builds every machine's traits. At most 256 sets are kept.
+ */
+const roles_by_fields = new Map<string, LaneRolesOfBuild>();
+function laneRolesOfConfig(config: Config): LaneRolesOfBuild {
+    const key = JSON.stringify([
+        config.belts.map(belt => [belt.id, (belt.lanes as readonly { ingredient: string }[]).map(lane => lane.ingredient)]),
+        config.machines, config.chests ?? null, config.drills ?? null,
+        config.inserters.map(inserter => [inserter.source.type, inserter.source.id, inserter.sink.type, inserter.sink.id, inserter.filters ?? null]),
+    ]);
+    const kept = roles_by_fields.get(key);
+    if (kept !== undefined) return kept;
+    // the build that is clocked: outside supply puts nothing onto a lane of the build's own (outside-supply.ts)
+    const clocked = withoutOutsideSupply(config);
+    const roles = laneRolesOf(clocked, carriedItemsOf(clocked));
+    if (roles_by_fields.size >= 256) roles_by_fields.clear();
+    roles_by_fields.set(key, roles);
+    return roles;
+}
+
+/** The facts of the lanes of a config (laneFactsOf), each with its role from what the inserters carry (laneRolesOf) */
+export function laneFactsOfConfig(config: Config): LaneFactsOfBuild {
+    return laneFactsOf(config, laneRolesOfConfig(config));
+}
+
+/**
  * Every entity's traits from the config and the game data, each built once, in the order the registry builds the
  * entities (simulation-context.ts): belts, machines, chests, inserters, drills. Each figure comes from the function the
  * entity computes it with. Where a figure follows the prototype's kind (the output block rule, the fuel, the belt speed,
  * the full-hand rule, the belt pickup calibration), the entity reads it from the trait's own function, by the
- * prototype's class and data fields (machine.ts, belt.ts, inserter.ts, and the inserter's pickup transition and belt
- * pickup logic), and the equivalence test holds both to the figures the name and kind branches gave before they were
+ * prototype's class and data fields (machine.ts, belt-speed.ts, inserter.ts, and the inserter's pickup transition and
+ * belt pickup logic), and the equivalence test holds both to the figures the name and kind branches gave before they were
  * removed.
  *
  * The registry (simulation-context.ts) does not call this: it is built on every trial, from a config made for that
@@ -213,12 +286,11 @@ function inserterTraitsOf(
  */
 export function buildTraits(config: Config): ConfigTraits {
     const traits: Record<string, NodeTraits> = {};
-    const lane_facts = laneFactsOf(config);
+    const { machines, outputsOf, chests, items_put_into, view } = endsOf(config);
+    const lane_facts = laneFactsOf(config, laneRolesOf(config, carriedItemsOf(config, view)));
 
-    const belt_lanes = new Map<number, readonly Lane[]>();
     const lane_traits = new Map<number, readonly LaneTrait[]>();
     config.belts.forEach((belt: BeltConfig) => {
-        belt_lanes.set(belt.id, lanesOf(belt));
         const lanes = beltLanesOfFacts(belt, lane_facts);
         lane_traits.set(belt.id, lanes);
         lanes.forEach(lane => {
@@ -226,20 +298,8 @@ export function buildTraits(config: Config): ConfigTraits {
         });
     });
 
-    const machines = new Map<number, MachineTraits>();
-    config.machines.forEach(machine => machines.set(machine.id, machineTraitsOf(machine)));
-
-    const outputsOf = (id: number) => machines.get(id)?.yield.results.map(result => result.item) ?? [];
-    const put_into: PutIntoView = {
-        machineOutputs: outputsOf,
-        beltItems: id => (belt_lanes.get(id) ?? []).map(lane => lane.ingredient_name),
-    };
-    const chests = new Map<number, Chest>();
-    (config.chests ?? []).forEach((chest_config: ChestConfig) => {
-        const items_put_in = itemsPutInto(config, chest_config.id, put_into);
-        const chest = Chest.fromConfig(chest_config, items_put_in);
-        chests.set(chest_config.id, chest);
-        const storage = chestStorage(chest, items_put_in);
+    chests.forEach((chest, id) => {
+        const storage = chestStorage(chest, items_put_into.get(id)!);
         traits[chest.entity_id.id] = {
             kind: "chest", entity: chest.entity_id.id, storage,
             spoilage: spoilageOf(storage.capacity_by_item.map(capacity => capacity.item)),
@@ -258,13 +318,6 @@ export function buildTraits(config: Config): ConfigTraits {
         traits[machine.entity] = { ...machine, placement };
     });
 
-    const view: InserterEndView = {
-        beltLanes: id => belt_lanes.get(id) ?? [],
-        machineOutputs: outputsOf,
-        machineInputs: id => machines.get(id)?.input_limits.limits.map(limit => limit.item) ?? [],
-        chestGives: id => chests.get(id)?.getItemFilters() ?? [],
-        chestAccepts: (id, item) => chests.get(id)?.acceptsItem(item) ?? false,
-    };
     config.inserters.forEach((inserter, index) => {
         const id = inserter.id ?? index + 1;
         const built = inserterTraitsOf(id, inserter, view, lane_traits);

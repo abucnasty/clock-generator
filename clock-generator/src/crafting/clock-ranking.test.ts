@@ -11,7 +11,6 @@ const clock = (id: string, ranking: Partial<ClockRanking> = {}): Ranked => ({
     meets_target_rate: true,
     rate_off_target: 0,
     holds_expected_output: true,
-    matches_belt_choice: true,
     wake_ups_per_minute: 100,
     window_count: 10,
     ...ranking,
@@ -60,18 +59,81 @@ describe("combineClockAlternativeRuns", () => {
         ])).toBe("more-windows");
     });
 
-    it("selects a clock that keeps belt pickup slack over one with fewer wake-ups that leaves it out", () => {
-        expect(selectedOf([
-            clock("slack", { wake_ups_per_minute: 80 }),
-            clock("no-slack", { wake_ups_per_minute: 30, matches_belt_choice: false }),
-        ])).toBe("slack");
+    // the time a pickup from a flowing lane takes is the simulation's, so no clock ranks behind another for the belt it takes from
+    it("gives a clock's ranking no key for the belt its windows take from", () => {
+        const ranking = (verdict: "stable" | "unstable", belt: "moving" | "backed_up") => rankingOf({ verdict, deadlock_risks: [],
+            assessment: { items_per_second: 10, wake_ups_per_minute: 30, holds: verdict === "stable", disturbance_trial: {} },
+            ranking_window_count: 4, belt: { kind: belt } } as unknown as Omit<ClockAlternative, "ranking">,
+            { setpoint: { items_per_second: 10 } } as Config);
+        expect(ranking("stable", "moving")).toEqual(ranking("stable", "backed_up"));
+        expect(Object.keys(ranking("stable", "moving")).sort()).toEqual(["holds_expected_output", "meets_target_rate", "rate_off_target",
+            "recovery_untried", "recovery_window_cycles", "signals_per_minute", "wake_ups_per_minute", "window_count"]);
     });
 
-    it("selects a clock without belt pickup slack when no clock with it meets the target rate", () => {
+    // the list of clocks shows each clock's signals a minute from its assessment: the ranking reads the same figure
+    it("ranks a clock by the signals a minute of its assessment, null where they were not counted", () => {
+        const ranking = (signals_per_minute: number | null | undefined) => rankingOf({ verdict: "stable", deadlock_risks: [],
+            assessment: { items_per_second: 10, wake_ups_per_minute: 30, holds: true, disturbance_trial: {},
+                ...(signals_per_minute !== undefined && { signals_per_minute }) },
+            ranking_window_count: 4 } as unknown as Omit<ClockAlternative, "ranking">,
+            { setpoint: { items_per_second: 10 } } as Config);
+        expect(ranking(138.4).signals_per_minute).toBe(138.4);
+        expect(ranking(null).signals_per_minute).toBeNull();
+        expect(ranking(undefined).signals_per_minute).toBeNull();
+    });
+
+    // a build with Pitch Pickups of 1 swing and Takt Batches of 2 swings, both at 452 wakeups a minute: 138 signals a
+    // minute against 100, where the 1-swing clock recovered in 6 window cycles against 10
+    it("selects, of clocks equal on wake-ups, the one with fewer signals a minute, before the window cycles to recover", () => {
         expect(selectedOf([
-            clock("slack", { meets_target_rate: false }),
-            clock("no-slack", { matches_belt_choice: false }),
-        ])).toBe("no-slack");
+            clock("more-signals", { wake_ups_per_minute: 452, signals_per_minute: 138, recovery_window_cycles: 6, window_count: 4 }),
+            clock("fewer-signals", { wake_ups_per_minute: 452, signals_per_minute: 100, recovery_window_cycles: 10, window_count: 8 }),
+        ])).toBe("fewer-signals");
+    });
+
+    it("does not let fewer signals overturn fewer wake-ups", () => {
+        expect(selectedOf([
+            clock("fewer-signals", { wake_ups_per_minute: 452.002, signals_per_minute: 10 }),
+            clock("fewer-wake-ups", { wake_ups_per_minute: 452, signals_per_minute: 900 }),
+        ])).toBe("fewer-wake-ups");
+    });
+
+    it("compares the signals to a thousandth, as the wake-ups", () => {
+        expect(selectedOf([
+            clock("first", { signals_per_minute: 100.0004, recovery_window_cycles: 9 }),
+            clock("sooner", { signals_per_minute: 100, recovery_window_cycles: 3 }),
+        ])).toBe("sooner");
+    });
+
+    it("ranks a clock whose signals were not counted after one whose were, and as one with none where neither was", () => {
+        expect(selectedOf([
+            clock("not-counted", { signals_per_minute: null, recovery_window_cycles: 1, window_count: 1 }),
+            clock("counted", { signals_per_minute: 5000, recovery_window_cycles: 30, window_count: 30 }),
+        ])).toBe("counted");
+        // a ranking kept from before the signals ranked has no figure: it ranks as one not counted
+        expect(selectedOf([
+            clock("kept", { recovery_window_cycles: 1 }),
+            clock("counted", { signals_per_minute: 5000, recovery_window_cycles: 30 }),
+        ])).toBe("counted");
+        expect(selectedOf([
+            clock("kept-slow", { recovery_window_cycles: 30 }),
+            clock("not-counted-sooner", { signals_per_minute: null, recovery_window_cycles: 2 }),
+        ])).toBe("not-counted-sooner");
+    });
+
+    it("leaves a tie on wake-ups and signals to the window cycles to recover, then the windows, then the first listed", () => {
+        expect(selectedOf([
+            clock("slow", { signals_per_minute: 100, recovery_window_cycles: 10, window_count: 2 }),
+            clock("sooner", { signals_per_minute: 100.0004, recovery_window_cycles: 6, window_count: 9 }),
+        ])).toBe("sooner");
+        expect(selectedOf([
+            clock("more-windows", { signals_per_minute: 100, recovery_window_cycles: 6, window_count: 9 }),
+            clock("fewer-windows", { signals_per_minute: 100, recovery_window_cycles: 6, window_count: 2 }),
+        ])).toBe("fewer-windows");
+        expect(selectedOf([
+            clock("first", { signals_per_minute: 100, recovery_window_cycles: 6, window_count: 2 }),
+            clock("second", { signals_per_minute: 100, recovery_window_cycles: 6, window_count: 2 }),
+        ])).toBe("first");
     });
 
     it("selects the fewest windows among clocks with the same wake-ups, and the first listed among equals", () => {
@@ -101,7 +163,7 @@ describe("combineClockAlternativeRuns", () => {
     it("selects the clock nearest to the target rate when none meets it, whatever its windows and its belt", () => {
         expect(selectedOf([
             clock("fewest-windows", { meets_target_rate: false, rate_off_target: -21.64, window_count: 5 }),
-            clock("nearest", { meets_target_rate: false, rate_off_target: -5.69, window_count: 40, matches_belt_choice: false }),
+            clock("nearest", { meets_target_rate: false, rate_off_target: -5.69, window_count: 40 }),
             clock("between", { meets_target_rate: false, rate_off_target: -8.57, window_count: 60 }),
         ])).toBe("nearest");
     });
@@ -180,6 +242,81 @@ describe("combineClockAlternativeRuns", () => {
     });
 });
 
+describe("the order of combineClockAlternativeRuns", () => {
+    /** The ids from first to last in the order, each clock a run of its own, and the selected id */
+    const ordered = (runs: (ClockAlternativeRun<Ranked> | null)[]) => {
+        const { alternatives, selected_index, order } = combineClockAlternativeRuns(runs, it => it);
+        return { ids: order.map(index => alternatives[index].id), selected: alternatives[selected_index]?.id };
+    };
+    const orderOf = (clocks: Ranked[]) => ordered(clocks.map(it => ({ signature: it.id, alternatives: [it] })));
+
+    it.each<[string, Ranked[], string[]]>([
+        ["by the tier first: exact and tried, rounded, recovery not tried, stable over the setpoint, the rest", [
+            clock("rest", { meets_target_rate: false, rate_off_target: -0.001, wake_ups_per_minute: 0 }),
+            clock("stable-over", { meets_target_rate: false, stable_above_target: true, rate_off_target: 2, wake_ups_per_minute: 1 }),
+            clock("untried", { recovery_untried: true, wake_ups_per_minute: 2 }),
+            clock("rounded", { runs_fast: 0.0002, wake_ups_per_minute: 3 }),
+            clock("exact", { wake_ups_per_minute: 900 }),
+        ], ["exact", "rounded", "untried", "stable-over", "rest"]],
+        ["then the distance from the setpoint, to a thousandth, above as far as below", [
+            clock("far", { meets_target_rate: false, rate_off_target: -3 }),
+            clock("over", { meets_target_rate: false, rate_off_target: 2 }),
+            clock("near", { meets_target_rate: false, rate_off_target: 0.4 }),
+            clock("near-too", { meets_target_rate: false, rate_off_target: -0.4004 }),
+        ], ["near", "near-too", "over", "far"]],
+        ["then whether it holds its output", [
+            clock("drifts", { meets_target_rate: false, holds_expected_output: false, wake_ups_per_minute: 1 }),
+            clock("holds", { meets_target_rate: false, wake_ups_per_minute: 80 }),
+        ], ["holds", "drifts"]],
+        ["then the wakeups to a thousandth, a count before none", [
+            clock("not-counted", { wake_ups_per_minute: null, window_count: 1 }),
+            clock("more", { wake_ups_per_minute: 12 }),
+            clock("fewer", { wake_ups_per_minute: 8, window_count: 30 }),
+            clock("fewer-too", { wake_ups_per_minute: 8.0004, window_count: 20 }),
+        ], ["fewer-too", "fewer", "more", "not-counted"]],
+        ["then the signals a minute to a thousandth, a count before none", [
+            clock("not-counted", { signals_per_minute: null, recovery_window_cycles: 1, window_count: 1 }),
+            clock("more", { signals_per_minute: 138, recovery_window_cycles: 6 }),
+            clock("fewer", { signals_per_minute: 100, recovery_window_cycles: 10, window_count: 30 }),
+            clock("fewer-too", { signals_per_minute: 100.0004, recovery_window_cycles: 10, window_count: 20 }),
+        ], ["fewer-too", "fewer", "more", "not-counted"]],
+        ["then the window cycles to recover after a stop, a count before none", [
+            clock("untimed", { wake_ups_per_minute: 0, recovery_window_cycles: null, window_count: 1 }),
+            clock("slow", { wake_ups_per_minute: 0, recovery_window_cycles: 33, window_count: 2 }),
+            clock("fast", { wake_ups_per_minute: 0, recovery_window_cycles: 3, window_count: 9 }),
+        ], ["fast", "slow", "untimed"]],
+        ["then the enable windows", [
+            clock("more-windows", { window_count: 12 }),
+            clock("fewer-windows", { window_count: 9 }),
+        ], ["fewer-windows", "more-windows"]],
+        ["and the made order where they tie on every key", [
+            clock("first"), clock("second", { wake_ups_per_minute: 100.0004 }), clock("third"),
+        ], ["first", "second", "third"]],
+    ])("orders %s", (_, clocks, ids) => {
+        const { ids: order, selected } = orderOf(clocks);
+        expect(order).toEqual(ids);
+        // the first in the order is the selected clock
+        expect(selected).toBe(ids[0]);
+    });
+
+    it("orders every clock of the combined runs once, a run of shared windows and a deeper search's run among them", () => {
+        const runs: (ClockAlternativeRun<Ranked> | null)[] = [
+            { signature: "a", alternatives: [clock("a", { wake_ups_per_minute: 80 })], also: [{ signature: "a-shared", alternatives: [clock("a-shared", { wake_ups_per_minute: 60 })] }] },
+            null,
+            { signature: "a", alternatives: [clock("a-again", { wake_ups_per_minute: 0 })] },
+            { signature: "b", alternatives: [clock("b", { wake_ups_per_minute: 50 }), clock("b-rounded", { runs_fast: 0.0002, wake_ups_per_minute: 1 })] },
+        ];
+        expect(ordered(runs)).toEqual({ ids: ["b", "a-shared", "a", "b-rounded"], selected: "b" });
+        // a deeper search adds a run: the positions are of all the clocks together, not of each run
+        const deeper = [...runs, { signature: "c", alternatives: [clock("c", { wake_ups_per_minute: 55 })] }];
+        expect(ordered(deeper)).toEqual({ ids: ["b", "c", "a-shared", "a", "b-rounded"], selected: "b" });
+    });
+
+    it("is empty with no clock", () => {
+        expect(combineClockAlternativeRuns<Ranked>([null], it => it)).toEqual({ alternatives: [], selected_index: 0, order: [] });
+    });
+});
+
 // the car paste at 80.78/s: a clock whose losses could not be tried (its window cycle has no whole-tick repeat) was taken as
 // stable and beat every clock that was tried (U11)
 describe("a clock whose recovery could not be tried", () => {
@@ -212,7 +349,7 @@ describe("a clock whose recovery could not be tried", () => {
     const ranked = (overrides: Partial<ClockAssessment>, deadlock = false): ClockRanking => {
         const clock_assessment = assessment(overrides);
         return rankingOf({ assessment: clock_assessment, verdict: clockVerdictOf(clock_assessment), ranking_window_count: 4,
-            deadlock_risks: deadlock ? [{}] : [], result: { belt_pickup_slack_left_out: false } } as unknown as Omit<ClockAlternative, "ranking">, config);
+            deadlock_risks: deadlock ? [{}] : [] } as unknown as Omit<ClockAlternative, "ranking">, config);
     };
     const NOT_TRIED = "A clock of 47.537 ticks does not repeat in whole ticks, so its output cannot be counted by the period";
 
@@ -261,7 +398,6 @@ describe("a clock rounded down to whole ticks", () => {
         const assessment: ClockAssessment = { holds: true, items_per_second, wake_ups_per_minute: 13.4, start_dependence: null,
             disturbance_trial: { survives: true, broken_by: [], recovered_after_window_cycles: 2 } };
         return rankingOf({ assessment, verdict: clockVerdictOf(assessment), ranking_window_count: 4, deadlock_risks: [],
-            result: { belt_pickup_slack_left_out: false },
             ...(rounded_clock && { rounded: { window_cycle_ticks: 2888, runs_fast: items_per_second / 9.97 - 1, within_machines: true, tried_on_its_window_cycle: true, ...rounded_clock } }),
         } as unknown as Omit<ClockAlternative, "ranking">, config);
     };
@@ -299,7 +435,7 @@ describe("searchesAreNeeded", () => {
     const needed = (clocks: (Ranked | null)[]): boolean =>
         searchesAreNeeded(clocks.map(it => it && { signature: it.id, alternatives: [it] }), it => it);
 
-    it("is not, once a clock made without a search meets the target rate for the belt asked", () => {
+    it("is not, once a clock made without a search meets the target rate", () => {
         expect(needed([clock("unstable", { meets_target_rate: false }), null, clock("stable", { wake_ups_per_minute: 900 })])).toBe(false);
     });
 
@@ -307,10 +443,6 @@ describe("searchesAreNeeded", () => {
         expect(needed([clock("unstable", { meets_target_rate: false }), clock("no-recovery", { meets_target_rate: false })])).toBe(true);
     });
 
-    // military science: its one stable clock leaves belt pickup slack out, on a config that does not say the input belts are backed up
-    it("is, when the only clock that meets the target rate is not made for the belt asked", () => {
-        expect(needed([clock("slack", { meets_target_rate: false }), clock("no-slack", { matches_belt_choice: false })])).toBe(true);
-    });
 
     it("is, when every clock made without a search failed", () => {
         expect(needed([null, null])).toBe(true);

@@ -7,6 +7,7 @@ import { OpenRange } from "../data-types";
 import { weightUnits, weightUnitsOf } from "../state/slot-inventory";
 import { countDistribution, RANDOM_MARGIN_LEVEL, rollsPerCraft } from "./random-margins";
 import { rotateRanges } from "./clock";
+import { textWords } from "./entity-name";
 
 /**
  * Windows for results that come by small chances (a recycler on scrap: twelve results, each from 1% to 20% of a roll),
@@ -270,7 +271,7 @@ export function sharedHandRefusal(machine: Machine, registry: Pick<ReadableEntit
     for (const inserter of registry.getAll().filter(Entity.isInserter).filter(it => it.source.entity_id.id === target.id)) {
         const taken = results.filter(item => inserter.filtered_items.has(item));
         if (taken.length > 1) {
-            return sharedHandText(inserter.entity_id.number, taken.map(item => FactorioDataService.itemNameInSentence(item)),
+            return sharedHandText(inserter.entity_id.number, taken.map(item => textWords().item(item)),
                 { type: target.type === "machine" ? "machine" : "chest", number: target.number });
         }
     }

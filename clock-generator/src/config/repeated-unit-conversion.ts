@@ -1,6 +1,6 @@
 import { Config, ConfigSchema } from './schema';
-import { findRepeatedUnits, validateCopies } from './copies-validator';
-import { CopiesError } from './errors';
+import { findRepeatedUnits } from './copies-validator';
+import { outsideSupplyOf } from './outside-supply';
 import { fraction } from '../data-types/fraction';
 import { orderByMachineDependencies } from '../common/order-by-machine-dependencies';
 
@@ -121,25 +121,41 @@ function analyze(config: Config): Analysis {
         if (!ids.machines.has(drill.target.id)) refuse('invalid-references', `Missing drill target ${drill.target.id}.`);
         join(keyOf('drill', drill.id), keyOf('machine', drill.target.id));
     });
+    // Outside supply (outside-supply.ts) is supply from outside the copies: its inserters and their chests are left out of
+    // the one copy, and the belt counts as supplied, as its lanes state. So is a chest nothing refers to. A chest something
+    // drops into (an inserter, a machine that places its results, a drill) is part of the build's flow, and an inserter from
+    // it is not left out.
+    const supply = outsideSupplyOf(config);
+    // a buffer chest alone in its subsystem, that such inserters alone take from, or that nothing refers to
+    const outsideChest = (nodes: Set<string>): boolean => nodes.size === 1
+        && [...nodes].every(key => key.startsWith('chest:') && supply.chests.has(Number(key.slice('chest:'.length))));
     const groups = new Map<string, Set<string>>();
     for (const key of parent.keys()) {
         const root = find(key);
         if (!groups.has(root)) groups.set(root, new Set());
         groups.get(root)!.add(key);
     }
-    const components: Component[] = [...groups.values()].map(nodes => {
+    const components: Component[] = [...groups.values()].flatMap(nodes => {
         const machines = config.machines.filter(row => nodes.has(keyOf('machine', row.id)));
-        if (machines.length === 0) refuse('unassigned-entities', 'A buffer chest or drill belongs to a subsystem without a machine.');
-        return { nodes, inserters: [], minimumMachine: Math.min(...machines.map(row => row.id)) };
+        if (machines.length === 0) {
+            if (outsideChest(nodes)) return [];
+            refuse('unassigned-entities', 'A buffer chest or drill belongs to a subsystem without a machine.');
+        }
+        return [{ nodes, inserters: [], minimumMachine: Math.min(...machines.map(row => row.id)) }];
     });
     const componentOf = new Map<string, number>();
     components.forEach((component, index) => component.nodes.forEach(key => componentOf.set(key, index)));
     const users = new Map<string, Set<number>>();
     config.belts.forEach(row => users.set(keyOf('belt', row.id), new Set()));
     config.chests?.filter(row => row.type === 'infinity-chest').forEach(row => users.set(keyOf('chest', row.id), new Set()));
+    const outside = new Set<number>();
     config.inserters.forEach((ins, index) => {
         const ends = [ins.source, ins.sink];
         const touching = ends.map(end => componentOf.get(keyOf(end.type, end.id))).filter((it): it is number => it !== undefined);
+        if (touching.length === 0 && supply.inserters.has(index)) {
+            outside.add(index);
+            return;
+        }
         if (touching.length === 0) refuse('unassigned-entities', 'An inserter belongs to a subsystem without a machine.');
         const component = touching[0];
         if (touching.some(it => it !== component)) throw new Error('Incomplete component union');
@@ -150,11 +166,15 @@ function analyze(config: Config): Analysis {
         }
     });
     for (const [key, usedBy] of users) {
+        // an infinity chest no copy uses: nothing drops into it here (an inserter that did belongs to a copy, or is refused
+        // above), so it is supply from outside or nothing at all, and is left out
+        if (usedBy.size === 0 && key.startsWith('chest:')) continue;
         if (usedBy.size === 0) refuse('unassigned-entities', 'An unreferenced belt or infinity chest cannot be assigned to a complete copy.');
         if (key.startsWith('belt:')) {
             const belt = config.belts[ids.belts.get(Number(key.slice(5)))!];
             if (belt.strategy === 'export') refuse('unsupported-boundary', 'Export belts have fixed external demand and cannot be converted automatically.');
-            if (usedBy.size > 1 && config.inserters.some(ins => ins.sink.type === 'belt' && ins.sink.id === belt.id && ins.sink.drop !== undefined)) {
+            if (usedBy.size > 1 && config.inserters.some((ins, index) => !outside.has(index)
+                && ins.sink.type === 'belt' && ins.sink.id === belt.id && ins.sink.drop !== undefined)) {
                 refuse('unsupported-boundary', 'A shared belt has coupled drop coordinates. Select one complete copy in Factorio.');
             }
         }
@@ -162,11 +182,12 @@ function analyze(config: Config): Analysis {
     return { rows, ids, components, componentOf, users };
 }
 
-type Place = { x: number; y: number } | undefined;
+/** Where a member of a copy stands, with its kind: a machine, chest or drill, or an inserter */
+type Place = { kind: NodeKind | 'inserter'; at: { x: number; y: number } | undefined };
 
 /**
  * The witness explicitly labels every local member and every private resource alias. Where the members stand is no part of
- * it (copies stand apart); it comes back beside it, in the order of the witness, for the gap between copies.
+ * it (copies stand apart); it comes back beside it, with each member's kind, for the gap between copies.
  */
 function witness(config: Config, analysis: Analysis, component: Component): { proof: unknown; places: Place[] } {
     const local = new Map<string, string>();
@@ -187,7 +208,8 @@ function witness(config: Config, analysis: Analysis, component: Component): { pr
         const { id: _id, position: _position, ...rest } = row as Row & { position?: { x: number; y: number } };
         return { ownIdPresent: own(row, 'id'), record: rest };
     };
-    const placed = (rows: Row[]): void => rows.forEach(row => places.push((row as Row & { position?: { x: number; y: number } }).position));
+    const placed = (kind: Place['kind'], rows: Row[]): void =>
+        rows.forEach(row => places.push({ kind, at: (row as Row & { position?: { x: number; y: number } }).position }));
     const end = (endpoint: End): unknown => {
         const key = keyOf(endpoint.type, endpoint.id);
         let label: unknown = local.get(key);
@@ -214,8 +236,8 @@ function witness(config: Config, analysis: Analysis, component: Component): { pr
             const sink = config.inserters[index].sink;
             return keyOf(sink.type, sink.id);
         });
-    placed(machines); placed(chests); placed(drills);
-    placed(executionOrder.map(index => config.inserters[index]));
+    placed('machine', machines); placed('chest', chests); placed('drill', drills);
+    placed('inserter', executionOrder.map(index => config.inserters[index]));
     const inserters = executionOrder.map(index => {
         const ins = config.inserters[index];
         return withoutId({ ...ins, source: end(ins.source), sink: end(ins.sink) } as Row);
@@ -245,24 +267,28 @@ function equalWitness(a: unknown, b: unknown): boolean {
 const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
 
 /**
- * Where the next copy stands from the one before it: the same step from every member of a unit to its counterpart in the
- * next, for every unit of every group. None when a member has no place or the steps differ.
+ * Where the next copy stands from the one before it: the same step from every member of a copy to its counterpart in the
+ * next. The members of a copy, from every unit of every group, are paired by kind and then by place (x, then y), not by the
+ * order they are listed in: a copy moved along keeps that order, so a copy listed in another order (one that is symmetric
+ * inside, listed from the other side) still pairs. None when a member has no place or the steps differ, as between copies
+ * mirrored against each other.
  */
 function copyOffsetOf(groups: Iterable<{ places: Place[] }[]>, multiplicity: number): { x: number; y: number } | undefined {
-    let offset: { x: number; y: number } | undefined;
+    const copies: Place[][] = Array.from({ length: multiplicity }, () => []);
     for (const group of groups) {
         const step = group.length / multiplicity;
-        for (let unit = 0; unit < step; unit++) {
-            for (let copy = 1; copy < multiplicity; copy++) {
-                const before = group[unit + (copy - 1) * step].places, after = group[unit + copy * step].places;
-                for (let member = 0; member < before.length; member++) {
-                    const a = before[member], b = after[member];
-                    if (a === undefined || b === undefined) return undefined;
-                    const moved = { x: Number((b.x - a.x).toFixed(6)), y: Number((b.y - a.y).toFixed(6)) };
-                    if (offset === undefined) offset = moved;
-                    else if (offset.x !== moved.x || offset.y !== moved.y) return undefined;
-                }
-            }
+        group.forEach((unit, index) => copies[Math.floor(index / step)].push(...unit.places));
+    }
+    if (copies.some(copy => copy.some(member => member.at === undefined))) return undefined;
+    const sorted = copies.map(copy => [...copy].sort((a, b) => a.kind.localeCompare(b.kind) || a.at!.x - b.at!.x || a.at!.y - b.at!.y));
+    let offset: { x: number; y: number } | undefined;
+    for (let copy = 1; copy < multiplicity; copy++) {
+        const before = sorted[copy - 1], after = sorted[copy];
+        for (let member = 0; member < before.length; member++) {
+            const a = before[member].at!, b = after[member].at!;
+            const moved = { x: Number((b.x - a.x).toFixed(6)), y: Number((b.y - a.y).toFixed(6)) };
+            if (offset === undefined) offset = moved;
+            else if (offset.x !== moved.x || offset.y !== moved.y) return undefined;
         }
     }
     return offset !== undefined && (offset.x !== 0 || offset.y !== 0) ? offset : undefined;
@@ -353,14 +379,16 @@ export function planRepeatedUnitConversion(config: Config): RepeatedUnitConversi
         });
         const copies = multipliedCopies(config.setpoint.copies, multiplicity);
         candidate.setpoint.copies = copies;
-        // where the next copy stands, read from the places of the copies; a config that had copies already says nothing of it
+        // where the next copy stands, read from the places of the copies; a config that had copies already says nothing of it.
+        // A stated copy_offset (pasted from the export) may be the gap of other copies than the ones found here, so it is
+        // kept only where the copies found stand that far apart, which is the gap read here: one they do not agree with is
+        // replaced by it, and one they cannot confirm (a member without a place, copies mirrored) is left out
         const offset = config.setpoint.copies === 1 ? copyOffsetOf(groups.values(), multiplicity) : undefined;
         delete candidate.setpoint.copy_offset;
         if (offset !== undefined) candidate.setpoint.copy_offset = offset;
         if (!ConfigSchema.safeParse(candidate).success) refuse('copies-not-representable', 'The multiplied Copies value is outside the supported schema.');
         analyze(candidate);
-        try { validateCopies(candidate); } catch (error) {
-            if (!(error instanceof CopiesError)) throw error;
+        if (findRepeatedUnits(candidate).gcd > 1) {
             refuse('candidate-still-repeated', 'The retained composition still contains repetition under the existing Copies check.');
         }
         return { kind: 'available', sourceConfigKey: JSON.stringify(config), multiplicity,

@@ -20,6 +20,8 @@ const WHY_SKIPPED = !FACTORIO ? "FACTORIO_PATH is not set to a Factorio executab
     : null;
 
 const SCAFFOLD = path.join(SAMPLE_BUILDS_DIR, "science", "automation", "automation-240.scaffold");
+/** The scaffold is abucnasty's build of nine copies of the config: the harness wires the clock to each */
+const COPIES = 9;
 /** Several window cycles of automation science after the warmup and settling */
 const RECORDED_TICKS = 7_200;
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
@@ -56,7 +58,8 @@ describe("the harness wires the clock to the build", () => {
         const selected = alternatives[selected_index];
         const subtick = selected.result.subtick;
         const window_cycle_ticks = subtick?.clock.window_cycle_ticks ?? selected.result.simulation_duration.ticks;
-        const expected = Math.round(config.setpoint.items_per_second / config.setpoint.copies * window_cycle_ticks / 60 * 1e6) / 1e6;
+        // what the nine copies move together: one copy's share of the target, as many times
+        const expected = Math.round(config.setpoint.items_per_second / config.setpoint.copies * COPIES * window_cycle_ticks / 60 * 1e6) / 1e6;
         // the clock with its schedule as the generator made it, which the harness wires without reading descriptions
         const exported = subtick ?? selected.result;
         const result = await recordInFactorio({
@@ -66,10 +69,13 @@ describe("the harness wires the clock to the build", () => {
             out: path.join(scratch, "automation-science-base-conditions.json"),
             ticks: RECORDED_TICKS,
             warmup_ticks: 3600,
-            settle_ticks: 1200,
+            // the nine copies come to their share on the new clock only after about 10,000 ticks (the scaffold-recordings
+            // probe finds steady state 10,244 ticks into its settle)
+            settle_ticks: 10_800,
             seed: [],
             clock: { blueprint: encodeBlueprintFile({ blueprint: exported.blueprint }), schedule: exported.schedule },
             config,
+            copies: COPIES,
             unclocked: false,
             game_speed: 1000,
             watch: false,

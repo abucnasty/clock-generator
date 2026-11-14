@@ -23,7 +23,7 @@ beforeAll(async () => {
 /** An alternative as the generator makes it, with the fields the properties read, and every property true of it */
 const made = (override: Record<string, any> = {}): any => {
     const alternative: any = {
-        id: 'time_division_windows', maker: 'even-hands', verdict: 'stable', deciders: 2,
+        id: 'time_division_windows', maker: 'even-hands', verdict: 'stable', deciders: 2, deadlock_risks: [],
         assessment: { holds: true, disturbance_trial: { survives: true }, wake_ups_per_minute: 3, signals_per_minute: 4 }, ranking: { meets_target_rate: true },
         strategy: { id: 'time_division_windows', tuning_method: 'calculated', settings: { output_count: { kind: 'output_swings', count: 2 }, window_cycle: [], belt_pickups: [] }, output_swings: 2, routing: { router: 'direct' } },
         result: {
@@ -118,11 +118,30 @@ describe('the property module', () => {
             expect(problem.message).toBe('verdict stable against survives false: stable only when it is not unstable and survives');
         });
 
+        it('stable-holds-and-survives-loss: a clock that holds on one copy and misses its rate with the copies gets the disturbance trials, and no problem', () => {
+            const report = check(made({ verdict: 'unstable', 'assessment.shared_lane_losses': [{ copy: 2 }], 'ranking.meets_target_rate': false }));
+            expect(report.problems).toEqual([]);
+        });
+
+        it('stable-holds-and-survives-loss: a clock that holds on one copy and gets no disturbance trial', () => {
+            const problem = only(check(made({ verdict: 'unstable', 'assessment.disturbance_trial': null, 'ranking.meets_target_rate': false })));
+            expect(problem).toEqual({ property: 'stable-holds-and-survives-loss', alternative: 'time_division_windows',
+                message: 'holds true and disturbance_trial not tried: a clock gets the disturbance trials exactly when one copy alone holds its rate' });
+        });
+
         it('stable-holds-and-survives-loss: a clock that does not hold is tried for the loss, and one that meets the target rate is not stable', () => {
             const unstable = check(made({ verdict: 'unstable', 'assessment.holds': false, 'ranking.meets_target_rate': false }));
-            expect(unstable.problems.map(it => it.message)).toEqual([expect.stringContaining('verdict unstable and disturbance_trial tried')]);
+            expect(unstable.problems.map(it => it.message)).toEqual(['holds false and disturbance_trial tried: a clock gets the disturbance trials exactly when one copy alone holds its rate']);
             const recovery = check(made({ verdict: 'no recovery', 'assessment.disturbance_trial': { survives: false } }));
-            expect(recovery.problems.map(it => it.message)).toEqual(['meets the target rate with verdict no recovery']);
+            expect(recovery.problems.map(it => it.message)).toEqual(['meets the setpoint with verdict no recovery and 0 deadlock risks: a clock that meets the setpoint is stable, or not unstable on a build with a deadlock risk']);
+        });
+
+        it('stable-holds-and-survives-loss: on a build with a deadlock risk a clock that meets the setpoint need only not be unstable', () => {
+            const risk = [{ item: 'iron-plate' }];
+            const recovery = check(made({ verdict: 'no recovery', 'assessment.disturbance_trial': { survives: false }, deadlock_risks: risk }));
+            expect(recovery.problems).toEqual([]);
+            const unstable = check(made({ verdict: 'unstable', 'assessment.disturbance_trial': { survives: false }, deadlock_risks: risk }));
+            expect(unstable.problems.map(it => it.message)).toEqual(['meets the setpoint with verdict unstable and 1 deadlock risks: a clock that meets the setpoint is stable, or not unstable on a build with a deadlock risk']);
         });
 
         it('counters-add-up: input and output wake-ups that are not the inserter\'s wake-ups', () => {

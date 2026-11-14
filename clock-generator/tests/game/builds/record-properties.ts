@@ -111,22 +111,25 @@ function deciderOrder(registry: ReturnType<typeof createEntityRegistryFromConfig
 
 /**
  * What the generator calls stable is a clock that holds its expected output and gets back to it after every loss: its verdict is
- * stable only when it survives, every clock that holds is tried for the loss and no other, and a clock that meets the target rate is
- * a stable one.
+ * stable only when it survives, a clock gets the disturbance trials exactly when one copy alone holds its rate (`holds`, also where all
+ * the copies together miss it), and a clock that meets the setpoint is a stable one, or on a build with a deadlock risk one that is not
+ * unstable.
  */
 function stableMeans(alternative: Alternative): string[] {
     const problems: string[] = [];
     const { verdict, assessment, ranking } = alternative;
     const tried = assessment.disturbance_trial !== null;
-    if (tried !== (verdict !== 'unstable')) {
-        problems.push(`verdict ${verdict} and disturbance_trial ${tried ? 'tried' : 'not tried'}: a clock is tried for the loss when it is not unstable, and not otherwise`);
+    if (tried !== assessment.holds) {
+        problems.push(`holds ${assessment.holds} and disturbance_trial ${tried ? 'tried' : 'not tried'}: a clock gets the disturbance trials exactly when one copy alone holds its rate`);
     }
     const survives = verdict !== 'unstable' && assessment.disturbance_trial?.survives === true;
     if ((verdict === 'stable') !== survives) {
         problems.push(`verdict ${verdict} against survives ${assessment.disturbance_trial?.survives}: stable only when it is not unstable and survives`);
     }
-    if (ranking.meets_target_rate && verdict !== 'stable') {
-        problems.push(`meets the target rate with verdict ${verdict}`);
+    // the ranking's own rule (`counts_as_holding`, rank.ts): on a build with a deadlock risk the disturbance trials do not decide
+    const risks = alternative.deadlock_risks.length;
+    if (ranking.meets_target_rate && (risks > 0 ? verdict === 'unstable' : verdict !== 'stable')) {
+        problems.push(`meets the setpoint with verdict ${verdict} and ${risks} deadlock risks: a clock that meets the setpoint is stable, or not unstable on a build with a deadlock risk`);
     }
     return problems;
 }

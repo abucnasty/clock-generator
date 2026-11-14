@@ -38950,7 +38950,9 @@
       "vector_to_place_result": [
         0,
         -1.85
-      ]
+      ],
+      "tile_width": 3,
+      "tile_height": 3
     },
     "burner-mining-drill": {
       "name": "burner-mining-drill",
@@ -38993,7 +38995,9 @@
       "vector_to_place_result": [
         -0.35,
         -1.3
-      ]
+      ],
+      "tile_width": 2,
+      "tile_height": 2
     },
     "pumpjack": {
       "name": "pumpjack",
@@ -39021,7 +39025,9 @@
       "vector_to_place_result": [
         0,
         0
-      ]
+      ],
+      "tile_width": 3,
+      "tile_height": 3
     },
     "big-mining-drill": {
       "name": "big-mining-drill",
@@ -39045,7 +39051,9 @@
       "vector_to_place_result": [
         0,
         -2.85
-      ]
+      ],
+      "tile_width": 5,
+      "tile_height": 5
     }
   },
   "resource": {
@@ -41616,6 +41624,8 @@
       ],
       "burner_fuel_categories": [],
       "crafting_speed": 0.5,
+      "tile_width": 3,
+      "tile_height": 3,
       "minable": {
         "mining_time": 0.2,
         "result": "assembling-machine-1"
@@ -41649,6 +41659,8 @@
       ],
       "burner_fuel_categories": [],
       "crafting_speed": 0.75,
+      "tile_width": 3,
+      "tile_height": 3,
       "minable": {
         "mining_time": 0.2,
         "result": "assembling-machine-2"
@@ -41680,6 +41692,8 @@
       ],
       "burner_fuel_categories": [],
       "crafting_speed": 1.25,
+      "tile_width": 3,
+      "tile_height": 3,
       "minable": {
         "mining_time": 0.2,
         "result": "assembling-machine-3"
@@ -41709,6 +41723,8 @@
       ],
       "burner_fuel_categories": [],
       "crafting_speed": 1,
+      "tile_width": 5,
+      "tile_height": 5,
       "minable": {
         "mining_time": 0.2,
         "result": "oil-refinery"
@@ -41737,6 +41753,8 @@
       ],
       "burner_fuel_categories": [],
       "crafting_speed": 1,
+      "tile_width": 3,
+      "tile_height": 3,
       "minable": {
         "mining_time": 0.1,
         "result": "chemical-plant"
@@ -41766,6 +41784,8 @@
       ],
       "burner_fuel_categories": [],
       "crafting_speed": 1,
+      "tile_width": 3,
+      "tile_height": 3,
       "minable": {
         "mining_time": 0.1,
         "result": "centrifuge"
@@ -41797,6 +41817,8 @@
         "nutrients"
       ],
       "crafting_speed": 2,
+      "tile_width": 3,
+      "tile_height": 3,
       "minable": {
         "mining_time": 0.1,
         "result": "biochamber"
@@ -41851,6 +41873,8 @@
       ],
       "burner_fuel_categories": [],
       "crafting_speed": 1,
+      "tile_width": 2,
+      "tile_height": 3,
       "minable": {
         "mining_time": 0.2,
         "result": "crusher"
@@ -41880,6 +41904,8 @@
       ],
       "burner_fuel_categories": [],
       "crafting_speed": 4,
+      "tile_width": 5,
+      "tile_height": 5,
       "minable": {
         "mining_time": 0.2,
         "result": "foundry"
@@ -41916,6 +41942,8 @@
         "food"
       ],
       "crafting_speed": 1,
+      "tile_width": 5,
+      "tile_height": 5,
       "allowed_effects": [],
       "module_slots": 0,
       "energy_source": {
@@ -41956,6 +41984,8 @@
       ],
       "burner_fuel_categories": [],
       "crafting_speed": 2,
+      "tile_width": 4,
+      "tile_height": 4,
       "minable": {
         "mining_time": 0.1,
         "result": "electromagnetic-plant"
@@ -41990,6 +42020,8 @@
       ],
       "burner_fuel_categories": [],
       "crafting_speed": 2,
+      "tile_width": 5,
+      "tile_height": 5,
       "minable": {
         "mining_time": 0.2,
         "result": "cryogenic-plant"
@@ -42021,6 +42053,8 @@
         "chemical"
       ],
       "crafting_speed": 1,
+      "tile_width": 2,
+      "tile_height": 2,
       "minable": {
         "mining_time": 0.2,
         "result": "stone-furnace"
@@ -42081,6 +42115,8 @@
       ],
       "burner_fuel_categories": [],
       "crafting_speed": 2,
+      "tile_width": 3,
+      "tile_height": 3,
       "minable": {
         "mining_time": 0.2,
         "result": "electric-furnace"
@@ -42112,6 +42148,8 @@
         "chemical"
       ],
       "crafting_speed": 2,
+      "tile_width": 2,
+      "tile_height": 2,
       "minable": {
         "mining_time": 0.2,
         "result": "steel-furnace"
@@ -42172,6 +42210,8 @@
         -0.35,
         -2.3
       ],
+      "tile_width": 2,
+      "tile_height": 4,
       "minable": {
         "mining_time": 0.2,
         "result": "recycler"

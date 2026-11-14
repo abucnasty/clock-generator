@@ -31,19 +31,19 @@ describe("the period estimated from the settings", () => {
 
 describe("the note under the gap between copies", () => {
     it("says the hands fit, and the other spacings that would, with the copies 12 tiles apart", async () => {
-        expect(dropRoomNote(await grenade())).toBe(`${LEAD} fit between each other on belt 1, if the inserters of a copy start together. `
+        expect(dropRoomNote(await grenade())).toBe(`${LEAD} fit between each other on the grenade belt (belt 1), if the inserters of a copy start together. `
             + "They would also fit with the copies 16, 18, 20, 22 or 24 tiles apart, and at any of these plus 14."
             + " This assumes every copy drops onto the belt the way this one does.");
     });
 
     it("says the hands land on each other with the copies 13 tiles apart, and what would fit", async () => {
-        expect(dropRoomNote(await grenade(at(13)))).toBe(`${LEAD} land on each other on belt 1, if the inserters of a copy start together, and some of them wait for room. `
+        expect(dropRoomNote(await grenade(at(13)))).toBe(`${LEAD} land on each other on the grenade belt (belt 1), if the inserters of a copy start together, and some of them wait for room. `
             + "They would fit with the copies 12, 16, 18, 20, 22 or 24 tiles apart, or 13 tiles apart with the inserters of a copy 7 tiles apart, and at any of these plus 14."
             + " This assumes every copy drops onto the belt the way this one does.");
     });
 
     it("lists spacings only, where no distance between a copy's inserters helps", async () => {
-        expect(dropRoomNote(await grenade(at(14)))).toBe(`${LEAD} land on each other on belt 1, if the inserters of a copy start together, and some of them wait for room. `
+        expect(dropRoomNote(await grenade(at(14)))).toBe(`${LEAD} land on each other on the grenade belt (belt 1), if the inserters of a copy start together, and some of them wait for room. `
             + "They would fit with the copies 12, 16, 18, 20, 22 or 24 tiles apart, and at any of these plus 14."
             + " This assumes every copy drops onto the belt the way this one does.");
     });
@@ -80,7 +80,7 @@ describe("the note under the gap between copies", () => {
         });
         const UNCHECKED = "Drops that are side-loaded or go through a splitter are not checked here.";
         // inserters 2 and 8 side-load: 7 hands of inserters 1 and 7 each on 14 tiles fit at 12, and at 13 as well, where the pair no longer collides
-        expect(dropRoomNote(await grenade(mark(2, 8)))).toMatch(/fit between each other on belt 1, if the inserters of a copy start together\./);
+        expect(dropRoomNote(await grenade(mark(2, 8)))).toMatch(/fit between each other on the grenade belt \(belt 1\), if the inserters of a copy start together\./);
         expect(dropRoomNote(await grenade(mark(2, 8)))!.endsWith(` This assumes every copy drops onto the belt the way this one does. ${UNCHECKED}`)).toBe(true);
         expect(dropRoomNote(await grenade())).not.toContain(UNCHECKED);
         // all marked: the note says only what is not covered

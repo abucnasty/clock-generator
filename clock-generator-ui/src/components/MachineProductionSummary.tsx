@@ -4,6 +4,7 @@ import type { MachineTargetRate, SerializableMachineFacts } from 'clock-generato
 import { useGameNames } from '../hooks/useGameNames';
 import { formatNumberText } from '../utils/numberText';
 import { FactorioIcon } from './FactorioIcon';
+import { nameInSentence } from '../utils/entityLabel';
 
 /** Capacity or steady-state demand, always per machine in one copy of the build. */
 export function MachineProductionSummary({ facts, targetRate, atTarget = false }: { facts: SerializableMachineFacts; targetRate?: MachineTargetRate; atTarget?: boolean }) {
@@ -59,7 +60,7 @@ export function MachineProductionSummary({ facts, targetRate, atTarget = false }
             </Box>
         </Box>
         {targetRatesUnavailable && <Typography component="span" variant="caption" color="text.secondary">Rate at the setpoint unavailable</Typography>}
-        {facts.fuel && <Tooltip title={`Consumes ${itemLabel(facts.fuel.item_name)} as fuel: ${formatNumberText(facts.fuel.consumption_rate_per_second * share)}/s ${fuelTiming} (${formatNumberText(facts.fuel.amount_per_craft)} per craft).`} arrow>
+        {facts.fuel && <Tooltip title={`Consumes ${nameInSentence(itemLabel(facts.fuel.item_name))} as fuel: ${formatNumberText(facts.fuel.consumption_rate_per_second * share)}/s ${fuelTiming} (${formatNumberText(facts.fuel.amount_per_craft)} per craft).`} arrow>
             <Box component="span" tabIndex={0} role="img" aria-label={`Fuel: ${itemLabel(facts.fuel.item_name)}, ${formatNumberText(facts.fuel.consumption_rate_per_second * share)} per second ${fuelTiming}`} sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, borderLeft: 1, borderColor: 'divider', pl: 0.75, borderRadius: 0.5 }}>
                 <LocalFireDepartmentOutlined aria-hidden sx={{ fontSize: 14 }} />
                 <Typography component="span" variant="caption">Fuel</Typography>

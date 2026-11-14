@@ -13,13 +13,19 @@ import {exhaustiveStartPhases, runAsBuiltCheck} from "./trial";
 import {quiet} from "./generate-blueprint-test-helpers";
 
 const fixture = JSON.parse(readFileSync(path.join(__dirname, "fixtures/imp-sampled-output.json"), "utf8"));
+/** The archived config with the infinite ends of its sulfur and coal lanes stated (belts 1 and 3); the file keeps its archived bytes */
+function archivedConfig(): unknown {
+    const config = structuredClone(fixture.config) as { belts: { id: number; lanes: { lane_end?: { kind: string } }[] }[] };
+    for (const belt of config.belts) if (belt.id === 1 || belt.id === 3) belt.lanes[0].lane_end = { kind: "infinite" };
+    return config;
+}
 const window_cycle_ticks = 96;
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); });
 
 // Synthetic phase measurements exercise the actual exhaustive acceptance/orbit paths. These tick counters and
 // state keys deliberately isolate policy; they are not a native trajectory or a simulator-mechanics calibration.
 async function measuredPhases(stride: number, bins: number[], cap: boolean, asBuilt = false) {
-    const sample = await parseConfig(JSON.stringify(fixture.config));
+    const sample = await parseConfig(JSON.stringify(archivedConfig()));
     const config = {...sample, overrides: {...sample.overrides, lcm: 1, terminal_swing_count: 1}};
     const windows = new Map<string, OpenRange[]>(Object.entries(fixture.clock_windows as Record<string, {start: number; end: number}[]>)
         .map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))]));

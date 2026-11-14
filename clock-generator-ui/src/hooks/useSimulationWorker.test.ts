@@ -108,7 +108,7 @@ function finishGeneration(planner: WorkerTransport) {
 
 function selectionClock(id: string, wakeUps: number): ClockAlternativeView {
     return { id, label: id, verdict: 'stable', ranking: { meets_target_rate: true, rate_off_target: 0,
-        holds_expected_output: true, matches_belt_choice: true, wake_ups_per_minute: wakeUps, window_count: 1 },
+        holds_expected_output: true, wake_ups_per_minute: wakeUps, window_count: 1 },
         assessment: { holds: true, items_per_second: 1, wake_ups_per_minute: wakeUps,
             disturbance_trial: { survives: true, broken_by: [], recovered_after_window_cycles: 1 }, start_dependence: null },
         deadlockRisk: null, beltLabel: '', assumptions: { kickStarts: [], outputDrops: [], machineFuel: [], overrides: undefined },

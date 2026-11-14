@@ -13,7 +13,7 @@ const options = { logger: quiet, factorio_states: false, fuel_consumption_view: 
 /** An alternative with the ranking only, which is all the selection reads */
 const ranked = (id: string, ranking: Partial<ClockRanking> = {}): ClockAlternative => ({
     id,
-    ranking: { meets_target_rate: true, rate_off_target: 0, holds_expected_output: true, matches_belt_choice: true, wake_ups_per_minute: 100, window_count: 10, ...ranking },
+    ranking: { meets_target_rate: true, rate_off_target: 0, holds_expected_output: true, wake_ups_per_minute: 100, window_count: 10, ...ranking },
 }) as unknown as ClockAlternative;
 const run = (alternative: ClockAlternative) => ({ signature: alternative.id, alternatives: [alternative] });
 

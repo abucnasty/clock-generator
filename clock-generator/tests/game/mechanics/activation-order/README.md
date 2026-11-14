@@ -3,11 +3,11 @@
 These bounded Factorio 2.1.21 observations exercise a local scheduler primitive. The replay supplies observed
 notifications and wake/sleep outcomes. It does not derive the factory's hand, machine or circuit behavior.
 
-![Agricultural-science layout](../images/agriculture-science.jpg)
+The agricultural cases were recorded on one copy of the agricultural science build, the sample's scaffold until it moved to
+abucnasty's build of five copies; that copy is kept as the staged-start tests' [fixture](../staged-start/fixtures/agricultural-science-one-copy.scaffold).
 
-The agricultural cases reuse the existing agricultural scaffold and screenshot catalog entry. The low-density
-structure case reuses its existing scaffold with a diagnostic clock: the exact historical clock is unavailable.
-The images show warmed layouts, not the observation state. See the [game evidence guide](../../README.md).
+The low density structure case reuses its existing scaffold with a diagnostic clock: the exact historical clock is
+unavailable. See the [game evidence guide](../../README.md).
 
 | Case | Ticks | Observed behavior |
 | --- | --- | --- |

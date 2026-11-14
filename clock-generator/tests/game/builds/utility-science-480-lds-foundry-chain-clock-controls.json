@@ -4,10 +4,10 @@
   "generated-one-copy": {
    "recorded": {
     "pr": 0,
-    "commit": "038ed41a",
-    "frozen_head": "038ed41a",
-    "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
-    "clock_sha256": "cf0e6cb014231f0c4aa262a80a859f99f0dbe0ffb8649ecb5a1bb8b39304e008",
+    "commit": "02590fdf",
+    "frozen_head": "02590fdf",
+    "note": "recorded under the protocol in game ticks on the engine of this head, with coal on both lanes of the coal belt in the config (the scaffold feeds one); pr is set when it is",
+    "clock_sha256": "53fb2eed02c29f57b296f40fc0e78a929702a1b2bf7c864000342dbdd2669df7",
     "clock_basis": "capture"
    },
    "native": {
@@ -39,44 +39,48 @@
      {
       "kind": "cut coal",
       "start": 10731,
-      "drop": 11679,
-      "release": 11679,
-      "recovered": 16271
+      "drop": 11543,
+      "release": 11543,
+      "recovered": 16439
      },
      {
       "kind": "block output",
-      "start": 16271,
-      "drop": 16363,
-      "release": 16363,
-      "recovered": 21311
+      "start": 16439,
+      "drop": 16531,
+      "release": 16531,
+      "recovered": 21479
      },
      {
       "kind": "cut processing-unit",
-      "start": 21311,
-      "drop": 21403,
-      "release": 21403,
-      "recovered": 25659
+      "start": 21479,
+      "drop": 21571,
+      "release": 21571,
+      "recovered": 26687
      }
     ],
     "stock": {
      "lowest": 0,
-     "end": 192,
+     "end": 240,
      "holds": true
     },
     "result": "holds",
-    "ended": 25659
+    "ended": 26687
    },
    "generation": {
     "period": 168,
     "expected": 384,
     "verdict": "stable",
     "selection": {
-     "id": "round_robin_polling",
+     "id": "coordinated_sources",
      "holds": true,
      "rate": 480,
-     "supply": "moving"
+     "supply": "backed_up"
     },
-    "clock_sha256": "cf0e6cb014231f0c4aa262a80a859f99f0dbe0ffb8649ecb5a1bb8b39304e008"
+    "clock_sha256": "53fb2eed02c29f57b296f40fc0e78a929702a1b2bf7c864000342dbdd2669df7"
+   },
+   "previous": {
+    "id": "round_robin_polling",
+    "clock_sha256": "5f4f37336a3cb5c53ff6e4063dc9f87bf12e997ccf156fd66194be0e95a9fa4f"
    }
   }
  }

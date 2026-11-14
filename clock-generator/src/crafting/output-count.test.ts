@@ -29,7 +29,7 @@ const runAsBuilt = async (output_window_start: number) => {
             })),
         },
     };
-    return generateClockForConfig(clocked, { logger: quiet, verify_as_built: false, fuel_consumption_view: false, modulo_blueprint: false, belt_pickup_slack: "never" });
+    return generateClockForConfig(clocked, { logger: quiet, verify_as_built: false, fuel_consumption_view: false, modulo_blueprint: false });
 };
 
 describe("the output counted in the recorded run", () => {

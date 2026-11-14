@@ -4,7 +4,7 @@ import type { InserterCoverageIssue, InserterFixOption, OutputTransferSummary } 
 import type { BeltFormData, ChestFormData, MachineFormData } from '../hooks/useConfigForm';
 import { MachineIcon } from './MachineIcon';
 import { useGameNames } from '../hooks/useGameNames';
-import { chestLabel, entityLabel } from '../utils/entityLabel';
+import { chestLabel, entityLabel, nameInSentence } from '../utils/entityLabel';
 import { coverageIssueElementId } from '../utils/firstProblem';
 import { EntityBadge } from './EntityBadge';
 import { FactorioIcon } from './FactorioIcon';
@@ -78,7 +78,7 @@ const ConnectionRepairs = memo(function ConnectionRepairs({ issues, onApplyFix, 
     const other = choices.filter(choice => !preferred.includes(choice));
     const receiverRepairs = onEnableRemoval ? directReceiverRemovalOptions(issues, outputTransfers, chests) : [];
     const input = issues[0].kind === 'missing_input_inserter';
-    const itemText = (repair: Repair) => repair.items.map(itemLabel).join(', ');
+    const itemText = (repair: Repair) => repair.items.map(item => nameInSentence(itemLabel(item))).join(', ');
     const detail = (repair: Repair) => repair.fix.type === 'review_filters'
         ? `Filters exclude ${itemText(repair)}`
         : `${repair.fix.type === 'add_lane_to_existing_belt' ? 'Updates the belt' : 'Adds 1 inserter'} · connects ${itemText(repair)}`;

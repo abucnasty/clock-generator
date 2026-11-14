@@ -1,0 +1,2516 @@
+{
+ "sample": "science/electromagnetic/electromagnetic-330.json",
+ "copies": 11,
+ "selected_index": 0,
+ "why_not_stable": null,
+ "lanes": [
+  {
+   "belt_id": 1,
+   "lane": 1,
+   "item": "accumulator",
+   "role": "input",
+   "end": "dead_end",
+   "end_given_by": "lane",
+   "sharing": "shared",
+   "supply_rate": 120,
+   "supply_rate_by_default": true,
+   "capacity": 120
+  },
+  {
+   "belt_id": 1,
+   "lane": 2,
+   "item": "supercapacitor",
+   "role": "input",
+   "end": "dead_end",
+   "end_given_by": "lane",
+   "sharing": "shared",
+   "supply_rate": 120,
+   "supply_rate_by_default": true,
+   "capacity": 120
+  }
+ ],
+ "clocks": [
+  {
+   "id": "takt_batches_observed",
+   "label": "Takt Batches: 3 output swings each output cycle",
+   "verdict": "stable",
+   "window_cycle_ticks": 2112,
+   "copies": 11,
+   "description": "The swing schedule the generator plans for the setpoint. The build is simulated with each inserter waiting on its machine's inventory, and each inserter's enable windows are the ticks it moved items. Swings are grouped into batches that match the output cycle. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": true,
+    "disturbance_trial": {
+     "survives": true,
+     "broken_by": [],
+     "broken_at_other_lane_phases": [],
+     "recovered_after_window_cycles": 2,
+     "on_copies": {
+      "survives": true,
+      "lanes": [
+       "1/1",
+       "1/2"
+      ],
+      "expected_output_items": 1056,
+      "recovered_after_window_cycles": 9
+     }
+    },
+    "items_per_second": 330,
+    "wake_ups_per_minute": 196.1155850307911,
+    "signals_per_minute": 122.78540975840832,
+    "start_dependence": null
+   },
+   "ranking": {
+    "meets_target_rate": true,
+    "recovery_untried": false,
+    "rate_off_target": 0,
+    "holds_expected_output": true,
+    "wake_ups_per_minute": 196.1155850307911,
+    "recovery_window_cycles": 2,
+    "window_count": 72
+   },
+   "strategy": {
+    "id": "takt_batches",
+    "tuning_method": "observed",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 3
+     },
+     "window_cycle": [],
+     "belt_pickups": []
+    },
+    "output_swings": 3,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 3,
+   "inserter_window_count": 72,
+   "terminal_swing_count": 3,
+   "cycle_ticks": 96,
+   "expected_output_items": 1056,
+   "insights": [
+    {
+     "id": "spare-time",
+     "scope": "build",
+     "title": "The electromagnetic plant that makes electromagnetic science pack has 6 ticks to spare each window cycle",
+     "what": "The electromagnetic plant that makes electromagnetic science pack crafts for 2106 of the 2112 ticks in a window cycle (384 crafts of 5.5 ticks) and is stopped for the other 6.",
+     "why": "At the setpoint a machine is not needed the whole time. The ticks left over are the only spare time it has: every tick it waits for an ingredient, or stops because its output has not been taken, comes out of them.",
+     "explanation": "The swings can make the electromagnetic plant that makes electromagnetic science pack wait up to 6 ticks each window cycle. Any more and it cannot catch up, so the build falls behind the target. The less there is to spare, the less room there is to move swings around and the less a late belt pickup is forgiven."
+    },
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The electromagnetic plant that makes electromagnetic science pack takes supercapacitor only while it holds fewer than 14. The inserter that takes accumulator and supercapacitor brings 16 at a time and the window cycle needs 24 hands of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of electromagnetic science pack takes 31.9 ticks to make",
+     "what": "The electromagnetic plant that makes electromagnetic science pack makes 2.75 electromagnetic science pack per craft (productivity included), so the 16 that the inserter (inserter 2) that drops electromagnetic science pack into a chest carries take 5.8 crafts, about 31.9 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 31.9 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "plan-versus-clock",
+     "scope": "clock",
+     "title": "Swings land a few ticks off the plan, as the blueprint runs them",
+     "what": "The plan has the inserter that takes accumulator and supercapacitor drop at ticks 19, 30, 113, 124, 209, 220, 305, 316, 401, 412, 497, 508, 593, 604, 689, 700, 720, 785, 808, 881, 899, 910, 987, 998, 1075, 1086, 1169, 1180, 1265, 1276, 1361, 1372, 1457, 1468, 1553, 1564, 1649, 1660, 1745, 1756, 1776, 1841, 1864, 1937, 1955, 1966, 2043, 2054. Run by the clock alone, as in the game, it drops at ticks 21, 32, 115, 126, 211, 222, 307, 318, 403, 414, 499, 510, 595, 606, 691, 702, 784, 795, 813, 883, 901, 912, 989, 1000, 1077, 1088, 1171, 1182, 1267, 1278, 1363, 1374, 1459, 1470, 1555, 1566, 1651, 1662, 1747, 1758, 1840, 1851, 1869, 1939, 1957, 1968, 2045, 2056. The inserter (inserter 2) that drops electromagnetic science pack into a chest and the inserter (inserter 3) that drops electromagnetic science pack into a chest differ too. The clock still holds its rate.",
+     "why": "The plan lets each inserter wait for its machine. The blueprint has only the clock, which switches inserters on and off. An enable window also stays on 2 ticks after the clock closes it, so an inserter that is back in time can start another swing if a full hand is waiting, and one that finds less keeps what it picked up for a later enable window.",
+     "explanation": "The same number of items moves each window cycle either way, but the swings can bunch together instead of landing one to an enable window. The Timeline tab shows both runs; the clock in the blueprint is the one the blueprint follows."
+    },
+    {
+     "id": "wake-ups",
+     "scope": "clock",
+     "title": "Machines wake the inserters 196.1 times a minute",
+     "what": "In a long run of this clock the machines of one copy of the build woke its inserters 196.1 times a minute. The inserter (inserter 2) that drops electromagnetic science pack into a chest is woken most, 90.4 times a minute: it is on 13.2% of the time and is on and waiting for 2.3% of it.",
+     "why": "An enabled inserter with nothing to move sleeps on the wakeup list of the machine it waits on, and that machine wakes it every time it finishes a craft. The inserter looks for something to move, finds nothing or part of a hand, and sleeps again. An inserter its clock has disabled is on no list and is never woken. In game the debug option show-wakeup-lists draws a line from a waiting inserter to its machine; a line that flickers is this.",
+     "explanation": "Each wakeup is a check that moves little or nothing, so among clocks that hold the target the one with the fewest is the lightest on update time. An inserter that is enabled most of the time is woken at most of the crafts of the machine it waits on, whether its enable windows are long, it is left always enabled in a loop of machines, or the configuration sets it to always enabled."
+    }
+   ],
+   "shared_lane_loss_note": null,
+   "checked_lanes": {
+    "line": {
+     "copies": 11,
+     "plain_output_belts": 0,
+     "output_chests": [
+      {
+       "chest_id": 1,
+       "kind": "infinity-chest",
+       "items": [
+        "electromagnetic-science-pack"
+       ]
+      }
+     ],
+     "output_chests_text": "The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack.",
+     "run_with_copies": true,
+     "every_copy_gets_items": true,
+     "output_belt": null,
+     "sentence": "Checked with all 11 copies on the lanes they share. Every copy gets its items. The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": false
+      },
+      "label": "Holds",
+      "sentence": "Every copy gets its items."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "holds",
+       "not_the_cause": false,
+       "steady_run_only": false
+      },
+      "label": "Holds",
+      "sentence": "Every copy gets its items."
+     }
+    ],
+    "cause": null,
+    "copies_made": {
+     "items_per_second": 330,
+     "window_cycles": 10
+    }
+   }
+  },
+  {
+   "id": "euclidean_swings",
+   "label": "Euclidean Swings: 2 output swings each output cycle",
+   "verdict": "unstable",
+   "window_cycle_ticks": 704,
+   "copies": 11,
+   "description": "Takt Batches with fractional swings turned on: an inserter that needs e.g. 3/2 swings each output cycle alternates between 1 and 2 swings instead of rounding, which can need fewer or shorter enable windows. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": true,
+    "disturbance_trial": {
+     "survives": true,
+     "broken_by": [],
+     "broken_at_other_lane_phases": [],
+     "recovered_after_window_cycles": 1
+    },
+    "items_per_second": 330,
+    "wake_ups_per_minute": 133.14366998577526,
+    "signals_per_minute": 158.74822190611664,
+    "start_dependence": null,
+    "shared_lane_losses": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "accumulator",
+      "copies": 11,
+      "copy": 2,
+      "inserter_id": 1,
+      "items": 2800,
+      "alone_items": 3456,
+      "swings": 175,
+      "alone_swings": 216,
+      "short_swings": 0,
+      "window_cycles": 27,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 2,
+       "kind": "machine",
+       "id": 1,
+       "made": 2802,
+       "target": 3456,
+       "behind": 654
+      },
+      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles."
+     },
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "accumulator",
+      "copies": 11,
+      "copy": 3,
+      "inserter_id": 1,
+      "items": 2800,
+      "alone_items": 3456,
+      "swings": 175,
+      "alone_swings": 216,
+      "short_swings": 0,
+      "window_cycles": 27,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 3,
+       "kind": "machine",
+       "id": 1,
+       "made": 2803,
+       "target": 3456,
+       "behind": 653
+      },
+      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "supercapacitor",
+      "copies": 11,
+      "copy": 2,
+      "inserter_id": 1,
+      "items": 2816,
+      "alone_items": 3456,
+      "swings": 176,
+      "alone_swings": 216,
+      "short_swings": 0,
+      "window_cycles": 27,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 2,
+       "kind": "machine",
+       "id": 1,
+       "made": 2802,
+       "target": 3456,
+       "behind": 654
+      },
+      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 40 of its 216 swings with supercapacitor in 27 window cycles."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "supercapacitor",
+      "copies": 11,
+      "copy": 3,
+      "inserter_id": 1,
+      "items": 2816,
+      "alone_items": 3456,
+      "swings": 176,
+      "alone_swings": 216,
+      "short_swings": 0,
+      "window_cycles": 27,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 3,
+       "kind": "machine",
+       "id": 1,
+       "made": 2803,
+       "target": 3456,
+       "behind": 653
+      },
+      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the belt flows east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 40 of its 216 swings with supercapacitor in 27 window cycles."
+     }
+    ]
+   },
+   "ranking": {
+    "meets_target_rate": false,
+    "recovery_untried": false,
+    "rate_off_target": 0,
+    "holds_expected_output": false,
+    "wake_ups_per_minute": 133.14366998577526,
+    "recovery_window_cycles": 1,
+    "window_count": 31
+   },
+   "strategy": {
+    "id": "euclidean_swings",
+    "tuning_method": "observed",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 2
+     },
+     "window_cycle": [],
+     "belt_pickups": []
+    },
+    "output_swings": 2,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 3,
+   "inserter_window_count": 31,
+   "terminal_swing_count": 2,
+   "cycle_ticks": 64,
+   "expected_output_items": 352,
+   "insights": [
+    {
+     "id": "spare-time",
+     "scope": "build",
+     "title": "The electromagnetic plant that makes electromagnetic science pack has 2 ticks to spare each window cycle",
+     "what": "The electromagnetic plant that makes electromagnetic science pack crafts for 702 of the 704 ticks in a window cycle (128 crafts of 5.5 ticks) and is stopped for the other 2.",
+     "why": "At the setpoint a machine is not needed the whole time. The ticks left over are the only spare time it has: every tick it waits for an ingredient, or stops because its output has not been taken, comes out of them.",
+     "explanation": "The swings can make the electromagnetic plant that makes electromagnetic science pack wait up to 2 ticks each window cycle. Any more and it cannot catch up, so the build falls behind the target. The less there is to spare, the less room there is to move swings around and the less a late belt pickup is forgiven."
+    },
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The electromagnetic plant that makes electromagnetic science pack takes supercapacitor only while it holds fewer than 14. The inserter that takes accumulator and supercapacitor brings 16 at a time and the window cycle needs 8 hands of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of electromagnetic science pack takes 31.9 ticks to make",
+     "what": "The electromagnetic plant that makes electromagnetic science pack makes 2.75 electromagnetic science pack per craft (productivity included), so the 16 that the inserter (inserter 2) that drops electromagnetic science pack into a chest carries take 5.8 crafts, about 31.9 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 31.9 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "wake-ups",
+     "scope": "clock",
+     "title": "Machines wake the inserters 133.1 times a minute",
+     "what": "In a long run of this clock the machines of one copy of the build woke its inserters 133.1 times a minute. The inserter (inserter 3) that drops electromagnetic science pack into a chest is woken most, 56.3 times a minute: it is on 14.1% of the time and is on and waiting for 0% of it.",
+     "why": "An enabled inserter with nothing to move sleeps on the wakeup list of the machine it waits on, and that machine wakes it every time it finishes a craft. The inserter looks for something to move, finds nothing or part of a hand, and sleeps again. An inserter its clock has disabled is on no list and is never woken. In game the debug option show-wakeup-lists draws a line from a waiting inserter to its machine; a line that flickers is this.",
+     "explanation": "Each wakeup is a check that moves little or nothing, so among clocks that hold the target the one with the fewest is the lightest on update time. An inserter that is enabled most of the time is woken at most of the crafts of the machine it waits on, whether its enable windows are long, it is left always enabled in a loop of machines, or the configuration sets it to always enabled."
+    }
+   ],
+   "shared_lane_loss_note": "It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 41 of its 216 swings with accumulator in 27 window cycles.",
+   "checked_lanes": {
+    "line": {
+     "copies": 11,
+     "plain_output_belts": 0,
+     "output_chests": [
+      {
+       "chest_id": 1,
+       "kind": "infinity-chest",
+       "items": [
+        "electromagnetic-science-pack"
+       ]
+      }
+     ],
+     "output_chests_text": "The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack.",
+     "run_with_copies": true,
+     "every_copy_gets_items": false,
+     "output_belt": null,
+     "sentence": "Checked with all 11 copies on the lanes they share. Copies 2 and 3 do not get all their items. The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "short",
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 41,
+         "swings": 216
+        },
+        {
+         "copy": 3,
+         "missed": 41,
+         "swings": 216
+        }
+       ]
+      },
+      "label": "Swings missed on copies 2 and 3",
+      "sentence": "Copies 2 and 3 miss 41 of 216 swings each."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "short",
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 40,
+         "swings": 216
+        },
+        {
+         "copy": 3,
+         "missed": 40,
+         "swings": 216
+        }
+       ]
+      },
+      "label": "Swings missed on copies 2 and 3",
+      "sentence": "Copies 2 and 3 miss 40 of 216 swings each."
+     }
+    ],
+    "cause": {
+     "kind": "lane",
+     "headline": {
+      "text": "Copies 2 and 3 miss 81 of 432 swings each",
+      "data": {
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 81,
+         "swings": 432
+        },
+        {
+         "copy": 3,
+         "missed": 81,
+         "swings": 432
+        }
+       ]
+      }
+     },
+     "cause": {
+      "text": "The gap that copy 1 leaves on the accumulator and supercapacitor lanes reaches copy 2 when its inserter must pick up. The electromagnetic plant of copy 2 that makes electromagnetic science pack has its output full and takes no more items. Each of them shows both. The gap that copy 2 leaves on the accumulator and supercapacitor lanes reaches copy 3 when its inserter must pick up. In 42 of the 81 missed swings, the electromagnetic plant of copy 3 that makes electromagnetic science pack has its output full and takes no more items. 42 of the 81 show both.",
+      "data": {
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 81,
+         "lane_empty": 81,
+         "gap_from_copy_before": 81,
+         "machine_full": 81,
+         "both": 81,
+         "neither": 0,
+         "lane_items": [
+          "supercapacitor",
+          "accumulator"
+         ],
+         "gap_items": [
+          "supercapacitor",
+          "accumulator"
+         ]
+        },
+        {
+         "copy": 3,
+         "missed": 81,
+         "lane_empty": 81,
+         "gap_from_copy_before": 81,
+         "machine_full": 42,
+         "both": 42,
+         "neither": 0,
+         "lane_items": [
+          "supercapacitor",
+          "accumulator"
+         ],
+         "gap_items": [
+          "supercapacitor",
+          "accumulator"
+         ]
+        }
+       ]
+      }
+     },
+     "reason": {
+      "code": "belt_gaps",
+      "data": {
+       "missed": 162,
+       "with_gap": 162
+      }
+     },
+     "spacing": {
+      "text": "The copies stand 10 tiles apart. It takes 80 ticks for items to travel between copies, and the window cycle is 704 ticks. The 11 copies take every supercapacitor and accumulator the two lanes bring, so the gap does not close on the way.",
+      "data": {
+       "step_tiles": 10,
+       "travel_ticks": 80,
+       "window_cycle_ticks": 704,
+       "take_all": true
+      }
+     },
+     "where": {
+      "text": "The inserter of copy 2 that takes accumulator and supercapacitor misses 81 of its 432 swings in 27 window cycles: 41 with accumulator and 40 with supercapacitor. Each swing is a hand of 16. The inserter of copy 3 that takes accumulator and supercapacitor misses 81 of its 432 swings in 27 window cycles: 41 with accumulator and 40 with supercapacitor. Each swing is a hand of 16.",
+      "data": {
+       "takers": [
+        {
+         "copy": 2,
+         "inserter_id": 1,
+         "missed": 81,
+         "swings": 432,
+         "items": [
+          {
+           "item": "accumulator",
+           "missed": 41,
+           "swings": 216
+          },
+          {
+           "item": "supercapacitor",
+           "missed": 40,
+           "swings": 216
+          }
+         ]
+        },
+        {
+         "copy": 3,
+         "inserter_id": 1,
+         "missed": 81,
+         "swings": 432,
+         "items": [
+          {
+           "item": "accumulator",
+           "missed": 41,
+           "swings": 216
+          },
+          {
+           "item": "supercapacitor",
+           "missed": 40,
+           "swings": 216
+          }
+         ]
+        }
+       ]
+      }
+     },
+     "alone": {
+      "text": "The same inserter makes all 432 swings. The clock is right for one copy.",
+      "data": {
+       "makes_all": true,
+       "missed": 0,
+       "swings": 432
+      }
+     },
+     "changes": {
+      "text": "With 9 copies on the accumulator and supercapacitor lanes, every copy makes every swing. Another clock of this build holds with all 11: Takt Batches, window cycle 2,112 ticks.",
+      "data": {
+       "fewer_copies": 9,
+       "other_clock": {
+        "id": "takt_batches_observed",
+        "label": "Takt Batches: 3 output swings each output cycle",
+        "window_cycle_ticks": 2112
+       }
+      }
+     },
+     "swings": {
+      "kind": "lane",
+      "rows": [
+       {
+        "copy": 2,
+        "inserter_id": 1,
+        "items": [
+         "accumulator",
+         "supercapacitor"
+        ],
+        "lanes": [
+         {
+          "belt_id": 1,
+          "lane": 1
+         },
+         {
+          "belt_id": 1,
+          "lane": 2
+         }
+        ],
+        "window_cycles": 27,
+        "swings_per_window_cycle": 16,
+        "missed": [
+         {
+          "window_cycle": 1,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 2,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 3,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 4,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 5,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 6,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 7,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 8,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 9,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 10,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 11,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 12,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 13,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 14,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 15,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 16,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 17,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 18,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 19,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 20,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 21,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 22,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 23,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 24,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 25,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 26,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 27,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         }
+        ]
+       },
+       {
+        "copy": 3,
+        "inserter_id": 1,
+        "items": [
+         "accumulator",
+         "supercapacitor"
+        ],
+        "lanes": [
+         {
+          "belt_id": 1,
+          "lane": 1
+         },
+         {
+          "belt_id": 1,
+          "lane": 2
+         }
+        ],
+        "window_cycles": 27,
+        "swings_per_window_cycle": 16,
+        "missed": [
+         {
+          "window_cycle": 1,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 2,
+          "missed": 3,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 3,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 4,
+          "missed": 3,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 5,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 6,
+          "missed": 3,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 7,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 8,
+          "missed": 3,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 9,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 10,
+          "missed": 3,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 11,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 12,
+          "missed": 3,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 13,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 14,
+          "missed": 3,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 15,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 16,
+          "missed": 3,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 17,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 18,
+          "missed": 3,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 19,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 20,
+          "missed": 3,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 21,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 22,
+          "missed": 3,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 23,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 24,
+          "missed": 3,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 25,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 26,
+          "missed": 3,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 27,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         }
+        ]
+       }
+      ]
+     }
+    },
+    "copies_made": {
+     "items_per_second": 318.585858586,
+     "window_cycles": 27
+    }
+   }
+  },
+  {
+   "id": "takt_batches_observed_swings_4",
+   "label": "Takt Batches: 4 output swings each output cycle",
+   "verdict": "unstable",
+   "window_cycle_ticks": 1408,
+   "copies": 11,
+   "description": "Takt Batches with a longer output cycle: the output inserter takes 4 hands each output cycle instead of 3 while the machine keeps crafting between swings. Batches more swings into fewer, longer enable windows. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. The planning simulation moved 656 of 704 items each window cycle; stability is judged by the clock-only check, which runs the enable windows of the blueprint. In the clock-only check the build repeats every 2 window cycles instead of every window cycle, moving 1232 of 1408 items over them.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": false,
+    "disturbance_trial": null,
+    "items_per_second": 285,
+    "wake_ups_per_minute": null,
+    "signals_per_minute": null,
+    "start_dependence": null
+   },
+   "ranking": {
+    "meets_target_rate": false,
+    "recovery_untried": false,
+    "rate_off_target": -45,
+    "holds_expected_output": false,
+    "wake_ups_per_minute": null,
+    "recovery_window_cycles": null,
+    "window_count": 41
+   },
+   "strategy": {
+    "id": "takt_batches",
+    "tuning_method": "observed",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 4
+     },
+     "window_cycle": [],
+     "belt_pickups": []
+    },
+    "output_swings": 4,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 3,
+   "inserter_window_count": 41,
+   "terminal_swing_count": 4,
+   "cycle_ticks": 128,
+   "expected_output_items": 704,
+   "insights": [
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The electromagnetic plant that makes electromagnetic science pack takes supercapacitor only while it holds fewer than 14. The inserter that takes accumulator and supercapacitor brings 16 at a time and the window cycle needs 16 hands of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of electromagnetic science pack takes 31.9 ticks to make",
+     "what": "The electromagnetic plant that makes electromagnetic science pack makes 2.75 electromagnetic science pack per craft (productivity included), so the 16 that the inserter (inserter 2) that drops electromagnetic science pack into a chest carries take 5.8 crafts, about 31.9 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 31.9 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "unstable",
+     "scope": "clock",
+     "title": "This clock underproduces",
+     "what": "Driven only by its enable windows, the build moved 608 of 704 items in a window cycle. The build repeats every 2 window cycles and moves 1232 of 1408 items over them.",
+     "why": "A clock has to work from wherever the machines happen to be when it starts, so it is simulated from several start points. A swing that arrives while its machine is at an insertion limit, out of ingredients or without a full hand does nothing useful, and once a machine has waited longer than its spare time it cannot catch up.",
+     "explanation": "Use a clock marked Stable. If none is, lower the setpoint, force fewer output swings (which gives the machines more buffer between swings), or yell at abuc to go fix his algorithm by opening an issue on GitHub (https://github.com/abucnasty/clock-generator/issues/new)."
+    }
+   ],
+   "shared_lane_loss_note": null,
+   "checked_lanes": {
+    "line": {
+     "copies": 11,
+     "plain_output_belts": 0,
+     "output_chests": [
+      {
+       "chest_id": 1,
+       "kind": "infinity-chest",
+       "items": [
+        "electromagnetic-science-pack"
+       ]
+      }
+     ],
+     "output_chests_text": "The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack.",
+     "run_with_copies": false,
+     "every_copy_gets_items": null,
+     "output_belt": null,
+     "sentence": "Not run with the copies: the clock does not hold its output on one copy. The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": {
+        "code": "one_copy_does_not_hold"
+       }
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": {
+        "code": "one_copy_does_not_hold"
+       }
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     }
+    ],
+    "cause": null
+   }
+  },
+  {
+   "id": "takt_batches_observed_swings_5",
+   "label": "Takt Batches: 5 output swings each output cycle",
+   "verdict": "unstable",
+   "window_cycle_ticks": 3520,
+   "copies": 11,
+   "description": "Takt Batches with a longer output cycle: the output inserter takes 5 hands each output cycle instead of 3 while the machine keeps crafting between swings. Batches more swings into fewer, longer enable windows. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. The planning simulation moved 1456 of 1760 items each window cycle; stability is judged by the clock-only check, which runs the enable windows of the blueprint.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": false,
+    "disturbance_trial": null,
+    "items_per_second": 264,
+    "wake_ups_per_minute": null,
+    "signals_per_minute": null,
+    "start_dependence": null
+   },
+   "ranking": {
+    "meets_target_rate": false,
+    "recovery_untried": false,
+    "rate_off_target": -66,
+    "holds_expected_output": false,
+    "wake_ups_per_minute": null,
+    "recovery_window_cycles": null,
+    "window_count": 88
+   },
+   "strategy": {
+    "id": "takt_batches",
+    "tuning_method": "observed",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 5
+     },
+     "window_cycle": [],
+     "belt_pickups": []
+    },
+    "output_swings": 5,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 3,
+   "inserter_window_count": 88,
+   "terminal_swing_count": 5,
+   "cycle_ticks": 160,
+   "expected_output_items": 1760,
+   "insights": [
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The electromagnetic plant that makes electromagnetic science pack takes supercapacitor only while it holds fewer than 14. The inserter that takes accumulator and supercapacitor brings 16 at a time and the window cycle needs 40 hands of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of electromagnetic science pack takes 31.9 ticks to make",
+     "what": "The electromagnetic plant that makes electromagnetic science pack makes 2.75 electromagnetic science pack per craft (productivity included), so the 16 that the inserter (inserter 2) that drops electromagnetic science pack into a chest carries take 5.8 crafts, about 31.9 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 31.9 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "unstable",
+     "scope": "clock",
+     "title": "This clock underproduces",
+     "what": "Driven only by its enable windows, the build moved 1408 of 1760 items in a window cycle.",
+     "why": "A clock has to work from wherever the machines happen to be when it starts, so it is simulated from several start points. A swing that arrives while its machine is at an insertion limit, out of ingredients or without a full hand does nothing useful, and once a machine has waited longer than its spare time it cannot catch up.",
+     "explanation": "Use a clock marked Stable. If none is, lower the setpoint, force fewer output swings (which gives the machines more buffer between swings), or yell at abuc to go fix his algorithm by opening an issue on GitHub (https://github.com/abucnasty/clock-generator/issues/new)."
+    }
+   ],
+   "shared_lane_loss_note": null,
+   "checked_lanes": {
+    "line": {
+     "copies": 11,
+     "plain_output_belts": 0,
+     "output_chests": [
+      {
+       "chest_id": 1,
+       "kind": "infinity-chest",
+       "items": [
+        "electromagnetic-science-pack"
+       ]
+      }
+     ],
+     "output_chests_text": "The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack.",
+     "run_with_copies": false,
+     "every_copy_gets_items": null,
+     "output_belt": null,
+     "sentence": "Not run with the copies: the clock does not hold its output on one copy. The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": {
+        "code": "one_copy_does_not_hold"
+       }
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": {
+        "code": "one_copy_does_not_hold"
+       }
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     }
+    ],
+    "cause": null
+   }
+  },
+  {
+   "id": "takt_batches_observed_swings_6",
+   "label": "Takt Batches: 6 output swings each output cycle",
+   "verdict": "unstable",
+   "window_cycle_ticks": 2112,
+   "copies": 11,
+   "description": "Takt Batches with a longer output cycle: the output inserter takes 6 hands each output cycle instead of 3 while the machine keeps crafting between swings. Batches more swings into fewer, longer enable windows. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. The planning simulation moved 976 of 1056 items each window cycle; stability is judged by the clock-only check, which runs the enable windows of the blueprint. In the clock-only check the build repeats every 2 window cycles instead of every window cycle, moving 1936 of 2112 items over them.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": false,
+    "disturbance_trial": null,
+    "items_per_second": 305,
+    "wake_ups_per_minute": null,
+    "signals_per_minute": null,
+    "start_dependence": null
+   },
+   "ranking": {
+    "meets_target_rate": false,
+    "recovery_untried": false,
+    "rate_off_target": -25,
+    "holds_expected_output": false,
+    "wake_ups_per_minute": null,
+    "recovery_window_cycles": null,
+    "window_count": 44
+   },
+   "strategy": {
+    "id": "takt_batches",
+    "tuning_method": "observed",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 6
+     },
+     "window_cycle": [],
+     "belt_pickups": []
+    },
+    "output_swings": 6,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 3,
+   "inserter_window_count": 44,
+   "terminal_swing_count": 6,
+   "cycle_ticks": 192,
+   "expected_output_items": 1056,
+   "insights": [
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The electromagnetic plant that makes electromagnetic science pack takes supercapacitor only while it holds fewer than 14. The inserter that takes accumulator and supercapacitor brings 16 at a time and the window cycle needs 24 hands of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of electromagnetic science pack takes 31.9 ticks to make",
+     "what": "The electromagnetic plant that makes electromagnetic science pack makes 2.75 electromagnetic science pack per craft (productivity included), so the 16 that the inserter (inserter 2) that drops electromagnetic science pack into a chest carries take 5.8 crafts, about 31.9 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 31.9 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "unstable",
+     "scope": "clock",
+     "title": "This clock underproduces",
+     "what": "Driven only by its enable windows, the build moved 976 of 1056 items in a window cycle. The build repeats every 2 window cycles and moves 1936 of 2112 items over them.",
+     "why": "A clock has to work from wherever the machines happen to be when it starts, so it is simulated from several start points. A swing that arrives while its machine is at an insertion limit, out of ingredients or without a full hand does nothing useful, and once a machine has waited longer than its spare time it cannot catch up.",
+     "explanation": "Use a clock marked Stable. If none is, lower the setpoint, force fewer output swings (which gives the machines more buffer between swings), or yell at abuc to go fix his algorithm by opening an issue on GitHub (https://github.com/abucnasty/clock-generator/issues/new)."
+    }
+   ],
+   "shared_lane_loss_note": null,
+   "checked_lanes": {
+    "line": {
+     "copies": 11,
+     "plain_output_belts": 0,
+     "output_chests": [
+      {
+       "chest_id": 1,
+       "kind": "infinity-chest",
+       "items": [
+        "electromagnetic-science-pack"
+       ]
+      }
+     ],
+     "output_chests_text": "The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack.",
+     "run_with_copies": false,
+     "every_copy_gets_items": null,
+     "output_belt": null,
+     "sentence": "Not run with the copies: the clock does not hold its output on one copy. The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": {
+        "code": "one_copy_does_not_hold"
+       }
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": {
+        "code": "one_copy_does_not_hold"
+       }
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     }
+    ],
+    "cause": null
+   }
+  },
+  {
+   "id": "takt_batches_observed_swings_7",
+   "label": "Takt Batches: 7 output swings each output cycle",
+   "verdict": "unstable",
+   "window_cycle_ticks": 4928,
+   "copies": 11,
+   "description": "Takt Batches with a longer output cycle: the output inserter takes 7 hands each output cycle instead of 3 while the machine keeps crafting between swings. Batches more swings into fewer, longer enable windows. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. The planning simulation moved 1936 of 2464 items each window cycle; stability is judged by the clock-only check, which runs the enable windows of the blueprint.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": false,
+    "disturbance_trial": null,
+    "items_per_second": 259.2857142857143,
+    "wake_ups_per_minute": null,
+    "signals_per_minute": null,
+    "start_dependence": null
+   },
+   "ranking": {
+    "meets_target_rate": false,
+    "recovery_untried": false,
+    "rate_off_target": -70.71428571428572,
+    "holds_expected_output": false,
+    "wake_ups_per_minute": null,
+    "recovery_window_cycles": null,
+    "window_count": 88
+   },
+   "strategy": {
+    "id": "takt_batches",
+    "tuning_method": "observed",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 7
+     },
+     "window_cycle": [],
+     "belt_pickups": []
+    },
+    "output_swings": 7,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 3,
+   "inserter_window_count": 88,
+   "terminal_swing_count": 7,
+   "cycle_ticks": 224,
+   "expected_output_items": 2464,
+   "insights": [
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The electromagnetic plant that makes electromagnetic science pack takes supercapacitor only while it holds fewer than 14. The inserter that takes accumulator and supercapacitor brings 16 at a time and the window cycle needs 56 hands of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of electromagnetic science pack takes 31.9 ticks to make",
+     "what": "The electromagnetic plant that makes electromagnetic science pack makes 2.75 electromagnetic science pack per craft (productivity included), so the 16 that the inserter (inserter 2) that drops electromagnetic science pack into a chest carries take 5.8 crafts, about 31.9 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 31.9 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "unstable",
+     "scope": "clock",
+     "title": "This clock underproduces",
+     "what": "Driven only by its enable windows, the build moved 1936 of 2464 items in a window cycle.",
+     "why": "A clock has to work from wherever the machines happen to be when it starts, so it is simulated from several start points. A swing that arrives while its machine is at an insertion limit, out of ingredients or without a full hand does nothing useful, and once a machine has waited longer than its spare time it cannot catch up.",
+     "explanation": "Use a clock marked Stable. If none is, lower the setpoint, force fewer output swings (which gives the machines more buffer between swings), or yell at abuc to go fix his algorithm by opening an issue on GitHub (https://github.com/abucnasty/clock-generator/issues/new)."
+    }
+   ],
+   "shared_lane_loss_note": null,
+   "checked_lanes": {
+    "line": {
+     "copies": 11,
+     "plain_output_belts": 0,
+     "output_chests": [
+      {
+       "chest_id": 1,
+       "kind": "infinity-chest",
+       "items": [
+        "electromagnetic-science-pack"
+       ]
+      }
+     ],
+     "output_chests_text": "The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack.",
+     "run_with_copies": false,
+     "every_copy_gets_items": null,
+     "output_belt": null,
+     "sentence": "Not run with the copies: the clock does not hold its output on one copy. The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": {
+        "code": "one_copy_does_not_hold"
+       }
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": {
+        "code": "one_copy_does_not_hold"
+       }
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     }
+    ],
+    "cause": null
+   }
+  },
+  {
+   "id": "takt_batches_swings_2",
+   "label": "Takt Batches: 2 output swings each output cycle",
+   "verdict": "unstable",
+   "window_cycle_ticks": 704,
+   "copies": 11,
+   "description": "Takt Batches with the output inserter limited to 2 swings each output cycle instead of 3. The output machine buffers more between swings; useful when the higher swing count is unstable. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 38 of its 224 swings with accumulator in 28 window cycles.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": true,
+    "disturbance_trial": {
+     "survives": true,
+     "broken_by": [],
+     "broken_at_other_lane_phases": [],
+     "recovered_after_window_cycles": 4
+    },
+    "items_per_second": 330,
+    "wake_ups_per_minute": 92.17638691322902,
+    "signals_per_minute": 112.66002844950214,
+    "start_dependence": null,
+    "shared_lane_losses": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "accumulator",
+      "copies": 11,
+      "copy": 2,
+      "inserter_id": 1,
+      "items": 2976,
+      "alone_items": 3584,
+      "swings": 186,
+      "alone_swings": 224,
+      "short_swings": 0,
+      "window_cycles": 28,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 2,
+       "kind": "machine",
+       "id": 1,
+       "made": 2984,
+       "target": 3584,
+       "behind": 600
+      },
+      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 38 of its 224 swings with accumulator in 28 window cycles."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "supercapacitor",
+      "copies": 11,
+      "copy": 2,
+      "inserter_id": 1,
+      "items": 2976,
+      "alone_items": 3584,
+      "swings": 186,
+      "alone_swings": 224,
+      "short_swings": 0,
+      "window_cycles": 28,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 2,
+       "kind": "machine",
+       "id": 1,
+       "made": 2984,
+       "target": 3584,
+       "behind": 600
+      },
+      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 38 of its 224 swings with supercapacitor in 28 window cycles."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "supercapacitor",
+      "copies": 11,
+      "copy": 3,
+      "inserter_id": 1,
+      "items": 2976,
+      "alone_items": 3584,
+      "swings": 186,
+      "alone_swings": 224,
+      "short_swings": 0,
+      "window_cycles": 28,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 3,
+       "kind": "machine",
+       "id": 1,
+       "made": 2986,
+       "target": 3584,
+       "behind": 598
+      },
+      "text": "The supercapacitor lane ends in a dead end. The 11 copies take supercapacitor from it. When the belt flows east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 38 of its 224 swings with supercapacitor in 28 window cycles."
+     },
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "lane_end": "dead_end",
+      "run_as": "dead_end",
+      "item": "accumulator",
+      "copies": 11,
+      "copy": 3,
+      "inserter_id": 1,
+      "items": 2992,
+      "alone_items": 3584,
+      "swings": 187,
+      "alone_swings": 224,
+      "short_swings": 0,
+      "window_cycles": 28,
+      "flow": {
+       "x": 1,
+       "y": 0
+      },
+      "behind": {
+       "copy": 3,
+       "kind": "machine",
+       "id": 1,
+       "made": 2986,
+       "target": 3584,
+       "behind": 598
+      },
+      "text": "The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 3 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 37 of its 224 swings with accumulator in 28 window cycles."
+     }
+    ]
+   },
+   "ranking": {
+    "meets_target_rate": false,
+    "recovery_untried": false,
+    "rate_off_target": 0,
+    "holds_expected_output": false,
+    "wake_ups_per_minute": 92.17638691322902,
+    "recovery_window_cycles": 4,
+    "window_count": 33
+   },
+   "strategy": {
+    "id": "takt_batches",
+    "tuning_method": "calculated",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 2
+     },
+     "window_cycle": [],
+     "belt_pickups": []
+    },
+    "output_swings": 2,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 2,
+   "inserter_window_count": 33,
+   "terminal_swing_count": 2,
+   "cycle_ticks": 64,
+   "expected_output_items": 352,
+   "insights": [
+    {
+     "id": "spare-time",
+     "scope": "build",
+     "title": "The electromagnetic plant that makes electromagnetic science pack has 2 ticks to spare each window cycle",
+     "what": "The electromagnetic plant that makes electromagnetic science pack crafts for 702 of the 704 ticks in a window cycle (128 crafts of 5.5 ticks) and is stopped for the other 2.",
+     "why": "At the setpoint a machine is not needed the whole time. The ticks left over are the only spare time it has: every tick it waits for an ingredient, or stops because its output has not been taken, comes out of them.",
+     "explanation": "The swings can make the electromagnetic plant that makes electromagnetic science pack wait up to 2 ticks each window cycle. Any more and it cannot catch up, so the build falls behind the target. The less there is to spare, the less room there is to move swings around and the less a late belt pickup is forgiven."
+    },
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The electromagnetic plant that makes electromagnetic science pack takes supercapacitor only while it holds fewer than 14. The inserter that takes accumulator and supercapacitor brings 16 at a time and the window cycle needs 8 hands of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of electromagnetic science pack takes 31.9 ticks to make",
+     "what": "The electromagnetic plant that makes electromagnetic science pack makes 2.75 electromagnetic science pack per craft (productivity included), so the 16 that the inserter (inserter 2) that drops electromagnetic science pack into a chest carries take 5.8 crafts, about 31.9 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 31.9 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "plan-versus-clock",
+     "scope": "clock",
+     "title": "Swings land a few ticks off the plan, as the blueprint runs them",
+     "what": "The plan has the inserter that takes accumulator and supercapacitor drop at ticks 14, 25, 101, 137, 201, 212, 277, 288, 393, 404, 457, 468, 540, 551, 649, 660. Run by the clock alone, as in the game, it drops at ticks 19, 74, 138, 149, 202, 266, 284, 330, 394, 405, 460, 522, 548, 590, 650, 661. The clock still holds its rate.",
+     "why": "The plan lets each inserter wait for its machine. The blueprint has only the clock, which switches inserters on and off. An enable window also stays on 2 ticks after the clock closes it, so an inserter that is back in time can start another swing if a full hand is waiting, and one that finds less keeps what it picked up for a later enable window.",
+     "explanation": "The same number of items moves each window cycle either way, but the swings can bunch together instead of landing one to an enable window. The Timeline tab shows both runs; the clock in the blueprint is the one the blueprint follows."
+    },
+    {
+     "id": "wake-ups",
+     "scope": "clock",
+     "title": "Machines wake the inserters 92.2 times a minute",
+     "what": "In a long run of this clock the machines of one copy of the build woke its inserters 92.2 times a minute. The inserter (inserter 3) that drops electromagnetic science pack into a chest is woken most, 35.8 times a minute: it is on 13.4% of the time and is on and waiting for 1.6% of it.",
+     "why": "An enabled inserter with nothing to move sleeps on the wakeup list of the machine it waits on, and that machine wakes it every time it finishes a craft. The inserter looks for something to move, finds nothing or part of a hand, and sleeps again. An inserter its clock has disabled is on no list and is never woken. In game the debug option show-wakeup-lists draws a line from a waiting inserter to its machine; a line that flickers is this.",
+     "explanation": "Each wakeup is a check that moves little or nothing, so among clocks that hold the target the one with the fewest is the lightest on update time. An inserter that is enabled most of the time is woken at most of the crafts of the machine it waits on, whether its enable windows are long, it is left always enabled in a loop of machines, or the configuration sets it to always enabled."
+    }
+   ],
+   "shared_lane_loss_note": "It is not stable on a lane its copies share. The accumulator lane ends in a dead end. The 11 copies take accumulator from it. When the belt flows east, copy 2 from the entry does not get sufficient items. Its inserter that takes accumulator and supercapacitor misses 38 of its 224 swings with accumulator in 28 window cycles.",
+   "checked_lanes": {
+    "line": {
+     "copies": 11,
+     "plain_output_belts": 0,
+     "output_chests": [
+      {
+       "chest_id": 1,
+       "kind": "infinity-chest",
+       "items": [
+        "electromagnetic-science-pack"
+       ]
+      }
+     ],
+     "output_chests_text": "The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack.",
+     "run_with_copies": true,
+     "every_copy_gets_items": false,
+     "output_belt": null,
+     "sentence": "Checked with all 11 copies on the lanes they share. Copies 2 and 3 do not get all their items. The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "short",
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 38,
+         "swings": 224
+        },
+        {
+         "copy": 3,
+         "missed": 37,
+         "swings": 224
+        }
+       ]
+      },
+      "label": "Swings missed on copies 2 and 3",
+      "sentence": "Copy 2 misses 38 of 224 swings, and copy 3 misses 37 of 224."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "short",
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 38,
+         "swings": 224
+        },
+        {
+         "copy": 3,
+         "missed": 38,
+         "swings": 224
+        }
+       ]
+      },
+      "label": "Swings missed on copies 2 and 3",
+      "sentence": "Copies 2 and 3 miss 38 of 224 swings each."
+     }
+    ],
+    "cause": {
+     "kind": "lane",
+     "headline": {
+      "text": "Copy 2 misses 76 of 448 swings, and copy 3 misses 75 of 448",
+      "data": {
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 76,
+         "swings": 448
+        },
+        {
+         "copy": 3,
+         "missed": 75,
+         "swings": 448
+        }
+       ]
+      }
+     },
+     "cause": {
+      "text": "The gap that copy 1 leaves on the accumulator and supercapacitor lanes reaches copy 2 when its inserter must pick up. In 45 of the 75 missed swings, the gap that copy 2 leaves on the supercapacitor lane reaches copy 3 when its inserter must pick up. In 57 of the 75 missed swings, the electromagnetic plant of copy 3 that makes electromagnetic science pack has its output full and takes no more items. 27 of the 75 show both.",
+      "data": {
+       "copies": [
+        {
+         "copy": 2,
+         "missed": 76,
+         "lane_empty": 76,
+         "gap_from_copy_before": 76,
+         "machine_full": 0,
+         "both": 0,
+         "neither": 0,
+         "lane_items": [
+          "accumulator",
+          "supercapacitor"
+         ],
+         "gap_items": [
+          "accumulator",
+          "supercapacitor"
+         ]
+        },
+        {
+         "copy": 3,
+         "missed": 75,
+         "lane_empty": 45,
+         "gap_from_copy_before": 45,
+         "machine_full": 57,
+         "both": 27,
+         "neither": 0,
+         "lane_items": [
+          "supercapacitor"
+         ],
+         "gap_items": [
+          "supercapacitor"
+         ]
+        }
+       ]
+      }
+     },
+     "reason": {
+      "code": "belt_gaps",
+      "data": {
+       "missed": 151,
+       "with_gap": 121
+      }
+     },
+     "spacing": {
+      "text": "The copies stand 10 tiles apart. It takes 80 ticks for items to travel between copies, and the window cycle is 704 ticks. The 11 copies take every accumulator and supercapacitor the two lanes bring, so the gap does not close on the way.",
+      "data": {
+       "step_tiles": 10,
+       "travel_ticks": 80,
+       "window_cycle_ticks": 704,
+       "take_all": true
+      }
+     },
+     "where": {
+      "text": "The inserter of copy 2 that takes accumulator and supercapacitor misses 76 of its 448 swings in 28 window cycles: 38 with accumulator and 38 with supercapacitor. Each swing is a hand of 16. The inserter of copy 3 that takes accumulator and supercapacitor misses 75 of its 448 swings in 28 window cycles: 38 with supercapacitor and 37 with accumulator. Each swing is a hand of 16.",
+      "data": {
+       "takers": [
+        {
+         "copy": 2,
+         "inserter_id": 1,
+         "missed": 76,
+         "swings": 448,
+         "items": [
+          {
+           "item": "accumulator",
+           "missed": 38,
+           "swings": 224
+          },
+          {
+           "item": "supercapacitor",
+           "missed": 38,
+           "swings": 224
+          }
+         ]
+        },
+        {
+         "copy": 3,
+         "inserter_id": 1,
+         "missed": 75,
+         "swings": 448,
+         "items": [
+          {
+           "item": "supercapacitor",
+           "missed": 38,
+           "swings": 224
+          },
+          {
+           "item": "accumulator",
+           "missed": 37,
+           "swings": 224
+          }
+         ]
+        }
+       ]
+      }
+     },
+     "alone": {
+      "text": "The same inserter makes all 448 swings. The clock is right for one copy.",
+      "data": {
+       "makes_all": true,
+       "missed": 0,
+       "swings": 448
+      }
+     },
+     "changes": {
+      "text": "With 9 copies on the accumulator and supercapacitor lanes, every copy makes every swing. Another clock of this build holds with all 11: Takt Batches, window cycle 2,112 ticks.",
+      "data": {
+       "fewer_copies": 9,
+       "other_clock": {
+        "id": "takt_batches_observed",
+        "label": "Takt Batches: 3 output swings each output cycle",
+        "window_cycle_ticks": 2112
+       }
+      }
+     },
+     "swings": {
+      "kind": "lane",
+      "rows": [
+       {
+        "copy": 2,
+        "inserter_id": 1,
+        "items": [
+         "accumulator",
+         "supercapacitor"
+        ],
+        "lanes": [
+         {
+          "belt_id": 1,
+          "lane": 1
+         },
+         {
+          "belt_id": 1,
+          "lane": 2
+         }
+        ],
+        "window_cycles": 28,
+        "swings_per_window_cycle": 16,
+        "missed": [
+         {
+          "window_cycle": 1,
+          "missed": 4,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 2,
+          "missed": 2,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 3,
+          "missed": 2,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 4,
+          "missed": 4,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 5,
+          "missed": 2,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 6,
+          "missed": 2,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 7,
+          "missed": 4,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 8,
+          "missed": 2,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 9,
+          "missed": 2,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 10,
+          "missed": 4,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 11,
+          "missed": 2,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 12,
+          "missed": 2,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 13,
+          "missed": 4,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 14,
+          "missed": 2,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 15,
+          "missed": 2,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 16,
+          "missed": 4,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 17,
+          "missed": 2,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 18,
+          "missed": 2,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 19,
+          "missed": 4,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 20,
+          "missed": 2,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 21,
+          "missed": 2,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 22,
+          "missed": 4,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 23,
+          "missed": 2,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 24,
+          "missed": 2,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 25,
+          "missed": 4,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 26,
+          "missed": 2,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 27,
+          "missed": 2,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 28,
+          "missed": 4,
+          "cause": "gap",
+          "lane_empty": true
+         }
+        ]
+       },
+       {
+        "copy": 3,
+        "inserter_id": 1,
+        "items": [
+         "accumulator",
+         "supercapacitor"
+        ],
+        "lanes": [
+         {
+          "belt_id": 1,
+          "lane": 1
+         },
+         {
+          "belt_id": 1,
+          "lane": 2
+         }
+        ],
+        "window_cycles": 28,
+        "swings_per_window_cycle": 16,
+        "missed": [
+         {
+          "window_cycle": 1,
+          "missed": 3,
+          "cause": "full",
+          "lane_empty": false
+         },
+         {
+          "window_cycle": 2,
+          "missed": 2,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 3,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 4,
+          "missed": 3,
+          "cause": "full",
+          "lane_empty": false
+         },
+         {
+          "window_cycle": 5,
+          "missed": 2,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 6,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 7,
+          "missed": 3,
+          "cause": "full",
+          "lane_empty": false
+         },
+         {
+          "window_cycle": 8,
+          "missed": 2,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 9,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 10,
+          "missed": 3,
+          "cause": "full",
+          "lane_empty": false
+         },
+         {
+          "window_cycle": 11,
+          "missed": 2,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 12,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 13,
+          "missed": 3,
+          "cause": "full",
+          "lane_empty": false
+         },
+         {
+          "window_cycle": 14,
+          "missed": 2,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 15,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 16,
+          "missed": 3,
+          "cause": "full",
+          "lane_empty": false
+         },
+         {
+          "window_cycle": 17,
+          "missed": 2,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 18,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 19,
+          "missed": 3,
+          "cause": "full",
+          "lane_empty": false
+         },
+         {
+          "window_cycle": 20,
+          "missed": 2,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 21,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 22,
+          "missed": 3,
+          "cause": "full",
+          "lane_empty": false
+         },
+         {
+          "window_cycle": 23,
+          "missed": 2,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 24,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 25,
+          "missed": 3,
+          "cause": "full",
+          "lane_empty": false
+         },
+         {
+          "window_cycle": 26,
+          "missed": 2,
+          "cause": "gap",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 27,
+          "missed": 3,
+          "cause": "both",
+          "lane_empty": true
+         },
+         {
+          "window_cycle": 28,
+          "missed": 3,
+          "cause": "full",
+          "lane_empty": false
+         }
+        ]
+       }
+      ]
+     }
+    },
+    "copies_made": {
+     "items_per_second": 320.016233766,
+     "window_cycles": 28
+    }
+   }
+  },
+  {
+   "id": "takt_batches_observed_swings_1",
+   "label": "Takt Batches: 1 output swing each output cycle",
+   "verdict": "unstable",
+   "window_cycle_ticks": 704,
+   "copies": 11,
+   "description": "Takt Batches with the output inserter limited to 1 swing each output cycle instead of 3. The output machine buffers more between swings; useful when the higher swing count is unstable. Made for a backed-up belt. Each belt inserter gets the enable windows it needs with backpressure at the pickup. On a moving belt, an inserter can be switched off with a partial hand. In the clock-only check the build repeats every 4 window cycles instead of every window cycle, moving 880 of 1408 items over them.",
+   "belt": {
+    "kind": "backed_up"
+   },
+   "belt_label": "backed-up",
+   "assessment": {
+    "holds": false,
+    "disturbance_trial": null,
+    "items_per_second": 195,
+    "wake_ups_per_minute": null,
+    "signals_per_minute": null,
+    "start_dependence": null
+   },
+   "ranking": {
+    "meets_target_rate": false,
+    "recovery_untried": false,
+    "rate_off_target": -135,
+    "holds_expected_output": false,
+    "wake_ups_per_minute": null,
+    "recovery_window_cycles": null,
+    "window_count": 30
+   },
+   "strategy": {
+    "id": "takt_batches",
+    "tuning_method": "observed",
+    "settings": {
+     "output_count": {
+      "kind": "output_swings",
+      "count": 1
+     },
+     "window_cycle": [],
+     "belt_pickups": []
+    },
+    "output_swings": 1,
+    "routing": {
+     "router": "direct"
+    }
+   },
+   "deciders": 3,
+   "inserter_window_count": 30,
+   "terminal_swing_count": 1,
+   "cycle_ticks": 32,
+   "expected_output_items": 352,
+   "insights": [
+    {
+     "id": "insertion-limits",
+     "scope": "build",
+     "title": "Each machine only takes an ingredient while it is below its insertion limit",
+     "what": "The electromagnetic plant that makes electromagnetic science pack takes supercapacitor only while it holds fewer than 14. The inserter that takes accumulator and supercapacitor brings 16 at a time and the window cycle needs 8 hands of it.",
+     "why": "An inserter puts an item into a machine only while the machine holds less of it than the insertion limit: the amount for one craft times a multiplier that grows with the machine's crafting speed. A hand that starts under the limit goes in whole, even past the limit, but the next hand has to wait until crafting has used enough.",
+     "explanation": "An enable window only does something while its machine is under the limit. An inserter enabled too early waits until enough has been crafted, and its enable window can close before that. An ingredient that needs several hands each window cycle cannot have them back to back once the machine holds the limit or more."
+    },
+    {
+     "id": "output-hand",
+     "scope": "build",
+     "title": "A full hand of electromagnetic science pack takes 31.9 ticks to make",
+     "what": "The electromagnetic plant that makes electromagnetic science pack makes 2.75 electromagnetic science pack per craft (productivity included), so the 16 that the inserter (inserter 2) that drops electromagnetic science pack into a chest carries take 5.8 crafts, about 31.9 ticks.",
+     "why": "A stack inserter leaves with a full hand. If it finds less, it picks up what is there and waits, and when its enable window closes it keeps holding those items until the next enable window.",
+     "explanation": "A swing that comes sooner than 31.9 ticks after the last one finds a partial hand unless the machine had items left over. That is not a problem by itself: the held items leave the machine's output free so it keeps crafting, and the swing completes in a later enable window. It does mean drops need not line up one to one with enable windows."
+    },
+    {
+     "id": "unstable",
+     "scope": "clock",
+     "title": "This clock underproduces",
+     "what": "Driven only by its enable windows, the build moved 208 of 352 items in a window cycle. The build repeats every 4 window cycles and moves 880 of 1408 items over them.",
+     "why": "A clock has to work from wherever the machines happen to be when it starts, so it is simulated from several start points. A swing that arrives while its machine is at an insertion limit, out of ingredients or without a full hand does nothing useful, and once a machine has waited longer than its spare time it cannot catch up.",
+     "explanation": "Use a clock marked Stable. If none is, lower the setpoint, force fewer output swings (which gives the machines more buffer between swings), or yell at abuc to go fix his algorithm by opening an issue on GitHub (https://github.com/abucnasty/clock-generator/issues/new)."
+    }
+   ],
+   "shared_lane_loss_note": null,
+   "checked_lanes": {
+    "line": {
+     "copies": 11,
+     "plain_output_belts": 0,
+     "output_chests": [
+      {
+       "chest_id": 1,
+       "kind": "infinity-chest",
+       "items": [
+        "electromagnetic-science-pack"
+       ]
+      }
+     ],
+     "output_chests_text": "The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack.",
+     "run_with_copies": false,
+     "every_copy_gets_items": null,
+     "output_belt": null,
+     "sentence": "Not run with the copies: the clock does not hold its output on one copy. The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack."
+    },
+    "rows": [
+     {
+      "belt_id": 1,
+      "lane": 1,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        1
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": {
+        "code": "one_copy_does_not_hold"
+       }
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     },
+     {
+      "belt_id": 1,
+      "lane": 2,
+      "together": {
+       "kind": "take",
+       "items_per_second": 120,
+       "lanes": [
+        2
+       ]
+      },
+      "state": {
+       "kind": "not_run",
+       "reason": {
+        "code": "one_copy_does_not_hold"
+       }
+      },
+      "label": "Not run with the copies",
+      "sentence": "The clock does not hold its output on one copy, so the copies are not run."
+     }
+    ],
+    "cause": null
+   }
+  }
+ ]
+}

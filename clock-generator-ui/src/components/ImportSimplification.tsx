@@ -5,7 +5,8 @@ import type { CheckedRepeatedUnitConversion } from '../worker/types';
 import { askEngine } from '../worker/engineClient';
 import { useGameNames } from '../hooks/useGameNames';
 import { importReduction, type ImportReduction } from '../utils/importReduction';
-import { importedAsOneUnitText } from '../utils/pasteText';
+import { IMPORTED_AS_ONE_BUILD, importedAsOneUnitText } from '../utils/pasteText';
+import { nameInSentence } from '../utils/entityLabel';
 
 function Changes({ reduction }: { reduction: ImportReduction }) {
     return <Box component="ul" sx={{ my: 1, pl: 2 }}>
@@ -54,7 +55,7 @@ export function ImportSimplification({ config, applied, onSimplify, onRestore, o
     if (applied) return <Alert severity="success" sx={{ mb: 2 }}>
         <AlertTitle>Simpler build ready to import</AlertTitle>
         <Changes reduction={applied} />
-        <Typography variant="body2">Total output: {applied.target.items_per_second}/s {recipeLabel(applied.target.recipe)} across {applied.copies} copies.</Typography>
+        <Typography variant="body2">Total output: {applied.target.items_per_second}/s {nameInSentence(recipeLabel(applied.target.recipe))} across {applied.copies} copies.</Typography>
         <Button size="small" color="inherit" onClick={onRestore} sx={{ mt: 0.5 }}>Review full pasted build</Button>
     </Alert>;
     const checked = result?.key === key ? result.checked : null;
@@ -64,7 +65,7 @@ export function ImportSimplification({ config, applied, onSimplify, onRestore, o
     if (checked?.kind === 'unavailable' && checked.repeatedGroups > 1) {
         const text = importedAsOneUnitText(checked, config);
         return <Alert severity="info" sx={{ mb: 2 }}>
-            <AlertTitle>Imported as one build</AlertTitle>
+            <AlertTitle>{IMPORTED_AS_ONE_BUILD}</AlertTitle>
             <Typography variant="body2">{text.what}</Typography>
             <Typography variant="body2" sx={{ mt: 0.75 }}>{text.next}</Typography>
         </Alert>;
@@ -77,6 +78,6 @@ export function ImportSimplification({ config, applied, onSimplify, onRestore, o
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, p: 0.5 }}>
             <Button ref={simplifyButton} size="small" variant="contained" color="success" onClick={() => onSimplify(checked.plan)}>Use simpler version</Button>
         </Box>
-        <Typography variant="caption" component="p" sx={{ mt: 0.75, mb: 0 }}>Force importing keeps every pasted entity. Check will still require reducing these repeated groups before generating a clock.</Typography>
+        <Typography variant="caption" component="p" sx={{ mt: 0.75, mb: 0 }}>Force importing keeps every pasted entity, and the clock is made for all of them.</Typography>
     </Alert>;
 }

@@ -5,6 +5,7 @@ import type { BlueprintCopyFailure } from '../hooks/useCopyBlueprint';
 import { useGameNames } from '../hooks/useGameNames';
 import { SETPOINT_HEADING_ID } from '../utils/introCard';
 import { generatedForText, madeAtText } from '../utils/resultsStaleness';
+import { sentenceStart } from '../utils/entityLabel';
 
 /** A failed attempt's exact snapshot; selecting text never writes to the clipboard or pins a clock. */
 export function ManualBlueprintDialog({ failure, onClose }: { failure: BlueprintCopyFailure; onClose: () => void }) {
@@ -38,7 +39,7 @@ export function ManualBlueprintDialog({ failure, onClose }: { failure: Blueprint
             <Typography variant="body2" sx={{ mb: 2 }}>
                 This is the blueprint from the failed copy attempt. Select the string, then copy it using your device's copy command.
             </Typography>
-            {failure.staleFor && <Alert severity="warning" sx={{ mb: 2 }}>This is an old clock. {generatedForText(failure.staleFor, recipeLabel)}, {madeAtText(failure.staleFor.generatedAt)}.</Alert>}
+            {failure.staleFor && <Alert severity="warning" sx={{ mb: 2 }}>This is an old clock. {sentenceStart(generatedForText(failure.staleFor, recipeLabel))}, {madeAtText(failure.staleFor.generatedAt)}.</Alert>}
             {failure.rateWarning && <Alert severity="warning" sx={{ mb: 2 }}>{failure.rateWarning}</Alert>}
             <TextField
                 inputRef={field}

@@ -17,7 +17,7 @@ import { HelpCommand } from './HelpButton';
 import { PanelSection } from './Panel';
 import { ItemSelector } from './ItemSelector';
 import { SortableList } from './SortableList';
-import { entityLabel, settingsSlotId } from '../utils/entityLabel';
+import { entityLabel, nameInSentence, settingsSlotId } from '../utils/entityLabel';
 import { BUTTON_NAMES, SELECT_NAMES } from '../utils/a11yLabels';
 import { useGameNames } from '../hooks/useGameNames';
 import { DRILL_TYPES, entityTypeLabel } from './entityTypes';
@@ -81,7 +81,7 @@ function DrillRow({ drill, index, count, resourceNames, build, getRecipeInfo, ou
                 {outputTransfer?.results.some(result => result.coverage === 'missing') && <Button color="warning" size="small" onClick={() => openTab('Output Routes')}>Output needs a route</Button>}
                 {!outputTransfersLoading && (!outputTransfer || outputTransfer.status === 'unavailable') && <Button color="inherit" size="small" onClick={() => openTab('Output Routes')}>Output routes unavailable</Button>}
             </Box>} tabs={[
-                { label: 'Input Routes', content: <Typography variant="body2">This drill mines {itemLabel(drill.mined_item_name) || 'its selected resource'} from the resource patch. No item input connections are configured.</Typography> },
+                { label: 'Input Routes', content: <Typography variant="body2">This drill mines {(drill.mined_item_name && nameInSentence(itemLabel(drill.mined_item_name))) || 'its selected resource'} from the resource patch. No item input connections are configured.</Typography> },
                 { label: 'Output Routes', content: <OutputTransferPanel summary={outputTransfer} chests={build.chests}
                     fallbackItems={drill.mined_item_name ? [drill.mined_item_name] : []} loading={outputTransfersLoading} /> },
                 { label: 'Machine Facts', content: <Box>

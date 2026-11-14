@@ -43,6 +43,7 @@ export type GlossaryId =
     | 'your-configurations'
     | 'share-link'
     | 'clock'
+    | 'rank'
     | 'blueprint'
     | 'check'
     | 'enable-rule'
@@ -51,13 +52,13 @@ export type GlossaryId =
     | 'supply-stop'
     | 'output-blockage'
     | 'recovery'
-    | 'belt-slack'
     | 'simulator'
     | 'hand'
     | 'lcm'
     | 'setpoint'
     | 'stable'
     | 'steady-state'
+    | 'oscillates'
     | 'signal';
 
 /**
@@ -173,6 +174,11 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
         insteadOf: 'potential clock, alternative, candidate, solution',
     },
     {
+        id: 'rank',
+        term: 'rank',
+        definition: 'The place of a clock in the generator\'s order for a build. Rank 1 is the recommended clock.',
+    },
+    {
         id: 'blueprint',
         term: 'blueprint',
         definition: 'The Factorio string you paste in the game. It holds a clock\'s combinators, not your build.',
@@ -223,13 +229,7 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
         definition: 'In the simulator\'s loss trials, the clock goes back to its rate by itself. The trials are a supply stop '
             + 'and an output blockage. A clock that fails one loss is not tried on the others. '
             + 'This is separate from holding the modeled rate and from checks of other sampled starts.',
-        insteadOf: 'recovers, recover, gets back',
-    },
-    {
-        id: 'belt-slack',
-        term: 'belt slack',
-        definition: 'Extra ticks added to an enable window. A late pickup from a moving belt can then still finish.',
-        insteadOf: 'belt pickup slack, pickup slack, slack on its own',
+        insteadOf: 'gets back',
     },
     {
         id: 'simulator',
@@ -263,6 +263,14 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
         definition: 'The condition after the startup period. The build repeats the same pattern in each window cycle. '
             + 'The output repeats. It is not constant.',
         insteadOf: 'warm, warmed up, settled',
+    },
+    {
+        id: 'oscillates',
+        term: 'Oscillates',
+        definition: 'The status of a clock that makes the setpoint on average, but the output of one or more window cycles is '
+            + 'more than a hand off it. An output that repeats over a few window cycles, each within a hand, is a steady state '
+            + 'and does not have this status.',
+        insteadOf: 'Underproduces, for a clock that makes the setpoint on average',
     },
     {
         id: 'strategy',
@@ -352,5 +360,4 @@ export function glossaryWithFocus(focus: readonly GlossaryId[]): { related: Glos
 export const TERMS_FOCUS = {
     wakeUps: ['wakeup', 'enable-window'],
     signals: ['signal', 'wakeup', 'enable-window'],
-    works: ['holds-the-rate', 'recovery', 'output-blockage', 'supply-stop'],
 } as const satisfies Record<string, readonly GlossaryId[]>;

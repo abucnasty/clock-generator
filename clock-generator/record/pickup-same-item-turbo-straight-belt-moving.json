@@ -4,16 +4,16 @@
   "group": "pickup",
   "name": "same-item-turbo-straight-belt-moving",
   "config_sha256": "1394b5d7be4de8855aca4dfde67ff39b3599e9d780e5b9f6ba088e3bd65dd5f2",
-  "job_results_sha256": "f79b4fdd895e1f64cbc1186e97353a641a6c32c88867c5d413822c318cbc22fa",
-  "selected": "takt_batches",
+  "job_results_sha256": "004fafcf75a6198592d5125bffea68a3befc9b7894e553e9c291b2f2ac1af8f0",
+  "selected": "takt_batches_observed",
   "selected_windows": {
     "inserter:1": "1-9",
-    "inserter:2": "1-17"
+    "inserter:2": "13-32"
   },
   "alternatives": [
-    {"id": "takt_batches", "verdict": "stable", "holds": true, "rate": 6, "supply": "moving", "window_cycle_ticks": 160, "wake_ups": 22.642, "descriptions_cut": 0, "clock_sha256": "4f119c4e514f9417903de78adf3bfd3eed516de5b481d538fec900dff5f1a7f9", "windows_sha256": "6e221edc73a420fa8e28aede43ebeb87d6be007177303fc9c5a0292e3c5ea538", "text_sha256": "43ffdb349b0dbef9ee69fd4ccf6bdde24a65a151a3d96b2b7906fd766752a1b7", "results_sha256": "a6506923ab77cb69931e7d16eb564a902fe971a0bdacd3029a6a5f66fe38e6a9"},
-    {"id": "time_study_windows", "verdict": "stable", "holds": true, "rate": 6, "supply": "moving", "window_cycle_ticks": 160, "wake_ups": 45.283, "descriptions_cut": 0, "clock_sha256": "8ee463540f36e336c8176f4e5efff0cb57f073f06e34088fcdc76a5d0dba7bb8", "windows_sha256": "7427b1ef2bf2e2ac81528ab7cf8c60762e1cde8ebc8cedec5458f9ca0548d824", "text_sha256": "8661b7878f13e868f0f5ccc8827a50597a3349648382f47d51260334c2e213cc", "results_sha256": "62171299f24e1e8f4d93c3905ff63e7335bcc6013ff954a458c03ecc61576519"},
-    {"id": "takt_batches_observed_swings_2", "verdict": "unstable", "holds": false, "rate": 3, "supply": "moving", "window_cycle_ticks": 320, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "c7a2d7f258b5c198d9e96ca3a33093fd3dc81034dce56a8d2a8a753353b3617c", "windows_sha256": "85b9daf6c00edda398792f8ec367659aa421d436e1752ff5c29e0718d82d61c6", "text_sha256": "bd3d5b70237231f2d57c54edeb45b007653b6078c2fa245e0e6cec78504b1e62", "results_sha256": "3370705a9beda4d1cf118a41bc877441808e78a10d9dee7078fe563da82c8ab2"},
-    {"id": "takt_batches_observed_swings_3", "verdict": "unstable", "holds": false, "rate": 2, "supply": "moving", "window_cycle_ticks": 480, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "827fe14fabf470bb3fc3b0f558b19812c0e9715ce8a33db50d20f1ace6399eef", "windows_sha256": "9653812accfbfa5db3ba5b2f6e50fdc734c9daa053fd788afe3d5b4797cf4c4f", "text_sha256": "76a9a240c4d84f5fbf2e5d7296a2e2c0ca492ac0d464c017581ad233c87eb2f3", "results_sha256": "5f46b77f825cbcec4b4fc62e70aca2b07b691a3a0713ded6c7690f78079e83b9"}
+    {"id": "takt_batches_observed", "verdict": "stable", "holds": true, "rate": 6, "supply": "moving", "window_cycle_ticks": 160, "wake_ups": 22.642, "descriptions_cut": 0, "clock_sha256": "67586738fd72ddcf75d0dee7ccba1a473add933ce6509302569e10bb0f297a0d", "windows_sha256": "11ce9406d1b47862e0d3c799042b7f131e13e2ab002c95cd755cda7841a3adff", "text_sha256": "0e5ae92f9832ab716c4eb5e222dd5da7d2fc7f13ab8f3e8bfca943f2ce6bdda5", "results_sha256": "ce15e1d015c79757751269c22c44740c52cdee99028c940723d0a8a7604dea5e"},
+    {"id": "time_study_windows", "verdict": "stable", "holds": true, "rate": 6, "supply": "moving", "window_cycle_ticks": 160, "wake_ups": 45.283, "descriptions_cut": 0, "clock_sha256": "212fe1bff2f656b903d58aac647d02f38464d289aafd780d394236ae88871a94", "windows_sha256": "6b47a5c5840798f3198057aa1ce23c83d05cc068f6d34d825fa866dd9e5c99f0", "text_sha256": "94d02462caaa7eb7fcebdd792aef404b593e4a0f376db06302ec3395ebe29a05", "results_sha256": "e6e1d06033154980a02adfac0c5edeb6f1adf0cdae552f1b65ae2e4aca9d7826"},
+    {"id": "takt_batches_observed_swings_2", "verdict": "unstable", "holds": false, "rate": 3, "supply": "moving", "window_cycle_ticks": 320, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "b2efe86b34ba0f103f50954ada8392cadd1b181eebc98a23f955b60850ad0419", "windows_sha256": "18e9867a03783db064347229c3c7f818de38e9d9c595aa28d4eb75e98eab366b", "text_sha256": "32387848be2a7f4674d89baef150a329b6fe66cab149057b02b00e348109c2da", "results_sha256": "639aa6ea5b5259a99b841853fed8dd1a55af23f996fba5ccc9f8773c0894cbd1"},
+    {"id": "takt_batches_observed_swings_3", "verdict": "unstable", "holds": false, "rate": 2, "supply": "moving", "window_cycle_ticks": 480, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "eb8d4f7fc9624179a5aacdb0cb0ce327dc66f17d6ea00a8825da2cc283ca814c", "windows_sha256": "567384b72a5c91b4118ef83258f68adddbea6f441d5228167455d0f1a63d3604", "text_sha256": "d828f0f8ddaf2e4577312abe2fa332a69ec5c02a9cff845e03277011601547bd", "results_sha256": "25e68e865c497284746e9efc92174822204ae33651af345b98e33cd311b9d084"}
   ]
 }

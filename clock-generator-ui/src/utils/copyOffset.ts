@@ -21,3 +21,11 @@ export function copyOffsetOf(tiles: number | null, side: Side): CopyOffset | und
     if (tiles === null || !(tiles > 0)) return undefined;
     return side === 'east' ? { x: tiles, y: 0 } : side === 'west' ? { x: -tiles, y: 0 } : side === 'north' ? { x: 0, y: -tiles } : { x: 0, y: tiles };
 }
+
+/**
+ * Whether the form asks where the next copy stands: wherever the build has more than one copy, whether it states the gap
+ * or not, as the check of the copies' lanes and drops reads it
+ */
+export function asksCopyOffset(setpoint: { copies: number }): boolean {
+    return setpoint.copies > 1;
+}

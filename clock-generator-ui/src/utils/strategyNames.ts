@@ -1,8 +1,8 @@
-import { catalogRowOf, routerRowOf, settingChipsOf, strategyRowOf } from 'clock-generator/light';
+import { catalogRowOf, routerRowOf, settingChipsOf, strategyRowOf, theName } from 'clock-generator/light';
 import type {
     AlwaysOnReason, ClockStrategy, EnableControl, Selection, SettingChip, StrategyCatalogRow, StrategyRef, TuningMethod,
 } from 'clock-generator/browser';
-import { entityLabel, type LabelKind } from './entityLabel';
+import { entityLabel, sentenceStart, type LabelKind } from './entityLabel';
 import { modeText } from './wakeWindowCopy';
 
 /**
@@ -16,6 +16,8 @@ import { modeText } from './wakeWindowCopy';
 export interface NamedClock {
     label: string;
     strategy?: ClockStrategy;
+    /** The names a sentence gives the build's belts, inserters, chests and drills (the engine's entityNamesInSentence) */
+    assumptions?: { entityNames?: Record<string, string> };
 }
 
 /** A chip after the name: the tuning method and the selection of the strategy, then the settings of the clock */
@@ -137,6 +139,7 @@ export function directRouterOf(clock: NamedClock): { name: string; definition: s
 /** The lines of the (i) of a Coordinated Sources clock: each source and what the router gave its entities; none for any other clock */
 export function sourceLinesOf(clock: NamedClock): string[] {
     const sources = clock.strategy?.routing?.sources ?? [];
+    const idLabel = (id: string) => entityNamed(id, clock.assumptions?.entityNames);
     return sources.map(({ source, entities }) => {
         const gave = Object.entries(entities).map(([entity, control]) => ({ entity, text: controlText(control) }));
         const texts = new Set(gave.map(({ text }) => text));
@@ -144,6 +147,12 @@ export function sourceLinesOf(clock: NamedClock): string[] {
         const what = texts.size === 1 ? [...texts][0] : gave.map(({ entity, text }) => `${idLabel(entity)}: ${text}`).join('; ');
         return `${idLabel(source)} \u2192 ${what}`;
     });
+}
+
+/** A belt, inserter, chest or drill by its items, "The coal belt" (the engine's names); anything else as idLabel */
+function entityNamed(id: string, entityNames: Readonly<Record<string, string>> | undefined): string {
+    const name = entityNames?.[id];
+    return name === undefined ? idLabel(id) : sentenceStart(theName(name));
 }
 
 /** "machine:2" as the views name it, "Machine 2" */

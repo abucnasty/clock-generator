@@ -21,7 +21,7 @@ const gears = { recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 1 };
 const twoBranches: Config = {
     setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
     machines: [{ id: 1, ...gears }, { id: 2, ...gears }],
-    belts: [belt(1, [lane("iron-plate")]), belt(2, [lane("iron-plate")])],
+    belts: [belt(1, [lane("iron-plate", { lane_end: { kind: "infinite" } })]), belt(2, [lane("iron-plate", { lane_end: { kind: "infinite" } })])],
     chests: [infinityChest(3, ["iron-gear-wheel"]), infinityChest(4, ["iron-gear-wheel"])],
     inserters: [
         inserter(1, { type: "belt", id: 1 }, { type: "machine", id: 1 }),

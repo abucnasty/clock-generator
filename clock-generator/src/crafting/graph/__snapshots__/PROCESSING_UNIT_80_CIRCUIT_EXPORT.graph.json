@@ -25,6 +25,20 @@
       ]
     },
     {
+      "key": "belt:5/lane:1",
+      "kind": "lane",
+      "ports": [
+        "belt:5/lane:1#plastic-bar"
+      ]
+    },
+    {
+      "key": "belt:5/lane:2",
+      "kind": "lane",
+      "ports": [
+        "belt:5/lane:2#plastic-bar"
+      ]
+    },
+    {
       "key": "belt:2/lane:1",
       "kind": "lane",
       "ports": [
@@ -301,10 +315,10 @@
       "entity": "inserter:10",
       "group": "inserter:10",
       "item": "plastic-bar",
-      "from": "belt:1/lane:1#plastic-bar",
+      "from": "belt:5/lane:1#plastic-bar",
       "from_ports": [
-        "belt:1/lane:1#plastic-bar",
-        "belt:1/lane:2#plastic-bar"
+        "belt:5/lane:1#plastic-bar",
+        "belt:5/lane:2#plastic-bar"
       ],
       "to": "machine:7",
       "lands_in": "ingredients",
@@ -601,6 +615,8 @@
   "order": [
     "belt:1/lane:1#plastic-bar",
     "belt:1/lane:2#plastic-bar",
+    "belt:5/lane:1#plastic-bar",
+    "belt:5/lane:2#plastic-bar",
     "belt:2/lane:2#electronic-circuit",
     "machine:1",
     "machine:8",
@@ -711,24 +727,7 @@
         ]
       }
     ],
-    "lanes": [
-      {
-        "at": "belt:1/lane:1#plastic-bar",
-        "item": "plastic-bar",
-        "edges": [
-          "inserter:1/plastic-bar",
-          "inserter:10/plastic-bar"
-        ]
-      },
-      {
-        "at": "belt:1/lane:2#plastic-bar",
-        "item": "plastic-bar",
-        "edges": [
-          "inserter:1/plastic-bar",
-          "inserter:10/plastic-bar"
-        ]
-      }
-    ]
+    "lanes": []
   },
   "terminal": [
     "inserter:16/electronic-circuit",

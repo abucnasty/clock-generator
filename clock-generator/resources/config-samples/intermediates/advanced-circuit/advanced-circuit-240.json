@@ -2,7 +2,11 @@
   "setpoint": {
     "recipe": "advanced-circuit",
     "items_per_second": 240,
-    "copies": 3
+    "copies": 3,
+    "copy_offset": {
+      "x": 10,
+      "y": 0
+    }
   },
   "machines": [
     {
@@ -183,10 +187,14 @@
     {
       "id": 1,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
           "ingredient": "electronic-circuit",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         }
       ]
     },
@@ -203,24 +211,35 @@
     {
       "id": 3,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
           "ingredient": "coal",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         },
         {
           "ingredient": "coal",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         }
       ]
     },
     {
       "id": 4,
       "type": "turbo-transport-belt",
+      "flow_direction": 4,
       "lanes": [
         {
           "ingredient": "electronic-circuit",
-          "stack_size": 4
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
         }
       ]
     },

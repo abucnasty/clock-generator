@@ -17,6 +17,14 @@
     {
       "vertex": "belt:1/lane:2#plastic-bar",
       "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:5/lane:1#plastic-bar",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:5/lane:2#plastic-bar",
+      "kind": "nothing-drops-on"
     }
   ],
   "groups": [

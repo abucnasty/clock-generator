@@ -23,6 +23,8 @@ interface AppDialogProps {
     onSubmit?: () => void;
     children?: ReactNode;
     maxWidth?: DialogProps['maxWidth'];
+    /** The whole screen, for a dialog with a wide table on a phone */
+    fullScreen?: boolean;
     /** Rules above and below the content, for content that scrolls */
     dividers?: boolean;
     scroll?: DialogProps['scroll'];
@@ -37,7 +39,7 @@ interface AppDialogProps {
  * the actions with the cancel button first. Full width up to `maxWidth`.
  */
 export function AppDialog({ open = true, onClose, title, description, describedBy, cancel, focusCancel = false, actions, closeButton = false,
-    onSubmit, children, maxWidth = 'sm', dividers = false, scroll, disableRestoreFocus, onEntered, onExited, ref }: AppDialogProps) {
+    onSubmit, children, maxWidth = 'sm', fullScreen = false, dividers = false, scroll, disableRestoreFocus, onEntered, onExited, ref }: AppDialogProps) {
     const id = useId();
     const cancelRef = useRef<HTMLButtonElement>(null);
     const descriptionIds = [description !== undefined ? `${id}-description` : null, describedBy].filter(Boolean).join(' ') || undefined;
@@ -55,7 +57,7 @@ export function AppDialog({ open = true, onClose, title, description, describedB
             {actions}
         </DialogActions>}
     </>;
-    return <Dialog ref={ref} open={open} onClose={onClose} maxWidth={maxWidth} fullWidth scroll={scroll} disableRestoreFocus={disableRestoreFocus}
+    return <Dialog ref={ref} open={open} onClose={onClose} maxWidth={maxWidth} fullScreen={fullScreen} fullWidth scroll={scroll} disableRestoreFocus={disableRestoreFocus}
         aria-labelledby={`${id}-title`} aria-describedby={descriptionIds}
         slotProps={{
             transition: {
