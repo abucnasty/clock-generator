@@ -148,6 +148,9 @@ describe('the tests of the clock, first on the tab', () => {
         const { container } = show(<ClockDiagnostics clock={counted} />, { names: gameNames });
         const losses = container.querySelector('[data-test="losses"]')!;
         expect([...losses.querySelectorAll('[data-test-count]')].map(it => it.textContent)).toEqual([line]);
+        // under the result, before the line that says one copy alone recovers: the count is of the copies
+        expect(losses.querySelector('[data-test-result]')!.nextElementSibling!.hasAttribute('data-test-count')).toBe(true);
+        expect(losses.querySelector('[data-test-count]')!.nextElementSibling!.hasAttribute('data-test-detail')).toBe(true);
         expect(container.textContent!.split(line)).toHaveLength(2);
         cleanup();
         const stable = show(<ClockDiagnostics clock={viewOf(AUTOMATION_240, 'time_study_windows')} />, { names: gameNames });

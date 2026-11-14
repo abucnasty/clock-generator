@@ -25,7 +25,7 @@ const EDGE: Record<TestState, { borderColor: string; borderStyle: string }> = {
 /**
  * The tests of the selected clock, first on its Diagnostics tab: one copy alone, all the copies together, the loss of inputs.
  * Three boxes in a row, stacked on a narrow page; each with its state, the test's name, the result in bold and one line.
- * A failed loss of inputs has a line more for each loss that breaks the clock: its trials as numbers.
+ * A failed loss of inputs has a line more for each loss that breaks the clock, its trials as numbers, under the result.
  */
 export function TestPipeline({ clock }: { clock: PipelineClock }) {
     const { itemLabel } = useGameNames();
@@ -38,8 +38,9 @@ export function TestPipeline({ clock }: { clock: PipelineClock }) {
                 <Typography variant="overline" component="p" color="text.secondary" sx={{ lineHeight: 1.4 }}>{box.name}</Typography>
             </Box>
             <Typography variant="body1" sx={{ fontWeight: 700, overflowWrap: 'anywhere' }} data-test-result="">{box.result}</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }} data-test-detail="">{box.detail}</Typography>
+            {/* the count is of the trials the result names (the copies', where the copies do not recover): under it, before the line */}
             {box.counts?.map(line => <Typography key={line} variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }} data-test-count="">{line}</Typography>)}
+            <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }} data-test-detail="">{box.detail}</Typography>
         </Box>)}
     </Box>;
 }

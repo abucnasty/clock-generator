@@ -26,7 +26,7 @@ export interface TestBox {
     result: string;
     /** One line under it */
     detail: string;
-    /** Under the detail of the loss of inputs: one line for each loss that breaks the clock, with its trials as numbers (trialCountText) */
+    /** Under the result of the loss of inputs, before the detail: one line for each loss that breaks the clock, with its trials as numbers (trialCountText) */
     counts?: string[];
 }
 
