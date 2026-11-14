@@ -1,6 +1,7 @@
 import { ClockWindowCycleLimitError, type SwingWindowCycleRejection } from "./plan/clock-window-cycle-limit";
 import { wholeSwingWindowCyclesBelow } from "./whole-swing-window-cycles";
 import { Config } from "../config";
+import { withoutOutsideSupply } from "../config/outside-supply";
 import { defaultLogger } from "../common/logger";
 import { roundRobinPollingClock } from "./candidates/round-robin-polling";
 import { timeStudyWindowsClock } from "./candidates/time-study-windows";
@@ -40,9 +41,11 @@ export function terminalCountForAlternativePlanning(result: Pick<BlueprintGenera
  * @returns The generated blueprint and related metadata
  */
 export function generateClockForConfig(
-    config: Config,
+    given: Config,
     options: GenerateClockOptions = {}
 ): BlueprintGenerationResult {
+    // the build that is clocked: outside supply gets no window (outside-supply.ts)
+    const config = withoutOutsideSupply(given);
     if (config.overrides?.derive_clock_windows) {
         return timeStudyWindowsClock(config, options, "prefer_planned");
     }

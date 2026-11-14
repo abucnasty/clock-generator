@@ -1,5 +1,6 @@
 import type { Config } from "../config/schema";
 import { FlowAcrossCopySpacingError, FlowAcrossCopySpacingIssue } from "../config/errors";
+import { withoutOutsideSupply } from "../config/outside-supply";
 import { laneFactsOfConfig } from "../entities/traits/build-traits";
 import { FlowDirection, LaneEnd } from "../entities/traits/lane-facts";
 
@@ -23,9 +24,9 @@ export function alongFlow(position: { x: number; y: number }, flow: FlowDirectio
     return position.x * flow.x + position.y * flow.y;
 }
 
-/** The belts an inserter of the config drops onto */
+/** The belts an inserter of the config drops onto; outside supply (outside-supply.ts) drops onto none of the build's own */
 export function droppedOnto(config: Config): Set<number> {
-    return new Set(config.inserters.flatMap(inserter => inserter.sink.type === "belt" ? [inserter.sink.id] : []));
+    return new Set(withoutOutsideSupply(config).inserters.flatMap(inserter => inserter.sink.type === "belt" ? [inserter.sink.id] : []));
 }
 
 /** The lanes a belt pickup of the config takes an item from: each belt's lanes with an item and a taker of it */

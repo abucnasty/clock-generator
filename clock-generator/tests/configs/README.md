@@ -41,3 +41,8 @@ take them. `paths.ts` names the ones unit tests load by sample-style keys (`Test
   lane that supplies 120, which generation refuses. On it the shared windows of the takers keep the rate where the separate
   ones lose it (`src/crafting/shared-windows.generation.test.ts`), and the fractional swings task is left out as it would
   make the primary clock again (`src/crafting/alternative-tasks.test.ts`).
+- `automation-row.ts` (`automationRow`): a row of the automation science sample's assemblers on its two turbo belts, each
+  with its input inserter at its own place along the input belt, a given number of tiles apart, and, as asked, four
+  inserters that put gears and copper onto the input belt from infinity chests upstream (supply from outside the build).
+  `src/config/outside-supply.test.ts` and `src/crafting/outside-supply.generation.test.ts` check that the supply is not
+  clocked and that the input lanes are checked.

@@ -537,9 +537,11 @@ function handleQuery(requestId: number, query: EngineQuery): void {
     }
 }
 
-function handlePlan(runId: number, config: Config, debugSteps: DebugSteps, streamLogs: boolean): void {
-    runStreaming(runId, config, debugSteps, streamLogs, (options) => {
-        requireValidConfig(config);
+function handlePlan(runId: number, given: Config, debugSteps: DebugSteps, streamLogs: boolean): void {
+    runStreaming(runId, given, debugSteps, streamLogs, (options) => {
+        requireValidConfig(given);
+        // the build that is clocked, which the clocks and their views are of: outside supply gets no window
+        const config = clockGenerator.withoutOutsideSupply(given);
         const notMade: NotMadeClock[] = [];
         // the tasks go out as soon as the primary clock is made: the pool runs them while this worker assesses it
         const plan = clockGenerator.planClockAlternatives(config, { ...options, on_not_made: clock => notMade.push(clock) }, (context, tasks, primarySignature) => postResponse({
@@ -552,7 +554,7 @@ function handlePlan(runId: number, config: Config, debugSteps: DebugSteps, strea
 
 function handleTask(
     runId: number,
-    config: Config,
+    given: Config,
     debugSteps: DebugSteps,
     streamLogs: boolean,
     context: import('clock-generator/browser').ClockAlternativeContext,
@@ -560,8 +562,10 @@ function handleTask(
     assessedSignatures: string[] = [],
     coordinatedSources?: import('clock-generator/browser').CoordinatedSourcesInput,
 ): void {
-    runStreaming(runId, config, debugSteps, streamLogs, (options) => {
-        requireValidConfig(config);
+    runStreaming(runId, given, debugSteps, streamLogs, (options) => {
+        requireValidConfig(given);
+        // the build that is clocked, which the clocks and their views are of: outside supply gets no window
+        const config = clockGenerator.withoutOutsideSupply(given);
         const notMade: NotMadeClock[] = [];
         // the per-branch clock is made from the parts of the runs before it, not from the context
         const onNotMade = (clock: NotMadeClock) => notMade.push(clock);
