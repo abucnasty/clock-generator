@@ -35,6 +35,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: the compare table's Show all columns, its Rate column and its hidden clocks are removed
 
 ### Changed
+- generation: loss trials above a tick budget are not run; progress names their loss and start
 - ui: Results shows the clocks as a list beside the selected clock, using the whole width
 - ui: Compare all opens the compare table over the page; a row selects its clock
 - ui: the compare table has every column where it fits, else a details row per clock

@@ -15,7 +15,7 @@ import { DisturbanceTrial, DisturbanceTrialOptions, DisturbanceTrialReport, Dist
 import { SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForWindowCycle, withWindowsLengthened } from "./clock";
 import type { SubtickWindowCycle } from "../common/subtick-window-cycle";
 import { canonicalKey, currentRunMemo } from "./plan/run-memo";
-import { wholeCounterOf } from "./plan/clock-window-cycle-limit";
+import { LOSS_TRIAL_BUDGET_TICKS, wholeCounterOf } from "./plan/clock-window-cycle-limit";
 import { assessTargetProduction, TargetProduction } from "./target-production";
 import { TARGET_RATE_TOLERANCE } from "./rank";
 import { BlueprintGenerationResult, BuildRun, FractionalSwings, LCM_STABILITY_TOLERANCE, SIMULATION_BUDGET_TICKS, RunOptions, fractionalSwingsOf, SimulationStabilityCheck, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, coldControlledTrialBuild, unclockedRun, provenRepeatBin, runBuild, trialRunOf, withInserterClocks } from "./plan/unclocked-run";
@@ -74,6 +74,11 @@ export interface ClockAssessment {
      * that does not repeat in whole ticks. Absent when they were tried, or the clock does not hold.
      */
     disturbance_trial_not_tried?: string;
+    /**
+     * Where the trials were not run for a reason the generator gives a code for, the code and its numbers, for the web app to
+     * word; beside `disturbance_trial_not_tried`. Absent where they were run, or not run for another reason.
+     */
+    disturbance_trial_not_tried_reason?: DisturbanceTrialNotTriedReason;
     /** Items per second the exported clock moved in its clock-only run, over all copies; the target when it holds */
     items_per_second: number;
     /**
@@ -704,8 +709,11 @@ export function disturbanceTrialOf(
     expected_output_items: number,
     logger: Logger = defaultLogger,
     options: Omit<DisturbanceTrialOptions, "loss" | "window_cycle_ticks" | "expected_output_items"> = {},
-    /** Called before the run of each loss, the one with nothing cut included */
-    on_loss?: (loss: DisturbanceTrial, index: number, total: number) => void,
+    /**
+     * Called before each run of a loss, the one with nothing cut included: from the modeled start (`start` 1), from each other
+     * lane phase, and in each other order of the takers, of `starts` in all (as lossTrialEstimateOfClock counts them)
+     */
+    on_loss?: (loss: DisturbanceTrial, index: number, total: number, start: number, starts: number) => void,
     /** Options of one loss over `options`, where a loss is tried in a way of its own (see resultLossOptionsOf) */
     options_for?: (loss: DisturbanceTrial) => Partial<DisturbanceTrialOptions>,
     /** The excesses of results that come by chance the clock is tried with too, after the losses (randomExcessLossesOf) */
@@ -729,15 +737,19 @@ export function disturbanceTrialOf(
     const losses: DisturbanceTrial[] = [...disturbanceTrialsOf(registry, config.setpoint.recipe), ...excesses];
     // a build whose items spoil is tried with losses shorter than its loss limit only
     const loss_limit = lossLimitOf(registry);
+    // arithmetic on the windows: counted here for the starts the progress names, run below only where every loss is got back from
+    const taker_orders = otherTakerOrdersOf(check_config, windows, window_cycle_ticks);
+    const starts = 1 + phase_starts.length + taker_orders.length;
     const tried = (loss: DisturbanceTrial, index: number): LossOutcome => {
-        on_loss?.(loss, index, losses.length + 1);
+        on_loss?.(loss, index, losses.length + 1, 1, starts);
         const canonical = outcomeOf(loss);
         if (!canonical.recovers || phase_starts.length === 0) return canonical;
         let ticks = canonical.ticks, recovery = canonical.recovered_after_bins!, stopped = canonical.stopped_after_ticks;
-        for (const [index, phases] of phase_starts.entries()) {
+        for (const [at, phases] of phase_starts.entries()) {
+            on_loss?.(loss, index, losses.length + 1, 2 + at, starts);
             const outcome = outcomeOf(loss, phases);
             ticks += outcome.ticks;
-            if (!outcome.recovers) return {...outcome, ticks, pickup_phase_starts_checked: index + 1,
+            if (!outcome.recovers) return {...outcome, ticks, pickup_phase_starts_checked: at + 1,
                 failed_pickup_phases: Object.fromEntries(phases)};
             recovery = Math.max(recovery, outcome.recovered_after_bins!);
             stopped = stopped === null || outcome.stopped_after_ticks === null ? null : Math.max(stopped, outcome.stopped_after_ticks);
@@ -765,13 +777,14 @@ export function disturbanceTrialOf(
     // from everything under the default order is tried so, a loss at a time and no further than its first failure: one
     // that does not already fails its verdict.
     const other_orders = undisturbed.recovers && outcomes.length === losses.length && outcomes.every(it => it.recovers)
-        ? otherTakerOrdersOf(check_config, windows, window_cycle_ticks) : [];
+        ? taker_orders : [];
     let judged = undisturbed;
     if (other_orders.length > 0) {
         const all: LossOutcome[] = [undisturbed, ...outcomes];
         const runs: DisturbanceTrialOptions["loss"][] = [{ kind: "none" }, ...losses];
-        orders: for (const order of other_orders) {
+        orders: for (const [order_at, order] of other_orders.entries()) {
             for (let at = 0; at < all.length; at++) {
+                on_loss?.(runs[at], at, losses.length + 1, 2 + phase_starts.length + order_at, starts);
                 const outcome = outcomeOf(runs[at], undefined, order);
                 const before = all[at];
                 if (!outcome.recovers) {
@@ -1832,7 +1845,27 @@ export function startDependenceVerdictOf(
 }
 
 /** What the backpressure loss trials of a clock found, or why they could not be run on it */
-export type DisturbanceTrialAssessment = Pick<ClockAssessment, "disturbance_trial" | "disturbance_trial_not_tried">;
+export type DisturbanceTrialAssessment = Pick<ClockAssessment, "disturbance_trial" | "disturbance_trial_not_tried" | "disturbance_trial_not_tried_reason">;
+
+/**
+ * Why the disturbance trials of a clock were not run, as a code and its numbers. `loss_trials_over_budget`: their estimate
+ * (lossTrialEstimateOfClock) is over LOSS_TRIAL_BUDGET_TICKS, which `budget` is.
+ */
+export type DisturbanceTrialNotTriedReason = { code: "loss_trials_over_budget"; data: LossTrialEstimate & { budget: number } };
+
+/** The reason the trials of a clock are not run where their estimate is over the budget; null where it is not, or where there is none */
+function overBudgetOf(planned_on: Config, result: BlueprintGenerationResult, logger: Logger): DisturbanceTrialNotTriedReason | null {
+    let estimate: LossTrialEstimate | null;
+    try {
+        estimate = lossTrialEstimateOfClock(planned_on, result);
+    } catch (error) {
+        // the trials are run as before, and fail there if they cannot be run
+        logger.log(`Loss trials could not be counted before they run: ${error instanceof Error ? error.message : String(error)}`);
+        return null;
+    }
+    return estimate === null || estimate.ticks <= LOSS_TRIAL_BUDGET_TICKS ? null
+        : { code: "loss_trials_over_budget", data: { ...estimate, budget: LOSS_TRIAL_BUDGET_TICKS } };
+}
 
 /**
  * Tries a clock that holds its expected output for backpressure loss. When the trials cannot be run on it, which is
@@ -1871,11 +1904,19 @@ function triedDisturbanceTrial(
     // the config the clock was planned on has its output swings each output cycle
     const config = verificationPlanningConfigOf(planned_on, result);
     const quiet: Logger = { log: () => { }, warn: () => { }, error: logger.error.bind(logger), debug: () => { } };
+    // trials that plan more ticks than the budget are not run: the clock keeps the verdict of what it holds
+    const over = overBudgetOf(planned_on, result, logger);
+    if (over !== null) {
+        const reason = `its loss trials are ${over.data.ticks.toLocaleString("en-US")} ticks, more than the budget of ${over.data.budget.toLocaleString("en-US")}`;
+        logger.log(`Loss trials not made: ${reason} (${over.data.losses} losses, ${over.data.starts} starts, ${over.data.trials} trials)`);
+        return { disturbance_trial: null, disturbance_trial_not_tried: reason, disturbance_trial_not_tried_reason: over };
+    }
     // a build with results that come by chance is tried with the backlog of them its margins say it takes up, too
     const excess = result.random_margins === undefined ? null : excessLossOf(result.random_margins.crafting);
     try {
         return { disturbance_trial: verdictOf(disturbanceTrialOf(config, result.clock_windows, result.simulation_duration.ticks,
-            result.stability_check.expected_output_items, quiet, {}, (_loss, index, total) => report?.(`Trying loss trial ${index + 1}/${total}`),
+            result.stability_check.expected_output_items, quiet, {}, (_loss, index, total, start, starts) =>
+                report?.(`Trying loss trial ${index + 1}/${total}${starts > 1 ? `, start ${start}/${starts}` : ""}`),
             result.exhaust === undefined ? undefined : resultLossOptionsOf(result.exhaust.plans), excess === null ? [] : [excess],
             fractionalSwingsOf(result.output_cycle_plan))) };
     } catch (error) {

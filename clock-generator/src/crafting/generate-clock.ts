@@ -149,7 +149,7 @@ function arithmeticBesidePlanned(clocks: MadeClocks, plan: UnclockedRun, planned
     if (!made.stability_check.holds || made_wake_ups === undefined || planned_wake_ups === undefined || !(made_wake_ups < planned_wake_ups)) {
         return planned;
     }
-    const survives = (result: BlueprintGenerationResult) => disturbanceTrialVerdictOf(plan.config, result, plan.logger).disturbance_trial?.survives === true;
+    const survives = (result: BlueprintGenerationResult) => disturbanceTrialVerdictOf(plan.config, result, plan.logger, options.on_progress_detail).disturbance_trial?.survives === true;
     if (!survives(made) && survives(planned)) {
         plan.logger.log("Enable windows by arithmetic: fewer wakeups, but the clock does not go back to its rate by itself after a supply stop or an output blockage, as the planned one does");
         return planned;
@@ -183,7 +183,7 @@ function withHandRoomInside(made: MadeClocks, plan: UnclockedRun, primary: Bluep
         || !(inside_wake_ups < primary_wake_ups)) {
         return primary;
     }
-    const survives = (result: BlueprintGenerationResult) => disturbanceTrialVerdictOf(plan.config, result, plan.logger).disturbance_trial?.survives === true;
+    const survives = (result: BlueprintGenerationResult) => disturbanceTrialVerdictOf(plan.config, result, plan.logger, options.on_progress_detail).disturbance_trial?.survives === true;
     if (!survives(inside) && survives(primary)) {
         plan.logger.log("Room for one hand inside the enable windows: fewer wakeups, but the clock does not go back to its rate by itself after a supply stop or an output blockage, as the primary one does");
         return primary;
@@ -284,7 +284,7 @@ function withoutGhostWakeUps(made: MadeClocks, primary: BlueprintGenerationResul
     if (best === primary) {
         return primary;
     }
-    const survives = (it: BlueprintGenerationResult) => disturbanceTrialVerdictOf(plan.config, it, plan.logger).disturbance_trial?.survives === true;
+    const survives = (it: BlueprintGenerationResult) => disturbanceTrialVerdictOf(plan.config, it, plan.logger, options.on_progress_detail).disturbance_trial?.survives === true;
     if (!survives(best) && survives(primary)) {
         plan.logger.log(`Enable windows shaped against ghost wakeups (${textOf(moved)}): fewer wakeups, but the clock does not go back to its rate by itself after a supply stop or an output blockage, as the primary one does`);
         return primary;

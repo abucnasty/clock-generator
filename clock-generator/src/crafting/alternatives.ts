@@ -959,9 +959,10 @@ function runAlternativeOf(
     let held = holds(result);
     const completed = result.primitive_round_robin_polling?.verification;
     const cached = completed?.signature === signature ? { disturbance_trial: completed.disturbance_trial,
-        disturbance_trial_not_tried: undefined, start_dependence: completed.start_dependence } : verification_cache?.get(signature);
+        disturbance_trial_not_tried: undefined, disturbance_trial_not_tried_reason: undefined, start_dependence: completed.start_dependence } : verification_cache?.get(signature);
     let loss: DisturbanceTrialAssessment = cached
-        ? { disturbance_trial: cached.disturbance_trial, disturbance_trial_not_tried: cached.disturbance_trial_not_tried }
+        ? { disturbance_trial: cached.disturbance_trial, disturbance_trial_not_tried: cached.disturbance_trial_not_tried,
+            ...(cached.disturbance_trial_not_tried_reason !== undefined && { disturbance_trial_not_tried_reason: cached.disturbance_trial_not_tried_reason }) }
         : held ? disturbanceTrialVerdictOf(definition.planned_on ?? config, result, logger, report) : { disturbance_trial: null };
     let used = definition;
     // the inserters of a loop on windows: a clock that does not meet goal 1 with them is made again with the loop's own
@@ -1186,7 +1187,7 @@ function runAlternativeOf(
         trial = { ...trial, result: { ...trial.result, stability_check: settled } };
         row = { ...row, result: { ...row.result, stability_check: settled } };
         const { as_built } = trial.result.stability_check;
-        const { disturbance_trial_not_tried } = trial.loss;
+        const { disturbance_trial_not_tried, disturbance_trial_not_tried_reason } = trial.loss;
         const disturbance_trial = withCopiesTrial(trial.loss.disturbance_trial, copies_trial);
         const start_dependence_note = trial.start_dependence === null ? null
             : startDependenceNote(trial.start_dependence, items => itemsPerSecondOverCopies(items, trial.clock_window_cycle, copies));
@@ -1212,6 +1213,7 @@ function runAlternativeOf(
         // what the exported clock moved in its clock-only run, not the target, which is the same for every alternative
         const achieved_output_items = as_built?.actual_output_items ?? trial.result.stability_check.actual_output_items;
         const assessment: ClockAssessment = { holds: trial.held, disturbance_trial, ...(disturbance_trial_not_tried !== undefined && { disturbance_trial_not_tried }),
+            ...(disturbance_trial_not_tried_reason !== undefined && { disturbance_trial_not_tried_reason }),
             items_per_second: itemsPerSecondOverCopies(achieved_output_items, trial.clock_window_cycle, copies),
             wake_ups_per_minute: as_built?.wake_ups?.wake_ups_per_minute ?? null,
             signals_per_minute: as_built?.wake_ups === undefined ? null : signalsPerMinuteOf(as_built.counters, row.result.blueprint, row.result.chest_drills, trial.clock_window_cycle),
@@ -1612,8 +1614,9 @@ function generateAllAlternatives(config: Config, options: GenerateClockOptions):
     // Request-local: a new generation (or changed config/data) never inherits another run's verdict.
     const verification_cache = new Map<string, VerificationAssessment>();
     if (plan.primary?.alternatives[0]) {
-        const {disturbance_trial, disturbance_trial_not_tried, start_dependence} = plan.primary.alternatives[0].assessment;
-        verification_cache.set(plan.primary.signature, {disturbance_trial, disturbance_trial_not_tried, start_dependence});
+        const {disturbance_trial, disturbance_trial_not_tried, disturbance_trial_not_tried_reason, start_dependence} = plan.primary.alternatives[0].assessment;
+        verification_cache.set(plan.primary.signature, {disturbance_trial, disturbance_trial_not_tried,
+            ...(disturbance_trial_not_tried_reason !== undefined && { disturbance_trial_not_tried_reason }), start_dependence});
     }
     const known_stable = (id: string) => stable_by_id.get(id);
     const all_definitions = runnable(alternativeDefinitions(config, plan.context, quietOptions(options, logger, report), known_stable), options);

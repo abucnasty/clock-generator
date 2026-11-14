@@ -16,6 +16,8 @@ export interface AutomationRowOptions {
     readonly items_per_second?: number;
     /** Each assembler at a crafting speed of its own, a little faster down the row, so that the row is not copies of one */
     readonly distinct?: boolean;
+    /** The input belt (belt 1): the sample's turbo belt with both lanes ending in a dead end by default */
+    readonly input?: { readonly belt: 'turbo-transport-belt' | 'express-transport-belt'; readonly lane_end: 'dead_end' | 'infinite' };
 }
 
 /** The crafting speed of the automation science sample (automation-240.json): a legendary assembler with its beacons */
@@ -68,9 +70,9 @@ export function automationRow(options: AutomationRowOptions): Config {
         machines,
         inserters: [...feeders, ...row],
         belts: [
-            { id: 1, type: 'turbo-transport-belt', flow_direction: 4, lanes: [
-                { ingredient: 'iron-gear-wheel', stack_size: 4, lane_end: { kind: 'dead_end' } },
-                { ingredient: 'copper-plate', stack_size: 4, lane_end: { kind: 'dead_end' } },
+            { id: 1, type: options.input?.belt ?? 'turbo-transport-belt', flow_direction: 4, lanes: [
+                { ingredient: 'iron-gear-wheel', stack_size: 4, lane_end: { kind: options.input?.lane_end ?? 'dead_end' } },
+                { ingredient: 'copper-plate', stack_size: 4, lane_end: { kind: options.input?.lane_end ?? 'dead_end' } },
             ] },
             { id: 2, type: 'turbo-transport-belt', lanes: [{ ingredient: 'automation-science-pack', stack_size: 4 }] },
         ],
