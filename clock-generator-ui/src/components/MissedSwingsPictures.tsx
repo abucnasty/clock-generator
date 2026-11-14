@@ -4,9 +4,13 @@ import type { BuildLane, CheckedLanes, MissedSwings, SharedLaneCause } from 'clo
 import { useGameNames } from '../hooks/useGameNames';
 import { useElementWidth } from '../hooks/useElementWidth';
 import { laneOf } from '../utils/checkedLanes';
+import { inserterNamerOf, type InserterNamer } from '../utils/inserterNames';
+import { takersAlongOf } from '../utils/laneTakers';
 import {
-    CAUSE_WORDS, chipRowsOf, legendOf, MISSED_SWINGS_COPY, nameInText, pictureLabelsOf, stripRowsOf, swingsEachOf, textPartsOf, type StripMark, type StripRow,
+    CAUSE_WORDS, chipRowsOf, inserterChipsOf, legendOf, MISSED_SWINGS_COPY, nameInText, ONE_COPY_WORDS, oneCopyCaptionOf, oneCopyTextPartsOf, pictureLabelsOf,
+    stripRowsOf, swingsEachOf, takersOf, textPartsOf, type StripMark, type StripRow,
 } from '../utils/missedSwings';
+import type { ClockModelAssumptions } from '../worker/types';
 import { Disclosure } from './Disclosure';
 
 /** The width the pictures are drawn at before the page has measured their place (and in a test, which has no layout) */
@@ -45,9 +49,15 @@ function Text({ x, y, size = 12, fill, anchor = 'start', weight = 400, children 
 }
 
 /** Picture one: one chip for each copy, in their order from the entry; a row for all the copies, the fewer copies that hold, one copy alone */
-function CopiesPicture({ cause, copies, width, narrow, laneItems, label }: { cause: SharedLaneCause; copies: number; width: number; narrow: boolean; laneItems: string[]; label: string }) {
+function CopiesPicture({ cause, copies, width, narrow, laneItems, label, named, along }: {
+    cause: SharedLaneCause; copies: number; width: number; narrow: boolean; laneItems: string[]; label: string; named: InserterNamer | null;
+    /** A build of one copy: the inserters on the lanes that miss swings in order along the belt, and the tiles between each and the next where known */
+    along: { ids: number[]; tiles: number[] | null };
+}) {
     const c = useColours();
-    const rows = chipRowsOf(cause, copies);
+    // a build of one copy: a chip for each inserter on the lane, in place of a chip for each copy
+    const inserters = named ? inserterChipsOf(cause, along.ids) : null;
+    const rows = inserters ? [inserters.row] : chipRowsOf(cause, copies);
     const slots = rows[0].values.length;
     const L = narrow ? 90 : 130, g = narrow ? 3 : 6, right = width - 2;
     const cw = (right - L - g * (slots - 1)) / slots;
@@ -63,7 +73,29 @@ function CopiesPicture({ cause, copies, width, narrow, laneItems, label }: { cau
         parts.push(<polygon key="head" points={`${right - 7},15 ${right},20 ${right - 7},25`} fill={c.muted} />);
         cx.forEach((x, i) => parts.push(<line key={`drop-${i}`} x1={x} y1={20} x2={x} y2={27} stroke={c.muted} />));
         y = 27;
-        const spacing = cause.spacing?.data;
+        // the result's spacing is the step of the copies, not the distance between inserters: a build of one copy has the tiles
+        // between its inserters from their places (laneTakers.ts)
+        const spacing = inserters ? undefined : cause.spacing?.data;
+        const gaps = inserters ? along.tiles : null;
+        if (gaps && slots > 1) {
+            const equal = gaps.every(gap => Math.abs(gap - gaps[0]) < 1e-9);
+            if (equal) {
+                parts.push(<line key="sp" x1={cx[0]} y1={36} x2={cx[1]} y2={36} stroke={c.text} />);
+                [cx[0], cx[1]].forEach((x, i) => parts.push(<line key={`sp-${i}`} x1={x} y1={32} x2={x} y2={40} stroke={c.text} />));
+                const words = ONE_COPY_WORDS.tilesBetween(gaps[0]);
+                if (narrow) {
+                    parts.push(<Text key="spt" x={right} y={54} size={11} fill={c.text} anchor="end">{words}</Text>);
+                    y = 58;
+                } else {
+                    parts.push(<Text key="spt" x={cx[1] + 8} y={40} size={11} fill={c.text}>{words}</Text>);
+                    y = 44;
+                }
+            } else {
+                parts.push(<Text key="spt" x={0} y={40} size={11} fill={c.text}>{ONE_COPY_WORDS.tilesApart(narrow)}</Text>);
+                gaps.forEach((gap, i) => parts.push(<Text key={`sp-${i}`} x={(cx[i] + cx[i + 1]) / 2} y={40} size={11} fill={c.text} anchor="middle">{MISSED_SWINGS_COPY.figureOf(gap)}</Text>));
+                y = 44;
+            }
+        }
         if (spacing && slots > 1) {
             const words = MISSED_SWINGS_COPY.spacing(spacing.travel_ticks, spacing.step_tiles, spacing.window_cycle_ticks);
             parts.push(<line key="sp" x1={cx[0]} y1={36} x2={cx[1]} y2={36} stroke={c.text} />);
@@ -77,11 +109,11 @@ function CopiesPicture({ cause, copies, width, narrow, laneItems, label }: { cau
             }
         }
     }
-    parts.push(<Text key="copy" x={0} y={y + 13} size={11} fill={c.muted}>{MISSED_SWINGS_COPY.copy}</Text>);
+    parts.push(<Text key="copy" x={0} y={y + 13} size={11} fill={c.muted}>{inserters ? ONE_COPY_WORDS.inserter : MISSED_SWINGS_COPY.copy}</Text>);
     // a part copy (5.5 copies) stands last: its head says so
-    const part = !Number.isInteger(copies);
+    const part = !inserters && !Number.isInteger(copies);
     cx.forEach((x, i) => parts.push(<Text key={`n-${i}`} x={x} y={y + 13} size={11} fill={c.muted} anchor="middle">
-        {part && i === slots - 1 ? MISSED_SWINGS_COPY.partCopy(i + 1, narrow) : i + 1}</Text>));
+        {inserters ? inserters.heads[i] : part && i === slots - 1 ? MISSED_SWINGS_COPY.partCopy(i + 1, narrow) : i + 1}</Text>));
     y += 20;
     rows.forEach((row, r) => {
         parts.push(<Text key={`l-${r}`} x={0} y={y + 19} fill={c.text}>{row.label}</Text>);
@@ -100,9 +132,9 @@ function CopiesPicture({ cause, copies, width, narrow, laneItems, label }: { cau
         });
         y += 36;
     });
-    parts.push(<Text key="unit" x={right} y={y + 8} size={11} fill={c.muted} anchor="end">{MISSED_SWINGS_COPY.unit(swingsEachOf(cause))}</Text>);
+    parts.push(<Text key="unit" x={right} y={y + 8} size={11} fill={c.muted} anchor="end">{MISSED_SWINGS_COPY.unit(swingsEachOf(cause, inserters !== null))}</Text>);
     const height = y + 14;
-    return <svg viewBox={`0 0 ${width} ${height}`} width="100%" role="img" aria-label={label} style={{ display: 'block' }} data-picture="copies">{parts}</svg>;
+    return <svg viewBox={`0 0 ${width} ${height}`} width="100%" role="img" aria-label={label} style={{ display: 'block' }} data-picture={inserters ? 'inserters' : 'copies'}>{parts}</svg>;
 }
 
 /** A mark of picture two: red for the copy before's gap, yellow for a full output, both halves for both, hatched for unknown */
@@ -189,13 +221,13 @@ function Figure({ title, children, caption, extra }: { title: string; children: 
         <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>{title}</Typography>
         {children}
         {extra}
-        <Typography component="figcaption" variant="caption" color="text.secondary">{caption}</Typography>
+        {caption !== '' && <Typography component="figcaption" variant="caption" color="text.secondary">{caption}</Typography>}
     </Box>;
 }
 
-function Legend({ swings, hatch }: { swings: MissedSwings; hatch: string }) {
+function Legend({ swings, hatch, oneCopy }: { swings: MissedSwings; hatch: string; oneCopy: boolean }) {
     return <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 2.5, rowGap: 0.75, fontSize: 12 }} data-legend="">
-        {legendOf(swings).map(entry => <Box component="span" key={entry.kind} sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
+        {legendOf(swings, oneCopy).map(entry => <Box component="span" key={entry.kind} sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
             <Swatch kind={entry.kind} hatch={hatch} /><span>{entry.text}</span>
         </Box>)}
     </Box>;
@@ -205,6 +237,8 @@ interface MissedSwingsPicturesProps {
     checked: CheckedLanes;
     cause: SharedLaneCause;
     lanes: readonly BuildLane[] | undefined;
+    /** The build's machines by inserter, which a build of one copy names its inserters with */
+    assumptions?: Pick<ClockModelAssumptions, 'machineOfInserter' | 'laneTakers'>;
     /** Selects the other clock the line names; without it, its name is plain text */
     onSelectClock?: (id: string) => void;
 }
@@ -214,44 +248,49 @@ interface MissedSwingsPicturesProps {
  * where the engine gives the swings; the line that names another clock of the build that holds; and the engine's
  * sentences behind "Read this as text". Each picture gives a screen reader the sentences it stands for.
  */
-export function MissedSwingsPictures({ checked, cause, lanes, onSelectClock }: MissedSwingsPicturesProps) {
+export function MissedSwingsPictures({ checked, cause, lanes, assumptions, onSelectClock }: MissedSwingsPicturesProps) {
     const ref = useRef<HTMLDivElement>(null);
     const measured = useElementWidth(ref);
     const width = measured > 0 ? measured : UNMEASURED_WIDTH;
     const narrow = width < NARROW_BELOW;
     const { itemLabel } = useGameNames();
+    const named = inserterNamerOf(checked.line.copies, assumptions);
     const hatch = `unknown-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
     const copies = checked.line.copies;
     const missing = cause.headline.data.copies.map(it => it.copy);
-    const labels = pictureLabelsOf(cause);
+    const labels = pictureLabelsOf(cause, named ? { named, itemLabel: id => itemLabel(id) } : undefined);
     const shortItems = [...new Set(checked.rows.filter(row => row.state.kind === 'short').map(row => laneOf(lanes, row)?.item).filter((it): it is string => Boolean(it)))];
     const laneItems = shortItems.map(item => nameInText(itemLabel(item)));
     const fewer = cause.changes?.data.fewer_copies ?? null;
-    const caption = cause.kind === 'join'
+    const caption = named ? oneCopyCaptionOf(cause) : cause.kind === 'join'
         ? MISSED_SWINGS_COPY.joinCaption(missing, cause.swings?.kind === 'join' ? cause.swings.side_belt : true)
         : MISSED_SWINGS_COPY.laneCaption(missing, fewer !== null && fewer > 1 ? fewer : null, cause.alone.data.missed);
     const swings = cause.swings;
-    const rows = swings === undefined ? [] : stripRowsOf(swings, itemLabel);
+    const takers = takersOf(cause);
+    // a build of one copy: every inserter on the lanes that miss swings, in order along the belt
+    const missedLanes = checked.rows.filter(row => row.state.kind === 'short').map(row => ({ belt_id: row.belt_id, lane: row.lane }));
+    const along = takersAlongOf(assumptions?.laneTakers, missedLanes, takers.map(it => it.inserter_id));
+    const rows = swings === undefined ? [] : stripRowsOf(swings, itemLabel, named, takers[0]?.inserter_id ?? 0);
     const span = Math.max(0, ...rows.map(it => it.windowCycles));
     const other = cause.changes?.data.other_clock ?? null;
     return <Box ref={ref} sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 2.25, minWidth: 0 }} data-missed-swings={cause.kind}>
-        <Figure title={MISSED_SWINGS_COPY.pictureOne} caption={caption}>
-            <CopiesPicture cause={cause} copies={copies} width={width} narrow={narrow} laneItems={laneItems} label={labels.one} />
+        <Figure title={named ? ONE_COPY_WORDS.pictureOne : MISSED_SWINGS_COPY.pictureOne} caption={caption}>
+            <CopiesPicture cause={cause} copies={copies} width={width} narrow={narrow} laneItems={laneItems} label={labels.one} named={named} along={along} />
         </Figure>
-        {swings !== undefined && rows.length > 0 && <Figure title={MISSED_SWINGS_COPY.pictureTwo(span, missing)}
+        {swings !== undefined && rows.length > 0 && <Figure title={named ? ONE_COPY_WORDS.pictureTwo(span, takers.map(it => it.inserter_id > 0 ? named(it.inserter_id) : ONE_COPY_WORDS.outputInserter)) : MISSED_SWINGS_COPY.pictureTwo(span, missing)}
             caption={swings.kind === 'join' ? MISSED_SWINGS_COPY.joinCaptionTwo(swings.copies[0]?.gives ?? 0) : MISSED_SWINGS_COPY.laneCaptionTwo}
-            extra={<Legend swings={swings} hatch={hatch} />}>
+            extra={<Legend swings={swings} hatch={hatch} oneCopy={named !== null} />}>
             <WindowCyclesPicture rows={rows} width={width} narrow={narrow} label={labels.two} hatch={hatch} />
         </Figure>}
         {other !== null && <Typography variant="body2" data-other-clock="">
-            {MISSED_SWINGS_COPY.otherClock(cause.kind, copies)}
+            {named ? ONE_COPY_WORDS.otherClock(cause.kind) : MISSED_SWINGS_COPY.otherClock(cause.kind, copies)}
             {onSelectClock ? <Link component="button" variant="body2" sx={{ verticalAlign: 'baseline' }} onClick={() => onSelectClock(other.id)}>{other.label.split(':')[0]}</Link>
                 : other.label.split(':')[0]}
             {MISSED_SWINGS_COPY.otherClockAfter(other.window_cycle_ticks)}
         </Typography>}
         <Disclosure summary={MISSED_SWINGS_COPY.readAsText} sx={{ borderTop: 1, borderColor: 'divider', pt: 0.5 }} data-read-as-text="">
             <Box sx={{ display: 'grid', gap: 0.75, pt: 0.5 }}>
-                {textPartsOf(cause).map(text => <Typography key={text} variant="body2">{text}</Typography>)}
+                {(named ? oneCopyTextPartsOf(cause, named, itemLabel) : textPartsOf(cause)).map(text => <Typography key={text} variant="body2">{text}</Typography>)}
             </Box>
         </Disclosure>
     </Box>;

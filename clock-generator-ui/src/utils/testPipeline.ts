@@ -31,8 +31,10 @@ export interface TestBox {
 export const TEST_PIPELINE_COPY = {
     heading: 'Tests of this clock',
     states: { passed: 'Passed', failed: 'Failed', 'not-run': 'Not run', 'does-not-apply': 'Does not apply', error: 'Error' } satisfies Record<TestState, string>,
-    oneCopy: 'One copy alone',
-    allCopies: (copies: number) => copies > 1 ? `All ${formatNumberText(copies)} copies together` : 'All copies together',
+    // a build of one copy has no copy to run alone: the tests say the clock alone, then the inserters together
+    oneCopy: (copies: number) => copies === 1 ? 'Clock alone' : 'One copy alone',
+    // a build of one copy has no copies to put together: its inserters are what the test runs together on their lanes
+    allCopies: (copies: number) => copies > 1 ? `All ${formatNumberText(copies)} copies together` : copies === 1 ? 'Inserters together' : 'All copies together',
     losses: 'Loss of inputs',
     holds: (target: string) => `Holds ${target}/s`,
     makesOf: (rate: string, target: string, verb: string) => `${verb} ${rate}/s of ${target}/s`,
@@ -41,22 +43,22 @@ export const TEST_PIPELINE_COPY = {
     /** Where the test ran: the lanes the copies share, or in a build of one copy the lanes several of its inserters take from */
     onSharedLanes: (copies: number) => copies > 1 ? 'On the lanes the copies share.' : 'On the lanes several of its inserters take from.',
     notRun: 'Not run',
-    oneCopyFails: 'One copy alone does not hold its rate.',
+    oneCopyFails: (copies: number) => copies === 1 ? 'The clock alone does not hold its rate.' : 'One copy alone does not hold its rate.',
     doesNotApply: 'Does not apply',
-    oneCopyBuild: 'The build has one copy.',
-    noLaneRun: 'No lane the copies take from is run with them.',
+    oneCopyBuild: (copies: number) => copies === 1 ? 'No lane is used by several inserters.' : 'The build has one copy.',
+    noLaneRun: (copies: number) => copies === 1 ? 'No lane several inserters take from is run.' : 'No lane the copies take from is run with them.',
     keptBefore: 'This clock was made before this test.',
     noResult: 'No result',
     lanesNotChecked: (reason: string) => `The lanes could not be checked: ${sentenceEnd(reason)}`,
     recovers: 'Recovers',
-    oneCopyRecovers: 'One copy recovers',
+    oneCopyRecovers: (copies: number) => copies === 1 ? 'Recovers alone' : 'One copy recovers',
     afterLosses: 'After a supply stop and after an output blockage.',
-    copiesNotTried: 'The copies are not tried: they do not hold their rate.',
-    copiesCouldNotBeTried: (reason: string) => `The copies could not be tried: ${sentenceEnd(reason)}`,
-    copiesDoNotRecover: 'The copies do not recover',
-    oneCopyAloneRecovers: 'One copy alone recovers.',
+    copiesNotTried: (copies: number) => copies === 1 ? 'The inserters together are not tried: they do not hold their rate.' : 'The copies are not tried: they do not hold their rate.',
+    copiesCouldNotBeTried: (reason: string, copies: number) => `${copies === 1 ? 'The inserters together' : 'The copies'} could not be tried: ${sentenceEnd(reason)}`,
+    copiesDoNotRecover: (copies: number) => copies === 1 ? 'The inserters together do not recover' : 'The copies do not recover',
+    oneCopyAloneRecovers: (copies: number) => copies === 1 ? 'It recovers alone.' : 'One copy alone recovers.',
     doesNotRecover: 'Does not recover',
-    oneCopyDoesNotRecover: 'One copy does not recover',
+    oneCopyDoesNotRecover: (copies: number) => copies === 1 ? 'Does not recover alone' : 'One copy does not recover',
     notBackByItself: 'It does not go back to its rate by itself.',
 };
 
@@ -84,7 +86,7 @@ function rateResult(clock: PipelineClock, rate: number): string {
  * Oscillates where the engine gives its reason (`as_built.output_reason`, as the status reads it), else that it does not hold
  */
 function oneCopyBox(clock: PipelineClock): TestBox {
-    const box = { test: 'one-copy' as const, name: TEST_PIPELINE_COPY.oneCopy, detail: TEST_PIPELINE_COPY.steadyState };
+    const box = { test: 'one-copy' as const, name: TEST_PIPELINE_COPY.oneCopy(clock.copies), detail: TEST_PIPELINE_COPY.steadyState };
     const rate = clock.assessment.items_per_second;
     if (clock.assessment.holds) return { ...box, state: 'passed', result: rateResult(clock, rate) };
     const result = isOffTarget(clock) ? rateResult(clock, rate)
@@ -109,16 +111,16 @@ function allCopiesBox(clock: PipelineClock): TestBox {
     const checked = clock.checkedLanes;
     // the engine checks no lane of a build of one copy where no two of its inserters take from one lane
     if ((checked === undefined || checked === null) && clock.copies <= 1) {
-        return { ...box, state: 'does-not-apply', result: TEST_PIPELINE_COPY.doesNotApply, detail: TEST_PIPELINE_COPY.oneCopyBuild };
+        return { ...box, state: 'does-not-apply', result: TEST_PIPELINE_COPY.doesNotApply, detail: TEST_PIPELINE_COPY.oneCopyBuild(clock.copies) };
     }
-    if (!clock.assessment.holds) return { ...box, state: 'not-run', result: TEST_PIPELINE_COPY.notRun, detail: TEST_PIPELINE_COPY.oneCopyFails };
+    if (!clock.assessment.holds) return { ...box, state: 'not-run', result: TEST_PIPELINE_COPY.notRun, detail: TEST_PIPELINE_COPY.oneCopyFails(clock.copies) };
     const stopped = lanesNotChecked(clock);
     if (stopped) return { ...box, state: 'error', result: TEST_PIPELINE_COPY.noResult, detail: TEST_PIPELINE_COPY.lanesNotChecked(stopped.reason) };
     if ((clock.assessment.shared_lane_losses?.length ?? 0) > 0) {
         return { ...box, state: 'failed', result: rateResult(clock, shownRateOf(clock)), detail: TEST_PIPELINE_COPY.onSharedLanes(clock.copies) };
     }
     if (checked === undefined || checked === null) return { ...box, state: 'not-run', result: TEST_PIPELINE_COPY.notRun, detail: TEST_PIPELINE_COPY.keptBefore };
-    if (!checked.line.run_with_copies) return { ...box, state: 'does-not-apply', result: TEST_PIPELINE_COPY.doesNotApply, detail: TEST_PIPELINE_COPY.noLaneRun };
+    if (!checked.line.run_with_copies) return { ...box, state: 'does-not-apply', result: TEST_PIPELINE_COPY.doesNotApply, detail: TEST_PIPELINE_COPY.noLaneRun(clock.copies) };
     return { ...box, state: 'passed', result: rateResult(clock, shownRateOf(clock)), detail: TEST_PIPELINE_COPY.onSharedLanes(clock.copies) };
 }
 
@@ -130,7 +132,7 @@ function allCopiesBox(clock: PipelineClock): TestBox {
  */
 function lossesBox(clock: PipelineClock, copiesFail: boolean): TestBox {
     const box = { test: 'losses' as const, name: TEST_PIPELINE_COPY.losses };
-    if (!clock.assessment.holds) return { ...box, state: 'not-run', result: TEST_PIPELINE_COPY.notRun, detail: TEST_PIPELINE_COPY.oneCopyFails };
+    if (!clock.assessment.holds) return { ...box, state: 'not-run', result: TEST_PIPELINE_COPY.notRun, detail: TEST_PIPELINE_COPY.oneCopyFails(clock.copies) };
     const trial = clock.assessment.disturbance_trial;
     if (trial === null || trial === undefined) {
         const reason = clock.assessment.disturbance_trial_not_tried;
@@ -142,18 +144,18 @@ function lossesBox(clock: PipelineClock, copiesFail: boolean): TestBox {
     const copies = trial.on_copies;
     if (copies !== undefined) {
         if (copies.not_tried !== undefined) {
-            return { ...box, state: 'passed', result: TEST_PIPELINE_COPY.oneCopyRecovers, detail: TEST_PIPELINE_COPY.copiesCouldNotBeTried(copies.not_tried) };
+            return { ...box, state: 'passed', result: TEST_PIPELINE_COPY.oneCopyRecovers(clock.copies), detail: TEST_PIPELINE_COPY.copiesCouldNotBeTried(copies.not_tried, clock.copies) };
         }
         return copies.survives
             ? { ...box, state: 'passed', result: TEST_PIPELINE_COPY.recovers, detail: TEST_PIPELINE_COPY.afterLosses }
-            : { ...box, state: 'failed', result: TEST_PIPELINE_COPY.copiesDoNotRecover, detail: TEST_PIPELINE_COPY.oneCopyAloneRecovers };
+            : { ...box, state: 'failed', result: TEST_PIPELINE_COPY.copiesDoNotRecover(clock.copies), detail: TEST_PIPELINE_COPY.oneCopyAloneRecovers(clock.copies) };
     }
     if (trial.survives) {
         return copiesFail
-            ? { ...box, state: 'passed', result: TEST_PIPELINE_COPY.oneCopyRecovers, detail: TEST_PIPELINE_COPY.copiesNotTried }
+            ? { ...box, state: 'passed', result: TEST_PIPELINE_COPY.oneCopyRecovers(clock.copies), detail: TEST_PIPELINE_COPY.copiesNotTried(clock.copies) }
             : { ...box, state: 'passed', result: TEST_PIPELINE_COPY.recovers, detail: TEST_PIPELINE_COPY.afterLosses };
     }
-    return { ...box, state: 'failed', result: copiesFail ? TEST_PIPELINE_COPY.oneCopyDoesNotRecover : TEST_PIPELINE_COPY.doesNotRecover, detail: TEST_PIPELINE_COPY.notBackByItself };
+    return { ...box, state: 'failed', result: copiesFail ? TEST_PIPELINE_COPY.oneCopyDoesNotRecover(clock.copies) : TEST_PIPELINE_COPY.doesNotRecover, detail: TEST_PIPELINE_COPY.notBackByItself };
 }
 
 /** The three tests of a clock, in the order the graphic draws them */

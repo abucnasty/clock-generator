@@ -8,6 +8,7 @@ import { AUTOMATION_240, checkedOf, ELECTROMAGNETIC_330, MILITARY_240, viewOf } 
 import { MISSED_SWINGS_COPY } from '../utils/missedSwings';
 import { ClockDiagnostics } from './ClockDiagnostics';
 import { oscillatingOf } from '../test/oscillationFixture';
+import { NINE_APART_HOLDS, NINE_APART_MISSES, rowView, SIX_APART_MISSES } from '../test/oneCopyBuild';
 
 const gameNames = names({ 'iron-gear-wheel': 'Iron gear wheel', 'copper-plate': 'Copper plate', 'automation-science-pack': 'Automation science pack',
     'military-science-pack': 'Military science pack', 'stone-wall': 'Stone wall', 'piercing-rounds-magazine': 'Piercing rounds magazine', 'iron-plate': 'Iron plate' });
@@ -29,6 +30,28 @@ function withoutCausePart(view: ClockAlternativeView): ClockAlternativeView {
     void _swings;
     return { ...view, checkedLanes: { ...view.checkedLanes!, cause } };
 }
+
+describe('the Diagnostics tab of a build of one copy', () => {
+    const clocks = [
+        ['misses swings with one inserter', rowView(NINE_APART_MISSES, 9, 'takt_batches_observed')],
+        ['misses swings with two inserters', rowView(SIX_APART_MISSES, 6, 'takt_batches_observed')],
+        ['holds', rowView(NINE_APART_HOLDS, 9, 'time_study_windows')],
+    ] as const;
+
+    it.each(clocks)('%s: no word about a copy in the tests, the pictures, the table, the labels or the tooltips', (_, clock) => {
+        const { container } = show(<ClockDiagnostics clock={{ ...clock, insights: [] }} />, { names: gameNames });
+        const details = container.querySelector('details') as HTMLDetailsElement | null;
+        if (details) details.open = true;
+        const labels = [...container.querySelectorAll('[aria-label]')].map(it => it.getAttribute('aria-label'));
+        const tips = [...container.querySelectorAll('title')].map(it => it.textContent);
+        expect([container.textContent, ...labels, ...tips].join('\n')).not.toMatch(/cop(y|ies)/i);
+    });
+
+    it('names the three tests for the clock alone, the inserters together and the loss of inputs', () => {
+        const { container } = show(<ClockDiagnostics clock={{ ...clocks[0][1], insights: [] }} />, { names: gameNames });
+        expect([...container.querySelectorAll('[data-test-pipeline] li')].map(it => it.querySelector('p')!.textContent)).toEqual(['Clock alone', 'Inserters together', 'Loss of inputs']);
+    });
+});
 
 describe('the Diagnostics tab holds exactly what each clock has', () => {
     it('a clock with a cause and a cause part: the headline, both pictures, the other clock, "Read this as text", the table', () => {

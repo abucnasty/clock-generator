@@ -13,6 +13,7 @@ import type { ClockAlternativeRun, Config, DebugSteps, LogMessage, Logger, Machi
 import { parseFormConfig } from './formConfig';
 import { laneRolesAnswer } from './laneRoles';
 import { convertBeltSetting } from '../utils/beltSettingConversion';
+import { laneTakersOf } from '../utils/laneTakers';
 import { installFactsOf } from './installFacts';
 import { createReadyGate } from './requestGate';
 import { NO_NAMES, hiddenRecipeIds, type GameNames } from '../utils/gameNames';
@@ -143,6 +144,9 @@ function toRunView(run: ClockAlternativeRun | null, config: Config): ClockAltern
             machines: machinesToName(config),
             entityNames,
             lanes,
+            laneTakers: laneTakersOf(config),
+            machineOfInserter: Object.fromEntries(config.inserters.flatMap((inserter, index) =>
+                inserter.sink.type === 'machine' ? [[inserter.id ?? index + 1, inserter.sink.id]] : [])),
             kickStarts: result.machine_facts.flatMap(machine => machine.facts.inputs
                 .filter(input => clockGenerator.FactorioDataService.findRecipeOrThrow(machine.facts.recipe).results.some(output => output.name === input.item_name))
                 .map(input => ({ machineId: machine.entity_id, item: input.item_name,

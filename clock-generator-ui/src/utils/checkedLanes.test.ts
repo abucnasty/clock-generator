@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { CheckedLanes } from 'clock-generator/browser';
+import type { CheckedLaneRow, CheckedLanes, ClockInsight, LaneNotCheckedReason } from 'clock-generator/browser';
 import { AUTOMATION_240, checkedOf, ELECTROMAGNETIC_330, ELECTROMAGNETIC_330_TWO_SWINGS, MILITARY_240, STATES, viewOf, viewsOf } from '../test/checkedLanesFixtures';
-import { CHECKED_LANES_COPY, descriptionShown, endText, givesLanes, insightsShown, laneOf, madeForLead, lanesCountText, laneText, roleText, rowSentenceShown, stateSentence, stateTone, supplyText, togetherText, whyNotStableShowsCause, withOtherClocksOf } from './checkedLanes';
+import { CHECKED_LANES_COPY, descriptionShown, endText, givesLanes, insightsShown, laneOf, madeForLead, lanesCountText, laneText, roleText, rowSentenceShown, stateLabelOf, stateSentence, stateTone, supplyText, togetherText, whyNotStableShowsCause, withOtherClocksOf } from './checkedLanes';
 
 const lanes = AUTOMATION_240.lanes;
 
@@ -172,5 +172,75 @@ describe('the sentence under a row\'s state, by the state\'s kind', () => {
         expect(rowSentenceShown(differ)).toBe(differ.sentence);
         const one = { ...row, state: { ...row.state, copies: [row.state.copies[0]] } };
         expect(rowSentenceShown(one)).toBeNull();
+    });
+});
+
+describe('the words of a row of a build of one copy', () => {
+    const named = (id: number) => `Inserter ${id} into machine ${(id + 1) / 2}`;
+    const none = { named, takers: [], item: undefined };
+
+    it.each(Object.keys(STATES))('%s: no word about a copy in its label, its sentence or the count it adds to', key => {
+        const { row } = STATES[key];
+        const words = [stateLabelOf(row, true), stateSentence(row, none), rowSentenceShown(row, none) ?? '', lanesCountText([row], true)].join(' ');
+        expect(words).not.toMatch(/cop(y|ies)/i);
+    });
+
+    it('names each inserter that misses swings on the lane of the row, where the cause says which', () => {
+        const row = { ...STATES.short.row, state: { kind: 'short', copies: [{ copy: 1, missed: 12, swings: 130 }] } } as CheckedLaneRow;
+        const takers = [
+            { inserter_id: 3, items: [{ item: 'copper-plate', missed: 9, swings: 65 }, { item: 'iron-gear-wheel', missed: 7, swings: 65 }] },
+            { inserter_id: 5, items: [{ item: 'copper-plate', missed: 3, swings: 65 }] },
+        ];
+        expect(stateSentence(row, { named, takers, item: 'copper-plate' })).toBe('Inserter 3 into machine 2 misses 9 of 65 swings. Inserter 5 into machine 3 misses 3 of 65 swings.');
+        // the figures of the cause do not add up to the row's: only the row's count
+        expect(stateSentence(row, { named, takers, item: 'iron-gear-wheel' })).toBe('12 of 130 swings missed.');
+        expect(stateSentence(row, none)).toBe('12 of 130 swings missed.');
+    });
+
+    it('words the labels of the states that name copies, and keeps the others', () => {
+        expect(stateLabelOf(STATES.short.row, true)).toBe('Swings missed');
+        expect(stateLabelOf(STATES.join_full.row, true)).toBe('Join full');
+        expect(stateLabelOf(STATES.takes_less.row, true)).toBe('Inserters take less');
+        expect(stateLabelOf(STATES.not_run.row, true)).toBe('Not run together');
+        expect(stateLabelOf(STATES.holds.row, true)).toBe(STATES.holds.row.label);
+        expect(stateLabelOf(STATES.rate_fits.row, true)).toBe(STATES.rate_fits.row.label);
+        // more copies: the engine's, word for word
+        for (const { row } of Object.values(STATES)) expect(stateLabelOf(row, false)).toBe(row.label);
+    });
+
+    it('words why a lane was not checked or not run, for each reason, in the words of inserters', () => {
+        const reasonRow = (reason: LaneNotCheckedReason) => ({ state: { kind: 'not_checked', reason }, sentence: '' }) as unknown as CheckedLaneRow;
+        const reasons: LaneNotCheckedReason[] = [{ code: 'one_copy_does_not_hold' }, { code: 'drop_rate_unknown' }, { code: 'drops_more_than_lane_carries', data: { copies: 1 } },
+            { code: 'build_drops_onto_belt' }, { code: 'check_stopped', data: { message: 'the belt has no lanes' } }, { code: 'output_belt_not_run' }, { code: 'lane_not_in_model' }];
+        for (const reason of reasons) expect(stateSentence(reasonRow(reason), none)).not.toMatch(/cop(y|ies)/i);
+        expect(stateSentence(reasonRow({ code: 'check_stopped', data: { message: 'the belt has no lanes' } }), none)).toBe('The lanes several inserters take from could not be checked: the belt has no lanes.');
+        expect(stateSentence(reasonRow({ code: 'check_stopped', data: { message: 'the belt has no lanes' } }))).toBe('The lanes its copies share could not be checked: the belt has no lanes.');
+    });
+
+    it('counts "not run together" in the heading', () => {
+        expect(lanesCountText([STATES.not_run.row], true)).toBe('1 lane · not run together');
+        expect(lanesCountText([STATES.not_run.row])).toBe('1 lane · not run with the copies');
+    });
+
+    it('heads the column of the plan "Planned for all inserters", and keeps the copies for more copies, a part copy too', () => {
+        expect(CHECKED_LANES_COPY.columns.together(1)).toBe('Planned for all inserters');
+        expect(CHECKED_LANES_COPY.columns.together(9)).toBe('Planned for the 9 copies');
+        expect(CHECKED_LANES_COPY.columns.together(5.5)).toBe('Planned for the 5.5 copies');
+    });
+});
+
+describe('the note on the spacing of drops, for a build of one copy', () => {
+    const note = (gap: string) => ({ id: 'drop-spacing', title: 'Drops onto the automation science pack belt land on each other', what: '', why: '', explanation: '',
+        table: { columns: ['Inserters', 'Hands each window cycle', 'Tiles between copies', 'Belt tiles in a window cycle'], rows: [['5 and 13', '4', gap, '9']] } }) as unknown as ClockInsight;
+
+    it('has no column on the gap between copies where every row has a dash for it', () => {
+        expect(insightsShown({ insights: [note('-')], copies: 1 })[0].table).toEqual({ columns: ['Inserters', 'Hands each window cycle', 'Belt tiles in a window cycle'], rows: [['5 and 13', '4', '9']] });
+    });
+
+    it('keeps the column where a row has a figure, and for more copies', () => {
+        expect(insightsShown({ insights: [note('9')], copies: 1 })[0].table!.columns).toContain('Tiles between copies');
+        expect(insightsShown({ insights: [note('-')], copies: 3 })[0].table!.columns).toContain('Tiles between copies');
+        const insights = [note('-')];
+        expect(insightsShown({ insights })).toBe(insights);
     });
 });

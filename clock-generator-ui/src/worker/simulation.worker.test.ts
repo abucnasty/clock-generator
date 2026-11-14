@@ -534,6 +534,11 @@ it('passes on what was checked on the shared lanes of each clock, and every lane
     expect(clock.assumptions.lanes?.map(lane => [lane.belt_id, lane.lane, lane.role, lane.sharing])).toEqual([
         [1, 1, 'output', 'shared'], [2, 1, 'output', 'shared'], [3, 1, 'input', 'shared'], [3, 2, 'input', 'shared'], [4, 1, 'input', 'shared'],
         [4, 2, 'input', 'shared'], [5, 1, 'input', 'per_copy'], [5, 2, 'input', 'per_copy'], [6, 1, 'input', 'per_copy'], [6, 2, 'input', 'per_copy']]);
+    // the machine each inserter that puts into one puts into, by the inserter's number: what a build of one copy names its inserters with
+    const config = JSON.parse(militarySample) as Config;
+    const expected = config.inserters.flatMap((inserter, index) => inserter.sink.type === 'machine' ? [[inserter.id ?? index + 1, inserter.sink.id]] : []);
+    expect(expected.length).toBeGreaterThan(0);
+    expect(Object.entries(clock.assumptions.machineOfInserter ?? {}).map(([id, machine]) => [Number(id), machine])).toEqual(expected);
 }, 30_000);
 
 describe('a build that states no lane end and no belt setting', () => {
