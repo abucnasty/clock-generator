@@ -151,7 +151,7 @@ export interface HarnessOptions {
      * For a probe that times its run in game ticks (a clock's window cycle can be far longer than the run)
      */
     record_at_once?: boolean;
-    /** Scratch folder for Factorio's write data; a temporary folder that is removed afterwards when absent */
+    /** Scratch folder for Factorio's write data; when absent, a folder made under `scratchRoot` and removed afterwards */
     work_dir?: string;
     /** Speed the game is set to as the build is built; absent, it stays what it is, as someone watching may have set it */
     game_speed?: number;
@@ -386,6 +386,16 @@ async function freeUdpPort(): Promise<number> {
  * A write-data folder of its own for the game: the save, the mods of this repository and the mods that ship with
  * the game. Nothing in the Factorio install or the player's own saves and mods is written to.
  */
+/**
+ * Where the scratch folders of a run are made: `TMPDIR` when it is set, else the user's cache folder. The system's temporary
+ * folder is often kept in memory, and a run that is killed leaves its folder behind.
+ */
+async function scratchRoot(): Promise<string> {
+    const root = process.env.TMPDIR ?? path.join(os.homedir(), ".cache", "clock-generator");
+    await fs.mkdir(root, { recursive: true });
+    return root;
+}
+
 async function prepareWorkDir(work_dir: string, executable: string, save: string): Promise<{ config: string; save: string; settings: string }> {
     const data_dir = factorioDataDir(executable);
     const mods_dir = path.join(work_dir, "mods");
@@ -1085,7 +1095,7 @@ export class HarnessSession {
     /** Starts the game and, to watch, opens it with graphics and waits for that to join */
     static async start(options: SessionOptions): Promise<HarnessSession> {
         const executable = await resolveFactorioExecutable(options.factorio);
-        const work_dir = path.resolve(options.work_dir ?? await fs.mkdtemp(path.join(os.tmpdir(), "clock-generator-harness-")));
+        const work_dir = path.resolve(options.work_dir ?? await fs.mkdtemp(path.join(await scratchRoot(), "clock-generator-harness-")));
         await fs.mkdir(work_dir, { recursive: true });
         const files = await prepareWorkDir(work_dir, executable, options.save);
         const deadline = Date.now() + options.timeout_seconds * 1000;
@@ -1686,7 +1696,7 @@ export class CachedHarnessSession {
             const session = await HarnessSession.start(quiet);
             try {
                 for (const [index, before] of this.answered.entries()) {
-                    this.replay_dir ??= await fs.mkdtemp(path.join(os.tmpdir(), "clock-generator-replay-"));
+                    this.replay_dir ??= await fs.mkdtemp(path.join(await scratchRoot(), "clock-generator-replay-"));
                     await session.record({ ...before.options, out: path.join(this.replay_dir, `described-${index}.json`), log: () => { } });
                 }
                 return await session.describeBuild({ ...options, log: () => { } });
@@ -1708,7 +1718,7 @@ export class CachedHarnessSession {
 
     private async replayAnswered(session: HarnessSession): Promise<void> {
         for (; this.played < this.answered.length; this.played++) {
-            this.replay_dir ??= await fs.mkdtemp(path.join(os.tmpdir(), "clock-generator-replay-"));
+            this.replay_dir ??= await fs.mkdtemp(path.join(await scratchRoot(), "clock-generator-replay-"));
             await session.record({ ...this.answered[this.played].options, out: path.join(this.replay_dir, `${this.played}.json`), log: () => { } });
         }
     }
