@@ -32,8 +32,8 @@ then.
    `package-lock.json` files. Add the section of the version, with the date, to `CHANGELOG.md`. The entry is under
    Fixed.
 
-4. Make the record again, as in step 6 of [Release a version](release-a-version.md). Only the `text_sha256` field can
-   change. Add the entry `Release x.y.z` to `clock-generator/record/MOVES.md`.
+4. Do not make the record again, as in step 6 of [Release a version](release-a-version.md). The patch bump moves no
+   file in `clock-generator/record/`.
 
 5. Open a pull request into `hotfix/<version>`. Give it the title `hotfix: <version>, <summary>` and use the template
    `.github/PULL_REQUEST_TEMPLATE/change.md`. The Version part has the patch version.

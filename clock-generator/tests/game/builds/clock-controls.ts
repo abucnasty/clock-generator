@@ -308,7 +308,7 @@ export function historicalPinMismatches(history: ClockHistory["cases"], current:
     return found;
 }
 
-/** An alternative of a record job (`record/<job>.json`, format clock-record-2): the fields a control's pin is checked against */
+/** An alternative of a record job (`record/<job>.json`, format clock-record-3): the fields a control's pin is checked against */
 export interface RecordAlternative {
     id: string;
     verdict: string;

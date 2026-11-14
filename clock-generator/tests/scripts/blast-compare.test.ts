@@ -12,9 +12,9 @@ afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 const sha = (c: string) => c.repeat(64);
 /** A job file with one alternative, the fields compare.py reads */
-const jobFile = (name: string, clock = sha('a')) => {
+const jobFile = (name: string, clock = sha('a'), text = sha('2')) => {
     const results = { label: sha('1') };
-    const alt = { id: 'even-hands', verdict: 'stable', holds: true, rate: 640, supply: null, window_cycle_ticks: 972, wake_ups: 10, clock_sha256: clock, text_sha256: sha('2'), descriptions_cut: 0, results_sha256: sha('3'), results };
+    const alt = { id: 'even-hands', verdict: 'stable', holds: true, rate: 640, supply: null, window_cycle_ticks: 972, wake_ups: 10, clock_sha256: clock, text_sha256: text, descriptions_cut: 0, results_sha256: sha('3'), results };
     return {
         group: 'config', name, selected_index: 0, results_sha256: sha('4'), job_results: { results_sha256: sha('5'), results },
         selected: alt, alternatives: [alt], seconds: 1,
@@ -23,10 +23,10 @@ const jobFile = (name: string, clock = sha('a')) => {
 
 let count = 0;
 /** A folder of job files named by name, with a _jobs.json listing config hashes (hashes[name]; a name without one has none) */
-const side = (hashes: Record<string, string | null>, withList = true) => {
+const side = (hashes: Record<string, string | null>, withList = true, text = sha('2')) => {
     const dir = path.join(tmp, `side${count++}`);
     fs.mkdirSync(dir);
-    for (const name of Object.keys(hashes)) fs.writeFileSync(path.join(dir, `config-${name}.json`), JSON.stringify(jobFile(name)));
+    for (const name of Object.keys(hashes)) fs.writeFileSync(path.join(dir, `config-${name}.json`), JSON.stringify(jobFile(name, sha('a'), text)));
     if (withList) {
         const jobs = Object.entries(hashes).map(([name, h]) => ({ key: `config-${name}`, group: 'config', name, ...(h ? { config_sha256: h } : {}) }));
         fs.writeFileSync(path.join(dir, '_jobs.json'), JSON.stringify({ format: 't1-blast-3', groups: ['config'], count: jobs.length, jobs }));
@@ -107,5 +107,18 @@ describe('compare.py --map', () => {
         const done = run('--map', mapFile('config-OLD config-SAME\n'), before(), after());
         expect(done.status).toBe(1);
         expect(done.stderr).toContain('config:SAME');
+    });
+});
+
+describe('compare.py and the text of a clock', () => {
+    it('counts the clocks whose text alone changed apart: the job files hold text_sha256 although the record does not', () => {
+        const done = run(side({ A: sha('c') }), side({ A: sha('c') }, true, sha('9')));
+        expect(done.status).toBe(0);
+        expect(done.stdout).toContain('selected clock hash changed: 0');
+        expect(done.stdout).toContain('alternatives whose text alone changed: 1');
+    });
+
+    it('counts none when the text is the same', () => {
+        expect(run(side({ A: sha('c') }), side({ A: sha('c') })).stdout).toContain('alternatives whose text alone changed: 0');
     });
 });
