@@ -25,7 +25,7 @@ import { OpenRange } from "../data-types";
 import { buildToNameOf } from "./build-names";
 import { SerializableClockWindows } from "./clock";
 import { lanesInSentence, NO_BUILD, type BuildToName } from "./entity-name";
-import { DisturbanceTrial, disturbanceTrialsOf, LossOutcome, lossLabel, lossLimitOf, trialCountOf, type TrialCount } from "./disturbance-trial";
+import { DisturbanceTrial, disturbanceTrialsOf, LossOutcome, lossLabel, lossLimitOf, type SkippedTrial, trialCountOf, type TrialCount, withEveryTrialCounted } from "./disturbance-trial";
 import { canonicalKey, currentRunMemo } from "./plan/run-memo";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { runOnSharedLanes } from "./shared-lane-model";
@@ -122,8 +122,10 @@ function triedOnCopies(config: Config, lanes: ReturnType<typeof sharedLaneRunsOf
     let recovered = 0;
     for (const { under, layouts } of readings) {
         for (const layout of layouts) {
-            const outcomeOf = (loss: DisturbanceTrial): LossOutcome => runOnSharedLanes(under, windows, window_cycle_ticks, layout, 1, logger, undefined,
-                { loss, window_cycle_ticks, expected_output_items, loss_limit_ticks: loss_limit?.ticks }).disturbance_trial!;
+            const runOf = (loss: DisturbanceTrial, skipped?: readonly SkippedTrial[]): LossOutcome => runOnSharedLanes(under, windows, window_cycle_ticks, layout, 1, logger, undefined,
+                { loss, window_cycle_ticks, expected_output_items, loss_limit_ticks: loss_limit?.ticks, ...(skipped !== undefined && { skipped_trials: skipped }) }).disturbance_trial!;
+            // a loss a copy is not back from has every trial of its plan counted (withEveryTrialCounted)
+            const outcomeOf = (loss: DisturbanceTrial): LossOutcome => withEveryTrialCounted(runOf(loss), skipped => runOf(loss, skipped));
             // the run with nothing cut, judged as the others: copies that are not at the expected output in every window
             // cycle without a loss cannot be judged after one
             const undisturbed = outcomeOf({ kind: "none" });

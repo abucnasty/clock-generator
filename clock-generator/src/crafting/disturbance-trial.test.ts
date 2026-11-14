@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import {
     clockCountsOneAt, countedOnTheClock, disturbanceTrialsOf, judgedCopies, judgedOnTheClock, judgedTogether, judgeRecovery, LATE_AFTER_WINDOW_CYCLES, LOSS_PLACES, LOSS_SHARES, lossId, lossLabel, lossLimitOf, lossTrialsPartOfTheWay,
     lossTrialsUntilStopped, LossOutcome, LossTrial, MAX_LOSS_WINDOW_CYCLES, MAX_RECOVERY_WINDOW_CYCLES, MAX_RUN_ON_WINDOW_CYCLES, plannedTrialsOf, reportOf, RUN_ON_EXACT_WINDOW_CYCLES,
-    repeatOnTheClock, runsOn, trialCountOf, verdictOf,
+    repeatOnTheClock, runsOn, trialCountOf, verdictOf, withEveryTrialCounted,
 } from "./disturbance-trial";
 import { Duration } from "../data-types";
 import type { BranchBins } from "./terminal-rate";
@@ -277,8 +277,8 @@ describe("the verdict of a clock's losses", () => {
 });
 
 describe("the trials of a loss that breaks a clock, as numbers", () => {
-    const trial = (cut_at: number, loss_ticks: number, until_stopped: boolean, recovers: boolean): LossTrial => ({
-        cut_at, restore_at: cut_at, until_stopped, loss_ticks, output_during_loss: 0, stopped_after_ticks: until_stopped ? loss_ticks : null,
+    const trial = (cut_at: number, loss_ticks: number, until_stopped: boolean, recovers: boolean, plan_index = 0): LossTrial => ({
+        plan_index, cut_at, restore_at: cut_at, until_stopped, loss_ticks, output_during_loss: 0, stopped_after_ticks: until_stopped ? loss_ticks : null,
         output_per_bin: [10], recovers, recovered_after_bins: recovers ? 1 : null, proven: true, ends_in: [10],
     });
     const outcome = (loss: LossOutcome["loss"], trials: LossTrial[], planned_trials = 16): LossOutcome => ({
@@ -296,15 +296,52 @@ describe("the trials of a loss that breaks a clock, as numbers", () => {
         expect(plannedTrialsOf({ kind: "none" }, LOSS_PLACES, LOSS_SHARES)).toBe(1);
     });
 
-    it("give the trials planned, run and recovered from, and the first not recovered from: the sixth of 16, a quarter of the time to stop", () => {
-        const copper = outcome({ kind: "supply", item: "copper-plate" }, [...stopped, trial(0, 466, false, true), trial(18, 466, false, false)]);
-        expect(trialCountOf(copper)).toEqual({ loss: { kind: "supply", items: ["copper-plate"] }, planned: 16, run: 6, recovered: 5,
+    it("give the trials planned, every one run, those recovered from, and the first not recovered from: the sixth of 16, a quarter of the time to stop", () => {
+        const copper = { ...outcome({ kind: "supply", item: "copper-plate" }, [...stopped, trial(0, 466, false, true), trial(18, 466, false, false)]),
+            every_trial: { run: 16, recovered: 15 } };
+        expect(trialCountOf(copper)).toEqual({ loss: { kind: "supply", items: ["copper-plate"] }, planned: 16, run: 16, recovered: 15,
             first_not_recovered: { cut_at: 18, loss_ticks: 466, until_stopped: false } });
     });
 
+    // the first run stops at plan trial 5; run again without it, trial 10 does not recover; run without both, every other one does
+    it("are run to the end of the plan: again from the same start with each trial that did not recover left out, until none fails", () => {
+        const copper = { kind: "supply", item: "copper-plate" } as const;
+        const planOf = (skipped: readonly number[], fails: number | null) => Array.from({ length: 16 }, (_, index) => index)
+            .filter(index => !skipped.includes(index))
+            .map(index => trial(index * 9, index < 4 ? 1900 : 466, index < 4, index !== fails, index))
+            .filter((_, at, all) => fails === null || all[at].plan_index <= fails);
+        const first = outcome(copper, planOf([], 5));
+        const asked: number[][] = [];
+        const rerun = (skipped: readonly { plan_index: number; stopped_after_ticks: number | null }[]) => {
+            asked.push(skipped.map(it => it.plan_index));
+            return outcome(copper, planOf(skipped.map(it => it.plan_index), skipped.length === 1 ? 10 : null));
+        };
+        const counted = withEveryTrialCounted(first, rerun);
+        expect(asked).toEqual([[5], [5, 10]]);
+        expect(counted.every_trial).toEqual({ run: 16, recovered: 14 });
+        // the outcome is the first run's: its trials end at the first that does not recover, which the verdict names
+        expect(counted.trials).toBe(first.trials);
+        expect(counted.ticks).toBe(3000);
+        expect(trialCountOf(counted)).toEqual({ loss: { kind: "supply", items: ["copper-plate"] }, planned: 16, run: 16, recovered: 14,
+            first_not_recovered: { cut_at: 45, loss_ticks: 466, until_stopped: false } });
+    });
+
+    it("run nothing more for a loss the clock recovers from, or the run with nothing cut", () => {
+        const never = () => { throw new Error("run again"); };
+        const recovered = outcome({ kind: "supply", item: "copper-plate" }, stopped);
+        expect(withEveryTrialCounted(recovered, never)).toBe(recovered);
+        const none = outcome({ kind: "none" }, [trial(0, 0, false, true)], 1);
+        expect(withEveryTrialCounted(none, never)).toBe(none);
+    });
+
+    it("stop with an error where the runs go on failing after as many runs as the plan has trials", () => {
+        const failing = outcome({ kind: "supply", item: "copper-plate" }, [trial(0, 1900, true, false)], 2);
+        expect(() => withEveryTrialCounted(failing, () => failing)).toThrow(/2 planned/);
+    });
+
     it("count a first trial that runs its course and does not recover, and an output blockage or an excess by its items", () => {
-        expect(trialCountOf(outcome({ kind: "output", item: "automation-science-pack" }, [trial(0, 216, true, false)]))).toEqual({
-            loss: { kind: "output", items: ["automation-science-pack"] }, planned: 16, run: 1, recovered: 0,
+        expect(trialCountOf({ ...outcome({ kind: "output", item: "automation-science-pack" }, [trial(0, 216, true, false)]), every_trial: { run: 16, recovered: 4 } })).toEqual({
+            loss: { kind: "output", items: ["automation-science-pack"] }, planned: 16, run: 16, recovered: 4,
             first_not_recovered: { cut_at: 0, loss_ticks: 216, until_stopped: true } });
         const excess = { kind: "excess", at: [{ machine_id: "machine:1", item: "iron-ore", count: 67 }, { machine_id: "machine:2", item: "iron-ore", count: 3 }] } as const;
         expect(trialCountOf(outcome(excess, [trial(0, 0, false, true), trial(18, 0, false, false)], 4))?.loss).toEqual({ kind: "excess", items: ["iron-ore"] });
@@ -316,11 +353,12 @@ describe("the trials of a loss that breaks a clock, as numbers", () => {
 
     it("are in the verdict for each loss that breaks the clock, in the order of the losses it does not recover from, and absent from a clock that recovers", () => {
         const none = outcome({ kind: "none" }, [trial(0, 0, false, true)], 1);
-        const coal = outcome({ kind: "supply", item: "coal" }, [trial(0, 1900, true, true), trial(18, 1900, true, false)]);
-        const copper = { ...outcome({ kind: "supply", item: "copper-plate" }, [trial(36, 1900, true, false)]), failed_pickup_phases: { "inserter:2": [1, 5] as const } };
+        const coal = { ...outcome({ kind: "supply", item: "coal" }, [trial(0, 1900, true, true), trial(18, 1900, true, false)]), every_trial: { run: 16, recovered: 13 } };
+        const copper = { ...outcome({ kind: "supply", item: "copper-plate" }, [trial(36, 1900, true, false)]), failed_pickup_phases: { "inserter:2": [1, 5] as const },
+            every_trial: { run: 16, recovered: 0 } };
         const verdict = verdictOf(reportOf(72, 10, none, [coal, outcome({ kind: "supply", item: "iron-plate" }, stopped), copper]));
         expect(verdict.broken_by).toEqual(["coal stops arriving", "copper plate stops arriving"]);
-        expect(verdict.trial_counts?.map(it => [it.loss.items[0], it.run, it.recovered])).toEqual([["coal", 2, 1], ["copper-plate", 1, 0]]);
+        expect(verdict.trial_counts?.map(it => [it.loss.items[0], it.planned, it.run, it.recovered])).toEqual([["coal", 16, 16, 13], ["copper-plate", 16, 16, 0]]);
         expect(verdictOf(reportOf(72, 10, none, [outcome({ kind: "supply", item: "iron-plate" }, stopped)]))).not.toHaveProperty("trial_counts");
     });
 });

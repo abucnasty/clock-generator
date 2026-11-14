@@ -72,18 +72,19 @@ export const TEST_PIPELINE_COPY = {
         output: { one: 'output blockage', many: 'output blockages', first: 'blockage' },
         excess: { one: 'excess', many: 'excesses', first: 'excess' },
     } satisfies Record<TrialCount['loss']['kind'], { one: string; many: string; first: string }>,
-    recoversFrom: (recovered: number, of: number, item: string, losses: string, tried: boolean) =>
-        `Recovers from ${formatNumberText(recovered)} of ${formatNumberText(of)} ${item} ${losses}${tried ? ' tried' : ''}.`,
-    notFrom: (first: string, cutAt: number, lasts: string) => `Not from the ${first} at tick ${formatNumberText(cutAt)}${lasts}.`,
-    forTicks: (ticks: number) => ` for ${formatNumberText(ticks)} ticks`,
-    untilStopped: ' until the build stops',
+    recoversFrom: (recovered: number, of: number, item: string, losses: string) =>
+        `Recovers from ${formatNumberText(recovered)} of ${formatNumberText(of)} ${item} ${losses}.`,
+    // the tick counts from 0 at the tick the clock counts 1, where the window cycle starts
+    notFrom: (first: string, cutAt: number, lasts: string) => `Not from the ${first} at tick ${formatNumberText(cutAt)} of the window cycle${lasts}.`,
+    forTicks: (ticks: number) => `, for ${formatNumberText(ticks)} ticks`,
+    untilStopped: ', until the build stops',
 };
 
 /**
  * The trials of a loss that breaks the clock, in one line, from the engine's numbers (`trial_counts`): how many it recovers
- * from of those run, "tried" where the run stopped before all its trials, then the first it does not recover from, by its
- * tick in the window cycle and its length. "Recovers from 5 of 6 copper plate supply stops tried. Not from the stop at
- * tick 18 for 466 ticks."
+ * from of all its trials, then the first it does not recover from, by its tick in the window cycle (counted from 0 at the
+ * tick the clock counts 1) and its length. "Recovers from 15 of 16 copper plate supply stops. Not from the stop at tick 18
+ * of the window cycle, for 466 ticks."
  */
 export function trialCountText(count: TrialCount, itemLabel: ItemLabel): string {
     const item = count.loss.items.map(id => itemLabel(id)).join(' and ');
@@ -92,7 +93,7 @@ export function trialCountText(count: TrialCount, itemLabel: ItemLabel): string 
     // an excess is placed at once: it has no length
     const lasts = count.loss.kind === 'excess' ? '' : first.until_stopped ? TEST_PIPELINE_COPY.untilStopped : TEST_PIPELINE_COPY.forTicks(first.loss_ticks);
     return `${TEST_PIPELINE_COPY.recoversFrom(count.recovered, count.run, item.charAt(0).toLowerCase() + item.slice(1),
-        count.run === 1 ? words.one : words.many, count.run < count.planned)} ${TEST_PIPELINE_COPY.notFrom(words.first, first.cut_at, lasts)}`;
+        count.run === 1 ? words.one : words.many)} ${TEST_PIPELINE_COPY.notFrom(words.first, first.cut_at, lasts)}`;
 }
 
 /** The losses that break the clock with their trials as numbers: those of one copy, else those on the copies; none for a result made before the count */

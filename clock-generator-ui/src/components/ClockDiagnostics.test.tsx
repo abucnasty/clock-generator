@@ -143,8 +143,8 @@ describe('the tests of the clock, first on the tab', () => {
         const pitch = viewOf(AUTOMATION_240, 'pitch_pickups');
         const trial = pitch.assessment.disturbance_trial!;
         const counted = { ...pitch, assessment: { ...pitch.assessment, disturbance_trial: { ...trial, on_copies: { ...trial.on_copies!, trial_counts: [{
-            loss: { kind: 'supply', items: ['copper-plate'] }, planned: 16, run: 13, recovered: 12, first_not_recovered: { cut_at: 0, loss_ticks: 1371, until_stopped: false } }] } } } } as ClockAlternativeView;
-        const line = 'Recovers from 12 of 13 copper plate supply stops tried. Not from the stop at tick 0 for 1371 ticks.';
+            loss: { kind: 'supply', items: ['copper-plate'] }, planned: 16, run: 16, recovered: 14, first_not_recovered: { cut_at: 0, loss_ticks: 1371, until_stopped: false } }] } } } } as ClockAlternativeView;
+        const line = 'Recovers from 14 of 16 copper plate supply stops. Not from the stop at tick 0 of the window cycle, for 1371 ticks.';
         const { container } = show(<ClockDiagnostics clock={counted} />, { names: gameNames });
         const losses = container.querySelector('[data-test="losses"]')!;
         expect([...losses.querySelectorAll('[data-test-count]')].map(it => it.textContent)).toEqual([line]);

@@ -126,7 +126,7 @@ describe('the card holds nothing of what Diagnostics shows', () => {
         const pitch = views[index];
         const trial = pitch.assessment.disturbance_trial!;
         const counted = { ...pitch, assessment: { ...pitch.assessment, disturbance_trial: { ...trial, on_copies: { ...trial.on_copies!, trial_counts: [{
-            loss: { kind: 'supply', items: ['copper-plate'] }, planned: 16, run: 13, recovered: 12, first_not_recovered: { cut_at: 0, loss_ticks: 1371, until_stopped: false } }] } } } } as ClockAlternativeView;
+            loss: { kind: 'supply', items: ['copper-plate'] }, planned: 16, run: 16, recovered: 14, first_not_recovered: { cut_at: 0, loss_ticks: 1371, until_stopped: false } }] } } } } as ClockAlternativeView;
         const { container } = card(views.map((view, at) => at === index ? counted : view), index, { onShowDiagnostics: () => {} });
         expect(container.textContent).not.toMatch(/Recovers from \d+ of/);
         expect(container.textContent).not.toContain('1371 ticks');
