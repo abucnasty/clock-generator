@@ -39,6 +39,7 @@ import { verificationPlanningConfigOf, verificationTerminalCountOf } from "./rou
 import { CIRCUIT_LATENCY_TICKS } from "../common/rule-constants";
 import { WakeUpsFromStarts, hasStockTheClockDoesNotSet, wakeUpsFromStarts } from "./wake-ups-from-starts";
 import type { ClockSharedLaneLoss } from "./shared-lane-verdict";
+import { LossTrialEstimate, lossTrialEstimateOf } from "./loss-trial-estimate";
 
 /**
  * Number of clock start offsets the as-built check tries. Depending on how the clock lines up with the
@@ -1883,6 +1884,33 @@ function triedDisturbanceTrial(
         logger.log(`Loss trials could not be made: ${reason}`);
         return { disturbance_trial: null, disturbance_trial_not_tried: reason };
     }
+}
+
+/**
+ * What the disturbance trials of a clock plan to simulate (loss-trial-estimate.ts), counted before they run, on the config,
+ * losses and starts they run on (triedDisturbanceTrial, disturbanceTrialOf). Null where the output of the clock cannot be
+ * counted by the window cycle (a fractional window cycle with no subtick clock): the trials refuse such a clock themselves.
+ */
+export function lossTrialEstimateOfClock(planned_on: Config, result: BlueprintGenerationResult): LossTrialEstimate | null {
+    const window_cycle_ticks = result.simulation_duration.ticks;
+    const repeat = Number.isInteger(window_cycle_ticks) ? null : subtickClockForWindowCycle(window_cycle_ticks);
+    const bin = Number.isInteger(window_cycle_ticks) ? { ticks: window_cycle_ticks, window_cycles: 1 }
+        : repeat === null ? null : { ticks: repeat.window_cycle_ticks, window_cycles: repeat.scale };
+    if (bin === null) return null;
+    const config = verificationPlanningConfigOf(planned_on, result);
+    const excess = result.random_margins === undefined ? null : excessLossOf(result.random_margins.crafting);
+    const options_for = result.exhaust === undefined ? undefined : resultLossOptionsOf(result.exhaust.plans);
+    const losses: DisturbanceTrial[] = [{ kind: "none" }, ...disturbanceTrialsOf(createEntityRegistryFromConfig(config), config.setpoint.recipe),
+        ...(excess === null ? [] : [excess])];
+    const windows = new Map(Object.entries(result.clock_windows).map(([entity_id, ranges]) =>
+        [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
+    const check_config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
+    const starts = 1 + [...movingPickupPhaseStarts(config)].length + otherTakerOrdersOf(check_config, windows, window_cycle_ticks).length;
+    return lossTrialEstimateOf(losses.map(loss => {
+        const options = loss.kind === "none" ? {} : options_for?.(loss) ?? {};
+        return { kind: loss.kind, ...(options.fixed_loss_ticks !== undefined && { fixed_loss_ticks: options.fixed_loss_ticks }),
+            ...(options.max_recovery_window_cycles !== undefined && { max_recovery_window_cycles: options.max_recovery_window_cycles }) };
+    }), starts, bin);
 }
 
 /**
