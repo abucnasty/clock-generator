@@ -121,6 +121,13 @@ describe('the tests of a clock, from the result\'s data', () => {
         expect(said(views[AUTOMATION_240.selected_index])[2]).toBe(`error: No result | ${detail}`);
     });
 
+    it('Error where the loss trials were over the budget: the words for the engine\'s code, not its message', () => {
+        const stable = clock('time_study_windows');
+        const over = { ...stable, assessment: { ...stable.assessment, disturbance_trial: null, disturbance_trial_not_tried: 'the message of the engine',
+            disturbance_trial_not_tried_reason: { code: 'loss_trials_over_budget', data: { losses: 3, starts: 505, trials: 24_745, ticks: 633_472_000, budget: 200_000_000 } } } } as ClockAlternativeView;
+        expect(said(over)[2]).toBe(`error: No result | ${SUMMARY_COPY.lossTrialsOverBudget('633,472,000', '200,000,000')}.`);
+    });
+
     it('a check of the shared lanes that stopped with an error, and a clock kept before the copies were run', () => {
         const stable = clock('time_study_windows');
         const stopped = { ...stable, assessment: { ...stable.assessment, shared_lane_losses: [{ kind: 'not_checked', reason: 'the belt has no lanes', text: '' }] } } as unknown as ClockAlternativeView;

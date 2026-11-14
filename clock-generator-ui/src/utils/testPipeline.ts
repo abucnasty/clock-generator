@@ -1,7 +1,7 @@
 import type { TrialCount } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../worker/types';
 import { formatNumberText } from './numberText';
-import { isOffTarget, SUMMARY_COPY, targetOf } from './clockSummary';
+import { isOffTarget, notTriedReasonOf, SUMMARY_COPY, targetOf } from './clockSummary';
 import { shownRateOf } from './shownRate';
 import { rateVerbs } from './targetCounts';
 
@@ -178,7 +178,7 @@ function lossesBox(clock: PipelineClock, copiesFail: boolean, itemLabel: ItemLab
     if (!clock.assessment.holds) return { ...box, state: 'not-run', result: TEST_PIPELINE_COPY.notRun, detail: TEST_PIPELINE_COPY.oneCopyFails(clock.copies) };
     const trial = clock.assessment.disturbance_trial;
     if (trial === null || trial === undefined) {
-        const reason = clock.assessment.disturbance_trial_not_tried;
+        const reason = notTriedReasonOf(clock);
         return { ...box, state: 'error', result: TEST_PIPELINE_COPY.noResult, detail: reason === undefined ? `${SUMMARY_COPY.errorNoResult}.` : sentenceOf(reason) };
     }
     if (!trial.survives && trial.broken_by.length === 0) {

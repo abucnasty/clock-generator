@@ -45,7 +45,8 @@ take them. `paths.ts` names the ones unit tests load by sample-style keys (`Test
   with its input inserter at its own place along the input belt, a given number of tiles apart, and, as asked, four
   inserters that put gears and copper onto the input belt from infinity chests upstream (supply from outside the build).
   `src/config/outside-supply.test.ts` and `src/crafting/outside-supply.generation.test.ts` check that the supply is not
-  clocked and that the input lanes are checked.
+  clocked and that the input lanes are checked. With `input`, the input belt is an express belt that moves on past the
+  row: `src/crafting/loss-trial-budget.generation.test.ts` tries the losses of such rows from many lane phases.
 - `gear-row.ts` (`gearRow`): a row of gear assemblers on one dead-end turbo belt of iron plate that four chest feeders keep full,
   as the scaffolds of `tests/game/mechanics/input-lane-gap/fixtures/` hold it and the Sidecar exports it. The game test of
   that family builds its clock from it, and `src/crafting/lane-check-from-positions.test.ts` checks the input lane of the row from the
