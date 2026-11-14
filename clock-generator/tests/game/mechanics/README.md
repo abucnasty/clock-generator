@@ -21,6 +21,7 @@ targeted commands and screenshot regeneration. Screenshots are layout references
 - [Control latency](control-latency/README.md): a decider switching inserters waiting at a chest, in sleep at a machine, over a belt, in pairs and while moving; inserters woken by a take or a craft.
 - [Drop spacing](drop-spacing/README.md): the hands of several copies on one belt lane, why a pitch and an offset make them fit or collide.
 - [Belt join](belt-join/README.md): side loads and splitters of turbo belts, every stack's line and position in every tick, against the engine's join model.
+- [Input lane gap](input-lane-gap/README.md): rows of assemblers on one dead-end belt of iron plate, and the second assembler that finds the gap the first one's hand made: the crafts it loses in the game, against the engine's lane check from the inserters' places.
 
 The mechanics game tests are run again only when the Factorio version changes; their offline replays run in `npm test`.
 
