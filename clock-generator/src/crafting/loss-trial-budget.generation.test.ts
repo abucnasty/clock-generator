@@ -53,4 +53,15 @@ describe("the disturbance trials of a clock within the budget", () => {
         expect(details).toContain("Trying loss trial 1/4, start 127/127");
         expect(details.every(it => /^Trying loss trial [1-4]\/4, start \d+\/127$/.test(it))).toBe(true);
     });
+
+    it("say so while the first clock is compared by its trials with the clocks made beside it", () => {
+        // 4 assemblers (253 starts), made as the first clock is made (checked as built, with room for a hand on every lane
+        // window): its windows by arithmetic, with the room inside and shaped against ghost wakeups are each compared with it
+        const details: string[] = [];
+        const compared: string[] = [];
+        const logger = { ...quiet, log: (message: string) => { if (/^(Room for one hand inside|Enable windows shaped against ghost wakeups)/.test(message)) compared.push(message); } };
+        generateClockForConfig(row(4), { logger, verify_as_built: true, lane_hand_room: "always", on_progress_detail: detail => details.push(detail) });
+        expect(compared.length).toBeGreaterThan(0);
+        expect(details.some(it => /^Trying loss trial \d+\/4, start \d+\/253$/.test(it))).toBe(true);
+    });
 });
