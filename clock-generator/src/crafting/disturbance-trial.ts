@@ -125,6 +125,47 @@ export function lossTrialsPartOfTheWay(
         ({ cut_at: Math.floor(place * bin_ticks), loss_ticks: Math.max(1, Math.ceil(share * stops_after_ticks)) })));
 }
 
+/**
+ * How many trials a loss has, as runLossTrials plans them: one with nothing cut; an excess, or a loss of fixed ticks, one at
+ * each place; any other loss one at each place that runs its course (one at the first place where `shares` has no 1) and one
+ * at each place for each share under 1. A run that stops at the first trial that does not recover runs fewer.
+ */
+export function plannedTrialsOf(loss: DisturbanceTrial, places: readonly number[], shares: readonly number[], fixed_loss_ticks?: number): number {
+    if (loss.kind === "none") return 1;
+    if (loss.kind === "excess" || fixed_loss_ticks !== undefined) return places.length;
+    return (shares.includes(1) ? places.length : 1) + places.length * shares.filter(share => share < 1).length;
+}
+
+/**
+ * The trials of a loss that breaks a clock, as numbers: those its plan has, those the run made (it stops at the first that
+ * does not recover), those the build recovers from, and the first it does not recover from. The counts are of the run that
+ * broke it: at the lanes' modeled phase, or from the first lane phase, the first order of the takers or the first run of the
+ * copies under which the clock does not recover.
+ */
+export interface TrialCount {
+    /** The loss: a supply stop, an output blockage or an excess of results that come by chance, and its items */
+    loss: { kind: "supply" | "output" | "excess"; items: ItemName[] };
+    planned: number;
+    run: number;
+    recovered: number;
+    /** The first trial the build does not recover from: where in the window cycle it was cut, in ticks, how long the item was gone, and whether the loss was to last until the build had stopped */
+    first_not_recovered: { cut_at: number; loss_ticks: number; until_stopped: boolean };
+}
+
+/** The trials of a loss as numbers (TrialCount); null for a loss the clock recovers from, or one with no trial */
+export function trialCountOf(outcome: Pick<LossOutcome, "loss" | "trials" | "planned_trials" | "recovers">): TrialCount | null {
+    const loss = outcome.loss;
+    const first = outcome.trials.find(trial => !trial.recovers);
+    if (outcome.recovers || loss.kind === "none" || first === undefined) return null;
+    return {
+        loss: { kind: loss.kind, items: loss.kind === "excess" ? excessItems(loss) : [loss.item] },
+        planned: outcome.planned_trials,
+        run: outcome.trials.length,
+        recovered: outcome.trials.filter(trial => trial.recovers).length,
+        first_not_recovered: { cut_at: first.cut_at, loss_ticks: first.loss_ticks, until_stopped: first.until_stopped },
+    };
+}
+
 /** A loss ends at the latest after this many window cycles, whether the build has stopped or not */
 export const MAX_LOSS_WINDOW_CYCLES = 200;
 
@@ -344,6 +385,8 @@ export interface LossOutcome {
     expected_per_bin: number;
     /** Trials from the canonical start, or the first lane-phase start that fails, up to the first that does not recover. */
     trials: LossTrial[];
+    /** The trials the loss has: each place in the window cycle for each length (plannedTrialsOf); `trials` stops at the first that does not recover */
+    planned_trials: number;
     /** Every trial recovers at every checked lane-phase start. */
     recovers: boolean;
     /** The most bins a trial took to be back at the expected output; null when one does not recover */
@@ -962,6 +1005,7 @@ export function runLossTrials(
         window_cycles_per_bin: bin.window_cycles,
         expected_per_bin,
         trials,
+        planned_trials: plannedTrialsOf(loss, places, shares, fixed),
         recovers,
         recovered_after_bins: recovers ? Math.max(...trials.map(trial => trial.recovered_after_bins ?? 0)) : null,
         stopped_after_ticks: never_stopped ? null : Math.max(0, ...ran_their_course.map(trial => trial.stopped_after_ticks ?? 0)),
@@ -1047,9 +1091,12 @@ export interface DisturbanceTrialVerdict {
      * made.
      */
     on_copies?: CopiesTrialVerdict;
+    /** The trials of each loss of one copy that breaks the clock, as numbers, in the order of `broken_by`; absent where none breaks it */
+    trial_counts?: TrialCount[];
 }
 
 export function verdictOf(report: DisturbanceTrialReport): DisturbanceTrialVerdict {
+    const trial_counts = report.losses.flatMap(outcome => trialCountOf(outcome) ?? []);
     return {
         survives: report.survives,
         broken_by: report.losses.filter(outcome => !outcome.recovers).map(outcome => lossLabel(outcome.loss)),
@@ -1062,5 +1109,6 @@ export function verdictOf(report: DisturbanceTrialReport): DisturbanceTrialVerdi
         ...(report.not_tried.length > 0 && { not_tried: report.not_tried.map(lossLabel) }),
         recovered_after_window_cycles: report.recovered_after_window_cycles,
         ...(report.loss_limit !== null && { loss_limit: report.loss_limit }),
+        ...(trial_counts.length > 0 && { trial_counts }),
     };
 }

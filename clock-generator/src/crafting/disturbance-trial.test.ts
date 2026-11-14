@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import {
     clockCountsOneAt, countedOnTheClock, disturbanceTrialsOf, judgedCopies, judgedOnTheClock, judgedTogether, judgeRecovery, LATE_AFTER_WINDOW_CYCLES, LOSS_PLACES, LOSS_SHARES, lossId, lossLabel, lossLimitOf, lossTrialsPartOfTheWay,
-    lossTrialsUntilStopped, LossOutcome, MAX_LOSS_WINDOW_CYCLES, MAX_RECOVERY_WINDOW_CYCLES, MAX_RUN_ON_WINDOW_CYCLES, reportOf, RUN_ON_EXACT_WINDOW_CYCLES,
-    repeatOnTheClock, runsOn, verdictOf,
+    lossTrialsUntilStopped, LossOutcome, LossTrial, MAX_LOSS_WINDOW_CYCLES, MAX_RECOVERY_WINDOW_CYCLES, MAX_RUN_ON_WINDOW_CYCLES, plannedTrialsOf, reportOf, RUN_ON_EXACT_WINDOW_CYCLES,
+    repeatOnTheClock, runsOn, trialCountOf, verdictOf,
 } from "./disturbance-trial";
 import { Duration } from "../data-types";
 import type { BranchBins } from "./terminal-rate";
@@ -220,7 +220,7 @@ describe("the losses a build whose items spoil is tried with", () => {
     });
 
     it("are named in the verdict, which no other build's has", () => {
-        const none: LossOutcome = { loss: { kind: "none" }, bin_ticks: 100, window_cycles_per_bin: 1, expected_per_bin: 10, trials: [], recovers: true,
+        const none: LossOutcome = { loss: { kind: "none" }, bin_ticks: 100, window_cycles_per_bin: 1, expected_per_bin: 10, trials: [], planned_trials: 1, recovers: true,
             recovered_after_bins: 0, stopped_after_ticks: 0, ticks: 1000 };
         expect(verdictOf(reportOf(100, 10, none, [], { ticks: 2700, item: "iron-bacteria" })).loss_limit).toEqual({ ticks: 2700, item: "iron-bacteria" });
         expect(verdictOf(reportOf(100, 10, none, [])).loss_limit).toBeUndefined();
@@ -230,7 +230,7 @@ describe("the losses a build whose items spoil is tried with", () => {
 // Automation science: copper plates and gear wheels off one belt into a machine, the packs onto another
 describe("the verdict of a clock's losses", () => {
     const outcome = (loss: LossOutcome["loss"], recovers: boolean, failed_pickup_phases?: LossOutcome["failed_pickup_phases"]): LossOutcome => ({
-        loss, bin_ticks: 100, window_cycles_per_bin: 1, expected_per_bin: 10, trials: [], recovers,
+        loss, bin_ticks: 100, window_cycles_per_bin: 1, expected_per_bin: 10, trials: [], planned_trials: 16, recovers,
         recovered_after_bins: recovers ? 1 : null, stopped_after_ticks: 50, ticks: 1000, ...(failed_pickup_phases && { failed_pickup_phases }),
     });
 
@@ -273,6 +273,55 @@ describe("the verdict of a clock's losses", () => {
     it("has none apart for a clock that gets back from every loss", () => {
         const report = reportOf(100, 10, outcome({ kind: "none" }, true), [outcome({ kind: "supply", item: "coal" }, true)]);
         expect(verdictOf(report)).toEqual({ survives: true, broken_by: [], broken_at_other_lane_phases: [], recovered_after_window_cycles: 1 });
+    });
+});
+
+describe("the trials of a loss that breaks a clock, as numbers", () => {
+    const trial = (cut_at: number, loss_ticks: number, until_stopped: boolean, recovers: boolean): LossTrial => ({
+        cut_at, restore_at: cut_at, until_stopped, loss_ticks, output_during_loss: 0, stopped_after_ticks: until_stopped ? loss_ticks : null,
+        output_per_bin: [10], recovers, recovered_after_bins: recovers ? 1 : null, proven: true, ends_in: [10],
+    });
+    const outcome = (loss: LossOutcome["loss"], trials: LossTrial[], planned_trials = 16): LossOutcome => ({
+        loss, bin_ticks: 72, window_cycles_per_bin: 1, expected_per_bin: 10, trials, planned_trials, recovers: trials.every(it => it.recovers),
+        recovered_after_bins: null, stopped_after_ticks: null, ticks: 1000,
+    });
+    const stopped = [0, 18, 36, 54].map(cut => trial(cut, 1900, true, true));
+
+    it("are planned for each place in the window cycle and each length: 16 for a loss, 4 for an excess or a loss of fixed ticks", () => {
+        expect(plannedTrialsOf({ kind: "supply", item: "copper-plate" }, LOSS_PLACES, LOSS_SHARES)).toBe(16);
+        expect(plannedTrialsOf({ kind: "output", item: "copper-plate" }, LOSS_PLACES, [1])).toBe(4);
+        expect(plannedTrialsOf({ kind: "supply", item: "copper-plate" }, LOSS_PLACES, [0.5])).toBe(5);
+        expect(plannedTrialsOf({ kind: "supply", item: "copper-plate" }, LOSS_PLACES, LOSS_SHARES, 300)).toBe(4);
+        expect(plannedTrialsOf({ kind: "excess", at: [{ machine_id: "machine:1", item: "iron-ore", count: 67 }] }, LOSS_PLACES, LOSS_SHARES)).toBe(4);
+        expect(plannedTrialsOf({ kind: "none" }, LOSS_PLACES, LOSS_SHARES)).toBe(1);
+    });
+
+    it("give the trials planned, run and recovered from, and the first not recovered from: the sixth of 16, a quarter of the time to stop", () => {
+        const copper = outcome({ kind: "supply", item: "copper-plate" }, [...stopped, trial(0, 466, false, true), trial(18, 466, false, false)]);
+        expect(trialCountOf(copper)).toEqual({ loss: { kind: "supply", items: ["copper-plate"] }, planned: 16, run: 6, recovered: 5,
+            first_not_recovered: { cut_at: 18, loss_ticks: 466, until_stopped: false } });
+    });
+
+    it("count a first trial that runs its course and does not recover, and an output blockage or an excess by its items", () => {
+        expect(trialCountOf(outcome({ kind: "output", item: "automation-science-pack" }, [trial(0, 216, true, false)]))).toEqual({
+            loss: { kind: "output", items: ["automation-science-pack"] }, planned: 16, run: 1, recovered: 0,
+            first_not_recovered: { cut_at: 0, loss_ticks: 216, until_stopped: true } });
+        const excess = { kind: "excess", at: [{ machine_id: "machine:1", item: "iron-ore", count: 67 }, { machine_id: "machine:2", item: "iron-ore", count: 3 }] } as const;
+        expect(trialCountOf(outcome(excess, [trial(0, 0, false, true), trial(18, 0, false, false)], 4))?.loss).toEqual({ kind: "excess", items: ["iron-ore"] });
+    });
+
+    it("are not given for a loss the clock recovers from", () => {
+        expect(trialCountOf(outcome({ kind: "supply", item: "copper-plate" }, stopped))).toBeNull();
+    });
+
+    it("are in the verdict for each loss that breaks the clock, in the order of the losses it does not recover from, and absent from a clock that recovers", () => {
+        const none = outcome({ kind: "none" }, [trial(0, 0, false, true)], 1);
+        const coal = outcome({ kind: "supply", item: "coal" }, [trial(0, 1900, true, true), trial(18, 1900, true, false)]);
+        const copper = { ...outcome({ kind: "supply", item: "copper-plate" }, [trial(36, 1900, true, false)]), failed_pickup_phases: { "inserter:2": [1, 5] as const } };
+        const verdict = verdictOf(reportOf(72, 10, none, [coal, outcome({ kind: "supply", item: "iron-plate" }, stopped), copper]));
+        expect(verdict.broken_by).toEqual(["coal stops arriving", "copper plate stops arriving"]);
+        expect(verdict.trial_counts?.map(it => [it.loss.items[0], it.run, it.recovered])).toEqual([["coal", 2, 1], ["copper-plate", 1, 0]]);
+        expect(verdictOf(reportOf(72, 10, none, [outcome({ kind: "supply", item: "iron-plate" }, stopped)]))).not.toHaveProperty("trial_counts");
     });
 });
 

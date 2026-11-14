@@ -68,6 +68,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - generation: a build that holds identical copies is clocked as given, no longer refused
 - ui: Build check notes a build of identical copies and offers the simpler version
 - ui: Diagnostics of a build of one copy names each inserter and its machine
+- ui: Diagnostics counts how many supply stops or output blockages a clock recovers from
 
 ### Fixed
 - ui: Paste from Factorio keeps where the next copy stands, as the export gives it

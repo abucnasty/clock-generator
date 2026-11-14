@@ -25,7 +25,7 @@ import { OpenRange } from "../data-types";
 import { buildToNameOf } from "./build-names";
 import { SerializableClockWindows } from "./clock";
 import { lanesInSentence, NO_BUILD, type BuildToName } from "./entity-name";
-import { DisturbanceTrial, disturbanceTrialsOf, LossOutcome, lossLabel, lossLimitOf } from "./disturbance-trial";
+import { DisturbanceTrial, disturbanceTrialsOf, LossOutcome, lossLabel, lossLimitOf, trialCountOf, type TrialCount } from "./disturbance-trial";
 import { canonicalKey, currentRunMemo } from "./plan/run-memo";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { runOnSharedLanes } from "./shared-lane-model";
@@ -55,6 +55,8 @@ export interface CopiesTrialVerdict {
      * item was back
      */
     trial?: { cut_at: number; loss_ticks: number; until_stopped: boolean; proven: boolean; window_cycles_after: number };
+    /** The trials of that loss on the copies, as numbers, in the shape of the trials of one copy (`DisturbanceTrialVerdict.trial_counts`); absent where every copy is back */
+    trial_counts?: TrialCount[];
     /** The copies not back after it, from the lanes' entry */
     short?: CopyShortAfterLoss[];
     /** The copies that hold only part of the output inserters (a part copy), whose output is not judged */
@@ -136,6 +138,7 @@ function triedOnCopies(config: Config, lanes: ReturnType<typeof sharedLaneRunsOf
                 outcome.trials.forEach(trial => trial.copies_not_judged?.forEach(copy => not_judged.add(copy)));
                 if (!outcome.recovers) {
                     const trial = outcome.trials[outcome.trials.length - 1];
+                    const count = trialCountOf(outcome);
                     const short = (trial.copies ?? []).filter(it => !it.recovers).map(it => ({ copy: it.copy, items_per_window_cycle: it.ends_in }));
                     const loss_lanes = loss.kind === "supply"
                         ? lanes.filter(lane => lane.shared && under.belts.find(belt => belt.id === lane.belt_id)?.lanes[lane.lane - 1]?.ingredient === loss.item).map(lane => `${lane.belt_id}/${lane.lane}`)
@@ -145,6 +148,7 @@ function triedOnCopies(config: Config, lanes: ReturnType<typeof sharedLaneRunsOf
                     return { ...base, survives: false, broken_by: lossLabel(loss), recovered_after_window_cycles: null,
                         trial: { cut_at: trial.cut_at, loss_ticks: trial.loss_ticks, until_stopped: trial.until_stopped, proven: trial.proven,
                             window_cycles_after: trial.output_per_bin.length * outcome.window_cycles_per_bin }, short,
+                        ...(count !== null && { trial_counts: [count] }),
                         ...(not_judged.size > 0 && { copies_not_judged: [...not_judged].sort((a, b) => a - b) }),
                         text: describeCopiesShort(loss, loss_lanes.length > 0 ? loss_lanes : shared_keys, copies, short, expected_output_items,
                             loss.kind === "output" && under.output_belt !== undefined && loss.item === under.setpoint.recipe, buildToNameOf(config)) };

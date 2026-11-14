@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { screen, within } from '@testing-library/react';
+import { cleanup, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { ClockInsight } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../worker/types';
@@ -136,6 +136,22 @@ describe('the tests of the clock, first on the tab', () => {
         expect(two.textContent).toContain('Makes 234.07/s of 240/s');
         expect(two.textContent).not.toMatch(/swing/i);
         expect(container.textContent!.split(view.checkedLanes!.cause!.headline.text)).toHaveLength(2);
+    });
+
+    // the counts of the 72-tick clock on the sample's nine copies, as the engine gives them (2026-11-14)
+    it('the loss of inputs of a clock that one trial breaks: a line with the count under its line, once on the tab; none on a clock that recovers', () => {
+        const pitch = viewOf(AUTOMATION_240, 'pitch_pickups');
+        const trial = pitch.assessment.disturbance_trial!;
+        const counted = { ...pitch, assessment: { ...pitch.assessment, disturbance_trial: { ...trial, on_copies: { ...trial.on_copies!, trial_counts: [{
+            loss: { kind: 'supply', items: ['copper-plate'] }, planned: 16, run: 13, recovered: 12, first_not_recovered: { cut_at: 0, loss_ticks: 1371, until_stopped: false } }] } } } } as ClockAlternativeView;
+        const line = 'Recovers from 12 of 13 copper plate supply stops tried. Not from the stop at tick 0 for 1371 ticks.';
+        const { container } = show(<ClockDiagnostics clock={counted} />, { names: gameNames });
+        const losses = container.querySelector('[data-test="losses"]')!;
+        expect([...losses.querySelectorAll('[data-test-count]')].map(it => it.textContent)).toEqual([line]);
+        expect(container.textContent!.split(line)).toHaveLength(2);
+        cleanup();
+        const stable = show(<ClockDiagnostics clock={viewOf(AUTOMATION_240, 'time_study_windows')} />, { names: gameNames });
+        expect(stable.container.querySelector('[data-test-count]')).toBeNull();
     });
 });
 

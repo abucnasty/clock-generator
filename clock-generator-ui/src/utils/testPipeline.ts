@@ -1,3 +1,4 @@
+import type { TrialCount } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../worker/types';
 import { formatNumberText } from './numberText';
 import { isOffTarget, SUMMARY_COPY, targetOf } from './clockSummary';
@@ -25,7 +26,12 @@ export interface TestBox {
     result: string;
     /** One line under it */
     detail: string;
+    /** Under the detail of the loss of inputs: one line for each loss that breaks the clock, with its trials as numbers (trialCountText) */
+    counts?: string[];
 }
+
+/** Names of the items of the engine's data, as the site shows them ("Copper plate"); without one, the id */
+type ItemLabel = (id: string) => string;
 
 /** Every string of the graphic, in one place for the glossary and for review */
 export const TEST_PIPELINE_COPY = {
@@ -60,7 +66,40 @@ export const TEST_PIPELINE_COPY = {
     doesNotRecover: 'Does not recover',
     oneCopyDoesNotRecover: (copies: number) => copies === 1 ? 'Does not recover alone' : 'One copy does not recover',
     notBackByItself: 'It does not go back to its rate by itself.',
+    // the trials of a loss that breaks the clock (trialCountText): the loss, one and more, and the first it does not recover from
+    lossWords: {
+        supply: { one: 'supply stop', many: 'supply stops', first: 'stop' },
+        output: { one: 'output blockage', many: 'output blockages', first: 'blockage' },
+        excess: { one: 'excess', many: 'excesses', first: 'excess' },
+    } satisfies Record<TrialCount['loss']['kind'], { one: string; many: string; first: string }>,
+    recoversFrom: (recovered: number, of: number, item: string, losses: string, tried: boolean) =>
+        `Recovers from ${formatNumberText(recovered)} of ${formatNumberText(of)} ${item} ${losses}${tried ? ' tried' : ''}.`,
+    notFrom: (first: string, cutAt: number, lasts: string) => `Not from the ${first} at tick ${formatNumberText(cutAt)}${lasts}.`,
+    forTicks: (ticks: number) => ` for ${formatNumberText(ticks)} ticks`,
+    untilStopped: ' until the build stops',
 };
+
+/**
+ * The trials of a loss that breaks the clock, in one line, from the engine's numbers (`trial_counts`): how many it recovers
+ * from of those run, "tried" where the run stopped before all its trials, then the first it does not recover from, by its
+ * tick in the window cycle and its length. "Recovers from 5 of 6 copper plate supply stops tried. Not from the stop at
+ * tick 18 for 466 ticks."
+ */
+export function trialCountText(count: TrialCount, itemLabel: ItemLabel): string {
+    const item = count.loss.items.map(id => itemLabel(id)).join(' and ');
+    const words = TEST_PIPELINE_COPY.lossWords[count.loss.kind];
+    const first = count.first_not_recovered;
+    // an excess is placed at once: it has no length
+    const lasts = count.loss.kind === 'excess' ? '' : first.until_stopped ? TEST_PIPELINE_COPY.untilStopped : TEST_PIPELINE_COPY.forTicks(first.loss_ticks);
+    return `${TEST_PIPELINE_COPY.recoversFrom(count.recovered, count.run, item.charAt(0).toLowerCase() + item.slice(1),
+        count.run === 1 ? words.one : words.many, count.run < count.planned)} ${TEST_PIPELINE_COPY.notFrom(words.first, first.cut_at, lasts)}`;
+}
+
+/** The losses that break the clock with their trials as numbers: those of one copy, else those on the copies; none for a result made before the count */
+function trialCountsOf(clock: PipelineClock): TrialCount[] {
+    const trial = clock.assessment.disturbance_trial;
+    return [...trial?.trial_counts ?? [], ...trial?.on_copies?.trial_counts ?? []];
+}
 
 /** A reason as the end of a sentence: its full stop, once */
 function sentenceEnd(reason: string): string {
@@ -128,10 +167,13 @@ function allCopiesBox(clock: PipelineClock): TestBox {
  * Test 3: the loss of inputs (`disturbance_trial`). Not run where one copy alone does not hold. An error where the trials gave
  * no result: none was made, or the run with nothing cut missed its expected output (no loss named). The trials on the copies
  * (`on_copies`) are made only after one copy recovers: there, one copy recovered and the box says whether the copies do. Where
- * the copies lose swings on a shared lane they are not tried, and the box says what one copy does.
+ * the copies lose swings on a shared lane they are not tried, and the box says what one copy does. A failed box has a line
+ * for each loss that breaks the clock, with its trials as numbers, where the result gives them (trialCountText).
  */
-function lossesBox(clock: PipelineClock, copiesFail: boolean): TestBox {
+function lossesBox(clock: PipelineClock, copiesFail: boolean, itemLabel: ItemLabel): TestBox {
     const box = { test: 'losses' as const, name: TEST_PIPELINE_COPY.losses };
+    const counts = trialCountsOf(clock).map(count => trialCountText(count, itemLabel));
+    const counted = counts.length > 0 ? { counts } : {};
     if (!clock.assessment.holds) return { ...box, state: 'not-run', result: TEST_PIPELINE_COPY.notRun, detail: TEST_PIPELINE_COPY.oneCopyFails(clock.copies) };
     const trial = clock.assessment.disturbance_trial;
     if (trial === null || trial === undefined) {
@@ -148,18 +190,18 @@ function lossesBox(clock: PipelineClock, copiesFail: boolean): TestBox {
         }
         return copies.survives
             ? { ...box, state: 'passed', result: TEST_PIPELINE_COPY.recovers, detail: TEST_PIPELINE_COPY.afterLosses }
-            : { ...box, state: 'failed', result: TEST_PIPELINE_COPY.copiesDoNotRecover(clock.copies), detail: TEST_PIPELINE_COPY.oneCopyAloneRecovers(clock.copies) };
+            : { ...box, state: 'failed', result: TEST_PIPELINE_COPY.copiesDoNotRecover(clock.copies), detail: TEST_PIPELINE_COPY.oneCopyAloneRecovers(clock.copies), ...counted };
     }
     if (trial.survives) {
         return copiesFail
             ? { ...box, state: 'passed', result: TEST_PIPELINE_COPY.oneCopyRecovers(clock.copies), detail: TEST_PIPELINE_COPY.copiesNotTried(clock.copies) }
             : { ...box, state: 'passed', result: TEST_PIPELINE_COPY.recovers, detail: TEST_PIPELINE_COPY.afterLosses };
     }
-    return { ...box, state: 'failed', result: copiesFail ? TEST_PIPELINE_COPY.oneCopyDoesNotRecover(clock.copies) : TEST_PIPELINE_COPY.doesNotRecover, detail: TEST_PIPELINE_COPY.notBackByItself };
+    return { ...box, state: 'failed', result: copiesFail ? TEST_PIPELINE_COPY.oneCopyDoesNotRecover(clock.copies) : TEST_PIPELINE_COPY.doesNotRecover, detail: TEST_PIPELINE_COPY.notBackByItself, ...counted };
 }
 
-/** The three tests of a clock, in the order the graphic draws them */
-export function testPipelineOf(clock: PipelineClock): [TestBox, TestBox, TestBox] {
+/** The three tests of a clock, in the order the graphic draws them; the items named by `itemLabel` (the game's names on the site) */
+export function testPipelineOf(clock: PipelineClock, itemLabel: ItemLabel = id => id): [TestBox, TestBox, TestBox] {
     const two = allCopiesBox(clock);
-    return [oneCopyBox(clock), two, lossesBox(clock, two.state === 'failed')];
+    return [oneCopyBox(clock), two, lossesBox(clock, two.state === 'failed', itemLabel)];
 }
