@@ -128,15 +128,18 @@ does needs a bump of `RECORDING_CACHE_PROTOCOL`.
 ## The whole suite on every lane
 
 ```bash
-python3 scripts/game/run-suite.py                     # warm: recordings read from the cache where they exist
-python3 scripts/game/run-suite.py --cache off         # a cold pass over tests/game/builds (mechanics stay on the cache)
-python3 scripts/game/run-suite.py --plan iron-plate-80-car-chest-clock    # the jobs and an estimate, nothing run
-python3 scripts/game/run-suite.py tests/game/mechanics/drills grenade-clock    # only files whose path contains these
+python3 scripts/game/run-suite.py --guard-dir <guard folder>    # warm: recordings read from the cache where they exist
+GUARD_DIR=<guard folder> python3 scripts/game/run-suite.py --cache off   # a cold pass over tests/game/builds (mechanics stay on the cache)
+python3 scripts/game/run-suite.py --no-guard --plan iron-plate-80-car-chest-clock    # the jobs and an estimate, nothing run
+python3 scripts/game/run-suite.py --no-guard tests/game/mechanics/drills grenade-clock    # only files whose path contains these
 ```
+
+The guard folder holds `guarded-run-budget.py` and `policy.json`. It comes from `--guard-dir` or `$GUARD_DIR`; no path is
+built in, and with neither the runner refuses to start. Only `--no-guard` starts the jobs directly, with no memory check.
 
 It lists the cases (`vitest list --json`), cuts them into jobs, orders the jobs longest first by the seconds each case took
 last (`scripts/game/case-seconds.json`, a cold pass of 2026-11-02 with Factorio 2.1.24), and starts them through the guard
-on `machine.factorio_max` lanes (`-j` to override; without the guard directory jobs start directly, two at a time). A case of
+on `machine.factorio_max` lanes (`-j` to override; with `--no-guard` jobs start directly, two at a time). A case of
 at least 120 seconds is a job of its own; shorter cases of one file share a job (`-t '^(a|b)$'`, one game at a time), so the
 many probes of a few seconds do not each pay vitest's start-up. Any case may be cut from its neighbours: every case starts its own
 game with `recordInFactorio`, or opens a `CachedHarnessSession` inside the one case that needs it (the staged-start tests), so no
