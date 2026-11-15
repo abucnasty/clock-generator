@@ -3,6 +3,7 @@ import { ClockWindowCycleLimitError, SIMULATION_BUDGET_TICKS, type SwingWindowCy
 import { assertOutputTransferGenerationSupported } from "../../config/output-transfer-generation";
 import assert from "../../common/assert";
 import type { NotMadeClock } from "../why-not-stable";
+import type { MakerLogSink } from "../maker-log";
 import { Config } from "../../config";
 import { EnableControlOverrideConfig } from "../../config/schema";
 import { assertInserterCoverage } from "../../config/inserter-coverage-validator";
@@ -386,6 +387,11 @@ export interface GenerateClockOptions {
     on_progress_detail?: (detail: string) => void;
     /** Called with each clock alternative that could not be made, and the generator's reason */
     on_not_made?: (clock: NotMadeClock) => void;
+    /**
+     * Called with each event of the maker log (maker-log.ts): what each maker made and why clocks were dropped. Read by
+     * `generateClockAlternatives` only; with none, nothing is logged or timed, and no result changes.
+     */
+    maker_log?: MakerLogSink;
     /**
      * Make the clock with windows shared by the inserters that take into their machines at the same moment (see
      * roundRobinPollingClock), or not at all: it needs `verify_as_built`, and throws where no shared windows hold.

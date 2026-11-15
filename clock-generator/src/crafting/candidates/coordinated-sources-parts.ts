@@ -1,6 +1,7 @@
 import type { AlwaysOnReasons } from "../enable-control-router";
 import type { SerializableClockWindows } from "../clock";
 import type { ClockStrategy, StrategyRef } from "../clock-strategy";
+import { emitMakerLog, makerLogOn, reasonOf, type MakerReason } from "../maker-log";
 
 /**
  * The parts the per-branch clock is composed from (coordinated-sources.ts): every clock the other makers built for the build, with
@@ -68,6 +69,17 @@ export function collectingParts<T>(work: () => T): { value: T; parts: Coordinate
     }
 }
 
+/** The `part` event of the maker log (`scripts/blast/MAKER-LOG.md`): a part, what became of it, and the fields of its outcome */
+export function partEvent(part: CoordinatedSourcesPart, outcome: string, extra: Record<string, unknown> = {}): void {
+    emitMakerLog(() => ({ event: "part", part: part.alternative_id ?? part.name, kind: part.alternative_id === undefined ? "way" : "clock", window_cycle_ticks: part.window_cycle_ticks,
+        wake_ups: part.wake_ups_per_minute ?? null, verdict: part.verdict ?? null, outcome, ...extra }));
+}
+
+/** The `part` event of a way of the grouped hands rule that was refused before it was offered, or dropped after: its window cycle, and the reason as a code */
+export function wayEvent(way: string, window_cycle_ticks: number, outcome: "refused" | "dropped", reason: MakerReason): void {
+    emitMakerLog(() => ({ event: "part", part: way, kind: "way", window_cycle_ticks, wake_ups: null, verdict: null, outcome, reasons: [reason] }));
+}
+
 /** A part's key: its window cycle and its windows, inserter by inserter in the order of their ids */
 export function partKey(part: Pick<CoordinatedSourcesPart, "window_cycle_ticks" | "windows">): string {
     const ids = Object.keys(part.windows).filter(id => part.windows[id].length > 0).sort();
@@ -106,12 +118,21 @@ export function coordinatedSourcesInputOf(runs: readonly (RunWithParts | null)[]
     }
     const ordered = [...all.filter(part => part.alternative_id !== undefined && part.verdict === "stable"),
         ...all.filter(part => part.alternative_id === undefined)];
+    if (makerLogOn()) {
+        // the clocks that are not stable are parts only where the recommended one is: the others are left out
+        for (const part of all) {
+            if (part.alternative_id !== undefined && part.verdict !== "stable" && part.alternative_id !== recommended_id) partEvent(part, "excluded", { reasons: [reasonOf("not_stable", { verdict: part.verdict })] });
+        }
+    }
     const kept = new Map<string, CoordinatedSourcesPart>();
     for (const part of ordered) {
         const key = partKey(part);
         const known = kept.get(key);
         if (known === undefined) kept.set(key, part);
-        else if (known.alternative_id === undefined && known.counted === undefined && part.counted !== undefined) kept.set(key, part);
+        else if (known.alternative_id === undefined && known.counted === undefined && part.counted !== undefined) {
+            partEvent(known, "excluded", { reasons: [reasonOf("same_windows_as_part", { part: part.alternative_id ?? part.name })] });
+            kept.set(key, part);
+        } else partEvent(part, "excluded", { reasons: [reasonOf("same_windows_as_part", { part: known.alternative_id ?? known.name })] });
     }
     const parts = [...kept.values()];
     const recommended = all.find(part => part.alternative_id === recommended_id);

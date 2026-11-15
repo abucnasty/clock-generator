@@ -14,7 +14,8 @@ import { sharedItemDeadlockRisks } from "../deadlock-risk";
 import { rankingWindowCount } from "../rank";
 import { turnOffsets } from "./taker-turns";
 import { targetItemOf, targetMachinesOf } from "../sequence/cycle/target-ends";
-import { offerPart, partsWanted } from "./coordinated-sources-parts";
+import { offerPart, partsWanted, wayEvent } from "./coordinated-sources-parts";
+import { reasonOf, type MakerReason } from "../maker-log";
 
 /** Ticks added to the shortest window that starts the last hand: one for the tick a combinator takes, one of margin */
 const WINDOW_MARGIN_TICKS = 2;
@@ -684,8 +685,29 @@ export function roundRobinPollingPlan(
  * A clock that holds at one placement and not next to it is not offered (working rule 3). The reason it is not, or null.
  */
 export function holdsWithMargin(plan: UnclockedRun, windows: Map<string, OpenRange[]>, window_cycle_ticks: number): string | null {
+    const failure = marginFailureOf(plan, windows, window_cycle_ticks);
+    return failure === null ? null : marginText(failure);
+}
+
+/** Where a clock does not hold with its margin: as it stands, or with a group of windows moved a tick (the group's windows and the inserters that have them) */
+export type MarginFailure = { check: "as_placed" } | { check: "shifted"; shift_ticks: number; windows: string; inserters: string[] };
+
+/** The reason of a margin failure, as a code of the maker log */
+export function marginReasonOf(failure: MarginFailure): MakerReason {
+    return reasonOf("margin_check", { check: failure.check, shift_ticks: failure.check === "shifted" ? failure.shift_ticks : null,
+        group_size: failure.check === "shifted" ? failure.inserters.length : null });
+}
+
+/** The sentence a margin failure has in a result */
+export function marginText(failure: MarginFailure): string {
+    return failure.check === "as_placed" ? "the enable windows do not hold"
+        : `the enable windows ${failure.windows} (${failure.inserters.join(", ")}) do not hold ${failure.shift_ticks > 0 ? "+" : ""}${failure.shift_ticks} tick`;
+}
+
+/** `holdsWithMargin` with the failure as data: the first group moved a tick that does not hold, or the clock as it stands */
+export function marginFailureOf(plan: UnclockedRun, windows: Map<string, OpenRange[]>, window_cycle_ticks: number): MarginFailure | null {
     const swings = fractionalSwingsOf(plan.run.output_cycle_plan);
-    if (!runClockOnBuild(plan.config, windows, window_cycle_ticks, plan.logger, swings).stability_check.holds) return "the enable windows do not hold";
+    if (!runClockOnBuild(plan.config, windows, window_cycle_ticks, plan.logger, swings).stability_check.holds) return { check: "as_placed" };
     const groups = new Map<string, string[]>();
     for (const [id, ranges] of windows) {
         const key = ranges.map(range => `${range.start_inclusive}-${range.end_inclusive}`).join(",");
@@ -696,7 +718,7 @@ export function holdsWithMargin(plan: UnclockedRun, windows: Map<string, OpenRan
             const moved = new Map(windows);
             for (const id of ids) moved.set(id, shiftedWindows(windows.get(id)!, ticks, window_cycle_ticks));
             if (!runClockOnBuild(plan.config, moved, window_cycle_ticks, plan.logger, swings).stability_check.holds) {
-                return `the enable windows ${key} (${ids.join(", ")}) do not hold ${ticks > 0 ? "+" : ""}${ticks} tick`;
+                return { check: "shifted", shift_ticks: ticks, windows: key, inserters: ids };
             }
         }
     }
@@ -766,6 +788,8 @@ function bestHolding(made: UnclockedRun, holding: HoldingWay[], shared: boolean)
     for (const held of ranked) {
         const { disturbance_trial } = disturbanceTrialVerdictOf(made.config, held.clock, made.logger);
         if (disturbance_trial?.survives === true) return held;
+        wayEvent(`${wayName(held.way)}${held.way.share_windows ? ", shared" : ""}`, held.clock.simulation_duration.ticks, "dropped",
+            reasonOf("loss_trial_one_copy", { tried: disturbance_trial !== null }));
         if (disturbance_trial === null) untried ??= held;
     }
     return untried ?? (shared ? null : ranked[0] ?? null);
@@ -879,8 +903,12 @@ export function roundRobinPollingClock(
             const key = JSON.stringify(Array.from(windows, ([id, ranges]) => [id, ranges.map(range => [range.start_inclusive, range.end_inclusive])]));
             if (tried.has(key)) continue;
             tried.add(key);
-            const unmoved = holdsWithMargin(made, windows, duration.ticks);
-            if (unmoved !== null) { reasons.push(unmoved); continue; }
+            const unmoved = marginFailureOf(made, windows, duration.ticks);
+            if (unmoved !== null) {
+                wayEvent(`${wayName(way)}${way.share_windows ? ", shared" : ""}`, duration.ticks, "refused", marginReasonOf(unmoved));
+                reasons.push(marginText(unmoved));
+                continue;
+            }
             // the margin runs start from the cold start only: the clock has to hold from the other start phases too
             const clock_of_windows = finishedClock(made, windows, turns, options, left_open);
             offerWay(`${wayName(way)}${way.share_windows ? ", shared" : ""}`, clock_of_windows, planned.guarded);
