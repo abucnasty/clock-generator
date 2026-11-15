@@ -44,7 +44,7 @@ local report = {events = {}, outputs = count, baseline_waits = {}, initial = {
     output_positions = {}, crafting_speed = {assemblers[1].crafting_speed, foundries[1].crafting_speed}}}
 for k = 1, count do report.initial.output_positions[k] = {outputs[k].position.x, outputs[k].position.y} report.baseline_waits[k] = 0 end
 local function event(t, action) table.insert(report.events, {tick = t, action = action}) end
--- a stopped producer's made and undelivered output goes with the cut (owner, 2026-11-03): the foundries' plates waiting in
+-- a stopped producer's made and undelivered output goes with the cut (abucnasty, 2026-11-03): the foundries' plates waiting in
 -- their output; the drills drop straight into the assemblers and hold nothing
 local function stop(list, kind, stopped, started)
     return {

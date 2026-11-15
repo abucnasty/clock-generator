@@ -61,7 +61,7 @@ function rowTotals(run, row) {
 }
 
 /**
- * The baseline and the output stock guard, judged from the record (owner, 2026-11-03):
+ * The baseline and the output stock guard, judged from the record (abucnasty, 2026-11-03):
  * - the baseline's whole clock cycles, from the steady-state tick to the last tick in the baseline at which the clock stands where
  *   it stood then, are judged by net output: the final machines' products less the change in their output stock over those
  *   ticks (what leaves them), against the target over those ticks, in whole numbers (net x 60 x d >= n x ticks for the target

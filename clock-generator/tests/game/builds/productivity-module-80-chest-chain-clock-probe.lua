@@ -65,7 +65,7 @@ local block = {
 }
 local iron = {
     kind = "stop iron foundries",
-    -- the stopped foundries' made and undelivered plates go with the cut (owner, 2026-11-03)
+    -- the stopped foundries' made and undelivered plates go with the cut (abucnasty, 2026-11-03)
     start = function(t)
         local removed = 0
         for _, f in ipairs(foundries) do

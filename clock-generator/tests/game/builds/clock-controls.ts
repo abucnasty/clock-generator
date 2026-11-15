@@ -48,7 +48,7 @@ export interface NativeClockSummary {
 }
 
 /**
- * A native run's summary under the game tests' protocol, timed in game ticks (owner 2026-11-03): helpers/lua/steady.lua records
+ * A native run's summary under the game tests' protocol, timed in game ticks (abucnasty, 2026-11-03): helpers/lua/steady.lua records
  * the run (what the machines that make the target item finish over the trailing minute steers each step; their products and
  * output stock are recorded for the whole run) and helpers/run-judgement.js judges the record, host-side. Ticks count from the
  * clock's start.
@@ -91,12 +91,12 @@ export interface NativeBaseline {
      * build judged by a count has no stock, and its net output is the count
      */
     measured?: {ticks: number; items: number; expected: number; stock_start?: number; stock_end?: number; net: number};
-    /** The baseline holds (owner, 2026-11-03): the net output of its whole clock cycles makes the target, 100% or more */
+    /** The baseline holds (abucnasty, 2026-11-03): the net output of its whole clock cycles makes the target, 100% or more */
     meets: boolean;
 }
 
 /**
- * The output stock guard (owner, 2026-11-03): the final machines' output stock at the end of the run (after the last recovery)
+ * The output stock guard (abucnasty, 2026-11-03): the final machines' output stock at the end of the run (after the last recovery)
  * is no lower than the lowest it was at any tick of the baseline's whole cycles, so a slowly draining stock (underproduction
  * the output inserters would hide) fails the run
  */

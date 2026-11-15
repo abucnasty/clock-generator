@@ -43,7 +43,7 @@ end
 local function stop_drill()
     return {
         kind = "stop drill",
-        -- the ore in the wagon goes with the cut (owner, 2026-11-03); its plates and steel stay, being downstream of the ore
+        -- the ore in the wagon goes with the cut (abucnasty, 2026-11-03); its plates and steel stay, being downstream of the ore
         start = function(t)
             drill.disabled_by_script = true
             local removed = cargo.remove{name = "iron-ore", count = 1000000}

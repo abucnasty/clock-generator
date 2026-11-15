@@ -21,8 +21,9 @@ Recording cache (tests/game/README.md). tests/game/mechanics always runs with CL
 again only when the game binary changes (the binary's hash is in the key). --cache on|off|refresh (default on) applies
 to tests/game/builds only; a cold pass over the suite is `--cache off`, a refresh `--cache refresh`.
 
-Every job goes through the guard (PROCESS.md section 1) when it is found (--guard-dir, $GUARD_DIR, or
-/home/abucnasty/dev/factorio-work/tools/guard); without it jobs start directly, -j lanes at once (default 2). The
+Every job goes through a guard: a folder that holds guarded-run-budget.py and policy.json, which checks the host's memory
+before and while a job runs. The folder comes from --guard-dir or $GUARD_DIR; no path is built in. With neither, the runner
+refuses to start (exit 1). Only --no-guard starts the jobs directly, -j lanes at once (default 2). The
 environment a job needs (FACTORIO_PATH, FACTORIO_HARNESS_SAVE, CLOCK_RECORDING_CACHE_DIR) is passed on the command line,
 because the guard's systemd unit does not inherit yours; the rest comes from clock-generator/.env as for any game test.
 
@@ -39,6 +40,8 @@ because the guard's systemd unit does not inherit yours; the rest comes from clo
                      folder (BELT_SPEED_CAPTURE_DIR, ORE_VOIDER_CAPTURE_DIR and the recyclers' capture folders): the pass that
                      records a protocol change, whose summaries are then written into the controls
   --plan             print the jobs and an estimate of the wall time, run nothing
+  --guard-dir DIR    the guard's folder (else $GUARD_DIR); one of the two, or --no-guard, is required
+  --no-guard         start the jobs directly, with no memory check; refused together with --guard-dir
   --owner NAME       the guard's owner label (default game-suite)
 """
 import argparse
@@ -56,7 +59,6 @@ from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]  # clock-generator/
-DEFAULT_GUARD_DIR = "/home/abucnasty/dev/factorio-work/tools/guard"
 DEFAULT_DURATIONS = Path(__file__).resolve().parent / "case-seconds.json"
 # per job: vitest start-up, the guard's unit, loading the game data (measured about 8 s on a warm job)
 JOB_OVERHEAD_SECONDS = 8
@@ -171,6 +173,20 @@ def simulate(jobs: list[dict], lanes: int) -> float:
     return max(free) if free else 0.0
 
 
+def resolve_guard(guard_dir: str | None, no_guard: bool, environ: dict[str, str]) -> Path | None:
+    """The guard's folder from --guard-dir or $GUARD_DIR, or None for --no-guard; a refusal (one line, exit 1) in any other case"""
+    if no_guard:
+        if guard_dir:
+            raise SystemExit("run-suite.py: --no-guard and --guard-dir contradict each other: pass one")
+        return None
+    folder = guard_dir or environ.get("GUARD_DIR")
+    if not folder:
+        raise SystemExit("run-suite.py: no guard folder: pass --guard-dir DIR, set GUARD_DIR, or pass --no-guard to start jobs with no guard")
+    if not (Path(folder) / "guarded-run-budget.py").is_file():
+        raise SystemExit(f"run-suite.py: {folder} holds no guarded-run-budget.py: fix --guard-dir or GUARD_DIR, or pass --no-guard")
+    return Path(folder)
+
+
 def guard_lanes(guard_dir: Path) -> int | None:
     try:
         return int(json.loads((guard_dir / "policy.json").read_text())["machine"]["factorio_max"])
@@ -262,7 +278,8 @@ def main() -> int:
     p.add_argument("--cache", choices=["on", "off", "refresh"], default="on")
     p.add_argument("--chunk-seconds", type=float, default=120)
     p.add_argument("--durations", type=Path, default=DEFAULT_DURATIONS)
-    p.add_argument("--guard-dir", default=os.environ.get("GUARD_DIR", DEFAULT_GUARD_DIR))
+    p.add_argument("--guard-dir")
+    p.add_argument("--no-guard", action="store_true")
     p.add_argument("--owner", default="game-suite")
     p.add_argument("--calibrate", action="store_true")
     p.add_argument("--plan", action="store_true")
@@ -271,9 +288,8 @@ def main() -> int:
         return 0
     args = p.parse_args()
 
-    guard_dir = Path(args.guard_dir)
-    guard = guard_dir if (guard_dir / "guarded-run-budget.py").exists() else None
-    lanes = args.lanes or (guard_lanes(guard_dir) if guard else None) or 2
+    guard = resolve_guard(args.guard_dir, args.no_guard, os.environ)
+    lanes = args.lanes or (guard_lanes(guard) if guard else None) or 2
     out = Path(args.out) if args.out else ROOT / ".scratch" / "game-suite" / datetime.now().strftime("%Y%m%d-%H%M%S")
     out = out.resolve()
     if out.exists() and any(out.iterdir()):

@@ -527,7 +527,6 @@
           "pass": true,
           "figures": {
             "pass": true,
-            "generator": "/home/abucnasty/dev/factorio-scripts/clock-generator",
             "version": "0.14.0",
             "commit": "b29e79e",
             "tag": "v0.14.0",
