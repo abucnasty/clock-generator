@@ -8,7 +8,7 @@ bash scripts/blast/blast.sh run .. <out> --log      # writes <out>/maker-log/<jo
 ```
 
 - The switch is `BLAST_LOG=1`, which `--log` sets. It turns selection off, so every job is generated and has a log.
-- A log is one JSON object a line, one line an event. The first key of a line is `job`, the blast's job key.
+- A log has one JSON line for each event. The first key of a line is `job`, the blast's job key.
 - The log is not in the record. It changes no job file, and the key of the run does not hold it. `record check` gives the same result with it on.
 - A file is written whole when its job ends. A job that failed to generate has no log.
 - A generation is given a log by `maker_log` in `GenerateClockOptions`. With none, no event is built and nothing is timed.
@@ -45,11 +45,11 @@ The job and its copies. `shared_lanes`: the lanes the check of the shared lanes 
 | `ranked_wake_ups` | the figure the selection ranks by (`ranking.wake_ups_per_minute`) |
 | `shared_lane_losses` | one row for each lane where a taker of a copy loses swings: `belt_id`, `lane`, `item`, `copies` (the copies that lose), `takers_losing`, `swings_lost` (the sum of the swings lost, against one copy alone). Empty where none |
 | `shared_lanes_not_checked` | true where the check of the shared lanes could not run |
-| `loss_trials.one_copy` | null where the trials were not run. Else `survives`, `failed` (the losses it does not get back from) and `not_tried` (the count of losses left out after the first that failed) |
+| `loss_trials.one_copy` | null where the trials were not run. Else `survives`, `failed` (the losses it does not recover from) and `not_tried` (the count of losses left out after the first that failed) |
 | `loss_trials.copies` | null where the trials on the copies were not made. Else `survives`, `failed`, `copies_short` (the copies not back) and `tried` |
 | `loss_trials.one_copy_not_tried` | true where the clock holds and its trials could not be run |
 
-A row of `failed` is a loss: `loss` (`supply`, `output` or `excess`), `items`, `trials_planned`, `trials_run`, `trials_recovered`, `cut_at` and `loss_ticks` of the first trial it does not get back from.
+A row of `failed` is a loss: `loss` (`supply`, `output` or `excess`), `items`, `trials_planned`, `trials_run`, `trials_recovered`, `cut_at` and `loss_ticks` of the first trial it does not recover from.
 
 ```json
 {"job":"config-FLYING_ROBOT_FRAME_80","event":"clock","id":"takt_batches_observed","maker":"planned-belt-slack","listed_index":0,"selected":false,"verdict":"unstable","holds":true,"meets_target_rate":false,"window_cycle_ticks":288,"wake_ups":62.717770034843205,"ranked_wake_ups":62.717770034843205,"shared_lane_losses":[{"belt_id":5,"lane":1,"item":"electronic-circuit","copies":[4,5,6],"takers_losing":3,"swings_lost":186}],"shared_lanes_not_checked":false,"loss_trials":{"one_copy":{"survives":true,"failed":[],"not_tried":0},"copies":null,"one_copy_not_tried":false}}
@@ -129,7 +129,7 @@ The list is `MAKER_REASON_CODES` in `src/crafting/maker-log.ts`. A test checks t
 | `not_stable` | `verdict` | `part`: a clock that is not stable gives no windows. `composition`, `not_made`: the clock made is not stable |
 | `margin_check` | `check` (`as_placed`, or `shifted` for a group moved a tick), `shift_ticks`, `group_size` (the inserters in the group) | `composition`, `part`: the windows do not hold with their margin |
 | `does_not_hold` | `stage` (`long_run`, or `whole_check`) | `composition`: the clock does not hold |
-| `loss_trial_one_copy` | `tried` (false where the trials could not be run) | `composition`, `part`: the clock does not get back from a loss on one copy |
+| `loss_trial_one_copy` | `tried` (false where the trials could not be run) | `composition`, `part`: the clock does not recover from a loss on one copy |
 | `cycle_does_not_divide` | `part_window_cycle_ticks`, `shared_window_cycle_ticks` | `part`: its window cycle does not divide the shared one |
 | `not_counted` | none | `part`: the long run of its own clock was not counted |
 | `does_not_hold_alone` | `source` (null for its own clock), `check` (`first_window_cycle`, `pickup_phase`, `long_run`, `not_checked`), `items`, `expected_items` | `part`: its clock, or the recommended clock with its windows for one source, does not hold |
