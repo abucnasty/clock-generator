@@ -25,6 +25,9 @@ dist
 # TypeScript cache
 *.tsbuildinfo
 
+# Python bytecode of the scripts
+__pycache__/
+
 # Optional eslint cache
 .eslintcache
 
