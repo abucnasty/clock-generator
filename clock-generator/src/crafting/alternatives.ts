@@ -35,6 +35,8 @@ import { coordinatedSourcesClock, withNotAdmitted, type NotAdmittedPart } from "
 import { BlueprintGenerationResult, clockedByConfig, GenerateClockOptions, SimulationStabilityCheck, fractionalStartOf, fractionalSwingsOf } from "./plan/unclocked-run";
 import { EntityTransferCountMap } from "./sequence/cycle/swing-counts";
 import { withRunMemo } from "./plan/run-memo";
+import { CodedError, emitMakerLog, makerLogOn, reasonOf, reasonOfError, timedCheck, timedMaker, withMakerLog } from "./maker-log";
+import { madeCompositionEvent, notMadeEvent, resultEvents } from "./maker-log-events";
 import { clockCost, ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, ROUNDED_CLOCK_MAX_FAST, RoundedClock, roundedRateAllowed, searchesToRun, searchesAreNeeded } from "./rank";
 import { TargetProductionRate } from "./target-production-rate";
 import { loopStockBoundOf } from "./candidates/loop-stock-bound";
@@ -619,7 +621,9 @@ function alternativeDefinitionsFor(
             run: () => {
                 // one search at the planned swing count; backing off would repeat it for every lower count
                 const result = timeStudyWindowsClock(base_config, quiet, "moved_output_swing");
-                assert(result.search?.kind === "moved output swing" && result.search.picked !== null, "no moved output swing passes the clock-only check");
+                if (!(result.search?.kind === "moved output swing" && result.search.picked !== null)) {
+                    throw new CodedError("no moved output swing passes the clock-only check", reasonOf("no_search_pick", { search: "moved_output_swing" }));
+                }
                 return result;
             },
             search: true,
@@ -639,7 +643,9 @@ function alternativeDefinitionsFor(
             run: () => {
                 // one search at the planned swing count, like uneven output swings
                 const result = phaseShiftedBatchClock(base_config, { ...quiet, lane_hand_room: "always" });
-                assert(result.search?.kind === "shifted cycle" && result.search.picked !== null, `no ${nameOf("phase_shifted_batch")} passes the clock-only check`);
+                if (!(result.search?.kind === "shifted cycle" && result.search.picked !== null)) {
+                    throw new CodedError(`no ${nameOf("phase_shifted_batch")} passes the clock-only check`, reasonOf("no_search_pick", { search: "phase_shifted_batch" }));
+                }
                 return result;
             },
             search: true,
@@ -945,6 +951,7 @@ function runAlternativeOf(
         const reason = error instanceof Error ? error.message : String(error);
         logger.log(`Clock "${definition.label}" could not be generated: ${reason}`);
         on_not_made?.({ id: definition.id, label: definition.label, reason });
+        if (on_not_made !== undefined) emitMakerLog(() => notMadeEvent(definition.id, reasonOfError(error)));
         return null;
     }
     const { id } = definition;
@@ -1111,8 +1118,8 @@ function runAlternativeOf(
         if (!trial.held) return null;
         if (!shared_lane_checks_of.has(trial)) {
             const on = used.planned_on ?? config;
-            shared_lane_checks_of.set(trial, sharedLaneCheckOf(() => judgeSharedLanes({ ...on, overrides: { ...on.overrides, terminal_swing_count: trial.result.used_terminal_swing_count } },
-                trial.result.clock_windows, trial.clock_window_cycle, logger), label, logger));
+            shared_lane_checks_of.set(trial, sharedLaneCheckOf(() => timedCheck("shared_lane_check", () => judgeSharedLanes({ ...on, overrides: { ...on.overrides, terminal_swing_count: trial.result.used_terminal_swing_count } },
+                trial.result.clock_windows, trial.clock_window_cycle, logger)), label, logger));
         }
         return shared_lane_checks_of.get(trial)!;
     };
@@ -1131,7 +1138,7 @@ function runAlternativeOf(
             let fewer: ReturnType<typeof fewerCopiesThatHold> = null;
             if (judgement !== null && judgement.losses.length > 0) {
                 try {
-                    fewer = fewerCopiesThatHold(with_swings, trial.result.clock_windows, trial.clock_window_cycle, logger);
+                    fewer = timedCheck("fewer_copies", () => fewerCopiesThatHold(with_swings, trial.result.clock_windows, trial.clock_window_cycle, logger));
                 } catch (error) {
                     if (isInternalError(error)) throw error;
                     logger.warn(`Clock "${label}": the runs with fewer copies on the shared lanes could not be made: ${error instanceof Error ? error.message : String(error)}`);
@@ -1156,8 +1163,8 @@ function runAlternativeOf(
             const on = used.planned_on ?? config;
             let tried: CopiesTrialVerdict | null;
             try {
-                tried = copiesDisturbanceTrial({ ...on, overrides: { ...on.overrides, terminal_swing_count: trial.result.used_terminal_swing_count } },
-                    trial.result.clock_windows, trial.clock_window_cycle, trial.result.stability_check.expected_output_items, logger);
+                tried = timedCheck("copies_trial", () => copiesDisturbanceTrial({ ...on, overrides: { ...on.overrides, terminal_swing_count: trial.result.used_terminal_swing_count } },
+                    trial.result.clock_windows, trial.clock_window_cycle, trial.result.stability_check.expected_output_items, logger));
             } catch (error) {
                 if (isInternalError(error)) throw error;
                 const reason = error instanceof Error ? error.message : String(error);
@@ -1419,7 +1426,7 @@ function planPrimaryAndTasks(
             ...(isExplored("coordinated_sources") && { explored: true as const }),
         }] : [])];
     on_tasks?.(context, tasks, clockVerificationSignature(config, result));
-    const primary_run = runAlternative(primary, config, logger, options.on_progress_detail, undefined, undefined, options.on_not_made);
+    const primary_run = timedMaker(primary.id, () => runAlternative(primary, config, logger, options.on_progress_detail, undefined, undefined, options.on_not_made));
     return { primary: primary_run === null ? null : withParts(primary_run, config, primary_ways), context, tasks };
 }
 
@@ -1523,9 +1530,21 @@ export function runCoordinatedSourcesTask(
         const listed = run?.alternatives.filter(it => it.verdict === "stable") ?? [];
         if (run !== null && run.alternatives.length === 0) {
             on_not_made?.({ id: COORDINATED_SOURCES_MAKER, label: COORDINATED_SOURCES_LABEL, reason: "Made, and the same clock as one made before it, which is listed." });
+            emitMakerLog(() => ({ event: "composition", outcome: "dropped", final: true, parts: null, reason: reasonOf("same_as_listed_clock") }));
+            if (on_not_made !== undefined) emitMakerLog(() => notMadeEvent(COORDINATED_SOURCES_MAKER, reasonOf("same_as_listed_clock")));
         }
         if (run !== null && run.alternatives.length > 0 && listed.length === 0) {
             options.on_not_made?.({ id: COORDINATED_SOURCES_MAKER, label: COORDINATED_SOURCES_LABEL, reason: notStableReason(run.alternatives) });
+        }
+        // the clock made is listed where it is stable, and otherwise logged with what the checks found of it: the clocks the copies drop are here
+        if (run !== null) {
+            for (const alternative of run.alternatives) {
+                const not_stable = reasonOf("not_stable", { verdict: alternative.verdict });
+                emitMakerLog(() => madeCompositionEvent(config, alternative, alternative.verdict === "stable" ? "listed" : "dropped", alternative.verdict === "stable" ? null : not_stable));
+            }
+            if (run.alternatives.length > 0 && listed.length === 0 && options.on_not_made !== undefined) {
+                emitMakerLog(() => notMadeEvent(COORDINATED_SOURCES_MAKER, reasonOf("not_stable", { verdict: run.alternatives[0].verdict })));
+            }
         }
         return run === null || listed.length === 0 ? null : { ...run, alternatives: listed };
     });
@@ -1588,7 +1607,7 @@ export function generateClockAlternatives(
     config: Config,
     options: GenerateClockOptions = {}
 ): ClockAlternativesResult {
-    return withRunMemo(() => generateAllAlternatives(withoutOutsideSupply(config), options));
+    return withMakerLog(options.maker_log, () => withRunMemo(() => generateAllAlternatives(withoutOutsideSupply(config), options)));
 }
 
 function generateAllAlternatives(config: Config, options: GenerateClockOptions): ClockAlternativesResult {
@@ -1625,7 +1644,7 @@ function generateAllAlternatives(config: Config, options: GenerateClockOptions):
         for (const definition of made) {
             current_step = definition.label;
             report();
-            const run = runAlternative(definition, config, logger, report, undefined, verification_cache, on_not_made, !plan.context.primary_stable);
+            const run = timedMaker(definition.id, () => runAlternative(definition, config, logger, report, undefined, verification_cache, on_not_made, !plan.context.primary_stable));
             completed++;
             runs[1 + definitions.indexOf(definition)] = run;
             if (run) {
@@ -1661,7 +1680,8 @@ function generateAllAlternatives(config: Config, options: GenerateClockOptions):
         current_step = COORDINATED_SOURCES_LABEL;
         total++;
         report();
-        runs.push(runCoordinatedSourcesTask(config, coordinatedSourcesInputOf(runs, recommended.id), { ...options, on_progress_detail: report, on_not_made }, signaturesOf(runs)));
+        runs.push(timedMaker(COORDINATED_SOURCES_MAKER, () =>
+            runCoordinatedSourcesTask(config, coordinatedSourcesInputOf(runs, recommended.id), { ...options, on_progress_detail: report, on_not_made }, signaturesOf(runs))));
         completed++;
     }
 
@@ -1674,6 +1694,7 @@ function generateAllAlternatives(config: Config, options: GenerateClockOptions):
     const ranked = combineClockAlternativeRuns(runs, it => it.ranking);
     // each clock's "what changes it" names another clock of this result that holds with all the copies (checked-lanes.ts)
     const combined = { ...ranked, alternatives: withOtherClocks(ranked.alternatives, ranked.selected_index, config.setpoint.copies) };
+    if (makerLogOn()) for (const event of resultEvents(config, combined)) emitMakerLog(() => event);
     return {
         ...combined,
         lanes: buildLanesOf(config),

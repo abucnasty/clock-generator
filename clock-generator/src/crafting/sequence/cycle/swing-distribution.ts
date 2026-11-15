@@ -2,6 +2,7 @@ import assert from "../../../common/assert";
 import { assertIsInserter, assertIsMachine, Entity, EntityId, ReadableEntityRegistry } from "../../../entities";
 import { EntityTransferCount, EntityTransferCountMap } from "./swing-counts";
 import type Fraction from "../../../data-types/fraction";
+import { CodedError, reasonOf, type MakerReason } from "../../maker-log";
 
 /**
  * Euclidean Swings the insertion limits do not allow: an inserter into a machine would have to swing more often in a
@@ -11,11 +12,14 @@ import type Fraction from "../../../data-types/fraction";
 export class FractionalSwingsRefusedError extends Error {
     /** The output swings a cycle the cycle plan was asked for; absent where the distribution is made on its own */
     readonly swings_per_cycle?: Fraction;
+    /** The refusal as the maker log's code, with the numbers of the swings that did not fit */
+    readonly reason?: MakerReason;
 
-    constructor(message: string, swings_per_cycle?: Fraction) {
+    constructor(message: string, swings_per_cycle?: Fraction, reason?: MakerReason) {
         super(message);
         this.name = "FractionalSwingsRefusedError";
         this.swings_per_cycle = swings_per_cycle;
+        this.reason = reason;
     }
 }
 
@@ -25,8 +29,8 @@ export class FractionalSwingsRefusedError extends Error {
  */
 export function fractionalSwingsWholeAt(refusal: FractionalSwingsRefusedError, count: number): Error {
     const swings = `${count} output swing${count === 1 ? "" : "s"}`;
-    return new Error(`${refusal.message} At ${swings} each output cycle, the most the insertion limits allow, every inserter swings a whole `
-        + `number of times each output cycle: the clock of ${swings}.`);
+    return new CodedError(`${refusal.message} At ${swings} each output cycle, the most the insertion limits allow, every inserter swings a whole `
+        + `number of times each output cycle: the clock of ${swings}.`, refusal.reason ?? reasonOf("other"));
 }
 
 /**
@@ -160,7 +164,9 @@ export function createAlternatingDistribution(
             throw new FractionalSwingsRefusedError(
                 `Cannot satisfy fractional swing constraint: each sub-cycle requires ${base_swings} swings, ` +
                 `but maximum allowed is ${max_swings_per_subcycle} due to insertion limits. ` +
-                `Total swings: ${total_swings}, cycle multiplier: ${cycle_multiplier}.`
+                `Total swings: ${total_swings}, cycle multiplier: ${cycle_multiplier}.`,
+                undefined,
+                reasonOf("fractional_swings_over_limit", { sub_cycle: null, swings_required: base_swings, swings_max: max_swings_per_subcycle, total_swings, cycle_multiplier }),
             );
         }
         return distribution;
@@ -182,7 +188,9 @@ export function createAlternatingDistribution(
             throw new FractionalSwingsRefusedError(
                 `Cannot satisfy fractional swing constraint: sub-cycle ${i} requires ${swings} swings, ` +
                 `but maximum allowed is ${max_swings_per_subcycle} due to insertion limits. ` +
-                `Total swings: ${total_swings}, cycle multiplier: ${cycle_multiplier}.`
+                `Total swings: ${total_swings}, cycle multiplier: ${cycle_multiplier}.`,
+                undefined,
+                reasonOf("fractional_swings_over_limit", { sub_cycle: i, swings_required: swings, swings_max: max_swings_per_subcycle, total_swings, cycle_multiplier }),
             );
         }
         

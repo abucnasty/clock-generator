@@ -8,10 +8,11 @@ import { sharedItemDeadlockRisks } from "../deadlock-risk";
 import { BlueprintGenerationResult, completedClockCheck, GenerateClockOptions, UnclockedRun, unclockedRun } from "../plan/unclocked-run";
 import { type AsBuiltRun, disturbanceTrialVerdictOf } from "../trial";
 import type { DisturbanceTrialVerdict } from "../disturbance-trial";
-import { finishedClock, holdsWithMargin } from "./round-robin-polling";
-import { partKey, type CoordinatedSourcesInput, type CoordinatedSourcesPart } from "./coordinated-sources-parts";
+import { finishedClock, marginFailureOf, marginReasonOf, marginText, type MarginFailure } from "./round-robin-polling";
+import { partEvent, partKey, type CoordinatedSourcesInput, type CoordinatedSourcesPart } from "./coordinated-sources-parts";
 import type { EnableControl, SourceControl } from "../strategy-catalog";
 import { costKey } from "../rank";
+import { CodedError, emitMakerLog, makerLogOn, reasonOf, type MakerReason } from "../maker-log";
 
 /**
  * The per-branch clock (DESIGN D7, PR 18): each part of the build gets the windows of the clock that fits it, all on one shared
@@ -39,13 +40,17 @@ import { costKey } from "../rank";
  * Throws CoordinatedSourcesNotApplicable where there is nothing to compose: no recommended clock among the parts, a window cycle that is not
  * whole, no group with a choice, or a local choice that keeps the recommended clock.
  */
-export class CoordinatedSourcesNotApplicable extends Error { }
+export class CoordinatedSourcesNotApplicable extends CodedError {
+    constructor(message: string, reason: MakerReason = reasonOf("other")) {
+        super(message, reason);
+    }
+}
 
 /** The most passes over the groups: a pass that changes nothing ends it sooner */
 export const COORDINATED_SOURCES_MAX_PASSES = 8;
 
-function refuse(reason: string): never {
-    throw new CoordinatedSourcesNotApplicable(reason);
+function refuse(message: string, reason: MakerReason): never {
+    throw new CoordinatedSourcesNotApplicable(message, reason);
 }
 
 const quiet: Logger = { log: () => { }, info: () => { }, warn: () => { }, error: () => { }, debug: () => { } } as unknown as Logger;
@@ -177,8 +182,8 @@ interface Trial {
     holds?: boolean;
     wake_ups: number | null;
     loss?: DisturbanceTrialVerdict | null;
-    /** Why it does not hold a tick either way (`holdsWithMargin`), or null where it does */
-    margin?: string | null;
+    /** Where it does not hold a tick either way (`marginFailureOf`), or null where it does */
+    margin?: MarginFailure | null;
 }
 
 /** How a part is shown in the log */
@@ -209,6 +214,14 @@ function notHeldOf(trial: Trial, shared_ticks: number): string {
     return `does not hold to the long run on ${shared_ticks} ticks: ${items}`;
 }
 
+/** What a check up to the long run found of a clock that does not hold there, as the fields of a reason */
+function notHeldFields(trial: Trial): { check: string; items: number | null; expected_items: number | null } {
+    const as_built = trial.result.stability_check.as_built;
+    if (as_built === undefined) return { check: "not_checked", items: null, expected_items: null };
+    return { check: as_built.first_check_failed === true ? "first_window_cycle" : as_built.failed_pickup_phases !== undefined ? "pickup_phase" : "long_run",
+        items: Number(as_built.actual_output_items.toFixed(3)), expected_items: trial.result.stability_check.expected_output_items };
+}
+
 /**
  * The plan the composed clocks run on: the config with the recommended clock's output swings, cycles and fractional swings; where its
  * window cycle is not the shared one, planned again with the cycles that make it so
@@ -225,7 +238,8 @@ function sharedPlan(config: Config, recommended: CoordinatedSourcesPart): Uncloc
         const cycles = window_cycle_ticks / (made.run.duration.ticks / made.run.recipe_lcm);
         if (Number.isInteger(cycles) && cycles >= 1) made = planned(cycles);
     }
-    if (made.run.duration.ticks !== window_cycle_ticks) refuse(`the build plans on ${made.run.duration.ticks} ticks, not the recommended clock's ${window_cycle_ticks}`);
+    if (made.run.duration.ticks !== window_cycle_ticks) refuse(`the build plans on ${made.run.duration.ticks} ticks, not the recommended clock's ${window_cycle_ticks}`,
+        reasonOf("plans_on_other_window_cycle", { planned_ticks: made.run.duration.ticks, recommended_ticks: window_cycle_ticks }));
     return made;
 }
 
@@ -239,9 +253,10 @@ export function coordinatedSourcesClock(
 ): BlueprintGenerationResult {
     const logger = options.logger ?? defaultLogger;
     const recommended = input.parts.find(part => part.alternative_id === input.recommended_id);
-    if (recommended === undefined) refuse(`the recommended clock ${input.recommended_id} is not among the clocks made for the build`);
+    if (recommended === undefined) refuse(`the recommended clock ${input.recommended_id} is not among the clocks made for the build`, reasonOf("recommended_not_a_part"));
     const shared_ticks = recommended.window_cycle_ticks;
-    if (!Number.isInteger(shared_ticks)) refuse(`the window cycle time of the recommended clock, ${shared_ticks} ticks, is not a whole number of ticks`);
+    if (!Number.isInteger(shared_ticks)) refuse(`the window cycle time of the recommended clock, ${shared_ticks} ticks, is not a whole number of ticks`,
+        reasonOf("window_cycle_not_whole", { window_cycle_ticks: shared_ticks }));
     const made = sharedPlan(config, recommended);
     const registry = made.run.simulation_context.entity_registry;
     const inserters: GroupedInserter[] = registry.getAll().filter(Entity.isInserter)
@@ -296,12 +311,19 @@ export function coordinatedSourcesClock(
 
     // the parts whose windows are not taken, with why, in the order of the parts
     const refused = new Map<CoordinatedSourcesPart, string>();
+    // the same, as the codes the log gives
+    const refused_reasons = new Map<CoordinatedSourcesPart, MakerReason[]>();
     const candidates = input.parts.filter(part => {
         if (part === recommended) return false;
-        const why = !Number.isInteger(part.window_cycle_ticks) || !Number.isInteger(shared_ticks / part.window_cycle_ticks)
+        const divides = Number.isInteger(part.window_cycle_ticks) && Number.isInteger(shared_ticks / part.window_cycle_ticks);
+        const why = !divides
             ? `its window cycle of ${part.window_cycle_ticks} ticks does not divide the shared one of ${shared_ticks}`
             : !fits(part) ? `it is ${part.verdict}` : undefined;
-        if (why !== undefined) refused.set(part, why);
+        if (why !== undefined) {
+            refused.set(part, why);
+            refused_reasons.set(part, [!divides ? reasonOf("cycle_does_not_divide", { part_window_cycle_ticks: part.window_cycle_ticks, shared_window_cycle_ticks: shared_ticks })
+                : reasonOf("not_stable", { verdict: part.verdict })]);
+        }
         return why === undefined;
     });
     // a part gives windows where its own clock on the shared window cycle was counted as built: one of that window cycle counted already (its own
@@ -316,12 +338,14 @@ export function coordinatedSourcesClock(
         if (own.every(key => given.has(key))) return false;
         let counted = part.counted === true && part.window_cycle_ticks === shared_ticks;
         let why = "the long run of its own clock was not counted";
+        let why_reason = reasonOf("not_counted");
         if (!counted && part.counted !== false) {
             counted_here++;
             const windows = tiledWindows(part.windows, part.window_cycle_ticks, shared_ticks);
             const trial = trialOf(windows, leftOpenOf(part, inserters, windows));
             counted = trial.result.stability_check.as_built?.wake_ups !== undefined;
             why = `its clock ${notHeldOf(trial, shared_ticks)}`;
+            why_reason = reasonOf("does_not_hold_alone", { source: null, ...notHeldFields(trial) });
         }
         if (counted) {
             own.forEach(key => given.add(key));
@@ -331,6 +355,7 @@ export function coordinatedSourcesClock(
         const pair = partGroups(inserters, [recommended, part], shared_ticks);
         const sources: string[] = [];
         const failed: string[] = [];
+        const failed_reasons: MakerReason[] = [];
         for (const group of pair) {
             const key = group.choices.length < 2 ? undefined : `${group.source}|${JSON.stringify(group.choices[1].windows)}`;
             if (key === undefined || given.has(key)) continue;
@@ -342,14 +367,26 @@ export function coordinatedSourcesClock(
                 sources.push(group.source);
             } else {
                 failed.push(`with only its windows for ${group.source}, the recommended clock ${notHeldOf(trial, shared_ticks)}`);
+                failed_reasons.push(reasonOf("does_not_hold_alone", { source: group.source, ...notHeldFields(trial) }));
             }
         }
         if (sources.length > 0) taken_for.set(part, sources);
-        if (failed.length > 0) refused.set(part, [why, ...failed, ...(sources.length > 0 ? [`its windows are taken for ${sources.join(", ")}`] : [])].join("; "));
+        if (failed.length > 0) {
+            refused.set(part, [why, ...failed, ...(sources.length > 0 ? [`its windows are taken for ${sources.join(", ")}`] : [])].join("; "));
+            refused_reasons.set(part, [why_reason, ...failed_reasons]);
+        }
         return false;
     });
     const not_admitted = input.parts.filter(part => refused.has(part)).map(part => ({ part: partName(part), why: refused.get(part)! }));
     on_admission?.(not_admitted);
+    if (makerLogOn()) {
+        for (const part of input.parts) {
+            const sources = taken_for.get(part) ?? [];
+            if (part === recommended) partEvent(part, "recommended");
+            else if (refused.has(part)) partEvent(part, "refused", { reasons: refused_reasons.get(part) ?? [], sources });
+            else partEvent(part, admitted.includes(part) ? "admitted" : "no_new_windows", { sources });
+        }
+    }
     if (not_admitted.length > 0) logger.log(`Coordinated Sources: ${notAdmittedNote(not_admitted)}`);
     const taking = candidates.filter(part => admitted.includes(part) || taken_for.has(part));
     const groups = partGroups(inserters, [recommended, ...taking], shared_ticks, (part, source) => taken_for.get(part)?.includes(source) ?? true);
@@ -358,7 +395,7 @@ export function coordinatedSourcesClock(
         + `${taken_for.has(part) ? `, for ${taken_for.get(part)!.join(", ")} alone` : ""})`).join(", ")}`);
     logger.log(`Coordinated Sources: ${taking.length + 1} clocks on ${shared_ticks} ticks (${counted_here} counted here, ${tried_alone} sources tried alone), `
         + `${groups.length} groups of inserters, ${choosing.length} with a choice: ${choosing.map(group => `${group.source} ${group.choices.length}`).join(", ") || "none"}`);
-    if (choosing.length === 0) refuse("no source has another choice than the recommended clock's");
+    if (choosing.length === 0) refuse("no source has another choice than the recommended clock's", reasonOf("no_source_has_choice"));
 
     const compose = (choice: ReadonlyMap<string, number>) => composeOf(groups, choice);
     const trialOfChoice = (choice: ReadonlyMap<string, number>): Trial => {
@@ -370,36 +407,57 @@ export function coordinatedSourcesClock(
         if (trial.loss === undefined) trial.loss = disturbanceTrialVerdictOf(made.config, trial.result, quiet).disturbance_trial;
         return trial.loss;
     };
-    const marginOf = (trial: Trial): string | null => {
+    const marginOf = (trial: Trial): MarginFailure | null => {
         if (trial.margin === undefined) {
-            trial.margin = holdsWithMargin(made, new Map(Object.entries(trial.windows).map(([id, ranges]) =>
+            trial.margin = marginFailureOf(made, new Map(Object.entries(trial.windows).map(([id, ranges]) =>
                 [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const)), shared_ticks);
         }
         return trial.margin;
+    };
+    // each judged composition once for each outcome, as the log gives it: the clock of each source, its window cycle and its wakeups on one copy
+    const logged = new Set<string>();
+    const compositionEvent = (choice: ReadonlyMap<string, number>, trial: Trial, outcome: string, reason: MakerReason | null, final = false): void => {
+        if (!makerLogOn() || [...choice.values()].every(index => index === 0)) return;
+        const key = `${JSON.stringify([...choice])}|${outcome}|${final}`;
+        if (logged.has(key)) return;
+        logged.add(key);
+        emitMakerLog(() => ({ event: "composition", outcome, final, window_cycle_ticks: shared_ticks, wake_ups: trial.wake_ups,
+            parts: Object.fromEntries(groups.map(group => [group.source, partName(group.choices[choice.get(group.source)!].parts[0])])),
+            reason }));
     };
 
     const recommended_key = partKey({ window_cycle_ticks: shared_ticks, windows: tiledWindows(recommended.windows, recommended.window_cycle_ticks, shared_ticks) });
     const judge: LocalChoiceJudge = {
         wakeUpsOf: choice => {
             const trial = trialOfChoice(choice);
+            if (!trial.holds_to_long_run) compositionEvent(choice, trial, "dropped", reasonOf("does_not_hold", { stage: "long_run" }));
             return trial.holds_to_long_run ? trial.wake_ups : null;
         },
         // the current choice where it holds as a whole; another where it also holds a tick either way and gets back from every loss (on a
         // build with a deadlock risk the losses do not decide), else where its losses could not be tried
         takes: (choice, current) => {
             const trial = trialOfChoice(choice);
-            if (!holdsOf(trial)) return "passed";
+            if (!holdsOf(trial)) { compositionEvent(choice, trial, "dropped", reasonOf("does_not_hold", { stage: "whole_check" })); return "passed"; }
             if (current) return "taken";
-            if (marginOf(trial) !== null) return "passed";
+            const margin = marginOf(trial);
+            if (margin !== null) { compositionEvent(choice, trial, "dropped", marginReasonOf(margin)); return "passed"; }
             const loss = deadlock_risk ? undefined : lossOf(trial);
-            if (deadlock_risk || loss?.survives === true) return "taken";
+            if (deadlock_risk || loss?.survives === true) { compositionEvent(choice, trial, "taken", null); return "taken"; }
+            compositionEvent(choice, trial, loss === null ? "untried" : "dropped", reasonOf("loss_trial_one_copy", { tried: loss !== null }));
             return loss === null ? "untried" : "passed";
         },
         refusal: choice => {
             const { windows, left_open } = compose(choice);
             if (partKey({ window_cycle_ticks: shared_ticks, windows }) === recommended_key) return "the local choice keeps the recommended clock";
             const margin = marginOf(trialOf(windows, left_open));
-            return margin === null ? null : `the composed clock: ${margin}`;
+            if (margin !== null) compositionEvent(choice, trialOf(windows, left_open), "dropped", marginReasonOf(margin), true);
+            return margin === null ? null : `the composed clock: ${marginText(margin)}`;
+        },
+        refusalReason: choice => {
+            const { windows, left_open } = compose(choice);
+            if (partKey({ window_cycle_ticks: shared_ticks, windows }) === recommended_key) return reasonOf("keeps_recommended_clock");
+            const margin = marginOf(trialOf(windows, left_open));
+            return margin === null ? null : marginReasonOf(margin);
         },
     };
     const starts = localChoiceStarts(inserters, groups, recommended, candidates, shared_ticks);
@@ -431,6 +489,8 @@ export interface LocalChoiceJudge {
     takes(choice: ReadonlyMap<string, number>, current: boolean): "taken" | "untried" | "passed";
     /** Why the clock a start ends on is not the per-branch clock (it is the recommended clock, or fails the margin), else null */
     refusal(choice: ReadonlyMap<string, number>): string | null;
+    /** The same reason as a code, for the maker log; read only where `refusal` gave one */
+    refusalReason?(choice: ReadonlyMap<string, number>): MakerReason | null;
 }
 
 /**
@@ -517,6 +577,7 @@ export function localChoiceFromStarts(
     const choosing = groups.filter(group => group.choices.length > 1);
     let best: { start: LocalChoiceStart; choice: Map<string, number>; cost: number } | undefined;
     let reason: string | undefined;
+    let reason_code: MakerReason | undefined;
     for (const start of starts) {
         if (start !== starts[0]) {
             logger.log(`Coordinated Sources: also from ${partName(start.part)}, whose wakeups a minute tie the recommended clock's (${start.part.wake_ups_per_minute})`);
@@ -524,11 +585,14 @@ export function localChoiceFromStarts(
         const choice = localChoice(choosing, start, judge, logger, starts.length > 1 ? `, from ${partName(start.part)}` : "");
         if (start !== starts[0] && [...choice].every(([source, index]) => start.choice.get(source) === index)) continue;
         const refusal = judge.refusal(choice);
-        if (refusal !== null) { reason ??= refusal; continue; }
+        if (refusal !== null) {
+            if (reason === undefined) { reason = refusal; reason_code = judge.refusalReason?.(choice) ?? reasonOf("other"); }
+            continue;
+        }
         const cost = costKey({ wake_ups_per_minute: judge.wakeUpsOf(choice) });
         if (best === undefined || cost < best.cost) best = { start, choice, cost };
     }
-    if (best === undefined) refuse(reason ?? "the local choice keeps the recommended clock");
+    if (best === undefined) refuse(reason ?? "the local choice keeps the recommended clock", reason_code ?? reasonOf("keeps_recommended_clock"));
     return { start: best.start, choice: best.choice };
 }
 

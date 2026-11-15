@@ -299,7 +299,7 @@ function distributionsAt(swings_per_cycle: Fraction, distributions: () => SwingD
         return distributions();
     } catch (error) {
         if (error instanceof FractionalSwingsRefusedError) {
-            throw new FractionalSwingsRefusedError(error.message, swings_per_cycle);
+            throw new FractionalSwingsRefusedError(error.message, swings_per_cycle, error.reason);
         }
         throw error;
     }

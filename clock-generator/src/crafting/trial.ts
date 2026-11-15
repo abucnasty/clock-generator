@@ -39,6 +39,7 @@ import { verificationPlanningConfigOf, verificationTerminalCountOf } from "./rou
 import { CIRCUIT_LATENCY_TICKS } from "../common/rule-constants";
 import { WakeUpsFromStarts, hasStockTheClockDoesNotSet, wakeUpsFromStarts } from "./wake-ups-from-starts";
 import type { ClockSharedLaneLoss } from "./shared-lane-verdict";
+import { timedCheck } from "./maker-log";
 
 /**
  * Number of clock start offsets the as-built check tries. Depending on how the clock lines up with the
@@ -1817,7 +1818,7 @@ export function disturbanceTrialVerdictOf(
         // a clock whose key cannot be made is tried as before, and fails in the trial if it cannot be tried
     }
     // A previously unavailable legacy trial is not a completed strict assessment.
-    const assess = () => triedDisturbanceTrial(planned_on, result, logger, report, errors);
+    const assess = () => timedCheck("loss_trials_one_copy", () => triedDisturbanceTrial(planned_on, result, logger, report, errors));
     const assessed = memo === undefined || key === undefined ? assess() : memo.disturbanceTrial(key, assess);
     return errors === "throw" && assessed.disturbance_trial === null ? assess() : assessed;
 }

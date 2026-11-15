@@ -1,4 +1,5 @@
 import assert from "../../common/assert";
+import { CodedError, reasonOf } from "../maker-log";
 import { Config } from "../../config";
 import { OpenRange } from "../../data-types";
 import { Entity, EntityId, handSizeFor, Inserter, Machine, ReadableEntityRegistry } from "../../entities";
@@ -9,15 +10,19 @@ import { turnOffsets } from "./taker-turns";
 import { createEntityRegistryFromConfig } from "../sequence/simulation-context";
 
 function assertNoDrills(registry: ReadableEntityRegistry): void {
-    assert(registry.getAll().every(entity => !Entity.isDrill(entity)), "Time-Division Windows are not made for a build with mining drills");
+    if (!registry.getAll().every(entity => !Entity.isDrill(entity))) {
+        throw new CodedError("Time-Division Windows are not made for a build with mining drills", reasonOf("has_drills"));
+    }
 }
 
 function assertTimeDivisionWindowsSource(inserter: Inserter): void {
     // the reason names the inserter as the app does ("inserter 5") and what it takes from instead ("a belt")
     const [kind, number] = inserter.entity_id.id.split(":");
     const source = inserter.source.entity_id.id.split(":")[0].replace(/-/g, " ");
-    assert(EntityId.isMachine(inserter.source.entity_id) || EntityId.isChest(inserter.source.entity_id),
-        `only made where every inserter takes from a machine or a chest; ${kind} ${number} takes from a ${source}`);
+    if (!(EntityId.isMachine(inserter.source.entity_id) || EntityId.isChest(inserter.source.entity_id))) {
+        throw new CodedError(`only made where every inserter takes from a machine or a chest; ${kind} ${number} takes from a ${source}`,
+            reasonOf("takes_from_belt", { inserter: Number(number), source_kind: inserter.source.entity_id.id.split(":")[0] }));
+    }
 }
 
 /**
