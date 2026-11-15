@@ -1,8 +1,8 @@
 // node scripts/export-clock.js <config json path or sample key> --out=<dir>
 //          [--alternative=<id|selected|all>[,<id>...]] [--always-on] [--windows=<file>] [--tag=<word>]
 //          [--scaffold=<blueprint file>] [--backed-up-belts] [--anchor=<x,y>] [--no-cells]
-// Generates the clocks of a config and writes each ready to place, for the clock files tools/place-clocks.js reads (the
-// benchmark tools' library, factorio-benchmark-tools): no game is started. The generator is the built one (`npx tsc`
+// Generates the clocks of a config and writes each ready to place, for the clock files the benchmark tools read to place
+// the clocks: no game is started. The generator is the built one (`npx tsc`
 // first), or the checkout CLOCK_GENERATOR_ROOT names.
 //
 //   <config>          a sample key of ConfigPaths (AUTOMATION_SCIENCE_240) or the path of a config JSON

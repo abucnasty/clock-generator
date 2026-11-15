@@ -16,8 +16,8 @@ into a car at its result spot, and two legendary stack inserters bring that back
 - `iron-ore-voider-400-overbeaconed.json`, `iron-ore-voider-400-overbeaconed.scaffold`: save B, the recycler with 4 legendary speed modules 3 and 6 beacons of
   2 each, crafting speed 26.634375, 852.3 crafts a second at most. Saves C, D and G of the benchmark give the same build.
 
-The scaffolds were cut from the saves (migrated to vanilla 2.1.21) by factorio-benchmark-tools' `extract-cell` at
-c9071e1: the build's entities as assembled, the wagon replaced by the four infinity chests. The enable conditions left on some
+The scaffolds were cut from the saves (migrated to vanilla 2.1.21) by the benchmark tools' extractor:
+the build's entities as assembled, the wagon replaced by the four infinity chests. The enable conditions left on some
 inserters and on the recycler have no wire and do nothing. The car is the recycler's `result_target`.
 
 **Target: 400 iron ore a second destroyed** (`counts: "destroyed"`): what the four inserters bring in from outside.

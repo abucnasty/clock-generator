@@ -1,6 +1,6 @@
 #!/bin/bash
-# replay.sh: the replay check of an engine change that must keep results identical (the engine refactor's per-commit
-# check, P4 section 6.2). Every job of the blast's job list is run with no search, on the clock the blast selected for
+# replay.sh: the replay check of an engine change that must keep results identical (the per-commit check of an engine
+# refactor). Every job of the blast's job list is run with no search, on the clock the blast selected for
 # it, and what every entity holds and shows is hashed per period of the clock (replay.js); a check lays those hashes
 # against a base recorded once on the parent commit (compare.js).
 #

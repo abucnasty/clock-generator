@@ -23,7 +23,7 @@
 #   -e <controls file>  BELT_CLOCK_EXPECTATIONS (replay)
 #   -d <dir>            BELT_CLOCK_REPLAY_DIR (replay)
 #   -x KEY=VALUE        an extra environment variable for every case (repeatable), e.g. -x SCAFFOLD_CAPTURE_DIR=<root>/<lane>/kept
-#   -c <cap>            harness Factorio processes allowed on the machine at once (default 4, ROADMAP section 2)
+#   -c <cap>            harness Factorio processes allowed on the machine at once (default 4)
 #   --factorio <path>   default $FACTORIO_PATH or /Applications/factorio_2_1.app/Contents/MacOS/factorio
 #   --save <zip>        default <worktree>/clock-generator/resources/clock_generator_staging.zip
 set -u
