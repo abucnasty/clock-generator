@@ -107,7 +107,7 @@ const generated = new Map<string, Prepared>();
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 
 /**
- * The game tests' protocol, timed in game ticks (helpers/lua/steady.lua; owner 2026-11-03): steady state is the first tick the
+ * The game tests' protocol, timed in game ticks (helpers/lua/steady.lua; abucnasty, 2026-11-03): steady state is the first tick the
  * machines that make the target item have finished target x 60 s over the trailing minute; the baseline is the minute after it
  * (a family may ask for more with a reason, never over 10 minutes); each disturbance lasts until it reduces output and is
  * recovered within 10 minutes of its release. A whole run is never over 15 minutes of game time: one that would be is not recorded.

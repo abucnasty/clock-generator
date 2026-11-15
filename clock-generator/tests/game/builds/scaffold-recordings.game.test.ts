@@ -271,10 +271,10 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         warmup_ticks: 3600,
         backed_up_belts: true,
     },
-    // The owner's full build (2026-11-04): 22 legendary assemblers in two rows of 11 (6 tiles apart), 120 beacons and 10 infinity
+    // abucnasty's full build (2026-11-04): 22 legendary assemblers in two rows of 11 (6 tiles apart), 120 beacons and 10 infinity
     // chests, the hand-made clock removed. The config is one row: 240 a second over 11 copies; the build is two of them, 480 over 22.
     // The bottom row is a mirror of the top (its inserters stand north of the belt: near lane 1, with the inserters on lane 1, where
-    // the config has near lane 2 and the inserters on lane 2), accepted as the same pickup by the owner: the near lane holds the
+    // the config has near lane 2 and the inserters on lane 2), accepted as the same pickup by abucnasty: the near lane holds the
     // inserter item in both rows.
     "logistic science (22 assemblers in two rows)": {
         scaffold: path.join(SAMPLES, "science", "logistic", "logistic-240.scaffold"),
@@ -482,7 +482,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [],
         warmup_ticks: 3600,
     },
-    // The owner's rocket fuel build (2026-11-04): jellynut processing between two rocket fuel biochambers (legendary, four
+    // abucnasty's rocket fuel build (2026-11-04): jellynut processing between two rocket fuel biochambers (legendary, four
     // legendary productivity modules each, 13 legendary beacons), 60 a second from one copy. Bioflux and jellynut come on one
     // moving turbo belt from infinity chests and drain into a void chest; nutrients come on a belt of their own whose end lets
     // 8 ticks in 61 through, and the seeds return on its other lane; water comes from an infinity pipe.
@@ -492,7 +492,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [],
         warmup_ticks: 3600,
     },
-    // The owner's stone brick build (2026-11-04): a drill (6 beacons, no modules) drops its stone straight into an electric
+    // abucnasty's stone brick build (2026-11-04): a drill (6 beacons, no modules) drops its stone straight into an electric
     // furnace (two legendary productivity modules, 8 beacons) whose one output inserter puts the bricks on a moving belt that
     // drains into a void chest; 40 a second from one copy, 120 over three. The harness puts the ore under the drill.
     "stone bricks from a drill into a furnace": {
@@ -513,7 +513,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [],
         warmup_ticks: 3600,
     },
-    // The owner's processing unit build (2026-11-05): one electromagnetic plant (legendary, 90.372) between two infinity chests, one
+    // abucnasty's processing unit build (2026-11-05): one electromagnetic plant (legendary, 90.372) between two infinity chests, one
     // chest of circuits (200 of each kind) and one that voids the units, each through one inserter; the sulfuric acid comes from an
     // infinity pipe. 15 a second from one copy (the build's most is 36.1). The game's inserter takes advanced circuits first from the
     // chest, the item its inventory order puts last (#617); the clock selected before that rule (Takt Batches: 1 output swing each output cycle) made half.
@@ -548,7 +548,7 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         warmup_ticks: 3600,
         copies: 12,
     },
-    // The owner's electric furnace build (2026-11-05): an electric furnace assembler (57.8125) taking steel from a foundry (185),
+    // abucnasty's electric furnace build (2026-11-05): an electric furnace assembler (57.8125) taking steel from a foundry (185),
     // stone bricks from three furnaces (80.0375) that each have a drill of their own dropping stone into them (speed bonuses 15.3075,
     // 12.5 and 13.975), and advanced circuits from two infinity chests on one backed-up belt. The furnaces go onto a moving belt into
     // a void chest. 10 a second from one copy, 20 over two.

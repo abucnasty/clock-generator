@@ -14,7 +14,7 @@ export const BELT_SPEEDS = [
 ] as const;
 export type FixtureBeltSpeed = typeof BELT_SPEEDS[number];
 /**
- * The belt tiers the clock game tests, their controls and their generation tests sweep: turbo only (owner, 2026-11-03: turbo
+ * The belt tiers the clock game tests, their controls and their generation tests sweep: turbo only (abucnasty, 2026-11-03: turbo
  * belts are the priority; a bug reported on another tier gets a scaffold of its own for that case)
  */
 export const CLOCK_TEST_SPEEDS: readonly FixtureBeltSpeed[] = BELT_SPEEDS.filter(speed => speed.name === "turbo");

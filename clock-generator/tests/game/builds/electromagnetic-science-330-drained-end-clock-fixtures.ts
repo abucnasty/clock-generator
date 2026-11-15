@@ -11,7 +11,7 @@ import {assertFeedDrains, PickupClockScenario} from "./pickup-clock-capture";
 
 /**
  * The electromagnetic science build (`ELECTROMAGNETIC_SCIENCE_330`, 330 packs a second over 11 copies, 30 a second a copy): one plant that
- * takes accumulators and supercapacitors from one turbo belt (#458). The owner's drained-end scaffold is one copy whose input line runs
+ * takes accumulators and supercapacitors from one turbo belt (#458). abucnasty's drained-end scaffold is one copy whose input line runs
  * past the plant into a loader and a void chest, so the supply moves; the sample's own scaffold closes the line. Two infinity chests
  * on each lane put the items onto the belt through a stack inserter each, and two stack inserters put the packs into void chests.
  *

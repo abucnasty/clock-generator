@@ -31,7 +31,7 @@ local function event(t, action) table.insert(report.events, {tick = t, action = 
 local function stop_drill()
     return {
         kind = "stop drill",
-        -- the ore in the car goes with the cut (owner, 2026-11-03), so the loss shows at once
+        -- the ore in the car goes with the cut (abucnasty, 2026-11-03), so the loss shows at once
         start = function(t)
             drill.disabled_by_script = true
             local removed = trunk.remove{name = "iron-ore", count = 1000000}

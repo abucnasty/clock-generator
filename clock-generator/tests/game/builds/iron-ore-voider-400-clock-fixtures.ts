@@ -20,7 +20,7 @@ import {RUN_PROTOCOL, runSummary} from "./pickup-clock-capture";
  * The disturbances: the ore supply cut, and the output blocked (the car filled to capacity and its two inserters disabled
  * by script). What comes back is random in the game and at its expected amount in the simulator, so beside the protocol the
  * baseline is judged on the ore destroyed against the binomial's range, the share of crafts that gave ore back, and on the car
- * never being full and the recycler never waiting for room. Dropped with the hour (owner's protocol, 2026-11-03): the mean of
+ * never being full and the recycler never waiting for room. Dropped with the hour (abucnasty's protocol, 2026-11-03): the mean of
  * the ore brought in per window cycle, which the baseline's whole clock cycles now judge, and the backlog of 2000 ore put into the car.
  */
 export interface OreVoiderCase {

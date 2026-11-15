@@ -35,7 +35,7 @@ end
 local function cut(item)
     return {
         kind = "cut " .. item,
-        -- the stock of the item in the container goes with the cut (owner, 2026-11-03), so the loss shows at once
+        -- the stock of the item in the container goes with the cut (abucnasty, 2026-11-03), so the loss shows at once
         start = function(t)
             set_supply(item, 0)
             local removed = inventory.remove{name = item, count = 1000000}

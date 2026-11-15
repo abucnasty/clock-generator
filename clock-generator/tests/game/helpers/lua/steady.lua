@@ -3,7 +3,7 @@
 -- whole clock cycles, the output stock guard, holds), so a rule that only judges differently needs no new recording.
 -- It steers the run by what the machines that make the target item finish over the trailing minute:
 --   steady state  the first tick the trailing `window` ticks (3,600) hold `expected` products or more (target rate x 60 s) and
---                 the trailing window has stopped falling after the warm-up's overshoot (owner, 2026-11-03): it is no lower than
+--                 the trailing window has stopped falling after the warm-up's overshoot (abucnasty, 2026-11-03): it is no lower than
 --                 it was a whole number of clock cycles earlier, as many as fit in the window (one where a cycle is longer),
 --                 so the two windows compared stand at the same point of the clock and do not overlap by more than a cycle
 --   baseline      the `baseline` ticks after it (3,600 unless the family names a reason for more, at most 36,000)
