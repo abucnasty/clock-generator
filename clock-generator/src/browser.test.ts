@@ -87,6 +87,7 @@ describe("the light entry", () => {
             "crafting/candidates/coordinated-sources-parts.ts",
             "crafting/entity-name.ts",
             "crafting/machine-name.ts",
+            "crafting/maker-log.ts",
             "crafting/other-clocks.ts",
             "crafting/rank.ts",
             "crafting/sequence/compact-history.ts",
