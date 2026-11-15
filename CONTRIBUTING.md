@@ -94,7 +94,6 @@ Changelogs and pull requests say "user", never "player".
   - `blast/record.py` (through `blast.sh record write|check`): the record in `clock-generator/record/`, one small JSON per blast job (the selected clock and every other clock it weighed), written from a blast run and checked against one in CI. See [`record/README.md`](clock-generator/record/README.md).
   - `replay/replay.sh`: the replay check of a change that must keep results identical: every blast job's selected clock run with no search (the as-built run, the planning run, a speed run and, with `--losses`, the supply losses), what every entity holds and shows hashed per window cycle, and laid against a base recorded once on the parent commit (`record`, `check`, `explain`).
   - `native/run-lane.sh`: one Factorio lane over a list of game test cases, at most four harness Factorio processes on the machine; `native/expected-from-blast.py` and `native/check.cjs` check a capture's clocks against the blast's.
-  - `classify/features.py` and `summarize.py`: the windows a native recording lifted from a full machine, by when the input's hand grew.
   - `docs/`: the documentation generators and checks (`npm run docs:portal`, `docs:fields`, `docs:game-labels`; see
     [docs/README.md](docs/README.md#checks)).
   - `worktree/setup.sh` gives a worktree its own `node_modules`; `worktree/orphans.sh` lists or stops a worktree's leftover vitest and harness Factorio processes.
