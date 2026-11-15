@@ -18,7 +18,8 @@
 // the process runs the first job nobody has claimed and stops, and leaves <BLAST_OUT>/.drained when none is left: blast.sh
 // starts a process for every job, so that no job meets what an earlier one left in the engine's memory, a memo for one),
 // CLOCK_EXPLORE (1: generate with `explore_strategies`, the explore mode; every job file then also holds `explored`, see below; key.py
-// keys it, so the run has an entry of its own and never mixes with the normal ones).
+// keys it, so the run has an entry of its own and never mixes with the normal ones),
+// BLAST_LOG (1: also write the maker log of each job to <BLAST_OUT>/maker-log/<job>.jsonl, see MAKER-LOG.md; it changes no job file, so it is not keyed).
 //
 // With CLOCK_EXPLORE=1 every job file also holds `explored`: the clock the shipped strategies selected and the best clock of the explored
 // strategies, each with its strategy, verdict and wake-ups a minute, whether the best beats the selected one by the ranking, and every explored
@@ -42,6 +43,7 @@ import * as configPaths from '../../../../src/config/config-paths';
 import { pickupClockConfig, pickupClockSpeedCases } from '../pickup-clock-speed-coverage';
 import { overHoodClockCases, overHoodClockConfig } from '../over-hood-clock-fixtures';
 import { digestAlternative, digestJob, type ExpandHistory } from './blast.digest';
+import type { MakerLogSink } from '../../../../src/crafting/maker-log';
 
 /** The job file format; blast.sh puts it in the cache key, so a change here never hits an older cache entry. 2: clock_sha256
  * is the hash of the clock's identity, without its text (1 hashed the text too). 3: results_sha256 and results, the digest
@@ -210,10 +212,16 @@ async function jobChecksModule(): Promise<{ runJobChecks: (job: string, config: 
     return fs.existsSync(file) ? import(file) : undefined;
 }
 
+/** The maker log's writer (tests/game/builds/blast-log.ts), where the build has it: a worktree from before it writes no log. A path, as above */
+async function makerLogModule(): Promise<typeof import('../blast-log') | undefined> {
+    const file = path.join(__dirname, '..', 'blast-log.ts');
+    return fs.existsSync(file) ? import(file) : undefined;
+}
+
 /** Every alternative of a config, each exported clock hashed, and the selected one; with the properties and the per-job checks of the result, where the modules are there */
 function clocksOf(config: any, expand: ExpandHistory | undefined, key: string, properties: Awaited<ReturnType<typeof propertyModule>>,
-    jobChecks: Awaited<ReturnType<typeof jobChecksModule>>) {
-    const generated = generateClockAlternatives(config, { logger: quiet, ...(EXPLORE && { explore_strategies: true as const }) });
+    jobChecks: Awaited<ReturnType<typeof jobChecksModule>>, maker_log?: MakerLogSink) {
+    const generated = generateClockAlternatives(config, { logger: quiet, ...(EXPLORE && { explore_strategies: true as const }), ...(maker_log && { maker_log }) });
     const summary = (a: any) => {
         const exported = a.result.subtick ?? a.result;
         const with_text = { blueprint: encodeBlueprintFile({ blueprint: exported.blueprint }), schedule: exported.schedule };
@@ -269,6 +277,7 @@ test.skipIf(!OUT)('blast', async () => {
     const expand = await historyExpander();
     const properties = await propertyModule();
     const jobChecks = await jobChecksModule();
+    const makerLog = await makerLogModule();
     const recorder = functionRecorder();
     if (recorder) {
         // what ran before the first job: the engine loading and the job list. Every job depends on it, so it is a record of its own
@@ -285,7 +294,10 @@ test.skipIf(!OUT)('blast', async () => {
         let body: any;
         try {
             const config = await job.config();
-            body = { group: job.group, name: job.name, ...clocksOf(config, expand, key, properties, jobChecks) };
+            // the maker log, only where BLAST_LOG asks for it: a generation with no sink builds no event and times nothing. It is written
+            // before the job's result, as the footprint is: a result without its log is not made, and a log without a result is overwritten
+            const generate = (sink?: MakerLogSink) => clocksOf(config, expand, key, properties, jobChecks, sink);
+            body = { group: job.group, name: job.name, ...(makerLog ? makerLog.generatedWithMakerLog(process.env, OUT!, { key, group: job.group, name: job.name }, generate) : generate()) };
         } catch (error: any) {
             body = { group: job.group, name: job.name, error: `${error?.name}: ${error?.message}` };
         }

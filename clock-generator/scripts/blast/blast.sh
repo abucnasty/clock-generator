@@ -13,6 +13,12 @@
 #   blast.sh run <worktree> <out> [-n N] [--no-store] [--no-build] [--full] [--base K]
 #                                           generates into <out> (resumable: done jobs stay, stale claims are freed);
 #                                           a complete run of a clean worktree is also stored in the cache
+#   blast.sh run <worktree> <out> --log [-n N] [--no-store] [--no-build]
+#                                           also writes the maker log: <out>/maker-log/<job>.jsonl, one JSON line an event, one file a job: what each
+#                                           maker made, the clocks it listed with their windows, and why clocks were dropped (MAKER-LOG.md has the
+#                                           schema). Off by default; it changes no job file and no record file, and the key does not hold it. The
+#                                           switch is BLAST_LOG=1, which the option sets. It turns selection off (--full): a job carried from the
+#                                           cache was not generated, so it has no log; a folder that holds jobs made without a log is refused
 #   blast.sh run <worktree> <out> --explore [-n N] [--no-store] [--no-build]
 #                                           the explore mode (CLOCK_EXPLORE=1, which works on every command that generates): the engine is asked for the explored
 #                                           strategies as well (`explore_strategies`), and each job file also holds `explored`: the selected clock and the best
@@ -272,6 +278,7 @@ while [ $# -gt 0 ]; do
     --no-build) BUILD=0 ;;
     --note) NOTE=$2; shift ;;
     --full) FULL=1 ;;
+    --log) export BLAST_LOG=1; FULL=1 ;;
     --base) BASE=$2; shift ;;
     --made-under) MADE+=("$2"); shift ;;
     --json|--md) ARGS+=("$1" "$2"); shift ;;
@@ -315,6 +322,7 @@ case "$cmd" in
   run)
     worktree "${ARGS[0]:-}"; out=${ARGS[1]:-}; [ -n "$out" ] || die "run <worktree> <out>"
     mkdir -p "$out"; out=$(cd "$out" && pwd -P)
+    if [ "${BLAST_LOG:-}" = 1 ] && [ ! -d "$out/maker-log" ] && ls "$out"/[!_]*.json > /dev/null 2>&1; then die "--log: $out holds jobs made without a log; use a new folder"; fi
     compute_key
     if [ -n "$SHARD" ]; then
       # this shard's jobs, by name, as BLAST_ONLY takes them; every shard computes the whole split from the same two files
