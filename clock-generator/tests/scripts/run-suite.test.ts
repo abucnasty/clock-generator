@@ -12,11 +12,11 @@ afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 /** The runner with these arguments and an environment of only `env` (no GUARD_DIR unless given) */
 const run = (args: string[], env: Record<string, string> = {}) =>
-    spawnSync('python3', ['-I', script, ...args], { encoding: 'utf8', env: { PATH: process.env.PATH ?? '', ...env } });
+    spawnSync('python3', ['-I', '-B', script, ...args], { encoding: 'utf8', env: { PATH: process.env.PATH ?? '', ...env } });
 
 /** What `resolve_guard` gives, or the refusal's text, called without the runner's main */
 const resolve = (guardDir: string | null, noGuard: boolean, env: Record<string, string> = {}) =>
-    spawnSync('python3', ['-I', '-c', [
+    spawnSync('python3', ['-I', '-B', '-c', [
         'import importlib.util, json, sys',
         'spec = importlib.util.spec_from_file_location("run_suite", sys.argv[1])',
         'module = importlib.util.module_from_spec(spec)',

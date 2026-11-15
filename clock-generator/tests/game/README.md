@@ -41,7 +41,7 @@ npm run test:game -- tests/game/builds/moving-pickup.game.test.ts -t 'straight-b
 
 `npm test` excludes `*.game.test.ts`. `npm run test:generation` checks generated clocks in the simulator.
 `npm run test:game` without a file runs the entire local game suite, serially, and can take many minutes;
-`python3 scripts/game/run-suite.py` runs it as case-level jobs on as many Factorio lanes as the guard allows (below).
+`python3 scripts/game/run-suite.py --guard-dir <guard folder>` runs it as case-level jobs on as many Factorio lanes as the guard allows (below).
 Missing Factorio/save settings cause skips; a skipped test has not verified the game behavior.
 
 For verification appropriate to other changes, see the [contributor guide](../../../CONTRIBUTING.md).
@@ -131,7 +131,7 @@ does needs a bump of `RECORDING_CACHE_PROTOCOL`.
 python3 scripts/game/run-suite.py --guard-dir <guard folder>    # warm: recordings read from the cache where they exist
 GUARD_DIR=<guard folder> python3 scripts/game/run-suite.py --cache off   # a cold pass over tests/game/builds (mechanics stay on the cache)
 python3 scripts/game/run-suite.py --no-guard --plan iron-plate-80-car-chest-clock    # the jobs and an estimate, nothing run
-python3 scripts/game/run-suite.py --no-guard tests/game/mechanics/drills grenade-clock    # only files whose path contains these
+python3 scripts/game/run-suite.py --guard-dir <guard folder> tests/game/mechanics/drills grenade-clock    # only files whose path contains these
 ```
 
 The guard folder holds `guarded-run-budget.py` and `policy.json`. It comes from `--guard-dir` or `$GUARD_DIR`; no path is
