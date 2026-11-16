@@ -8,6 +8,10 @@ a line that names the reason and lists the jobs. A pull request that moves no re
 CI checks this file: the "Record check" fails when a selected clock got worse than in the base and its job key is not in the lines the pull
 request adds to this file.
 
+## Loss trials of a fractional window cycle are judged on whole bins (#761)
+No recommended clock, verdict, hold, rate, wakeups, window or clock hash moved.
+- config-ADVANCED_CIRCUIT_230 (pitch_pickups_subtick), config-IRON_BACTERIA_380_CULTIVATION (takt_batches_observed_subtick, takt_batches_observed_swings_4_subtick, takt_batches_observed_swings_6_subtick, time_study_windows_subtick), config-METALLURGIC_SCIENCE_45 (time_study_windows_subtick), config-STEEL_PLATE_26_WAGON_CHEST and variants-STEEL_HUB_26_CONTAINER_OUTPUT (takt_batches_observed_subtick, takt_batches_observed_swings_1_subtick), variants-STEEL_PLATE_26_WAGON_CHEST_IRON_ORE_OUT_OF_PERIOD (takt_batches_observed_subtick, takt_batches_observed_swings_1_subtick, takt_batches_observed_swings_2_subtick, takt_batches_observed_swings_3_subtick, time_study_windows_subtick): `results_sha256` only, on every subtick clock that holds (15 clocks) and on no other. Their spare-time insight is now told per window cycle, not per run of the subtick clock, with the window cycles the trials give. Their loss trials end a window cycle after the build stops and count at least three bins, so the trial numbers in the assessment can move too (not told apart: no blast of the base was cached)
+
 ## The loss trials run from the cold start only (#754)
 No recommended clock, verdict, rate, wakeups or clock hash moved.
 - all 86 jobs: `results_sha256` of every clock that holds, because the verdict no longer carries the always-empty `broken_at_other_lane_phases` (338 clocks)
