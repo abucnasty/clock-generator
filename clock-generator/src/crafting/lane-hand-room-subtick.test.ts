@@ -28,4 +28,10 @@ describe("the room for one more hand on a subtick clock", () => {
         expect(clock.lane_hand_room.size).toBe(0);
         expect(clock.windows.get("inserter:9")).toEqual(plan.unslacked_windows.get("inserter:9"));
     });
+
+    it("is left out there too when a maker asks for it always", () => {
+        const always = clockOfPlan(plan, { lane_hand_room: "always" });
+        expect(always.lane_hand_room.size).toBe(0);
+        expect(always.windows).toEqual(clock.windows);
+    });
 });

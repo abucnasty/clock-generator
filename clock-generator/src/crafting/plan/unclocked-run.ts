@@ -1617,7 +1617,9 @@ export function clockOfWindows(
 ): PlannedClock {
     const { config, logger, run: { simulation_context, duration, total_expected_output } } = plan;
     const full_lane_hand_room = laneHandRoomTicks(simulation_context.entity_registry);
-    const mode = options.lane_hand_room ?? "trial";
+    // on a window cycle of part ticks the room is added only where the clock does not hold without it, asked for always or not
+    const asked = options.lane_hand_room ?? "trial";
+    const mode = asked === "always" && !Number.isInteger(duration.ticks) ? "trial" : asked;
     // the room the planning run's windows hold already, after the last pickup of each: none is added to them
     const inside = mode === "inside" && unslacked_windows === plan.unslacked_windows ? handRoomInsideWindows(plan) : null;
     if (mode === "inside" && inside === null) {
