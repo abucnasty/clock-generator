@@ -3,7 +3,7 @@ import { defaultLogger, Logger } from "../../common/logger";
 import { OpenRange } from "../../data-types";
 import { Entity } from "../../entities";
 import { EntityRouteError, type AlwaysOnReason, type AlwaysOnReasons } from "../enable-control-router";
-import { subtickClockForWindowCycle, type SerializableClockWindows } from "../clock";
+import type { SerializableClockWindows } from "../clock";
 import { sharedItemDeadlockRisks } from "../deadlock-risk";
 import { BlueprintGenerationResult, completedClockCheck, GenerateClockOptions, UnclockedRun, unclockedRun } from "../plan/unclocked-run";
 import { type AsBuiltRun, disturbanceTrialVerdictOf } from "../trial";
@@ -37,9 +37,8 @@ import { CodedError, emitMakerLog, makerLogOn, reasonOf, type MakerReason } from
  * - **The clock** is then checked as a whole: the one-tick margin here (`holdsWithMargin`), and the checks of every alternative
  *   where it is listed (as built from every start, every loss).
  *
- * Throws CoordinatedSourcesNotApplicable where there is nothing to compose: no recommended clock among the parts, a fractional window cycle
- * with no subtick clock, no group with a choice, or a local choice that keeps the recommended clock. On a fractional window cycle with a
- * subtick clock only the parts on that same window cycle give windows.
+ * Throws CoordinatedSourcesNotApplicable where there is nothing to compose: no recommended clock among the parts, a window cycle that is not
+ * whole, no group with a choice, or a local choice that keeps the recommended clock.
  */
 export class CoordinatedSourcesNotApplicable extends CodedError {
     constructor(message: string, reason: MakerReason = reasonOf("other")) {
@@ -62,15 +61,6 @@ export function tiledWindows(windows: SerializableClockWindows, window_cycle_tic
     const times = shared_ticks / window_cycle_ticks;
     return Object.fromEntries(Object.entries(windows).map(([id, ranges]) => [id,
         Array.from({ length: times }, (_, k) => ranges.map(range => ({ start: range.start + k * window_cycle_ticks, end: range.end + k * window_cycle_ticks }))).flat()]));
-}
-
-/**
- * Whether a part's windows repeat on the shared window cycle: a whole-tick window cycle that divides it, or on a fractional
- * one the same window cycle, its windows as they are (a fractional window cycle's windows are not repeated)
- */
-export function sharesWindowCycle(part_ticks: number, shared_ticks: number): boolean {
-    if (!Number.isInteger(shared_ticks)) return part_ticks === shared_ticks;
-    return Number.isInteger(part_ticks) && Number.isInteger(shared_ticks / part_ticks);
 }
 
 /** One choice of a group: the windows of each of its inserters (null: always enabled), and the parts that give them */
@@ -265,11 +255,10 @@ export function coordinatedSourcesClock(
     const recommended = input.parts.find(part => part.alternative_id === input.recommended_id);
     if (recommended === undefined) refuse(`the recommended clock ${input.recommended_id} is not among the clocks made for the build`, reasonOf("recommended_not_a_part"));
     const shared_ticks = recommended.window_cycle_ticks;
-    // a fractional window cycle with a subtick clock composes the parts on that same window cycle (`sharesWindowCycle`)
-    if (!Number.isInteger(shared_ticks) && subtickClockForWindowCycle(shared_ticks) === null) {
-        refuse(`not offered on a fractional window cycle with no subtick clock (${shared_ticks} ticks)`,
-            reasonOf("window_cycle_not_whole", { window_cycle_ticks: shared_ticks }));
-    }
+    // the parts of one fractional window cycle compose as they are, but the selection they make there is not yet
+    // recorded in the game (the steel build with its iron ore out of the window cycle moves to one)
+    if (!Number.isInteger(shared_ticks)) refuse(`not offered on a fractional window cycle (${shared_ticks} ticks)`,
+        reasonOf("window_cycle_not_whole", { window_cycle_ticks: shared_ticks }));
     const made = sharedPlan(config, recommended);
     const registry = made.run.simulation_context.entity_registry;
     const inserters: GroupedInserter[] = registry.getAll().filter(Entity.isInserter)
@@ -302,7 +291,7 @@ export function coordinatedSourcesClock(
         }
         return trial.holds;
     };
-    const fits = (part: CoordinatedSourcesPart) => sharesWindowCycle(part.window_cycle_ticks, shared_ticks)
+    const fits = (part: CoordinatedSourcesPart) => Number.isInteger(part.window_cycle_ticks) && Number.isInteger(shared_ticks / part.window_cycle_ticks)
         && (part === recommended || part.alternative_id === undefined || part.verdict === "stable");
     // the windows the clock has beside its inserters' (drills), from the recommended clock
     const fixed = Object.fromEntries(Object.entries(tiledWindows(recommended.windows, recommended.window_cycle_ticks, shared_ticks))
@@ -328,7 +317,7 @@ export function coordinatedSourcesClock(
     const refused_reasons = new Map<CoordinatedSourcesPart, MakerReason[]>();
     const candidates = input.parts.filter(part => {
         if (part === recommended) return false;
-        const divides = sharesWindowCycle(part.window_cycle_ticks, shared_ticks);
+        const divides = Number.isInteger(part.window_cycle_ticks) && Number.isInteger(shared_ticks / part.window_cycle_ticks);
         const why = !divides
             ? `its window cycle of ${part.window_cycle_ticks} ticks does not divide the shared one of ${shared_ticks}`
             : !fits(part) ? `it is ${part.verdict}` : undefined;

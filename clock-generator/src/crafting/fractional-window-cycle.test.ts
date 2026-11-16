@@ -6,22 +6,6 @@ import { subtickClockForWindowCycle, windowOfTicks, windowTicks, withWindowsAtLe
 import { evenlySpacedOutputWindows, paddedWindows } from "./candidates/transforms";
 import { movedOutputSwingCandidates } from "./candidates/moved-output-swing";
 import { shiftedCycleCandidates } from "./candidates/phase-shifted-batch";
-import { sharesWindowCycle } from "./candidates/coordinated-sources";
-
-describe("the parts Coordinated Sources composes", () => {
-    it("on a fractional window cycle are those of the same window cycle", () => {
-        expect(sharesWindowCycle(38400 / 77, 38400 / 77)).toBe(true);
-        expect(sharesWindowCycle(19200 / 77, 38400 / 77)).toBe(false);
-        expect(sharesWindowCycle(498, 38400 / 77)).toBe(false);
-    });
-
-    it("on a whole-tick window cycle are those whose window cycle divides it", () => {
-        expect(sharesWindowCycle(250, 500)).toBe(true);
-        expect(sharesWindowCycle(500, 500)).toBe(true);
-        expect(sharesWindowCycle(300, 500)).toBe(false);
-        expect(sharesWindowCycle(250.5, 501)).toBe(false);
-    });
-});
 
 // The production science rebuild at 231 a second: a window cycle of 38400/77 ticks, a subtick clock of 38400 ticks read in
 // 1/77 ticks. A window [s, e] is open in the whole ticks whose position is in it, so a window read off whole ticks covers
