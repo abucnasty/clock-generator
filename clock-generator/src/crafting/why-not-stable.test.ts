@@ -121,6 +121,19 @@ describe("why the selected clock does not meet goal 1", () => {
         expect(spare(8, 320)).not.toContain("to spare");
     });
 
+    it("leaves the spare time out where the trial that broke the clock did not fall short: it put down more than its expected output", () => {
+        const spare_time = { machine: "the assembling machine that makes grenade", spare_ticks: 2, working_ticks: 97, recovery_window_cycles: 40 };
+        const count = (over: boolean) => ({ loss: { kind: "output" as const, items: ["grenade"] }, planned: 16, run: 16, recovered: 1,
+            first_not_recovered: { cut_at: 0, loss_ticks: 32000, until_stopped: true, ...(over && { over: true as const }) } });
+        const broken = (trial_counts: ReturnType<typeof count>[]) => whyNotStable([noRecovery(["grenade is not taken away"], {
+            spare_time, assessment: { holds: true, items_per_second: 7.5, disturbance_trial: { survives: false, broken_by: ["grenade is not taken away"], trial_counts } },
+        })], 0, moving)!.message;
+        expect(broken([count(true)])).toContain("after grenade is not taken away. A buffer");
+        expect(broken([count(false)])).toContain("has 2 ticks to spare");
+        // one loss over and one short: the short one is what the spare time tells of
+        expect(broken([count(true), count(false)])).toContain("has 2 ticks to spare");
+    });
+
     it("says so of a clock off its expected output in the run the losses are tried on", () => {
         expect(whyNotStable([noRecovery([])], 0, moving)?.message).toBe("The recommended clock (Takt Batches: 2 output swings each output cycle) holds "
             + "the setpoint, but was off its expected output in the run the loss trials are made on, so whether it goes back to it by itself "

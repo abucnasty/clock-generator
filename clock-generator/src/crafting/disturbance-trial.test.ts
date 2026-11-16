@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import {
     clockCountsOneAt, countedOnTheClock, disturbanceTrialsOf, judgedCopies, judgedOnTheClock, judgedTogether, judgeRecovery, LATE_AFTER_WINDOW_CYCLES, LOSS_PLACES, LOSS_SHARES, lossId, lossLabel, lossLimitOf, lossTrialsPartOfTheWay,
     lossTrialsUntilStopped, LossOutcome, LossTrial, MAX_LOSS_WINDOW_CYCLES, MAX_RECOVERY_WINDOW_CYCLES, MAX_RUN_ON_WINDOW_CYCLES, plannedTrialsOf, reportOf, RUN_ON_EXACT_WINDOW_CYCLES,
-    repeatOnTheClock, runsOn, trialCountOf, verdictOf, withEveryTrialCounted,
+    recoveryBinsOf, repeatOnTheClock, runsOn, trialCountOf, verdictOf, wholeWindowCyclesAfter, withEveryTrialCounted,
 } from "./disturbance-trial";
 import { Duration } from "../data-types";
 import type { BranchBins } from "./terminal-rate";
@@ -197,6 +197,31 @@ describe("a trial that is short late in its window", () => {
         expect(runsOn(early, 400, null, LATE_AFTER_WINDOW_CYCLES, 8)).toBe(false);
     });
 
+    it("gives a bin of many window cycles three bins and holds it to the last two: the first after the release holds what the loss held back", () => {
+        // whole-tick window cycles: the window cycles as they are
+        expect(recoveryBinsOf(1)).toEqual({ recovery_bins: 40, hold_bins: 8 });
+        expect(recoveryBinsOf(1, 4, 2)).toEqual({ recovery_bins: 4, hold_bins: 2 });
+        // 4 window cycles a bin: 10 bins, held to 2, as the window cycles give it
+        expect(recoveryBinsOf(4)).toEqual({ recovery_bins: 10, hold_bins: 2 });
+        // a subtick clock of 16000/161 ticks: 161 window cycles a bin, so 1 bin of each before
+        expect(recoveryBinsOf(161)).toEqual({ recovery_bins: 3, hold_bins: 2 });
+        // the grenade build at 28.98/s after its output was blocked: the first bin one hand over, then back
+        expect(judgeRecovery([7776, 7728, 7728], 7728, null, 2)).toEqual({ recovers: true, recovered_after_bins: 1, proven: false, ends_in: [7728, 7728] });
+        expect(judgeRecovery([7776], 7728, null, 1).recovers).toBe(false);
+    });
+
+    it("ends a loss a whole number of window cycles after its cut, within a tick: the next multiple of a whole-tick window cycle", () => {
+        const whole = { ticks: 72, window_cycles: 1 };
+        expect([0, 1, 71, 72, 73, 216].map(elapsed => wholeWindowCyclesAfter(elapsed, whole))).toEqual([0, 72, 72, 72, 144, 216]);
+        // 16000/161 ticks: 4 window cycles are 397.52 ticks, so tick 398; 161 of them are 16000 ticks exactly
+        const subtick = { ticks: 16000, window_cycles: 161 };
+        expect(wholeWindowCyclesAfter(302, subtick)).toBe(398);
+        expect(wholeWindowCyclesAfter(398, subtick)).toBe(398);
+        expect(wholeWindowCyclesAfter(399, subtick)).toBe(497);
+        expect(wholeWindowCyclesAfter(15999, subtick)).toBe(16000);
+        expect(wholeWindowCyclesAfter(16000, subtick)).toBe(16000);
+    });
+
     it("does not run on where a bin is longer than the window: a subtick clock of 83 periods a bin", () => {
         expect(runsOn([1000], 1020, null, Math.floor(LATE_AFTER_WINDOW_CYCLES / 83), Math.ceil(8 / 83))).toBe(false);
     });
@@ -343,6 +368,19 @@ describe("the trials of a loss that breaks a clock, as numbers", () => {
             first_not_recovered: { cut_at: 0, loss_ticks: 216, until_stopped: true } });
         const excess = { kind: "excess", at: [{ machine_id: "machine:1", item: "iron-ore", count: 67 }, { machine_id: "machine:2", item: "iron-ore", count: 3 }] } as const;
         expect(trialCountOf(outcome(excess, [trial(0, 0, false, true), trial(18, 0, false, false)], 4))?.loss).toEqual({ kind: "excess", items: ["iron-ore"] });
+    });
+
+    it("say of a first trial not recovered from that it ended over its expected output, and nothing of one that fell short or was at it", () => {
+        const ended = (ends_in: number[]) => ({ ...trial(0, 216, true, false), output_per_bin: ends_in, ends_in, proven: false });
+        const countOf = (ends_in: number[]) => trialCountOf(outcome({ kind: "output", item: "grenade" }, [ended(ends_in)]))!.first_not_recovered;
+        expect(countOf([12, 10])).toEqual({ cut_at: 0, loss_ticks: 216, until_stopped: true, over: true });
+        expect(countOf([8, 10])).not.toHaveProperty("over");
+        expect(countOf([12, 8])).not.toHaveProperty("over");
+        // a run of the copies: each copy that is not back, on its own
+        const copies = (...ends: number[][]) => ({ ...ended(ends.flat()), copies: ends.map((ends_in, at) => ({ copy: at + 1, recovers: false, ends_in })) });
+        const copiesOf = (...ends: number[][]) => trialCountOf(outcome({ kind: "output", item: "grenade" }, [copies(...ends)]))!.first_not_recovered;
+        expect(copiesOf([11], [12])).toHaveProperty("over", true);
+        expect(copiesOf([11], [9])).not.toHaveProperty("over");
     });
 
     it("are not given for a loss the clock recovers from", () => {

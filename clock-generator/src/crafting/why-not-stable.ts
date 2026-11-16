@@ -20,6 +20,7 @@
  * The UI calls this on its own view of the clocks, so the same words show there as in the result.
  */
 import type { DisturbanceTrialVerdict } from "./disturbance-trial";
+import type { CopiesTrialVerdict } from "./shared-lane-trial";
 import { capitalized, theName } from "./entity-name";
 import type { ClockBelt } from "./clock";
 import type { ExportShortfall } from "./export-delivery";
@@ -67,7 +68,8 @@ export interface WhyNotStableClock {
     /** Stable over the target rate, which the selection picks where none meets goal 1 (`ClockRanking.stable_above_target`) */
     stable_above_target?: boolean;
     assessment: Pick<ClockAssessment, "holds" | "items_per_second" | "shared_lane_losses"> & {
-        disturbance_trial: Pick<DisturbanceTrialVerdict, "survives" | "broken_by" | "not_tried"> | null;
+        disturbance_trial: (Pick<DisturbanceTrialVerdict, "survives" | "broken_by" | "not_tried" | "trial_counts">
+            & { on_copies?: Pick<CopiesTrialVerdict, "trial_counts"> }) | null;
     };
     /** Whether the clock is made for a moving belt (some input lane is not a dead end) */
     moving_belt: boolean;
@@ -239,11 +241,21 @@ function takerOrder(clock: WhyNotStableClock, build: WhyNotStableBuild): WhyNotS
 }
 
 /**
- * The spare-time sentence, when making up one window cycle of crafting at the machine's spare ticks a window cycle takes it more
- * window cycles than a build is given to get back after a loss
+ * Whether the trials that broke the clock fell short of its expected output: not where every first trial it did not recover from
+ * ended over it (`TrialCount.first_not_recovered.over`). Where the verdict counts no trial (a result made before it did, or a clock
+ * off its expected output with nothing cut), as it was told before: short.
  */
-function spareTimeSentence(spare: SpareTime | null): string {
-    if (spare === null) {
+function fellShort(trial: WhyNotStableClock["assessment"]["disturbance_trial"]): boolean {
+    const counts = [...trial?.trial_counts ?? [], ...trial?.on_copies?.trial_counts ?? []];
+    return counts.length === 0 || counts.some(count => count.first_not_recovered.over !== true);
+}
+
+/**
+ * The spare-time sentence, when the trials that broke the clock fell short (fellShort) and making up one window cycle of crafting
+ * at the machine's spare ticks a window cycle takes it more window cycles than a build is given to get back after a loss
+ */
+function spareTimeSentence(spare: SpareTime | null, fell_short: boolean): string {
+    if (spare === null || !fell_short) {
         return "";
     }
     const make_up_window_cycles = spare.spare_ticks > 0 ? spare.working_ticks / spare.spare_ticks : Infinity;
@@ -263,7 +275,7 @@ function noRecovery(clock: WhyNotStableClock): WhyNotStable {
         : "was off its expected output in the run the loss trials are made on, so whether it goes back to it by itself after a supply stop or an output blockage is not known.";
     return {
         cause: "no recovery",
-        message: `The recommended clock (${clock.label}) holds the setpoint, but ${losses}${notTriedSentence(clock.assessment.disturbance_trial?.not_tried)}${spareTimeSentence(clock.spare_time)}`
+        message: `The recommended clock (${clock.label}) holds the setpoint, but ${losses}${notTriedSentence(clock.assessment.disturbance_trial?.not_tried)}${spareTimeSentence(clock.spare_time, fellShort(clock.assessment.disturbance_trial))}`
             + " A buffer, or a faster machine, lets it catch up.",
     };
 }

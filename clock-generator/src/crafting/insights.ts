@@ -1,7 +1,8 @@
 import { assumedCopySpacings, droppedOntoSharedLanes } from "./shared-lane-verdict";
 import { SerializableMachineFacts } from "../data-types/machine-facts";
 import { InserterStatus, MachineStatus } from "../state";
-import { MAX_RECOVERY_WINDOW_CYCLES, type DisturbanceTrialVerdict } from "./disturbance-trial";
+import { recoveryBinsOf, type DisturbanceTrialVerdict } from "./disturbance-trial";
+import { subtickClockForWindowCycle } from "../common/subtick-window-cycle";
 import { describeSharedItem, type SharedItemDeadlockRisk } from "./deadlock-risk";
 import type { BlueprintGenerationResult } from "./generate-blueprint";
 import { CompactEntityStateTransitions, CompactStateTransitionHistory, transitionsOf } from "./sequence/compact-history";
@@ -108,9 +109,16 @@ function dropTicks(history: CompactStateTransitionHistory, entity_id: string): n
 
 /** How much of each window cycle the machines are not needed, the slack all timing has to fit in */
 function spareTimeInsight(result: BlueprintGenerationResult, run: CompactStateTransitionHistory, nameOf: (entity: { entity_id: string; label: string }) => EntityName): ClockInsight | null {
-    const window_cycle_ticks = run.total_duration_ticks;
+    // a fractional window cycle runs on a subtick clock, whose run is the whole ticks it repeats in: many window cycles, so the
+    // ticks of the run are told per window cycle. A whole-tick window cycle's run is told as it is.
+    const subtick = subtickClockForWindowCycle(result.simulation_duration.ticks);
+    const run_window_cycles = subtick === null ? 1 : Math.max(1, Math.round(run.total_duration_ticks / result.simulation_duration.ticks));
+    const window_cycle_ticks = run.total_duration_ticks / run_window_cycles;
+    // the window cycles a build is given to be back after a loss, in the whole bins its trials count (recoveryBinsOf)
+    const bin_window_cycles = subtick?.scale ?? 1;
+    const recovery_window_cycles = recoveryBinsOf(bin_window_cycles).recovery_bins * bin_window_cycles;
     const machines = run.entities.filter(it => it.entity_type === "machine").map(entity => {
-        const working = workingTicks(run, entity, window_cycle_ticks);
+        const working = workingTicks(run, entity, run.total_duration_ticks) / run_window_cycles;
         const facts = result.machine_facts.find(it => it.entity_id === entity.entity_id)?.facts;
         return { entity, working, spare: window_cycle_ticks - working, facts };
     });
@@ -139,7 +147,7 @@ function spareTimeInsight(result: BlueprintGenerationResult, run: CompactStateTr
                 it.facts ? `${round(it.facts.ticks_per_craft)}` : ""]),
         },
         spare_time: { machine: name, spare_ticks: tightest.spare, working_ticks: tightest.working,
-            recovery_window_cycles: MAX_RECOVERY_WINDOW_CYCLES },
+            recovery_window_cycles },
     };
 }
 

@@ -1426,8 +1426,10 @@ function disturbanceTrialOf(
         .map(exported => ({ exported, fillers: exported.filler_ids.flatMap(id => inserter_states.get(id) ?? []) }));
     // where the clock counts 1: a repeat that is not at the rate in its bins is counted again on the clock
     const clock_counts_one_at = clockCountsOneAt(controlled.resettable_registry.clocks(), loss_window_cycle, bin.ticks, trial_context.tick_provider.getCurrentTick());
+    // the build has stopped once a window cycle of the clock (in whole ticks: every window opens in it) has gone by with nothing
+    // done, not a bin: a subtick clock's bin is many window cycles
     const disturbance_trial = runLossTrials(trial_context, simulated.output_inserter_states, options.disturbance_trial, bin,
-        Math.max(bin.ticks, ...own_clock_ticks), proof_stride, watched_exports, terminal_branches, clock_counts_one_at);
+        Math.max(Math.ceil(loss_window_cycle), ...own_clock_ticks), proof_stride, watched_exports, terminal_branches, clock_counts_one_at);
     logger.log(`Loss trial (${options.disturbance_trial.loss.kind}): back_to_rate=${disturbance_trial.recovers} over ${disturbance_trial.trials.length} trials`);
     return disturbance_trial;
 }

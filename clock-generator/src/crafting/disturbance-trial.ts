@@ -152,13 +152,26 @@ export interface TrialCount {
     recovered: number;
     /**
      * The first trial the build does not recover from: where in the window cycle it was cut (LossTrial.cut_at), how long
-     * the item was gone, and whether the loss was to last until the build had stopped
+     * the item was gone, and whether the loss was to last until the build had stopped. `over` where the bins it ended in carry
+     * more than the expected output (each copy that is not back, in a run of the copies): it did not fall short, it put down
+     * more; absent where it fell short or was at the expected output in sum.
      */
-    first_not_recovered: { cut_at: number; loss_ticks: number; until_stopped: boolean };
+    first_not_recovered: { cut_at: number; loss_ticks: number; until_stopped: boolean; over?: true };
+}
+
+/** Whether bins carry more than `expected_per_bin` each, in sum */
+const overExpected = (bins: readonly number[], expected_per_bin: number) =>
+    bins.length > 0 && bins.reduce((sum, it) => sum + it, 0) > expected_per_bin * bins.length;
+
+/** Whether a trial that does not recover ended over its expected output: its own bins, or in a run of the copies each copy's that is not back */
+function endedOver(trial: LossTrial, expected_per_bin: number): boolean {
+    const not_back = trial.copies?.filter(copy => !copy.recovers);
+    return not_back !== undefined && not_back.length > 0 ? not_back.every(copy => overExpected(copy.ends_in, expected_per_bin))
+        : trial.copies === undefined && overExpected(trial.ends_in, expected_per_bin);
 }
 
 /** The trials of a loss as numbers (TrialCount); null for a loss the clock recovers from, or one with no trial */
-export function trialCountOf(outcome: Pick<LossOutcome, "loss" | "trials" | "planned_trials" | "recovers" | "every_trial">): TrialCount | null {
+export function trialCountOf(outcome: Pick<LossOutcome, "loss" | "trials" | "planned_trials" | "recovers" | "every_trial" | "expected_per_bin">): TrialCount | null {
     const loss = outcome.loss;
     const first = outcome.trials.find(trial => !trial.recovers);
     if (outcome.recovers || loss.kind === "none" || first === undefined) return null;
@@ -167,7 +180,8 @@ export function trialCountOf(outcome: Pick<LossOutcome, "loss" | "trials" | "pla
         planned: outcome.planned_trials,
         run: outcome.every_trial?.run ?? outcome.trials.length,
         recovered: outcome.every_trial?.recovered ?? outcome.trials.filter(trial => trial.recovers).length,
-        first_not_recovered: { cut_at: first.cut_at, loss_ticks: first.loss_ticks, until_stopped: first.until_stopped },
+        first_not_recovered: { cut_at: first.cut_at, loss_ticks: first.loss_ticks, until_stopped: first.until_stopped,
+            ...(endedOver(first, outcome.expected_per_bin) && { over: true as const }) },
     };
 }
 
@@ -263,6 +277,47 @@ export const MAX_RUN_ON_WINDOW_CYCLES = 200;
  * short in the last RECOVERY_HOLD_WINDOW_CYCLES of MAX_RECOVERY_WINDOW_CYCLES.
  */
 export const LATE_AFTER_WINDOW_CYCLES = MAX_RECOVERY_WINDOW_CYCLES - RECOVERY_HOLD_WINDOW_CYCLES;
+
+/**
+ * Where a bin holds more than one window cycle (the whole ticks a subtick clock repeats in), the fewest bins a trial is held
+ * to at its end (see recoveryBinsOf)
+ */
+export const MULTI_CYCLE_HOLD_BINS = 2;
+
+/**
+ * The bins a trial is given to be back at its expected output (`recovery_bins`) and the bins at its end it is held to where no
+ * state repeated (`hold_bins`): the window cycles of each, in whole bins. A bin of one window cycle has them as they are. A bin
+ * of more window cycles (a subtick clock's) is held to MULTI_CYCLE_HOLD_BINS at least, and given one bin more than it is held
+ * to: the first bin after the item is back holds what the loss held back (the hand an output blockage kept, the backlog that
+ * drains), so it is never one of the bins the trial is held to exactly.
+ */
+export function recoveryBinsOf(
+    window_cycles_per_bin: number,
+    max_recovery_window_cycles = MAX_RECOVERY_WINDOW_CYCLES,
+    recovery_hold_window_cycles = RECOVERY_HOLD_WINDOW_CYCLES,
+): { recovery_bins: number; hold_bins: number } {
+    const recovery = Math.max(1, Math.ceil(max_recovery_window_cycles / window_cycles_per_bin));
+    const hold = Math.max(1, Math.ceil(recovery_hold_window_cycles / window_cycles_per_bin));
+    if (window_cycles_per_bin <= 1) {
+        return { recovery_bins: recovery, hold_bins: hold };
+    }
+    const hold_bins = Math.max(hold, MULTI_CYCLE_HOLD_BINS);
+    return { recovery_bins: Math.max(recovery, hold_bins + 1), hold_bins };
+}
+
+/**
+ * Ticks from a cut to the first tick at or after `elapsed` ticks from it that is a whole number of window cycles from it, within
+ * a tick: where the clock stands where it stood at the cut. The window cycle is `bin.ticks / bin.window_cycles` (a subtick
+ * clock's p/q), counted in whole numbers so that no rounding moves the tick; for a whole-tick window cycle, the next multiple of it.
+ */
+export function wholeWindowCyclesAfter(elapsed: number, bin: { ticks: number; window_cycles: number }): number {
+    if (elapsed <= 0) {
+        return 0;
+    }
+    // the fewest window cycles k whose ticks, rounded up, reach `elapsed`: k * p / q > elapsed - 1
+    const window_cycles = Math.floor(((elapsed - 1) * bin.window_cycles) / bin.ticks) + 1;
+    return Math.ceil((window_cycles * bin.ticks) / bin.window_cycles);
+}
 
 /**
  * Whether a trial that is not back at the end of its window runs on: no state of it repeated (one that did proves what
@@ -788,8 +843,8 @@ export function runLossTrials(
     // than the loss limit of a build whose items spoil
     const limit_ticks = options.loss_limit_ticks !== undefined ? Math.max(1, Math.ceil(options.loss_limit_ticks) - 1) : Infinity;
     const max_loss_ticks = Math.min(limit_ticks, Math.ceil((options.max_loss_window_cycles ?? MAX_LOSS_WINDOW_CYCLES) * options.window_cycle_ticks));
-    const max_recovery_bins = Math.max(1, Math.ceil((options.max_recovery_window_cycles ?? MAX_RECOVERY_WINDOW_CYCLES) / bin.window_cycles));
-    const hold_bins = Math.max(1, Math.ceil((options.recovery_hold_window_cycles ?? RECOVERY_HOLD_WINDOW_CYCLES) / bin.window_cycles));
+    const { recovery_bins: max_recovery_bins, hold_bins } = recoveryBinsOf(bin.window_cycles,
+        options.max_recovery_window_cycles ?? MAX_RECOVERY_WINDOW_CYCLES, options.recovery_hold_window_cycles ?? RECOVERY_HOLD_WINDOW_CYCLES);
     const max_run_on_bins = Math.floor((options.max_run_on_window_cycles ?? MAX_RUN_ON_WINDOW_CYCLES) / bin.window_cycles);
     const run_on_bins = Math.max(1, Math.ceil((options.run_on_exact_window_cycles ?? RUN_ON_EXACT_WINDOW_CYCLES) / bin.window_cycles));
     const late_after_bins = Math.floor((options.late_after_window_cycles ?? LATE_AFTER_WINDOW_CYCLES) / bin.window_cycles);
@@ -924,9 +979,10 @@ export function runLossTrials(
                     }
                 }
                 if (until_stopped) {
-                    // back at the place it was cut at, or at the limit where that comes first
-                    const wanted = ((plan.restore_at % bin.ticks) + bin.ticks) % bin.ticks;
-                    while ((now() - start_tick) % bin.ticks !== wanted && now() - cut_tick < limit_ticks) {
+                    // back at the place in the window cycle it was cut at (plan.restore_at is the cut's place): a whole number of
+                    // window cycles after the cut, within a tick; or at the limit where that comes first
+                    const restore_tick = cut_tick + wholeWindowCyclesAfter(now() - cut_tick, bin);
+                    while (now() < restore_tick && now() - cut_tick < limit_ticks) {
                         step();
                     }
                     ended_at_limit = stopped_after_ticks === null && now() - cut_tick >= limit_ticks;
