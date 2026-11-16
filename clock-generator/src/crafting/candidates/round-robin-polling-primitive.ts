@@ -109,7 +109,8 @@ export function constructPrimitiveRoundRobinPolling(config: Config): PrimitiveRo
             effective_lcm: grouped_cycles, window_cycle_ticks, limit_ticks: SIMULATION_BUDGET_TICKS });
     }
     assert(Number.isFinite(window_cycle_ticks) && window_cycle_ticks > 0, `Window cycle time must be positive and finite, got ${window_cycle_ticks}`);
-    if (!Number.isInteger(window_cycle_ticks)) throw new RoundRobinPollingNotApplicable(`the period is ${window_cycle_ticks} ticks, not a whole number`);
+    // the turns are planned in whole ticks of the window cycle, as roundRobinPollingPlan refuses any other
+    if (!Number.isInteger(window_cycle_ticks)) throw new RoundRobinPollingNotApplicable(`not offered on a fractional window cycle (${window_cycle_ticks} ticks)`);
     const clocks = unplannedInserterClocks(registry, window_cycle_ticks);
     if ([...clocks.values()].some(clock => clock.kind !== "by-product")) throw new RoundRobinPollingNotApplicable("primitive grouped construction retains by-product clocks only");
     const composition: RoundRobinPollingComposition = { ...route_facts, retained_clocks: clocks };

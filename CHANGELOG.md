@@ -14,6 +14,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 ### Fixed
 - generation: clocks of a fractional window cycle that recover after a loss are now called stable
 - ui: spare time is told per window cycle for clocks of a fractional window cycle
+- generation: subtick clocks now get Time-Study Windows and Moved Output Swing clocks that hold
 
 ## [0.29.1] - 2026-11-14
 

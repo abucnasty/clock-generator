@@ -8,12 +8,13 @@ import { TimeStudyWindows, deriveTimeStudyWindows } from "../candidates/time-stu
 import { alwaysEnabledByConfig, windowsFromHistory } from "../plan/unclocked-run";
 import { Confirmed, QuickTrial, confirm, search } from "./search";
 import { withOutputWindowMoved } from "./transforms";
+import { lastPosition, positionStep, windowTicks, withWindowsKeepingLength } from "../clock";
 
 /** Positions tried for moved output swings; each costs dozens of clock-only simulations */
 const MAX_UNEVEN_OUTPUT_CANDIDATES = 24;
 
 
-interface MovedOutputSwingCandidate {
+export interface MovedOutputSwingCandidate {
     /** Index of the moved window among each output inserter's windows, in clock order */
     window_index: number;
     shift_ticks: number;
@@ -23,9 +24,11 @@ interface MovedOutputSwingCandidate {
 /**
  * The planned output windows with one window moved earlier or later in steps of a craft, the first window staying
  * put as the reference. A moved window keeps at least its own length clear of its neighbours. Every output inserter
- * moves the same window by the same amount. Empty when there is a single window per window cycle or the window cycle is fractional.
+ * moves the same window by the same amount, in whole ticks. On a p/q-tick window cycle the windows are given in its
+ * clock's positions (`withWindowsKeepingLength`), so a moved window keeps its length in every window cycle. Empty when
+ * there is a single window per window cycle, or the window cycle is fractional with no subtick clock.
  */
-function movedOutputSwingCandidates(
+export function movedOutputSwingCandidates(
     output_windows: Map<string, OpenRange[]>,
     window_cycle_ticks: number,
     step_ticks: number,
@@ -33,10 +36,13 @@ function movedOutputSwingCandidates(
     const sorted = new Map(Array.from(output_windows, ([key, ranges]) =>
         [key, [...ranges].sort((a, b) => a.start_inclusive - b.start_inclusive)] as const));
     const count = Math.min(...Array.from(sorted.values(), ranges => ranges.length));
-    if (!Number.isInteger(window_cycle_ticks) || sorted.size === 0 || count < 2
+    // a tick, or the 1/q tick between two positions of a subtick clock
+    const position = positionStep(window_cycle_ticks);
+    if (position === null || sorted.size === 0 || count < 2
         || Array.from(sorted.values()).some(ranges => ranges.length !== count)) {
         return [];
     }
+    const last = lastPosition(window_cycle_ticks);
 
     // shifts every output inserter has room for, per moved window
     const room: { window_index: number; min: number; max: number }[] = [];
@@ -45,10 +51,10 @@ function movedOutputSwingCandidates(
         let max = Infinity;
         for (const ranges of sorted.values()) {
             const window = ranges[window_index];
-            const length = window.end_inclusive - window.start_inclusive + 1;
+            const length = windowTicks(window, window_cycle_ticks);
             const next_start = window_index + 1 < count ? ranges[window_index + 1].start_inclusive : ranges[0].start_inclusive + window_cycle_ticks;
-            min = Math.max(min, ranges[window_index - 1].end_inclusive + length + 1 - window.start_inclusive);
-            max = Math.min(max, next_start - length - 1 - window.end_inclusive, window_cycle_ticks - 1 - window.end_inclusive);
+            min = Math.max(min, ranges[window_index - 1].end_inclusive + length + position - window.start_inclusive);
+            max = Math.min(max, next_start - length - position - window.end_inclusive, last - window.end_inclusive);
         }
         room.push({ window_index, min, max });
     }
@@ -87,7 +93,10 @@ export function movedOutputSwingWindows(
     report?: (detail: string) => void,
 ): TimeStudyWindows | null {
     const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
-    const planned_windows = windowsFromHistory(planned_history, createEntityRegistryFromConfig(config), alwaysEnabledByConfig(config));
+    // read off the whole ticks of the planning run: on a p/q-tick window cycle made again in the clock's positions, as long
+    // in every window cycle as in the planning run's
+    const planned_windows = withWindowsKeepingLength(
+        windowsFromHistory(planned_history, createEntityRegistryFromConfig(config), alwaysEnabledByConfig(config)), window_cycle_ticks);
     const output_windows = new Map(Array.from(planned_windows).filter(([key]) => output_inserter_ids.has(key)));
     const drill_ids = new Set(Array.from(planned_history.keys()).filter(EntityId.isDrill).map(it => it.id));
     const drill_windows = new Map(Array.from(planned_windows).filter(([key]) => drill_ids.has(key)));

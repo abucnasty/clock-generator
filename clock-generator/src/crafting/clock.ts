@@ -6,6 +6,7 @@ import { backpressureHandGrabTicks } from "../state/backpressure-pickup-lane";
 import { CIRCUIT_LATENCY_TICKS } from "../common/rule-constants";
 import { stacksOf } from "../entities/traits/timing";
 import { isDeadEnd } from "../entities/traits/lane-facts";
+import { subtickClockForWindowCycle } from "../common/subtick-window-cycle";
 
 
 
@@ -195,17 +196,136 @@ export function backpressureHandTicks(entity_registry: ReadableEntityRegistry): 
     return hand_ticks;
 }
 
-/** Windows that last at least the ticks given, by key: a shorter window is lengthened at its end (whole-tick window cycles only) */
+/**
+ * The step between two positions of a window cycle's clock: a tick, or 1/q tick on a p/q-tick window cycle with a subtick
+ * clock. Null for a fractional window cycle with no subtick clock, whose windows are left as they are.
+ */
+export function positionStep(window_cycle_ticks: number): number | null {
+    if (Number.isInteger(window_cycle_ticks)) {
+        return 1;
+    }
+    const subtick = subtickClockForWindowCycle(window_cycle_ticks);
+    return subtick === null ? null : 1 / subtick.scale;
+}
+
+/** The last position a window can end on without running past the end of the window cycle */
+export function lastPosition(window_cycle_ticks: number): number {
+    const step = positionStep(window_cycle_ticks);
+    return step === null ? window_cycle_ticks : window_cycle_ticks - step;
+}
+
+/**
+ * The ticks a window covers. On a p/q-tick window cycle a window [s, e] is open in the whole ticks whose position, in steps
+ * of 1/q, is in it (enable-control.ts, SubtickPositions): its (e - s) q + 1 positions cover the same number of ticks in
+ * every window cycle only when it is a whole number of ticks long, and one tick fewer otherwise in every window cycle
+ * but the one that starts on a whole tick. This is the most it covers: e - s + 1 for a window read off whole ticks, and
+ * the ticks of a window made in positions (`windowOfTicks`), so reading a window again gives the same.
+ */
+export function windowTicks(range: OpenRange, window_cycle_ticks: number): number {
+    const step = positionStep(window_cycle_ticks);
+    if (step === null || step === 1) {
+        return range.end_inclusive - range.start_inclusive + 1;
+    }
+    const positions = Math.round((range.end_inclusive - range.start_inclusive) / step) + 1;
+    return Math.ceil(positions * step - 1e-9);
+}
+
+/**
+ * A window of `ticks` ticks from `start`, open for that many ticks in every window cycle: on a p/q-tick window cycle its
+ * q * ticks positions, the last 1/q tick before start + ticks. Not carried over the end of the window cycle.
+ */
+export function windowOfTicks(start: number, ticks: number, window_cycle_ticks: number): OpenRange {
+    const step = positionStep(window_cycle_ticks) ?? 1;
+    return OpenRange.from(start, start + ticks - step);
+}
+
+/**
+ * A p/q-tick window cycle's windows as whole windows: the start of each and the ticks it covers (`windowTicks`), where a
+ * window carried over the end of the window cycle (one to its last position and one from 0) is one window
+ */
+function windowsOf(ranges: readonly OpenRange[], window_cycle_ticks: number, step: number): { start: number; ticks: number; wraps: boolean }[] {
+    const sorted = [...ranges].sort((a, b) => a.start_inclusive - b.start_inclusive);
+    const last = sorted[sorted.length - 1];
+    const wraps = sorted.length > 1 && sorted[0].start_inclusive === 0 && last.end_inclusive >= window_cycle_ticks - step - 1e-9;
+    const windows = (wraps ? sorted.slice(1, -1) : sorted)
+        .map(range => ({ start: range.start_inclusive, ticks: windowTicks(range, window_cycle_ticks), wraps: false }));
+    if (wraps) {
+        // the positions from the last window's start to the end of the window cycle, then from 0 to the first's end
+        const positions = Math.round((window_cycle_ticks - last.start_inclusive) / step) + Math.round(sorted[0].end_inclusive / step) + 1;
+        windows.push({ start: last.start_inclusive, ticks: Math.ceil(positions * step - 1e-9), wraps: true });
+    }
+    return windows;
+}
+
+/**
+ * The windows, by key, each made again with the ticks `ticksOf` gives it (from the ticks it covers), so that it covers
+ * them in every window cycle of a p/q-tick window cycle. A window up to the end of the window cycle stops at its last
+ * position unless `carry_over`; the end carries it over to the start otherwise, and a window that was carried over
+ * already stays so.
+ */
+function withWindowTicks(
+    ranges: readonly OpenRange[],
+    window_cycle_ticks: number,
+    step: number,
+    ticksOf: (ticks: number) => number,
+    carry_over: boolean,
+): OpenRange[] {
+    const most = Math.floor(window_cycle_ticks + 1e-9);
+    const made = windowsOf(ranges, window_cycle_ticks, step).flatMap(window => {
+        const ticks = Math.min(ticksOf(window.ticks), most);
+        const range = windowOfTicks(0, ticks, window_cycle_ticks);
+        if (carry_over || window.wraps) {
+            return rotateRanges([range], window.start, window_cycle_ticks);
+        }
+        return [OpenRange.from(window.start, Math.min(window.start + range.end_inclusive, window_cycle_ticks - step))];
+    });
+    return OpenRange.reduceRanges(made, step);
+}
+
+/**
+ * A p/q-tick window cycle's windows each made again with the ticks `ticksOf` gives it, covering them in every window
+ * cycle, a window up to the end of the window cycle stopping at its last position (a padding). The windows as they are
+ * on any other window cycle.
+ */
+export function withWindowTicksUpToTheEnd(ranges: OpenRange[], window_cycle_ticks: number, ticksOf: (ticks: number) => number): OpenRange[] {
+    const step = positionStep(window_cycle_ticks);
+    return step === null || step === 1 || ranges.length === 0 ? ranges : withWindowTicks(ranges, window_cycle_ticks, step, ticksOf, false);
+}
+
+/**
+ * The windows with each one made in the positions of its window cycle's clock, as long as it is (`windowTicks`), so that
+ * on a p/q-tick window cycle a window read off whole ticks covers that many in every window cycle. The windows as they
+ * are on a whole-tick window cycle, and on a fractional one with no subtick clock.
+ */
+export function withWindowsKeepingLength(windows: Map<string, OpenRange[]>, window_cycle_ticks: number): Map<string, OpenRange[]> {
+    const step = positionStep(window_cycle_ticks);
+    if (step === null || step === 1) {
+        return windows;
+    }
+    return new Map(Array.from(windows, ([key, ranges]) => [key, ranges.length === 0 ? ranges
+        : withWindowTicks(ranges, window_cycle_ticks, step, ticks => ticks, false)]));
+}
+
+/**
+ * Windows that last at least the ticks given, by key: a shorter window is lengthened at its end. On a p/q-tick window
+ * cycle every window of such a key covers its ticks in every window cycle (`windowTicks`); a fractional window cycle with
+ * no subtick clock keeps its windows.
+ */
 export function withWindowsAtLeast(
     windows: Map<string, OpenRange[]>,
     least_ticks: ReadonlyMap<string, number>,
     window_cycle_ticks: number,
 ): Map<string, OpenRange[]> {
     const result = new Map<string, OpenRange[]>();
+    const step = positionStep(window_cycle_ticks);
     for (const [key, ranges] of windows) {
         const ticks = least_ticks.get(key) ?? 0;
-        if (ticks === 0 || !Number.isInteger(window_cycle_ticks) || ranges.every(r => r.end_inclusive - r.start_inclusive + 1 >= ticks)) {
+        if (ticks === 0 || step === null || ranges.every(r => windowTicks(r, window_cycle_ticks) >= ticks)) {
             result.set(key, ranges);
+            continue;
+        }
+        if (step !== 1) {
+            result.set(key, withWindowTicks(ranges, window_cycle_ticks, step, length => Math.max(length, ticks), true));
             continue;
         }
         const lengthened = ranges.flatMap(r => {
@@ -217,17 +337,26 @@ export function withWindowsAtLeast(
     return result;
 }
 
-/** Windows lengthened at their end by the ticks given, by key (whole-tick window cycles only) */
+/**
+ * Windows lengthened at their end by the ticks given, by key. On a p/q-tick window cycle a lengthened window covers its
+ * ticks (`windowTicks`) and the ticks added in every window cycle; a fractional window cycle with no subtick clock keeps
+ * its windows.
+ */
 export function withWindowsLengthened(
     windows: Map<string, OpenRange[]>,
     ticks_by_key: ReadonlyMap<string, number>,
     window_cycle_ticks: number,
 ): Map<string, OpenRange[]> {
     const result = new Map<string, OpenRange[]>();
+    const step = positionStep(window_cycle_ticks);
     for (const [key, ranges] of windows) {
         const ticks = ticks_by_key.get(key) ?? 0;
-        if (ticks === 0 || !Number.isInteger(window_cycle_ticks)) {
+        if (ticks === 0 || step === null) {
             result.set(key, ranges);
+            continue;
+        }
+        if (step !== 1) {
+            result.set(key, ranges.length === 0 ? ranges : withWindowTicks(ranges, window_cycle_ticks, step, length => length + ticks, true));
             continue;
         }
         const extended = ranges.flatMap(r => {

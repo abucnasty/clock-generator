@@ -397,7 +397,9 @@ export function roundRobinPollingPlan(
     /** Where the turn rule reports what the takers into other recipes take (`turnOffsets`); not reported without it */
     log?: (line: string) => void,
 ): RoundRobinPollingPlan {
-    if (!Number.isInteger(window_cycle_ticks)) refuse(`the period is ${window_cycle_ticks} ticks, not a whole number`);
+    // its turns are whole ticks of the window cycle, and every hand of a window cycle lands on the same tick of the next:
+    // a p/q-tick window cycle moves them by a part of a tick from one window cycle to the next
+    if (!Number.isInteger(window_cycle_ticks)) refuse(`not offered on a fractional window cycle (${window_cycle_ticks} ticks)`);
     const entities = entity_registry.getAll();
     const transfers = new Map(Array.from(swing_counts.entries(), ([entity_id, transfer]) => [entity_id.id, transfer] as const));
     const computed_clocks = composition?.retained_clocks.size ? unplannedInserterClocks(entity_registry, window_cycle_ticks) : new Map<string, InserterClock>();

@@ -255,7 +255,9 @@ export function coordinatedSourcesClock(
     const recommended = input.parts.find(part => part.alternative_id === input.recommended_id);
     if (recommended === undefined) refuse(`the recommended clock ${input.recommended_id} is not among the clocks made for the build`, reasonOf("recommended_not_a_part"));
     const shared_ticks = recommended.window_cycle_ticks;
-    if (!Number.isInteger(shared_ticks)) refuse(`the window cycle time of the recommended clock, ${shared_ticks} ticks, is not a whole number of ticks`,
+    // the parts of one fractional window cycle compose as they are, but the selection they make there is not yet
+    // recorded in the game (the steel build with its iron ore out of the window cycle moves to one)
+    if (!Number.isInteger(shared_ticks)) refuse(`not offered on a fractional window cycle (${shared_ticks} ticks)`,
         reasonOf("window_cycle_not_whole", { window_cycle_ticks: shared_ticks }));
     const made = sharedPlan(config, recommended);
     const registry = made.run.simulation_context.entity_registry;

@@ -41,5 +41,11 @@ test("a window shorter than a hand takes is lengthened at its end, across the pe
     const lengthened = withWindowsAtLeast(windows, new Map([["inserter:2", 10]]), 1408);
     expect(lengthened.get("inserter:2")).toEqual([OpenRange.from(0, 10), OpenRange.from(25, 46), OpenRange.from(1405, 1407)]);
     expect(lengthened.get("inserter:1")).toBe(windows.get("inserter:1"));
-    expect(withWindowsAtLeast(windows, new Map([["inserter:2", 10]]), 1408.5).get("inserter:2")).toBe(windows.get("inserter:2"));
+});
+
+test("on a window cycle of part ticks a window lasts the ticks in every window cycle: it ends a half tick before the next whole one", () => {
+    const windows = new Map([["inserter:2", [OpenRange.from(1, 8), OpenRange.from(25, 46), OpenRange.from(1405, 1407)]]]);
+    // 1408.5 ticks: positions in half ticks, so a window of 10 ticks from 1 ends at 10.5; the window at the end runs on to 6
+    expect(withWindowsAtLeast(windows, new Map([["inserter:2", 10]]), 1408.5).get("inserter:2"))
+        .toEqual([OpenRange.from(0, 10.5), OpenRange.from(25, 46.5), OpenRange.from(1405, 1408.5)]);
 });

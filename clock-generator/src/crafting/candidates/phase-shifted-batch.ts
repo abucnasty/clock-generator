@@ -8,6 +8,7 @@ import { AsBuiltRun } from "../trial";
 import { BlueprintGenerationResult, GenerateClockOptions, TrialRun, checkedClock, clockOfPlan, unclockedRun } from "../plan/unclocked-run";
 import { Confirmed, QuickTrial, SearchRangeEdge, SearchReport, confirm, quickTrial, search } from "./search";
 import { cycleOfWindow, withCycleShifted } from "./transforms";
+import { positionStep, withWindowsKeepingLength } from "../clock";
 import { transitionsOf } from "../sequence/compact-history";
 import { machineNameOf, type MachineToName } from "../machine-name";
 import { buildToNameOf } from "../build-names";
@@ -20,7 +21,7 @@ const MAX_SHIFTED_CYCLE_CANDIDATES = 48;
 const MIN_SHIFTED_CYCLE_FRACTION = 1 / 8;
 
 
-interface ShiftedCycleCandidate {
+export interface ShiftedCycleCandidate {
     /** 0-based crafting cycle within the window cycle */
     cycle_index: number;
     shift_ticks: number;
@@ -34,14 +35,19 @@ interface ShiftedCycleCandidate {
  * lengths and spacing. A window belongs to the cycle it starts in. The first cycle stays put as the reference, and a
  * moved window never touches the same entity's windows of another cycle or wraps the end of the window cycle.
  * Only shifts at least an eighth of a cycle away from the planned position can be used; a cycle with none is left out.
+ * Shifts are whole ticks. On a p/q-tick window cycle the windows are given in its clock's positions
+ * (`withWindowsKeepingLength`), so a moved window keeps its length in every window cycle, with a whole tick closed
+ * between it and the next; a fractional window cycle with no subtick clock gets none.
  */
-function shiftedCycleCandidates(
+export function shiftedCycleCandidates(
     planned_windows: Map<string, OpenRange[]>,
     cycle_ticks: number,
     window_cycle_ticks: number,
 ): ShiftedCycleCandidate[] {
     const cycles = Math.round(window_cycle_ticks / cycle_ticks);
-    if (!Number.isInteger(window_cycle_ticks) || cycles < 2) {
+    // a tick, or the 1/q tick between two positions of a subtick clock
+    const position = positionStep(window_cycle_ticks);
+    if (position === null || cycles < 2) {
         return [];
     }
     const cycleOf = (range: OpenRange) => cycleOfWindow(range, cycle_ticks, cycles);
@@ -58,10 +64,11 @@ function shiftedCycleCandidates(
             const fixed = ranges.filter(range => cycleOf(range) !== cycle_index);
             const first = Math.min(...moved.map(range => range.start_inclusive));
             const last = Math.max(...moved.map(range => range.end_inclusive));
-            const before = Math.max(-2, ...fixed.filter(range => range.end_inclusive < first).map(range => range.end_inclusive));
+            // a tick closed between two windows: a position after the end, then a whole tick
+            const before = Math.max(-1 - position, ...fixed.filter(range => range.end_inclusive < first).map(range => range.end_inclusive));
             const after = Math.min(window_cycle_ticks + 1, ...fixed.filter(range => range.start_inclusive > last).map(range => range.start_inclusive));
-            min = Math.max(min, before + 2 - first);
-            max = Math.min(max, after - 2 - last);
+            min = Math.max(min, before + 1 + position - first);
+            max = Math.min(max, after - 1 - position - last);
         }
         if (Number.isFinite(min) && Number.isFinite(max) && max > min) {
             room.push({ cycle_index, min, max });
@@ -286,9 +293,10 @@ function shiftedCycleWindows(
 export function phaseShiftedBatchClock(config: Config, options: GenerateClockOptions = {}): BlueprintGenerationResult {
     const plan = unclockedRun(config, options);
     const clock = clockOfPlan(plan, options);
+    // on a p/q-tick window cycle the shifts are made of windows as long in every window cycle as in the planning run
     const shifted = shiftedCycleWindows(
         { ...config, overrides: { ...config.overrides, derive_clock_windows: false } },
-        clock.windows, plan.entity_ids, plan.run.output_cycle_plan.total_duration.ticks, plan.run.duration.ticks, plan.logger, options.on_progress_detail,
+        withWindowsKeepingLength(clock.windows, plan.run.duration.ticks), plan.entity_ids, plan.run.output_cycle_plan.total_duration.ticks, plan.run.duration.ticks, plan.logger, options.on_progress_detail,
     );
     const report = shifted === null ? undefined : {
         ...shifted.search,

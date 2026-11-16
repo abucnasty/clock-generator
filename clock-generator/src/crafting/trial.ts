@@ -12,7 +12,7 @@ import { WakeUps, wakeUpsOfStock } from "./wake-ups";
 import { InserterCounters, inserterEnds, wakeUpsAndCountersOfStock } from "./inserter-counters";
 import { judgeCounterSpan, judgeLongRun, judgeProvenCycle, LONG_RUN_MAX_TICKS, LONG_RUN_SETTLE_SHARE, longRunWindowCycles, OutputReason, outputReasonOf, wholeOutputRepeats } from "./long-run";
 import { DisturbanceTrial, DisturbanceTrialOptions, DisturbanceTrialReport, DisturbanceTrialVerdict, disturbanceTrialsOf, ExcessLoss, LATE_AFTER_WINDOW_CYCLES, LossOutcome, lossLimitOf, MAX_RECOVERY_WINDOW_CYCLES, reportOf, type SkippedTrial, verdictOf, withEveryTrialCounted } from "./disturbance-trial";
-import { SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForWindowCycle, withWindowsLengthened } from "./clock";
+import { SerializableClockWindows, positionStep, rotateRanges, shiftRangesForCircuitLatency, subtickClockForWindowCycle, withWindowsLengthened } from "./clock";
 import type { SubtickWindowCycle } from "../common/subtick-window-cycle";
 import { canonicalKey, currentRunMemo } from "./plan/run-memo";
 import { wholeCounterOf } from "./plan/clock-window-cycle-limit";
@@ -1657,7 +1657,7 @@ export interface LaneHandRoomDecision {
  * The room for one more hand (laneHandRoomTicks) lets a hand that starts late fill inside its window, but in a short
  * window cycle it can also leave time for a hand the plan does not have when the machine is not at its insertion
  * limit. `helps` is false only when the clock-only check passes without the room but not with it, or lands further
- * from the expected output with it. The config is checked with `derive_clock_windows` off, which only
+ * from the expected output with it; on a p/q-tick window cycle also whenever it passes without the room. The config is checked with `derive_clock_windows` off, which only
  * `generateClockForConfig` reads: the run is the same as on the config as given.
  */
 export function laneHandRoomTrial(
@@ -1670,13 +1670,19 @@ export function laneHandRoomTrial(
     /** How the clock's runs plan, as the clock was planned (`fractionalSwingsOf`) */
     swings: FractionalSwings = {},
 ): LaneHandRoomDecision {
-    if (Array.from(room.values()).every(ticks => ticks === 0) || !Number.isInteger(window_cycle_ticks)) {
+    // a fractional window cycle with no subtick clock gets no room (withWindowsLengthened): nothing to decide
+    if (Array.from(room.values()).every(ticks => ticks === 0) || positionStep(window_cycle_ticks) === null) {
         return { helps: true, verified: null };
     }
     const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
     const with_room_windows = withWindowsLengthened(windows, room, window_cycle_ticks);
     const check = (checked: Map<string, OpenRange[]>) => runAsBuiltCheck(base_config, checked, window_cycle_ticks, logger, AS_BUILT_START_PHASES, undefined,
         FREE_RUNNING_CHECK_TICKS, undefined, false, "loop-windows", swings);
+    // on a p/q-tick window cycle the room is added only where the clock does not hold without it: its windows were held
+    // without it until the room could be added there, and each tick of it costs wakeups
+    if (!Number.isInteger(window_cycle_ticks) && check(windows).check.holds) {
+        return { helps: false, verified: null };
+    }
     const with_room = check(with_room_windows);
     if (with_room.check.holds) {
         return { helps: true, verified: { windows: with_room_windows, run: with_room } };
