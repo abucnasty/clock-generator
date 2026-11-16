@@ -11,6 +11,8 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ## [Unreleased]
 
+## [0.29.2] - 2026-11-16
+
 ### Fixed
 - generation: clocks of a fractional window cycle that recover after a loss are now called stable
 - ui: spare time is told per window cycle for clocks of a fractional window cycle
