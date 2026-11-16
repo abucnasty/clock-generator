@@ -1657,7 +1657,7 @@ export interface LaneHandRoomDecision {
  * The room for one more hand (laneHandRoomTicks) lets a hand that starts late fill inside its window, but in a short
  * window cycle it can also leave time for a hand the plan does not have when the machine is not at its insertion
  * limit. `helps` is false only when the clock-only check passes without the room but not with it, or lands further
- * from the expected output with it. The config is checked with `derive_clock_windows` off, which only
+ * from the expected output with it; on a p/q-tick window cycle also whenever it passes without the room. The config is checked with `derive_clock_windows` off, which only
  * `generateClockForConfig` reads: the run is the same as on the config as given.
  */
 export function laneHandRoomTrial(
@@ -1678,6 +1678,11 @@ export function laneHandRoomTrial(
     const with_room_windows = withWindowsLengthened(windows, room, window_cycle_ticks);
     const check = (checked: Map<string, OpenRange[]>) => runAsBuiltCheck(base_config, checked, window_cycle_ticks, logger, AS_BUILT_START_PHASES, undefined,
         FREE_RUNNING_CHECK_TICKS, undefined, false, "loop-windows", swings);
+    // on a p/q-tick window cycle the room is added only where the clock does not hold without it: its windows were held
+    // without it until the room could be added there, and each tick of it costs wakeups
+    if (!Number.isInteger(window_cycle_ticks) && check(windows).check.holds) {
+        return { helps: false, verified: null };
+    }
     const with_room = check(with_room_windows);
     if (with_room.check.holds) {
         return { helps: true, verified: { windows: with_room_windows, run: with_room } };
