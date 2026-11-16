@@ -14,16 +14,18 @@ import { transitionsOf } from "../sequence/compact-history";
 
 /**
  * Every window of the inserters named lengthened at its end by `padding` ticks, up to the end of the window cycle. On a
- * p/q-tick window cycle a padded window covers its ticks and the padding in every window cycle (`withWindowsLengthened`).
+ * p/q-tick window cycle a padded window covers its ticks and the padding in every window cycle (`withWindowsLengthened`),
+ * unless `in_positions` is false: then its end moves by the padding, as on a whole-tick window cycle.
  */
 export function paddedWindows(
     windows: Map<string, OpenRange[]>,
     padded_ids: Iterable<string>,
     padding: number,
     window_cycle_ticks: number,
+    in_positions: boolean = true,
 ): Map<string, OpenRange[]> {
     const result = new Map(windows);
-    const step = positionStep(window_cycle_ticks);
+    const step = in_positions ? positionStep(window_cycle_ticks) : 1;
     for (const key of padded_ids) {
         const ranges = windows.get(key);
         if (ranges === undefined) {

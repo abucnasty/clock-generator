@@ -12,7 +12,7 @@ import { WakeUps, wakeUpsOfStock } from "./wake-ups";
 import { InserterCounters, inserterEnds, wakeUpsAndCountersOfStock } from "./inserter-counters";
 import { judgeCounterSpan, judgeLongRun, judgeProvenCycle, LONG_RUN_MAX_TICKS, LONG_RUN_SETTLE_SHARE, longRunWindowCycles, OutputReason, outputReasonOf, wholeOutputRepeats } from "./long-run";
 import { DisturbanceTrial, DisturbanceTrialOptions, DisturbanceTrialReport, DisturbanceTrialVerdict, disturbanceTrialsOf, ExcessLoss, LATE_AFTER_WINDOW_CYCLES, LossOutcome, lossLimitOf, MAX_RECOVERY_WINDOW_CYCLES, reportOf, type SkippedTrial, verdictOf, withEveryTrialCounted } from "./disturbance-trial";
-import { SerializableClockWindows, rotateRanges, shiftRangesForCircuitLatency, subtickClockForWindowCycle, withWindowsLengthened } from "./clock";
+import { SerializableClockWindows, positionStep, rotateRanges, shiftRangesForCircuitLatency, subtickClockForWindowCycle, withWindowsLengthened } from "./clock";
 import type { SubtickWindowCycle } from "../common/subtick-window-cycle";
 import { canonicalKey, currentRunMemo } from "./plan/run-memo";
 import { wholeCounterOf } from "./plan/clock-window-cycle-limit";
@@ -1670,7 +1670,8 @@ export function laneHandRoomTrial(
     /** How the clock's runs plan, as the clock was planned (`fractionalSwingsOf`) */
     swings: FractionalSwings = {},
 ): LaneHandRoomDecision {
-    if (Array.from(room.values()).every(ticks => ticks === 0) || !Number.isInteger(window_cycle_ticks)) {
+    // a fractional window cycle with no subtick clock gets no room (withWindowsLengthened): nothing to decide
+    if (Array.from(room.values()).every(ticks => ticks === 0) || positionStep(window_cycle_ticks) === null) {
         return { helps: true, verified: null };
     }
     const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
