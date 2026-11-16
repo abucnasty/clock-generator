@@ -301,7 +301,7 @@ export function pitchPickupsTransferWindows(
  */
 export function pitchPickupsClock(config: Config, options: GenerateClockOptions = {}): BlueprintGenerationResult {
     const plan = unclockedRun(config, options);
-    const clock = clockOfPlan(plan, options);
+    const planned = clockOfPlan(plan, options);
     const { output_inserters, output_machine_state_machines, swing_counts, output_inserter_ids, recipe_lcm, duration } = plan.run;
     // waiting for a full hand past the output block would refuse input drops every cycle
     const full_hand_fits = output_inserters.every((os, index) =>
@@ -313,12 +313,20 @@ export function pitchPickupsClock(config: Config, options: GenerateClockOptions 
             output_swings.set(entity_id.id, etc.total_transfer_count.toDecimal() * recipe_lcm);
         }
     }
-    const full_hand = !full_hand_fits ? null : pitchPickupsOutputWindows(
+    const fullHandOn = (base: typeof planned) => !full_hand_fits ? null : pitchPickupsOutputWindows(
         { ...config, overrides: { ...config.overrides, derive_clock_windows: false } },
-        clock.windows, output_swings,
+        base.windows, output_swings,
         new Set(output_inserters.map(os => os.inserter.source.entity_id.id)),
         duration.ticks, plan.logger, options.on_progress_detail,
     );
+    // On a p/q-tick window cycle the room for one more hand is decided on this clock's own windows, not on the planned
+    // clock's it builds on: where the planned windows took the room, the timing is searched first on them without it,
+    // and kept where that clock passes the search's own check.
+    const bare = !Number.isInteger(duration.ticks) && planned.lane_hand_room.size > 0
+        ? clockOfPlan(plan, { ...options, lane_hand_room: "never" }) : null;
+    const bare_full_hand = bare === null ? null : fullHandOn(bare);
+    const clock = bare_full_hand !== null ? bare! : planned;
+    const full_hand = bare_full_hand ?? fullHandOn(planned);
     return checkedClock(plan, clock, full_hand?.windows ?? clock.windows, options, {
         search: full_hand?.search,
         verified: full_hand === null ? undefined
