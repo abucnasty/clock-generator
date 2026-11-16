@@ -5,7 +5,7 @@ import { OpenRange } from "../../data-types";
 import { EntityId } from "../../entities";
 import { InventoryTransferHistory } from "../sequence/inventory-transfer-history";
 import { Logger } from "../../common/logger";
-import { withWindowsLengthened } from "../clock";
+import { withWindowsKeepingLength, withWindowsLengthened } from "../clock";
 import { BlueprintGenerationResult, GenerateClockOptions, TrialRun, alwaysEnabledByConfig, clockOfPlan, clockOnlyRunOf, exportClock, unclockedRun, windowsFromHistory } from "../plan/unclocked-run";
 import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, FULL_CHECK_START_PHASES, runAsBuiltCheck, runClockOnBuild, trialWithLoopWindows } from "../trial";
 import { pitchPickupsTransferWindows } from "./pitch-pickups";
@@ -63,7 +63,10 @@ function deriveClockWindows(
     report?: (detail: string) => void,
 ): TimeStudyWindows {
     const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
-    const planned_windows = windowsFromHistory(planned_history, createEntityRegistryFromConfig(config), alwaysEnabledByConfig(config));
+    // read off the whole ticks of the planning run: on a p/q-tick window cycle made again in the clock's positions, as long
+    // in every window cycle as in the planning run's, since a window read off whole ticks is a tick short in the others
+    const planned_windows = withWindowsKeepingLength(
+        windowsFromHistory(planned_history, createEntityRegistryFromConfig(config), alwaysEnabledByConfig(config)), window_cycle_ticks);
     const output_windows = new Map(Array.from(planned_windows).filter(([key]) => output_inserter_ids.has(key)));
     // drills only report WORKING/DISABLED, so their activity gives no useful window to derive
     const drill_ids = new Set(Array.from(planned_history.keys()).filter(EntityId.isDrill).map(it => it.id));

@@ -1,6 +1,6 @@
 import { OpenRange } from "../../data-types";
 import { InserterStatus } from "../../state";
-import { rotateRanges } from "../clock";
+import { positionStep, rotateRanges, windowOfTicks, windowTicks, withWindowTicksUpToTheEnd } from "../clock";
 import { CIRCUIT_LATENCY_TICKS } from "../../common/rule-constants";
 import { TrialRun } from "../plan/unclocked-run";
 import { transitionsOf } from "../sequence/compact-history";
@@ -12,7 +12,10 @@ import { transitionsOf } from "../sequence/compact-history";
  * `withWindowsLengthened` in clock.ts.
  */
 
-/** Every window of the inserters named lengthened at its end by `padding` ticks, up to the end of the window cycle */
+/**
+ * Every window of the inserters named lengthened at its end by `padding` ticks, up to the end of the window cycle. On a
+ * p/q-tick window cycle a padded window covers its ticks and the padding in every window cycle (`withWindowsLengthened`).
+ */
 export function paddedWindows(
     windows: Map<string, OpenRange[]>,
     padded_ids: Iterable<string>,
@@ -20,9 +23,14 @@ export function paddedWindows(
     window_cycle_ticks: number,
 ): Map<string, OpenRange[]> {
     const result = new Map(windows);
+    const step = positionStep(window_cycle_ticks);
     for (const key of padded_ids) {
         const ranges = windows.get(key);
         if (ranges === undefined) {
+            continue;
+        }
+        if (step !== null && step !== 1) {
+            result.set(key, withWindowTicksUpToTheEnd(ranges, window_cycle_ticks, ticks => ticks + padding));
             continue;
         }
         result.set(key, OpenRange.reduceRanges(ranges.map(r =>
@@ -102,14 +110,20 @@ export function withSingleSwingOutput(
  * The output inserters' swings spread evenly over the window cycle, one swing per window. Windows are the shortest
  * planned window minus the circuit latency, since the game keeps the inserter enabled that much longer and
  * a longer window lets it return and grab a partial stack. Null when that would not change anything or cannot be built.
+ * On a p/q-tick window cycle the windows start a q-th of the window cycle apart to the nearest 1/q tick, and each covers
+ * its ticks in every window cycle (`windowOfTicks`); a fractional window cycle with no subtick clock gets none.
  */
 export function evenlySpacedOutputWindows(
     output_windows: Map<string, OpenRange[]>,
     swing_counts: ReadonlyMap<string, number>,
     window_cycle_ticks: number,
 ): Map<string, OpenRange[]> | null {
-    if (!Number.isInteger(window_cycle_ticks)) {
+    const step = positionStep(window_cycle_ticks);
+    if (step === null) {
         return null;
+    }
+    if (step !== 1) {
+        return evenlySpacedOutputWindowsInPositions(output_windows, swing_counts, window_cycle_ticks, step);
     }
     const even = new Map<string, OpenRange[]>();
     let changed = false;
@@ -129,6 +143,38 @@ export function evenlySpacedOutputWindows(
         }
         const reduced = OpenRange.reduceRanges(spaced);
         changed ||= reduced.length !== ranges.length || reduced.some((r, i) => r.start_inclusive !== ranges[i].start_inclusive || r.end_inclusive !== ranges[i].end_inclusive);
+        even.set(key, reduced);
+    }
+    return changed ? even : null;
+}
+
+/** `evenlySpacedOutputWindows` on a p/q-tick window cycle, in its clock's positions of `step` ticks */
+function evenlySpacedOutputWindowsInPositions(
+    output_windows: Map<string, OpenRange[]>,
+    swing_counts: ReadonlyMap<string, number>,
+    window_cycle_ticks: number,
+    step: number,
+): Map<string, OpenRange[]> | null {
+    const even = new Map<string, OpenRange[]>();
+    let changed = false;
+    for (const [key, ranges] of output_windows) {
+        const swings = swing_counts.get(key) ?? 0;
+        if (swings === 0 || ranges.length === 0) {
+            return null;
+        }
+        const length = Math.min(...ranges.map(r => windowTicks(r, window_cycle_ticks))) - CIRCUIT_LATENCY_TICKS;
+        if (length < 1 || length >= window_cycle_ticks / swings) {
+            return null;
+        }
+        const first = Math.min(...ranges.map(r => r.start_inclusive));
+        const spaced: OpenRange[] = [];
+        for (let k = 0; k < swings; k++) {
+            const offset = Math.round(k * window_cycle_ticks / swings / step) * step;
+            spaced.push(...rotateRanges([windowOfTicks(first, length, window_cycle_ticks)], offset, window_cycle_ticks));
+        }
+        const reduced = OpenRange.reduceRanges(spaced, step);
+        const sorted = [...ranges].sort((a, b) => a.start_inclusive - b.start_inclusive);
+        changed ||= reduced.length !== sorted.length || reduced.some((r, i) => r.start_inclusive !== sorted[i].start_inclusive || r.end_inclusive !== sorted[i].end_inclusive);
         even.set(key, reduced);
     }
     return changed ? even : null;
