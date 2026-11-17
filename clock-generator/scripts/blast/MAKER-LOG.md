@@ -145,7 +145,7 @@ Each row is an inserter: the `copies` read (1 is the config's own), its `windows
 | `openings`, `open_ticks` | its openings and open ticks in the span, over all the copies read |
 | `needed`, `needed_ticks` | the first and the last needed tick, counted from `start` (null where none), and the count. In a needed tick the inserter's phase rule read its enable condition and the read let it go on. After the update its hand is at its pickup |
 | `needed_by` | the needed ticks by kind: `start` (a hand starts), `fill` (a hand fills on), `wait` (a part hand waits for its machine) |
-| `open_without_pickup` | open ticks that were not needed. An inserter asleep on a list makes no read, so its ticks asleep count here |
+| `open_without_pickup` | open ticks that were not needed. An inserter in sleep on a list makes no read, so its ticks in sleep count here |
 | `cut_hands`, `cut_empty` | hands the close of the window cut at their pickup, and of them the empty hands |
 | `ticks_to_swing`, `not_swung` | the cut hands by their open ticks to the swing: from the next opening to the tick the hand leaves for the sink. `not_swung`: the cut hands that do not leave in the record |
 | `starts_by_last` | `copies` only, for a taker of a belt: its hand starts by their last condition (as `missed_swings`) |
@@ -170,7 +170,7 @@ a row for each inserter:
 | --- | --- |
 | `input` | wakeups from the list of the machine it puts into: by the `machine` (a craft start, or a fuel item its burner took), by an `inserter` (a take from the machine's output) |
 | `output` | wakeups from the list of the machine it takes from: by the `machine` (a result), by an `inserter` (fuel put in) |
-| `ghost` | of those, by list, the ghost wakeups: the clock switched the inserter off while it was asleep on the list |
+| `ghost` | of those, by list, the ghost wakeups: the clock switched the inserter off while it was in sleep on the list |
 | `empty_hand_enabled_ticks` | ticks it was enabled with an empty hand and its arm not away: at its `pickup`, or at `rest` |
 
 ```json
