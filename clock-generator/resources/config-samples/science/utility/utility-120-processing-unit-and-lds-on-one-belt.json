@@ -123,5 +123,19 @@
       ]
     }
   ],
-  "chests": []
+  "chests": [],
+  "output_belt": {
+    "side_belt": {
+      "lane": "right",
+      "tiles": 2
+    },
+    "stretches": [
+      {
+        "points": [
+          { "side_load": [1, 2, 3, 4, 5, 6, 7], "lane": "left", "layout": "side-straight" },
+          { "tiles": 14, "lane_end": { "kind": "infinite" } }
+        ]
+      }
+    ]
+  }
 }

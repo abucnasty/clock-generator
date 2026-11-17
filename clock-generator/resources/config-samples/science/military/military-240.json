@@ -275,5 +275,34 @@
         }
       ]
     }
-  ]
+  ],
+  "output_belt": {
+    "side_belts": [
+      { "outputs": [1, 3, 5, 7, 9], "lane": "right", "tiles": 3, "left_curves": 1, "right_curves": 1 },
+      { "outputs": [2, 4, 6, 8, 10], "lane": "left", "tiles": 3, "left_curves": 1, "right_curves": 1 }
+    ],
+    "stretch_groups": [[1], [2]],
+    "stretches": [
+      {
+        "points": [
+          { "side_load": [1], "lane": "left", "layout": "side-entrance" },
+          { "tiles": 9, "side_load": [3], "lane": "left", "layout": "side-entrance" },
+          { "tiles": 9, "side_load": [5], "lane": "left", "layout": "side-entrance" },
+          { "tiles": 9, "side_load": [7], "lane": "left", "layout": "side-entrance" },
+          { "tiles": 9, "side_load": [9], "lane": "left", "layout": "side-entrance" },
+          { "tiles": 10, "lane_end": { "kind": "infinite" } }
+        ]
+      },
+      {
+        "points": [
+          { "side_load": [2], "lane": "right", "layout": "side-entrance" },
+          { "tiles": 9, "side_load": [4], "lane": "right", "layout": "side-entrance" },
+          { "tiles": 9, "side_load": [6], "lane": "right", "layout": "side-entrance" },
+          { "tiles": 9, "side_load": [8], "lane": "right", "layout": "side-entrance" },
+          { "tiles": 9, "side_load": [10], "lane": "right", "layout": "side-entrance" },
+          { "tiles": 10, "lane_end": { "kind": "infinite" } }
+        ]
+      }
+    ]
+  }
 }

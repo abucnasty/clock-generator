@@ -20,7 +20,8 @@ is 80 plates a second from one copy.
 - `lithium-plate-80-silo-chest.json`: an earlier export of the same build as the paste reads it (each list through its schema), with the
   target added. It is the export above without the qualities, positions and directions; each machine's `prototype`
   (`cryogenic-plant` for machines 1 and 2 and `electric-furnace` for 3 to 8) was taken from the scaffold and is the one
-  the export names, and the two marks of the export above were added to it. No other field was edited.
+  the export names, and the two marks of the export above were added to it. The `output_belt` section was written from
+  the scaffold, see "The output belt". No other field was edited.
 
 The export was taken after a warm-up of 3600 ticks without a clock. A furnace has no recipe until it gets its first
 input, so an export taken earlier is incomplete: after 1 tick it had 2 machines and no belt. The sidecar exports a
@@ -41,12 +42,34 @@ filled silo: the harness warms the build up for 3600 ticks without a clock befor
 218 lithium then, whatever the config says. Each cut empties it. Building the two inserters that fill the silo after
 the six that empty it changed nothing in any window cycle.
 
-The clock with 7 output swings (7560 ticks) is stable in the simulator but not in the game: it moves 9,440 to 9,600 of
-its 10,080 plates a window cycle. The output inserters of the two eastern furnaces drop onto underground belt entrances whose
-exits side-load onto the belt that already carries the other four furnaces' plates. The export describes all of it as one
-belt, and the simulator gives those two inserters the room of that belt. In the game they wait for the merge, their
-furnaces stop with a full output, and the inserters that feed those furnaces from the silo miss hands. The clock opens
-the six output inserters together, which the other two clocks do not.
+With the output belt stated, the simulator selects the clock of 2,160 ticks (6 output swings), as before. In the game
+(Factorio 2.1.24, warm-up 3,600 ticks, 10,800 ticks recorded) it moves 2,880 plates, its target, in each of 4 whole
+window cycles. The clock with 5 output swings (1,080 ticks) is now unstable in the simulator, and in the game it moves
+1,344 to 1,408 of its 1,440 plates a window cycle (9 window cycles).
 
-The export marks the two inserters (15 and 16) as dropping onto a belt that side-loads onto another, 3 tiles on, and
-the result names that as a known limit.
+The clock with 7 output swings (7560 ticks) is not stable in the game: it moves 9,440 to 9,600 of its 10,080 plates a
+window cycle. The output inserters of the two eastern furnaces drop onto underground belt entrances whose exits side-load
+onto the belt that already carries the other four furnaces' plates. In the game they wait for the merge, their furnaces
+stop with a full output, and the inserters that feed those furnaces from the silo miss hands. The clock opens the six
+output inserters together, which the other two clocks do not. Before the config stated its output belt, the simulator
+called this clock stable, because it gave each output inserter the room of a belt of its own. It now calls it unstable.
+
+## The output belt
+
+The config states the output belt of the scaffold (`output_belt`). Each row of three furnaces puts its plates on a line
+of its own, and the two lines side-load onto the underground entrance that leads to the loader. They are stated as two
+groups of stretches (`stretch_groups`), each with its own copy of the entrance's line and its own loader, because the
+config cannot state two side-loads onto one tile. That is exact only if the two lanes of that entrance never interact.
+- Row 1 is furnaces 3, 5 and 7 (output inserters 1, 3 and 5), row 2 furnaces 4, 6 and 8 (2, 4 and 6).
+- The first furnace of a row drops in line onto an underground entrance, the second 10 tiles on onto its exit, and the
+  third (7 and 8, the inserters marked as side-loaded) onto a side belt of 3 tiles that side-loads onto the line 4 tiles
+  on. The line turns after 10 tiles (row 1 right, row 2 left) and side-loads onto the entrance that leads to the loader,
+  row 1 from its left side and row 2 from its right side, 6 tiles from the loader.
+- The lane of an in-line drop is the right lane, and the left lane for a mirrored inserter (the engine's rule and the
+  Sidecar's). The inserters of row 2 are mirrored in the scaffold, those of row 1 and the side belts' are not. The
+  entrance's hood lets through the right lane of row 1 and the left lane of row 2, and the furnaces deliver in the game,
+  so their plates are on those lanes. The drop lanes are read from the blueprint and that rule, not exported by the
+  Sidecar for this build, and not measured on an underground end.
+
+The simulator moves the plates on these lines, so an output inserter that cannot put its plates down waits, as in the
+game.

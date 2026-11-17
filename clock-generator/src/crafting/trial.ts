@@ -3,7 +3,7 @@ import { targetInsertersOf, targetItemOf, targetMachinesOf } from "./sequence/cy
 import { Config } from "../config";
 import { EnableControlOverrideConfig, EnableControlRange } from "../config/schema";
 import { InserterClock, unplannedInserterClocks } from "./sequence/unplanned-inserter-clock";
-import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
+import { createEntityRegistryFromConfig, type SimulationContext } from "./sequence/simulation-context";
 import { Duration, OpenRange } from "../data-types";
 import { Entity, EntityId, Inserter, Machine } from "../entities";
 import { Logger, defaultLogger } from "../common/logger";
@@ -39,7 +39,9 @@ import { verificationPlanningConfigOf, verificationTerminalCountOf } from "./rou
 import { CIRCUIT_LATENCY_TICKS } from "../common/rule-constants";
 import { WakeUpsFromStarts, hasStockTheClockDoesNotSet, wakeUpsFromStarts } from "./wake-ups-from-starts";
 import type { ClockSharedLaneLoss } from "./shared-lane-verdict";
-import { timedCheck } from "./maker-log";
+import { makerLogOn, timedCheck } from "./maker-log";
+import { runOfOneCopyForLog } from "./one-copy-log";
+import { beginTickLoop, withTickPurpose } from "./tick-ledger";
 
 /**
  * Number of clock start offsets the as-built check tries. Depending on how the clock lines up with the
@@ -476,6 +478,8 @@ function longRunOfFreeRunningBuild(
     start: Pick<ClockTrialOptions, "competing_takers_order" | "decider_order" | "main_clock_shift" | "fractional_swings"> = {},
     /** What the caller reads of the stock: the stock it gets is recorded in no more detail */
     stock_detail: StockDetail = "full",
+    /** A reader put into each run's context before its first tick (the maker log's); it changes nothing in the run */
+    on_context?: (context: SimulationContext) => void,
 ): {
     keeps_up: boolean;
     /** The judged span's amount under the strict target amount, which `keeps_up` requires */
@@ -517,7 +521,8 @@ function longRunOfFreeRunningBuild(
     }
     // only its stock is read, which names the state of every inserter itself
     const runOf = (simulate_window_cycles: number) => {
-        const build_run = clockBuildRun(config, decider_windows, window_cycle_ticks, logger, { simulate_window_cycles, machine_stock: true, factorio_states: false, detect_repeat: true, ...start, stock_detail, record_histories: false });
+        const build_run = withTickPurpose("long_run", () => clockBuildRun(config, decider_windows, window_cycle_ticks, logger, { simulate_window_cycles, machine_stock: true, factorio_states: false, detect_repeat: true, ...start, stock_detail, record_histories: false,
+            ...(on_context !== undefined && { on_context }) }));
         return { build_run, run: trialRunOf(build_run) };
     };
     let { build_run, run } = runOf(window_cycles);
@@ -774,7 +779,7 @@ export function startDependenceOf(
     const check_config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
     // a clock stands at another place of a window cycle of a whole number of ticks only; a fractional one is tried unshifted
     const tried = starts.filter(start => start.clock_shift === 0 || Number.isInteger(window_cycle_ticks));
-    const runs = tried.map(start => {
+    const runs = tried.map(start => withTickPurpose("start_dependence", () => {
         // A start changes the shared counter's position, including computed by-product predicates on that counter.
         const order = { ...swings, competing_takers_order: start.competing_takers_order, decider_order: start.decider_order,
             main_clock_shift: start.clock_shift === 0 ? 0 : window_cycle_ticks - start.clock_shift % window_cycle_ticks };
@@ -783,7 +788,7 @@ export function startDependenceOf(
             ? long_run.keeps_up
             : runClockOnBuild(check_config, windows, window_cycle_ticks, logger, { factorio_states: false, ...order }).stability_check.holds;
         return { long_run, keeps_up };
-    });
+    }, { claim: true }));
     // the first start is the one the clock is judged on: all its checks decide, not the long run alone; a clock that
     // fails one of the checks that are not about the start fails from every start
     const reaching = startsReachingTarget(cold_holds, runs.map(it => it.keeps_up));
@@ -834,7 +839,8 @@ export function wakeUpsFromStartsOf(
     const figureAt = (place: number): number | null => {
         const standing = place === 0 ? windows
             : new Map(Array.from(windows, ([key, ranges]) => [key, rotateRanges(ranges, place, window_cycle_ticks)] as const));
-        const long_run = longRunOfFreeRunningBuild(check_config, standing, window_cycle_ticks, expected_output_items, quiet, long_run_ticks, swings, "wake-ups");
+        const long_run = withTickPurpose("wakeups_from_starts", () =>
+            longRunOfFreeRunningBuild(check_config, standing, window_cycle_ticks, expected_output_items, quiet, long_run_ticks, swings, "wake-ups"), { claim: true });
         if (long_run === null) {
             return null;
         }
@@ -958,6 +964,8 @@ export function exhaustiveStartPhases(
         });
         const simulation_tick = new SimulationTick(context);
         const now = () => context.tick_provider.getCurrentTick();
+        // the phase's run, from the cold build's tick 0
+        const ledger = beginTickLoop("phase_proof", now);
 
         // the rotated windows enable at tick t what the unrotated enable at t - offset, so the unrotated clock's
         // phase 0 falls on the local ticks offset, offset + bin, ...: the crossings every phase's states compare at
@@ -1021,6 +1029,7 @@ export function exhaustiveStartPhases(
             }
         }
         outcome.ticks += now();
+        ledger?.close();
         outcome.phases_checked++;
         outcome.proven &&= run_proven;
         report?.(outcome.phases_checked, counter_ticks);
@@ -1143,7 +1152,8 @@ export function runAsBuiltCheck(
     const counter = wholeCounterOf(window_cycle_ticks);
     // the count the progress is reported against: as it always was where no whole counter is checked
     const total = startPhaseTotalOf(window_cycle_ticks, counter, start_phases);
-    const result = passed !== undefined ? passed.run.result : firstClockSpan(config, decider_windows, window_cycle_ticks, logger, swings);
+    const result = passed !== undefined ? passed.run.result
+        : withTickPurpose("first_span", () => firstClockSpan(config, decider_windows, window_cycle_ticks, logger, swings));
     const check: AsBuiltStabilityCheck = {
         holds: result.stability_check.holds,
         actual_output_items: result.stability_check.actual_output_items,
@@ -1169,9 +1179,9 @@ export function runAsBuiltCheck(
             check.pickup_phase_starts_checked = (check.pickup_phase_starts_checked ?? 0) + 1;
             continue;
         }
-        const shifted = firstClockSpan(config, decider_windows, window_cycle_ticks, logger,
+        const shifted = withTickPurpose("start_phase", () => firstClockSpan(config, decider_windows, window_cycle_ticks, logger,
             {...swings, moving_pickup_phases: phases, factorio_states: false, ...(pickup_phase_cycles && {disturbance_trial:
-                {loss: {kind: "none"}, window_cycle_ticks, expected_output_items: result.stability_check.expected_output_items}})});
+                {loss: {kind: "none"}, window_cycle_ticks, expected_output_items: result.stability_check.expected_output_items}})}));
         check.pickup_phase_starts_checked = (check.pickup_phase_starts_checked ?? 0) + 1;
         const judged = overItsCycle(shifted);
         const amount = strict ? measuredAmountOf(judged) : null;
@@ -1212,13 +1222,17 @@ export function runAsBuiltCheck(
                 check.start_up_shortfall = passed.run.check.start_up_shortfall;
             }
         } else {
+            // for the maker log only: the timetable and the ledger of the run whose wakeups are counted, read and never changed
+            const for_log = makerLogOn() && stock_detail !== "hands" ? runOfOneCopyForLog(config, decider_windows, window_cycle_ticks) : undefined;
             // no long run when none is asked for (a quick trial of a search)
-            const long_run = long_run_ticks > 0 ? longRunOfFreeRunningBuild(config, decider_windows, window_cycle_ticks, result.stability_check.expected_output_items, logger, long_run_ticks, swings, stock_detail) : null;
+            const long_run = long_run_ticks > 0 ? longRunOfFreeRunningBuild(config, decider_windows, window_cycle_ticks, result.stability_check.expected_output_items, logger, long_run_ticks, swings, stock_detail,
+                for_log?.on_context) : null;
             stock = stock_detail === "hands" ? undefined : long_run?.stock;
             if (long_run && stock) {
                 // judged as the long run is: the proven cycle, or what follows the start-up of a sampled run
-                const counted = wakeUpsAndCountersOfStock(stock, config,
-                    long_run.proven ? long_run.first_judged_tick : Math.floor(stock.ticks / LONG_RUN_SETTLE_SHARE));
+                const from_tick = long_run.proven ? long_run.first_judged_tick : Math.floor(stock.ticks / LONG_RUN_SETTLE_SHARE);
+                const counted = wakeUpsAndCountersOfStock(stock, config, from_tick);
+                for_log?.keep(counted.wake_ups, stock, from_tick);
                 check.wake_ups = counted.wake_ups;
                 check.counters = counted.counters;
                 check.long_run_proven = long_run.proven;
@@ -1323,7 +1337,7 @@ function afterTheLongRun(
     }
 
     if (typeof process !== "undefined" && process.env?.CLOCK_PROOF_PHASES === "1") {
-        const exhaustive = exhaustiveStartPhases(config, decider_windows, window_cycle_ticks, logger, report, swings);
+        const exhaustive = withTickPurpose("start_phase", () => exhaustiveStartPhases(config, decider_windows, window_cycle_ticks, logger, report, swings));
         if (exhaustive !== null) {
             check.start_phases_checked = exhaustive.phases_checked;
             check.start_phases_proven = exhaustive.proven;
@@ -1350,7 +1364,8 @@ function afterTheLongRun(
     }
     for (const offset of start_shifts) {
         // only its output count is read
-        const shifted = firstClockSpan(config, decider_windows, window_cycle_ticks, logger, { ...swings, factorio_states: false, main_clock_shift: offset });
+        const shifted = withTickPurpose("start_phase", () =>
+            firstClockSpan(config, decider_windows, window_cycle_ticks, logger, { ...swings, factorio_states: false, main_clock_shift: offset }));
         check.start_phases_checked++;
         report?.(check.start_phases_checked, total);
         const amount = strict ? measuredAmountOf(shifted.stability_check) : null;
@@ -1441,14 +1456,16 @@ function heldUnderOtherTakerOrders(
     }
     check.taker_orders_checked = 1;
     check.competing_takers = competingTakersOf(config);
+    // the runs of an order, its long run too, are counted to the order
+    const underOrder = <T>(work: () => T): T => withTickPurpose("taker_order", work, { claim: true });
     for (const order of orders) {
         check.taker_orders_checked++;
-        const run = firstClockSpan(config, decider_windows, window_cycle_ticks, logger, { ...swings, factorio_states: false, competing_takers_order: order });
+        const run = underOrder(() => firstClockSpan(config, decider_windows, window_cycle_ticks, logger, { ...swings, factorio_states: false, competing_takers_order: order }));
         let failed: { actual_output_items: number; full_output_chests?: FullOutputChest[]; export_shortfalls?: ExportShortfall[];
             repeat_window_cycles?: number; repeat_output_items?: number } | null = run.stability_check.holds ? null : run.stability_check;
         let amount: ReturnType<typeof measuredAmountOf> | null = null;
         if (failed === null && long_run_ticks > 0) {
-            const long_run = longRunOfFreeRunningBuild(config, decider_windows, window_cycle_ticks, expected_output_items, logger, long_run_ticks, { ...swings, competing_takers_order: order }, "hands");
+            const long_run = underOrder(() => longRunOfFreeRunningBuild(config, decider_windows, window_cycle_ticks, expected_output_items, logger, long_run_ticks, { ...swings, competing_takers_order: order }, "hands"));
             if (long_run !== null && !long_run.keeps_up) {
                 failed = { actual_output_items: long_run.output_items_per_window_cycle, full_output_chests: long_run.full_output_chests, export_shortfalls: long_run.export_shortfalls };
                 if (long_run.target_production !== undefined) {
@@ -1775,6 +1792,25 @@ export function buildAsBuiltConfig(
 }
 
 /**
+ * Where the window decider of each inserter and drill stands in the order a run of the clock's windows on `config` builds them
+ * (`buildAsBuiltConfig`, the blueprint's order), by entity key; an entity with no decider is left out
+ */
+export function deciderBuildOrderOf(config: Config, windows: Map<string, OpenRange[]>, window_cycle_ticks: number): Record<string, number> {
+    const built = buildAsBuiltConfig(config, windows, window_cycle_ticks);
+    const placeOf = (control: EnableControlOverrideConfig | undefined) => control !== undefined && "decider_build_order" in control ? control.decider_build_order : undefined;
+    const order: Record<string, number> = {};
+    built.inserters.forEach((inserter, index) => {
+        const place = placeOf(inserter.overrides?.enable_control);
+        if (place !== undefined) order[EntityId.forInserter(inserter.id ?? index + 1).id] = place;
+    });
+    for (const drill of built.drills?.configs ?? []) {
+        const place = placeOf(drill.overrides?.enable_control);
+        if (place !== undefined) order[EntityId.forDrill(drill.id).id] = place;
+    }
+    return order;
+}
+
+/**
  * Tries a clock from every start of CLOCK_STARTS (see `startDependenceOf`). Null when the runs cannot be made on it,
  * which is logged. The config is the one the clock was planned on.
  */
@@ -1824,7 +1860,7 @@ export function disturbanceTrialVerdictOf(
         // a clock whose key cannot be made is tried as before, and fails in the trial if it cannot be tried
     }
     // A previously unavailable legacy trial is not a completed strict assessment.
-    const assess = () => timedCheck("loss_trials_one_copy", () => triedDisturbanceTrial(planned_on, result, logger, report, errors));
+    const assess = () => timedCheck("loss_trials_one_copy", () => withTickPurpose("trial_one_copy", () => triedDisturbanceTrial(planned_on, result, logger, report, errors), { claim: true }));
     const assessed = memo === undefined || key === undefined ? assess() : memo.disturbanceTrial(key, assess);
     return errors === "throw" && assessed.disturbance_trial === null ? assess() : assessed;
 }
@@ -2021,8 +2057,10 @@ function withoutOutputReason(check: AsBuiltStabilityCheck | undefined): AsBuiltS
 }
 
 /**
- * What the trials of a loss are a function of: the config the clock is verified on, its windows and window cycle, and the items it
- * is expected to move a window cycle. The trials run on nothing else, so two clocks with this key have the same verdict. The cycles
+ * What the trials of a loss on one copy are a function of: which trials they are (those of one copy, apart from those on the copies:
+ * `copiesTrialKey`), the config the clock is verified on, its windows and window cycle, and the items it is expected to move a window
+ * cycle. The trials run on nothing else, so two clocks with this key have the same verdict. The config is the one built as the
+ * blueprint builds the clock (`buildAsBuiltConfig`), so it holds the order its window deciders are built in. The cycles
  * of the clock (`overrides.lcm`) are left out where they set nothing: they set the window cycle of a run that is not given one, which
  * a whole window cycle is, and the clocks of the inserters outside the plan, which a build without any has none of.
  */
@@ -2034,6 +2072,6 @@ export function disturbanceTrialKey(planned_on: Config, result: BlueprintGenerat
     const config = cycles_set_nothing ? { ...verification_config, overrides: { ...verification_config.overrides, lcm: undefined } } : verification_config;
     // the excess trial is of the margins: two clocks of the same windows are tried alike only with the same one
     const excess = result.random_margins === undefined ? null : excessLossOf(result.random_margins.crafting);
-    return canonicalVerificationJson({ config, fractional_swings, window_cycle_ticks, windows: result.clock_windows, expected_output: result.stability_check.expected_output_items,
+    return canonicalVerificationJson({ trial: "one_copy", config, fractional_swings, window_cycle_ticks, windows: result.clock_windows, expected_output: result.stability_check.expected_output_items,
         ...(excess !== null && { excess }) });
 }

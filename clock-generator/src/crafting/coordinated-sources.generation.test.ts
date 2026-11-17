@@ -7,6 +7,10 @@ import { combineClockAlternativeRuns } from "./rank";
 import { coordinatedSourcesInputOf, type CoordinatedSourcesInput, type CoordinatedSourcesPart } from "./candidates/coordinated-sources-parts";
 import type { NotMadeClock } from "./why-not-stable";
 import { quiet } from "./generate-blueprint-test-helpers";
+import { currentRunMemo, withRunMemo } from "./plan/run-memo";
+import { disturbanceTrialKey } from "./trial";
+import type { MakerLogEvent, MakerReason } from "./maker-log";
+import { generateClockAlternatives } from "./generate-blueprint";
 
 const options = { logger: quiet };
 /** The strategy of a part that is not a listed clock, as the input gives a way of the grouped hands construction */
@@ -36,6 +40,61 @@ function composed(config: Config, input: CoordinatedSourcesInput, signatures: re
     return { run, not_made };
 }
 
+// ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED: the recycler's inserters are outside the plan, and the recommended clock is planned on
+// cycles of its own (`overrides.lcm`), which set their clocks
+describe("the per-branch clock of a build with inserters outside the shared plan", () => {
+    it("is tried on one copy under one key by the maker and the listing: the listing's trials of the clock made are the maker's", async () => {
+        const made = await inputOf("ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED");
+        const recommended = made.input.parts.find(part => part.alternative_id === made.input.recommended_id)!;
+        expect(recommended.plan?.lcm).toBeDefined();
+        let hits = 0;
+        const { run } = withRunMemo(() => {
+            const composed_here = composed(made.config, made.input, made.signatures);
+            hits = currentRunMemo()!.loss_hits;
+            return composed_here;
+        });
+        expect(run?.alternatives.map(it => it.id)).toEqual(["coordinated_sources"]);
+        // the maker tried every composition once and the listing asked again for the one it lists
+        expect(hits).toBe(1);
+        // on the plan's config, with its cycles, the key of the clock made is another
+        const clock = run!.alternatives[0].result;
+        const on_plan = { ...made.config, overrides: { ...made.config.overrides, lcm: recommended.plan!.lcm } };
+        expect(disturbanceTrialKey(on_plan, clock)).not.toBe(disturbanceTrialKey(made.config, clock));
+    });
+});
+
+// AUTOMATION_SCIENCE_240: on one copy the local choice ends on a clock of 0 wakeups a minute, whose copies lose swings on the lanes they
+// share; with the copies it ends on another clock, which holds with them
+describe("the per-branch clock of the automation science build", () => {
+    it("is never the clock of 0 wakeups that loses swings with the copies, but the one that holds with them", async () => {
+        const events: MakerLogEvent[] = [];
+        const generated = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240),
+            { logger: quiet, maker_log: event => { events.push(event); } });
+        const compositions = events.filter(event => event.event === "composition");
+        // the local choice on one copy ends on the clock of 0 wakeups; with the copies it is dropped, and never made
+        const zero = compositions.filter(event => event.wake_ups === 0);
+        expect(zero.map(event => [event.outcome, (event.reason as MakerReason | null)?.code ?? null])).toContainEqual(["dropped", "does_not_hold_with_copies"]);
+        expect(zero.filter(event => event.outcome === "listed")).toEqual([]);
+        const selected = generated.alternatives[generated.selected_index];
+        expect([selected.id, selected.verdict]).toEqual(["coordinated_sources", "stable"]);
+        expect(selected.ranking.wake_ups_per_minute).toBeCloseTo(70.065, 3);
+        expect(selected.result.coordinated_sources!.parts).toEqual({ "belt:1": "takt_batches_observed_swings_2", "machine:1": "euclidean_swings" });
+    });
+});
+
+// ELECTROMAGNETIC_SCIENCE_330: the local choice keeps the recommended clock, which the maker judges with the copies before it refuses
+describe("the per-branch clock of a build where the local choice keeps the recommended clock", () => {
+    it("judges the recommended clock with the copies under the listing's keys: the listing's judgement is a hit", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE_330);
+        const hits = withRunMemo(() => {
+            generateClockAlternatives(config, { logger: quiet });
+            const memo = currentRunMemo()!;
+            return [memo.shared_lane_check_hits, memo.copies_trial_hits];
+        });
+        expect(hits).toEqual([1, 1]);
+    });
+});
+
 // MILITARY_SCIENCE_240: the per-branch clock is made from the clocks before it and listed
 describe("the per-branch clock of the military science build", () => {
     let made: Awaited<ReturnType<typeof inputOf>>;
@@ -49,6 +108,18 @@ describe("the per-branch clock of the military science build", () => {
         const { run, not_made } = composed(made.config, made.input, made.signatures);
         expect(run?.alternatives.map(it => it.id)).toEqual(["coordinated_sources"]);
         expect(not_made).toEqual([]);
+    });
+
+    it("is judged with the copies once: the listing's judgement of the clock made is the maker's", () => {
+        let hits: number[] = [];
+        const { run } = withRunMemo(() => {
+            const composed_here = composed(made.config, made.input, made.signatures);
+            const memo = currentRunMemo()!;
+            hits = [memo.shared_lane_check_hits, memo.copies_trial_hits];
+            return composed_here;
+        });
+        expect(run?.alternatives.map(it => it.id)).toEqual(["coordinated_sources"]);
+        expect(hits).toEqual([1, 1]);
     });
 
     it("is in not_made where it is the same clock as one made before it", () => {

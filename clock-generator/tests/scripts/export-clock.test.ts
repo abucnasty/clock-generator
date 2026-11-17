@@ -89,8 +89,9 @@ describe('export-clock.js on automation science', () => {
         expect(at.size).toBe(config.inserters.length);
     });
 
+    // The refusal does not depend on the build, so it is tested on a small one: a second generation of automation science would be slow.
     it('refuses an alternative the generator does not have, and says which there are', () => {
-        const refused = spawnSync('node', [script('export-clock.js'), 'AUTOMATION_SCIENCE_240', `--out=${path.join(out, 'refused')}`, '--alternative=nothing', '--no-cells'], { cwd: root, encoding: 'utf-8' });
+        const refused = spawnSync('node', [script('export-clock.js'), 'STONE_BRICK_120_DRILL_DIRECT_INSERT', `--out=${path.join(out, 'refused')}`, '--alternative=nothing', '--no-cells'], { cwd: root, encoding: 'utf-8' });
         expect(refused.status).toBe(1);
         expect(String(refused.stderr)).toContain('No potential clock nothing');
         expect(read(out, 'refused', 'error.json').error).toContain('takt_batches_observed_swings_2');

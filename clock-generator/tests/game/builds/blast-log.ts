@@ -1,5 +1,5 @@
 // The maker log of a blast job, written beside the blast's output (scripts/blast/MAKER-LOG.md): one JSON line an event, one file
-// a job, `<out>/maker-log/<job>.jsonl`. Off unless BLAST_LOG=1 (`blast.sh run --log`). Used by scripts/blast/blast.blastrun.ts, which
+// a job, `<out>/maker-log/<job>.jsonl`. Off unless BLAST_LOG=1 (`blast.sh run --log`); its repeat check off unless BLAST_REPEAT_CHECK=1 too. Used by scripts/blast/blast.blastrun.ts, which
 // finds this file beside the builds' tests, and by the tests of the log. The record never holds it: nothing here reaches a job file.
 import fs from 'fs'; import path from 'path';
 import { MAKER_LOG_EVENTS, type MakerLogEvent, type MakerLogSink } from '../../../src/crafting/maker-log';
@@ -9,6 +9,11 @@ export function makerLogSwitchedOn(env: Record<string, string | undefined>): boo
     return env.BLAST_LOG === '1';
 }
 
+/** Whether the maker log also holds the repeat check of each listed clock: the switch of `blast.sh run --repeat-check`, with the log on */
+export function repeatCheckSwitchedOn(env: Record<string, string | undefined>): boolean {
+    return makerLogSwitchedOn(env) && env.BLAST_REPEAT_CHECK === '1';
+}
+
 /** The folder of the logs in a blast's output */
 export function makerLogFolder(out: string): string {
     return path.join(out, 'maker-log');
@@ -16,13 +21,14 @@ export function makerLogFolder(out: string): string {
 
 /**
  * Runs a job's generation with a sink for the maker log and writes the job's log when it returns; where the switch is off the generation
- * is given no sink and nothing is written, not even the folder. A generation that throws writes no log.
+ * is given no sink and nothing is written, not even the folder. A generation that throws writes no log. `repeat_check` says whether
+ * the generation is asked for the repeat check (`repeatCheckSwitchedOn`).
  */
 export function generatedWithMakerLog<T>(env: Record<string, string | undefined>, out: string, job: { key: string; group: string; name: string },
-    generate: (sink: MakerLogSink | undefined) => T): T {
-    if (!makerLogSwitchedOn(env)) return generate(undefined);
+    generate: (sink: MakerLogSink | undefined, repeat_check: boolean) => T): T {
+    if (!makerLogSwitchedOn(env)) return generate(undefined, false);
     const events: MakerLogEvent[] = [];
-    const generated = generate(event => { events.push(event); });
+    const generated = generate(event => { events.push(event); }, repeatCheckSwitchedOn(env));
     writeMakerLog(out, job, events);
     return generated;
 }

@@ -7,7 +7,7 @@ different clock on another. Identical verification results should be shared with
 ## Purpose and removal audit
 
 The October 2026 audit retains the scheduling strategies tested so far and identifies one redundant construction:
-the backed-up-belt clock when no inserter picks from a belt. An early guard now skips that construction.
+the clock for belts with backpressure when no inserter picks from a belt. Both belt-mode clocks, that one and the moving-belt clock, have since been removed (below).
 Removal trials confirm current benefits from the other tested strategies, including default fallback cases.
 Game recordings establish behavior for their recorded fixtures, not every possible build.
 
@@ -22,8 +22,8 @@ Game recordings establish behavior for their recorded fixtures, not every possib
 | Shifted swings | Moves a whole input/output round within machine inventory limits. The October 2026 removal trial finds uniquely better-ranked clocks for Flying Robot Frame, Chemical Science and a backed-up Utility variant. | Keep as a deferred search; removal worsens supported results. |
 | Uneven output swings | Moves an output swing and observes new input windows. The October 2026 removal trial finds a uniquely better-ranked moving-supply Utility clock. Historical [belted Utility findings](../resources/config-samples/README.md) recorded 96 items in each of 107 window cycles, with five windows instead of seven at the same wakeup rate. | Keep as a deferred search; removal worsens a default fallback result. |
 | Shared windows | The windows of the grouped hands rule with the takers that open on the same tick sharing one, the longest any of them needs, so that they share one decider combinator ([stability](stability.md), item 10). Not made for the other output swing counts or fractional swings since 0.26.0 (on no sample or fixture was theirs selected). Listed beside the separate clock only where it holds from every start, passes the margin of a tick either way and gets back from every disturbance trial. [Military Science](../src/crafting/shared-windows.generation.test.ts) selects it (4 deciders) where the separate windows have no recovery; the productivity module chain lists it at 6 deciders and 1,254.4 wakeups a minute against 12 and 575.6. | Keep; ranked as any other clock (stable first, then the fewest wakeups). |
-| Backed-up clock | Models a different input supply condition and is ranked against the user's belt choice. With no belt-pickup inserters it rebuilds an exact primary duplicate. | Skip construction only when no inserter takes from a belt; retain it for belt-fed builds. |
-| Moving-belt clock | On a config whose belts are backed up: the build planned with the belts moving, belt slack on its belt windows, and the clock-only check, swing backoff and disturbance trials on the config's backed-up belts, where it holds by its own check. A last resort, made after the searches only when no other clock can be selected as stable. #275: the normal backed-up side underground entrance and exit and front exit refill slower than a stack a tick, every clock planned for backed-up belts misses (natively too), and this one holds 176 a window cycle in the game with exact recovery. | Keep as a fallback; it costs time only on builds with no stable clock. |
+
+The clock for belts with backpressure and the moving-belt clock are no longer made. The moving-belt fallback was removed in 0.25.0, and the ticks that were added to belt pickup windows as an option and the ranking of clocks against a belt choice in 0.29.0: a clock is made once for the build, each input lane's end (a dead end or not) sets its supply condition, and no clock is ranked against a belt choice. In October 2026 (#275) the normal underground entrance, underground exit and front exit with backpressure refilled slower than a stack a tick: every clock planned for belts with backpressure missed there, in the game too, and the clock that held 176 a window cycle in the game with exact recovery was the moving-belt fallback.
 
 Removed in 0.26.0, because switching each off moved no recommended clock on any blast job or backed-up sample (the removal trial of October 2026, run over every sample and fixture as built and with backed-up belts) and saved 5,571 of 74,499 simulated builds: All results at once (a second clock of rare results; results in turn stays), the rounded form of a clock that has a subtick clock (the rounded form stays where there is none), and the shared windows of the other output swing counts and of fractional swings (the batched swings' shared clock stays).
 
@@ -43,9 +43,9 @@ The trial transcripts and local benchmark tables behind this audit (#257) were n
 
 Coordinated Sources is the router that gives the inserters of each source the enable windows of another clock of the build
 (`src/crafting/candidates/coordinated-sources.ts`). A source is a machine, belt or chest that inserters take from. The generator makes
-it after every other clock, on the window cycle of the clock they recommend. It composes it from the stable clocks of the build and the
-ways of the grouped hands construction. Each of these is a part. A part's windows are repeated where its window cycle divides the shared
-one. A part whose window cycle does not divide it gives no windows.
+it after every other clock, on the window cycle of the clock they recommend. It composes it from the stable clocks of the build, the
+ways of the grouped hands construction, and the listed clocks that hold on one copy but are not stable. Each of these is a part. A
+part's windows are repeated where its window cycle divides the shared one. A part whose window cycle does not divide it gives no windows.
 
 The generator takes the windows of a part in one of two ways:
 
@@ -57,9 +57,15 @@ The generator takes the windows of a part in one of two ways:
   cannot. A source whose windows a part before it gave already is not tried again.
 
 This costs at most one more check up to the long run for each source of each part that fails as a whole. The generator then sets the
-sources one at a time, from the output upstream, and keeps the setting with the smallest number of wakeups for the full clock. A clock it
-makes is checked as every other clock: the clock-only check from every start, the long run, the margin of one tick, the lanes the copies
-share, and the disturbance trials on one copy and on the copies.
+sources one at a time, from the output upstream, and keeps the setting with the smallest number of wakeups for the full clock.
+
+The generator then checks that clock with every copy: the lanes the copies share, then the disturbance trials on the copies. Where it
+kept the recommended clock, it checks the recommended clock. These are the checks of the listing, made once for each clock. If the
+clock holds with the copies, the generator keeps that clock. If it does not, the
+generator sets the sources again from the same starts. This time, a setting must also hold with the copies. The generator does not take
+a setting or keep the current setting otherwise. So the clock it makes never loses swings on a shared lane. A clock it makes is also checked as every other clock:
+the clock-only check from every start, the long run, the margin of one tick, the lanes the copies share, and the disturbance trials on
+one copy and on the copies.
 
 Where it makes no clock, or makes a clock that is the same as a clock made before it, the result has an entry for Coordinated Sources in
 `not_made`. Its reason is why no clock was made (for example "the local choice keeps the recommended clock") or "Made, and the same clock

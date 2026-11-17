@@ -13,7 +13,7 @@ import type { OwnClock, WakeWindow, WakeWindowRow } from './wakeWindows';
 
 /** Glossary, "enable window" */
 const WAKE_WINDOW_DEFINITION = 'The ticks of the window cycle during which the clock switches an inserter or drill on. '
-    + 'Between its enable windows it is off, so the game has nothing to wake.';
+    + 'Between its enable windows it is off.';
 
 /** Glossary, "wakeup" */
 const WAKE_UP_DEFINITION = WAKEUP_DEFINITION;

@@ -75,6 +75,7 @@ import type { TurnGroup } from "../turn-groups";
 import type { SourceControl } from "../strategy-catalog";
 import { AlwaysOnReason, AlwaysOnReasons, alwaysOnReasonsOf, classifyEntities } from "../enable-control-router";
 import { RunMemo, currentRunMemo } from "./run-memo";
+import { beginShadow, countRunMemoHit, tickLedgerOn, withTickPurpose, type ShadowWatch } from "../tick-ledger";
 import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, completedAsBuiltCheck, laneHandRoomTrial, runAsBuiltCheck, runClockOnBuild, trialWithLoopWindows } from "../trial";
 
 export { SIMULATION_BUDGET_TICKS };
@@ -393,6 +394,11 @@ export interface GenerateClockOptions {
      */
     maker_log?: MakerLogSink;
     /**
+     * With `maker_log`: also run each listed clock that holds on one copy again on its windows narrowed to the ticks its run
+     * needed, and log whether the run repeats (maker-log.ts, `MakerLogOptions.repeat_check`). No result changes.
+     */
+    maker_log_repeat_check?: boolean;
+    /**
      * Make the clock with windows shared by the inserters that take into their machines at the same moment (see
      * roundRobinPollingClock), or not at all: it needs `verify_as_built`, and throws where no shared windows hold.
      */
@@ -648,7 +654,12 @@ export interface BuildRun extends PlannedOutputCycle, TransferPlan {
  */
 export function runBuild(config: Config, options: RunOptions): BuildRun {
     const memo = currentRunMemo();
-    return memo !== undefined && RunMemo.accepts(options) ? memo.run(config, options, () => simulateBuild(config, options)) : simulateBuild(config, options);
+    if (memo === undefined || !RunMemo.accepts(options)) return simulateBuild(config, options);
+    // a run the memo hands out again simulates no tick: the tick ledger counts it as a run asked and not made
+    const hits_before = memo.hits;
+    const run = memo.run(config, options, () => simulateBuild(config, options));
+    if (memo.hits > hits_before) countRunMemoHit();
+    return run;
 }
 
 function simulateBuild(config: Config, options: RunOptions): BuildRun {
@@ -689,10 +700,13 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
             ? { config_json: JSON.stringify(config), terminal_swing_count } : undefined);
     });
 
-    const warmup = warmUp(config, build, controlled, duration, warmup_window_cycle, debug, debug_steps, logger);
+    // the shadow of the tick ledger: only where a ledger is open; it reads the outputs and changes nothing
+    const shadow = tickLedgerOn() ? shadowOfOutputs(build, all_output_inserters, duration, warmup_window_cycle) : undefined;
+    const warmup = warmUp(config, build, controlled, duration, warmup_window_cycle, debug, debug_steps, logger, shadow);
     const repeat_window_cycles = warmup.repeat_window_cycles;
     const repeat_bin = options.detect_repeat === true && (options.simulate_window_cycles ?? 1) > 1 ? provenRepeatBin(config, duration.ticks) : null;
-    const simulated = simulate(build, controlled, all_output_inserters, duration, options, debug, debug_steps, logger, repeat_bin);
+    const simulated = simulate(build, controlled, all_output_inserters, duration, options, debug, debug_steps, logger, repeat_bin, shadow);
+    shadow?.finish();
     // the recorded run is over: what it recorded is sealed once, and the run, the memo and every result share that copy
     const state_transition_history = build.state_transition_history.seal(build.simulation_context.entity_registry, simulated.recorded_duration.ticks);
     const final_history = finalHistoryOf(build, output_cycle_plan, all_output_inserters, duration, logger);
@@ -1039,6 +1053,17 @@ interface RunWindowCycles {
     warmup_window_cycle: Duration;
 }
 
+/**
+ * The shadow of a run's warm-up (`tick-ledger.ts`): what each output inserter has dropped is read at the end of every whole window
+ * cycle of the warm-up and of the judged cycle, which is the first window cycle of the recorded run
+ */
+function shadowOfOutputs(build: RecordedBuild, all_output_inserters: InserterState[], duration: Duration, warmup_window_cycle: Duration): ShadowWatch | undefined {
+    const output_states = build.simulation_context.inserters
+        .map(it => it.inserter_state)
+        .filter(state => all_output_inserters.some(os => os.inserter.entity_id.id === state.entity_id.id));
+    return beginShadow(duration.ticks, Math.floor(warmup_window_cycle.ticks / duration.ticks), output_states.length, () => output_states.map(state => state.items_dropped));
+}
+
 /** The window cycle of the plan and the warmup, shortened where a long window cycle would take it past SIMULATION_BUDGET_TICKS */
 function runWindowCyclesOf(output_cycle_plan: OutputCyclePlan, recipe_lcm: number, options: RunOptions, logger: Logger,
     overLimit: (window_cycle_ticks: number) => ClockWindowCycleLimitError): RunWindowCycles {
@@ -1078,6 +1103,7 @@ function warmUp(
     debug: MutableDebugSettingsProvider,
     debug_steps: DebugSteps,
     logger: Logger,
+    shadow?: ShadowWatch,
 ): { repeat_window_cycles: number | undefined; ticks_run: number } {
     const { simulation_context } = build;
     const { resettable_registry } = controlled;
@@ -1089,7 +1115,7 @@ function warmUp(
         const warmup_step = new WarmupStep(simulation_context, warmup_window_cycle,
             isPurelyClocked(config, duration.ticks)
                 ? { window_cycle_ticks: duration.ticks, key: () => simulationStateKey(simulation_context) }
-                : undefined);
+                : undefined, shadow?.warm_up);
         warmup_step.execute();
         if (warmup_step.ticks_run < warmup_window_cycle.ticks) {
             logger.log(`Warm-up reached a repeating state after ${warmup_step.ticks_run} ticks`);
@@ -1163,6 +1189,8 @@ function simulate(
     logger: Logger,
     /** Bin at whose boundaries a repeated state repeats forever; the run stops early at a repeat (see detect_repeat) */
     repeat_bin: { ticks: number; window_cycles: number } | null = null,
+    /** The shadow of the warm-up, told what the recorded run's first window cycle gave */
+    shadow?: ShadowWatch,
 ): SimulatedRun {
     const { simulation_context, inventory_transfer_history, state_transition_history } = build;
     const { resettable_registry } = controlled;
@@ -1229,7 +1257,9 @@ function simulate(
         };
     }
     // the after-tick phase's recorders, in this order
-    const recorders: TickRecorder[] = [fuel_level_recorder, stock_recorder, timeline_recorder]
+    const first_tick_of_run = simulation_context.tick_provider.getCurrentTick();
+    const judged_recorder = shadow?.judged(() => simulation_context.tick_provider.getCurrentTick() - first_tick_of_run);
+    const recorders: TickRecorder[] = [fuel_level_recorder, stock_recorder, timeline_recorder, judged_recorder]
         .filter(recorder => recorder !== undefined);
     const simulate_step = new SimulateStep(simulation_context, recorded_duration, recorders, stop_early);
     withDebugFor(debug, debug_steps, RunnerStepType.SIMULATE, () => simulate_step.execute());
@@ -1513,9 +1543,9 @@ export interface UnclockedRun {
  */
 export function unclockedRun(config: Config, options: UnclockedRunOptions = {}): UnclockedRun {
     const logger = options.logger ?? defaultLogger;
-    const run = runBuild(config, { logger, debug: options.debug, debug_steps: options.debug_steps, factorio_states: options.factorio_states,
+    const run = withTickPurpose("planning", () => runBuild(config, { logger, debug: options.debug, debug_steps: options.debug_steps, factorio_states: options.factorio_states,
         ...(options.fractional_swings === true && { fractional_swings: true }),
-        ...(options.pickup_start !== undefined && { pickup_start: options.pickup_start }) });
+        ...(options.pickup_start !== undefined && { pickup_start: options.pickup_start }) }));
     // Throws LaneCapacityError if one unit asks a belt lane for more than it carries; after the run, so the planner's
     // own refusal of the target comes first
     assertLaneCapacity(config);
@@ -2426,11 +2456,11 @@ function fuelConsumptionView(
     let window_cycles = Math.min(Math.max(2, Math.ceil(FUEL_VIEW_HANDS * hand_lasts / window_cycle_ticks), Math.ceil(min_ticks / window_cycle_ticks)), max_window_cycles);
     while (true) {
         // the windows are run as they are: observing them again would return that run instead, without the fuel levels
-        const run = runClockOnBuild(
+        const run = withTickPurpose("fuel_view", () => runClockOnBuild(
             { ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, windows, window_cycle_ticks, logger,
             { ...swings, simulate_window_cycles: window_cycles, fuel_levels: true },
             on_these_fuel_clocks ? inserter_clocks : undefined,
-        );
+        ), { claim: true });
         const swung = run.serializable_transfer_history.entities
             .some(entity => fuel_inserter_ids.includes(entity.entity_id) && entity.transfers.length > 0);
         if (swung || window_cycles >= max_window_cycles) {

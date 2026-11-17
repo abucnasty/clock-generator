@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { INSTALL_COPY, firstLineOf, installSteps, wiringList, wiringRowKey, type InstallStep, type InstallStepId } from './installSteps';
+import { INSTALL_COPY, firstLineOf, installSteps, wiringList, wiringRowKey, type InstallStep, type InstallStepId, type WiringMoves } from './installSteps';
 
 type Input = Parameters<typeof installSteps>[0];
 const detailOf = (steps: InstallStep[], id: InstallStepId) => steps.find(it => it.id === id)?.detail ?? '';
@@ -37,8 +37,12 @@ describe('installSteps', () => {
 
     it.each<[string, Input, InstallStepId, string[]]>([
         ['says to use the first blueprint of a book', book, 'book', ['Use the first blueprint', 'the book opens on it']],
-        ['says how to wire a drill and set it to switch on', drillOnly, 'drills', ['(drill 1)', 'Anything > 0']],
+        ['says how to wire a drill and set it to switch on', drillOnly, 'drills', ['"1 drill"', 'Anything > 0']],
         ['says how to set an inserter to switch on', plain, 'enable', ['Anything > 0', 'Enable if']],
+        ['says what the combinator\'s lines hold: the count of inserters, then source, item and sink', plain, 'wire', [
+            'starts with a count of inserters, such as "2 inserters"',
+            'each inserter has a line of source, item and sink',
+        ]],
         ['names the clock lock among the parts to leave, and points the description to the list', plain, 'wire', [
             'the Clock lock and every combinator described "Part of the clock"',
             'The combinator\'s description names the same inserters; this list has all of it.',
@@ -74,10 +78,10 @@ describe('installSteps', () => {
 });
 
 describe('wiringList', () => {
-    const moves: Record<string, { items: string[]; route: string }> = {
-        'inserter:1': { items: ['iron-plate'], route: 'Belt 1 to Machine 1' },
+    const moves: Record<string, WiringMoves> = {
+        'inserter:1': { items: ['iron-plate'], route: 'Belt 1 to Machine 1', from: { label: 'Belt 1' }, to: { label: 'Machine 1', recipe: 'iron-gear-wheel' } },
         'inserter:2': { items: ['copper-cable'], route: 'Machine 2 to Machine 1' },
-        'drill:1': { items: ['stone'], route: 'into Machine 3' },
+        'drill:1': { items: ['stone'], route: 'into Machine 3', to: { label: 'Machine 3', recipe: 'rail' } },
     };
     const none = { items: [], route: '' };
     const movesOf = (id: string) => moves[id] ?? none;
@@ -88,14 +92,14 @@ describe('wiringList', () => {
     });
 
     it.each([
-        ['gives each inserter its item ids (shown as icons) and its ends, one entry each', { wiring: [[2, 1], [3]], drills: [] }, [
+        ['gives each inserter its item ids (shown as icons), its ends and the recipe of a machine, one entry each', { wiring: [[2, 1], [3]], drills: [] }, [
             [
-                { label: 'Inserter 1', items: ['iron-plate'], route: 'Belt 1 to Machine 1' },
+                { label: 'Inserter 1', items: ['iron-plate'], route: 'Belt 1 to Machine 1', from: { label: 'Belt 1' }, to: { label: 'Machine 1', recipe: 'iron-gear-wheel' } },
                 { label: 'Inserter 2', items: ['copper-cable'], route: 'Machine 2 to Machine 1' },
             ],
             [{ label: 'Inserter 3', items: [], route: '' }],
         ]],
-        ['gives a drill its item and where it mines into', { wiring: [], drills: [[1]] }, [[{ label: 'Drill 1', items: ['stone'], route: 'into Machine 3' }]]],
+        ['gives a drill its item and where it mines into', { wiring: [], drills: [[1]] }, [[{ label: 'Drill 1', items: ['stone'], route: 'into Machine 3', to: { label: 'Machine 3', recipe: 'rail' } }]]],
     ])('%s', (_, facts, entries) => {
         expect(wiringList(facts, movesOf).map(it => it.entries)).toEqual(entries);
     });

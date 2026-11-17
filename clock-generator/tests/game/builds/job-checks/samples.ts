@@ -22,9 +22,13 @@ const selectedOf = (generated: ClockAlternativesResult): ClockAlternative => gen
 const byMaker = (generated: ClockAlternativesResult, maker: string): ClockAlternative => generated.alternatives.find(alternative => alternative.maker === maker)!;
 const byLabel = (generated: ClockAlternativesResult, label: string): ClockAlternative => generated.alternatives.find(alternative => alternative.label === label)!;
 type Entities = ClockAlternative['result']['blueprint']['entities'];
+// the line of an inserter or a drill under a combinator's header: "Inserter 4: [entity=car] → [item=iron-ore] → machine 1 [recipe=iron-plate]"
+const ROUTE_LINE = /^(Inserters?|Drills?) \d+(, \d+)*: /;
+/** The header and the line of counts of a description, without the lines of each inserter between them */
+const headerAndCounts = (description: string | undefined) => (description ?? '').split('\n').filter(line => !ROUTE_LINE.test(line)).slice(0, 2);
 const deciderDescriptions = (alternative: ClockAlternative) => alternative.result.blueprint.entities
     .filter(entity => entity.name === 'decider-combinator')
-    .map(entity => (entity.player_description ?? '').split('\n').slice(0, 2));
+    .map(entity => headerAndCounts(entity.player_description));
 
 // The productivity module chain (PRODUCTIVITY_MODULE_80_CHEST_CHAIN) at 80 modules a second over 6 copies: nine machines with chests between them.
 // Windows made from the hands and the order of the chain hold in one cycle, so no search is run.
@@ -345,10 +349,13 @@ const grenade: JobCheck[] = [
                 [[1, 2], 'Group 1 of 2: takes its turn in ticks 1–44 of the 112-tick window cycle. Its combinators stand together, in the order of the turn.'],
                 [[7, 8], 'Group 2 of 2: takes its turn in ticks 57–100 of the 112-tick window cycle. Its combinators stand together, in the order of the turn.'],
             ]);
-            // after the lines that say what the combinator switches on and when, which stay the first two
-            for (const [entity] of groupLines) expect(lines(entity)[2]).toMatch(/^Group /);
-            expect(lines(tagged(blueprint.entities, 'inserters', [1, 2]))[0]).toBe('2 inserters, each [entity=assembling-machine-3] → [entity=turbo-transport-belt] [item=grenade] (1, 2)');
-            expect(lines(tagged(blueprint.entities, 'inserters', [1, 2]))[1]).toBe('1 swing each in 1 enable window per 112-tick window cycle: open 1');
+            // after the lines that say what the combinator switches on and when: the header, the line of each inserter, the counts
+            for (const [entity] of groupLines) expect(lines(entity).filter(line => !ROUTE_LINE.test(line))[2]).toMatch(/^Group /);
+            expect(lines(tagged(blueprint.entities, 'inserters', [1, 2])).slice(0, 3)).toEqual([
+                '2 inserters [item=grenade] (1, 2)',
+                'Inserters 1, 2: [entity=assembling-machine-3] → [item=grenade] → [entity=turbo-transport-belt]',
+                '1 swing each in 1 enable window per 112-tick window cycle: open 1',
+            ]);
         },
     },
     {
@@ -360,7 +367,7 @@ const grenade: JobCheck[] = [
             const [grouped, plain] = [selected.blueprint, flat.blueprint];
             expect(plain.entities.some(entity => (entity.player_description ?? '').includes('Group '))).toBe(false);
             expect(grouped.entities.map(entity => entity.position.x)).not.toEqual(plain.entities.map(entity => entity.position.x));
-            const withoutPlace = (entities: Entities) => entities.map(({ position, player_description, ...rest }) => ({ ...rest, first_lines: (player_description ?? '').split('\n').slice(0, 2) }));
+            const withoutPlace = (entities: Entities) => entities.map(({ position, player_description, ...rest }) => ({ ...rest, first_lines: headerAndCounts(player_description) }));
             expect(withoutPlace(grouped.entities)).toEqual(withoutPlace(plain.entities));
             expect(selected.schedule).toEqual(flat.schedule);
             // the same networks: every window combinator on the one network the filter's output makes, the lock on the same red network
@@ -379,7 +386,7 @@ const grenade: JobCheck[] = [
         name: 'every alternative says the lanes of the belt are exactly full, and the selected clock\'s hands fit between each other',
         run: ({ generated }) => {
             for (const alternative of generated.alternatives) {
-                expect(alternative.insights.find(it => it.id === 'lanes-exactly-full')?.title).toBe('Both lanes of the grenade belt are exactly full');
+                expect(alternative.insights.find(it => it.id === 'lanes-exactly-full')?.title).toBe('The grenade lane (lane 1 of belt 1) and the grenade lane (lane 2 of belt 1) are exactly full');
                 expect(alternative.insights.find(it => it.id === 'drop-spacing')).toBeDefined();
             }
             // the two inserters of a row start in the same tick: the 14 hands of a row land on 14 tiles of the belt's cycle of 14

@@ -13,7 +13,7 @@ import {GENERATED_ALTERNATIVE as LOGISTIC_ALTERNATIVE} from "./logistic-science-
 import {GENERATED_ALTERNATIVE as GRENADE_ALTERNATIVE, grenadeClockCases} from "./grenade-clock-fixtures";
 import {GENERATED_ALTERNATIVE as PRODUCTIVITY_ALTERNATIVE} from "./productivity-module-80-chest-chain-clock-fixtures";
 import {GENERATED_ALTERNATIVE as UTILITY_ALTERNATIVE} from "./utility-science-480-lds-foundry-chain-clock-fixtures";
-import {GENERATED_ALTERNATIVE as CIRCUIT_EXPORT_ALTERNATIVE, PROCESSING_UNIT_80_CIRCUIT_EXPORT_CASES} from "./processing-unit-80-circuit-export-clock-fixtures";
+import {PROCESSING_UNIT_80_CIRCUIT_EXPORT_CASES} from "./processing-unit-80-circuit-export-clock-fixtures";
 
 /**
  * Every game test that runs a generated clock compares what the game did with a recording, and the recording belongs to
@@ -211,8 +211,8 @@ const RECORD_LINKS: Record<string, RecordLink & {runs?: boolean}> = {
     // its game test records fractional swings, selected until #595 (batched swings with the slack inside its windows since)
     "logistic-science-240-direct-insert-clock-controls.json": {jobOf: config("LOGISTIC_SCIENCE_240_DIRECT_INSERT"), offered: ["generated-one-copy"]},
     "processing-unit-80-circuit-export-clock-controls.json": {
-        jobOf: name => name === "generated-backed-up" ? variant("PROCESSING_UNIT_80_CIRCUIT_EXPORT_BACKED_UP") : "config-PROCESSING_UNIT_80_CIRCUIT_EXPORT",
-        offered: ["generated-as-is", "generated-backed-up"]},
+        jobOf: name => name.endsWith("-backed-up") ? variant("PROCESSING_UNIT_80_CIRCUIT_EXPORT_BACKED_UP") : "config-PROCESSING_UNIT_80_CIRCUIT_EXPORT",
+        offered: ["per-hand-as-is", "per-hand-backed-up"]},
     "productivity-module-80-chest-chain-clock-controls.json": {jobOf: config("PRODUCTIVITY_MODULE_80_CHEST_CHAIN"), offered: ["generated-one-copy"]},
     "steel-plate-26-wagon-chest-clock-controls.json": {
         jobOf: name => name === "steel-wagon-iron-ore-out-of-period" ? variant("STEEL_PLATE_26_WAGON_CHEST_IRON_ORE_OUT_OF_PERIOD") : "config-STEEL_PLATE_26_WAGON_CHEST", runs: true,
@@ -235,7 +235,7 @@ const FIXTURE_ALTERNATIVES: Record<string, Record<string, string>> = {
     "grenade-clock-controls.json": Object.fromEntries(grenadeClockCases().filter(it => it.kind === "generated clock").map(it => [it.name, GRENADE_ALTERNATIVE])),
     "productivity-module-80-chest-chain-clock-controls.json": {"generated-one-copy": PRODUCTIVITY_ALTERNATIVE},
     "utility-science-480-lds-foundry-chain-clock-controls.json": {"generated-one-copy": UTILITY_ALTERNATIVE},
-    "processing-unit-80-circuit-export-clock-controls.json": Object.fromEntries(PROCESSING_UNIT_80_CIRCUIT_EXPORT_CASES.map(it => [it.name, CIRCUIT_EXPORT_ALTERNATIVE])),
+    "processing-unit-80-circuit-export-clock-controls.json": Object.fromEntries(PROCESSING_UNIT_80_CIRCUIT_EXPORT_CASES.map(it => [it.name, it.alternative])),
 };
 
 describe("the fixtures name the alternative their pin is of", () => {
