@@ -879,7 +879,7 @@
       "group": "inserter:1",
       "item": "grenade",
       "from": "machine:1",
-      "to": "belt:1/lane:1",
+      "to": "belt:1/lane:2",
       "from_lanes": [],
       "lands_in": "lane",
       "hand": {
@@ -934,7 +934,7 @@
       "group": "inserter:2",
       "item": "grenade",
       "from": "machine:2",
-      "to": "belt:1/lane:1",
+      "to": "belt:1/lane:2",
       "from_lanes": [],
       "lands_in": "lane",
       "hand": {

@@ -86,7 +86,7 @@
       "from_ports": [
         "machine:1"
       ],
-      "to": "belt:1/lane:1#grenade",
+      "to": "belt:1/lane:2#grenade",
       "lands_in": "lane",
       "hand": 16,
       "floor_cycle": 11,
@@ -106,7 +106,7 @@
       "from_ports": [
         "machine:2"
       ],
-      "to": "belt:1/lane:1#grenade",
+      "to": "belt:1/lane:2#grenade",
       "lands_in": "lane",
       "hand": 16,
       "floor_cycle": 11,
@@ -307,12 +307,12 @@
   ],
   "components": [],
   "order": [
-    "belt:1/lane:2#grenade",
     "machine:3",
     "drill:1",
     "machine:1",
     "drill:2",
     "machine:2",
+    "belt:1/lane:2#grenade",
     "drill:3",
     "machine:4",
     "drill:4",
@@ -338,10 +338,16 @@
         "at": "belt:1/lane:1#grenade",
         "item": "grenade",
         "edges": [
-          "inserter:1/grenade",
-          "inserter:2/grenade",
           "inserter:7/grenade",
           "inserter:8/grenade"
+        ]
+      },
+      {
+        "at": "belt:1/lane:2#grenade",
+        "item": "grenade",
+        "edges": [
+          "inserter:1/grenade",
+          "inserter:2/grenade"
         ]
       }
     ],
