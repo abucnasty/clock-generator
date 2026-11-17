@@ -14,6 +14,9 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 ### Changed
 - generation: Coordinated Sources now checks its clock with every copy while it chooses
 
+### Fixed
+- generation: the start dependence check now runs its ascending and random inserter orders
+
 ## [0.29.2] - 2026-11-16
 
 ### Fixed

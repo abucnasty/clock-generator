@@ -293,3 +293,37 @@ describe.each(ORDERS)("a traced run with the takers $taker_order", ({ taker_orde
         }
     });
 });
+
+describe("the takers of one machine in a tick where both take", () => {
+    /** The update list a run of the build starts with, and the items each of the takers 2 and 3 has picked up after each tick */
+    function takes(taker_order?: TakerOrder): { list: string[]; picked: [number, number][] } {
+        const context = SimulationContext.fromConfig(BUILD);
+        if (taker_order !== undefined) context.competing_takers_order = taker_order;
+        const list = context.inserterScheduling().state().active_order.slice();
+        const takers = [2, 3].map(id => context.inserters.find(it => it.inserter_state.entity_id.number === id)!);
+        const picked: [number, number][] = [];
+        new SimulateStep(context, Duration.ofTicks(TICKS),
+            [{ record() { picked.push([takers[0].inserter_state.items_picked_up, takers[1].inserter_state.items_picked_up]); } }],
+        ).execute();
+        return { list, picked };
+    }
+
+    it("starts the update list as today for the default order: the highest config id first", () => {
+        expect(takes().list).toEqual(["inserter:3", "inserter:2", "inserter:1"]);
+        expect(takes("descending")).toEqual(takes());
+    });
+
+    it("starts the update list with the takers in the declared order, each ahead of the inserter that feeds their machine", () => {
+        expect(takes("ascending").list).toEqual(["inserter:2", "inserter:3", "inserter:1"]);
+    });
+
+    it("lets the taker the declared order puts first take first, so the runs of the two orders part", () => {
+        const descending = takes("descending").picked;
+        const ascending = takes("ascending").picked;
+        const at = descending.findIndex((counts, tick) => counts[0] !== ascending[tick][0] || counts[1] !== ascending[tick][1]);
+        expect(at).toBeGreaterThanOrEqual(0);
+        // in the first tick the runs part, the taker served first has taken more than it has under the other order
+        expect(descending[at][1]).toBeGreaterThan(ascending[at][1]);
+        expect(ascending[at][0]).toBeGreaterThan(descending[at][0]);
+    });
+});

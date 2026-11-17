@@ -83,8 +83,9 @@ function rankedMembers<T>(members: readonly T[], number_of: (member: T) => numbe
  * first of them takes up to its hand and the next what is left (see TakerOrder). Every inserter that takes from a
  * machine stays ahead of the inserters that put into it, as the list has them (`orderInsertersDownstreamFirst`): a taker
  * served late among its competitors does not move an inserter of its own sink's feeders ahead of that sink's takers,
- * which the rule for windows that open together needs (`Hand.wokenThisTick`). The phase table's inserters phase runs them
- * in this order (simulation/tick-phases.ts).
+ * which the rule for windows that open together needs (`Hand.wokenThisTick`). The phase table's inserters phase runs their
+ * tick observers and Wakes in this order (simulation/tick-phases.ts); the update list starts with the takers of one
+ * machine in it (`withTakersInOrderOf`).
  */
 export function inserterUpdateOrder(
     inserters: readonly InserterArchetype[],
@@ -115,6 +116,27 @@ export function inserterUpdateOrder(
         groups.push({ places, ranked });
     }
     return groups.length === 0 ? list : orderWith(list, groups);
+}
+
+/**
+ * The list with the inserters that take from one machine put among their places in the order `ordered` has them (an
+ * `inserterUpdateOrder`), every other inserter where it is: the update list a build of the same design in another order
+ * starts with (SimulationContext.inserterScheduling). Where `ordered` has each machine's takers in the list's order, the
+ * list comes back as it is.
+ */
+export function withTakersInOrderOf(list: readonly InserterArchetype[], ordered: readonly InserterArchetype[]): InserterArchetype[] {
+    const rank = new Map(ordered.map((it, index) => [it, index] as const));
+    const places_by_machine = new Map<string, number[]>();
+    list.forEach((it, place) => {
+        const source = it.inserter_state.inserter.source.entity_id;
+        if (source.type === "machine") places_by_machine.set(source.id, [...(places_by_machine.get(source.id) ?? []), place]);
+    });
+    const result = [...list];
+    for (const places of places_by_machine.values()) {
+        const members = places.map(place => list[place]).sort((a, b) => rank.get(a)! - rank.get(b)!);
+        places.forEach((place, index) => { result[place] = members[index]; });
+    }
+    return result;
 }
 
 /**
