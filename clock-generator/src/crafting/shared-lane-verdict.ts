@@ -86,6 +86,9 @@ import { longRunWindowCyclesOf, runClockOnBuild } from "./trial";
  * entity the loss names further behind by more than one craft or hand, the loss says that its join is full
  * (`join_full`), not that the lane gives it too few items; else it names the lane, and gives the held hands beside it
  * (`side_belt_waits`).
+ *
+ * A build that states its output belt and shares no lane the model runs is run on its output belt alone
+ * (`judgedOnOutputBelt`): with no taker, a copy's output inserter behind its target there, by the output belt, is the loss.
  */
 
 /** What one taker of one copy put down of a lane's item in a run of the copies on their shared lanes */
@@ -294,6 +297,15 @@ export interface SharedLaneLoss {
      * behind by more than one craft or hand than in the same run with each output inserter on a tile of its own.
      */
     join_full?: JoinFull;
+    /**
+     * Where the copies share no lane the check runs and the config states its output belt (`judgedOnOutputBelt`): the loss
+     * is that of the copy's output inserters on the output belt, not of a taker. `inserter_id` is its output inserter furthest
+     * behind; `belt_id` the belt it drops onto, and `lane` the first lane of it with the target's item; `items` and `swings`
+     * its output inserters' over the judged window cycles, against the run with each on a tile of its own (`alone_items`,
+     * `alone_swings`); `join_full` the swings of its output inserters, those that waited for room on the output belt, and
+     * those their target needs.
+     */
+    on_output_belt?: true;
     /** The hands the copy's side belt held where the output belt is not the cause: a fact beside the lane's shortfall */
     side_belt_waits?: JoinFull;
     /** The sentence the result shows */
@@ -640,6 +652,14 @@ function missedSwings(loss: Omit<SharedLaneLoss, "text">, item: string): string 
  * `build`, the config's). One fact a sentence; the game's names of items have no plural.
  */
 export function describeSharedLaneLoss(loss: Omit<SharedLaneLoss, "text">, build: BuildToName = NO_BUILD): string {
+    if (loss.join_full !== undefined && loss.on_output_belt === true) {
+        // the output inserters of a copy together, in line on the output belt or on side belts: no taker, no entry
+        const { held_hands, hands, target_swings } = loss.join_full;
+        const missed = target_swings === undefined || target_swings <= hands ? ""
+            : ` They miss ${counted(target_swings - hands)} of the ${counted(target_swings)} swings their target needs.`;
+        return `The output belt has no room where the output inserters of ${loss.copies > 1 ? `copy ${loss.copy}` : "the build"} drop. `
+            + `They wait for room in ${counted(held_hands)} of their ${counted(hands)} swings in ${loss.window_cycles} window cycles.${missed}`;
+    }
     if (loss.join_full !== undefined) {
         const { held_hands, hands, target_swings } = loss.join_full;
         const missed = target_swings === undefined || target_swings <= hands ? ""
@@ -870,6 +890,90 @@ function withoutOutputBelt(config: Config): Config {
     return without;
 }
 
+/**
+ * One run of the copies with no lane in it, read over the whole window cycles of the second half of the run: every copy of
+ * `layout` built, each output inserter putting its stacks onto the output belt where `config` states it, else on a tile of
+ * its own; what each copy's machines and output inserters made, and its hands on the output belt
+ */
+function outputBeltRunOf(config: Config, layout: SharedLaneLayout, windows: Map<string, OpenRange[]>, window_cycle_ticks: number, window_cycles: number,
+    logger: Logger, ends: OutputEnds | null): RunOfCopies {
+    let madeOf = (): CopyMade[] => [];
+    let last_tick = 0;
+    const model = runOnSharedLanes(config, windows, window_cycle_ticks, layout, window_cycles, logger, context => {
+        madeOf = recordCopiesMade(context, ends);
+        const now = () => context.tick_provider.getCurrentTick();
+        context.after_inserters.push({ tick() { last_tick = now(); } });
+    });
+    const first_cycle = Math.ceil(last_tick / 2 / window_cycle_ticks), end_cycle = Math.floor((last_tick + 1) / window_cycle_ticks + 1e-9);
+    const from = cycleStart(first_cycle, window_cycle_ticks), to = cycleStart(end_cycle, window_cycle_ticks);
+    const output_belt = model.output_belt;
+    return { shortfalls: [], made: madeOf(), from, to, window_cycles: Math.max(0, end_cycle - first_cycle), holds: layout.copies.later,
+        ...(output_belt !== undefined && { join_full: joinFullOf(output_belt, from, to), join_waits: joinWaitsOf(output_belt, from, to),
+            output_swings: outputSwingsOf(output_belt, first_cycle, end_cycle, window_cycle_ticks) }) };
+}
+
+/** Items of the target's item that copy `copy`'s output inserters put down over the judged window cycles of `run` */
+function outputItemsOf(run: RunOfCopies, copy: number): number {
+    return run.made.filter(it => it.copy + 1 === copy && it.kind === "output_inserter")
+        .reduce((sum, { counts }) => counts.reduce((of, it) => it.tick >= run.from && it.tick < run.to ? of + it.amount : of, sum), 0);
+}
+
+/**
+ * Judges a clock on the output belt alone, for a build that states its output belt and whose copies share no lane the check
+ * runs (`modelLanesOf` is empty). One run holds every copy, each output inserter putting its stacks onto the output belt
+ * (output-belt-run.ts). A copy's output inserter that is behind its target rate there by more than one hand
+ * (`behindTargetIn`) is a loss where the output belt is the cause: the same run with each output inserter on a tile of its
+ * own, made only then, has it behind by more than one hand less (`joinIsTheCause`). The loss is one for each copy, named by its
+ * output inserter furthest behind, with the swings of the copy's output inserters and those that waited for room
+ * (`join_full`). A build of a part copy is not run: the layout of a part copy comes from the lanes it shares.
+ */
+function judgedOnOutputBelt(config: Config, clock_windows: SerializableClockWindows, window_cycle_ticks: number, logger: Logger): SharedLaneJudgement {
+    const copies = config.setpoint.copies;
+    if (!Number.isInteger(copies)) throw new Error(`the copies share no lane, and the output belt is not run with a part copy (${copies} copies)`);
+    const build = buildToNameOf(config);
+    const windows = new Map(Object.entries(clock_windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
+    const window_cycles = longRunWindowCyclesOf(window_cycle_ticks);
+    const ends = outputEndsOf(config);
+    const rates = ends === null ? null : targetRatesOf(config, ends);
+    if (ends === null || rates === null) throw new Error("the target rates of the output inserters cannot be worked out, so the output belt cannot be judged");
+    const layout: SharedLaneLayout = { rows: [], copies: { later: Array.from({ length: copies - 1 }, () => "whole" as const) } };
+    const run = outputBeltRunOf(config, layout, windows, window_cycle_ticks, window_cycles, logger, ends);
+    // each copy's output inserter furthest behind its target
+    const furthest = new Map<number, BehindTarget>();
+    for (const behind of behindTargetIn(run, rates)) if (behind.kind === "output_inserter" && !furthest.has(behind.copy)) furthest.set(behind.copy, behind);
+    let reference: RunOfCopies | undefined;
+    const found = [...furthest.values()].flatMap(behind => {
+        reference ??= outputBeltRunOf(withoutOutputBelt(config), layout, windows, window_cycle_ticks, window_cycles, logger, ends);
+        if (!joinIsTheCause(behind, reference, rates)) return [];
+        const index = config.inserters.findIndex((inserter, at) => (inserter.id ?? at + 1) === behind.id);
+        const sink = config.inserters[index].sink;
+        const belt = config.belts.find(it => sink.type === "belt" && it.id === sink.id) ?? config.belts.find(it => it.lanes.some(lane => lane.ingredient === ends.item))!;
+        const lane = (belt.lanes.findIndex(it => it.ingredient === ends.item) + 1 || 1) as 1 | 2;
+        const hand = rates.output_inserters.get(behind.id)!.hand;
+        // the two runs can end at other ticks (a run stops once its state repeats): the run on tiles of their own over the
+        // span of the run on the output belt, at its rate
+        const span = (it: RunOfCopies) => it.to - it.from;
+        const items = outputItemsOf(run, behind.copy);
+        const alone_items = span(reference) > 0 ? Math.round(outputItemsOf(reference, behind.copy) / span(reference) * span(run)) : 0;
+        const swings = Math.round(items / hand);
+        const target_swings = targetSwingsOf(run, rates, behind.copy);
+        const made = run.output_swings?.get(behind.copy);
+        const gives = targetSwingsInCycleOf(run, rates, behind.copy, window_cycle_ticks);
+        const loss: Omit<SharedLaneLoss, "text"> = { belt_id: belt.id, lane, lane_end: "infinite", run_as: "infinite", item: ends.item, copies, copy: behind.copy,
+            inserter_id: behind.id, items, alone_items, swings, alone_swings: Math.round(alone_items / hand), short_swings: 0,
+            window_cycles: run.window_cycles, flow: { x: 0, y: 0 }, behind, on_output_belt: true,
+            // the swings of all the copy's output inserters, of which those its side belts or drop tiles held
+            join_full: { held_hands: run.join_waits?.get(behind.copy)?.held_hands ?? 0, hands: swings, ...(target_swings !== undefined && { target_swings }) } };
+        const facts: SharedLaneLossFacts = { hand, step_tiles: 0, travel_ticks: 0, alone_output_swings: Math.round(alone_items / hand),
+            ...(made !== undefined && gives !== undefined && { output_swings: { made, gives } }) };
+        return [{ loss: { ...loss, text: describeSharedLaneLoss(loss, build) }, facts }];
+    });
+    const copies_made = judgedCopiesMade([{ made: copiesMadeIn(run), losses: found.length }]);
+    return { losses: found.map(it => it.loss), loss_facts: found.map(it => it.facts), fast_check_passes: true, simulated: true, longer_run: false, lanes: [],
+        ...(run.join_waits !== undefined && run.join_waits.size > 0 && { join_waits: [...run.join_waits].sort(([a], [b]) => a - b).map(([copy, waits]) => ({ copy, ...waits })) }),
+        ...(copies_made !== undefined && { copies_made }) };
+}
+
 /** The copies whose side belt held a hand of their output inserter from tick `from` up to, not including, `to` */
 function joinFullOf(output_belt: OutputBeltRun, from: number, to: number): Map<number, JoinFull> {
     const full = new Map<number, JoinFull>();
@@ -1088,7 +1192,11 @@ function judgedOnLanes(config: Config, clock_windows: SerializableClockWindows, 
     copies_on_lanes: number | undefined, alone_runs: Map<string, AloneRun>): SharedLaneJudgement {
     const lanes = modelLanesOf(config);
     const keys = lanes.map(lane => `${lane.belt_id}/${lane.lane}`);
-    if (lanes.length === 0) return { losses: [], fast_check_passes: true, simulated: false, longer_run: false, lanes: keys };
+    if (lanes.length === 0) {
+        // a build whose copies share no lane is run on its output belt alone, where it states one
+        return config.output_belt === undefined || copies_on_lanes !== undefined ? { losses: [], fast_check_passes: true, simulated: false, longer_run: false, lanes: keys }
+            : judgedOnOutputBelt(config, clock_windows, window_cycle_ticks, logger);
+    }
     const build = buildToNameOf(config);
     const windows = new Map(Object.entries(clock_windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     const window_cycles = longRunWindowCyclesOf(window_cycle_ticks);
