@@ -64,7 +64,8 @@ export function lithiumRows(sample: Config, form: LithiumRowsForm): Config {
         { side_load: { stretch }, lane, layout: 'side-entrance' as const },
         { tiles: 6, lane_end: { kind: 'infinite' as const } },
     ] });
-    // each side-loaded output inserter drops in line onto an underground entrance, on its right lane
+    // each side-loaded output inserter drops in line onto an underground entrance, not mirrored: the right lane, as on a
+    // straight belt (not measured on an underground end; with the left lane the run makes the same plates)
     const side_belt = in_chest.includes(7) && in_chest.includes(8) ? {} : { side_belt: { lane: 'right' as const, tiles: 3 } };
 
     return {

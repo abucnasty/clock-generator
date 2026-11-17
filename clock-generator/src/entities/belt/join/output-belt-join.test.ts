@@ -78,6 +78,46 @@ describe("the output belt as the lines of the join model", () => {
     });
 });
 
+describe("an output belt with a splitter that one stretch feeds", () => {
+    // The logistic science 240 build's line as stated for its scaffold: stretch 6 ends in the splitter's right input, no
+    // stretch in its left input, and its two outputs side-load back onto the line before the infinite end
+    const exit = { lane: "right" as const, layout: "side-exit" as const };
+    const belt: OutputBelt = {
+        stretches: [
+            { points: [{ drop: 1, lane: "right" }, { tiles: 6, drop: 2, lane: "right" }, { tiles: 6, drop: 3, lane: "right" },
+                { tiles: 3, left_curves: 1, right_curves: 1, side_load: { stretch: 2 }, lane: "right", layout: "side-entrance" }, { tiles: 13, right_curves: 1 }] },
+            { points: [{ drop: 5, lane: "left" }, { tiles: 6, drop: 4, lane: "left" }, { tiles: 5, right_curves: 1 }] },
+            { points: [{ side_load: { stretch: 1 }, lane: "left", layout: "side-straight" },
+                { tiles: 23, left_curves: 1, right_curves: 1, side_load: { stretch: 4 }, ...exit }, { tiles: 12, side_load: { stretch: 5 }, ...exit },
+                { tiles: 8, side_load: { stretch: 7 }, ...exit }, { tiles: 1, side_load: { stretch: 8 }, lane: "left", layout: "side-entrance" },
+                { tiles: 6, lane_end: { kind: "infinite" } }] },
+            { points: [{ drop: 6, lane: "right" }, { tiles: 6, drop: 7, lane: "right" }, { tiles: 6, drop: 8, lane: "right" }, { tiles: 5, left_curves: 1 }] },
+            { points: [{ drop: 9, lane: "right" }, { tiles: 6, drop: 10, lane: "right" }, { tiles: 5, left_curves: 1 }] },
+            { points: [{ drop: 11, lane: "right" }, { tiles: 4, splitter_input: "right" }] },
+            { points: [{ splitter_output: "right" }, { tiles: 3, left_curves: 1 }] },
+            { points: [{ splitter_output: "left" }, { tiles: 5, left_curves: 1, right_curves: 2 }] },
+        ],
+        splitter: { input_priority: "right", output_priority: "right" },
+    };
+    const one_input = outputBeltJoinOf(outputBeltGeometry(belt, 0));
+
+    it("takes a stack from every drop through to the infinite end, those of the splitter's one input through the splitter", () => {
+        for (const number of [1, 4, 6, 9, 11]) {
+            const model = new JoinModel(one_input.layout);
+            const drop = one_input.drops.get(number)!;
+            const [id] = model.tick({ put_ons: [{ line: drop.line, position: drop.spot - 32, time: "after-movement" }] });
+            const lines = new Set<string>();
+            for (let tick = 0; tick < 2000 && model.stacks().some(it => it.id === id); tick++) {
+                lines.add(model.stacks().find(it => it.id === id)!.line);
+                model.tick();
+            }
+            expect(model.stacks(), `the stack of output ${number}`).toEqual([]);
+            expect([...lines].some(line => line.startsWith("the infinite end's loader")), `the stack of output ${number}`).toBe(true);
+            if (number === 11) expect([...lines].some(line => line.startsWith("the splitter's right input"))).toBe(true);
+        }
+    });
+});
+
 describe("an output belt of several lines, with a side belt of its own for some output inserters", () => {
     // Two lines, each with its own infinite end: line 1 takes a drop of output 1 and a side load of output 3, line 2 a
     // drop of output 2 and a side load of output 4; output 4's side belt is longer and turns

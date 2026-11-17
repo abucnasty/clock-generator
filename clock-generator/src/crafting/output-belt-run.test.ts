@@ -144,6 +144,11 @@ const quietLogger = { log: () => {}, warn: () => {}, error: () => {}, debug: () 
  * of the clock on the build from a cold start, after the warm-up
  */
 function platesByWindowCycle(config: Config, clock: RecordedClock): number[] {
+    return runOfClock(config, clock).plates;
+}
+
+/** `platesByWindowCycle`, with the hands that the output belt took */
+function runOfClock(config: Config, clock: RecordedClock): { plates: number[]; belt_hands: number } {
     const under: Config = clock.output_swings === undefined ? config
         : { ...config, overrides: { ...config.overrides, terminal_swing_count: clock.output_swings } };
     const windows = new Map(Object.entries(clock.windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))]));
@@ -152,7 +157,7 @@ function platesByWindowCycle(config: Config, clock: RecordedClock): number[] {
         ? [EntityId.forInserter(inserter.id ?? index + 1).id] : []);
     const cycles = LITHIUM_RUN_TICKS / clock.window_cycle_ticks;
     let recorders: Map<string, DropRecorder> | undefined;
-    runOnSharedLanes(under, windows, clock.window_cycle_ticks, sharedLaneLayoutOf(under, []), cycles, quietLogger,
+    const run = runOnSharedLanes(under, windows, clock.window_cycle_ticks, sharedLaneLayoutOf(under, []), cycles, quietLogger,
         context => { recorders = recordInserters(context, output_ids); });
     const plates = new Array<number>(cycles).fill(0);
     for (const recorder of recorders!.values()) {
@@ -161,7 +166,8 @@ function platesByWindowCycle(config: Config, clock: RecordedClock): number[] {
             if (cycle < cycles) plates[cycle] += hand.items;
         }
     }
-    return plates.slice(LITHIUM_WARM_UP_TICKS / clock.window_cycle_ticks);
+    return { plates: plates.slice(LITHIUM_WARM_UP_TICKS / clock.window_cycle_ticks),
+        belt_hands: [...run.output_belt?.hands.values() ?? []].reduce((sum, hands) => sum + hands.length, 0) };
 }
 
 /** The plates of a window cycle of the clock, at the build's 80 a second */
@@ -192,7 +198,10 @@ describe("the output belt of two lines, with three output inserters on each, on 
     });
 
     it("the clock short in the game holds with one furnace a row on the lines, and falls short with two", () => {
-        expect(holds(platesByWindowCycle(lithiumRows(sample, "one furnace a row"), short_in_game), short_in_game)).toBe(true);
+        const one_a_row = runOfClock(lithiumRows(sample, "one furnace a row"), short_in_game);
+        expect(holds(one_a_row.plates, short_in_game)).toBe(true);
+        // furnaces 5 and 6 put their plates on the lines: 4 hands a window, 15 windows a window cycle, 6 window cycles
+        expect(one_a_row.belt_hands).toBeGreaterThanOrEqual(2 * 4 * 15 * 5);
         expect(fallsShort(platesByWindowCycle(lithiumRows(sample, "no side loads"), short_in_game), short_in_game)).toBe(true);
     });
 
