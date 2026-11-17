@@ -5,7 +5,7 @@ import { SimulationContext } from "./sequence/simulation-context";
 import { PrepareStep } from "./runner/steps/prepare-step";
 import { SimulateStep } from "./runner/steps/simulate-step";
 import { WarmupStep } from "./runner/steps/warmup-step";
-import { beginTickLoop, countRunMemoHit, tickLedgerOn, withTickLedger, withTickPurpose, type TickLedgerCount, type TickPurpose } from "./tick-ledger";
+import { beginTickLoop, countRunMemoHit, tickLedgerOn, withTickLedger, withTickMaker, withTickPurpose, type TickLedgerCount, type TickPurpose } from "./tick-ledger";
 
 const counted = (work: () => void): TickLedgerCount => {
     let count: TickLedgerCount | undefined;
@@ -45,9 +45,9 @@ describe("the tick ledger of a build run by hand", () => {
         expect(recorded).toBe(STOPPED_AFTER);
         expect(prepared).toBeGreaterThan(0);
         expect(count.rows).toEqual([
-            { purpose: "planning", stage: "prepare", loop: "prepare_step", runs: 1, ticks: prepared },
-            { purpose: "planning", stage: "warm_up", loop: "warmup_step", runs: 1, ticks: WINDOW_CYCLE },
-            { purpose: "planning", stage: "judged", loop: "simulate_step", runs: 1, ticks: STOPPED_AFTER },
+            { maker: null, purpose: "planning", stage: "prepare", loop: "prepare_step", runs: 1, ticks: prepared },
+            { maker: null, purpose: "planning", stage: "warm_up", loop: "warmup_step", runs: 1, ticks: WINDOW_CYCLE },
+            { maker: null, purpose: "planning", stage: "judged", loop: "simulate_step", runs: 1, ticks: STOPPED_AFTER },
         ]);
     });
 
@@ -56,7 +56,7 @@ describe("the tick ledger of a build run by hand", () => {
         const warmup = new WarmupStep(context, Duration.ofTicks(100), { window_cycle_ticks: 10, key: () => { if (context.tick_provider.getCurrentTick() >= 30) throw new Error("stopped"); return String(context.tick_provider.getCurrentTick()); } });
         let count: TickLedgerCount | undefined;
         expect(() => withTickLedger(made => { count = made; }, () => withTickPurpose("long_run", () => warmup.execute()))).toThrow("stopped");
-        expect(count!.rows).toEqual([{ purpose: "long_run", stage: "warm_up", loop: "warmup_step", runs: 1, ticks: 30 }]);
+        expect(count!.rows).toEqual([{ maker: null, purpose: "long_run", stage: "warm_up", loop: "warmup_step", runs: 1, ticks: 30 }]);
     });
 });
 
@@ -93,7 +93,47 @@ describe("the purpose of a run", () => {
 
     it("counts a run the memo handed out again to the purpose that asked, with no tick", () => {
         const count = counted(() => withTickPurpose("long_run", countRunMemoHit));
-        expect(count).toEqual({ rows: [], memo_hits: [{ purpose: "long_run", hits: 1 }] });
+        expect(count).toEqual({ rows: [], memo_hits: [{ maker: null, purpose: "long_run", hits: 1 }] });
+    });
+});
+
+describe("the maker of a run", () => {
+    const loop = (ticks: number) => () => beginTickLoop("simulate_step", () => ticks)?.close();
+    const makersOf = (count: TickLedgerCount) => count.rows.map(row => [row.maker, row.ticks]);
+
+    it("is none outside every maker", () => {
+        expect(makersOf(counted(() => withTickPurpose("planning", loop(5))))).toEqual([[null, 5]]);
+    });
+
+    it("is the innermost maker's, and the rows of one maker add up", () => {
+        const count = counted(() => withTickPurpose("long_run", () => {
+            withTickMaker("derived", loop(3));
+            withTickMaker("derived", loop(4));
+            withTickMaker("full-hand", () => withTickMaker("per-branch", loop(9)));
+            loop(1)();
+        }));
+        expect(count.rows).toEqual([
+            { maker: null, purpose: "long_run", stage: "judged", loop: "simulate_step", runs: 1, ticks: 1 },
+            { maker: "derived", purpose: "long_run", stage: "judged", loop: "simulate_step", runs: 2, ticks: 7 },
+            { maker: "per-branch", purpose: "long_run", stage: "judged", loop: "simulate_step", runs: 1, ticks: 9 },
+        ]);
+    });
+
+    it("goes back to what it was after a maker, also one that threw", () => {
+        const count = counted(() => {
+            try { withTickMaker("derived", () => { throw new Error("no"); }); } catch { /* the maker is left */ }
+            loop(2)();
+        });
+        expect(makersOf(count)).toEqual([[null, 2]]);
+    });
+
+    it("counts a memo hit to the maker that asked", () => {
+        const count = counted(() => withTickPurpose("long_run", () => { withTickMaker("derived", countRunMemoHit); countRunMemoHit(); }));
+        expect(count.memo_hits).toEqual([{ maker: null, purpose: "long_run", hits: 1 }, { maker: "derived", purpose: "long_run", hits: 1 }]);
+    });
+
+    it("is not set where no ledger is open", () => {
+        expect(withTickMaker("derived", () => tickLedgerOn())).toBe(false);
     });
 });
 
@@ -133,6 +173,6 @@ describe("a generation with no ledger asked for", () => {
         let inner = 0;
         const count = counted(() => withTickLedger(() => { inner++; }, () => withTickPurpose("planning", () => beginTickLoop("prepare_step", () => 7)?.close())));
         expect(inner).toBe(0);
-        expect(rowOf(count, "planning", "prepare_step")).toEqual({ purpose: "planning", stage: "prepare", loop: "prepare_step", runs: 1, ticks: 7 });
+        expect(rowOf(count, "planning", "prepare_step")).toEqual({ maker: null, purpose: "planning", stage: "prepare", loop: "prepare_step", runs: 1, ticks: 7 });
     });
 });

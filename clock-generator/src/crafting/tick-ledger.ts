@@ -6,7 +6,8 @@
  * Off unless a caller opens a ledger with `withTickLedger`: with none open nothing is counted, no row is built, and
  * nothing a generation computes changes. The ledger only reads the runs a generation makes; it never asks for one.
  *
- * Three words tell what a tick was for:
+ * Four words tell what a tick was for:
+ * - the maker: the generator's slot that asked for the run (`withTickMaker`), or none where no maker was running.
  * - the purpose: the question the run answered (`TickPurpose`). A run sets its purpose with `withTickPurpose`.
  * - the stage: where in its run the tick fell: `prepare`, `warm_up` or `judged`.
  * - the loop: which tick loop of the engine ran it (`TickLoop`). The stage follows from the loop, and the loops of a
@@ -64,8 +65,10 @@ export const TICK_STAGE_OF_LOOP: Record<TickLoop, TickStage> = {
     phase_proof: "judged",
 };
 
-/** The ticks and runs of one purpose in one loop */
+/** The ticks and runs of one maker and purpose in one loop */
 export interface TickLedgerRow {
+    /** The maker the runs were made inside (`withTickMaker`); null where no maker was running */
+    maker: string | null;
     purpose: TickPurpose;
     stage: TickStage;
     loop: TickLoop;
@@ -76,10 +79,10 @@ export interface TickLedgerRow {
 
 /** What a ledger counted */
 export interface TickLedgerCount {
-    /** By purpose, then by loop, in the order of `TICK_PURPOSES` and `TICK_LOOPS`; a row only where a loop ran */
+    /** By maker (none first, then by name), by purpose, then by loop, in the order of `TICK_PURPOSES` and `TICK_LOOPS`; a row only where a loop ran */
     rows: TickLedgerRow[];
-    /** Runs the run memo handed out again, by the purpose that asked: runs asked with no tick simulated */
-    memo_hits: { purpose: TickPurpose; hits: number }[];
+    /** Runs the run memo handed out again, by the maker and purpose that asked: runs asked with no tick simulated */
+    memo_hits: { maker: string | null; purpose: TickPurpose; hits: number }[];
 }
 
 export type TickLedgerSink = (count: TickLedgerCount) => void;
@@ -90,6 +93,7 @@ export interface OpenTickLoop {
 }
 
 interface OpenLoop extends OpenTickLoop {
+    maker: string | null;
     purpose: TickPurpose;
     loop: TickLoop;
     ticks: () => number;
@@ -98,9 +102,11 @@ interface OpenLoop extends OpenTickLoop {
 interface Scope {
     sink: TickLedgerSink;
     rows: Map<string, TickLedgerRow>;
-    memo_hits: Map<TickPurpose, number>;
+    memo_hits: Map<string, { maker: string | null; purpose: TickPurpose; hits: number }>;
     /** The loops begun and not ended */
     open: Set<OpenLoop>;
+    /** The maker whose work is now running */
+    maker: string | null;
     /** The purpose of the work now running */
     purpose: TickPurpose;
     /** Whether the work now running is inside a scope that claims every run in it */
@@ -115,11 +121,14 @@ export function tickLedgerOn(): boolean {
     return scope !== undefined;
 }
 
-function count(own: Scope, purpose: TickPurpose, loop: TickLoop, ticks: number): void {
-    const key = `${purpose}/${loop}`;
+/** The key of a maker in a row: the null maker has a key no maker's name can have */
+const makerKey = (maker: string | null): string => maker === null ? "" : `maker:${maker}`;
+
+function count(own: Scope, maker: string | null, purpose: TickPurpose, loop: TickLoop, ticks: number): void {
+    const key = `${makerKey(maker)}/${purpose}/${loop}`;
     const row = own.rows.get(key);
     if (row === undefined) {
-        own.rows.set(key, { purpose, stage: TICK_STAGE_OF_LOOP[loop], loop, runs: 1, ticks });
+        own.rows.set(key, { maker, purpose, stage: TICK_STAGE_OF_LOOP[loop], loop, runs: 1, ticks });
     } else {
         row.runs++;
         row.ticks += ticks;
@@ -132,21 +141,39 @@ function count(own: Scope, purpose: TickPurpose, loop: TickLoop, ticks: number):
  */
 export function withTickLedger<T>(sink: TickLedgerSink | undefined, work: () => T): T {
     if (sink === undefined || scope !== undefined) return work();
-    const own: Scope = { sink, rows: new Map(), memo_hits: new Map(), open: new Set(), purpose: "no_purpose", claimed: false };
+    const own: Scope = { sink, rows: new Map(), memo_hits: new Map(), open: new Set(), maker: null, purpose: "no_purpose", claimed: false };
     scope = own;
     try {
         return work();
     } finally {
         scope = undefined;
         // a loop that an error left open is counted as far as it went
-        for (const open of own.open) count(own, open.purpose, open.loop, open.ticks());
+        for (const open of own.open) count(own, open.maker, open.purpose, open.loop, open.ticks());
         own.open.clear();
         const purposeOrder = (purpose: TickPurpose) => TICK_PURPOSES.indexOf(purpose);
+        // the order does not depend on the order the runs were made in: two counts of one generation are the same
+        const makerOrder = (a: string | null, b: string | null) => a === b ? 0 : a === null ? -1 : b === null ? 1 : a < b ? -1 : 1;
         sink({
-            rows: [...own.rows.values()].sort((a, b) => purposeOrder(a.purpose) - purposeOrder(b.purpose)
+            rows: [...own.rows.values()].sort((a, b) => makerOrder(a.maker, b.maker) || purposeOrder(a.purpose) - purposeOrder(b.purpose)
                 || TICK_LOOPS.indexOf(a.loop) - TICK_LOOPS.indexOf(b.loop)),
-            memo_hits: [...own.memo_hits].map(([purpose, hits]) => ({ purpose, hits })).sort((a, b) => purposeOrder(a.purpose) - purposeOrder(b.purpose)),
+            memo_hits: [...own.memo_hits.values()].sort((a, b) => makerOrder(a.maker, b.maker) || purposeOrder(a.purpose) - purposeOrder(b.purpose)),
         });
+    }
+}
+
+/**
+ * Runs `work` with `maker` as the maker its runs are counted to, where a ledger is open. The scopes nest; the innermost maker
+ * is the one counted.
+ */
+export function withTickMaker<T>(maker: string, work: () => T): T {
+    const own = scope;
+    if (own === undefined) return work();
+    const before = own.maker;
+    own.maker = maker;
+    try {
+        return work();
+    } finally {
+        own.maker = before;
     }
 }
 
@@ -176,11 +203,12 @@ export function beginTickLoop(loop: TickLoop, ticks: () => number): OpenTickLoop
     const own = scope;
     if (own === undefined) return undefined;
     const open: OpenLoop = {
+        maker: own.maker,
         purpose: own.purpose,
         loop,
         ticks,
         close: () => {
-            if (own.open.delete(open)) count(own, open.purpose, open.loop, ticks());
+            if (own.open.delete(open)) count(own, open.maker, open.purpose, open.loop, ticks());
         },
     };
     own.open.add(open);
@@ -190,5 +218,9 @@ export function beginTickLoop(loop: TickLoop, ticks: () => number): OpenTickLoop
 /** Counts a run the run memo handed out again to the purpose that asked, where a ledger is open */
 export function countRunMemoHit(): void {
     const own = scope;
-    if (own !== undefined) own.memo_hits.set(own.purpose, (own.memo_hits.get(own.purpose) ?? 0) + 1);
+    if (own === undefined) return;
+    const key = `${makerKey(own.maker)}/${own.purpose}`;
+    const row = own.memo_hits.get(key);
+    if (row === undefined) own.memo_hits.set(key, { maker: own.maker, purpose: own.purpose, hits: 1 });
+    else row.hits++;
 }

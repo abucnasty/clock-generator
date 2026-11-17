@@ -9,6 +9,10 @@ import { digestAlternative, digestJob } from '../../../scripts/blast/blast.diges
 import { handConditionRecorders } from '../../../src/crafting/hand-conditions';
 import { windowsHashOf } from '../../../src/crafting/maker-log-events';
 import { timetableRecorders } from '../../../src/crafting/timetable';
+import { SimulationTick } from '../../../src/crafting/runner/simulation-tick';
+import { timedMaker, withMakerLog } from '../../../src/crafting/maker-log';
+import { tickLedgerOn } from '../../../src/crafting/tick-ledger';
+import { PRIMARY_PLANNING_MAKER } from '../../../src/crafting/alternatives';
 
 /** The kinds of event a job gives only where its copies share a lane */
 const LANE_KINDS = ['job_lanes', 'lane_facts', 'missed_swings'];
@@ -38,11 +42,24 @@ describe('the maker log of a blast job', () => {
     const out = path.join(SCRATCH, 'on');
     let result: Awaited<ReturnType<typeof generated>>;
     let events: MakerLogEvent[];
+    let again: MakerLogEvent[];
+    // the calls of `SimulationTick.executeForTick` in the first generation, counted apart from the ledger
+    let simulated_ticks = 0;
     beforeAll(async () => {
         fs.rmSync(SCRATCH, { recursive: true, force: true });
-        result = await generated('ACCUMULATOR_320', { BLAST_LOG: '1', BLAST_REPEAT_CHECK: '1' }, out);
+        const executeForTick = SimulationTick.prototype.executeForTick;
+        SimulationTick.prototype.executeForTick = function (this: SimulationTick) { simulated_ticks++; executeForTick.call(this); };
+        try {
+            result = await generated('ACCUMULATOR_320', { BLAST_LOG: '1', BLAST_REPEAT_CHECK: '1' }, out);
+        } finally {
+            SimulationTick.prototype.executeForTick = executeForTick;
+        }
         events = readLog(out, 'config-ACCUMULATOR_320');
-    }, 120_000);
+        // the same job again
+        const second = path.join(SCRATCH, 'again');
+        await generated('ACCUMULATOR_320', { BLAST_LOG: '1', BLAST_REPEAT_CHECK: '1' }, second);
+        again = readLog(second, 'config-ACCUMULATOR_320');
+    }, 240_000);
 
     it('has every event of the schema but those of the lanes the copies share, each line of the job', () => {
         for (const kind of MAKER_LOG_EVENTS.filter(it => !LANE_KINDS.includes(it))) expect(events.filter(it => it.event === kind).length, `no ${kind} event`).toBeGreaterThan(0);
@@ -114,11 +131,63 @@ describe('the maker log of a blast job', () => {
         }
     });
 
+    it('has one ticks event, with a row for each maker, purpose and stage, that adds up to every tick simulated', () => {
+        const ticks = events.filter(it => it.event === 'ticks');
+        expect(ticks).toHaveLength(1);
+        const rows = ticks[0].rows as { maker: string | null; purpose: string; stage: string; loop: string; runs: number; ticks: number }[];
+        expect(rows.length).toBeGreaterThan(0);
+        for (const row of rows) expect(Object.keys(row).sort()).toEqual(['loop', 'maker', 'purpose', 'runs', 'stage', 'ticks']);
+        expect(rows.reduce((sum, row) => sum + row.ticks, 0)).toBe(simulated_ticks);
+        expect(simulated_ticks).toBeGreaterThan(0);
+        expect(rows.filter(row => row.purpose === 'no_purpose')).toEqual([]);
+        // by maker: the makers the log times, the planning of the primary clock, and the runs no maker asked for
+        const makers = new Set(rows.map(row => row.maker));
+        const timed = Object.keys((events.find(it => it.event === 'seconds')!.makers as Record<string, number>));
+        for (const maker of makers) if (maker !== null) expect(timed, String(maker)).toContain(maker);
+        expect(Object.keys(ticks[0]).sort()).toEqual(['event', 'job', 'memo_hits', 'rows']);
+    });
+
+    it('counts the planning of the primary clock to a maker of its own, with its seconds', () => {
+        const seconds = events.find(it => it.event === 'seconds')!.makers as Record<string, number>;
+        expect(Object.keys(seconds)).toContain(PRIMARY_PLANNING_MAKER);
+        expect(seconds[PRIMARY_PLANNING_MAKER]).toBeGreaterThan(0);
+        const rows = events.find(it => it.event === 'ticks')!.rows as { maker: string | null; purpose: string; ticks: number }[];
+        expect(rows.filter(row => row.maker === PRIMARY_PLANNING_MAKER).some(row => row.purpose === 'planning' && row.ticks > 0)).toBe(true);
+        // it is no clock's maker
+        expect(events.filter(it => it.event === 'clock').map(it => it.maker)).not.toContain(PRIMARY_PLANNING_MAKER);
+    });
+
+    it('gives two logs of one job that are the same apart from the seconds', () => {
+        const without_seconds = (log: MakerLogEvent[]) => log.filter(it => it.event !== 'seconds');
+        expect(without_seconds(again)).toEqual(without_seconds(events));
+        expect(again.filter(it => it.event === 'ticks')).toHaveLength(1);
+        // and the seconds are what differs, with the same makers
+        expect(Object.keys(again.find(it => it.event === 'seconds')!.makers as object)).toEqual(Object.keys(events.find(it => it.event === 'seconds')!.makers as object));
+    });
+
     it('is written with the job on every line, in an order that does not depend on the order the events were made in', () => {
         const job = { key: 'k', group: 'g', name: 'n' };
         const reversed = [...events].reverse();
         expect(makerLogLines(job, reversed)).toHaveLength(events.length);
         expect(makerLogLines(job, reversed).map(line => JSON.parse(line).event)).toEqual(events.map(it => it.event));
+    });
+});
+
+describe('the maker log with no sink', () => {
+    it('opens no ledger, builds no event and times no maker', () => {
+        let events = 0;
+        let clock_reads = 0;
+        const now = performance.now.bind(performance);
+        performance.now = () => { clock_reads++; return now(); };
+        try {
+            expect(withMakerLog(undefined, () => [tickLedgerOn(), timedMaker('derived', () => 'made')])).toEqual([false, 'made']);
+            expect(clock_reads).toBe(0);
+            // with a sink the ledger is open as long as the log is, and gives its event once
+            withMakerLog(() => { events++; }, () => expect(tickLedgerOn()).toBe(true));
+            expect(events).toBe(2);
+        } finally {
+            performance.now = now;
+        }
     });
 });
 

@@ -12,9 +12,10 @@
 
 import type { ClockRunForLog, OneCopyForLog } from "./one-copy-log";
 import type { SharedLanesForLog } from "./shared-lane-log";
+import { withTickLedger, withTickMaker, type TickLedgerCount } from "./tick-ledger";
 
 /** The format of the log, on the `job` event: a field's name and meaning do not change, a new field, a field less or a changed meaning is a new number */
-export const MAKER_LOG_FORMAT = "maker-log-2";
+export const MAKER_LOG_FORMAT = "maker-log-3";
 
 /** A reason as a code with numbers: the fields a code has are those `MAKER_REASON_CODES` lists for it */
 export interface MakerReason {
@@ -89,9 +90,18 @@ export interface MakerLogEvent {
 
 /** The events, in the order a log lists them (the order they are made in within a kind) */
 export const MAKER_LOG_EVENTS = ["job", "job_lanes", "clock", "windows", "lane_facts", "missed_swings", "timetable", "ledger", "repeat_check", "composition", "part",
-    "not_made", "seconds"] as const;
+    "not_made", "ticks", "seconds"] as const;
 
 export type MakerLogSink = (event: MakerLogEvent) => void;
+
+/**
+ * The `ticks` event: the ticks the generation simulated and the runs it made, by maker, purpose and stage (`tick-ledger.ts`).
+ * One event a job, with a row for each maker, purpose and loop that ran, never a line for a tick or a run.
+ */
+export function ticksEventOf(count: TickLedgerCount): MakerLogEvent {
+    return { event: "ticks", rows: count.rows.map(row => ({ maker: row.maker, purpose: row.purpose, stage: row.stage, loop: row.loop, runs: row.runs, ticks: row.ticks })),
+        memo_hits: count.memo_hits.map(hit => ({ maker: hit.maker, purpose: hit.purpose, hits: hit.hits })) };
+}
 
 /** The seconds a log counts, by what they were spent on */
 export type MakerSecondsKind = "shared_lane_check" | "copies_trial" | "fewer_copies" | "loss_trials_one_copy" | "timetable" | "repeat_check";
@@ -150,7 +160,8 @@ export function withMakerLog<T>(sink: MakerLogSink | undefined, work: () => T, o
         repeat_check: options.repeat_check === true };
     scope = own;
     try {
-        return work();
+        // the ledger of the ticks is open as long as the log is, and gives its event before the seconds
+        return withTickLedger(count => sink(ticksEventOf(count)), work);
     } finally {
         scope = undefined;
         const round = (seconds: number) => Math.round(seconds * 1000) / 1000;
@@ -199,13 +210,16 @@ export function repeatCheckOn(): boolean {
     return scope?.repeat_check === true;
 }
 
-/** Runs `work` and counts its seconds to a maker, where a log is on */
+/**
+ * Runs `work` and counts its seconds to a maker, where a log is on. The ticks the work simulates are counted to the maker too
+ * (`withTickMaker`, a ledger of its own: it does nothing where none is open).
+ */
 export function timedMaker<T>(maker: string, work: () => T): T {
     const own = scope;
-    if (own === undefined) return work();
+    if (own === undefined) return withTickMaker(maker, work);
     const started = now();
     try {
-        return work();
+        return withTickMaker(maker, work);
     } finally {
         own.makers.set(maker, (own.makers.get(maker) ?? 0) + (now() - started) / 1000);
     }

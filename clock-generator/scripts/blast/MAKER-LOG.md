@@ -22,22 +22,24 @@ Words: a **maker** is one of the generator's slots that makes a clock (`ClockAlt
 A **part** is a clock, or a way of the grouped hands rule, that Coordinated Sources can take windows from. A **composition** is a clock
 Coordinated Sources makes by taking each source's windows from one part. A **reason** is a code with numbers, never a sentence.
 
-## Format `maker-log-2`
+## Format `maker-log-3`
 
 A field's name and meaning do not change. A new field, a field less or a changed meaning is a new format number.
-`maker-log-2` adds the events of the lanes the copies share (`job_lanes`, `lane_facts` and `missed_swings`), the `timetable` and the
+`maker-log-3` adds the event `ticks` and one key of `seconds.makers`, `primary-planning`. The planning of the primary clock was
+made before every maker, so no seconds were counted to it. The events of `maker-log-2` are as they were.
+`maker-log-2` added the events of the lanes the copies share (`job_lanes`, `lane_facts` and `missed_swings`), the `timetable` and the
 `ledger` of each listed clock, the `repeat_check`, and two fields of `seconds`. The events of `maker-log-1` are as they were.
 Field names are those of the record (`id`, `maker`, `verdict`, `holds`, `window_cycle_ticks`, `wake_ups`) where the record has them, so that a log joins the record on `job` and `id`.
 `holds` is one copy alone, as in the record.
 The lines of a file are in the order of the kinds below. Within a kind they are in the order the events were made.
-Only `seconds` changes from one run to the next: without that line, two logs of one job are the same.
+Only `seconds` changes from one run to the next: without that line, two logs of one job are the same. It is the last line.
 
 ### `job`: one a job
 
 The job and its copies. `shared_lanes`: the lanes the check of the shared lanes runs with the takers of the copies together. `unknown_end_lanes`: lanes of unknown end that the check runs as one copy alone.
 
 ```json
-{"job":"config-FLYING_ROBOT_FRAME_80","group":"config","name":"FLYING_ROBOT_FRAME_80","event":"job","format":"maker-log-2","recipe":"flying-robot-frame","copies":12,"copy_offset":{"x":6,"y":0},"shared_lanes":[{"belt_id":5,"lane":1,"item":"electronic-circuit"}],"unknown_end_lanes":[]}
+{"job":"config-FLYING_ROBOT_FRAME_80","group":"config","name":"FLYING_ROBOT_FRAME_80","event":"job","format":"maker-log-3","recipe":"flying-robot-frame","copies":12,"copy_offset":{"x":6,"y":0},"shared_lanes":[{"belt_id":5,"lane":1,"item":"electronic-circuit"}],"unknown_end_lanes":[]}
 ```
 
 ### `job_lanes`: one a job whose copies share a lane
@@ -246,17 +248,38 @@ A way that failed its margin check before it was offered is a `refused` part of 
 {"job":"config-ACCUMULATOR_320","event":"not_made","id":"shifted-swings","reason":{"code":"no_search_pick","search":"phase_shifted_batch"}}
 ```
 
+### `ticks`: one a job
+
+The ticks the generation simulated, by `maker`, `purpose` and `stage`. A row is made only for a loop that was run. There is no line for a tick or for a run.
+The ticks of all the rows add up to every tick the generation simulated. The rows are in the order of `maker` (null first, then by name), `purpose` and `loop`.
+
+| Field | Meaning |
+| --- | --- |
+| `maker` | the key of `seconds.makers` of the maker that asked for the run; null where no maker did (the repeat check is one) |
+| `purpose` | why the run was made: `planning`, `first_span`, `long_run`, `taker_order`, `start_phase`, `quick_trial`, `trial_one_copy`, `trial_copies`, `shared_lane_check`, `fewer_copies`, `repeat_check`, `start_dependence`, `wakeups_from_starts`, `margin_check`, `window_derivation`, `pitch_pickups`, `fuel_view`, `config_check`. `no_purpose` is a fault of the log. The blast has none. A check with more than one kind of run (`quick_trial`, `trial_copies`) has all its runs in its own row |
+| `stage` | `prepare`, `warm_up` or `judged`: where in the run the ticks fell |
+| `loop` | the tick loop that made them: `prepare_step`, `warmup_step`, `simulate_step`, `loss_trials` or `phase_proof`. The `stage` follows from the `loop`. `judged` also holds `loss_trials` and `phase_proof`. For the ticks of the recorded run alone, take `simulate_step` |
+| `runs`, `ticks` | the loops that were run, and their ticks. A warm-up that stops at its repeat counts the ticks it made, not the ticks asked for |
+
+`memo_hits`: one row for each `maker` and `purpose`, with `hits`: runs the generation used again. Such a run makes no tick.
+
+```json
+{"job":"config-ACCUMULATOR_320","event":"ticks","rows":[{"maker":null,"purpose":"repeat_check","stage":"warm_up","loop":"warmup_step","runs":21,"ticks":72206},{"maker":"derived","purpose":"planning","stage":"prepare","loop":"prepare_step","runs":1,"ticks":350},{"maker":"derived","purpose":"planning","stage":"warm_up","loop":"warmup_step","runs":1,"ticks":9720},{"maker":"derived","purpose":"planning","stage":"judged","loop":"simulate_step","runs":1,"ticks":972},{"maker":"primary-planning","purpose":"trial_one_copy","stage":"judged","loop":"loss_trials","runs":2,"ticks":39098}],"memo_hits":[]}
+```
+
+The example is shortened: five rows.
+
 ### `seconds`: the seconds of the job
 
-`makers`: the seconds each maker took (the key is `maker`). The other fields are the seconds of the checks: with the copies (`shared_lane_check_seconds`, `copies_trial_seconds`, `fewer_copies_seconds`) and the loss trials on one copy (`loss_trials_one_copy_seconds`). The seconds of a check a maker asked for are also in the maker's seconds.
+`makers`: the seconds each maker took (the key is `maker`). `primary-planning`: the planning of the primary clock and its checks, which is made before every maker. It is no clock's `maker`. The key of the primary clock holds its own run, as before. The other fields are the seconds of the checks: with the copies (`shared_lane_check_seconds`, `copies_trial_seconds`, `fewer_copies_seconds`) and the loss trials on one copy (`loss_trials_one_copy_seconds`). The seconds of a check a maker asked for are also in the maker's seconds.
 `timetable_seconds`: the reading of the timetable and the ledger of each run of one copy, after the run. The record of a run is made while it runs. Its seconds are in the seconds of the check that runs it. `repeat_check_seconds`: the repeat checks, 0 without the switch.
 A check that makers share is counted where it was first made. The figures are wall-clock seconds, and they change from run to run.
 
 ```json
-{"job":"config-AUTOMATION_SCIENCE_240","event":"seconds","makers":{"planned-belt-slack":1.532,"derived":4.485,"full-hand":3.693,"per-branch":13.84},"shared_lane_check_seconds":4.302,"copies_trial_seconds":15.923,"fewer_copies_seconds":1.712,"loss_trials_one_copy_seconds":0.265,"timetable_seconds":0.023,"repeat_check_seconds":0.124}
+{"job":"config-ACCUMULATOR_320","event":"seconds","makers":{"primary-planning":0.691,"planned-belt-slack":0.639,"fractional":0.666,"even-hands":0.809,"swings-2":0.179,"swings-3":0.036,"swings-4":0.098,"derived":3.779,"shifted-swings":1.082,"per-branch":6.25},"shared_lane_check_seconds":0,"copies_trial_seconds":0,"fewer_copies_seconds":0,"loss_trials_one_copy_seconds":0.83,"timetable_seconds":0.202,"repeat_check_seconds":0.711}
 ```
 
-The example is shortened: four makers. It is of a run with the repeat check.
+The example is of a run with the repeat check.
 
 ## Reasons
 

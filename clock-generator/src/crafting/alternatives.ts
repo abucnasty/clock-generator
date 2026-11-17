@@ -1345,8 +1345,11 @@ function planPrimaryAndTasks(
 ): ClockAlternativesPlan {
     const logger = options.logger ?? defaultLogger;
     // the primary clock is made here, before its run: the ways its constructions offer are the primary run's parts
-    const { value: definition, parts: primary_ways } = collectingParts(() => primaryDefinition(config, options, options.on_progress_detail));
-    const result = definition.run();
+    // its seconds and ticks are counted to a maker of their own: the primary's run below finds this run in the memo
+    const { definition, primary_ways, result } = timedMaker(PRIMARY_PLANNING_MAKER, () => {
+        const { value: definition, parts: primary_ways } = collectingParts(() => primaryDefinition(config, options, options.on_progress_detail));
+        return { definition, primary_ways, result: definition.run() };
+    });
     // once a generation; where it goes changes no result, since the coverage check reads the game data itself when it comes first
     warnUncalibratedBeltPickups(config, logger);
     warnLanesSharedByCopies(config, logger);
@@ -1453,6 +1456,8 @@ function runTask(
 
 /** The id of the per-branch clock (DESIGN D7) */
 export const COORDINATED_SOURCES_MAKER = "per-branch";
+/** The maker the log counts the planning of the primary clock to: it is made before any maker runs, and is not a clock's `maker` */
+export const PRIMARY_PLANNING_MAKER = "primary-planning";
 const COORDINATED_SOURCES_LABEL = nameOf("coordinated_sources");
 const COORDINATED_SOURCES_DESCRIPTION = "The inserters of each source use the enable windows of one other clock made for the build, on one shared window cycle. "
     + "A source is a machine, belt or chest that inserters take from. The generator sets the sources one at a time, from the output "
