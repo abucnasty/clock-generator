@@ -56,8 +56,8 @@ describe("the output belt section of a config", () => {
     it("is optional: a config without it parses as before, with no output_belt", () => {
         const parsed = ConfigSchema.parse(withoutBelt());
         expect("output_belt" in parsed).toBe(false);
-        const logistic = ConfigSchema.parse(JSON.parse(readFileSync(ConfigPaths.LOGISTIC_SCIENCE_240, "utf8")));
-        expect("output_belt" in logistic).toBe(false);
+        const direct = ConfigSchema.parse(JSON.parse(readFileSync(ConfigPaths.LOGISTIC_SCIENCE_240_DIRECT_INSERT, "utf8")));
+        expect("output_belt" in direct).toBe(false);
     });
 
     it("is read as it is stated: no default or change is added", () => {
@@ -710,3 +710,54 @@ describe("a splitter with one input", () => {
         ]);
     });
 });
+
+/**
+ * The logistic science 240 sample states the output belt of one row of its scaffold: 11 copies, each with one output
+ * inserter, and a splitter with one input. The other row of the scaffold is the same row reflected (every piece, its
+ * direction and the splitter's priorities turned the other way), so its lines are this statement with left and right
+ * swapped: the sample does not state it again.
+ */
+describe("the output belt of the logistic science 240 sample", () => {
+    const sample = () => ConfigSchema.parse(JSON.parse(readFileSync(ConfigPaths.LOGISTIC_SCIENCE_240, "utf8")));
+    const turned = (value: unknown): unknown => {
+        if (Array.isArray(value)) return value.map(turned);
+        if (value !== null && typeof value === "object") {
+            return Object.fromEntries(Object.entries(value).map(([key, each]) => [
+                key.replace("left", "\u0000").replace("right", "left").replace("\u0000", "right"), turned(each)]));
+        }
+        return value === "left" ? "right" : value === "right" ? "left" : value;
+    };
+
+    it("is accepted: no problem for the 11 copies 6 tiles apart, one output inserter each", () => {
+        const config = sample();
+        expect(outputBeltProblems(config.output_belt!, config.setpoint.copy_offset, 1)).toEqual([]);
+    });
+
+    it("holds one group of eight stretches with one infinite end, and the splitter with one input", () => {
+        const config = sample();
+        const geometry = outputBeltGeometry(config.output_belt!, copySpacing(config));
+        expect(geometry.groups).toEqual([{ group: 1, stretches: [1, 2, 3, 4, 5, 6, 7, 8], infinite_end_stretch: 3 }]);
+        expect(geometry.splitter).toMatchObject({ input_priority: "right", output_priority: "right",
+            inputs: [{ side: "right", stretch: 6 }], outputs: [{ side: "right", stretch: 7 }, { side: "left", stretch: 8 }] });
+    });
+
+    it("has each copy's drop on the stretch and the lane that the scaffold's hands drop on", () => {
+        const config = sample();
+        const drops = outputBeltGeometry(config.output_belt!, copySpacing(config)).drops.map(drop => [drop.copy, drop.stretch, drop.lane]);
+        expect(drops).toEqual([[1, 1, "right"], [2, 1, "right"], [3, 1, "right"], [5, 2, "left"], [4, 2, "left"],
+            [6, 4, "right"], [7, 4, "right"], [8, 4, "right"], [9, 5, "right"], [10, 5, "right"], [11, 6, "right"]]);
+    });
+
+    it("states the reflected row as the same lines with left and right swapped", () => {
+        const config = sample();
+        const belt = config.output_belt!;
+        const mirror = turned(belt) as OutputBelt;
+        expect(outputBeltProblems(mirror, config.setpoint.copy_offset, 1)).toEqual([]);
+        const lines = (each: OutputBelt) => outputBeltGeometry(each, copySpacing(config)).lines.map(line => [line.lane, line.length]);
+        const swapped = lines(belt).map(([lane, length]) => [lane === "left" ? "right" : "left", length]);
+        const sort = (list: unknown[][]) => list.map(entry => JSON.stringify(entry)).sort();
+        expect(sort(lines(mirror))).toEqual(sort(swapped));
+    });
+});
+
+const copySpacing = (config: { setpoint: { copy_offset?: { x: number; y: number } } }) => Math.abs(config.setpoint.copy_offset!.x) + Math.abs(config.setpoint.copy_offset!.y);

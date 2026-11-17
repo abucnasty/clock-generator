@@ -112,5 +112,72 @@
       ]
     }
   ],
-  "chests": []
+  "chests": [],
+  "output_belt": {
+    "stretches": [
+      {
+        "points": [
+          { "drop": 1, "lane": "right" },
+          { "tiles": 6, "drop": 2, "lane": "right" },
+          { "tiles": 6, "drop": 3, "lane": "right" },
+          { "tiles": 3, "left_curves": 1, "right_curves": 1, "side_load": { "stretch": 2 }, "lane": "right", "layout": "side-entrance" },
+          { "tiles": 13, "right_curves": 1 }
+        ]
+      },
+      {
+        "points": [
+          { "drop": 5, "lane": "left" },
+          { "tiles": 6, "drop": 4, "lane": "left" },
+          { "tiles": 5, "right_curves": 1 }
+        ]
+      },
+      {
+        "points": [
+          { "side_load": { "stretch": 1 }, "lane": "left", "layout": "side-straight" },
+          { "tiles": 23, "left_curves": 1, "right_curves": 1, "side_load": { "stretch": 4 }, "lane": "right", "layout": "side-exit" },
+          { "tiles": 12, "side_load": { "stretch": 5 }, "lane": "right", "layout": "side-exit" },
+          { "tiles": 8, "side_load": { "stretch": 7 }, "lane": "right", "layout": "side-exit" },
+          { "tiles": 1, "side_load": { "stretch": 8 }, "lane": "left", "layout": "side-entrance" },
+          { "tiles": 6, "lane_end": { "kind": "infinite" } }
+        ]
+      },
+      {
+        "points": [
+          { "drop": 6, "lane": "right" },
+          { "tiles": 6, "drop": 7, "lane": "right" },
+          { "tiles": 6, "drop": 8, "lane": "right" },
+          { "tiles": 5, "left_curves": 1 }
+        ]
+      },
+      {
+        "points": [
+          { "drop": 9, "lane": "right" },
+          { "tiles": 6, "drop": 10, "lane": "right" },
+          { "tiles": 5, "left_curves": 1 }
+        ]
+      },
+      {
+        "points": [
+          { "drop": 11, "lane": "right" },
+          { "tiles": 4, "splitter_input": "right" }
+        ]
+      },
+      {
+        "points": [
+          { "splitter_output": "right" },
+          { "tiles": 3, "left_curves": 1 }
+        ]
+      },
+      {
+        "points": [
+          { "splitter_output": "left" },
+          { "tiles": 5, "left_curves": 1, "right_curves": 2 }
+        ]
+      }
+    ],
+    "splitter": {
+      "input_priority": "right",
+      "output_priority": "right"
+    }
+  }
 }
