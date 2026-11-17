@@ -77,3 +77,50 @@ describe("the output belt as the lines of the join model", () => {
         expect(copy5.get("stretch 2 right lane: side load of copy 6 to side load of copy 7")! - copy5.get("stretch 2 right lane: drop of copy 5 to side load of copy 6")!).toBe(84);
     });
 });
+
+describe("an output belt of several lines, with a side belt of its own for some output inserters", () => {
+    // Two lines, each with its own infinite end: line 1 takes a drop of output 1 and a side load of output 3, line 2 a
+    // drop of output 2 and a side load of output 4; output 4's side belt is longer and turns
+    const belt: OutputBelt = {
+        side_belt: { lane: "right", tiles: 2 },
+        side_belts: [{ outputs: [4], lane: "left", tiles: 4, right_curves: 1 }],
+        stretch_groups: [[1], [2]],
+        stretches: [
+            { points: [{ drop: 1, lane: "right" }, { tiles: 4, side_load: [3], lane: "right", layout: "side-straight" }, { tiles: 3, lane_end: { kind: "infinite" } }] },
+            { points: [{ drop: 2, lane: "left" }, { tiles: 4, side_load: [4], lane: "left", layout: "side-straight" }, { tiles: 3, lane_end: { kind: "infinite" } }] },
+        ],
+    };
+    const two = outputBeltJoinOf(outputBeltGeometry(belt, 0));
+    const of = (id: string) => two.layout.lines.find(it => it.id === id);
+
+    it("ends each line in a loader of its own, named by the stretch it ends", () => {
+        expect(two.infinite_end_lines).toEqual(["the infinite end's loader of stretch 1, left lane", "the infinite end's loader of stretch 1, right lane",
+            "the infinite end's loader of stretch 2, left lane", "the infinite end's loader of stretch 2, right lane"]);
+        expect(of("stretch 1 right lane: side load of copy 3 to the infinite end")?.feeds).toBe("the infinite end's loader of stretch 1, right lane");
+        expect(of("stretch 2 left lane: side load of copy 4 to the infinite end")?.feeds).toBe("the infinite end's loader of stretch 2, left lane");
+        expect(new JoinModel(two.layout).stacks()).toEqual([]);
+    });
+
+    it("puts each side-loaded output's drop on the middle of the first tile of its own side belt, on its own lane", () => {
+        expect(of("side belt of copy 3 right lane")?.length).toBe(512);
+        expect(two.drops.get(3)).toEqual({ line: "side belt of copy 3 right lane", spot: 512 - 128 });
+        // a drop tile, two straight tiles and a right curve, whose left lane is its outer one
+        expect(of("side belt of copy 4 left lane")?.length).toBe(3 * 256 + 295);
+        expect(two.drops.get(4)).toEqual({ line: "side belt of copy 4 left lane", spot: 3 * 256 + 295 - 128 });
+    });
+
+    it("keeps the stacks of one line off the other", () => {
+        const model = new JoinModel(two.layout);
+        const drop = two.drops.get(2)!;
+        const [id] = model.tick({ put_ons: [{ line: drop.line, position: drop.spot - 32, time: "after-movement" }] });
+        const lines = new Set<string>();
+        for (let tick = 0; tick < 300; tick++) {
+            model.tick();
+            const stack = model.stacks().find(it => it.id === id);
+            if (stack === undefined) break;
+            lines.add(stack.line);
+        }
+        expect([...lines].every(line => line.startsWith("stretch 2 ") || line.includes("of stretch 2"))).toBe(true);
+        expect(model.stacks()).toEqual([]);
+    });
+});

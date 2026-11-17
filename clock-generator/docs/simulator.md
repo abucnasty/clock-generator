@@ -331,6 +331,14 @@ The other eight held. With the line, the run gives that assembler as the one sho
 the clock that keeps every assembler at 96, and the runs with the third's output, or the first two's, off the line.
 Without the line, the run had no assembler short.
 
+A section can state several lines. Each group of `stretch_groups` ends in an infinite end of its own, with a loader on
+each lane. An output inserter that `side_belts` names drops on its own side belt. The lithium plate sample's scaffold
+shows it (`tests/configs/lithium-rows.ts`, the test in `src/crafting/output-belt-run.test.ts`): two rows of three
+furnaces, each row's plates on a line of its own. In the game (Factorio 2.1.24), one clock made 5,120 to 5,680 of its
+5,760 plates a window cycle. With furnaces 7 and 8 off the lines, it made 5,152, then 5,728. With one furnace a row on
+the lines, it made 5,760 in every window cycle. The run gives the same: short, short, full. Another clock made its plates
+in every window cycle, in the game and in the run. Without the lines, the run had the first clock full.
+
 An output inserter puts its stacks on the middle of its drop tile, with the rule above. A stack goes one step past the
 middle, or 64 behind the stack ahead. It must be less than 64 behind the middle. On a free side belt, a hand's stacks go
 down 0, 1, 2 and 4 ticks after it comes. A stack stays in the hand only when the side belt is full to its drop tile. On
