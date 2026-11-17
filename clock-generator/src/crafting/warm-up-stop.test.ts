@@ -56,11 +56,17 @@ function fromItsStart(stock: StockRecording | undefined): StockRecording | undef
 }
 
 /** The warm-up stopped where `ticks` says, and the run recorded after it is the one recorded after the full warm-up */
-function expectStoppedExactly(built: Config, window_cycle_ticks: number, warmup: number, ticks: { full: number; ran: number; repeat_window_cycles?: number }) {
+function expectStoppedExactly(built: Config, window_cycle_ticks: number, warmup: number,
+    ticks: { full: number; ran: number | { before: number; whole_repeats_of: number }; repeat_window_cycles?: number }) {
     const stopped = run(built, window_cycle_ticks, warmup);
     const full = run(built, window_cycle_ticks, warmup, true);
     expect(full.clock_tick_at_start).toBe(ticks.full);
-    expect(stopped.clock_tick_at_start).toBe(ticks.ran);
+    if (typeof ticks.ran === "number") {
+        expect(stopped.clock_tick_at_start).toBe(ticks.ran);
+    } else {
+        expect(stopped.clock_tick_at_start).toBeLessThan(ticks.ran.before);
+        expect((ticks.full - stopped.clock_tick_at_start!) % ticks.ran.whole_repeats_of).toBe(0);
+    }
     expect(fromItsStart(stopped.machine_stock)).toEqual(fromItsStart(full.machine_stock));
     // the stability check reads the repeat the warm-up found only on a build clocked throughout on the run's window
     // cycle, as before; the warm-ups that stop now leave it as the full warm-up does
@@ -81,6 +87,12 @@ describe("the warm-up's stop on a repeated state", () => {
     it("stops a build with an inserter that is not clocked, on a condition of what the key holds, where its state repeats", async () => {
         const { built, window_cycle_ticks } = await metallurgic();
         expectStoppedExactly(withOutputOn(built, { mode: "CONDITIONAL", rule_set: always_true }), window_cycle_ticks, 80, { full: 17067, ran: 7467 });
+        // a condition that turns on and off with what the machine holds: the inserter's wakes, which the key holds, carry it
+        // from one tick to the next
+        const four_packs = { operator: "AND" as const, rules: [{ left: { type: "INVENTORY_ITEM" as const, entity: "SOURCE" as const, item_name: "metallurgic-science-pack" },
+            operator: ">=" as const, right: { type: "CONSTANT" as const, value: 4 } }] };
+        expectStoppedExactly(withOutputOn(built, { mode: "CONDITIONAL", rule_set: four_packs }), window_cycle_ticks, 80,
+            { full: 17067, ran: { before: 17067, whole_repeats_of: 640 } });
     });
 
     it("runs the full warm-up where the part that is not clocked holds what the key does not (a latch), or the state has not repeated", async () => {
