@@ -84,7 +84,11 @@
       "sink": {
         "type": "belt",
         "id": 1,
-        "belt_direction": 12
+        "belt_direction": 12,
+        "drop": {
+          "lane": 2,
+          "position": 3
+        }
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
@@ -104,7 +108,11 @@
       "sink": {
         "type": "belt",
         "id": 1,
-        "belt_direction": 12
+        "belt_direction": 12,
+        "drop": {
+          "lane": 2,
+          "position": 0
+        }
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
@@ -200,7 +208,11 @@
       "sink": {
         "type": "belt",
         "id": 1,
-        "belt_direction": 12
+        "belt_direction": 12,
+        "drop": {
+          "lane": 1,
+          "position": 3
+        }
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
@@ -220,7 +232,11 @@
       "sink": {
         "type": "belt",
         "id": 1,
-        "belt_direction": 12
+        "belt_direction": 12,
+        "drop": {
+          "lane": 1,
+          "position": 0
+        }
       },
       "prototype": "stack-inserter",
       "quality": "legendary",
