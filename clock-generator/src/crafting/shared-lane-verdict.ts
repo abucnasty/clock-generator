@@ -1241,16 +1241,6 @@ function howFarBehind(run: RunOfCopies, rates: TargetRates): BehindTarget[] {
     });
 }
 
-/** How far every machine and output inserter of every copy is behind its target over the judged span of one run of the copies */
-export interface BehindInSpan {
-    /** The window cycles the run was made for */
-    window_cycles: number;
-    /** The judged window cycles: the whole ones of the second half of the run */
-    judged_window_cycles: number;
-    /** Every machine and output inserter with a target, ahead (behind below 0) or not */
-    behind: BehindTarget[];
-}
-
 /** The grain of the rate judge: one craft of a machine, one hand of an output inserter (ruling 258's unit, not set on any clock) */
 const RATE_GRAIN = 1 + ROUNDING;
 
@@ -1298,25 +1288,6 @@ export function rateBehind(run: RunOfCopies, rates: TargetRates): BehindTarget[]
 export function growing(before: readonly BehindTarget[], after: readonly BehindTarget[]): BehindTarget[] {
     const was = new Map(before.map(it => [behindKey(it), it.behind] as const));
     return after.filter(it => it.behind > RATE_GRAIN && it.behind - (was.get(behindKey(it)) ?? 0) > RATE_GRAIN);
-}
-
-/**
- * For measurement: each run of the copies the verdict makes (each reading of a lane of unknown end, each layout), made for
- * the long run's window cycles times each of `multiples`, and how far every machine and output inserter is behind its
- * target over the judged span of each. Null where the targets cannot be worked out. It makes no run of one copy alone.
- */
-export function behindOverSpans(config: Config, clock_windows: SerializableClockWindows, window_cycle_ticks: number, logger: Logger,
-    multiples: readonly number[] = [1, 2, 4]): { reading: number; layout: number; spans: BehindInSpan[] }[] | null {
-    const ends = outputEndsOf(config);
-    const rates = ends === null ? null : targetRatesOf(config, ends);
-    if (ends === null || rates === null) return null;
-    const windows = new Map(Object.entries(clock_windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
-    const window_cycles = longRunWindowCyclesOf(window_cycle_ticks);
-    return sharedLaneRunsOf(config).readings.flatMap(({ under, layouts }, reading) => layouts.map((layout, index) => ({ reading, layout: index,
-        spans: multiples.map(multiple => {
-            const run = copiesRunOf(under, layout, windows, window_cycle_ticks, multiple * window_cycles, logger, ends);
-            return { window_cycles: multiple * window_cycles, judged_window_cycles: run.window_cycles, behind: rateBehind(run, rates) };
-        }) })));
 }
 
 /**
