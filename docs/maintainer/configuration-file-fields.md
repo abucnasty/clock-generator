@@ -318,11 +318,18 @@ after the engine reads the file: a field with a default is required, but a confi
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `output_belt` | object | no | The output belt: the side belt that each copy's output inserter drops on, and the stretches of belt from the copies to the infinite end, in tiles. The run of the copies moves the output on it, and an output blockage shuts its infinite end. |
-| `output_belt.side_belt` | object | no | The side belt that each copy's output inserter drops on, the same for every copy that has one. |
+| `output_belt.side_belt` | object | no | The side belt that each copy's output inserter drops on, the same for every copy that has one. An output inserter that `side_belts` names has the side belt of its entry instead. |
 | `output_belt.side_belt.lane` | one of `left`, `right` | yes | The lane of the side belt that the output inserter drops on: "left" or "right" in the direction of travel. |
 | `output_belt.side_belt.tiles` | integer > 0 | yes | The steps from the drop tile to the tile that the side belt side-loads onto, as the sidecar's walk counts them. This is the number that `drop_capture.tiles` holds. On a drop tile and one curve, it is 2. |
 | `output_belt.side_belt.left_curves` | integer ≥ 0 | no | The left curves of the side belt after its drop tile. |
 | `output_belt.side_belt.right_curves` | integer ≥ 0 | no | The right curves of the side belt after its drop tile. |
+| `output_belt.side_belts` | array (at least 1) of objects | no | Side belts of some output inserters, each by their numbers, for a copy whose output inserters do not drop on side belts of one shape. An output inserter that no entry names has `side_belt`. |
+| `output_belt.side_belts[].lane` | one of `left`, `right` | yes | The lane of the side belt that the output inserter drops on: "left" or "right" in the direction of travel. |
+| `output_belt.side_belts[].tiles` | integer > 0 | yes | The steps from the drop tile to the tile that the side belt side-loads onto, as the sidecar's walk counts them. This is the number that `drop_capture.tiles` holds. On a drop tile and one curve, it is 2. |
+| `output_belt.side_belts[].left_curves` | integer ≥ 0 | no | The left curves of the side belt after its drop tile. |
+| `output_belt.side_belts[].right_curves` | integer ≥ 0 | no | The right curves of the side belt after its drop tile. |
+| `output_belt.side_belts[].outputs` | array (at least 1) of integer > 0 | yes | The numbers of the output inserters that drop on this side belt (see `drop`). Each number is in one entry. |
+| `output_belt.stretch_groups` | array (at least 1) of array (at least 1) of integer > 0 | no | The groups of stretches that join: a side load of a stretch or the splitter joins stretches of one group only. Each group has exactly one infinite end. State it where the output belt has several infinite ends that do not join. Without it, all stretches are one group, with one infinite end. |
 | `output_belt.stretches` | array (at least 1) of objects | yes | The stretches of the output belt, each from where items first come onto it to where it ends. Stretch 1 is the first. |
 | `output_belt.stretches[].points` | array (at least 1) of objects | yes | The points of the stretch, upstream first. |
 | `output_belt.stretches[].points[].tiles` | integer > 0 | no | The steps from the previous point to this point, as the sidecar's walk counts them. Each belt entity is one step. An underground pair is the tiles between its ends. The tile that a stretch side-loads onto, the splitter and the infinite end are one step each. After a point that lists copies, count from the last copy of the list. The first point of a stretch has no tiles. |
