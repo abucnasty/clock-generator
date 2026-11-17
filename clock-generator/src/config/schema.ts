@@ -853,6 +853,16 @@ export const ConfigOverridesSchema = z.preprocess(renameLoopSeedItemsToKickStart
      */
     check_start_dependence: z.boolean().optional().describe("Whether the generator tests each clock from more starts than the cold start."),
     /**
+     * The start the clocks are judged from. "cold": the machines, buffers and hands are empty when the clock starts at its
+     * tick 0, the belts and chests are the supplies they always are, and a machine that makes its own ingredient is given
+     * its kick start (see `kick_start_items`). "backpressure": the part of the build that no clock controls is first run
+     * until it has settled, with every clocked inserter and drill held off, as a staged scaffold in the game has settled
+     * before its clock starts, and the clock starts from there. The runs that make the clock's windows start cold in both.
+     *
+     * @default "cold"
+     */
+    judged_start: z.enum(["cold", "backpressure"]).optional().describe("The start every clock is judged from: the cold start, or the backpressure start (the unclocked part of the build filled until it settles, then the clock)."),
+    /**
      * Make the disturbance trials again on the copies that share a lane, where the copies share one: a supply stop closes
      * the entry of each shared lane that carries the item, so that the lane drains, and after each trial every copy has to
      * be back at the expected output of one copy. Made for a clock that gets back from every loss on one copy and keeps

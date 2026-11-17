@@ -307,6 +307,7 @@ after the engine reads the file: a field with a default is required, but a confi
 | `overrides.backed_up_belts` | boolean | no | Deprecated. State the lane_end of each lane instead. true: each lane without a lane_end is a dead end. false: each such lane is an infinite end. Without it, the role of the lane sets the end. |
 | `overrides.search_for_fewer_wake_ups` | boolean | no | Whether the generator always does the four searches, to find a clock with fewer wakeups. |
 | `overrides.check_start_dependence` | boolean | no | Whether the generator tests each clock from more starts than the cold start. |
+| `overrides.judged_start` | one of `cold`, `backpressure` | no | The start every clock is judged from: the cold start, or the backpressure start (the unclocked part of the build filled until it settles, then the clock). |
 | `overrides.disturbance_trials_on_copies` | boolean | no | Whether the generator makes the disturbance trials again on the copies that share a lane. |
 | `overrides.kick_start_items` | integer ≥ 0 | no | The kick start: the number of its own product that a machine gets before its clock starts, when its recipe uses that product. |
 | `overrides.disable_swing_backoff` | boolean | no | Not used: set terminal_swing_count to give the number of output swings. |
