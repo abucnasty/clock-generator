@@ -75,7 +75,7 @@ describe("the rate judge on the clocks recorded in the game on copies that share
         const behind = judged.losses[0].behind!;
         expect(behind.kind).toBe("machine");
         // more than a craft a window cycle behind over the run four times as long: a shortfall that grows with the run
-        expect(behind.behind).toBeGreaterThan(judged.by_rate!.spans[2] / 2);
+        expect(behind.behind).toBeGreaterThan(judged.by_rate!.spans![2] / 2);
     });
 
     // abucnasty's chemical science build of 5.5 copies (#725), shared-lane-verdict.test.ts: a part copy is one of the cases
