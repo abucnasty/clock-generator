@@ -92,6 +92,7 @@ describe("the light entry", () => {
             "crafting/rank.ts",
             "crafting/sequence/compact-history.ts",
             "crafting/strategy-catalog.ts",
+            "crafting/tick-ledger.ts",
             "crafting/why-not-stable.ts",
             "data-types/fraction.ts",
             "data-types/map-extended.ts",

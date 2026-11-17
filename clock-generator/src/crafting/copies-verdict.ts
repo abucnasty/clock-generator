@@ -8,6 +8,7 @@ import { Logger } from "../common/logger";
 import type { SerializableClockWindows } from "./clock";
 import { EntityRouteError } from "./enable-control-router";
 import { makerLogOn, timedCheck } from "./maker-log";
+import { withTickPurpose } from "./tick-ledger";
 import { currentRunMemo } from "./plan/run-memo";
 import { SecondaryPlanningInvariantError } from "./round-robin-polling-primitive-policy";
 import { copiesCheckKeys, copiesDisturbanceTrial, CopiesTrialVerdict } from "./shared-lane-trial";
@@ -110,12 +111,14 @@ export function verdictWithCopies(
     const memo = currentRunMemo();
     const keys = memo === undefined ? { shared_lanes: null, trials: null } : copiesCheckKeys(config, windows, window_cycle_ticks, expected_output_items);
     // the facts of the lanes for the maker log are kept only where a generation asked for a log
-    const judge = () => timedCheck("shared_lane_check", () => checks.sharedLanes(config, windows, window_cycle_ticks, logger, { for_log: makerLogOn() }));
+    const judge = () => timedCheck("shared_lane_check", () => withTickPurpose("shared_lane_check", () =>
+        checks.sharedLanes(config, windows, window_cycle_ticks, logger, { for_log: makerLogOn() }), { claim: true }));
     const lane_check = sharedLaneCheckOf(memo === undefined || keys.shared_lanes === null ? judge : () => memo.sharedLaneCheck(keys.shared_lanes!, judge), label, logger);
     if (!trials_on_copies || lane_check.losses.length > 0 || !one_copy_survives()) {
         return { lane_check, copies_trial: null, holds: lane_check.losses.length === 0 };
     }
-    const tried = () => timedCheck("copies_trial", () => checks.trials(config, windows, window_cycle_ticks, expected_output_items, logger));
+    const tried = () => timedCheck("copies_trial", () => withTickPurpose("trial_copies", () =>
+        checks.trials(config, windows, window_cycle_ticks, expected_output_items, logger), { claim: true }));
     let copies_trial: CopiesTrialVerdict | null;
     try {
         copies_trial = memo === undefined || keys.trials === null ? tried() : memo.copiesTrial(keys.trials, tried);

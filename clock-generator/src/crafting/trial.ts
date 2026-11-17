@@ -41,6 +41,7 @@ import { WakeUpsFromStarts, hasStockTheClockDoesNotSet, wakeUpsFromStarts } from
 import type { ClockSharedLaneLoss } from "./shared-lane-verdict";
 import { makerLogOn, timedCheck } from "./maker-log";
 import { runOfOneCopyForLog } from "./one-copy-log";
+import { beginTickLoop, withTickPurpose } from "./tick-ledger";
 
 /**
  * Number of clock start offsets the as-built check tries. Depending on how the clock lines up with the
@@ -520,8 +521,8 @@ function longRunOfFreeRunningBuild(
     }
     // only its stock is read, which names the state of every inserter itself
     const runOf = (simulate_window_cycles: number) => {
-        const build_run = clockBuildRun(config, decider_windows, window_cycle_ticks, logger, { simulate_window_cycles, machine_stock: true, factorio_states: false, detect_repeat: true, ...start, stock_detail, record_histories: false,
-            ...(on_context !== undefined && { on_context }) });
+        const build_run = withTickPurpose("long_run", () => clockBuildRun(config, decider_windows, window_cycle_ticks, logger, { simulate_window_cycles, machine_stock: true, factorio_states: false, detect_repeat: true, ...start, stock_detail, record_histories: false,
+            ...(on_context !== undefined && { on_context }) }));
         return { build_run, run: trialRunOf(build_run) };
     };
     let { build_run, run } = runOf(window_cycles);
@@ -778,7 +779,7 @@ export function startDependenceOf(
     const check_config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
     // a clock stands at another place of a window cycle of a whole number of ticks only; a fractional one is tried unshifted
     const tried = starts.filter(start => start.clock_shift === 0 || Number.isInteger(window_cycle_ticks));
-    const runs = tried.map(start => {
+    const runs = tried.map(start => withTickPurpose("start_dependence", () => {
         // A start changes the shared counter's position, including computed by-product predicates on that counter.
         const order = { ...swings, competing_takers_order: start.competing_takers_order, decider_order: start.decider_order,
             main_clock_shift: start.clock_shift === 0 ? 0 : window_cycle_ticks - start.clock_shift % window_cycle_ticks };
@@ -787,7 +788,7 @@ export function startDependenceOf(
             ? long_run.keeps_up
             : runClockOnBuild(check_config, windows, window_cycle_ticks, logger, { factorio_states: false, ...order }).stability_check.holds;
         return { long_run, keeps_up };
-    });
+    }, { claim: true }));
     // the first start is the one the clock is judged on: all its checks decide, not the long run alone; a clock that
     // fails one of the checks that are not about the start fails from every start
     const reaching = startsReachingTarget(cold_holds, runs.map(it => it.keeps_up));
@@ -838,7 +839,8 @@ export function wakeUpsFromStartsOf(
     const figureAt = (place: number): number | null => {
         const standing = place === 0 ? windows
             : new Map(Array.from(windows, ([key, ranges]) => [key, rotateRanges(ranges, place, window_cycle_ticks)] as const));
-        const long_run = longRunOfFreeRunningBuild(check_config, standing, window_cycle_ticks, expected_output_items, quiet, long_run_ticks, swings, "wake-ups");
+        const long_run = withTickPurpose("wakeups_from_starts", () =>
+            longRunOfFreeRunningBuild(check_config, standing, window_cycle_ticks, expected_output_items, quiet, long_run_ticks, swings, "wake-ups"), { claim: true });
         if (long_run === null) {
             return null;
         }
@@ -962,6 +964,8 @@ export function exhaustiveStartPhases(
         });
         const simulation_tick = new SimulationTick(context);
         const now = () => context.tick_provider.getCurrentTick();
+        // the phase's run, from the cold build's tick 0
+        const ledger = beginTickLoop("phase_proof", now);
 
         // the rotated windows enable at tick t what the unrotated enable at t - offset, so the unrotated clock's
         // phase 0 falls on the local ticks offset, offset + bin, ...: the crossings every phase's states compare at
@@ -1025,6 +1029,7 @@ export function exhaustiveStartPhases(
             }
         }
         outcome.ticks += now();
+        ledger?.close();
         outcome.phases_checked++;
         outcome.proven &&= run_proven;
         report?.(outcome.phases_checked, counter_ticks);
@@ -1147,7 +1152,8 @@ export function runAsBuiltCheck(
     const counter = wholeCounterOf(window_cycle_ticks);
     // the count the progress is reported against: as it always was where no whole counter is checked
     const total = startPhaseTotalOf(window_cycle_ticks, counter, start_phases);
-    const result = passed !== undefined ? passed.run.result : firstClockSpan(config, decider_windows, window_cycle_ticks, logger, swings);
+    const result = passed !== undefined ? passed.run.result
+        : withTickPurpose("first_span", () => firstClockSpan(config, decider_windows, window_cycle_ticks, logger, swings));
     const check: AsBuiltStabilityCheck = {
         holds: result.stability_check.holds,
         actual_output_items: result.stability_check.actual_output_items,
@@ -1173,9 +1179,9 @@ export function runAsBuiltCheck(
             check.pickup_phase_starts_checked = (check.pickup_phase_starts_checked ?? 0) + 1;
             continue;
         }
-        const shifted = firstClockSpan(config, decider_windows, window_cycle_ticks, logger,
+        const shifted = withTickPurpose("start_phase", () => firstClockSpan(config, decider_windows, window_cycle_ticks, logger,
             {...swings, moving_pickup_phases: phases, factorio_states: false, ...(pickup_phase_cycles && {disturbance_trial:
-                {loss: {kind: "none"}, window_cycle_ticks, expected_output_items: result.stability_check.expected_output_items}})});
+                {loss: {kind: "none"}, window_cycle_ticks, expected_output_items: result.stability_check.expected_output_items}})}));
         check.pickup_phase_starts_checked = (check.pickup_phase_starts_checked ?? 0) + 1;
         const judged = overItsCycle(shifted);
         const amount = strict ? measuredAmountOf(judged) : null;
@@ -1331,7 +1337,7 @@ function afterTheLongRun(
     }
 
     if (typeof process !== "undefined" && process.env?.CLOCK_PROOF_PHASES === "1") {
-        const exhaustive = exhaustiveStartPhases(config, decider_windows, window_cycle_ticks, logger, report, swings);
+        const exhaustive = withTickPurpose("start_phase", () => exhaustiveStartPhases(config, decider_windows, window_cycle_ticks, logger, report, swings));
         if (exhaustive !== null) {
             check.start_phases_checked = exhaustive.phases_checked;
             check.start_phases_proven = exhaustive.proven;
@@ -1358,7 +1364,8 @@ function afterTheLongRun(
     }
     for (const offset of start_shifts) {
         // only its output count is read
-        const shifted = firstClockSpan(config, decider_windows, window_cycle_ticks, logger, { ...swings, factorio_states: false, main_clock_shift: offset });
+        const shifted = withTickPurpose("start_phase", () =>
+            firstClockSpan(config, decider_windows, window_cycle_ticks, logger, { ...swings, factorio_states: false, main_clock_shift: offset }));
         check.start_phases_checked++;
         report?.(check.start_phases_checked, total);
         const amount = strict ? measuredAmountOf(shifted.stability_check) : null;
@@ -1449,14 +1456,16 @@ function heldUnderOtherTakerOrders(
     }
     check.taker_orders_checked = 1;
     check.competing_takers = competingTakersOf(config);
+    // the runs of an order, its long run too, are counted to the order
+    const underOrder = <T>(work: () => T): T => withTickPurpose("taker_order", work, { claim: true });
     for (const order of orders) {
         check.taker_orders_checked++;
-        const run = firstClockSpan(config, decider_windows, window_cycle_ticks, logger, { ...swings, factorio_states: false, competing_takers_order: order });
+        const run = underOrder(() => firstClockSpan(config, decider_windows, window_cycle_ticks, logger, { ...swings, factorio_states: false, competing_takers_order: order }));
         let failed: { actual_output_items: number; full_output_chests?: FullOutputChest[]; export_shortfalls?: ExportShortfall[];
             repeat_window_cycles?: number; repeat_output_items?: number } | null = run.stability_check.holds ? null : run.stability_check;
         let amount: ReturnType<typeof measuredAmountOf> | null = null;
         if (failed === null && long_run_ticks > 0) {
-            const long_run = longRunOfFreeRunningBuild(config, decider_windows, window_cycle_ticks, expected_output_items, logger, long_run_ticks, { ...swings, competing_takers_order: order }, "hands");
+            const long_run = underOrder(() => longRunOfFreeRunningBuild(config, decider_windows, window_cycle_ticks, expected_output_items, logger, long_run_ticks, { ...swings, competing_takers_order: order }, "hands"));
             if (long_run !== null && !long_run.keeps_up) {
                 failed = { actual_output_items: long_run.output_items_per_window_cycle, full_output_chests: long_run.full_output_chests, export_shortfalls: long_run.export_shortfalls };
                 if (long_run.target_production !== undefined) {
@@ -1851,7 +1860,7 @@ export function disturbanceTrialVerdictOf(
         // a clock whose key cannot be made is tried as before, and fails in the trial if it cannot be tried
     }
     // A previously unavailable legacy trial is not a completed strict assessment.
-    const assess = () => timedCheck("loss_trials_one_copy", () => triedDisturbanceTrial(planned_on, result, logger, report, errors));
+    const assess = () => timedCheck("loss_trials_one_copy", () => withTickPurpose("trial_one_copy", () => triedDisturbanceTrial(planned_on, result, logger, report, errors), { claim: true }));
     const assessed = memo === undefined || key === undefined ? assess() : memo.disturbanceTrial(key, assess);
     return errors === "throw" && assessed.disturbance_trial === null ? assess() : assessed;
 }

@@ -36,6 +36,7 @@ import { BlueprintGenerationResult, clockedByConfig, GenerateClockOptions, Simul
 import { EntityTransferCountMap } from "./sequence/cycle/swing-counts";
 import { withRunMemo } from "./plan/run-memo";
 import { CodedError, emitMakerLog, makerLogOn, noteClockLanes, noteClockRun, reasonOf, reasonOfError, timedCheck, timedMaker, withMakerLog } from "./maker-log";
+import { withTickPurpose } from "./tick-ledger";
 import { madeCompositionEvent, notMadeEvent, resultEvents } from "./maker-log-events";
 import { clockCost, ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, ROUNDED_CLOCK_MAX_FAST, RoundedClock, roundedRateAllowed, searchesToRun, searchesAreNeeded } from "./rank";
 import { TargetProductionRate } from "./target-production-rate";
@@ -1138,7 +1139,7 @@ function runAlternativeOf(
             let fewer: ReturnType<typeof fewerCopiesThatHold> = null;
             if (judgement !== null && judgement.losses.length > 0) {
                 try {
-                    fewer = timedCheck("fewer_copies", () => fewerCopiesThatHold(with_swings, trial.result.clock_windows, trial.clock_window_cycle, logger));
+                    fewer = timedCheck("fewer_copies", () => withTickPurpose("fewer_copies", () => fewerCopiesThatHold(with_swings, trial.result.clock_windows, trial.clock_window_cycle, logger), { claim: true }));
                 } catch (error) {
                     if (isInternalError(error)) throw error;
                     logger.warn(`Clock "${label}": the runs with fewer copies on the shared lanes could not be made: ${error instanceof Error ? error.message : String(error)}`);
@@ -1344,8 +1345,11 @@ function planPrimaryAndTasks(
 ): ClockAlternativesPlan {
     const logger = options.logger ?? defaultLogger;
     // the primary clock is made here, before its run: the ways its constructions offer are the primary run's parts
-    const { value: definition, parts: primary_ways } = collectingParts(() => primaryDefinition(config, options, options.on_progress_detail));
-    const result = definition.run();
+    // the seconds and ticks of this planning are counted to a maker of their own: it is made before any maker runs
+    const { definition, primary_ways, result } = timedMaker(PRIMARY_PLANNING_MAKER, () => {
+        const { value: definition, parts: primary_ways } = collectingParts(() => primaryDefinition(config, options, options.on_progress_detail));
+        return { definition, primary_ways, result: definition.run() };
+    });
     // once a generation; where it goes changes no result, since the coverage check reads the game data itself when it comes first
     warnUncalibratedBeltPickups(config, logger);
     warnLanesSharedByCopies(config, logger);
@@ -1452,6 +1456,8 @@ function runTask(
 
 /** The id of the per-branch clock (DESIGN D7) */
 export const COORDINATED_SOURCES_MAKER = "per-branch";
+/** The maker the log counts the planning of the primary clock to: it is made before any maker runs, and is not a clock's `maker` */
+export const PRIMARY_PLANNING_MAKER = "primary-planning";
 const COORDINATED_SOURCES_LABEL = nameOf("coordinated_sources");
 const COORDINATED_SOURCES_DESCRIPTION = "The inserters of each source use the enable windows of one other clock made for the build, on one shared window cycle. "
     + "A source is a machine, belt or chest that inserters take from. The generator sets the sources one at a time, from the output "

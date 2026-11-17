@@ -40,6 +40,7 @@ import type { CopiesTrialVerdict } from "./shared-lane-trial";
 import { COPY_NUMBER_STRIDE, twinOf } from "./sequence/build-copies";
 import type { WindowCycleClock } from "../simulation/controls/enable-control";
 import { textWords } from "./entity-name";
+import { beginTickLoop } from "./tick-ledger";
 
 export type DisturbanceTrial =
     /** Nothing is cut: the run as it is, counted as the runs with a loss are */
@@ -869,6 +870,7 @@ export function runLossTrials(
     const simulation_tick = new SimulationTick(context);
     const now = () => context.tick_provider.getCurrentTick();
     const start_tick = now();
+    const ledger = beginTickLoop("loss_trials", () => now() - start_tick);
     const step = () => simulation_tick.executeForTick();
     const runUntilPhase = (phase: number) => {
         const wanted = ((phase % bin.ticks) + bin.ticks) % bin.ticks;
@@ -1108,6 +1110,7 @@ export function runLossTrials(
     const recovers = trials.every(trial => trial.recovers);
     const ran_their_course = trials.filter(trial => trial.until_stopped);
     const never_stopped = ran_their_course.some(trial => trial.stopped_after_ticks === null);
+    ledger?.close();
     return {
         loss,
         bin_ticks: bin.ticks,

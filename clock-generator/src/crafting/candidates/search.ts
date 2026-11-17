@@ -5,6 +5,7 @@ import { Logger } from "../../common/logger";
 import { StockRecording } from "../machine-stock";
 import { TrialRun } from "../plan/unclocked-run";
 import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FULL_CHECK_START_PHASES, runAsBuiltCheck } from "../trial";
+import { withTickPurpose } from "../tick-ledger";
 
 /**
  * The one search every transform of a clock's windows goes through, with the one policy for trying its candidates.
@@ -151,7 +152,7 @@ export function quickTrial(config: Config, windows: Map<string, OpenRange[]>, wi
     /** Judge each lane-phase start over its repeating cycle (see runAsBuiltCheck): observed windows do */
     pickup_phase_cycles: boolean = false,
 ): QuickTrial & { result: TrialRun; run: AsBuiltRun } {
-    const run = runAsBuiltCheck(config, windows, window_cycle_ticks, logger, AS_BUILT_START_PHASES, undefined, 0, undefined, pickup_phase_cycles);
+    const run = withTickPurpose("quick_trial", () => runAsBuiltCheck(config, windows, window_cycle_ticks, logger, AS_BUILT_START_PHASES, undefined, 0, undefined, pickup_phase_cycles), { claim: true });
     return { holds: run.check.holds, result: run.result, run };
 }
 

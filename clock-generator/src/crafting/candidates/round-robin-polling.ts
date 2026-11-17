@@ -16,6 +16,7 @@ import { turnOffsets } from "./taker-turns";
 import { targetItemOf, targetMachinesOf } from "../sequence/cycle/target-ends";
 import { offerPart, partsWanted, wayEvent } from "./coordinated-sources-parts";
 import { reasonOf, type MakerReason } from "../maker-log";
+import { withTickPurpose } from "../tick-ledger";
 
 /** Ticks added to the shortest window that starts the last hand: one for the tick a combinator takes, one of margin */
 const WINDOW_MARGIN_TICKS = 2;
@@ -709,7 +710,9 @@ export function marginText(failure: MarginFailure): string {
 /** `holdsWithMargin` with the failure as data: the first group moved a tick that does not hold, or the clock as it stands */
 export function marginFailureOf(plan: UnclockedRun, windows: Map<string, OpenRange[]>, window_cycle_ticks: number): MarginFailure | null {
     const swings = fractionalSwingsOf(plan.run.output_cycle_plan);
-    if (!runClockOnBuild(plan.config, windows, window_cycle_ticks, plan.logger, swings).stability_check.holds) return { check: "as_placed" };
+    const holdsOn = (on: Map<string, OpenRange[]>) =>
+        withTickPurpose("margin_check", () => runClockOnBuild(plan.config, on, window_cycle_ticks, plan.logger, swings).stability_check.holds, { claim: true });
+    if (!holdsOn(windows)) return { check: "as_placed" };
     const groups = new Map<string, string[]>();
     for (const [id, ranges] of windows) {
         const key = ranges.map(range => `${range.start_inclusive}-${range.end_inclusive}`).join(",");
@@ -719,7 +722,7 @@ export function marginFailureOf(plan: UnclockedRun, windows: Map<string, OpenRan
         for (const ticks of [-MARGIN_SHIFT_TICKS, MARGIN_SHIFT_TICKS]) {
             const moved = new Map(windows);
             for (const id of ids) moved.set(id, shiftedWindows(windows.get(id)!, ticks, window_cycle_ticks));
-            if (!runClockOnBuild(plan.config, moved, window_cycle_ticks, plan.logger, swings).stability_check.holds) {
+            if (!holdsOn(moved)) {
                 return { check: "shifted", shift_ticks: ticks, windows: key, inserters: ids };
             }
         }

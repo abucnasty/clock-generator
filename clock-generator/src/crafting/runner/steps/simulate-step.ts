@@ -4,6 +4,7 @@ import type { TickRecorder } from "../../../simulation/observers/observer";
 import { Duration } from "../../../data-types";
 import { SimulationContext } from "../../sequence";
 import { RunnerStep, RunnerStepType } from "./runner-step";
+import { beginTickLoop } from "../../tick-ledger";
 
 export class SimulateStep implements RunnerStep {
     public readonly type: RunnerStepType = RunnerStepType.SIMULATE
@@ -34,6 +35,7 @@ export class SimulateStep implements RunnerStep {
 
         const start_tick = context.tick_provider.getCurrentTick();
         const end_tick = start_tick + this.duration.ticks;
+        const ledger = beginTickLoop("simulate_step", () => context.tick_provider.getCurrentTick() - start_tick);
 
         while (true) {
             const current_tick = context.tick_provider.getCurrentTick();
@@ -52,6 +54,7 @@ export class SimulateStep implements RunnerStep {
             }
         }
         this.ticks_run = context.tick_provider.getCurrentTick() - start_tick;
+        ledger?.close();
     }
 
     private build(): SimulationTick {
