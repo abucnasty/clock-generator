@@ -23,8 +23,10 @@ hood, open half) are used here.
   of the belt (1/8 tile) past its drop point, the second a further 1/8 behind that, the third and every later one at the same place as the
   third: from the side at 3/8, 1/2, 5/8 and again 5/8 tile from the end of the belt piece, from behind at 0.176, 0.301, 0.426 and again 0.426. A
   drop from a side lands on the lane **farther** from the inserter; a drop along the line, either way, on its right lane.
-- **An underground end** takes `0,1,3,5,7,…`: the third stack comes a tick later than on a straight line. The exception is a drop from
-  downstream of an entrance, across its hood onto its open half, which keeps `0,1,2,4,…`. A drop **into the hood** of an entrance puts
+- **An underground end**, in the probe's cells, takes `0,1,3,5,7,…`: the third stack comes a tick later than on a straight line. The exception is a drop from
+  downstream of an entrance, across its hood onto its open half, which keeps `0,1,2,4,…`. Ten inserters that drop onto an underground end
+  on the scaffolds of three sample builds (Factorio 2.1.24) dropped at `0,1,2,4` instead. Which layouts give which is open
+  ([#678](https://github.com/abucnasty/clock-generator/issues/678)). A drop **into the hood** of an entrance puts
   every stack at the hood's mouth, where it goes below ground; a drop from downstream into the hood of an exit, where the line ends,
   takes two stacks and then none.
 - **A line that ends at the inserter** takes a hand until its last tile is full: four stacks (a tile of a lane), fewer with a queue

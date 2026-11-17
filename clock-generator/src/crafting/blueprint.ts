@@ -87,6 +87,7 @@ function createDeciderCombinatorForTransfers(
             }),
             deciderWindows(ranges, clockValueRanges, modulo ? { modulus: modulo.split.modulus, signal: modulo.signal } : undefined, window_cycle.subtick_scale),
             window_cycle.ticks,
+            turn_line,
         );
     }
 
@@ -94,19 +95,14 @@ function createDeciderCombinatorForTransfers(
         // the window repeats every modulus ticks on the clock, or on the modulo the decider reads when that is its length
         const signal = modulo && modulo.split.modulus === inserter_clock.modulus ? modulo.signal : SignalId.clock;
         const [window] = clockValueRanges(wholeRanges([inserter_clock.window]));
-        description_lines = unplannedDescriptionLines(entity_ids, entity_registry, items, inserter_clock, window, signal);
+        description_lines = unplannedDescriptionLines(entity_ids, entity_registry, items, inserter_clock, window, signal, turn_line);
     }
 
     if (!swing_counts && Entity.isDrill(entity)) {
         // a drill into a chest: its windows are made from the takes out of the chest, outside the swing counts
         description_lines = chestDrillDescriptionLines(entity_ids, entity_registry, items,
             deciderWindows(ranges, clockValueRanges, modulo ? { modulus: modulo.split.modulus, signal: modulo.signal } : undefined, window_cycle.subtick_scale),
-            window_cycle.ticks);
-    }
-
-    // after the lines that say what it switches on and when; the lines Factorio keeps are the first ones
-    if (turn_line !== undefined && description_lines.length > 0) {
-        description_lines.splice(Math.min(2, description_lines.length), 0, turn_line);
+            window_cycle.ticks, turn_line);
     }
 
     const outputs = Array.from(items).map(item_name => SignalId.item(item_name));

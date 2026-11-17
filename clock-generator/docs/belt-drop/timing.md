@@ -47,8 +47,10 @@ same figures for the four sides and ends of a straight line. Delay is 4 for ever
   drop point plus one step of the belt (1/8 tile) and stays within a quarter tile behind the drop point (`recordings.test.ts` asserts it for
   every straight-line scenario of every belt stack size).
 - The lane is the far one for a drop across the line and the right lane (2) for a drop along it, from behind or ahead.
-- An underground end is a tick slower from the third stack on (`0,1,3,5,…`), except the drop that reaches across an entrance's hood from
-  downstream (`0,1,2,4,…`). The open half is 0.5 tile long: its stacks are read within that, and a stack dropped into an entrance's hood is
+- In the probe's cells an underground end is a tick slower from the third stack on (`0,1,3,5,…`), except the drop that reaches across an entrance's hood from
+  downstream (`0,1,2,4,…`); the offsets are the ticks the stacks were seen on the lane. Ten inserters that drop onto an underground end on the
+  scaffolds of three sample builds (2.1.24) read their hand emptying at `0,1,2,4`. Which layouts give which is open
+  ([#678](https://github.com/abucnasty/clock-generator/issues/678)). The open half is 0.5 tile long: its stacks are read within that, and a stack dropped into an entrance's hood is
   read at the mouth (0) and goes below ground at once.
 - The line that ends at the inserter holds four stacks of a hand in the last tile of a lane (an exit: two in its open half) and then
   the hand waits for room that never comes (see [dead ends](#a-line-that-ends-at-the-inserter)).

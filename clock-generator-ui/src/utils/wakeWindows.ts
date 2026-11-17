@@ -37,6 +37,12 @@ export interface OwnClock {
     item: string;
 }
 
+/** One end of a route as the wiring reference names it: "Belt 1", "Machine 2" and the id of the recipe a machine makes */
+export interface RowEnd {
+    label: string;
+    recipe?: string;
+}
+
 export interface WakeWindowRow {
     /** The engine's entity id, "inserter:3" */
     id: string;
@@ -48,6 +54,9 @@ export interface WakeWindowRow {
     items: string[];
     /** Between what, "Belt 1 to Machine 2"; a drill's "into Machine 1"; empty when the run does not say */
     route: string;
+    /** The ends of the route, by name and recipe; absent when the run does not say (a drill has no source end) */
+    from?: RowEnd;
+    to?: RowEnd;
     source?: EntityOption;
     sink?: EntityOption;
     windows: WakeWindow[];
@@ -193,6 +202,16 @@ function endLabel(end: { entity_id: string; label: string } | undefined): string
     return match && kind ? entityLabel(kind, Number(match[2])) : end.label;
 }
 
+/** The end as the wiring reference names it: its name from its id, and for a sink the recipe the engine's label carries, "Machine 2 (iron-gear-wheel)" */
+function rowEnd(end: { entity_id: string; label: string } | undefined, withRecipe: boolean): RowEnd | undefined {
+    const label = endLabel(end);
+    if (label === null) {
+        return undefined;
+    }
+    const recipe = withRecipe ? /^Machine \d+ \((.+)\)$/.exec(end?.label ?? '')?.[1] : undefined;
+    return { label, ...(recipe !== undefined ? { recipe } : {}) };
+}
+
 /** One row per inserter, then per drill, in number order, of everything the clock switches or leaves on */
 export function buildWakeWindowRows(alternative: WakeWindowSource, options: readonly EntityOption[] = []): WakeWindowRow[] {
     const endpoints = new Map(options.map(option => [`${option.type}:${option.id}`, option]));
@@ -249,6 +268,8 @@ export function buildWakeWindowRows(alternative: WakeWindowSource, options: read
             onTicks = onShare * window_cycle_ticks;
         }
 
+        const from = entity && kind === 'inserter' ? rowEnd(entity.source, false) : undefined;
+        const to = entity ? rowEnd(entity.sink, true) : undefined;
         const route = entity ? rowRouteText(kind === 'inserter' ? endLabel(entity.source) : null, endLabel(entity.sink)) : '';
 
         rows.push({
@@ -258,6 +279,8 @@ export function buildWakeWindowRows(alternative: WakeWindowSource, options: read
             label: entityLabel(kind, number),
             items: entity ? [...entity.items] : [],
             route,
+            ...(from ? { from } : {}),
+            ...(to ? { to } : {}),
             source: endpoint(entity?.source?.entity_id),
             sink: endpoint(entity?.sink?.entity_id),
             windows,

@@ -296,10 +296,9 @@ _Avoid_: Short (as the label of a row)
 
 **Room for one more hand**:
 Ticks that the generator adds at the end of each enable window of an inserter. It adds them where the inserter takes
-from a lane that is not a dead end. They are the ticks that one more hand takes to fill at one lane stack a tick: 4
-ticks for a hand of 16 from stacks of 4. On such a lane, an empty space or a take upstream can start a hand later than
-the generator planned. Without the room, the window closes on a hand that is not full. A lane with an unknown end gets
-the room. A side pickup of an item on both lanes of its belt gets no room. Its far lane gives what an empty space on
+from a belt, dead end or not. They are the ticks that one more hand takes to fill at one lane stack a tick: 4
+ticks for a hand of 16 from stacks of 4. On a lane, an empty space or a take upstream can start a hand later than
+the generator planned. Without the room, the window closes on a hand that is not full. A side pickup of an item on both lanes of its belt gets no room. Its far lane gives what an empty space on
 its near lane does not give. A project term, as the code says it (`laneHandRoomTicks`).
 _Avoid_: belt slack, belt pickup slack, pickup slack, slack (bare)
 

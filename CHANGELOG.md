@@ -14,6 +14,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 ### Changed
 - generation: Coordinated Sources now checks its clock with every copy while it chooses
 - generation: the chemical science, grenade and utility science samples now judge their output belts
+- blueprint: combinator descriptions and the wiring reference now show each inserter's source, item and sink
 - simulation: an output belt can now be stated for builds with several output inserters
 
 ### Fixed
