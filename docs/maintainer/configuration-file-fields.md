@@ -191,12 +191,14 @@ after the engine reads the file: a field with a default is required, but a confi
 | `belts[]{strategy=normal}.lanes[0].supply_rate` | number > 0 | no | The items per second that come onto the lane where it starts. The default is the lane's capacity. |
 | `belts[]{strategy=normal}.lanes[0].lane_end` | one of 3 objects, by `kind`: `dead_end`, `infinite`, `unknown` | no | The end of the lane. Without it, the deprecated backed_up_belts sets the end if the configuration states it. If not, the role of the lane sets the end: an input or a buffer lane is a dead end, an output lane is an infinite end. |
 | `belts[]{strategy=normal}.lanes[0].sharing` | one of `shared`, `per_copy` | no | shared (default): all copies take from this lane. per_copy: each copy has a lane of its own. |
+| `belts[]{strategy=normal}.lanes[0].underground_entrances` | array of number | no | The underground entrances of a lane that the copies share, where the game cuts the lane into lines: the middle of each entrance that has an exit after it, in tiles along the lane from the middle of copy 1's pickup tile, upstream negative, from upstream to downstream. Read only when the override lane_lines is true. |
 | `belts[]{strategy=normal}.lanes[1]` | object | yes |  |
 | `belts[]{strategy=normal}.lanes[1].ingredient` | string | yes | The name of the item on the lane. |
 | `belts[]{strategy=normal}.lanes[1].stack_size` | integer > 0 | yes | The number of items in each stack on the lane. |
 | `belts[]{strategy=normal}.lanes[1].supply_rate` | number > 0 | no | The items per second that come onto the lane where it starts. The default is the lane's capacity. |
 | `belts[]{strategy=normal}.lanes[1].lane_end` | one of 3 objects, by `kind`: `dead_end`, `infinite`, `unknown` | no | The end of the lane. Without it, the deprecated backed_up_belts sets the end if the configuration states it. If not, the role of the lane sets the end: an input or a buffer lane is a dead end, an output lane is an infinite end. |
 | `belts[]{strategy=normal}.lanes[1].sharing` | one of `shared`, `per_copy` | no | shared (default): all copies take from this lane. per_copy: each copy has a lane of its own. |
+| `belts[]{strategy=normal}.lanes[1].underground_entrances` | array of number | no | The underground entrances of a lane that the copies share, where the game cuts the lane into lines: the middle of each entrance that has an exit after it, in tiles along the lane from the middle of copy 1's pickup tile, upstream negative, from upstream to downstream. Read only when the override lane_lines is true. |
 | `belts[]{strategy=export}.id` | integer > 0 | yes | The number that identifies the belt in the configuration. |
 | `belts[]{strategy=export}.type` | one of `transport-belt`, `fast-transport-belt`, `express-transport-belt`, `turbo-transport-belt` | yes | The prototype name of the belt. |
 | `belts[]{strategy=export}.flow_direction` | `0` or `4` or `8` or `12` | no | The direction in which the belt flows along the row of copies: 0 north, 4 east, 8 south, 12 west. Without it, the check runs the items in the two directions along the copies. A direction across copy_offset, on a lane that the copies share, is refused. |
@@ -207,6 +209,7 @@ after the engine reads the file: a field with a default is required, but a confi
 | `belts[]{strategy=export}.lanes[0].supply_rate` | number > 0 | no | The items per second that come onto the lane where it starts. The default is the lane's capacity. |
 | `belts[]{strategy=export}.lanes[0].lane_end` | one of 3 objects, by `kind`: `dead_end`, `infinite`, `unknown` | no | The end of the lane. Without it, the deprecated backed_up_belts sets the end if the configuration states it. If not, the role of the lane sets the end: an input or a buffer lane is a dead end, an output lane is an infinite end. |
 | `belts[]{strategy=export}.lanes[0].sharing` | one of `shared`, `per_copy` | no | shared (default): all copies take from this lane. per_copy: each copy has a lane of its own. |
+| `belts[]{strategy=export}.lanes[0].underground_entrances` | array of number | no | The underground entrances of a lane that the copies share, where the game cuts the lane into lines: the middle of each entrance that has an exit after it, in tiles along the lane from the middle of copy 1's pickup tile, upstream negative, from upstream to downstream. Read only when the override lane_lines is true. |
 | `belts[]{strategy=export}.lanes[0].consumption_per_second` | number > 0 | no | The items per second that entities outside the configuration take off this lane. |
 | `belts[]{strategy=export}.lanes[1]` | object | yes |  |
 | `belts[]{strategy=export}.lanes[1].ingredient` | string | yes | The name of the item on the lane. |
@@ -214,6 +217,7 @@ after the engine reads the file: a field with a default is required, but a confi
 | `belts[]{strategy=export}.lanes[1].supply_rate` | number > 0 | no | The items per second that come onto the lane where it starts. The default is the lane's capacity. |
 | `belts[]{strategy=export}.lanes[1].lane_end` | one of 3 objects, by `kind`: `dead_end`, `infinite`, `unknown` | no | The end of the lane. Without it, the deprecated backed_up_belts sets the end if the configuration states it. If not, the role of the lane sets the end: an input or a buffer lane is a dead end, an output lane is an infinite end. |
 | `belts[]{strategy=export}.lanes[1].sharing` | one of `shared`, `per_copy` | no | shared (default): all copies take from this lane. per_copy: each copy has a lane of its own. |
+| `belts[]{strategy=export}.lanes[1].underground_entrances` | array of number | no | The underground entrances of a lane that the copies share, where the game cuts the lane into lines: the middle of each entrance that has an exit after it, in tiles along the lane from the middle of copy 1's pickup tile, upstream negative, from upstream to downstream. Read only when the override lane_lines is true. |
 | `belts[]{strategy=export}.lanes[1].consumption_per_second` | number > 0 | no | The items per second that entities outside the configuration take off this lane. |
 
 ## chests
@@ -308,6 +312,7 @@ after the engine reads the file: a field with a default is required, but a confi
 | `overrides.search_for_fewer_wake_ups` | boolean | no | Whether the generator always does the four searches, to find a clock with fewer wakeups. |
 | `overrides.check_start_dependence` | boolean | no | Whether the generator tests each clock from more starts than the cold start. |
 | `overrides.disturbance_trials_on_copies` | boolean | no | Whether the generator makes the disturbance trials again on the copies that share a lane. |
+| `overrides.lane_lines` | boolean | no | Whether each lane that the copies share and that states its underground entrances runs as lines cut at those entrances, in the game's order. |
 | `overrides.kick_start_items` | integer ≥ 0 | no | The kick start: the number of its own product that a machine gets before its clock starts, when its recipe uses that product. |
 | `overrides.disable_swing_backoff` | boolean | no | Not used: set terminal_swing_count to give the number of output swings. |
 | `overrides.derive_clock_windows` | boolean | no | Whether the generator finds the enable windows of other inserters from a run in which only the output inserters have a clock. |
