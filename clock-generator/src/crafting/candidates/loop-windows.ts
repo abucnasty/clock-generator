@@ -107,6 +107,14 @@ function droppedPerTick(stock: StockRecording, inserter_ids: ReadonlySet<string>
     return to > from ? dropped / (to - from) : 0;
 }
 
+/** The windows `loopInserterWindows` proposes for an inserter that takes out of a loop */
+export interface OutOfLoopWindows {
+    windows: OpenRange[];
+    item_name: string;
+    /** For windows placed one a hand: the ticks of a slot, over which they may be moved together; they open at its start */
+    phase_slot?: number;
+}
+
 /**
  * Windows for the inserters that take from a loop of machines into a machine outside it (the eggs for the science
  * biochamber; the out edges of its composite node into a machine, `machineLoopsOf`), which the loop leaves always enabled
@@ -124,6 +132,14 @@ function droppedPerTick(stock: StockRecording, inserter_ids: ReadonlySet<string>
  * it); one into a machine that is under its block all the time or nearly; and every one of them on a window cycle that is
  * not a whole number of ticks.
  *
+ * Where the machine is under its block in fewer stretches than the inserter moved hands a window cycle in the run (its
+ * output is taken in many short windows, and the block parts nothing), and its insertion limit holds a hand, the
+ * inserter gets one window for each of its hands, spread evenly, each as long as the machine takes to draw the hands of
+ * its inserters under its insertion limit (`drawWindowTicks` of a slot's hands). Where they open in the slot is not read
+ * from the run: `phase_slot` is the slot, over which the caller places them (see `trialWithLoopWindows`). On
+ * agricultural science's clocks of one output swing (an output window every 19.2 ticks): 9 and 10 bring 32 eggs every 96
+ * ticks, 20 ticks of every 96.
+ *
  * Only a proposal: the caller keeps the windows if the as-built check of the build with them passes, over a longer run
  * than the check of the clock without them (see `trialWithLoopWindows`), and the clock is made again without them
  * where it does not get back from a loss with them.
@@ -133,8 +149,8 @@ export function loopInserterWindows(
     window_cycle_ticks: number,
     stock: StockRecording,
     logger: Logger,
-): Map<string, { windows: OpenRange[]; item_name: string }> {
-    const result = new Map<string, { windows: OpenRange[]; item_name: string }>();
+): Map<string, OutOfLoopWindows> {
+    const result = new Map<string, OutOfLoopWindows>();
     if (!Number.isInteger(window_cycle_ticks)) {
         return result;
     }
@@ -164,12 +180,30 @@ export function loopInserterWindows(
         for (const inserter of into_sink) {
             const min_disabled_ticks = LOOP_WINDOW_MIN_SWINGS * inserter.animation.total.ticks;
             const stretches = underBlockStretches(map, min_disabled_ticks).length;
-            const lengths = Array.from(inserter.filtered_items).flatMap(item_name => {
-                const input = sink.inputs.get(item_name);
+            const hands = handsPerWindowCycle(stock, inserter.entity_id.id, window_cycle_ticks);
+            const items = Array.from(inserter.filtered_items).filter(item_name => sink.inputs.has(item_name));
+            // fewer stretches under the block than hands: the block does not part the hands, so one window a hand
+            const by_hands = stretches < hands && items.length > 0
+                && items.every(item_name => sink.inputs.get(item_name)!.automated_insertion_limit.quantity >= handSizeFor(inserter, item_name));
+            const per_window = by_hands ? hands : stretches;
+            const lengths = items.flatMap(item_name => {
                 const drawn = droppedPerTick(stock, feeding_sink, item_name, window_cycle_ticks);
-                return input === undefined || drawn <= 0 ? []
-                    : [drawWindowTicks(inserter, input.automated_insertion_limit.quantity, drawn * window_cycle_ticks / stretches, drawn)];
+                return drawn <= 0 ? []
+                    : [drawWindowTicks(inserter, sink.inputs.get(item_name)!.automated_insertion_limit.quantity, drawn * window_cycle_ticks / per_window, drawn)];
             });
+            if (by_hands && lengths.length > 0) {
+                const slot = window_cycle_ticks / hands;
+                const length = Math.max(...lengths);
+                if (slot - length < min_disabled_ticks) {
+                    logger.log(`Loop enable windows of ${inserter.entity_id.id}: kept always enabled, a window for each of its ${hands} hands would leave it off under ${min_disabled_ticks} ticks at a time`);
+                    continue;
+                }
+                const windows = OpenRange.reduceRanges(Array.from({ length: hands }, (_, k) => windowFrom(Math.round(k * slot), length, window_cycle_ticks)).flat());
+                logger.log(`Loop enable windows of ${inserter.entity_id.id}: ${sink_id} is under its output block in ${stretches} stretch${stretches === 1 ? "" : "es"} for its ${hands} hands, `
+                    + `so ${length} ticks of every ${slot}, as long as ${sink_id} takes to draw a hand of each of its inserters under its insertion limit`);
+                result.set(inserter.entity_id.id, { windows, item_name: Array.from(inserter.filtered_items).sort().join(","), phase_slot: slot });
+                continue;
+            }
             const windows = lengths.length === 0 ? null : underBlockWindows(map, min_disabled_ticks, Math.max(...lengths));
             if (windows === null) {
                 logger.log(`Loop enable windows of ${inserter.entity_id.id}: kept always enabled, ${sink_id} is under its output block nearly all the time`);
