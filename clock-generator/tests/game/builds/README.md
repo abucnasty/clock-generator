@@ -603,8 +603,8 @@ tail, against 80 (70 at its lowest tick) in the baseline. It is a lower, steady 
 `iron-plate-80-car-chest-clock.generation.test.ts` pins each clock and checks it against its native summary.
 
 The second difference of #587 is a count, not the stock, and it is kept as it was: the scaffold recordings' "iron plates through a car"
-(`scaffold-recordings.game.test.ts`, `crafts_open`) shows the two furnaces finishing 193.17 crafts and productivity bars a period in the game
-under the minute-long recording against 194.00 in the simulator, while the build moves 96 plates in every period; over the 36,000 ticks recorded
+(`scaffold-recordings.game.test.ts`, `crafts_open`) shows the two furnaces finishing 193.17 crafts and productivity bars a window cycle in the game
+under the minute-long recording against 194.00 in the simulator, while the build moves 96 plates in every window cycle; over the 36,000 ticks recorded
 before, the two agreed. The 0.83 crafts (0.4%) are named and not explained here: that recording was not made again for the stock guard.
 
 ```bash
