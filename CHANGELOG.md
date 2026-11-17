@@ -15,7 +15,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - generation: Coordinated Sources now checks its clock with every copy while it chooses
 
 ### Fixed
-- generation: the start dependence check now runs its ascending and random inserter orders
+- generation: the start dependence check's ascending and random inserter orders now apply to inserters that are always enabled; clocked inserters keep the order their enable windows' deciders were built in
 
 ## [0.29.2] - 2026-11-16
 
