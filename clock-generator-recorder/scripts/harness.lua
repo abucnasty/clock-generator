@@ -1250,6 +1250,252 @@ function harness.advance(job)
     return { tick = game.tick, pause_tick = state.pause_tick }
 end
 
+---The kick start of loops in a staged start, the seeds of the job and its probe (job.lua): what goes into the build right before
+---its recording starts
+---@param state table storage.harness
+---@param job table the job of harness.start
+---@param report table gets loop_seeds and seeds
+local function seed_and_probe(state, job, report)
+    if state.staged then
+        report.loop_seeds = seed_self_ingredient_loops(state.entities, (job.staged or {}).loop_seed or 200)
+    end
+
+    for _, seed in ipairs(job.seed or {}) do
+        table.insert(report.seeds, apply_seed(state.entities, seed))
+    end
+
+    if job.lua then
+        local chunk, problem = load(job.lua, "=harness lua", "t")
+        if not chunk then
+            error(problem)
+        end
+        -- settle.finish() ends the settle in the tick it is called in: a probe that runs until something happens in the game
+        -- ends it then, and settle_ticks is the most it may take. settle.record_samples(n) shortens a recording without a clock
+        -- (a staged start, or record.at_once) to n samples: a probe that records until something happens ends it then, and
+        -- record.ticks is the most it may take
+        local settle = {
+            finish = function()
+                if state.record_tick and state.record_tick > game.tick then state.record_tick = game.tick end
+            end,
+            record_samples = function(samples)
+                local recording = storage.recording
+                assert(recording and not recording.clock, "record_samples needs a recording without a clock that has started")
+                if samples < recording.fallback_ticks then recording.fallback_ticks = math.max(samples, recording.sample_count) end
+            end,
+        }
+        chunk(state.entities, game.surfaces[state.surface_index], state.area, settle)
+    end
+end
+
+---The Clock lock of a generated clock: the constant combinator that puts out the Lock signal, which stops the clock while it is on
+---@param combinators LuaEntity[]
+---@return LuaEntity
+local function clock_lock(combinators)
+    for _, combinator in pairs(combinators) do
+        if combinator.valid and combinator.type == "constant-combinator" then
+            local behavior = combinator.get_control_behavior()
+            for _, section in pairs(behavior and behavior.sections or {}) do
+                for _, filter in pairs(section.filters) do
+                    if filter.value and filter.value.name == "signal-lock" then
+                        return combinator
+                    end
+                end
+            end
+        end
+    end
+    error("the clock has no Clock lock: no constant combinator of it puts out the Lock signal")
+end
+
+-- the main counter is read after this many ticks with the lock off, for the report
+local COUNTER_AFTER_TICKS = 5
+
+---The backpressure start of a staged start, in the tick its inserters are built: the clock is built and its Clock lock set on, then
+---it is wired, so the inserters it schedules (the windowed inserters) are held off while the rest of the build fills. fill_tick
+---watches the fill and open_fill sets the lock off.
+---@param state table storage.harness
+---@param job table the job of harness.start
+---@param staged_report table what place_staged built
+---@return table clock report, table fill report
+local function start_fill(state, job, staged_report)
+    local options = job.staged.backpressure
+    local combinators, tags = build_clock(state, job.clock.blueprint)
+    local lock = clock_lock(combinators)
+    lock.get_control_behavior().enabled = true
+    local clock_report = attach_clock(state, combinators, tags, job.clock)
+
+    local windowed = {}
+    local windowed_count = 0
+    for _, wired in pairs(clock_report.wired) do
+        if not windowed[wired.unit_number] then
+            windowed[wired.unit_number] = true
+            windowed_count = windowed_count + 1
+        end
+    end
+    local by_unit_number = {}
+    for _, entity in pairs(state.entities) do
+        if entity.valid and entity.unit_number then
+            by_unit_number[entity.unit_number] = entity
+        end
+    end
+    -- every inserter of the cell: those built now and those built in the first stage that the build order names
+    local cell, unclocked_count = {}, 0
+    local function add(unit_number, config_id)
+        local entity = by_unit_number[unit_number]
+        if entity then
+            table.insert(cell, { entity = entity, config_id = config_id, windowed = windowed[unit_number] == true, moved = false })
+            if not windowed[unit_number] then
+                unclocked_count = unclocked_count + 1
+            end
+        end
+    end
+    for _, placed in pairs(staged_report.placed) do
+        add(placed.unit_number, placed.config_id)
+    end
+    for _, preexisting in pairs(staged_report.preexisting) do
+        add(preexisting.unit_number, preexisting.config_id)
+    end
+    local machines = {}
+    for _, entity in pairs(state.entities) do
+        if entity.valid and CRAFTING_MACHINE_TYPES[entity.type] then
+            table.insert(machines, { entity = entity, last = entity.products_finished, windows = {} })
+        end
+    end
+
+    state.fill = {
+        phase = "filling",
+        started_tick = game.tick,
+        window_ticks = options.window_ticks,
+        cap_ticks = options.cap_ticks,
+        lock = lock,
+        combinators = combinators,
+        windowed = windowed,
+        cell = cell,
+        machines = machines,
+        leaks = { ticks = 0, units = {} },
+        -- the kick start of loops, the seeds and the probe go in at the opening
+        job = job,
+        counter_after = {},
+    }
+    return clock_report, { lock_unit = lock.unit_number, started_tick = game.tick, windowed = windowed_count, unclocked = unclocked_count,
+        window_ticks = options.window_ticks, cap_ticks = options.cap_ticks }
+end
+
+---The end of the fill of a backpressure start: what the build holds is reported, the lock is set off, and the kick start, the seeds,
+---the probe and the recording start in this tick
+---@param state table storage.harness
+---@param ended "steady"|"cap"
+local function open_fill(state, ended)
+    local fill = state.fill
+    -- what drops into each machine: an inserter the clock holds, one it does not, or none
+    local feeders = {}
+    for _, entity in pairs(state.entities) do
+        if entity.valid and entity.type == "inserter" then
+            local drop = entity.drop_target
+            if drop and drop.valid and drop.unit_number then
+                local fed = feeders[drop.unit_number] or {}
+                if fill.windowed[entity.unit_number] then fed.windowed = true else fed.unclocked = true end
+                feeders[drop.unit_number] = fed
+            end
+        end
+    end
+    local machines = {}
+    for _, machine in ipairs(fill.machines) do
+        local entity = machine.entity
+        if entity.valid then
+            local fed = feeders[entity.unit_number]
+            local ok, recipe = pcall(function() return entity.get_recipe() end)
+            table.insert(machines, {
+                unit_number = entity.unit_number,
+                name = entity.name,
+                recipe = ok and recipe and recipe.name or nil,
+                fed_by = fed == nil and "none" or (fed.unclocked and "unclocked" or "windowed"),
+                input = entity.get_inventory(defines.inventory.crafter_input).get_item_count(),
+                output = entity.get_inventory(defines.inventory.crafter_output).get_item_count(),
+                products_finished = entity.products_finished,
+                windows = machine.windows,
+            })
+        end
+    end
+    local inserters = {}
+    for _, member in ipairs(fill.cell) do
+        local entity = member.entity
+        if entity.valid then
+            local hand = entity.held_stack
+            table.insert(inserters, { unit_number = entity.unit_number, config_id = member.config_id, windowed = member.windowed,
+                held = hand.valid_for_read and hand.count or 0, moved = member.moved })
+        end
+    end
+    local leaked = {}
+    for unit_number in pairs(fill.leaks.units) do
+        table.insert(leaked, unit_number)
+    end
+    local opening = {
+        tick = game.tick,
+        started_tick = fill.started_tick,
+        ended = ended,
+        window_ticks = fill.window_ticks,
+        counter = clock_counter(fill.combinators),
+        leaks = { ticks = fill.leaks.ticks, first_tick = fill.leaks.first_tick, units = leaked },
+        machines = machines,
+        inserters = inserters,
+        seeds = {},
+    }
+    fill.lock.get_control_behavior().enabled = false
+    seed_and_probe(state, fill.job, opening)
+    start_recording(state)
+    fill.phase = "open"
+    fill.opening = opening
+end
+
+---One tick of the fill of a backpressure start: every windowed inserter has to be disabled by the circuit, and every crafting machine's
+---products are counted at the end of each window; the lock is set off once every machine made as many in two windows in a row, or
+---at the cap
+---@param state table storage.harness
+local function fill_tick(state)
+    local fill = state.fill
+    -- an inserter built in the tick the fill started knows its circuit condition after its first tick
+    local checks = game.tick > fill.started_tick + 1
+    for _, member in ipairs(fill.cell) do
+        local entity = member.entity
+        if entity.valid then
+            if checks and member.windowed then
+                local behavior = entity.get_control_behavior()
+                if not (behavior and behavior.disabled) then
+                    if fill.leaks.last_tick ~= game.tick then
+                        fill.leaks.ticks = fill.leaks.ticks + 1
+                        fill.leaks.last_tick = game.tick
+                        fill.leaks.first_tick = fill.leaks.first_tick or game.tick
+                    end
+                    fill.leaks.units[entity.unit_number] = true
+                end
+            end
+            if entity.held_stack.valid_for_read then
+                member.moved = true
+            end
+        end
+    end
+    local elapsed = game.tick - fill.started_tick
+    if elapsed > 0 and elapsed % fill.window_ticks == 0 then
+        local steady = elapsed >= 2 * fill.window_ticks
+        for _, machine in ipairs(fill.machines) do
+            local made = machine.entity.valid and machine.entity.products_finished or machine.last
+            table.insert(machine.windows, made - machine.last)
+            machine.last = made
+            local count = #machine.windows
+            if count < 2 or machine.windows[count] ~= machine.windows[count - 1] then
+                steady = false
+            end
+        end
+        if steady then
+            open_fill(state, "steady")
+            return
+        end
+    end
+    if elapsed >= fill.cap_ticks then
+        open_fill(state, "cap")
+    end
+end
+
 ---Wire a clock, seed the build, start recording and let the game run
 ---@param job {clock: table?, unclocked: boolean?, seed: table[]?, lua: string?, settle_ticks: number?, record: {ticks: number?, periods: number?, at_once: boolean?}?}
 ---@return table report
@@ -1291,8 +1537,12 @@ function harness.start(job)
         end
     end
 
+    -- a backpressure start: the clock is wired with its lock on, and the build fills until the lock is set off (open_fill)
+    local backpressure = state.staged ~= nil and job.staged ~= nil and job.staged.backpressure ~= nil and job.clock ~= nil and not primed
     if primed then
         report.clock = attach_clock(state, primed.combinators, primed.tags, job.clock)
+    elseif backpressure then
+        report.clock, report.fill = start_fill(state, job, report.staged)
     elseif job.clock then
         report.clock = wire_clock(state, job.clock)
     elseif job.unclocked then
@@ -1303,34 +1553,8 @@ function harness.start(job)
         end
     end
 
-    if state.staged then
-        report.loop_seeds = seed_self_ingredient_loops(state.entities, (job.staged or {}).loop_seed or 200)
-    end
-
-    for _, seed in ipairs(job.seed or {}) do
-        table.insert(report.seeds, apply_seed(state.entities, seed))
-    end
-
-    if job.lua then
-        local chunk, problem = load(job.lua, "=harness lua", "t")
-        if not chunk then
-            error(problem)
-        end
-        -- settle.finish() ends the settle in the tick it is called in: a probe that runs until something happens in the game
-        -- ends it then, and settle_ticks is the most it may take. settle.record_samples(n) shortens a recording without a clock
-        -- (a staged start, or record.at_once) to n samples: a probe that records until something happens ends it then, and
-        -- record.ticks is the most it may take
-        local settle = {
-            finish = function()
-                if state.record_tick and state.record_tick > game.tick then state.record_tick = game.tick end
-            end,
-            record_samples = function(samples)
-                local recording = storage.recording
-                assert(recording and not recording.clock, "record_samples needs a recording without a clock that has started")
-                if samples < recording.fallback_ticks then recording.fallback_ticks = math.max(samples, recording.sample_count) end
-            end,
-        }
-        chunk(state.entities, game.surfaces[state.surface_index], state.area, settle)
+    if not backpressure then
+        seed_and_probe(state, job, report)
     end
 
     local record = job.record or {}
@@ -1344,7 +1568,9 @@ function harness.start(job)
         ignore_clock = job.unclocked or state.staged ~= nil or record.at_once == true,
     }
     state.ready = false
-    if (job.settle_ticks or 0) > 0 or state.staged then
+    if backpressure then
+        -- the recording starts in the tick the lock is set off (open_fill)
+    elseif (job.settle_ticks or 0) > 0 or state.staged then
         -- the build runs on its new clock and seeds for a while first, so its start-up is not in the recording. The inserters built
         -- in a staged start know what they pick up from and drop into after their first tick, which the recording needs
         state.record_tick = game.tick + math.max(job.settle_ticks or 0, 1)
@@ -1364,7 +1590,11 @@ function harness.status()
     status.tick = game.tick
     status.paused = game.tick_paused
     status.ready = state ~= nil and state.ready
-    status.settling = state ~= nil and state.record_tick ~= nil
+    status.settling = state ~= nil and (state.record_tick ~= nil or (state.fill ~= nil and state.fill.phase == "filling"))
+    if state ~= nil and state.fill ~= nil then
+        status.fill = { phase = state.fill.phase, elapsed = game.tick - state.fill.started_tick, opening = state.fill.opening,
+            counter_after = state.fill.counter_after }
+    end
     if state ~= nil and state.staged ~= nil then
         local staged = state.staged
         status.staged = { phase = staged.phase, started_tick = staged.started_tick, saturated_tick = staged.saturated_tick, failed = staged.failed, lanes = staged.lane_log, run = staged.run }
@@ -1378,7 +1608,8 @@ end
 ---@return boolean
 function harness.is_waiting()
     local state = storage.harness
-    return state ~= nil and (state.pause_tick ~= nil or state.record_tick ~= nil or (state.staged ~= nil and state.staged.phase == "filling"))
+    return state ~= nil and (state.pause_tick ~= nil or state.record_tick ~= nil or (state.staged ~= nil and state.staged.phase == "filling")
+        or (state.fill ~= nil and (state.fill.phase == "filling" or #state.fill.counter_after < COUNTER_AFTER_TICKS)))
 end
 
 ---Per-tick handler during the warm-up, which pauses the game once it is over, and while a build settles before it is recorded
@@ -1386,6 +1617,13 @@ function harness.on_tick()
     local state = storage.harness
     if state and state.staged and state.staged.phase == "filling" then
         staged_tick(state)
+    end
+    if state and state.fill then
+        if state.fill.phase == "filling" then
+            fill_tick(state)
+        elseif #state.fill.counter_after < COUNTER_AFTER_TICKS then
+            table.insert(state.fill.counter_after, clock_counter(state.fill.combinators))
+        end
     end
     if state and state.pause_tick and game.tick >= state.pause_tick then
         state.pause_tick = nil
