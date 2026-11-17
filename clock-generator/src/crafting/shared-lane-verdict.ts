@@ -938,6 +938,8 @@ function judgedOnOutputBelt(config: Config, clock_windows: SerializableClockWind
     if (ends === null || rates === null) throw new Error("the target rates of the output inserters cannot be worked out, so the output belt cannot be judged");
     const layout: SharedLaneLayout = { rows: [], copies: { later: Array.from({ length: copies - 1 }, () => "whole" as const) } };
     const run = outputBeltRunOf(config, layout, windows, window_cycle_ticks, window_cycles, logger, ends);
+    // a clock is never taken to hold on a run with nothing judged
+    if (!(run.to > run.from)) throw new Error("the run of the output belt has no whole window cycle to judge");
     // each copy's output inserter furthest behind its target
     const furthest = new Map<number, BehindTarget>();
     for (const behind of behindTargetIn(run, rates)) if (behind.kind === "output_inserter" && !furthest.has(behind.copy)) furthest.set(behind.copy, behind);
@@ -950,8 +952,8 @@ function judgedOnOutputBelt(config: Config, clock_windows: SerializableClockWind
         const belt = config.belts.find(it => sink.type === "belt" && it.id === sink.id) ?? config.belts.find(it => it.lanes.some(lane => lane.ingredient === ends.item))!;
         const lane = (belt.lanes.findIndex(it => it.ingredient === ends.item) + 1 || 1) as 1 | 2;
         const hand = rates.output_inserters.get(behind.id)!.hand;
-        // the two runs can end at other ticks (a run stops once its state repeats): the run on tiles of their own over the
-        // span of the run on the output belt, at its rate
+        // the two runs can end at other ticks, so their judged spans differ: the run on tiles of their own over the span of
+        // the run on the output belt, at its rate
         const span = (it: RunOfCopies) => it.to - it.from;
         const items = outputItemsOf(run, behind.copy);
         const alone_items = span(reference) > 0 ? Math.round(outputItemsOf(reference, behind.copy) / span(reference) * span(run)) : 0;
