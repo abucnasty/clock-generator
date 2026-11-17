@@ -228,13 +228,14 @@ export interface ConditionOpening {
 }
 
 /**
- * What the hand waited for at a tick: the arm away (`hand_at_source`); a hand it swings (`on_its_way`); else the first of
- * room and item that did not hold; else, where it took items, the window (the close cut a hand it was filling); else
- * nothing of the four (`left_over`: the hand could have taken and did not, as on the tick it decides its first stack)
+ * What the hand waited for at a tick: a hand it swings, to the sink or at it (`on_its_way`); an empty arm on its way back
+ * (`hand_at_source`); else the first of room and item that did not hold; else, where it took items, the window (it was
+ * taking: a close there cuts the hand); else nothing of the four (`left_over`: the hand could have taken and did not, as
+ * on the tick it decides its first stack)
  */
 export function waitedFor(record: TakerConditions, tick: number): AtClose {
-    if (!record.has(tick, "hand_at_source")) return "hand_at_source";
     if (record.onItsWay(tick)) return "on_its_way";
+    if (!record.has(tick, "hand_at_source")) return "hand_at_source";
     if (!record.has(tick, "room_at_sink")) return "room_at_sink";
     if (!record.has(tick, "item_there")) return "item_there";
     return record.tookFrom(tick) !== null ? "window_open" : "left_over";

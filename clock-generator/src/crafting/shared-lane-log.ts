@@ -2,7 +2,7 @@ import { Config } from "../config";
 import { laneLoads, sharedLaneSupplyOf } from "../config/lane-capacity-validator";
 import Fraction, { fraction } from "../data-types/fraction";
 import { laneFactsOfConfig } from "../entities/traits/build-traits";
-import { AtClose, HandCondition, handStartsOf, HAND_CONDITIONS, openingsOf, TakerConditions, waitedFor } from "./hand-conditions";
+import { AtClose, HandCondition, handStartsOf, openingsOf, TakerConditions, waitedFor } from "./hand-conditions";
 import type { HandDropped, LaneRow } from "./shared-lane-model";
 
 /**
@@ -19,7 +19,7 @@ import type { HandDropped, LaneRow } from "./shared-lane-model";
  *   stack's passing time of a pickup of copy j moved on by that travel, on the window cycle. It binds only where the lane
  *   moves at copy k's reach: the share of its open ticks in which it moved is given beside it.
  * - Missed swings: for each taker of a copy that loses swings, its pickups in the judged span, and for each window cycle
- *   with a missed swing what the hand waited for when its window closed (hand-conditions.ts).
+ *   with a missed swing the condition its hand waited for longer than in its window cycles with none (hand-conditions.ts).
  */
 
 /** The window cycle a tick is in, for a window cycle that need not be a whole number of ticks (as shared-lane-verdict.ts) */
@@ -253,8 +253,15 @@ export function movedAtReach(records: readonly TakerConditions[], lane: 1 | 2, f
     return { open_ticks, moved_ticks };
 }
 
-/** What a missed swing is given as its reason: the condition the hand waited for when its window closed, or none (`left_over`) */
+/**
+ * What a missed swing is given as its reason: the condition the hand waited for longer than in its window cycles with no
+ * missed swing; the window where nothing waited longer and a window of the cycle closed on a hand that was taking; else
+ * none (`left_over`)
+ */
 export type MissedSwingCondition = HandCondition | "left_over";
+
+/** Open ticks of a window cycle by what the hand waited for in them (`waitedFor`) */
+export type WaitTicks = Partial<Record<AtClose, number>>;
 
 /** The missed swings of one taker of one copy that loses swings, with its pickups and what each window cycle's hand waited for */
 export interface MissedSwings {
@@ -268,13 +275,20 @@ export interface MissedSwings {
     cause?: "lane" | "join_full";
     /** Its pickups in the judged span: [window cycle of the span from 1, tick of the window cycle, lane (0 where no lane says)] */
     pickups: [number, number, number][];
+    /**
+     * What a window cycle with no missed swing is held against: the open ticks by wait, on average, of the taker's own window
+     * cycles of the span with no missed swing (`own`), else of the same taker of the first copy over the span (`first_copy`),
+     * else none
+     */
+    baseline: { of: "own" | "first_copy" | "none"; window_cycles: number; waits: WaitTicks };
     /** Each window cycle with a missed swing */
     window_cycles: {
         window_cycle: number;
         missed: number;
-        /** What the hand waited for at the close of the last opening of the window cycle that closed on a wait; `left_over` where none did */
         condition: MissedSwingCondition;
-        /** What it waited for at the close of each opening of the window cycle */
+        /** Its open ticks by what the hand waited for in them */
+        waits: WaitTicks;
+        /** What the hand waited for at the close of each opening of the window cycle */
         at_close: AtClose[];
         /** The class the result's rows give the window cycle (`MissedSwingCause`) */
         stop_class: string;
@@ -285,13 +299,36 @@ export interface MissedSwings {
     starts_by_last: Partial<Record<HandCondition, number>>;
 }
 
+/** The open ticks of a record from tick `from` up to, not including, `to`, by what the hand waited for */
+function waitsIn(record: TakerConditions, from: number, to: number): WaitTicks {
+    const waits: WaitTicks = {};
+    for (let tick = Math.max(from, record.first_tick); tick < Math.min(to, record.last_tick + 1); tick++) {
+        if (!record.windowOpen(tick)) continue;
+        const wait = waitedFor(record, tick);
+        waits[wait] = (waits[wait] ?? 0) + 1;
+    }
+    return waits;
+}
+
+/** The mean of several counts of open ticks by wait, to three places */
+function meanOf(counts: readonly WaitTicks[]): WaitTicks {
+    const sum: Record<string, number> = {};
+    for (const count of counts) for (const [wait, ticks] of Object.entries(count)) sum[wait] = (sum[wait] ?? 0) + (ticks ?? 0);
+    return Object.fromEntries(Object.entries(sum).map(([wait, ticks]) => [wait, Math.round(ticks / counts.length * 1000) / 1000]));
+}
+
+/** The conditions a hand can wait for longer than its baseline, in the order a tie is given in */
+const LONGER_WAITS: readonly HandCondition[] = ["hand_at_source", "room_at_sink", "item_there"];
+
 /**
  * The missed swings of one taker of one copy from its record. `missed` gives, for each window cycle of the span (from 1)
- * with a missed swing, the swings missed and the class the result gives it. The openings of a window cycle are those that
- * open in it. A taker whose window is always open (or not read) has no close in the window cycle: what its hand waited for
- * at the window cycle's last tick is taken.
+ * with a missed swing, the swings missed and the class the result gives it. Each such window cycle's open ticks are counted
+ * by what the hand waited for (`waitedFor`) and held against the baseline: the condition with the most ticks over it is
+ * the one that did not come in time. Where none is over it, the window is the condition if an opening of the window cycle
+ * closed on a hand that was taking; else the missed swing has none (`left_over`). `first_copy` is the record of the same
+ * taker of the first copy, the baseline where every window cycle of the span has a missed swing.
  */
-export function missedSwingsOf(input: { record: TakerConditions; copy: number; inserter_id: number; belt_id: number; lanes: number[]; item: string;
+export function missedSwingsOf(input: { record: TakerConditions; first_copy?: TakerConditions; copy: number; inserter_id: number; belt_id: number; lanes: number[]; item: string;
     first_cycle: number; end_cycle: number; window_cycle_ticks: number;
     missed: readonly { window_cycle: number; missed: number; cause: string }[] }): MissedSwings {
     const { record, first_cycle, end_cycle, window_cycle_ticks: T } = input;
@@ -303,21 +340,37 @@ export function missedSwingsOf(input: { record: TakerConditions; copy: number; i
         const k = cycleOfTick(tick, T);
         pickups.push([k - first_cycle + 1, tick - cycleStartOf(k, T), lane]);
     }
+    const cycleWaits = (of: TakerConditions, k: number) => waitsIn(of, cycleStartOf(k, T), cycleStartOf(k + 1, T));
+    const missed_cycles = new Set(input.missed.map(it => first_cycle + it.window_cycle - 1));
+    const clean = Array.from({ length: Math.max(0, end_cycle - first_cycle) }, (_, i) => first_cycle + i).filter(k => !missed_cycles.has(k));
+    const first_copy = input.first_copy !== undefined && input.first_copy !== record ? input.first_copy : undefined;
+    const baseline: MissedSwings["baseline"] = clean.length > 0 ? { of: "own", window_cycles: clean.length, waits: meanOf(clean.map(k => cycleWaits(record, k))) }
+        : first_copy !== undefined && end_cycle > first_cycle
+            ? { of: "first_copy", window_cycles: end_cycle - first_cycle, waits: meanOf(Array.from({ length: end_cycle - first_cycle }, (_, i) => cycleWaits(first_copy, first_cycle + i))) }
+            : { of: "none", window_cycles: 0, waits: {} };
     const openings = openingsOf(record, from, to);
     const by_condition: MissedSwings["by_condition"] = {};
     const window_cycles = input.missed.map(({ window_cycle, missed, cause }) => {
         const k = first_cycle + window_cycle - 1;
         const start = cycleStartOf(k, T), end = cycleStartOf(k + 1, T);
-        const of_cycle = openings.filter(it => it.opens >= start && it.opens < end);
-        const at_close = of_cycle.length > 0 ? of_cycle.map(it => it.at_close) : [waitedFor(record, end - 1)];
-        const waits = at_close.filter((it): it is HandCondition => (HAND_CONDITIONS as readonly string[]).includes(it));
-        const condition: MissedSwingCondition = waits.length > 0 ? waits[waits.length - 1] : "left_over";
+        const at_close = openings.filter(it => it.opens >= start && it.opens < end).map(it => it.at_close);
+        const waits = cycleWaits(record, k);
+        let condition: MissedSwingCondition = "left_over", most = 0;
+        for (const wait of LONGER_WAITS) {
+            const over = (waits[wait] ?? 0) - (baseline.waits[wait] ?? 0);
+            if (over > most + 1e-9) {
+                condition = wait;
+                most = over;
+            }
+        }
+        if (condition === "left_over" && at_close.includes("window_open")) condition = "window_open";
         by_condition[condition] = (by_condition[condition] ?? 0) + missed;
-        return { window_cycle, missed, condition, at_close, stop_class: cause };
+        return { window_cycle, missed, condition, waits, at_close, stop_class: cause };
     });
     const starts_by_last: MissedSwings["starts_by_last"] = {};
     for (const start of handStartsOf(record, from, to)) starts_by_last[start.last] = (starts_by_last[start.last] ?? 0) + 1;
-    return { copy: input.copy, inserter_id: input.inserter_id, belt_id: input.belt_id, lanes: input.lanes, item: input.item, pickups, window_cycles, by_condition, starts_by_last };
+    return { copy: input.copy, inserter_id: input.inserter_id, belt_id: input.belt_id, lanes: input.lanes, item: input.item, pickups, baseline, window_cycles,
+        by_condition, starts_by_last };
 }
 
 /** One run of the copies the check judged by, as the log gives it */

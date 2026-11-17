@@ -458,7 +458,8 @@ describe("the facts of the lanes the check keeps for the maker log", async () =>
 });
 
 // measured (simulator, the engine of a59adb73): copy 2's inserter 1 misses 16 swings over the span; the rows class 8 of them as
-// neither; at the close of each window that missed one, its hand held items the machine took no more of
+// neither. In each window cycle that misses one, its hand waits for room at the machine longer than in its window cycles with
+// none: it holds items the machine takes no more of
 const MISSED_SWINGS_SWINGS_2 = ["copper-plate", "iron-gear-wheel"].map(item => ({ item, missed: 16, neither: 8, left_over: 0, by_condition: { room_at_sink: 16 } }));
 
 // AUTOMATION_SCIENCE_240's clock takt_batches_observed_swings_2 (windows from the record's job at a59adb73): copy 2 misses swings
@@ -479,6 +480,11 @@ describe("the missed swings of a clock whose second copy loses swings on both la
             // the same window cycles and missed swings as the result's rows
             expect(missed.window_cycles.reduce((sum, it) => sum + it.missed, 0)).toBe(stops.missed);
             expect(Object.values(missed.by_condition).reduce((sum, it) => sum + it, 0)).toBe(stops.missed);
+            // the condition is what the hand waited for longer than in its own window cycles with no missed swing
+            expect(missed.baseline.of).toBe("own");
+            for (const cycle of missed.window_cycles.filter(it => it.condition !== "left_over" && it.condition !== "window_open")) {
+                expect(cycle.waits[cycle.condition] ?? 0).toBeGreaterThan(missed.baseline.waits[cycle.condition] ?? 0);
+            }
             return { item: loss.item, missed: stops.missed, neither: stops.neither, left_over: missed.by_condition.left_over ?? 0, by_condition: missed.by_condition };
         });
         // measured at a59adb73's engine (simulator): the swings the rows class as neither, against those the log gives no condition

@@ -849,7 +849,8 @@ function shortfallsOf(under: Config, lanes: readonly ModelLane[], layout: Shared
                 alone.recorders.get(take.inserter_id)?.hands ?? [], taker_hands.get(`${take.copy}|${take.inserter_id}`) ?? [],
                 { first_cycle, end_cycle, window_cycle_ticks, travel_ticks: step_tiles / tiles_a_tick, reach_ticks: taker.length_tiles / tiles_a_tick })) };
         const record = conditions?.find(it => it.copy === take.copy && it.inserter_id === take.inserter_id);
-        const for_log = record === undefined ? undefined : forLog(() => missedSwingsOf({ record, copy: take.copy + 1, inserter_id: loss.inserter_id, belt_id: take.belt_id,
+        const first_copy = conditions?.find(it => it.copy === 0 && it.inserter_id === take.inserter_id);
+        const for_log = record === undefined ? undefined : forLog(() => missedSwingsOf({ record, ...(first_copy !== undefined && { first_copy }), copy: take.copy + 1, inserter_id: loss.inserter_id, belt_id: take.belt_id,
             lanes: [take.lane, ...others.map(other => other.lane)], item: take.item, first_cycle, end_cycle, window_cycle_ticks,
             missed: (loss_facts.swings?.missed ?? []).map(it => ({ window_cycle: it.window_cycle, missed: it.missed, cause: it.cause })) }), log_errors);
         return [{ short: alone_items - items, hand, loss, facts: loss_facts, ...(for_log !== undefined && { for_log }) }];

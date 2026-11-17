@@ -104,16 +104,17 @@ The example is shortened: one item, one window, one copy.
 | Field | Meaning |
 | --- | --- |
 | `pickups` | each tick the taker's hand took items in the judged span: `[window cycle of the span from 1, tick of the window cycle, lane]`; the lane is 0 where the run does not say it |
-| `window_cycles` | each window cycle with fewer swings than one copy alone: `missed`, `at_close` (what the hand waited for at the last open tick of each opening that opens in it), `condition` (the last of those that is a condition, else `left_over`) and `stop_class` (the class the result's rows give it) |
+| `baseline` | what a window cycle with a missed swing is held against: `waits`, the open ticks of a window cycle by what the hand waited for, on average over the taker's own window cycles of the span with no missed swing (`of`: `own`), else over the same taker of the first copy (`first_copy`), else none |
+| `window_cycles` | each window cycle with fewer swings than one copy alone: `missed`; `waits`, its open ticks by what the hand waited for; `condition`, the condition with the most open ticks over the baseline, else `window_open` where an opening of it closed on a hand that was taking, else `left_over`; `at_close`, what the hand waited for at the last open tick of each opening that opens in it; and `stop_class`, the class the result's rows give it |
 | `by_condition` | missed swings by `condition` |
 | `starts_by_last` | the taker's hand starts in the span by their last condition |
 
 The four conditions are read in each tick after the inserters' update (`src/crafting/hand-conditions.ts`): `window_open`, `hand_at_source`, `room_at_sink` (the sink takes what the hand brings, read from the sink), `item_there` (a reach holds a stack the hand can take).
 A hand start is the first take of an empty hand. Its last condition is the one that came last before it, ties in that order.
-At a close, `on_its_way` is a hand it swings, `window_open` a hand that took items in the last open tick, and `left_over` a hand that met all four and took nothing.
+In each open tick the hand waits for one thing: `on_its_way` (it holds a hand it swings), else the first condition that does not hold, in the order `hand_at_source`, `room_at_sink`, `item_there`; `window_open` where it took items, and `left_over` where all four held and it took nothing.
 
 ```json
-{"job":"config-FLYING_ROBOT_FRAME_80","event":"missed_swings","id":"takt_batches_observed","loss":0,"run":0,"copy":4,"inserter_id":3,"belt_id":5,"lanes":[1],"item":"electronic-circuit","cause":"lane","pickups":[[1,15,2],[1,16,2]],"window_cycles":[{"window_cycle":1,"missed":2,"condition":"hand_at_source","at_close":["room_at_sink","hand_at_source"],"stop_class":"neither"}],"by_condition":{"hand_at_source":102},"starts_by_last":{"window_open":122,"hand_at_source":81}}
+{"job":"config-FLYING_ROBOT_FRAME_80","event":"missed_swings","id":"takt_batches_observed","loss":0,"run":0,"copy":4,"inserter_id":3,"belt_id":5,"lanes":[1],"item":"electronic-circuit","pickups":[[1,15,2],[1,16,2]],"baseline":{"of":"first_copy","window_cycles":61,"waits":{"left_over":2,"window_open":15,"on_its_way":20,"hand_at_source":16}},"window_cycles":[{"window_cycle":1,"missed":2,"condition":"room_at_sink","waits":{"window_open":9,"on_its_way":12,"hand_at_source":11,"room_at_sink":21},"at_close":["room_at_sink","hand_at_source"],"stop_class":"neither"}],"by_condition":{"room_at_sink":82,"item_there":20},"starts_by_last":{"window_open":122,"hand_at_source":81},"cause":"lane"}
 ```
 
 The example is shortened: two pickups, one window cycle.
