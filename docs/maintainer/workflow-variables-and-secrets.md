@@ -28,7 +28,7 @@ The check names are the `name` values in `test.yml`.
 | Code checks | knip, type check, `npm run build` and lint in `clock-generator` | Each run. Not when Changed files finds only documentation. |
 | Unit tests | The result of the Unit shards and Code checks | Each run. Not when Changed files finds only documentation. |
 | Docs checks | `PORTAL.md` and the configuration file fields topic agree with their sources. The bold labels of the user topics are correct. | Each run |
-| Gen 1/2, Gen 2/2 | The generation tests, in two shards | When Changed files finds changes that are not documentation, and the pull request is not a draft |
+| Gen 1/5 to Gen 5/5 | The generation tests, in five shards | When Changed files finds changes that are not documentation, and the pull request is not a draft |
 | Gen summary | The result of the Gen shards | Pull requests to `master` or `hotfix/`, and runs with `generation` set to `true`. Correct when the changes are only documentation. |
 | Rec 1/6 to Rec 6/6 | The samples and fixtures of the blast, in six shards | Pull requests only, when Changed files finds changes that are not documentation, and the pull request is not a draft |
 | Rec summary | Compares the results with the record in `clock-generator/record/` | Pull requests to `master` or `hotfix/` only. Correct when the changes are only documentation. |
