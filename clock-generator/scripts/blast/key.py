@@ -46,8 +46,10 @@ PATHS = ['clock-generator/src', 'clock-generator/resources', 'clock-generator/pa
 ENV_KEYED: list[str] = ['CLOCK_EXPLORE']
 # changes generation too, but the runner clears it (blast.sh runs every process with `env -u`), so it is never in effect
 ENV_CLEARED = ['CLOCK_PROOF_PHASES']
-# read by the harness or the scripts, not by generation: the game recording store (src/harness) and the sweep scripts' checkout
-ENV_IGNORED = ['CLOCK_RECORDING_CACHE', 'CLOCK_RECORDING_CACHE_DIR', 'CLOCK_RECORDING_CACHE_LOG', 'CLOCK_GENERATOR_ROOT']
+# read by the harness or the scripts, not by generation: the game recording store (src/harness) and the sweep scripts' checkout;
+# and CLOCK_LOSS_WORKERS, which makes the loss runs of a disturbance trial in worker threads and changes no result, only the time and
+# the CPU a build takes: its runs are not of a key of their own, so run them with --no-store --full
+ENV_IGNORED = ['CLOCK_RECORDING_CACHE', 'CLOCK_RECORDING_CACHE_DIR', 'CLOCK_RECORDING_CACHE_LOG', 'CLOCK_GENERATOR_ROOT', 'CLOCK_LOSS_WORKERS']
 
 
 class UnknownEnvironment(Exception):

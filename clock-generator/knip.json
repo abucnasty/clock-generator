@@ -8,6 +8,7 @@
     "src/verify-recording.ts",
     "src/rule-calls.ts",
     "src/rules-of-the-game.ts",
+    "src/crafting/loss-run-worker.ts",
     "src/data/generated/prototype-types.ts",
     "src/**/*.test.ts",
     "scripts/**/*.js",

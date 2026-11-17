@@ -55,7 +55,7 @@ describe('the environment in the blast cache key', () => {
 
     it('does not count the variables the runner clears or the ones that do not reach generation', () => {
         const unset = engineOf().engine;
-        for (const name of ['CLOCK_PROOF_PHASES', 'CLOCK_RECORDING_CACHE', 'CLOCK_RECORDING_CACHE_DIR', 'CLOCK_RECORDING_CACHE_LOG', 'CLOCK_GENERATOR_ROOT']) {
+        for (const name of ['CLOCK_PROOF_PHASES', 'CLOCK_RECORDING_CACHE', 'CLOCK_RECORDING_CACHE_DIR', 'CLOCK_RECORDING_CACHE_LOG', 'CLOCK_GENERATOR_ROOT', 'CLOCK_LOSS_WORKERS']) {
             expect(engineOf({ [name]: 'x' }).engine, name).toBe(unset);
         }
     });

@@ -104,6 +104,10 @@
 # other, and never carries jobs from an entry made under another setting. With none set the key is what it always was. Every
 # command that runs or stores refuses, naming the variable, when the environment holds a CLOCK_* variable that key.py has on no list.
 #
+# CLOCK_LOSS_WORKERS=<n> puts the loss runs of each job's disturbance trials in n worker threads (the processes below then run 1 + n threads each). It
+# changes no result, only the wall time and the CPU a job takes, so the key does not hold it (key.py ENV_IGNORED): use it for a blast of a few named
+# jobs (BLAST_ONLY) that are generated alone, run with --no-store --full, and never for a full blast of every job or in CI, where the jobs fill the cores.
+#
 # Env: BLAST_DURATIONS (the durations --shard deals out by, default ci/record-durations.json), BLAST_GROUPS, BLAST_SKIP (jobs to leave out; none by default), BLAST_ONLY (run only these jobs, by ConfigPaths name; never cached; the run is complete, and exits 0, when every listed job is done), BLAST_SETUP (comma list of setup files from
 # clock-generator/, e.g. a rule patch; such a run is never cached), BLAST_CACHE (default
 # <main checkout>/clock-generator/.scratch/blast-cache, shared by every worktree of the repository), BLAST_LOCK (the file

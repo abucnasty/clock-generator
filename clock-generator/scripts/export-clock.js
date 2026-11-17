@@ -1,6 +1,6 @@
 // node scripts/export-clock.js <config json path or sample key> --out=<dir>
 //          [--alternative=<id|selected|all>[,<id>...]] [--always-on] [--windows=<file>] [--tag=<word>]
-//          [--scaffold=<blueprint file>] [--backed-up-belts] [--anchor=<x,y>] [--no-cells]
+//          [--scaffold=<blueprint file>] [--backed-up-belts] [--anchor=<x,y>] [--no-cells] [--loss-workers=<n>]
 // Generates the clocks of a config and writes each ready to place, for the clock files the benchmark tools read to place
 // the clocks: no game is started. The generator is the built one (`npx tsc`
 // first), or the checkout CLOCK_GENERATOR_ROOT names.
@@ -18,6 +18,9 @@
 //   --anchor          x,y of the copy's anchor in the scaffold's coordinates (default 0,0: the save has the scaffold where
 //                     the blueprint says); the offsets of cells.json are from it
 //   --no-cells        do not write cells.json
+//   --loss-workers    run the loss runs of the disturbance trials in <n> worker threads, as CLOCK_LOSS_WORKERS=<n> does (0 or no flag:
+//                     one thread). The clocks, verdicts and results are the same; the wall time of one build generated alone falls, for
+//                     more CPU time, so use it for one build at a time, not where jobs already fill the cores (a blast of every job, CI)
 //
 // Writes, in --out:
 //   cells.json             {cells: [{name, config, problems, instances, inserters: {id: {name, offset, wired, has_wire}}}]},
@@ -31,12 +34,19 @@ const path = require("path"), fs = require("fs"), zlib = require("zlib");
 const arg = name => process.argv.find(a => a === `--${name}` || a.startsWith(`--${name}=`))?.split("=").slice(1).join("=") ?? null;
 const flag = name => process.argv.includes(`--${name}`);
 const positional = process.argv.slice(2).filter(a => !a.startsWith("--"));
-const USAGE = "usage: export-clock.js <config json path or sample key> --out=<dir> [--alternative=<id|selected|all>] [--always-on] [--windows=<file>] [--tag=<word>] [--scaffold=<file>] [--backed-up-belts] [--anchor=<x,y>] [--no-cells]";
+const USAGE = "usage: export-clock.js <config json path or sample key> --out=<dir> [--alternative=<id|selected|all>] [--always-on] [--windows=<file>] [--tag=<word>] [--scaffold=<file>] [--backed-up-belts] [--anchor=<x,y>] [--no-cells] [--loss-workers=<n>]";
 if (positional.length !== 1 || arg("out") === null) {
     console.error(USAGE);
     process.exit(2);
 }
 const out_dir = path.resolve(arg("out"));
+if (arg("loss-workers") !== null) {
+    if (arg("loss-workers") === "") {
+        console.error("--loss-workers takes a number of worker threads: --loss-workers=<n>");
+        process.exit(2);
+    }
+    process.env.CLOCK_LOSS_WORKERS = arg("loss-workers");
+}
 const { dist, quiet, loadSample } = require("./lib");
 const { scaffoldOf } = require("./scaffold-of");
 const { ConfigPaths } = dist("config/config-paths.js");

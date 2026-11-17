@@ -40,6 +40,8 @@ import { CIRCUIT_LATENCY_TICKS } from "../common/rule-constants";
 import { WakeUpsFromStarts, hasStockTheClockDoesNotSet, wakeUpsFromStarts } from "./wake-ups-from-starts";
 import type { ClockSharedLaneLoss } from "./shared-lane-verdict";
 import { timedCheck } from "./maker-log";
+import { lossRunPool, type LossRunRequest } from "./loss-run-pool";
+import { WorkerThreadsError } from "./sync-worker-pool";
 
 /**
  * Number of clock start offsets the as-built check tries. Depending on how the clock lines up with the
@@ -687,6 +689,21 @@ export function clockFromWindows(
 }
 
 /**
+ * One run of one loss of a disturbance trial, as `disturbanceTrialOf` makes it: the build on the windows alone, cold start,
+ * with the loss and its options. Plain data in and out, so that a worker thread can make it (loss-run-worker.ts).
+ */
+export function lossRunOnBuild(
+    check_config: Config,
+    windows: Map<string, OpenRange[]>,
+    window_cycle_ticks: number,
+    logger: Logger,
+    swings: FractionalSwings,
+    trial: DisturbanceTrialOptions,
+): LossOutcome {
+    return runClockOnBuild(check_config, windows, window_cycle_ticks, logger, { ...swings, factorio_states: false, disturbance_trial: trial }).disturbance_trial!;
+}
+
+/**
  * Whether a clock survives backpressure loss (GOALS.md): the build is run on the windows alone, as its blueprint runs
  * it, once undisturbed and once for every loss it can have (each item that comes off a belt or out of a chest stops
  * arriving, each item it puts on a belt or in a chest is not taken away), and has to be back at exactly its expected
@@ -718,24 +735,37 @@ export function disturbanceTrialOf(
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     const check_config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
     // each loss on a run of its own, so that a clock one loss breaks is not broken for the next
-    const runOf = (loss: DisturbanceTrialOptions["loss"], skipped?: readonly SkippedTrial[]): LossOutcome => runClockOnBuild(check_config, windows, window_cycle_ticks, logger, {
-        ...swings,
-        factorio_states: false,
-        disturbance_trial: { loss_limit_ticks: loss_limit?.ticks, ...options, ...options_for?.(loss), loss, window_cycle_ticks, expected_output_items,
-            ...(skipped !== undefined && { skipped_trials: skipped }) },
-    }).disturbance_trial!;
-    // a loss the clock does not recover from has every trial of its plan counted (withEveryTrialCounted)
-    const outcomeOf = (loss: DisturbanceTrialOptions["loss"]): LossOutcome =>
-        withEveryTrialCounted(runOf(loss), skipped => runOf(loss, skipped));
+    const trialOptionsOf = (loss: DisturbanceTrialOptions["loss"], skipped?: readonly SkippedTrial[]): DisturbanceTrialOptions =>
+        ({ loss_limit_ticks: loss_limit?.ticks, ...options, ...options_for?.(loss), loss, window_cycle_ticks, expected_output_items,
+            ...(skipped !== undefined && { skipped_trials: skipped }) });
+    const runOf = (loss: DisturbanceTrialOptions["loss"], skipped?: readonly SkippedTrial[]): LossOutcome =>
+        lossRunOnBuild(check_config, windows, window_cycle_ticks, logger, swings, trialOptionsOf(loss, skipped));
     const registry = createEntityRegistryFromConfig(config);
     const losses: DisturbanceTrial[] = [...disturbanceTrialsOf(registry, config.setpoint.recipe), ...excesses];
     // a build whose items spoil is tried with losses shorter than its loss limit only
     const loss_limit = lossLimitOf(registry);
+    // The first run of each loss, the undisturbed run first, made ahead in worker threads where CLOCK_LOSS_WORKERS asks for them. Each is
+    // the run `runOf` would make, so what the trial reads below is what it read before, in the same order, and it stops where it
+    // stopped: the runs after the loss it stops at are made for nothing. A run that fails in a worker fails the trial only where
+    // the trial reads it. The runs a loss that does not recover is counted again with (`withEveryTrialCounted`) stay on this thread.
+    const all_losses: DisturbanceTrial[] = [{ kind: "none" }, ...losses];
+    const pool = lossRunPool();
+    const ahead = pool === null ? null : pool.run(all_losses.map((loss): LossRunRequest =>
+        ({ config: check_config, windows: clock_windows, window_cycle_ticks, swings, trial: trialOptionsOf(loss) })));
+    const firstRunOf = (loss: DisturbanceTrial): LossOutcome => {
+        const made = ahead?.[all_losses.indexOf(loss)];
+        if (made === undefined) return runOf(loss);
+        if ("error" in made) throw new Error(`The run of a loss in a worker thread failed: ${made.error}`);
+        return made.answer;
+    };
+    // a loss the clock does not recover from has every trial of its plan counted (withEveryTrialCounted)
+    const outcomeOf = (loss: DisturbanceTrial): LossOutcome =>
+        withEveryTrialCounted(firstRunOf(loss), skipped => runOf(loss, skipped));
     const tried = (loss: DisturbanceTrial, index: number): LossOutcome => {
         on_loss?.(loss, index, losses.length + 1);
         return outcomeOf(loss);
     };
-    const undisturbed = tried({ kind: "none" }, 0);
+    const undisturbed = tried(all_losses[0], 0);
     // The losses are tried in the order disturbanceTrialsOf gives: the supplies, then the outputs, the product's first.
     // Of the losses the clocks of the samples do not get back from, the supplies are the more often, and no other order
     // saves more than a point and a half of the trials. They stop at the first the clock does not get back from: it does
@@ -1847,7 +1877,8 @@ function triedDisturbanceTrial(
             result.exhaust === undefined ? undefined : resultLossOptionsOf(result.exhaust.plans), excess === null ? [] : [excess],
             fractionalSwingsOf(result.output_cycle_plan))) };
     } catch (error) {
-        if (errors === "throw") throw error;
+        // a failure of the worker threads is not a trial that could not be made: the generation stops, as it would on a switch that is wrong
+        if (errors === "throw" || error instanceof WorkerThreadsError) throw error;
         const reason = error instanceof Error ? error.message : String(error);
         logger.log(`Loss trials could not be made: ${reason}`);
         return { disturbance_trial: null, disturbance_trial_not_tried: reason };

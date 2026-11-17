@@ -89,6 +89,18 @@ describe('export-clock.js on automation science', () => {
         expect(at.size).toBe(config.inserters.length);
     });
 
+    it('writes the same clock with the loss runs in worker threads (--loss-workers), and refuses a count that is not a whole number', () => {
+        const selected = selectedFolder();
+        const threaded = path.join(out, 'threaded');
+        const made = spawnSync('node', [script('export-clock.js'), 'AUTOMATION_SCIENCE_240', `--out=${threaded}`, '--alternative=selected', '--no-cells', '--loss-workers=2'], { cwd: root, encoding: 'utf-8' });
+        expect(made.status, String(made.stderr)).toBe(0);
+        expect(read(threaded, selected, 'automation-240.json')).toEqual(read(out, selected, 'automation-240.json'));
+        expect(read(threaded, selected, 'arm.json')).toEqual(read(out, selected, 'arm.json'));
+        const refused = spawnSync('node', [script('export-clock.js'), 'AUTOMATION_SCIENCE_240', `--out=${path.join(out, 'refused-workers')}`, '--no-cells', '--loss-workers=many'], { cwd: root, encoding: 'utf-8' });
+        expect(refused.status).toBe(1);
+        expect(String(refused.stderr)).toContain('CLOCK_LOSS_WORKERS is a whole number of 0 or more, not "many"');
+    }, 120_000);
+
     it('refuses an alternative the generator does not have, and says which there are', () => {
         const refused = spawnSync('node', [script('export-clock.js'), 'AUTOMATION_SCIENCE_240', `--out=${path.join(out, 'refused')}`, '--alternative=nothing', '--no-cells'], { cwd: root, encoding: 'utf-8' });
         expect(refused.status).toBe(1);
