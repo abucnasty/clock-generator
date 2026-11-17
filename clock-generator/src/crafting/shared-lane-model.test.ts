@@ -144,8 +144,10 @@ function handsOfTaker(config: Config, layout: SharedLaneLayout | null): string {
 
 describe("the line ends of a row's lane, from its underground entrances", () => {
     // nine copies 9 tiles apart, one taker a copy without positions, as automation science 240 has them
-    const automation = (): Config => ({ ...rowConfig({ copies: 9, copy_offset: { x: 9, y: 0 } }),
-        inserters: [{ id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 } }] } as Config);
+    const automation = (): Config => {
+        const config = rowConfig({ copies: 9, copy_offset: { x: 9, y: 0 } });
+        return { ...config, machines: config.machines.slice(0, 1), inserters: [{ id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 } }] } as Config;
+    };
     const row = () => rowsOf(automation(), { x: 1, y: 0 }).rows[0];
 
     it("puts each entrance in tiles from the lane's entry, copy 1's pickup tile a tile and a half from it, and leaves out one upstream of the entry", () => {
@@ -164,11 +166,10 @@ describe("the line ends of a row's lane, from its underground entrances", () => 
     });
 
     it("runs the copies on the lane in lines only with the override: the lane keys its lines", () => {
-        const windows = new Map([["inserter:1", [OpenRange.from(1, 24)]]]);
+        // four gear copies 4 tiles apart: the lane runs 1.5 tiles to copy 1's pickup tile's middle and ends at 14
         const lanesOf = (overrides: Config["overrides"]) => {
-            const config = { ...automation(), overrides,
-                belts: [{ id: 1, type: "turbo-transport-belt", lanes: [{ ingredient: "advanced-circuit", stack_size: 4, lane_end: { kind: "dead_end" }, underground_entrances: [1, 10, 19] }] }] } as Config;
-            return runOnSharedLanes(config, windows, 72, rowsOf(config, { x: 1, y: 0 }), 2, quiet).lanes[0].key();
+            const config = { ...gearConfig({ lane_end: { kind: "dead_end" }, underground_entrances: [1, 5, 9] }, 4), overrides };
+            return runOnSharedLanes(config, gearWindows, 120, rowsOf(config, { x: 1, y: 0 }), 2, quiet).lanes[0].key();
         };
         expect(lanesOf({})).not.toContain("lines");
         expect(lanesOf({ lane_lines: true })).toContain("lines");

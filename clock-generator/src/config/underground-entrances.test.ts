@@ -52,6 +52,8 @@ describe("the underground entrances of a lane", () => {
     });
 
     it("are refused where a number is not finite", () => {
-        expect(problems(configWith({ underground_entrances: [1, Number.POSITIVE_INFINITY] })).map(it => it.path)).toEqual(["belts.0.lanes.0.underground_entrances.1"]);
+        // a belt is one of two kinds, so the refusal names the belt
+        expect(problems(configWith({ underground_entrances: [1, Number.POSITIVE_INFINITY] })).map(it => it.path)).toEqual(["belts.0"]);
+        expect(problems(configWith({ underground_entrances: [1, 10] }))).toEqual([]);
     });
 });

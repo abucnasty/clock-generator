@@ -101,23 +101,19 @@ describe("a shared lane in lines", () => {
     });
 
     it("keeps a follower waiting one tick at a line's end where its line was updated while the leader's line was off the list", () => {
-        const { one, lines } = lanes();
-        for (const lane of [one, lines]) {
-            // a take in line A (1 to 2 tiles) puts A on the list; a tick later a take in line D puts D and C on after it, while B
-            // stands off the list: A is updated first and cannot move, B goes on only when C moves, and A has had its tick
-            expect(lane.reachOf(2, 1).take(10, 4)).toBe(4);
-            expect(lane.reachOf(8, 1).take(11, 4)).toBe(4);
-        }
-        // up to the take in D the two agree; in the tick after it the stacks of A between its gap and B's first stack stand in
-        // the lane of lines and move in the one line: one tick, and then they agree again for good
-        for (let tick = 10; tick <= 11; tick++) expect(positions(lines, tick)).toEqual(positions(one, tick));
-        const waits = positions(lines, 12), moves = positions(one, 12);
-        expect(waits).not.toEqual(moves);
-        const at_a = (list: number[]) => list.filter(position => position >= 6 * 256 && position < 7 * 256);
-        // the leader at A's downstream end (6 tiles upstream of the reach's edge) waits, the one line has it moved
-        expect(at_a(waits)[0]).toBe(6 * 256);
-        expect(at_a(moves)[0]).toBeLessThan(6 * 256);
-        for (let tick = 14; tick < 40; tick++) expect(positions(lines, tick)).toEqual(positions(one, tick));
+        // a take in line A (1 to 2 tiles) puts A on the list; a tick later a take in line D puts D and C on after it, while B
+        // stands off the list: A is updated first and cannot move, B goes on only when C moves, and A has had its tick
+        const [one_line, in_lines] = Object.values(lanes()).map(lane => Array.from({ length: 40 }, (_, tick) => {
+            if (tick === 10) expect(lane.reachOf(2, 1).take(10, 4)).toBe(4);
+            if (tick === 11) expect(lane.reachOf(8, 1).take(11, 4)).toBe(4);
+            return positions(lane, tick);
+        }));
+        // up to the take in D the two agree; in the tick after it the stack at A's downstream end (2 tiles from the entry, 6
+        // from the reach's edge) stands in the lane of lines and moves in the one line: one tick, then they agree again for good
+        expect(in_lines.slice(0, 12)).toEqual(one_line.slice(0, 12));
+        expect(in_lines[12]).toContain(6 * 256);
+        expect(one_line[12]).not.toContain(6 * 256);
+        expect(in_lines.slice(14)).toEqual(one_line.slice(14));
     });
 
     it("invents no wait where a pickup puts its line and the line feeding it on: takes downstream alone move the lines as one line", () => {
