@@ -35,7 +35,7 @@ import { coordinatedSourcesClock, withNotAdmitted, type NotAdmittedPart } from "
 import { BlueprintGenerationResult, clockedByConfig, GenerateClockOptions, SimulationStabilityCheck, fractionalStartOf, fractionalSwingsOf } from "./plan/unclocked-run";
 import { EntityTransferCountMap } from "./sequence/cycle/swing-counts";
 import { withRunMemo } from "./plan/run-memo";
-import { CodedError, emitMakerLog, makerLogOn, noteClockLanes, reasonOf, reasonOfError, timedCheck, timedMaker, withMakerLog } from "./maker-log";
+import { CodedError, emitMakerLog, makerLogOn, noteClockLanes, noteClockRun, reasonOf, reasonOfError, timedCheck, timedMaker, withMakerLog } from "./maker-log";
 import { madeCompositionEvent, notMadeEvent, resultEvents } from "./maker-log-events";
 import { clockCost, ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, ROUNDED_CLOCK_MAX_FAST, RoundedClock, roundedRateAllowed, searchesToRun, searchesAreNeeded } from "./rank";
 import { TargetProductionRate } from "./target-production-rate";
@@ -1207,8 +1207,16 @@ function runAlternativeOf(
             inserter_window_count, deciders: windowDeciderCount(row.result.blueprint), ranking_window_count, assessment, verdict: clockVerdictOf(assessment), deadlock_risks, belt, insights,
             strategy: listed_strategy };
         // for the maker log only: what the check of the shared lanes kept of this clock, by its result
-        if (makerLogOn()) noteClockLanes(clock.result, { held: tried_as.held, not_checked: shared_lane_losses.some(isNotChecked),
-            for_log: sharedLaneCheck(tried_as)?.judgement?.for_log ?? null });
+        if (makerLogOn()) {
+            noteClockLanes(clock.result, { held: tried_as.held, not_checked: shared_lane_losses.some(isNotChecked),
+                for_log: sharedLaneCheck(tried_as)?.judgement?.for_log ?? null });
+            // how its run of one copy is made, as the wakeups from the starts make it (`fromStarts`), for the repeat check
+            const planned_on = used.planned_on ?? config;
+            noteClockRun(clock.result, { config: { ...planned_on, overrides: { ...planned_on.overrides, terminal_swing_count: tried_as.result.used_terminal_swing_count } },
+                windows: tried_as.result.clock_windows, window_cycle_ticks: tried_as.clock_window_cycle, expected_output_items,
+                long_run_ticks: tried_as === exact_trial && tried_as.result.loop_windows !== undefined ? LOOP_WINDOW_CHECK_TICKS : FREE_RUNNING_CHECK_TICKS,
+                swings: fractionalSwingsOf(tried_as.result.output_cycle_plan) });
+        }
         const ranking = rankingOf(clock, config);
         // where its wake-ups decide the selection, a clock of a build with a loop, whose wake-ups depend on how it starts, is ranked by their mean
         // over the starts; the clock of a trial that is neither the exact one nor the rounded one tried meets no target
@@ -1553,7 +1561,8 @@ export function generateClockAlternatives(
     config: Config,
     options: GenerateClockOptions = {}
 ): ClockAlternativesResult {
-    return withMakerLog(options.maker_log, () => withRunMemo(() => generateAllAlternatives(withoutOutsideSupply(config), options)));
+    return withMakerLog(options.maker_log, () => withRunMemo(() => generateAllAlternatives(withoutOutsideSupply(config), options)),
+        { repeat_check: options.maker_log_repeat_check === true });
 }
 
 function generateAllAlternatives(config: Config, options: GenerateClockOptions): ClockAlternativesResult {
@@ -1640,7 +1649,7 @@ function generateAllAlternatives(config: Config, options: GenerateClockOptions):
     const ranked = combineClockAlternativeRuns(runs, it => it.ranking);
     // each clock's "what changes it" names another clock of this result that holds with all the copies (checked-lanes.ts)
     const combined = { ...ranked, alternatives: withOtherClocks(ranked.alternatives, ranked.selected_index, config.setpoint.copies) };
-    if (makerLogOn()) for (const event of resultEvents(config, combined)) emitMakerLog(() => event);
+    if (makerLogOn()) for (const event of resultEvents(config, combined, logger)) emitMakerLog(() => event);
     return {
         ...combined,
         lanes: buildLanesOf(config),

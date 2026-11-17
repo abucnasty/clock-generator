@@ -540,7 +540,7 @@ function countKeptLists(inserter: WatchingInserter, alarms: KeptListsAlarms, fir
             if (shown_end !== undefined && armAway(tick - 1) && (shown_end === "sink" ? sinkAlarmed(tick) : sourceAlarmed(tick))) away++;
             if (woke === "sink") woken_at_sink++;
             if (woke === "source") woken_at_source++;
-            if (woke !== null) on_wake?.(inserter.inserter_id, tick, woke);
+            if (woke !== null) on_wake?.(inserter.inserter_id, tick, woke, woke_in === JOIN_INSERTERS ? "inserter" : "machine");
             alarm_count += (sourceAlarmed(tick) ? 1 : 0) + (sinkAlarmed(tick) ? 1 : 0);
             if (states[tick] !== OFF) {
                 enabled++;
@@ -551,8 +551,14 @@ function countKeptLists(inserter: WatchingInserter, alarms: KeptListsAlarms, fir
     return { woken_at_sink, woken_at_source, woken: woken_at_sink + woken_at_source, away, alarms: alarm_count, enabled, waiting };
 }
 
-/** Called once for each wake-up counted, with the tick it happens in and the end whose machine woke the inserter */
-export type WakeListener = (inserter_id: string, tick: number, end: WatchedEnd) => void;
+/**
+ * What alarmed the list of a wake-up: the machine (a craft start or a fuel item taken on its input list, a result on its
+ * output list), or another inserter (a take from the machine's output on its input list, fuel put in on its output list)
+ */
+export type WakeCause = "machine" | "inserter";
+
+/** Called once for each wake-up counted, with the tick it happens in, the end whose machine woke the inserter, and what alarmed that list */
+export type WakeListener = (inserter_id: string, tick: number, end: WatchedEnd, by: WakeCause) => void;
 
 /**
  * Wake-ups of every inserter over the ticks `from_tick` (inclusive) to `to_tick` (exclusive) of a run.

@@ -26,6 +26,7 @@ import { droppedOnto, ModelLane, modelLanesOf, takenLanesOf, takenTogether, take
 import { DropRecorder, HandDropped, LaidOutLane, LaneRow, recordInserters, runOnSharedLanes, SharedLaneLayout, sharedLaneLayoutOf } from "./shared-lane-model";
 import type { OutputBeltRun } from "./output-belt-run";
 import { recordHandConditions, TakerConditions } from "./hand-conditions";
+import { InserterTimetableRecord, recordTimetable, timetableOf as timetableLineOf, windowRangesOf } from "./timetable";
 import { claimedStacksOf, clockLaneLoadOf, CopySpacing, FillOfOpening, laneFillOf, LoggedRun, missedSwingsOf, MissedSwings, movedAtReach, pickupPhasesOf,
     SharedLanesForLog } from "./shared-lane-log";
 import { TargetProductionRate } from "./target-production-rate";
@@ -230,15 +231,18 @@ function recordStops(context: SimulationContext, config: Config, layout: SharedL
  */
 export function copyLaneTakes(config: Config, windows: Map<string, OpenRange[]>, window_cycle_ticks: number, layout: SharedLaneLayout,
     window_cycles: number, logger: Logger, ends: OutputEnds | null = null, for_log = false, log_errors: string[] = []): { takes: CopyLaneTake[]; made: CopyMade[]; last_tick: number; output_belt?: OutputBeltRun;
-        stops: TakerStops[]; taker_hands: ReadonlyMap<string, readonly HandDropped[]>; conditions?: TakerConditions[] } {
+        stops: TakerStops[]; taker_hands: ReadonlyMap<string, readonly HandDropped[]>; conditions?: TakerConditions[]; timetable?: InserterTimetableRecord[] } {
     let madeOf = (): CopyMade[] => [];
     let stopsOf = (): TakerStops[] => [];
     let conditionsOf: (() => TakerConditions[]) | null = null;
+    let timetableOf: (() => InserterTimetableRecord[]) | null = null;
     const model = runOnSharedLanes(config, windows, window_cycle_ticks, layout, window_cycles, logger, context => {
         madeOf = recordCopiesMade(context, ends);
         stopsOf = recordStops(context, config, layout);
         // for the maker log only: the four conditions of every taker, read and never changed
         if (for_log) conditionsOf = recordHandConditions(context, config, new Set(layout.rows.flatMap(row => row.takers.map(taker => `${taker.copy}|${taker.inserter_id}`))));
+        // and the timetable of every inserter of every copy
+        if (for_log) timetableOf = recordTimetable(context);
     });
     let last_tick = 0;
     const takes = layout.rows.flatMap(row => {
@@ -253,8 +257,9 @@ export function copyLaneTakes(config: Config, windows: Map<string, OpenRange[]>,
     // every hand of each taker of each copy, of every item it takes: a missed swing of one item moves the next hand of another
     const taker_hands = new Map(model.takers.map(record => [`${record.copy}|${record.inserter_id}`, record.hands] as const));
     const conditions = conditionsOf === null ? undefined : forLog(conditionsOf as () => TakerConditions[], log_errors);
+    const timetable = timetableOf === null ? undefined : forLog(timetableOf as () => InserterTimetableRecord[], log_errors);
     return { takes, made: madeOf(), last_tick, ...(model.output_belt !== undefined && { output_belt: model.output_belt }), stops: stopsOf(), taker_hands,
-        ...(conditions !== undefined && { conditions }) };
+        ...(conditions !== undefined && { conditions }), ...(timetable !== undefined && { timetable }) };
 }
 
 /** One taker of one copy that loses swings on a lane the copies share */
@@ -778,7 +783,7 @@ function spacingOf(config: Config, row: LaneRow): CopySpacing {
  * the record of the four conditions
  */
 function loggedRunOf(under: Config, reading: number, layout: SharedLaneLayout, alone: AloneRun, conditions: readonly TakerConditions[], clock_windows: Map<string, OpenRange[]>,
-    window_cycle_ticks: number, window_cycles: number, first_cycle: number, end_cycle: number): LoggedRun {
+    window_cycle_ticks: number, window_cycles: number, first_cycle: number, end_cycle: number, timetable: readonly InserterTimetableRecord[] | undefined, errors: string[]): LoggedRun {
     const from = cycleStart(first_cycle, window_cycle_ticks), to = cycleStart(end_cycle, window_cycle_ticks);
     const claimed_stacks = layout.rows.filter(row => row.copies > 1).map(row => {
         const belt = under.belts.find(it => it.id === row.belt_id)!;
@@ -790,7 +795,10 @@ function loggedRunOf(under: Config, reading: number, layout: SharedLaneLayout, a
             moved: copy => movedAtReach(conditions.filter(it => it.copy === copy && ids.includes(it.inserter_id)), row.lane, from, to) });
     });
     const flow = layout.rows[0]?.flow ?? { x: 0, y: 0 };
-    return { reading, flow: [flow.x, flow.y], window_cycles, first_cycle, end_cycle, losses: 0, claimed_stacks };
+    // the timetable of every inserter of every copy over the judged span, where the window cycle is of whole ticks
+    const line = timetable === undefined || !Number.isInteger(window_cycle_ticks) ? undefined
+        : forLog(() => timetableLineOf({ records: timetable, windows: windowRangesOf(clock_windows), window_cycle_ticks, from, to, conditions }), errors);
+    return { reading, flow: [flow.x, flow.y], window_cycles, first_cycle, end_cycle, losses: 0, claimed_stacks, ...(line !== undefined && { timetable: line }) };
 }
 
 /**
@@ -800,7 +808,7 @@ function loggedRunOf(under: Config, reading: number, layout: SharedLaneLayout, a
 function shortfallsOf(under: Config, lanes: readonly ModelLane[], layout: SharedLaneLayout, alone: AloneRun, windows: Map<string, OpenRange[]>,
     window_cycle_ticks: number, window_cycles: number, logger: Logger, ends: OutputEnds | null, for_log: { reading: number; errors: string[] } | null = null): RunOfCopies {
     const facts = laneFactsOfConfig(under);
-    const { takes, made, last_tick, output_belt, stops, taker_hands, conditions } = copyLaneTakes(under, windows, window_cycle_ticks, layout, window_cycles, logger, ends,
+    const { takes, made, last_tick, output_belt, stops, taker_hands, conditions, timetable } = copyLaneTakes(under, windows, window_cycle_ticks, layout, window_cycles, logger, ends,
         for_log !== null, for_log?.errors);
     const last = Math.min(alone.last_tick, last_tick);
     const first_cycle = Math.ceil(last / 2 / window_cycle_ticks), end_cycle = Math.floor((last + 1) / window_cycle_ticks + 1e-9);
@@ -811,7 +819,7 @@ function shortfallsOf(under: Config, lanes: readonly ModelLane[], layout: Shared
     const output_swings = output_belt === undefined ? undefined : outputSwingsOf(output_belt, first_cycle, end_cycle, window_cycle_ticks);
     const log_errors = for_log?.errors ?? [];
     const logged_run = for_log === null || conditions === undefined ? undefined
-        : forLog(() => loggedRunOf(under, for_log.reading, layout, alone, conditions, windows, window_cycle_ticks, window_cycles, first_cycle, end_cycle), for_log.errors);
+        : forLog(() => loggedRunOf(under, for_log.reading, layout, alone, conditions, windows, window_cycle_ticks, window_cycles, first_cycle, end_cycle, timetable, for_log.errors), for_log.errors);
     const joins = { ...(join_full !== undefined && { join_full }), ...(join_waits !== undefined && { join_waits }), ...(output_swings !== undefined && { output_swings }),
         ...(logged_run !== undefined && { for_log: logged_run }) };
     const span = Math.max(0, end_cycle - first_cycle);

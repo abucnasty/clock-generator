@@ -3,8 +3,11 @@ import type { ClockAlternative, ClockAlternativesResult } from "./alternatives";
 import { isNotChecked, type SharedLaneLoss } from "./shared-lane-verdict";
 import { modelLanesOf } from "./shared-lane-lanes";
 import type { DisturbanceTrialVerdict, TrialCount } from "./disturbance-trial";
-import { clockLanesOf, MAKER_LOG_FORMAT, reasonOf, type MakerLogEvent, type MakerReason } from "./maker-log";
+import type { Logger } from "../common/logger";
+import { clockLanesOf, clockRunOf, MAKER_LOG_FORMAT, reasonOf, reasonOfError, repeatCheckOn, runOfOneCopyOf, timedCheck, type MakerLogEvent, type MakerReason } from "./maker-log";
+import { repeatCheckOf } from "./repeat-check";
 import { jobLaneLoadsOf } from "./shared-lane-log";
+import { wakeUpsCountOf } from "./wake-ledger";
 
 /**
  * The events of a finished generation that are read from its result (`job`, `clock`, `windows`, `not_made`): the clocks it
@@ -154,7 +157,64 @@ export function laneFactsEvent(alternative: ClockAlternative): MakerLogEvent {
     const head = { event: "lane_facts", id: alternative.id, window_cycle_ticks: windows.window_cycle_ticks,
         windows_hash: windowsHashOf(windows.windows as Record<string, [number, number][]>) };
     if (cause !== null || lanes?.for_log == null) return { ...head, reason: reasonOf("not_run_with_copies", { cause: cause ?? "no_lane_run" }), readings: [], runs: [], errors: [] };
-    return { ...head, reason: null, readings: lanes.for_log.readings, runs: lanes.for_log.runs, errors: lanes.for_log.errors };
+    // the timetable of each run is in the clock's `timetable` event
+    return { ...head, reason: null, readings: lanes.for_log.readings, runs: lanes.for_log.runs.map(({ timetable: _timetable, ...run }) => run), errors: lanes.for_log.errors };
+}
+
+/** The wakeups the record holds of a listed clock (`AsBuiltStabilityCheck.wake_ups`), the object the log keeps its run of one copy by */
+const recordWakeUpsOf = (alternative: ClockAlternative) => alternative.result.stability_check?.as_built?.wake_ups;
+
+/**
+ * The `timetable` event of a listed clock: the timetable of its run of one copy whose wakeups the record holds, over the ticks
+ * they are counted on, and of each run of the copies the check of the shared lanes judged it by, over its judged span
+ */
+export function timetableEvent(alternative: ClockAlternative): MakerLogEvent {
+    const windows = windowsEvent(alternative);
+    const wake_ups = recordWakeUpsOf(alternative);
+    const one = wake_ups === undefined ? undefined : runOfOneCopyOf(wake_ups);
+    const cause = wake_ups === undefined ? "no_long_run" : one === undefined ? "not_noted" : one.timetable === null ? "not_read" : null;
+    const copies = (clockLanesOf(alternative.result)?.for_log?.runs ?? []).flatMap((run, index) => run.timetable === undefined ? []
+        : [{ run: index, reading: run.reading, ...run.timetable }]);
+    return { event: "timetable", id: alternative.id, window_cycle_ticks: windows.window_cycle_ticks,
+        windows_hash: windowsHashOf(windows.windows as Record<string, [number, number][]>),
+        reason: cause === null ? null : reasonOf("no_run_of_one_copy", { cause }),
+        one_copy: one?.timetable == null ? null : { ...one.timetable, ticks_before_stock: one.ticks_before_stock },
+        copies, errors: one?.errors ?? [] };
+}
+
+/**
+ * The `ledger` event of a listed clock: the wakeups of its run of one copy by inserter, list and cause, the ghosts apart, and
+ * whether they add up to the wakeups the record holds (`adds_up`: the same count over the same ticks)
+ */
+export function ledgerEvent(alternative: ClockAlternative): MakerLogEvent {
+    const wake_ups = recordWakeUpsOf(alternative);
+    const one = wake_ups === undefined ? undefined : runOfOneCopyOf(wake_ups);
+    const ledger = one?.ledger ?? null;
+    const cause = wake_ups === undefined ? "no_long_run" : one === undefined ? "not_noted" : ledger === null ? "not_read" : null;
+    const record = wake_ups === undefined ? null : { wake_ups: wakeUpsCountOf(wake_ups.wake_ups_per_minute, wake_ups.ticks), ticks: wake_ups.ticks, wake_ups_per_minute: wake_ups.wake_ups_per_minute };
+    const adds_up = ledger === null || record === null ? null
+        : ledger.ticks === record.ticks && ledger.wake_ups === record.wake_ups && ledger.wake_ups_per_minute === record.wake_ups_per_minute;
+    return { event: "ledger", id: alternative.id, reason: cause === null ? null : reasonOf("no_run_of_one_copy", { cause }), record, adds_up,
+        ...(ledger === null ? { ledger: null } : { ledger }) };
+}
+
+/**
+ * The `repeat_check` event of a listed clock, made only where the generation asks for the repeat check: the clock that holds on
+ * one copy run again on its windows narrowed to the ticks its run needed (repeat-check.ts)
+ */
+export function repeatCheckEvent(alternative: ClockAlternative, logger: Logger): MakerLogEvent {
+    const head = { event: "repeat_check", id: alternative.id };
+    const run = clockRunOf(alternative.result);
+    const wake_ups = recordWakeUpsOf(alternative);
+    const cause = !alternative.assessment.holds ? "does_not_hold_one_copy" : run === undefined ? "not_noted"
+        : !Number.isInteger(run.window_cycle_ticks) ? "window_cycle_not_whole" : null;
+    if (cause !== null || run === undefined) return { ...head, reason: reasonOf("not_repeat_checked", { cause: cause ?? "not_noted" }), check: null };
+    const timetable = wake_ups === undefined ? null : runOfOneCopyOf(wake_ups)?.timetable ?? null;
+    try {
+        return { ...head, reason: null, check: timedCheck("repeat_check", () => repeatCheckOf(run, timetable, logger)) };
+    } catch (error) {
+        return { ...head, reason: reasonOf("not_repeat_checked", { cause: "error" }), check: null, error: error instanceof Error ? error.message : String(reasonOfError(error).code) };
+    }
 }
 
 /** The `missed_swings` events of a listed clock: one for each loss on a lane the copies share with a record, in the order of its losses */
@@ -164,10 +224,15 @@ export function missedSwingsEvents(alternative: ClockAlternative): MakerLogEvent
     return for_log.missed_swings.flatMap((missed, loss) => missed === null ? [] : [{ event: "missed_swings", id: alternative.id, loss, ...missed }]);
 }
 
-/** The events a finished generation gives: the job, then each listed clock with its windows; for a job whose copies share a lane, the facts of the lanes too */
-export function resultEvents(config: Config, result: Pick<ClockAlternativesResult, "alternatives" | "selected_index">): MakerLogEvent[] {
+/**
+ * The events a finished generation gives: the job, then each listed clock with its windows, its timetable and its ledger; for a
+ * job whose copies share a lane, the facts of the lanes too; where the generation asks for it, each clock's repeat check
+ */
+export function resultEvents(config: Config, result: Pick<ClockAlternativesResult, "alternatives" | "selected_index">, logger: Logger): MakerLogEvent[] {
     const shared = hasSharedLane(config);
+    const repeat = repeatCheckOn();
     return [jobEvent(config), ...(shared ? [jobLanesEvent(config)] : []), ...result.alternatives.flatMap((alternative, index) =>
         [clockEvent(config, alternative, index, index === result.selected_index), windowsEvent(alternative),
-            ...(shared ? [laneFactsEvent(alternative), ...missedSwingsEvents(alternative)] : [])])];
+            ...(shared ? [laneFactsEvent(alternative), ...missedSwingsEvents(alternative)] : []),
+            timetableEvent(alternative), ledgerEvent(alternative), ...(repeat ? [repeatCheckEvent(alternative, logger)] : [])])];
 }

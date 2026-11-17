@@ -4,10 +4,11 @@ import { generateClockAlternatives } from '../../../src/crafting/generate-bluepr
 import { loadConfigFromFile } from '../../../src/config/loader';
 import { ConfigPaths } from '../../../src/config/config-paths';
 import { MAKER_LOG_EVENTS, MAKER_LOG_FORMAT, MAKER_REASON_CODES, type MakerLogEvent } from '../../../src/crafting/maker-log';
-import { generatedWithMakerLog, makerLogFolder, makerLogLines, makerLogSwitchedOn } from './blast-log';
+import { generatedWithMakerLog, makerLogFolder, makerLogLines, makerLogSwitchedOn, repeatCheckSwitchedOn } from './blast-log';
 import { digestAlternative, digestJob } from '../../../scripts/blast/blast.digest';
 import { handConditionRecorders } from '../../../src/crafting/hand-conditions';
 import { windowsHashOf } from '../../../src/crafting/maker-log-events';
+import { timetableRecorders } from '../../../src/crafting/timetable';
 
 /** The kinds of event a job gives only where its copies share a lane */
 const LANE_KINDS = ['job_lanes', 'lane_facts', 'missed_swings'];
@@ -26,7 +27,7 @@ const SCRATCH = path.resolve(__dirname, '../../../.scratch/maker-log-test');
 /** The generation of a job as the blast makes it, with the log a run with BLAST_LOG=1 writes, or without */
 function generated(name: keyof typeof ConfigPaths, env: Record<string, string>, out: string) {
     return loadConfigFromFile(ConfigPaths[name]).then(config => generatedWithMakerLog(env, out, { key: `config-${name}`, group: 'config', name },
-        sink => generateClockAlternatives(config, { logger: quiet, ...(sink && { maker_log: sink }) })));
+        (sink, repeat_check) => generateClockAlternatives(config, { logger: quiet, ...(sink && { maker_log: sink }), ...(repeat_check && { maker_log_repeat_check: true }) })));
 }
 
 const readLog = (out: string, key: string): MakerLogEvent[] =>
@@ -39,7 +40,7 @@ describe('the maker log of a blast job', () => {
     let events: MakerLogEvent[];
     beforeAll(async () => {
         fs.rmSync(SCRATCH, { recursive: true, force: true });
-        result = await generated('ACCUMULATOR_320', { BLAST_LOG: '1' }, out);
+        result = await generated('ACCUMULATOR_320', { BLAST_LOG: '1', BLAST_REPEAT_CHECK: '1' }, out);
         events = readLog(out, 'config-ACCUMULATOR_320');
     }, 120_000);
 
@@ -75,6 +76,44 @@ describe('the maker log of a blast job', () => {
         expect(events.filter(it => it.event === 'not_made').length).toBe(result.not_made.length);
     });
 
+    it('has a timetable and a ledger for each listed clock, and a ledger that adds up to the wakeups the record holds', () => {
+        const clocks = events.filter(it => it.event === 'clock');
+        const ids = clocks.map(it => it.id);
+        expect(events.filter(it => it.event === 'timetable').map(it => it.id)).toEqual(ids);
+        expect(events.filter(it => it.event === 'ledger').map(it => it.id)).toEqual(ids);
+        for (const clock of clocks) {
+            const ledger = events.find(it => it.event === 'ledger' && it.id === clock.id)!;
+            const timetable = events.find(it => it.event === 'timetable' && it.id === clock.id)!;
+            if (clock.wake_ups === null) {
+                expect(ledger.reason, String(clock.id)).toEqual({ code: 'no_run_of_one_copy', cause: 'no_long_run' });
+                continue;
+            }
+            // check A: the ledger of the run whose wakeups the record holds gives the same count over the same ticks
+            expect(ledger.reason, String(clock.id)).toBeNull();
+            expect(ledger.adds_up, String(clock.id)).toBe(true);
+            expect((ledger.record as { wake_ups_per_minute: number }).wake_ups_per_minute).toBe(clock.wake_ups);
+            expect(timetable.reason, String(clock.id)).toBeNull();
+            const line = timetable.one_copy as { rows: { unmapped_open_ticks: number; windows: unknown[] }[]; errors: string[] };
+            expect(line.errors).toEqual([]);
+            expect(line.rows.every(row => row.unmapped_open_ticks === 0), String(clock.id)).toBe(true);
+        }
+    });
+
+    it('has a repeat check for each listed clock where the switch asks for it, run on the clocks that hold on one copy', () => {
+        const checks = events.filter(it => it.event === 'repeat_check');
+        expect(checks.map(it => it.id)).toEqual(result.alternatives.map(it => it.id));
+        for (const check of checks) {
+            const clock = events.find(it => it.event === 'clock' && it.id === check.id)!;
+            if (!clock.holds) {
+                expect(check.reason).toEqual({ code: 'not_repeat_checked', cause: 'does_not_hold_one_copy' });
+                continue;
+            }
+            expect(check.reason, JSON.stringify(check)).toBeNull();
+            // the run again on the clock's own windows repeats the first, and the first is the run whose wakeups the record holds
+            expect(check.check).toMatchObject({ control_repeats: true, same_needed_as_timetable: true });
+        }
+    });
+
     it('is written with the job on every line, in an order that does not depend on the order the events were made in', () => {
         const job = { key: 'k', group: 'g', name: 'n' };
         const reversed = [...events].reverse();
@@ -91,16 +130,27 @@ describe('the switch of the maker log', () => {
         expect(makerLogSwitchedOn({ BLAST_LOG: '1' })).toBe(true);
     });
 
+    it('has the repeat check on for BLAST_REPEAT_CHECK=1 with the log only', () => {
+        expect(repeatCheckSwitchedOn({ BLAST_REPEAT_CHECK: '1' })).toBe(false);
+        expect(repeatCheckSwitchedOn({ BLAST_LOG: '1' })).toBe(false);
+        expect(repeatCheckSwitchedOn({ BLAST_LOG: '1', BLAST_REPEAT_CHECK: '0' })).toBe(false);
+        expect(repeatCheckSwitchedOn({ BLAST_LOG: '1', BLAST_REPEAT_CHECK: '1' })).toBe(true);
+    });
+
     it('writes no log, not even its folder, when it is off; and the log changes no clock when it is on', async () => {
         const off = path.join(SCRATCH, 'off');
         const on = path.join(SCRATCH, 'switched-on');
         // with the log off, no recorder of the four conditions goes into any run
+        // nor any recorder of the timetable
         const recorders = handConditionRecorders.made;
+        const timetables = timetableRecorders.made;
         const without = await generated('FLYING_ROBOT_FRAME_80', {}, off);
         expect(handConditionRecorders.made).toBe(recorders);
+        expect(timetableRecorders.made).toBe(timetables);
         expect(fs.existsSync(off)).toBe(false);
         const with_log = await generated('FLYING_ROBOT_FRAME_80', { BLAST_LOG: '1' }, on);
         expect(handConditionRecorders.made).toBeGreaterThan(recorders);
+        expect(timetableRecorders.made).toBeGreaterThan(timetables);
         expect(fs.existsSync(makerLogFolder(on))).toBe(true);
         // the results the record holds a digest of are the same with and without the log
         expect(digestJob(with_log).results_sha256).toBe(digestJob(without).results_sha256);
@@ -108,7 +158,7 @@ describe('the switch of the maker log', () => {
         expect(with_log.not_made).toEqual(without.not_made);
         // nothing the log keeps reaches an alternative: no component the digest hashes, and no part of the result that shows the lanes
         for (const alternative of with_log.alternatives) {
-            expect(JSON.stringify(alternative)).not.toMatch(/for_log|claimed_stacks|lane_load|hand_at_source|missed_swings|readings/);
+            expect(JSON.stringify(alternative)).not.toMatch(/for_log|claimed_stacks|lane_load|hand_at_source|missed_swings|readings|needed_by|open_without_pickup|ticks_to_swing|empty_hand_enabled_ticks|ticks_before_stock/);
         }
         expect(with_log.alternatives.map(it => [it.checked_lanes, it.shared_lane_loss_note])).toEqual(without.alternatives.map(it => [it.checked_lanes, it.shared_lane_loss_note]));
         expect(without.alternatives.some(it => it.shared_lane_loss_note !== undefined)).toBe(true);
@@ -139,5 +189,12 @@ describe('the switch of the maker log', () => {
         const missed = events.filter(it => it.event === 'missed_swings' && it.id === 'takt_batches_observed' && it.item === 'electronic-circuit');
         expect(missed.map(it => [it.copy, it.belt_id, it.lanes])).toEqual([[4, 5, [1]], [5, 5, [1]], [6, 5, [1]]]);
         expect(events.filter(it => it.event === 'job_lanes')).toHaveLength(1);
+        // with the log alone, no repeat check; a clock that holds on one copy has the timetable of each run of the copies
+        expect(events.filter(it => it.event === 'repeat_check')).toHaveLength(0);
+        for (const clock of events.filter(it => it.event === 'clock' && it.holds)) {
+            const timetable = events.find(it => it.event === 'timetable' && it.id === clock.id)!;
+            expect((timetable.copies as unknown[]).length, String(clock.id)).toBeGreaterThan(0);
+            expect(events.find(it => it.event === 'ledger' && it.id === clock.id)!.adds_up, String(clock.id)).toBe(true);
+        }
     }, 120_000);
 });

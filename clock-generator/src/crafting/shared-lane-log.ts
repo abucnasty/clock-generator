@@ -4,6 +4,7 @@ import Fraction, { fraction } from "../data-types/fraction";
 import { laneFactsOfConfig } from "../entities/traits/build-traits";
 import { AtClose, HandCondition, handStartsOf, openingsOf, TakerConditions, waitedFor } from "./hand-conditions";
 import type { HandDropped, LaneRow } from "./shared-lane-model";
+import type { TimetableLine } from "./timetable";
 
 /**
  * The facts of the lanes the copies share that the maker log gives beside each clock (scripts/blast/MAKER-LOG.md, format
@@ -386,6 +387,8 @@ export interface LoggedRun {
     /** Losses that stood in it */
     losses: number;
     claimed_stacks: ClaimedStacks[];
+    /** The timetable of every inserter of every copy over the judged span; absent on a window cycle that is not of whole ticks, or where it could not be read */
+    timetable?: TimetableLine;
 }
 
 /** What the check of the shared lanes kept for the log, beside the judgement: `for_log` of `SharedLaneJudgement` */

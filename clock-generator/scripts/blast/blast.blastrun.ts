@@ -19,7 +19,8 @@
 // starts a process for every job, so that no job meets what an earlier one left in the engine's memory, a memo for one),
 // CLOCK_EXPLORE (1: generate with `explore_strategies`, the explore mode; every job file then also holds `explored`, see below; key.py
 // keys it, so the run has an entry of its own and never mixes with the normal ones),
-// BLAST_LOG (1: also write the maker log of each job to <BLAST_OUT>/maker-log/<job>.jsonl, see MAKER-LOG.md; it changes no job file, so it is not keyed).
+// BLAST_LOG (1: also write the maker log of each job to <BLAST_OUT>/maker-log/<job>.jsonl, see MAKER-LOG.md; it changes no job file, so it is not keyed),
+// BLAST_REPEAT_CHECK (1, with BLAST_LOG: the log also holds the repeat check of each listed clock; it changes no job file, so it is not keyed).
 //
 // With CLOCK_EXPLORE=1 every job file also holds `explored`: the clock the shipped strategies selected and the best clock of the explored
 // strategies, each with its strategy, verdict and wake-ups a minute, whether the best beats the selected one by the ranking, and every explored
@@ -220,8 +221,9 @@ async function makerLogModule(): Promise<typeof import('../blast-log') | undefin
 
 /** Every alternative of a config, each exported clock hashed, and the selected one; with the properties and the per-job checks of the result, where the modules are there */
 function clocksOf(config: any, expand: ExpandHistory | undefined, key: string, properties: Awaited<ReturnType<typeof propertyModule>>,
-    jobChecks: Awaited<ReturnType<typeof jobChecksModule>>, maker_log?: MakerLogSink) {
-    const generated = generateClockAlternatives(config, { logger: quiet, ...(EXPLORE && { explore_strategies: true as const }), ...(maker_log && { maker_log }) });
+    jobChecks: Awaited<ReturnType<typeof jobChecksModule>>, maker_log?: MakerLogSink, repeat_check = false) {
+    const generated = generateClockAlternatives(config, { logger: quiet, ...(EXPLORE && { explore_strategies: true as const }), ...(maker_log && { maker_log }),
+        ...(repeat_check && { maker_log_repeat_check: true }) });
     const summary = (a: any) => {
         const exported = a.result.subtick ?? a.result;
         const with_text = { blueprint: encodeBlueprintFile({ blueprint: exported.blueprint }), schedule: exported.schedule };
@@ -296,7 +298,7 @@ test.skipIf(!OUT)('blast', async () => {
             const config = await job.config();
             // the maker log, only where BLAST_LOG asks for it: a generation with no sink builds no event and times nothing. It is written
             // before the job's result, as the footprint is: a result without its log is not made, and a log without a result is overwritten
-            const generate = (sink?: MakerLogSink) => clocksOf(config, expand, key, properties, jobChecks, sink);
+            const generate = (sink?: MakerLogSink, repeat_check = false) => clocksOf(config, expand, key, properties, jobChecks, sink, repeat_check);
             body = { group: job.group, name: job.name, ...(makerLog ? makerLog.generatedWithMakerLog(process.env, OUT!, { key, group: job.group, name: job.name }, generate) : generate()) };
         } catch (error: any) {
             body = { group: job.group, name: job.name, error: `${error?.name}: ${error?.message}` };
