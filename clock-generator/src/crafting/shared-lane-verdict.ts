@@ -229,7 +229,7 @@ function recordStops(context: SimulationContext, config: Config, layout: SharedL
  * (`taker_hands`). The verdict reads the copies' figures here alone, so that where they come from can change in this function only.
  */
 export function copyLaneTakes(config: Config, windows: Map<string, OpenRange[]>, window_cycle_ticks: number, layout: SharedLaneLayout,
-    window_cycles: number, logger: Logger, ends: OutputEnds | null = null, for_log = false): { takes: CopyLaneTake[]; made: CopyMade[]; last_tick: number; output_belt?: OutputBeltRun;
+    window_cycles: number, logger: Logger, ends: OutputEnds | null = null, for_log = false, log_errors: string[] = []): { takes: CopyLaneTake[]; made: CopyMade[]; last_tick: number; output_belt?: OutputBeltRun;
         stops: TakerStops[]; taker_hands: ReadonlyMap<string, readonly HandDropped[]>; conditions?: TakerConditions[] } {
     let madeOf = (): CopyMade[] => [];
     let stopsOf = (): TakerStops[] => [];
@@ -252,7 +252,7 @@ export function copyLaneTakes(config: Config, windows: Map<string, OpenRange[]>,
     });
     // every hand of each taker of each copy, of every item it takes: a missed swing of one item moves the next hand of another
     const taker_hands = new Map(model.takers.map(record => [`${record.copy}|${record.inserter_id}`, record.hands] as const));
-    const conditions = conditionsOf === null ? undefined : (conditionsOf as () => TakerConditions[])();
+    const conditions = conditionsOf === null ? undefined : forLog(conditionsOf as () => TakerConditions[], log_errors);
     return { takes, made: madeOf(), last_tick, ...(model.output_belt !== undefined && { output_belt: model.output_belt }), stops: stopsOf(), taker_hands,
         ...(conditions !== undefined && { conditions }) };
 }
@@ -798,9 +798,10 @@ function loggedRunOf(under: Config, reading: number, layout: SharedLaneLayout, a
  * window cycles of the clock in the second half of both runs, and what each copy's machines and output inserters made
  */
 function shortfallsOf(under: Config, lanes: readonly ModelLane[], layout: SharedLaneLayout, alone: AloneRun, windows: Map<string, OpenRange[]>,
-    window_cycle_ticks: number, window_cycles: number, logger: Logger, ends: OutputEnds | null, for_log: { reading: number } | null = null): RunOfCopies {
+    window_cycle_ticks: number, window_cycles: number, logger: Logger, ends: OutputEnds | null, for_log: { reading: number; errors: string[] } | null = null): RunOfCopies {
     const facts = laneFactsOfConfig(under);
-    const { takes, made, last_tick, output_belt, stops, taker_hands, conditions } = copyLaneTakes(under, windows, window_cycle_ticks, layout, window_cycles, logger, ends, for_log !== null);
+    const { takes, made, last_tick, output_belt, stops, taker_hands, conditions } = copyLaneTakes(under, windows, window_cycle_ticks, layout, window_cycles, logger, ends,
+        for_log !== null, for_log?.errors);
     const last = Math.min(alone.last_tick, last_tick);
     const first_cycle = Math.ceil(last / 2 / window_cycle_ticks), end_cycle = Math.floor((last + 1) / window_cycle_ticks + 1e-9);
     const from = cycleStart(first_cycle, window_cycle_ticks), to = cycleStart(end_cycle, window_cycle_ticks);
@@ -808,8 +809,9 @@ function shortfallsOf(under: Config, lanes: readonly ModelLane[], layout: Shared
     const join_full = output_belt === undefined ? undefined : joinFullOf(output_belt, from, to);
     const join_waits = output_belt === undefined ? undefined : joinWaitsOf(output_belt, from, to);
     const output_swings = output_belt === undefined ? undefined : outputSwingsOf(output_belt, first_cycle, end_cycle, window_cycle_ticks);
+    const log_errors = for_log?.errors ?? [];
     const logged_run = for_log === null || conditions === undefined ? undefined
-        : loggedRunOf(under, for_log.reading, layout, alone, conditions, windows, window_cycle_ticks, window_cycles, first_cycle, end_cycle);
+        : forLog(() => loggedRunOf(under, for_log.reading, layout, alone, conditions, windows, window_cycle_ticks, window_cycles, first_cycle, end_cycle), for_log.errors);
     const joins = { ...(join_full !== undefined && { join_full }), ...(join_waits !== undefined && { join_waits }), ...(output_swings !== undefined && { output_swings }),
         ...(logged_run !== undefined && { for_log: logged_run }) };
     const span = Math.max(0, end_cycle - first_cycle);
@@ -847,9 +849,9 @@ function shortfallsOf(under: Config, lanes: readonly ModelLane[], layout: Shared
                 alone.recorders.get(take.inserter_id)?.hands ?? [], taker_hands.get(`${take.copy}|${take.inserter_id}`) ?? [],
                 { first_cycle, end_cycle, window_cycle_ticks, travel_ticks: step_tiles / tiles_a_tick, reach_ticks: taker.length_tiles / tiles_a_tick })) };
         const record = conditions?.find(it => it.copy === take.copy && it.inserter_id === take.inserter_id);
-        const for_log = record === undefined ? undefined : missedSwingsOf({ record, copy: take.copy + 1, inserter_id: loss.inserter_id, belt_id: take.belt_id,
+        const for_log = record === undefined ? undefined : forLog(() => missedSwingsOf({ record, copy: take.copy + 1, inserter_id: loss.inserter_id, belt_id: take.belt_id,
             lanes: [take.lane, ...others.map(other => other.lane)], item: take.item, first_cycle, end_cycle, window_cycle_ticks,
-            missed: (loss_facts.swings?.missed ?? []).map(it => ({ window_cycle: it.window_cycle, missed: it.missed, cause: it.cause })) });
+            missed: (loss_facts.swings?.missed ?? []).map(it => ({ window_cycle: it.window_cycle, missed: it.missed, cause: it.cause })) }), log_errors);
         return [{ short: alone_items - items, hand, loss, facts: loss_facts, ...(for_log !== undefined && { for_log }) }];
     });
     return { shortfalls, made, from, to, window_cycles: span, holds, ...joins };
@@ -1143,6 +1145,16 @@ export function sharedLaneRunsOf(config: Config, copies_on_lanes?: number): { la
     }) };
 }
 
+/** A part of the log, made where it can be: an error of it goes to `errors` and never into the judgement */
+function forLog<T>(make: () => T, errors: string[]): T | undefined {
+    try {
+        return make();
+    } catch (error) {
+        errors.push(error instanceof Error ? error.message : String(error));
+        return undefined;
+    }
+}
+
 /**
  * What the log gives of one reading of the lanes from its run of one copy alone: for each item of each belt, the lane load
  * of the clock and the fill after each opening of its takers' windows, over the judged half of the run as the fast check
@@ -1164,7 +1176,7 @@ function readingForLog(under: Config, reading: number, groups: readonly { rows: 
 
 /** What the judgement keeps for the log: the readings, each run judged by with the losses that stood in it, and each loss's missed swings with its run */
 function lanesForLog(readings: SharedLanesForLog["readings"], judged_runs: readonly { run: RunOfCopies; losses: number }[],
-    logged: readonly ({ run: RunOfCopies; missed: MissedSwings } | undefined)[]): SharedLanesForLog {
+    logged: readonly ({ run: RunOfCopies; missed: MissedSwings } | undefined)[]): Omit<SharedLanesForLog, "errors"> {
     const logged_runs = judged_runs.filter(it => it.run.for_log !== undefined);
     const index = new Map(logged_runs.map((it, at) => [it.run, at] as const));
     return { readings, runs: logged_runs.map(it => ({ ...it.run.for_log!, losses: it.losses })),
@@ -1250,8 +1262,9 @@ function judgedOnLanes(config: Config, clock_windows: SerializableClockWindows, 
     // the first run of each reading: the run of one copy, and the copies on each layout of the lanes, with their shortfalls
     const first: { reading: number; under: Config; taker_ids: string[]; alone: AloneRun; runs: { layout: SharedLaneLayout; run: RunOfCopies }[] }[] = [];
     let fast_check_passes = true;
-    // for the maker log: the lane load and the fill of each reading, from its run of one copy alone
+    // for the maker log: the lane load and the fill of each reading, from its run of one copy alone, and what could not be read
     const readings_log: SharedLanesForLog["readings"] = [];
+    const log_errors: string[] = [];
     const aloneOf = (reading: number, under: Config, taker_ids: readonly string[], cycles: number): AloneRun => {
         const key = `${reading}|${cycles}|${taker_ids.join(",")}`;
         if (!alone_runs.has(key)) alone_runs.set(key, runAlone(under, taker_ids, windows, window_cycle_ticks, cycles, logger, output_ids));
@@ -1274,9 +1287,12 @@ function judgedOnLanes(config: Config, clock_windows: SerializableClockWindows, 
             groups.set(key, group);
         }
         fast_check_passes &&= [...groups.values()].every(group => refillsInTime(group.rows, group.supply, pickups, group.item, clock_windows, window_cycle_ticks, from_tick, alone.last_tick));
-        if (for_log) readings_log.push(readingForLog(under, reading, [...groups.values()], alone, pickups, clock_windows, window_cycle_ticks, from_tick));
+        if (for_log) {
+            const logged = forLog(() => readingForLog(under, reading, [...groups.values()], alone, pickups, clock_windows, window_cycle_ticks, from_tick), log_errors);
+            if (logged !== undefined) readings_log.push(logged);
+        }
         first.push({ reading, under, taker_ids, alone, runs: layouts.map(layout => ({ layout,
-            run: shortfallsOf(under, lanes, layout, alone, windows, window_cycle_ticks, window_cycles, logger, ends, for_log ? { reading } : null) })) });
+            run: shortfallsOf(under, lanes, layout, alone, windows, window_cycle_ticks, window_cycles, logger, ends, for_log ? { reading, errors: log_errors } : null) })) });
     }
     const shortfalls = first.flatMap(it => it.runs.flatMap(({ run }) => run.shortfalls));
     // each run the verdict judged by, with the losses that stood in it: for the rate of the copies, read only where all
@@ -1294,8 +1310,8 @@ function judgedOnLanes(config: Config, clock_windows: SerializableClockWindows, 
         return { losses: sorted.map(it => it.loss), loss_facts: sorted.map(it => it.facts), fast_check_passes, simulated: true, longer_run, lanes: keys,
             ...(join_waits.size > 0 && { join_waits: [...join_waits].sort(([a], [b]) => a - b).map(([copy, waits]) => ({ copy, held_hands: waits.held_hands, hands: waits.hands })) }),
             ...(copies_made !== undefined && { copies_made }),
-            ...(for_log && { for_log: lanesForLog(readings_log, judged_runs, sorted.map(it => it.logged === undefined ? undefined
-                : { ...it.logged, missed: { ...it.logged.missed, cause: it.loss.join_full !== undefined ? "join_full" as const : "lane" as const } })) }) };
+            ...(for_log && { for_log: { ...lanesForLog(readings_log, judged_runs, sorted.map(it => it.logged === undefined ? undefined
+                : { ...it.logged, missed: { ...it.logged.missed, cause: it.loss.join_full !== undefined ? "join_full" as const : "lane" as const } })), errors: [...log_errors] } }) };
     };
     // no taker short, or one short by more than a hand, which the end of the judged span does not make: judged as it is,
     // each run's losses standing where a machine or an output inserter of that run is behind its target
@@ -1317,7 +1333,7 @@ function judgedOnLanes(config: Config, clock_windows: SerializableClockWindows, 
         if (short_runs.length === 0) continue;
         const alone = aloneOf(reading, under, taker_ids, 2 * window_cycles);
         for (const { layout } of short_runs) {
-            const longer = shortfallsOf(under, lanes, layout, alone, windows, window_cycle_ticks, 2 * window_cycles, logger, ends, for_log ? { reading } : null);
+            const longer = shortfallsOf(under, lanes, layout, alone, windows, window_cycle_ticks, 2 * window_cycles, logger, ends, for_log ? { reading, errors: log_errors } : null);
             waitsOf(longer);
             found.push(...judgedIn(longer, standing(longer, longer.shortfalls.filter(shortfall => shortfall.short > shortfall.hand), alone,
                 () => shortfallsOf(withoutOutputBelt(under), lanes, layout, alone, windows, window_cycle_ticks, 2 * window_cycles, logger, ends))));

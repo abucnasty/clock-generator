@@ -153,8 +153,8 @@ export function laneFactsEvent(alternative: ClockAlternative): MakerLogEvent {
         : lanes.for_log === null ? "no_lane_run" : null;
     const head = { event: "lane_facts", id: alternative.id, window_cycle_ticks: windows.window_cycle_ticks,
         windows_hash: windowsHashOf(windows.windows as Record<string, [number, number][]>) };
-    if (cause !== null || lanes?.for_log == null) return { ...head, reason: reasonOf("not_run_with_copies", { cause: cause ?? "no_lane_run" }), readings: [], runs: [] };
-    return { ...head, reason: null, readings: lanes.for_log.readings, runs: lanes.for_log.runs };
+    if (cause !== null || lanes?.for_log == null) return { ...head, reason: reasonOf("not_run_with_copies", { cause: cause ?? "no_lane_run" }), readings: [], runs: [], errors: [] };
+    return { ...head, reason: null, readings: lanes.for_log.readings, runs: lanes.for_log.runs, errors: lanes.for_log.errors };
 }
 
 /** The `missed_swings` events of a listed clock: one for each loss on a lane the copies share with a record, in the order of its losses */

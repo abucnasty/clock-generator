@@ -420,6 +420,7 @@ describe("the facts of the lanes the check keeps for the maker log", async () =>
         const with_log = judgeSharedLanes(config, clock.windows, clock.window_cycle_ticks, quiet, { for_log: true });
         expect(without.for_log).toBeUndefined();
         expect(withoutLog(with_log)).toEqual(without);
+        expect(with_log.for_log!.errors).toEqual([]);
         const fills = with_log.for_log!.readings.flatMap(reading => reading.fill);
         expect(fills.length).toBeGreaterThan(0);
         expect(fills.every(fill => fill.fills_in_time)).toBe(without.fast_check_passes);

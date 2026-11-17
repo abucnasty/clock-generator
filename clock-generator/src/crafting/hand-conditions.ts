@@ -165,11 +165,21 @@ export function recordHandConditions(context: SimulationContext, config: Config,
         const record = new TakerConditions(copy, inserter_id, archetype.control.looks_ahead, lanes.map(it => it.lane));
         watched.push({ record, inserter: archetype, lanes, held: archetype.inserter_state.held_item?.quantity ?? 0 });
     }
+    // a read that fails ends the record: the run goes on as it would without the recorder
+    let failed: string | null = null;
     context.after_inserters.push({ tick() {
+        if (failed !== null) return;
         const tick = now();
-        for (const it of watched) it.record.push(tick, bitsOf(it, tick));
+        try {
+            for (const it of watched) it.record.push(tick, bitsOf(it, tick));
+        } catch (error) {
+            failed = error instanceof Error ? error.message : String(error);
+        }
     } });
-    return () => watched.map(it => it.record);
+    return () => {
+        if (failed !== null) throw new Error(`The record of the four conditions stopped: ${failed}`);
+        return watched.map(it => it.record);
+    };
 }
 
 function bitsOf(it: Watched, tick: number): number {

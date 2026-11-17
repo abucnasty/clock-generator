@@ -343,4 +343,6 @@ export interface SharedLanesForLog {
     runs: LoggedRun[];
     /** For each loss of the judgement, in its order: its missed swings, with the run it was found in (an index of `runs`); null where no record was made */
     missed_swings: ({ run: number } & MissedSwings | null)[];
+    /** What could not be read for the log, by its error: the parts it left out. Nothing of the judgement depends on them */
+    errors: string[];
 }
