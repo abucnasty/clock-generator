@@ -118,8 +118,13 @@ describe("request-local duplicate verification", () => {
         const chosen = recovery.mock.calls.filter(([, result]) => result.window_maker === "arithmetic"
             || inside.has(windowsKey(result.clock_windows)) || result.ghost_wakeup_windows !== undefined)
             .map(([config, result]) => signature(config, result));
-        expect(repeated).toHaveLength(3);
-        expect(chosen).toEqual(expect.arrayContaining(repeated));
+        // Coordinated Sources keeps the recommended clock here, and judges it with the copies before it refuses: it asks for its
+        // trials on one copy again, under the listing's key, and the run memo serves them
+        const recommended = generated.alternatives[generated.selected_index].result;
+        const kept = recovery.mock.calls.filter(([, result]) => windowsKey(result.clock_windows) === windowsKey(recommended.clock_windows))
+            .map(([config, result]) => signature(config, result));
+        expect(repeated).toHaveLength(4);
+        expect([...chosen, ...kept]).toEqual(expect.arrayContaining(repeated));
         // Both clocks are stable; batched swings is selected on its fewer wake-ups although swings-1 recovers in 2 window cycles
         // rather than 3. Sharing the verification must preserve that choice.
         const other = generated.alternatives.find(clock => clock.maker === "swings-1")!;

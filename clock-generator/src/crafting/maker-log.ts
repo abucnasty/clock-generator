@@ -41,6 +41,7 @@ export const MAKER_REASON_CODES = {
     margin_check: ["check", "shift_ticks", "group_size"],
     does_not_hold: ["stage"],
     loss_trial_one_copy: ["tried"],
+    does_not_hold_with_copies: ["check"],
     // a part not taken by Coordinated Sources
     cycle_does_not_divide: ["part_window_cycle_ticks", "shared_window_cycle_ticks"],
     not_counted: [],

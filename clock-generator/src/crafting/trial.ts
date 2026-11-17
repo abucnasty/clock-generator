@@ -1775,6 +1775,25 @@ export function buildAsBuiltConfig(
 }
 
 /**
+ * Where the window decider of each inserter and drill stands in the order a run of the clock's windows on `config` builds them
+ * (`buildAsBuiltConfig`, the blueprint's order), by entity key; an entity with no decider is left out
+ */
+export function deciderBuildOrderOf(config: Config, windows: Map<string, OpenRange[]>, window_cycle_ticks: number): Record<string, number> {
+    const built = buildAsBuiltConfig(config, windows, window_cycle_ticks);
+    const placeOf = (control: EnableControlOverrideConfig | undefined) => control !== undefined && "decider_build_order" in control ? control.decider_build_order : undefined;
+    const order: Record<string, number> = {};
+    built.inserters.forEach((inserter, index) => {
+        const place = placeOf(inserter.overrides?.enable_control);
+        if (place !== undefined) order[EntityId.forInserter(inserter.id ?? index + 1).id] = place;
+    });
+    for (const drill of built.drills?.configs ?? []) {
+        const place = placeOf(drill.overrides?.enable_control);
+        if (place !== undefined) order[EntityId.forDrill(drill.id).id] = place;
+    }
+    return order;
+}
+
+/**
  * Tries a clock from every start of CLOCK_STARTS (see `startDependenceOf`). Null when the runs cannot be made on it,
  * which is logged. The config is the one the clock was planned on.
  */
@@ -2021,8 +2040,10 @@ function withoutOutputReason(check: AsBuiltStabilityCheck | undefined): AsBuiltS
 }
 
 /**
- * What the trials of a loss are a function of: the config the clock is verified on, its windows and window cycle, and the items it
- * is expected to move a window cycle. The trials run on nothing else, so two clocks with this key have the same verdict. The cycles
+ * What the trials of a loss on one copy are a function of: which trials they are (those of one copy, apart from those on the copies:
+ * `copiesTrialKey`), the config the clock is verified on, its windows and window cycle, and the items it is expected to move a window
+ * cycle. The trials run on nothing else, so two clocks with this key have the same verdict. The config is the one built as the
+ * blueprint builds the clock (`buildAsBuiltConfig`), so it holds the order its window deciders are built in. The cycles
  * of the clock (`overrides.lcm`) are left out where they set nothing: they set the window cycle of a run that is not given one, which
  * a whole window cycle is, and the clocks of the inserters outside the plan, which a build without any has none of.
  */
@@ -2034,6 +2055,6 @@ export function disturbanceTrialKey(planned_on: Config, result: BlueprintGenerat
     const config = cycles_set_nothing ? { ...verification_config, overrides: { ...verification_config.overrides, lcm: undefined } } : verification_config;
     // the excess trial is of the margins: two clocks of the same windows are tried alike only with the same one
     const excess = result.random_margins === undefined ? null : excessLossOf(result.random_margins.crafting);
-    return canonicalVerificationJson({ config, fractional_swings, window_cycle_ticks, windows: result.clock_windows, expected_output: result.stability_check.expected_output_items,
+    return canonicalVerificationJson({ trial: "one_copy", config, fractional_swings, window_cycle_ticks, windows: result.clock_windows, expected_output: result.stability_check.expected_output_items,
         ...(excess !== null && { excess }) });
 }

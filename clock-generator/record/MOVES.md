@@ -8,6 +8,9 @@ a line that names the reason and lists the jobs. A pull request that moves no re
 CI checks this file: the "Record check" fails when a selected clock got worse than in the base and its job key is not in the lines the pull
 request adds to this file.
 
+## Coordinated Sources checks its clock with every copy (#766)
+- config-AUTOMATION_SCIENCE_240: selected time_study_windows -> coordinated_sources, wake-ups 300.696 -> 70.065 a minute (stable, 240 a second, window cycle 216 as before); Coordinated Sources is now made for this build: its choice on one copy ended on a composition of 0 wakeups whose copies lose swings on the shared lanes, and it now judges each composition with the nine copies and takes the first that holds with them. In Factorio 2.1.24, on the sample's scaffold of nine copies, each copy moved 96 of 96 packs in every window cycle of four recordings (99, 49, 49 and 49 window cycles). The clock pin of the scaffold recording "automation science" names the new clock.
+
 ## Strategies that made nothing on a subtick clock work on one (#762)
 Only jobs with a subtick clock moved; no whole-tick job and no recommended clock moved. On a p/q-tick window cycle the room for one more hand was never added, because the lengthening it needs did nothing there. There it is now added only where the windows do not hold without it, by the room trial, also for a maker that asks for it always, and for Pitch Pickups on its own windows (ruled by abucnasty, 728).
 - config-ADVANCED_CIRCUIT_230: pitch_pickups_subtick stays recommended and unchanged (59.993 wakeups a minute): its windows hold without the room. Six unstable clocks get it, as they do not hold without it: takt_batches_observed_swings_2_subtick 207.273 -> 208.182 a second, takt_batches_observed_swings_4_subtick 115.909 -> 125.682, the others the same rate

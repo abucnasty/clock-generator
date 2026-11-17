@@ -89,7 +89,7 @@ For a Coordinated Sources clock, `source_clocks` gives, for each source, the par
 | `admitted` | the maker takes windows from it | `sources`: the sources it gives windows to alone, empty where it gives all |
 | `no_new_windows` | it gives no window that another part does not | `sources` |
 | `refused` | the maker takes no window from it, or only those of `sources` | `reasons`, `sources` |
-| `excluded` | it was left out before the maker saw it | `reasons` |
+| `excluded` | it was left out before the maker saw it: a listed clock that does not hold on one copy | `reasons` |
 | `dropped` | a way of the grouped hands rule that was offered, and its loss trial on one copy failed | `reasons` |
 
 A way that failed its margin check before it was offered is a `refused` part of the kind `way`. A way has no `verdict` or `wake_ups`.
@@ -126,10 +126,11 @@ The list is `MAKER_REASON_CODES` in `src/crafting/maker-log.ts`. A test checks t
 | `fractional_swings_over_limit` | `sub_cycle` (null where the swings divide evenly), `swings_required`, `swings_max`, `total_swings`, `cycle_multiplier` | `not_made`: the insertion limits do not allow the fractional swings |
 | `window_cycle_not_whole`, `recommended_not_a_part`, `plans_on_other_window_cycle`, `no_source_has_choice`, `keeps_recommended_clock` | `window_cycle_ticks`; none; `planned_ticks`, `recommended_ticks`; none; none | `not_made`: Coordinated Sources had nothing to compose |
 | `same_as_listed_clock` | none | `not_made`, `composition`: the clock made is one that is listed already |
-| `not_stable` | `verdict` | `part`: a clock that is not stable gives no windows. `composition`, `not_made`: the clock made is not stable |
+| `not_stable` | `verdict` | `part`: a clock that is not stable and does not hold on one copy gives no windows. `composition`, `not_made`: the clock made is not stable |
 | `margin_check` | `check` (`as_placed`, or `shifted` for a group moved a tick), `shift_ticks`, `group_size` (the inserters in the group) | `composition`, `part`: the windows do not hold with their margin |
 | `does_not_hold` | `stage` (`long_run`, or `whole_check`) | `composition`: the clock does not hold |
 | `loss_trial_one_copy` | `tried` (false where the trials could not be run) | `composition`, `part`: the clock does not recover from a loss on one copy |
+| `does_not_hold_with_copies` | `check` (`shared_lanes` where a taker of a copy loses swings on a shared lane, else `loss_trials` where a copy is not back after a trial on the copies) | `composition`: Coordinated Sources does not take the composition, or ends no local choice on it, because it does not hold with the copies. Where the local choice on one copy ends on such a composition, that composition is logged with this reason too. Then the local choice runs again with the copies |
 | `cycle_does_not_divide` | `part_window_cycle_ticks`, `shared_window_cycle_ticks` | `part`: its window cycle does not divide the shared one |
 | `not_counted` | none | `part`: the long run of its own clock was not counted |
 | `does_not_hold_alone` | `source` (null for its own clock), `check` (`first_window_cycle`, `pickup_phase`, `long_run`, `not_checked`), `items`, `expected_items` | `part`: its clock, or the recommended clock with its windows for one source, does not hold |

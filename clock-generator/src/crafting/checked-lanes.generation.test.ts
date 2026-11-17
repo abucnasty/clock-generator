@@ -46,8 +46,8 @@ describe("what was checked on the lanes the copies of the automation science 240
             + "3 with iron gear wheel and 3 with copper plate. Each swing is a hand of 16.");
         expect(cause.alone.text).toBe("The same inserter makes all 130 swings. The clock is right for one copy.");
         expect(cause.changes!.text).toBe("With 8 copies on the iron gear wheel and copper plate lanes, every copy makes every swing. "
-            + "Another clock of this build holds with all 9: Time-Study Windows, window cycle 216 ticks.");
-        expect(cause.changes!.data).toMatchObject({ fewer_copies: 8, other_clock: { id: "time_study_windows", window_cycle_ticks: 216 } });
+            + "Another clock of this build holds with all 9: Coordinated Sources, window cycle 216 ticks.");
+        expect(cause.changes!.data).toMatchObject({ fewer_copies: 8, other_clock: { id: "coordinated_sources", window_cycle_ticks: 216 } });
         expect(clock.checked_lanes!.line.sentence).toBe("Checked with all 9 copies on the lanes they share. Copy 2 does not get all its items, and no copy is held back at the output belt.");
     });
 
@@ -68,7 +68,7 @@ describe("what was checked on the lanes the copies of the automation science 240
         expect(cause.where.text).toBe("The inserter of copy 4 that drops automation science pack misses 42 of its 378 swings in 63 window cycles, and so does that of copy 8. "
             + "84 of the 336 swings each one makes wait for room.");
         expect(cause.alone.text).toBe("The same inserter makes all 378 swings. The clock is right for one copy.");
-        expect(cause.changes!.text).toBe("With 3 copies, every copy makes every swing. Another clock of this build has no full join: Time-Study Windows, window cycle 216 ticks.");
+        expect(cause.changes!.text).toBe("With 3 copies, every copy makes every swing. Another clock of this build has no full join: Coordinated Sources, window cycle 216 ticks.");
     });
 
     it("on the stable time study windows clock: the line and three rows that hold, with the waits at the join counted", () => {

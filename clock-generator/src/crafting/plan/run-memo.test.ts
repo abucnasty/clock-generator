@@ -280,6 +280,16 @@ describe("the memo of the backpressure loss verdicts of a generation", () => {
         expect(new Set([key, ...keys]).size).toBe(keys.length + 1);
     });
 
+    it("names the trials of one copy, and holds the order the window deciders are built in", () => {
+        const key = JSON.parse(disturbanceTrialKey(config, clock)) as { trial: string; config: Config };
+        expect(key.trial).toBe("one_copy");
+        // the config of the key is built as the blueprint builds the clock: each inserter with windows has its decider's place
+        const places = key.config.inserters.map(inserter => inserter.overrides?.enable_control)
+            .flatMap(control => control !== undefined && "decider_build_order" in control ? [control.decider_build_order] : []);
+        expect(places.length).toBeGreaterThan(0);
+        expect(places.every(place => Number.isInteger(place))).toBe(true);
+    });
+
     it("tells clocks apart by the cycles they are planned on where those set the clocks of the inserters outside the plan", async () => {
         const fuel = await loadConfigFromFile(TestConfigPaths.BIOCHAMBER_FUEL);
         const built = generateClockForConfig(fuel, { logger: quiet, verify_as_built: false, fuel_consumption_view: false, modulo_blueprint: false, factorio_states: false });

@@ -18,7 +18,7 @@ import { DisturbanceTrialVerdict } from "./disturbance-trial";
 import { SharedItemDeadlockRisk, sharedItemDeadlockRisks } from "./deadlock-risk";
 import { disturbanceTrialInsight, beltPickupNotTestedInsights, chestDrillInsights, ClockInsight, clockInsights, deadlockRiskInsight, dropSpacingInsights, lanesExactlyFullInsights, onePerCopyFeedInsights, assumedCopySpacingInsights, droppedOntoSharedLaneInsights, sideLoadedDropInsights, startDependenceInsight, withWakeUpsFromStarts } from "./insights";
 import { chestDrillFallbackConfig, ChestDrillClock, hasPlannedChestDrill } from "./chest-drill-windows";
-import { chestDrillReasons, EntityRouteError, entityRoutesOf } from "./enable-control-router";
+import { chestDrillReasons, entityRoutesOf } from "./enable-control-router";
 import { ClockBelt, clockBeltLabel, delayedHandRoomTicks, fuelRoomTicks } from "./clock";
 import { timeDivisionWindowsClock } from "./candidates/time-division-windows";
 import { pitchPickupsClock } from "./candidates/pitch-pickups";
@@ -29,7 +29,7 @@ import { generateClockForConfig, generateClockWithSwingBackoff, terminalCountFor
 import { primitiveRoundRobinPollingOptionsSupported, verifiedPrimitiveRoundRobinPollingClock } from "./candidates/round-robin-polling-primitive-verified";
 import { primitiveRoundRobinPollingConfigSupported } from "./candidates/round-robin-polling-primitive";
 import { MAX_OBSERVED_WINDOWS_WINDOW_CYCLE_TICKS, swingCountsListed } from "./planner/window-cycles";
-import { SecondaryPlanningInvariantError, secondaryPlanningCountOf, verificationPlanningConfigOf, withSecondaryPlanningProvenance, type SecondaryPlanningCount } from "./round-robin-polling-primitive-policy";
+import { secondaryPlanningCountOf, verificationPlanningConfigOf, withSecondaryPlanningProvenance, type SecondaryPlanningCount } from "./round-robin-polling-primitive-policy";
 import { collectingParts, coordinatedSourcesInputOf, type CoordinatedSourcesInput, type CoordinatedSourcesPart } from "./candidates/coordinated-sources-parts";
 import { coordinatedSourcesClock, withNotAdmitted, type NotAdmittedPart } from "./candidates/coordinated-sources";
 import { BlueprintGenerationResult, clockedByConfig, GenerateClockOptions, SimulationStabilityCheck, fractionalStartOf, fractionalSwingsOf } from "./plan/unclocked-run";
@@ -49,11 +49,12 @@ import { signalsPerMinuteOf } from "./clock-signals";
 import { START_DEPENDENCE_NOT_CHECKED, StartDependence, startDependenceNote } from "./start-dependence";
 import { NotMadeClock, notTriedSentence, WhyNotStable, whyNotStable, whyNotStableClockOf } from "./why-not-stable";
 import { DEFAULT_KICK_START_ITEMS } from "./runner/cold-start";
-import { ClockSharedLaneLoss, fewerCopiesThatHold, isNotChecked, judgeSharedLanes, SharedLaneJudgement, sharedLanesNotChecked } from "./shared-lane-verdict";
+import { ClockSharedLaneLoss, fewerCopiesThatHold, isNotChecked } from "./shared-lane-verdict";
+import { isInternalError, SharedLaneCheck, verdictWithCopies, VerdictWithCopies } from "./copies-verdict";
 import { buildLanesOf, BuildLane, CheckedLanes, checkedLanesOf, withOtherClocks } from "./checked-lanes";
 import { buildToNameOf, entityNamesInSentence } from "./build-names";
 import { capitalized, drillNameInText, insertersInSentence, textWords } from "./entity-name";
-import { copiesDisturbanceTrial, CopiesTrialVerdict } from "./shared-lane-trial";
+import { CopiesTrialVerdict } from "./shared-lane-trial";
 
 
 export interface ClockAlternative {
@@ -204,12 +205,6 @@ export interface ClockAlternativesPlan {
 /** The options Round-Robin Polling with a shorter window cycle is verified with, as the primary alternative's (see primaryDefinition) */
 const SMALL_BATCHES_OPTIONS: GenerateClockOptions = { verify_as_built: true, lane_hand_room: "always" };
 
-
-/**
- * An error of the generator itself, which fails the generation: not a clock that could not be made, so no maker's fallback
- * passes over it
- */
-const isInternalError = (error: unknown): boolean => error instanceof SecondaryPlanningInvariantError || error instanceof EntityRouteError;
 
 interface AlternativeDefinition {
     id: string;
@@ -833,7 +828,7 @@ function alternativePart(config: Config, alternative: ClockAlternative): Coordin
     const { result } = alternative;
     const { overrides } = verificationPlanningConfigOf(config, result);
     return {
-        name: alternative.id, alternative_id: alternative.id, verdict: alternative.verdict, wake_ups_per_minute: clockCost(alternative.ranking),
+        name: alternative.id, alternative_id: alternative.id, verdict: alternative.verdict, holds: alternative.assessment.holds, wake_ups_per_minute: clockCost(alternative.ranking),
         window_cycle_ticks: result.simulation_duration.ticks, windows: result.clock_windows,
         counted: result.stability_check.as_built?.wake_ups !== undefined,
         ...(result.always_on_reasons !== undefined && { always_on: result.always_on_reasons }),
@@ -1109,20 +1104,25 @@ function runAlternativeOf(
         return from_starts_of.get(trial)!;
     };
     /**
-     * The takers of the copies that lose swings on a lane they share (see shared-lane-verdict.ts), made once per trial, of
-     * the clock it runs and on the config it is verified on: only of a clock that holds its expected output, which alone
-     * the lanes can keep from being stable. Where the check cannot run, the loss that says so (`sharedLaneLossesOf`).
+     * The verdict with the copies of the clock a trial runs (copies-verdict.ts), made once per trial, on the config it is verified
+     * on: only of a clock that holds its expected output, which alone the lanes can keep from being stable. First the takers of the
+     * copies that lose swings on a lane they share (where the check cannot run, the loss that says so: `sharedLaneLossesOf`); then the
+     * disturbance trials on the copies, only where no swing is lost there and the clock gets back from every loss on one copy, unless
+     * the config switches them off (`overrides.disturbance_trials_on_copies`). A maker that judged the clock before (the same key) made
+     * them already.
      */
-    const shared_lane_checks_of = new Map<Trial, SharedLaneCheck>();
-    const sharedLaneCheck = (trial: Trial): SharedLaneCheck | null => {
+    const verdicts_with_copies_of = new Map<Trial, VerdictWithCopies>();
+    const verdictWithCopiesOf = (trial: Trial): VerdictWithCopies | null => {
         if (!trial.held) return null;
-        if (!shared_lane_checks_of.has(trial)) {
+        if (!verdicts_with_copies_of.has(trial)) {
             const on = used.planned_on ?? config;
-            shared_lane_checks_of.set(trial, sharedLaneCheckOf(() => timedCheck("shared_lane_check", () => judgeSharedLanes({ ...on, overrides: { ...on.overrides, terminal_swing_count: trial.result.used_terminal_swing_count } },
-                trial.result.clock_windows, trial.clock_window_cycle, logger)), label, logger));
+            verdicts_with_copies_of.set(trial, verdictWithCopies({ config: { ...on, overrides: { ...on.overrides, terminal_swing_count: trial.result.used_terminal_swing_count } },
+                windows: trial.result.clock_windows, window_cycle_ticks: trial.clock_window_cycle, expected_output_items: trial.result.stability_check.expected_output_items },
+            () => trial.loss.disturbance_trial?.survives === true, config.overrides?.disturbance_trials_on_copies !== false, label, logger));
         }
-        return shared_lane_checks_of.get(trial)!;
+        return verdicts_with_copies_of.get(trial)!;
     };
+    const sharedLaneCheck = (trial: Trial): SharedLaneCheck | null => verdictWithCopiesOf(trial)?.lane_check ?? null;
     const sharedLaneLosses = (trial: Trial): readonly ClockSharedLaneLoss[] => sharedLaneCheck(trial)?.losses ?? [];
     /**
      * What was checked on the lanes the copies share (checked-lanes.ts), made once per trial: from the check of the shared
@@ -1150,32 +1150,8 @@ function runAlternativeOf(
         }
         return checked_lanes_of.get(trial)!;
     };
-    /**
-     * The disturbance trials on the copies that share a lane (see shared-lane-trial.ts), made once per trial: only of a clock
-     * that holds, gets back from every loss on one copy and loses no swings on the shared lanes, unless the config switches
-     * them off (`overrides.disturbance_trials_on_copies`); null where they are not made
-     */
-    const copies_trials_of = new Map<Trial, CopiesTrialVerdict | null>();
-    const copiesTrial = (trial: Trial, shared_lane_losses: readonly ClockSharedLaneLoss[]): CopiesTrialVerdict | null => {
-        if (config.overrides?.disturbance_trials_on_copies === false || !trial.held || shared_lane_losses.length > 0
-            || trial.loss.disturbance_trial?.survives !== true) return null;
-        if (!copies_trials_of.has(trial)) {
-            const on = used.planned_on ?? config;
-            let tried: CopiesTrialVerdict | null;
-            try {
-                tried = timedCheck("copies_trial", () => copiesDisturbanceTrial({ ...on, overrides: { ...on.overrides, terminal_swing_count: trial.result.used_terminal_swing_count } },
-                    trial.result.clock_windows, trial.clock_window_cycle, trial.result.stability_check.expected_output_items, logger));
-            } catch (error) {
-                if (isInternalError(error)) throw error;
-                const reason = error instanceof Error ? error.message : String(error);
-                logger.warn(`Clock "${label}": the disturbance trials on the copies that share a lane could not be made: ${reason}`);
-                // the clock keeps the verdict of one copy, and the result says why the copies were not tried
-                tried = { survives: true, lanes: [], expected_output_items: trial.result.stability_check.expected_output_items, recovered_after_window_cycles: null, not_tried: reason };
-            }
-            copies_trials_of.set(trial, tried);
-        }
-        return copies_trials_of.get(trial)!;
-    };
+    /** The disturbance trials on the copies that share a lane of the clock a trial runs (`verdictWithCopiesOf`); null where they are not made */
+    const copiesTrial = (trial: Trial): CopiesTrialVerdict | null => verdictWithCopiesOf(trial)?.copies_trial ?? null;
     /** The trial of a clock rounded down to whole ticks on its own window cycle, where one is made (below) */
     let rounded_trial: Trial | null = null;
     /** The alternative for a trial of the clock: its notes, insights, assessment and ranking */
@@ -1184,7 +1160,7 @@ function runAlternativeOf(
         listing?: ListingSettings }): ClockAlternative => {
         const tried_as = trial;
         const shared_lane_losses = sharedLaneLosses(trial);
-        const copies_trial = copiesTrial(trial, shared_lane_losses);
+        const copies_trial = copiesTrial(trial);
         // a clock that fails its first check is listed by the mean of its long run, not the one window cycle measured
         const settled_check = (settle_unstable ?? !held) ? settledStability(trial) : trial.result.stability_check;
         // the counters of its inserters learn which decider switches each from the blueprint it is listed with
@@ -1317,39 +1293,6 @@ function sharedLaneLossNote(losses: readonly ClockSharedLaneLoss[]): string {
     const loss = losses[0];
     if (isNotChecked(loss)) return ` It is not counted as stable. ${loss.text}`;
     return loss.join_full !== undefined ? ` It is not stable on its output belt. ${loss.text}` : ` It is not stable on a lane its copies share. ${loss.text}`;
-}
-
-/**
- * The shared-lane losses of one clock as `judge` (the check of the lanes its copies share) finds them, the log line
- * written. Where the check stops with an error, the clock is not taken to hold on those lanes: its one loss says that
- * they could not be checked, and why. An internal error of the generator fails the generation.
- */
-export function sharedLaneLossesOf(judge: () => SharedLaneJudgement, label: string, logger: Logger): readonly ClockSharedLaneLoss[] {
-    return sharedLaneCheckOf(judge, label, logger).losses;
-}
-
-/** The check of a clock's shared lanes: its losses as `sharedLaneLossesOf` gives them, and the judgement where the check ran */
-interface SharedLaneCheck {
-    losses: readonly ClockSharedLaneLoss[];
-    judgement: SharedLaneJudgement | null;
-}
-
-/** `sharedLaneLossesOf` with the judgement kept, for the rows of the result (checked-lanes.ts) */
-function sharedLaneCheckOf(judge: () => SharedLaneJudgement, label: string, logger: Logger): SharedLaneCheck {
-    let judged: SharedLaneJudgement;
-    try {
-        judged = judge();
-    } catch (error) {
-        if (isInternalError(error)) throw error;
-        const reason = error instanceof Error ? error.message : String(error);
-        logger.warn(`Clock "${label}": the lanes its copies share could not be checked: ${reason}`);
-        return { losses: [sharedLanesNotChecked(reason)], judgement: null };
-    }
-    if (judged.lanes.length > 0) {
-        logger.log(`Clock "${label}": the shared lanes ${judged.lanes.join(", ")}: the refill arithmetic says ${judged.fast_check_passes ? "they refill in time" : "they may run short"}; `
-            + `with every copy on them, ${judged.losses.length === 0 ? "no copy loses swings" : `${judged.losses.length} takers lose swings`}`);
-    }
-    return { losses: judged.losses, judgement: judged };
 }
 
 /** A share as a percentage the labels print: "0.02%", "1.14%", "under 0.01%" */

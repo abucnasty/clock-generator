@@ -53,6 +53,9 @@ describe("a whole build of nine identical assemblers, clocked as given", () => {
     it("works with copies of a build that itself holds like assemblers: the copies and the inserters of a copy are both spaced", () => {
         expect(lossesOf(in_copies, TWO_SWINGS)).toEqual(["3 copper-plate 56/65", "3 iron-gear-wheel 58/65"]);
         expect(clockOf(in_copies, TWO_SWINGS).assessment.shared_lane_losses?.map(loss => "copy" in loss ? loss.copy : null)).toEqual([1, 1]);
-        expect(in_copies.alternatives[in_copies.selected_index].id).toBe("time_study_windows");
+        // Coordinated Sources is selected, at 784.241 wakeups a minute where Time-Study Windows wakes 902.088. The game result
+        // above is about the 72-tick clock: this clock gives the input inserters the windows of Time-Study Windows, not the
+        // 72-tick ones.
+        expect(in_copies.alternatives[in_copies.selected_index].id).toBe("coordinated_sources");
     });
 });
