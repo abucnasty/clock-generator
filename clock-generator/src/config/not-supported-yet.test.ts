@@ -12,10 +12,10 @@ const config = (chest: Record<string, unknown>, machine_type?: string) => JSON.s
 const buffer = { type: "buffer-chest", storage_size: 80, item_filter: "iron-plate" };
 
 describe("a config naming an entity the generator does not support yet", () => {
-    it("is refused with the reason and the roadmap milestone, not the list of types it takes", async () => {
+    it("is refused with the reason, not the list of types it takes", async () => {
         await expect(parseConfig(config(buffer, "rocket-silo"))).rejects.toThrow(
             "Configuration check failed at 'machines[0].type': \"rocket-silo\" is not supported yet: a rocket silo as a machine, "
-            + "crafting rocket parts and launching, comes with phase 2 of roadmap milestone M2 (containers); a rocket silo is "
+            + "crafting rocket parts and launching, is not modelled; a rocket silo is "
             + "taken as a chest: list it under `chests` with type \"rocket-silo\"");
         await expect(parseConfig(config(buffer, "lab"))).rejects.toThrow(
             "\"lab\" is not supported yet: labs are not modelled: they consume no recipe");

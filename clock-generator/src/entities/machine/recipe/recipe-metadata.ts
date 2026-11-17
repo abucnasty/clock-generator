@@ -109,7 +109,7 @@ function fromRecipe(recipe: EnrichedRecipe): RecipeMetadata {
 
     // the fluids are not simulated (GOALS.md, "Game Data and What Is Not Modelled Yet")
     assert(results.length >= 1, recipe.fluid_results.length > 0
-        ? `Recipe ${name} makes only fluids (${recipe.fluid_results.map(it => it.name).join(", ")}): fluid products are not supported (roadmap follow-up F1).`
+        ? `Recipe ${name} makes only fluids (${recipe.fluid_results.map(it => it.name).join(", ")}): fluid products are not supported yet.`
         : `Recipe ${name} has no products.`);
 
     const main_product_index = results.reduce(

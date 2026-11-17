@@ -127,7 +127,7 @@ export interface BeltPickupCalibration {
 
 /**
  * The inserter kinds whose belt pickup timing (the arm model) is calibrated: one evidence row, the legendary stack
- * inserter with 16-item hands on 4-item belt stacks (decision D9, follow-up F7). A kind is added here only once it is
+ * inserter with 16-item hands on 4-item belt stacks (decision D9). A kind is added here only once it is
  * measured on belts. Everything that asks reads this row: the traits (timing.belt_pickup_calibrated), the arm gate
  * (simulation/components/belt-hand-pickup.ts), the scope check (config/inserter-scope.ts) and the warning for pickups
  * outside the calibration (config/pickup-calibration.ts).

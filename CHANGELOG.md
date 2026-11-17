@@ -13,6 +13,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ### Changed
 - generation: Coordinated Sources now checks its clock with every copy while it chooses
+- ui: refusals of builds not supported yet now say what is not supported, with no release or item number
 
 ## [0.29.2] - 2026-11-16
 

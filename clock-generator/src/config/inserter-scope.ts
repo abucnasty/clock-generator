@@ -19,7 +19,7 @@ interface ScopedInserter {
 /**
  * The refusal of a belt pickup by an inserter whose kind is not in the calibration row (inserter-spec.ts
  * BELT_PICKUP_CALIBRATED: the legendary stack inserter), null for any other inserter. Belt pickup timing was calibrated
- * on the legendary stack inserter only (follow-up F7); other kinds and qualities keep working on chests and machines,
+ * on the legendary stack inserter only; other kinds and qualities keep working on chests and machines,
  * where their swing comes from the game data. A prototype or quality the model does not run at all is refused for that
  * instead.
  */
@@ -30,7 +30,7 @@ function beltPickupKindProblem(inserter: ScopedInserter): string | null {
     assertSupportedInserterKind(prototype, quality);
     const kind = `${quality} ${prototype}`;
     return `picking up from a belt with ${/^[aeiou]/.test(kind) ? "an" : "a"} ${kind} is not supported yet: belt pickup timing `
-        + "is calibrated on the legendary stack inserter only (follow-up F7). Other kinds and qualities work on chests and "
+        + "is calibrated on the legendary stack inserter only. Other kinds and qualities work on chests and "
         + "machines; take from this belt with a legendary stack inserter";
 }
 

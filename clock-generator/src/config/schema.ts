@@ -535,7 +535,7 @@ export const InserterConfigSchema = z.object({
      * The inserter's prototype name in the game data: "inserter", "fast-inserter", "long-handed-inserter",
      * "bulk-inserter" or "stack-inserter" (default). The burner inserter needs fuel and is refused. The prototype sets
      * how long a swing takes, with the quality, and how many items the hand holds, with the research. Only the
-     * legendary stack inserter may pick up from a belt: belt pickup timing is calibrated on it alone (follow-up F7).
+     * legendary stack inserter may pick up from a belt: belt pickup timing is calibrated on it alone.
      */
     prototype: z.string().optional().describe("The prototype name of the inserter in the game data; the default is \"stack-inserter\"."),
     /** The inserter's quality (default "legendary"); the higher it is, the faster the arm turns. It does not change the hand. */
