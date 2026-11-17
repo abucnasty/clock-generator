@@ -28,7 +28,7 @@ import { atRateFrom, branchesScaledTo, cycleAtRate, firstBinAtRate, type BranchB
 import { FactorioDataService, ItemName } from "../data";
 import { Chest, Entity, EntityId, ReadableEntityRegistry } from "../entities";
 import { EntityState, InserterState } from "../state";
-import { simulationStateKey } from "./runner/steady-state";
+import { stateKeyWithLanes } from "./runner/shared-lanes-key";
 import { SimulationContext } from "./sequence/simulation-context";
 import { ExportShortfall, ExportedItem, exportShortfallOfBins } from "./export-delivery";
 import { SPOIL_LIMIT_SHARE } from "../common/rule-constants";
@@ -880,8 +880,8 @@ export function runLossTrials(
     };
     const dropped = () => groups.reduce((sum, _group, at) => sum + groupDropped(at), 0);
     // the state a run's boundary is compared by: in a run of the copies, the lanes they share too, each brought up to now
-    const stateKey = copies === undefined ? () => simulationStateKey(context)
-        : () => [simulationStateKey(context), ...copies.lanes.map(it => { it.lane.advanceTo(now()); return it.lane.key(); })].join("\n");
+    const shared_lanes = copies?.lanes.map(it => it.lane) ?? [];
+    const stateKey = () => stateKeyWithLanes(context, shared_lanes);
 
     // What the build does: every item an inserter moves and every product a machine finishes is counted, and a
     // machine that crafts moves its bars. A drill puts into a machine without a count, which the stock shows; a drill
