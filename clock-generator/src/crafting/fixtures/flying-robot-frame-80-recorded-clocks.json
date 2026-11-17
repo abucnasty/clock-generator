@@ -1,0 +1,95 @@
+{
+  "time_study_windows_job_file": {
+    "window_cycle_ticks": 288,
+    "windows": {
+      "inserter:1": [
+        {
+          "start": 1,
+          "end": 13
+        },
+        {
+          "start": 145,
+          "end": 157
+        }
+      ],
+      "inserter:2": [
+        {
+          "start": 158,
+          "end": 184
+        }
+      ],
+      "inserter:3": [
+        {
+          "start": 14,
+          "end": 51
+        },
+        {
+          "start": 158,
+          "end": 184
+        }
+      ]
+    }
+  },
+  "moved_output_swing_job_file": {
+    "window_cycle_ticks": 288,
+    "windows": {
+      "inserter:1": [
+        {
+          "start": 1,
+          "end": 13
+        },
+        {
+          "start": 128,
+          "end": 140
+        }
+      ],
+      "inserter:2": [
+        {
+          "start": 14,
+          "end": 40
+        }
+      ],
+      "inserter:3": [
+        {
+          "start": 14,
+          "end": 51
+        },
+        {
+          "start": 141,
+          "end": 167
+        }
+      ]
+    }
+  },
+  "time_study_windows_planner": {
+    "window_cycle_ticks": 288,
+    "windows": {
+      "inserter:1": [
+        {
+          "start": 1,
+          "end": 13
+        },
+        {
+          "start": 145,
+          "end": 157
+        }
+      ],
+      "inserter:2": [
+        {
+          "start": 14,
+          "end": 40
+        }
+      ],
+      "inserter:3": [
+        {
+          "start": 14,
+          "end": 51
+        },
+        {
+          "start": 158,
+          "end": 184
+        }
+      ]
+    }
+  }
+}
