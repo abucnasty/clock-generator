@@ -76,6 +76,7 @@ import type { SourceControl } from "../strategy-catalog";
 import { AlwaysOnReason, AlwaysOnReasons, alwaysOnReasonsOf, classifyEntities } from "../enable-control-router";
 import { RunMemo, currentRunMemo } from "./run-memo";
 import { beginShadow, countRunMemoHit, tickLedgerOn, withTickPurpose, type ShadowWatch } from "../tick-ledger";
+import { judgedPeriodOf } from "../long-run";
 import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, completedAsBuiltCheck, laneHandRoomTrial, runAsBuiltCheck, runClockOnBuild, trialWithLoopWindows } from "../trial";
 
 export { SIMULATION_BUDGET_TICKS };
@@ -147,7 +148,9 @@ export interface ClockOnlyRun {
 
 export interface SimulationStabilityCheck {
     /** Complete physical counter span behind a fractional first-check mean; absent on ordinary one-period runs. */
-    observation_span?: { ticks: number; window_cycles: number; output_items: number };
+    observation_span?: { ticks: number; window_cycles: number; output_items: number;
+        /** A span of P (`judgedPeriodOf`), judged within this many items of what its window cycles expect */
+        approx_tolerance?: number };
     /** The run moved its expected output, within a hand of tolerance (and the clock-only check held, when one ran) */
     holds: boolean;
     /** Total items transferred by output inserters during the simulation window cycle */
@@ -704,7 +707,9 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
     const shadow = tickLedgerOn() ? shadowOfOutputs(build, all_output_inserters, duration, warmup_window_cycle) : undefined;
     const warmup = warmUp(config, build, controlled, duration, warmup_window_cycle, debug, debug_steps, logger, shadow);
     const repeat_window_cycles = warmup.repeat_window_cycles;
-    const repeat_bin = options.detect_repeat === true && (options.simulate_window_cycles ?? 1) > 1 ? provenRepeatBin(config, duration.ticks) : null;
+    // a subtick clock judged on P (`judgedPeriodOf`) is judged on it as a sample, never on the proven cycle of its whole counter
+    const repeat_bin = options.detect_repeat === true && (options.simulate_window_cycles ?? 1) > 1 && judgedPeriodOf(duration.ticks) === null
+        ? provenRepeatBin(config, duration.ticks) : null;
     const simulated = simulate(build, controlled, all_output_inserters, duration, options, debug, debug_steps, logger, repeat_bin, shadow);
     shadow?.finish();
     // the recorded run is over: what it recorded is sealed once, and the run, the memo and every result share that copy

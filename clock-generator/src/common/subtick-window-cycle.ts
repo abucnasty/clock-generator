@@ -23,6 +23,29 @@ export function subtickClockForWindowCycle(window_cycle_ticks: number): SubtickW
     return null;
 }
 
+/** A span of whole ticks a fractional window cycle is judged on in place of the whole ticks its subtick clock repeats in */
+export interface JudgedPeriod {
+    /** P: whole ticks */
+    ticks: number;
+    /** The window cycles P lasts, not a whole number: P over the window cycle */
+    window_cycles: number;
+    /** The whole window cycles P stands for, whose output a span of P holds: P over the window cycle, rounded */
+    whole_window_cycles: number;
+}
+
+/**
+ * One window cycle rounded to the nearest whole tick, P (90.947 ticks: 91; 213.333: 213): the shorter period a subtick clock
+ * can be judged on in place of the whole ticks its subtick clock repeats in (1,728 and 640). Null for a whole-tick window
+ * cycle, which is its own period, and for a fractional one with no subtick clock.
+ */
+export function roundedPeriodOf(window_cycle_ticks: number): JudgedPeriod | null {
+    if (subtickClockForWindowCycle(window_cycle_ticks) === null) {
+        return null;
+    }
+    const ticks = Math.max(1, Math.round(window_cycle_ticks));
+    return { ticks, window_cycles: ticks / window_cycle_ticks, whole_window_cycles: Math.max(1, Math.round(ticks / window_cycle_ticks)) };
+}
+
 /**
  * The whole values a decider is open for, of a window with these bounds: a fractional bound (from a fractional
  * window cycle's wrap) is rounded inward, as the exported deciders' constants are. Null when no whole value is inside.

@@ -10,10 +10,10 @@ import { Logger, defaultLogger } from "../common/logger";
 import { StockDetail, StockRecording } from "./machine-stock";
 import { WakeUps, wakeUpsOfStock } from "./wake-ups";
 import { InserterCounters, inserterEnds, wakeUpsAndCountersOfStock } from "./inserter-counters";
-import { judgeCounterSpan, judgeLongRun, judgeProvenCycle, LONG_RUN_MAX_TICKS, LONG_RUN_SETTLE_SHARE, longRunWindowCycles, OutputReason, outputReasonOf, wholeOutputRepeats } from "./long-run";
+import { judgeCounterSpan, judgedPeriodOf, judgeLongRun, judgeProvenCycle, LONG_RUN_MAX_TICKS, LONG_RUN_SETTLE_SHARE, longRunWindowCycles, OutputReason, outputReasonOf, wholeOutputRepeats } from "./long-run";
 import { DisturbanceTrial, DisturbanceTrialOptions, DisturbanceTrialReport, DisturbanceTrialVerdict, disturbanceTrialsOf, ExcessLoss, LATE_AFTER_WINDOW_CYCLES, LossOutcome, lossLimitOf, MAX_RECOVERY_WINDOW_CYCLES, reportOf, type SkippedTrial, verdictOf, withEveryTrialCounted } from "./disturbance-trial";
 import { SerializableClockWindows, positionStep, rotateRanges, shiftRangesForCircuitLatency, subtickClockForWindowCycle, withWindowsLengthened } from "./clock";
-import type { SubtickWindowCycle } from "../common/subtick-window-cycle";
+import type { JudgedPeriod, SubtickWindowCycle } from "../common/subtick-window-cycle";
 import { canonicalKey, currentRunMemo } from "./plan/run-memo";
 import { wholeCounterOf } from "./plan/clock-window-cycle-limit";
 import { assessTargetProduction, TargetProduction } from "./target-production";
@@ -314,6 +314,8 @@ function clockBuildRun(
 function firstClockSpan(
     config: Config, windows: Map<string, OpenRange[]>, window_cycle_ticks: number, logger: Logger, options: ClockTrialOptions = {},
 ): TrialRun {
+    const period = judgedPeriodOf(window_cycle_ticks);
+    if (period !== null) return firstSpanOfPeriod(config, windows, window_cycle_ticks, period, logger, options);
     const repeat = wholeCounterOf(window_cycle_ticks);
     if (repeat === null) return runClockOnBuild(config, windows, window_cycle_ticks, logger, options);
     const run = runClockOnBuild(config, windows, window_cycle_ticks, logger,
@@ -333,6 +335,40 @@ function firstClockSpan(
         holds: judged.holds && shortfalls.length === 0,
         actual_output_items: judged.output_items_per_window_cycle,
         observation_span: judged.observation_span,
+        ...(shortfalls.length > 0 && { export_shortfalls: shortfalls }),
+    } };
+}
+
+/**
+ * The first check of a subtick clock judged on P (`judgedPeriodOf`, the switch on): it runs P ticks, its clocks running on
+ * through the warm-up, in place of the whole counter. A span of P is no whole number of window cycles, so it cuts through the
+ * drops of every output inserter at both ends: it holds where it is within a hand of each of them of what its window cycles
+ * expect, as the long run judges such a span. Its rate is read over the whole window cycles P stands for, whose output the
+ * span holds; over the window cycles P lasts it would be off by that whole number times the window cycle over P.
+ */
+function firstSpanOfPeriod(
+    config: Config, windows: Map<string, OpenRange[]>, window_cycle_ticks: number, period: JudgedPeriod, logger: Logger, options: ClockTrialOptions,
+): TrialRun {
+    const run = runClockOnBuild(config, windows, window_cycle_ticks, logger, { ...options, simulate_window_cycles: Math.ceil(period.window_cycles),
+        observation_ticks: period.ticks, counter_runs_through: true, machine_stock: true, stock_detail: "hands" });
+    const measured = run.stability_check.actual_output_items;
+    const registry = createEntityRegistryFromConfig(config), target = targetItemOf(config.setpoint);
+    const output_ids = new Set(targetMachinesOf(target, registry)
+        .flatMap(machine => targetInsertersOf(machine, target, registry).map(inserter => inserter.entity_id.id)));
+    const output_inserters = registry.getAll().filter(Entity.isInserter).filter(inserter => output_ids.has(inserter.entity_id.id));
+    const tolerance = Math.max(1, ...output_inserters.map(it => it.metadata.stack_size)) * Math.max(1, output_inserters.length);
+    const holds = Math.abs(measured - run.stability_check.expected_output_items * period.window_cycles)
+        <= Math.max(tolerance, LCM_STABILITY_TOLERANCE * period.window_cycles);
+    const stock = run.machine_stock!;
+    const shortfalls = exportShortfallsOfRun(exportedItemsOf(registry, output_ids),
+        new Map(stock.inserters.map(inserter => [inserter.inserter_id, inserter.held])),
+        { first_tick: 0, bin_ticks: period.ticks, ticks: stock.ticks, count: 1, proven: false });
+    const window_cycles = period.whole_window_cycles;
+    const { repeat_window_cycles: _window_cycles, repeat_output_items: _items, export_shortfalls: _shortfalls, ...measurement } = run.stability_check;
+    return { ...run, stability_check: { ...measurement,
+        holds: holds && shortfalls.length === 0,
+        actual_output_items: measured / window_cycles,
+        observation_span: { ticks: period.ticks, window_cycles, output_items: measured, approx_tolerance: tolerance },
         ...(shortfalls.length > 0 && { export_shortfalls: shortfalls }),
     } };
 }
@@ -634,7 +670,9 @@ function startUpShortfallOf(held: readonly (readonly number[])[], orbit_tick: nu
 /** The amount of a sampled long run, over the whole repeats of its output in its judged bins (`wholeOutputRepeats`) */
 function sampledAmountOf(verdict: ReturnType<typeof judgeLongRun>): TargetProduction {
     const { bins, total } = wholeOutputRepeats(verdict.judged);
-    return assessTargetProduction({ total, expected_total: verdict.expected_per_bin * bins,
+    // bins of P (`judgedPeriodOf`) cannot be held to the item: short by the long run's tolerance at most
+    const expected_total = verdict.approx ? Math.max(0, verdict.expected_per_bin * bins - verdict.tolerance) : verdict.expected_per_bin * bins;
+    return assessTargetProduction({ total, expected_total,
         output_items_per_window_cycle: total / (verdict.window_cycles_per_bin * bins) }, false);
 }
 
@@ -834,7 +872,7 @@ export function wakeUpsFromStartsOf(
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const)), window_cycle_ticks);
     const ends = inserterEnds(check_config);
     const repeat = subtickClockForWindowCycle(window_cycle_ticks);
-    const bin = Number.isInteger(window_cycle_ticks) ? window_cycle_ticks : repeat?.window_cycle_ticks ?? null;
+    const bin = judgedPeriodOf(window_cycle_ticks)?.ticks ?? (Number.isInteger(window_cycle_ticks) ? window_cycle_ticks : repeat?.window_cycle_ticks ?? null);
     const quiet = quietLogger(logger);
     const figureAt = (place: number): number | null => {
         const standing = place === 0 ? windows
@@ -1412,7 +1450,8 @@ function measuredAmountOf(check: SimulationStabilityCheck): { target_production:
     const window_cycles = span?.window_cycles ?? (repeat ? check.repeat_window_cycles! : 1);
     const total = span?.output_items ?? (repeat ? check.repeat_output_items! : check.actual_output_items);
     return {
-        target_production: assessTargetProduction({ total, expected_total: check.expected_output_items * window_cycles,
+        // a span of P (`firstSpanOfPeriod`) cannot be held to the item: short by its tolerance at most
+        target_production: assessTargetProduction({ total, expected_total: Math.max(0, check.expected_output_items * window_cycles - (span?.approx_tolerance ?? 0)),
             output_items_per_window_cycle: total / window_cycles }, span !== undefined || repeat || check.repeat_window_cycles === 1),
         output_basis: window_cycles > 1 ? "long-run mean" : "one period",
     };

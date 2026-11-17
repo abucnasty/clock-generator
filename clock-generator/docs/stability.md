@@ -204,6 +204,17 @@ A clock called stable is proven only where its check reports `long_run_proven` o
 - Long runs that never repeat, such as agricultural science and metallurgic science's fractional window cycle time.
 - The orders of competing takers: two orders where at most two are enabled together, the rotations where more are; their combinations across machines are not tried.
 
+### The period a subtick clock is judged on
+
+A clock whose window cycle time is not a whole number of ticks repeats only after the whole ticks of its subtick clock: 1,728 ticks (19 window cycles) for a window cycle of 90.947 ticks. Its first check runs that count, and its long run is cut into bins of it. Behind a switch, off by default (`SUBTICK_CLOCK_JUDGED_ON_ROUNDED_PERIOD`, `clock-generator/src/crafting/judged-period-switch.ts`), such a clock is judged on P, one window cycle rounded to the nearest whole tick (91 ticks), in its place:
+
+- The first check runs P ticks. A span of P is no whole number of window cycles, so it may be a hand of every output inserter off what its window cycles expect, and the strict amount may be short by that much.
+- Its rate is read over the one window cycle P stands for: a span of 91 ticks held one window cycle's output, 576 items, which over the 1.0006 window cycles P lasts would read 379.78 a second where the clock makes 380.
+- The long run is judged in bins of P, each within a hand of every output inserter, and it is a sample, never a proof. A clock that fails it is listed at the mean of those bins.
+- The wake-ups from the starts are counted in bins of P.
+
+The loss trials, the planning run, the start shifts and the check of every start phase keep the whole ticks of the subtick clock.
+
 ## Active Inserter Windows
 
 An active inserter window is defined as a period where an inserter receives a signal from a decider combinator telling it to be enabled. During that window it has the ability to actively do work and transfer materials from a source to a sink.

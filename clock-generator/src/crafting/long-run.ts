@@ -8,6 +8,16 @@
  * a window cycle's output (570 of 576), and bins of the true window cycle put a drop that falls on their edge on either side of
  * it from one window cycle to the next, all output inserters at once.
  */
+import { JudgedPeriod, roundedPeriodOf } from "../common/subtick-window-cycle";
+import { SUBTICK_CLOCK_JUDGED_ON_ROUNDED_PERIOD } from "./judged-period-switch";
+
+/**
+ * The period a clock of this window cycle is judged on with the switch on (judged-period-switch.ts): P for a subtick clock
+ * (`roundedPeriodOf`); null with the switch off, and for a whole-tick window cycle or one with no subtick clock.
+ */
+export function judgedPeriodOf(window_cycle_ticks: number): JudgedPeriod | null {
+    return SUBTICK_CLOCK_JUDGED_ON_ROUNDED_PERIOD ? roundedPeriodOf(window_cycle_ticks) : null;
+}
 
 /** A fractional window cycle in whole ticks: `scale` window cycles last `window_cycle_ticks` ticks */
 export interface WindowCycleRepeat {
@@ -52,6 +62,8 @@ export const LONG_RUN_SETTLE_SHARE = 3;
 export const LONG_RUN_MAX_TICKS = 108_000;
 
 interface LongRunVerdict {
+    /** Judged in bins of P, no whole number of window cycles (`judgedPeriodOf`) */
+    approx?: true;
     keeps_up: boolean;
     /** Ticks in a bin; null when the judged span is compared as a whole (no repeat in whole ticks fits the run) */
     bin_ticks: number | null;
@@ -74,8 +86,15 @@ interface LongRunVerdict {
     output_items_per_window_cycle: number;
 }
 
-/** Whole ticks after which a build on a clock of this window cycle repeats, or null when no small whole number of window cycles is whole */
-function binOf(window_cycle_ticks: number, repeat: WindowCycleRepeat | null): { ticks: number; window_cycles: number } | null {
+/**
+ * Whole ticks after which a build on a clock of this window cycle repeats, or null when no small whole number of window cycles is whole.
+ * With the switch on, P for a subtick clock (`judgedPeriodOf`): no whole number of window cycles (`approx`).
+ */
+function binOf(window_cycle_ticks: number, repeat: WindowCycleRepeat | null): { ticks: number; window_cycles: number; approx?: true } | null {
+    const judged = judgedPeriodOf(window_cycle_ticks);
+    if (judged !== null) {
+        return { ticks: judged.ticks, window_cycles: judged.window_cycles, approx: true };
+    }
     if (Number.isInteger(window_cycle_ticks)) {
         return { ticks: window_cycle_ticks, window_cycles: 1 };
     }
@@ -199,13 +218,16 @@ export function judgeLongRun(
     // A span that is no whole repeat is cut at both ends where it falls, through the drops of every output inserter,
     // so it may be a hand of each of them off. Known limit: a cut that falls well hides as much again, so a clock
     // that is short by just under two hands of every output inserter over the span can pass. No sample gets here.
-    const tolerance = bin === null ? hand * Math.max(1, held.length) : hand;
+    // A bin of P (`judgedPeriodOf`) is no whole number of window cycles either, so it is cut as such a span is.
+    const approx = bin?.approx === true;
+    const tolerance = bin === null || approx ? hand * Math.max(1, held.length) : hand;
     const off_bins = judged.map((items, index) => ({ index, items })).filter(it => Math.abs(it.items - expected_per_bin) > tolerance);
     const total = judged.reduce((sum, items) => sum + items, 0);
     const expected_total = expected_per_bin * judged.length;
     const span_off = Math.abs(total - expected_total) > tolerance;
     const judged_window_cycles = window_cycles_per_bin * judged.length;
     return {
+        ...(approx && { approx: true as const }),
         keeps_up: off_bins.length === 0 && !span_off,
         bin_ticks: bin === null ? null : bin_ticks,
         window_cycles_per_bin,
