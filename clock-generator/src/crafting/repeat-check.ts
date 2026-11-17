@@ -12,7 +12,8 @@ import { longRunWindowCyclesOf, runClockOnBuild } from "./trial";
 
 /**
  * The repeat check of the maker log (scripts/blast/MAKER-LOG.md, event `repeat_check`): a clock that holds on one copy is run
- * from the cold start as its long run is made, and the ticks the run needed of each window are read from its first tick on
+ * from the cold start as its long run is made, for all the window cycles of the long run (the long run itself stops where its
+ * state repeats), and the ticks the run needed of each window are read from its first tick on
  * (timetable.ts). Each window is narrowed to the span of those ticks, with no margin; a window with no needed tick stays as
  * it is. The narrowed clock is run again from the same start, and every hand of every inserter is compared tick for tick
  * with the first run. Where a hand differs, each narrowed window opens 1, 2 and more ticks earlier, never before its own
@@ -158,12 +159,13 @@ export function repeatCheckOf(run: ClockRunForLog, timetable: TimetableLine | nu
     const config: Config = { ...run.config, overrides: { ...run.config.overrides, derive_clock_windows: false } };
     const cycles = longRunWindowCyclesOf(T, run.long_run_ticks);
     if (cycles <= 1) throw new Error(`no long run of a window cycle of ${T} ticks`);
-    const runWith = (windows: SerializableClockWindows, detect_repeat: boolean, on_context: (context: SimulationContext) => void) =>
+    // every run for all the window cycles of the long run: the long run stops where its state repeats, a narrowed run need not
+    const runWith = (windows: SerializableClockWindows, on_context: (context: SimulationContext) => void) =>
         runClockOnBuild(config, withChestDrillWindows(config, mapOf(windows), T), T, logger, { simulate_window_cycles: cycles, machine_stock: true, factorio_states: false,
-            detect_repeat, ...run.swings, stock_detail: "hands", record_histories: false, on_context });
+            ...run.swings, stock_detail: "hands", record_histories: false, on_context });
     // the first run, as the long run of the clock is made
     let recordsOf: () => InserterTimetableRecord[] = () => [];
-    runWith(run.windows, true, context => { recordsOf = recordTimetable(context); });
+    runWith(run.windows, context => { recordsOf = recordTimetable(context); });
     const first = recordsOf();
     const from = Math.min(...first.map(record => record.first_tick));
     const to = Math.min(...first.map(record => record.last_tick)) + 1;
@@ -174,7 +176,7 @@ export function repeatCheckOf(run: ClockRunForLog, timetable: TimetableLine | nu
     const again = (windows: SerializableClockWindows): FirstDifference | null => {
         runs++;
         try {
-            runWith(windows, false, context => compareHands(context, first));
+            runWith(windows, context => compareHands(context, first));
         } catch (stop) {
             if (stop instanceof StopRun) return stop.difference;
             throw stop;

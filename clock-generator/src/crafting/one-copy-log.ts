@@ -56,11 +56,12 @@ export function runOfOneCopyForLog(config: Config, windows: ReadonlyMap<string, 
     on_context: (context: SimulationContext) => void;
     keep: (wake_ups: object, stock: StockRecording, from_tick: number) => void;
 } {
-    let records: (() => InserterTimetableRecord[]) | null = null;
+    // a record for each run the check makes: it can run the clock again for longer and keep the first run
+    const records: (() => InserterTimetableRecord[])[] = [];
     const whole = Number.isInteger(window_cycle_ticks);
     return {
         on_context: context => {
-            if (whole) records = recordTimetable(context);
+            if (whole) records.push(recordTimetable(context));
         },
         keep: (wake_ups, stock, from_tick) => timedCheck("timetable", () => {
             const errors: string[] = [];
@@ -69,26 +70,34 @@ export function runOfOneCopyForLog(config: Config, windows: ReadonlyMap<string, 
             let ticks_before_stock: number | null = null;
             if (!whole) {
                 errors.push(`no timetable of a window cycle of ${window_cycle_ticks} ticks: it reads whole ticks`);
-            } else if (records === null) {
+            } else if (records.length === 0) {
                 errors.push("no record of the timetable was made");
             } else {
-                const read = made(records, errors);
-                if (read !== null && read.length > 0) {
-                    // the stock is of the ticks after the warm-up, up to the run's end: its last tick is the record's
-                    const shift = read[0].last_tick - (stock.ticks - 1);
-                    const lined_up = stock.inserters.every(series => {
-                        const record = read.find(it => it.copy === 0 && it.inserter_id === series.inserter_id);
-                        if (record === undefined) return false;
-                        for (let tick = Math.max(0, from_tick); tick < stock.ticks; tick++) if (record.heldAt(tick + shift) !== series.held[tick]) return false;
+                // the record of the run whose stock this is, and the run's tick of the stock's first: the stock starts after the
+                // warm-up, and a run that repeats keeps only the ticks it is judged on, so the run's ticks of the stock are found
+                // where every hand of the stock is the record's (the end of the run first, then from its start)
+                const linedUp = (read: InserterTimetableRecord[]): number | null => {
+                    if (read.length === 0) return null;
+                    const pairs = stock.inserters.map(series => ({ series, record: read.find(it => it.copy === 0 && it.inserter_id === series.inserter_id) }));
+                    if (pairs.some(pair => pair.record === undefined)) return null;
+                    const fits = (shift: number) => pairs.every(({ series, record }) => {
+                        for (let tick = 0; tick < stock.ticks; tick++) if (record!.heldAt(tick + shift) !== series.held[tick]) return false;
                         return true;
                     });
-                    if (!lined_up) {
-                        errors.push("the record of the timetable does not line up with the run's stock");
-                    } else {
-                        ticks_before_stock = shift;
-                        timetable = made(() => timetableOf({ records: read, windows: windowRangesOf(windows), window_cycle_ticks, from: from_tick + shift, to: stock.ticks + shift,
-                            needed_from: Math.min(...read.map(it => it.first_tick)) }), errors);
-                    }
+                    const end = read[0].last_tick - (stock.ticks - 1);
+                    if (fits(end)) return end;
+                    for (let shift = read[0].first_tick; shift < end; shift++) if (fits(shift)) return shift;
+                    return null;
+                };
+                const reads = records.map(record => made(record, errors)).filter((read): read is InserterTimetableRecord[] => read !== null);
+                const read = reads.find(it => linedUp(it) !== null);
+                if (read === undefined) {
+                    errors.push(`the record of the timetable does not line up with the run's stock (${reads.length} of ${records.length} runs read)`);
+                } else {
+                    const shift = linedUp(read)!;
+                    ticks_before_stock = shift;
+                    timetable = made(() => timetableOf({ records: read, windows: windowRangesOf(windows), window_cycle_ticks, from: from_tick + shift, to: stock.ticks + shift,
+                        needed_from: Math.min(...read.map(it => it.first_tick)) }), errors);
                 }
             }
             noteRunOfOneCopy(wake_ups, { window_cycle_ticks, timetable, ticks_before_stock, ledger, errors });
