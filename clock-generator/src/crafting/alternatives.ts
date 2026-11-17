@@ -828,7 +828,7 @@ function alternativePart(config: Config, alternative: ClockAlternative): Coordin
     const { result } = alternative;
     const { overrides } = verificationPlanningConfigOf(config, result);
     return {
-        name: alternative.id, alternative_id: alternative.id, verdict: alternative.verdict, wake_ups_per_minute: clockCost(alternative.ranking),
+        name: alternative.id, alternative_id: alternative.id, verdict: alternative.verdict, holds: alternative.assessment.holds, wake_ups_per_minute: clockCost(alternative.ranking),
         window_cycle_ticks: result.simulation_duration.ticks, windows: result.clock_windows,
         counted: result.stability_check.as_built?.wake_ups !== undefined,
         ...(result.always_on_reasons !== undefined && { always_on: result.always_on_reasons }),

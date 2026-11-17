@@ -19,7 +19,8 @@ import { CodedError, emitMakerLog, makerLogOn, reasonOf, type MakerReason } from
  * window cycle, the window cycle of today's recommended clock.
  *
  * - **Parts:** every clock the other makers built for the build (`CoordinatedSourcesPart`): the stable alternatives, every way of the grouped
- *   hands construction (whether its clock holds as a whole or not), and the per-hand shape of every way that guards takers. A part
+ *   hands construction (whether its clock holds as a whole or not), the per-hand shape of every way that guards takers, and the alternatives
+ *   that hold on one copy but are not stable (the copies on a shared lane, or a disturbance trial, make them so). A part
  *   gives windows where its window cycle divides the shared one (its windows repeated) and its own clock's long run was counted as built.
  * - **One source at a time:** a part with no count gives the windows of one group where today's recommended clock with only that group's
  *   windows taken from the part holds to the long run, the check that counts its wakeups (`trialOf`); each group is tried once, where
@@ -291,8 +292,9 @@ export function coordinatedSourcesClock(
         }
         return trial.holds;
     };
+    // an alternative that is not stable gives windows where it holds on one copy: the composition is judged as a whole
     const fits = (part: CoordinatedSourcesPart) => Number.isInteger(part.window_cycle_ticks) && Number.isInteger(shared_ticks / part.window_cycle_ticks)
-        && (part === recommended || part.alternative_id === undefined || part.verdict === "stable");
+        && (part === recommended || part.alternative_id === undefined || part.verdict === "stable" || part.holds === true);
     // the windows the clock has beside its inserters' (drills), from the recommended clock
     const fixed = Object.fromEntries(Object.entries(tiledWindows(recommended.windows, recommended.window_cycle_ticks, shared_ticks))
         .filter(([id]) => !inserters.some(it => it.id === id)));

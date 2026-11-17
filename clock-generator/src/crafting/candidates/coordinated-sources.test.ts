@@ -137,6 +137,16 @@ describe("the input of the per-branch clock", () => {
         expect(input.parts.map(it => it.name)).toEqual(["planned-belt-slack", "staged", "compact, per hand"]);
     });
 
+    it("takes a clock that holds on one copy though it is not stable, after the ways, and leaves out one that does not hold", () => {
+        const holds_unstable = { ...unstable, holds: true };
+        const no_recovery = part("swings-1", 24, { "inserter:1": [window(0, 5)] }, { alternative_id: "swings-1", verdict: "no recovery", holds: true });
+        const does_not_hold = part("derived", 24, { "inserter:1": [window(0, 6)] }, { alternative_id: "derived", verdict: "unstable", holds: false });
+        // a clock that is not stable with the windows of a stable one or a way is that part already
+        const same_as_stable = part("shifted-swings", 24, { "inserter:1": [window(0, 3)] }, { alternative_id: "shifted-swings", verdict: "unstable", holds: true });
+        const input = coordinatedSourcesInputOf([{ parts: [holds_unstable, stable, does_not_hold, same_as_stable, way, no_recovery] }], "planned-belt-slack");
+        expect(input.parts.map(it => it.name)).toEqual(["planned-belt-slack", "staged", "swings-2", "swings-1"]);
+    });
+
     it("keeps the recommended clock though it is not stable", () => {
         expect(coordinatedSourcesInputOf([{ parts: [stable, unstable] }], "swings-2").parts.map(it => it.name)).toEqual(["planned-belt-slack", "swings-2"]);
     });

@@ -16,6 +16,11 @@ export interface CoordinatedSourcesPart {
     /** The alternative's verdict; absent for a way */
     verdict?: "stable" | "no recovery" | "unstable";
     /**
+     * Whether the alternative's clock holds its expected output on one copy (`ClockAssessment.holds`), whatever its verdict: a clock
+     * that is not stable gives windows where it holds; absent for a way
+     */
+    holds?: boolean;
+    /**
      * The wakeups a minute the selection ranks the alternative by (`ClockRanking.wake_ups_per_minute`; null where they were not
      * counted); absent for a way, and for a part carried from before it was set
      */
@@ -99,8 +104,10 @@ interface RunWithParts {
 /**
  * The input of the per-branch clock from the runs of a generation and the id of the clock they recommend: the parts of
  * every run, the stable alternatives first in the order they are listed, then the ways of the constructions in the order
- * they were made, each set of windows once (a counted one before one not yet counted), and the recommended clock itself
- * where it is not among them (a clock that is not stable is a part only where it is the recommended one)
+ * they were made, then the alternatives that hold on one copy and are not stable (the copies or a disturbance trial make them
+ * so), in the order they are listed, each set of windows once (a counted one before one not yet counted), and the recommended
+ * clock itself where it is not among them. An alternative that does not hold on one copy is a part only where it is the
+ * recommended one. The clocks that are not stable come last, so that a set of windows a stable clock or a way gives keeps its part.
  */
 export function coordinatedSourcesInputOf(runs: readonly (RunWithParts | null)[], recommended_id: string): CoordinatedSourcesInput {
     const all: CoordinatedSourcesPart[] = [];
@@ -116,12 +123,16 @@ export function coordinatedSourcesInputOf(runs: readonly (RunWithParts | null)[]
         const strategy = part.alternative_id === undefined ? WAY_STRATEGY : strategies.get(part.alternative_id);
         if (strategy !== undefined) all[index] = { ...part, strategy };
     }
+    const holdsNotStable = (part: CoordinatedSourcesPart) => part.alternative_id !== undefined && part.alternative_id !== recommended_id
+        && part.verdict !== "stable" && part.holds === true;
     const ordered = [...all.filter(part => part.alternative_id !== undefined && part.verdict === "stable"),
-        ...all.filter(part => part.alternative_id === undefined)];
+        ...all.filter(part => part.alternative_id === undefined), ...all.filter(holdsNotStable)];
     if (makerLogOn()) {
-        // the clocks that are not stable are parts only where the recommended one is: the others are left out
+        // the clocks that do not hold on one copy are parts only where the recommended one is: the others are left out
         for (const part of all) {
-            if (part.alternative_id !== undefined && part.verdict !== "stable" && part.alternative_id !== recommended_id) partEvent(part, "excluded", { reasons: [reasonOf("not_stable", { verdict: part.verdict })] });
+            if (part.alternative_id !== undefined && part.verdict !== "stable" && part.alternative_id !== recommended_id && !holdsNotStable(part)) {
+                partEvent(part, "excluded", { reasons: [reasonOf("not_stable", { verdict: part.verdict })] });
+            }
         }
     }
     const kept = new Map<string, CoordinatedSourcesPart>();
