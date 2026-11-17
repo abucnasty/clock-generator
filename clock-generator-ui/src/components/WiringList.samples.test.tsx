@@ -46,6 +46,16 @@ describe('the wiring list of every sample', () => {
         for (const { key, description } of combinators) {
             expect(description, key).toBeTruthy();
             expect(install.lines[key], key).toBe(firstLineOf(description!));
+            // under the header, a line of source, item and sink for each inserter or drill the combinator switches on
+            // (a description Factorio cut has lost its last lines)
+            if (!description!.endsWith('...')) {
+                const named = description!.split('\n').flatMap(line => {
+                    const match = /^(?:Inserters?|Drills?) (\d+(?:, \d+)*): \S.* → \S.* → \S.*$/.exec(line);
+                    return match ? match[1].split(', ').map(Number) : [];
+                });
+                const ids = key.split(':')[1].split(',').map(Number);
+                expect(named.sort((x, y) => x - y), key).toEqual(ids.sort((x, y) => x - y));
+            }
         }
         expect(Object.keys(install.lines).sort()).toEqual(combinators.map(it => it.key).sort());
         // the schedule and the tags name the same rows
