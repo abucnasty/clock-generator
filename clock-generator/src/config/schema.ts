@@ -914,7 +914,10 @@ export const ConfigSchema = z.preprocess(renameTargetOutputToSetpoint, z.preproc
         + "of belt from the copies to the infinite end, in tiles. The run of the copies moves the output on it, and an output blockage shuts its infinite end."),
 }).superRefine((config, context) => {
     if (config.output_belt !== undefined) {
-        for (const problem of outputBeltProblems(config.output_belt, config.setpoint.copy_offset)) {
+        // the output inserters of a copy: those that drop the target item onto a belt that carries it
+        const outputs = config.inserters.filter(inserter => inserter.sink.type === TargetType.BELT && config.belts.some(belt =>
+            belt.id === inserter.sink.id && belt.lanes.some(lane => lane.ingredient === config.setpoint.recipe))).length;
+        for (const problem of outputBeltProblems(config.output_belt, config.setpoint.copy_offset, outputs)) {
             context.addIssue({ code: "custom", path: ["output_belt", ...problem.path], message: problem.message });
         }
     }

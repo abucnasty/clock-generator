@@ -13,6 +13,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ### Changed
 - generation: Coordinated Sources now checks its clock with every copy while it chooses
+- simulation: an output belt can now be stated for builds with several output inserters
 
 ## [0.29.2] - 2026-11-16
 
