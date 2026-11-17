@@ -52,6 +52,7 @@ describe("the ledger of a clock's wakeups", () => {
 
     it("keeps the ghost wakeups apart, as many as the run has, each one of the wakeups counted", () => {
         const ghosts = ghostWakeUpsOfStock(stock, ends, from);
+        expect(ghosts.length).toBeGreaterThan(0);
         const in_ledger = ledger.rows.reduce((sum, row) => sum + row.ghost.input + row.ghost.output, 0);
         expect(in_ledger).toBe(ghosts.length);
         for (const row of ledger.rows) {

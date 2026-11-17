@@ -115,16 +115,6 @@ export class InserterTimetableRecord {
     public swingsOutIn(tick: number): boolean {
         return (this.at(tick) & SWINGS_OUT) !== 0;
     }
-
-    /** Whether the phase rule read the enable condition in the tick */
-    public readIn(tick: number): boolean {
-        return (this.at(tick) & READ) !== 0;
-    }
-
-    /** Whether the hand took items in the tick */
-    public tookIn(tick: number): boolean {
-        return (this.at(tick) & TOOK) !== 0;
-    }
 }
 
 /** How many recorders were put into runs, for a test that the log off puts none in */

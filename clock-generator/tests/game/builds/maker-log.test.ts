@@ -88,7 +88,7 @@ describe('the maker log of a blast job', () => {
                 expect(ledger.reason, String(clock.id)).toEqual({ code: 'no_run_of_one_copy', cause: 'no_long_run' });
                 continue;
             }
-            // check A: the ledger of the run whose wakeups the record holds gives the same count over the same ticks
+            // the ledger of the run whose wakeups the record holds gives the same count over the same ticks
             expect(ledger.reason, String(clock.id)).toBeNull();
             expect(ledger.adds_up, String(clock.id)).toBe(true);
             expect((ledger.record as { wake_ups_per_minute: number }).wake_ups_per_minute).toBe(clock.wake_ups);

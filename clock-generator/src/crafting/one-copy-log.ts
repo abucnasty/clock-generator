@@ -86,7 +86,12 @@ export function runOfOneCopyForLog(config: Config, windows: ReadonlyMap<string, 
                     });
                     const end = read[0].last_tick - (stock.ticks - 1);
                     if (fits(end)) return end;
-                    for (let shift = read[0].first_tick; shift < end; shift++) if (fits(shift)) return shift;
+                    for (let shift = read[0].first_tick; shift < end; shift++) {
+                        if (!fits(shift)) continue;
+                        // a fit at another place in the window cycle would name other windows: the record cannot be read then
+                        for (let other = shift + 1; other < Math.min(end, shift + window_cycle_ticks); other++) if (fits(other)) return null;
+                        return shift;
+                    }
                     return null;
                 };
                 const reads = records.map(record => made(record, errors)).filter((read): read is InserterTimetableRecord[] => read !== null);
