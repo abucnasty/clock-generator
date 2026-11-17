@@ -4,7 +4,8 @@ An optional log of a blast. It says what each maker made, which clocks the gener
 It is off by default.
 
 ```bash
-bash scripts/blast/blast.sh run .. <out> --log      # writes <out>/maker-log/<job>.jsonl, one file a job
+bash scripts/blast/blast.sh run .. <out> --log            # writes <out>/maker-log/<job>.jsonl, one file a job
+bash scripts/blast/blast.sh run .. <out> --repeat-check   # the log, with the repeat check of each listed clock
 ```
 
 - The switch is `BLAST_LOG=1`, which `--log` sets. It turns selection off, so every job is generated and has a log.
@@ -13,6 +14,9 @@ bash scripts/blast/blast.sh run .. <out> --log      # writes <out>/maker-log/<jo
 - A file is written whole when its job ends. A job that failed to generate has no log.
 - A generation is given a log by `maker_log` in `GenerateClockOptions`. With none, no event is built and nothing is timed.
 - The log reads what the generation computed. It asks for no check the generation did not run.
+- The repeat check is not like that. It runs each listed clock that holds on one copy again (event `repeat_check`).
+  Its switch is `BLAST_REPEAT_CHECK=1`, which `--repeat-check` sets with `BLAST_LOG=1`.
+  A generation asks for it with `maker_log_repeat_check`. It is not on in CI or in a record write. It changes no job file.
 
 Words: a **maker** is one of the generator's slots that makes a clock (`ClockAlternative.maker`). A **listed** clock is a clock in the result.
 A **part** is a clock, or a way of the grouped hands rule, that Coordinated Sources can take windows from. A **composition** is a clock
@@ -21,7 +25,8 @@ Coordinated Sources makes by taking each source's windows from one part. A **rea
 ## Format `maker-log-2`
 
 A field's name and meaning do not change. A new field, a field less or a changed meaning is a new format number.
-`maker-log-2` adds the events of the lanes the copies share: `job_lanes`, `lane_facts` and `missed_swings`. The events of `maker-log-1` are as they were.
+`maker-log-2` adds the events of the lanes the copies share (`job_lanes`, `lane_facts` and `missed_swings`), the `timetable` and the
+`ledger` of each listed clock, the `repeat_check`, and two fields of `seconds`. The events of `maker-log-1` are as they were.
 Field names are those of the record (`id`, `maker`, `verdict`, `holds`, `window_cycle_ticks`, `wake_ups`) where the record has them, so that a log joins the record on `job` and `id`.
 `holds` is one copy alone, as in the record.
 The lines of a file are in the order of the kinds below. Within a kind they are in the order the events were made.
@@ -119,6 +124,88 @@ In each open tick the hand waits for one thing: `on_its_way` (it holds a hand it
 
 The example is shortened: two pickups, one window cycle.
 
+### `timetable`: one for each listed clock
+
+What each inserter's windows were needed for. `one_copy` is read from the long run of the clock-only check: the record's wakeups are
+from that run. It is read over the ticks the wakeups are counted on. `copies` has one line for each run of the copies that the check
+of the shared lanes judged by, over its judged span. `run` is the place of that run in the `runs` of `lane_facts`. A line is made only
+on a window cycle of whole ticks.
+
+`reason` is null, or `no_run_of_one_copy` with its `cause`: `no_long_run` (the clock-only check made no long run: the clock does not
+hold), `not_noted` or `not_read` (`errors` says why). Then `one_copy` is null. `windows_hash` joins it to the `windows` event.
+
+A line has `from_tick` and `to_tick` (ticks of the run), its `rows`, `no_window` (the inserters with no window of the clock) and
+`errors`. `one_copy` also has `ticks_before_stock`: the run's ticks before the first tick the record's wakeups are counted from.
+Each row is an inserter: the `copies` read (1 is the config's own), its `windows` and `unmapped_open_ticks`.
+`unmapped_open_ticks` are open ticks at a position that no window has. They are 0 where the record lines up with the clock. Each window:
+
+| Field | Meaning |
+| --- | --- |
+| `start`, `ticks` | the window as the clock gives it: its first tick of the window cycle and its length. Ranges that meet are one window. The range at the end of the window cycle and the range at its start are one window too |
+| `openings`, `open_ticks` | its openings and open ticks in the span, over all the copies read |
+| `needed`, `needed_ticks` | the first and the last needed tick, counted from `start` (null where none), and the count. In a needed tick the inserter's phase rule read its enable condition and the read let it go on. After the update its hand is at its pickup |
+| `needed_by` | the needed ticks by kind: `start` (a hand starts), `fill` (a hand fills on), `wait` (a part hand waits for its machine) |
+| `open_without_pickup` | open ticks that were not needed. An inserter asleep on a list makes no read, so its ticks asleep count here |
+| `cut_hands`, `cut_empty` | hands the close of the window cut at their pickup, and of them the empty hands |
+| `ticks_to_swing`, `not_swung` | the cut hands by their open ticks to the swing: from the next opening to the tick the hand leaves for the sink. `not_swung`: the cut hands that do not leave in the record |
+| `starts_by_last` | `copies` only, for a taker of a belt: its hand starts by their last condition (as `missed_swings`) |
+| `needed_from_start` | `one_copy` only: `needed` over the whole run from its first tick, the warm-up included. The repeat check narrows to it |
+
+```json
+{"job":"config-AUTOMATION_SCIENCE_240","event":"timetable","id":"pitch_pickups","window_cycle_ticks":72,"windows_hash":"4f29c18f","reason":null,"one_copy":{"from_tick":433,"to_tick":721,"rows":[{"inserter_id":"inserter:1","copies":[1],"windows":[{"start":1,"ticks":24,"openings":4,"open_ticks":96,"needed":[0,23],"needed_ticks":33,"needed_by":{"start":9,"fill":23,"wait":1},"open_without_pickup":63,"cut_hands":0,"cut_empty":0,"ticks_to_swing":{},"not_swung":0,"needed_from_start":[0,23]}],"unmapped_open_ticks":0}],"no_window":[],"errors":[],"ticks_before_stock":433},"copies":[{"run":0,"reading":0,"from_tick":4680,"to_tick":9360,"rows":[{"inserter_id":"inserter:1","copies":[1,2,3,4,5,6,7,8,9],"windows":[{"start":1,"ticks":24,"openings":585,"open_ticks":14040,"needed":[0,23],"needed_ticks":4921,"needed_by":{"start":1314,"fill":3463,"wait":144},"open_without_pickup":9119,"cut_hands":0,"cut_empty":0,"ticks_to_swing":{},"not_swung":0,"starts_by_last":{"window_open":441,"hand_at_source":729}}],"unmapped_open_ticks":0}],"no_window":[],"errors":[]}],"errors":[]}
+```
+
+The example is shortened: one inserter, one window, one run of the copies.
+
+### `ledger`: one for each listed clock
+
+The wakeups of the run of one copy that the record's wakeups are from. They are counted over the same ticks, as the record counts them.
+`reason` is as in `timetable`; then `ledger` is null. `record` is the record's: `wake_ups` (the count), `ticks` and `wake_ups_per_minute`.
+`adds_up` is true where the ledger has the same count over the same ticks. The value a minute must be the same too. It is null where one is missing.
+
+`ledger` has `from_tick` and `to_tick` (ticks of the stock the wakeups are counted on), `ticks`, `wake_ups`, `wake_ups_per_minute` and
+a row for each inserter:
+
+| Field | Meaning |
+| --- | --- |
+| `input` | wakeups from the list of the machine it puts into: by the `machine` (a craft start, or a fuel item its burner took), by an `inserter` (a take from the machine's output) |
+| `output` | wakeups from the list of the machine it takes from: by the `machine` (a result), by an `inserter` (fuel put in) |
+| `ghost` | of those, by list, the ghost wakeups: the clock switched the inserter off while it was asleep on the list |
+| `empty_hand_enabled_ticks` | ticks it was enabled with an empty hand and its arm not away: at its `pickup`, or at `rest` |
+
+```json
+{"job":"config-AUTOMATION_SCIENCE_240","event":"ledger","id":"pitch_pickups","reason":null,"record":{"wake_ups":4,"ticks":287,"wake_ups_per_minute":50.174216027874564},"adds_up":true,"ledger":{"from_tick":1,"to_tick":288,"ticks":287,"wake_ups":4,"wake_ups_per_minute":50.174216027874564,"rows":[{"inserter_id":"inserter:1","input":{"machine":4,"inserter":0},"output":{"machine":0,"inserter":0},"ghost":{"input":3,"output":0},"empty_hand_enabled_ticks":{"pickup":0,"rest":7}}]}}
+```
+
+The example is shortened: one inserter.
+
+### `repeat_check`: one for each listed clock, only with `--repeat-check`
+
+The clock runs from the cold start as its long run is made, for all the window cycles of the long run. Each window is narrowed to its
+`needed_from_start` in that run, with no margin. A window with no needed tick stays as it is. A window that its needed ticks fill
+stays as it is too. The narrowed clock runs again from the same start. Each hand of each inserter is compared tick for tick with the
+first run. Where a hand is not the same, each narrowed window opens 1, 2 or more ticks earlier, until the run repeats. A window never
+opens before its own opening. Nothing the check makes is listed, ranked or kept.
+
+`reason` is null, or `not_repeat_checked` with its `cause`: `does_not_hold_one_copy`, `window_cycle_not_whole`, `not_noted`, or
+`error` (then `error` gives it). Then `check` is null.
+
+| Field | Meaning |
+| --- | --- |
+| `ticks` | the ticks of the first run compared |
+| `windows` | the windows `narrowed`, those `not_needed` (no needed tick), and `all` |
+| `same_needed_as_timetable` | true where the first run has the needed ticks of the clock's `timetable` (`needed_from_start`); null where the clock has no timetable |
+| `control_repeats` | the clock run again on its own windows repeats the first run. Where it does not, nothing else can be read |
+| `earlier_by` | the ticks the narrowed windows open before their first needed tick in the run that repeats; null where none repeats |
+| `earlier_by_most` | the most `earlier_by` can be: there every narrowed window opens where it did |
+| `runs` | the runs made, the first and the control run included |
+| `first_difference`, `last_difference` | the first hand that is not the same, in the run with no earlier opening and in the last run: `tick`, `inserter_id`, and the items `held` in the first run and `held_again` |
+| `shared_sources` | `machine_with_takers`: a machine two or more inserters take from. `taken_in_one_tick`: a source of one item that two takers can take from in one tick, by their windows. An inserter with no window is always enabled |
+
+```json
+{"job":"config-AUTOMATION_SCIENCE_240","event":"repeat_check","id":"pitch_pickups","reason":null,"check":{"ticks":9576,"windows":{"narrowed":2,"not_needed":0,"all":3},"same_needed_as_timetable":true,"earlier_by_most":0,"shared_sources":{"machine_with_takers":false,"taken_in_one_tick":false},"control_repeats":true,"earlier_by":0,"runs":3,"first_difference":null,"last_difference":null}}
+```
+
 ### `composition`: the compositions Coordinated Sources judged, made or dropped
 
 | Field | Meaning |
@@ -162,11 +249,14 @@ A way that failed its margin check before it was offered is a `refused` part of 
 ### `seconds`: the seconds of the job
 
 `makers`: the seconds each maker took (the key is `maker`). The other fields are the seconds of the checks: with the copies (`shared_lane_check_seconds`, `copies_trial_seconds`, `fewer_copies_seconds`) and the loss trials on one copy (`loss_trials_one_copy_seconds`). The seconds of a check a maker asked for are also in the maker's seconds.
+`timetable_seconds`: the reading of the timetable and the ledger of each run of one copy, after the run. The record of a run is made while it runs. Its seconds are in the seconds of the check that runs it. `repeat_check_seconds`: the repeat checks, 0 without the switch.
 A check that makers share is counted where it was first made. The figures are wall-clock seconds, and they change from run to run.
 
 ```json
-{"job":"config-FLYING_ROBOT_FRAME_80","event":"seconds","makers":{"planned-belt-slack":0.863,"per-branch":0.028},"shared_lane_check_seconds":1.197,"copies_trial_seconds":2.837,"fewer_copies_seconds":1.829,"loss_trials_one_copy_seconds":0.185}
+{"job":"config-AUTOMATION_SCIENCE_240","event":"seconds","makers":{"planned-belt-slack":1.532,"derived":4.485,"full-hand":3.693,"per-branch":13.84},"shared_lane_check_seconds":4.302,"copies_trial_seconds":15.923,"fewer_copies_seconds":1.712,"loss_trials_one_copy_seconds":0.265,"timetable_seconds":0.023,"repeat_check_seconds":0.124}
 ```
+
+The example is shortened: four makers. It is of a run with the repeat check.
 
 ## Reasons
 
@@ -191,6 +281,8 @@ The list is `MAKER_REASON_CODES` in `src/crafting/maker-log.ts`. A test checks t
 | `does_not_hold_alone` | `source` (null for its own clock), `check` (`first_window_cycle`, `pickup_phase`, `long_run`, `not_checked`), `items`, `expected_items` | `part`: its clock, or the recommended clock with its windows for one source, does not hold |
 | `same_windows_as_part` | `part` | `part`: another part has the same windows |
 | `not_run_with_copies` | `cause` | `lane_facts`: the clock has no facts of the lanes (see `lane_facts`) |
+| `no_run_of_one_copy` | `cause` | `timetable`, `ledger`: the run of one copy was not read (see `timetable`) |
+| `not_repeat_checked` | `cause` | `repeat_check`: the clock was not run again (see `repeat_check`) |
 | `other` | none | a reason no site gave a code. This is a fault of the log. The blast has none |
 
 ## What the log does not hold
