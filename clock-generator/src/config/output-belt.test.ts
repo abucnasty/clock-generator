@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { ConfigSchema } from "./schema";
 import { ConfigPaths } from "./config-paths";
 import { OutputBelt, outputBeltGeometry, outputBeltProblems, streamPhase } from "./output-belt";
+import { outputBeltJoinOf } from "../entities/belt/join/output-belt-join";
 import { automationRow } from "../../tests/configs/automation-row";
 
 /**
@@ -487,5 +488,225 @@ describe("the blocks of the seven test scaffolds", () => {
         const splitter = withoutEntry(BLOCKS[5][1]) as { splitter: object };
         expect(rules({ ...splitter, splitter: { input_priority: "right", output_priority: "right" } }))
             .toEqual(["nothing feeds a stretch", "nothing feeds a stretch", "not one infinite end"]);
+    });
+});
+
+/** Two lines: two rows of two copies, each row's belt with its own infinite end */
+const TWO_LINES = (): OutputBelt => ({
+    stretch_groups: [[1], [2]],
+    stretches: [
+        { points: [{ drop: 1, lane: "right" }, { tiles: 6, drop: 2, lane: "right" }, { tiles: 3, lane_end: { kind: "infinite" } }] },
+        { points: [{ drop: 3, lane: "left" }, { tiles: 6, drop: 4, lane: "left" }, { tiles: 3, lane_end: { kind: "infinite" } }] },
+    ],
+});
+
+describe("several lines: the output belt states `stretch_groups`", () => {
+    it("accepts two groups that each end in an infinite end of their own, and reads them as stated", () => {
+        expect(problems(TWO_LINES())).toEqual([]);
+        expect(ConfigSchema.parse(withBelt(TWO_LINES())).output_belt).toEqual(TWO_LINES());
+    });
+
+    it("gives the geometry each group, its stretches and its infinite end, and each end's lines", () => {
+        const geometry = outputBeltGeometry(TWO_LINES(), 0);
+        expect(geometry.groups).toEqual([
+            { group: 1, stretches: [1], infinite_end_stretch: 1 },
+            { group: 2, stretches: [2], infinite_end_stretch: 2 },
+        ]);
+        expect(geometry.infinite_ends.map(end => [end.stretch, end.lines])).toEqual([
+            [1, { left: "stretch 1 left lane: drop of copy 2 to the infinite end", right: "stretch 1 right lane: drop of copy 2 to the infinite end" }],
+            [2, { left: "stretch 2 left lane: drop of copy 4 to the infinite end", right: "stretch 2 right lane: drop of copy 4 to the infinite end" }],
+        ]);
+    });
+
+    it("is one group of all stretches where it is not stated", () => {
+        expect(outputBeltGeometry(SAMPLE_BELT, 9).groups).toEqual([{ group: 1, stretches: [1, 2, 3, 4, 5], infinite_end_stretch: 4 }]);
+    });
+
+    it("keeps the refusal of two ends without it, with the words of today", () => {
+        const belt = TWO_LINES();
+        delete belt.stretch_groups;
+        expect(problems(belt)).toEqual(["output_belt: The output belt states 2 infinite ends. "
+            + "State exactly one: `lane_end: {\"kind\": \"infinite\"}` on the last point of the stretch whose items leave the build."]);
+    });
+
+    it("refuses a stretch that is not in `stretches`, one that is in two groups, and one that is in none", () => {
+        const unknown = TWO_LINES();
+        unknown.stretch_groups = [[1], [2, 5]];
+        expect(problems(unknown)).toEqual(["output_belt.stretch_groups.1.1: `stretch_groups` names stretch 5, which is not in `stretches` (1 to 2). "
+            + "State the number of a stretch of the output belt."]);
+        const twice = TWO_LINES();
+        twice.stretch_groups = [[1, 2], [2]];
+        expect(problems(twice)).toEqual([
+            "output_belt.stretch_groups.1.0: Stretch 2 is in groups 1 and 2 of `stretch_groups`. State each stretch in one group.",
+            "output_belt.stretch_groups.0: Group 1 (stretches 1 and 2) states 2 infinite ends. "
+                + "State exactly one: `lane_end: {\"kind\": \"infinite\"}` on the last point of the stretch whose items leave the build.",
+        ]);
+        const none = TWO_LINES();
+        none.stretch_groups = [[1]];
+        expect(problems(none)).toEqual(["output_belt.stretch_groups: Stretch 2 is in no group of `stretch_groups`. State every stretch in the group "
+            + "whose infinite end its items reach, or remove `stretch_groups` when the output belt has one infinite end."]);
+    });
+
+    it("refuses a group with no infinite end, and a group with two", () => {
+        const noEnd = TWO_LINES();
+        noEnd.stretches[1].points[2] = { tiles: 3 };
+        expect(problems(noEnd)).toEqual([
+            "output_belt.stretches.1.points.2: The last point of stretch 2 holds only its run, but no `side_load` names stretch 2. "
+                + "State where its items go: `side_load: {\"stretch\": 2}` at the point that takes them, `splitter_input`, or the infinite end.",
+            "output_belt.stretch_groups.1: Group 2 (stretch 2) states no infinite end. "
+                + "State exactly one: `lane_end: {\"kind\": \"infinite\"}` on the last point of the stretch whose items leave the build.",
+        ]);
+        const both = TWO_LINES();
+        both.stretch_groups = [[1, 2]];
+        expect(problems(both)).toEqual(["output_belt.stretch_groups.0: Group 1 (stretches 1 and 2) states 2 infinite ends. "
+            + "State exactly one: `lane_end: {\"kind\": \"infinite\"}` on the last point of the stretch whose items leave the build."]);
+    });
+
+    it("refuses a side load of a stretch onto a stretch of another group, and says what to state", () => {
+        const belt: OutputBelt = {
+            stretch_groups: [[1], [2]],
+            stretches: [
+                { points: [{ drop: 1, lane: "right" }, { tiles: 4, side_load: { stretch: 2 }, lane: "left", layout: "side-straight" }, { tiles: 2, lane_end: { kind: "infinite" } }] },
+                { points: [{ drop: 2, lane: "right" }, { tiles: 5 }] },
+            ],
+        };
+        expect(problems(belt)).toContain("output_belt.stretches.0.points.1: Stretch 2 (group 2) side-loads onto stretch 1 (group 1). "
+            + "A group holds the stretches that join: state both stretches in one group, or end stretch 2 in an infinite end of its own.");
+        const joined: OutputBelt = { ...belt, stretch_groups: [[1, 2]] };
+        expect(problems(joined)).toEqual([]);
+    });
+
+    it("refuses a splitter whose stretches are in two groups", () => {
+        const belt = copyOf();
+        belt.stretch_groups = [[1, 2, 3], [4, 5]];
+        expect(problems(belt)).toEqual([
+            "output_belt.stretch_groups.0: Group 1 (stretches 1, 2 and 3) states no infinite end. "
+                + "State exactly one: `lane_end: {\"kind\": \"infinite\"}` on the last point of the stretch whose items leave the build.",
+            "output_belt.splitter: The splitter joins stretches of groups 1 and 2 (its inputs are stretches 2 and 3, its outputs "
+                + "are stretches 4 and 5). State them in one group.",
+        ]);
+    });
+});
+
+describe("side belts a hand: the output belt states `side_belts`", () => {
+    /** Outputs 1 and 2 on straight tiles of one stretch: output 1 on the side belt of `side_belt`, output 2 on a side belt of its own */
+    const OWN_SIDE_BELT = (): OutputBelt => ({
+        side_belt: { lane: "right", tiles: 2, left_curves: 1 },
+        side_belts: [{ outputs: [2], lane: "left", tiles: 4, right_curves: 1 }],
+        stretches: [{ points: [
+            { side_load: [1], lane: "right", layout: "side-straight" },
+            { tiles: 3, side_load: [2], lane: "right", layout: "side-straight" },
+            { tiles: 3, lane_end: { kind: "infinite" } },
+        ] }],
+    });
+
+    it("accepts a side belt for some outputs beside the one of `side_belt`, and reads it as stated", () => {
+        expect(problems(OWN_SIDE_BELT())).toEqual([]);
+        expect(ConfigSchema.parse(withBelt(OWN_SIDE_BELT())).output_belt).toEqual(OWN_SIDE_BELT());
+    });
+
+    it("gives each output the lines of its own side belt, and `side_belt` to those that no entry names", () => {
+        const geometry = outputBeltGeometry(OWN_SIDE_BELT(), 0);
+        const length = (name: string) => geometry.lines.find(line => line.name === name)?.length;
+        // output 1: a drop tile and a left curve after it; output 2: a drop tile, three tiles and a right curve (the left lane is the outer one)
+        expect([length("side belt of copy 1 left lane"), length("side belt of copy 1 right lane")]).toEqual([362, 551]);
+        expect([length("side belt of copy 2 left lane"), length("side belt of copy 2 right lane")]).toEqual([1063, 874]);
+        expect(geometry.side_belts).toEqual([
+            { number: 1, lane: "right", drop_tile_end: 256, line_end: { left: 362, right: 551 } },
+            { number: 2, lane: "left", drop_tile_end: 256, line_end: { left: 1063, right: 874 } },
+        ]);
+    });
+
+    it("is the same as `side_belt` alone where an entry repeats it", () => {
+        const alone = OWN_SIDE_BELT();
+        delete alone.side_belts;
+        const repeated: OutputBelt = { ...alone, side_belts: [{ outputs: [2], lane: "right", tiles: 2, left_curves: 1 }] };
+        expect(outputBeltGeometry(repeated, 0).lines).toEqual(outputBeltGeometry(alone, 0).lines);
+    });
+
+    it("checks the hood against the lane of each output's own side belt", () => {
+        const belt = OWN_SIDE_BELT();
+        belt.stretches[0].points[0].layout = "side-exit";
+        belt.stretches[0].points[1].layout = "side-exit";
+        // output 1 side-loads its right lane onto an exit from the right: it passes. Output 2 sends its left lane: shut.
+        expect(problems(belt)).toEqual(["output_belt.stretches.0.points.1: The side belts of copies 2 side-load their left lane onto an underground exit "
+            + "(side-exit) from the right of stretch 1, and the exit's hood shuts that lane: its items stop there. On an exit, only the right lane passes "
+            + "from the right. State the lane that the items move on, or the layout of the tile that takes them."]);
+    });
+
+    it("refuses an output named twice, an output that no side load names, and a side belt with more curves than tiles", () => {
+        const twice = OWN_SIDE_BELT();
+        twice.side_belts = [{ outputs: [2], lane: "left", tiles: 4, right_curves: 1 }, { outputs: [2], lane: "right", tiles: 2 }];
+        expect(problems(twice)).toEqual(["output_belt.side_belts.1.outputs.0: Output 2 is named by two entries of `side_belts`. State the side belt of each output once."]);
+        const unused = OWN_SIDE_BELT();
+        unused.side_belts = [{ outputs: [2, 7], lane: "left", tiles: 4, right_curves: 1 }];
+        expect(problems(unused)).toEqual(["output_belt.side_belts.0.outputs.1: `side_belts` states a side belt for output 7, but no `side_load` names it. "
+            + "Remove the number, or state its side load."]);
+        const curves = OWN_SIDE_BELT();
+        curves.side_belts = [{ outputs: [2], lane: "left", tiles: 2, right_curves: 2 }];
+        expect(problems(curves)).toEqual(["output_belt.side_belts.0: The side belt of outputs 2 holds 2 curves in 1 tile after its drop tile; a curve takes a tile of its own."]);
+    });
+
+    it("refuses an output that side-loads and has no side belt, with `side_belt` stated or not", () => {
+        const noDefault = OWN_SIDE_BELT();
+        delete noDefault.side_belt;
+        expect(problems(noDefault)).toEqual(["output_belt.side_belts: Output 1 side-loads and has no side belt. "
+            + "State `side_belt` for every output that `side_belts` does not name, or name it in `side_belts`."]);
+        const none = OWN_SIDE_BELT();
+        delete none.side_belt;
+        delete none.side_belts;
+        expect(problems(none)).toEqual(["output_belt: State `side_belt`: the belt that each copy's output inserter drops on, up to its side load."]);
+    });
+});
+
+describe("a splitter with one input", () => {
+    /** The logistic science 240 build's output belt: stretch 6 ends in the splitter's right input, and no stretch ends in its left input */
+    const ONE_INPUT = (): OutputBelt => ({
+        stretches: [
+            { points: [{ drop: 11, lane: "right" }, { tiles: 4, splitter_input: "right" }] },
+            { points: [{ splitter_output: "right" }, { tiles: 3, left_curves: 1 }] },
+            { points: [{ splitter_output: "left" }, { tiles: 5, left_curves: 1, right_curves: 2 }] },
+            { points: [{ side_load: { stretch: 2 }, lane: "left", layout: "side-straight" },
+                { tiles: 3, side_load: { stretch: 3 }, lane: "right", layout: "side-straight" }, { tiles: 4, lane_end: { kind: "infinite" } }] },
+        ],
+        splitter: { input_priority: "right", output_priority: "right" },
+    });
+
+    it("is accepted", () => {
+        expect(problems(ONE_INPUT())).toEqual([]);
+    });
+
+    it("has the lines of both inputs: the input that no stretch ends in is a line that nothing feeds", () => {
+        const geometry = outputBeltGeometry(ONE_INPUT(), 0);
+        for (const side of ["left", "right"]) {
+            for (const lane of ["left", "right"]) {
+                const line = geometry.lines.find(each => each.name === `the splitter's ${side} input, ${lane} lane`);
+                expect(line?.length).toBe(179);
+                expect(line?.feeds).toEqual([`the splitter's left output, ${lane} lane`, `the splitter's right output, ${lane} lane`]);
+            }
+        }
+        expect(geometry.splitter?.inputs).toEqual([{ side: "right", stretch: 1 }]);
+    });
+
+    it("is a layout of the join model", () => {
+        const layout = outputBeltJoinOf(outputBeltGeometry(ONE_INPUT(), 0)).layout;
+        const ids = new Set(layout.lines.map(line => line.id));
+        const splitter = layout.splitters![0];
+        for (const id of [...splitter.inputs.left, ...splitter.inputs.right, ...splitter.outputs.left, ...splitter.outputs.right]) expect(ids.has(id)).toBe(true);
+    });
+
+    it("is refused without `splitter`, and with a `splitter` that no stretch ends in", () => {
+        const without = ONE_INPUT();
+        delete without.splitter;
+        expect(problems(without)).toEqual(["output_belt: State `splitter` with its `input_priority` and `output_priority`: "
+            + "stretches 1 end at its inputs, and stretches 2 and 3 start at its outputs."]);
+        const unfed = ONE_INPUT();
+        unfed.stretches[0].points[1] = { tiles: 4 };
+        expect(problems(unfed)).toEqual([
+            "output_belt.splitter: No stretch ends in an input of the splitter, or none starts at an output. "
+                + "State `splitter_input` and `splitter_output` on the stretches at the splitter, or remove `splitter`.",
+            "output_belt.stretches.0.points.1: The last point of stretch 1 holds only its run, but no `side_load` names stretch 1. "
+                + "State where its items go: `side_load: {\"stretch\": 1}` at the point that takes them, `splitter_input`, or the infinite end.",
+        ]);
     });
 });

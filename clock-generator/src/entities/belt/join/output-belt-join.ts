@@ -77,10 +77,13 @@ export function outputBeltJoinOf(geometry: OutputBeltGeometry): OutputBeltJoin {
     }
 
     const infinite_end_lines: string[] = [];
+    const several_ends = geometry.infinite_ends.length > 1;
     for (const end of geometry.infinite_ends) {
         for (const lane of LANES) {
             const last = line(end.lines?.[lane]);
-            const loader = { id: `the infinite end's loader, ${lane} lane`, length: LOADER_LINE_LENGTH, lane, end: "loader" as const };
+            // each group of stretches has an infinite end of its own: its loader is named by the stretch it ends
+            const id = several_ends ? `the infinite end's loader of stretch ${end.stretch}, ${lane} lane` : `the infinite end's loader, ${lane} lane`;
+            const loader = { id, length: LOADER_LINE_LENGTH, lane, end: "loader" as const };
             lines.set(loader.id, loader);
             last.feeds = loader.id;
             infinite_end_lines.push(loader.id);
@@ -95,9 +98,12 @@ export function outputBeltJoinOf(geometry: OutputBeltGeometry): OutputBeltJoin {
     }
 
     const drops = new Map<number, OutputBeltDropSpot>();
-    const side_belt = geometry.side_belt;
     for (const load of geometry.side_loads) {
-        if (!("side_belt_of_copy" in load.sender) || side_belt === undefined) continue;
+        if (!("side_belt_of_copy" in load.sender)) continue;
+        const number = load.sender.side_belt_of_copy;
+        // the number's own side belt: that of its entry in `side_belts`, else `side_belt`
+        const side_belt = geometry.side_belts.find(each => each.number === number) ?? geometry.side_belt;
+        if (side_belt === undefined) continue;
         const sender = line(load.sender_lines?.[side_belt.lane]);
         // the drop tile is the side belt's first tile: its middle is the rest of the line and half a tile from its end
         drops.set(load.sender.side_belt_of_copy, { line: sender.id, spot: sender.length - side_belt.drop_tile_end + TILE_MIDDLE });
