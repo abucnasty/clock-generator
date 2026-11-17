@@ -10,8 +10,10 @@
  * own and is not changed by the log.
  */
 
+import type { SharedLanesForLog } from "./shared-lane-log";
+
 /** The format of the log, on the `job` event: a field's name and meaning do not change, a new field, a field less or a changed meaning is a new number */
-export const MAKER_LOG_FORMAT = "maker-log-1";
+export const MAKER_LOG_FORMAT = "maker-log-2";
 
 /** A reason as a code with numbers: the fields a code has are those `MAKER_REASON_CODES` lists for it */
 export interface MakerReason {
@@ -47,6 +49,8 @@ export const MAKER_REASON_CODES = {
     not_counted: [],
     does_not_hold_alone: ["source", "check", "items", "expected_items"],
     same_windows_as_part: ["part"],
+    // a listed clock of a job whose copies share a lane, with no facts of the lanes (event `lane_facts`)
+    not_run_with_copies: ["cause"],
     other: [],
 } as const satisfies Record<string, readonly string[]>;
 
@@ -80,7 +84,7 @@ export interface MakerLogEvent {
 }
 
 /** The events, in the order a log lists them (the order they are made in within a kind) */
-export const MAKER_LOG_EVENTS = ["job", "clock", "windows", "composition", "part", "not_made", "seconds"] as const;
+export const MAKER_LOG_EVENTS = ["job", "job_lanes", "clock", "windows", "lane_facts", "missed_swings", "composition", "part", "not_made", "seconds"] as const;
 
 export type MakerLogSink = (event: MakerLogEvent) => void;
 
@@ -93,6 +97,17 @@ interface Scope {
     /** Seconds each maker took, by its slot (`ClockAlternative.maker`) */
     makers: Map<string, number>;
     checks: Map<MakerSecondsKind, number>;
+    /** What the check of the shared lanes kept for the log of each clock made, by the clock's result (`noteClockLanes`) */
+    lanes: WeakMap<object, ClockLanesForLog>;
+}
+
+/** What the checks with the copies kept of one clock for the log: whether it holds on one copy, whether its lanes were checked, and their facts */
+export interface ClockLanesForLog {
+    held: boolean;
+    /** Whether the check of the shared lanes stopped with an error */
+    not_checked: boolean;
+    /** The facts of the lanes, where the check ran them (`SharedLaneJudgement.for_log`) */
+    for_log: SharedLanesForLog | null;
 }
 
 /** The log being made: set while a generation that asked for one runs, as the run memo is */
@@ -111,7 +126,7 @@ const now = (): number => (typeof performance === "undefined" ? Date.now() : per
  */
 export function withMakerLog<T>(sink: MakerLogSink | undefined, work: () => T): T {
     if (sink === undefined || scope !== undefined) return work();
-    const own: Scope = { sink, makers: new Map(), checks: new Map() };
+    const own: Scope = { sink, makers: new Map(), checks: new Map(), lanes: new WeakMap() };
     scope = own;
     try {
         return work();
@@ -126,6 +141,16 @@ export function withMakerLog<T>(sink: MakerLogSink | undefined, work: () => T): 
 /** Gives the sink an event, made only where there is one */
 export function emitMakerLog(make: () => MakerLogEvent): void {
     scope?.sink(make());
+}
+
+/** Keeps what the checks with the copies found of a clock, by its result, for the events of the listed clocks; nothing where no log is on */
+export function noteClockLanes(result: object, lanes: ClockLanesForLog): void {
+    scope?.lanes.set(result, lanes);
+}
+
+/** What `noteClockLanes` kept of the clock with this result; undefined where nothing was kept */
+export function clockLanesOf(result: object): ClockLanesForLog | undefined {
+    return scope?.lanes.get(result);
 }
 
 /** Runs `work` and counts its seconds to a maker, where a log is on */

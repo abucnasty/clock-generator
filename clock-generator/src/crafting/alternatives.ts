@@ -35,7 +35,7 @@ import { coordinatedSourcesClock, withNotAdmitted, type NotAdmittedPart } from "
 import { BlueprintGenerationResult, clockedByConfig, GenerateClockOptions, SimulationStabilityCheck, fractionalStartOf, fractionalSwingsOf } from "./plan/unclocked-run";
 import { EntityTransferCountMap } from "./sequence/cycle/swing-counts";
 import { withRunMemo } from "./plan/run-memo";
-import { CodedError, emitMakerLog, makerLogOn, reasonOf, reasonOfError, timedCheck, timedMaker, withMakerLog } from "./maker-log";
+import { CodedError, emitMakerLog, makerLogOn, noteClockLanes, reasonOf, reasonOfError, timedCheck, timedMaker, withMakerLog } from "./maker-log";
 import { madeCompositionEvent, notMadeEvent, resultEvents } from "./maker-log-events";
 import { clockCost, ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, ROUNDED_CLOCK_MAX_FAST, RoundedClock, roundedRateAllowed, searchesToRun, searchesAreNeeded } from "./rank";
 import { TargetProductionRate } from "./target-production-rate";
@@ -1206,6 +1206,9 @@ function runAlternativeOf(
             ...(checked_lanes !== null && { checked_lanes }), ...(loss_note !== "" && { shared_lane_loss_note: loss_note.trimStart() }),
             inserter_window_count, deciders: windowDeciderCount(row.result.blueprint), ranking_window_count, assessment, verdict: clockVerdictOf(assessment), deadlock_risks, belt, insights,
             strategy: listed_strategy };
+        // for the maker log only: what the check of the shared lanes kept of this clock, by its result
+        if (makerLogOn()) noteClockLanes(clock.result, { held: tried_as.held, not_checked: shared_lane_losses.some(isNotChecked),
+            for_log: sharedLaneCheck(tried_as)?.judgement?.for_log ?? null });
         const ranking = rankingOf(clock, config);
         // where its wake-ups decide the selection, a clock of a build with a loop, whose wake-ups depend on how it starts, is ranked by their mean
         // over the starts; the clock of a trial that is neither the exact one nor the rounded one tried meets no target

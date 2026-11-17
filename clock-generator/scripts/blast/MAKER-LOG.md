@@ -18,9 +18,10 @@ Words: a **maker** is one of the generator's slots that makes a clock (`ClockAlt
 A **part** is a clock, or a way of the grouped hands rule, that Coordinated Sources can take windows from. A **composition** is a clock
 Coordinated Sources makes by taking each source's windows from one part. A **reason** is a code with numbers, never a sentence.
 
-## Format `maker-log-1`
+## Format `maker-log-2`
 
 A field's name and meaning do not change. A new field, a field less or a changed meaning is a new format number.
+`maker-log-2` adds the events of the lanes the copies share: `job_lanes`, `lane_facts` and `missed_swings`. The events of `maker-log-1` are as they were.
 Field names are those of the record (`id`, `maker`, `verdict`, `holds`, `window_cycle_ticks`, `wake_ups`) where the record has them, so that a log joins the record on `job` and `id`.
 `holds` is one copy alone, as in the record.
 The lines of a file are in the order of the kinds below. Within a kind they are in the order the events were made.
@@ -31,7 +32,17 @@ Only `seconds` changes from one run to the next: without that line, two logs of 
 The job and its copies. `shared_lanes`: the lanes the check of the shared lanes runs with the takers of the copies together. `unknown_end_lanes`: lanes of unknown end that the check runs as one copy alone.
 
 ```json
-{"job":"config-FLYING_ROBOT_FRAME_80","group":"config","name":"FLYING_ROBOT_FRAME_80","event":"job","format":"maker-log-1","recipe":"flying-robot-frame","copies":12,"copy_offset":{"x":6,"y":0},"shared_lanes":[{"belt_id":5,"lane":1,"item":"electronic-circuit"}],"unknown_end_lanes":[]}
+{"job":"config-FLYING_ROBOT_FRAME_80","group":"config","name":"FLYING_ROBOT_FRAME_80","event":"job","format":"maker-log-2","recipe":"flying-robot-frame","copies":12,"copy_offset":{"x":6,"y":0},"shared_lanes":[{"belt_id":5,"lane":1,"item":"electronic-circuit"}],"unknown_end_lanes":[]}
+```
+
+### `job_lanes`: one a job whose copies share a lane
+
+What the config states of its lanes and its copies, from the config alone. `output_belt_stated` and `copy_offset_stated`: whether the config states them.
+`lane_loads`: for each take of the config's inserters from a belt (`laneLoads`), the lane load: `copies` times `items_per_second` (what one copy takes at the setpoint), over `supply_per_second` (what the lanes get for every copy).
+`against_one` is `below`, `exactly` or `above` 1, compared exactly. `per_copy` is true where each copy has a lane of its own. `lane_loads` is null where the planner cannot plan the config.
+
+```json
+{"job":"config-FLYING_ROBOT_FRAME_80","event":"job_lanes","output_belt_stated":false,"copy_offset_stated":true,"lane_loads":[{"belt_id":5,"lanes":[1],"items":["electronic-circuit"],"per_copy":false,"copies":12,"items_per_second":10,"supply_per_second":120,"load":1,"against_one":"exactly"}]}
 ```
 
 ### `clock`: one for each listed clock
@@ -63,6 +74,48 @@ For a Coordinated Sources clock, `source_clocks` gives, for each source, the par
 ```json
 {"job":"config-ACCUMULATOR_320","event":"windows","id":"coordinated_sources","window_cycle_ticks":972,"windows":{"inserter:1":[[0,0],[54,54]],"inserter:10":[[0,6],[49,55]]},"source_clocks":{"machine:1":"round_robin_polling","machine:3":"time_division_windows"}}
 ```
+
+### `lane_facts`: one for each listed clock of a job whose copies share a lane
+
+The facts of the lanes, read from the runs the check of the shared lanes made for the clock. The log asks for no other run.
+`window_cycle_ticks` and `windows_hash` (FNV-1a of the `windows` of the clock's `windows` event, as JSON) join it to that event.
+`reason` is null, or `not_run_with_copies` with its `cause`: `does_not_hold_one_copy` (the check runs only a clock that holds on one copy), `lanes_not_checked` (the check stopped with an error), `no_lane_run` or `not_noted`. Then `readings` and `runs` are empty.
+
+| Field | Meaning |
+| --- | --- |
+| `readings` | for each reading of the lanes of unknown end (`reading` 0: a dead end, 1: an infinite end), from the run of one copy alone, for each item of each belt: |
+| `readings[].lane_load` | the lane load of the clock: `copies` times `items_per_window_cycle` (what one copy took in a window cycle, over `window_cycles` of the judged span), over `supply_per_window_cycle`, and `against_one` |
+| `readings[].fill` | for each window of the takers (`opens`, `gap_ticks` to the next window opening): its `openings` with a take, the `longest_fill_ticks` the supply takes to bring back what every copy took in one, and the `openings_not_filled` before the next. `fills_in_time` is the check's refill arithmetic |
+| `runs` | each run of the copies the check judged by: its `reading`, the `flow` of its first row, its `window_cycles`, its judged span from `first_cycle` up to `end_cycle`, and its `losses` |
+| `runs[].claimed_stacks` | for each lane more than one copy takes from: how the copies stand (`spacing`: `copy_offset`, `copy_length` from the positions, or `copy_width`), the `stack_ticks` a stack takes to pass a point, the takers with no window, and for each copy: `travel_ticks` from copy 1, its `pickups` (ticks of the window cycle on which one copy alone takes the item), the `claimed` ones (within `stack_ticks` of an earlier copy's pickup moved on by the travel between them), and the `open_ticks` of its windows and the `moved_ticks` among them in which the lane moved at its reach |
+
+```json
+{"job":"config-FLYING_ROBOT_FRAME_80","event":"lane_facts","id":"takt_batches_observed","window_cycle_ticks":288,"windows_hash":"7a202363","reason":null,"readings":[{"reading":0,"lane_load":[{"belt_id":5,"item":"electronic-circuit","lanes":[1],"copies":12,"items_per_window_cycle":48,"supply_per_window_cycle":576,"load":1,"window_cycles":61,"against_one":"exactly"}],"fill":[{"belt_id":5,"item":"electronic-circuit","lanes":[1],"fills_in_time":false,"windows":[{"opens":13,"gap_ticks":144,"openings":61,"longest_fill_ticks":192,"openings_not_filled":61}]}]}],"runs":[{"reading":0,"flow":[1,0],"window_cycles":120,"first_cycle":62,"end_cycle":123,"losses":12,"claimed_stacks":[{"belt_id":5,"lane":1,"item":"electronic-circuit","spacing":"copy_offset","stack_ticks":2,"takers_without_windows":[],"copies":[{"copy":7,"travel_ticks":288,"pickups":12,"claimed":12,"open_ticks":3233,"moved_ticks":2684}]}]}]}
+```
+
+The example is shortened: one item, one window, one copy.
+
+### `missed_swings`: one for each taker of a copy that loses swings on a lane the copies share
+
+`id` is the clock's, `loss` the place of the loss in the clock's losses, `run` the place of its run in the `runs` of the clock's `lane_facts`.
+`copy` (1 is the config's own), `inserter_id`, `belt_id`, `lanes` and `item` are the loss's.
+
+| Field | Meaning |
+| --- | --- |
+| `pickups` | each tick the taker's hand took items in the judged span: `[window cycle of the span from 1, tick of the window cycle, lane]`; the lane is 0 where the run does not say it |
+| `window_cycles` | each window cycle with fewer swings than one copy alone: `missed`, `at_close` (what the hand waited for at the last open tick of each opening that opens in it), `condition` (the last of those that is a condition, else `left_over`) and `stop_class` (the class the result's rows give it) |
+| `by_condition` | missed swings by `condition` |
+| `starts_by_last` | the taker's hand starts in the span by their last condition |
+
+The four conditions are read in each tick after the inserters' update (`src/crafting/hand-conditions.ts`): `window_open`, `hand_at_source`, `room_at_sink` (the sink takes what the hand brings, read from the sink), `item_there` (a reach holds a stack the hand can take).
+A hand start is the first take of an empty hand. Its last condition is the one that came last before it, ties in that order.
+At a close, `on_its_way` is a hand it swings, `window_open` a hand that took items in the last open tick, and `left_over` a hand that met all four and took nothing.
+
+```json
+{"job":"config-FLYING_ROBOT_FRAME_80","event":"missed_swings","id":"takt_batches_observed","loss":0,"run":0,"copy":4,"inserter_id":3,"belt_id":5,"lanes":[1],"item":"electronic-circuit","pickups":[[1,15,2],[1,16,2]],"window_cycles":[{"window_cycle":1,"missed":2,"condition":"hand_at_source","at_close":["room_at_sink","hand_at_source"],"stop_class":"neither"}],"by_condition":{"hand_at_source":102},"starts_by_last":{"window_open":122,"hand_at_source":81}}
+```
+
+The example is shortened: two pickups, one window cycle.
 
 ### `composition`: the compositions Coordinated Sources judged, made or dropped
 
@@ -135,6 +188,7 @@ The list is `MAKER_REASON_CODES` in `src/crafting/maker-log.ts`. A test checks t
 | `not_counted` | none | `part`: the long run of its own clock was not counted |
 | `does_not_hold_alone` | `source` (null for its own clock), `check` (`first_window_cycle`, `pickup_phase`, `long_run`, `not_checked`), `items`, `expected_items` | `part`: its clock, or the recommended clock with its windows for one source, does not hold |
 | `same_windows_as_part` | `part` | `part`: another part has the same windows |
+| `not_run_with_copies` | `cause` | `lane_facts`: the clock has no facts of the lanes (see `lane_facts`) |
 | `other` | none | a reason no site gave a code. This is a fault of the log. The blast has none |
 
 ## What the log does not hold

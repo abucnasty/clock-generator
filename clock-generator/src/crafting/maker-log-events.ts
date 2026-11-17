@@ -3,7 +3,8 @@ import type { ClockAlternative, ClockAlternativesResult } from "./alternatives";
 import { isNotChecked, type SharedLaneLoss } from "./shared-lane-verdict";
 import { modelLanesOf } from "./shared-lane-lanes";
 import type { DisturbanceTrialVerdict, TrialCount } from "./disturbance-trial";
-import { MAKER_LOG_FORMAT, type MakerLogEvent, type MakerReason } from "./maker-log";
+import { clockLanesOf, MAKER_LOG_FORMAT, reasonOf, type MakerLogEvent, type MakerReason } from "./maker-log";
+import { jobLaneLoadsOf } from "./shared-lane-log";
 
 /**
  * The events of a finished generation that are read from its result (`job`, `clock`, `windows`, `not_made`): the clocks it
@@ -111,8 +112,62 @@ export function notMadeEvent(id: string, reason: MakerReason): MakerLogEvent {
     return { event: "not_made", id, reason };
 }
 
-/** The events a finished generation gives: the job, then each listed clock with its windows */
+/** Whether the check of the shared lanes runs the takers of the copies together on a lane of the config */
+const hasSharedLane = (config: Config) => modelLanesOf(config).some(lane => lane.shared);
+
+/**
+ * The `job_lanes` event of a job whose copies share a lane: what the config states of the lanes and the copies, and the
+ * lane load of each take on a belt, from the config alone (`jobLaneLoadsOf`)
+ */
+export function jobLanesEvent(config: Config): MakerLogEvent {
+    let lane_loads: ReturnType<typeof jobLaneLoadsOf> | null;
+    try {
+        lane_loads = jobLaneLoadsOf(config);
+    } catch {
+        // the loads come from the planner's output cycle, which a config it refuses has none of
+        lane_loads = null;
+    }
+    return { event: "job_lanes", output_belt_stated: config.output_belt !== undefined, copy_offset_stated: config.setpoint.copy_offset !== undefined, lane_loads };
+}
+
+/** A hash of a clock's windows as the `windows` event gives them (FNV-1a, 32 bits, hex), to join the events of one clock */
+export function windowsHashOf(windows: Record<string, readonly (readonly [number, number])[]>): string {
+    const text = JSON.stringify(windows);
+    let hash = 0x811c9dc5;
+    for (let index = 0; index < text.length; index++) {
+        hash ^= text.charCodeAt(index);
+        hash = Math.imul(hash, 0x01000193) >>> 0;
+    }
+    return hash.toString(16).padStart(8, "0");
+}
+
+/**
+ * The `lane_facts` event of a listed clock of a job whose copies share a lane: the facts of its lanes from the runs of its
+ * check with the copies, or the reason they were not made (`not_run_with_copies`: the clock does not hold on one copy, the
+ * check stopped with an error, or it ran no lane)
+ */
+export function laneFactsEvent(alternative: ClockAlternative): MakerLogEvent {
+    const windows = windowsEvent(alternative);
+    const lanes = clockLanesOf(alternative.result);
+    const cause = lanes === undefined ? "not_noted" : !lanes.held ? "does_not_hold_one_copy" : lanes.not_checked ? "lanes_not_checked"
+        : lanes.for_log === null ? "no_lane_run" : null;
+    const head = { event: "lane_facts", id: alternative.id, window_cycle_ticks: windows.window_cycle_ticks,
+        windows_hash: windowsHashOf(windows.windows as Record<string, [number, number][]>) };
+    if (cause !== null || lanes?.for_log == null) return { ...head, reason: reasonOf("not_run_with_copies", { cause: cause ?? "no_lane_run" }), readings: [], runs: [] };
+    return { ...head, reason: null, readings: lanes.for_log.readings, runs: lanes.for_log.runs };
+}
+
+/** The `missed_swings` events of a listed clock: one for each loss on a lane the copies share with a record, in the order of its losses */
+export function missedSwingsEvents(alternative: ClockAlternative): MakerLogEvent[] {
+    const for_log = clockLanesOf(alternative.result)?.for_log ?? null;
+    if (for_log === null) return [];
+    return for_log.missed_swings.flatMap((missed, loss) => missed === null ? [] : [{ event: "missed_swings", id: alternative.id, loss, ...missed }]);
+}
+
+/** The events a finished generation gives: the job, then each listed clock with its windows; for a job whose copies share a lane, the facts of the lanes too */
 export function resultEvents(config: Config, result: Pick<ClockAlternativesResult, "alternatives" | "selected_index">): MakerLogEvent[] {
-    return [jobEvent(config), ...result.alternatives.flatMap((alternative, index) =>
-        [clockEvent(config, alternative, index, index === result.selected_index), windowsEvent(alternative)])];
+    const shared = hasSharedLane(config);
+    return [jobEvent(config), ...(shared ? [jobLanesEvent(config)] : []), ...result.alternatives.flatMap((alternative, index) =>
+        [clockEvent(config, alternative, index, index === result.selected_index), windowsEvent(alternative),
+            ...(shared ? [laneFactsEvent(alternative), ...missedSwingsEvents(alternative)] : [])])];
 }
