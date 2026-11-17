@@ -68,11 +68,11 @@ describe("a machine with nothing to work on, stopped, or out of fuel", () => {
         expect(differences(stops, name, sim, ["heat", "remaining", "fuel_count", "progress"])).toEqual([]);
     });
 
-    // A craft whose bar sums to exactly 1 (192 steps of 1/192) is finished by the game a tick after its bar shows 1: that tick
-    // tops the buffer up, and the next draws a tick's energy with no top-up. The simulator finishes it in the tick its bar
-    // reaches 1, so a machine that stops there is one tick of fuel ahead of the game from then on (the biochamber's model has
-    // it too): the buffer is 1/15 of a tick a tick sooner and the fuel left is a tick's usage higher from the tick it stops, for the rest of the run.
-    test.each(["stone-no-ingredients", "steel-no-ingredients", "stone-full-output", "steel-full-output", "biochamber-no-ingredients"])("stops %s, a tick of fuel ahead of the game", name => {
+    // A craft whose bar sums to 1 in exact arithmetic (192 steps of 1/192) falls short of the recipe time by rounding: the
+    // game finishes it a tick after its bar shows 1, that tick tops the buffer up, and the next draws a tick's energy with no
+    // top-up. The simulator keeps the craft as the game does and finishes it in the same tick, so a machine that stops there
+    // burns what the game burns, tick by tick.
+    test.each(["stone-no-ingredients", "steel-no-ingredients", "stone-full-output", "steel-full-output", "biochamber-no-ingredients"])("stops %s, the fuel burned as in the game", name => {
         const spec = caseOf("stops", name);
         const info = scenarioOf(stops, name);
         const sim = simulateMachine(info, spec, run("stops").ticks);
@@ -82,17 +82,13 @@ describe("a machine with nothing to work on, stopped, or out of fuel", () => {
         // up to the tick the game's fuel is all burned (a biochamber with 10 nutrients runs out in the run)
         const burned_out = game.findIndex(row => row.t > 0 && left(row) < TOLERANCE);
         const until = burned_out < 0 ? game.length : burned_out - 1;
-        const ahead = sim.slice(0, until).map((row, k) => left(row) - left(game[k]));
-        const first = ahead.findIndex(it => Math.abs(it) > TOLERANCE);
         const [span] = statusSpans(stops, game, name.endsWith("full-output") ? "full_output" : name.startsWith("biochamber") ? "full_output" : "no_ingredients").filter(([from]) => from > 300);
-        expect(first).toBe(span[0]);
-        // from the tick it stops the simulator burned nothing more; the game burned the tick before
-        // (in the tick an item changes at most: the game changes it a tick later)
-        const changes = swaps(game).length + 1;
-        expect(ahead.slice(first).filter(it => Math.abs(it - info.energy_usage) > TOLERANCE).length).toBeLessThanOrEqual(changes);
-        // the buffer and the fuel items agree in every other tick: the buffer shows 1/15 of a tick a tick sooner, only in the tick before
-        const same = sim.slice(0, until).map((row, k) => k === first - 1 ? "" : [Math.abs(row.heat - game[k].heat) < TOLERANCE, row.fuel_count === game[k].fuel_count].every(Boolean) ? "" : `t=${k}`).filter(Boolean);
-        expect(same.length).toBeLessThanOrEqual(changes);
+        expect(span[0]).toBeLessThan(until);
+        // the energy left agrees in every tick, before the stop and after it
+        expect(sim.slice(0, until).map((row, k) => left(row) - left(game[k])).findIndex(it => Math.abs(it) > TOLERANCE)).toBe(-1);
+        // the buffer and the fuel items agree in every tick but those an item changes in (the game changes it a tick later)
+        const same = sim.slice(0, until).map((row, k) => [Math.abs(row.heat - game[k].heat) < TOLERANCE, row.fuel_count === game[k].fuel_count].every(Boolean) ? "" : `t=${k}`).filter(Boolean);
+        expect(same.length).toBeLessThanOrEqual(swaps(game).length);
     });
 
     test.each(["stone-runout", "steel-runout", "spawner-runout", "biochamber-runout"])("%s reports no fuel from the tick the buffer is spent until it is refuelled, give or take a tick", name => {
