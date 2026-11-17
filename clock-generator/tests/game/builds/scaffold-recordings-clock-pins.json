@@ -36,6 +36,11 @@
       "backed_up_belts": false,
       "clock_sha256": "fdadf1208da4052e7de2e474352e3d5ac85118d67e9042890a803fd46a0bacb8"
     },
+    "utility science": {
+      "config": "UTILITY_SCIENCE_120",
+      "backed_up_belts": false,
+      "clock_sha256": "8c6d44c1bf947b06ff0a6348abfa9543c3b3c8c358b68bc84db4338deec2977c"
+    },
     "utility science with processing units and low density structures on one belt": {
       "config": "UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT",
       "backed_up_belts": false,

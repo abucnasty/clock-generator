@@ -787,3 +787,17 @@ had 858.5 in the game and 843.8 in the simulator.
 BELT_SPEED_CAPTURE_DIR=.scratch/productivity-module-80-chest-chain-clock-new BELT_CLOCK_CALIBRATE=1 \
   npm run test:game -- tests/game/builds/productivity-module-80-chest-chain-clock.game.test.ts
 ```
+
+## Utility science 120: the selected clock from the staged start
+
+[utility-science-120-selected-clock.game.test.ts](utility-science-120-selected-clock.game.test.ts) records the clock the generator selects for
+`UTILITY_SCIENCE_120` (Takt Batches, window cycle 672 ticks, pinned in `scaffold-recordings-clock-pins.json` as "utility science") on the
+sample's scaffold of one copy (17.14 a second), as the config is and with backed-up belts, from the staged start to steady state, a baseline of
+21 whole window cycles (the run is past 21,600 ticks before the loss), then the loss the disturbance trial names: low density structure stops arriving
+(lasting until no craft finishes for a window cycle, restored at the place in the window cycle it was cut at). Recorded at Factorio 2.1.24, both cases the same:
+steady state at tick 7,136, 192 in each of the 21 window cycles, and after the loss the output comes back (recovered at tick 27,632). The simulator's
+verdict for the clock is "no recovery", from the loss on the copies that share a lane; the scaffold holds one copy, so that join is not in this run.
+
+```bash
+UTILITY_120_CAPTURE_DIR=.scratch/utility-120 npm run test:game -- tests/game/builds/utility-science-120-selected-clock.game.test.ts
+```
