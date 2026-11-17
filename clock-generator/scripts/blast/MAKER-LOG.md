@@ -140,7 +140,7 @@ The list is `MAKER_REASON_CODES` in `src/crafting/maker-log.ts`. A test checks t
 ## What the log does not hold
 
 - Clocks that a maker drops inside its own search, such as the grouped hands rule's ways that fail the loss trial in `generate-clock.ts`, are not logged. The log has the ways of the grouped hands rule that the margin check and the loss trial drop (`part`).
-- Coordinated Sources is made on the window cycles of a few clocks, each around its own clock (`recommended` names it). The log
+- Coordinated Sources is made on the window cycles of two clocks, each around its own clock (`recommended` names it). The log
   has every event of the window cycle whose clock is listed, or of the recommended clock's where none is. Of the other window cycles
   it has only the compositions judged before the end (`final` false), each with its own `window_cycle_ticks`; their parts, their
   `final` compositions and their `not_made` are not logged.

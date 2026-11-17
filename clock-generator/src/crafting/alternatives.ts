@@ -1649,7 +1649,7 @@ function generateAllAlternatives(config: Config, options: GenerateClockOptions):
         total += fallbacks.length;
         generate(fallbacks);
     }
-    // and after every other clock, the per-branch clock, composed from their parts on the window cycles of the best few of them,
+    // and after every other clock, the per-branch clock, composed from their parts on the window cycles of the best two of them,
     // the one they recommend first (their ids in the selection's order)
     const so_far = combineClockAlternativeRuns(runs, it => it.ranking);
     const ranked_ids = so_far.order.map(index => so_far.alternatives[index].id);

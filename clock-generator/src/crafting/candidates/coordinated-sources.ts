@@ -18,7 +18,7 @@ import { verdictWithCopies, type VerdictWithCopies } from "../copies-verdict";
 /**
  * The per-branch clock (DESIGN D7, PR 18): each part of the build gets the windows of the clock that fits it, all on one shared
  * window cycle, the window cycle of today's recommended clock. Below, "the recommended clock" is the clock it is composed around:
- * it is composed so on the window cycles of the best few clocks (`onWindowCycles`), each time around that cycle's clock.
+ * it is composed so on the window cycles of the best two clocks (`onWindowCycles`, `windowCycleClocksOf`), each time around that cycle's clock.
  *
  * - **Parts:** every clock the other makers built for the build (`CoordinatedSourcesPart`): the stable alternatives, every way of the grouped
  *   hands construction (whether its clock holds as a whole or not), the per-hand shape of every way that guards takers, and the alternatives

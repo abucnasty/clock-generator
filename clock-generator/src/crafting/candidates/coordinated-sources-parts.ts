@@ -57,7 +57,7 @@ export interface CoordinatedSourcesInput {
 }
 
 /** The most window cycles the per-branch clock is composed on: the recommended clock's and the others' (`windowCycleClocksOf`) */
-export const COORDINATED_SOURCES_WINDOW_CYCLES = 3;
+export const COORDINATED_SOURCES_WINDOW_CYCLES = 2;
 
 /**
  * The clocks whose window cycles the per-branch clock is composed on, from the ids of the clocks in the selection's order (the
