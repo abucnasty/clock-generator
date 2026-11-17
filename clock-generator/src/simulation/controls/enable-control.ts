@@ -43,6 +43,17 @@ export function isWindowCycleClock(it: unknown): it is WindowCycleClock {
     return it instanceof ClockedEnableControl;
 }
 
+/**
+ * What a proof that a run repeats needs of a clock: its window cycle, the ticks after its start that stay dark (`reset`),
+ * and whether a p/q-tick window cycle answers in whole 1/q ticks, which repeat every p ticks (floats drift). Null for a
+ * control that is not a clock.
+ */
+export function clockRepeatFacts(it: unknown): { window_cycle_ticks: number; start_latency_ticks: number; exact_subtick_positions: boolean } | null {
+    return it instanceof ClockedEnableControl
+        ? { window_cycle_ticks: it.windowCycleDuration.ticks, start_latency_ticks: it.start_latency_ticks, exact_subtick_positions: it.exact_subtick_positions }
+        : null;
+}
+
 export const AlwaysEnabledControl: EnableControl = {
     isEnabled(): boolean {
         return true;
