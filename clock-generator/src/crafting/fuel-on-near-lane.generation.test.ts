@@ -16,13 +16,14 @@ const withSwings = (config: Config, count: number): Config => ({ ...config, over
 // more hand: 6 ticks of a hand cycle of 11 (delayedHandRoomTicks).
 describe("a clock of a build that takes fuel off the near lane of a belt", () => {
     // agricultural science, one copy, the nutrients on the near lane of inserters 1, 2 and 11: Takt Batches at 2 output
-    // swings with the room for one more hand moves 799.38 of 800 a window cycle as built, and 800 with the room
+    // swings with the room for one more hand moves 799.38 of 800 a window cycle as built, and 800 with the room. With the
+    // windows of its egg loop the clock holds without the room (#516), so they are left out here: the room is what is tried.
     it("that does not hold is made again with room for the delayed hand, and the clock made again holds", async () => {
         const config = withSwings(await loadConfigFromFile(TestConfigPaths.AGRICULTURAL_SCIENCE_50_FUEL_ON_NEAR_LANE), 2);
         const without = generateClockForConfig({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } },
-            { logger: quiet, verify_as_built: true, lane_hand_room: "always" });
+            { logger: quiet, verify_as_built: true, lane_hand_room: "always", loop_windows: false });
         expect(without.stability_check.as_built?.holds).toBe(false);
-        const primary = planClockAlternatives(config, { logger: quiet }).primary!.alternatives[0];
+        const primary = planClockAlternatives(config, { logger: quiet, loop_windows: false }).primary!.alternatives[0];
         expect(primary.result.fuel_hand_room_ticks).toEqual({ "inserter:1": 6, "inserter:2": 6, "inserter:11": 6 });
         // the description names the room and why the clock has it
         expect(primary.description).toContain("The inserters (1, 2 and 11) that take bioflux and nutrients take fuel off the belt as well as an "
