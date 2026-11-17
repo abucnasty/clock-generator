@@ -46,7 +46,7 @@ export class OutputBeltRun {
     /** End changes made in tick `done`: given with the next tick, they act from the tick after it */
     private ends: EndChange[] = [];
     private shut = false;
-    /** Each copy's hands, by the copy's number in the section (from 1) */
+    /** The hands of each copy's output inserters, by the copy's number (from 1) */
     public readonly hands = new Map<number, OutputHand[]>();
     /** The ticks a stack takes to go down on a free drop tile, by the stacks of a hand: 0, 1, 2 and 4 for four */
     private readonly free_spans = new Map<number, number>();
@@ -57,8 +57,8 @@ export class OutputBeltRun {
         this.done = start_tick;
     }
 
-    /** The copies with a drop on the output belt, by their number in the section (from 1) */
-    public copies(): number[] {
+    /** The numbers that the section gives a drop on the output belt (from 1) */
+    public drops(): number[] {
         return [...this.join.drops.keys()].sort((a, b) => a - b);
     }
 
@@ -75,13 +75,13 @@ export class OutputBeltRun {
     }
 
     /**
-     * Where a stack put down on the copy's drop tile in this tick lands, as the distance to its line's end; null where
-     * there is no room. LaneTraffic's rule, against the stacks of the drop tile's line after this tick's movement.
+     * Where a stack put down on the drop tile of the section's number `at` in this tick lands, as the distance to its line's
+     * end; null where there is no room. LaneTraffic's rule, against the stacks of the drop tile's line after this tick's movement.
      */
-    private landing(copy: number, tick: number): { line: string; position: number } | null {
+    private landing(at: number, tick: number): { line: string; position: number } | null {
         this.advanceTo(tick);
-        const drop = this.join.drops.get(copy);
-        assert(drop !== undefined, `Copy ${copy} drops on no point of the output belt`);
+        const drop = this.join.drops.get(at);
+        assert(drop !== undefined, `Number ${at} drops on no point of the output belt`);
         const positions = this.model.positionsOn(drop.line);
         for (const stack of this.put) if (stack.line === drop.line) positions.push(stack.position);
         positions.sort((a, b) => a - b);
@@ -90,19 +90,19 @@ export class OutputBeltRun {
         return landing >= drop.spot + GAP ? null : { line: drop.line, position: landing };
     }
 
-    public hasRoom(copy: number, tick: number): boolean {
-        return this.landing(copy, tick) !== null;
+    public hasRoom(at: number, tick: number): boolean {
+        return this.landing(at, tick) !== null;
     }
 
-    /** Puts a stack down on the copy's drop tile in this tick, if there is room for it */
-    public putDown(copy: number, tick: number): boolean {
-        const landing = this.landing(copy, tick);
+    /** Puts a stack down on the drop tile of the section's number `at` in this tick, if there is room for it */
+    public putDown(at: number, tick: number): boolean {
+        const landing = this.landing(at, tick);
         if (landing === null) return false;
         this.put.push(landing);
         return true;
     }
 
-    /** Records a hand of the copy's output inserter once its last stack is down */
+    /** Records a hand of an output inserter of the copy once its last stack is down */
     public handDone(copy: number, hand: OutputHand): void {
         this.hands.set(copy, [...this.hands.get(copy) ?? [], hand]);
     }
@@ -184,7 +184,8 @@ export class OutputBeltDrop extends LaneTraffic {
     private stacks = 0;
     private last = 0;
 
-    constructor(private readonly run: OutputBeltRun, private readonly copy: number, private readonly holds_key: boolean,
+    /** `at`: the inserter's number in the section; `copy`: the copy it is of (from 1) */
+    constructor(private readonly run: OutputBeltRun, private readonly at: number, private readonly copy: number, private readonly holds_key: boolean,
         private readonly held: () => number, private readonly stack_items: number, belt_speed: BeltSpeed) {
         super(belt_speed);
     }
@@ -197,7 +198,7 @@ export class OutputBeltDrop extends LaneTraffic {
             this.arrival = tick;
             this.stacks = 0;
         }
-        if (!this.run.putDown(this.copy, tick)) return false;
+        if (!this.run.putDown(this.at, tick)) return false;
         this.stacks++;
         this.last = tick;
         // the hand is empty once this stack leaves it
@@ -209,7 +210,7 @@ export class OutputBeltDrop extends LaneTraffic {
     }
 
     public override hasRoom(tick: number): boolean {
-        return this.run.hasRoom(this.copy, tick);
+        return this.run.hasRoom(this.at, tick);
     }
 
     public override stateKey(tick: number): string {
@@ -221,21 +222,23 @@ export class OutputBeltDrop extends LaneTraffic {
     }
 }
 
-/** The output inserter of the config: the one that drops the target item onto a belt that carries it */
-function outputInserterOf(config: Config): number {
+/** The output inserters of the config, in its order: those that drop the target item onto a belt that carries it */
+function outputInsertersOf(config: Config): number[] {
     const item = config.setpoint.recipe;
     const found = config.inserters.flatMap((inserter, index) => {
         if (inserter.sink.type !== "belt") return [];
         const belt = config.belts.find(it => it.id === inserter.sink.id);
         return belt !== undefined && belt.lanes.some(lane => lane.ingredient === item) ? [inserter.id ?? index + 1] : [];
     });
-    assert(found.length === 1, `The output belt needs one output inserter that drops ${item} onto a belt; the config has ${found.length}`);
-    return found[0];
+    assert(found.length > 0, `The output belt needs an output inserter that drops ${item} onto a belt; the config has none`);
+    return found;
 }
 
 /**
- * Puts the output belt of the config into a run of the copies before its first tick: each copy that the section names
- * gets a drop slot on the output belt in place of its own local tile. Null where the config states no output belt.
+ * Puts the output belt of the config into a run of the copies before its first tick: each output inserter that the section
+ * names gets a drop slot on the output belt in place of its own local tile. Null where the config states no output belt.
+ * A number of the section names a copy's output inserter: with k output inserters a copy, number n is the
+ * ((n - 1) mod k + 1)-th of copy floor((n - 1) / k) + 1, so with one it is the copy.
  */
 export function installOutputBelt(context: SimulationContext, config: Config): OutputBeltRun | null {
     if (config.output_belt === undefined) return null;
@@ -243,18 +246,19 @@ export function installOutputBelt(context: SimulationContext, config: Config): O
     assert(now() === 0, "The output belt goes in before the first tick");
     const join = outputBeltJoinOf(outputBeltGeometry(config.output_belt, copySpacingOf(config.setpoint.copy_offset) ?? 0));
     const run = new OutputBeltRun(join, now());
-    const inserter_number = outputInserterOf(config);
-    run.copies().forEach((copy, index) => {
-        const inserter_id = EntityId.forInserter(copyNumberOf(copy - 1, inserter_number)).id;
+    const outputs = outputInsertersOf(config);
+    run.drops().forEach((at, index) => {
+        const copy = Math.floor((at - 1) / outputs.length) + 1;
+        const inserter_id = EntityId.forInserter(copyNumberOf(copy - 1, outputs[(at - 1) % outputs.length])).id;
         const inserter = context.inserters.find(it => it.entity_id.id === inserter_id);
-        assert(inserter !== undefined, `The output belt names copy ${copy}, which the run of the copies does not hold`);
+        assert(inserter !== undefined, `The output belt names output inserter ${at}, which the run of the copies does not hold`);
         const belt_state = context.state_registry.getStateByEntityIdOrThrow(inserter.inserter_state.inserter.sink.entity_id);
         assert(EntityState.isBelt(belt_state), `${inserter_id} does not drop on a belt`);
         assert(belt_state.belt.belt_speed === BeltSpeed.TURBO_TRANSPORT_BELT && belt_state.lanes.every(lane => lane.stack_size === 4),
             "The model of the output belt knows turbo belts with stacks of 4 only");
         const held = () => inserter.inserter_state.held_item?.quantity ?? 0;
-        belt_state.lanes.forEach((lane, at) => lane.seedDrop(inserter_id,
-            new OutputBeltDrop(run, copy, index === 0 && at === 0, held, lane.stack_size, belt_state.belt.belt_speed)));
+        belt_state.lanes.forEach((lane, lane_at) => lane.seedDrop(inserter_id,
+            new OutputBeltDrop(run, at, copy, index === 0 && lane_at === 0, held, lane.stack_size, belt_state.belt.belt_speed)));
     });
     return run;
 }
