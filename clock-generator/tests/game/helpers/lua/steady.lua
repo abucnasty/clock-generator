@@ -12,6 +12,10 @@
 --   recovery      the steady-state test (both parts) met again, within `recover_bound` ticks of the release
 -- The run ends when the last disturbance has recovered, or at the first step that fails, or at `cap` ticks; then the
 -- harness's settle is ended so the recording starts. Ticks are counted from the tick the probe is installed in.
+-- A run may ask for a tail (`tail`, in ticks, off by default): after the last recovery (or the baseline's end, with no
+-- disturbance) it goes on for that long and ends at the first whole clock cycle after it, so the stock a disturbance leaves
+-- is recorded (series.cycles, from the tick protocol.tail.from on) and not only the stock at the tick of the recovery. A run
+-- with no tail ends as before.
 -- Recorded per final machine (products finished since the start, and the item in its output inventory: its output stock):
 --   series.seconds  every 60 ticks, with the lowest total output stock of the ticks since the row before
 --   series.cycles   from the steady-state tick on, every tick the clock stands where it stood then (whole clock cycles), with
@@ -137,6 +141,9 @@ function M.run(spec)
     local trailing_at, last_at = {}, {}
     history[0] = 0
     local function at(t) return history[t % size] end
+    local tail = spec.tail
+    assert(tail == nil or tail >= 1, "a tail is at least one tick")
+    local tail_from
     local phase, step = "steady", 0
     local steady, baseline, current, steady_position
     local started = game.tick
@@ -154,7 +161,14 @@ function M.run(spec)
     local function next_disturbance(t)
         step = step + 1
         local disturbance = disturbances[step]
-        if not disturbance then return finish("holds", t) end
+        if not disturbance then
+            if not tail then return finish("holds", t) end
+            protocol.tail = {from = t, ticks = tail}
+            tail_from = t
+            phase = "tail"
+            write()
+            return
+        end
         current = {kind = disturbance.kind, start = t}
         table.insert(protocol.disturbances, current)
         mark(t, "start " .. step)
@@ -240,6 +254,9 @@ function M.run(spec)
                 elseif t - current.release >= recover_bound then
                     return finish("disturbance " .. step .. " (" .. current.kind .. ") did not recover within " .. recover_bound .. " ticks", t)
                 end
+            elseif phase == "tail" then
+                -- the run ends on a whole clock cycle (the row of this tick is in series.cycles already)
+                if t - tail_from >= tail and position == steady_position then finish("holds", t) end
             end
         end)
         if not ok then

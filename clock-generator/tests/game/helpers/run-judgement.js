@@ -13,6 +13,7 @@
  *   window: number, expected: number, steady?: number, result?: string, ended?: number, error?: string,
  *   baseline?: {start: number, ticks: number, min: number, max: number},
  *   disturbances: Disturbance[] | Record<string, never>,
+ *   tail?: {from: number, ticks: number},
  *   finals?: {unit_number: number, recipe: string, worth: number}[] | Record<string, never>,
  *   series?: RunSeries,
  * }} RunRecord
@@ -67,6 +68,10 @@ function rowTotals(run, row) {
  *   ticks (what leaves them), against the target over those ticks, in whole numbers (net x 60 x d >= n x ticks for the target
  *   n/d a second). No whole cycle in the baseline: it fails (the family names a longer baseline);
  * - the stock guard: the output stock at the end of the run is no lower than the lowest it was at any tick of those cycles.
+ *   A run that asked for a tail (steady.lua `tail`: it goes on after its last recovery) is judged by the stock after settling
+ *   instead (judgeStockAfterTail): the stock a disturbance leaves is read once it has settled, not at the tick of the recovery
+ *   (abucnasty, 2026-11-03; #587: the guard compares levels that follow the same disturbance). A run with no tail, and every
+ *   summary recorded before the tail, is judged as before.
  * A build judged by a count has no output stock: its net output is the count, and the guard does not apply (stock null).
  * @param {RunRecord} run
  * @param {number} target products a second, as exact as known (the fraction is taken of it)
@@ -106,7 +111,36 @@ function judgeBaseline(run, target) {
     const lowest = Math.min(stockStart, ...cycles.slice(1).map(row => row.low ?? Infinity));
     const ended = at("end");
     const endStock = ended ? rowTotals(run, ended).stock : null;
+    if (run.tail) {
+        const after = judgeStockAfterTail(run, run.tail, lowest);
+        return {baseline, stock: {lowest, end: endStock, holds: endStock !== null && after.settled !== null && after.settled.holds, after}};
+    }
     return {baseline, stock: {lowest, end: endStock, holds: endStock !== null && endStock >= lowest}};
+}
+
+/**
+ * The output stock after the last recovery, from the run's tail (steady.lua): at each whole clock cycle the total stock and the
+ * lowest it was at any tick since the cycle before, from the tick of the last recovery on. What the last disturbance leaves
+ * takes a while to settle (a dip, then a climb back to a level), so the level is read in the last half of the tail only. It holds
+ * when, there, the stock is never below the baseline's lowest at any tick (the same measure the baseline's lowest is) and is not
+ * falling (no lower at the last whole cycle than at the first of those): a slow drain never settles and fails. No cycle there (the
+ * run ended before the tail did): no settled level, and the guard fails.
+ * @param {RunRecord} run
+ * @param {{from: number, ticks: number}} tail
+ * @param {number} lowest the lowest output stock at any tick of the baseline's whole cycles
+ * @returns {{from: number, t: number[], stock: number[], low: number[], settled: null | {from: number, lowest: number, last: number, falling: boolean, holds: boolean}}}
+ */
+function judgeStockAfterTail(run, tail, lowest) {
+    const rows = list(run.series?.cycles).filter(row => row.t >= tail.from && row.s !== undefined);
+    const totals = rows.map(row => rowTotals(run, row).stock ?? 0);
+    const lows = rows.map((row, k) => row.low ?? totals[k]);
+    const readFrom = tail.from + tail.ticks / 2;
+    const first = rows.findIndex(row => row.t >= readFrom);
+    const kept = {from: tail.from, t: rows.map(row => row.t), stock: totals, low: lows};
+    if (first < 0) return {...kept, settled: null};
+    const read = lows.slice(first), level = Math.min(...read);
+    const falling = totals[totals.length - 1] < totals[first];
+    return {...kept, settled: {from: rows[first].t, lowest: level, last: totals[totals.length - 1], falling, holds: level >= lowest && !falling}};
 }
 
 /**
