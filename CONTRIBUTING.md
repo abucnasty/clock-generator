@@ -254,7 +254,7 @@ is never loosened because a job fails it.
 
 | Check name | What it does | Runs |
 | --- | --- | --- |
-| Unit tests | knip, typecheck, build, lint, `npm test` (the units, `clock-controls.test.ts` among them) | every pull request that changes more than documentation |
+| `Unit 1/4` to `Unit 4/4` and `Code checks`, then `Unit tests` | `npm test` (the units, `clock-controls.test.ts` among them) dealt out by `ci/unit-durations.json`; knip, typecheck, build and lint in `Code checks` | every pull request that changes more than documentation |
 | `Gen 1/2` and `Gen 2/2`, then `Gen summary` | the `*.generation.test.ts` files, dealt out by `ci/generation-durations.json` | ready pull requests to `master` or `hotfix/` that change more than documentation, and releases; on a draft the shards do not run and the check fails (below) |
 | `Rec 1/6` to `Rec 6/6`, then `Rec summary` | the 86 jobs, joined, compared with `record/`, with the properties, the per-job checks and the never-worse rule | ready pull requests to `master` or `hotfix/` that change more than documentation; on a draft the shards do not run and the check fails (below) |
 | `UI build`, `UI samples`, `UI browser` | the UI | every pull request that changes more than documentation |
