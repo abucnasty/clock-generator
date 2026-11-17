@@ -30,7 +30,7 @@ async function inputOf(key: keyof typeof ConfigPaths): Promise<{ config: Config;
     const signatures: string[] = [];
     const walk = (run: ClockAlternativeRun) => { signatures.push(run.signature); run.also?.forEach(walk); };
     runs.forEach(run => { if (run !== null) walk(run); });
-    return { config, input: coordinatedSourcesInputOf(runs, combined.alternatives[combined.selected_index].id), signatures };
+    return { config, input: coordinatedSourcesInputOf(runs, combined.order.map(index => combined.alternatives[index].id)), signatures };
 }
 
 /** The per-branch clock made from an input, and what it wrote to not_made */
@@ -82,6 +82,20 @@ describe("the per-branch clock of the automation science build", () => {
     });
 });
 
+// LITHIUM_PLATE_80_SILO_CHEST: the recommended clock is on 4,320 ticks; the clock of 3.335 wakeups a minute that the game held is
+// composed on 2,160 ticks, the window cycle of the time-division windows, the best-ranked stable clock on another window cycle
+describe("the per-branch clock of the lithium plate build", () => {
+    it("is composed on the window cycle of the next best clock where that gives fewer wakeups than the recommended clock's", async () => {
+        const generated = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.LITHIUM_PLATE_80_SILO_CHEST), { logger: quiet });
+        const recommended = generated.alternatives.filter(it => it.id !== "coordinated_sources")
+            .reduce((best, it) => (it.verdict === "stable" && it.ranking.wake_ups_per_minute! < best.ranking.wake_ups_per_minute! ? it : best));
+        expect([recommended.id, recommended.result.simulation_duration.ticks]).toEqual(["takt_batches_observed_swings_4", 4320]);
+        const selected = generated.alternatives[generated.selected_index];
+        expect([selected.id, selected.verdict, selected.result.simulation_duration.ticks]).toEqual(["coordinated_sources", "stable", 2160]);
+        expect(selected.ranking.wake_ups_per_minute).toBeCloseTo(3.335, 3);
+    });
+});
+
 // ELECTROMAGNETIC_SCIENCE_330: the local choice keeps the recommended clock, which the maker judges with the copies before it refuses
 describe("the per-branch clock of a build where the local choice keeps the recommended clock", () => {
     it("judges the recommended clock with the copies under the listing's keys: the listing's judgement is a hit", async () => {
@@ -110,24 +124,30 @@ describe("the per-branch clock of the military science build", () => {
         expect(not_made).toEqual([]);
     });
 
-    it("is judged with the copies once: the listing's judgement of the clock made is the maker's", () => {
-        let hits: number[] = [];
-        const { run } = withRunMemo(() => {
-            const composed_here = composed(made.config, made.input, made.signatures);
+    it("is judged with the copies once a window cycle: the listing's judgement of the clock made is the maker's", () => {
+        expect(made.input.window_cycle_ids?.length).toBe(2);
+        const hitsOf = (input: CoordinatedSourcesInput) => withRunMemo(() => {
+            const { run } = composed(made.config, input, made.signatures);
+            expect(run?.alternatives.map(it => it.id)).toEqual(["coordinated_sources"]);
             const memo = currentRunMemo()!;
-            hits = [memo.shared_lane_check_hits, memo.copies_trial_hits];
-            return composed_here;
+            return [memo.shared_lane_check_hits, memo.copies_trial_hits];
         });
-        expect(run?.alternatives.map(it => it.id)).toEqual(["coordinated_sources"]);
-        expect(hits).toEqual([1, 1]);
+        expect(hitsOf({ ...made.input, window_cycle_ids: undefined })).toEqual([1, 1]);
+        // a clock made on each of the two window cycles, each judged by the maker and then by the listing
+        expect(hitsOf(made.input)).toEqual([2, 2]);
     });
 
     it("is in not_made where it is the same clock as one made before it", () => {
-        const first = composed(made.config, made.input, made.signatures).run!;
-        const { run, not_made } = composed(made.config, made.input, [...made.signatures, first.signature]);
+        const one_cycle = { ...made.input, window_cycle_ids: undefined };
+        const first = composed(made.config, one_cycle, made.signatures).run!;
+        const { run, not_made } = composed(made.config, one_cycle, [...made.signatures, first.signature]);
         expect(run).toBeNull();
         expect(not_made.map(it => [it.id, it.label])).toEqual([["per-branch", "Coordinated Sources"]]);
         expect(not_made[0].reason).toMatch(/^Made, and the same clock as one made before it, which is listed\./);
+        // on every window cycle, the clock of another window cycle is listed in its place, and nothing is in not_made
+        const others = composed(made.config, made.input, [...made.signatures, first.signature]);
+        expect(others.run!.alternatives[0].result.simulation_duration.ticks).not.toBe(first.alternatives[0].result.simulation_duration.ticks);
+        expect(others.not_made).toEqual([]);
     });
 
     it("is in not_made where it is refused, with the parts it takes no windows from and why", () => {

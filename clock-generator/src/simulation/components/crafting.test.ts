@@ -221,7 +221,7 @@ describe("Crafting and Wakes: what the machine's state keeps of them", () => {
         const state = stateOf("iron-gear-wheel", { crafting_speed: 15 });
         const { crafting, wakes } = state;
         const key = () => `${crafting.key()}|${wakes.key()}`;
-        expect(key()).toBe(`${CraftingStatus.ITEM_INGREDIENT_SHORTAGE};0|false;false;false`);
+        expect(key()).toBe(`${CraftingStatus.ITEM_INGREDIENT_SHORTAGE};false;0|false;false;false`);
         const keys = new Set([key()]);
         for (const status of STATUSES) {
             crafting.status = status;
@@ -238,5 +238,17 @@ describe("Crafting and Wakes: what the machine's state keeps of them", () => {
         Object.assign(crafting, { craftCount: 9, craftsStarted: 9, totalCrafted: 9 });
         wakes.windowOpeningTakeDecider = 2;
         expect(key()).toBe(before);
+    });
+
+    it("keys the craft underway in billionths of a craft, and a craft started with a rest of a few 1e-16 s as underway", () => {
+        const { crafting } = stateOf("iron-gear-wheel");
+        crafting.craftingProgress.progress = 0.25;
+        expect(crafting.key()).toBe(`${CraftingStatus.ITEM_INGREDIENT_SHORTAGE};true;250000000`);
+        crafting.craftingProgress.progress = 0.25 + 4e-10;
+        expect(crafting.key()).toBe(`${CraftingStatus.ITEM_INGREDIENT_SHORTAGE};true;250000000`);
+        crafting.craftingProgress.progress = 5e-16;
+        expect(crafting.key()).toBe(`${CraftingStatus.ITEM_INGREDIENT_SHORTAGE};true;0`);
+        crafting.craftingProgress.progress = 0;
+        expect(crafting.key()).toBe(`${CraftingStatus.ITEM_INGREDIENT_SHORTAGE};false;0`);
     });
 });
