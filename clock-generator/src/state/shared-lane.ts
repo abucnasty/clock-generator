@@ -48,9 +48,9 @@ export interface SharedLaneArgs {
  *   stack on.
  *
  * So a stack can wait one tick at a line's end where the one-line lane would move it: where its line was updated while the
- * line ahead stood off the list, and that line went back on later in the same tick. The rules are those of facts
- * 0.29.0-02-207 (measured) and engine-belts-02-011; the order of the takes in a tick (downstream first) is fitted to one
- * recording, not established.
+ * line ahead stood off the list, and that line went back on later in the same tick. The rules were measured on a two-row
+ * fixture in Factorio 2.1.24 (#737); the order of the takes in a tick (downstream first) is fitted to one recording of the
+ * nine-copy automation science scaffold, not established.
  */
 export interface SharedLaneLines {
     /** The line ends, in tiles from the lane's entry, ascending: a stack exactly at one is on the line upstream of it */

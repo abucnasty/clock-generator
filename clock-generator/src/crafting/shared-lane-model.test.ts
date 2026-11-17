@@ -149,7 +149,7 @@ describe("the line ends of a row's lane, from its underground entrances", () => 
     const row = () => rowsOf(automation(), { x: 1, y: 0 }).rows[0];
 
     it("puts each entrance in tiles from the lane's entry, copy 1's pickup tile a tile and a half from it, and leaves out one upstream of the entry", () => {
-        // the measured entrances of the scaffold (fact 0.29.0-02-156): the one 7 tiles upstream of copy 1 is not on the lane
+        // the entrances of the automation science scaffold, as measured on it (#737): the one 7 tiles upstream of copy 1 is not on the lane
         expect(row().length_tiles).toBe(74);
         expect(lineEndsOf(row(), [-7, 1, 10, 19, 28, 37, 46, 55, 64])).toEqual([2.5, 11.5, 20.5, 29.5, 38.5, 47.5, 56.5, 65.5]);
     });
