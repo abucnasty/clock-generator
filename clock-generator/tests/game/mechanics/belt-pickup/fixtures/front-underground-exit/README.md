@@ -127,7 +127,7 @@ cannot be built in this geometry; generated clocks, including those of a moving 
 
 ## Generated clocks
 
-The table gives the verdicts of the clocks recorded on 2026-10-20 (Factorio 2.1.21, #274 and #275), at all four speeds and both
+The table gives the verdicts of the clocks recorded on 2026-10-20 (Factorio 2.1.21, #274), at all four speeds and both
 mirroring states, with the ordinary electromagnetic targets (30/s turbo to 7.5/s normal), 63 baseline window cycles and the
 three ordinary disturbances. They are the verdicts of the clocks the generator made then, not of the clocks it selects now.
 A simulator run of the one dispatch (0.27.0) moved the express moving-config verdict from "no recovery" to stable, and since 2026-11-03 the

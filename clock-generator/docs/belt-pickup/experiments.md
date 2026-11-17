@@ -23,8 +23,8 @@ The accepted changes shipped in **engine/UI 0.19.0** and **Sidecar 0.11.0** (202
   holes, partial stacks and lane phase persist across hands and circuit windows. Underground pickups have
   less reach, rather than a fixed tick penalty.
 - Geometry and supply motion are separate. Omitted `pickup_length` defaults to **1**; undergrounds use **0.5**.
-  A lane that states no `lane_end` takes the end of its role: an input or buffer lane is a dead end (with
-  backpressure), an output lane an infinite end ([lane ends](lane-ends.md)). Ordinary supply with backpressure retains
+  A lane that states no `lane_end` takes the end of its role: an input or buffer lane is a dead end (the
+  generator makes the clock for pickups with backpressure), an output lane an infinite end ([lane ends](lane-ends.md)). Ordinary supply with backpressure retains
   finite stock, stops stacks at the endpoint and refills holes at belt speed.
 - Replenishment depends on topology. Closing the last exit of a lane does not guarantee permanent local saturation when
   other consumers can reopen a route.
@@ -128,8 +128,8 @@ its timing is not tested. Measuring them is follow-up F7.
 The mismatches: the express moving side underground entrance and exit hold and have recovery in the game, where the generator says "no recovery" from lane phase [1,5], which the capture cannot set up (#269); the front exit on a moving config holds and has recovery in the game at express and normal, where the generator says "no recovery" and "unstable" from lane phases of a moving belt, which the exit's backed-up belt does not have (#274). Each verdict is the cautious side.
 The "no recovery" verdicts are of the engines of those recordings: since 2026-11-14 the loss trials run from the cold start only, so the generator no longer tries a loss from another lane phase, and these builds' verdicts now are not recorded here.
 
-The ordinary clocks are verified on **48 configurations** across all four speeds
-(`tests/game/builds/pickup-clock-controls.json`, each entry with the PR that recorded it): the recapture after the belt
+Until 2026-11-03 the ordinary clocks were verified on **48 configurations** across all four speeds; the controls
+(`tests/game/builds/pickup-clock-controls.json`) now hold the 12 turbo ones. The 48, each with the PR that recorded it: the recapture after the belt
 window-end trim (#265), with the 20 electromagnetic clocks the belt hand's resume fix changed recorded again (#266), the
 fast straight moving clock the belt-fed window rule changed recorded once more (#267), the two express moving
 underground clocks #269 changed, and the two normal backed-up underground clocks #275 changed, recorded again with the front exits on the clock #456 selects (#479).
@@ -138,7 +138,7 @@ over-produces in its early window cycles. The two normal moving
 underground defaults hold their baseline in these steady-state recordings and got back to target after every loss, but the
 generator says "unstable": it finds the clock failing from cold lane phase [3,0], and a native sweep of all 64 lane
 phases shows the game never settling from it or from four other phases, the exit's natural one among them, where
-it cycles at 143 a window cycle against 176 (`tests/game/builds/lane-phase-controls.json`, #266).
+it cycles at 143 a window cycle against 176 (#266; that table of 128 runs is no longer kept).
 The two normal backed-up underground defaults are a stable clock for backed-up belts, every belt-fed window as long as a
 hand takes from the lanes at rest (#456, recorded in #479): 176 in every baseline window cycle and after every disturbance, as the clock
 planned with the belts moving and given belt slack did that #275 recorded. A backed-up belt
@@ -150,7 +150,7 @@ generator no longer makes the clock planned with the belts moving for a backed-u
 checks. The two express moving underground defaults are
 observed windows at 3 output swings, made for moving supply (#269): exact baseline and recovery in the game, while the
 generator said "no recovery", its disturbance trials failing from lane phase [1,5] alone, which the capture cannot set up
-(`lane-phase-controls.json`). Through this half-tile pickup the game moves 704 to 716 a window cycle with
+(#269). Through this half-tile pickup the game moves 704 to 716 a window cycle with
 every inserter always enabled, the plant's own limit: the pickup was never the bound. The clock before, made for
 backed-up supply, moved 352 a window cycle under moving supply, in the model as in the game. The #265 recapture's own clocks (43 of 48 exact,
 41 stable), the earlier post-fix recapture (#253: 46 of 48 exact, 42 stable after the lane-phase audit) and the original

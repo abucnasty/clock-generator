@@ -557,11 +557,11 @@ window cycle. The protocol is the standard one: the holmium plates cut for 2 win
 cut again. The silo holds at most 250 lithium, so each cut empties it. The warm-up of 3600 ticks without a clock fills the
 silo before the clock starts, though the config exports it empty.
 
-[lithium-plate-80-silo-chest-clock-controls.json](lithium-plate-80-silo-chest-clock-controls.json) holds the 4 native summaries, recorded on Factorio
-2.1.21 at commit `759e9a50`. **The clock with 3 output swings, in both build orders, and the clock with 1 output swing meet exact
-baseline output (63 window cycles), drop to 0 in every disturbance and are exact in every judged window cycle after each; the two
-build orders are equal in every window cycle.** The clock with 7 output swings is stable in the simulator and short in the game,
-9,440 to 9,600 of 10,080 in every window cycle: the output inserters of two furnaces drop onto underground entrances whose exits
+[lithium-plate-80-silo-chest-clock-controls.json](lithium-plate-80-silo-chest-clock-controls.json) holds the 4 native summaries, trailing-minute runs
+recorded on Factorio 2.1.24 on engine `57c76634`. **The clock with 3 output swings, in both build orders, and the clock with 1
+output swing hold their target over the baseline and recover after each disturbance, and the output stock guard holds.** The clock
+with 7 output swings is stable in the simulator, and the game reaches no steady state with it within 36,000 ticks:
+the output inserters of two furnaces drop onto underground entrances whose exits
 side-load onto the shared output belt, which the config describes as one belt with room for every drop
 ([scope](../../../docs/game-data-and-scope.md)). `clock-controls.test.ts` pins each clock against the record and `game-runs-hold.test.ts` checks it
 against its native summary.
@@ -729,10 +729,10 @@ blueprint of five combinators with no wires to inserters, so the harness wired i
 window combinators, each outputting the signal of the item the inserters it switches move (utility science pack for the 8 output
 inserters, processing unit for the 8 that take units and frames off the belts, low density structure for the 8 between foundries
 and machines, plastic bar for the 4 between the cryogenic plant and the foundries). **The coal inserter has no signal and is not
-on the clock: it runs all the time.** The game run with it wired like that makes 768 packs in every window cycle and
-gets back from a cut of the coal, the output and the units, with the same recoveries; after the coal returns it swings between
-384 and 704 packs for 7 window cycles before it makes 768 again, at 246.4 wakeups a minute by the series' method. The 107 window cycles of 768
-packs, with 184.8 wakeups a minute in the game and 211.8 in the simulator, are from an earlier run that wired the coal inserter on
+on the clock: it runs all the time.** The game run with it wired like that makes 768 packs in every turn of its counter (336 ticks) and
+gets back from a cut of the coal, the output and the units too; after the coal returns it swings between
+384 and 704 packs for 7 turns before it makes 768 again, at 246.4 wakeups a minute by the series' method. The 107 turns of 768
+packs, with 184.8 wakeups a minute in the game and 211.8 in the simulator, are from another run that wired the coal inserter on
 the plastic bar signal instead. It is evidence and a benchmark for the rule, not a control of this family.
 
 ```bash
