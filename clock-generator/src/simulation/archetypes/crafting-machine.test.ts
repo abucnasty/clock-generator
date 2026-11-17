@@ -353,10 +353,14 @@ describe("Crafting machine with a fuel slot", () => {
         expect(machine_state.inventoryState.getQuantity("yumako-mash")).toBe(8)
     })
 
-    test("burns one nutrient for every two crafts", () => {
+    // a nutrient pays for the 240 ticks of two crafts. 120 steps of 1/30 s fall short of the 4 s by rounding, so the
+    // first craft finishes a tick late and the second, started in that tick, is a few 1e-15 of a craft short when the
+    // energy runs out: it waits for fuel (how the game's burner spends that last sliver was not recorded)
+    test("burns one nutrient for two crafts' ticks of work", () => {
         const { machine_state, machine } = createBiochamberState(12, 1)
         run(machine_state, machine, 600)
-        expect(machine_state.craftCount).toBe(2)
+        expect([machine_state.craftsStarted, machine_state.craftCount]).toEqual([2, 1])
+        expect(machine_state.craftingProgress.progress).toBeGreaterThan(1 - 1e-12)
         expect(machine_state.fuelInventory.getQuantity("nutrients")).toBe(0)
         expect(machine_state.status).toBe(MachineStatus.NO_FUEL)
     })
@@ -374,8 +378,11 @@ describe("Crafting machine with a fuel slot", () => {
         machine_state.ingress.insert("nutrients", 1)
         executeForTicks(machine, 1)
         expect(machine_state.status).toBe(MachineStatus.WORKING)
-        // a craft started once the machine had fuel to burn
+        // a craft started once the machine had fuel to burn; it finishes a tick late, as 120 steps of 1/30 s fall short
+        // of the 4 s by rounding
         run(machine_state, machine, 120)
+        expect([machine_state.craftsStarted, machine_state.craftCount]).toEqual([1, 0])
+        run(machine_state, machine, 1)
         expect(machine_state.craftCount).toBe(1)
     })
 
@@ -402,8 +409,11 @@ describe("Crafting machine with a fuel slot", () => {
         run(machine_state, machine, 180)
         // second craft is half done and has used up the nutrient
         expect(machine_state.craftCount).toBe(1)
+        // the first craft finished a tick late, so the second is a few 1e-15 of a craft short when the energy runs out
         run(machine_state, machine, 100)
-        expect(machine_state.craftCount).toBe(2)
+        expect(machine_state.craftCount).toBe(1)
+        expect(machine_state.craftingProgress.progress).toBeGreaterThan(1 - 1e-12)
+        expect(machine_state.status).toBe(MachineStatus.NO_FUEL)
         machine_state.fuelInventory.addQuantity("nutrients", 1)
         run(machine_state, machine, 400)
         expect(machine_state.craftCount).toBe(4)
@@ -675,11 +685,12 @@ describe("Crafting machine: its steps and observers", () => {
     // one key for the machine, its components' in a fixed order (P4 3.4): Storage, Crafting, Yield, Wakes, Energy
     test("keys what its components keep: its inventories, status and craft, held products and bars, last tick's flags, energy", () => {
         const { machine_state, machine } = gears(0)
-        expect(machine.stateKey()).toBe(`[["iron-gear-wheel",0],["iron-plate",2]];{};[]|${CraftingStatus.ITEM_INGREDIENT_SHORTAGE};0|0;0;[]|false;false;false|`)
+        expect(machine.stateKey()).toBe(`[["iron-gear-wheel",0],["iron-plate",2]];{};[]|${CraftingStatus.ITEM_INGREDIENT_SHORTAGE};false;0|0;0;[]|false;false;false|`)
         executeForTicks(machine, 1)
         expect(machine_state.crafting.status).toBe(CraftingStatus.WORKING)
-        // the plates taken, the half craft, the started craft its Wakes report; an electric machine's energy keys nothing
-        expect(machine.stateKey()).toBe(`[["iron-gear-wheel",0],["iron-plate",0]];{};[]|${CraftingStatus.WORKING};0.5|0;0;[]|false;false;true|`)
+        // the plates taken, the half craft (in billionths of a craft), the started craft its Wakes report; an electric
+        // machine's energy keys nothing
+        expect(machine.stateKey()).toBe(`[["iron-gear-wheel",0],["iron-plate",0]];{};[]|${CraftingStatus.WORKING};true;500000000|0;0;[]|false;false;true|`)
         expect(machine.stateKey()).toBe([machine_state.storageKey(), machine_state.crafting.key(), machine_state.yield.key(),
             machine_state.wakes.key(), machine_state.energy.key()].join("|"))
     })

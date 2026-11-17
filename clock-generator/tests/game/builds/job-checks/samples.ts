@@ -218,10 +218,12 @@ const utility480: JobCheck[] = [
 // Metallurgic science at the speeds the game gives its scaffold, its packs taken into a chest that removes them
 const metallurgic: JobCheck[] = [
     {
-        name: 'the observed windows do not repeat a state in the long run',
+        name: 'the observed windows repeat a state in the long run',
         run: ({ generated }) => {
-            // the long run repeats no state: the game makes 480 and every eighth window cycle 496, 100% of the target over 38 window cycles
-            expect(selectedOf(generated).result.stability_check.as_built?.long_run_proven).toBe(false);
+            // the game makes 480 and every eighth window cycle 496, 100% of the target over 38 window cycles. The long run repeats a
+            // state once the keys hold the craft underway and the productivity bars to a billionth of a craft: the bars' rounding
+            // drift, which a payout never resets, kept the full doubles of one window cycle from equalling those of a later one
+            expect(selectedOf(generated).result.stability_check.as_built?.long_run_proven).toBe(true);
         },
     },
     {
