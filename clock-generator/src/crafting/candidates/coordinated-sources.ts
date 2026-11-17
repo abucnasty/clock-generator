@@ -17,7 +17,8 @@ import { verdictWithCopies, type VerdictWithCopies } from "../copies-verdict";
 
 /**
  * The per-branch clock (DESIGN D7, PR 18): each part of the build gets the windows of the clock that fits it, all on one shared
- * window cycle, the window cycle of today's recommended clock.
+ * window cycle, the window cycle of today's recommended clock. Below, "the recommended clock" is the clock it is composed around:
+ * it is composed so on the window cycles of the best two clocks (`onWindowCycles`, `windowCycleClocksOf`), each time around that cycle's clock.
  *
  * - **Parts:** every clock the other makers built for the build (`CoordinatedSourcesPart`): the stable alternatives, every way of the grouped
  *   hands construction (whether its clock holds as a whole or not), the per-hand shape of every way that guards takers, and the alternatives
@@ -532,6 +533,25 @@ export function coordinatedSourcesClock(
     const result = finishedClock(made, map, [], { ...options, loop_windows: false }, left_open);
     return { ...result, coordinated_sources: { parts: Object.fromEntries(groups.map(group => [group.source, partName(group.choices[current.get(group.source)!].parts[0])])),
         sources: sourceControlsOf(groups, current, result.always_on_reasons ?? {}, logger, config.setpoint.recipe) } };
+}
+
+/**
+ * The per-branch clock on the window cycle of each clock of `input.window_cycle_ids` in turn (the recommended clock's alone where
+ * there are none), each composed around its own clock: `make` is given the input with that clock as the recommended one and gives
+ * what is listed of it, or null. The clock listed is the one `first` puts first of those made (by its index in them), of equals
+ * the earlier window cycle's; `index` is its window cycle's place. Null where none is made.
+ */
+export function onWindowCycles<T>(
+    input: CoordinatedSourcesInput,
+    make: (around: CoordinatedSourcesInput, index: number) => T | null,
+    first: (made: readonly T[]) => number,
+): { made: T; index: number } | null {
+    const made: { made: T; index: number }[] = [];
+    (input.window_cycle_ids ?? [input.recommended_id]).forEach((id, index) => {
+        const it = make({ recommended_id: id, parts: input.parts }, index);
+        if (it !== null) made.push({ made: it, index });
+    });
+    return made.length === 0 ? null : made[first(made.map(it => it.made))];
 }
 
 /** A start of the local choice: the clock it starts from, and the choice of each group that has that clock's windows */
