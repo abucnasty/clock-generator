@@ -547,7 +547,7 @@ A drill mines by two progress bars, as the game's does (since 0.20.0): each tick
   the 1- and 2-swing clocks; with 44 (1.43) they did not. The simulator has the refusal that uses up the surplus: an egg
   biochamber takes no nutrients as an ingredient while its output holds 14 eggs or more, and takes a hand into its fuel
   slot only while that slot is under its limit (`clock-generator/src/simulation/components/ingress.test.ts`). But its
-  as-built check and its long run pass both clocks at 1.30 (simulated 2026-11-17). So 40 hands starved the build in the
+  as-built check and its long run pass both clocks at 1.30 (simulated 2026-11-17). So 40 hands left the build short in the
   game and hold in the simulator, and the cause is not known. The recordings of 2026-10-09 are not in the repository.
   Until a game run records these hands at 1.30, the generator keeps 1.43, and the windows of every loop build rest on
   that one build.
