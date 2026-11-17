@@ -43,9 +43,9 @@ The trial transcripts and local benchmark tables behind this audit (#257) were n
 
 Coordinated Sources is the router that gives the inserters of each source the enable windows of another clock of the build
 (`src/crafting/candidates/coordinated-sources.ts`). A source is a machine, belt or chest that inserters take from. The generator makes
-it after every other clock, on the window cycle of the clock they recommend. It composes it from the stable clocks of the build and the
-ways of the grouped hands construction. Each of these is a part. A part's windows are repeated where its window cycle divides the shared
-one. A part whose window cycle does not divide it gives no windows.
+it after every other clock, on the window cycle of the clock they recommend. It composes it from the stable clocks of the build, the
+ways of the grouped hands construction, and the listed clocks that hold on one copy but are not stable. Each of these is a part. A
+part's windows are repeated where its window cycle divides the shared one. A part whose window cycle does not divide it gives no windows.
 
 The generator takes the windows of a part in one of two ways:
 
@@ -57,9 +57,15 @@ The generator takes the windows of a part in one of two ways:
   cannot. A source whose windows a part before it gave already is not tried again.
 
 This costs at most one more check up to the long run for each source of each part that fails as a whole. The generator then sets the
-sources one at a time, from the output upstream, and keeps the setting with the smallest number of wakeups for the full clock. A clock it
-makes is checked as every other clock: the clock-only check from every start, the long run, the margin of one tick, the lanes the copies
-share, and the disturbance trials on one copy and on the copies.
+sources one at a time, from the output upstream, and keeps the setting with the smallest number of wakeups for the full clock.
+
+The generator then checks that clock with every copy: the lanes the copies share, then the disturbance trials on the copies. Where it
+kept the recommended clock, it checks the recommended clock. These are the checks of the listing, made once for each clock. If the
+clock holds with the copies, the generator keeps that clock. If it does not, the
+generator sets the sources again from the same starts. This time, a setting must also hold with the copies. The generator does not take
+a setting or keep the current setting otherwise. So the clock it makes never loses swings on a shared lane. A clock it makes is also checked as every other clock:
+the clock-only check from every start, the long run, the margin of one tick, the lanes the copies share, and the disturbance trials on
+one copy and on the copies.
 
 Where it makes no clock, or makes a clock that is the same as a clock made before it, the result has an entry for Coordinated Sources in
 `not_made`. Its reason is why no clock was made (for example "the local choice keeps the recommended clock") or "Made, and the same clock

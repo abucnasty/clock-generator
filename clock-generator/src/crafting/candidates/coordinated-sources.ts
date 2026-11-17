@@ -36,6 +36,8 @@ import { verdictWithCopies, type VerdictWithCopies } from "../copies-verdict";
  * - **The starts:** the local choice also starts from each stable clock among the parts whose wakeups a minute tie the recommended
  *   clock's as the selection compares them (`costKey`), every group on that clock's windows (`localChoiceStarts`). The clock is the
  *   result with the fewest wakeups, of equals the recommended clock's start's (`localChoiceFromStarts`).
+ * - **With the copies:** the end of the local choice is judged with the copies, as the listing judges a clock (`verdictWithCopies`); where
+ *   it does not hold with them, the local choice runs again and takes only compositions that do (`localChoiceWithCopies`).
  * - **The clock** is then checked as a whole: the one-tick margin here (`holdsWithMargin`), and the checks of every alternative
  *   where it is listed (as built from every start, every loss).
  *
