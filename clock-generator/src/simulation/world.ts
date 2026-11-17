@@ -35,7 +35,8 @@ export class World {
         public readonly drills: readonly MiningDrillArchetype[],
         /**
          * Takers before feeders, the takers of one machine in the context's taker order (`inserterUpdateOrder`): the
-         * order their tick observers and Wakes run in; their updates follow the update list (`scheduling`)
+         * order their tick observers and Wakes run in; their updates follow the update list (`scheduling`), which starts
+         * with the takers of one machine in this order too
          */
         public readonly inserters: readonly InserterArchetype[],
         /** In config order */
