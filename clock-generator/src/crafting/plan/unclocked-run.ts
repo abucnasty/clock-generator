@@ -48,6 +48,8 @@ import { WarmupStep } from "../runner/steps/warmup-step";
 import { FullOutputChest, fullOutputChestsOf } from "../full-output-chests";
 import { ExportShortfall, exportShortfallsOfWindowCycle, exportedItemsOf } from "../export-delivery";
 import { simulationStateKey } from "../runner/steady-state";
+import { stateKeyWithLanes } from "../runner/shared-lanes-key";
+import type { SharedLane } from "../../state/shared-lane";
 import { InstalledControl, warmUpRepeatOf } from "../runner/warm-up-repeat";
 import { SimulateStep } from "../runner/steps/simulate-step";
 import { RunnerStepType } from "../runner/steps/runner-step";
@@ -529,6 +531,11 @@ export interface RunOptions {
      */
     build_copies?: BuildCopies;
     /**
+     * The lanes a run of the copies shares (`runOnSharedLanes`), which the context's states do not hold: filled by
+     * `on_context` before the first tick, and keyed with the state where the warm-up looks for a repeat (`stateKeyWithLanes`)
+     */
+    shared_lanes?: { readonly lanes: readonly { readonly lane: SharedLane }[] };
+    /**
      * After the run, cut one supply of the build and give it back, several times over, and count what the build makes
      * once it is back (see disturbance-trial.ts). For a run on clock windows alone; nothing is cut in any other run.
      */
@@ -703,7 +710,8 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
 
     // the shadow of the tick ledger: only where a ledger is open; it reads the outputs and changes nothing
     const shadow = tickLedgerOn() ? shadowOfOutputs(build, all_output_inserters, duration, warmup_window_cycle) : undefined;
-    const warmup = warmUp(config, build, controlled, duration, warmup_window_cycle, debug, debug_steps, logger, shadow);
+    const shared_lanes = options.shared_lanes?.lanes.map(it => it.lane) ?? [];
+    const warmup = warmUp(config, build, controlled, duration, warmup_window_cycle, shared_lanes, debug, debug_steps, logger, shadow);
     const repeat_window_cycles = warmup.repeat_window_cycles;
     const repeat_bin = options.detect_repeat === true && (options.simulate_window_cycles ?? 1) > 1 ? provenRepeatBin(config, duration.ticks) : null;
     const simulated = simulate(build, controlled, all_output_inserters, duration, options, debug, debug_steps, logger, repeat_bin, shadow);
@@ -1100,7 +1108,7 @@ function runWindowCyclesOf(output_cycle_plan: OutputCyclePlan, recipe_lcm: numbe
 
 /**
  * Step 2: warms the build up, and stops where its state repeats wherever its controls let the key prove a repeat
- * (`warmUpRepeatOf`). Returns the window cycles its state repeats over, when the warmup reached a repeating state on a
+ * (`warmUpRepeatOf`); in a run of the copies the key holds the lanes they share too. Returns the window cycles its state repeats over, when the warmup reached a repeating state on a
  * build clocked throughout on the run's window cycle; the stability check reads them, and no other repeat.
  */
 function warmUp(
@@ -1109,6 +1117,8 @@ function warmUp(
     controlled: ControlledBuild,
     duration: Duration,
     warmup_window_cycle: Duration,
+    /** The lanes a run of the copies shares, which the context's states do not hold: keyed with them (`stateKeyWithLanes`) */
+    shared_lanes: readonly SharedLane[],
     debug: MutableDebugSettingsProvider,
     debug_steps: DebugSteps,
     logger: Logger,
@@ -1124,7 +1134,7 @@ function warmUp(
         const repeat = warmUpRepeatOf(duration.ticks, controlled.installed_controls, warmup_window_cycle.ticks);
         const warmup_step = new WarmupStep(simulation_context, warmup_window_cycle,
             repeat.armed
-                ? { bin_ticks: repeat.bin_ticks, keyed_from_ticks: repeat.keyed_from_ticks, key: () => simulationStateKey(simulation_context) }
+                ? { bin_ticks: repeat.bin_ticks, keyed_from_ticks: repeat.keyed_from_ticks, key: () => stateKeyWithLanes(simulation_context, shared_lanes) }
                 : undefined, shadow?.warm_up);
         warmup_step.execute();
         if (warmup_step.ticks_run < warmup_window_cycle.ticks) {
