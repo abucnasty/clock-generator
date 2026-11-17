@@ -5,7 +5,7 @@ import { SimulationContext } from "./sequence/simulation-context";
 import { PrepareStep } from "./runner/steps/prepare-step";
 import { SimulateStep } from "./runner/steps/simulate-step";
 import { WarmupStep } from "./runner/steps/warmup-step";
-import { beginTickLoop, countRunMemoHit, tickLedgerOn, withTickLedger, withTickMaker, withTickPurpose, type TickLedgerCount, type TickPurpose } from "./tick-ledger";
+import { beginShadow, beginTickLoop, countRunMemoHit, shadowOf, tickLedgerOn, withTickLedger, withTickMaker, withTickPurpose, type TickLedgerCount, type TickPurpose } from "./tick-ledger";
 
 const counted = (work: () => void): TickLedgerCount => {
     let count: TickLedgerCount | undefined;
@@ -93,7 +93,7 @@ describe("the purpose of a run", () => {
 
     it("counts a run the memo handed out again to the purpose that asked, with no tick", () => {
         const count = counted(() => withTickPurpose("long_run", countRunMemoHit));
-        expect(count).toEqual({ rows: [], memo_hits: [{ maker: null, purpose: "long_run", hits: 1 }] });
+        expect(count).toEqual({ rows: [], memo_hits: [{ maker: null, purpose: "long_run", hits: 1 }], shadows: [] });
     });
 });
 
@@ -174,5 +174,114 @@ describe("a generation with no ledger asked for", () => {
         const count = counted(() => withTickLedger(() => { inner++; }, () => withTickPurpose("planning", () => beginTickLoop("prepare_step", () => 7)?.close())));
         expect(inner).toBe(0);
         expect(rowOf(count, "planning", "prepare_step")).toEqual({ maker: null, purpose: "planning", stage: "prepare", loop: "prepare_step", runs: 1, ticks: 7 });
+    });
+});
+
+describe("the shadow: the first warm-up window cycle whose output equals the judged cycle's", () => {
+    const WINDOW_CYCLE = 10;
+    const WARM_UP_CYCLES = 8;
+
+    /**
+     * A warm-up of 8 window cycles and a recorded run of 1 on a build whose output is scripted: `per_cycle(c)` is the items the
+     * one output gives in window cycle c (from 1; the judged cycle is the 9th). The reader gives the running total at the tick.
+     */
+    const shadowsOf = (per_cycle: (cycle: number) => number, options: { stops_at_repeat?: boolean; recorded_ticks?: number; asked_cycles?: number } = {}) => {
+        const context = SimulationContext.fromConfig(steelHub());
+        const total = () => {
+            let items = 0;
+            for (let cycle = 1; cycle <= Math.floor(context.tick_provider.getCurrentTick() / WINDOW_CYCLE); cycle++) items += per_cycle(cycle);
+            return [items];
+        };
+        const asked = options.asked_cycles ?? WARM_UP_CYCLES;
+        const count = counted(() => withTickPurpose("long_run", () => {
+            const shadow = beginShadow(WINDOW_CYCLE, asked, 1, total)!;
+            new WarmupStep(context, Duration.ofTicks(asked * WINDOW_CYCLE), options.stops_at_repeat ? { window_cycle_ticks: WINDOW_CYCLE, key: () => "the same state" } : undefined, shadow.warm_up).execute();
+            const start = context.tick_provider.getCurrentTick();
+            const recorder = shadow.judged(() => context.tick_provider.getCurrentTick() - start)!;
+            new SimulateStep(context, Duration.ofTicks(options.recorded_ticks ?? WINDOW_CYCLE), [recorder]).execute();
+            shadow.finish();
+        }));
+        return count.shadows;
+    };
+    const row = (fields: object) => ({ maker: null, purpose: "long_run", outcome: "found", cycle: null, stays: false, ran: WARM_UP_CYCLES, asked: WARM_UP_CYCLES, runs: 1, ...fields });
+
+    it("gives the cycle k where the output settles, counted from 1", () => {
+        // 2 and 4 items in the first two window cycles, then 5 in each, the judged one too: it settles at 3
+        expect(shadowsOf(cycle => cycle === 1 ? 2 : cycle === 2 ? 4 : 5)).toEqual([row({ cycle: 3, stays: true })]);
+        expect(shadowsOf(cycle => cycle === 1 ? 5 : 6)).toEqual([row({ cycle: 2, stays: true })]);
+        expect(shadowsOf(() => 5)).toEqual([row({ cycle: 1, stays: true })]);
+    });
+
+    it("gives none for a build that never settles in its warm-up", () => {
+        // the output grows by one every window cycle: the judged cycle's is more than any the warm-up gave
+        expect(shadowsOf(cycle => cycle)).toEqual([row({ outcome: "none" })]);
+    });
+
+    it("tells whether the later window cycles gave that output too", () => {
+        // 5 and 4 in turn: the judged cycle (the 9th) gives 5, and the first cycle to give 5 is not followed by cycles that all do
+        expect(shadowsOf(cycle => cycle % 2 === 1 ? 5 : 4)).toEqual([row({ cycle: 1, stays: false })]);
+    });
+
+    it("compares every output exactly, and reads the warm-up where it stopped at its repeat", () => {
+        const context = SimulationContext.fromConfig(steelHub());
+        const outputs = () => [Math.floor(context.tick_provider.getCurrentTick() / WINDOW_CYCLE) * 3, Math.floor(context.tick_provider.getCurrentTick() / WINDOW_CYCLE) < 2 ? 1 : 4];
+        expect(shadowOf([[3, 1], [3, 4], [3, 4]], [3, 4])).toEqual({ cycle: 2, stays: true });
+        expect(shadowOf([[3, 1], [3, 4]], [3, 5])).toEqual({ cycle: null, stays: false });
+        expect(shadowOf([[3]], [3, 4])).toEqual({ cycle: null, stays: false });
+        const count = counted(() => {
+            const shadow = beginShadow(WINDOW_CYCLE, 8, 2, outputs)!;
+            const warmup = new WarmupStep(context, Duration.ofTicks(8 * WINDOW_CYCLE), { window_cycle_ticks: WINDOW_CYCLE, key: () => "the same state" }, shadow.warm_up);
+            warmup.execute();
+            // the repeat stops it at the boundary of the first window cycle after the first: 1 whole window cycle was run
+            expect(warmup.ticks_run).toBe(WINDOW_CYCLE);
+            shadow.finish();
+        });
+        expect(count.shadows).toEqual([{ maker: null, purpose: "no_purpose", outcome: "not_judged", cycle: null, stays: false, ran: 1, asked: 8, runs: 1 }]);
+    });
+
+    it("reads nothing and changes nothing: a warm-up watched stops where it stopped, with the same ticks", () => {
+        const run = (watched: boolean) => {
+            const context = SimulationContext.fromConfig(steelHub());
+            const work = () => {
+                const shadow = watched ? beginShadow(WINDOW_CYCLE, 8, 1, () => [0]) : undefined;
+                const warmup = new WarmupStep(context, Duration.ofTicks(8 * WINDOW_CYCLE), { window_cycle_ticks: WINDOW_CYCLE, key: () => "the same state" }, shadow?.warm_up);
+                warmup.execute();
+                return [warmup.ticks_run, warmup.repeat_window_cycles, context.tick_provider.getCurrentTick()];
+            };
+            return watched ? withTickLedger(() => { }, work) : work();
+        };
+        expect(run(true)).toEqual(run(false));
+    });
+
+    it("counts a warm-up asked for no window cycle, a run with no judged cycle, a window cycle of fractional ticks and a build with no output", () => {
+        expect(shadowsOf(() => 5, { asked_cycles: 0 })).toEqual([row({ outcome: "no_warm_up", ran: 0, asked: 0 })]);
+        // a recorded run shorter than one window cycle has no judged cycle
+        expect(shadowsOf(() => 5, { recorded_ticks: WINDOW_CYCLE - 1 })).toEqual([row({ outcome: "not_judged" })]);
+        const fixed = counted(() => withTickPurpose("planning", () => {
+            beginShadow(10.5, 10, 1, () => [0])!.finish();
+            beginShadow(10, 10, 0, () => [])!.finish();
+        }));
+        expect(fixed.shadows.map(it => [it.outcome, it.purpose, it.asked, it.ran])).toEqual([["not_whole", "planning", 10, 0], ["no_output", "planning", 10, 0]]);
+    });
+
+    it("counts by maker, purpose and cycle, not a line a run, and a run an error ended before its judged cycle as none", () => {
+        const count = counted(() => {
+            for (const maker of ["derived", "derived", "per-branch"]) {
+                withTickMaker(maker, () => withTickPurpose("first_span", () => {
+                    const shadow = beginShadow(WINDOW_CYCLE, 8, 1, () => [0])!;
+                    shadow.warm_up!.cycle_ended();
+                    if (maker === "per-branch") return;
+                    shadow.finish();
+                }));
+            }
+        });
+        expect(count.shadows.map(it => [it.maker, it.purpose, it.outcome, it.ran, it.runs])).toEqual([
+            ["derived", "first_span", "not_judged", 1, 2],
+            ["per-branch", "first_span", "not_judged", 1, 1],
+        ]);
+    });
+
+    it("builds nothing where no ledger is open", () => {
+        expect(beginShadow(WINDOW_CYCLE, 8, 1, () => { throw new Error("read"); })).toBeUndefined();
     });
 });

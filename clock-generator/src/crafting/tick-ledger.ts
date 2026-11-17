@@ -77,12 +77,43 @@ export interface TickLedgerRow {
     ticks: number;
 }
 
+/**
+ * What a warm-up gave, read against the judged cycle (the first window cycle of the recorded run that follows it):
+ * - `found`: a warm-up window cycle gave the same output as the judged cycle (`cycle`, counted from 1).
+ * - `none`: no window cycle the warm-up ran did.
+ * - `no_warm_up`: the warm-up was asked for no whole window cycle, so it has none to read.
+ * - `not_judged`: the run gave no judged cycle (it was shorter than a window cycle, or an error ended it).
+ * - `not_whole`: the window cycle is not a whole number of ticks, so its output is not counted by the window cycle.
+ * - `no_output`: the build has no output inserter to read.
+ */
+export const SHADOW_OUTCOMES = ["found", "none", "no_warm_up", "not_judged", "not_whole", "no_output"] as const;
+
+export type ShadowOutcome = (typeof SHADOW_OUTCOMES)[number];
+
+/** The warm-ups of one maker and purpose that ended in the same way: a count by cycle, never a line a run */
+export interface TickShadowRow {
+    maker: string | null;
+    purpose: TickPurpose;
+    outcome: ShadowOutcome;
+    /** The first warm-up window cycle (from 1) whose output equals the judged cycle's; null unless `found` */
+    cycle: number | null;
+    /** Whether every window cycle the warm-up ran after `cycle` gave that output too; false unless `found` */
+    stays: boolean;
+    /** The window cycles the warm-up ran in whole (fewer than asked where it stopped at its repeat) */
+    ran: number;
+    /** The whole window cycles the warm-up was asked for */
+    asked: number;
+    runs: number;
+}
+
 /** What a ledger counted */
 export interface TickLedgerCount {
     /** By maker (none first, then by name), by purpose, then by loop, in the order of `TICK_PURPOSES` and `TICK_LOOPS`; a row only where a loop ran */
     rows: TickLedgerRow[];
     /** Runs the run memo handed out again, by the maker and purpose that asked: runs asked with no tick simulated */
     memo_hits: { maker: string | null; purpose: TickPurpose; hits: number }[];
+    /** The shadow count: every warm-up run, by maker, purpose and outcome (the runs of a maker and purpose add up to the `warmup_step` rows of it) */
+    shadows: TickShadowRow[];
 }
 
 export type TickLedgerSink = (count: TickLedgerCount) => void;
@@ -103,6 +134,9 @@ interface Scope {
     sink: TickLedgerSink;
     rows: Map<string, TickLedgerRow>;
     memo_hits: Map<string, { maker: string | null; purpose: TickPurpose; hits: number }>;
+    shadows: Map<string, TickShadowRow>;
+    /** The shadows begun and not finished */
+    shadows_open: Set<() => void>;
     /** The loops begun and not ended */
     open: Set<OpenLoop>;
     /** The maker whose work is now running */
@@ -141,7 +175,8 @@ function count(own: Scope, maker: string | null, purpose: TickPurpose, loop: Tic
  */
 export function withTickLedger<T>(sink: TickLedgerSink | undefined, work: () => T): T {
     if (sink === undefined || scope !== undefined) return work();
-    const own: Scope = { sink, rows: new Map(), memo_hits: new Map(), open: new Set(), maker: null, purpose: "no_purpose", claimed: false };
+    const own: Scope = { sink, rows: new Map(), memo_hits: new Map(), shadows: new Map(), shadows_open: new Set(), open: new Set(), maker: null,
+        purpose: "no_purpose", claimed: false };
     scope = own;
     try {
         return work();
@@ -150,6 +185,8 @@ export function withTickLedger<T>(sink: TickLedgerSink | undefined, work: () => 
         // a loop that an error left open is counted as far as it went
         for (const open of own.open) count(own, open.maker, open.purpose, open.loop, open.ticks());
         own.open.clear();
+        // a warm-up whose run an error ended before its judged cycle is counted as one with none
+        for (const finish of [...own.shadows_open]) finish();
         const purposeOrder = (purpose: TickPurpose) => TICK_PURPOSES.indexOf(purpose);
         // the order does not depend on the order the runs were made in: two counts of one generation are the same
         const makerOrder = (a: string | null, b: string | null) => a === b ? 0 : a === null ? -1 : b === null ? 1 : a < b ? -1 : 1;
@@ -157,6 +194,9 @@ export function withTickLedger<T>(sink: TickLedgerSink | undefined, work: () => 
             rows: [...own.rows.values()].sort((a, b) => makerOrder(a.maker, b.maker) || purposeOrder(a.purpose) - purposeOrder(b.purpose)
                 || TICK_LOOPS.indexOf(a.loop) - TICK_LOOPS.indexOf(b.loop)),
             memo_hits: [...own.memo_hits.values()].sort((a, b) => makerOrder(a.maker, b.maker) || purposeOrder(a.purpose) - purposeOrder(b.purpose)),
+            shadows: [...own.shadows.values()].sort((a, b) => makerOrder(a.maker, b.maker) || purposeOrder(a.purpose) - purposeOrder(b.purpose)
+                || SHADOW_OUTCOMES.indexOf(a.outcome) - SHADOW_OUTCOMES.indexOf(b.outcome) || (a.cycle ?? 0) - (b.cycle ?? 0)
+                || Number(a.stays) - Number(b.stays) || a.ran - b.ran || a.asked - b.asked),
         });
     }
 }
@@ -223,4 +263,83 @@ export function countRunMemoHit(): void {
     const row = own.memo_hits.get(key);
     if (row === undefined) own.memo_hits.set(key, { maker: own.maker, purpose: own.purpose, hits: 1 });
     else row.hits++;
+}
+
+/**
+ * Where the output of a window cycle first equals the judged cycle's. `warm_up` holds what each warm-up window cycle gave
+ * (an item count for each output, in one order), `judged` what the judged cycle gave. The cycle counts from 1. Exact: every
+ * output gives the same count. `stays` says that every later warm-up window cycle gave that output too.
+ */
+export function shadowOf(warm_up: readonly (readonly number[])[], judged: readonly number[]): { cycle: number | null; stays: boolean } {
+    const same = (output: readonly number[]) => output.length === judged.length && output.every((items, index) => items === judged[index]);
+    const first = warm_up.findIndex(same);
+    return first === -1 ? { cycle: null, stays: false } : { cycle: first + 1, stays: warm_up.slice(first).every(same) };
+}
+
+/** A warm-up's window cycles, watched: the warm-up step tells it where each one ends */
+export interface WindowCycleWatch {
+    window_cycle_ticks: number;
+    /** The warm-up has run one more whole window cycle */
+    cycle_ended(): void;
+}
+
+/**
+ * The shadow of one run: a record of the output at the end of each warm-up window cycle and at the end of the judged cycle.
+ * It only reads, and it never asks for a run. The run gives it a reader of its outputs; it counts to the maker and purpose
+ * that were set when it began.
+ */
+export interface ShadowWatch {
+    /** For the warm-up step; undefined where the output of a window cycle is not counted (`not_whole`, `no_output`) */
+    warm_up: WindowCycleWatch | undefined;
+    /** A recorder for the step of the recorded run, which reads the output at the end of its first window cycle; undefined as `warm_up` */
+    judged(ticks_run: () => number): { record(): void } | undefined;
+    /** Ends the shadow: counts the run. A shadow not finished when the ledger closes is counted as `not_judged` */
+    finish(): void;
+}
+
+/**
+ * Begins the shadow of a run that warms up for `asked` whole window cycles of `window_cycle_ticks` ticks, where a ledger is
+ * open. `read` gives the items each of the `outputs` output inserters has dropped, in total, in one order. Returns undefined
+ * where no ledger is open: nothing is read or built.
+ */
+export function beginShadow(window_cycle_ticks: number, asked: number, outputs: number, read: () => number[]): ShadowWatch | undefined {
+    const own = scope;
+    if (own === undefined) return undefined;
+    const { maker, purpose } = own;
+    const fixed: ShadowOutcome | undefined = !(Number.isInteger(window_cycle_ticks) && window_cycle_ticks > 0) ? "not_whole" : outputs === 0 ? "no_output" : undefined;
+    // the totals at the start of the warm-up and after each window cycle of it
+    const warm_up: number[][] = fixed === undefined ? [read()] : [];
+    let judged_start: number[] | undefined;
+    let judged: number[] | undefined;
+    let finished = false;
+    const countOutcome = (outcome: ShadowOutcome, cycle: number | null, stays: boolean, ran: number) => {
+        const key = `${makerKey(maker)}/${purpose}/${outcome}/${cycle}/${stays}/${ran}/${asked}`;
+        const row = own.shadows.get(key);
+        if (row === undefined) own.shadows.set(key, { maker, purpose, outcome, cycle, stays, ran, asked, runs: 1 });
+        else row.runs++;
+    };
+    const finish = () => {
+        if (finished) return;
+        finished = true;
+        own.shadows_open.delete(finish);
+        const ran = Math.max(0, warm_up.length - 1);
+        if (fixed !== undefined) return countOutcome(fixed, null, false, 0);
+        if (asked === 0) return countOutcome("no_warm_up", null, false, ran);
+        if (judged === undefined) return countOutcome("not_judged", null, false, ran);
+        const cycles = warm_up.slice(1).map((totals, index) => totals.map((items, output) => items - warm_up[index][output]));
+        const { cycle, stays } = shadowOf(cycles, judged);
+        countOutcome(cycle === null ? "none" : "found", cycle, stays, ran);
+    };
+    own.shadows_open.add(finish);
+    if (fixed !== undefined) return { warm_up: undefined, judged: () => undefined, finish };
+    return {
+        warm_up: { window_cycle_ticks, cycle_ended: () => { warm_up.push(read()); } },
+        judged: ticks_run => {
+            judged_start = read();
+            return { record: () => {
+                if (judged === undefined && ticks_run() >= window_cycle_ticks) judged = read().map((items, output) => items - judged_start![output]);
+            } };
+        },
+        finish,
+    };
 }

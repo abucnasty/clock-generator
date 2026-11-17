@@ -147,6 +147,22 @@ describe('the maker log of a blast job', () => {
         expect(Object.keys(ticks[0]).sort()).toEqual(['event', 'job', 'memo_hits', 'rows']);
     });
 
+    it('has one shadow event, a count by maker, purpose, outcome and cycle that adds up to the runs of the warm-up', () => {
+        const shadow = events.filter(it => it.event === 'shadow');
+        expect(shadow).toHaveLength(1);
+        expect(Object.keys(shadow[0]).sort()).toEqual(['event', 'job', 'rows']);
+        const rows = shadow[0].rows as { maker: string | null; purpose: string; outcome: string; cycle: number | null; stays: boolean; ran: number; asked: number; runs: number }[];
+        for (const row of rows) expect(Object.keys(row).sort()).toEqual(['asked', 'cycle', 'maker', 'outcome', 'purpose', 'ran', 'runs', 'stays']);
+        const runs = (list: { maker: string | null; purpose: string; runs: number }[]) => {
+            const by = new Map<string, number>();
+            for (const row of list) by.set(`${row.maker}/${row.purpose}`, (by.get(`${row.maker}/${row.purpose}`) ?? 0) + row.runs);
+            return [...by].sort(([a], [b]) => (a < b ? -1 : 1));
+        };
+        const ticks = events.find(it => it.event === 'ticks')!.rows as { maker: string | null; purpose: string; loop: string; runs: number }[];
+        expect(runs(rows)).toEqual(runs(ticks.filter(row => row.loop === 'warmup_step')));
+        expect(rows.some(row => row.outcome === 'found')).toBe(true);
+    });
+
     it('counts the planning of the primary clock to a maker of its own, with its seconds', () => {
         const seconds = events.find(it => it.event === 'seconds')!.makers as Record<string, number>;
         expect(Object.keys(seconds)).toContain(PRIMARY_PLANNING_MAKER);
@@ -182,9 +198,9 @@ describe('the maker log with no sink', () => {
         try {
             expect(withMakerLog(undefined, () => [tickLedgerOn(), timedMaker('derived', () => 'made')])).toEqual([false, 'made']);
             expect(clock_reads).toBe(0);
-            // with a sink the ledger is open as long as the log is, and gives its event once
+            // with a sink the ledger is open as long as the log is, and gives its two events once (the ticks and the shadow), then the seconds
             withMakerLog(() => { events++; }, () => expect(tickLedgerOn()).toBe(true));
-            expect(events).toBe(2);
+            expect(events).toBe(3);
         } finally {
             performance.now = now;
         }

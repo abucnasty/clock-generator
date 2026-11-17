@@ -76,6 +76,25 @@ describe("the tick ledger of a generation", () => {
     it("simulates the same ticks with no ledger asked for", () => {
         expect(calls_with_no_ledger).toBe(generation.calls);
     });
+
+    it("gives every warm-up run a shadow or none: for each maker and purpose the shadows are the runs of the warm-up loop", () => {
+        const runsOf = (rows: { maker: string | null; purpose: string; runs: number }[]) => {
+            const runs = new Map<string, number>();
+            for (const row of rows) runs.set(`${row.maker}/${row.purpose}`, (runs.get(`${row.maker}/${row.purpose}`) ?? 0) + row.runs);
+            return [...runs].sort(([a], [b]) => a < b ? -1 : 1);
+        };
+        const warmups = runsOf(generation.count.rows.filter(row => row.loop === "warmup_step"));
+        expect(warmups.length).toBeGreaterThan(0);
+        expect(runsOf(generation.count.shadows)).toEqual(warmups);
+        const found = generation.count.shadows.filter(row => row.outcome === "found");
+        expect(found.length).toBeGreaterThan(0);
+        for (const row of generation.count.shadows) {
+            expect(row.ran, JSON.stringify(row)).toBeLessThanOrEqual(row.asked);
+            if (row.outcome === "found") expect(row.cycle!, JSON.stringify(row)).toBeGreaterThanOrEqual(1);
+            if (row.outcome === "found") expect(row.cycle!, JSON.stringify(row)).toBeLessThanOrEqual(row.ran);
+            else expect(row.cycle).toBeNull();
+        }
+    });
 });
 
 // the maker log and its repeat check run a clock again, only where the log asks for them

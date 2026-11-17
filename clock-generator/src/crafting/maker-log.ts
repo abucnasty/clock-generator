@@ -15,7 +15,7 @@ import type { SharedLanesForLog } from "./shared-lane-log";
 import { withTickLedger, withTickMaker, type TickLedgerCount } from "./tick-ledger";
 
 /** The format of the log, on the `job` event: a field's name and meaning do not change, a new field, a field less or a changed meaning is a new number */
-export const MAKER_LOG_FORMAT = "maker-log-3";
+export const MAKER_LOG_FORMAT = "maker-log-4";
 
 /** A reason as a code with numbers: the fields a code has are those `MAKER_REASON_CODES` lists for it */
 export interface MakerReason {
@@ -90,7 +90,7 @@ export interface MakerLogEvent {
 
 /** The events, in the order a log lists them (the order they are made in within a kind) */
 export const MAKER_LOG_EVENTS = ["job", "job_lanes", "clock", "windows", "lane_facts", "missed_swings", "timetable", "ledger", "repeat_check", "composition", "part",
-    "not_made", "ticks", "seconds"] as const;
+    "not_made", "ticks", "shadow", "seconds"] as const;
 
 export type MakerLogSink = (event: MakerLogEvent) => void;
 
@@ -101,6 +101,15 @@ export type MakerLogSink = (event: MakerLogEvent) => void;
 export function ticksEventOf(count: TickLedgerCount): MakerLogEvent {
     return { event: "ticks", rows: count.rows.map(row => ({ maker: row.maker, purpose: row.purpose, stage: row.stage, loop: row.loop, runs: row.runs, ticks: row.ticks })),
         memo_hits: count.memo_hits.map(hit => ({ maker: hit.maker, purpose: hit.purpose, hits: hit.hits })) };
+}
+
+/**
+ * The `shadow` event: what each warm-up gave, read against the judged cycle (`tick-ledger.ts`). One event a job, with a row for each
+ * maker, purpose and outcome, and cycle: a count of warm-up runs, never a line for a run.
+ */
+export function shadowEventOf(count: TickLedgerCount): MakerLogEvent {
+    return { event: "shadow", rows: count.shadows.map(row => ({ maker: row.maker, purpose: row.purpose, outcome: row.outcome, cycle: row.cycle, stays: row.stays,
+        ran: row.ran, asked: row.asked, runs: row.runs })) };
 }
 
 /** The seconds a log counts, by what they were spent on */
@@ -160,8 +169,8 @@ export function withMakerLog<T>(sink: MakerLogSink | undefined, work: () => T, o
         repeat_check: options.repeat_check === true };
     scope = own;
     try {
-        // the ledger of the ticks is open as long as the log is, and gives its event before the seconds
-        return withTickLedger(count => sink(ticksEventOf(count)), work);
+        // the ledger of the ticks is open as long as the log is, and gives its events before the seconds
+        return withTickLedger(count => { sink(ticksEventOf(count)); sink(shadowEventOf(count)); }, work);
     } finally {
         scope = undefined;
         const round = (seconds: number) => Math.round(seconds * 1000) / 1000;

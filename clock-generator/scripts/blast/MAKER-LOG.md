@@ -22,10 +22,11 @@ Words: a **maker** is one of the generator's slots that makes a clock (`ClockAlt
 A **part** is a clock, or a way of the grouped hands rule, that Coordinated Sources can take windows from. A **composition** is a clock
 Coordinated Sources makes by taking each source's windows from one part. A **reason** is a code with numbers, never a sentence.
 
-## Format `maker-log-3`
+## Format `maker-log-4`
 
 A field's name and meaning do not change. A new field, a field less or a changed meaning is a new format number.
-`maker-log-3` adds the event `ticks` and one key of `seconds.makers`, `primary-planning`. The planning of the primary clock was
+`maker-log-4` adds the event `shadow`. The events of `maker-log-3` are as they were.
+`maker-log-3` added the event `ticks` and one key of `seconds.makers`, `primary-planning`. The planning of the primary clock was
 made before every maker, so no seconds were counted to it. The events of `maker-log-2` are as they were.
 `maker-log-2` added the events of the lanes the copies share (`job_lanes`, `lane_facts` and `missed_swings`), the `timetable` and the
 `ledger` of each listed clock, the `repeat_check`, and two fields of `seconds`. The events of `maker-log-1` are as they were.
@@ -39,7 +40,7 @@ Only `seconds` changes from one run to the next: without that line, two logs of 
 The job and its copies. `shared_lanes`: the lanes the check of the shared lanes runs with the takers of the copies together. `unknown_end_lanes`: lanes of unknown end that the check runs as one copy alone.
 
 ```json
-{"job":"config-FLYING_ROBOT_FRAME_80","group":"config","name":"FLYING_ROBOT_FRAME_80","event":"job","format":"maker-log-3","recipe":"flying-robot-frame","copies":12,"copy_offset":{"x":6,"y":0},"shared_lanes":[{"belt_id":5,"lane":1,"item":"electronic-circuit"}],"unknown_end_lanes":[]}
+{"job":"config-FLYING_ROBOT_FRAME_80","group":"config","name":"FLYING_ROBOT_FRAME_80","event":"job","format":"maker-log-4","recipe":"flying-robot-frame","copies":12,"copy_offset":{"x":6,"y":0},"shared_lanes":[{"belt_id":5,"lane":1,"item":"electronic-circuit"}],"unknown_end_lanes":[]}
 ```
 
 ### `job_lanes`: one a job whose copies share a lane
@@ -268,6 +269,30 @@ The ticks of all the rows add up to every tick the generation simulated. The row
 ```
 
 The example is shortened: five rows.
+
+### `shadow`: one a job
+
+Each run warms up before the cycle that is judged. The shadow reads that warm-up against the judged cycle: the first window cycle of the recorded run.
+For each window cycle of the warm-up, and for the judged cycle, it counts the items that each output inserter dropped in it. The two are equal when every output gave the same count.
+The warm-up is not changed, and no window cycle of it is skipped. The shadow gives the window cycle in which the warm-up first gave the judged cycle's output.
+A row is a count of warm-up runs, not a line for a run. The rows are in the order of `maker` (null first, then by name), `purpose`, `outcome` and `cycle`.
+The runs of the rows of one `maker` and `purpose` add up to the `runs` of its `warmup_step` rows in `ticks`.
+
+| Field | Meaning |
+| --- | --- |
+| `maker`, `purpose` | as in `ticks` |
+| `outcome` | `found`: a window cycle of the warm-up gave the judged cycle's output. `none`: no window cycle the warm-up ran did. `no_warm_up`: the warm-up was asked for no whole window cycle. `not_judged`: the run gave no judged cycle (it was shorter than a window cycle, or an error ended it). `not_whole`: the window cycle is not a whole number of ticks. `no_output`: the build has no output inserter |
+| `cycle` | the first window cycle of the warm-up that gave the judged cycle's output, counted from 1; null unless `outcome` is `found` |
+| `stays` | true when every later window cycle that the warm-up ran gave that output too; false unless `outcome` is `found` |
+| `ran` | the whole window cycles the warm-up ran. A warm-up that stops at its repeat runs fewer than it was asked for |
+| `asked` | the whole window cycles the warm-up was asked for |
+| `runs` | the warm-up runs with these values |
+
+```json
+{"job":"config-ACCUMULATOR_320","event":"shadow","rows":[{"maker":"derived","purpose":"planning","outcome":"found","cycle":3,"stays":false,"ran":10,"asked":10,"runs":1},{"maker":"derived","purpose":"first_span","outcome":"found","cycle":5,"stays":false,"ran":7,"asked":10,"runs":1},{"maker":"derived","purpose":"taker_order","outcome":"found","cycle":6,"stays":true,"ran":10,"asked":10,"runs":14},{"maker":"fractional","purpose":"planning","outcome":"none","cycle":null,"stays":false,"ran":10,"asked":10,"runs":2}]}
+```
+
+The example is shortened: four rows.
 
 ### `seconds`: the seconds of the job
 
