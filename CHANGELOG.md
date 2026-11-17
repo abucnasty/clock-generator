@@ -15,6 +15,9 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - generation: Coordinated Sources now checks its clock with every copy while it chooses
 - simulation: an output belt can now be stated for builds with several output inserters
 
+### Fixed
+- simulation: machines now finish a craft and start the next in the game's tick
+
 ## [0.29.2] - 2026-11-16
 
 ### Fixed
