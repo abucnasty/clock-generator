@@ -2,6 +2,7 @@ import type { BuildRun, RunOptions } from "./unclocked-run";
 import type { Config } from "../../config";
 import type { DisturbanceTrialAssessment } from "../trial";
 import type { CopiesTrialVerdict } from "../shared-lane-trial";
+import type { SharedLaneJudgement } from "../shared-lane-verdict";
 
 /**
  * A run shorter than this is simulated again rather than kept. A run of 100,000 ticks takes seconds; a shorter one
@@ -120,7 +121,7 @@ export class RunMemo {
     loss_hits = 0;
 
     /** What the trials on the copies that share a lane found about a clock (see `copiesTrial`), by what they are a function of */
-    private readonly copies_trials = new Map<string, CopiesTrialVerdict>();
+    private readonly copies_trials = new Map<string, CopiesTrialVerdict | null>();
     /** Verdicts of the trials on the copies handed out again */
     copies_trial_hits = 0;
 
@@ -128,6 +129,11 @@ export class RunMemo {
     get copies_trials_made(): number {
         return this.copies_trials.size;
     }
+
+    /** What the check of the lanes the copies share found about a clock (see `sharedLaneCheck`), by what it is a function of */
+    private readonly shared_lane_checks = new Map<string, SharedLaneJudgement>();
+    /** Checks of the shared lanes handed out again */
+    shared_lane_check_hits = 0;
 
     /** What the checks of a set of windows found (see `judgement`), by what they are a function of */
     private readonly judgements = new Map<string, string | null>();
@@ -168,17 +174,32 @@ export class RunMemo {
 
     /**
      * The verdict of the trials of a clock on the copies that share a lane (shared-lane-trial.ts): the one kept, or the one
-     * `tried` makes. The alternatives that list one clock more than once try it once.
+     * `tried` makes (null where none is made). The alternatives that list one clock more than once, and a maker that judged the
+     * clock before it is listed, try it once. Trials that stop with an error keep nothing.
      */
-    copiesTrial(key: string, tried: () => CopiesTrialVerdict): CopiesTrialVerdict {
-        const kept = this.copies_trials.get(key);
-        if (kept !== undefined) {
+    copiesTrial(key: string, tried: () => CopiesTrialVerdict | null): CopiesTrialVerdict | null {
+        if (this.copies_trials.has(key)) {
             this.copies_trial_hits++;
-            return kept;
+            return this.copies_trials.get(key)!;
         }
         const verdict = tried();
         this.copies_trials.set(key, verdict);
         return verdict;
+    }
+
+    /**
+     * The check of the lanes a clock's copies share (shared-lane-verdict.ts): the one kept, or the one `judged` makes. A check that
+     * stops with an error keeps nothing.
+     */
+    sharedLaneCheck(key: string, judged: () => SharedLaneJudgement): SharedLaneJudgement {
+        const kept = this.shared_lane_checks.get(key);
+        if (kept !== undefined) {
+            this.shared_lane_check_hits++;
+            return kept;
+        }
+        const judgement = judged();
+        this.shared_lane_checks.set(key, judgement);
+        return judgement;
     }
 
     /**

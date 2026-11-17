@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sharedLaneLossesOf } from "./alternatives";
+import { sharedLaneLossesOf } from "./copies-verdict";
 import { SecondaryPlanningInvariantError } from "./round-robin-polling-primitive-policy";
 import type { SharedLaneJudgement } from "./shared-lane-verdict";
 import { ClockAssessment, clockVerdictOf } from "./trial";
