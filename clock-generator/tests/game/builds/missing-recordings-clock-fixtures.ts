@@ -1,4 +1,3 @@
-import path from "path";
 import {Config} from "../../../src/config";
 import {ConfigPaths} from "../../../src/config/config-paths";
 
@@ -43,7 +42,6 @@ export interface MissingRecordingCase {
 
 const scaffoldOf = (key: keyof typeof ConfigPaths) => ConfigPaths[key].replace(/\.json$/, ".scaffold");
 export const scaffoldFile = (item: MissingRecordingCase) => scaffoldOf(item.config);
-export const sampleFolder = (item: MissingRecordingCase) => path.dirname(ConfigPaths[item.config]);
 
 export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
     {

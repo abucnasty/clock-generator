@@ -809,7 +809,7 @@ Recorded at Factorio 2.1.24, all seven holding their target on every copy and re
   losses (2,900 and 2,892 of 2,880 after), 12 to 15 of its window cycles short of 32 by a few items, so it is judged on the stretch and not on each window cycle. The staged
   recording starts before the recyclers have a recipe, so its copies are the final machines taken from the west, two to a copy.
 - `AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER` (one copy of the job's nine) cannot be recorded from the staged start: the staged start fills the belts under the
-  pickups before it places the cell's inserters, and the only inserters that put anything on this build's belt are the foundries' output inserters, which are placed
+  pickups before it places the build's inserters, and the only inserters that put anything on this build's belt are the foundries' output inserters, which are placed
   with the clock; the lanes never saturate ("The belts did not saturate", 2026-11-17, Factorio 2.1.24). It waits for a start from ruling 60's state.
 
 ```bash
