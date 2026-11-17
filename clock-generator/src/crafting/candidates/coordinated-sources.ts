@@ -13,6 +13,7 @@ import { partEvent, partKey, type CoordinatedSourcesInput, type CoordinatedSourc
 import type { EnableControl, SourceControl } from "../strategy-catalog";
 import { costKey } from "../rank";
 import { CodedError, emitMakerLog, makerLogOn, reasonOf, type MakerReason } from "../maker-log";
+import { verdictWithCopies, type VerdictWithCopies } from "../copies-verdict";
 
 /**
  * The per-branch clock (DESIGN D7, PR 18): each part of the build gets the windows of the clock that fits it, all on one shared
@@ -185,6 +186,8 @@ interface Trial {
     loss?: DisturbanceTrialVerdict | null;
     /** Where it does not hold a tick either way (`marginFailureOf`), or null where it does */
     margin?: MarginFailure | null;
+    /** Its verdict with the copies (`verdictWithCopies`), null where it does not hold as a whole; undefined until asked */
+    with_copies?: VerdictWithCopies | null;
 }
 
 /** How a part is shown in the log */
@@ -433,42 +436,83 @@ export function coordinatedSourcesClock(
             reason }));
     };
 
+    // the verdict with the copies of a composition that holds as a whole, made once a composition, as the listing judges the clock it
+    // lists (copies-verdict.ts): on the build's config with the clock's output swings, the clock's own windows and its expected items,
+    // so that the run memo's keys are the listing's and the listing's judgement of the clock made is no second run
+    const copiesVerdictOf = (trial: Trial): VerdictWithCopies | null => {
+        if (trial.with_copies === undefined) {
+            trial.with_copies = !holdsOf(trial) ? null : verdictWithCopies({
+                config: { ...config, overrides: { ...config.overrides, terminal_swing_count: trial.result.used_terminal_swing_count } },
+                windows: trial.result.clock_windows, window_cycle_ticks: shared_ticks, expected_output_items: trial.result.stability_check.expected_output_items,
+            }, () => lossOf(trial)?.survives === true, config.overrides?.disturbance_trials_on_copies !== false, "Coordinated Sources", quiet);
+        }
+        return trial.with_copies;
+    };
+    const holdsWithCopies = (trial: Trial): boolean => copiesVerdictOf(trial)?.holds === true;
+    const copiesReasonOf = (trial: Trial): MakerReason => reasonOf("does_not_hold_with_copies",
+        { check: (copiesVerdictOf(trial)?.lane_check.losses.length ?? 0) > 0 ? "shared_lanes" : "loss_trials" });
+
     const recommended_key = partKey({ window_cycle_ticks: shared_ticks, windows: tiledWindows(recommended.windows, recommended.window_cycle_ticks, shared_ticks) });
-    const judge: LocalChoiceJudge = {
-        wakeUpsOf: choice => {
-            const trial = trialOfChoice(choice);
-            if (!trial.holds_to_long_run) compositionEvent(choice, trial, "dropped", reasonOf("does_not_hold", { stage: "long_run" }));
-            return trial.holds_to_long_run ? trial.wake_ups : null;
-        },
-        // the current choice where it holds as a whole; another where it also holds a tick either way and gets back from every loss (on a
-        // build with a deadlock risk the losses do not decide), else where its losses could not be tried
-        takes: (choice, current) => {
-            const trial = trialOfChoice(choice);
-            if (!holdsOf(trial)) { compositionEvent(choice, trial, "dropped", reasonOf("does_not_hold", { stage: "whole_check" })); return "passed"; }
-            if (current) return "taken";
-            const margin = marginOf(trial);
-            if (margin !== null) { compositionEvent(choice, trial, "dropped", marginReasonOf(margin)); return "passed"; }
-            const loss = deadlock_risk ? undefined : lossOf(trial);
-            if (deadlock_risk || loss?.survives === true) { compositionEvent(choice, trial, "taken", null); return "taken"; }
-            compositionEvent(choice, trial, loss === null ? "untried" : "dropped", reasonOf("loss_trial_one_copy", { tried: loss !== null }));
-            return loss === null ? "untried" : "passed";
-        },
-        refusal: choice => {
-            const { windows, left_open } = compose(choice);
-            if (partKey({ window_cycle_ticks: shared_ticks, windows }) === recommended_key) return "the local choice keeps the recommended clock";
-            const margin = marginOf(trialOf(windows, left_open));
-            if (margin !== null) compositionEvent(choice, trialOf(windows, left_open), "dropped", marginReasonOf(margin), true);
-            return margin === null ? null : `the composed clock: ${marginText(margin)}`;
-        },
-        refusalReason: choice => {
-            const { windows, left_open } = compose(choice);
-            if (partKey({ window_cycle_ticks: shared_ticks, windows }) === recommended_key) return reasonOf("keeps_recommended_clock");
-            const margin = marginOf(trialOf(windows, left_open));
-            return margin === null ? null : marginReasonOf(margin);
-        },
+    // the judge of the local choice; with the copies, a composition is taken, or kept as the current choice, only where it also holds with
+    // the copies, and a clock that does not is no result. A composition whose loss trial on one copy fails is passed as before, unjudged.
+    const judgeOf = (with_copies: boolean): LocalChoiceJudge => {
+        const judged = (choice: ReadonlyMap<string, number>, trial: Trial): boolean => {
+            if (!with_copies || holdsWithCopies(trial)) return true;
+            compositionEvent(choice, trial, "dropped", copiesReasonOf(trial));
+            return false;
+        };
+        return {
+            wakeUpsOf: choice => {
+                const trial = trialOfChoice(choice);
+                if (!trial.holds_to_long_run) compositionEvent(choice, trial, "dropped", reasonOf("does_not_hold", { stage: "long_run" }));
+                return trial.holds_to_long_run ? trial.wake_ups : null;
+            },
+            // the current choice where it holds as a whole; another where it also holds a tick either way and gets back from every loss (on a
+            // build with a deadlock risk the losses do not decide), else where its losses could not be tried
+            takes: (choice, current) => {
+                const trial = trialOfChoice(choice);
+                if (!holdsOf(trial)) { compositionEvent(choice, trial, "dropped", reasonOf("does_not_hold", { stage: "whole_check" })); return "passed"; }
+                if (current) return judged(choice, trial) ? "taken" : "passed";
+                const margin = marginOf(trial);
+                if (margin !== null) { compositionEvent(choice, trial, "dropped", marginReasonOf(margin)); return "passed"; }
+                const loss = deadlock_risk ? undefined : lossOf(trial);
+                if (deadlock_risk || loss?.survives === true) {
+                    if (!judged(choice, trial)) return "passed";
+                    compositionEvent(choice, trial, "taken", null);
+                    return "taken";
+                }
+                if (loss === null && !judged(choice, trial)) return "passed";
+                compositionEvent(choice, trial, loss === null ? "untried" : "dropped", reasonOf("loss_trial_one_copy", { tried: loss !== null }));
+                return loss === null ? "untried" : "passed";
+            },
+            refusal: choice => {
+                const { windows, left_open } = compose(choice);
+                if (partKey({ window_cycle_ticks: shared_ticks, windows }) === recommended_key) return "the local choice keeps the recommended clock";
+                const trial = trialOf(windows, left_open);
+                const margin = marginOf(trial);
+                if (margin !== null) compositionEvent(choice, trial, "dropped", marginReasonOf(margin), true);
+                if (margin === null && with_copies && !holdsWithCopies(trial)) return "the composed clock does not hold with the copies";
+                return margin === null ? null : `the composed clock: ${marginText(margin)}`;
+            },
+            refusalReason: choice => {
+                const { windows, left_open } = compose(choice);
+                if (partKey({ window_cycle_ticks: shared_ticks, windows }) === recommended_key) return reasonOf("keeps_recommended_clock");
+                const trial = trialOf(windows, left_open);
+                const margin = marginOf(trial);
+                if (margin === null && with_copies && !holdsWithCopies(trial)) return copiesReasonOf(trial);
+                return margin === null ? null : marginReasonOf(margin);
+            },
+        };
     };
     const starts = localChoiceStarts(inserters, groups, recommended, candidates, shared_ticks);
-    const { start, choice: current } = localChoiceFromStarts(groups, starts, judge, logger);
+    // the end of the local choice on one copy is judged with the copies; where it does not hold, the local choice runs again with them
+    const endHolds = (choice: ReadonlyMap<string, number>): boolean => {
+        const trial = trialOfChoice(choice);
+        if (holdsWithCopies(trial)) return true;
+        compositionEvent(choice, trial, "dropped", copiesReasonOf(trial));
+        return false;
+    };
+    const { start, choice: current } = localChoiceWithCopies(groups, starts, { one_copy: judgeOf(false), with_copies: judgeOf(true) }, endHolds, logger);
     const { windows, left_open } = compose(current);
     const map = new Map(Object.entries(windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     logger.log(`Coordinated Sources: ${starts.length > 1 ? `from ${partName(start.part)}, ` : ""}`
@@ -601,6 +645,44 @@ export function localChoiceFromStarts(
     }
     if (best === undefined) refuse(reason ?? "the local choice keeps the recommended clock", reason_code ?? reasonOf("keeps_recommended_clock"));
     return { start: best.start, choice: best.choice };
+}
+
+/**
+ * The local choice with the copies, end first: the local choice from every start on one copy (`localChoiceFromStarts` with
+ * `judges.one_copy`), then its end judged with the copies (`endHolds`). The end is the clock it makes; where every start is refused,
+ * the end the recommended clock's start was refused on (the recommended clock itself, or a composition that fails its margin). Where
+ * the end holds with the copies, the outcome of the first local choice stands, the clock or the refusal. Where it does not, the local
+ * choice runs again from the same starts with `judges.with_copies`, which takes, or keeps as the current choice, only a composition that
+ * holds with the copies, and its outcome is the result.
+ */
+export function localChoiceWithCopies(
+    groups: readonly PartGroup[],
+    starts: readonly LocalChoiceStart[],
+    judges: { one_copy: LocalChoiceJudge; with_copies: LocalChoiceJudge },
+    endHolds: (choice: ReadonlyMap<string, number>) => boolean,
+    logger: Logger,
+): { start: LocalChoiceStart; choice: Map<string, number> } {
+    let first_refused: Map<string, number> | undefined;
+    const one_copy: LocalChoiceJudge = { ...judges.one_copy, refusal: choice => {
+        const refusal = judges.one_copy.refusal(choice);
+        if (refusal !== null) first_refused ??= new Map(choice);
+        return refusal;
+    } };
+    let made: { start: LocalChoiceStart; choice: Map<string, number> } | undefined;
+    let refused: unknown;
+    try {
+        made = localChoiceFromStarts(groups, starts, one_copy, logger);
+    } catch (error) {
+        if (!(error instanceof CoordinatedSourcesNotApplicable)) throw error;
+        refused = error;
+    }
+    const end = made?.choice ?? first_refused;
+    if (end === undefined || endHolds(end)) {
+        if (made === undefined) throw refused;
+        return made;
+    }
+    logger.log("Coordinated Sources: the clock does not hold with the copies; the local choice runs again with them");
+    return localChoiceFromStarts(groups, starts, judges.with_copies, logger);
 }
 
 /** The inserters a part leaves always enabled, with its reasons */

@@ -76,6 +76,18 @@ describe("the per-branch clock of the military science build", () => {
         expect(not_made).toEqual([]);
     });
 
+    it("is judged with the copies once: the listing's judgement of the clock made is the maker's", () => {
+        let hits: number[] = [];
+        const { run } = withRunMemo(() => {
+            const composed_here = composed(made.config, made.input, made.signatures);
+            const memo = currentRunMemo()!;
+            hits = [memo.shared_lane_check_hits, memo.copies_trial_hits];
+            return composed_here;
+        });
+        expect(run?.alternatives.map(it => it.id)).toEqual(["coordinated_sources"]);
+        expect(hits).toEqual([1, 1]);
+    });
+
     it("is in not_made where it is the same clock as one made before it", () => {
         const first = composed(made.config, made.input, made.signatures).run!;
         const { run, not_made } = composed(made.config, made.input, [...made.signatures, first.signature]);

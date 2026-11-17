@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CoordinatedSourcesNotApplicable, localChoiceFromStarts, localChoiceStarts, partGroups, sourceControlsOf, tiledWindows, upstreamOrder,
+import { CoordinatedSourcesNotApplicable, localChoiceFromStarts, localChoiceStarts, localChoiceWithCopies, partGroups, sourceControlsOf, tiledWindows, upstreamOrder,
     type GroupedInserter, type LocalChoiceJudge } from "./coordinated-sources";
 import { EntityRouteError } from "../enable-control-router";
 import { collectingParts, offerPart, partKey, partsWanted, coordinatedSourcesInputOf, type CoordinatedSourcesPart } from "./coordinated-sources-parts";
@@ -120,6 +120,63 @@ describe("the starts of the local choice", () => {
         expect(found.start.part.name).toBe("recommended");
         expect(Object.fromEntries(found.choice)).toEqual({ "machine:2": 2, "machine:1": 1, "belt:1": 0 });
         logged.length = 0;
+    });
+});
+
+describe("the local choice with the copies, end first", () => {
+    const clock = (id: string, wake_ups_per_minute: number, at: number) => part(id, 20, { "inserter:1": [window(0, 4)], "inserter:2": [window(at, at + 1)],
+        "inserter:3": [window(at, at + 1)], "inserter:4": [window(at - 5, at - 5)] }, { alternative_id: id, verdict: "stable", wake_ups_per_minute });
+    const recommended = clock("recommended", 40, 5);
+    const other = clock("other", 90, 9);
+    const tied = clock("tied", 40, 7);
+    const all = partGroups(CHAIN, [recommended, tied, other], 20);
+    // the recommended clock's start alone: no other clock ties it
+    const starts = localChoiceStarts(CHAIN, all, recommended, [other], 20);
+    const keyOf = (choice: ReadonlyMap<string, number>) => `${choice.get("machine:2")},${choice.get("machine:1")}`;
+    /** A judge by the wakeups of each choice (one not in the table does not hold); with the copies, the choices of `lose` do not hold */
+    const judge = (wake_ups: Record<string, number>, lose: readonly string[] = []): LocalChoiceJudge => {
+        const of = (choice: ReadonlyMap<string, number>) => wake_ups[keyOf(choice)] ?? null;
+        return {
+            wakeUpsOf: of,
+            takes: choice => of(choice) === null || lose.includes(keyOf(choice)) ? "passed" : "taken",
+            refusal: choice => [...choice.values()].every(it => it === 0) ? "the local choice keeps the recommended clock"
+                : lose.includes(keyOf(choice)) ? "the composed clock does not hold with the copies" : null,
+        };
+    };
+    const never: LocalChoiceJudge = { wakeUpsOf: () => { throw new Error("judged with the copies"); }, takes: () => "passed", refusal: () => null };
+    const logger = { log: () => { }, warn: () => { }, error: () => { }, debug: () => { } };
+    // on one copy, machine:2 takes the other clock (20); with the copies that clock does not hold, and the tied one (30) does
+    const wake_ups = { "0,0": 40, "1,0": 30, "2,0": 20 };
+
+    it("keep the clock of the local choice on one copy where it holds with the copies, and run no second local choice", () => {
+        const ends: string[] = [];
+        const found = localChoiceWithCopies(all, starts, { one_copy: judge(wake_ups), with_copies: never }, choice => { ends.push(keyOf(choice)); return true; }, logger);
+        expect(Object.fromEntries(found.choice)).toEqual({ "machine:2": 2, "machine:1": 0, "belt:1": 0 });
+        expect(ends).toEqual(["2,0"]);
+    });
+
+    it("run the local choice again with the copies where its end does not hold with them, and give its clock", () => {
+        const found = localChoiceWithCopies(all, starts, { one_copy: judge(wake_ups), with_copies: judge(wake_ups, ["2,0"]) }, choice => keyOf(choice) !== "2,0", logger);
+        expect(Object.fromEntries(found.choice)).toEqual({ "machine:2": 1, "machine:1": 0, "belt:1": 0 });
+    });
+
+    it("judge the recommended clock where the local choice keeps it, and keep the refusal where it holds with the copies", () => {
+        const ends: string[] = [];
+        const kept = { "0,0": 40, "1,0": 50 };
+        expect(() => localChoiceWithCopies(all, starts, { one_copy: judge(kept), with_copies: never }, choice => { ends.push(keyOf(choice)); return true; }, logger))
+            .toThrow(new CoordinatedSourcesNotApplicable("the local choice keeps the recommended clock"));
+        expect(ends).toEqual(["0,0"]);
+    });
+
+    it("run the local choice again where the recommended clock it keeps does not hold with the copies", () => {
+        const kept = { "0,0": 40, "1,0": 50 };
+        const found = localChoiceWithCopies(all, starts, { one_copy: judge(kept), with_copies: judge(kept, ["0,0"]) }, choice => keyOf(choice) !== "0,0", logger);
+        expect(Object.fromEntries(found.choice)).toEqual({ "machine:2": 1, "machine:1": 0, "belt:1": 0 });
+    });
+
+    it("give the refusal of the local choice with the copies where no composition holds with them", () => {
+        expect(() => localChoiceWithCopies(all, starts, { one_copy: judge(wake_ups), with_copies: judge(wake_ups, ["0,0", "1,0", "2,0"]) },
+            choice => keyOf(choice) === "none", logger)).toThrow(new CoordinatedSourcesNotApplicable("the local choice keeps the recommended clock"));
     });
 });
 
