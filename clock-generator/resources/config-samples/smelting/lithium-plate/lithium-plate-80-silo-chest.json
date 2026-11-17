@@ -334,5 +334,39 @@
       "item_filter": [],
       "remove_unfiltered_items": true
     }
-  ]
+  ],
+  "output_belt": {
+    "side_belt": { "lane": "right", "tiles": 3 },
+    "stretch_groups": [[1, 3], [2, 4]],
+    "stretches": [
+      {
+        "points": [
+          { "drop": 1, "lane": "right" },
+          { "tiles": 10, "drop": 3, "lane": "right" },
+          { "tiles": 4, "side_load": [5], "lane": "right", "layout": "side-straight" },
+          { "tiles": 10, "right_curves": 1 }
+        ]
+      },
+      {
+        "points": [
+          { "drop": 2, "lane": "left" },
+          { "tiles": 10, "drop": 4, "lane": "left" },
+          { "tiles": 4, "side_load": [6], "lane": "left", "layout": "side-straight" },
+          { "tiles": 10, "left_curves": 1 }
+        ]
+      },
+      {
+        "points": [
+          { "side_load": { "stretch": 1 }, "lane": "left", "layout": "side-entrance" },
+          { "tiles": 6, "lane_end": { "kind": "infinite" } }
+        ]
+      },
+      {
+        "points": [
+          { "side_load": { "stretch": 2 }, "lane": "right", "layout": "side-entrance" },
+          { "tiles": 6, "lane_end": { "kind": "infinite" } }
+        ]
+      }
+    ]
+  }
 }

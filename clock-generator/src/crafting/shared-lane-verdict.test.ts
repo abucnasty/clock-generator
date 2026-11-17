@@ -400,6 +400,15 @@ describe("the output belt of a build of one copy that shares no lane, on the lit
         }
     });
 
+    it("states the sample's own output belt as the test config states it, and judges the sample as loaded as the game does", () => {
+        expect(sample.output_belt).toEqual(lithiumRows(sample, "as built").output_belt);
+        const short = judged(sample, "short_in_game");
+        expect(short.simulated).toBe(true);
+        expect(short.losses.length).toBeGreaterThan(0);
+        expect(short.losses.every(loss => loss.on_output_belt === true)).toBe(true);
+        expect(judged(sample, "holds_in_game")).toMatchObject({ losses: [], simulated: true });
+    });
+
     it("fails the clock short in the game with furnaces 7 and 8 off the lines, as the game", () => {
         expect(judged(lithiumRows(sample, "no side loads"), "short_in_game").losses.length).toBeGreaterThan(0);
     });
@@ -423,9 +432,10 @@ describe("the output belt of a build of one copy that shares no lane, on the lit
     });
 
     it("does not run a build of one copy with no output belt and no lane shared, and the result says it was checked on one copy", () => {
-        const judgement = judged(sample, "short_in_game");
+        const no_belt = { ...sample, output_belt: undefined };
+        const judgement = judged(no_belt, "short_in_game");
         expect(judgement).toEqual({ losses: [], fast_check_passes: true, simulated: false, longer_run: false, lanes: [] });
-        expect(checkedLanesOf({ config: sample, holds: true, judged: judgement, window_cycle_ticks: 4320, copies_trial: null, fewer: null })!.line)
+        expect(checkedLanesOf({ config: no_belt, holds: true, judged: judgement, window_cycle_ticks: 4320, copies_trial: null, fewer: null })!.line)
             .toMatchObject({ run_with_copies: false, sentence: "Checked on one copy. No lane the copies take from is run with every copy on it. On the output belt, only the sum of the drops is checked." });
     });
 

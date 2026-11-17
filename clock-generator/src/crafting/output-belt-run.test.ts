@@ -192,6 +192,14 @@ describe("the output belt of two lines, with three output inserters on each, on 
         }
     });
 
+    it("is stated by the sample as loaded, with no problem, and the sample's run is the same as the test config's", () => {
+        const outputs = sample.inserters.filter(inserter => inserter.source.type === "machine" && inserter.sink.type === "belt").length;
+        expect(outputBeltProblems(sample.output_belt!, sample.setpoint.copy_offset, outputs)).toEqual([]);
+        expect(sample.output_belt).toEqual(lithiumRows(sample, "as built").output_belt);
+        expect(fallsShort(platesByWindowCycle(sample, short_in_game), short_in_game)).toBe(true);
+        expect(holds(platesByWindowCycle(sample, holds_in_game), holds_in_game)).toBe(true);
+    });
+
     it("as built: the clock short in the game falls short, the clock that holds in the game makes its plates in every window cycle", () => {
         expect(fallsShort(platesByWindowCycle(lithiumRows(sample, "as built"), short_in_game), short_in_game)).toBe(true);
         expect(holds(platesByWindowCycle(lithiumRows(sample, "as built"), holds_in_game), holds_in_game)).toBe(true);
@@ -206,6 +214,6 @@ describe("the output belt of two lines, with three output inserters on each, on 
     });
 
     it("without the output belt, each hand on a tile of its own, the clock short in the game holds", () => {
-        expect(holds(platesByWindowCycle(sample, short_in_game), short_in_game)).toBe(true);
+        expect(holds(platesByWindowCycle({ ...sample, output_belt: undefined }, short_in_game), short_in_game)).toBe(true);
     });
 });
