@@ -79,8 +79,8 @@ describe("the output belt in the run of the copies", () => {
         // the drop slot of the first copy's hand holds the key, so the belt's key (and the state of the run) holds it
         const lane = new BeltLane({ ingredient_name: "automation-science-pack", stack_size: 4 }, BeltSpeed.TURBO_TRANSPORT_BELT);
         const twin = new BeltLane({ ingredient_name: "automation-science-pack", stack_size: 4 }, BeltSpeed.TURBO_TRANSPORT_BELT);
-        lane.seedDrop("inserter:2", new OutputBeltDrop(one, 1, true, () => 0, 4, BeltSpeed.TURBO_TRANSPORT_BELT));
-        twin.seedDrop("inserter:2", new OutputBeltDrop(other, 1, true, () => 0, 4, BeltSpeed.TURBO_TRANSPORT_BELT));
+        lane.seedDrop("inserter:2", new OutputBeltDrop(one, 1, 1, true, () => 0, 4, BeltSpeed.TURBO_TRANSPORT_BELT));
+        twin.seedDrop("inserter:2", new OutputBeltDrop(other, 1, 1, true, () => 0, 4, BeltSpeed.TURBO_TRANSPORT_BELT));
         expect(lane.dropKey("inserter:2", 10)).toBe(one.key(10));
         expect(lane.dropKey("inserter:2", 10)).not.toBe(twin.dropKey("inserter:2", 10));
     });

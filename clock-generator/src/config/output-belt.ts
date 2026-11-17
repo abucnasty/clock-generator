@@ -18,6 +18,10 @@ import { withoutOutletWords } from "./infinite-end";
  *   and the tile a stretch side-loads onto, the splitter and the infinite end one step each. After a point that lists copies,
  *   the steps are counted from the last copy of the list.
  * - A **join** is a belt lane going onto another belt, by a side load or by the splitter. No field names it.
+ * - A **number** in `side_load` and `drop` names an output inserter. Where a copy has one, it is the copy's number. Where
+ *   a copy has k, the j-th of them in the config (from 1) of copy c is number (c - 1) k + j: the output inserters of
+ *   a whole build of one copy are 1 to k. A list of several numbers steps by `copy_offset`, so with several output
+ *   inserters a copy each side load is stated at a point of its own.
  *
  * Lengths are in 1/256 tile, the game's unit of a belt position, and each is the length of a belt lane as the game has
  * it (`line_length` of a transport line, read on the automation science scaffold, Factorio 2.1.24).
@@ -69,7 +73,8 @@ const PointSchema = z.strictObject({
     right_curves: curvesSchema().optional().describe("The right curves between the previous point and this point."),
     side_load: z.union([
         z.array(z.number().int().positive()).min(1).describe("The copies whose side belts side-load onto this stretch, upstream first. "
-            + "The first copy side-loads at this point, and each next copy `setpoint.copy_offset` further along the stretch."),
+            + "The first copy side-loads at this point, and each next copy `setpoint.copy_offset` further along the stretch. "
+            + "Where a copy has several output inserters, a number names one of them (see `drop`): state one at a point."),
         z.strictObject({
             stretch: z.number().int().positive().describe("The stretch, from 1, that side-loads onto this point from its last point."),
         }),
@@ -78,7 +83,8 @@ const PointSchema = z.strictObject({
     lane: laneSchema("The lane that takes the side load or the drop").optional(),
     layout: z.enum(SIDE_LOAD_LAYOUTS).optional().describe("The belt piece that takes the side load, as `pickup_layout` names it: "
         + "side-straight (a straight belt), side-entrance (an underground entrance) or side-exit (an underground exit)."),
-    drop: z.number().int().positive().describe("The copy, from 1, with the output inserter that drops onto this point.").optional(),
+    drop: z.number().int().positive().describe("The copy, from 1, with the output inserter that drops onto this point. "
+        + "Where a copy has k output inserters, number (c - 1) k + j is the j-th of them in the config of copy c.").optional(),
     splitter_input: laneSchema("The splitter's input that this stretch ends in").optional(),
     splitter_output: laneSchema("The splitter's output that this stretch starts at").optional(),
     lane_end: withoutOutletWords(z.strictObject({
@@ -438,7 +444,7 @@ export const streamPhase = (put_on_spot: number, length_after: number, belt_step
  * What the generator refuses in an output belt, each with what to state instead. The shape checks come first; the rules
  * that need the geometry (two side loads onto one tile, a lane that an underground's hood shuts) run when they pass.
  */
-export function outputBeltProblems(belt: OutputBelt, copy_offset: { x: number; y: number } | undefined): OutputBeltProblem[] {
+export function outputBeltProblems(belt: OutputBelt, copy_offset: { x: number; y: number } | undefined, outputs_a_copy = 1): OutputBeltProblem[] {
     const shape: OutputBeltProblem[] = [];
     const rules: OutputBeltProblem[] = [];
     const count = belt.stretches.length;
@@ -494,7 +500,10 @@ export function outputBeltProblems(belt: OutputBelt, copy_offset: { x: number; y
                 if (!ordered) {
                     shape.push({ path, message: "List the copies of a side load in the order they stand along the stretch, upstream first, each once." });
                 }
-                if (copies.length > 1 && (spacing === undefined || !Number.isInteger(spacing))) {
+                if (copies.length > 1 && outputs_a_copy > 1) {
+                    shape.push({ path, message: `A copy has ${outputs_a_copy} output inserters, and a list of side loads steps by \`setpoint.copy_offset\`, `
+                        + "one copy a step. State each output inserter's side load at a point of its own, with its `tiles`." });
+                } else if (copies.length > 1 && (spacing === undefined || !Number.isInteger(spacing))) {
                     shape.push({ path, message: "State `setpoint.copy_offset` in whole tiles: the side loads of a list stand that far apart along the stretch." });
                 }
             } else if (point.side_load !== undefined) {
