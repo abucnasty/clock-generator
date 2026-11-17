@@ -529,6 +529,18 @@ A drill mines by two progress bars, as the game's does (since 0.20.0): each tick
 - **A window that opens on a machine at its output block** follows hold-up rules with unexplained exceptions (see "When a waiting inserter acts"). One of them (#276): when another inserter takes a machine's products off its output block in the tick a belt hand comes back from its swing, the simulator has the hand take its first stack in that tick. In the game it comes a tick later when the taker drops onto a belt (56 of 56 hands), and by the decider order when it drops into a chest (79 of 79). The game's rule, tried in the simulator, moves no recommended clock. Whether the model takes it on is not decided.
 - **A fuel inserter's own clock** runs with no circuit latency in the simulator, while its blueprint encodes the usual two ticks (#276). Neither has been checked in the game. Adding the two ticks changes no clock, verdict or selection, only the wakeup figures of four fuel samples, none of which has a build.
 - **The burner energy model** is checked on outcomes only (total burn against the configured rate), never tick by tick against the game.
+- **The hand surplus of a loop build** (#759). In a build with a loop, an inserter that brings an ingredient from a
+  machine outside the loop (the nutrients of the egg loop) gets windows for 1.43 times the hands its machine needs
+  (`MACHINE_HANDS_SURPLUS`, `clock-generator/src/crafting/plan/unclocked-run.ts`). This number is fitted to the game, and
+  the simulator cannot judge it. Measured in the game on 2026-10-09 on the agricultural science build, which needs
+  30.652 hands an inserter in 480 ticks on every clock: with 40 hands (1.30) the egg biochambers ran out of nutrients on
+  the 1- and 2-swing clocks; with 44 (1.43) they did not. The simulator has the refusal that uses up the surplus: an egg
+  biochamber takes no nutrients as an ingredient while its output holds 14 eggs or more, and takes a hand into its fuel
+  slot only while that slot is under its limit (`clock-generator/src/simulation/components/ingress.test.ts`). But its
+  as-built check and its long run pass both clocks at 1.30 (simulated 2026-11-17). So 40 hands starved the build in the
+  game and hold in the simulator, and the cause is not known. The recordings of 2026-10-09 are not in the repository.
+  Until a game run records these hands at 1.30, the generator keeps 1.43, and the windows of every loop build rest on
+  that one build.
 
 
 ## Right bend with an upstream pickup
