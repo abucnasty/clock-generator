@@ -1345,7 +1345,7 @@ function planPrimaryAndTasks(
 ): ClockAlternativesPlan {
     const logger = options.logger ?? defaultLogger;
     // the primary clock is made here, before its run: the ways its constructions offer are the primary run's parts
-    // its seconds and ticks are counted to a maker of their own: the primary's run below finds this run in the memo
+    // the seconds and ticks of this planning are counted to a maker of their own: it is made before any maker runs
     const { definition, primary_ways, result } = timedMaker(PRIMARY_PLANNING_MAKER, () => {
         const { value: definition, parts: primary_ways } = collectingParts(() => primaryDefinition(config, options, options.on_progress_detail));
         return { definition, primary_ways, result: definition.run() };
