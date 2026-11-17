@@ -14,7 +14,7 @@
     "automation science": {
       "config": "AUTOMATION_SCIENCE_240",
       "backed_up_belts": false,
-      "clock_sha256": "b1490c9f2c499d0b7a510ce5be68b711d43c46deab3269f76a152eb79262bd1e"
+      "clock_sha256": "75bf8985934ac4c9af2c495771f850fa1da1fdd9c9d2276390d044f3aa0c18de"
     },
     "chemical science with a shared foundry": {
       "config": "CHEMICAL_SCIENCE_240_SHARED_FOUNDRY",
