@@ -47,7 +47,39 @@ export interface CoordinatedSourcesPart {
 /** What the per-branch clock is composed from: today's recommended clock (by its id) and every part */
 export interface CoordinatedSourcesInput {
     recommended_id: string;
+    /**
+     * The clocks whose window cycles the per-branch clock is composed on, each around its own clock, best-ranked first: the
+     * recommended clock, then the best-ranked stable clocks on other window cycles (`windowCycleClocksOf`). Absent: the recommended
+     * clock's window cycle alone.
+     */
+    window_cycle_ids?: string[];
     parts: CoordinatedSourcesPart[];
+}
+
+/** The most window cycles the per-branch clock is composed on: the recommended clock's and the others' (`windowCycleClocksOf`) */
+export const COORDINATED_SOURCES_WINDOW_CYCLES = 2;
+
+/**
+ * The clocks whose window cycles the per-branch clock is composed on, from the ids of the clocks in the selection's order (the
+ * recommended clock first): the recommended clock, whatever its verdict, then, in that order, each stable clock with a whole
+ * window cycle no longer than the recommended clock's that none taken before it has, up to COORDINATED_SOURCES_WINDOW_CYCLES. Of
+ * the clocks on one window cycle only the best-ranked is taken. A longer window cycle is left out because a composition's checks
+ * grow with it: the productivity module build's 72-tick clock beside a stable clock of 26,136 ticks ran out of memory.
+ */
+export function windowCycleClocksOf(parts: readonly CoordinatedSourcesPart[], ranked_ids: readonly string[]): CoordinatedSourcesPart[] {
+    const of = (id: string) => parts.find(part => part.alternative_id === id);
+    const recommended = of(ranked_ids[0]);
+    if (recommended === undefined) return [];
+    const taken = [recommended];
+    for (const id of ranked_ids.slice(1)) {
+        if (taken.length >= COORDINATED_SOURCES_WINDOW_CYCLES) break;
+        const part = of(id);
+        if (part === undefined || part.verdict !== "stable" || !Number.isInteger(part.window_cycle_ticks)
+            || part.window_cycle_ticks > recommended.window_cycle_ticks
+            || taken.some(it => it.window_cycle_ticks === part.window_cycle_ticks)) continue;
+        taken.push(part);
+    }
+    return taken;
 }
 
 /** The parts being collected, innermost last: a part offered goes to every one */
@@ -102,14 +134,17 @@ interface RunWithParts {
 }
 
 /**
- * The input of the per-branch clock from the runs of a generation and the id of the clock they recommend: the parts of
+ * The input of the per-branch clock from the runs of a generation and the ids of their clocks in the selection's order: the parts of
  * every run, the stable alternatives first in the order they are listed, then the ways of the constructions in the order
  * they were made, then the alternatives that hold on one copy and are not stable (the copies or a disturbance trial make them
  * so), in the order they are listed, each set of windows once (a counted one before one not yet counted), and the recommended
  * clock itself where it is not among them. An alternative that does not hold on one copy is a part only where it is the
  * recommended one. The clocks that are not stable come last, so that a set of windows a stable clock or a way gives keeps its part.
+ * `ranked_ids` are the ids of the runs' clocks in the selection's order, the recommended clock first: the clocks whose window cycles
+ * the per-branch clock is composed on are read from them (`windowCycleClocksOf`), and each is a part.
  */
-export function coordinatedSourcesInputOf(runs: readonly (RunWithParts | null)[], recommended_id: string): CoordinatedSourcesInput {
+export function coordinatedSourcesInputOf(runs: readonly (RunWithParts | null)[], ranked_ids: readonly string[]): CoordinatedSourcesInput {
+    const recommended_id = ranked_ids[0];
     const all: CoordinatedSourcesPart[] = [];
     const strategies = new Map<string, StrategyRef>();
     const walk = (run: RunWithParts | null | undefined): void => {
@@ -146,7 +181,7 @@ export function coordinatedSourcesInputOf(runs: readonly (RunWithParts | null)[]
         } else partEvent(part, "excluded", { reasons: [reasonOf("same_windows_as_part", { part: known.alternative_id ?? known.name })] });
     }
     const parts = [...kept.values()];
-    const recommended = all.find(part => part.alternative_id === recommended_id);
-    if (recommended !== undefined && !parts.includes(recommended)) parts.push(recommended);
-    return { recommended_id, parts };
+    const centres = windowCycleClocksOf(all, ranked_ids);
+    for (const centre of centres) if (!parts.includes(centre)) parts.push(centre);
+    return { recommended_id, ...(centres.length > 1 && { window_cycle_ids: centres.map(it => it.alternative_id!) }), parts };
 }
