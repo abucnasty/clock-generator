@@ -6,6 +6,7 @@ import { SimulationContext } from "../crafting/sequence/simulation-context";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { MachineState } from "../state";
+import { Config } from "../config";
 
 describe("the orders a clock is checked under", () => {
     it("is the default alone where no machine has two takers of one product", () => {
@@ -26,6 +27,7 @@ describe("the orders a clock is checked under", () => {
 
 // the utility science 480 build: the foundry 3 is taken from by inserters 5 and 7, the foundry 10 by 22 and 25, in the list in that order
 describe("the order competing inserters are updated in", () => {
+    let config: Config;
     let context: SimulationContext;
     const foundry = (id: number) => context.state_registry.getStateByEntityIdOrThrow<MachineState>(context.machines.find(it => it.machine_state.entity_id.number === id)!.machine_state.entity_id);
     /** The inserters of the foundries 3 and 10, by their config ids, in the order they are given */
@@ -33,7 +35,8 @@ describe("the order competing inserters are updated in", () => {
         inserters.map(it => it.inserter_state.entity_id.number).filter(id => [5, 7, 22, 25].includes(id));
 
     beforeAll(async () => {
-        context = SimulationContext.fromConfig(await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN));
+        config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN);
+        context = SimulationContext.fromConfig(config);
     });
 
     /** The order the inserters of the foundries 3 and 10 are updated in a tick, with each foundry holding `held` low density structures */
@@ -90,6 +93,20 @@ describe("the order competing inserters are updated in", () => {
             expect(takers(World.of(context).inserters)).toEqual([5, 7, 22, 25]);
         } finally {
             context.competing_takers_order = kept;
+        }
+    });
+
+    it("starts the update list of a context with the takers of each foundry in the order its World has them", () => {
+        for (const taker_order of ["descending", "ascending", { rotation: 1 }, { seed: 1 }, { seed: 2 }, { seed: 5 }] as TakerOrder[]) {
+            const fresh = SimulationContext.fromConfig(config);
+            fresh.competing_takers_order = taker_order;
+            const world = World.of(fresh);
+            const listed = fresh.inserterScheduling().state().active_order
+                .map(id => world.inserters.find(it => it.entity_id.id === id)!);
+            for (const group of [[5, 7], [22, 25]]) {
+                const of = (inserters: readonly InserterArchetype[]) => takers(inserters).filter(id => group.includes(id));
+                expect(of(listed), takerOrderName(taker_order)).toEqual(of(world.inserters));
+            }
         }
     });
 

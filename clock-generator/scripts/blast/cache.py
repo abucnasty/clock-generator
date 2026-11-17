@@ -11,14 +11,14 @@ usage:
                                                 copies the listed jobs (only those: a job not in the list, Thaeln's
                                                 the utility science 480 build say, is left out and named) into a new entry; refuses if any is
                                                 missing. If the entry exists, compares instead: every job the same
-                                                (but its seconds) or the differences
+                                                (but its seconds and the seconds of its checks) or the differences
   cache.py list <cache>
   cache.py missing <out> <_jobs.json>           how many listed jobs have no result in <out>
   cache.py seed <out> <base jobs dir> <base functions dir> <_jobs.json> [--dry]
                                                 per <out>/.plan.json (functions.js plan): copies the carried jobs'
                                                 results into <out>, marks them claimed, writes .seed.json; says why
                                                 the others rerun. --dry only says
-  cache.py same <a> <b>                         every job the same in two jobs folders (or entries' jobs/), but its seconds;
+  cache.py same <a> <b>                         every job the same in two jobs folders (or entries' jobs/), but its seconds and the seconds of its checks;
                                                 exit 1 if any differs or is in one only, or a side has no jobs
   cache.py bases <cache> <engine.json> <_jobs.json> <tool> <worktree>
                                                 the entries a new engine can carry jobs forward from, nearest in git
@@ -57,9 +57,12 @@ def complete(d, list_file=None):
 
 def same(a, b):
     a, b = dict(json.load(open(a))), dict(json.load(open(b)))
-    # the seconds, and the property module's verdicts (their own seconds, and a module that changed with the engine unchanged), are not results
+    # the seconds, the property module's verdicts (their own seconds, and a module that changed with the engine unchanged) and
+    # the seconds the per-job checks took are not results: the rest of `checks` (module hash, what ran, failures) is
     for body in (a, b):
         body.pop('seconds', None); body.pop('properties', None)
+        if isinstance(body.get('checks'), dict):
+            body['checks'] = {k: v for k, v in body['checks'].items() if k != 'seconds'}
     return a == b
 
 
