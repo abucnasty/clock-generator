@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import { Duration, OpenRange } from "../../data-types";
 import type { EnableControlOverrideConfig } from "../../config/schema";
 import { TickProvider } from "../../simulation/current-tick-provider";
-import { AlwaysEnabledControl, EnableControl } from "../../simulation/controls/enable-control";
+import { AlwaysEnabledControl, EnableControl, READS_KEYED_STATE } from "../../simulation/controls/enable-control";
 import { SimulationContext } from "../sequence/simulation-context";
 import { steelHub } from "../container-output.fixture";
 import { WarmupStep } from "./steps/warmup-step";
-import { InstalledControl, warmUpRepeatOf } from "./warm-up-repeat";
+import { controlsKeyOf, InstalledControl, skipRepeatedTicks, warmUpRepeatOf } from "./warm-up-repeat";
 
 const clock = (window_cycle_ticks: number, options: { start_latency_ticks?: number; exact_subtick_positions?: boolean } = {}): InstalledControl => ({
     control: EnableControl.clocked({ windowCycleDuration: Duration.ofTicks(window_cycle_ticks), enabledRanges: [OpenRange.from(0, 1)],
@@ -15,10 +15,17 @@ const clock = (window_cycle_ticks: number, options: { start_latency_ticks?: numb
 });
 const condition = { operator: "AND" as const, rules: [{ left: { type: "CONSTANT" as const, value: 1 }, operator: ">" as const, right: { type: "CONSTANT" as const, value: 0 } }] };
 const conditional = (latched: boolean): InstalledControl => ({
-    control: EnableControl.lambda(() => true),
+    control: latched
+        ? EnableControl.latched({ base: EnableControl.lambda(() => true, READS_KEYED_STATE), release: EnableControl.lambda(() => false, READS_KEYED_STATE) })
+        : EnableControl.lambda(() => true, READS_KEYED_STATE),
     override: { mode: "CONDITIONAL", rule_set: condition, ...(latched && { latch: { release: condition } }) } as EnableControlOverrideConfig,
 });
 const always: InstalledControl = { control: AlwaysEnabledControl, override: { mode: "ALWAYS" } };
+/** A control of the plan (AUTO) that counts in spans of `span_ticks`, keyed by its count */
+const counting = (span_ticks: number, count: { value: number } = { value: 0 }): InstalledControl => ({
+    control: EnableControl.lambda(() => true, { key: () => String(count.value), period_ticks: span_ticks, skip: ticks => { count.value += ticks; } }),
+    override: undefined,
+});
 
 describe("where the warm-up may stop on a repeated state", () => {
     it("is every window cycle on a build clocked throughout on it, keyed from where its clocks' start is no longer dark", () => {
@@ -37,17 +44,52 @@ describe("where the warm-up may stop on a repeated state", () => {
         expect(warmUpRepeatOf(60, [clock(60), conditional(false)], 600)).toEqual({ armed: true, bin_ticks: 60, keyed_from_ticks: 0 });
     });
 
+    it("holds a latch and a control of the plan that keys its counts, on the merge of their spans and every clock inside", () => {
+        expect(warmUpRepeatOf(60, [clock(60), conditional(true)], 600)).toEqual({ armed: true, bin_ticks: 60, keyed_from_ticks: 0 });
+        expect(warmUpRepeatOf(60, [{ control: EnableControl.latched({ base: AlwaysEnabledControl, release: AlwaysEnabledControl }), override: undefined }], 600))
+            .toEqual({ armed: true, bin_ticks: 60, keyed_from_ticks: 0 });
+        // a count in spans of 2 window cycles: every 120 ticks
+        expect(warmUpRepeatOf(60, [clock(60), counting(120)], 600)).toEqual({ armed: true, bin_ticks: 120, keyed_from_ticks: 0 });
+        // a clock of 90 ticks inside a control of the plan, and a latch on what the key holds
+        const inside = EnableControl.all([clock(90, { start_latency_ticks: 3 }).control,
+            EnableControl.latched({ base: EnableControl.lambda(() => true, READS_KEYED_STATE), release: EnableControl.never })]);
+        expect(warmUpRepeatOf(60, [{ control: inside, override: undefined }], 600)).toEqual({ armed: true, bin_ticks: 180, keyed_from_ticks: 3 });
+    });
+
     it("is none where a control reads what the key does not hold, or a clock does not repeat in whole ticks before the warm-up ends", () => {
-        expect(warmUpRepeatOf(60, [clock(60), conditional(true)], 600)).toEqual({ armed: false, reason: "latched" });
-        // a control of the plan (AUTO): a count of hands allowed so far, closed over
+        // a control of the plan (AUTO) that does not say what it keeps, alone or inside a latch
         expect(warmUpRepeatOf(60, [clock(60), { control: EnableControl.lambda(() => true), override: { mode: "AUTO" } }], 600))
             .toEqual({ armed: false, reason: "planning control" });
-        expect(warmUpRepeatOf(60, [{ control: EnableControl.latched({ base: AlwaysEnabledControl, release: AlwaysEnabledControl }), override: undefined }], 600))
+        expect(warmUpRepeatOf(60, [{ control: EnableControl.latched({ base: EnableControl.lambda(() => true), release: AlwaysEnabledControl }), override: undefined }], 600))
             .toEqual({ armed: false, reason: "planning control" });
         expect(warmUpRepeatOf(640 / 3, [clock(640 / 3, { exact_subtick_positions: false })], 6400 / 3)).toEqual({ armed: false, reason: "inexact clock" });
+        // spans of 640/3 ticks are counted in floats
+        expect(warmUpRepeatOf(640 / 3, [counting(640 / 3)], 6400 / 3)).toEqual({ armed: false, reason: "inexact clock" });
+        expect(warmUpRepeatOf(60, [counting(7 * 11 * 13)], 600)).toEqual({ armed: false, reason: "repeat past the warm-up" });
         // half a tick on a billion: its whole-tick repeat is too large for a 32-bit counter
         expect(warmUpRepeatOf(1e9 + 0.5, [], 600)).toEqual({ armed: false, reason: "no whole-tick repeat" });
         expect(warmUpRepeatOf(60, [clock(60), clock(7 * 11 * 13)], 600)).toEqual({ armed: false, reason: "repeat past the warm-up" });
+    });
+});
+
+describe("the controls' key", () => {
+    it("holds each latch's bit and each count, in the order the controls were put on, and moves the counts by a stop's left-out ticks", () => {
+        let on = true;
+        const latch = EnableControl.latched({ base: EnableControl.lambda(() => on, READS_KEYED_STATE), release: EnableControl.lambda(() => !on, READS_KEYED_STATE) });
+        const count = { value: 4 };
+        const controls = [clock(60), { control: latch, override: undefined }, counting(120, count)];
+        const key = controlsKeyOf(controls);
+        expect(key()).toBe("|0|4");
+        latch.isEnabled();
+        expect(key()).toBe("|1|4");
+        on = false;
+        latch.isEnabled();
+        expect(key()).toBe("|0|4");
+        skipRepeatedTicks(controls, 240);
+        expect(key()).toBe("|0|244");
+        // a stop that left out nothing moves nothing
+        skipRepeatedTicks(controls, 0);
+        expect(count.value).toBe(244);
     });
 });
 

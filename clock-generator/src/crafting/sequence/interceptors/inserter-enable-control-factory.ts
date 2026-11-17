@@ -3,7 +3,7 @@ import { Entity, EntityId, handSizeFor, Inserter, Machine, MiningDrill, miningDr
 import { EntityTransferCountMap, outputPathOf } from "../cycle/swing-counts";
 import { targetInsertersOf, targetMachinesOf } from "../cycle/target-ends";
 import { exhaustWindowRanges, takesResultOf } from "../../exhaust";
-import { AlwaysEnabledControl, EnableControl } from "../../../simulation/controls/enable-control";
+import { AlwaysEnabledControl, EnableControl, READS_KEYED_STATE } from "../../../simulation/controls/enable-control";
 import { ResettableRegistry } from "../../../simulation/controls/resettable-registry";
 import { TickProvider } from "../../../simulation/current-tick-provider";
 import { assertIsInserterState, assertIsMachineState, EntityState, InserterState, MachineState, ReadableEntityStateRegistry } from "../../../state";
@@ -113,7 +113,7 @@ export class EnableControlFactory {
             return EnableControl.lambda(() => {
                 const tick = this.tick_provider.getCurrentTick() % plan.window_cycle_ticks;
                 return ranges.some(range => tick >= range.start_inclusive && tick <= range.end_inclusive);
-            });
+            }, { period_ticks: plan.window_cycle_ticks });
         }
 
         // a target that counts an item destroyed: every inserter of the plan into a machine that destroys it, or out of
@@ -296,6 +296,10 @@ export class EnableControlFactory {
                         hands_dropped_before_refill = dropped;
                     }
                     return refilling;
+                }, {
+                    // the item it last saw in the hand, whether it refills, and the hands dropped since the refill
+                    // started: the count of hands dropped only grows, and is read only as that difference
+                    key: () => `${held_item_name};${refilling ? (hands_dropped.get(source_item_name) ?? 0) - hands_dropped_before_refill : "-"}`,
                 });
             })
         )
@@ -325,11 +329,11 @@ export class EnableControlFactory {
                 const available_space = sink_state.getAvailableSpace(source_item_name);
                 const source_quantity = source_state.inventoryState.getQuantity(source_item_name);
                 return available_space >= stack_size && source_quantity >= stack_size;
-            }),
+            }, READS_KEYED_STATE),
             release: EnableControl.lambda(() => {
                 // Release when chest is full
                 return sink_state.isFull(source_item_name);
-            })
+            }, READS_KEYED_STATE)
         });
     }
 
@@ -364,7 +368,7 @@ export class EnableControlFactory {
         return EnableControl.lambda(() => {
             const source_quantity = source_state.getCurrentQuantity();
             return source_quantity >= stack_size;
-        });
+        }, READS_KEYED_STATE);
     }
 
     /**
@@ -393,7 +397,7 @@ export class EnableControlFactory {
             const total_available = source_quantity + items_in_hands;
 
             return total_available >= total_stack_size;
-        });
+        }, READS_KEYED_STATE);
     }
 
     public fromChestToMachine(
@@ -447,13 +451,13 @@ export class EnableControlFactory {
                 const sink_quantity = put_in.get();
                 const chest_has_items = source_state.getCurrentQuantity(item_name) > 0;
                 return chest_has_items && sink_quantity < minimum_required * buffer_multiplier;
-            }),
+            }, READS_KEYED_STATE),
             release: EnableControl.lambda(() => {
                 // Release when sink is at insertion limit OR chest is empty (for buffer chests)
                 const sink_quantity = put_in.get();
                 const chest_is_empty = source_state.isEmpty();
                 return sink_quantity >= automated_insertion_limit || chest_is_empty;
-            })
+            }, READS_KEYED_STATE)
         });
     }
 
@@ -562,12 +566,12 @@ export class EnableControlFactory {
                         const sink_quantity = put_in.get();
                         const sink_quantity_after_transfer = sink_quantity - Math.ceil(sink_consumption_per_tick * time_to_transfer_minimum_amount);
                         return sink_quantity_after_transfer < minimum_required * 4
-                    })
+                    }, READS_KEYED_STATE)
                 ]),
                 release: EnableControl.lambda(() => {
                     const sink_quantity = put_in.get();
                     return sink_quantity >= max_insertion_amount
-                })
+                }, READS_KEYED_STATE)
             })
         ])
     }
@@ -635,21 +639,7 @@ export class EnableControlFactory {
         const hand_size = handSizeFor(inserter_state.inserter, source_state.machine.output.item_name);
         const items_per_span = swings_per_cycle.getNumerator * hand_size;
         const span_ticks = OutputCyclePlan.ticksOfCycles(this.output_cycle_plan, swings_per_cycle.getDenominator);
-
-        let span: number | null = null;
-        let allowed = 0;
-        return EnableControl.lambda(() => {
-            const picked_up = inserter_state.items_picked_up;
-            const current_span = Math.floor(this.tick_provider.getCurrentTick() / span_ticks);
-            if (span === null || current_span !== span) {
-                // the ticks start over between the warm up and the run that is recorded: one span more, as any other
-                const spans_passed = span !== null && current_span > span ? current_span - span : 1;
-                // what was not picked up is not saved up for later
-                allowed = Math.min(allowed + spans_passed * items_per_span, picked_up + items_per_span);
-                span = current_span;
-            }
-            return picked_up < allowed + hand_size - 1;
-        });
+        return this.pickedUpAndNoMore(inserter_state, items_per_span, span_ticks, hand_size - 1);
     }
 
     /**
@@ -664,18 +654,42 @@ export class EnableControlFactory {
         const hand_size = planned.stack_size;
         const items_per_span = swings_per_cycle.getNumerator * hand_size;
         const span_ticks = OutputCyclePlan.ticksOfCycles(this.output_cycle_plan, swings_per_cycle.getDenominator);
+        return this.pickedUpAndNoMore(inserter_state, items_per_span, span_ticks, 0);
+    }
 
+    /**
+     * Every span of `span_ticks` allows `items_per_span` items more, and the inserter is enabled while it has picked up
+     * less than it was allowed so far and `slack`. Its key for the warm-up's proof of a repeat (`LambdaRepeat`) holds the
+     * span it last counted, as spans before the current one, and what it is allowed over what it has picked up: the
+     * running totals themselves only grow, and nothing here reads them but as that difference. Its answers repeat with
+     * the spans, in whole ticks only where a span is a whole number of ticks.
+     */
+    private pickedUpAndNoMore(inserter_state: InserterState, items_per_span: number, span_ticks: number, slack: number): EnableControl {
         let span: number | null = null;
         let allowed = 0;
         return EnableControl.lambda(() => {
             const picked_up = inserter_state.items_picked_up;
             const current_span = Math.floor(this.tick_provider.getCurrentTick() / span_ticks);
             if (span === null || current_span !== span) {
+                // the ticks start over between the warm up and the run that is recorded: one span more, as any other
                 const spans_passed = span !== null && current_span > span ? current_span - span : 1;
+                // what was not picked up is not saved up for later
                 allowed = Math.min(allowed + spans_passed * items_per_span, picked_up + items_per_span);
                 span = current_span;
             }
-            return picked_up < allowed;
+            return picked_up < allowed + slack;
+        }, {
+            key: () => {
+                const spans_since = span === null ? "-" : Math.floor(this.tick_provider.getCurrentTick() / span_ticks) - span;
+                return `${spans_since};${allowed - inserter_state.items_picked_up}`;
+            },
+            period_ticks: span_ticks,
+            skip: ticks => {
+                if (span !== null) {
+                    assert(Number.isInteger(ticks / span_ticks), `A warm-up's stop left out ${ticks} ticks, no whole number of spans of ${span_ticks}`);
+                    span += ticks / span_ticks;
+                }
+            },
         });
     }
 
@@ -723,7 +737,7 @@ export class EnableControlFactory {
                     clocked_control,
                     container === null
                         ? this.sourceIsGreaterThanStackSize(source_state, hand)
-                        : EnableControl.lambda(() => container.getCurrentQuantity(item_name) >= hand),
+                        : EnableControl.lambda(() => container.getCurrentQuantity(item_name) >= hand, READS_KEYED_STATE),
                 ]
             )
         }
@@ -1246,7 +1260,7 @@ export class EnableControlFactory {
                 amount_per_craft.add(source_quantity).toDecimal()
             )
             return source_quantity_after_next_craft >= minimum_quantity
-        })
+        }, READS_KEYED_STATE)
     }
 
     public latchedUntilLessThanMinimum(
@@ -1262,11 +1276,11 @@ export class EnableControlFactory {
             base: EnableControl.lambda(() => {
                 const sink_quantity = put_in.get();
                 return sink_quantity <= minimum_required * buffer_multiplier
-            }),
+            }, READS_KEYED_STATE),
             release: EnableControl.lambda(() => {
                 const sink_quantity = put_in.get();
                 return sink_quantity >= automated_insertion_limit
-            })
+            }, READS_KEYED_STATE)
         })
     }
     /**

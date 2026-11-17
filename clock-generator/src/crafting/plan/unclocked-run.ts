@@ -48,7 +48,7 @@ import { WarmupStep } from "../runner/steps/warmup-step";
 import { FullOutputChest, fullOutputChestsOf } from "../full-output-chests";
 import { ExportShortfall, exportShortfallsOfWindowCycle, exportedItemsOf } from "../export-delivery";
 import { simulationStateKey } from "../runner/steady-state";
-import { InstalledControl, warmUpRepeatOf } from "../runner/warm-up-repeat";
+import { controlsKeyOf, InstalledControl, skipRepeatedTicks, warmUpRepeatOf } from "../runner/warm-up-repeat";
 import { SimulateStep } from "../runner/steps/simulate-step";
 import { RunnerStepType } from "../runner/steps/runner-step";
 import { Logger, defaultLogger } from "../../common/logger";
@@ -1122,11 +1122,16 @@ function warmUp(
     resettable_registry.resetAll(true);
     return withDebugFor(debug, debug_steps, RunnerStepType.WARM_UP, () => {
         const repeat = warmUpRepeatOf(duration.ticks, controlled.installed_controls, warmup_window_cycle.ticks);
+        const controls_key = repeat.armed ? controlsKeyOf(controlled.installed_controls) : undefined;
         const warmup_step = new WarmupStep(simulation_context, warmup_window_cycle,
             repeat.armed
-                ? { bin_ticks: repeat.bin_ticks, keyed_from_ticks: repeat.keyed_from_ticks, key: () => simulationStateKey(simulation_context) }
+                ? { bin_ticks: repeat.bin_ticks, keyed_from_ticks: repeat.keyed_from_ticks, key: () => `${simulationStateKey(simulation_context)}\n${controls_key!()}` }
                 : undefined, shadow?.warm_up);
         warmup_step.execute();
+        // a stop left out whole repeats: what the controls count in spans of the run moves on by them
+        if (warmup_step.repeat_ticks !== undefined) {
+            skipRepeatedTicks(controlled.installed_controls, Math.ceil(warmup_window_cycle.ticks) - warmup_step.ticks_run);
+        }
         if (warmup_step.ticks_run < warmup_window_cycle.ticks) {
             logger.log(`Warm-up reached a repeating state after ${warmup_step.ticks_run} ticks`);
         }
