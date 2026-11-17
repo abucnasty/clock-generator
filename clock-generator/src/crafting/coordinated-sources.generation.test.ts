@@ -82,6 +82,19 @@ describe("the per-branch clock of the automation science build", () => {
     });
 });
 
+// ELECTROMAGNETIC_SCIENCE_330: the local choice keeps the recommended clock, which the maker judges with the copies before it refuses
+describe("the per-branch clock of a build where the local choice keeps the recommended clock", () => {
+    it("judges the recommended clock with the copies under the listing's keys: the listing's judgement is a hit", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.ELECTROMAGNETIC_SCIENCE_330);
+        const hits = withRunMemo(() => {
+            generateClockAlternatives(config, { logger: quiet });
+            const memo = currentRunMemo()!;
+            return [memo.shared_lane_check_hits, memo.copies_trial_hits];
+        });
+        expect(hits).toEqual([1, 1]);
+    });
+});
+
 // MILITARY_SCIENCE_240: the per-branch clock is made from the clocks before it and listed
 describe("the per-branch clock of the military science build", () => {
     let made: Awaited<ReturnType<typeof inputOf>>;

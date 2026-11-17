@@ -439,11 +439,21 @@ export function coordinatedSourcesClock(
     // the verdict with the copies of a composition that holds as a whole, made once a composition, as the listing judges the clock it
     // lists (copies-verdict.ts): on the build's config with the clock's output swings, the clock's own windows and its expected items,
     // so that the run memo's keys are the listing's and the listing's judgement of the clock made is no second run
+    // The keys keep the order of the windows' members. The recommended clock composed is the recommended clock, which the listing judges
+    // on its own windows: its members are put in the recommended clock's order, so that its judgement is a hit too.
+    const recommended_windows = tiledWindows(recommended.windows, recommended.window_cycle_ticks, shared_ticks);
+    const recommended_key = partKey({ window_cycle_ticks: shared_ticks, windows: recommended_windows });
+    const judgedWindowsOf = (trial: Trial): SerializableClockWindows => {
+        const windows = trial.result.clock_windows;
+        if (partKey({ window_cycle_ticks: shared_ticks, windows: trial.windows }) !== recommended_key) return windows;
+        const order = Object.keys(recommended_windows).filter(id => id in windows);
+        return Object.fromEntries([...order, ...Object.keys(windows).filter(id => !(id in recommended_windows))].map(id => [id, windows[id]]));
+    };
     const copiesVerdictOf = (trial: Trial): VerdictWithCopies | null => {
         if (trial.with_copies === undefined) {
             trial.with_copies = !holdsOf(trial) ? null : verdictWithCopies({
                 config: { ...config, overrides: { ...config.overrides, terminal_swing_count: trial.result.used_terminal_swing_count } },
-                windows: trial.result.clock_windows, window_cycle_ticks: shared_ticks, expected_output_items: trial.result.stability_check.expected_output_items,
+                windows: judgedWindowsOf(trial), window_cycle_ticks: shared_ticks, expected_output_items: trial.result.stability_check.expected_output_items,
             }, () => lossOf(trial)?.survives === true, config.overrides?.disturbance_trials_on_copies !== false, "Coordinated Sources", quiet);
         }
         return trial.with_copies;
@@ -452,7 +462,6 @@ export function coordinatedSourcesClock(
     const copiesReasonOf = (trial: Trial): MakerReason => reasonOf("does_not_hold_with_copies",
         { check: (copiesVerdictOf(trial)?.lane_check.losses.length ?? 0) > 0 ? "shared_lanes" : "loss_trials" });
 
-    const recommended_key = partKey({ window_cycle_ticks: shared_ticks, windows: tiledWindows(recommended.windows, recommended.window_cycle_ticks, shared_ticks) });
     // the judge of the local choice; with the copies, a composition is taken, or kept as the current choice, only where it also holds with
     // the copies, and a clock that does not is no result. A composition whose loss trial on one copy fails is passed as before, unjudged.
     const judgeOf = (with_copies: boolean): LocalChoiceJudge => {
