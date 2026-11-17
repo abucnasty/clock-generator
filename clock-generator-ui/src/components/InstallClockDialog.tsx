@@ -40,7 +40,7 @@ export function InstallClockDialog({ open, onClose, selected, blueprintString, s
         for (const { element } of background) element.inert = true;
         return () => { for (const { element, inert } of background) element.inert = inert; };
     }, [open, modalRoot]);
-    const moves = useMemo(() => new Map<string, WiringMoves>(open ? buildWakeWindowRows(selected).map(row => [row.id, { items: row.items, route: row.route }]) : []), [open, selected]);
+    const moves = useMemo(() => new Map<string, WiringMoves>(open ? buildWakeWindowRows(selected).map(row => [row.id, { items: row.items, route: row.route, ...(row.from ? { from: row.from } : {}), ...(row.to ? { to: row.to } : {}) }]) : []), [open, selected]);
     const movesOf = (entity: string) => moves.get(entity) ?? { items: [], route: '' };
     const warning = cardWarningOf(selected);
     return <AppDialog ref={setModalRoot} open={open} onClose={onClose} maxWidth="md" dividers title="Install in Factorio" cancel="Close"

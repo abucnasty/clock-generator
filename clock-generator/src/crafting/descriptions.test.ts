@@ -46,108 +46,179 @@ describe("the description of an enabling combinator", () => {
 
     it("names both ends by their icons, the machine it fills with its recipe, and lists a few windows", () => {
         expect(planned([EntityId.forInserter(4)])).toEqual([
-            "[entity=cargo-wagon] → [entity=turbo-transport-belt] [item=jelly] (inserter 4)",
+            "1 inserter [item=jelly] (4)",
+            "Inserter 4: [entity=cargo-wagon] → [item=jelly] → [entity=turbo-transport-belt]",
             "2 swings in 2 enable windows per 144-tick window cycle: open 27–39, 72–84",
         ]);
     });
 
     it("names a machine the config has no prototype for, and a plain chest, by their ids, a machine with its recipe", () => {
-        expect(planned([EntityId.forInserter(2)])[0])
-            .toBe("machine 1 [recipe=rocket-fuel-from-jelly] → [entity=turbo-transport-belt] [item=jelly] (inserter 2)");
-        expect(planned([EntityId.forInserter(6)])[0]).toBe("chest 2 → machine 2 [recipe=jellynut-processing] [item=jelly] (inserter 6)");
+        expect(planned([EntityId.forInserter(2)])[1])
+            .toBe("Inserter 2: machine 1 [recipe=rocket-fuel-from-jelly] → [item=jelly] → [entity=turbo-transport-belt]");
+        expect(planned([EntityId.forInserter(6)])[1]).toBe("Inserter 6: chest 2 → [item=jelly] → machine 2 [recipe=jellynut-processing]");
     });
 
     it("names a machine and a chest the config gives a prototype by their icons, the machine it fills with its recipe", () => {
-        expect(planned([EntityId.forInserter(7)])[0]).toBe("[entity=electric-furnace] → [entity=steel-chest] [item=jelly] (inserter 7)");
-        expect(planned([EntityId.forInserter(8)])[0]).toBe("[entity=steel-chest] → [entity=electric-furnace] [recipe=steel-plate] [item=jelly] (inserter 8)");
+        expect(planned([EntityId.forInserter(7)])[1]).toBe("Inserter 7: [entity=electric-furnace] → [item=jelly] → [entity=steel-chest]");
+        expect(planned([EntityId.forInserter(8)])[1]).toBe("Inserter 8: [entity=steel-chest] → [item=jelly] → [entity=electric-furnace] [recipe=steel-plate]");
     });
 
     it("says once what the inserters of one combinator share, listing the machines that differ only by their ids", () => {
         expect(planned([EntityId.forInserter(5), EntityId.forInserter(1)])).toEqual([
-            "2 inserters: [entity=turbo-transport-belt] → machines 1, 3 [recipe=rocket-fuel-from-jelly] [item=jelly] (1, 5)",
+            "2 inserters [item=jelly] (1, 5)",
+            "Inserters 1, 5: [entity=turbo-transport-belt] → [item=jelly] → machines 1, 3 [recipe=rocket-fuel-from-jelly]",
             "2 swings each in 2 enable windows per 144-tick window cycle: open 27–39, 72–84",
         ]);
     });
 
     it("gives the range and each count by who moves it when the inserters of one combinator move different numbers", () => {
         const ids = [EntityId.forInserter(1), EntityId.forInserter(5), EntityId.forInserter(3)];
-        expect(planned(ids, [fraction(2), fraction(3), fraction(2)])[1])
+        expect(planned(ids, [fraction(2), fraction(3), fraction(2)])[3])
             .toBe("2 to 3 swings (inserters 1, 3: 2; inserter 5: 3) in 2 enable windows per 144-tick window cycle: open 27–39, 72–84");
-        expect(planned([EntityId.forInserter(4), EntityId.forInserter(5)], [fraction(5, 4), fraction(2)])[1])
+        expect(planned([EntityId.forInserter(4), EntityId.forInserter(5)], [fraction(5, 4), fraction(2)])[3])
             .toBe("1.25 to 2 swings (inserter 4: 1.25; inserter 5: 2) in 2 enable windows per 144-tick window cycle: open 27–39, 72–84");
     });
 
     it("gives the range and each count of the drills of one combinator that mine different amounts", () => {
-        expect(planned([EntityId.forDrill(1), EntityId.forDrill(2), EntityId.forDrill(3)], [fraction(15), fraction(15), fraction(19)])[1])
+        expect(planned([EntityId.forDrill(1), EntityId.forDrill(2), EntityId.forDrill(3)], [fraction(15), fraction(15), fraction(19)]).at(-1))
             .toBe("Mines 240 to 304 (drills 1, 2: 240; drill 3: 304) in 2 enable windows per 144-tick window cycle: open 27–39, 72–84");
     });
 
-    it("gives each route a line after the counts when the inserters of one combinator work with different machines", () => {
+    it("gives each route a line under the header when the inserters of one combinator work with different machines", () => {
         expect(planned([EntityId.forInserter(3), EntityId.forInserter(1)])).toEqual([
             "2 inserters [item=jelly] (1, 3)",
+            "Inserter 1: [entity=turbo-transport-belt] → [item=jelly] → machine 1 [recipe=rocket-fuel-from-jelly]",
+            "Inserter 3: [entity=turbo-transport-belt] → [item=jelly] → machine 2 [recipe=jellynut-processing]",
             "2 swings each in 2 enable windows per 144-tick window cycle: open 27–39, 72–84",
-            "- 1: [entity=turbo-transport-belt] → machine 1 [recipe=rocket-fuel-from-jelly]",
-            "- 3: [entity=turbo-transport-belt] → machine 2 [recipe=jellynut-processing]",
         ]);
     });
 
+    it("gives each inserter the items it moves itself, not those of the whole combinator", () => {
+        const carrying = (id: number, source: EntityId, sink: EntityId, ...items: string[]) => ({ ...inserter(id, source, sink), filtered_items: new Set(items) });
+        const own = {
+            getEntityById: (id: EntityId) => [
+                ...entities, carrying(9, belt, EntityId.forMachine(2), "plastic-bar"), carrying(10, belt, EntityId.forMachine(2), "copper-cable", "iron-plate"),
+            ].find(entity => entity.entity_id.id === id.id) ?? null,
+        } as unknown as ReadableEntityRegistry;
+        const lines = plannedDescriptionLines([EntityId.forInserter(9), EntityId.forInserter(10)], own, ["plastic-bar", "copper-cable", "iron-plate"],
+            [9, 10].map(id => ({ entity_id: EntityId.forInserter(id), swings: fraction(2) })), two_windows, "144");
+        expect(lines.slice(0, 3)).toEqual([
+            "2 inserters [item=plastic-bar] [item=copper-cable] [item=iron-plate] (9, 10)",
+            "Inserter 9: [entity=turbo-transport-belt] → [item=plastic-bar] → machine 2 [recipe=jellynut-processing]",
+            "Inserter 10: [entity=turbo-transport-belt] → [item=copper-cable] [item=iron-plate] → machine 2 [recipe=jellynut-processing]",
+        ]);
+    });
+
+    it("joins the inserters that share both ends, with all their items, when a line for each would not fit in the 500 bytes Factorio keeps", () => {
+        const carrying = (id: number, source: EntityId, sink: EntityId, ...items: string[]) => ({ ...inserter(id, source, sink), filtered_items: new Set(items) });
+        const foundry = { entity_id: EntityId.forMachine(11), metadata: { recipe: { name: "casting-iron" }, prototype: "foundry" } };
+        const plant = { entity_id: EntityId.forMachine(12), metadata: { recipe: { name: "electronic-circuit" }, prototype: "electromagnetic-plant" } };
+        const cryo = { entity_id: EntityId.forMachine(13), metadata: { recipe: { name: "plastic-bar" }, prototype: "cryogenic-plant" } };
+        const store = { entity_id: EntityId.forChest(4), chest_type: "buffer-chest", prototype: "steel-chest" };
+        const crowded = {
+            getEntityById: (id: EntityId) => [
+                foundry, plant, cryo, store,
+                carrying(3, foundry.entity_id, store.entity_id, "copper-cable"), carrying(4, cryo.entity_id, store.entity_id, "plastic-bar"),
+                carrying(11, foundry.entity_id, plant.entity_id, "iron-plate"), carrying(12, foundry.entity_id, plant.entity_id, "copper-cable"),
+            ].find(entity => entity.entity_id.id === id.id) ?? null,
+        } as unknown as ReadableEntityRegistry;
+        const ids = [3, 4, 11, 12].map(id => EntityId.forInserter(id));
+        const lines = plannedDescriptionLines(ids, crowded, ["copper-cable", "plastic-bar", "iron-plate"],
+            ids.map(entity_id => ({ entity_id, swings: fraction(1) })), deciderWindows([OpenRange.from(0, 11)], values), "72");
+        expect(lines).toEqual([
+            "4 inserters [item=copper-cable] [item=plastic-bar] [item=iron-plate] (3, 4, 11, 12)",
+            "Inserter 3: [entity=foundry] → [item=copper-cable] → [entity=steel-chest]",
+            "Inserter 4: [entity=cryogenic-plant] → [item=plastic-bar] → [entity=steel-chest]",
+            "Inserters 11, 12: [entity=foundry] → [item=iron-plate] [item=copper-cable] → [entity=electromagnetic-plant] [recipe=electronic-circuit]",
+            "1 swing each in 1 enable window per 72-tick window cycle: open 1–12",
+        ]);
+        expect(new TextEncoder().encode(lines.join("\n")).length).toBeLessThanOrEqual(500);
+        // the counts of each inserter make the line of counts long: the lines start at the numbers, and then the header has no items
+        const counted = plannedDescriptionLines(ids, crowded, ["copper-cable", "plastic-bar", "iron-plate"],
+            ids.map((entity_id, index) => ({ entity_id, swings: fraction(index + 1, 7) })), deciderWindows([OpenRange.from(0, 11), OpenRange.from(30, 41)], values), "72");
+        expect(new TextEncoder().encode(counted.join("\n")).length).toBeLessThanOrEqual(500);
+        expect(counted.some(line => line.endsWith("..."))).toBe(false);
+        expect(counted.slice(0, 4)).toEqual([
+            "4 inserters (3, 4, 11, 12)",
+            "3: [entity=foundry] → [item=copper-cable] → [entity=steel-chest]",
+            "4: [entity=cryogenic-plant] → [item=plastic-bar] → [entity=steel-chest]",
+            "11, 12: [entity=foundry] → [item=iron-plate] [item=copper-cable] → [entity=electromagnetic-plant] [recipe=electronic-circuit]",
+        ]);
+        // short enough in full: one line for each item
+        const two = [3, 4].map(id => EntityId.forInserter(id));
+        expect(plannedDescriptionLines(two, crowded, ["copper-cable", "plastic-bar"], two.map(entity_id => ({ entity_id, swings: fraction(1) })),
+            deciderWindows([OpenRange.from(0, 11)], values), "72")).toHaveLength(4);
+    });
+
+    it("puts the turn line after the counts, below the lines of the inserters", () => {
+        const lines = plannedDescriptionLines([EntityId.forInserter(3), EntityId.forInserter(1)], registry, ["jelly"],
+            [3, 1].map(id => ({ entity_id: EntityId.forInserter(id), swings: fraction(2) })), two_windows, "144", "Group 1 of 2: takes its turn.");
+        expect(lines.map(line => line.split(":")[0])).toEqual(["2 inserters [item=jelly] (1, 3)", "Inserter 1", "Inserter 3", "2 swings each in 2 enable windows per 144-tick window cycle", "Group 1 of 2"]);
+    });
+
     it("gives a drill's items, not the plan's unit of 16, from the drill to the machine it fills", () => {
-        expect(planned([EntityId.forDrill(1)], fraction(15))[0]).toBe("[entity=big-mining-drill] [item=jelly] → machine 1 [recipe=rocket-fuel-from-jelly] (drill 1)");
-        expect(planned([EntityId.forDrill(1)], fraction(15))[1]).toBe("Mines 240 in 2 enable windows per 144-tick window cycle: open 27–39, 72–84");
+        expect(planned([EntityId.forDrill(1)], fraction(15)).slice(0, 2)).toEqual([
+            "1 drill [item=jelly] (1)",
+            "Drill 1: [entity=big-mining-drill] → [item=jelly] → machine 1 [recipe=rocket-fuel-from-jelly]",
+        ]);
+        expect(planned([EntityId.forDrill(1)], fraction(15))[2]).toBe("Mines 240 in 2 enable windows per 144-tick window cycle: open 27–39, 72–84");
     });
 
     it("gives a count that is not whole to 3 decimals, and one swing as one", () => {
-        expect(planned([EntityId.forInserter(4)], fraction(285, 2))[1]).toMatch(/^142\.5 swings in /);
-        expect(planned([EntityId.forInserter(4)], fraction(1))[1]).toMatch(/^1 swing in /);
+        expect(planned([EntityId.forInserter(4)], fraction(285, 2))[2]).toMatch(/^142\.5 swings in /);
+        expect(planned([EntityId.forInserter(4)], fraction(1))[2]).toMatch(/^1 swing in /);
     });
 
     it("gives a window of one tick as its one value", () => {
         const one_tick = deciderWindows([OpenRange.from(27, 27), OpenRange.from(71, 83)], values);
-        expect(planned([EntityId.forInserter(4)], fraction(2), one_tick)[1]).toBe("2 swings in 2 enable windows per 144-tick window cycle: open 28, 72–84");
+        expect(planned([EntityId.forInserter(4)], fraction(2), one_tick)[2]).toBe("2 swings in 2 enable windows per 144-tick window cycle: open 28, 72–84");
         const by_product: InserterClock = { inserter_id: EntityId.forInserter(2), kind: "by-product", modulus: 32, own_clock: false, window: OpenRange.from(6, 6) };
-        expect(unplannedDescriptionLines([EntityId.forInserter(2)], registry, ["jellynut-seed"], by_product, OpenRange.from(7, 7), SignalId.clock)[1])
+        expect(unplannedDescriptionLines([EntityId.forInserter(2)], registry, ["jellynut-seed"], by_product, OpenRange.from(7, 7), SignalId.clock)[2])
             .toBe("Clears it: open [virtual-signal=signal-clock] 7 of every 32 ticks; outside the main plan");
     });
 
     it("lists no windows past three, nor repeating ones, and says what is unusual", () => {
         const four = deciderWindows([0, 10, 20, 30].map(at => OpenRange.from(at, at + 2)), values);
-        expect(planned([EntityId.forInserter(4)], fraction(4), four)[1]).toBe("4 swings in 4 enable windows per 144-tick window cycle");
+        expect(planned([EntityId.forInserter(4)], fraction(4), four)[2]).toBe("4 swings in 4 enable windows per 144-tick window cycle");
         const repeating = deciderWindows([OpenRange.from(0, 2)], values, { modulus: 48, signal: SignalId.virtual("signal-A") });
-        expect(planned([EntityId.forInserter(4)], fraction(3), repeating).slice(1)).toEqual([
+        expect(planned([EntityId.forInserter(4)], fraction(3), repeating).slice(2)).toEqual([
             "3 swings in 1 enable window per 144-tick window cycle",
             "Enable windows repeat every 48 ticks: [virtual-signal=signal-A] = clock mod 48",
         ]);
         const subtick = deciderWindows([OpenRange.from(0, 2)], values, undefined, 13);
         // the unit of the windows is on their line, so the numbers are not read as ticks
-        expect(planned([EntityId.forInserter(4)], fraction(3), subtick).slice(1)).toEqual(["3 swings in 1 enable window per 144-tick window cycle: open 1–3 (in 1/13 ticks)"]);
+        expect(planned([EntityId.forInserter(4)], fraction(3), subtick).slice(2)).toEqual(["3 swings in 1 enable window per 144-tick window cycle: open 1–3 (in 1/13 ticks)"]);
         const many_subtick = deciderWindows([0, 10, 20, 30].map(at => OpenRange.from(at, at + 2)), values, undefined, 13);
-        expect(planned([EntityId.forInserter(4)], fraction(4), many_subtick)[1]).toBe("4 swings in 4 enable windows per 144-tick window cycle; enable windows in 1/13 ticks");
+        expect(planned([EntityId.forInserter(4)], fraction(4), many_subtick)[2]).toBe("4 swings in 4 enable windows per 144-tick window cycle; enable windows in 1/13 ticks");
     });
 
     it("says of a drill into a chest that it tops that chest up, named by its icon, else by its id", () => {
         const one = deciderWindows([OpenRange.from(27, 27)], values);
         expect(chestDrillDescriptionLines([EntityId.forDrill(2)], registry, ["iron-ore"], one, "72")).toEqual([
-            "[entity=big-mining-drill] [item=iron-ore] → [entity=cargo-wagon] (drill 2)",
+            "1 drill [item=iron-ore] (2)",
+            "Drill 2: [entity=big-mining-drill] → [item=iron-ore] → [entity=cargo-wagon]",
             "Tops the [entity=cargo-wagon] up just in time, 1 enable window per 72-tick window cycle: open 28",
             "Not counted as swings: opens just before the inserters take from the [entity=cargo-wagon]",
         ]);
-        expect(chestDrillDescriptionLines([EntityId.forDrill(3)], registry, ["iron-ore"], one, "72").slice(1)).toEqual([
+        expect(chestDrillDescriptionLines([EntityId.forDrill(3)], registry, ["iron-ore"], one, "72").slice(2)).toEqual([
             "Tops chest 2 up just in time, 1 enable window per 72-tick window cycle: open 28",
             "Not counted as swings: opens just before the inserters take from chest 2",
         ]);
-        expect(chestDrillDescriptionLines([EntityId.forDrill(2), EntityId.forDrill(3)], registry, ["iron-ore"], one, "72")[2])
+        expect(chestDrillDescriptionLines([EntityId.forDrill(2), EntityId.forDrill(3)], registry, ["iron-ore"], one, "72").at(-1))
             .toBe("Not counted as swings: opens just before the inserters take from it");
     });
 
     it("gives a fuel and a by-product inserter their windows as the conditions read them", () => {
         const fuel: InserterClock = { inserter_id: EntityId.forInserter(1), kind: "fuel", modulus: 192, own_clock: true, window: OpenRange.from(0, 7) };
         expect(unplannedDescriptionLines([EntityId.forInserter(1)], registry, ["nutrients"], fuel, OpenRange.from(1, 8), null)).toEqual([
-            "Fuel: [entity=turbo-transport-belt] → machine 1 [recipe=rocket-fuel-from-jelly] [item=nutrients] (inserter 1)",
+            "Fuel: 1 inserter [item=nutrients] (1)",
+            "Inserter 1: [entity=turbo-transport-belt] → [item=nutrients] → machine 1 [recipe=rocket-fuel-from-jelly]",
             "Open [virtual-signal=signal-clock] 1–8 of the fuel clock, once every 192 ticks; does not swing while the fuel slot is full",
         ]);
         const by_product: InserterClock = { inserter_id: EntityId.forInserter(2), kind: "by-product", modulus: 32, own_clock: false, window: OpenRange.from(6, 10) };
         expect(unplannedDescriptionLines([EntityId.forInserter(2)], registry, ["jellynut-seed"], by_product, OpenRange.from(7, 11), SignalId.clock)).toEqual([
-            "By-product: machine 1 [recipe=rocket-fuel-from-jelly] → [entity=turbo-transport-belt] [item=jellynut-seed] (inserter 2)",
+            "By-product: 1 inserter [item=jellynut-seed] (2)",
+            "Inserter 2: machine 1 [recipe=rocket-fuel-from-jelly] → [item=jellynut-seed] → [entity=turbo-transport-belt]",
             "Clears it: open [virtual-signal=signal-clock] 7–11 of every 32 ticks; outside the main plan",
         ]);
     });
