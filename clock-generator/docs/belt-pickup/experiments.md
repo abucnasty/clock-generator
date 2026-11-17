@@ -23,8 +23,9 @@ The accepted changes shipped in **engine/UI 0.19.0** and **Sidecar 0.11.0** (202
   holes, partial stacks and lane phase persist across hands and circuit windows. Underground pickups have
   less reach, rather than a fixed tick penalty.
 - Geometry and supply motion are separate. Omitted `pickup_length` defaults to **1**; undergrounds use **0.5**.
-  Moving is the default. Ordinary backed-up supply retains finite stock, stops stacks at the endpoint and
-  refills holes at belt speed.
+  A lane that states no `lane_end` takes the end of its role: an input or buffer lane is a dead end (with
+  backpressure), an output lane an infinite end ([lane ends](lane-ends.md)). Ordinary supply with backpressure retains
+  finite stock, stops stacks at the endpoint and refills holes at belt speed.
 - Replenishment depends on topology. Closing the last exit of a lane does not guarantee permanent local saturation when
   other consumers can reopen a route.
 
@@ -460,8 +461,8 @@ normal underground pickups that preceded #266 and its 128 lane-phase cells. Two 
 Picking up from a belt tile that another belt side-loads onto is **out of scope**, as splitters are. This covers
 one side stream onto the pickup tile (formerly the per-lane `source.pickup_supply` profiles `side-inner` and
 `side-outer`) and two side streams merging onto one receiving lane (formerly `source.pickup_merge`). The generator
-models a belt that runs straight onto the pickup tile (through supply), an underground endpoint and an
-over-the-hood pickup. A config that names `pickup_supply` or `pickup_merge` is refused. Sidecar 0.11.0 marks a
+models a belt that runs straight onto the pickup tile (through supply), an underground endpoint, an
+over-the-hood pickup and the upstream side of a right bend (`bend-right-upstream`, measured on turbo belts only). A config that names `pickup_supply` or `pickup_merge` is refused. Sidecar 0.11.0 marks a
 pickup from a side-loaded tile unsupported with the reason `side-loaded`, and the generator refuses that capture
 instead of timing it as an ordinary belt. A manual config or a capture from an older Sidecar does not record
 side-loading. Neither model was released.

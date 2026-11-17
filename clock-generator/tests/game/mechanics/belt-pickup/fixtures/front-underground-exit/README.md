@@ -127,9 +127,13 @@ cannot be built in this geometry; generated clocks, including those of a moving 
 
 ## Generated clocks
 
-The [front clock controls](../../../../builds/README.md#front-pickup-operating-clocks) run this fixture's generated
-clocks at all four speeds and both mirroring states, with the ordinary electromagnetic targets (30/s turbo to 7.5/s
-normal), 63 baseline window cycles and the three ordinary disturbances, on Factorio 2.1.21 (2026-10-20).
+The table gives the verdicts of the clocks recorded on 2026-10-20 (Factorio 2.1.21, #274 and #275), at all four speeds and both
+mirroring states, with the ordinary electromagnetic targets (30/s turbo to 7.5/s normal), 63 baseline window cycles and the
+three ordinary disturbances. They are the verdicts of the clocks the generator made then, not of the clocks it selects now.
+A simulator run of the one dispatch (0.27.0) moved the express moving-config verdict from "no recovery" to stable, and since 2026-11-03 the
+[front clock controls](../../../../builds/README.md#front-pickup-operating-clocks) run the turbo tier only, on Factorio 2.1.24: the exit's four
+controls (with backpressure and moving config, both mirroring states) select a stable clock of 352 ticks, and the game holds its target
+and recovers after each disturbance.
 
 | Config | Turbo | Express | Fast | Normal |
 | --- | --- | --- | --- | --- |
@@ -139,7 +143,9 @@ normal), 63 baseline window cycles and the three ordinary disturbances, on Facto
 Both mirroring states agree in every cell. A moving config gets a clock made for moving belts; its express and
 normal verdicts come from moving lane-phase starts this exit cannot have, and on the backed-up exit every one of
 them holds its target in all 63 baseline window cycles and after every disturbance. **A moving config is safe on this
-layout.** At normal it does better than the backed-up config's own clock, whose alternatives all fail.
+layout.** At normal the config with backpressure had no stable clock on 2026-10-20 (the "unstable" entry above). It got one
+afterwards, and the game holds 176 in every window cycle on it: first the clock made for a moving belt (#275), then the
+clock for belts with backpressure that #456 selects, recorded in #479. The normal tier is not among the controls now.
 
 
 From `clock-generator/`, with `.env` configured:
