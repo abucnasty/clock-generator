@@ -8,6 +8,10 @@ a line that names the reason and lists the jobs. A pull request that moves no re
 CI checks this file: the "Record check" fails when a selected clock got worse than in the base and its job key is not in the lines the pull
 request adds to this file.
 
+## Logistic science 240 states its output lines (#797)
+Only the job of one sample moved; no other job, and no selected clock, verdict, hold, rate or wakeups got worse. The logistic science sample now says which lines its scaffold has for the output (eight stretches in one group, with a splitter that has one input), so the simulator judges its clocks with them.
+- config-LOGISTIC_SCIENCE_240: takt_batches_observed stays selected and unchanged (stable, 240 a second, window cycle 176, 20.571 wakeups a minute, clock hash 05fd4bbd); its results digest and that of takt_batches_observed_swings_3 moved. takt_batches_observed_swings_1 (window cycle 88) goes from stable to unstable, rate, wakeups and clock hash as before: on the stated lines it falls short. In Factorio 2.1.24, on the sample's scaffold of 22 copies, the selected clock made 64 of 64 on every copy in each of 61 window cycles, and swings_1 made 512 of 704 a window cycle and found no steady state in 36,000 ticks
+
 ## Lithium plate 80 states its output lines (#794)
 Only the job of one sample moved; no other job, and no selected clock, verdict, hold, rate or wakeups got worse. The lithium plate sample now says which belt its scaffold has for the output (two lines, three output hands on each), so the simulator judges its clocks with it.
 - config-LITHIUM_PLATE_80_SILO_CHEST: coordinated_sources stays selected and unchanged (stable, 80 a second, window cycle 2,160, 3.335 wakeups a minute, clock hash 2b115eb8). takt_batches_observed_swings_5 (window cycle 1,080) and takt_batches_observed_swings_7 (window cycle 7,560) go from stable to unstable, rate, wakeups and clock hash as before: on the stated belt they fall short. In Factorio 2.1.24, swings_5 made 1,344 to 1,408 of 1,440 in 9 window cycles and found no steady state in 36,000 ticks; the selected clock made 2,880 of 2,880 in 4 of 4 window cycles
