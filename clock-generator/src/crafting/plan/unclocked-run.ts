@@ -48,6 +48,7 @@ import { WarmupStep } from "../runner/steps/warmup-step";
 import { FullOutputChest, fullOutputChestsOf } from "../full-output-chests";
 import { ExportShortfall, exportShortfallsOfWindowCycle, exportedItemsOf } from "../export-delivery";
 import { simulationStateKey } from "../runner/steady-state";
+import { InstalledControl, warmUpRepeatOf } from "../runner/warm-up-repeat";
 import { SimulateStep } from "../runner/steps/simulate-step";
 import { RunnerStepType } from "../runner/steps/runner-step";
 import { Logger, defaultLogger } from "../../common/logger";
@@ -952,6 +953,8 @@ interface ControlledBuild {
     crafting_shares: Map<string, number>;
     always_enabled_by_config: Set<string>;
     inserter_clocks: Map<string, InserterClock>;
+    /** The control each inserter and drill was put on, in the order of the context's lists */
+    installed_controls: InstalledControl[];
 }
 
 /**
@@ -1022,29 +1025,34 @@ function withEnableControls(
     // Swap the controls of the build's context, in place
     // Route to configurable factory if override mode is not AUTO, otherwise use automatic factory
     // a later copy's inserter or drill runs on the control of the config's own (build-copies.ts); a condition reads the
-    // copy's own entities
+    // copy's own entities; what each is put on is kept for the warm-up's proof of a repeat (`warmUpRepeatOf`)
+    const installed_controls: InstalledControl[] = [];
+    const install = (entity_id: EntityId, control: InstalledControl["control"]) => {
+        installed_controls.push({ control, override: enable_control_override_map.get(entity_id.id) });
+        return control;
+    };
     simulation_context.useControls({
         drill: (drill_state) => {
             const entity_id = twinOf(drill_state.entity_id);
             if (configurable_enable_control_factory.hasOverride(entity_id)) {
                 const override_mode = configurable_enable_control_factory.getOverrideOrThrow(entity_id).mode;
                 logger.log(`Using configurable override for drill ${drill_state.entity_id.id} with mode ${override_mode}`);
-                return configurable_enable_control_factory.createForEntityId(entity_id);
+                return install(entity_id, configurable_enable_control_factory.createForEntityId(entity_id));
             }
-            return enable_control_factory.createForEntityId(entity_id);
+            return install(entity_id, enable_control_factory.createForEntityId(entity_id));
         },
         inserter: (inserter_state) => {
             const entity_id = twinOf(inserter_state.entity_id);
             if (configurable_enable_control_factory.hasOverride(entity_id)) {
                 const override_mode = configurable_enable_control_factory.getOverrideOrThrow(entity_id).mode;
                 logger.log(`Using configurable override for inserter ${inserter_state.entity_id.id} with mode ${override_mode}`);
-                return configurable_enable_control_factory.createForEntityId(entity_id, inserter_state.inserter);
+                return install(entity_id, configurable_enable_control_factory.createForEntityId(entity_id, inserter_state.inserter));
             }
-            return enable_control_factory.createForEntityId(entity_id);
+            return install(entity_id, enable_control_factory.createForEntityId(entity_id));
         }
     });
 
-    return { resettable_registry, crafting_shares, always_enabled_by_config, inserter_clocks };
+    return { resettable_registry, crafting_shares, always_enabled_by_config, inserter_clocks, installed_controls };
 }
 
 /** How long a build runs: the window cycle of the clock, and the warmup before it */
@@ -1091,8 +1099,9 @@ function runWindowCyclesOf(output_cycle_plan: OutputCyclePlan, recipe_lcm: numbe
 }
 
 /**
- * Step 2: warms the build up. Returns the window cycles its state repeats over, when the warmup reached a repeating state;
- * a build that is not clocked throughout is not checked for one.
+ * Step 2: warms the build up, and stops where its state repeats wherever its controls let the key prove a repeat
+ * (`warmUpRepeatOf`). Returns the window cycles its state repeats over, when the warmup reached a repeating state on a
+ * build clocked throughout on the run's window cycle; the stability check reads them, and no other repeat.
  */
 function warmUp(
     config: Config,
@@ -1112,15 +1121,20 @@ function warmUp(
     // the clocks start here, on a cold build at its tick 0
     resettable_registry.resetAll(true);
     return withDebugFor(debug, debug_steps, RunnerStepType.WARM_UP, () => {
+        const repeat = warmUpRepeatOf(duration.ticks, controlled.installed_controls, warmup_window_cycle.ticks);
         const warmup_step = new WarmupStep(simulation_context, warmup_window_cycle,
-            isPurelyClocked(config, duration.ticks)
-                ? { window_cycle_ticks: duration.ticks, key: () => simulationStateKey(simulation_context) }
+            repeat.armed
+                ? { bin_ticks: repeat.bin_ticks, keyed_from_ticks: repeat.keyed_from_ticks, key: () => simulationStateKey(simulation_context) }
                 : undefined, shadow?.warm_up);
         warmup_step.execute();
         if (warmup_step.ticks_run < warmup_window_cycle.ticks) {
             logger.log(`Warm-up reached a repeating state after ${warmup_step.ticks_run} ticks`);
         }
-        return { repeat_window_cycles: warmup_step.repeat_window_cycles, ticks_run: warmup_step.ticks_run };
+        const repeat_ticks = warmup_step.repeat_ticks;
+        return {
+            repeat_window_cycles: repeat_ticks !== undefined && isPurelyClocked(config, duration.ticks) ? repeat_ticks / duration.ticks : undefined,
+            ticks_run: warmup_step.ticks_run,
+        };
     });
 }
 
