@@ -121,7 +121,8 @@ function judgeBaseline(run, target) {
 /**
  * The output stock after the last recovery, from the run's tail (steady.lua): at each whole clock cycle the total stock and the
  * lowest it was at any tick since the cycle before, from the tick of the last recovery on. What the last disturbance leaves
- * takes a while to settle (a dip, then a climb back to a level), so the level is read in the last half of the tail only. It holds
+ * takes a while to settle (a dip, then a climb back to a level), so the level is read in the last half of the tail only (which can start
+ * before the stock has stopped climbing; a climb is no fall). It holds
  * when, there, the stock is never below the baseline's lowest at any tick (the same measure the baseline's lowest is) and is not
  * falling (no lower at the last whole cycle than at the first of those): a slow drain never settles and fails. No cycle there (the
  * run ended before the tail did): no settled level, and the guard fails.

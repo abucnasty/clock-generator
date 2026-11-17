@@ -4,9 +4,9 @@
     "car-derived": {
       "recorded": {
         "pr": 0,
-        "commit": "038ed41a",
-        "frozen_head": "038ed41a",
-        "note": "recorded again on 2026-11-17 in Factorio 2.1.24 with a tail of 14,400 ticks after the last recovery (#587), on the same clock; the stock guard reads the stock after settling (stock.after)",
+        "commit": "c507b0f1",
+        "frozen_head": "c507b0f1",
+        "note": "recorded under the protocol in game ticks on the engine of this head, in Factorio 2.1.24 on 2026-11-17 with a tail of 14,400 ticks after the last recovery (#587: the stock guard reads the stock after settling); the clock is the one of the recording before, the same clock_sha256; pr is set when the PR is opened",
         "clock_sha256": "ada70e1e95f6344645551b76515f3357c953fe28f1586020cc05de38d6143723",
         "clock_basis": "capture"
       },
@@ -95,9 +95,9 @@
     "car-derived-takers-last": {
       "recorded": {
         "pr": 0,
-        "commit": "038ed41a",
-        "frozen_head": "038ed41a",
-        "note": "recorded again on 2026-11-17 in Factorio 2.1.24 with a tail of 14,400 ticks after the last recovery (#587), on the same clock; the stock guard reads the stock after settling (stock.after)",
+        "commit": "c507b0f1",
+        "frozen_head": "c507b0f1",
+        "note": "recorded under the protocol in game ticks on the engine of this head, in Factorio 2.1.24 on 2026-11-17 with a tail of 14,400 ticks after the last recovery (#587: the stock guard reads the stock after settling); the clock is the one of the recording before, the same clock_sha256; pr is set when the PR is opened",
         "clock_sha256": "ada70e1e95f6344645551b76515f3357c953fe28f1586020cc05de38d6143723",
         "clock_basis": "capture"
       },
@@ -186,9 +186,9 @@
     "car-swings-2": {
       "recorded": {
         "pr": 0,
-        "commit": "57c76634",
-        "frozen_head": "57c76634",
-        "note": "recorded again on 2026-11-17 in Factorio 2.1.24 with a tail of 14,400 ticks after the last recovery (#587), on the same clock; the stock guard reads the stock after settling (stock.after)",
+        "commit": "c507b0f1",
+        "frozen_head": "c507b0f1",
+        "note": "recorded under the protocol in game ticks on the engine of this head, in Factorio 2.1.24 on 2026-11-17 with a tail of 14,400 ticks after the last recovery (#587: the stock guard reads the stock after settling); the clock is the one of the recording before, the same clock_sha256; pr is set when the PR is opened",
         "clock_sha256": "c034828da0e279f66be23750884f519b8b467b5313a2da0b5c07daa789e3f0bb",
         "clock_basis": "capture"
       },
@@ -277,9 +277,9 @@
     "car-swings-2-takers-last": {
       "recorded": {
         "pr": 0,
-        "commit": "57c76634",
-        "frozen_head": "57c76634",
-        "note": "recorded again on 2026-11-17 in Factorio 2.1.24 with a tail of 14,400 ticks after the last recovery (#587), on the same clock; the stock guard reads the stock after settling (stock.after)",
+        "commit": "c507b0f1",
+        "frozen_head": "c507b0f1",
+        "note": "recorded under the protocol in game ticks on the engine of this head, in Factorio 2.1.24 on 2026-11-17 with a tail of 14,400 ticks after the last recovery (#587: the stock guard reads the stock after settling); the clock is the one of the recording before, the same clock_sha256; pr is set when the PR is opened",
         "clock_sha256": "c034828da0e279f66be23750884f519b8b467b5313a2da0b5c07daa789e3f0bb",
         "clock_basis": "capture"
       },
@@ -368,9 +368,9 @@
     "car-swings-3": {
       "recorded": {
         "pr": 0,
-        "commit": "038ed41a",
-        "frozen_head": "038ed41a",
-        "note": "recorded again on 2026-11-17 in Factorio 2.1.24 with a tail of 14,400 ticks after the last recovery (#587), on the same clock; the stock guard reads the stock after settling (stock.after)",
+        "commit": "c507b0f1",
+        "frozen_head": "c507b0f1",
+        "note": "recorded under the protocol in game ticks on the engine of this head, in Factorio 2.1.24 on 2026-11-17 with a tail of 14,400 ticks after the last recovery (#587: the stock guard reads the stock after settling); the clock is the one of the recording before, the same clock_sha256; pr is set when the PR is opened",
         "clock_sha256": "680216906ebddadf5638a3116ff240e7c0eec81994ac20e033eee4b22653b662",
         "clock_basis": "capture"
       },
@@ -462,9 +462,9 @@
     "car-swings-3-takers-last": {
       "recorded": {
         "pr": 0,
-        "commit": "038ed41a",
-        "frozen_head": "038ed41a",
-        "note": "recorded again on 2026-11-17 in Factorio 2.1.24 with a tail of 14,400 ticks after the last recovery (#587), on the same clock; the stock guard reads the stock after settling (stock.after)",
+        "commit": "c507b0f1",
+        "frozen_head": "c507b0f1",
+        "note": "recorded under the protocol in game ticks on the engine of this head, in Factorio 2.1.24 on 2026-11-17 with a tail of 14,400 ticks after the last recovery (#587: the stock guard reads the stock after settling); the clock is the one of the recording before, the same clock_sha256; pr is set when the PR is opened",
         "clock_sha256": "680216906ebddadf5638a3116ff240e7c0eec81994ac20e033eee4b22653b662",
         "clock_basis": "capture"
       },
@@ -556,9 +556,9 @@
     "car-swings-1": {
       "recorded": {
         "pr": 0,
-        "commit": "038ed41a",
-        "frozen_head": "038ed41a",
-        "note": "recorded again on 2026-11-17 in Factorio 2.1.24 with a tail of 14,400 ticks after the last recovery (#587), on the same clock; the stock guard reads the stock after settling (stock.after)",
+        "commit": "c507b0f1",
+        "frozen_head": "c507b0f1",
+        "note": "recorded under the protocol in game ticks on the engine of this head, in Factorio 2.1.24 on 2026-11-17 with a tail of 14,400 ticks after the last recovery (#587: the stock guard reads the stock after settling); the clock is the one of the recording before, the same clock_sha256; pr is set when the PR is opened",
         "clock_sha256": "2076db78e3f81019464ac681875c38570f79c30a628d0373e906624b99abd6b0",
         "clock_basis": "capture"
       },

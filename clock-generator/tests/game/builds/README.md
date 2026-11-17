@@ -587,13 +587,17 @@ checks; here it is stopped as the supply cut. Do not compare these recordings wi
 families.
 
 [iron-plate-80-car-chest-clock-controls.json](iron-plate-80-car-chest-clock-controls.json) holds the 7 native summaries, 7 trailing-minute runs
-recorded on Factorio 2.1.24. In all 7 the net output is exact, the machines reach a steady state and every recovery holds. The
+recorded on Factorio 2.1.24. In all 7 the net output is exact and the machines reach a steady state; the three recoveries are recorded (the
+second and the third disturbance last one tick each: the trailing minute is still below the baseline's lowest when they start), and in the
+288-tick control the trailing minute falls to 4,722 against 4,800 at tick 15,300, 480 ticks after the last recorded recovery, while the stock is lowest, and is no lower than 4,796 from tick 22,000 (a window of 3,600 ticks is not a whole number of 288-tick cycles). The
 run goes on for 14,400 ticks after its last recovery (the `tail` of `helpers/lua/steady.lua`) and the output stock guard reads the stock
 after it has settled, at each whole window cycle of the last half of the tail ([#587](https://github.com/abucnasty/clock-generator/issues/587)):
 it must be no lower than the baseline's lowest and not falling. The last drill stop empties the car, and what the furnaces keep in their output
 afterwards is not what the run showed at the tick of the recovery: it falls first, then climbs back.
 **The 4 controls of the clocks of 288 and 144 ticks hold the guard**: the stock falls to 0 (288 ticks) or 50 (144 ticks) at its lowest tick after the
-recovery, and settles at 128 and at 194 (122 and 152 at the lowest tick) after about 9,200 and 7,900 ticks, against baseline lowest stocks of 88 and 90. **The 3 controls of the clocks of 72 ticks keep it as a
+recovery, and settles at 128 and at 194 (122 and 152 at the lowest tick) after about 9,200 and 7,900 ticks, against baseline lowest stocks of 88 and 90.
+The half of the tail the guard reads can start before the stock has settled (the 288-tick clock is still climbing at its start, and its lowest tick
+there is 100): the guard asks only that the stock is never below the baseline's lowest and does not fall. **The 3 controls of the clocks of 72 ticks keep it as a
 `known_differences` entry**: the stock is at 48 (43 at its lowest tick) at every whole window cycle from the recovery on, for the 14,400 ticks of the
 tail, against 80 (70 at its lowest tick) in the baseline. It is a lower, steady level, not a drain; why the level is lower is not found.
 `iron-plate-80-car-chest-clock.generation.test.ts` pins each clock and checks it against its native summary.
