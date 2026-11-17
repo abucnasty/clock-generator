@@ -1,5 +1,5 @@
 import { assumedCopySpacings, droppedOntoSharedLanes } from "./shared-lane-verdict";
-import { outputEndsOf, sharedLanesOf } from "./checked-lanes";
+import { sharedLanesOf } from "./checked-lanes";
 import { SerializableMachineFacts } from "../data-types/machine-facts";
 import { InserterStatus, MachineStatus } from "../state";
 import { recoveryBinsOf, type DisturbanceTrialVerdict } from "./disturbance-trial";
@@ -592,24 +592,23 @@ export function droppedOntoSharedLaneInsights(config: Config): ClockInsight[] {
 
 /**
  * That the output hands that share a belt are not judged as one line: two or more output inserters drop the target onto a
- * belt, counting those of every copy, and the config states neither the belt as its `output_belt` nor a drop spot (`sink.drop`)
- * for the hands. The clock is judged as if each hand dropped onto a free belt (checked-lanes.ts: a plain output lane). A
- * warning only: the clock keeps its verdict. None where the line is stated, or each belt has one output hand in all.
+ * belt, counting those of every copy, and the config states neither an `output_belt` nor a drop spot (`sink.drop`) for the
+ * hands on that belt. The clock is judged as if each hand dropped onto a free belt (checked-lanes.ts: a plain output lane).
+ * A warning only: the clock keeps its verdict. None where the line is stated, or each belt has one output hand in all.
  */
 export function outputLineNotJudgedInsights(config: Config): ClockInsight[] {
+    // a config that states its output belt states its line: its own checks refuse what the generator does not model there
+    if (config.output_belt !== undefined) return [];
     let lanes;
     try {
-        lanes = sharedLanesOf(config).filter(lane => lane.role === "output");
+        lanes = sharedLanesOf(config).filter(lane => lane.role === "output" && lane.item === config.setpoint.recipe);
     } catch {
         return [];
     }
-    const ends = outputEndsOf(config);
-    const stated = config.output_belt !== undefined && ends.belts.size === 1 ? [...ends.belts][0] : undefined;
     const geometry = (belt_id: number) => config.inserters.filter(inserter => inserter.sink.type === "belt" && inserter.sink.id === belt_id)
         .every(inserter => inserter.sink.type === "belt" && inserter.sink.drop !== undefined);
-    const belts = [...new Set(lanes.map(lane => lane.belt_id))].filter(belt_id => belt_id !== stated && !geometry(belt_id)).sort((a, b) => a - b);
-    if (belts.length === 0) return [];
-    const build = buildToNameOf(config);
+    const belts = [...new Set(lanes.map(lane => lane.belt_id))].filter(belt_id => !geometry(belt_id)).sort((a, b) => a - b);
+    const build = belts.length === 0 ? NO_BUILD : buildToNameOf(config);
     return belts.map(belt_id => {
         const belt = theName(beltNameInText(belt_id, build));
         return { id: `output-line-not-judged-${belt_id}`, scope: "build" as const,

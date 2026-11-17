@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { automationRow } from "../../tests/configs/automation-row";
+import { ConfigPaths } from "../config/config-paths";
+import { loadConfigFromFile } from "../config/loader";
 import type { Config } from "../config/schema";
 import { outputLineNotJudgedInsights } from "./insights";
 
@@ -46,5 +48,23 @@ describe("the notice that the output line of hands that share a belt was not jud
 
     it("says nothing of a build with one output hand a belt", () => {
         expect(ids(automationRow({ machines: 1, pitch: 9 }))).toEqual([]);
+    });
+
+    // the samples: those that state their output line (output_belt, or a drop spot for each hand) say nothing
+    it("says nothing of the samples that state their output line", async () => {
+        for (const name of ["AUTOMATION_SCIENCE_240", "MILITARY_SCIENCE_240", "GRENADE_240_FILLS_BELT_EXACTLY", "CHEMICAL_SCIENCE_240_SHARED_FOUNDRY", "LITHIUM_PLATE_80_SILO_CHEST",
+            "FLYING_ROBOT_FRAME_80", "LOGISTIC_SCIENCE_240", "UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT"] as const) {
+            expect(ids(await loadConfigFromFile(ConfigPaths[name])), name).toEqual([]);
+        }
+    });
+
+    it("names the belt of the samples whose hands share a belt and state no line", async () => {
+        expect(ids(await loadConfigFromFile(ConfigPaths.LDS_240))).toEqual(["output-line-not-judged-1"]);
+        expect(ids(await loadConfigFromFile(ConfigPaths.ROCKET_FUEL_60))).toEqual(["output-line-not-judged-2"]);
+        expect(ids(await loadConfigFromFile(ConfigPaths.ELECTRIC_FURNACE_20))).toEqual(["output-line-not-judged-2"]);
+    });
+
+    it("counts the hands of the target only: the circuits that a processing unit build exports do not count", async () => {
+        expect(ids(await loadConfigFromFile(ConfigPaths.PROCESSING_UNIT_80_CIRCUIT_EXPORT))).toEqual([]);
     });
 });
