@@ -379,7 +379,7 @@ const grenade: JobCheck[] = [
         name: 'every alternative says the lanes of the belt are exactly full, and the selected clock\'s hands fit between each other',
         run: ({ generated }) => {
             for (const alternative of generated.alternatives) {
-                expect(alternative.insights.find(it => it.id === 'lanes-exactly-full')?.title).toBe('Both lanes of the grenade belt are exactly full');
+                expect(alternative.insights.find(it => it.id === 'lanes-exactly-full')?.title).toBe('The grenade lane (lane 1 of belt 1) and the grenade lane (lane 2 of belt 1) are exactly full');
                 expect(alternative.insights.find(it => it.id === 'drop-spacing')).toBeDefined();
             }
             // the two inserters of a row start in the same tick: the 14 hands of a row land on 14 tiles of the belt's cycle of 14
