@@ -53,11 +53,6 @@ function nodeThreads(): Threads | null {
     return process.getBuiltinModule("node:worker_threads") ?? null;
 }
 
-/** Whether this runs where worker threads exist */
-export function workerThreadsExist(): boolean {
-    return nodeThreads() !== null;
-}
-
 /**
  * `count` worker threads that each run `script` (an absolute path of a file that calls `serveSyncWorker`). Null where worker
  * threads are not there. Throws when they are but `script` is not a file: asking for workers and getting none would hide a
