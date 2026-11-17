@@ -7,6 +7,7 @@ import { SimulationContext } from "../sequence/simulation-context";
 import { steelHub } from "../container-output.fixture";
 import { WarmupStep } from "./steps/warmup-step";
 import { controlsKeyOf, InstalledControl, skipRepeatedTicks, warmUpRepeatOf } from "./warm-up-repeat";
+import { pickedUpAndNoMore } from "../sequence/interceptors/inserter-enable-control-factory";
 
 const clock = (window_cycle_ticks: number, options: { start_latency_ticks?: number; exact_subtick_positions?: boolean } = {}): InstalledControl => ({
     control: EnableControl.clocked({ windowCycleDuration: Duration.ofTicks(window_cycle_ticks), enabledRanges: [OpenRange.from(0, 1)],
@@ -69,6 +70,46 @@ describe("where the warm-up may stop on a repeated state", () => {
         // half a tick on a billion: its whole-tick repeat is too large for a 32-bit counter
         expect(warmUpRepeatOf(1e9 + 0.5, [], 600)).toEqual({ armed: false, reason: "no whole-tick repeat" });
         expect(warmUpRepeatOf(60, [clock(60), clock(7 * 11 * 13)], 600)).toEqual({ armed: false, reason: "repeat past the warm-up" });
+    });
+});
+
+describe("the hand-over from a stopped warm-up to the recorded run", () => {
+    /**
+     * An output inserter held to 4 items a span of 10 ticks (`pickedUpAndNoMore`), which takes one item in each tick it is
+     * enabled: it takes its 4 at the start of every span, so it repeats every span. It is warmed `warm_up` ticks, has
+     * `skipped` ticks left out by a stop, then the ticks start over for the recorded run, in which it sleeps through
+     * `asleep` ticks before it asks again; its answers from then on.
+     */
+    const recorded = (warm_up: number, skipped: number | null, asleep: number) => {
+        const tick = TickProvider.mutable(0);
+        const state = { items_picked_up: 0 };
+        const control = pickedUpAndNoMore(state, tick, 4, 10, 0);
+        const ask = () => {
+            const enabled = control.isEnabled();
+            if (enabled) state.items_picked_up += 1;
+            return enabled;
+        };
+        for (let t = 0; t < warm_up; t++) {
+            tick.setCurrentTick(t);
+            ask();
+        }
+        if (skipped !== null) skipRepeatedTicks([{ control, override: undefined }], skipped);
+        const answers: boolean[] = [];
+        for (let t = asleep; t < asleep + 50; t++) {
+            tick.setCurrentTick(t);
+            answers.push(ask());
+        }
+        return answers;
+    };
+
+    it("starts the recorded run as the full warm-up does, where the inserter sleeps through the run's first spans", () => {
+        // the full warm-up runs 100 ticks; stopped at 40, it left out 60, six spans. The recorded run's first ask falls in
+        // span 3, the span the stopped warm-up last counted
+        const full = recorded(100, null, 30);
+        expect(recorded(40, 60, 30)).toEqual(full);
+        // without the skip the first ask finds its span already counted, and the inserter waits a span the full run does not
+        expect(recorded(40, null, 30)).not.toEqual(full);
+        expect(full.slice(0, 4)).toEqual([true, true, true, true]);
     });
 });
 

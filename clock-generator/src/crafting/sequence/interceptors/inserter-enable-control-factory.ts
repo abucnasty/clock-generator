@@ -30,6 +30,45 @@ export function runThroughTicks(game_tick_provider: TickProvider | undefined, wi
     return Number.isInteger(window_cycle_ticks) || counter_runs_through ? game_tick_provider : undefined;
 }
 
+/**
+ * Every span of `span_ticks` allows `items_per_span` items more, and the inserter is enabled while it has picked up
+ * less than it was allowed so far and `slack`. Its key for the warm-up's proof of a repeat (`LambdaRepeat`) holds the
+ * span it last counted, as spans before the current one, and what it is allowed over what it has picked up: the
+ * running totals themselves only grow, and nothing here reads them but as that difference. Its answers repeat with
+ * the spans, in whole ticks only where a span is a whole number of ticks. The span it last counted is a span of the
+ * run's ticks, which start over with the recorded run: after a warm-up's stop it moves on by the ticks left out (`skip`),
+ * so the recorded run's first count finds it where the full warm-up would have left it.
+ */
+export function pickedUpAndNoMore(inserter_state: Pick<InserterState, "items_picked_up">, tick_provider: TickProvider,
+    items_per_span: number, span_ticks: number, slack: number): EnableControl {
+    let span: number | null = null;
+    let allowed = 0;
+    return EnableControl.lambda(() => {
+        const picked_up = inserter_state.items_picked_up;
+        const current_span = Math.floor(tick_provider.getCurrentTick() / span_ticks);
+        if (span === null || current_span !== span) {
+            // the ticks start over between the warm up and the run that is recorded: one span more, as any other
+            const spans_passed = span !== null && current_span > span ? current_span - span : 1;
+            // what was not picked up is not saved up for later
+            allowed = Math.min(allowed + spans_passed * items_per_span, picked_up + items_per_span);
+            span = current_span;
+        }
+        return picked_up < allowed + slack;
+    }, {
+        key: () => {
+            const spans_since = span === null ? "-" : Math.floor(tick_provider.getCurrentTick() / span_ticks) - span;
+            return `${spans_since};${allowed - inserter_state.items_picked_up}`;
+        },
+        period_ticks: span_ticks,
+        skip: ticks => {
+            if (span !== null) {
+                assert(Number.isInteger(ticks / span_ticks), `A warm-up's stop left out ${ticks} ticks, no whole number of spans of ${span_ticks}`);
+                span += ticks / span_ticks;
+            }
+        },
+    });
+}
+
 export class EnableControlFactory {
 
     private readonly target_output_item_name: string;
@@ -657,40 +696,8 @@ export class EnableControlFactory {
         return this.pickedUpAndNoMore(inserter_state, items_per_span, span_ticks, 0);
     }
 
-    /**
-     * Every span of `span_ticks` allows `items_per_span` items more, and the inserter is enabled while it has picked up
-     * less than it was allowed so far and `slack`. Its key for the warm-up's proof of a repeat (`LambdaRepeat`) holds the
-     * span it last counted, as spans before the current one, and what it is allowed over what it has picked up: the
-     * running totals themselves only grow, and nothing here reads them but as that difference. Its answers repeat with
-     * the spans, in whole ticks only where a span is a whole number of ticks.
-     */
     private pickedUpAndNoMore(inserter_state: InserterState, items_per_span: number, span_ticks: number, slack: number): EnableControl {
-        let span: number | null = null;
-        let allowed = 0;
-        return EnableControl.lambda(() => {
-            const picked_up = inserter_state.items_picked_up;
-            const current_span = Math.floor(this.tick_provider.getCurrentTick() / span_ticks);
-            if (span === null || current_span !== span) {
-                // the ticks start over between the warm up and the run that is recorded: one span more, as any other
-                const spans_passed = span !== null && current_span > span ? current_span - span : 1;
-                // what was not picked up is not saved up for later
-                allowed = Math.min(allowed + spans_passed * items_per_span, picked_up + items_per_span);
-                span = current_span;
-            }
-            return picked_up < allowed + slack;
-        }, {
-            key: () => {
-                const spans_since = span === null ? "-" : Math.floor(this.tick_provider.getCurrentTick() / span_ticks) - span;
-                return `${spans_since};${allowed - inserter_state.items_picked_up}`;
-            },
-            period_ticks: span_ticks,
-            skip: ticks => {
-                if (span !== null) {
-                    assert(Number.isInteger(ticks / span_ticks), `A warm-up's stop left out ${ticks} ticks, no whole number of spans of ${span_ticks}`);
-                    span += ticks / span_ticks;
-                }
-            },
-        });
+        return pickedUpAndNoMore(inserter_state, this.tick_provider, items_per_span, span_ticks, slack);
     }
 
     /**
