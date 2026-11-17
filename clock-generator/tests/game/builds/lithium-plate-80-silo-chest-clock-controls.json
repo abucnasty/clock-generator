@@ -261,7 +261,7 @@
       "generation": {
         "period": 7560,
         "expected": 10080,
-        "verdict": "stable",
+        "verdict": "unstable",
         "selection": {
           "id": "takt_batches_observed_swings_7",
           "holds": true,

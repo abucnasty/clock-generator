@@ -164,6 +164,8 @@ describe("generateClockForConfig", () => {
         config.setpoint.items_per_second = sample.setpoint.items_per_second / sample.setpoint.copies;
         config.setpoint.copies = 1;
         delete config.setpoint.copy_offset;
+        // the sample's output belt is stated for its 12 copies
+        delete config.output_belt;
         for (const belt of config.belts) {
             for (const lane of belt.lanes) {
                 lane.lane_end = { kind: "infinite" };

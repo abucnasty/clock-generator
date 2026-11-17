@@ -426,13 +426,16 @@ const OUTPUT_BELT_NOT_RUN ="The output belt is run with the copies only together
 
 /**
  * The rows, the line and the parts of the cause of one clock, from its check of the lanes its copies share (see the
- * module's description); null for a build of one copy with no lane that several of its inserters use (`sharedLanesOf`)
+ * module's description); null for a build of one copy with no lane that several of its inserters use (`sharedLanesOf`),
+ * unless the check ran its output belt alone (`judgedOnOutputBelt` in shared-lane-verdict.ts)
  */
 export function checkedLanesOf(input: CheckedLanesInput): CheckedLanes | null {
     const { config, holds, judged, window_cycle_ticks, copies_trial, fewer } = input;
     const copies = config.setpoint.copies;
     const lanes = sharedLanesOf(config);
-    if (!(copies > 1) && lanes.length === 0) return null;
+    // the copies run on the output belt alone: a build that states its output belt and shares no lane the check runs
+    const on_output_belt = judged !== null && !("stopped" in judged) && judged.simulated && judged.lanes.length === 0 && config.output_belt !== undefined;
+    if (!(copies > 1) && lanes.length === 0 && !on_output_belt) return null;
     const build = buildToNameOf(config);
     let loads: ReturnType<typeof laneLoads> | null;
     try {
@@ -447,7 +450,7 @@ export function checkedLanesOf(input: CheckedLanesInput): CheckedLanes | null {
     const stopped = judged !== null && "stopped" in judged ? judged.stopped : null;
     // a build of one copy is run with its inserters together only on a lane they share: a lane of unknown end that is not,
     // run as one copy alone, does not count
-    const run = holds && judgement !== null && judgement.simulated && (copies > 1 || modelLanesOf(config).some(lane => lane.shared));
+    const run = holds && judgement !== null && judgement.simulated && (copies > 1 || modelLanesOf(config).some(lane => lane.shared) || on_output_belt);
     const ran_lanes = new Set(judgement?.lanes ?? []);
     const losses = (judgement?.losses ?? []).filter(loss => !isNotChecked(loss));
     const facts = judgement?.loss_facts ?? [];
@@ -500,7 +503,7 @@ export function checkedLanesOf(input: CheckedLanesInput): CheckedLanes | null {
     const first = (row: CheckedLaneRow) => row.state.kind === "short" || row.state.kind === "join_full" ? 0 : 1;
     rows.sort((a, b) => first(a) - first(b) || a.belt_id - b.belt_id || a.lane - b.lane);
 
-    const line = lineOf({ config, build, rows, run, holds, lane_losses, join_losses, judgement, trial_failed, copies_trial, ends, stated_output_belt });
+    const line = lineOf({ config, build, rows, run, holds, lane_losses, join_losses, judgement, trial_failed, copies_trial, ends, stated_output_belt, on_output_belt });
     const cause = run && losses.length > 0 ? causeOf({ config, build, losses, facts, window_cycle_ticks, fewer, loads, lanes: [...ran_lanes] }) : null;
     const made = run ? judgement!.copies_made : undefined;
     return { line, rows, cause, ...(made !== undefined && { copies_made: { items_per_second: rounded(made.items_per_second), window_cycles: made.window_cycles } }) };
@@ -508,8 +511,8 @@ export function checkedLanesOf(input: CheckedLanesInput): CheckedLanes | null {
 
 function lineOf(input: { config: Config; build: BuildToName; rows: readonly CheckedLaneRow[]; run: boolean; holds: boolean; lane_losses: readonly SharedLaneLoss[];
     join_losses: readonly SharedLaneLoss[]; judgement: SharedLaneJudgement | null; trial_failed: boolean; copies_trial: CopiesTrialVerdict | null;
-    ends: { belts: Set<number>; chests: Set<number> }; stated_output_belt: number | undefined }): CheckedLine {
-    const { config, build, rows, run, holds, lane_losses, join_losses, judgement, trial_failed, copies_trial, ends, stated_output_belt } = input;
+    ends: { belts: Set<number>; chests: Set<number> }; stated_output_belt: number | undefined; on_output_belt: boolean }): CheckedLine {
+    const { config, build, rows, run, holds, lane_losses, join_losses, judgement, trial_failed, copies_trial, ends, stated_output_belt, on_output_belt } = input;
     const copies = config.setpoint.copies;
     const plain_output_belts = new Set(rows.filter(row => row.state.kind === "rate_fits").map(row => row.belt_id)).size;
     const output_chests = [...ends.chests].map(id => {
@@ -538,6 +541,14 @@ function lineOf(input: { config: Config; build: BuildToName; rows: readonly Chec
     const at_belt = output_belt === null ? "" : output_belt === "misses" ? `, and ${copiesNamed(join_copies)} ${join_copies.length === 1 ? "misses" : "miss"} swings at the output belt`
         : output_belt === "waits_none_misses" ? ", and no copy misses a swing at the output belt" : ", and no copy is held back at the output belt";
     const trial = trial_failed && copies_trial?.text !== undefined ? ` ${copies_trial.text}` : "";
+    if (on_output_belt) {
+        // no lane is taken from: only the output belt was run
+        const belt = output_belt === "misses" ? `${join_copies.length === 1 && copies <= 1 ? "The build misses" : `${capitalized(copiesNamed(join_copies))} ${join_copies.length === 1 ? "misses" : "miss"}`} swings at the output belt.`
+            : output_belt === "waits_none_misses" ? "No output inserter misses a swing at the output belt."
+                : output_belt === "none_waits" ? "No output inserter is held back at the output belt." : "";
+        return { ...base, run_with_copies: true, every_copy_gets_items: null, output_belt, ...(trial !== "" && { copies_trial_text: trial.trimStart() }),
+            sentence: `${copies > 1 ? `Checked with all ${figure(copies)} copies on the output belt.` : "Checked with every output inserter on the output belt."}${belt === "" ? "" : ` ${belt}`}${plain}${chests}${trial}` };
+    }
     return { ...base, run_with_copies: true, every_copy_gets_items: short_copies.length === 0, output_belt, ...(trial !== "" && { copies_trial_text: trial.trimStart() }),
         sentence: `${copies > 1 ? `Checked with all ${figure(copies)} copies on the lanes they share.` : "Checked with every inserter on the lanes several of them take from."} ${items}${at_belt}.${plain}${chests}${trial}` };
 }
@@ -581,6 +592,36 @@ function causeOf(input: { config: Config; build: BuildToName; losses: readonly S
         const output_inserter = outputInserterOf(config);
         const swinger = (copy: number) => output_inserter === undefined ? `the output inserter of copy ${copy}` : inserterOfCopy(output_inserter, copy, build);
         const same = at_join.every(it => it.missed === at_join[0].missed && it.swings === at_join[0].swings && it.held_hands === at_join[0].held_hands && it.hands === at_join[0].hands);
+        // the output belt run alone, with no lane taken from: the output inserters of each copy together, in line or on side belts
+        const on_belt = losses.some(loss => loss.on_output_belt === true);
+        const inserters = (copy: number) => `the output inserters of ${config.setpoint.copies > 1 ? `copy ${copy}` : "the build"}`;
+        if (on_belt) {
+            const alone_swings = losses.map(factsOf).find(it => it?.alone_output_swings !== undefined)?.alone_output_swings;
+            const needed = at_join[0].swings;
+            const makes_all = alone_swings !== undefined && alone_swings >= needed;
+            const output_swings = at_join.map(it => ({ copy: it.copy, of: losses.filter(loss => loss.copy === it.copy).map(factsOf).find(facts => facts?.output_swings !== undefined)?.output_swings }));
+            const swings: MissedSwings | undefined = output_swings.every(it => it.of !== undefined)
+                ? { kind: "join", side_belt: config.output_belt?.side_belt !== undefined, copies: output_swings.map(it => ({ copy: it.copy, window_cycles: it.of!.made.length, made: [...it.of!.made], gives: it.of!.gives })) } : undefined;
+            const named_by = (copy: number) => losses.find(loss => loss.copy === copy)?.inserter_id ?? 0;
+            return {
+                kind,
+                headline: { text: missedSentence(at_join), data: { copies: at_join.map(({ copy, missed, swings }) => ({ copy, missed, swings })) } },
+                reason: { code: "target_full", data: { missed: at_join.reduce((sum, it) => sum + it.missed, 0), swings: at_join.reduce((sum, it) => sum + it.swings, 0) } },
+                cause: { text: named.map(copy => `The output belt has no room where ${inserters(copy)} drop.`).join(" "),
+                    data: { copies: named.map(copy => ({ copy })) } },
+                spacing: null,
+                where: { text: at_join.map(it => `${capitalized(inserters(it.copy))} miss ${figure(it.missed)} of their ${figure(it.swings)} swings in ${losses[0].window_cycles} window cycles. `
+                    + `${figure(it.held_hands)} of the ${figure(it.hands)} swings they make wait for room.`).join(" "),
+                data: { takers: at_join.map(it => ({ copy: it.copy, inserter_id: named_by(it.copy), missed: it.missed, swings: it.swings,
+                    items: [{ item: config.setpoint.recipe, missed: it.missed, swings: it.swings }] })) } },
+                alone: { text: alone_swings === undefined ? "The run with each output inserter on a tile of its own does not record them."
+                    : makes_all ? `With each on a tile of its own, the same inserters make all ${figure(needed)} swings. The clock is right for one copy.`
+                        : `With each on a tile of its own, the same inserters make ${figure(alone_swings)} of the ${figure(needed)} swings their target needs.`,
+                data: { makes_all, missed: alone_swings === undefined ? 0 : Math.max(0, needed - alone_swings), swings: needed } },
+                changes: changes(null),
+                ...(swings !== undefined && { swings }),
+            };
+        }
         const where = same
             ? `${capitalized(swinger(at_join[0].copy))} misses ${figure(at_join[0].missed)} of its ${figure(at_join[0].swings)} swings in ${losses[0].window_cycles} window cycles`
                 + (one ? "." : `, and so ${at_join.length === 2 ? "does that" : "do those"} of ${copiesNamed(named.slice(1))}.`)
