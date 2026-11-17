@@ -95,14 +95,23 @@ function endOf(entity_id: EntityId, registry: ReadableEntityRegistry, show_recip
 interface Route {
     /** The config ids of the inserters or drills that take it */
     ids: number[];
+    /** "[entity=car] → [item=iron-plate] → machine 1 [recipe=iron-gear-wheel]": source, the items it moves, sink */
     text: string;
-    /** Some end is several entities ("machines 1, 2"), so "each" does not fit before it */
-    several_ends: boolean;
 }
 
-/** The routes of the inserters or drills of one combinator, the ones that differ only by the ids of their ends together */
-function routesOf(entity_ids: EntityId[], registry: ReadableEntityRegistry, by_product: boolean): Route[] {
-    const groups = new Map<string, { ids: number[]; from: End[]; to: End[] }>();
+/** The item icons an inserter or a drill moves itself; `shared` (the combinator's) when the registry does not say */
+function itemIconsOf(entity: Entity, shared: string): string {
+    const names = Entity.isInserter(entity) ? Array.from(entity.filtered_items ?? []) : Entity.isDrill(entity) && entity.item ? [entity.item.name] : [];
+    return names.length > 0 ? itemIcons(names) : shared;
+}
+
+/**
+ * The routes of the inserters or drills of one combinator, the ones that differ only by the ids of their ends together.
+ * `merged` puts the inserters that share both ends in one route even when they move different items: its line then gives
+ * all of their items.
+ */
+function routesOf(entity_ids: EntityId[], registry: ReadableEntityRegistry, shared_items: string, by_product: boolean, merged: boolean): Route[] {
+    const groups = new Map<string, { ids: number[]; from: End[]; to: End[]; items: string }>();
     for (const entity_id of entity_ids.slice().sort((a, b) => a.number - b.number)) {
         const entity = registry.getEntityById(entity_id);
         if (entity === null) {
@@ -114,8 +123,10 @@ function routesOf(entity_ids: EntityId[], registry: ReadableEntityRegistry, by_p
         if (from === null || to === null) {
             continue;
         }
-        const key = `${from.key} → ${to.key}`;
-        const group = groups.get(key) ?? { ids: [], from: [], to: [] };
+        const items = itemIconsOf(entity, shared_items);
+        const key = merged ? `${from.key} → ${to.key}` : `${from.key} → ${items} → ${to.key}`;
+        const group = groups.get(key) ?? { ids: [], from: [], to: [], items: "" };
+        group.items = Array.from(new Set([...group.items.split(" ").filter(icon => icon !== ""), ...items.split(" ")])).join(" ");
         group.ids.push(entity_id.number);
         group.from.push(from);
         group.to.push(to);
@@ -123,37 +134,65 @@ function routesOf(entity_ids: EntityId[], registry: ReadableEntityRegistry, by_p
     }
     return Array.from(groups.values()).map(group => {
         const ids = (ends: End[]) => Array.from(new Set(ends.map(end => end.id))).sort((a, b) => a - b);
-        const [from_ids, to_ids] = [ids(group.from), ids(group.to)];
         return {
             ids: group.ids,
-            text: `${group.from[0].render(from_ids)} → ${group.to[0].render(to_ids)}`,
-            several_ends: (group.from[0].by_id && from_ids.length > 1) || (group.to[0].by_id && to_ids.length > 1),
+            text: `${group.from[0].render(ids(group.from))} → ${group.items} → ${group.to[0].render(ids(group.to))}`,
         };
     });
 }
 
 /**
- * Line 1 of an enabling combinator, and the line of each route when its inserters or drills take more than one:
- * "[entity=car] → machine 1 [recipe=iron-plate] [item=iron-ore] (inserter 1)",
- * "6 inserters, each [entity=rocket-silo] → [entity=electric-furnace] [recipe=lithium-plate] [item=lithium] (7, 8, 9, 10, 13, 14)".
- * A drill's line starts at the drill with its item: "[entity=big-mining-drill] [item=stone] → machine 2 [recipe=rail] (drill 1)".
+ * The lines that say what a combinator switches on. The header has the count, the items it outputs and the config ids:
+ * "2 inserters [item=iron-gear-wheel] [item=copper-plate] (1, 5)". Under it, a line for each route, in the one shape the
+ * wiring reference uses too, source, then the items it moves, then the sink with its recipe:
+ * "Inserter 1: [entity=car] → [item=iron-ore] → machine 1 [recipe=iron-plate]", "Inserters 7, 8: [entity=rocket-silo] → [item=lithium] → [entity=electric-furnace] [recipe=lithium-plate]".
+ * A drill's line starts at the drill with its item: "Drill 1: [entity=big-mining-drill] → [item=stone] → machine 2 [recipe=rail]".
  */
-function identityLines(entity_ids: EntityId[], registry: ReadableEntityRegistry, item_icons: string, prefix = "", by_product = false): { first: string; routes: string[] } {
+function identityLines(entity_ids: EntityId[], registry: ReadableEntityRegistry, item_icons: string, compaction: Compaction, prefix = "", by_product = false): { header: string; routes: string[] } {
     const sorted = entity_ids.map(it => it.number).sort((a, b) => a - b);
-    const drill = EntityId.isDrill(entity_ids[0]);
-    const noun = drill ? "drill" : "inserter";
-    const tag = sorted.length === 1 ? `(${noun} ${sorted[0]})` : `(${sorted.join(", ")})`;
-    const routes = routesOf(entity_ids, registry, by_product);
-    const items_after = (route: string) => drill ? route.replace(" → ", ` ${item_icons} → `) : `${route} ${item_icons}`;
-    if (routes.length === 1) {
-        const [route] = routes;
-        const lead = sorted.length === 1 ? "" : `${sorted.length} ${noun}s${route.several_ends ? ":" : ", each"} `;
-        return { first: `${prefix}${lead}${items_after(route.text)} ${tag}`, routes: [] };
-    }
+    const noun = EntityId.isDrill(entity_ids[0]) ? "drill" : "inserter";
+    const name = (ids: number[]) => compaction.bare ? ids.join(", ") : `${plural(ids.length, noun)} ${ids.join(", ")}`.replace(/^./, first => first.toUpperCase());
     return {
-        first: `${prefix}${sorted.length} ${noun}s ${item_icons} ${tag}`,
-        routes: routes.map(route => `- ${route.ids.join(", ")}: ${route.text}`),
+        header: `${prefix}${sorted.length} ${plural(sorted.length, noun)} ${compaction.headerWithoutItems ? "" : `${item_icons} `}(${sorted.join(", ")})`,
+        routes: routesOf(entity_ids, registry, item_icons, by_product, compaction.merged).map(route => `${name(route.ids)}: ${route.text}`),
     };
+}
+
+/** How much of a description's lines are given up to fit the bytes Factorio keeps of it: none, then one more of these at each step */
+interface Compaction {
+    /** The inserters that share both ends are one line, with all their items */
+    merged: boolean;
+    /** A line starts at the numbers of its inserters: the header names them as inserters */
+    bare: boolean;
+    /** The header has no items: each line of an inserter has them */
+    headerWithoutItems: boolean;
+}
+
+const COMPACTIONS: Compaction[] = [
+    { merged: false, bare: false, headerWithoutItems: false },
+    { merged: true, bare: false, headerWithoutItems: false },
+    { merged: true, bare: true, headerWithoutItems: false },
+    { merged: true, bare: true, headerWithoutItems: true },
+];
+
+/**
+ * The lines in full, one line for each route of each item; when they do not fit in the bytes Factorio keeps of a description,
+ * with as little given up as makes them fit (`Compaction`), so that no line is cut. The last step is used when none fits.
+ */
+function fitted(lines_of: (compaction: Compaction) => string[]): string[] {
+    const fits = (lines: string[]) => new TextEncoder().encode(lines.join("\n")).length <= MAX_PLAYER_DESCRIPTION_BYTES;
+    for (const compaction of COMPACTIONS.slice(0, -1)) {
+        const lines = lines_of(compaction);
+        if (fits(lines)) {
+            return lines;
+        }
+    }
+    return lines_of(COMPACTIONS[COMPACTIONS.length - 1]);
+}
+
+/** The line of a group's turn goes after the line of the counts and windows: the lines before it are the header and the routes */
+function withTurn(lines: string[], before: number, turn_line: string | undefined): string[] {
+    return turn_line === undefined ? lines : [...lines.slice(0, before), turn_line, ...lines.slice(before)];
 }
 
 /** The item icons of a combinator's line, one after the other: "[item=iron-gear-wheel] [item=copper-plate]" */
@@ -202,8 +241,9 @@ export function plannedDescriptionLines(
     swings_a_window_cycle: readonly { entity_id: EntityId; swings: Fraction }[],
     windows: DeciderWindows,
     window_cycle_text: string,
+    /** The line of the group's turn, after the counts */
+    turn_line?: string,
 ): string[] {
-    const { first, routes } = identityLines(entity_ids, registry, itemIcons(item_names));
     const drill = EntityId.isDrill(entity_ids[0]);
     const counts = Array.from(new Set(swings_a_window_cycle.map(it => it.swings.toDecimal()))).sort((a, b) => a - b);
     const swings_of = (count: number) => swings_a_window_cycle.find(it => it.swings.toDecimal() === count)!.swings;
@@ -223,12 +263,15 @@ export function plannedDescriptionLines(
         const each = entity_ids.length > 1 ? " each" : "";
         what = `${drill ? `Mines ${count_text(swings)}` : `${count_text(swings)} ${plural(swings.toDecimal() === 1 ? 1 : 2, "swing")}`}${each}`;
     }
-    return [
-        first,
-        `${what} in ${windowsText(windows, window_cycle_text)}`,
-        ...unusualWindowLines(windows),
-        ...routes,
-    ];
+    return fitted(compaction => {
+        const { header, routes } = identityLines(entity_ids, registry, itemIcons(item_names), compaction);
+        return withTurn([
+            header,
+            ...routes,
+            `${what} in ${windowsText(windows, window_cycle_text)}`,
+            ...unusualWindowLines(windows),
+        ], 2 + routes.length, turn_line);
+    });
 }
 
 /**
@@ -274,16 +317,19 @@ export function chestDrillDescriptionLines(
     item_names: Iterable<string>,
     windows: DeciderWindows,
     window_cycle_text: string,
+    turn_line?: string,
 ): string[] {
-    const { first, routes } = identityLines(drill_ids, registry, itemIcons(item_names));
     const sink = sinkOfDrills(drill_ids, registry);
-    return [
-        first,
-        `Tops ${sink ?? "each drill's container"} up just in time, ${windowsText(windows, window_cycle_text)}`,
-        ...unusualWindowLines(windows),
-        `Not counted as swings: opens just before the inserters take from ${sink ?? "it"}`,
-        ...routes,
-    ];
+    return fitted(compaction => {
+        const { header, routes } = identityLines(drill_ids, registry, itemIcons(item_names), compaction);
+        return withTurn([
+            header,
+            ...routes,
+            `Tops ${sink ?? "each drill's container"} up just in time, ${windowsText(windows, window_cycle_text)}`,
+            ...unusualWindowLines(windows),
+            `Not counted as swings: opens just before the inserters take from ${sink ?? "it"}`,
+        ], 2 + routes.length, turn_line);
+    });
 }
 
 /**
@@ -298,23 +344,28 @@ export function unplannedDescriptionLines(
     /** The window as the condition reads it (the 0-based window plus the clock's first value) */
     window: OpenRange,
     signal: SignalId | null,
+    turn_line?: string,
 ): string[] {
     const items = itemIcons(item_names);
     const open = `${signal === null ? CLOCK_ICON : SignalId.toDescriptionString(signal)} ${rangeText(window)}`;
     if (inserter_clock.kind === "fuel") {
-        const { first, routes } = identityLines(inserter_ids, registry, items, "Fuel: ");
-        return [
-            first,
-            `Open ${open}${signal === null ? " of the fuel clock" : ""}, once every ${inserter_clock.modulus} ticks; does not swing while the fuel slot is full`,
-            ...routes,
-        ];
+        return fitted(compaction => {
+            const { header, routes } = identityLines(inserter_ids, registry, items, compaction, "Fuel: ");
+            return withTurn([
+                header,
+                ...routes,
+                `Open ${open}${signal === null ? " of the fuel clock" : ""}, once every ${inserter_clock.modulus} ticks; does not swing while the fuel slot is full`,
+            ], 2 + routes.length, turn_line);
+        });
     }
-    const { first, routes } = identityLines(inserter_ids, registry, items, "By-product: ", true);
-    return [
-        first,
-        `Clears it: open ${open} of every ${inserter_clock.modulus} ticks; outside the main plan`,
-        ...routes,
-    ];
+    return fitted(compaction => {
+        const { header, routes } = identityLines(inserter_ids, registry, items, compaction, "By-product: ", true);
+        return withTurn([
+            header,
+            ...routes,
+            `Clears it: open ${open} of every ${inserter_clock.modulus} ticks; outside the main plan`,
+        ], 2 + routes.length, turn_line);
+    });
 }
 
 /**

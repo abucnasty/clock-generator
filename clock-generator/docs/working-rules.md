@@ -4,7 +4,7 @@ This page was split out of GOALS.md on 2026-10-15; GOALS.md holds the goals.
 
 ## Working Rules
 
-Decided on 2026-10-10, after a day in which each recording of the game led to another rule for the simulator and the work on goal 2 did not start.
+Rules 1 to 5 were decided on 2026-10-10, after a day in which each recording of the game led to another rule for the simulator and the work on goal 2 did not start. Rule 6 was added on 2026-10-11.
 
 1. The simulator is the judge of a clock, because it is the only judge that ships with the generator. The game is what the simulator is calibrated against.
 2. A difference between the simulator and the game is chased only when it changes whether a clock is stable, or which clock is selected, on some sample. Any other difference gets a line in `resources/config-samples/README.md` and is left.

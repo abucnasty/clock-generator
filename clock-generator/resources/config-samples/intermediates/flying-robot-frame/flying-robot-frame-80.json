@@ -126,5 +126,44 @@
       ]
     }
   ],
-  "chests": []
+  "chests": [],
+  "output_belt": {
+    "stretch_groups": [[1, 2], [3, 4]],
+    "stretches": [
+      {
+        "points": [
+          { "drop": 1, "lane": "right" },
+          { "tiles": 6, "drop": 2, "lane": "right" },
+          { "tiles": 5, "drop": 3, "lane": "right" },
+          { "tiles": 21, "left_curves": 1, "right_curves": 1, "side_load": { "stretch": 2 }, "lane": "right", "layout": "side-straight" },
+          { "tiles": 8, "left_curves": 1, "right_curves": 1, "lane_end": { "kind": "infinite" } }
+        ]
+      },
+      {
+        "points": [
+          { "drop": 4, "lane": "right" },
+          { "tiles": 5, "drop": 5, "lane": "right" },
+          { "tiles": 6, "drop": 6, "lane": "right" },
+          { "tiles": 3, "left_curves": 1 }
+        ]
+      },
+      {
+        "points": [
+          { "drop": 12, "lane": "left" },
+          { "tiles": 6, "drop": 11, "lane": "left" },
+          { "tiles": 5, "drop": 10, "lane": "left" },
+          { "tiles": 21, "left_curves": 1, "right_curves": 1, "side_load": { "stretch": 4 }, "lane": "left", "layout": "side-straight" },
+          { "tiles": 8, "left_curves": 1, "right_curves": 1, "lane_end": { "kind": "infinite" } }
+        ]
+      },
+      {
+        "points": [
+          { "drop": 9, "lane": "left" },
+          { "tiles": 5, "drop": 8, "lane": "left" },
+          { "tiles": 6, "drop": 7, "lane": "left" },
+          { "tiles": 3, "right_curves": 1 }
+        ]
+      }
+    ]
+  }
 }

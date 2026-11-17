@@ -125,11 +125,11 @@ describe("request-local duplicate verification", () => {
             .map(([config, result]) => signature(config, result));
         expect(repeated).toHaveLength(4);
         expect([...chosen, ...kept]).toEqual(expect.arrayContaining(repeated));
-        // Both clocks are stable; batched swings is selected on its fewer wake-ups although swings-1 recovers in 2 window cycles
-        // rather than 3. Sharing the verification must preserve that choice.
+        // Batched swings is selected on its fewer wake-ups although swings-1 recovers in 2 window cycles rather than 3 (swings-1
+        // is unstable on the output belt the sample states, as it is in the game). Sharing the verification must preserve that choice.
         const other = generated.alternatives.find(clock => clock.maker === "swings-1")!;
         const selected = generated.alternatives[generated.selected_index];
-        expect(other.verdict).toBe("stable");
+        expect(other.verdict).toBe("unstable");
         expect(other.ranking.recovery_window_cycles).toBe(2);
         expect(selected.maker).toBe("planned-belt-slack");
         expect(selected.verdict).toBe("stable");

@@ -14,10 +14,14 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 ### Changed
 - generation: Coordinated Sources now checks its clock with every copy while it chooses
 - generation: the chemical science, grenade and utility science samples now judge their output belts
+- blueprint: combinator descriptions and the wiring reference now show each inserter's source, item and sink
 - simulation: an output belt can now be stated for builds with several output inserters
 - simulation: output belts can now have several lines and a side belt per output inserter
 - simulation: builds that share no lane now check their stated output belt too
 - generation: the lithium plate sample now judges its output belts
+- generation: the military science 240 sample now judges its output belts
+- generation: the logistic science sample now judges its output belt
+- generation: the flying robot frame sample now judges its output belts
 
 ### Fixed
 - simulation: machines now finish a craft and start the next in the game's tick

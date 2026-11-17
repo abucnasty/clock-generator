@@ -5,7 +5,7 @@ import { Config } from "../config/schema";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import { SerializableClockWindows } from "./clock";
-import { behindTargetIn, CopyMade, describeSharedLaneLoss, fewerCopiesThatHold, judgedCopiesMade, judgeSharedLanes, RunOfCopies, SharedLaneLoss, TargetRates } from "./shared-lane-verdict";
+import { behindTargetIn, CopyMade, describeSharedLaneLoss, fewerCopiesThatHold, judgedCopiesMade, judgeSharedLanes, RunOfCopies, SharedLaneJudgement, SharedLaneLoss, TargetRates } from "./shared-lane-verdict";
 import { withoutSharedLaneFacts } from "./generate-blueprint-test-helpers";
 import { lithiumRows } from "../../tests/configs/lithium-rows";
 import { checkedLanesOf } from "./checked-lanes";
@@ -473,5 +473,102 @@ describe("the text of a loss on a lane the copies share", () => {
         const join = { ...loss, short_swings: 0, join_full: { held_hands: 84, hands: 336 } };
         expect(describeSharedLaneLoss(join)).toBe("The side belt of copy 2 from the entry is full at its join onto the output belt. "
             + "Its output inserter waits for room in 84 of its 336 swings in 65 window cycles.");
+    });
+});
+
+/** The judgement as a result reads it: without the facts it keeps for the maker log */
+const withoutLog = ({ for_log: _for_log, ...judgement }: SharedLaneJudgement) => judgement;
+
+// The facts of the lanes for the maker log are read from the runs the check makes. They change nothing it finds, and the
+// fill of each item of each belt is the refill arithmetic of `fast_check_passes`.
+describe("the facts of the lanes the check keeps for the maker log", async () => {
+    const chemical = await loadConfigFromFile(path.join(__dirname, "fixtures", "chemical-science-120-5.5-copies-one-circuit-lane.json"));
+    const chemical_clocks: Record<string, { window_cycle_ticks: number; windows: SerializableClockWindows }> =
+        JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "chemical-science-120-recorded-clocks.json"), "utf8"));
+    const stated = flowing(withFacts(chemical, { "1/1": dead_end, "1/2": dead_end, "2/1": dead_end, "2/2": dead_end }), [1, 2], 4);
+    const inserters = withFacts(await loadConfigFromFile(path.join(__dirname, "fixtures", "inserter-crafting-240-3-copies-ore-lines.json")), { "2/1": dead_end, "2/2": dead_end });
+    const inserter_clocks: Record<string, { window_cycle_ticks: number; windows: SerializableClockWindows }> =
+        JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "inserter-crafting-240-recorded-clocks.json"), "utf8"));
+    const cases: [string, Config, { window_cycle_ticks: number; windows: SerializableClockWindows }][] = [
+        ["chemical science, coordinated_sources (loses)", stated, chemical_clocks.coordinated_sources],
+        ["chemical science, time_study_windows (holds)", stated, chemical_clocks.time_study_windows],
+        ["inserter crafting, takt_batches_swings_6 (loses)", inserters, inserter_clocks.takt_batches_swings_6],
+        ["inserter crafting, coordinated_sources (holds)", inserters, inserter_clocks.coordinated_sources],
+    ];
+
+    it.each(cases)("judges %s as it does without them, the fill of every item in time where the fast check passes", (_, config, clock) => {
+        const without = judgeSharedLanes(config, clock.windows, clock.window_cycle_ticks, quiet);
+        const with_log = judgeSharedLanes(config, clock.windows, clock.window_cycle_ticks, quiet, { for_log: true });
+        expect(without.for_log).toBeUndefined();
+        expect(withoutLog(with_log)).toEqual(without);
+        expect(with_log.for_log!.errors).toEqual([]);
+        const fills = with_log.for_log!.readings.flatMap(reading => reading.fill);
+        expect(fills.length).toBeGreaterThan(0);
+        expect(fills.every(fill => fill.fills_in_time)).toBe(without.fast_check_passes);
+        // one missed swings record for each loss, from a run the check judged by
+        expect(with_log.for_log!.missed_swings).toHaveLength(without.losses.length);
+        for (const [index, missed] of with_log.for_log!.missed_swings.entries()) {
+            const loss = without.losses[index];
+            expect(missed).not.toBeNull();
+            expect([missed!.copy, missed!.inserter_id, missed!.belt_id, missed!.item]).toEqual([loss.copy, loss.inserter_id, loss.belt_id, loss.item]);
+            expect(with_log.for_log!.runs[missed!.run].losses).toBeGreaterThan(0);
+        }
+    });
+
+    it("puts a loss down to the join where the copy's side belt is full at its join, else to the lane", async () => {
+        const automation = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
+        const takt = { "inserter:2": [{ start: 1, end: 37 }, { start: 109, end: 145 }],
+            "inserter:1": [{ start: 13, end: 38 }, { start: 42, end: 65 }, { start: 133, end: 154 }, { start: 181, end: 193 }] };
+        const judged = judgeSharedLanes(automation, takt, 216, quiet, { for_log: true });
+        expect(judged.losses.length).toBeGreaterThan(0);
+        expect(judged.for_log!.missed_swings.map(it => it!.cause)).toEqual(judged.losses.map(() => "join_full"));
+        const lane = judgeSharedLanes(inserters, inserter_clocks.takt_batches_swings_6.windows, inserter_clocks.takt_batches_swings_6.window_cycle_ticks, quiet, { for_log: true });
+        expect(new Set(lane.for_log!.missed_swings.map(it => it!.cause))).toEqual(new Set(["lane"]));
+    });
+
+    it("gives the lanes of each pickup of a taker that takes one item from both lanes of its belt", () => {
+        const clock = inserter_clocks.takt_batches_swings_6;
+        const { for_log } = judgeSharedLanes(inserters, clock.windows, clock.window_cycle_ticks, quiet, { for_log: true });
+        const ore = for_log!.missed_swings.filter(it => it !== null && it.inserter_id === 1 && it.item === "iron-ore");
+        expect(ore.length).toBeGreaterThan(0);
+        for (const missed of ore) {
+            expect(missed!.lanes).toEqual([1, 2]);
+            expect(new Set(missed!.pickups.map(([, , lane]) => lane))).toEqual(new Set([1, 2]));
+        }
+    });
+});
+
+// measured (simulator, the engine of a59adb73): copy 2's inserter 1 misses 16 swings over the span; the rows class 8 of them as
+// neither. In each window cycle that misses one, its hand waits for room at the machine longer than in its window cycles with
+// none: it holds items the machine takes no more of
+const MISSED_SWINGS_SWINGS_2 = ["copper-plate", "iron-gear-wheel"].map(item => ({ item, missed: 16, neither: 8, left_over: 0, by_condition: { room_at_sink: 16 } }));
+
+// AUTOMATION_SCIENCE_240's clock takt_batches_observed_swings_2 (windows from the record's job at a59adb73): copy 2 misses swings
+// of inserter 1 on both lanes of belt 1. The result's rows class many of them as `neither` (no empty reach, no full
+// output while the hand held items); the log gives each window cycle the condition the hand waited for when its window closed.
+describe("the missed swings of a clock whose second copy loses swings on both lanes of its belt", () => {
+    it("gives the copy, its pickups by window cycle and a condition for each window cycle with a missed swing", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
+        const windows = { "inserter:1": [{ start: 28, end: 51 }], "inserter:2": [{ start: 1, end: 13 }] };
+        const judged = judgeSharedLanes({ ...config, overrides: { ...config.overrides, terminal_swing_count: 2 } }, windows, 72, quiet, { for_log: true });
+        expect(new Set(judged.losses.map(loss => loss.copy))).toEqual(new Set([2]));
+        const counts = judged.losses.map((loss, index) => {
+            const missed = judged.for_log!.missed_swings[index]!;
+            const stops = judged.loss_facts![index].stops!;
+            expect([missed.copy, missed.inserter_id, missed.lanes]).toEqual([2, 1, [loss.lane]]);
+            // every pickup in the judged span, each on a tick of its window cycle, from the lane it came from
+            expect(missed.pickups.every(([cycle, tick, lane]) => cycle >= 1 && cycle <= loss.window_cycles && tick >= 0 && tick < 72 && (lane === 1 || lane === 2))).toBe(true);
+            // the same window cycles and missed swings as the result's rows
+            expect(missed.window_cycles.reduce((sum, it) => sum + it.missed, 0)).toBe(stops.missed);
+            expect(Object.values(missed.by_condition).reduce((sum, it) => sum + it, 0)).toBe(stops.missed);
+            // the condition is what the hand waited for longer than in its own window cycles with no missed swing
+            expect(missed.baseline.of).toBe("own");
+            for (const cycle of missed.window_cycles.filter(it => it.condition !== "left_over" && it.condition !== "window_open")) {
+                expect(cycle.waits[cycle.condition] ?? 0).toBeGreaterThan(missed.baseline.waits[cycle.condition] ?? 0);
+            }
+            return { item: loss.item, missed: stops.missed, neither: stops.neither, left_over: missed.by_condition.left_over ?? 0, by_condition: missed.by_condition };
+        });
+        // measured at a59adb73's engine (simulator): the swings the rows class as neither, against those the log gives no condition
+        expect(counts).toEqual(MISSED_SWINGS_SWINGS_2);
     });
 });

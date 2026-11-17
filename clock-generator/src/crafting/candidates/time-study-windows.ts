@@ -8,6 +8,7 @@ import { Logger } from "../../common/logger";
 import { positionStep, withWindowsKeepingLength, withWindowsLengthened } from "../clock";
 import { BlueprintGenerationResult, GenerateClockOptions, TrialRun, alwaysEnabledByConfig, clockOfPlan, clockOnlyRunOf, exportClock, unclockedRun, windowsFromHistory } from "../plan/unclocked-run";
 import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, FULL_CHECK_START_PHASES, runAsBuiltCheck, runClockOnBuild, trialWithLoopWindows } from "../trial";
+import { withTickPurpose } from "../tick-ledger";
 import { pitchPickupsTransferWindows } from "./pitch-pickups";
 import { Confirmed, QuickTrial, SearchReport, confirm, quickTrial, search } from "./search";
 import { busyDeciderRanges, evenlySpacedOutputWindows, outputSwingCountsOf, paddedWindows } from "./transforms";
@@ -142,7 +143,7 @@ export function deriveTimeStudyWindows(
     const as_read = !in_positions && !Number.isInteger(window_cycle_ticks);
     const fixed_windows = new Map([...output_windows, ...drill_windows]);
     report?.(`Simulating with only the output inserters clocked (${label} enable windows)`);
-    const derivation = runClockOnBuild(base_config, fixed_windows, window_cycle_ticks, logger);
+    const derivation = withTickPurpose("window_derivation", () => runClockOnBuild(base_config, fixed_windows, window_cycle_ticks, logger), { claim: true });
     logger.log(`Derived enable windows (${label}): output-only run actual=${derivation.stability_check.actual_output_items} expected=${derivation.stability_check.expected_output_items}`);
     const even_output_windows = as_read ? null
         : evenlySpacedOutputWindows(output_windows, outputSwingCountsOf(derivation, new Set(output_windows.keys()), window_cycle_ticks), window_cycle_ticks);

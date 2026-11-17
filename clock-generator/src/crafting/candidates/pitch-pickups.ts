@@ -5,7 +5,11 @@ import { Entity, EntityId, handSizeFor, ReadableEntityRegistry } from "../../ent
 import { InserterStatus, MachineStatus } from "../../state";
 import { Logger } from "../../common/logger";
 import { BlueprintGenerationResult, GenerateClockOptions, LCM_STABILITY_TOLERANCE, TrialRun, checkedClock, clockOfPlan, unclockedRun } from "../plan/unclocked-run";
-import { AsBuiltRun, AsBuiltStabilityCheck, runClockOnBuild } from "../trial";
+import { AsBuiltRun, AsBuiltStabilityCheck, runClockOnBuild as runClockOnWindows } from "../trial";
+import { withTickPurpose } from "../tick-ledger";
+
+/** A run of the build on windows the full-hand search tries: its ticks are the search's */
+const runClockOnBuild: typeof runClockOnWindows = (...args) => withTickPurpose("pitch_pickups", () => runClockOnWindows(...args), { claim: true });
 import { StockRecording } from "../machine-stock";
 import { Confirmed, QuickTrial, SearchReport, confirm, quickTrial, search } from "./search";
 import { SpareOutputWindows, withSingleSwingOutput } from "./transforms";

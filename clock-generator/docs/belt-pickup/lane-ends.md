@@ -112,14 +112,14 @@ tile that another belt side-loads onto. The generator does not accept that picku
 
 The sample `INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK`
 ([configuration](../../resources/config-samples/intermediates/inserter-crafting/inserter-crafting-240-shared-signal-clock.json))
-shows the two layouts together. Two belts bring iron ore on both lanes. On each belt, two inserters at side pickups
+shows the ends of the lanes of a side pickup. Two belts bring iron ore on both lanes. On each belt, two inserters at side pickups
 take ore for two furnaces.
 
 | Belt | Near lane | End of the near lane | End of the far lane |
 | --- | --- | --- | --- |
-| 1 | 2 | dead end | infinite end; outside the configuration, 53 1/3 items per second go on |
-| 4 | 1 | dead end | infinite end; outside the configuration, 53 1/3 items per second go on |
+| 1 | 2 | dead end | dead end |
+| 4 | 1 | dead end | dead end |
 
-The sample is cut from a larger build. In that build, each ore belt side-loads into an underground exit after the
-third copy. The hood blocks the near lane, so it is a dead end. The far lane continues to two furnaces outside the
-configuration. They take 53 1/3 iron ore per second. The configuration cannot state that rate at a lane end.
+The sample is built on the one-copy scaffold. Each ore belt ends at an underground entrance with no exit, and the ore lanes
+are capped after the third copy. Thus both lanes of each ore belt are dead ends, and the configuration states them so
+(`lane_end`: `dead_end`).

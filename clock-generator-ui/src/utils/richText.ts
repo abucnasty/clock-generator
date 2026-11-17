@@ -1,6 +1,6 @@
 /**
- * The game's rich text in a combinator's description, "[entity=car] → machine 1 [recipe=iron-plate] [item=iron-ore]
- * (inserter 1)": the tags the game draws as icons, split out from the words between them.
+ * The game's rich text in a combinator's description, "[entity=car] → [item=iron-ore] → machine 1 [recipe=iron-plate]":
+ * the tags the game draws as icons, split out from the words between them.
  */
 
 /** What a tag names. Other kinds of tag (a tile, a technology) stay as the text they are */

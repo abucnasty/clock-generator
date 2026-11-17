@@ -181,6 +181,30 @@ describe('buildWakeWindowRows', () => {
         expect(drill.source).toBeUndefined();
     });
 
+    it('names the two ends of a route and the recipe of a machine sink, from the engine\'s labels, with no options', () => {
+        const [inserter, chest, drill] = rowsOf({
+            entities: [
+                entity('inserter:3', {
+                    items: ['iron-plate'],
+                    source: { entity_id: 'belt:1', entity_type: 'belt', label: 'Belt 1' },
+                    sink: { entity_id: 'machine:2', entity_type: 'machine', label: 'Machine 2 (iron-gear-wheel)' },
+                }),
+                entity('drill:1', { items: ['iron-ore'], sink: { entity_id: 'furnace:4', entity_type: 'furnace', label: 'Machine 4 (iron-plate)' } }),
+                entity('inserter:5', {
+                    items: ['iron-gear-wheel'],
+                    source: { entity_id: 'machine:2', entity_type: 'machine', label: 'Machine 2 (iron-gear-wheel)' },
+                    sink: { entity_id: 'chest:1', entity_type: 'chest', label: 'Car 1' },
+                }),
+            ],
+        });
+        expect(inserter).toMatchObject({ from: { label: 'Belt 1' }, to: { label: 'Machine 2', recipe: 'iron-gear-wheel' } });
+        expect(inserter.from).not.toHaveProperty('recipe');
+        expect(drill).toMatchObject({ to: { label: 'Machine 4', recipe: 'iron-plate' } });
+        expect(drill).not.toHaveProperty('from');
+        expect(chest).toMatchObject({ from: { label: 'Machine 2' }, to: { label: 'Car 1' } });
+        expect(chest.from).not.toHaveProperty('recipe');
+    });
+
     it('tells the modes apart', () => {
         const rows = rowsOf({
             clockWindows: { 'inserter:1': spans([0, 9]), 'inserter:2': [] },

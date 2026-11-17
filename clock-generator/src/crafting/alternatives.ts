@@ -35,7 +35,8 @@ import { coordinatedSourcesClock, withNotAdmitted, type NotAdmittedPart } from "
 import { BlueprintGenerationResult, clockedByConfig, GenerateClockOptions, SimulationStabilityCheck, fractionalStartOf, fractionalSwingsOf } from "./plan/unclocked-run";
 import { EntityTransferCountMap } from "./sequence/cycle/swing-counts";
 import { withRunMemo } from "./plan/run-memo";
-import { CodedError, emitMakerLog, makerLogOn, reasonOf, reasonOfError, timedCheck, timedMaker, withMakerLog } from "./maker-log";
+import { CodedError, emitMakerLog, makerLogOn, noteClockLanes, noteClockRun, reasonOf, reasonOfError, timedCheck, timedMaker, withMakerLog } from "./maker-log";
+import { withTickPurpose } from "./tick-ledger";
 import { madeCompositionEvent, notMadeEvent, resultEvents } from "./maker-log-events";
 import { clockCost, ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, ROUNDED_CLOCK_MAX_FAST, RoundedClock, roundedRateAllowed, searchesToRun, searchesAreNeeded } from "./rank";
 import { TargetProductionRate } from "./target-production-rate";
@@ -1138,7 +1139,7 @@ function runAlternativeOf(
             let fewer: ReturnType<typeof fewerCopiesThatHold> = null;
             if (judgement !== null && judgement.losses.length > 0) {
                 try {
-                    fewer = timedCheck("fewer_copies", () => fewerCopiesThatHold(with_swings, trial.result.clock_windows, trial.clock_window_cycle, logger));
+                    fewer = timedCheck("fewer_copies", () => withTickPurpose("fewer_copies", () => fewerCopiesThatHold(with_swings, trial.result.clock_windows, trial.clock_window_cycle, logger), { claim: true }));
                 } catch (error) {
                     if (isInternalError(error)) throw error;
                     logger.warn(`Clock "${label}": the runs with fewer copies on the shared lanes could not be made: ${error instanceof Error ? error.message : String(error)}`);
@@ -1206,6 +1207,17 @@ function runAlternativeOf(
             ...(checked_lanes !== null && { checked_lanes }), ...(loss_note !== "" && { shared_lane_loss_note: loss_note.trimStart() }),
             inserter_window_count, deciders: windowDeciderCount(row.result.blueprint), ranking_window_count, assessment, verdict: clockVerdictOf(assessment), deadlock_risks, belt, insights,
             strategy: listed_strategy };
+        // for the maker log only: what the check of the shared lanes kept of this clock, by its result
+        if (makerLogOn()) {
+            noteClockLanes(clock.result, { held: tried_as.held, not_checked: shared_lane_losses.some(isNotChecked),
+                for_log: sharedLaneCheck(tried_as)?.judgement?.for_log ?? null });
+            // how its run of one copy is made, as the wakeups from the starts make it (`fromStarts`), for the repeat check
+            const planned_on = used.planned_on ?? config;
+            noteClockRun(clock.result, { config: { ...planned_on, overrides: { ...planned_on.overrides, terminal_swing_count: tried_as.result.used_terminal_swing_count } },
+                windows: tried_as.result.clock_windows, window_cycle_ticks: tried_as.clock_window_cycle, expected_output_items,
+                long_run_ticks: tried_as === exact_trial && tried_as.result.loop_windows !== undefined ? LOOP_WINDOW_CHECK_TICKS : FREE_RUNNING_CHECK_TICKS,
+                swings: fractionalSwingsOf(tried_as.result.output_cycle_plan) });
+        }
         const ranking = rankingOf(clock, config);
         // where its wake-ups decide the selection, a clock of a build with a loop, whose wake-ups depend on how it starts, is ranked by their mean
         // over the starts; the clock of a trial that is neither the exact one nor the rounded one tried meets no target
@@ -1333,8 +1345,11 @@ function planPrimaryAndTasks(
 ): ClockAlternativesPlan {
     const logger = options.logger ?? defaultLogger;
     // the primary clock is made here, before its run: the ways its constructions offer are the primary run's parts
-    const { value: definition, parts: primary_ways } = collectingParts(() => primaryDefinition(config, options, options.on_progress_detail));
-    const result = definition.run();
+    // the seconds and ticks of this planning are counted to a maker of their own: it is made before any maker runs
+    const { definition, primary_ways, result } = timedMaker(PRIMARY_PLANNING_MAKER, () => {
+        const { value: definition, parts: primary_ways } = collectingParts(() => primaryDefinition(config, options, options.on_progress_detail));
+        return { definition, primary_ways, result: definition.run() };
+    });
     // once a generation; where it goes changes no result, since the coverage check reads the game data itself when it comes first
     warnUncalibratedBeltPickups(config, logger);
     warnLanesSharedByCopies(config, logger);
@@ -1441,6 +1456,8 @@ function runTask(
 
 /** The id of the per-branch clock (DESIGN D7) */
 export const COORDINATED_SOURCES_MAKER = "per-branch";
+/** The maker the log counts the planning of the primary clock to: it is made before any maker runs, and is not a clock's `maker` */
+export const PRIMARY_PLANNING_MAKER = "primary-planning";
 const COORDINATED_SOURCES_LABEL = nameOf("coordinated_sources");
 const COORDINATED_SOURCES_DESCRIPTION = "The inserters of each source use the enable windows of one other clock made for the build, on one shared window cycle. "
     + "A source is a machine, belt or chest that inserters take from. The generator sets the sources one at a time, from the output "
@@ -1550,7 +1567,8 @@ export function generateClockAlternatives(
     config: Config,
     options: GenerateClockOptions = {}
 ): ClockAlternativesResult {
-    return withMakerLog(options.maker_log, () => withRunMemo(() => generateAllAlternatives(withoutOutsideSupply(config), options)));
+    return withMakerLog(options.maker_log, () => withRunMemo(() => generateAllAlternatives(withoutOutsideSupply(config), options)),
+        { repeat_check: options.maker_log_repeat_check === true });
 }
 
 function generateAllAlternatives(config: Config, options: GenerateClockOptions): ClockAlternativesResult {
@@ -1637,7 +1655,7 @@ function generateAllAlternatives(config: Config, options: GenerateClockOptions):
     const ranked = combineClockAlternativeRuns(runs, it => it.ranking);
     // each clock's "what changes it" names another clock of this result that holds with all the copies (checked-lanes.ts)
     const combined = { ...ranked, alternatives: withOtherClocks(ranked.alternatives, ranked.selected_index, config.setpoint.copies) };
-    if (makerLogOn()) for (const event of resultEvents(config, combined)) emitMakerLog(() => event);
+    if (makerLogOn()) for (const event of resultEvents(config, combined, logger)) emitMakerLog(() => event);
     return {
         ...combined,
         lanes: buildLanesOf(config),
