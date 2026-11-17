@@ -62,8 +62,9 @@ export const COORDINATED_SOURCES_WINDOW_CYCLES = 3;
 /**
  * The clocks whose window cycles the per-branch clock is composed on, from the ids of the clocks in the selection's order (the
  * recommended clock first): the recommended clock, whatever its verdict, then, in that order, each stable clock with a whole
- * window cycle that none taken before it has, up to COORDINATED_SOURCES_WINDOW_CYCLES. Of the clocks on one window cycle only the
- * best-ranked is taken.
+ * window cycle no longer than the recommended clock's that none taken before it has, up to COORDINATED_SOURCES_WINDOW_CYCLES. Of
+ * the clocks on one window cycle only the best-ranked is taken. A longer window cycle is left out because a composition's checks
+ * grow with it: the productivity module build's 72-tick clock beside a stable clock of 26,136 ticks ran out of memory.
  */
 export function windowCycleClocksOf(parts: readonly CoordinatedSourcesPart[], ranked_ids: readonly string[]): CoordinatedSourcesPart[] {
     const of = (id: string) => parts.find(part => part.alternative_id === id);
@@ -74,6 +75,7 @@ export function windowCycleClocksOf(parts: readonly CoordinatedSourcesPart[], ra
         if (taken.length >= COORDINATED_SOURCES_WINDOW_CYCLES) break;
         const part = of(id);
         if (part === undefined || part.verdict !== "stable" || !Number.isInteger(part.window_cycle_ticks)
+            || part.window_cycle_ticks > recommended.window_cycle_ticks
             || taken.some(it => it.window_cycle_ticks === part.window_cycle_ticks)) continue;
         taken.push(part);
     }

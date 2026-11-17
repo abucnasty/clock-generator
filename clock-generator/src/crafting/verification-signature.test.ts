@@ -8,6 +8,8 @@ import {generateClockAlternatives, planClockAlternatives, runClockAlternativeTas
 import {plannedFractionally, quiet} from "./generate-blueprint-test-helpers";
 import * as trial from "./trial";
 import * as planning from "./plan/unclocked-run";
+import {combineClockAlternativeRuns} from "./rank";
+import {windowCycleClocksOf} from "./candidates/coordinated-sources-parts";
 
 const options = {logger: quiet, verify_as_built: false, fuel_consumption_view: false, factorio_states: false, modulo_blueprint: false};
 const signature = trial.clockVerificationSignature;
@@ -118,12 +120,18 @@ describe("request-local duplicate verification", () => {
         const chosen = recovery.mock.calls.filter(([, result]) => result.window_maker === "arithmetic"
             || inside.has(windowsKey(result.clock_windows)) || result.ghost_wakeup_windows !== undefined)
             .map(([config, result]) => signature(config, result));
-        // Coordinated Sources keeps the recommended clock here, and judges it with the copies before it refuses: it asks for its
-        // trials on one copy again, under the listing's key, and the run memo serves them
-        const recommended = generated.alternatives[generated.selected_index].result;
-        const kept = recovery.mock.calls.filter(([, result]) => windowsKey(result.clock_windows) === windowsKey(recommended.clock_windows))
+        // Coordinated Sources keeps the clock it composes around on each window cycle here (the recommended clock, and the next
+        // best-ranked stable clock on a shorter window cycle), and judges it with the copies before it refuses: it asks for its trials
+        // on one copy again, under the listing's key, and the run memo serves them
+        const listed = generated.alternatives.filter(it => it.id !== "coordinated_sources");
+        const { order } = combineClockAlternativeRuns([{ signature: "listed", alternatives: listed }], it => it.ranking);
+        const centres = windowCycleClocksOf(listed.map(it => ({ name: it.id, alternative_id: it.id, verdict: it.verdict,
+            window_cycle_ticks: it.result.simulation_duration.ticks, windows: it.result.clock_windows })), order.map(index => listed[index].id));
+        expect(centres).toHaveLength(2);
+        const centre_windows = new Set(centres.map(it => windowsKey(it.windows)));
+        const kept = recovery.mock.calls.filter(([, result]) => centre_windows.has(windowsKey(result.clock_windows)))
             .map(([config, result]) => signature(config, result));
-        expect(repeated).toHaveLength(4);
+        expect(repeated).toHaveLength(5);
         expect([...chosen, ...kept]).toEqual(expect.arrayContaining(repeated));
         // Both clocks are stable; batched swings is selected on its fewer wake-ups although swings-1 recovers in 2 window cycles
         // rather than 3. Sharing the verification must preserve that choice.

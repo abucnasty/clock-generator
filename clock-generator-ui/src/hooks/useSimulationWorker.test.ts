@@ -413,10 +413,10 @@ describe('tasks alongside the primary alternative', () => {
             const runId = answerPlan([task('one', 'One'), task('two', 'Two'), coordinatedSources]);
             const requests = () => workers.flatMap(w => w.requests('task')).filter(m => m.runId === runId);
             const on = (id: string, ticks: number) => ({ ...part(id), window_cycle_ticks: ticks });
-            finishTask(runId, 'two', { signature: 'two', alternatives: [selectionClock('two', 5)], parts: [on('two', 20)] });
+            finishTask(runId, 'two', { signature: 'two', alternatives: [selectionClock('two', 5)], parts: [on('two', 5)] });
             finishTask(runId, 'one', { signature: 'one', alternatives: [selectionClock('one', 3)], parts: [on('one', 10)] });
             const sent = requests().find(m => m.taskId === 'per-branch');
-            expect(sent?.coordinatedSources).toEqual({ recommended_id: 'one', window_cycle_ids: ['one', 'two'], parts: [on('one', 10), on('two', 20)] });
+            expect(sent?.coordinatedSources).toEqual({ recommended_id: 'one', window_cycle_ids: ['one', 'two'], parts: [on('one', 10), on('two', 5)] });
         });
 
         it('is not run where no clock was made to start from', async () => {

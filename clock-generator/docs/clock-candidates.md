@@ -76,7 +76,8 @@ windows did not hold, with what the recommended clock with only those windows di
 clock holds, the `why_not_stable` message lists it with the other clocks not made ([stability](stability.md)).
 
 The generator makes Coordinated Sources on more than one window cycle: that of the recommended clock, then those of the next
-best-ranked stable clocks on other window cycles, three window cycles at most and one clock for each. On each, it composes the clock
+best-ranked stable clocks on other window cycles no longer than the recommended clock's, three window cycles at most and one clock
+for each. A longer window cycle is left out because the checks of a composition grow with it. On each, it composes the clock
 as above, around that window cycle's clock in place of the recommended one. It lists one of the clocks made: the one the selection
 ranks first, and of equals the one on the earlier window cycle. On the lithium plate sample the recommended clock is on 4,320 ticks,
 and the clock composed on 2,160 ticks, the window cycle of the time-division windows, has half the wakeups of the one composed on

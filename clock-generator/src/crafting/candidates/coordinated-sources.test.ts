@@ -208,12 +208,12 @@ describe("the input of the per-branch clock", () => {
         expect(coordinatedSourcesInputOf([{ parts: [stable, unstable] }], ["swings-2"]).parts.map(it => it.name)).toEqual(["planned-belt-slack", "swings-2"]);
     });
 
-    it("composes on the window cycles of the recommended clock and the next best-ranked stable clocks, one a window cycle, at most three", () => {
+    it("composes on the window cycles of the recommended clock and the next best-ranked stable clocks, one a window cycle, none longer, at most three", () => {
         const on = (name: string, ticks: number, verdict: CoordinatedSourcesPart["verdict"], start: number) =>
             part(name, ticks, { "inserter:1": [window(start, start)] }, { alternative_id: name, verdict, holds: true });
-        const parts = [on("swings-4", 96, "stable", 0), on("observed", 96, "stable", 1), on("swings-7", 12, "unstable", 2),
+        const parts = [on("swings-4", 96, "stable", 0), on("observed", 96, "stable", 1), on("swings-7", 12, "unstable", 2), on("time-study", 192, "stable", 6),
             on("time-division", 48, "stable", 3), on("swings-3", 24, "stable", 4), on("swings-1", 6, "stable", 5)];
-        const input = coordinatedSourcesInputOf([{ parts }], ["swings-4", "observed", "swings-7", "time-division", "swings-3", "swings-1"]);
+        const input = coordinatedSourcesInputOf([{ parts }], ["swings-4", "observed", "swings-7", "time-study", "time-division", "swings-3", "swings-1"]);
         expect(input.recommended_id).toBe("swings-4");
         expect(input.window_cycle_ids).toEqual(["swings-4", "time-division", "swings-3"]);
         // one window cycle: the recommended clock's alone, as before
