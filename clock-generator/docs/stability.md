@@ -208,9 +208,10 @@ A clock called stable is proven only where its check reports `long_run_proven` o
 
 A clock whose window cycle time is not a whole number of ticks repeats only after the whole ticks of its subtick clock: 1,728 ticks (19 window cycles) for a window cycle of 90.947 ticks. Its first check runs that count, and its long run is cut into bins of it. Behind a switch, off by default (`SUBTICK_CLOCK_JUDGED_ON_ROUNDED_PERIOD`, `clock-generator/src/crafting/judged-period-switch.ts`), such a clock is judged on P, one window cycle rounded to the nearest whole tick (91 ticks), in its place:
 
-- The first check runs P ticks. A span of P is no whole number of window cycles, so it may be a hand of every output inserter off what its window cycles expect, and the strict amount may be short by that much.
+- The first check and each start shift run P ticks. A span of P is no whole number of window cycles: it holds the drops of the one window cycle it stands for, give or take a hand of every output inserter where it cuts through them. It holds where it is within that of the window cycle's output, and the strict amount may be short by that much.
 - Its rate is read over the one window cycle P stands for: a span of 91 ticks held one window cycle's output, 576 items, which over the 1.0006 window cycles P lasts would read 379.78 a second where the clock makes 380.
-- The long run is judged in bins of P, each within a hand of every output inserter, and it is a sample, never a proof. A clock that fails it is listed at the mean of those bins.
+- The long run is judged in bins of P, each within a hand of every output inserter of one window cycle's output, and all of them together within two hands of every output inserter (one at each end) of the output of the window cycles their ticks last. It is a sample, never a proof. A clock that fails it is listed at the mean of those bins.
+- Metallurgic science's time-study clock (640/3 ticks, P = 213) shows why: its spans of 213 ticks move 144, 160 or 176 items, whole hands of its one output inserter, and 80 of them moved 12,800 where their ticks expect 12,780. Against the 159.75 items a span's ticks last and within one hand at the ends, it failed where its whole ticks hold.
 - The wake-ups from the starts are counted in bins of P.
 
 The loss trials, the planning run, the start shifts and the check of every start phase keep the whole ticks of the subtick clock.

@@ -80,8 +80,13 @@ interface LongRunVerdict {
     off_bins: { index: number; items: number }[];
     total: number;
     expected_total: number;
-    /** The judged span as a whole is further off than the tolerance */
+    /** The judged span as a whole is further off than the tolerance (`span_tolerance` where there is one) */
     span_off: boolean;
+    /**
+     * In bins of P: what the judged span as a whole may be off `expected_total`, the output of the window cycles its ticks
+     * last, where a bin is held to `expected_per_bin`, the output of the whole window cycles it stands for
+     */
+    span_tolerance?: number;
     /** Items a window cycle moved on average over the judged span, not rounded: a reader that prints it rounds it for display */
     output_items_per_window_cycle: number;
 }
@@ -90,10 +95,10 @@ interface LongRunVerdict {
  * Whole ticks after which a build on a clock of this window cycle repeats, or null when no small whole number of window cycles is whole.
  * With the switch on, P for a subtick clock (`judgedPeriodOf`): no whole number of window cycles (`approx`).
  */
-function binOf(window_cycle_ticks: number, repeat: WindowCycleRepeat | null): { ticks: number; window_cycles: number; approx?: true } | null {
+function binOf(window_cycle_ticks: number, repeat: WindowCycleRepeat | null): { ticks: number; window_cycles: number; approx?: JudgedPeriod } | null {
     const judged = judgedPeriodOf(window_cycle_ticks);
     if (judged !== null) {
-        return { ticks: judged.ticks, window_cycles: judged.window_cycles, approx: true };
+        return { ticks: judged.ticks, window_cycles: judged.window_cycles, approx: judged };
     }
     if (Number.isInteger(window_cycle_ticks)) {
         return { ticks: window_cycle_ticks, window_cycles: 1 };
@@ -214,20 +219,23 @@ export function judgeLongRun(
         }
     }
 
-    const expected_per_bin = expected_per_window_cycle * window_cycles_per_bin;
+    // A bin of P (`judgedPeriodOf`) holds the drops of the whole window cycles it stands for, give or take a hand of every
+    // output inserter where it cuts through them, and so is held to their output; the bins together are held to the output
+    // of the window cycles their ticks last, within a hand of every output inserter at each of their two ends.
+    const approx = bin?.approx;
+    const expected_per_bin = expected_per_window_cycle * (approx?.whole_window_cycles ?? window_cycles_per_bin);
     // A span that is no whole repeat is cut at both ends where it falls, through the drops of every output inserter,
     // so it may be a hand of each of them off. Known limit: a cut that falls well hides as much again, so a clock
     // that is short by just under two hands of every output inserter over the span can pass. No sample gets here.
-    // A bin of P (`judgedPeriodOf`) is no whole number of window cycles either, so it is cut as such a span is.
-    const approx = bin?.approx === true;
-    const tolerance = bin === null || approx ? hand * Math.max(1, held.length) : hand;
+    const tolerance = bin === null || approx !== undefined ? hand * Math.max(1, held.length) : hand;
+    const span_tolerance = approx !== undefined ? 2 * tolerance : undefined;
     const off_bins = judged.map((items, index) => ({ index, items })).filter(it => Math.abs(it.items - expected_per_bin) > tolerance);
     const total = judged.reduce((sum, items) => sum + items, 0);
-    const expected_total = expected_per_bin * judged.length;
-    const span_off = Math.abs(total - expected_total) > tolerance;
+    const expected_total = approx !== undefined ? expected_per_window_cycle * window_cycles_per_bin * judged.length : expected_per_bin * judged.length;
+    const span_off = Math.abs(total - expected_total) > (span_tolerance ?? tolerance);
     const judged_window_cycles = window_cycles_per_bin * judged.length;
     return {
-        ...(approx && { approx: true as const }),
+        ...(approx !== undefined && { approx: true as const, span_tolerance }),
         keeps_up: off_bins.length === 0 && !span_off,
         bin_ticks: bin === null ? null : bin_ticks,
         window_cycles_per_bin,
@@ -295,7 +303,9 @@ export type OutputReason = { code: "oscillation"; data: OscillationFacts };
  */
 export function outputReasonOf(verdict: LongRunVerdict, mean_tolerance: number, repeat_window_cycles: number | null): OutputReason | undefined {
     if (verdict.off_bins.length === 0) return undefined;
-    const expected_per_window_cycle = verdict.expected_per_bin / verdict.window_cycles_per_bin;
+    // (a bin of P is held to the whole window cycles it stands for, not to the ones its ticks last)
+    const expected_per_window_cycle = verdict.approx ? verdict.expected_total / (verdict.window_cycles_per_bin * verdict.judged.length)
+        : verdict.expected_per_bin / verdict.window_cycles_per_bin;
     if (Math.abs(verdict.output_items_per_window_cycle - expected_per_window_cycle) > mean_tolerance) return undefined;
     const bins = verdict.judged.length;
     const facts: OscillationFacts = { expected: verdict.expected_per_bin, window_cycles_per_bin: verdict.window_cycles_per_bin, tolerance: verdict.tolerance,

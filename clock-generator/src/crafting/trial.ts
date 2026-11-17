@@ -342,9 +342,9 @@ function firstClockSpan(
 /**
  * The first check of a subtick clock judged on P (`judgedPeriodOf`, the switch on): it runs P ticks, its clocks running on
  * through the warm-up, in place of the whole counter. A span of P is no whole number of window cycles, so it cuts through the
- * drops of every output inserter at both ends: it holds where it is within a hand of each of them of what its window cycles
- * expect, as the long run judges such a span. Its rate is read over the whole window cycles P stands for, whose output the
- * span holds; over the window cycles P lasts it would be off by that whole number times the window cycle over P.
+ * drops of every output inserter at both ends: it holds where it is within a hand of each of them of what the whole window
+ * cycles P stands for expect, as the long run judges a bin of P. Its rate is read over those whole window cycles, whose
+ * output the span holds; over the window cycles P lasts it would be off by that whole number times the window cycle over P.
  */
 function firstSpanOfPeriod(
     config: Config, windows: Map<string, OpenRange[]>, window_cycle_ticks: number, period: JudgedPeriod, logger: Logger, options: ClockTrialOptions,
@@ -357,8 +357,8 @@ function firstSpanOfPeriod(
         .flatMap(machine => targetInsertersOf(machine, target, registry).map(inserter => inserter.entity_id.id)));
     const output_inserters = registry.getAll().filter(Entity.isInserter).filter(inserter => output_ids.has(inserter.entity_id.id));
     const tolerance = Math.max(1, ...output_inserters.map(it => it.metadata.stack_size)) * Math.max(1, output_inserters.length);
-    const holds = Math.abs(measured - run.stability_check.expected_output_items * period.window_cycles)
-        <= Math.max(tolerance, LCM_STABILITY_TOLERANCE * period.window_cycles);
+    const holds = Math.abs(measured - run.stability_check.expected_output_items * period.whole_window_cycles)
+        <= Math.max(tolerance, LCM_STABILITY_TOLERANCE * period.whole_window_cycles);
     const stock = run.machine_stock!;
     const shortfalls = exportShortfallsOfRun(exportedItemsOf(registry, output_ids),
         new Map(stock.inserters.map(inserter => [inserter.inserter_id, inserter.held])),
@@ -670,8 +670,10 @@ function startUpShortfallOf(held: readonly (readonly number[])[], orbit_tick: nu
 /** The amount of a sampled long run, over the whole repeats of its output in its judged bins (`wholeOutputRepeats`) */
 function sampledAmountOf(verdict: ReturnType<typeof judgeLongRun>): TargetProduction {
     const { bins, total } = wholeOutputRepeats(verdict.judged);
-    // bins of P (`judgedPeriodOf`) cannot be held to the item: short by the long run's tolerance at most
-    const expected_total = verdict.approx ? Math.max(0, verdict.expected_per_bin * bins - verdict.tolerance) : verdict.expected_per_bin * bins;
+    // bins of P (`judgedPeriodOf`) cannot be held to the item: the output of the window cycles their ticks last, short by the
+    // judged span's tolerance at most
+    const expected_total = verdict.approx ? Math.max(0, verdict.expected_total / verdict.judged.length * bins - (verdict.span_tolerance ?? verdict.tolerance))
+        : verdict.expected_per_bin * bins;
     return assessTargetProduction({ total, expected_total,
         output_items_per_window_cycle: total / (verdict.window_cycles_per_bin * bins) }, false);
 }

@@ -83,6 +83,30 @@ describe("a subtick clock judged on P reads its rate over the window cycle P sta
         },
     ];
 
+    // Metallurgic science 45, the time-study clock selected on the full period (640/3 ticks, P = 213, shorter): a span of
+    // 213 ticks holds 144, 160 or 176 items, whole hands of its one output inserter. Against the 159.75 its ticks last it
+    // was 16.25 off at 176, and its long run moved 12,800 over 80 spans where their ticks expect 12,780: over a hand, at
+    // both. Against the one window cycle a span stands for (160), and the run's total within a hand at each of its two cut
+    // ends, it holds, as on the whole ticks of its subtick clock.
+    cases.push({
+        name: "metallurgic science 45, time study windows (640/3 ticks, P = 213, shorter)",
+        config: async () => {
+            const sample = await loadConfigFromFile(ConfigPaths.METALLURGIC_SCIENCE_45);
+            return { ...sample, overrides: { ...sample.overrides, lcm: 5, terminal_swing_count: 2 } };
+        },
+        window_cycle_ticks: 640 / 3, ticks: 213, expected: 160,
+        windows: {
+            "inserter:1": "24-31,61-68,94-101,131-138,167-174,200-207",
+            "inserter:2": "0-7,16-23,33-40,53-60,69-76,86-93,106-113,123-130,139-146,159-166,176-183,192-199,212-212",
+            "inserter:3": "2-24,45-67,88-110,130-152,173-193",
+            "inserter:4": "0-8,24-41,61-77,94-114,131-147,167-184,200-212.33333333333334",
+            "inserter:5": "0-8,24-41,61-77,94-114,131-147,167-184,200-212.33333333333334",
+            "inserter:6": "0-3,63-73,99-109,169-179,205-212.33333333333334",
+            "inserter:7": "1-11,27-48,54-98,107-128,134-144,160-181,187-212",
+            "inserter:8": "0-7,26-33,53-60,79-86,106-113,133-140,159-166,186-193,212-212",
+        },
+    });
+
     it.each(cases)("$name", async ({ config, window_cycle_ticks, ticks, expected, windows }) => {
         const result = trial.clockFromWindows(await config(), windowsOf(windows), window_cycle_ticks, quiet);
         expect(result.stability_check.expected_output_items).toBe(expected);
