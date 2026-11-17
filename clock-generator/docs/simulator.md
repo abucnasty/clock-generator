@@ -320,6 +320,17 @@ copies in order. It has the lane change onto an underground entrance and a copy'
 splitter with its loop, and the infinite end. The infinite end is a loader at the end of the last stretch. A config without the
 section runs as before: each output inserter drops on a tile of its own.
 
+A number in the section names an output inserter. Where a copy has one, it is the copy. Where a copy has `k`, number
+`(c - 1) k + j` is the `j`-th output inserter of copy `c`, in the config's order. So the section of a whole build of one
+copy names each of its output inserters, and so does the section of copies of several. A list of side loads steps by
+`setpoint.copy_offset`, one copy a step, so such a section states each side load at a point of its own. The automation
+science row of nine assemblers on the sample's scaffold shows it (`tests/configs/automation-row.ts`, the test in
+`src/crafting/whole-build.generation.test.ts`). Under one clock in the game (Factorio 2.1.24), the third assembler made 80
+of its 96 packs in every second window cycle. The packs of the first two passed its join, and its side belt stood full.
+The other eight held. With the line, the run gives that assembler as the one short, at 80 in the worst window cycle. It holds
+the clock that keeps every assembler at 96, and the runs with the third's output, or the first two's, off the line.
+Without the line, the run had no assembler short.
+
 An output inserter puts its stacks on the middle of its drop tile, with the rule above. A stack goes one step past the
 middle, or 64 behind the stack ahead. It must be less than 64 behind the middle. On a free side belt, a hand's stacks go
 down 0, 1, 2 and 4 ticks after it comes. A stack stays in the hand only when the side belt is full to its drop tile. On

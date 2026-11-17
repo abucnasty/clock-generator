@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { ConfigSchema } from "./schema";
 import { ConfigPaths } from "./config-paths";
-import { OutputBelt, outputBeltGeometry, streamPhase } from "./output-belt";
+import { OutputBelt, outputBeltGeometry, outputBeltProblems, streamPhase } from "./output-belt";
+import { automationRow } from "../../tests/configs/automation-row";
 
 /**
  * The output belt of the automation science build of nine copies, as its scaffold has it (read in the game, Factorio
@@ -344,6 +345,24 @@ describe("the geometry derived from the sample's output belt", () => {
         expect(geometry.side_loads.map(load => [load.receiver_line, load.sender_lines])).toContainEqual(["stretch 1 right lane: side load of copy 3 to side load of copy 4",
             { left: "side belt of copy 4 left lane", right: "side belt of copy 4 right lane" }]);
         expect(geometry.stretches.map(stretch => stretch.carried)).toEqual([["right"], ["left", "right"], ["left"], ["left", "right"], ["left", "right"]]);
+    });
+
+    it("is the same with each side load at a point of its own, 9 tiles apart, and no copy_offset", () => {
+        // as tests/configs/automation-row.ts states it for a row of nine assemblers, one copy or three of three
+        const own_points = automationRow({ machines: 9, pitch: 9, output_line: {} }).output_belt!;
+        expect(outputBeltProblems(own_points, undefined)).toEqual([]);
+        const apart = outputBeltGeometry(own_points, 0);
+        const withoutPaths = (of: typeof geometry) => ({ ...of, stretches: of.stretches.map(stretch => ({ ...stretch, places: stretch.places.map(({ point: _point, ...place }) => place) })),
+            side_loads: of.side_loads.map(({ path: _path, ...load }) => load) });
+        expect(withoutPaths(apart)).toEqual(withoutPaths(geometry));
+    });
+
+    it("is refused as lists of copies where a copy has several output inserters: a list steps by copy_offset", () => {
+        const result = ConfigSchema.safeParse({ ...automationRow({ machines: 9, pitch: 9 }), output_belt: SAMPLE_BELT });
+        const messages = result.success ? [] : result.error.issues.map(issue => `${issue.path.join(".")}: ${issue.message}`);
+        const message = "A copy has 9 output inserters, and a list of side loads steps by `setpoint.copy_offset`, one copy a step. "
+            + "State each output inserter's side load at a point of its own, with its `tiles`.";
+        expect(messages).toEqual([`output_belt.stretches.0.points.0: ${message}`, `output_belt.stretches.1.points.2: ${message}`]);
     });
 });
 
