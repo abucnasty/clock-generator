@@ -14,8 +14,9 @@ import * as repeat from "./runner/warm-up-repeat";
 import { WarmupStep } from "./runner/steps/warmup-step";
 import { buildAsBuiltConfig } from "./trial";
 
-/** The controls' key as the run makes it, kept before any spy on it */
+/** The controls' key and the arming as the run makes them, kept before any spy on them */
 const controlsKeyOf = repeat.controlsKeyOf;
+const warmUpRepeatOf = repeat.warmUpRepeatOf;
 
 /** The metallurgic science clock of 640/3 ticks as built (fixture): it repeats in 640 whole ticks, 3 window cycles */
 async function metallurgic(): Promise<{ built: Config; window_cycle_ticks: number }> {
@@ -150,6 +151,34 @@ describe("the warm-up's stop on a repeated state", () => {
         expect(full.ran).toBe(1440);
         expect(stopped.ran).toBe(1008);
         expect(stopped.plan).toEqual(full.plan);
+    });
+
+    it("keys the planning controls' own counts: an inserter's items picked up move the controls' key", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
+        // the controls the planning run put its inserters on, and whether its warm-up was armed
+        let installed: repeat.InstalledControl[] = [];
+        let armed: boolean | undefined;
+        const spy = vi.spyOn(repeat, "warmUpRepeatOf").mockImplementation((window_cycle_ticks, controls, warm_up_ticks) => {
+            const result = warmUpRepeatOf(window_cycle_ticks, controls, warm_up_ticks);
+            if (armed === undefined) {
+                installed = [...controls];
+                armed = result.armed;
+            }
+            return result;
+        });
+        let context: ReturnType<typeof unclockedRun>["run"]["simulation_context"];
+        try {
+            context = unclockedRun(config, { logger: quiet }).run.simulation_context;
+        } finally {
+            spy.mockRestore();
+        }
+        expect(armed).toBe(true);
+        const key = controlsKeyOf(installed);
+        const before = key();
+        context.inserters.forEach(it => { it.inserter_state.items_picked_up += 1; });
+        expect(key()).not.toBe(before);
+        context.inserters.forEach(it => { it.inserter_state.items_picked_up -= 1; });
+        expect(key()).toBe(before);
     });
 
     it("runs a planning run in full where its controls' counts do not repeat, though the simulation's state does", async () => {
