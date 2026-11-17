@@ -24,7 +24,9 @@ The check names are the `name` values in `test.yml`.
 | Check | Tests | When it starts |
 | --- | --- | --- |
 | Changed files | Finds if a pull request changes only documentation: Markdown files, `docs/` and `clock-generator/docs/` | Pull requests to `master` or `hotfix/`, and runs with `generation` set to `true` |
-| Unit tests | knip, type check, `npm run build`, lint and `npm test` in `clock-generator` | Each run. Not when Changed files finds only documentation. |
+| Unit 1/4 to Unit 4/4 | `npm test` in `clock-generator`, in four shards | Each run. Not when Changed files finds only documentation. |
+| Code checks | knip, type check, `npm run build` and lint in `clock-generator` | Each run. Not when Changed files finds only documentation. |
+| Unit tests | The result of the Unit shards and Code checks | Each run. Not when Changed files finds only documentation. |
 | Docs checks | `PORTAL.md` and the configuration file fields topic agree with their sources. The bold labels of the user topics are correct. | Each run |
 | Gen 1/2, Gen 2/2 | The generation tests, in two shards | When Changed files finds changes that are not documentation, and the pull request is not a draft |
 | Gen summary | The result of the Gen shards | Pull requests to `master` or `hotfix/`, and runs with `generation` set to `true`. Correct when the changes are only documentation. |
