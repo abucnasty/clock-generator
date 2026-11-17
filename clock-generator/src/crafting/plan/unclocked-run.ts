@@ -75,6 +75,7 @@ import type { TurnGroup } from "../turn-groups";
 import type { SourceControl } from "../strategy-catalog";
 import { AlwaysOnReason, AlwaysOnReasons, alwaysOnReasonsOf, classifyEntities } from "../enable-control-router";
 import { RunMemo, currentRunMemo } from "./run-memo";
+import { countRunMemoHit, withTickPurpose } from "../tick-ledger";
 import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, completedAsBuiltCheck, laneHandRoomTrial, runAsBuiltCheck, runClockOnBuild, trialWithLoopWindows } from "../trial";
 
 export { SIMULATION_BUDGET_TICKS };
@@ -653,7 +654,12 @@ export interface BuildRun extends PlannedOutputCycle, TransferPlan {
  */
 export function runBuild(config: Config, options: RunOptions): BuildRun {
     const memo = currentRunMemo();
-    return memo !== undefined && RunMemo.accepts(options) ? memo.run(config, options, () => simulateBuild(config, options)) : simulateBuild(config, options);
+    if (memo === undefined || !RunMemo.accepts(options)) return simulateBuild(config, options);
+    // a run the memo hands out again simulates no tick: the tick ledger counts it as a run asked and not made
+    const hits_before = memo.hits;
+    const run = memo.run(config, options, () => simulateBuild(config, options));
+    if (memo.hits > hits_before) countRunMemoHit();
+    return run;
 }
 
 function simulateBuild(config: Config, options: RunOptions): BuildRun {
@@ -1518,9 +1524,9 @@ export interface UnclockedRun {
  */
 export function unclockedRun(config: Config, options: UnclockedRunOptions = {}): UnclockedRun {
     const logger = options.logger ?? defaultLogger;
-    const run = runBuild(config, { logger, debug: options.debug, debug_steps: options.debug_steps, factorio_states: options.factorio_states,
+    const run = withTickPurpose("planning", () => runBuild(config, { logger, debug: options.debug, debug_steps: options.debug_steps, factorio_states: options.factorio_states,
         ...(options.fractional_swings === true && { fractional_swings: true }),
-        ...(options.pickup_start !== undefined && { pickup_start: options.pickup_start }) });
+        ...(options.pickup_start !== undefined && { pickup_start: options.pickup_start }) }));
     // Throws LaneCapacityError if one unit asks a belt lane for more than it carries; after the run, so the planner's
     // own refusal of the target comes first
     assertLaneCapacity(config);
@@ -2431,11 +2437,11 @@ function fuelConsumptionView(
     let window_cycles = Math.min(Math.max(2, Math.ceil(FUEL_VIEW_HANDS * hand_lasts / window_cycle_ticks), Math.ceil(min_ticks / window_cycle_ticks)), max_window_cycles);
     while (true) {
         // the windows are run as they are: observing them again would return that run instead, without the fuel levels
-        const run = runClockOnBuild(
+        const run = withTickPurpose("fuel_view", () => runClockOnBuild(
             { ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, windows, window_cycle_ticks, logger,
             { ...swings, simulate_window_cycles: window_cycles, fuel_levels: true },
             on_these_fuel_clocks ? inserter_clocks : undefined,
-        );
+        ), { claim: true });
         const swung = run.serializable_transfer_history.entities
             .some(entity => fuel_inserter_ids.includes(entity.entity_id) && entity.transfers.length > 0);
         if (swung || window_cycles >= max_window_cycles) {

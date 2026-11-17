@@ -9,6 +9,7 @@ import { COPY_NUMBER_STRIDE } from "./sequence/build-copies";
 import { createEntityRegistryFromConfig, type SimulationContext } from "./sequence/simulation-context";
 import { clockWindowsOf, type InserterTimetableRecord, rangesOfWindowPart, recordTimetable, timetableOf, type TimetableLine, type WindowRange } from "./timetable";
 import { longRunWindowCyclesOf, runClockOnBuild } from "./trial";
+import { withTickPurpose } from "./tick-ledger";
 
 /**
  * The repeat check of the maker log (scripts/blast/MAKER-LOG.md, event `repeat_check`): a clock that holds on one copy is run
@@ -161,8 +162,8 @@ export function repeatCheckOf(run: ClockRunForLog, timetable: TimetableLine | nu
     if (cycles <= 1) throw new Error(`no long run of a window cycle of ${T} ticks`);
     // every run for all the window cycles of the long run: the long run stops where its state repeats, a narrowed run need not
     const runWith = (windows: SerializableClockWindows, on_context: (context: SimulationContext) => void) =>
-        runClockOnBuild(config, withChestDrillWindows(config, mapOf(windows), T), T, logger, { simulate_window_cycles: cycles, machine_stock: true, factorio_states: false,
-            ...run.swings, stock_detail: "hands", record_histories: false, on_context });
+        withTickPurpose("repeat_check", () => runClockOnBuild(config, withChestDrillWindows(config, mapOf(windows), T), T, logger, { simulate_window_cycles: cycles, machine_stock: true, factorio_states: false,
+            ...run.swings, stock_detail: "hands", record_histories: false, on_context }), { claim: true });
     // the first run, as the long run of the clock is made
     let recordsOf: () => InserterTimetableRecord[] = () => [];
     runWith(run.windows, context => { recordsOf = recordTimetable(context); });

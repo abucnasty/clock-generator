@@ -2,6 +2,7 @@ import { SimulationTick } from "../simulation-tick";
 import { Duration } from "../../../data-types";
 import { SimulationContext } from "../../sequence";
 import { RunnerStep, RunnerStepType } from "./runner-step";
+import { beginTickLoop } from "../../tick-ledger";
 
 export class WarmupStep implements RunnerStep {
     public readonly type: RunnerStepType = RunnerStepType.WARM_UP
@@ -29,6 +30,7 @@ export class WarmupStep implements RunnerStep {
 
         const start_tick = context.tick_provider.getCurrentTick();
         const end_tick = start_tick + this.duration.ticks;
+        const ledger = beginTickLoop("warmup_step", () => context.tick_provider.getCurrentTick() - start_tick);
         const boundary_by_key = new Map<string, number>();
         this.repeat_window_cycles = undefined;
 
@@ -54,6 +56,7 @@ export class WarmupStep implements RunnerStep {
             simulation_tick.executeForTick();
         }
         this.ticks_run = context.tick_provider.getCurrentTick() - start_tick;
+        ledger?.close();
     }
 
     private build(): SimulationTick {

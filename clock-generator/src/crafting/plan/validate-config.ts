@@ -13,6 +13,7 @@ import { PrepareStep } from "../runner/steps/prepare-step";
 import { Logger } from "../../common/logger";
 import { Inserter } from "../../entities";
 import { planOutputCycle, transferPlanOf } from "../plan/unclocked-run";
+import { withTickPurpose } from "../tick-ledger";
 
 /** What validating a config finds out before any clock is generated */
 export interface ConfigValidation {
@@ -51,10 +52,11 @@ export function validateConfig(config: Config, options: { logger?: Logger; fract
     const simulation_context = SimulationContext.fromConfig(config);
     // a target that counts an item destroyed is planned by arithmetic: nothing is counted from a run that fills the build
     if (config.setpoint.counts !== "destroyed") {
-        new PrepareStep(simulation_context).execute();
+        withTickPurpose("config_check", () => new PrepareStep(simulation_context).execute(), { claim: true });
     }
 
-    const { output_cycle_plan, output_inserters, all_output_inserters } = planOutputCycle(config, simulation_context, logger, options.fractional_swings === true);
+    const { output_cycle_plan, output_inserters, all_output_inserters } = withTickPurpose("config_check", () =>
+        planOutputCycle(config, simulation_context, logger, options.fractional_swings === true), { claim: true });
     // the planner has accepted the target: now no belt lane may be asked for more than it carries
     assertLaneCapacity(config);
     const { recipe_lcm, serializable_transfer_plan } = transferPlanOf(config, output_cycle_plan, simulation_context);
