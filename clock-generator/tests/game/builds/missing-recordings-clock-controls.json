@@ -3,7 +3,7 @@
  "cases": {
   "accumulator-320": {
    "recorded": {
-    "pr": 0,
+    "pr": 809,
     "commit": "b416a030",
     "frozen_head": "b416a030",
     "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
@@ -67,7 +67,7 @@
   },
   "automation-science-240-one-output-swing": {
    "recorded": {
-    "pr": 0,
+    "pr": 809,
     "commit": "b416a030",
     "frozen_head": "b416a030",
     "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
@@ -131,7 +131,7 @@
   },
   "electromagnetic-science-240-recycler-belt-fed": {
    "recorded": {
-    "pr": 0,
+    "pr": 809,
     "commit": "b416a030",
     "frozen_head": "b416a030",
     "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
@@ -209,7 +209,7 @@
   },
   "flying-robot-frame-80": {
    "recorded": {
-    "pr": 0,
+    "pr": 809,
     "commit": "b416a030",
     "frozen_head": "b416a030",
     "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
@@ -287,7 +287,7 @@
   },
   "logistic-science-240": {
    "recorded": {
-    "pr": 0,
+    "pr": 809,
     "commit": "b416a030",
     "frozen_head": "b416a030",
     "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
@@ -365,7 +365,7 @@
   },
   "processing-unit-15-chest-fed": {
    "recorded": {
-    "pr": 0,
+    "pr": 809,
     "commit": "b416a030",
     "frozen_head": "b416a030",
     "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
@@ -443,7 +443,7 @@
   },
   "productivity-module-80-chest-chain": {
    "recorded": {
-    "pr": 0,
+    "pr": 809,
     "commit": "b416a030",
     "frozen_head": "b416a030",
     "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
