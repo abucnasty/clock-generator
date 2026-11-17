@@ -9,6 +9,8 @@ import type { NotMadeClock } from "./why-not-stable";
 import { quiet } from "./generate-blueprint-test-helpers";
 import { currentRunMemo, withRunMemo } from "./plan/run-memo";
 import { disturbanceTrialKey } from "./trial";
+import type { MakerLogEvent, MakerReason } from "./maker-log";
+import { generateClockAlternatives } from "./generate-blueprint";
 
 const options = { logger: quiet };
 /** The strategy of a part that is not a listed clock, as the input gives a way of the grouped hands construction */
@@ -58,6 +60,25 @@ describe("the per-branch clock of a build with inserters outside the shared plan
         const clock = run!.alternatives[0].result;
         const on_plan = { ...made.config, overrides: { ...made.config.overrides, lcm: recommended.plan!.lcm } };
         expect(disturbanceTrialKey(on_plan, clock)).not.toBe(disturbanceTrialKey(made.config, clock));
+    });
+});
+
+// AUTOMATION_SCIENCE_240: on one copy the local choice ends on a clock of 0 wakeups a minute, whose copies lose swings on the lanes they
+// share; with the copies it ends on another clock, which holds with them
+describe("the per-branch clock of the automation science build", () => {
+    it("is never the clock of 0 wakeups that loses swings with the copies, but the one that holds with them", async () => {
+        const events: MakerLogEvent[] = [];
+        const generated = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240),
+            { logger: quiet, maker_log: event => { events.push(event); } });
+        const compositions = events.filter(event => event.event === "composition");
+        // the local choice on one copy ends on the clock of 0 wakeups; with the copies it is dropped, and never made
+        const zero = compositions.filter(event => event.wake_ups === 0);
+        expect(zero.map(event => [event.outcome, (event.reason as MakerReason | null)?.code ?? null])).toContainEqual(["dropped", "does_not_hold_with_copies"]);
+        expect(zero.filter(event => event.outcome === "listed")).toEqual([]);
+        const selected = generated.alternatives[generated.selected_index];
+        expect([selected.id, selected.verdict]).toEqual(["coordinated_sources", "stable"]);
+        expect(selected.ranking.wake_ups_per_minute).toBeCloseTo(70.065, 3);
+        expect(selected.result.coordinated_sources!.parts).toEqual({ "belt:1": "takt_batches_observed_swings_2", "machine:1": "euclidean_swings" });
     });
 });
 
