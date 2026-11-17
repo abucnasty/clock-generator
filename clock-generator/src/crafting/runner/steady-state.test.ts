@@ -67,8 +67,11 @@ const FIELDS: Record<string, { keyed: readonly string[]; excluded: Readonly<Reco
     BeltHandDrop: { keyed: [], excluded: { at_spot: BUILD, spot_ticks: BUILD } },
     BeltHandPickup: { keyed: [], excluded: { layout: BUILD, near_lane: BUILD, notification_scheduling: BUILD }, references: ["sink_wakes"] },
     Control: { keyed: [], excluded: { is_game_clock: CONTROL, looks_ahead: CONTROL, decider_build_order: CONTROL } },
-    // its craft underway is a field of its ProgressState: changed in the test of what is no plain field
-    Crafting: { keyed: ["status"], excluded: { craftCount: TOTAL, craftsStarted: TOTAL, totalCrafted: TOTAL, crafts_per_tick: BUILD } },
+    // its craft underway in recipe seconds; its ProgressState reads it as a fraction, changed in the test of what is no plain field
+    Crafting: {
+        keyed: ["status", "seconds"],
+        excluded: { craftCount: TOTAL, craftsStarted: TOTAL, totalCrafted: TOTAL, recipe_seconds: BUILD, crafting_speed: BUILD },
+    },
     MachineWakes: {
         keyed: ["outputBlockedAfterLastTick", "finishedCraftInLastTick", "startedCraftInLastTick"],
         excluded: {

@@ -516,7 +516,7 @@ export function useSimulationWorker(): UseSimulationWorkerResult {
                     ...generation.runs.slice(0, 1 + generation.tasks.findIndex(candidate => candidate.id === task.id))
                         .flatMap(run => task.coordinated_sources === true ? (run === null ? [] : signaturesOf(run)) : run?.alternatives.length ? [run.signature] : [])])],
                 ...(task.coordinated_sources === true && { coordinatedSources: coordinatedSourcesInputOf(generation.runs.map(withStrategies),
-                    (({ alternatives, selected_index }) => alternatives[selected_index].id)(combineClockAlternativeRuns(generation.runs, it => it.ranking))) }),
+                    (({ alternatives, order }) => order.map(index => alternatives[index].id))(combineClockAlternativeRuns(generation.runs, it => it.ranking))) }),
             } satisfies WorkerRequest);
         }
         if (generation.running.size > 0 || generation.queue.length > 0 || generation.primaryPending) {
