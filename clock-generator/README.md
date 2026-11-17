@@ -563,7 +563,7 @@ timing; a dead end on each input lane (`lane_end`) selects supply with backpress
 - `backed_up_belts`: deprecated; state the `lane_end` of each lane instead. `true` makes each lane that states no end a dead end, `false` an infinite end
 - `search_for_fewer_wake_ups`: run the four searches for every build (default false)
 - `check_start_dependence`: try every clock from other starts than the cold start too, and name the clocks that reach their target from some starts only (default false; see `docs/stability.md`, "Start dependence")
-- `judged_start`: the start every clock is judged from, `"cold"` or `"backpressure"` (the part of the build that no clock controls is filled until it settles, then the clock starts); default `"cold"` (see `docs/stability.md`, "How a clock is started")
+- `judged_start`: the start every clock is judged from, `"backpressure"` (the part of the build that no clock controls is filled until it settles, then the clock starts) or `"cold"` (machines, buffers and hands empty); default `"backpressure"` (see `docs/stability.md`, "How a clock is started")
 - `kick_start_items`: items a machine that makes its own ingredient (pentapod eggs) is given once when a clock starts (default 200, the same kick start as the harness gives)
 
 `src/config/schema.ts` (`ConfigOverridesSchema`) lists the others. Older files using `non_moving_belts` migrate to

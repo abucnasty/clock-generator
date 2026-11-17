@@ -1,5 +1,6 @@
 import { DEFAULT_TAKER_ORDER, TakerOrder } from "../simulation/competing-takers";
 import { DeciderOrder } from "./decider-order";
+import type { JudgedStart } from "../config/schema";
 
 /**
  * Whether a clock reaches its target from every sampled cold phase/order start, or only from some
@@ -158,6 +159,12 @@ export function startDependenceNote(dependence: StartDependence, items_per_secon
     return `start-dependent: reaches ${Number(expected_rate.toFixed(2))}/s from ${names(reaching)}; ${settles.join("; ")}.`;
 }
 
-/** What the generator says of a build whose clocks were tried from the cold start alone */
-export const START_DEPENDENCE_NOT_CHECKED = "Start dependence was not checked: every clock was judged from the cold start of the scaffold alone. "
-    + "Set overrides.check_start_dependence to try each clock from other starts too.";
+/** What the generator says of a build whose clocks were tried from the start they are judged from alone (`judged_start`) */
+export function startDependenceNotChecked(start: JudgedStart): string {
+    return start === "cold"
+        ? "Start dependence was not checked: every clock was judged from the cold start of the scaffold alone. "
+            + "Set overrides.check_start_dependence to try each clock from other starts too."
+        : "Start dependence was not checked: every clock was judged from the backpressure start alone (the part of the build "
+            + "no clock controls filled until it settles, then the clock). Set overrides.check_start_dependence to try each clock "
+            + "from other starts too, or overrides.judged_start to \"cold\" to judge from the cold start.";
+}

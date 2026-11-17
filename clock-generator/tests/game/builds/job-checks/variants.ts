@@ -5,9 +5,9 @@ import type { JobCheck } from '../record-job-checks';
 import { disturbanceTrialOf, COORDINATED_SOURCES_MAKER, selectableAsStable } from '../../../../src/crafting/generate-blueprint';
 import type { ClockAlternative, ClockAlternativesResult } from '../../../../src/crafting/generate-blueprint';
 import { lossId, verdictOf, type DisturbanceTrialReport } from '../../../../src/crafting/disturbance-trial';
-import { START_DEPENDENCE_NOT_CHECKED } from '../../../../src/crafting/start-dependence';
+import { startDependenceNotChecked } from '../../../../src/crafting/start-dependence';
 import { SEARCH_MAKERS } from '../../../../src/crafting/generate-blueprint-test-helpers';
-import type { Config } from '../../../../src/config/schema';
+import { judgedStartOf, type Config } from '../../../../src/config/schema';
 
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 const selectedOf = (generated: ClockAlternativesResult): ClockAlternative => generated.alternatives[generated.selected_index];
@@ -195,9 +195,9 @@ const automation: JobCheck[] = [
     },
     {
         name: 'says plainly that start dependence was not checked, by default',
-        run: ({ generated }) => {
+        run: ({ config, generated }) => {
             expect(generated.start_dependence_checked).toBe(false);
-            expect(generated.start_dependence_note).toBe(START_DEPENDENCE_NOT_CHECKED);
+            expect(generated.start_dependence_note).toBe(startDependenceNotChecked(judgedStartOf(config.overrides)));
             expect(generated.alternatives.every(it => it.assessment.start_dependence === null)).toBe(true);
         },
     },

@@ -5,7 +5,7 @@ import assert from "../../common/assert";
 import type { NotMadeClock } from "../why-not-stable";
 import type { MakerLogSink } from "../maker-log";
 import { Config } from "../../config";
-import { EnableControlOverrideConfig } from "../../config/schema";
+import { EnableControlOverrideConfig, judgedStartOf } from "../../config/schema";
 import { assertInserterCoverage } from "../../config/inserter-coverage-validator";
 import { validateCopies } from "../../config/copies-validator";
 import { assertFlowAlongCopySpacing } from "../shared-lane-lanes";
@@ -672,13 +672,13 @@ export function runBuild(config: Config, asked: RunOptions): BuildRun {
 }
 
 /**
- * The options a run is made with: a run from a cold start is made from the fill where `overrides.judged_start` asks for
- * it and the run judges a clock. A run that makes or tries windows (`runsThatMakeWindows`) keeps the cold start: its
+ * The options a run is made with: a run from a cold start is made from the fill unless `overrides.judged_start` asks for
+ * the cold start (`judgedStartOf`), where the run judges a clock. A run that makes or tries windows (`runsThatMakeWindows`) keeps the cold start: its
  * windows are the ones the clock-only runs of the cold start are judged on. The start is in the options, so the run memo
  * keeps the two apart.
  */
 function withTheStartOf(config: Config, options: RunOptions): RunOptions {
-    if (options.cold_start !== true || options.fill_start === true || config.overrides?.judged_start !== "backpressure" || runsThatMakeWindows()) return options;
+    if (options.cold_start !== true || options.fill_start === true || judgedStartOf(config.overrides) !== "backpressure" || runsThatMakeWindows()) return options;
     return { ...options, fill_start: true };
 }
 

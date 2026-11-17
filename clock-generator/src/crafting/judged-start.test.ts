@@ -11,9 +11,10 @@ import { BackpressureFillStep, fillStateKey, lanePhaseTicks, observeFills, type 
 import { EntityState } from "../state";
 import { SimulationTick } from "./runner/simulation-tick";
 import { withTickPurpose } from "./tick-ledger";
+import { startDependenceSummary } from "./alternatives";
 
 // docs/stability.md, "How a clock is started": `overrides.judged_start` "backpressure" runs the part of the build that no
-// clock controls until it settles, and the clock starts there; "cold" (the default) starts it on an empty build
+// clock controls until it settles, and the clock starts there (the default); "cold" starts it on an empty build
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 
 // the over-the-hood turbo build of the lane phase controls: one machine, an output inserter and an input inserter that takes
@@ -55,9 +56,21 @@ describe("a clock-only run from the backpressure start", () => {
         expect(filled.reports[0].fill?.end).toBe("repeat");
     });
 
-    it("is the cold start where no override asks for the fill", () => {
-        expect(firstWindowCycle(configOf(), BOTH).reports).toEqual([]);
-        expect(firstWindowCycle(configOf("cold"), BOTH).reports).toEqual([]);
+    it("is the backpressure start where the config names no start", () => {
+        const only_output = windowsOf("inserter:1");
+        const named = firstWindowCycle(configOf("backpressure"), only_output);
+        const by_default = firstWindowCycle(configOf(), only_output);
+        expect(by_default.reports).toHaveLength(1);
+        expect(by_default.reports).toEqual(named.reports);
+        expect(by_default.stock).toEqual(named.stock);
+        expect(by_default.output).toBe(named.output);
+    });
+
+    it("is the cold start where the config asks for it", () => {
+        const only_output = windowsOf("inserter:1");
+        const cold = firstWindowCycle(configOf("cold"), only_output);
+        expect(cold.reports).toEqual([]);
+        expect(Object.values(cold.stock.machines[0].inputs).every(series => series[0] === 0)).toBe(true);
     });
 
     it("starts exactly as from the cold start where every inserter is clocked", () => {
@@ -94,6 +107,16 @@ describe("a clock-only run from the backpressure start", () => {
         expect(none.reports).toHaveLength(1);
         expect(none.reports[0].kept_cold).toBe("nothing_clocked");
         expect(none.stock).toEqual(firstWindowCycle(configOf("cold"), new Map()).stock);
+    });
+});
+
+describe("the result's start sentence", () => {
+    it("names the start the clocks were judged from, and how to choose the other", () => {
+        const by_default = startDependenceSummary(configOf(), []).start_dependence_note;
+        expect(by_default).toContain("judged from the backpressure start alone");
+        expect(by_default).toContain("overrides.judged_start");
+        expect(startDependenceSummary(configOf("backpressure"), []).start_dependence_note).toBe(by_default);
+        expect(startDependenceSummary(configOf("cold"), []).start_dependence_note).toContain("judged from the cold start of the scaffold alone");
     });
 });
 
