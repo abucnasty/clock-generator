@@ -17,11 +17,14 @@ import {PickupClockScenario} from "./pickup-clock-capture";
  */
 const FOLDER = path.dirname(ConfigPaths.PROCESSING_UNIT_80_CIRCUIT_EXPORT);
 
+/** The id of the alternative the generator selects for the config: the clock that takes its windows from the source of each branch */
+export const GENERATED_ALTERNATIVE = "coordinated_sources";
+
 /**
- * The id of the alternative the generated clock is: the 24-tick one, which the rule for hands in groups makes stable, with a window of a tick at
- * each swing of the takers the surplus guard gates
+ * The id of the alternative the cases before the selection moved recorded: the 24-tick one, which the rule for hands in groups makes stable, with a window
+ * of a tick at each swing of the takers the surplus guard gates. It is still an alternative of the job, and its two recordings are kept.
  */
-export const GENERATED_ALTERNATIVE = "round_robin_polling_per_hand";
+export const PER_HAND_ALTERNATIVE = "round_robin_polling_per_hand";
 
 /** The scaffold has four throttle inserters (belt to infinity chest) and four chest inserters for the plastic, which the config does not have */
 const SCAFFOLD_INSERTERS = 8;
@@ -30,11 +33,15 @@ export interface ProcessingUnitCircuitExportClockCase {
     name: string;
     /** Whether the config has its belts backed up (`overrides.backed_up_belts`) */
     backed: boolean;
+    /** The id of the alternative the case records */
+    alternative: string;
 }
 
 export const PROCESSING_UNIT_80_CIRCUIT_EXPORT_CASES: ProcessingUnitCircuitExportClockCase[] = [
-    {name: "generated-as-is", backed: false},
-    {name: "generated-backed-up", backed: true},
+    {name: "generated-as-is", backed: false, alternative: GENERATED_ALTERNATIVE},
+    {name: "generated-backed-up", backed: true, alternative: GENERATED_ALTERNATIVE},
+    {name: "per-hand-as-is", backed: false, alternative: PER_HAND_ALTERNATIVE},
+    {name: "per-hand-backed-up", backed: true, alternative: PER_HAND_ALTERNATIVE},
 ];
 
 export function assertProcessingUnitCircuitExportHardware(recording: Recording, config: Config): void {
@@ -59,7 +66,7 @@ export async function processingUnitCircuitExportClockScenario(variant: Processi
         name: variant.name, speed: CLOCK_TEST_SPEEDS[0], backed: variant.backed,
         config: () => config,
         scaffold: () => fs.readFileSync(path.join(FOLDER, "processing-unit-80-circuit-export.scaffold"), "utf8").trim(),
-        alternative: GENERATED_ALTERNATIVE,
+        alternative: variant.alternative,
         probeFile: path.join(__dirname, "processing-unit-80-circuit-export-clock-probe.lua"),
         probe: {family: "processing-unit-80-circuit-export"},
         controls: path.join(__dirname, "processing-unit-80-circuit-export-clock-controls.json"),
