@@ -16,7 +16,7 @@ describe("generateClockForConfig", () => {
         // windows on the loop, so the windows of the loop do not show there
         const sample = await loadConfigFromFile(TestConfigPaths.AGRICULTURAL_SCIENCE_250_BIOFLUX_ON_NEAR_LANE);
 
-        it("counts a clock's windows without those of its feeders; the 5-swing clock does not go back to its rate by itself after a supply stop or an output blockage and the 2-swing one is selected", () => {
+        it("counts a clock's windows without those of its feeders; the 5-swing clock does not go back to its rate by itself after a supply stop or an output blockage and Coordinated Sources is selected", () => {
             // With hands of 12 on the sample this was 354 windows with the feeders', 324 without: the 3-swing clock has
             // 336 and was selected while the fewest windows were, before the windows of the feeders were left out of the
             // count. Wake-ups decide now, which the windows of the feeders bring down, and the windows only between
@@ -27,8 +27,9 @@ describe("generateClockForConfig", () => {
             // The batched 5-swing clock (480 ticks) reads 100 windows with and without the feeders'. The simulator serves
             // the takers of one machine in the order the game serves them and judges a clock under every order
             // (docs/simulator.md, docs/stability.md): the 5-swing clock holds but does not get back after the bioflux
-            // stops arriving, and the 3-swing clock does not hold. The clocks of 1 and 2 swings get back from every loss and
-            // the 2-swing clock is selected (GOALS.md, "Backpressure Loss").
+            // stops arriving, and the 3-swing clock does not hold. The clocks of 1 and 2 swings get back from every loss
+            // (GOALS.md, "Backpressure Loss"), and so does Coordinated Sources, which wakes 4,276.538 times a minute where
+            // the 2-swing clock wakes 4,403.000: it is selected. All of these are verdicts of the simulator.
             const config: Config = {
                 ...sample,
                 machines: sample.machines.map(it => it.id === 3 || it.id === 4 ? { ...it, crafting_speed: 80 } : it),
@@ -47,9 +48,9 @@ describe("generateClockForConfig", () => {
             expect(five_swings.result.simulation_duration.ticks).toBe(480);
             expect(three_swings.ranking_window_count).toBe(336);
             expect(three_swings.verdict).toBe("unstable");
-            expect(alternatives.filter(it => it.verdict === "stable").map(it => it.maker).sort()).toEqual(["swings-1", "swings-2"]);
+            expect(alternatives.filter(it => it.verdict === "stable").map(it => it.maker).sort()).toEqual(["per-branch", "swings-1", "swings-2"]);
             const selected = alternatives[selected_index];
-            expect(selected.maker).toBe("swings-2");
+            expect(selected.maker).toBe("per-branch");
             expect(selected.verdict).toBe("stable");
             expect(selected.assessment.disturbance_trial).toMatchObject({ survives: true, broken_by: [] });
         });
