@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CoordinatedSourcesNotApplicable, localChoiceFromStarts, localChoiceStarts, localChoiceWithCopies, partGroups, sourceControlsOf, tiledWindows, upstreamOrder,
+import { CoordinatedSourcesNotApplicable, localChoiceFromStarts, localChoiceStarts, localChoiceWithCopies, onWindowCycles, partGroups, sourceControlsOf, tiledWindows, upstreamOrder,
     type GroupedInserter, type LocalChoiceJudge } from "./coordinated-sources";
 import { EntityRouteError } from "../enable-control-router";
 import { collectingParts, offerPart, partKey, partsWanted, coordinatedSourcesInputOf, type CoordinatedSourcesPart } from "./coordinated-sources-parts";
@@ -189,7 +189,7 @@ describe("the input of the per-branch clock", () => {
     const counted_per_hand = part("compact, per hand", 24, { "inserter:1": [window(2, 2)] });
 
     it("lists the stable alternatives first, then the ways, each set of windows once, a counted one before one not yet counted", () => {
-        const input = coordinatedSourcesInputOf([{ parts: [way, per_hand] }, null, { parts: [stable, unstable, same_way], also: [{ parts: [counted_per_hand] }] }], "planned-belt-slack");
+        const input = coordinatedSourcesInputOf([{ parts: [way, per_hand] }, null, { parts: [stable, unstable, same_way], also: [{ parts: [counted_per_hand] }] }], ["planned-belt-slack"]);
         expect(input.recommended_id).toBe("planned-belt-slack");
         expect(input.parts.map(it => it.name)).toEqual(["planned-belt-slack", "staged", "compact, per hand"]);
     });
@@ -200,18 +200,64 @@ describe("the input of the per-branch clock", () => {
         const does_not_hold = part("derived", 24, { "inserter:1": [window(0, 6)] }, { alternative_id: "derived", verdict: "unstable", holds: false });
         // a clock that is not stable with the windows of a stable one or a way is that part already
         const same_as_stable = part("shifted-swings", 24, { "inserter:1": [window(0, 3)] }, { alternative_id: "shifted-swings", verdict: "unstable", holds: true });
-        const input = coordinatedSourcesInputOf([{ parts: [holds_unstable, stable, does_not_hold, same_as_stable, way, no_recovery] }], "planned-belt-slack");
+        const input = coordinatedSourcesInputOf([{ parts: [holds_unstable, stable, does_not_hold, same_as_stable, way, no_recovery] }], ["planned-belt-slack"]);
         expect(input.parts.map(it => it.name)).toEqual(["planned-belt-slack", "staged", "swings-2", "swings-1"]);
     });
 
     it("keeps the recommended clock though it is not stable", () => {
-        expect(coordinatedSourcesInputOf([{ parts: [stable, unstable] }], "swings-2").parts.map(it => it.name)).toEqual(["planned-belt-slack", "swings-2"]);
+        expect(coordinatedSourcesInputOf([{ parts: [stable, unstable] }], ["swings-2"]).parts.map(it => it.name)).toEqual(["planned-belt-slack", "swings-2"]);
+    });
+
+    it("composes on the window cycles of the recommended clock and the next best-ranked stable clocks, one a window cycle, at most three", () => {
+        const on = (name: string, ticks: number, verdict: CoordinatedSourcesPart["verdict"], start: number) =>
+            part(name, ticks, { "inserter:1": [window(start, start)] }, { alternative_id: name, verdict, holds: true });
+        const parts = [on("swings-4", 96, "stable", 0), on("observed", 96, "stable", 1), on("swings-7", 12, "unstable", 2),
+            on("time-division", 48, "stable", 3), on("swings-3", 24, "stable", 4), on("swings-1", 6, "stable", 5)];
+        const input = coordinatedSourcesInputOf([{ parts }], ["swings-4", "observed", "swings-7", "time-division", "swings-3", "swings-1"]);
+        expect(input.recommended_id).toBe("swings-4");
+        expect(input.window_cycle_ids).toEqual(["swings-4", "time-division", "swings-3"]);
+        // one window cycle: the recommended clock's alone, as before
+        expect(coordinatedSourcesInputOf([{ parts }], ["swings-4", "observed"]).window_cycle_ids).toBeUndefined();
     });
 
     it("keys a part by its period and its windows, in the order of the inserters' ids", () => {
         expect(partKey(part("a", 24, { "inserter:2": [window(1, 1)], "inserter:1": [window(0, 0)], "inserter:3": [] })))
             .toBe(partKey(part("b", 24, { "inserter:1": [window(0, 0)], "inserter:2": [window(1, 1)] })));
         expect(partKey(part("a", 24, { "inserter:1": [window(0, 0)] }))).not.toBe(partKey(part("a", 48, { "inserter:1": [window(0, 0)] })));
+    });
+});
+
+describe("the per-branch clock on the window cycles of the best few clocks", () => {
+    // the recommended clock on 96 ticks, and the next best-ranked stable clock on 48
+    const recommended = part("swings-4", 96, { "inserter:1": [window(0, 3)] }, { alternative_id: "swings-4", verdict: "stable", wake_ups_per_minute: 11.669 });
+    const second = part("time-division", 48, { "inserter:1": [window(0, 1)] }, { alternative_id: "time-division", verdict: "stable", wake_ups_per_minute: 13.340 });
+    const input = coordinatedSourcesInputOf([{ parts: [recommended, second] }], ["swings-4", "time-division"]);
+    /** A maker that composes, around each clock, a clock of the wakeups given for it (none where null) */
+    const makerOf = (wake_ups: Record<string, number | null>) => (around: { recommended_id: string; parts: CoordinatedSourcesPart[] }) => {
+        expect(around.parts).toBe(input.parts);
+        const made = wake_ups[around.recommended_id];
+        return made === null ? null : { around: around.recommended_id, window_cycle_ticks: around.parts.find(it => it.alternative_id === around.recommended_id)!.window_cycle_ticks, wake_ups: made };
+    };
+    const fewest = (made: readonly { wake_ups: number }[]) => made.reduce((best, it, index) => it.wake_ups < made[best].wake_ups ? index : best, 0);
+
+    it("lists the composition on the second-best clock's window cycle where it has fewer wakeups", () => {
+        expect(onWindowCycles(input, makerOf({ "swings-4": 6.668, "time-division": 3.335 }), fewest))
+            .toEqual({ made: { around: "time-division", window_cycle_ticks: 48, wake_ups: 3.335 }, index: 1 });
+    });
+
+    it("keeps the recommended clock's window cycle's where it is first, or tied", () => {
+        expect(onWindowCycles(input, makerOf({ "swings-4": 3.335, "time-division": 3.335 }), fewest)?.index).toBe(0);
+    });
+
+    it("lists what another window cycle makes where the recommended clock's makes none, and none where none makes one", () => {
+        expect(onWindowCycles(input, makerOf({ "swings-4": null, "time-division": 13 }), fewest)?.made.around).toBe("time-division");
+        expect(onWindowCycles(input, makerOf({ "swings-4": null, "time-division": null }), fewest)).toBeNull();
+    });
+
+    it("is made on the recommended clock's window cycle alone where the input names no other", () => {
+        const tried: string[] = [];
+        onWindowCycles({ recommended_id: "swings-4", parts: [recommended, second] }, around => { tried.push(around.recommended_id); return null; }, fewest);
+        expect(tried).toEqual(["swings-4"]);
     });
 });
 
@@ -281,7 +327,7 @@ describe("the strategy of a part", () => {
     it("is the one of the alternative it is, and Round-Robin Polling by the grouped hands for a way", () => {
         const alternative = part("exhaust", 24, { "inserter:1": [window(0, 3)] }, { alternative_id: "exhaust", verdict: "stable" });
         const way = part("staged", 24, { "inserter:1": [window(1, 3)] });
-        const input = coordinatedSourcesInputOf([{ alternatives: [{ id: "exhaust", strategy: { id: "exhaust", tuning_method: "calculated" } as ClockStrategy }], parts: [alternative, way] }], "exhaust");
+        const input = coordinatedSourcesInputOf([{ alternatives: [{ id: "exhaust", strategy: { id: "exhaust", tuning_method: "calculated" } as ClockStrategy }], parts: [alternative, way] }], ["exhaust"]);
         expect(input.parts.map(it => it.strategy)).toEqual([{ id: "exhaust", tuning_method: "calculated" }, { id: "round_robin_polling", tuning_method: "calculated" }]);
     });
 });

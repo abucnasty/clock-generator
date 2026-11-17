@@ -43,7 +43,7 @@ The trial transcripts and local benchmark tables behind this audit (#257) were n
 
 Coordinated Sources is the router that gives the inserters of each source the enable windows of another clock of the build
 (`src/crafting/candidates/coordinated-sources.ts`). A source is a machine, belt or chest that inserters take from. The generator makes
-it after every other clock, on the window cycle of the clock they recommend. It composes it from the stable clocks of the build, the
+it after every other clock, on the window cycle of the clock they recommend (and of a few others, below). It composes it from the stable clocks of the build, the
 ways of the grouped hands construction, and the listed clocks that hold on one copy but are not stable. Each of these is a part. A
 part's windows are repeated where its window cycle divides the shared one. A part whose window cycle does not divide it gives no windows.
 
@@ -74,6 +74,14 @@ cycle that does not divide the shared one, an own clock whose long run was not c
 window cycle (where it fails, and the items against those expected). For a part tried one source at a time, it names each source whose
 windows did not hold, with what the recommended clock with only those windows did, and the sources whose windows were taken. Where no
 clock holds, the `why_not_stable` message lists it with the other clocks not made ([stability](stability.md)).
+
+The generator makes Coordinated Sources on more than one window cycle: that of the recommended clock, then those of the next
+best-ranked stable clocks on other window cycles, three window cycles at most and one clock for each. On each, it composes the clock
+as above, around that window cycle's clock in place of the recommended one. It lists one of the clocks made: the one the selection
+ranks first, and of equals the one on the earlier window cycle. On the lithium plate sample the recommended clock is on 4,320 ticks,
+and the clock composed on 2,160 ticks, the window cycle of the time-division windows, has half the wakeups of the one composed on
+4,320 (3.335 a minute against 6.668). Where no window cycle gives a
+clock, the entry in `not_made` is that of the recommended clock's window cycle.
 
 ## Shipped and explored strategies
 

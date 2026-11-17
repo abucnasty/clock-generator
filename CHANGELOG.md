@@ -18,6 +18,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - simulation: output belts can now have several lines and a side belt per output inserter
 - simulation: builds that share no lane now check their stated output belt too
 - generation: the lithium plate sample now judges its output belts
+- generation: Coordinated Sources also tries the window cycles of the next best clocks
 
 ### Fixed
 - simulation: machines now finish a craft and start the next in the game's tick
