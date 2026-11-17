@@ -124,21 +124,26 @@ export function copiesTrialKey(config: Config, clock_windows: SerializableClockW
  * The keys of the two checks of a clock with the copies, from one reading of the config: of the check of the lanes the copies share
  * (`shared_lanes`: which check it is, the lanes, the config, the order of the window deciders on each reading of the lanes, the windows
  * and the window cycle; null where the build has no lane the check runs) and of the trials on the copies (`trials`: `copiesTrialKey`;
- * null where the copies share no lane). Either is null too where it cannot be made: that check is then made without the memo.
+ * null where the copies share no lane). Either is null too where it cannot be made, whatever stops it: that check is then made
+ * without the memo, and an error of the config or the windows is met there, where the check's own handling gives it.
  */
 export function copiesCheckKeys(config: Config, clock_windows: SerializableClockWindows, window_cycle_ticks: number,
+    expected_output_items: number): { shared_lanes: string | null; trials: string | null } {
+    try {
+        return checkKeysOf(config, clock_windows, window_cycle_ticks, expected_output_items);
+    } catch {
+        return { shared_lanes: null, trials: null };
+    }
+}
+
+function checkKeysOf(config: Config, clock_windows: SerializableClockWindows, window_cycle_ticks: number,
     expected_output_items: number): { shared_lanes: string | null; trials: string | null } {
     const runs = sharedLaneRunsOf(config);
     const lanes = runs.lanes.filter(lane => lane.shared).map(lane => `${lane.belt_id}/${lane.lane}`);
     if (runs.lanes.length === 0) return { shared_lanes: null, trials: null };
     const windows = new Map(Object.entries(clock_windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
-    let decider_orders: Record<string, number>[];
-    try {
-        // as the runs of the copies build each reading (runOnSharedLanes)
-        decider_orders = runs.readings.map(({ under }) => deciderBuildOrderOf({ ...under, overrides: { ...under.overrides, derive_clock_windows: false } }, windows, window_cycle_ticks));
-    } catch {
-        return { shared_lanes: null, trials: null };
-    }
+    // as the runs of the copies build each reading (runOnSharedLanes)
+    const decider_orders = runs.readings.map(({ under }) => deciderBuildOrderOf({ ...under, overrides: { ...under.overrides, derive_clock_windows: false } }, windows, window_cycle_ticks));
     const modelled = runs.lanes.map(lane => `${lane.belt_id}/${lane.lane}`);
     return {
         shared_lanes: canonicalKey([{ check: "shared_lanes", lanes: modelled }, config, decider_orders, clock_windows, window_cycle_ticks]),

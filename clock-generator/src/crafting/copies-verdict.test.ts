@@ -90,6 +90,18 @@ describe("the verdict of a clock with the copies", () => {
         expect(runs.trials).toBe(2);
     });
 
+    it("makes the checks without the memo where the keys cannot be made, so that what stops them is met where the checks handle it", () => {
+        const { runs, checks, one_copy } = counted(holds);
+        // windows a key cannot be made of: the checks are given them as they are
+        const broken = { ...clock, windows: { ...clock.windows, "inserter:1": null as unknown as { start: number; end: number }[] } };
+        withRunMemo(() => {
+            expect(verdictWithCopies(broken, one_copy, true, "Pitch Pickups", quiet, checks).holds).toBe(true);
+            verdictWithCopies(broken, one_copy, true, "Pitch Pickups", quiet, checks);
+            expect([currentRunMemo()!.shared_lane_check_hits, currentRunMemo()!.copies_trial_hits]).toEqual([0, 0]);
+        });
+        expect([runs.lanes, runs.trials]).toEqual([2, 2]);
+    });
+
     it("fails the generation on an internal error of the generator", () => {
         const { checks, one_copy } = counted(() => { throw new SecondaryPlanningInvariantError("broken"); });
         expect(() => verdictWithCopies(clock, one_copy, true, "Pitch Pickups", quiet, checks)).toThrow(SecondaryPlanningInvariantError);
