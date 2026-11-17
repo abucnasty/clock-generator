@@ -332,7 +332,7 @@ after the engine reads the file: a field with a default is required, but a confi
 | `output_belt.stretches[].points[].side_load.stretch` | integer > 0 | yes | The stretch, from 1, that side-loads onto this point from its last point. |
 | `output_belt.stretches[].points[].lane` | one of `left`, `right` | no | The lane that takes the side load or the drop: "left" or "right" in the direction of travel. |
 | `output_belt.stretches[].points[].layout` | one of `side-straight`, `side-entrance`, `side-exit` | no | The belt piece that takes the side load, as `pickup_layout` names it: side-straight (a straight belt), side-entrance (an underground entrance) or side-exit (an underground exit). |
-| `output_belt.stretches[].points[].drop` | integer > 0 | no | The copy, from 1, with the output inserter that drops onto this point. |
+| `output_belt.stretches[].points[].drop` | integer > 0 | no | The copy, from 1, with the output inserter that drops onto this point. Where a copy has k output inserters, number (c - 1) k + j is the j-th of them in the config of copy c. |
 | `output_belt.stretches[].points[].splitter_input` | one of `left`, `right` | no | The splitter's input that this stretch ends in: "left" or "right" in the direction of travel. |
 | `output_belt.stretches[].points[].splitter_output` | one of `left`, `right` | no | The splitter's output that this stretch starts at: "left" or "right" in the direction of travel. |
 | `output_belt.stretches[].points[].lane_end` | object | no | The infinite end of the output belt, on the last point of its stretch. |
