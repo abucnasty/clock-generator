@@ -65,6 +65,12 @@ export class Crafting implements EnergyUser, YieldUser {
     /** The status the machine shows, as the status rule gave it (statusRule) */
     public status: CraftingStatus = CraftingStatus.ITEM_INGREDIENT_SHORTAGE;
 
+    /**
+     * A craft started with no progress: the craft before it ended exactly as its tick ran out, and the next took its
+     * ingredients in that tick (as the game does). It is underway though its progress is still 0.
+     */
+    private started_with_no_progress: boolean = false;
+
     private readonly yield: Yield;
     private readonly crafts_per_tick: number;
     /** What starting a craft asks, in recipe order */
@@ -150,15 +156,22 @@ export class Crafting implements EnergyUser, YieldUser {
         let worked = false;
 
         this.yield.release(this);
-        while (budget > PROGRESS_EPSILON && !this.yield.holdsProducts() && !this.yield.barWaits()) {
+        let finished = false;
+        while ((budget > PROGRESS_EPSILON || finished) && !this.yield.holdsProducts() && !this.yield.barWaits()) {
             let progress = this.craftingProgress.progress;
-            if (progress <= 0) {
+            if (progress <= 0 && !this.started_with_no_progress) {
                 if (!this.canStartCraft() || !this.energy.hasFuel()) {
                     break;
                 }
                 this.consume();
                 progress = 0;
+                if (budget <= PROGRESS_EPSILON) {
+                    // the craft that ended used the whole tick: the game starts the next in that tick, with no progress
+                    this.started_with_no_progress = true;
+                    break;
+                }
             }
+            this.started_with_no_progress = false;
 
             const step = Math.min(budget, 1 - progress);
             progress += step;
@@ -166,7 +179,8 @@ export class Crafting implements EnergyUser, YieldUser {
             worked = true;
             this.yield.advanceBonus(step);
 
-            if (progress >= 1 - PROGRESS_EPSILON) {
+            finished = progress >= 1 - PROGRESS_EPSILON;
+            if (finished) {
                 this.yield.finishCraft(this);
                 this.craftCount += 1;
                 progress = 0;
@@ -179,7 +193,7 @@ export class Crafting implements EnergyUser, YieldUser {
 
     /** Whether a craft is underway (what Energy asks) */
     public craftInProgress(): boolean {
-        return this.craftingProgress.progress > 0;
+        return this.craftingProgress.progress > 0 || this.started_with_no_progress;
     }
 
     /**
@@ -203,15 +217,17 @@ export class Crafting implements EnergyUser, YieldUser {
 
     /**
      * What of it drives the machine's next ticks, for the machine's key (see simulationStateKey): the status as its code
-     * and the craft underway. The crafts counted and the main product made are running totals: they never repeat.
+     * and the craft underway, with whether one started with no progress. The crafts counted and the main product made
+     * are running totals: they never repeat.
      */
     public key(): string {
-        return `${this.status};${this.craftingProgress.progress}`;
+        return `${this.status};${this.craftingProgress.progress};${this.started_with_no_progress}`;
     }
 
     /** A snapshot's copy of what `other` holds: the craft underway, the counts and the status */
     public copyFrom(other: Crafting): void {
         this.craftingProgress.progress = other.craftingProgress.progress;
+        this.started_with_no_progress = other.started_with_no_progress;
         this.craftCount = other.craftCount;
         this.craftsStarted = other.craftsStarted;
         this.totalCrafted = other.totalCrafted;

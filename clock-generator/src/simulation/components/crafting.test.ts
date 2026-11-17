@@ -149,6 +149,27 @@ describe("Crafting: a working tick", () => {
         // two crafts of the 2.5 the tick had room for
         expect(state.yield.bonusProgress.progress).toBeCloseTo(2 * 0.2, 12);
     });
+
+    // The battery plant of the accumulator build of issue 152, recorded in Factorio 2.1.21: crafting speed 87.375 on the
+    // 4 s battery, 233/640 of a craft a tick. Its craft at 407/640 ends exactly as the tick runs out, and the game takes
+    // the next craft's plates in that tick (7 to 6), its bar at 0; the bar moves on from the next tick.
+    it("starts the next craft in the tick the last one ended, where that craft used the whole tick", () => {
+        const state = stateOf("battery", { prototype: "cryogenic-plant", crafting_speed: 87.375, productivity: 200 });
+        const crafting = state.crafting;
+        state.inventoryState.addQuantity("iron-plate", 7);
+        state.inventoryState.addQuantity("copper-plate", 7);
+        crafting.craftingProgress.progress = 407 / 640;
+        crafting.tick();
+        expect([crafting.craftCount, crafting.craftsStarted]).toEqual([1, 1]);
+        expect([state.inventoryState.getQuantity("iron-plate"), state.inventoryState.getQuantity("copper-plate")]).toEqual([6, 6]);
+        expect(crafting.craftingProgress.progress).toBe(0);
+        // the craft it started is underway: the next tick progresses it and takes nothing
+        expect(crafting.craftInProgress()).toBe(true);
+        crafting.tick();
+        expect([crafting.craftCount, crafting.craftsStarted]).toEqual([1, 1]);
+        expect(state.inventoryState.getQuantity("iron-plate")).toBe(6);
+        expect(crafting.craftingProgress.progress).toBeCloseTo(233 / 640, 12);
+    });
 });
 
 describe("MachineWakes", () => {
@@ -204,6 +225,10 @@ describe("Crafting and Wakes: what the machine's state keeps of them", () => {
         Object.assign(state.wakes, { outputBlockedAfterLastTick: true, finishedCraftInLastTick: true, startedCraftInLastTick: true,
             windowOpeningTakeDecider: 1 });
         const cloned = MachineState.clone(state);
+        // a craft started with no progress is copied too
+        Object.assign(state.crafting, { started_with_no_progress: true });
+        expect(MachineState.clone(state).crafting.key()).toBe(state.crafting.key());
+        Object.assign(state.crafting, { started_with_no_progress: false });
         expect(cloned.crafting).not.toBe(state.crafting);
         expect(cloned.crafting.craftingProgress).not.toBe(state.crafting.craftingProgress);
         expect([cloned.craftingProgress.progress, cloned.craftCount, cloned.craftsStarted, cloned.totalCrafted, cloned.status])
@@ -221,7 +246,7 @@ describe("Crafting and Wakes: what the machine's state keeps of them", () => {
         const state = stateOf("iron-gear-wheel", { crafting_speed: 15 });
         const { crafting, wakes } = state;
         const key = () => `${crafting.key()}|${wakes.key()}`;
-        expect(key()).toBe(`${CraftingStatus.ITEM_INGREDIENT_SHORTAGE};0|false;false;false`);
+        expect(key()).toBe(`${CraftingStatus.ITEM_INGREDIENT_SHORTAGE};0;false|false;false;false`);
         const keys = new Set([key()]);
         for (const status of STATUSES) {
             crafting.status = status;
@@ -229,11 +254,15 @@ describe("Crafting and Wakes: what the machine's state keeps of them", () => {
         }
         crafting.craftingProgress.progress = 0.5;
         keys.add(key());
+        // a craft started with no progress, at the end of a tick the craft before it used up
+        crafting.craftingProgress.progress = 0;
+        Object.assign(crafting, { started_with_no_progress: true });
+        keys.add(key());
         for (const flag of ["outputBlockedAfterLastTick", "finishedCraftInLastTick", "startedCraftInLastTick"] as const) {
             wakes[flag] = true;
             keys.add(key());
         }
-        expect(keys.size).toBe(1 + 3 + 1 + 3);
+        expect(keys.size).toBe(1 + 3 + 1 + 1 + 3);
         const before = key();
         Object.assign(crafting, { craftCount: 9, craftsStarted: 9, totalCrafted: 9 });
         wakes.windowOpeningTakeDecider = 2;

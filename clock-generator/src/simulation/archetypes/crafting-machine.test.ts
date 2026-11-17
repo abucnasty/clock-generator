@@ -647,6 +647,29 @@ describe("Crafting machine: its steps and observers", () => {
         expect(machine_state.wakes.windowOpeningTakeDecider).toBe(null)
     })
 
+    // Iron gear wheels at crafting speed 1, 30 ticks a craft: each craft ends exactly as a tick runs out. As in the game
+    // (the battery plant of issue 152, Factorio 2.1.21), the next craft takes its plates in the tick the last one ended,
+    // the last plates included; it works on from the next tick and finishes in the tick it would have anyway.
+    test("starts the next craft in the tick a craft ends on a whole tick, and finishes it in the same tick as before", () => {
+        const machine_state = MachineState.forMachine(createMachine("iron-gear-wheel"))
+        const machine = CraftingMachineArchetype.create({ machine_state })
+        machine_state.inventoryState.addQuantity("iron-plate", 4)
+        const starts: number[] = []
+        const finishes: number[] = []
+        const working: number[] = []
+        for (let tick = 1; tick <= 62; tick++) {
+            executeForTicks(machine, 1)
+            if (machine_state.wakes.startedCraftInLastTick) starts.push(tick)
+            if (machine_state.wakes.finishedCraftInLastTick) finishes.push(tick)
+            if (machine_state.status === MachineStatus.WORKING) working.push(tick)
+        }
+        expect(starts).toEqual([1, 30])
+        expect(finishes).toEqual([30, 60])
+        expect(working).toEqual(Array.from({ length: 60 }, (_, index) => index + 1))
+        expect([machine_state.craftsStarted, machine_state.craftCount]).toEqual([2, 2])
+        expect(machine_state.inventoryState.getQuantity("iron-plate")).toBe(0)
+    })
+
     test("counts the crafts its Wakes report from its build on", () => {
         const machine_state = MachineState.forMachine(createMachine("iron-gear-wheel", { crafting_speed: 15 }))
         machine_state.craftCount = 5
@@ -675,11 +698,11 @@ describe("Crafting machine: its steps and observers", () => {
     // one key for the machine, its components' in a fixed order (P4 3.4): Storage, Crafting, Yield, Wakes, Energy
     test("keys what its components keep: its inventories, status and craft, held products and bars, last tick's flags, energy", () => {
         const { machine_state, machine } = gears(0)
-        expect(machine.stateKey()).toBe(`[["iron-gear-wheel",0],["iron-plate",2]];{};[]|${CraftingStatus.ITEM_INGREDIENT_SHORTAGE};0|0;0;[]|false;false;false|`)
+        expect(machine.stateKey()).toBe(`[["iron-gear-wheel",0],["iron-plate",2]];{};[]|${CraftingStatus.ITEM_INGREDIENT_SHORTAGE};0;false|0;0;[]|false;false;false|`)
         executeForTicks(machine, 1)
         expect(machine_state.crafting.status).toBe(CraftingStatus.WORKING)
         // the plates taken, the half craft, the started craft its Wakes report; an electric machine's energy keys nothing
-        expect(machine.stateKey()).toBe(`[["iron-gear-wheel",0],["iron-plate",0]];{};[]|${CraftingStatus.WORKING};0.5|0;0;[]|false;false;true|`)
+        expect(machine.stateKey()).toBe(`[["iron-gear-wheel",0],["iron-plate",0]];{};[]|${CraftingStatus.WORKING};0.5;false|0;0;[]|false;false;true|`)
         expect(machine.stateKey()).toBe([machine_state.storageKey(), machine_state.crafting.key(), machine_state.yield.key(),
             machine_state.wakes.key(), machine_state.energy.key()].join("|"))
     })
