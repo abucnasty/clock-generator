@@ -47,12 +47,12 @@ export const INSTALL_COPY = {
     },
     wire: {
         title: 'Wire the output of each combinator to its inserters.',
-        detail: 'A combinator whose description ends its first line with "(inserter 3)", or with the numbers of several '
-            + 'inserters, switches them on; the line names the item and the two ends, such as "[car] → [electric furnace]". '
+        detail: 'A combinator whose description starts with a count of inserters, such as "2 inserters", switches them on; '
+            + 'under it, each inserter has a line of source, item and sink, such as "[car] → [iron plate] → [electric furnace]". '
             + 'With a green wire, connect its output to each inserter in the wiring reference; the numbers are the ones on '
             + 'Configure. The combinator\'s description names the same inserters; this list has all of it. The Clock, the '
             + 'Clock lock and every combinator described "Part of the clock" are the clock itself: leave them.',
-        drills: ' A combinator whose first line ends with "(drill 1)" switches that mining drill on: wire it the same way.',
+        drills: ' A combinator whose first line starts with "1 drill" switches that mining drill on: wire it the same way.',
     },
     enable: {
         title: 'Set each wired inserter to switch on with that wire.',
@@ -64,7 +64,7 @@ export const INSTALL_COPY = {
     },
     drills: {
         title: 'Wire each combinator\'s output to its mining drills, and set them to switch on with it.',
-        detail: 'A combinator whose description ends its first line with "(drill 1)" switches that mining drill on. With '
+        detail: 'A combinator whose description starts with a count of drills, such as "1 drill", switches that mining drill on. With '
             + 'a green wire, connect its output to each drill in the wiring reference; the numbers are the ones on Configure. '
             + 'Then open the drill, find Circuit network connection, choose Enable if, and set the condition to '
             + 'Anything > 0, with Read resources off: a drill that reads its resources puts its ore on the wire, and '
@@ -128,10 +128,22 @@ export function installSteps(input: InstallInput): InstallStep[] {
     ];
 }
 
-/** What an inserter or drill moves and between which ends: the item ids (the page shows them as icons) and "Belt 1 to Machine 1" */
+/** One end of a route: "Belt 1", "Machine 2", and the id of the recipe when the end is a machine (the page shows it as an icon) */
+export interface WiringEnd {
+    label: string;
+    recipe?: string;
+}
+
+/**
+ * What an inserter or drill moves and between which ends: the item ids (the page shows them as icons), the two ends
+ * (a drill has no `from`: it is its own source) and the same in words, "Belt 1 to Machine 1", for a run that does not
+ * name the ends
+ */
 export interface WiringMoves {
     items: string[];
     route: string;
+    from?: WiringEnd;
+    to?: WiringEnd;
 }
 
 /** One inserter or drill to wire to a combinator's output */

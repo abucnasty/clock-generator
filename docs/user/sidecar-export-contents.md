@@ -32,10 +32,12 @@ uses first. This includes:
 - Pickups in line with an underground belt entrance or exit, after it in the direction of the belt.
 - Pickups across an underground belt exit, from the belt before the exit. At these pickups, the first lane changes
   after you use **Flip horizontal** or **Flip vertical** on the inserter.
+- Pickups from a right bend of a turbo belt, for an inserter that is not mirrored and stands one tile upstream of the
+  bend. The first lane is lane 1.
 
 The export marks each belt pickup for which the sidecar cannot give data. The site does not accept these pickups:
 
-- A pickup from a belt bend.
+- A pickup from a belt bend, other than the pickup above.
 - A pickup from a splitter.
 - A pickup from a belt tile that has side-loading from a different belt.
 - A pickup in line with the belt, or a different pickup position that the site cannot use.
@@ -114,7 +116,8 @@ The export gives no copy spacing in these conditions:
 One copy can have two or more machines that are the same, with the same inserters, at equal distances along a belt. The
 sidecar cannot find the difference between these machines and copies. Then it gives that distance.
 
-The site does not use the copy spacing from the export. Set the distance to the next copy in **Setpoint**.
+When you paste an export and tick the Setpoint row, the site puts the copy spacing from the export into **Setpoint**.
+You can change the distance to the next copy there.
 
 ## Entities that are not in the export
 

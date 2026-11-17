@@ -42,4 +42,9 @@ export class Control {
     public enabledIn(ticks: number): boolean {
         return this.current.isEnabledIn!(ticks);
     }
+
+    /** The control it asks now, for a reader of the run: asking it through here changes nothing */
+    public get asked(): EnableControl {
+        return this.current;
+    }
 }

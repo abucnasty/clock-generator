@@ -3,7 +3,7 @@ import { targetInsertersOf, targetItemOf, targetMachinesOf } from "./sequence/cy
 import { Config } from "../config";
 import { EnableControlOverrideConfig, EnableControlRange } from "../config/schema";
 import { InserterClock, unplannedInserterClocks } from "./sequence/unplanned-inserter-clock";
-import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
+import { createEntityRegistryFromConfig, type SimulationContext } from "./sequence/simulation-context";
 import { Duration, OpenRange } from "../data-types";
 import { Entity, EntityId, Inserter, Machine } from "../entities";
 import { Logger, defaultLogger } from "../common/logger";
@@ -39,7 +39,8 @@ import { verificationPlanningConfigOf, verificationTerminalCountOf } from "./rou
 import { CIRCUIT_LATENCY_TICKS } from "../common/rule-constants";
 import { WakeUpsFromStarts, hasStockTheClockDoesNotSet, wakeUpsFromStarts } from "./wake-ups-from-starts";
 import type { ClockSharedLaneLoss } from "./shared-lane-verdict";
-import { timedCheck } from "./maker-log";
+import { makerLogOn, timedCheck } from "./maker-log";
+import { runOfOneCopyForLog } from "./one-copy-log";
 
 /**
  * Number of clock start offsets the as-built check tries. Depending on how the clock lines up with the
@@ -476,6 +477,8 @@ function longRunOfFreeRunningBuild(
     start: Pick<ClockTrialOptions, "competing_takers_order" | "decider_order" | "main_clock_shift" | "fractional_swings"> = {},
     /** What the caller reads of the stock: the stock it gets is recorded in no more detail */
     stock_detail: StockDetail = "full",
+    /** A reader put into each run's context before its first tick (the maker log's); it changes nothing in the run */
+    on_context?: (context: SimulationContext) => void,
 ): {
     keeps_up: boolean;
     /** The judged span's amount under the strict target amount, which `keeps_up` requires */
@@ -517,7 +520,8 @@ function longRunOfFreeRunningBuild(
     }
     // only its stock is read, which names the state of every inserter itself
     const runOf = (simulate_window_cycles: number) => {
-        const build_run = clockBuildRun(config, decider_windows, window_cycle_ticks, logger, { simulate_window_cycles, machine_stock: true, factorio_states: false, detect_repeat: true, ...start, stock_detail, record_histories: false });
+        const build_run = clockBuildRun(config, decider_windows, window_cycle_ticks, logger, { simulate_window_cycles, machine_stock: true, factorio_states: false, detect_repeat: true, ...start, stock_detail, record_histories: false,
+            ...(on_context !== undefined && { on_context }) });
         return { build_run, run: trialRunOf(build_run) };
     };
     let { build_run, run } = runOf(window_cycles);
@@ -1212,13 +1216,17 @@ export function runAsBuiltCheck(
                 check.start_up_shortfall = passed.run.check.start_up_shortfall;
             }
         } else {
+            // for the maker log only: the timetable and the ledger of the run whose wakeups are counted, read and never changed
+            const for_log = makerLogOn() && stock_detail !== "hands" ? runOfOneCopyForLog(config, decider_windows, window_cycle_ticks) : undefined;
             // no long run when none is asked for (a quick trial of a search)
-            const long_run = long_run_ticks > 0 ? longRunOfFreeRunningBuild(config, decider_windows, window_cycle_ticks, result.stability_check.expected_output_items, logger, long_run_ticks, swings, stock_detail) : null;
+            const long_run = long_run_ticks > 0 ? longRunOfFreeRunningBuild(config, decider_windows, window_cycle_ticks, result.stability_check.expected_output_items, logger, long_run_ticks, swings, stock_detail,
+                for_log?.on_context) : null;
             stock = stock_detail === "hands" ? undefined : long_run?.stock;
             if (long_run && stock) {
                 // judged as the long run is: the proven cycle, or what follows the start-up of a sampled run
-                const counted = wakeUpsAndCountersOfStock(stock, config,
-                    long_run.proven ? long_run.first_judged_tick : Math.floor(stock.ticks / LONG_RUN_SETTLE_SHARE));
+                const from_tick = long_run.proven ? long_run.first_judged_tick : Math.floor(stock.ticks / LONG_RUN_SETTLE_SHARE);
+                const counted = wakeUpsAndCountersOfStock(stock, config, from_tick);
+                for_log?.keep(counted.wake_ups, stock, from_tick);
                 check.wake_ups = counted.wake_ups;
                 check.counters = counted.counters;
                 check.long_run_proven = long_run.proven;
