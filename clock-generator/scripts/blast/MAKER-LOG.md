@@ -98,7 +98,7 @@ The example is shortened: one item, one window, one copy.
 ### `missed_swings`: one for each taker of a copy that loses swings on a lane the copies share
 
 `id` is the clock's, `loss` the place of the loss in the clock's losses, `run` the place of its run in the `runs` of the clock's `lane_facts`.
-`copy` (1 is the config's own), `inserter_id`, `belt_id`, `lanes` and `item` are the loss's.
+`copy` (1 is the config's own), `inserter_id`, `belt_id`, `lanes` and `item` are the loss's. `cause` is `lane`, or `join_full` where the loss is put down to the copy's side belt full at its join onto the output belt.
 
 | Field | Meaning |
 | --- | --- |
@@ -112,7 +112,7 @@ A hand start is the first take of an empty hand. Its last condition is the one t
 At a close, `on_its_way` is a hand it swings, `window_open` a hand that took items in the last open tick, and `left_over` a hand that met all four and took nothing.
 
 ```json
-{"job":"config-FLYING_ROBOT_FRAME_80","event":"missed_swings","id":"takt_batches_observed","loss":0,"run":0,"copy":4,"inserter_id":3,"belt_id":5,"lanes":[1],"item":"electronic-circuit","pickups":[[1,15,2],[1,16,2]],"window_cycles":[{"window_cycle":1,"missed":2,"condition":"hand_at_source","at_close":["room_at_sink","hand_at_source"],"stop_class":"neither"}],"by_condition":{"hand_at_source":102},"starts_by_last":{"window_open":122,"hand_at_source":81}}
+{"job":"config-FLYING_ROBOT_FRAME_80","event":"missed_swings","id":"takt_batches_observed","loss":0,"run":0,"copy":4,"inserter_id":3,"belt_id":5,"lanes":[1],"item":"electronic-circuit","cause":"lane","pickups":[[1,15,2],[1,16,2]],"window_cycles":[{"window_cycle":1,"missed":2,"condition":"hand_at_source","at_close":["room_at_sink","hand_at_source"],"stop_class":"neither"}],"by_condition":{"hand_at_source":102},"starts_by_last":{"window_open":122,"hand_at_source":81}}
 ```
 
 The example is shortened: two pickups, one window cycle.

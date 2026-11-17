@@ -100,8 +100,8 @@ describe("the stacks the copies claim on a lane they share", () => {
         expect(claimed(2, 12.75, [10]).copies[1].claimed).toBe(0);
     });
 
-    it("finds a claim over the end of the window cycle", () => {
-        // copy 1 takes at 95; copy 2 takes at 5, 10 tiles of travel at 0.125 = 80 ticks: 5 - 95 - 80 = -170, that is 30 on a cycle of 100.
+    it("finds a claim for the pickups of a window that runs over the end of the window cycle", () => {
+        // one window from 90 to 10: pickups at 95 and 5. Copy 1 takes at 95; copy 2 takes at 5, 10 tiles of travel at 0.125 = 80 ticks: 5 - 95 - 80 = -170, that is 30 on a cycle of 100.
         // At 1.25 tiles (10 ticks): 5 - 95 - 10 = -100, that is 0: copy 2 claims what copy 1 took in the window cycle before
         expect(claimed(2, 10, [95, 5]).copies[1].claimed).toBe(0);
         expect(claimed(2, 1.25, [95, 5]).copies[1].claimed).toBe(1);

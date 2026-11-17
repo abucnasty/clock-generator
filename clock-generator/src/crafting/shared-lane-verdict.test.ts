@@ -433,6 +433,17 @@ describe("the facts of the lanes the check keeps for the maker log", async () =>
         }
     });
 
+    it("puts a loss down to the join where the copy's side belt is full at its join, else to the lane", async () => {
+        const automation = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
+        const takt = { "inserter:2": [{ start: 1, end: 37 }, { start: 109, end: 145 }],
+            "inserter:1": [{ start: 13, end: 38 }, { start: 42, end: 65 }, { start: 133, end: 154 }, { start: 181, end: 193 }] };
+        const judged = judgeSharedLanes(automation, takt, 216, quiet, { for_log: true });
+        expect(judged.losses.length).toBeGreaterThan(0);
+        expect(judged.for_log!.missed_swings.map(it => it!.cause)).toEqual(judged.losses.map(() => "join_full"));
+        const lane = judgeSharedLanes(inserters, inserter_clocks.takt_batches_swings_6.windows, inserter_clocks.takt_batches_swings_6.window_cycle_ticks, quiet, { for_log: true });
+        expect(new Set(lane.for_log!.missed_swings.map(it => it!.cause))).toEqual(new Set(["lane"]));
+    });
+
     it("gives the lanes of each pickup of a taker that takes one item from both lanes of its belt", () => {
         const clock = inserter_clocks.takt_batches_swings_6;
         const { for_log } = judgeSharedLanes(inserters, clock.windows, clock.window_cycle_ticks, quiet, { for_log: true });

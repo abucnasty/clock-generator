@@ -264,6 +264,8 @@ export interface MissedSwings {
     belt_id: number;
     lanes: number[];
     item: string;
+    /** What the loss is put down to: the lane, or the copy's side belt full at its join onto the output belt (`SharedLaneLoss.join_full`) */
+    cause?: "lane" | "join_full";
     /** Its pickups in the judged span: [window cycle of the span from 1, tick of the window cycle, lane (0 where no lane says)] */
     pickups: [number, number, number][];
     /** Each window cycle with a missed swing */

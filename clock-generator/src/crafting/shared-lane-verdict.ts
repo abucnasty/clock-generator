@@ -1294,7 +1294,8 @@ function judgedOnLanes(config: Config, clock_windows: SerializableClockWindows, 
         return { losses: sorted.map(it => it.loss), loss_facts: sorted.map(it => it.facts), fast_check_passes, simulated: true, longer_run, lanes: keys,
             ...(join_waits.size > 0 && { join_waits: [...join_waits].sort(([a], [b]) => a - b).map(([copy, waits]) => ({ copy, held_hands: waits.held_hands, hands: waits.hands })) }),
             ...(copies_made !== undefined && { copies_made }),
-            ...(for_log && { for_log: lanesForLog(readings_log, judged_runs, sorted.map(it => it.logged)) }) };
+            ...(for_log && { for_log: lanesForLog(readings_log, judged_runs, sorted.map(it => it.logged === undefined ? undefined
+                : { ...it.logged, missed: { ...it.logged.missed, cause: it.loss.join_full !== undefined ? "join_full" as const : "lane" as const } })) }) };
     };
     // no taker short, or one short by more than a hand, which the end of the judged span does not make: judged as it is,
     // each run's losses standing where a machine or an output inserter of that run is behind its target
