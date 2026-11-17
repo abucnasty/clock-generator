@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
+import type { Config } from "../config/schema";
 import { generateClockAlternatives, type GenerateClockOptions } from "./generate-blueprint";
 import { quiet } from "./generate-blueprint-test-helpers";
 import { SimulationTick } from "./runner/simulation-tick";
@@ -12,8 +13,9 @@ const total = (count: TickLedgerCount) => count.rows.reduce((sum, row) => sum + 
  * One generation of the small build, with a ledger open. The ticks of the generation are counted apart, at the tick itself:
  * every call of `SimulationTick.executeForTick`, whichever loop makes it.
  */
-async function generatedCounted(options: Partial<GenerateClockOptions> = {}): Promise<{ count: TickLedgerCount; calls: number }> {
-    const config = await loadConfigFromFile(ConfigPaths.ACCUMULATOR_320);
+async function generatedCounted(options: Partial<GenerateClockOptions> = {}, overrides: Config["overrides"] = {}): Promise<{ count: TickLedgerCount; calls: number }> {
+    const loaded = await loadConfigFromFile(ConfigPaths.ACCUMULATOR_320);
+    const config = { ...loaded, overrides: { ...loaded.overrides, ...overrides } };
     const executeForTick = SimulationTick.prototype.executeForTick;
     let calls = 0;
     SimulationTick.prototype.executeForTick = function (this: SimulationTick) {
@@ -110,5 +112,20 @@ describe("the tick ledger of a generation that proves every start phase", () => 
         expect(total(generation.count)).toBe(generation.calls);
         expect(generation.count.rows.filter(row => row.purpose === "no_purpose")).toEqual([]);
         expect(generation.count.rows.some(row => row.loop === "phase_proof" && row.purpose === "start_phase" && row.ticks > 0)).toBe(true);
+    });
+});
+
+// a clock tried from the other starts, only where the config asks for it
+describe("the tick ledger of a generation that checks start dependence", () => {
+    let generation: Awaited<ReturnType<typeof generatedCounted>>;
+
+    beforeAll(async () => {
+        generation = await generatedCounted({}, { check_start_dependence: true });
+    }, 600_000);
+
+    it("counts every tick, and the runs from the other starts to their own purposes", () => {
+        expect(total(generation.count)).toBe(generation.calls);
+        expect(generation.count.rows.filter(row => row.purpose === "no_purpose")).toEqual([]);
+        expect(generation.count.rows.some(row => row.purpose === "start_dependence" && row.ticks > 0)).toBe(true);
     });
 });
