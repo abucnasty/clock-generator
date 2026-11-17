@@ -9,7 +9,7 @@ import {recordInFactorio} from "../../../src/harness/factorio-harness";
 import {recipesMaking} from "../../../src/harness/recording-output";
 import {matchCopies} from "../../../src/verification/entity-copies";
 import {composeProbeSource} from "../helpers/probe-source";
-import {clockHash, readRecordJob} from "./clock-controls";
+import {clockHash, expectedNativeSummary, readRecordJob} from "./clock-controls";
 import {CONTROLS_FILE, MISSING_RECORDING_CASES, scaffoldFile} from "./missing-recordings-clock-fixtures";
 import {RUN_PROTOCOL, runSummary} from "./pickup-clock-capture";
 
@@ -75,6 +75,11 @@ describe.sequential("the selected clock of a record job from the staged start, w
 
             const summary = runSummary(run, {generationVerdict: selected.verdict, target: Math.round(target * 1e6) / 1e6, period}, target);
             fs.writeFileSync(path.join(directory, "summary.json"), JSON.stringify(summary) + "\n");
+            // the run of the pinned clock is the one the controls file keeps (BELT_CLOCK_CALIBRATE=1 records a new one)
+            if (process.env.BELT_CLOCK_CALIBRATE !== "1") {
+                const kept = expectedNativeSummary(path.join(__dirname, CONTROLS_FILE), item.name);
+                if (kept) expect(summary, `the run is the one ${CONTROLS_FILE} keeps for ${item.name}`).toEqual(kept);
+            }
 
             // each copy by itself: its final machines, found as the harness finds the copies
             const finals = run.finals as {unit_number: number; worth: number}[];
