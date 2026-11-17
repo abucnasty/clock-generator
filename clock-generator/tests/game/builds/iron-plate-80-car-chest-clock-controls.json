@@ -1,12 +1,12 @@
 {
-  "meaning": "The iron plate build with a car as a chest between a big mining drill and two furnaces (iron-plate-80-car-chest-clock-fixtures.ts); the disturbances are the drill stopped (the car's ore taken with it), the output blocked, the drill stopped again. `native` is the run under the game tests' protocol, timed in game ticks (tests/game/helpers/lua/steady.lua), recorded in Factorio 2.1.24: steady state (the machines making the target have made it over the trailing 3,600 ticks, no less than a window of whole clock cycles earlier), a baseline judged by net output over its whole clock cycles (the final machines' products less the output stock they gained; 3,600 ticks unless the fixture names a longer one), then each disturbance until the output falls below the baseline's lowest minute, released and recovered; `stock` is the output stock guard (the run fails when the final machines' output stock at its end is below the lowest of the baseline's whole cycles; null for a build judged by a count). The probe records the run, the verdicts are computed host-side (tests/game/helpers/run-judgement.js). `generation` is the selection the family's generation test pins, with the sha256 of its exported clock's identity (`clockIdentity`); `recorded` is the recording that is current.",
+  "meaning": "The iron plate build with a car as a chest between a big mining drill and two furnaces (iron-plate-80-car-chest-clock-fixtures.ts); the disturbances are the drill stopped (the car's ore taken with it), the output blocked, the drill stopped again. `native` is the run under the game tests' protocol, timed in game ticks (tests/game/helpers/lua/steady.lua), recorded in Factorio 2.1.24: steady state (the machines making the target have made it over the trailing 3,600 ticks, no less than a window of whole clock cycles earlier), a baseline judged by net output over its whole clock cycles (the final machines' products less the output stock they gained; 3,600 ticks unless the fixture names a longer one), then each disturbance until the output falls below the baseline's lowest minute, released and recovered; `stock` is the output stock guard (the run fails when the final machines' output stock, once the last disturbance's effect has settled, is below the lowest of the baseline's whole cycles, or is still falling; the run goes on 14,400 ticks after its last recovery, `stock.after` keeps the stock at each whole clock cycle of them; null for a build judged by a count). The probe records the run, the verdicts are computed host-side (tests/game/helpers/run-judgement.js). `generation` is the selection the family's generation test pins, with the sha256 of its exported clock's identity (`clockIdentity`); `recorded` is the recording that is current.",
   "cases": {
     "car-derived": {
       "recorded": {
-        "pr": 0,
-        "commit": "038ed41a",
-        "frozen_head": "038ed41a",
-        "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
+        "pr": 803,
+        "commit": "c507b0f1",
+        "frozen_head": "c507b0f1",
+        "note": "recorded under the protocol in game ticks on the engine of this head, in Factorio 2.1.24 on 2026-11-17 with a tail of 14,400 ticks after the last recovery (#587: the stock guard reads the stock after settling); the clock is the one of the recording before, the same clock_sha256",
         "clock_sha256": "ada70e1e95f6344645551b76515f3357c953fe28f1586020cc05de38d6143723",
         "clock_basis": "capture"
       },
@@ -60,11 +60,24 @@
         ],
         "stock": {
           "lowest": 88,
-          "end": 78,
-          "holds": false
+          "end": 128,
+          "holds": true,
+          "after": {
+            "from": 14821,
+            "t": [14832, 15120, 15408, 15696, 15984, 16272, 16560, 16848, 17136, 17424, 17712, 18000, 18288, 18576, 18864, 19152, 19440, 19728, 20016, 20304, 20592, 20880, 21168, 21456, 21744, 22032, 22320, 22608, 22896, 23184, 23472, 23760, 24048, 24336, 24624, 24912, 25200, 25488, 25776, 26064, 26352, 26640, 26928, 27216, 27504, 27792, 28080, 28368, 28656, 28944, 29232],
+            "stock": [60, 16, 24, 26, 30, 32, 38, 42, 44, 48, 54, 56, 60, 62, 68, 72, 74, 78, 84, 86, 90, 92, 98, 102, 104, 108, 114, 116, 120, 122, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128],
+            "low": [50, 0, 8, 16, 22, 24, 28, 30, 36, 40, 42, 46, 52, 54, 58, 60, 66, 70, 72, 76, 82, 84, 88, 90, 96, 100, 102, 106, 112, 114, 118, 120, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122],
+            "settled": {
+              "from": 22032,
+              "lowest": 100,
+              "last": 128,
+              "falling": false,
+              "holds": true
+            }
+          }
         },
         "result": "holds",
-        "ended": 14821
+        "ended": 29232
       },
       "generation": {
         "period": 288,
@@ -77,17 +90,14 @@
           "supply": null
         },
         "clock_sha256": "ada70e1e95f6344645551b76515f3357c953fe28f1586020cc05de38d6143723"
-      },
-      "known_differences": {
-        "stock_guard": "#587: a final drill stop leaves the furnaces' output stock at a lower, steady level, below the baseline's lowest; net output, steady state and every recovery hold"
       }
     },
     "car-derived-takers-last": {
       "recorded": {
-        "pr": 0,
-        "commit": "038ed41a",
-        "frozen_head": "038ed41a",
-        "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
+        "pr": 803,
+        "commit": "c507b0f1",
+        "frozen_head": "c507b0f1",
+        "note": "recorded under the protocol in game ticks on the engine of this head, in Factorio 2.1.24 on 2026-11-17 with a tail of 14,400 ticks after the last recovery (#587: the stock guard reads the stock after settling); the clock is the one of the recording before, the same clock_sha256",
         "clock_sha256": "ada70e1e95f6344645551b76515f3357c953fe28f1586020cc05de38d6143723",
         "clock_basis": "capture"
       },
@@ -141,11 +151,24 @@
         ],
         "stock": {
           "lowest": 88,
-          "end": 78,
-          "holds": false
+          "end": 128,
+          "holds": true,
+          "after": {
+            "from": 14821,
+            "t": [14832, 15120, 15408, 15696, 15984, 16272, 16560, 16848, 17136, 17424, 17712, 18000, 18288, 18576, 18864, 19152, 19440, 19728, 20016, 20304, 20592, 20880, 21168, 21456, 21744, 22032, 22320, 22608, 22896, 23184, 23472, 23760, 24048, 24336, 24624, 24912, 25200, 25488, 25776, 26064, 26352, 26640, 26928, 27216, 27504, 27792, 28080, 28368, 28656, 28944, 29232],
+            "stock": [60, 16, 24, 26, 30, 32, 38, 42, 44, 48, 54, 56, 60, 62, 68, 72, 74, 78, 84, 86, 90, 92, 98, 102, 104, 108, 114, 116, 120, 122, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128],
+            "low": [50, 0, 8, 16, 22, 24, 28, 30, 36, 40, 42, 46, 52, 54, 58, 60, 66, 70, 72, 76, 82, 84, 88, 90, 96, 100, 102, 106, 112, 114, 118, 120, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122, 122],
+            "settled": {
+              "from": 22032,
+              "lowest": 100,
+              "last": 128,
+              "falling": false,
+              "holds": true
+            }
+          }
         },
         "result": "holds",
-        "ended": 14821
+        "ended": 29232
       },
       "generation": {
         "period": 288,
@@ -158,17 +181,14 @@
           "supply": null
         },
         "clock_sha256": "ada70e1e95f6344645551b76515f3357c953fe28f1586020cc05de38d6143723"
-      },
-      "known_differences": {
-        "stock_guard": "#587: a final drill stop leaves the furnaces' output stock at a lower, steady level, below the baseline's lowest; net output, steady state and every recovery hold"
       }
     },
     "car-swings-2": {
       "recorded": {
-        "pr": 0,
-        "commit": "57c76634",
-        "frozen_head": "57c76634",
-        "note": "recorded under the protocol in game ticks on the engine of this head; pr is set when the PR is opened",
+        "pr": 803,
+        "commit": "c507b0f1",
+        "frozen_head": "c507b0f1",
+        "note": "recorded under the protocol in game ticks on the engine of this head, in Factorio 2.1.24 on 2026-11-17 with a tail of 14,400 ticks after the last recovery (#587: the stock guard reads the stock after settling); the clock is the one of the recording before, the same clock_sha256",
         "clock_sha256": "c034828da0e279f66be23750884f519b8b467b5313a2da0b5c07daa789e3f0bb",
         "clock_basis": "capture"
       },
@@ -222,11 +242,24 @@
         ],
         "stock": {
           "lowest": 90,
-          "end": 86,
-          "holds": false
+          "end": 194,
+          "holds": true,
+          "after": {
+            "from": 14539,
+            "t": [14545, 14689, 14833, 14977, 15121, 15265, 15409, 15553, 15697, 15841, 15985, 16129, 16273, 16417, 16561, 16705, 16849, 16993, 17137, 17281, 17425, 17569, 17713, 17857, 18001, 18145, 18289, 18433, 18577, 18721, 18865, 19009, 19153, 19297, 19441, 19585, 19729, 19873, 20017, 20161, 20305, 20449, 20593, 20737, 20881, 21025, 21169, 21313, 21457, 21601, 21745, 21889, 22033, 22177, 22321, 22465, 22609, 22753, 22897, 23041, 23185, 23329, 23473, 23617, 23761, 23905, 24049, 24193, 24337, 24481, 24625, 24769, 24913, 25057, 25201, 25345, 25489, 25633, 25777, 25921, 26065, 26209, 26353, 26497, 26641, 26785, 26929, 27073, 27217, 27361, 27505, 27649, 27793, 27937, 28081, 28225, 28369, 28513, 28657, 28801, 28945],
+            "stock": [92, 94, 94, 98, 100, 100, 104, 104, 106, 110, 110, 112, 116, 116, 118, 118, 122, 124, 124, 128, 130, 130, 134, 134, 136, 140, 140, 142, 146, 146, 148, 148, 152, 154, 154, 158, 160, 160, 164, 164, 166, 170, 170, 172, 176, 176, 178, 178, 182, 184, 184, 188, 190, 190, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194],
+            "low": [50, 52, 54, 54, 58, 60, 60, 62, 66, 66, 68, 70, 72, 74, 76, 78, 80, 82, 84, 84, 88, 90, 90, 92, 96, 96, 98, 100, 102, 104, 106, 108, 110, 112, 114, 114, 118, 120, 120, 122, 126, 126, 128, 130, 132, 134, 136, 138, 140, 142, 144, 144, 148, 150, 150, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152],
+            "settled": {
+              "from": 21745,
+              "lowest": 144,
+              "last": 194,
+              "falling": false,
+              "holds": true
+            }
+          }
         },
         "result": "holds",
-        "ended": 14539
+        "ended": 28945
       },
       "generation": {
         "period": 144,
@@ -239,17 +272,14 @@
           "supply": null
         },
         "clock_sha256": "c034828da0e279f66be23750884f519b8b467b5313a2da0b5c07daa789e3f0bb"
-      },
-      "known_differences": {
-        "stock_guard": "#587: a final drill stop leaves the furnaces' output stock at a lower, steady level, below the baseline's lowest; net output, steady state and every recovery hold"
       }
     },
     "car-swings-2-takers-last": {
       "recorded": {
-        "pr": 0,
-        "commit": "57c76634",
-        "frozen_head": "57c76634",
-        "note": "recorded under the protocol in game ticks on the engine of this head; pr is set when the PR is opened",
+        "pr": 803,
+        "commit": "c507b0f1",
+        "frozen_head": "c507b0f1",
+        "note": "recorded under the protocol in game ticks on the engine of this head, in Factorio 2.1.24 on 2026-11-17 with a tail of 14,400 ticks after the last recovery (#587: the stock guard reads the stock after settling); the clock is the one of the recording before, the same clock_sha256",
         "clock_sha256": "c034828da0e279f66be23750884f519b8b467b5313a2da0b5c07daa789e3f0bb",
         "clock_basis": "capture"
       },
@@ -303,11 +333,24 @@
         ],
         "stock": {
           "lowest": 90,
-          "end": 86,
-          "holds": false
+          "end": 194,
+          "holds": true,
+          "after": {
+            "from": 14539,
+            "t": [14545, 14689, 14833, 14977, 15121, 15265, 15409, 15553, 15697, 15841, 15985, 16129, 16273, 16417, 16561, 16705, 16849, 16993, 17137, 17281, 17425, 17569, 17713, 17857, 18001, 18145, 18289, 18433, 18577, 18721, 18865, 19009, 19153, 19297, 19441, 19585, 19729, 19873, 20017, 20161, 20305, 20449, 20593, 20737, 20881, 21025, 21169, 21313, 21457, 21601, 21745, 21889, 22033, 22177, 22321, 22465, 22609, 22753, 22897, 23041, 23185, 23329, 23473, 23617, 23761, 23905, 24049, 24193, 24337, 24481, 24625, 24769, 24913, 25057, 25201, 25345, 25489, 25633, 25777, 25921, 26065, 26209, 26353, 26497, 26641, 26785, 26929, 27073, 27217, 27361, 27505, 27649, 27793, 27937, 28081, 28225, 28369, 28513, 28657, 28801, 28945],
+            "stock": [92, 94, 94, 98, 100, 100, 104, 104, 106, 110, 110, 112, 116, 116, 118, 118, 122, 124, 124, 128, 130, 130, 134, 134, 136, 140, 140, 142, 146, 146, 148, 148, 152, 154, 154, 158, 160, 160, 164, 164, 166, 170, 170, 172, 176, 176, 178, 178, 182, 184, 184, 188, 190, 190, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194, 194],
+            "low": [50, 52, 54, 54, 58, 60, 60, 62, 66, 66, 68, 70, 72, 74, 76, 78, 80, 82, 84, 84, 88, 90, 90, 92, 96, 96, 98, 100, 102, 104, 106, 108, 110, 112, 114, 114, 118, 120, 120, 122, 126, 126, 128, 130, 132, 134, 136, 138, 140, 142, 144, 144, 148, 150, 150, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152, 152],
+            "settled": {
+              "from": 21745,
+              "lowest": 144,
+              "last": 194,
+              "falling": false,
+              "holds": true
+            }
+          }
         },
         "result": "holds",
-        "ended": 14539
+        "ended": 28945
       },
       "generation": {
         "period": 144,
@@ -320,17 +363,14 @@
           "supply": null
         },
         "clock_sha256": "c034828da0e279f66be23750884f519b8b467b5313a2da0b5c07daa789e3f0bb"
-      },
-      "known_differences": {
-        "stock_guard": "#587: a final drill stop leaves the furnaces' output stock at a lower, steady level, below the baseline's lowest; net output, steady state and every recovery hold"
       }
     },
     "car-swings-3": {
       "recorded": {
-        "pr": 0,
-        "commit": "038ed41a",
-        "frozen_head": "038ed41a",
-        "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
+        "pr": 803,
+        "commit": "c507b0f1",
+        "frozen_head": "c507b0f1",
+        "note": "recorded under the protocol in game ticks on the engine of this head, in Factorio 2.1.24 on 2026-11-17 with a tail of 14,400 ticks after the last recovery (#587: the stock guard reads the stock after settling); the clock is the one of the recording before, the same clock_sha256",
         "clock_sha256": "680216906ebddadf5638a3116ff240e7c0eec81994ac20e033eee4b22653b662",
         "clock_basis": "capture"
       },
@@ -384,11 +424,24 @@
         ],
         "stock": {
           "lowest": 70,
-          "end": 50,
-          "holds": false
+          "end": 48,
+          "holds": false,
+          "after": {
+            "from": 26317,
+            "t": [26319, 26391, 26463, 26535, 26607, 26679, 26751, 26823, 26895, 26967, 27039, 27111, 27183, 27255, 27327, 27399, 27471, 27543, 27615, 27687, 27759, 27831, 27903, 27975, 28047, 28119, 28191, 28263, 28335, 28407, 28479, 28551, 28623, 28695, 28767, 28839, 28911, 28983, 29055, 29127, 29199, 29271, 29343, 29415, 29487, 29559, 29631, 29703, 29775, 29847, 29919, 29991, 30063, 30135, 30207, 30279, 30351, 30423, 30495, 30567, 30639, 30711, 30783, 30855, 30927, 30999, 31071, 31143, 31215, 31287, 31359, 31431, 31503, 31575, 31647, 31719, 31791, 31863, 31935, 32007, 32079, 32151, 32223, 32295, 32367, 32439, 32511, 32583, 32655, 32727, 32799, 32871, 32943, 33015, 33087, 33159, 33231, 33303, 33375, 33447, 33519, 33591, 33663, 33735, 33807, 33879, 33951, 34023, 34095, 34167, 34239, 34311, 34383, 34455, 34527, 34599, 34671, 34743, 34815, 34887, 34959, 35031, 35103, 35175, 35247, 35319, 35391, 35463, 35535, 35607, 35679, 35751, 35823, 35895, 35967, 36039, 36111, 36183, 36255, 36327, 36399, 36471, 36543, 36615, 36687, 36759, 36831, 36903, 36975, 37047, 37119, 37191, 37263, 37335, 37407, 37479, 37551, 37623, 37695, 37767, 37839, 37911, 37983, 38055, 38127, 38199, 38271, 38343, 38415, 38487, 38559, 38631, 38703, 38775, 38847, 38919, 38991, 39063, 39135, 39207, 39279, 39351, 39423, 39495, 39567, 39639, 39711, 39783, 39855, 39927, 39999, 40071, 40143, 40215, 40287, 40359, 40431, 40503, 40575, 40647, 40719],
+            "stock": [48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48],
+            "low": [43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43],
+            "settled": {
+              "from": 33519,
+              "lowest": 43,
+              "last": 48,
+              "falling": false,
+              "holds": false
+            }
+          }
         },
         "result": "holds",
-        "ended": 26317
+        "ended": 40719
       },
       "generation": {
         "period": 72,
@@ -403,15 +456,15 @@
         "clock_sha256": "680216906ebddadf5638a3116ff240e7c0eec81994ac20e033eee4b22653b662"
       },
       "known_differences": {
-        "stock_guard": "#587: a final drill stop leaves the furnaces' output stock at a lower, steady level, below the baseline's lowest; net output, steady state and every recovery hold"
+        "stock_guard": "#587: after the last drill stop the furnaces' output stock settles at a lower, steady level and stays there: 48 at every whole clock cycle of the 14,402 ticks that follow (lowest tick 43), below the baseline's lowest of 70; net output, steady state and every recovery hold. Not a drain; the reason for the level is not found"
       }
     },
     "car-swings-3-takers-last": {
       "recorded": {
-        "pr": 0,
-        "commit": "038ed41a",
-        "frozen_head": "038ed41a",
-        "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
+        "pr": 803,
+        "commit": "c507b0f1",
+        "frozen_head": "c507b0f1",
+        "note": "recorded under the protocol in game ticks on the engine of this head, in Factorio 2.1.24 on 2026-11-17 with a tail of 14,400 ticks after the last recovery (#587: the stock guard reads the stock after settling); the clock is the one of the recording before, the same clock_sha256",
         "clock_sha256": "680216906ebddadf5638a3116ff240e7c0eec81994ac20e033eee4b22653b662",
         "clock_basis": "capture"
       },
@@ -465,11 +518,24 @@
         ],
         "stock": {
           "lowest": 70,
-          "end": 50,
-          "holds": false
+          "end": 48,
+          "holds": false,
+          "after": {
+            "from": 26317,
+            "t": [26319, 26391, 26463, 26535, 26607, 26679, 26751, 26823, 26895, 26967, 27039, 27111, 27183, 27255, 27327, 27399, 27471, 27543, 27615, 27687, 27759, 27831, 27903, 27975, 28047, 28119, 28191, 28263, 28335, 28407, 28479, 28551, 28623, 28695, 28767, 28839, 28911, 28983, 29055, 29127, 29199, 29271, 29343, 29415, 29487, 29559, 29631, 29703, 29775, 29847, 29919, 29991, 30063, 30135, 30207, 30279, 30351, 30423, 30495, 30567, 30639, 30711, 30783, 30855, 30927, 30999, 31071, 31143, 31215, 31287, 31359, 31431, 31503, 31575, 31647, 31719, 31791, 31863, 31935, 32007, 32079, 32151, 32223, 32295, 32367, 32439, 32511, 32583, 32655, 32727, 32799, 32871, 32943, 33015, 33087, 33159, 33231, 33303, 33375, 33447, 33519, 33591, 33663, 33735, 33807, 33879, 33951, 34023, 34095, 34167, 34239, 34311, 34383, 34455, 34527, 34599, 34671, 34743, 34815, 34887, 34959, 35031, 35103, 35175, 35247, 35319, 35391, 35463, 35535, 35607, 35679, 35751, 35823, 35895, 35967, 36039, 36111, 36183, 36255, 36327, 36399, 36471, 36543, 36615, 36687, 36759, 36831, 36903, 36975, 37047, 37119, 37191, 37263, 37335, 37407, 37479, 37551, 37623, 37695, 37767, 37839, 37911, 37983, 38055, 38127, 38199, 38271, 38343, 38415, 38487, 38559, 38631, 38703, 38775, 38847, 38919, 38991, 39063, 39135, 39207, 39279, 39351, 39423, 39495, 39567, 39639, 39711, 39783, 39855, 39927, 39999, 40071, 40143, 40215, 40287, 40359, 40431, 40503, 40575, 40647, 40719],
+            "stock": [48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48],
+            "low": [43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43],
+            "settled": {
+              "from": 33519,
+              "lowest": 43,
+              "last": 48,
+              "falling": false,
+              "holds": false
+            }
+          }
         },
         "result": "holds",
-        "ended": 26317
+        "ended": 40719
       },
       "generation": {
         "period": 72,
@@ -484,15 +550,15 @@
         "clock_sha256": "680216906ebddadf5638a3116ff240e7c0eec81994ac20e033eee4b22653b662"
       },
       "known_differences": {
-        "stock_guard": "#587: a final drill stop leaves the furnaces' output stock at a lower, steady level, below the baseline's lowest; net output, steady state and every recovery hold"
+        "stock_guard": "#587: after the last drill stop the furnaces' output stock settles at a lower, steady level and stays there: 48 at every whole clock cycle of the 14,402 ticks that follow (lowest tick 43), below the baseline's lowest of 70; net output, steady state and every recovery hold. Not a drain; the reason for the level is not found"
       }
     },
     "car-swings-1": {
       "recorded": {
-        "pr": 0,
-        "commit": "038ed41a",
-        "frozen_head": "038ed41a",
-        "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
+        "pr": 803,
+        "commit": "c507b0f1",
+        "frozen_head": "c507b0f1",
+        "note": "recorded under the protocol in game ticks on the engine of this head, in Factorio 2.1.24 on 2026-11-17 with a tail of 14,400 ticks after the last recovery (#587: the stock guard reads the stock after settling); the clock is the one of the recording before, the same clock_sha256",
         "clock_sha256": "2076db78e3f81019464ac681875c38570f79c30a628d0373e906624b99abd6b0",
         "clock_basis": "capture"
       },
@@ -546,11 +612,24 @@
         ],
         "stock": {
           "lowest": 70,
-          "end": 50,
-          "holds": false
+          "end": 48,
+          "holds": false,
+          "after": {
+            "from": 26317,
+            "t": [26319, 26391, 26463, 26535, 26607, 26679, 26751, 26823, 26895, 26967, 27039, 27111, 27183, 27255, 27327, 27399, 27471, 27543, 27615, 27687, 27759, 27831, 27903, 27975, 28047, 28119, 28191, 28263, 28335, 28407, 28479, 28551, 28623, 28695, 28767, 28839, 28911, 28983, 29055, 29127, 29199, 29271, 29343, 29415, 29487, 29559, 29631, 29703, 29775, 29847, 29919, 29991, 30063, 30135, 30207, 30279, 30351, 30423, 30495, 30567, 30639, 30711, 30783, 30855, 30927, 30999, 31071, 31143, 31215, 31287, 31359, 31431, 31503, 31575, 31647, 31719, 31791, 31863, 31935, 32007, 32079, 32151, 32223, 32295, 32367, 32439, 32511, 32583, 32655, 32727, 32799, 32871, 32943, 33015, 33087, 33159, 33231, 33303, 33375, 33447, 33519, 33591, 33663, 33735, 33807, 33879, 33951, 34023, 34095, 34167, 34239, 34311, 34383, 34455, 34527, 34599, 34671, 34743, 34815, 34887, 34959, 35031, 35103, 35175, 35247, 35319, 35391, 35463, 35535, 35607, 35679, 35751, 35823, 35895, 35967, 36039, 36111, 36183, 36255, 36327, 36399, 36471, 36543, 36615, 36687, 36759, 36831, 36903, 36975, 37047, 37119, 37191, 37263, 37335, 37407, 37479, 37551, 37623, 37695, 37767, 37839, 37911, 37983, 38055, 38127, 38199, 38271, 38343, 38415, 38487, 38559, 38631, 38703, 38775, 38847, 38919, 38991, 39063, 39135, 39207, 39279, 39351, 39423, 39495, 39567, 39639, 39711, 39783, 39855, 39927, 39999, 40071, 40143, 40215, 40287, 40359, 40431, 40503, 40575, 40647, 40719],
+            "stock": [48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48],
+            "low": [43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43, 43],
+            "settled": {
+              "from": 33519,
+              "lowest": 43,
+              "last": 48,
+              "falling": false,
+              "holds": false
+            }
+          }
         },
         "result": "holds",
-        "ended": 26317
+        "ended": 40719
       },
       "generation": {
         "period": 72,
@@ -565,7 +644,7 @@
         "clock_sha256": "2076db78e3f81019464ac681875c38570f79c30a628d0373e906624b99abd6b0"
       },
       "known_differences": {
-        "stock_guard": "#587: a final drill stop leaves the furnaces' output stock at a lower, steady level, below the baseline's lowest; net output, steady state and every recovery hold"
+        "stock_guard": "#587: after the last drill stop the furnaces' output stock settles at a lower, steady level and stays there: 48 at every whole clock cycle of the 14,402 ticks that follow (lowest tick 43), below the baseline's lowest of 70; net output, steady state and every recovery hold. Not a drain; the reason for the level is not found"
       }
     }
   }

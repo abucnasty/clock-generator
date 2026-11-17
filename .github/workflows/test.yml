@@ -40,10 +40,57 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  unit:
-    name: Unit tests
+  # The unit tests, in shards like the generation tests (below): the sequencer of clock-generator/ci/duration-sequencer.ts
+  # deals the files out by their measured seconds (ci/unit-durations.json, from the log of a run), so that the job's wall time
+  # is that of the slowest shard. One runner took 7 to 9 minutes for all of them on 2026-11-17 (the limit was 10), and the
+  # longest file takes two minutes of that, so more shards than four would not shorten it. The code checks (knip, type check,
+  # build, lint) run once, beside the shards. The check that is named "Unit tests" is the job after them.
+  unit-shards:
+    name: Unit ${{ matrix.shard }}/${{ strategy.job-total }}
     needs: changes
-    # skipped (which satisfies a required check) when the pull request changes documentation only; run when `changes` did not run or failed
+    # skipped when the pull request changes documentation only; run when `changes` did not run or failed
+    if: ${{ !cancelled() && needs.changes.outputs.generation != 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      # every shard finishes, so that a pull request shows all its failures at once
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    defaults:
+      run:
+        working-directory: clock-generator
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: clock-generator/package-lock.json
+
+      - run: npm ci
+
+      # as for the generation tests: vitest starts the files that took longest in the run before. One series for each shard count and shard.
+      - name: Durations of the last unit tests
+        uses: actions/cache@v4
+        with:
+          path: clock-generator/node_modules/.vite/vitest
+          key: unit-shard-durations-${{ strategy.job-total }}-${{ matrix.shard }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: unit-shard-durations-${{ strategy.job-total }}-${{ matrix.shard }}-
+
+      # a few tests run the scripts of scripts/, which load the build in dist/
+      - name: Build
+        run: npm run build
+
+      # the game-backed tests need a Factorio install and are not part of this: `npm run test:game`
+      - name: Unit tests
+        run: npm test -- --shard=${{ matrix.shard }}/${{ strategy.job-total }} --reporter=default
+
+  # The code checks of the unit tests job, which the shards do not repeat.
+  unit-checks:
+    name: Code checks
+    needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.generation != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -73,9 +120,32 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      # the game-backed tests need a Factorio install and are not part of this: `npm run test:game`
-      - name: Unit tests
-        run: npm test -- --reporter=default
+  # The check "Unit tests": one name for the code checks and the shards, whatever their number. It is skipped, which satisfies
+  # a required check, when the pull request changes documentation only (the shards are skipped then), and fails when a shard or the
+  # code checks failed.
+  unit:
+    name: Unit tests
+    needs: [changes, unit-shards, unit-checks]
+    # not skipped with the shards by their failure: it is the job that tells what became of them
+    if: ${{ !cancelled() && needs.changes.outputs.generation != 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Result of the unit tests
+        env:
+          SHARDS: ${{ needs.unit-shards.result }}
+          CHECKS: ${{ needs.unit-checks.result }}
+        run: |
+          set -eu
+          if [ "$CHECKS" != "success" ]; then
+            echo "::error::The code checks did not pass: they ended $CHECKS."
+            exit 1
+          fi
+          if [ "$SHARDS" != "success" ]; then
+            echo "::error::The unit tests did not pass: the shards ended $SHARDS."
+            exit 1
+          fi
+          echo "The code checks and the unit tests passed in every shard." | tee -a "$GITHUB_STEP_SUMMARY"
 
   # The documentation checks: the generated files are what their sources give (the sidecar's PORTAL.md from the user
   # topics on exporting a build, docs/maintainer/configuration-file-fields.md from the engine's ConfigSchema), and every bold label
@@ -210,13 +280,16 @@ jobs:
     if: needs.changes.outputs.generation == 'true' && github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     # the builds that are jobs of the record are checked there (tests/game/builds/job-checks/), so the generation tests are the
-    # options and searches the record does not run: about 700 s of runner time on 2026-11-05, half of it in a shard
+    # options and searches the record does not run: on 2026-11-17 one of two shards took 20 to 25 minutes (the limit) and the
+    # other 5 to 6, and the files took about 3,700 s of file time in all; with five shards the estimated slowest shard is 539 s of tests, and
+    # the slowest file (whole-build, about 500 s) keeps it from going lower with more. The shard count that fits the durations:
+    # `npm exec -- vitest list --project generation --shard=1/<count>` prints the estimate of the slowest shard
     timeout-minutes: 25
     strategy:
       # every shard finishes, so that a pull request shows all its failures at once
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3, 4, 5]
     defaults:
       run:
         working-directory: clock-generator

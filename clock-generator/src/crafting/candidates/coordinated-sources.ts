@@ -181,8 +181,12 @@ interface Trial {
     result: BlueprintGenerationResult;
     /** Whether it holds up to the long run */
     holds_to_long_run: boolean;
-    /** The check up to the long run, which `holdsOf` finishes */
-    check_to_long_run: AsBuiltRun | undefined;
+    /**
+     * The check up to the long run, which `holdsOf` finishes: what it reads of it (the check and the run's result), never the long
+     * run's stock, which is of the length of the window cycle times its window cycles for every machine and inserter. Left out once
+     * `holdsOf` has finished it, and where the clock does not hold to the long run, which nothing finishes.
+     */
+    check_to_long_run: Pick<AsBuiltRun, "result" | "check"> | undefined;
     /** Whether it holds as built (its whole check); undefined until `holdsOf` asks */
     holds?: boolean;
     wake_ups: number | null;
@@ -278,10 +282,11 @@ export function coordinatedSourcesClock(
         const known = trials.get(key);
         if (known !== undefined) return known;
         const map = new Map(Object.entries(windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
-        let check_to_long_run: AsBuiltRun | undefined;
-        const result = finishedClock(made, map, [], lean, left_open, undefined, { through: "long-run", on_as_built: run => { check_to_long_run = run; } });
+        let check_to_long_run: Trial["check_to_long_run"];
+        const result = finishedClock(made, map, [], lean, left_open, undefined, { through: "long-run", on_as_built: run => { check_to_long_run = { result: run.result, check: run.check }; } });
         const as_built = result.stability_check.as_built;
-        const trial: Trial = { windows, map, result, holds_to_long_run: as_built?.holds === true, check_to_long_run,
+        const holds_to_long_run = as_built?.holds === true;
+        const trial: Trial = { windows, map, result, holds_to_long_run, check_to_long_run: holds_to_long_run ? check_to_long_run : undefined,
             wake_ups: as_built?.wake_ups?.wake_ups_per_minute ?? null };
         trials.set(key, trial);
         return trial;
@@ -294,6 +299,7 @@ export function coordinatedSourcesClock(
                 const check = completedClockCheck(made, trial.map, trial.check_to_long_run).check;
                 trial.result = { ...trial.result, stability_check: { ...trial.result.stability_check, holds: check.holds, as_built: check } };
                 trial.holds = check.holds;
+                trial.check_to_long_run = undefined;
             }
         }
         return trial.holds;
