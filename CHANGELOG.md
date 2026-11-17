@@ -22,6 +22,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - generation: the military science 240 sample now judges its output belts
 - generation: the logistic science sample now judges its output belt
 - generation: the flying robot frame sample now judges its output belts
+- generation: Coordinated Sources also tries the window cycle of the next best clock
 
 ### Fixed
 - simulation: machines now finish a craft and start the next in the game's tick
