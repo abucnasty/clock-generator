@@ -8,6 +8,10 @@ a line that names the reason and lists the jobs. A pull request that moves no re
 CI checks this file: the "Record check" fails when a selected clock got worse than in the base and its job key is not in the lines the pull
 request adds to this file.
 
+## Lithium plate 80 states its output lines (#794)
+Only the job of one sample moved; no other job, and no selected clock, verdict, hold, rate or wakeups got worse. The lithium plate sample now says which belt its scaffold has for the output (two lines, three output hands on each), so the simulator judges its clocks with it.
+- config-LITHIUM_PLATE_80_SILO_CHEST: coordinated_sources stays selected and unchanged (stable, 80 a second, window cycle 2,160, 3.335 wakeups a minute, clock hash 2b115eb8). takt_batches_observed_swings_5 (window cycle 1,080) and takt_batches_observed_swings_7 (window cycle 7,560) go from stable to unstable, rate, wakeups and clock hash as before: on the stated belt they fall short. In Factorio 2.1.24, swings_5 made 1,344 to 1,408 of 1,440 in 9 window cycles and found no steady state in 36,000 ticks; the selected clock made 2,880 of 2,880 in 4 of 4 window cycles
+
 ## Three samples state their output belt (#773)
 Only the four jobs of three samples moved; no other job, and no verdict, hold, rate or wakeups of a selected clock got worse. The chemical science, utility science and grenade samples now say which belt their scaffold has for the output, so the simulator judges their clocks with it.
 - config-CHEMICAL_SCIENCE_240_SHARED_FOUNDRY and variants-CHEMICAL_SCIENCE_240_SHARED_FOUNDRY_BACKED_UP: coordinated_sources stays selected (stable, 240 a second, window cycle 352, 122.844 wakeups a minute); its windows on inserters 2 and 4 are now 1-13, 89-101, 177-189 and 265-277 (four windows, were two: 0-24 and 176-200), so its clock hash moved. The clock pin of the scaffold recording "chemical science with a shared foundry" names the new clock
