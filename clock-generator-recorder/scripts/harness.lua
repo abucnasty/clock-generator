@@ -1622,7 +1622,7 @@ function harness.on_tick()
         if state.fill.phase == "filling" then
             fill_tick(state)
         elseif #state.fill.counter_after < COUNTER_AFTER_TICKS then
-            table.insert(state.fill.counter_after, clock_counter(state.fill.combinators))
+            table.insert(state.fill.counter_after, (clock_counter(state.fill.combinators)))
         end
     end
     if state and state.pause_tick and game.tick >= state.pause_tick then

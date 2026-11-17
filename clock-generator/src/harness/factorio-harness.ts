@@ -1671,7 +1671,8 @@ export class HarnessSession {
         const opening: BackpressureOpening & Record<string, any> = filled.fill.opening;
         const machines = listOf(opening.machines);
         for (const machine of machines) {
-            log(`Machine ${machine.name} (unit ${machine.unit_number}, ${machine.recipe ?? "no recipe"}, fed by ${machine.fed_by} inserters): `
+            const fed_by = machine.fed_by === "none" ? "no inserter drops into it" : machine.fed_by === "windowed" ? "only windowed inserters drop into it" : "an inserter with no window drops into it";
+            log(`Machine ${machine.name} (unit ${machine.unit_number}, ${machine.recipe ?? "no recipe"}; ${fed_by}): `
                 + `made ${listOf(machine.windows).join(", ")} in the windows of the fill; at the opening ${machine.input} in, ${machine.output} out, ${machine.products_finished} made`);
         }
         for (const inserter of listOf(opening.inserters)) {
