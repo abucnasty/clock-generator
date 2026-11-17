@@ -25,6 +25,10 @@ import { capitalized, inserterNameInText, theName, lanesInSentence, NO_BUILD, te
 import { droppedOnto, ModelLane, modelLanesOf, takenLanesOf, takenTogether, takerSpacingUnknown } from "./shared-lane-lanes";
 import { DropRecorder, HandDropped, LaidOutLane, LaneRow, recordInserters, runOnSharedLanes, SharedLaneLayout, sharedLaneLayoutOf } from "./shared-lane-model";
 import type { OutputBeltRun } from "./output-belt-run";
+import { recordHandConditions, TakerConditions } from "./hand-conditions";
+import { InserterTimetableRecord, recordTimetable, timetableOf as timetableLineOf, windowRangesOf } from "./timetable";
+import { claimedStacksOf, clockLaneLoadOf, CopySpacing, FillOfOpening, laneFillOf, LoggedRun, missedSwingsOf, MissedSwings, movedAtReach, pickupPhasesOf,
+    SharedLanesForLog } from "./shared-lane-log";
 import { TargetProductionRate } from "./target-production-rate";
 import { longRunWindowCyclesOf, runClockOnBuild } from "./trial";
 
@@ -226,13 +230,19 @@ function recordStops(context: SimulationContext, config: Config, layout: SharedL
  * (`taker_hands`). The verdict reads the copies' figures here alone, so that where they come from can change in this function only.
  */
 export function copyLaneTakes(config: Config, windows: Map<string, OpenRange[]>, window_cycle_ticks: number, layout: SharedLaneLayout,
-    window_cycles: number, logger: Logger, ends: OutputEnds | null = null): { takes: CopyLaneTake[]; made: CopyMade[]; last_tick: number; output_belt?: OutputBeltRun;
-        stops: TakerStops[]; taker_hands: ReadonlyMap<string, readonly HandDropped[]> } {
+    window_cycles: number, logger: Logger, ends: OutputEnds | null = null, for_log = false, log_errors: string[] = []): { takes: CopyLaneTake[]; made: CopyMade[]; last_tick: number; output_belt?: OutputBeltRun;
+        stops: TakerStops[]; taker_hands: ReadonlyMap<string, readonly HandDropped[]>; conditions?: TakerConditions[]; timetable?: InserterTimetableRecord[] } {
     let madeOf = (): CopyMade[] => [];
     let stopsOf = (): TakerStops[] => [];
+    let conditionsOf: (() => TakerConditions[]) | null = null;
+    let timetableOf: (() => InserterTimetableRecord[]) | null = null;
     const model = runOnSharedLanes(config, windows, window_cycle_ticks, layout, window_cycles, logger, context => {
         madeOf = recordCopiesMade(context, ends);
         stopsOf = recordStops(context, config, layout);
+        // for the maker log only: the four conditions of every taker, read and never changed
+        if (for_log) conditionsOf = recordHandConditions(context, config, new Set(layout.rows.flatMap(row => row.takers.map(taker => `${taker.copy}|${taker.inserter_id}`))));
+        // and the timetable of every inserter of every copy
+        if (for_log) timetableOf = recordTimetable(context);
     });
     let last_tick = 0;
     const takes = layout.rows.flatMap(row => {
@@ -246,7 +256,10 @@ export function copyLaneTakes(config: Config, windows: Map<string, OpenRange[]>,
     });
     // every hand of each taker of each copy, of every item it takes: a missed swing of one item moves the next hand of another
     const taker_hands = new Map(model.takers.map(record => [`${record.copy}|${record.inserter_id}`, record.hands] as const));
-    return { takes, made: madeOf(), last_tick, ...(model.output_belt !== undefined && { output_belt: model.output_belt }), stops: stopsOf(), taker_hands };
+    const conditions = conditionsOf === null ? undefined : forLog(conditionsOf as () => TakerConditions[], log_errors);
+    const timetable = timetableOf === null ? undefined : forLog(timetableOf as () => InserterTimetableRecord[], log_errors);
+    return { takes, made: madeOf(), last_tick, ...(model.output_belt !== undefined && { output_belt: model.output_belt }), stops: stopsOf(), taker_hands,
+        ...(conditions !== undefined && { conditions }), ...(timetable !== undefined && { timetable }) };
 }
 
 /** One taker of one copy that loses swings on a lane the copies share */
@@ -460,6 +473,11 @@ export interface SharedLaneJudgement {
      * judgement with fewer copies on the lanes.
      */
     copies_made?: CopiesMade;
+    /**
+     * Only where the maker log asked for it (`judgeSharedLanes` with `for_log`): the facts of the lanes and the missed swings
+     * of the runs the check made (shared-lane-log.ts). No result reads it.
+     */
+    for_log?: SharedLanesForLog;
 }
 
 /** What the output inserters of all the copies put down of the target's item in one run of the copies, over its judged span */
@@ -579,6 +597,15 @@ function refillsInTime(rows: readonly LaneRow[], supply_per_second: Fraction, pi
     const ids = [...new Set(takers.map(taker => taker.inserter_id))];
     const windows = laneWindowsOf(ids.flatMap(id => clock_windows[id] ?? [{ start: 0, end: Math.ceil(window_cycle_ticks) - 1 }]), window_cycle_ticks);
     if (windows.length === 0) return true;
+    return fillAfterOpenings(takers, windows, supply_per_second, pickups, item, window_cycle_ticks, from, last_tick).every(it => it.in_time);
+}
+
+/**
+ * The arithmetic of `refillsInTime` for each opening of the judged half, in the order the openings are first met: what
+ * every taker of every copy takes in it, as ticks of the supply, against the ticks to the next window opening
+ */
+function fillAfterOpenings(takers: readonly LaneRow["takers"][number][], windows: readonly LaneWindow[], supply_per_second: Fraction,
+    pickups: ReadonlyMap<string, readonly HandDropped[]>, item: string, window_cycle_ticks: number, from: number, last_tick: number): FillOfOpening[] {
     // what one inserter took in each opening, then summed over every taker of every copy
     const per_opening = new Map<string, number>();
     for (const taker of takers) {
@@ -592,12 +619,24 @@ function refillsInTime(rows: readonly LaneRow[], supply_per_second: Fraction, pi
         }
     }
     const per_tick = supply_per_second.divide(60);
-    for (const [key, items] of per_opening) {
+    return [...per_opening].map(([key, items]) => {
         const k = Number(key.split("/")[1]);
         const refill = fraction(items).divide(per_tick), gap = gapOf(windows, k, window_cycle_ticks);
-        if (Number.isInteger(gap) ? refill.subtract(gap).getNumerator > 0 : refill.toDecimal() > gap) return false;
-    }
-    return true;
+        const late = Number.isInteger(gap) ? refill.subtract(gap).getNumerator > 0 : refill.toDecimal() > gap;
+        return { window: k, opens: windows[k].start, gap_ticks: gap, fill_ticks: refill.toDecimal(), in_time: !late };
+    });
+}
+
+/** The fill of the lanes of one item of one belt, for the log: `fillAfterOpenings` by window, and whether all of it is in time */
+function laneFillForLog(belt_id: number, rows: readonly LaneRow[], supply_per_second: Fraction, pickups: ReadonlyMap<string, readonly HandDropped[]>,
+    item: string, clock_windows: SerializableClockWindows, window_cycle_ticks: number, from: number, last_tick: number) {
+    const takers = rows.flatMap(row => row.takers);
+    const ids = [...new Set(takers.map(taker => taker.inserter_id))];
+    const windows = laneWindowsOf(ids.flatMap(id => clock_windows[id] ?? [{ start: 0, end: Math.ceil(window_cycle_ticks) - 1 }]), window_cycle_ticks);
+    const lanes = rows.map(row => row.lane);
+    if (windows.length === 0) return laneFillOf(belt_id, item, lanes, [], true);
+    const openings = fillAfterOpenings(takers, windows, supply_per_second, pickups, item, window_cycle_ticks, from, last_tick);
+    return laneFillOf(belt_id, item, lanes, openings, openings.every(it => it.in_time));
 }
 
 /** A map direction as a word: east, west, south or north */
@@ -679,6 +718,8 @@ interface Shortfall {
     loss: Omit<SharedLaneLoss, "text">;
     /** What the run shows beside the loss (`SharedLaneLossFacts`), the parts a later run adds left out */
     facts: SharedLaneLossFacts;
+    /** Only where the maker log asked for it: the taker's missed swings, with what each window cycle's hand waited for */
+    for_log?: MissedSwings;
 }
 
 /** The run of one copy alone: what each taker put down, the run's last tick, and the hand of each taker for an item */
@@ -724,6 +765,40 @@ export interface RunOfCopies {
     join_waits?: ReadonlyMap<number, JoinFull>;
     /** Where the config states its output belt: by the copy, its hands on the output belt in each window cycle of the span */
     output_swings?: ReadonlyMap<number, number[]>;
+    /** Only where the maker log asked for it: the run as the log gives it, its count of losses left at 0 */
+    for_log?: LoggedRun;
+}
+
+/** How the copies stand along a row in the run: `copy_offset`, else the length of a copy from the positions of the row's takers, else its width */
+function spacingOf(config: Config, row: LaneRow): CopySpacing {
+    if (row.step_stated) return "copy_offset";
+    const takers = new Set(row.takers.map(taker => taker.inserter_id));
+    const positioned = config.inserters.every((inserter, index) => !takers.has(EntityId.forInserter(inserter.id ?? index + 1).id) || inserter.position !== undefined);
+    return positioned ? "copy_length" : "copy_width";
+}
+
+/**
+ * The run of the copies as the log gives it: its span, and on each row the copies share the stacks they claim, from the
+ * pickups of the run of one copy alone and the copies' reaches, with the motion of the lane at each copy's reach from
+ * the record of the four conditions
+ */
+function loggedRunOf(under: Config, reading: number, layout: SharedLaneLayout, alone: AloneRun, conditions: readonly TakerConditions[], clock_windows: Map<string, OpenRange[]>,
+    window_cycle_ticks: number, window_cycles: number, first_cycle: number, end_cycle: number, timetable: readonly InserterTimetableRecord[] | undefined, errors: string[]): LoggedRun {
+    const from = cycleStart(first_cycle, window_cycle_ticks), to = cycleStart(end_cycle, window_cycle_ticks);
+    const claimed_stacks = layout.rows.filter(row => row.copies > 1).map(row => {
+        const belt = under.belts.find(it => it.id === row.belt_id)!;
+        const item = belt.lanes[row.lane - 1].ingredient;
+        const ids = [...new Set(row.takers.map(taker => taker.inserter_id))];
+        const phases = new Map(ids.map(id => [id, pickupPhasesOf(alone.recorders.get(id)?.pickups ?? [], item, from, to, window_cycle_ticks)] as const));
+        return claimedStacksOf({ row, item, spacing: spacingOf(under, row), tiles_per_tick: tilesPerTickOf(beltSpeedOf(belt.type)), window_cycle_ticks, phases,
+            takers_without_windows: ids.filter(id => (clock_windows.get(id) ?? []).length === 0),
+            moved: copy => movedAtReach(conditions.filter(it => it.copy === copy && ids.includes(it.inserter_id)), row.lane, from, to) });
+    });
+    const flow = layout.rows[0]?.flow ?? { x: 0, y: 0 };
+    // the timetable of every inserter of every copy over the judged span, where the window cycle is of whole ticks
+    const line = timetable === undefined || !Number.isInteger(window_cycle_ticks) ? undefined
+        : forLog(() => timetableLineOf({ records: timetable, windows: windowRangesOf(clock_windows), window_cycle_ticks, from, to, conditions }), errors);
+    return { reading, flow: [flow.x, flow.y], window_cycles, first_cycle, end_cycle, losses: 0, claimed_stacks, ...(line !== undefined && { timetable: line }) };
 }
 
 /**
@@ -731,9 +806,10 @@ export interface RunOfCopies {
  * window cycles of the clock in the second half of both runs, and what each copy's machines and output inserters made
  */
 function shortfallsOf(under: Config, lanes: readonly ModelLane[], layout: SharedLaneLayout, alone: AloneRun, windows: Map<string, OpenRange[]>,
-    window_cycle_ticks: number, window_cycles: number, logger: Logger, ends: OutputEnds | null): RunOfCopies {
+    window_cycle_ticks: number, window_cycles: number, logger: Logger, ends: OutputEnds | null, for_log: { reading: number; errors: string[] } | null = null): RunOfCopies {
     const facts = laneFactsOfConfig(under);
-    const { takes, made, last_tick, output_belt, stops, taker_hands } = copyLaneTakes(under, windows, window_cycle_ticks, layout, window_cycles, logger, ends);
+    const { takes, made, last_tick, output_belt, stops, taker_hands, conditions, timetable } = copyLaneTakes(under, windows, window_cycle_ticks, layout, window_cycles, logger, ends,
+        for_log !== null, for_log?.errors);
     const last = Math.min(alone.last_tick, last_tick);
     const first_cycle = Math.ceil(last / 2 / window_cycle_ticks), end_cycle = Math.floor((last + 1) / window_cycle_ticks + 1e-9);
     const from = cycleStart(first_cycle, window_cycle_ticks), to = cycleStart(end_cycle, window_cycle_ticks);
@@ -741,7 +817,11 @@ function shortfallsOf(under: Config, lanes: readonly ModelLane[], layout: Shared
     const join_full = output_belt === undefined ? undefined : joinFullOf(output_belt, from, to);
     const join_waits = output_belt === undefined ? undefined : joinWaitsOf(output_belt, from, to);
     const output_swings = output_belt === undefined ? undefined : outputSwingsOf(output_belt, first_cycle, end_cycle, window_cycle_ticks);
-    const joins = { ...(join_full !== undefined && { join_full }), ...(join_waits !== undefined && { join_waits }), ...(output_swings !== undefined && { output_swings }) };
+    const log_errors = for_log?.errors ?? [];
+    const logged_run = for_log === null || conditions === undefined ? undefined
+        : forLog(() => loggedRunOf(under, for_log.reading, layout, alone, conditions, windows, window_cycle_ticks, window_cycles, first_cycle, end_cycle, timetable, for_log.errors), for_log.errors);
+    const joins = { ...(join_full !== undefined && { join_full }), ...(join_waits !== undefined && { join_waits }), ...(output_swings !== undefined && { output_swings }),
+        ...(logged_run !== undefined && { for_log: logged_run }) };
     const span = Math.max(0, end_cycle - first_cycle);
     if (end_cycle <= first_cycle) return { shortfalls: [], made, from, to, window_cycles: span, holds, ...joins };
     // a taker that takes one item from both lanes of its belt has the same hands on both: a hand cannot be told by its lane,
@@ -776,7 +856,12 @@ function shortfallsOf(under: Config, lanes: readonly ModelLane[], layout: Shared
             ...(of_taker !== undefined && missedSwingStops(of_taker, stops.filter(it => it.copy === take.copy - 1),
                 alone.recorders.get(take.inserter_id)?.hands ?? [], taker_hands.get(`${take.copy}|${take.inserter_id}`) ?? [],
                 { first_cycle, end_cycle, window_cycle_ticks, travel_ticks: step_tiles / tiles_a_tick, reach_ticks: taker.length_tiles / tiles_a_tick })) };
-        return [{ short: alone_items - items, hand, loss, facts: loss_facts }];
+        const record = conditions?.find(it => it.copy === take.copy && it.inserter_id === take.inserter_id);
+        const first_copy = conditions?.find(it => it.copy === 0 && it.inserter_id === take.inserter_id);
+        const for_log = record === undefined ? undefined : forLog(() => missedSwingsOf({ record, ...(first_copy !== undefined && { first_copy }), copy: take.copy + 1, inserter_id: loss.inserter_id, belt_id: take.belt_id,
+            lanes: [take.lane, ...others.map(other => other.lane)], item: take.item, first_cycle, end_cycle, window_cycle_ticks,
+            missed: (loss_facts.swings?.missed ?? []).map(it => ({ window_cycle: it.window_cycle, missed: it.missed, cause: it.cause })) }), log_errors);
+        return [{ short: alone_items - items, hand, loss, facts: loss_facts, ...(for_log !== undefined && { for_log }) }];
     });
     return { shortfalls, made, from, to, window_cycles: span, holds, ...joins };
 }
@@ -1069,14 +1154,52 @@ export function sharedLaneRunsOf(config: Config, copies_on_lanes?: number): { la
     }) };
 }
 
+/** A part of the log, made where it can be: an error of it goes to `errors` and never into the judgement */
+function forLog<T>(make: () => T, errors: string[]): T | undefined {
+    try {
+        return make();
+    } catch (error) {
+        errors.push(error instanceof Error ? error.message : String(error));
+        return undefined;
+    }
+}
+
+/**
+ * What the log gives of one reading of the lanes from its run of one copy alone: for each item of each belt, the lane load
+ * of the clock and the fill after each opening of its takers' windows, over the judged half of the run as the fast check
+ * reads it
+ */
+function readingForLog(under: Config, reading: number, groups: readonly { rows: LaneRow[]; supply: Fraction; item: string }[], alone: AloneRun,
+    pickups: ReadonlyMap<string, readonly HandDropped[]>, clock_windows: SerializableClockWindows, window_cycle_ticks: number, from_tick: number): SharedLanesForLog["readings"][number] {
+    const first_cycle = Math.ceil(alone.last_tick / 2 / window_cycle_ticks), end_cycle = Math.floor((alone.last_tick + 1) / window_cycle_ticks + 1e-9);
+    const lane_load = groups.flatMap(group => {
+        const ids = [...new Set(group.rows.flatMap(row => row.takers.map(taker => taker.inserter_id)))];
+        const load = clockLaneLoadOf({ belt_id: group.rows[0].belt_id, item: group.item, lanes: group.rows.map(row => row.lane),
+            copies: group.rows.some(row => row.copies > 1) ? under.setpoint.copies : 1, supply_per_second: group.supply,
+            taker_pickups: ids.map(id => alone.recorders.get(id)?.pickups ?? []), window_cycle_ticks, first_cycle, end_cycle });
+        return load === null ? [] : [load];
+    });
+    const fill = groups.map(group => laneFillForLog(group.rows[0].belt_id, group.rows, group.supply, pickups, group.item, clock_windows, window_cycle_ticks, from_tick, alone.last_tick));
+    return { reading, lane_load, fill };
+}
+
+/** What the judgement keeps for the log: the readings, each run judged by with the losses that stood in it, and each loss's missed swings with its run */
+function lanesForLog(readings: SharedLanesForLog["readings"], judged_runs: readonly { run: RunOfCopies; losses: number }[],
+    logged: readonly ({ run: RunOfCopies; missed: MissedSwings } | undefined)[]): Omit<SharedLanesForLog, "errors"> {
+    const logged_runs = judged_runs.filter(it => it.run.for_log !== undefined);
+    const index = new Map(logged_runs.map((it, at) => [it.run, at] as const));
+    return { readings, runs: logged_runs.map(it => ({ ...it.run.for_log!, losses: it.losses })),
+        missed_swings: logged.map(it => it === undefined || !index.has(it.run) ? null : { run: index.get(it.run)!, ...it.missed }) };
+}
+
 /**
  * Judges a clock on the lanes its copies share (see the module's description). The runs it makes are decided by the
  * takers' shortfalls alone; a loss they find stands only where a machine or an output inserter of a copy is behind its
  * target rate in the same run (`standing`).
  */
 export function judgeSharedLanes(config: Config, clock_windows: SerializableClockWindows, window_cycle_ticks: number, logger: Logger,
-    options: { copies_on_lanes?: number } = {}): SharedLaneJudgement {
-    return judgedOnLanes(config, clock_windows, window_cycle_ticks, logger, options.copies_on_lanes, new Map());
+    options: { copies_on_lanes?: number; for_log?: boolean } = {}): SharedLaneJudgement {
+    return judgedOnLanes(config, clock_windows, window_cycle_ticks, logger, options.copies_on_lanes, new Map(), options.for_log === true);
 }
 
 /**
@@ -1085,7 +1208,7 @@ export function judgeSharedLanes(config: Config, clock_windows: SerializableCloc
  * makes each once (`fewerCopiesThatHold`)
  */
 function judgedOnLanes(config: Config, clock_windows: SerializableClockWindows, window_cycle_ticks: number, logger: Logger,
-    copies_on_lanes: number | undefined, alone_runs: Map<string, AloneRun>): SharedLaneJudgement {
+    copies_on_lanes: number | undefined, alone_runs: Map<string, AloneRun>, for_log = false): SharedLaneJudgement {
     const lanes = modelLanesOf(config);
     const keys = lanes.map(lane => `${lane.belt_id}/${lane.lane}`);
     if (lanes.length === 0) return { losses: [], fast_check_passes: true, simulated: false, longer_run: false, lanes: keys };
@@ -1097,7 +1220,10 @@ function judgedOnLanes(config: Config, clock_windows: SerializableClockWindows, 
     // the target rates, worked out once and only where a taker's shortfall is a loss
     let rates: TargetRates | null | undefined;
     /** A loss and what the run shows beside it */
-    interface Judged { loss: Omit<SharedLaneLoss, "text">; facts: SharedLaneLossFacts }
+    interface Judged { loss: Omit<SharedLaneLoss, "text">; facts: SharedLaneLossFacts; logged?: { run: RunOfCopies; missed: MissedSwings } }
+    /** A loss with the record the log keeps of its taker, and the run it stood in, where the log asked for them */
+    const withLog = (judged: Judged, shortfall: Shortfall, run: RunOfCopies): Judged =>
+        shortfall.for_log === undefined ? judged : { ...judged, logged: { run, missed: shortfall.for_log } };
     /** The swings of copy `copy`'s output inserters of the target's item in the run alone, over the judged span of `run` */
     const aloneOutputSwings = (alone: AloneRun, run: RunOfCopies) => ends === null ? undefined
         : output_ids.reduce((sum, id) => sum + (alone.recorders.get(id)?.hand_ends ?? []).filter(tick => tick >= run.from && tick < run.to).length, 0);
@@ -1110,11 +1236,12 @@ function judgedOnLanes(config: Config, clock_windows: SerializableClockWindows, 
     const standing = (run: RunOfCopies, shortfalls: readonly Shortfall[], alone: AloneRun, reference: () => RunOfCopies): Judged[] => {
         if (shortfalls.length === 0) return [];
         if (rates === undefined) rates = ends === null ? null : targetRatesOf(config, ends);
-        if (rates === null) return shortfalls.map(({ loss, facts }) => ({ loss, facts }));
+        if (rates === null) return shortfalls.map(shortfall => withLog({ loss: shortfall.loss, facts: shortfall.facts }, shortfall, run));
         const behind = behindTargetIn(run, rates);
         // the run with each output inserter on a tile of its own, made only where a copy's side belt held a hand
         let without: RunOfCopies | undefined;
-        return behind.length === 0 ? [] : shortfalls.map(({ loss, facts }) => {
+        return behind.length === 0 ? [] : shortfalls.map(shortfall => withLog(((): Judged => {
+            const { loss, facts } = shortfall;
             const of_copy = behind.find(it => it.copy === loss.copy) ?? behind[0];
             const held = run.join_full?.get(loss.copy);
             if (held === undefined) return { loss: { ...loss, behind: of_copy }, facts };
@@ -1131,7 +1258,7 @@ function judgedOnLanes(config: Config, clock_windows: SerializableClockWindows, 
                 facts: { ...facts, ...(there !== undefined && { without_output_belt: { swings: there.loss.swings, alone_swings: there.loss.alone_swings } }),
                     ...(alone_output_swings !== undefined && { alone_output_swings }),
                     ...(made !== undefined && gives !== undefined && { output_swings: { made, gives } }) } };
-        });
+        })(), shortfall, run));
     };
     // each copy's waits at its join, the most of any run of the copies the verdict judged by
     const join_waits = new Map<number, JoinFull>();
@@ -1144,6 +1271,9 @@ function judgedOnLanes(config: Config, clock_windows: SerializableClockWindows, 
     // the first run of each reading: the run of one copy, and the copies on each layout of the lanes, with their shortfalls
     const first: { reading: number; under: Config; taker_ids: string[]; alone: AloneRun; runs: { layout: SharedLaneLayout; run: RunOfCopies }[] }[] = [];
     let fast_check_passes = true;
+    // for the maker log: the lane load and the fill of each reading, from its run of one copy alone, and what could not be read
+    const readings_log: SharedLanesForLog["readings"] = [];
+    const log_errors: string[] = [];
     const aloneOf = (reading: number, under: Config, taker_ids: readonly string[], cycles: number): AloneRun => {
         const key = `${reading}|${cycles}|${taker_ids.join(",")}`;
         if (!alone_runs.has(key)) alone_runs.set(key, runAlone(under, taker_ids, windows, window_cycle_ticks, cycles, logger, output_ids));
@@ -1166,7 +1296,12 @@ function judgedOnLanes(config: Config, clock_windows: SerializableClockWindows, 
             groups.set(key, group);
         }
         fast_check_passes &&= [...groups.values()].every(group => refillsInTime(group.rows, group.supply, pickups, group.item, clock_windows, window_cycle_ticks, from_tick, alone.last_tick));
-        first.push({ reading, under, taker_ids, alone, runs: layouts.map(layout => ({ layout, run: shortfallsOf(under, lanes, layout, alone, windows, window_cycle_ticks, window_cycles, logger, ends) })) });
+        if (for_log) {
+            const logged = forLog(() => readingForLog(under, reading, [...groups.values()], alone, pickups, clock_windows, window_cycle_ticks, from_tick), log_errors);
+            if (logged !== undefined) readings_log.push(logged);
+        }
+        first.push({ reading, under, taker_ids, alone, runs: layouts.map(layout => ({ layout,
+            run: shortfallsOf(under, lanes, layout, alone, windows, window_cycle_ticks, window_cycles, logger, ends, for_log ? { reading, errors: log_errors } : null) })) });
     }
     const shortfalls = first.flatMap(it => it.runs.flatMap(({ run }) => run.shortfalls));
     // each run the verdict judged by, with the losses that stood in it: for the rate of the copies, read only where all
@@ -1178,12 +1313,14 @@ function judgedOnLanes(config: Config, clock_windows: SerializableClockWindows, 
     };
     const judged = (found: Judged[], longer_run: boolean): SharedLaneJudgement => {
         // the worst first: the most items short of the run of one copy
-        const sorted = found.map(({ loss, facts }) => ({ loss: { ...loss, text: describeSharedLaneLoss(loss, build) }, facts }))
+        const sorted = found.map(({ loss, facts, logged }) => ({ loss: { ...loss, text: describeSharedLaneLoss(loss, build) }, facts, logged }))
             .sort((a, b) => (b.loss.alone_items - b.loss.items) - (a.loss.alone_items - a.loss.items));
         const copies_made = copies_on_lanes === undefined ? judgedCopiesMade(judged_runs.map(it => ({ made: copiesMadeIn(it.run), losses: it.losses }))) : undefined;
         return { losses: sorted.map(it => it.loss), loss_facts: sorted.map(it => it.facts), fast_check_passes, simulated: true, longer_run, lanes: keys,
             ...(join_waits.size > 0 && { join_waits: [...join_waits].sort(([a], [b]) => a - b).map(([copy, waits]) => ({ copy, held_hands: waits.held_hands, hands: waits.hands })) }),
-            ...(copies_made !== undefined && { copies_made }) };
+            ...(copies_made !== undefined && { copies_made }),
+            ...(for_log && { for_log: { ...lanesForLog(readings_log, judged_runs, sorted.map(it => it.logged === undefined ? undefined
+                : { ...it.logged, missed: { ...it.logged.missed, cause: it.loss.join_full !== undefined ? "join_full" as const : "lane" as const } })), errors: [...log_errors] } }) };
     };
     // no taker short, or one short by more than a hand, which the end of the judged span does not make: judged as it is,
     // each run's losses standing where a machine or an output inserter of that run is behind its target
@@ -1205,7 +1342,7 @@ function judgedOnLanes(config: Config, clock_windows: SerializableClockWindows, 
         if (short_runs.length === 0) continue;
         const alone = aloneOf(reading, under, taker_ids, 2 * window_cycles);
         for (const { layout } of short_runs) {
-            const longer = shortfallsOf(under, lanes, layout, alone, windows, window_cycle_ticks, 2 * window_cycles, logger, ends);
+            const longer = shortfallsOf(under, lanes, layout, alone, windows, window_cycle_ticks, 2 * window_cycles, logger, ends, for_log ? { reading, errors: log_errors } : null);
             waitsOf(longer);
             found.push(...judgedIn(longer, standing(longer, longer.shortfalls.filter(shortfall => shortfall.short > shortfall.hand), alone,
                 () => shortfallsOf(withoutOutputBelt(under), lanes, layout, alone, windows, window_cycle_ticks, 2 * window_cycles, logger, ends))));

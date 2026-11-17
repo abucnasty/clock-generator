@@ -393,6 +393,11 @@ export interface GenerateClockOptions {
      */
     maker_log?: MakerLogSink;
     /**
+     * With `maker_log`: also run each listed clock that holds on one copy again on its windows narrowed to the ticks its run
+     * needed, and log whether the run repeats (maker-log.ts, `MakerLogOptions.repeat_check`). No result changes.
+     */
+    maker_log_repeat_check?: boolean;
+    /**
      * Make the clock with windows shared by the inserters that take into their machines at the same moment (see
      * roundRobinPollingClock), or not at all: it needs `verify_as_built`, and throws where no shared windows hold.
      */

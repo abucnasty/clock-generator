@@ -19,6 +19,11 @@
 #                                           schema). Off by default; it changes no job file and no record file, and the key does not hold it. The
 #                                           switch is BLAST_LOG=1, which the option sets. It turns selection off (--full): a job carried from the
 #                                           cache was not generated, so it has no log; a folder that holds jobs made without a log is refused
+#   blast.sh run <worktree> <out> --repeat-check [-n N] [--no-store] [--no-build]
+#                                           the maker log (--log) with the repeat check of each listed clock that holds on one copy: the clock is run
+#                                           again on its windows narrowed to the ticks its run needed (event repeat_check, MAKER-LOG.md). The switch is
+#                                           BLAST_REPEAT_CHECK=1, which the option sets with BLAST_LOG=1. It runs clocks the generation does not run, so
+#                                           a job takes longer; it changes no job file and no record file, and the key does not hold it
 #   blast.sh run <worktree> <out> --explore [-n N] [--no-store] [--no-build]
 #                                           the explore mode (CLOCK_EXPLORE=1, which works on every command that generates): the engine is asked for the explored
 #                                           strategies as well (`explore_strategies`), and each job file also holds `explored`: the selected clock and the best
@@ -285,6 +290,7 @@ while [ $# -gt 0 ]; do
     --note) NOTE=$2; shift ;;
     --full) FULL=1 ;;
     --log) export BLAST_LOG=1; FULL=1 ;;
+    --repeat-check) export BLAST_LOG=1 BLAST_REPEAT_CHECK=1; FULL=1 ;;
     --base) BASE=$2; shift ;;
     --made-under) MADE+=("$2"); shift ;;
     --json|--md) ARGS+=("$1" "$2"); shift ;;
