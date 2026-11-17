@@ -146,7 +146,7 @@ hold (a text, a decider's description, the always-on reasons, the fuel view, the
 
 Prioritize reducing repeated generation and simulation work; adding workers is not a substitute, especially
 on CI runners with limited CPU capacity. Preserve every case, phase, clock offset and recovery check.
-CI runs the generation tests in two shards (`Gen 1/2`, `Gen 2/2`: `vitest --shard`, files shared out by their measured CI seconds in
+CI runs the generation tests in five shards (`Gen 1/5` to `Gen 5/5`: `vitest --shard`, files shared out by their measured CI seconds in
 `clock-generator/ci/generation-durations.json`; the count is the `shard` list of the `generation-shards` job in
 `.github/workflows/test.yml`), so a pull request waits for the slowest shard. A file is never split between shards, so the slowest file sets a floor under that time however many
 shards there are.
@@ -255,7 +255,7 @@ is never loosened because a job fails it.
 | Check name | What it does | Runs |
 | --- | --- | --- |
 | `Unit 1/4` to `Unit 4/4` and `Code checks`, then `Unit tests` | `npm test` (the units, `clock-controls.test.ts` among them) dealt out by `ci/unit-durations.json`; knip, typecheck, build and lint in `Code checks` | every pull request that changes more than documentation |
-| `Gen 1/2` and `Gen 2/2`, then `Gen summary` | the `*.generation.test.ts` files, dealt out by `ci/generation-durations.json` | ready pull requests to `master` or `hotfix/` that change more than documentation, and releases; on a draft the shards do not run and the check fails (below) |
+| `Gen 1/5` to `Gen 5/5`, then `Gen summary` | the `*.generation.test.ts` files, dealt out by `ci/generation-durations.json` | ready pull requests to `master` or `hotfix/` that change more than documentation, and releases; on a draft the shards do not run and the check fails (below) |
 | `Rec 1/6` to `Rec 6/6`, then `Rec summary` | the 86 jobs, joined, compared with `record/`, with the properties, the per-job checks and the never-worse rule | ready pull requests to `master` or `hotfix/` that change more than documentation; on a draft the shards do not run and the check fails (below) |
 | `UI build`, `UI samples`, `UI browser` | the UI | every pull request that changes more than documentation |
 | `Docs checks` | PORTAL.md and the configuration file fields topic are current, and the bold labels of the user topics are strings of the site, the sidecar or the game ([docs/README.md](docs/README.md#checks)) | every pull request |

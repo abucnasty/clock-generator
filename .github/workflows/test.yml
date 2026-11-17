@@ -280,13 +280,16 @@ jobs:
     if: needs.changes.outputs.generation == 'true' && github.event.pull_request.draft != true
     runs-on: ubuntu-latest
     # the builds that are jobs of the record are checked there (tests/game/builds/job-checks/), so the generation tests are the
-    # options and searches the record does not run: about 700 s of runner time on 2026-11-05, half of it in a shard
+    # options and searches the record does not run: on 2026-11-17 one of two shards took 20 to 25 minutes (the limit) and the
+    # other 5 to 6, and the files took about 3,700 s of file time in all; with five shards the estimated slowest shard is 539 s of tests, and
+    # the slowest file (whole-build, about 500 s) keeps it from going lower with more. The shard count that fits the durations:
+    # `npm exec -- vitest list --project generation --shard=1/<count>` prints the estimate of the slowest shard
     timeout-minutes: 25
     strategy:
       # every shard finishes, so that a pull request shows all its failures at once
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3, 4, 5]
     defaults:
       run:
         working-directory: clock-generator
