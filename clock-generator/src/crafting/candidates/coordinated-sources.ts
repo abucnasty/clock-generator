@@ -405,8 +405,11 @@ export function coordinatedSourcesClock(
         return trialOf(windows, left_open);
     };
     const deadlock_risk = sharedItemDeadlockRisks(registry).length > 0;
+    // the disturbance trials of a composition on one copy, asked on the build's config as the listing asks for the clock it lists: one key
+    // from both sides (disturbanceTrialKey), so that the listing's trials of the clock made are the maker's. The plan's config would carry
+    // the recommended clock's cycles (`overrides.lcm`), which the key keeps on a build with inserters outside the plan.
     const lossOf = (trial: Trial): DisturbanceTrialVerdict | null => {
-        if (trial.loss === undefined) trial.loss = disturbanceTrialVerdictOf(made.config, trial.result, quiet).disturbance_trial;
+        if (trial.loss === undefined) trial.loss = disturbanceTrialVerdictOf(config, trial.result, quiet).disturbance_trial;
         return trial.loss;
     };
     const marginOf = (trial: Trial): MarginFailure | null => {

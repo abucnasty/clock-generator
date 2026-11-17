@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { automationRow } from "../../tests/configs/automation-row";
 import { quiet } from "./generate-blueprint-test-helpers";
-import { copiesDisturbanceTrial, describeCopiesShort } from "./shared-lane-trial";
+import { copiesDisturbanceTrial, copiesTrialKey, describeCopiesShort } from "./shared-lane-trial";
+import { canonicalKey } from "./plan/run-memo";
+import { deciderBuildOrderOf } from "./trial";
 import { OpenRange } from "../data-types";
 import type { SkippedTrial } from "./disturbance-trial";
 import { runOnSharedLanes } from "./shared-lane-model";
@@ -38,6 +40,37 @@ describe("the trials on the lanes a build's inserters share of a clock that one 
         const next = runOf([{ plan_index: failed.plan_index, stopped_after_ticks: failed.stopped_after_ticks }]);
         expect(next.trials.slice(0, 5)).toEqual(first.trials.slice(0, 5));
         expect(next.trials[5].plan_index).toBe(6);
+    });
+});
+
+describe("the key of the trials on the copies", () => {
+    const config = { ...automationRow({ machines: 9, pitch: 9 }), overrides: { terminal_swing_count: 1 } };
+    const inputs = Array.from({ length: 9 }, (_, index) => [`inserter:${2 * index + 1}`, [{ start: 1, end: 24 }]] as const);
+    const outputs = Array.from({ length: 9 }, (_, index) => [`inserter:${2 * index + 2}`, [{ start: 0, end: 3 }, { start: 36, end: 39 }]] as const);
+    const windows = Object.fromEntries([...inputs, ...outputs]);
+
+    it("names which trials they are, the lanes the copies share, and the order of the window deciders on each reading of the lanes", () => {
+        const key = copiesTrialKey(config, windows, 72, 288)!;
+        const { lanes, readings } = sharedLaneRunsOf(config);
+        expect(key).toContain(canonicalKey({ trial: "copies", lanes: lanes.filter(lane => lane.shared).map(lane => `${lane.belt_id}/${lane.lane}`) })!);
+        const ranges = new Map([...inputs, ...outputs].map(([id, list]) => [id, list.map(range => OpenRange.from(range.start, range.end))] as const));
+        const orders = readings.map(({ under }) => deciderBuildOrderOf({ ...under, overrides: { ...under.overrides, derive_clock_windows: false } }, ranges, 72));
+        // the nine input inserters share one decider, and the nine output inserters another
+        expect(new Set(Object.values(orders[0])).size).toBe(2);
+        expect(Object.keys(orders[0])).toHaveLength(18);
+        expect(key).toContain(canonicalKey(orders)!);
+    });
+
+    it("is another key for other windows, another window cycle, another expected output or another config", () => {
+        const key = copiesTrialKey(config, windows, 72, 288);
+        const others = [
+            copiesTrialKey(config, { ...windows, "inserter:1": [{ start: 2, end: 25 }] }, 72, 288),
+            copiesTrialKey(config, windows, 144, 288),
+            copiesTrialKey(config, windows, 72, 289),
+            copiesTrialKey({ ...config, overrides: { terminal_swing_count: 2 } }, windows, 72, 288),
+        ];
+        expect(new Set([key, ...others]).size).toBe(others.length + 1);
+        expect(copiesTrialKey(config, windows, 72, 288)).toBe(key);
     });
 });
 

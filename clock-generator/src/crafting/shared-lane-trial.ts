@@ -30,6 +30,7 @@ import { canonicalKey, currentRunMemo } from "./plan/run-memo";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { runOnSharedLanes } from "./shared-lane-model";
 import { sharedLaneRunsOf } from "./shared-lane-verdict";
+import { deciderBuildOrderOf } from "./trial";
 
 /** A copy that is not back at the expected output after a trial on the copies */
 export interface CopyShortAfterLoss {
@@ -102,12 +103,38 @@ export function describeCopiesShort(loss: DisturbanceTrial, lanes: readonly stri
  */
 export function copiesDisturbanceTrial(config: Config, clock_windows: SerializableClockWindows, window_cycle_ticks: number,
     expected_output_items: number, logger: Logger): CopiesTrialVerdict | null {
-    const { lanes, readings } = sharedLaneRunsOf(config);
+    const runs = sharedLaneRunsOf(config);
+    const { lanes, readings } = runs;
     if (!lanes.some(lane => lane.shared)) return null;
     const memo = currentRunMemo();
-    const key = memo === undefined ? null : canonicalKey([config, clock_windows, window_cycle_ticks, expected_output_items]);
+    const key = memo === undefined ? null : copiesTrialKeyOf(config, runs, clock_windows, window_cycle_ticks, expected_output_items);
     const tried = () => triedOnCopies(config, lanes, readings, clock_windows, window_cycle_ticks, expected_output_items, logger);
     return memo === undefined || key === null ? tried() : memo.copiesTrial(key, tried);
+}
+
+/**
+ * What the trials of a clock on the copies that share a lane are a function of: which trials they are (those on the copies, with the
+ * lanes they share, apart from those of one copy: `disturbanceTrialKey`), the config, the order the window deciders are built in on
+ * each reading of the lanes it runs (in a tick in which two windows open together, it decides which inserter goes first), the windows,
+ * the window cycle and the items one copy is expected to move a window cycle. Null where one of them cannot be written as a key
+ * (`canonicalKey`) or the order cannot be worked out: the trials are then made without the memo.
+ */
+export function copiesTrialKey(config: Config, clock_windows: SerializableClockWindows, window_cycle_ticks: number, expected_output_items: number): string | null {
+    return copiesTrialKeyOf(config, sharedLaneRunsOf(config), clock_windows, window_cycle_ticks, expected_output_items);
+}
+
+function copiesTrialKeyOf(config: Config, runs: ReturnType<typeof sharedLaneRunsOf>, clock_windows: SerializableClockWindows, window_cycle_ticks: number,
+    expected_output_items: number): string | null {
+    const windows = new Map(Object.entries(clock_windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
+    let decider_orders: Record<string, number>[];
+    try {
+        // as the runs of the copies build each reading (runOnSharedLanes)
+        decider_orders = runs.readings.map(({ under }) => deciderBuildOrderOf({ ...under, overrides: { ...under.overrides, derive_clock_windows: false } }, windows, window_cycle_ticks));
+    } catch {
+        return null;
+    }
+    const lanes = runs.lanes.filter(lane => lane.shared).map(lane => `${lane.belt_id}/${lane.lane}`);
+    return canonicalKey([{ trial: "copies", lanes }, config, decider_orders, clock_windows, window_cycle_ticks, expected_output_items]);
 }
 
 function triedOnCopies(config: Config, lanes: ReturnType<typeof sharedLaneRunsOf>["lanes"], readings: ReturnType<typeof sharedLaneRunsOf>["readings"],
