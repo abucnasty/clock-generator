@@ -309,6 +309,15 @@ drops onto is not run with every copy on it (the result names its lanes); side-l
 line are not modelled, except on an output belt that the config states (below). Each copy's machines are its own, so
 machines two copies share in the game are not.
 
+A shared lane is one line, moved whole each tick. The game cuts a lane into lines at each underground entrance that has an
+exit after it, and moves only the lines on its active list, in the order they went on it, before the inserters take. So a
+stack at an entrance can wait one tick where the one line moves it. With the override `lane_lines`, each shared lane that
+states its `underground_entrances` (in tiles along the lane from the middle of copy 1's pickup tile, upstream negative)
+runs as those lines, in the game's order (`SharedLaneLines` in `src/state/shared-lane.ts`). An entrance at or upstream of
+the lane's entry is left out. The override is off by default. The takes of one tick go onto the list downstream first:
+fitted to one recording, not established. A wait at a joint of two plain belts, which the game showed during and after a
+copper stop on the nine-copy automation science scaffold (#737), is not modelled.
+
 ### The output belt of the copies
 
 Where a config states its output belt (`output_belt`), the run of the copies moves every stack on it in each tick

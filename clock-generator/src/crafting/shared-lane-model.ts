@@ -293,8 +293,28 @@ export function recordInserters(context: SimulationContext, inserter_ids: readon
 }
 
 /**
+ * Where a row's lane is cut into lines (`SharedLaneLines`), in tiles from its entry: the lane's `underground_entrances`, which
+ * the config states in tiles from the middle of copy 1's pickup tile (the row's first reach, the most upstream taker of the
+ * config's copy). An entrance at or upstream of the lane's entry is left out: the run of the copies starts the lane a tile
+ * upstream of copy 1, so the stretch before it is not part of the lane. Null for a lane that states none, or a row of one copy
+ * (whose lane is no row of copies). An entrance at or past the lane's end, the last copy's reach, is refused.
+ */
+export function lineEndsOf(row: LaneRow, entrances: readonly number[] | undefined): number[] | null {
+    if (entrances === undefined || row.copies < 2) return null;
+    const first = row.takers[0];
+    const middle = first.edge_tiles - first.length_tiles / 2;
+    const cuts = entrances.map(entrance => middle + entrance);
+    const past = entrances.filter((_, at) => cuts[at] >= row.length_tiles - 1e-9);
+    assert(past.length === 0, `Lane ${row.lane} of belt ${row.belt_id} states underground entrances at ${past.join(", ")} tiles from copy 1's pickup, `
+        + `at or past the lane's end at ${row.length_tiles - middle} tiles, the last copy's reach. Remove them: only an entrance with an exit `
+        + "after it, upstream of the last copy, cuts the lane.");
+    return cuts.filter(cut => cut > 1e-9);
+}
+
+/**
  * Puts the model into a context of the copies (build-copies.ts) before its first tick: each row's lane runs as one
- * `SharedLane`, and each taker of each copy reaches it in place of a stock of its own, its hands recorded. A lane of
+ * `SharedLane` (as lines cut at its underground entrances where the override `lane_lines` is set and the lane states them,
+ * `lineEndsOf`), and each taker of each copy reaches it in place of a stock of its own, its hands recorded. A lane of
  * unknown end is not run here: it is run under each end in turn by the caller. Where the config states its output belt,
  * each copy's output inserter puts its stacks onto it (output-belt-run.ts); else each puts them on a tile of its own.
  */
@@ -311,9 +331,11 @@ export function installSharedLanes(context: SimulationContext, config: Config, r
         const belt = config.belts.find(it => it.id === row.belt_id)!;
         const belt_state = context.state_registry.getStateByEntityIdOrThrow(EntityId.forBelt(row.belt_id));
         assert(EntityState.isBelt(belt_state), `Belt ${row.belt_id} is not a belt`);
+        const cuts = config.overrides?.lane_lines === true ? lineEndsOf(row, belt.lanes[row.lane - 1].underground_entrances) : null;
         const lane = new SharedLane({
             belt_speed: belt_state.belt.belt_speed, stack_size: belt.lanes[row.lane - 1].stack_size,
             supply_rate: lane_facts.supply_rate, lane_end: lane_facts.lane_end, length_tiles: row.length_tiles,
+            ...(cuts !== null && { lines: { cuts_tiles: cuts } }),
         });
         lanes.push(lane);
         for (const taker of row.takers) {

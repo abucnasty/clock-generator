@@ -3,7 +3,7 @@ import { Config, ConfigSchema } from "../config/schema";
 import { Logger } from "../common/logger";
 import { OpenRange } from "../data-types";
 import { FlowDirection } from "../entities/traits/lane-facts";
-import { SharedLaneLayout, sharedLaneLayoutOf, runOnSharedLanes } from "./shared-lane-model";
+import { SharedLaneLayout, lineEndsOf, sharedLaneLayoutOf, runOnSharedLanes } from "./shared-lane-model";
 import { runClockOnBuild } from "./trial";
 
 /** One copy: two takers of one belt lane, 12 tiles apart, and a machine for each */
@@ -141,6 +141,39 @@ function handsOfTaker(config: Config, layout: SharedLaneLayout | null): string {
     });
     return JSON.stringify(hands);
 }
+
+describe("the line ends of a row's lane, from its underground entrances", () => {
+    // nine copies 9 tiles apart, one taker a copy without positions, as automation science 240 has them
+    const automation = (): Config => ({ ...rowConfig({ copies: 9, copy_offset: { x: 9, y: 0 } }),
+        inserters: [{ id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 } }] } as Config);
+    const row = () => rowsOf(automation(), { x: 1, y: 0 }).rows[0];
+
+    it("puts each entrance in tiles from the lane's entry, copy 1's pickup tile a tile and a half from it, and leaves out one upstream of the entry", () => {
+        // the measured entrances of the scaffold (fact 0.29.0-02-156): the one 7 tiles upstream of copy 1 is not on the lane
+        expect(row().length_tiles).toBe(74);
+        expect(lineEndsOf(row(), [-7, 1, 10, 19, 28, 37, 46, 55, 64])).toEqual([2.5, 11.5, 20.5, 29.5, 38.5, 47.5, 56.5, 65.5]);
+    });
+
+    it("is none for a lane that states no entrances", () => {
+        expect(lineEndsOf(row(), undefined)).toBeNull();
+    });
+
+    it("refuses an entrance at or past the lane's end, the last copy's reach, naming the fix", () => {
+        expect(() => lineEndsOf(row(), [1, 72.5])).toThrow("Lane 1 of belt 1 states underground entrances at 72.5 tiles from copy 1's pickup, at or past the lane's end at 72.5 tiles, "
+            + "the last copy's reach. Remove them: only an entrance with an exit after it, upstream of the last copy, cuts the lane.");
+    });
+
+    it("runs the copies on the lane in lines only with the override: the lane keys its lines", () => {
+        const windows = new Map([["inserter:1", [OpenRange.from(1, 24)]]]);
+        const lanesOf = (overrides: Config["overrides"]) => {
+            const config = { ...automation(), overrides,
+                belts: [{ id: 1, type: "turbo-transport-belt", lanes: [{ ingredient: "advanced-circuit", stack_size: 4, lane_end: { kind: "dead_end" }, underground_entrances: [1, 10, 19] }] }] } as Config;
+            return runOnSharedLanes(config, windows, 72, rowsOf(config, { x: 1, y: 0 }), 2, quiet).lanes[0].key();
+        };
+        expect(lanesOf({})).not.toContain("lines");
+        expect(lanesOf({ lane_lines: true })).toContain("lines");
+    });
+});
 
 describe("the model run with one copy and one taker on the lane", () => {
     it.each([[{ lane_end: { kind: "dead_end" } }], [{ lane_end: { kind: "infinite" } }]])("gives the hands of the run without it (%j)", lane => {

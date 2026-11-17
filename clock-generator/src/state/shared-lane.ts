@@ -32,6 +32,29 @@ export interface SharedLaneArgs {
     readonly lane_end: LaneEnd;
     /** Where the lane ends, in tiles from its entry */
     readonly length_tiles: number;
+    /** The lane as lines cut at its underground entrances (`SharedLaneLines`); without it, one line moved whole each tick */
+    readonly lines?: SharedLaneLines;
+}
+
+/**
+ * A lane cut into lines, as the game cuts one at each underground entrance that has an exit after it: each line runs from
+ * one entrance's end to the next. The game moves the lines of a tick before the inserters take, and only the lines on its
+ * active list, in the order they went on it:
+ * - a line first moves the line it feeds, where that line is on the list and has not moved this tick;
+ * - a line that moved nothing goes off the list; one that moved puts the line feeding it on;
+ * - a stack that crosses into the next line puts that line on, and counts as that line moving; a stack moves once a tick;
+ * - a line put back on after it was updated in a tick does not move again until the next tick;
+ * - a take puts its line and the line feeding it on, the takes of a tick downstream first, then the line the entry put a
+ *   stack on.
+ *
+ * So a stack can wait one tick at a line's end where the one-line lane would move it: where its line was updated while the
+ * line ahead stood off the list, and that line went back on later in the same tick. The rules are those of facts
+ * 0.29.0-02-207 (measured) and engine-belts-02-011; the order of the takes in a tick (downstream first) is fitted to one
+ * recording, not established.
+ */
+export interface SharedLaneLines {
+    /** The line ends, in tiles from the lane's entry, ascending: a stack exactly at one is on the line upstream of it */
+    readonly cuts_tiles: readonly number[];
 }
 
 /**
@@ -67,6 +90,13 @@ export class SharedLane {
     /** Items the entry put on and the infinite end took off, from the start */
     public supplied = 0;
     public drained = 0;
+    /** The line ends in 1/256 tile (`SharedLaneLines`); null for a lane of one line */
+    private readonly cuts: number[] | null = null;
+    /** The lines on the active list, in the order they went on it: 0 is the line at the entry */
+    private active: number[] = [];
+    /** Where the takes of the tick that stands took, and where the entry put a stack on: their lines go on the list next tick */
+    private taken_at: number[] = [];
+    private put_on_at: number | null = null;
 
     constructor(args: SharedLaneArgs) {
         assert(args.lane_end.kind !== "unknown", "A shared lane runs with a known end: a lane of unknown end is run under each end");
@@ -82,6 +112,92 @@ export class SharedLane {
         // the lane starts full: a stack every spacing from the end back to the entry
         for (let x = this.end; x >= 0; x -= STACK_SPACING) this.stacks.push({ x, count: this.stack_size });
         this.initial = this.items();
+        if (args.lines !== undefined) {
+            assert(this.infinite_end === null, "A lane in lines runs to a dead end only");
+            this.cuts = args.lines.cuts_tiles.map(tiles => Math.round(tiles * 256));
+            assert(this.cuts.every((cut, at) => cut > 0 && cut < this.end && (at === 0 || cut > this.cuts![at - 1])),
+                `The line ends of a lane of ${this.end / 256} tiles go up inside it: ${args.lines.cuts_tiles.join(", ")}`);
+            // every line goes on at the start, downstream first: one that cannot move goes off in the first tick
+            this.active = Array.from({ length: this.cuts.length + 1 }, (_, at) => this.cuts!.length - at);
+        }
+    }
+
+    /** The line a position is on: the number of line ends upstream of it (a stack at an end is on the line upstream of it) */
+    private lineOf(x: number): number {
+        const cuts = this.cuts!;
+        let line = 0;
+        while (line < cuts.length && cuts[line] < x) line++;
+        return line;
+    }
+
+    private putOn(line: number): void {
+        if (line >= 0 && !this.active.includes(line)) this.active.push(line);
+    }
+
+    /** One tick of a lane in lines (`SharedLaneLines`): the lines on the list move, then the entry puts a stack on */
+    private stepLines(): void {
+        const stacks = this.stacks;
+        // what the takes of the tick before put on the list, downstream first, then the entry's stack
+        for (const x of this.taken_at.sort((a, b) => b - a)) {
+            const line = this.lineOf(x);
+            this.putOn(line);
+            this.putOn(line - 1);
+        }
+        if (this.put_on_at !== null) this.putOn(this.lineOf(this.put_on_at));
+        this.taken_at = [];
+        this.put_on_at = null;
+
+        const lines = this.cuts!.length + 1;
+        // each stack's line at the start of the tick, kept as stacks cross: the stacks of a line stand together, head first
+        const line_of = stacks.map(stack => this.lineOf(stack.x));
+        const updated = new Array<boolean>(lines).fill(false);
+        const got = new Array<boolean>(lines).fill(false);
+        const moved_this_tick = new Array<boolean>(stacks.length).fill(false);
+        const speed = this.speed;
+        const update = (line: number): void => {
+            updated[line] = true;
+            if (line + 1 < lines && !updated[line + 1] && this.active.includes(line + 1)) update(line + 1);
+            let moved = false;
+            for (let index = 0; index < stacks.length; index++) {
+                if (line_of[index] !== line || moved_this_tick[index]) continue;
+                const stack = stacks[index];
+                const limit = index === 0 ? this.end : stacks[index - 1].x - STACK_SPACING;
+                const x = Math.max(stack.x, Math.min(stack.x + speed, limit));
+                if (x === stack.x) continue;
+                moved = true;
+                moved_this_tick[index] = true;
+                stack.x = x;
+                const into = this.lineOf(x);
+                if (into !== line) {
+                    line_of[index] = into;
+                    got[into] = true;
+                    this.putOn(into);
+                }
+            }
+            if (moved || got[line]) this.putOn(line - 1);
+            else this.active = this.active.filter(it => it !== line);
+        };
+        // the list in its order: a line put on (back) during the walk is reached in it, and one already updated waits
+        for (let at = 0; at < this.active.length;) {
+            if (updated[this.active[at]]) {
+                at++;
+                continue;
+            }
+            update(this.active[at]);
+            at = 0;
+        }
+
+        if (this.entry_closed) return;
+        const unit = 60 * this.supply.denominator, full = this.stack_size * unit;
+        this.supply_bank = Math.min(this.supply_bank + this.supply.numerator, full);
+        const tail = stacks[stacks.length - 1];
+        if (this.supply_bank >= full && (tail === undefined || tail.x >= STACK_SPACING)) {
+            const x = tail === undefined ? 0 : Math.min(tail.x - STACK_SPACING, speed);
+            stacks.push({ x, count: this.stack_size });
+            this.supply_bank -= full;
+            this.supplied += this.stack_size;
+            this.put_on_at = x;
+        }
     }
 
     /** A taker's reach: the stretch of `length_tiles` that ends downstream at `edge_tiles` from the entry */
@@ -118,6 +234,10 @@ export class SharedLane {
 
     /** One tick: the infinite end takes the head where it may, every stack moves, then the entry puts a stack on where there is room */
     private step(): void {
+        if (this.cuts !== null) {
+            this.stepLines();
+            return;
+        }
         const stacks = this.stacks;
         const infinite_end = this.infinite_end;
         if (infinite_end !== null) {
@@ -173,6 +293,8 @@ export class SharedLane {
     public takeAt(index: number, capacity: number): number {
         const stack = this.stacks[index];
         const taken = Math.min(stack.count, capacity);
+        // in lines, a take puts its line on the list (a take of part of a stack too: not established for a part)
+        if (this.cuts !== null && taken > 0) this.taken_at.push(stack.x);
         stack.count -= taken;
         if (stack.count === 0) this.stacks.splice(index, 1);
         return taken;
@@ -186,7 +308,9 @@ export class SharedLane {
 
     /** Everything a later tick of the lane reads, for the state key */
     public key(): string {
-        return `${this.entry_closed ? "closed;" : ""}${this.supply_bank};${this.infinite_end_bank};${this.stacks.map(stack => `${stack.x}:${stack.count}`).join(",")}`;
+        // in lines, the list's order and what the tick's takes and entry put on decide what moves next
+        const lines = this.cuts === null ? "" : `;lines ${this.active.join(".")};${[...this.taken_at].sort((a, b) => b - a).join(".")};${this.put_on_at ?? "-"}`;
+        return `${this.entry_closed ? "closed;" : ""}${this.supply_bank};${this.infinite_end_bank};${this.stacks.map(stack => `${stack.x}:${stack.count}`).join(",")}${lines}`;
     }
 
     /** The items on the lane now */

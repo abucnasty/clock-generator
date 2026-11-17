@@ -614,6 +614,15 @@ const BeltLaneConfigSchema = z.object({
     supply_rate: z.number().positive().optional().describe("The items per second that come onto the lane where it starts. The default is the lane's capacity."),
     lane_end: LaneEndConfigSchema.optional().describe("The end of the lane. Without it, the deprecated backed_up_belts sets the end if the configuration states it. If not, the role of the lane sets the end: an input or a buffer lane is a dead end, an output lane is an infinite end."),
     sharing: LaneSharingConfigSchema.optional().describe("shared (default): all copies take from this lane. per_copy: each copy has a lane of its own."),
+    /**
+     * Where the game cuts the lane into lines: the middle of each underground entrance that has an exit after it, in tiles
+     * along the lane from the middle of copy 1's pickup tile (the most upstream taker of the config's copy), upstream
+     * negative. Read only with the override `lane_lines` (state/shared-lane.ts `SharedLaneLines`); an entrance upstream of
+     * the lane's entry in the run of the copies is left out.
+     */
+    underground_entrances: z.array(z.number().finite()).optional().describe("The underground entrances of a lane that the copies share, where the game cuts the lane into lines: "
+        + "the middle of each entrance that has an exit after it, in tiles along the lane from the middle of copy 1's pickup tile, upstream negative, from upstream to downstream. "
+        + "Read only when the override lane_lines is true."),
 });
 
 const ExportBeltLaneConfigSchema = BeltLaneConfigSchema.extend({
@@ -862,6 +871,14 @@ export const ConfigOverridesSchema = z.preprocess(renameLoopSeedItemsToKickStart
      */
     disturbance_trials_on_copies: z.boolean().optional().describe("Whether the generator makes the disturbance trials again on the copies that share a lane."),
     /**
+     * Run each lane the copies share that states its `underground_entrances` as lines cut at those entrances, moved in the
+     * game's order (state/shared-lane.ts `SharedLaneLines`), in place of one line moved whole each tick. A stack can then
+     * wait one tick at an entrance, as in the game. Off by default: a lane without entrances runs as one line either way.
+     *
+     * @default false
+     */
+    lane_lines: z.boolean().optional().describe("Whether each lane that the copies share and that states its underground entrances runs as lines cut at those entrances, in the game's order."),
+    /**
      * Items of its own product a machine whose recipe makes its own ingredient (pentapod eggs) is given once when a clock
      * starts on the staged scaffold: the loop cannot start itself, so the scaffold's machines get their kick start by hand.
      *
@@ -998,6 +1015,30 @@ export const ConfigSchema = z.preprocess(renameTargetOutputToSetpoint, z.preproc
             context.addIssue({ code: "custom", path: ["belts", belt_index, "lanes", lane_index, "lane_end"],
                 message: `Lane ${lane_index + 1} of belt ${belt.id} states a consumption rate and a lane end. The consumption rate `
                     + "states what leaves the end of the lane. Remove the lane end." });
+        });
+    });
+    // the underground entrances of a lane: in order, on a lane the copies share, which runs to a dead end
+    config.belts.forEach((belt, belt_index) => {
+        (belt.lanes as readonly { underground_entrances?: number[]; sharing?: string; lane_end?: { kind: string }; consumption_per_second?: number }[]).forEach((lane, lane_index) => {
+            const entrances = lane.underground_entrances;
+            if (entrances === undefined) return;
+            const path = ["belts", belt_index, "lanes", lane_index, "underground_entrances"];
+            const name = `Lane ${lane_index + 1} of belt ${belt.id}`;
+            if (entrances.some((entrance, at) => at > 0 && entrance <= entrances[at - 1])) {
+                context.addIssue({ code: "custom", path, message: `${name} states its underground entrances out of order or more than once. Write each entrance `
+                    + "once, in tiles along the lane from the middle of copy 1's pickup tile, from upstream to downstream." });
+            }
+            if (lane.sharing === "per_copy") {
+                context.addIssue({ code: "custom", path, message: `${name} is a lane of each copy, and only a lane that the copies share runs as lines. `
+                    + "Remove its underground entrances, or state the lane as shared." });
+            }
+            // an end other than a dead end: stated, an export lane's consumption, or every unstated end infinite (backed_up_belts false)
+            const not_dead_end = lane.lane_end !== undefined ? lane.lane_end.kind !== "dead_end"
+                : lane.consumption_per_second !== undefined || config.overrides?.backed_up_belts === false;
+            if (not_dead_end) {
+                context.addIssue({ code: "custom", path, message: `${name} states underground entrances, and the lane in lines runs to a dead end only. `
+                    + "Remove its underground entrances, or state its lane_end as dead_end if the lane stops after the last copy." });
+            }
         });
     });
     // a drop spot is all or none per belt: the lane rule needs every stack on it
