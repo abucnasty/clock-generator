@@ -16,7 +16,7 @@ import { machinesInOrder, traitsOf } from "../entities/traits/traits-of";
 import { Logger, defaultLogger } from "../common/logger";
 import { DisturbanceTrialVerdict } from "./disturbance-trial";
 import { SharedItemDeadlockRisk, sharedItemDeadlockRisks } from "./deadlock-risk";
-import { disturbanceTrialInsight, beltPickupNotTestedInsights, chestDrillInsights, ClockInsight, clockInsights, deadlockRiskInsight, dropSpacingInsights, lanesExactlyFullInsights, onePerCopyFeedInsights, assumedCopySpacingInsights, droppedOntoSharedLaneInsights, sideLoadedDropInsights, startDependenceInsight, withWakeUpsFromStarts } from "./insights";
+import { disturbanceTrialInsight, beltPickupNotTestedInsights, chestDrillInsights, ClockInsight, clockInsights, deadlockRiskInsight, dropSpacingInsights, lanesExactlyFullInsights, onePerCopyFeedInsights, assumedCopySpacingInsights, droppedOntoSharedLaneInsights, outputLineNotJudgedInsights, sideLoadedDropInsights, startDependenceInsight, withWakeUpsFromStarts } from "./insights";
 import { chestDrillFallbackConfig, ChestDrillClock, hasPlannedChestDrill } from "./chest-drill-windows";
 import { chestDrillReasons, entityRoutesOf } from "./enable-control-router";
 import { ClockBelt, clockBeltLabel, delayedHandRoomTicks, fuelRoomTicks } from "./clock";
@@ -1189,6 +1189,7 @@ function runAlternativeOf(
             ...onePerCopyFeedInsights(config),
             ...assumedCopySpacingInsights(config),
             ...droppedOntoSharedLaneInsights(config),
+            ...outputLineNotJudgedInsights(config),
             ...dropSpacingInsights(trial.result, config),
             ...(start_dependence_note !== null && trial.start_dependence !== null ? [startDependenceInsight(start_dependence_note, trial.start_dependence)] : []),
             ...chestDrillInsights(trial.result, build_names),

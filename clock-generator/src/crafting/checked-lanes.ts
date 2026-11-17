@@ -276,7 +276,7 @@ export function sharedLanesOf(config: Config, lanes: readonly BuildLane[] = buil
 }
 
 /** The belts the config's output inserters drop the target's item onto, and the chests they or the machines put it into */
-function outputEndsOf(config: Config): { belts: Set<number>; chests: Set<number> } {
+export function outputEndsOf(config: Config): { belts: Set<number>; chests: Set<number> } {
     const item = config.setpoint.recipe;
     const belts = new Set<number>(), chests = new Set<number>();
     const makers = new Set(config.machines.filter(machine => machine.recipe === item).map(machine => machine.id));

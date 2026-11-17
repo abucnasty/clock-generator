@@ -1,4 +1,5 @@
 import { assumedCopySpacings, droppedOntoSharedLanes } from "./shared-lane-verdict";
+import { outputEndsOf, sharedLanesOf } from "./checked-lanes";
 import { SerializableMachineFacts } from "../data-types/machine-facts";
 import { InserterStatus, MachineStatus } from "../state";
 import { recoveryBinsOf, type DisturbanceTrialVerdict } from "./disturbance-trial";
@@ -20,7 +21,7 @@ import { describeDropSpacing, dropSpacing, dropSpacingTable } from "../config/dr
 import { describeOnePerCopyFeed, lanesExactlyFull, lanesExactlyFullNote, onePerCopyFeeds } from "../config/lane-capacity-validator";
 import { machineNameOf, type MachineToName } from "./machine-name";
 import { buildToNameOf } from "./build-names";
-import { capitalized, chestNameInText, drillNameInText, entityNameOf, lanesInSentence, NO_BUILD, textWords, theName, type BuildToName } from "./entity-name";
+import { beltNameInText, capitalized, chestNameInText, drillNameInText, entityNameOf, lanesInSentence, NO_BUILD, textWords, theName, type BuildToName } from "./entity-name";
 
 /** Facts of one machine of the build, for explaining what its limits allow */
 export interface MachineFactsEntry {
@@ -587,6 +588,38 @@ export function droppedOntoSharedLaneInsights(config: Config): ClockInsight[] {
         what: `${capital(lanesInSentence([{ belt_id, lane }], build))} is not checked with ${every} on it. The build drops items onto this belt, and the check of a `
             + "shared lane does not run those drops yet.",
         why: "", explanation: "" }));
+}
+
+/**
+ * That the output hands that share a belt are not judged as one line: two or more output inserters drop the target onto a
+ * belt, counting those of every copy, and the config states neither the belt as its `output_belt` nor a drop spot (`sink.drop`)
+ * for the hands. The clock is judged as if each hand dropped onto a free belt (checked-lanes.ts: a plain output lane). A
+ * warning only: the clock keeps its verdict. None where the line is stated, or each belt has one output hand in all.
+ */
+export function outputLineNotJudgedInsights(config: Config): ClockInsight[] {
+    let lanes;
+    try {
+        lanes = sharedLanesOf(config).filter(lane => lane.role === "output");
+    } catch {
+        return [];
+    }
+    const ends = outputEndsOf(config);
+    const stated = config.output_belt !== undefined && ends.belts.size === 1 ? [...ends.belts][0] : undefined;
+    const geometry = (belt_id: number) => config.inserters.filter(inserter => inserter.sink.type === "belt" && inserter.sink.id === belt_id)
+        .every(inserter => inserter.sink.type === "belt" && inserter.sink.drop !== undefined);
+    const belts = [...new Set(lanes.map(lane => lane.belt_id))].filter(belt_id => belt_id !== stated && !geometry(belt_id)).sort((a, b) => a - b);
+    if (belts.length === 0) return [];
+    const build = buildToNameOf(config);
+    return belts.map(belt_id => {
+        const belt = theName(beltNameInText(belt_id, build));
+        return { id: `output-line-not-judged-${belt_id}`, scope: "build" as const,
+            title: `The output line of ${belt} was not judged`,
+            what: `Two or more output inserters drop onto ${belt}, counting those of every copy, and the configuration does not state its output line. `
+                + "The clock was judged as if each output inserter dropped onto a belt of its own.",
+            why: "",
+            explanation: "A clock that is stable here can make less in the game. State the output line: set output_belt, or give each of these inserters "
+                + "a drop (the lane and the position)." };
+    });
 }
 
 /** The supply rate each copy's lane needs, for every lane that is per copy */
