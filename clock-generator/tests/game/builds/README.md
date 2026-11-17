@@ -778,3 +778,40 @@ verdict for the clock is "no recovery", from the loss on the copies that share a
 ```bash
 UTILITY_120_CAPTURE_DIR=.scratch/utility-120 npm run test:game -- tests/game/builds/utility-science-120-selected-clock.game.test.ts
 ```
+
+## The missing recordings: the picks of eight record jobs from the staged start
+
+[missing-recordings-clock.game.test.ts](missing-recordings-clock.game.test.ts) records the clock the record selects for each job of
+[missing-recordings-clock-fixtures.ts](missing-recordings-clock-fixtures.ts) on the sample's scaffold, from the staged start (every inserter of these
+builds has a window, so the staged start is the judged start), with the probe [missing-recordings-clock-probe.lua](missing-recordings-clock-probe.lua):
+steady state, a baseline of whole window cycles, then the losses of the case one after the other (each until the output falls, then released),
+then 7,200 ticks more. The losses are the standard cuts of the families above (an ingredient cut of each input line, the output block, an ingredient cut)
+where the build has input lines, the productivity module chain's own (coal, output, iron foundries stopped), and the output block alone for a build that takes
+every ingredient from fluids or machines (accumulator). A build of copies is judged on each copy by itself: every whole window cycle from steady state to the first
+loss, and every whole window cycle of the last minute after the last loss. The controls are in
+[missing-recordings-clock-controls.json](missing-recordings-clock-controls.json); the test keeps each run, its verdict and its controls entry in `MISSING_RECORDINGS_CAPTURE_DIR`.
+Recorded at Factorio 2.1.24, all seven holding their target on every copy and recovering from every loss:
+
+| Job | Clock (window cycle) | Copies built | Window cycles per copy before / after the losses | Steady state | Last loss recovered |
+| --- | --- | --- | --- | --- | --- |
+| `AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING` | Pitch Pickups (72) | 9 of 9 | 50 / 50 | 7,292 | 17,736 |
+| `FLYING_ROBOT_FRAME_80` | Moved Output Swing (288) | 12 of 12 | 12 / 12 | 7,056 | 25,261 |
+| `PRODUCTIVITY_MODULE_80_CHEST_CHAIN` | Coordinated Sources (72) | 1 of 6 | 50 / 50 | 7,437 | 27,146 |
+| `ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED` | Coordinated Sources (40) | 2 of 5 | 90 / 90 | 7,200 | 32,428 |
+| `PROCESSING_UNIT_15_CHEST_FED` | Euclidean Swings (384) | 1 of 1 | 9 / 9 | 7,074 | 19,010 |
+| `LOGISTIC_SCIENCE_240` | Takt Batches (176) | 22 of 11 (two rows) | 20 / 20 | 7,194 | 20,042 |
+| `ACCUMULATOR_320` | Coordinated Sources (972) | 9 of 9 | 3 / 3 | 6,516 | 15,174 |
+
+- The first pick is "no recovery" in the simulator (copper plate stops arriving on the copies that share a lane). In the game all nine copies keep their rate and
+  the output comes back after that loss, so the game and the simulator differ, as for utility science 120 above.
+- Named limits: the scaffold of the productivity module chain holds one copy of the job's six, and that of the electromagnetic science recycler build two of five; the
+  joins of the other copies are not in these runs. The recycler build's output is random: each copy made 2,907 and 2,890 of 2,880 over its 90 window cycles before the
+  losses (2,900 and 2,892 of 2,880 after), 12 to 15 of its window cycles short of 32 by a few items, so it is judged on the stretch and not on each window cycle. The staged
+  recording starts before the recyclers have a recipe, so its copies are the final machines taken from the west, two to a copy.
+- `AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER` (one copy of the job's nine) cannot be recorded from the staged start: the staged start fills the belts under the
+  pickups before it places the cell's inserters, and the only inserters that put anything on this build's belt are the foundries' output inserters, which are placed
+  with the clock; the lanes never saturate ("The belts did not saturate", 2026-11-17, Factorio 2.1.24). It waits for a start from ruling 60's state.
+
+```bash
+MISSING_RECORDINGS_CAPTURE_DIR=.scratch/missing-recordings npm run test:game -- tests/game/builds/missing-recordings-clock.game.test.ts -t flying-robot-frame
+```
