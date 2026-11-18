@@ -58,5 +58,6 @@ steady.run{
     finals = steady.final_machines(entities, options.recipes, options.item), clock = steady.clock(entities),
     window = options.window, expected = options.expected, baseline = options.baseline, cap = options.cap,
     disturbances = {stop_drill(), block, stop_drill()},
+    tail = options.tail,
     report = report, output = "clock-speed.json", settle = settle,
 }

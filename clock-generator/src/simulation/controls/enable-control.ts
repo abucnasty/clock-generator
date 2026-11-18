@@ -43,6 +43,17 @@ export function isWindowCycleClock(it: unknown): it is WindowCycleClock {
     return it instanceof ClockedEnableControl;
 }
 
+/**
+ * What a proof that a run repeats needs of a clock: its window cycle, the ticks after its start that stay dark (`reset`),
+ * and whether a p/q-tick window cycle answers in whole 1/q ticks, which repeat every p ticks (floats drift). Null for a
+ * control that is not a clock.
+ */
+export function clockRepeatFacts(it: unknown): { window_cycle_ticks: number; start_latency_ticks: number; exact_subtick_positions: boolean } | null {
+    return it instanceof ClockedEnableControl
+        ? { window_cycle_ticks: it.windowCycleDuration.ticks, start_latency_ticks: it.start_latency_ticks, exact_subtick_positions: it.exact_subtick_positions }
+        : null;
+}
+
 export const AlwaysEnabledControl: EnableControl = {
     isEnabled(): boolean {
         return true;
@@ -235,9 +246,28 @@ class ClockWindows {
     }
 }
 
+/**
+ * What a control made of a function holds for a proof that a run repeats (`controlRepeatOf`). It reads entity states the
+ * simulation's key holds and constants of the build, and besides them only what it states here:
+ * - `key`: what it keeps of its own between asks that its later answers read; it keeps nothing when unset.
+ * - `period_ticks`: the ticks its answers repeat in, when it reads the tick; it reads no tick when unset.
+ * - `skip`: told that the warm-up left out this many ticks, a whole number of repeats, at its stop: it moves what it
+ *   counts in ticks of the run as though they had run, so it stands where the full warm-up would have left it.
+ * A control made of a function without it keeps what no key holds.
+ */
+export interface LambdaRepeat {
+    key?: () => string;
+    period_ticks?: number;
+    skip?: (ticks: number) => void;
+}
+
+/** A function control that reads only entity states the key holds and constants: it keeps nothing and reads no tick */
+export const READS_KEYED_STATE: LambdaRepeat = Object.freeze({});
+
 class EnableControlLambda implements EnableControl {
     constructor(
-        private readonly enabledFn: () => boolean
+        private readonly enabledFn: () => boolean,
+        public readonly repeat?: LambdaRepeat,
     ) { }
 
     public isEnabled(): boolean {
@@ -339,11 +369,12 @@ export class LatchedEnableControl implements EnableControl {
     }
 
     constructor(
-        private readonly base: EnableControl,
-        private readonly release: EnableControl,
+        public readonly base: EnableControl,
+        public readonly release: EnableControl,
     ) { }
 
-    private latched: boolean = false;
+    /** Whether it is latched on: kept between asks, so a proof of a repeat keys it (`controlRepeatOf`) */
+    public latched: boolean = false;
 
     public isEnabled(): boolean {
         if (this.latched && this.release.isEnabled()) {
@@ -372,7 +403,7 @@ class AllEnableControl implements EnableControl {
     }
 
     constructor(
-        private readonly enableControls: ReadonlyArray<EnableControl>
+        public readonly enableControls: ReadonlyArray<EnableControl>
     ) { }
 
     public isEnabled(): boolean {
@@ -393,7 +424,7 @@ class AnyEnableControl implements EnableControl {
     }
 
     constructor(
-        private readonly enableControls: ReadonlyArray<EnableControl>
+        public readonly enableControls: ReadonlyArray<EnableControl>
     ) { }
 
     public isEnabled(): boolean {
@@ -401,8 +432,70 @@ class AnyEnableControl implements EnableControl {
     }
 }
 
-function createLambdaEnableControl(enabledFn: () => boolean): EnableControl {
-    return new EnableControlLambda(enabledFn);
+function createLambdaEnableControl(enabledFn: () => boolean, repeat?: LambdaRepeat): EnableControl {
+    return new EnableControlLambda(enabledFn, repeat);
+}
+
+/** What a proof that a run repeats needs of a clock (`clockRepeatFacts`) */
+export type ClockRepeatFacts = NonNullable<ReturnType<typeof clockRepeatFacts>>;
+
+/**
+ * What a proof that a run repeats needs of a control and of every control inside it (all, any, latched):
+ * - `clocks`: the clocks inside it;
+ * - `period_ticks`: the ticks the functions inside it that read the tick repeat in;
+ * - `key`: what it keeps between asks that its later answers read: each latch's bit and each function's own count
+ *   (`LambdaRepeat`), in a fixed order; a control asked less often than another keeps its state as it stands;
+ * - `skip`: moves what the functions inside it count in ticks, where the warm-up left out a whole number of repeats.
+ * Null where something inside keeps what no key holds: a function control made without its `LambdaRepeat`.
+ */
+export interface ControlRepeat {
+    clocks: ClockRepeatFacts[];
+    period_ticks: number[];
+    key: () => string;
+    skip: (ticks: number) => void;
+}
+
+export function controlRepeatOf(control: EnableControl): ControlRepeat | null {
+    const clocks: ClockRepeatFacts[] = [];
+    const period_ticks: number[] = [];
+    const keys: (() => string)[] = [];
+    const skips: ((ticks: number) => void)[] = [];
+    const walk = (it: EnableControl): boolean => {
+        if (it === AlwaysEnabledControl || it === NeverEnabledControl) {
+            return true;
+        }
+        const clock = clockRepeatFacts(it);
+        if (clock !== null) {
+            clocks.push(clock);
+            return true;
+        }
+        if (it instanceof EnableControlLambda) {
+            if (it.repeat === undefined) {
+                return false;
+            }
+            if (it.repeat.key !== undefined) keys.push(it.repeat.key);
+            if (it.repeat.period_ticks !== undefined) period_ticks.push(it.repeat.period_ticks);
+            if (it.repeat.skip !== undefined) skips.push(it.repeat.skip);
+            return true;
+        }
+        if (it instanceof LatchedEnableControl) {
+            keys.push(() => it.latched ? "1" : "0");
+            return walk(it.base) && walk(it.release);
+        }
+        if (it instanceof AllEnableControl || it instanceof AnyEnableControl) {
+            return it.enableControls.every(walk);
+        }
+        return false;
+    };
+    if (!walk(control)) {
+        return null;
+    }
+    return {
+        clocks,
+        period_ticks,
+        key: () => keys.map(key => key()).join(","),
+        skip: ticks => skips.forEach(skip => skip(ticks)),
+    };
 }
 
 export const EnableControl = {
