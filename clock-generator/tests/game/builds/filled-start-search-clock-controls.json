@@ -1,0 +1,4 @@
+{
+ "meaning": "The picks of the search from every stable clock (CLOCK_SEARCH_FROM_EVERY_START=1, off by default: the record, made with it off, does not select them), recorded in the game from ruling 60's start (the backpressure start of the harness) under the game tests' protocol timed in game ticks (tests/game/helpers/lua/steady.lua), in Factorio 2.1.24. Each entry is the run of one pick on the sample's scaffold: `native` the summary of the run, `generation` the selection the generator makes with the switch on, and `recorded.clock_sha256` the clock the game ran. The generation test of the picks (src/crafting/filled-start-search.generation.test.ts) finds each pin made with the switch on, and clock-controls.test.ts finds a pin that is the record's own selection. The cases are those of missing-recordings-clock-fixtures.ts with `from_every_start` and of filled-start-search-clock-fixtures.ts.",
+ "cases": {}
+}

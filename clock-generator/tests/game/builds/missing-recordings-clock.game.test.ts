@@ -9,8 +9,9 @@ import {recordInFactorio} from "../../../src/harness/factorio-harness";
 import {recipesMaking} from "../../../src/harness/recording-output";
 import {matchCopies} from "../../../src/verification/entity-copies";
 import {composeProbeSource} from "../helpers/probe-source";
-import {clockHash, expectedNativeSummary, readRecordJob} from "./clock-controls";
-import {CONTROLS_FILE, MISSING_RECORDING_CASES, scaffoldFile} from "./missing-recordings-clock-fixtures";
+import {withSearchFromEveryStart} from "../helpers/search-switch";
+import {clockHash, clockToRun, expectedNativeSummary, readRecordJob} from "./clock-controls";
+import {controlsFileOf, MISSING_RECORDING_CASES, scaffoldFile} from "./missing-recordings-clock-fixtures";
 import {RUN_PROTOCOL, runSummary} from "./pickup-clock-capture";
 
 /**
@@ -43,13 +44,20 @@ describe.sequential("the selected clock of a record job from the staged start, w
 
             const loaded = await loadConfigFromFile(ConfigPaths[item.config]);
             const config = item.variant ? item.variant(loaded) : loaded;
-            const generated = generateClockAlternatives(config, {logger: quiet});
+            const generated = withSearchFromEveryStart(item.from_every_start === true, () => generateClockAlternatives(config, {logger: quiet}));
             const selected = generated.alternatives[generated.selected_index];
             const exported = selected.result.subtick ?? selected.result;
             const period = selected.result.subtick?.clock.window_cycle_ticks ?? selected.result.simulation_duration.ticks;
             const made = readRecordJob(item.job)!;
             const base = made.alternatives.find(alternative => alternative.id === made.selected)!;
-            expect(clockHash(exported), `the selected clock (${selected.id}) is the one the record selects for ${item.job}`).toBe(base.clock_sha256);
+            if (item.from_every_start) {
+                // the switch moves the pick: the clock recorded is not the record's, and it is the one the entry names
+                expect(clockHash(exported), `the pick from every stable clock (${selected.id}) is another clock than the record selects for ${item.job}`).not.toBe(base.clock_sha256);
+                const pinned = process.env.BELT_CLOCK_CALIBRATE === "1" ? undefined : clockToRun(path.join(__dirname, controlsFileOf(item)), item.name);
+                if (pinned) expect(clockHash(exported), `the clock ${item.name} runs is the one its entry in ${controlsFileOf(item)} was recorded on`).toBe(pinned);
+            } else {
+                expect(clockHash(exported), `the selected clock (${selected.id}) is the one the record selects for ${item.job}`).toBe(base.clock_sha256);
+            }
 
             const jobCopies = config.setpoint.copies ?? 1;
             const perCopy = config.setpoint.items_per_second / jobCopies;
@@ -90,8 +98,8 @@ describe.sequential("the selected clock of a record job from the staged start, w
             fs.writeFileSync(path.join(directory, "summary.json"), JSON.stringify(summary) + "\n");
             // the run of the pinned clock is the one the controls file keeps (BELT_CLOCK_CALIBRATE=1 records a new one)
             if (process.env.BELT_CLOCK_CALIBRATE !== "1") {
-                const kept = expectedNativeSummary(path.join(__dirname, CONTROLS_FILE), item.name);
-                if (kept) expect(summary, `the run is the one ${CONTROLS_FILE} keeps for ${item.name}`).toEqual(kept);
+                const kept = expectedNativeSummary(path.join(__dirname, controlsFileOf(item)), item.name);
+                if (kept) expect(summary, `the run is the one ${controlsFileOf(item)} keeps for ${item.name}`).toEqual(kept);
             }
 
             // each copy by itself: its final machines, found as the harness finds the copies

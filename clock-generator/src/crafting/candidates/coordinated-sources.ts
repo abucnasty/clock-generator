@@ -589,7 +589,7 @@ export interface LocalChoiceJudge {
 export const SEARCH_FROM_EVERY_START_VARIABLE = "CLOCK_SEARCH_FROM_EVERY_START";
 
 /** Whether the switch is on; read where the starts are made, so a test sets it for one generation */
-export function searchesFromEveryStart(): boolean {
+function searchesFromEveryStart(): boolean {
     return typeof process !== "undefined" && process.env?.[SEARCH_FROM_EVERY_START_VARIABLE] === "1";
 }
 

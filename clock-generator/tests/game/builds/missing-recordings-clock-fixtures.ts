@@ -14,6 +14,11 @@ import {withJellyHandsOf15} from "../../configs/rocket-fuel-hands";
  * ingredient from fluids or from machines has no ingredient to cut, and its loss is the output block alone.
  */
 export const CONTROLS_FILE = "missing-recordings-clock-controls.json";
+/**
+ * The controls file of the picks the search from every stable clock makes (CLOCK_SEARCH_FROM_EVERY_START=1, off by default: the record does not
+ * select them), recorded here and under the families' own probes (filled-start-search-clock.game.test.ts)
+ */
+export const SEARCH_CONTROLS_FILE = "filled-start-search-clock-controls.json";
 
 export type Loss = {kind: "cut"; item: string} | {kind: "block"} | {kind: "stop"; recipe: string};
 
@@ -22,6 +27,11 @@ export interface MissingRecordingCase {
     name: string;
     /** The record job */
     job: string;
+    /**
+     * The case records the pick the generator makes with CLOCK_SEARCH_FROM_EVERY_START on (tests/game/helpers/search-switch.ts), not the
+     * record's: the test asserts it is another clock than the record's selection, and its entry is in SEARCH_CONTROLS_FILE
+     */
+    from_every_start?: true;
     config: keyof typeof ConfigPaths;
     /** The scaffold's file name where it is not the config's own with ".scaffold" for ".json" (the advanced circuit samples share one) */
     scaffold?: string;
@@ -72,6 +82,8 @@ export interface MissingRecordingCase {
      */
     late_recording?: string;
 }
+
+export const controlsFileOf = (item: MissingRecordingCase) => item.from_every_start ? SEARCH_CONTROLS_FILE : CONTROLS_FILE;
 
 const scaffoldOf = (key: keyof typeof ConfigPaths) => ConfigPaths[key].replace(/\.json$/, ".scaffold");
 export const scaffoldFile = (item: MissingRecordingCase) => item.scaffold ? path.join(path.dirname(ConfigPaths[item.config]), item.scaffold) : scaffoldOf(item.config);
@@ -214,5 +226,27 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
     {
         name: "iron-bacteria-380-nutrients", job: "config-IRON_BACTERIA_380_CULTIVATION", config: "IRON_BACTERIA_380_CULTIVATION", copies: 1,
         losses: [{kind: "cut", item: "nutrients"}],
+    },
+    // the picks of the search from every stable clock (CLOCK_SEARCH_FROM_EVERY_START=1) that the generic protocol records, each from ruling 60's
+    // start with the losses of the job's own case above
+    {
+        name: "advanced-circuit-240-from-every-start", scaffold: "advanced-circuit.scaffold", job: "config-ADVANCED_CIRCUIT_240", config: "ADVANCED_CIRCUIT_240", copies: 1,
+        from_every_start: true, start: "backpressure",
+        losses: [{kind: "cut", item: "electronic-circuit"}, {kind: "block"}, {kind: "cut", item: "coal"}],
+        limit: "the scaffold holds one copy of the job's three",
+    },
+    {
+        name: "advanced-circuit-240-backed-up-from-every-start", scaffold: "advanced-circuit.scaffold", job: "variants-ADVANCED_CIRCUIT_240_BACKED_UP", config: "ADVANCED_CIRCUIT_240", copies: 1,
+        from_every_start: true, start: "backpressure",
+        variant: config => ({...config, overrides: {...config.overrides, backed_up_belts: true}}),
+        losses: [{kind: "cut", item: "electronic-circuit"}, {kind: "block"}, {kind: "cut", item: "coal"}],
+        limit: "the scaffold holds one copy of the job's three",
+    },
+    {
+        // the electric furnaces and the productivity modules come on one belt from two infinity chests; the stone comes from a drill, which has no cut
+        name: "production-science-120-two-belts-from-every-start", job: "config-PRODUCTION_SCIENCE_120_TWO_BELTS", config: "PRODUCTION_SCIENCE_120_TWO_BELTS", copies: 1,
+        from_every_start: true, start: "backpressure",
+        losses: [{kind: "cut", item: "electric-furnace"}, {kind: "block"}, {kind: "cut", item: "productivity-module"}],
+        limit: "the scaffold holds one copy of the job's seven",
     },
 ];
