@@ -185,6 +185,63 @@ async function startTextAt(browser, url, cold) {
     return errors;
 }
 
+/**
+ * The two number fields of Advanced (LCM Override, Force Output Swings) line up: at 1440 px their boxes start on one line
+ * and so do their help texts; at 390 px they stack, each with the same gap from label to box and from box to help text.
+ * With `SWITCH_SHOTS` set to a folder, a screenshot of the panel at each width goes there.
+ */
+async function numberFieldsAlignAt(browser, url) {
+    const errors = [];
+    const shots = process.env.SWITCH_SHOTS;
+    for (const [width, stacked] of [[1440, false], [390, true]]) {
+        const page = await browser.newPage({ viewport: { width, height: 900 } });
+        page.setDefaultTimeout(TIMEOUT_MS);
+        page.on('pageerror', (error) => errors.push(`page: ${error.message}`));
+        try {
+            await page.goto(url);
+            await page.getByRole('button', { name: 'Try an example' }).click();
+            await page.getByRole('dialog').getByRole('button', { name: EXAMPLE }).click();
+            await page.getByRole('button', { name: /^Advanced/ }).click();
+            const lcm = page.getByRole('spinbutton', { name: 'LCM Override' });
+            const force = page.getByRole('spinbutton', { name: 'Force Output Swings' });
+            await force.waitFor();
+            // the accordion opens with a transition: wait until the boxes stop moving
+            await page.waitForFunction(() => {
+                const box = document.querySelector('[data-build-anchor="advanced"] input[type="number"]')?.getBoundingClientRect();
+                window.__lastTop = [window.__lastTop?.[1], box?.top];
+                return box && window.__lastTop[0] === window.__lastTop[1];
+            }, undefined, { polling: 200 });
+            const parts = (input) => input.evaluate((element) => {
+                const top = (el) => el.getBoundingClientRect().top;
+                const bottom = (el) => el.getBoundingClientRect().bottom;
+                const box = element.closest('.MuiInputBase-root');
+                const label = element.labels[0];
+                const help = document.getElementById(element.getAttribute('aria-describedby') ?? '');
+                return { label: { top: top(label), bottom: bottom(label) }, box: { top: top(box), bottom: bottom(box) }, help: { top: top(help) } };
+            });
+            const [a, b] = [await parts(lcm), await parts(force)];
+            const near = (x, y) => Math.abs(x - y) < 0.5;
+            if (!stacked) {
+                if (!near(a.box.top, b.box.top)) errors.push(`at ${width} px the boxes start ${Math.abs(a.box.top - b.box.top).toFixed(1)} px apart`);
+                if (!near(a.help.top, b.help.top)) errors.push(`at ${width} px the help texts start ${Math.abs(a.help.top - b.help.top).toFixed(1)} px apart`);
+            } else {
+                if (!(a.label.top < a.box.top && a.box.top < a.help.top && a.help.top < b.label.top && b.label.top < b.box.top && b.box.top < b.help.top)) {
+                    errors.push(`at ${width} px the fields do not stack as label, box, help text, one field after the other`);
+                }
+                if (!near(a.box.top - a.label.top, b.box.top - b.label.top) || !near(a.help.top - a.box.bottom, b.help.top - b.box.bottom)) {
+                    errors.push(`at ${width} px the two fields space their label, box and help text differently`);
+                }
+            }
+            if (shots) await page.locator('[data-build-anchor="advanced"]').screenshot({ path: `${shots}/number-fields-${width}.png` });
+        } catch (error) {
+            errors.push(error instanceof Error ? error.message : String(error));
+        } finally {
+            await page.close();
+        }
+    }
+    return errors;
+}
+
 /** Reproduces fullscreen output-route repair while a machine draft is dirty. */
 async function repairOutputFocusAt(browser, url) {
     const errors = [];
@@ -421,6 +478,13 @@ try {
                 } else {
                     console.log(`The result text names the ${cold ? 'cold' : 'backpressure'} start in a browser on ${name}`);
                 }
+            }
+            const alignErrors = await numberFieldsAlignAt(browser, server.resolvedUrls.local[0]);
+            if (alignErrors.length > 0) {
+                console.error(`The number fields of Advanced do not line up in a browser on ${name}:\n${alignErrors.map((error) => `  ${error}`).join('\n')}`);
+                failed = true;
+            } else {
+                console.log(`The number fields of Advanced line up at 1440 and 390 px in a browser on ${name}`);
             }
             const repairErrors = await repairOutputFocusAt(browser, server.resolvedUrls.local[0]);
             if (repairErrors.length > 0) {

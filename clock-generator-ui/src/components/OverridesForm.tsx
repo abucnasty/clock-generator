@@ -24,6 +24,52 @@ const SEARCH_NAMES = {
     pitch: catalogRowOf({ id: 'pitch_pickups', tuning_method: 'observed' }).name,
 };
 
+/** The one height of a label row: the help button's, so a field without one still starts its box on the same line */
+const LABEL_ROW_HEIGHT = 30;
+
+interface NumberFieldProps {
+    id: string;
+    label: string;
+    /** The "?" after the label, with what it opens */
+    help?: { label: string; text: string };
+    value: number | undefined;
+    onChange: (value: number | undefined) => void;
+    /** Under the box, tied to it */
+    description: string;
+}
+
+/**
+ * A whole-number override in the same four parts every time, so that the fields line up where they sit side by side
+ * and stack alike where they do not: the label, with its help button where there is one, then the box, then its
+ * help text. Empty takes the calculated value.
+ */
+function NumberField({ id, label, help, value, onChange, description }: NumberFieldProps) {
+    return (
+        <Box sx={{ width: 260, maxWidth: '100%' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minHeight: LABEL_ROW_HEIGHT }}>
+                <Typography component="label" htmlFor={id} variant="body2">{label}</Typography>
+                {help && (
+                    <HelpButton label={help.label}>
+                        <Typography variant="body2">{help.text}</Typography>
+                    </HelpButton>
+                )}
+            </Box>
+            <TextField
+                id={id}
+                type="number"
+                value={value ?? ''}
+                onChange={e => onChange(parseInt(e.target.value) || undefined)}
+                slotProps={{ htmlInput: { min: 1, 'aria-describedby': `${id}-help` } }}
+                fullWidth
+                size="small"
+            />
+            <Typography id={`${id}-help`} variant="caption" color="text.secondary" component="p" sx={{ mt: 0.5 }}>
+                {description}
+            </Typography>
+        </Box>
+    );
+}
+
 interface OverridesFormProps {
     importedChecks?: ConfigFormData['overrides'];
     lcm?: number;
@@ -57,6 +103,7 @@ export function OverridesForm({
     setCount,
 }: OverridesFormProps) {
     const summaryId = useId();
+    const lcmId = useId();
     const forceId = useId();
     const searchId = useId();
     const startId = useId();
@@ -95,41 +142,21 @@ export function OverridesForm({
                 </Typography>
                 
                 <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-                    <TextField
+                    <NumberField
+                        id={lcmId}
                         label="LCM Override"
-                        type="number"
-                        value={lcm ?? ''}
-                        onChange={(e) =>
-                            onUpdate(
-                                'lcm',
-                                parseInt(e.target.value) || undefined
-                            )
-                        }
-                        slotProps={{ htmlInput: { min: 1 } }}
-                        sx={{ width: 200 }}
-                        size="small"
-                        helperText="Output cycles per window cycle (overrides the calculated LCM). The swing plan below shows the calculated value."
+                        value={lcm}
+                        onChange={value => onUpdate('lcm', value)}
+                        description="Output cycles per window cycle (overrides the calculated LCM). The swing plan below shows the calculated value."
                     />
-                    <Box sx={{ width: 260, maxWidth: '100%' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <Typography component="label" htmlFor={forceId} variant="body2">{force.label}</Typography>
-                            <HelpButton label={force.helpLabel}>
-                                <Typography variant="body2">{force.help.join(' ')}</Typography>
-                            </HelpButton>
-                        </Box>
-                        <TextField
-                            id={forceId}
-                            type="number"
-                            value={terminalSwingCount ?? ''}
-                            onChange={e => onUpdate('terminal_swing_count', parseInt(e.target.value) || undefined)}
-                            slotProps={{ htmlInput: { min: 1, 'aria-describedby': `${forceId}-help` } }}
-                            fullWidth
-                            size="small"
-                        />
-                        <Typography id={`${forceId}-help`} variant="caption" color="text.secondary" component="p" sx={{ mt: 0.5 }}>
-                            {force.field}
-                        </Typography>
-                    </Box>
+                    <NumberField
+                        id={forceId}
+                        label={force.label}
+                        help={{ label: force.helpLabel, text: force.help.join(' ') }}
+                        value={terminalSwingCount}
+                        onChange={value => onUpdate('terminal_swing_count', value)}
+                        description={force.field}
+                    />
                     <Box>
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                             <FormControlLabel
