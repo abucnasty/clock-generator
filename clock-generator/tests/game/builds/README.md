@@ -312,12 +312,13 @@ hash is `builtClockIdentity` of the build's blueprint, recomputed by `clock-cont
   `clock_sha256` (checked by `pickup-clock-cold-start-mechanics.test.ts` against the clock the stored windows build and the fixture's
   pin, and for the runs started at the window cycle's beginning by `clock-controls.test.ts` against the record's selection)
   and `recorded_clock_sha256` (checked by the game test).
-- Eight scaffold-recordings builds expect values that belong to one clock (agricultural science having no dip and no
+- Nine scaffold-recordings builds expect values that belong to one clock (agricultural science having no dip and no
   difference after its staged start, agricultural science with backpressure on the belts having no difference, what each of the
   nine copies of automation science moves, the moved inserters of chemical science with a shared foundry, what each of
   the 11 copies of electromagnetic science moves, what each row of military science with grenades moves, what the one copy of
-  production science with a drill into the rail assembler moves, and what each of the two copies of utility science with
-  processing units and low density structures on one belt moves): `scaffold-recordings-clock-pins.json`.
+  production science with a drill into the rail assembler moves, what each of the two copies of utility science with
+  processing units and low density structures on one belt moves, and the output of iron bacteria cultivation):
+  `scaffold-recordings-clock-pins.json`.
 - The agricultural science scaffold's control on the 2-swing clock keeps one line: inserter 11 moves 371.33 a window cycle in the
   game and 370.16 in the simulator. Since #333 the simulator runs a clock of whole ticks by its own window cycle time (960 ticks for
   this one, where the plan has 480), so the run the test compares is twice as long, and its two one-hand dips fall before
@@ -587,11 +588,25 @@ checks; here it is stopped as the supply cut. Do not compare these recordings wi
 families.
 
 [iron-plate-80-car-chest-clock-controls.json](iron-plate-80-car-chest-clock-controls.json) holds the 7 native summaries, 7 trailing-minute runs
-recorded on Factorio 2.1.24. **In all 7 the net output is exact, the machines reach a steady state and every recovery holds, but
-the output stock guard fails: after the last drill stop the furnaces' output stock settles at a lower, steady level, below the
-baseline's lowest.** Each control keeps that failure as a `known_differences` entry
-([#587](https://github.com/abucnasty/clock-generator/issues/587), open).
+recorded on Factorio 2.1.24. In all 7 the net output is exact and the machines reach a steady state; the three recoveries are recorded (the
+second and the third disturbance last one tick each: the trailing minute is still below the baseline's lowest when they start), and in the
+288-tick control the trailing minute falls to 4,722 against 4,800 at tick 15,300, 480 ticks after the last recorded recovery, while the stock is lowest, and is no lower than 4,796 from tick 22,000 (a window of 3,600 ticks is not a whole number of 288-tick cycles). The
+run goes on for 14,400 ticks after its last recovery (the `tail` of `helpers/lua/steady.lua`) and the output stock guard reads the stock
+after it has settled, at each whole window cycle of the last half of the tail ([#587](https://github.com/abucnasty/clock-generator/issues/587)):
+it must be no lower than the baseline's lowest and not falling. The last drill stop empties the car, and what the furnaces keep in their output
+afterwards is not what the run showed at the tick of the recovery: it falls first, then climbs back.
+**The 4 controls of the clocks of 288 and 144 ticks hold the guard**: the stock falls to 0 (288 ticks) or 50 (144 ticks) at its lowest tick after the
+recovery, and settles at 128 and at 194 (122 and 152 at the lowest tick) after about 9,200 and 7,900 ticks, against baseline lowest stocks of 88 and 90.
+The half of the tail the guard reads can start before the stock has settled (the 288-tick clock is still climbing at its start, and its lowest tick
+there is 100): the guard asks only that the stock is never below the baseline's lowest and does not fall. **The 3 controls of the clocks of 72 ticks keep it as a
+`known_differences` entry**: the stock is at 48 (43 at its lowest tick) at every whole window cycle from the recovery on, for the 14,400 ticks of the
+tail, against 80 (70 at its lowest tick) in the baseline. It is a lower, steady level, not a drain; why the level is lower is not found.
 `iron-plate-80-car-chest-clock.generation.test.ts` pins each clock and checks it against its native summary.
+
+The second difference of #587 is a count, not the stock, and it is kept as it was: the scaffold recordings' "iron plates through a car"
+(`scaffold-recordings.game.test.ts`, `crafts_open`) shows the two furnaces finishing 193.17 crafts and productivity bars a window cycle in the game
+under the minute-long recording against 194.00 in the simulator, while the build moves 96 plates in every window cycle; over the 36,000 ticks recorded
+before, the two agreed. The 0.83 crafts (0.4%) are named and not explained here: that recording was not made again for the stock guard.
 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/car-new BELT_CLOCK_CALIBRATE=1 \
@@ -763,4 +778,56 @@ had 858.5 in the game and 843.8 in the simulator.
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/productivity-module-80-chest-chain-clock-new BELT_CLOCK_CALIBRATE=1 \
   npm run test:game -- tests/game/builds/productivity-module-80-chest-chain-clock.game.test.ts
+```
+
+## Utility science 120: the selected clock from the staged start
+
+[utility-science-120-selected-clock.game.test.ts](utility-science-120-selected-clock.game.test.ts) records the clock the generator selects for
+`UTILITY_SCIENCE_120` (Takt Batches, window cycle 672 ticks, pinned in `scaffold-recordings-clock-pins.json` as "utility science") on the
+sample's scaffold of one copy (17.14 a second), as the config is and with backpressure on the belts, from the staged start to steady state, a baseline of
+21 whole window cycles (the run is past 21,600 ticks before the loss), then the loss the disturbance trial names: low density structure stops arriving
+(lasting until no craft finishes for a window cycle, restored at the place in the window cycle it was cut at). Recorded at Factorio 2.1.24, both cases the same:
+steady state at tick 7,136, 192 in each of the 21 window cycles, and after the loss the output comes back (recovered at tick 27,632). The simulator's
+verdict for the clock is "no recovery", from the loss on the copies that share a lane; the scaffold holds one copy, so that join is not in this run.
+On the seven-copy scaffold the game agrees with the simulator's "no recovery" (copy 7 stayed at 0 for 45 window cycles after the same stop, the build's known deadlock risk), so the one-copy difference comes from the one-copy scaffold having no shared lane.
+
+```bash
+UTILITY_120_CAPTURE_DIR=.scratch/utility-120 npm run test:game -- tests/game/builds/utility-science-120-selected-clock.game.test.ts
+```
+
+## The missing recordings: the picks of eight record jobs from the staged start
+
+[missing-recordings-clock.game.test.ts](missing-recordings-clock.game.test.ts) records the clock the record selects for each job of
+[missing-recordings-clock-fixtures.ts](missing-recordings-clock-fixtures.ts) on the sample's scaffold, from the staged start (every inserter of these
+builds has a window, so the staged start is the judged start), with the probe [missing-recordings-clock-probe.lua](missing-recordings-clock-probe.lua):
+steady state, a baseline of whole window cycles, then the losses of the case one after the other (each until the output falls, then released),
+then 7,200 ticks more. The losses are the standard cuts of the families above (an ingredient cut of each input line, the output block, an ingredient cut)
+where the build has input lines, the productivity module chain's own (coal, output, iron foundries stopped), and the output block alone for a build that takes
+every ingredient from fluids or machines (accumulator). A build of copies is judged on each copy by itself: every whole window cycle from steady state to the first
+loss, and every whole window cycle of the last minute after the last loss. The controls are in
+[missing-recordings-clock-controls.json](missing-recordings-clock-controls.json); the test keeps each run, its verdict and its controls entry in `MISSING_RECORDINGS_CAPTURE_DIR`.
+Recorded at Factorio 2.1.24, all seven holding their target on every copy and recovering from every loss:
+
+| Job | Clock (window cycle) | Copies built | Window cycles per copy before / after the losses | Steady state | Last loss recovered |
+| --- | --- | --- | --- | --- | --- |
+| `AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING` | Pitch Pickups (72) | 9 of 9 | 50 / 50 | 7,292 | 17,736 |
+| `FLYING_ROBOT_FRAME_80` | Moved Output Swing (288) | 12 of 12 | 12 / 12 | 7,056 | 25,261 |
+| `PRODUCTIVITY_MODULE_80_CHEST_CHAIN` | Coordinated Sources (72) | 1 of 6 | 50 / 50 | 7,437 | 27,146 |
+| `ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED` | Coordinated Sources (40) | 2 of 5 | 90 / 90 | 7,200 | 32,428 |
+| `PROCESSING_UNIT_15_CHEST_FED` | Euclidean Swings (384) | 1 of 1 | 9 / 9 | 7,074 | 19,010 |
+| `LOGISTIC_SCIENCE_240` | Takt Batches (176) | 22 of 11 (two rows) | 20 / 20 | 7,194 | 20,042 |
+| `ACCUMULATOR_320` | Coordinated Sources (972) | 9 of 9 | 3 / 3 | 6,516 | 15,174 |
+
+- The first pick is "no recovery" in the simulator (copper plate stops arriving on the copies that share a lane). In the game all nine copies keep their rate and
+  the output comes back after that loss, so the game and the simulator differ, as for utility science 120 above.
+- Named limits: the scaffold of the productivity module chain holds one copy of the job's six, and that of the electromagnetic science recycler build two of five; the
+  joins of the other copies are not in these runs. The recycler build's output is random: each copy made 2,907 and 2,890 of 2,880 over its 90 window cycles before the
+  losses (2,900 and 2,892 of 2,880 after), 12 to 15 of its window cycles short of 32 by a few items, so it is judged on the stretch and not on each window cycle. The staged
+  recording starts before the recyclers have a recipe, so its copies are the final machines taken from the west, two to a copy.
+- `AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER` (one copy of the job's nine) cannot be recorded from the staged start: the staged start fills the belts under the
+  pickups before it places the build's inserters, and the only inserters that put anything on this build's belt are the foundries' output inserters, which are placed
+  with the clock; the lanes never saturate ("The belts did not saturate", 2026-11-17, Factorio 2.1.24). It waits for a start from ruling 60's state.
+
+```bash
+MISSING_RECORDINGS_CAPTURE_DIR=.scratch/missing-recordings npm run test:game -- tests/game/builds/missing-recordings-clock.game.test.ts -t flying-robot-frame
 ```

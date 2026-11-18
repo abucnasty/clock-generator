@@ -32,7 +32,7 @@ describe("the tick ledger of a build run by hand", () => {
             const before = context.tick_provider.getCurrentTick();
             new PrepareStep(context).execute();
             prepared = context.tick_provider.getCurrentTick() - before;
-            const warmup = new WarmupStep(context, Duration.ofTicks(ASKED_WARMUP), { window_cycle_ticks: WINDOW_CYCLE, key: () => "the same state" });
+            const warmup = new WarmupStep(context, Duration.ofTicks(ASKED_WARMUP), { bin_ticks: WINDOW_CYCLE, key: () => "the same state" });
             warmup.execute();
             warmed = warmup.ticks_run;
             let steps = 0;
@@ -53,7 +53,7 @@ describe("the tick ledger of a build run by hand", () => {
 
     it("counts the ticks of a loop that ended with an error, when the ledger closes", () => {
         const context = SimulationContext.fromConfig(steelHub());
-        const warmup = new WarmupStep(context, Duration.ofTicks(100), { window_cycle_ticks: 10, key: () => { if (context.tick_provider.getCurrentTick() >= 30) throw new Error("stopped"); return String(context.tick_provider.getCurrentTick()); } });
+        const warmup = new WarmupStep(context, Duration.ofTicks(100), { bin_ticks: 10, key: () => { if (context.tick_provider.getCurrentTick() >= 30) throw new Error("stopped"); return String(context.tick_provider.getCurrentTick()); } });
         let count: TickLedgerCount | undefined;
         expect(() => withTickLedger(made => { count = made; }, () => withTickPurpose("long_run", () => warmup.execute()))).toThrow("stopped");
         expect(count!.rows).toEqual([{ maker: null, purpose: "long_run", stage: "warm_up", loop: "warmup_step", runs: 1, ticks: 30 }]);
@@ -195,7 +195,7 @@ describe("the shadow: the first warm-up window cycle whose output equals the jud
         const asked = options.asked_cycles ?? WARM_UP_CYCLES;
         const count = counted(() => withTickPurpose("long_run", () => {
             const shadow = beginShadow(WINDOW_CYCLE, asked, 1, total)!;
-            new WarmupStep(context, Duration.ofTicks(asked * WINDOW_CYCLE), options.stops_at_repeat ? { window_cycle_ticks: WINDOW_CYCLE, key: () => "the same state" } : undefined, shadow.warm_up).execute();
+            new WarmupStep(context, Duration.ofTicks(asked * WINDOW_CYCLE), options.stops_at_repeat ? { bin_ticks: WINDOW_CYCLE, key: () => "the same state" } : undefined, shadow.warm_up).execute();
             const start = context.tick_provider.getCurrentTick();
             const recorder = shadow.judged(() => context.tick_provider.getCurrentTick() - start)!;
             new SimulateStep(context, Duration.ofTicks(options.recorded_ticks ?? WINDOW_CYCLE), [recorder]).execute();
@@ -230,7 +230,7 @@ describe("the shadow: the first warm-up window cycle whose output equals the jud
         expect(shadowOf([[3]], [3, 4])).toEqual({ cycle: null, stays: false });
         const count = counted(() => {
             const shadow = beginShadow(WINDOW_CYCLE, 8, 2, outputs)!;
-            const warmup = new WarmupStep(context, Duration.ofTicks(8 * WINDOW_CYCLE), { window_cycle_ticks: WINDOW_CYCLE, key: () => "the same state" }, shadow.warm_up);
+            const warmup = new WarmupStep(context, Duration.ofTicks(8 * WINDOW_CYCLE), { bin_ticks: WINDOW_CYCLE, key: () => "the same state" }, shadow.warm_up);
             warmup.execute();
             // the repeat stops it at the boundary of the first window cycle after the first: 1 whole window cycle was run
             expect(warmup.ticks_run).toBe(WINDOW_CYCLE);
@@ -244,9 +244,9 @@ describe("the shadow: the first warm-up window cycle whose output equals the jud
             const context = SimulationContext.fromConfig(steelHub());
             const work = () => {
                 const shadow = watched ? beginShadow(WINDOW_CYCLE, 8, 1, () => [0]) : undefined;
-                const warmup = new WarmupStep(context, Duration.ofTicks(8 * WINDOW_CYCLE), { window_cycle_ticks: WINDOW_CYCLE, key: () => "the same state" }, shadow?.warm_up);
+                const warmup = new WarmupStep(context, Duration.ofTicks(8 * WINDOW_CYCLE), { bin_ticks: WINDOW_CYCLE, key: () => "the same state" }, shadow?.warm_up);
                 warmup.execute();
-                return [warmup.ticks_run, warmup.repeat_window_cycles, context.tick_provider.getCurrentTick()];
+                return [warmup.ticks_run, warmup.repeat_ticks, context.tick_provider.getCurrentTick()];
             };
             return watched ? withTickLedger(() => { }, work) : work();
         };

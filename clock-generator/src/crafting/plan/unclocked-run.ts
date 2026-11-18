@@ -5,7 +5,7 @@ import assert from "../../common/assert";
 import type { NotMadeClock } from "../why-not-stable";
 import type { MakerLogSink } from "../maker-log";
 import { Config } from "../../config";
-import { EnableControlOverrideConfig } from "../../config/schema";
+import { EnableControlOverrideConfig, judgedStartOf } from "../../config/schema";
 import { assertInserterCoverage } from "../../config/inserter-coverage-validator";
 import { validateCopies } from "../../config/copies-validator";
 import { assertFlowAlongCopySpacing } from "../shared-lane-lanes";
@@ -15,7 +15,8 @@ import { buildPlanOfConfig } from "../planner/plan-build";
 import { assertLaneCapacity } from "../../config/lane-capacity-validator";
 import { DebugObserverFactory } from "../sequence/debug/debug-observer-factory";
 import { DebugSettingsProvider, MutableDebugSettingsProvider } from "../sequence/debug/debug-settings-provider";
-import { InserterClock, byProductOnlyInserters, clockWindowsOverWindowCycle, fuelOnlyInserters, isByProductOnlyInserter, alwaysEnabledInserters, unplannedInserterClocks } from "../sequence/unplanned-inserter-clock";
+import { InserterClock, byProductOnlyInserters, clockWindowsOverWindowCycle, fuelOnlyInserters, isByProductOnlyInserter, alwaysEnabledInserters, loopInserters, unplannedInserterClocks } from "../sequence/unplanned-inserter-clock";
+import { BackpressureFillStep, reportFill } from "../runner/steps/backpressure-fill-step";
 import { createEntityRegistryFromConfig, MovingPickupPhases, SimulationContext } from "../sequence/simulation-context";
 import { Duration, OpenRange } from "../../data-types";
 import { Entity, EntityId, handSizeFor, Inserter, Machine, ReadableEntityRegistry } from "../../entities";
@@ -48,6 +49,9 @@ import { WarmupStep } from "../runner/steps/warmup-step";
 import { FullOutputChest, fullOutputChestsOf } from "../full-output-chests";
 import { ExportShortfall, exportShortfallsOfWindowCycle, exportedItemsOf } from "../export-delivery";
 import { simulationStateKey } from "../runner/steady-state";
+import { stateKeyWithLanes } from "../runner/shared-lanes-key";
+import type { SharedLane } from "../../state/shared-lane";
+import { controlsKeyOf, InstalledControl, skipRepeatedTicks, warmUpRepeatOf } from "../runner/warm-up-repeat";
 import { SimulateStep } from "../runner/steps/simulate-step";
 import { RunnerStepType } from "../runner/steps/runner-step";
 import { Logger, defaultLogger } from "../../common/logger";
@@ -75,7 +79,7 @@ import type { TurnGroup } from "../turn-groups";
 import type { SourceControl } from "../strategy-catalog";
 import { AlwaysOnReason, AlwaysOnReasons, alwaysOnReasonsOf, classifyEntities } from "../enable-control-router";
 import { RunMemo, currentRunMemo } from "./run-memo";
-import { beginShadow, countRunMemoHit, tickLedgerOn, withTickPurpose, type ShadowWatch } from "../tick-ledger";
+import { beginShadow, countRunMemoHit, runsThatMakeWindows, tickLedgerOn, withTickPurpose, type ShadowWatch } from "../tick-ledger";
 import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, completedAsBuiltCheck, laneHandRoomTrial, runAsBuiltCheck, runClockOnBuild, trialWithLoopWindows } from "../trial";
 
 export { SIMULATION_BUDGET_TICKS };
@@ -492,6 +496,13 @@ export interface RunOptions {
      * false: the planning run is not on a clock, and starts from the build filled until its output is blocked).
      */
     cold_start?: boolean;
+    /**
+     * Start from the fill of the backpressure start (`overrides.judged_start`) rather than the cold start: the build is run
+     * with the inserters and drills a clock holds off until the part nothing clocks has settled (`BackpressureFillStep`),
+     * and the clock starts there. Set by `runBuild` for a run from a cold start, where the config asks for it and the run
+     * judges a clock; a run that makes or tries windows keeps the cold start (`runsThatMakeWindows`).
+     */
+    fill_start?: true;
     /** In what order inserters that compete for one machine's product are updated where the turn rule cannot decide (default descending config ids) */
     competing_takers_order?: TakerOrder;
     /**
@@ -527,6 +538,11 @@ export interface RunOptions {
      * plan is made on the config, and each copy's inserters and drills run on the controls of the config's own
      */
     build_copies?: BuildCopies;
+    /**
+     * The lanes a run of the copies shares (`runOnSharedLanes`), which the context's states do not hold: filled by
+     * `on_context` before the first tick, and keyed with the state where the warm-up looks for a repeat (`stateKeyWithLanes`)
+     */
+    shared_lanes?: { readonly lanes: readonly { readonly lane: SharedLane }[] };
     /**
      * After the run, cut one supply of the build and give it back, several times over, and count what the build makes
      * once it is back (see disturbance-trial.ts). For a run on clock windows alone; nothing is cut in any other run.
@@ -652,7 +668,8 @@ export interface BuildRun extends PlannedOutputCycle, TransferPlan {
  * A long run that the generation in progress has made before, with this config and these options, is not made again
  * (see `RunMemo`).
  */
-export function runBuild(config: Config, options: RunOptions): BuildRun {
+export function runBuild(config: Config, asked: RunOptions): BuildRun {
+    const options = withTheStartOf(config, asked);
     const memo = currentRunMemo();
     if (memo === undefined || !RunMemo.accepts(options)) return simulateBuild(config, options);
     // a run the memo hands out again simulates no tick: the tick ledger counts it as a run asked and not made
@@ -660,6 +677,17 @@ export function runBuild(config: Config, options: RunOptions): BuildRun {
     const run = memo.run(config, options, () => simulateBuild(config, options));
     if (memo.hits > hits_before) countRunMemoHit();
     return run;
+}
+
+/**
+ * The options a run is made with: a run from a cold start is made from the fill unless `overrides.judged_start` asks for
+ * the cold start (`judgedStartOf`), where the run judges a clock. A run that makes or tries windows (`runsThatMakeWindows`) keeps the cold start: its
+ * windows are the ones the clock-only runs of the cold start are judged on. The start is in the options, so the run memo
+ * keeps the two apart.
+ */
+function withTheStartOf(config: Config, options: RunOptions): RunOptions {
+    if (options.cold_start !== true || options.fill_start === true || judgedStartOf(config.overrides) !== "backpressure" || runsThatMakeWindows()) return options;
+    return { ...options, fill_start: true };
 }
 
 function simulateBuild(config: Config, options: RunOptions): BuildRun {
@@ -682,7 +710,9 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
     const swing_counts = output_cycle_plan.entity_transfer_map;
     const transfer_plan = planTransfers(config, output_cycle_plan, simulation_context, logger);
     // a staged scaffold starts with nothing in its machines: the plan stands, the build is made anew and seeded
-    const build = options.cold_start ? coldBuildOf(config, options, debug, logger) : planned_build;
+    const build = options.cold_start
+        ? (options.fill_start === true ? backpressureBuildOf(config, options, output_cycle_plan, transfer_plan.recipe_lcm, debug, logger) : coldBuildOf(config, options, debug, logger))
+        : planned_build;
     const controlled = withEnableControls(config, build, output_cycle_plan, transfer_plan.recipe_lcm, logger,
         options.counter_runs_through === true);
     const { duration, warmup_window_cycle } = runWindowCyclesOf(output_cycle_plan, transfer_plan.recipe_lcm, options, logger, window_cycle_ticks => {
@@ -702,7 +732,8 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
 
     // the shadow of the tick ledger: only where a ledger is open; it reads the outputs and changes nothing
     const shadow = tickLedgerOn() ? shadowOfOutputs(build, all_output_inserters, duration, warmup_window_cycle) : undefined;
-    const warmup = warmUp(config, build, controlled, duration, warmup_window_cycle, debug, debug_steps, logger, shadow);
+    const shared_lanes = options.shared_lanes?.lanes.map(it => it.lane) ?? [];
+    const warmup = warmUp(config, build, controlled, duration, warmup_window_cycle, shared_lanes, debug, debug_steps, logger, shadow);
     const repeat_window_cycles = warmup.repeat_window_cycles;
     const repeat_bin = options.detect_repeat === true && (options.simulate_window_cycles ?? 1) > 1 ? provenRepeatBin(config, duration.ticks) : null;
     const simulated = simulate(build, controlled, all_output_inserters, duration, options, debug, debug_steps, logger, repeat_bin, shadow);
@@ -833,10 +864,72 @@ function recordedBuildOf(config: Config, options: RunOptions, debug: MutableDebu
  * makes its own ingredient is given `overrides.kick_start_items` of it once (see `kickStartLoopingRecipes`).
  */
 function coldBuildOf(config: Config, options: RunOptions, debug: MutableDebugSettingsProvider, logger: Logger): RecordedBuild {
-    const build = recordedBuildOf(config, options, debug, logger, options.build_copies);
+    return withTheColdStart(recordedBuildOf(config, options, debug, logger, options.build_copies), config, options);
+}
+
+function withTheColdStart(build: RecordedBuild, config: Config, options: RunOptions): RecordedBuild {
     kickStartLoopingRecipes(build.simulation_context, config.overrides?.kick_start_items ?? DEFAULT_KICK_START_ITEMS);
     options.on_context?.(build.simulation_context);
     return build;
+}
+
+/**
+ * The backpressure start of ruling 60 (`overrides.judged_start`), for a run that judges a clock: the build anew, run with
+ * every clocked inserter and drill off and every other one on until the part nothing clocks repeats (`BackpressureFillStep`),
+ * then every machine that makes its own ingredient is given its kick start, and the clock starts. Inserters on fuel clocks of
+ * their own stay on in the fill; the inserters of a loop are off in it. A later copy's inserter or drill is held with its twin.
+ *
+ * - A run with nothing clocked is its own fill: it starts as the cold start does.
+ * - A run read by an `on_context` reader or made of copies has the readers put in before the fill, as the cold start puts them
+ *   in before its first tick (the shared lanes go in at tick 0), so that they see the fill as they see a warm-up; the fill then
+ *   ends at a whole number of window cycles, so that the tick a reader sees is the tick of the clock. Where the window cycle is
+ *   not a whole number of ticks that cannot be done, and such a run keeps the cold start.
+ * - Whatever the run is, the fill ends at the lane phase the cold start has at its tick 0 (`BackpressureFillStep`).
+ */
+function backpressureBuildOf(config: Config, options: RunOptions, output_cycle_plan: OutputCyclePlan, recipe_lcm: number,
+    debug: MutableDebugSettingsProvider, logger: Logger): RecordedBuild {
+    const window_cycle_ticks = options.window_cycle_ticks ?? OutputCyclePlan.ticksOfCycles(output_cycle_plan, recipe_lcm);
+    const build = recordedBuildOf(config, options, debug, logger, options.build_copies);
+    const { simulation_context } = build;
+    const held_off = heldOffByTheClock(config, simulation_context, OutputCyclePlan.ticksOfCycles(output_cycle_plan, recipe_lcm));
+    if (held_off.size === 0) {
+        reportFill({ window_cycle_ticks, held_off: 0, kept_cold: "nothing_clocked" });
+        return withTheColdStart(build, config, options);
+    }
+    const read = options.on_context !== undefined || options.build_copies !== undefined;
+    if (read && !Number.isInteger(window_cycle_ticks)) {
+        reportFill({ window_cycle_ticks, held_off: held_off.size, kept_cold: "fractional_window_cycle" });
+        return withTheColdStart(build, config, options);
+    }
+    options.on_context?.(simulation_context);
+    const fill = new BackpressureFillStep(simulation_context, held_off, read ? window_cycle_ticks : 1).execute();
+    if (fill.end === "cap") {
+        logger.warn(`The fill of the backpressure start did not settle in ${fill.ticks} ticks; the clock starts from where it stands. Lines still changing: ${fill.changing?.join(", ")}`);
+    }
+    kickStartLoopingRecipes(simulation_context, config.overrides?.kick_start_items ?? DEFAULT_KICK_START_ITEMS);
+    reportFill({ window_cycle_ticks, held_off: held_off.size, fill });
+    build.inventory_transfer_history.clear();
+    build.relative_tick.start = simulation_context.tick_provider.getCurrentTick();
+    return build;
+}
+
+/**
+ * The inserters and drills a clock holds in a run on clock windows, by the id the config gives them: those with a clocked
+ * control (`overrides.enable_control.mode` CLOCKED) but the fuel inserters on a clock of their own, and the inserters of a loop
+ */
+function heldOffByTheClock(config: Config, simulation_context: SimulationContext, window_cycle_ticks: number): Set<string> {
+    const registry = simulation_context.entity_registry;
+    const own_clock = new Set(Array.from(unplannedInserterClocks(registry, window_cycle_ticks, undefined, undefined, alwaysEnabledByConfig(config)))
+        .filter(([, clock]) => clock.own_clock).map(([id]) => id));
+    const held = new Set<string>(loopInserters(registry).map(inserter => inserter.entity_id.id));
+    config.inserters.forEach((inserter, index) => {
+        const id = EntityId.forInserter(inserter.id ?? index + 1).id;
+        if (!own_clock.has(id) && inserter.overrides?.enable_control?.mode === "CLOCKED") held.add(id);
+    });
+    for (const drill of config.drills?.configs ?? []) {
+        if (drill.overrides?.enable_control?.mode === "CLOCKED") held.add(EntityId.forDrill(drill.id).id);
+    }
+    return held;
 }
 
 /** Runs a step with debugging on when `debug_steps` asks for it for that step, and turns it off after */
@@ -952,6 +1045,8 @@ interface ControlledBuild {
     crafting_shares: Map<string, number>;
     always_enabled_by_config: Set<string>;
     inserter_clocks: Map<string, InserterClock>;
+    /** The control each inserter and drill was put on, in the order of the context's lists */
+    installed_controls: InstalledControl[];
 }
 
 /**
@@ -1022,29 +1117,34 @@ function withEnableControls(
     // Swap the controls of the build's context, in place
     // Route to configurable factory if override mode is not AUTO, otherwise use automatic factory
     // a later copy's inserter or drill runs on the control of the config's own (build-copies.ts); a condition reads the
-    // copy's own entities
+    // copy's own entities; what each is put on is kept for the warm-up's proof of a repeat (`warmUpRepeatOf`)
+    const installed_controls: InstalledControl[] = [];
+    const install = (entity_id: EntityId, control: InstalledControl["control"]) => {
+        installed_controls.push({ control, override: enable_control_override_map.get(entity_id.id) });
+        return control;
+    };
     simulation_context.useControls({
         drill: (drill_state) => {
             const entity_id = twinOf(drill_state.entity_id);
             if (configurable_enable_control_factory.hasOverride(entity_id)) {
                 const override_mode = configurable_enable_control_factory.getOverrideOrThrow(entity_id).mode;
                 logger.log(`Using configurable override for drill ${drill_state.entity_id.id} with mode ${override_mode}`);
-                return configurable_enable_control_factory.createForEntityId(entity_id);
+                return install(entity_id, configurable_enable_control_factory.createForEntityId(entity_id));
             }
-            return enable_control_factory.createForEntityId(entity_id);
+            return install(entity_id, enable_control_factory.createForEntityId(entity_id));
         },
         inserter: (inserter_state) => {
             const entity_id = twinOf(inserter_state.entity_id);
             if (configurable_enable_control_factory.hasOverride(entity_id)) {
                 const override_mode = configurable_enable_control_factory.getOverrideOrThrow(entity_id).mode;
                 logger.log(`Using configurable override for inserter ${inserter_state.entity_id.id} with mode ${override_mode}`);
-                return configurable_enable_control_factory.createForEntityId(entity_id, inserter_state.inserter);
+                return install(entity_id, configurable_enable_control_factory.createForEntityId(entity_id, inserter_state.inserter));
             }
-            return enable_control_factory.createForEntityId(entity_id);
+            return install(entity_id, enable_control_factory.createForEntityId(entity_id));
         }
     });
 
-    return { resettable_registry, crafting_shares, always_enabled_by_config, inserter_clocks };
+    return { resettable_registry, crafting_shares, always_enabled_by_config, inserter_clocks, installed_controls };
 }
 
 /** How long a build runs: the window cycle of the clock, and the warmup before it */
@@ -1091,8 +1191,9 @@ function runWindowCyclesOf(output_cycle_plan: OutputCyclePlan, recipe_lcm: numbe
 }
 
 /**
- * Step 2: warms the build up. Returns the window cycles its state repeats over, when the warmup reached a repeating state;
- * a build that is not clocked throughout is not checked for one.
+ * Step 2: warms the build up, and stops where its state repeats wherever its controls let the key prove a repeat
+ * (`warmUpRepeatOf`); in a run of the copies the key holds the lanes they share too. Returns the window cycles its state repeats over, when the warmup reached a repeating state on a
+ * build clocked throughout on the run's window cycle; the stability check reads them, and no other repeat.
  */
 function warmUp(
     config: Config,
@@ -1100,6 +1201,8 @@ function warmUp(
     controlled: ControlledBuild,
     duration: Duration,
     warmup_window_cycle: Duration,
+    /** The lanes a run of the copies shares, which the context's states do not hold: keyed with them (`stateKeyWithLanes`) */
+    shared_lanes: readonly SharedLane[],
     debug: MutableDebugSettingsProvider,
     debug_steps: DebugSteps,
     logger: Logger,
@@ -1112,15 +1215,25 @@ function warmUp(
     // the clocks start here, on a cold build at its tick 0
     resettable_registry.resetAll(true);
     return withDebugFor(debug, debug_steps, RunnerStepType.WARM_UP, () => {
+        const repeat = warmUpRepeatOf(duration.ticks, controlled.installed_controls, warmup_window_cycle.ticks);
+        const controls_key = repeat.armed ? controlsKeyOf(controlled.installed_controls) : undefined;
         const warmup_step = new WarmupStep(simulation_context, warmup_window_cycle,
-            isPurelyClocked(config, duration.ticks)
-                ? { window_cycle_ticks: duration.ticks, key: () => simulationStateKey(simulation_context) }
+            repeat.armed
+                ? { bin_ticks: repeat.bin_ticks, keyed_from_ticks: repeat.keyed_from_ticks, key: () => `${stateKeyWithLanes(simulation_context, shared_lanes)}\n${controls_key!()}` }
                 : undefined, shadow?.warm_up);
         warmup_step.execute();
+        // a stop left out whole repeats: what the controls count in spans of the run moves on by them
+        if (warmup_step.repeat_ticks !== undefined) {
+            skipRepeatedTicks(controlled.installed_controls, Math.ceil(warmup_window_cycle.ticks) - warmup_step.ticks_run);
+        }
         if (warmup_step.ticks_run < warmup_window_cycle.ticks) {
             logger.log(`Warm-up reached a repeating state after ${warmup_step.ticks_run} ticks`);
         }
-        return { repeat_window_cycles: warmup_step.repeat_window_cycles, ticks_run: warmup_step.ticks_run };
+        const repeat_ticks = warmup_step.repeat_ticks;
+        return {
+            repeat_window_cycles: repeat_ticks !== undefined && isPurelyClocked(config, duration.ticks) ? repeat_ticks / duration.ticks : undefined,
+            ticks_run: warmup_step.ticks_run,
+        };
     });
 }
 

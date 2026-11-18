@@ -306,7 +306,8 @@ after the engine reads the file: a field with a default is required, but a confi
 | `overrides.terminal_swing_count` | integer > 0 | no | The number of output swings in each output cycle; without it, the generator chooses the number. |
 | `overrides.backed_up_belts` | boolean | no | Deprecated. State the lane_end of each lane instead. true: each lane without a lane_end is a dead end. false: each such lane is an infinite end. Without it, the role of the lane sets the end. |
 | `overrides.search_for_fewer_wake_ups` | boolean | no | Whether the generator always does the four searches, to find a clock with fewer wakeups. |
-| `overrides.check_start_dependence` | boolean | no | Whether the generator tests each clock from more starts than the cold start. |
+| `overrides.check_start_dependence` | boolean | no | Whether the generator tests each clock from more starts than the one it is judged from (judged_start). |
+| `overrides.judged_start` | one of `cold`, `backpressure` | no | The start every clock is judged from: the backpressure start (the default: the unclocked part of the build filled until it settles, then the clock), or the cold start. |
 | `overrides.disturbance_trials_on_copies` | boolean | no | Whether the generator makes the disturbance trials again on the copies that share a lane. |
 | `overrides.kick_start_items` | integer ≥ 0 | no | The kick start: the number of its own product that a machine gets before its clock starts, when its recipe uses that product. |
 | `overrides.disable_swing_backoff` | boolean | no | Not used: set terminal_swing_count to give the number of output swings. |

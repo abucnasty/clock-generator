@@ -55,9 +55,11 @@ export interface LoopInserterBound {
 }
 
 /**
- * #516's two-hop bound (0.26.0 DESIGN section 6) on the windows of a clock of a build with a loop of machines: a report of
- * the margins, which no clock is kept or dropped by. `source_leftover_margin` and `sink_stock_margin_crafts` are the least
- * of hop 1 (items) and of hop 2 (crafts) over the loop's inserters.
+ * #516's two-hop bound (0.26.0 DESIGN section 6) on the windows of a clock of a build with a loop of machines. Hop 2 is a
+ * gate: the windows of a loop's own inserters are kept only where every machine of the loop has a craft to spare
+ * (`margin_crafts` at least 0; trialWithLoopWindows in trial.ts). Hop 1 is a report: it counts a source as giving all it
+ * held at a closing edge, and is under 0 on windows that hold. `source_leftover_margin` and `sink_stock_margin_crafts` are
+ * the least of hop 1 (items) and of hop 2 (crafts) over the loop's inserters.
  */
 export interface LoopStockBound {
     readonly inserters: readonly LoopInserterBound[];
@@ -180,6 +182,20 @@ export function loopStockBound(config: Config, windows: SerializableClockWindows
         source_leftover_margin: Math.min(...bounds.flatMap(it => it.source_leftover.map(window => window.margin))),
         sink_stock_margin_crafts: Math.min(...bounds.map(it => it.sink_stock.margin_crafts)),
     };
+}
+
+/**
+ * #516's gate on the windows of a loop's own inserters (hop 2 of `loopStockBound`): at each machine of the loop, the
+ * insertion limit of the item its loop feeders bring, less what the machine draws and loses to spoilage over the longest
+ * stretch of the window cycle in which none of them is enabled, has to leave at least one craft's worth. Null where it
+ * does; else why not. Its premise: a machine holds its insertion limit when the last of its loop feeders' windows closes,
+ * else that window would have brought it a hand.
+ */
+export function loopStockShortOf(config: Config, windows: SerializableClockWindows, window_cycle_ticks: number): string | null {
+    const short = loopStockBound(config, windows, window_cycle_ticks)?.inserters.find(it => it.sink_stock.margin_crafts < 0);
+    return short === undefined ? null
+        : `${short.sink} holds ${short.item} for ${round(short.sink_stock.margin_crafts + 1)} crafts after the ${short.sink_stock.longest_gap} ticks `
+            + "without a window of its loop feeders, under one craft to spare";
 }
 
 /** The assessment's `loop_stock_bound` of a clock: its bound where it has windows for a loop (`loop_windows`), else nothing */

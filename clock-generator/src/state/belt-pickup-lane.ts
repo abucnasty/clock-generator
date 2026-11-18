@@ -60,6 +60,17 @@ export class BeltPickupLane implements BeltPickupStock {
         return Math.ceil((tick * this.speed - this.phase + this.length) / 64) - 1;
     }
 
+    /**
+     * The ticks after which the stream stands where it did, whatever it holds: its stacks are 64 units apart and it moves
+     * `speed` units a tick, so its place in a stack's spacing (the first number of `stateKey`) comes back every 64 / gcd(64, speed)
+     * ticks (2 on a turbo belt, 8 on a basic one). The only part of a run that is tied to the tick the context counts.
+     */
+    public phaseTicks(): number {
+        let a = 64, b = this.speed;
+        while (b !== 0) [a, b] = [b, a % b];
+        return 64 / a;
+    }
+
     public hasTakenAt(tick: number): boolean {
         return this.last_take_tick === tick;
     }

@@ -104,7 +104,7 @@ interface UseConfigFormResult {
     reorderDrills: (fromIndex: number, toIndex: number) => void;
     
     // Overrides
-    updateOverrides: (field: keyof NonNullable<ConfigFormData['overrides']>, value: number | boolean | string[] | undefined) => void;
+    updateOverrides: (field: keyof NonNullable<ConfigFormData['overrides']>, value: number | boolean | string | string[] | undefined) => void;
     updateIgnoredIngredients: (items: string[], transferPlan: SerializableTransferPlan) => void;
     
     // Import/Export

@@ -22,9 +22,10 @@ export const GENERATED_ALTERNATIVE = "coordinated_sources";
 
 /**
  * The id of the alternative the cases before the selection moved recorded: the 24-tick one, which the rule for hands in groups makes stable, with a window
- * of a tick at each swing of the takers the surplus guard gates. It is still an alternative of the job, and its two recordings are kept.
+ * of a tick at each swing of the takers the surplus guard gates. It is still an alternative of the job, and its two recordings are kept. From the
+ * backpressure start (the default) the same windows come from the one-swing maker, under the id below (round_robin_polling_per_hand before).
  */
-export const PER_HAND_ALTERNATIVE = "round_robin_polling_per_hand";
+export const PER_HAND_ALTERNATIVE = "round_robin_polling_swings_1_per_hand";
 
 /** The scaffold has four throttle inserters (belt to infinity chest) and four chest inserters for the plastic, which the config does not have */
 const SCAFFOLD_INSERTERS = 8;

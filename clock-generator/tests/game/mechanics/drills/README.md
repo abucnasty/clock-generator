@@ -33,8 +33,8 @@ Each build checks three things:
 - **The whole build in the simulator**, every entity simulated, for the builds whose other entities the simulator has as
   the game does (`simulated`: the car emptied by a stack inserter, `landfill-l8`): the sink's count in every tick. A yellow
   inserter taking from a car leaves with what is there where the simulator's waits to fill its hand, and an assembler
-  starts its next craft a tick later in the simulator than in the game, so those builds are compared through the drill
-  alone.
+  started its next craft a tick later in the simulator than in the game (recorded before the simulator kept a craft's
+  progress as the game does, #760; not compared since), so those builds are compared through the drill alone.
 
 The game's drill has no mining target in the recording's first tick: game row k is the simulator's k-th tick.
 

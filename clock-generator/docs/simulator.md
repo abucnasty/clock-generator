@@ -459,6 +459,16 @@ That one tick decides whether a clock holds when its windows are as long as the 
 
 That clock has two states, and the game was in both: one plant made its 352 a window cycle and the other 264, under the same windows. Which one a machine ends up in is decided by what it holds when the clock starts. In the earlier filled-start generator, with machines full of ingredients and emptied of products, the simulator held 704 from every place in the window cycle and classified the clock as meeting goal 1. In that investigation, starting the plants short of ingredients instead fell short from 12 of 108 starts, where the tightened clock and the clock from version 0.5.0 got back to 704 from all 108. Those observations are historical evidence, not the current startup contract. Current clock trials start with full input supplies, empty machines, buffers and hands, phase 0 and the configured one-time kick start (default 200), and with the clock's first latency ticks dark (see [Starting on supplied belts](#starting-on-supplied-belts)); planning still uses a separate prepared build. Optional extended checks sample other cold clock phases and competing-taker orders actually listed in `assessment.start_dependence.starts`, not filled or free-running builds. Neither those samples nor the disturbance trials prove convergence from every live inventory or build order (see [stability](stability.md)).
 
+### When a craft finishes
+
+A machine keeps the craft underway as the game does: in seconds of recipe time, a double, a tick adding crafting speed / 60 at full power (`Crafting`, `clock-generator/src/simulation/components/crafting.ts`). The craft finishes in the tick that sum reaches the recipe time, with no tolerance, and the rest of the tick's step goes on to the next craft:
+
+- a rest above 0: the next craft takes its ingredients in the same tick (233/640, 1/60, 1/40 and 1/600 of a craft a tick);
+- a rest of exactly 0: it takes them at the start of the next tick (1/8);
+- a sum that falls short of the recipe time by rounding: the craft finishes a tick late, and the next takes its ingredients in that late tick (1/30 on 0.5 s, 1/192 on 3.2 s).
+
+The fraction of a craft a tick does not decide it alone: 1/60 is on time as speed 1 on 1 s and as 0.5 on 0.5 s, and 1/30 (speed 1 on 0.5 s) is late. Recorded in Factorio 2.1.24 on nine machines, 3,500 ticks each: the simulator takes, finishes and pays the productivity bonus in the game's ticks (`clock-generator/src/simulation/archetypes/crafting-machine.test.ts`). The productivity bar is fed the part of a craft each step makes. A run's key holds the craft and the bar to a billionth of a craft, so a run whose doubles drift apart by less than that repeats. Not recorded: a tick at less than full power (a burner's restart), a machine that stops with a rest carried, and crafting speeds rounded as configs carry them.
+
 ### Products a machine cannot put out
 
 A machine starts a craft whatever its output holds, and the products are made when the craft finishes. If they do not fit under the stack size, the machine holds them and starts no craft until they do. It puts them in its output in the first tick there is room, in whatever state the machine is: working, short of ingredients or at its output block. In a tick the inserters act first and the machines after them (the order of a tick, phase by phase and step by step, is one table: `clock-generator/src/simulation/tick-phases.ts`), and the recorder samples at the end of the tick. So when an inserter takes products from a machine that holds some, the machine puts them in during that same tick, and one sample shows both, though the machine has nothing left to craft with. Seen in the game on the agricultural science build from the staged start: the two nutrient machines held 40 nutrients behind a full output, an inserter took 32 and the output read 88 in the sample of tick 92, where the simulator, which put held products in only while the machine was working, read 48. With the rule they agree through the first 600 ticks. A full productivity bar is still paid in the working tick, not before. The statistic `products_finished` is not changed by it: the simulator counts a craft when it finishes, the game when its products are put in the output.
@@ -529,6 +539,18 @@ A drill mines by two progress bars, as the game's does (since 0.20.0): each tick
 - **A window that opens on a machine at its output block** follows hold-up rules with unexplained exceptions (see "When a waiting inserter acts"). One of them (#276): when another inserter takes a machine's products off its output block in the tick a belt hand comes back from its swing, the simulator has the hand take its first stack in that tick. In the game it comes a tick later when the taker drops onto a belt (56 of 56 hands), and by the decider order when it drops into a chest (79 of 79). The game's rule, tried in the simulator, moves no recommended clock. Whether the model takes it on is not decided.
 - **A fuel inserter's own clock** runs with no circuit latency in the simulator, while its blueprint encodes the usual two ticks (#276). Neither has been checked in the game. Adding the two ticks changes no clock, verdict or selection, only the wakeup figures of four fuel samples, none of which has a build.
 - **The burner energy model** is checked on outcomes only (total burn against the configured rate), never tick by tick against the game.
+- **The hand surplus of a loop build** (#759). In a build with a loop, an inserter that brings an ingredient from a
+  machine outside the loop (the nutrients of the egg loop) gets windows for 1.43 times the hands its machine needs
+  (`MACHINE_HANDS_SURPLUS`, `clock-generator/src/crafting/plan/unclocked-run.ts`). This number is fitted to the game, and
+  the simulator cannot judge it. Measured in the game on 2026-10-09 on the agricultural science build, which needs
+  30.652 hands an inserter in 480 ticks on every clock: with 40 hands (1.30) the egg biochambers ran out of nutrients on
+  the 1- and 2-swing clocks; with 44 (1.43) they did not. The simulator has the refusal that uses up the surplus: an egg
+  biochamber takes no nutrients as an ingredient while its output holds 14 eggs or more, and takes a hand into its fuel
+  slot only while that slot is under its limit (`clock-generator/src/simulation/components/ingress.test.ts`). But its
+  as-built check and its long run pass both clocks at 1.30 (simulated 2026-11-17). So 40 hands left the build short in the
+  game and hold in the simulator, and the cause is not known. The recordings of 2026-10-09 are not in the repository.
+  Until a game run records these hands at 1.30, the generator keeps 1.43, and the windows of every loop build rest on
+  that one build.
 
 
 ## Right bend with an upstream pickup

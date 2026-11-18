@@ -220,6 +220,22 @@ export function repeatCheckOn(): boolean {
 }
 
 /**
+ * Runs `work` with the events it gives held back instead of given to the sink; the caller gives those it keeps (`emitMakerLog`).
+ * Its seconds are counted as they would be. Without a log no event is built and none is held.
+ */
+export function heldMakerLog<T>(work: () => T): { value: T; events: MakerLogEvent[] } {
+    const own = scope;
+    const events: MakerLogEvent[] = [];
+    if (own === undefined) return { value: work(), events };
+    scope = { ...own, sink: event => { events.push(event); } };
+    try {
+        return { value: work(), events };
+    } finally {
+        scope = own;
+    }
+}
+
+/**
  * Runs `work` and counts its seconds to a maker, where a log is on. The ticks the work simulates are counted to the maker too
  * (`withTickMaker`, a ledger of its own: it does nothing where none is open).
  */
