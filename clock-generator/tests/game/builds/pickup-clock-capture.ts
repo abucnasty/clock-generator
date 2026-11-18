@@ -82,6 +82,8 @@ export interface PickupClockScenario {
     baseline?: {ticks: number; reason: string};
     /** A probe of its own, in place of pickup-clock-speed-probe.lua: it runs steady.lua with its own disturbances and writes clock-speed.json */
     probeFile?: string;
+    /** A Lua file composed in before the probe's own (test-only additions that read the game and change nothing; see composeProbeSource) */
+    probePrelude?: string;
     /**
      * The run starts from the harness's staged start (every inserter of the build placed with the clock in one tick, the machines and
      * containers as the start leaves them), not from a warm-up. The run is the settle, as in the other families, and the recording of
@@ -90,7 +92,9 @@ export interface PickupClockScenario {
      */
     staged?: boolean;
     probe: {family: string; machine_name?: string; ingredients?: readonly [string, string]; output_to_belt?: boolean;
-        trace_ticks?: number; stackSize?: number; assemblers?: number; tail?: number};
+        trace_ticks?: number; stackSize?: number; assemblers?: number; tail?: number;
+        /** The car probe's per-tick series (iron-plate-80-car-chest-series-prelude.lua), with the clock's window cycle in ticks */
+        series?: {period: number}};
     /** The native setup audit, in place of assertPickupClockHardware (which expects a belt-fed input) */
     assertHardware?: (recording: Recording, config: Config, blueprint: string) => void;
     validateRecording?: (recording: Recording, config: Config) => void;
@@ -238,7 +242,7 @@ export async function capturePickupClockScenario(scenario: PickupClockScenario) 
                     ...scenario.probe, window: RUN_PROTOCOL.window, expected: expectedPerWindow, baseline: baselineTicks, cap: RUN_PROTOCOL.cap,
                     recipes, item: config.setpoint.recipe, speed: scenario.speed.units / 32, reach,
                     ...(scenario.staged && {staged: true, finals}),
-                }), game_speed: 1000, watch: false, timeout_seconds: scenario.staged ? 1800 : 900, log() {},
+                }, scenario.probePrelude), game_speed: 1000, watch: false, timeout_seconds: scenario.staged ? 1800 : 900, log() {},
             })).recording;
         (scenario.assertHardware ?? assertPickupClockHardware)(recording, config, blueprint);
         scenario.validateRecording?.(recording, config);
@@ -249,6 +253,11 @@ export async function capturePickupClockScenario(scenario: PickupClockScenario) 
             expect(report.initial).toMatchObject({speed: scenario.speed.units / 32, reach: reach});
         }
         scenario.validateReport?.(report);
+        // a run that asked for the car probe's series keeps it (series.json), with the protocol's own rows at each whole window cycle
+        if (report.series) {
+            fs.writeFileSync(path.join(capture.directory, "series.json"),
+                JSON.stringify({...report.series, protocol_cycles: report.protocol.series.cycles, marks: report.protocol.series.marks, events: report.events}) + "\n");
+        }
         const run = report.protocol as RunReport;
         expect(run.error, "the probe failed in the game").toBeUndefined();
         expect(run.result, "the run did not end before the recording: over the cap").toBeDefined();

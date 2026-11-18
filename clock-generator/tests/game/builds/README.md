@@ -614,6 +614,12 @@ BELT_SPEED_CAPTURE_DIR=.scratch/car-new BELT_CLOCK_CALIBRATE=1 \
   npm run test:game -- tests/game/builds/iron-plate-80-car-chest-clock.game.test.ts -t '^car clock: car-swings-3$'
 ```
 
+A test-only option keeps the series that the summary drops (`CAR_SERIES=1`, off by default; [iron-plate-80-car-chest-series-prelude.lua](iron-plate-80-car-chest-series-prelude.lua),
+composed in before the probe, so no recording made without it changes key): `series.json` in the capture directory holds, a tick, both furnaces'
+output stock, the car's ore, the drill's status, the clock's counter and the stack in each taker's hand from 10 window cycles before each drill stop to 40
+after it, and at each whole window cycle from steady state on both furnaces' products finished and productivity bars. The run and its summary are as
+without the option.
+
 ## A cargo wagon as the hub of a steel build
 
 `steel-plate-26-wagon-chest-clock.game.test.ts` enumerates 3 controls ([steel-plate-26-wagon-chest-clock-fixtures.ts](steel-plate-26-wagon-chest-clock-fixtures.ts)) on

@@ -15,12 +15,15 @@ function luaOptions(value) {
 /** Compose host-side files into the single chunk accepted by the existing harness/--lua interface.
  * @param {string} scenario Absolute scenario file path.
  * @param {Record<string, unknown>} [options] Explicit scenario parameters; no Lua placeholder replacement.
+ * @param {string} [prelude] Absolute path of a Lua file placed after the options and before the scenario, for a scenario run with a
+ *   test-only addition; without it the composed text is what it was, so no recording's key moves.
  */
-function composeProbeSource(scenario, options = {}) {
+function composeProbeSource(scenario, options = {}, prelude = undefined) {
     const modules = [ ["capture", "capture.lua"], ["pickup", "belt-pickup.lua"], ["steady", "steady.lua"] ];
     const shared = modules.map(([name, file]) =>
         `local ${name} = (function()\n${fs.readFileSync(path.join(__dirname, "lua", file), "utf8")}\nend)()\n`).join("");
-    return `${shared}\nlocal options = ${luaOptions(options)}\n${fs.readFileSync(scenario, "utf8")}\n`;
+    const before = prelude === undefined ? "" : `${fs.readFileSync(prelude, "utf8")}\n`;
+    return `${shared}\nlocal options = ${luaOptions(options)}\n${before}${fs.readFileSync(scenario, "utf8")}\n`;
 }
 
 module.exports = { composeProbeSource };
