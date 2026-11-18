@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import path from "path";
 import { encodeBlueprintFile } from "../blueprints/serde";
 import {
-    assertClockAttached, assertClockPriming, assertRecordableTicks, buildPartsMissingFromConfig, builtCopies, clockInserters, stagedBuildOrder, clockOfBlueprintString, clockWindowCycleTicks, matchBuiltCopies, matchBuiltDrills, matchBuiltInserters, MAX_RECORDED_TICKS,
+    assertBackpressureOpening, assertClockAttached, assertClockPriming, assertRecordableTicks, buildPartsMissingFromConfig, builtCopies, clockInserters, stagedBuildOrder, clockOfBlueprintString, clockWindowCycleTicks, matchBuiltCopies, matchBuiltDrills, matchBuiltInserters, MAX_RECORDED_TICKS,
     factorioDataDir, missingFromConfigMessage, partCopiesOf, recordedTicks, recordInFactorio, scheduledDrillIds, scheduledInserterIds,
     drillResourceOf,
 } from "./factorio-harness";
@@ -649,6 +649,82 @@ describe("a clock placed first in a staged start", () => {
         }
         await expect(run({ clock: swapped, config: {}, copies: 2, staged_start: { build_order: "descending", clock_phase: 13 } })).rejects.toThrow("Factorio not found");
         await expect(run({ clock: swapped, config: {}, staged_start: { clock_phase: 0 } })).rejects.toThrow("Factorio not found");
+    });
+});
+
+describe("a backpressure start in a staged start", () => {
+    const run = (more: object) => recordInFactorio({
+        factorio: "/nowhere/factorio", save: "/nowhere/save.zip", blueprint: "0", out: "/nowhere/recording.json",
+        ticks: 600, warmup_ticks: 0, seed: [], unclocked: false, game_speed: 1000, timeout_seconds: 1, log: () => { }, ...more,
+    });
+    const virtual = (name: string) => ({ name, type: "virtual" });
+    const clockBlueprint = (lock: boolean) => encodeBlueprintFile({ blueprint: { entities: [
+        { entity_number: 1, name: "decider-combinator", player_description: "Clock for chemical science",
+            control_behavior: { decider_conditions: { conditions: [{ first_signal: virtual("signal-clock"), comparator: "<", constant: 352 }], outputs: [] } } },
+        { entity_number: 2, name: "constant-combinator", control_behavior: { is_on: false, sections: { sections: [{ index: 1,
+            filters: [{ index: 1, ...virtual(lock ? "signal-lock" : "signal-A"), quality: "normal", comparator: "=", count: 1 }] }] } } },
+    ] } } as any);
+    const locked = { blueprint: clockBlueprint(true), schedule: { counted_ticks: 352, inserter_combinators: [] } };
+    const unlocked = { blueprint: clockBlueprint(false), schedule: { counted_ticks: 352, inserter_combinators: [] } };
+
+    it("is asked for with a generated clock that has a Clock lock, and default or whole window and cap ticks", async () => {
+        await expect(run({ clock: locked, config: {}, staged_start: { backpressure: {} } })).rejects.toThrow("Factorio not found");
+        await expect(run({ clock: locked, config: {}, staged_start: { build_order: "descending", backpressure: { window_ticks: 600, cap_ticks: 1200 } } }))
+            .rejects.toThrow("Factorio not found");
+        await expect(run({ clock: locked, config: {}, copies: 2, staged_start: { backpressure: { window_ticks: 3600 } } })).rejects.toThrow("Factorio not found");
+    });
+
+    it("is refused without a generated clock, unclocked, with a clock placed first, or with a clock that has no Clock lock", async () => {
+        await expect(run({ config: {}, staged_start: { build_order: [1], backpressure: {} } })).rejects.toThrow("holds the windowed inserters off with the lock of a generated clock");
+        await expect(run({ clock: locked, config: {}, unclocked: true, staged_start: { backpressure: {} } })).rejects.toThrow("holds the windowed inserters off with the lock of a generated clock");
+        await expect(run({ clock: locked, config: {}, staged_start: { clock_phase: 0, backpressure: {} } })).rejects.toThrow("starts the clock at its first tick: it takes no clock_phase");
+        await expect(run({ clock: unlocked, config: {}, staged_start: { backpressure: {} } })).rejects.toThrow("has no Clock lock");
+        await expect(run({ clock: { ...locked, blueprint: "0" }, config: {}, staged_start: { backpressure: {} } })).rejects.toThrow("has no Clock lock");
+    });
+
+    it("is refused with a window or cap that is no whole number of ticks, or a cap shorter than two windows", async () => {
+        for (const window_ticks of [0, -60, 1.5]) {
+            await expect(run({ clock: locked, config: {}, staged_start: { backpressure: { window_ticks } } }))
+                .rejects.toThrow(`The window of the backpressure fill's steady test is a whole number of ticks above 0, not ${window_ticks}`);
+        }
+        await expect(run({ clock: locked, config: {}, staged_start: { backpressure: { window_ticks: 600, cap_ticks: 1199 } } }))
+            .rejects.toThrow("The cap of the backpressure fill is a whole number of ticks of at least two windows (1200), not 1199");
+        await expect(run({ clock: locked, config: {}, staged_start: { backpressure: { cap_ticks: 7200.5 } } }))
+            .rejects.toThrow("of at least two windows (7200), not 7200.5");
+    });
+
+    const opening = {
+        tick: 9000, started_tick: 1800, ended: "steady" as const, window_ticks: 3600, counter: 1, leaks: { ticks: 0, units: [] },
+        machines: [
+            { unit_number: 7, name: "foundry", recipe: "pipe", fed_by: "unclocked" as const, input: 40, output: 12, products_finished: 900, windows: [450, 450] },
+            { unit_number: 8, name: "assembling-machine-3", recipe: "chemical-science-pack", fed_by: "windowed" as const, input: 0, output: 0, products_finished: 0, windows: [0, 0] },
+        ],
+        inserters: [
+            { unit_number: 20, config_id: 1, windowed: true, held: 0, moved: false },
+            { unit_number: 21, config_id: 2, windowed: false, held: 4, moved: true },
+        ],
+    };
+
+    it("opens with the windowed inserters and the machines only they fill empty, after a fill with no windowed inserter enabled", () => {
+        expect(() => assertBackpressureOpening(opening)).not.toThrow();
+        // a fill that reached its cap is reported, not refused; the game writes a list of one as an object of its keys
+        expect(() => assertBackpressureOpening({ ...opening, ended: "cap", machines: { 1: { ...opening.machines[0], windows: [449, 450, 449] } } })).not.toThrow();
+    });
+
+    it("is refused when the game did not report it, a windowed inserter was enabled or holds items, a machine only they fill holds items, or a steady fill is not steady", () => {
+        expect(() => assertBackpressureOpening(undefined)).toThrow("did not report the opening of the backpressure fill");
+        expect(() => assertBackpressureOpening({ ...opening, leaks: { ticks: 2, first_tick: 1801, units: [20] } }))
+            .toThrow("Windowed inserters were enabled for 2 ticks of the fill with the lock on, first at tick 1801: units 20");
+        expect(() => assertBackpressureOpening({ ...opening, inserters: [{ ...opening.inserters[0], held: 3 }] }))
+            .toThrow("Windowed inserters hold items at the opening: unit 20 (config id 1) holds 3");
+        expect(() => assertBackpressureOpening({ ...opening, inserters: [{ ...opening.inserters[0], moved: true }] }))
+            .toThrow("Windowed inserters held items during the fill with the lock on: unit 20 (config id 1)");
+        const filled = { ...opening.machines[1], input: 5, products_finished: 1 };
+        expect(() => assertBackpressureOpening({ ...opening, machines: [opening.machines[0], filled] }))
+            .toThrow("Machines that only windowed inserters fill hold items at the opening: assembling-machine-3 (unit 8): 5 in, 0 out, 1 made");
+        const moving = { ...opening.machines[0], windows: [449, 450] };
+        expect(() => assertBackpressureOpening({ ...opening, machines: [moving] }))
+            .toThrow("The fill ended as steady, and foundry (unit 7) made 449, then 450 in its last two windows");
     });
 });
 

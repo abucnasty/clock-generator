@@ -213,6 +213,128 @@ export interface StagedStartOptions {
      * is built in the tick the inserters are.
      */
     clock_phase?: number;
+    /**
+     * The backpressure start (docs/maintainer/glossary.md): once the belts are saturated, every inserter of the cell is built in
+     * the order asked for and the generated clock is wired with its Clock lock on, in one tick, so the inserters the clock
+     * schedules (the windowed inserters) are held off. The inserters with no window and the supply run until the part of the
+     * build that no clock holds is steady (see BackpressureFillOptions), then the lock is set off and the recording starts in
+     * that tick: the clock starts at its first tick. Seeds, the kick start of loops and `lua` are put in at that tick, not at
+     * the placement. Needs a generated clock with a Clock lock; not with `clock_phase` or `unclocked`. Absent, nothing changes.
+     */
+    backpressure?: BackpressureFillOptions;
+}
+
+/** How the fill of a backpressure start ends (StagedStartOptions.backpressure) */
+export interface BackpressureFillOptions {
+    /**
+     * Ticks of one window of the steady test. The fill is steady when every crafting machine of the build finished as many
+     * products in the last window as in the window before. Windows are counted from the tick the inserters are built. Default 3,600
+     */
+    window_ticks?: number;
+    /** Ticks the fill may take: at the cap the lock is set off whether or not the fill is steady, and the report says so. Default 36,000 */
+    cap_ticks?: number;
+}
+
+const DEFAULT_FILL_WINDOW_TICKS = 3600;
+const DEFAULT_FILL_CAP_TICKS = 36_000;
+
+/** What the game reports of a backpressure start at the tick its lock is set off (harness.lua, the fill) */
+export interface BackpressureOpening {
+    /** The tick the lock was set off and the recording started in */
+    tick: number;
+    /** The tick the inserters of the cell were built and the clock wired with its lock on */
+    started_tick: number;
+    /** steady: every machine made as many products in its last two windows; cap: the fill reached its cap */
+    ended: "steady" | "cap";
+    window_ticks: number;
+    /** The main counter of the clock in the tick the lock was set off, before the clock has counted with the lock off */
+    counter: number;
+    /** Ticks of the fill in which a windowed inserter was not disabled by the circuit, the first, and the inserters */
+    leaks: { ticks: number; first_tick?: number; units: number[] | Record<string, number> };
+    /**
+     * Every crafting machine of the build. fed_by: "unclocked" when an inserter with no window drops into it, "windowed" when
+     * only windowed inserters do, "none" when no inserter does (fluids or loaders only). windows: products finished in each window
+     */
+    machines: BackpressureMachine[] | Record<string, BackpressureMachine>;
+    /** Every inserter of the cell, whether the clock holds it, what its hand holds at the opening and whether it held anything in the fill */
+    inserters: BackpressureInserter[] | Record<string, BackpressureInserter>;
+    /** The main counter after each of the first ticks with the lock off */
+    counter_after?: number[] | Record<string, number>;
+}
+
+interface BackpressureMachine {
+    unit_number: number;
+    name: string;
+    recipe?: string;
+    fed_by: "unclocked" | "windowed" | "none";
+    input: number;
+    output: number;
+    products_finished: number;
+    windows: number[] | Record<string, number>;
+}
+
+interface BackpressureInserter {
+    unit_number: number;
+    config_id?: number;
+    windowed: boolean;
+    held: number;
+    moved: boolean;
+}
+
+/** A list the game wrote: as an object of its keys when it has one entry, or none */
+function listOf<T>(written: T[] | Record<string, T> | undefined): T[] {
+    return written === undefined ? [] : Object.values(written);
+}
+
+/**
+ * Throws when a backpressure start did not open as the start asks: the game did not report the opening, a windowed inserter was
+ * enabled while the lock was on, a windowed inserter holds items at the opening, a machine that only windowed inserters fill holds
+ * items or made products, or a fill reported steady has a machine that made a different count in its last two windows. A fill
+ * that reached its cap is not refused: it is reported.
+ */
+export function assertBackpressureOpening(opening: BackpressureOpening | undefined): void {
+    if (!opening) {
+        throw new Error("The game did not report the opening of the backpressure fill");
+    }
+    if (opening.leaks.ticks > 0) {
+        throw new Error(`Windowed inserters were enabled for ${opening.leaks.ticks} ticks of the fill with the lock on, first at tick ${opening.leaks.first_tick}: `
+            + `units ${listOf(opening.leaks.units).join(", ")}`);
+    }
+    const holding = listOf(opening.inserters).filter(inserter => inserter.windowed && inserter.held > 0);
+    if (holding.length > 0) {
+        throw new Error(`Windowed inserters hold items at the opening: ${holding.map(it => `unit ${it.unit_number} (config id ${it.config_id}) holds ${it.held}`).join("; ")}`);
+    }
+    const moved = listOf(opening.inserters).filter(inserter => inserter.windowed && inserter.moved);
+    if (moved.length > 0) {
+        throw new Error(`Windowed inserters held items during the fill with the lock on: ${moved.map(it => `unit ${it.unit_number} (config id ${it.config_id})`).join("; ")}`);
+    }
+    const machines = listOf(opening.machines);
+    const filled = machines.filter(machine => machine.fed_by === "windowed" && (machine.input > 0 || machine.output > 0 || machine.products_finished > 0));
+    if (filled.length > 0) {
+        throw new Error(`Machines that only windowed inserters fill hold items at the opening: `
+            + filled.map(it => `${it.name} (unit ${it.unit_number}): ${it.input} in, ${it.output} out, ${it.products_finished} made`).join("; "));
+    }
+    if (opening.ended === "steady") {
+        for (const machine of machines) {
+            const windows = listOf(machine.windows);
+            const [before, last] = windows.slice(-2);
+            if (windows.length < 2 || before !== last) {
+                throw new Error(`The fill ended as steady, and ${machine.name} (unit ${machine.unit_number}) made ${windows.slice(-2).join(", then ")} in its last two windows`);
+            }
+        }
+    }
+}
+
+/** Whether a clock blueprint has a Clock lock: a constant combinator that puts out the Lock signal */
+function hasClockLock(blueprint: string): boolean {
+    let entities: any[];
+    try {
+        entities = decodeBlueprintString(blueprint).blueprint?.entities ?? [];
+    } catch {
+        return false;
+    }
+    return entities.some(entity => entity.name === "constant-combinator"
+        && (entity.control_behavior?.sections?.sections ?? []).some((section: any) => (section.filters ?? []).some((filter: any) => filter.name === "signal-lock")));
 }
 
 /** One inserter of the cell in a staged start, in the order the inserters are built: its config id, its copy (0 for the first) and where it stands from the middle of the blueprint */
@@ -1064,6 +1186,26 @@ function assertBuildOptions(options: BuildOptions): void {
                 throw new Error(`The phase the clock is placed first to is a value its main counter reads, a whole number from 0 to its window cycle of ${window_cycle_ticks} ticks, not ${phase}`);
             }
         }
+        const fill = options.staged_start.backpressure;
+        if (fill !== undefined) {
+            if (!options.clock || options.unclocked) {
+                throw new Error("A backpressure start holds the windowed inserters off with the lock of a generated clock: it needs a generated clock and no unclocked run");
+            }
+            if (phase !== undefined) {
+                throw new Error("A backpressure start starts the clock at its first tick: it takes no clock_phase, as setting the lock off starts the clock over");
+            }
+            const window_ticks = fill.window_ticks ?? DEFAULT_FILL_WINDOW_TICKS;
+            if (!Number.isInteger(window_ticks) || window_ticks <= 0) {
+                throw new Error(`The window of the backpressure fill's steady test is a whole number of ticks above 0, not ${window_ticks}`);
+            }
+            const cap_ticks = fill.cap_ticks ?? DEFAULT_FILL_CAP_TICKS;
+            if (!Number.isInteger(cap_ticks) || cap_ticks < 2 * window_ticks) {
+                throw new Error(`The cap of the backpressure fill is a whole number of ticks of at least two windows (${2 * window_ticks}), not ${cap_ticks}`);
+            }
+            if (!hasClockLock(options.clock.blueprint)) {
+                throw new Error("The generated clock has no Clock lock (a constant combinator that puts out the Lock signal): a backpressure start holds the windowed inserters off with it");
+            }
+        }
         // the recording runs for exactly the ticks asked for, from the placement tick
         assertRecordableTicks(options.ticks, null);
         return;
@@ -1458,7 +1600,13 @@ export class HarnessSession {
             unclocked: options.unclocked,
             seed: options.seed,
             lua: options.lua,
-            staged: { order, loop_seed: staged.loop_seed, copies: options.copies },
+            staged: {
+                order, loop_seed: staged.loop_seed, copies: options.copies,
+                ...(staged.backpressure && { backpressure: {
+                    window_ticks: staged.backpressure.window_ticks ?? DEFAULT_FILL_WINDOW_TICKS,
+                    cap_ticks: staged.backpressure.cap_ticks ?? DEFAULT_FILL_CAP_TICKS,
+                } }),
+            },
             record: { ticks: options.ticks },
         });
         if (priming) {
@@ -1480,6 +1628,13 @@ export class HarnessSession {
                 + (Object.values(start.clock.wired_drills ?? {}).length > 0 ? ` and ${Object.values(start.clock.wired_drills).length} drill` : "")
                 + ` in tick ${start.staged.tick}`);
         }
+        if (staged.backpressure) {
+            const opening = await this.backpressureFill(start, deadline, options.log);
+            start.staged.backpressure = opening;
+            start.loop_seeds = opening.loop_seeds;
+            start.seeds = opening.seeds;
+            start.tick = opening.tick;
+        }
         for (const seeded of Object.values<{ unit_number: number; item: string; inserted: number }>(start.loop_seeds ?? {})) {
             options.log(`Seeded ${seeded.inserted} ${seeded.item} into the machine with unit number ${seeded.unit_number} (a loop)`);
         }
@@ -1489,6 +1644,11 @@ export class HarnessSession {
         if (!finished.last_recording) {
             throw new Error(`The recorder stopped without writing a recording. End of the game's log:\n${this.server.logTail()}`);
         }
+        if (staged.backpressure) {
+            const after = listOf<number>(finished.fill?.counter_after);
+            start.staged.backpressure.counter_after = after;
+            options.log(`The main counter of the clock read ${start.staged.backpressure.counter} in the tick the lock was set off, then ${after.join(", ")}`);
+        }
         const written = path.join(this.work_dir, "script-output", finished.last_recording.filename);
         const recording = parseRecording(JSON.parse(await fs.readFile(written, "utf-8")));
         const recording_path = path.resolve(options.out);
@@ -1496,6 +1656,37 @@ export class HarnessSession {
         await fs.copyFile(written, recording_path);
         options.log(`Recorded ${recording.sample_count} ticks (${recording.stop_reason})`);
         return { recording_path, recording, build: { ...build, saturation: saturated.staged }, start };
+    }
+
+    /**
+     * The fill of a backpressure start, from the tick its inserters were built and its clock wired with the lock on until the game
+     * set the lock off: logs every window of the steady test and the build at the opening, and throws when it did not open as the
+     * start asks (assertBackpressureOpening)
+     */
+    private async backpressureFill(start: any, deadline: number, log: (message: string) => void): Promise<BackpressureOpening & Record<string, any>> {
+        log(`The clock is wired with its Clock lock (unit ${start.fill.lock_unit}) on in tick ${start.fill.started_tick}: `
+            + `${start.fill.windowed} windowed inserters held off, ${start.fill.unclocked} inserters of the cell with no window run; `
+            + `steady test over windows of ${start.fill.window_ticks} ticks, cap ${start.fill.cap_ticks} ticks`);
+        const filled = await this.waitFor("the backpressure fill", deadline, status => status.fill !== undefined && status.fill.phase !== "filling");
+        const opening: BackpressureOpening & Record<string, any> = filled.fill.opening;
+        const machines = listOf(opening.machines);
+        for (const machine of machines) {
+            const fed_by = machine.fed_by === "none" ? "no inserter drops into it" : machine.fed_by === "windowed" ? "only windowed inserters drop into it" : "an inserter with no window drops into it";
+            log(`Machine ${machine.name} (unit ${machine.unit_number}, ${machine.recipe ?? "no recipe"}; ${fed_by}): `
+                + `made ${listOf(machine.windows).join(", ")} in the windows of the fill; at the opening ${machine.input} in, ${machine.output} out, ${machine.products_finished} made`);
+        }
+        for (const inserter of listOf(opening.inserters)) {
+            log(`Inserter unit ${inserter.unit_number} (config id ${inserter.config_id ?? "none"}): ${inserter.windowed ? "windowed" : "no window"}, `
+                + `holds ${inserter.held} at the opening, ${inserter.moved ? "held items in the fill" : "held nothing in the fill"}`);
+        }
+        const fed = (by: string) => machines.filter(machine => machine.fed_by === by);
+        const holding = (list: BackpressureMachine[]) => list.filter(machine => machine.input > 0 || machine.output > 0).length;
+        log(`The lock was set off in tick ${opening.tick}, ${opening.tick - opening.started_tick} ticks after the inserters were built, `
+            + (opening.ended === "steady" ? "with the part no clock holds steady" : `at the cap: the part no clock holds was not steady`)
+            + `. Machines an inserter with no window fills: ${fed("unclocked").length}, ${holding(fed("unclocked"))} hold items; `
+            + `machines only windowed inserters fill: ${fed("windowed").length}, ${holding(fed("windowed"))} hold items; machines no inserter fills: ${fed("none").length}`);
+        assertBackpressureOpening(opening);
+        return opening;
     }
 
     /** Lets the build run on, at this speed when one is given, until the window of the game opened to watch is closed; returns at once when none is open */
