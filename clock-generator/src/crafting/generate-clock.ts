@@ -10,7 +10,8 @@ import { BlueprintGenerationResult, GenerateClockOptions, UnclockedRun, PlannedC
 import { type GhostWindow, windowsWithoutGhostWakeUps } from "./plan/ghost-windows";
 import { ghostWakeUpsOfStock } from "./wake-ups";
 import { inserterEnds } from "./inserter-counters";
-import { LONG_RUN_SETTLE_SHARE } from "./long-run";
+import { LONG_RUN_SETTLE_SHARE, judgedPeriodOf } from "./long-run";
+import { SUBTICK_BACKOFF_BESIDE_A_CLOCK_THAT_HOLDS } from "./subtick-backoff-switch";
 import type { AsBuiltRun } from "./trial";
 import { ArithmeticWindowsNotApplicable, batchedSwingsWindowsByArithmetic } from "./plan/batched-arithmetic";
 import { estimatedOutputSwings } from "./plan/output-swing-estimate";
@@ -418,8 +419,38 @@ export function generateClockWithSwingBackoff(
         ? generated_count : initial_result.used_terminal_swing_count;
     requested_initial_count ??= initial_swing_count;
 
+    /** The counts below the first, one at a time, to the first whose clock holds */
+    const backOff = (estimated: (swings: number) => string | undefined) => {
+        const attempts: SwingAttemptResult[] = [];
+        for (let swings = initial_swing_count - 1; swings >= 1; swings--) {
+            logger.log(`Attempting terminal_swing_count=${swings}...`);
+            const attempt_result = generateWithinBudget(withCount(swings));
+            if (attempt_result === null) break;
+            if ((window_cycle_frontier !== undefined || first_fractional_refusal !== undefined) && generated_count !== undefined) swings = generated_count;
+
+            attempts.push({
+                terminal_swing_count: swings,
+                holds: attempt_result.stability_check.holds,
+                actual_output_items: attempt_result.stability_check.actual_output_items,
+                expected_output_items: attempt_result.stability_check.expected_output_items,
+            });
+
+            logger.log(
+                `swings=${swings}: actual=${attempt_result.stability_check.actual_output_items}, ` +
+                `expected=${attempt_result.stability_check.expected_output_items}, ` +
+                `stable=${attempt_result.stability_check.holds}`
+                + (estimated(swings) === undefined ? "" : `, estimate: ${estimated(swings)}`)
+            );
+
+            if (attempt_result.stability_check.holds) {
+                return { attempts, stable_result: attempt_result, stable_swing_count: swings };
+            }
+        }
+        return { attempts, stable_result: null, stable_swing_count: null };
+    };
+
     if (initial_result.stability_check.holds || swing_count_forced || initial_swing_count <= 1) {
-        return {
+        const first: BlueprintGenerationResult = {
             ...initial_result,
             swing_backoff_report: {
                 triggered: false,
@@ -436,6 +467,40 @@ export function generateClockWithSwingBackoff(
                 attempts: [],
             },
         };
+        if (!SUBTICK_BACKOFF_BESIDE_A_CLOCK_THAT_HOLDS || !initial_result.stability_check.holds || swing_count_forced || initial_swing_count <= 1
+            || judgedPeriodOf(initial_result.simulation_duration.ticks) === null) {
+            return first;
+        }
+        // a subtick clock that holds on P (subtick-backoff-switch.ts): the clock the backoff below makes after a first clock that
+        // does not hold (the counts below, to the first that holds), kept where it wakes fewer and gets back to its rate after
+        // the loss trials; the first clock everywhere else, its report as it is
+        const said = "Swing backoff beside a subtick clock that holds";
+        let backed_off: ReturnType<typeof backOff>;
+        try {
+            backed_off = backOff(() => undefined);
+        } catch (error) {
+            logger.log(`${said}: not made (${error instanceof Error ? error.message : String(error)}), the first clock`);
+            return first;
+        }
+        const { attempts, stable_result: lower, stable_swing_count: lower_count } = backed_off;
+        if (lower === null || lower_count === null) {
+            logger.log(`${said}: no count below ${initial_swing_count} holds, the first clock`);
+            return first;
+        }
+        const wake_ups = (result: BlueprintGenerationResult) => result.stability_check.as_built?.wake_ups?.wake_ups_per_minute;
+        const lower_wake_ups = wake_ups(lower), first_wake_ups = wake_ups(initial_result);
+        if (lower_wake_ups === undefined || first_wake_ups === undefined || !(lower_wake_ups < first_wake_ups)) {
+            logger.log(`${said}: ${lower_count} swings wake ${lower_wake_ups?.toFixed(2)} a minute against ${first_wake_ups?.toFixed(2)}, the first clock`);
+            return first;
+        }
+        if (disturbanceTrialVerdictOf(config, lower, logger, options.on_progress_detail).disturbance_trial?.survives !== true) {
+            logger.log(`${said}: ${lower_count} swings wake fewer, but the clock does not go back to its rate by itself after a supply stop or an output blockage, the first clock`);
+            return first;
+        }
+        logger.log(`${said}: ${lower_count} swings kept (${lower_wake_ups.toFixed(2)} against ${first_wake_ups.toFixed(2)} wakeups a minute)`);
+        // reported as a backoff: the clock is not the first one's
+        return { ...lower, swing_backoff_report: { ...first.swing_backoff_report!, ...pruningReport(), triggered: true,
+            stable_terminal_swing_count: lower_count, attempts } };
     }
 
     logger.log(`\n--- Output Swing Stability Backoff ---`);
@@ -457,10 +522,6 @@ export function generateClockWithSwingBackoff(
             + estimate.above.map(it => `; ${it.swings} ${it.verdict}${it.verdict === "no rule" ? ` (${it.reason})` : ""}`).join(""));
     }
 
-    const attempts: SwingAttemptResult[] = [];
-    let stable_result: BlueprintGenerationResult | null = null;
-    let stable_swing_count: number | null = null;
-
     const initial_attempt: SwingAttemptResult = {
         terminal_swing_count: initial_swing_count,
         holds: false,
@@ -468,32 +529,7 @@ export function generateClockWithSwingBackoff(
         expected_output_items: initial_result.stability_check.expected_output_items,
     };
 
-    for (let swings = initial_swing_count - 1; swings >= 1; swings--) {
-        logger.log(`Attempting terminal_swing_count=${swings}...`);
-        const attempt_result = generateWithinBudget(withCount(swings));
-        if (attempt_result === null) break;
-        if ((window_cycle_frontier !== undefined || first_fractional_refusal !== undefined) && generated_count !== undefined) swings = generated_count;
-
-        attempts.push({
-            terminal_swing_count: swings,
-            holds: attempt_result.stability_check.holds,
-            actual_output_items: attempt_result.stability_check.actual_output_items,
-            expected_output_items: attempt_result.stability_check.expected_output_items,
-        });
-
-        logger.log(
-            `swings=${swings}: actual=${attempt_result.stability_check.actual_output_items}, ` +
-            `expected=${attempt_result.stability_check.expected_output_items}, ` +
-            `stable=${attempt_result.stability_check.holds}`
-            + (estimated(swings) === undefined ? "" : `, estimate: ${estimated(swings)}`)
-        );
-
-        if (attempt_result.stability_check.holds) {
-            stable_result = attempt_result;
-            stable_swing_count = swings;
-            break;
-        }
-    }
+    const { attempts, stable_result, stable_swing_count } = backOff(estimated);
 
     const swing_backoff_report: SwingBackoffReport = {
         triggered: true,
