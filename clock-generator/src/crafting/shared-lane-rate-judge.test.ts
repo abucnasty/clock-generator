@@ -33,8 +33,11 @@ describe("the rate judge on the clocks recorded in the game on copies that share
     // #660, shared-lane-verdict.test.ts: three copies on ore lanes into loaders; under Takt Batches with 6 swings copy 3 made
     // about 4,000 of 4,800 a minute, and every copy made 4,800 under the other four
     const d1 = withFacts(await loadConfigFromFile(path.join(FIXTURES, "inserter-crafting-240-3-copies-ore-lines.json")), { "2/1": dead_end, "2/2": dead_end });
+    // takt_batches_swings_6, the one that loses in the game, takes over 70 s on CI: its tests are in
+    // shared-lane-rate-judge.generation.test.ts
     for (const [id, clock] of Object.entries(clocksOf("inserter-crafting-240-recorded-clocks.json"))) {
-        recorded.push({ name: `inserter build, ore lanes into loaders: ${id}`, holds_in_game: id !== "takt_batches_swings_6", config: d1, ...clock });
+        if (id === "takt_batches_swings_6") continue;
+        recorded.push({ name: `inserter build, ore lanes into loaders: ${id}`, holds_in_game: true, config: d1, ...clock });
     }
     // the same build with its ore lanes' ends stated (the sample): Coordinated Sources (the clock of the game recording
     // generated-three-copies, inserter-crafting-240-shared-signal-clock-controls.json) and Time-Study Windows (as
