@@ -364,6 +364,7 @@ export function runOnSharedLanes(
     const copies: CopiesOnSharedLanes = { lanes: [] };
     const run = runClockOnBuild({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, windows, window_cycle_ticks, logger, {
         simulate_window_cycles: window_cycles, record_histories: false, factorio_states: false, build_copies: layout.copies,
+        shared_lanes: copies,
         ...(disturbance_trial !== undefined && { disturbance_trial: { ...disturbance_trial, copies } }),
         on_context: context => {
             model = installSharedLanes(context, config, layout.rows);

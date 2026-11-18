@@ -3,8 +3,14 @@ import path from 'node:path';
 import { BaseSequencer } from 'vitest/node';
 import type { TestSpecification } from 'vitest/node';
 
-/** Seconds each generation test file took on a CI runner (ci/generation-durations.json, keyed by path from this package) */
-const durationsFile = path.join(__dirname, 'generation-durations.json');
+/**
+ * Seconds each test file took on a CI runner, keyed by path from this package: one file for each project that CI shards
+ * (the generation tests and the unit tests)
+ */
+const durationsFiles: Record<string, string> = {
+    generation: path.join(__dirname, 'generation-durations.json'),
+    unit: path.join(__dirname, 'unit-durations.json'),
+};
 
 export interface ShardItem {
     key: string;
@@ -68,7 +74,10 @@ export default class DurationSequencer extends BaseSequencer {
         const { index, count } = this.ctx.config.shard!;
         const root = this.ctx.config.root;
         const keyOf = (spec: TestSpecification) => path.relative(root, spec.moduleId).split(path.sep).join('/');
-        const known: Record<string, number> = JSON.parse(fs.readFileSync(durationsFile, 'utf8'));
+        // the durations of the projects whose files are dealt out: the median of one project must not stand in for another's
+        const projects = new Set(files.map(spec => spec.project.name));
+        const known: Record<string, number> = Object.assign({}, ...[...projects].map(name =>
+            durationsFiles[name] ? JSON.parse(fs.readFileSync(durationsFiles[name], 'utf8')) : {}));
         const byKey = new Map(files.map(spec => [keyOf(spec), spec]));
         const seconds = secondsOf([...byKey.keys()], known);
         const shards = assignShards([...byKey.keys()].map(key => ({ key, seconds: seconds.get(key)! })), count);

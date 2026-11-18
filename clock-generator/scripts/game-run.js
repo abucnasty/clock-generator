@@ -89,7 +89,12 @@ function describeRun(run, items_per_second) {
                 : "no whole clock cycle in it")
             + (baseline.meets ? ": meets" : ": does not meet"));
     }
-    if (stock) lines.push(`output stock at the end ${stock.end}, lowest in the baseline ${stock.lowest}: ${stock.holds ? "holds" : "DRAINED"}`);
+    if (stock) {
+        const settled = stock.after?.settled;
+        lines.push(`output stock at the end ${stock.end}, lowest in the baseline ${stock.lowest}`
+            + (stock.after ? (settled ? `, after settling (from tick ${settled.from}) lowest ${settled.lowest}${settled.falling ? ", still falling" : ""}` : ", the run ended before it settled") : "")
+            + `: ${stock.holds ? "holds" : "DRAINED"}`);
+    }
     const holds = runHolds({ result: run.result, baseline, disturbances, stock });
     if (run.result !== "holds") lines.push(`the run ended: ${run.result ?? "it did not end before the recording started"}`);
     return { holds, lines };
