@@ -11,7 +11,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ## [Unreleased]
 
-## [0.30.0] - 2026-11-17
+## [0.30.0] - 2026-11-18
 
 ### Added
 - ui: a notice where output inserters share a belt line that the configuration does not state
