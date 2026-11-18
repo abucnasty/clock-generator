@@ -299,6 +299,84 @@
     "clock_sha256": "e45bff6b92a3689f5168704cfc6bb006986a96046d1bd386ee2f44a5483e430c"
    }
   },
+  "automation-science-120-foundries-feed-belt-to-assembler": {
+   "recorded": {
+    "pr": 0,
+    "commit": "a05422d7",
+    "frozen_head": "a05422d7",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24; pr is set when the PR is opened",
+    "clock_sha256": "782c742702cdf841d67621527b01eeeeed5e5d0739db98afa50c6b5bc9fe058e",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 13.333333,
+    "period": 144,
+    "window": 3600,
+    "expected": 800,
+    "steady": 7200,
+    "baseline": {
+     "ticks": 3600,
+     "total": 800,
+     "expected": 800,
+     "min": 800,
+     "max": 800,
+     "held": true,
+     "meets": true,
+     "measured": {
+      "ticks": 3600,
+      "items": 800,
+      "expected": 800,
+      "stock_start": 28,
+      "stock_end": 28,
+      "net": 800
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut copper-plate",
+      "start": 10800,
+      "drop": 10846,
+      "release": 10846,
+      "recovered": 14990
+     },
+     {
+      "kind": "block output",
+      "start": 14990,
+      "drop": 15598,
+      "release": 15598,
+      "recovered": 19310
+     },
+     {
+      "kind": "cut iron-gear-wheel",
+      "start": 19310,
+      "drop": 19486,
+      "release": 19486,
+      "recovered": 23630
+     }
+    ],
+    "stock": {
+     "lowest": 0,
+     "end": 16,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 23630
+   },
+   "generation": {
+    "period": 144,
+    "expected": 32,
+    "verdict": "stable",
+    "selection": {
+     "id": "takt_batches_observed",
+     "holds": true,
+     "rate": 120,
+     "supply": "backed_up"
+    },
+    "clock_sha256": "782c742702cdf841d67621527b01eeeeed5e5d0739db98afa50c6b5bc9fe058e"
+   }
+  },
   "automation-science-240-one-output-swing": {
    "recorded": {
     "pr": 809,
@@ -361,6 +439,84 @@
      "supply": "backed_up"
     },
     "clock_sha256": "0f8a8504f6ec238aa1d6327eddad6779df30c3a4f981cf3120a9dff9c588b87c"
+   }
+  },
+  "electric-furnace-20": {
+   "recorded": {
+    "pr": 0,
+    "commit": "a05422d7",
+    "frozen_head": "a05422d7",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start, settle_ticks and steady.after_finals), in Factorio 2.1.24; pr is set when the PR is opened",
+    "clock_sha256": "c7c3a86fea49e2449d37932d8606cdac127cc4285da870f60c6de56dc7fcbb66",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 10,
+    "period": 864,
+    "window": 3600,
+    "expected": 600,
+    "steady": 7078,
+    "baseline": {
+     "ticks": 3600,
+     "total": 600,
+     "expected": 600,
+     "min": 598,
+     "max": 602,
+     "held": false,
+     "meets": true,
+     "measured": {
+      "ticks": 3456,
+      "items": 576,
+      "expected": 576,
+      "stock_start": 8,
+      "stock_end": 8,
+      "net": 576
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut advanced-circuit",
+      "start": 10678,
+      "drop": 10694,
+      "release": 10694,
+      "recovered": 14374
+     },
+     {
+      "kind": "block output",
+      "start": 14374,
+      "drop": 15782,
+      "release": 15782,
+      "recovered": 19462
+     },
+     {
+      "kind": "cut advanced-circuit",
+      "start": 19462,
+      "drop": 19526,
+      "release": 19526,
+      "recovered": 23494
+     }
+    ],
+    "stock": {
+     "lowest": 0,
+     "end": 8,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 23494
+   },
+   "generation": {
+    "period": 864,
+    "expected": 144,
+    "verdict": "stable",
+    "selection": {
+     "id": "takt_batches_observed",
+     "holds": true,
+     "rate": 20,
+     "supply": "backed_up"
+    },
+    "clock_sha256": "c7c3a86fea49e2449d37932d8606cdac127cc4285da870f60c6de56dc7fcbb66"
    }
   },
   "electromagnetic-science-240-recycler-belt-fed": {
