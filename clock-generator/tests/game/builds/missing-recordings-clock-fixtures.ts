@@ -241,5 +241,8 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
         from_every_start: true, start: "backpressure",
         losses: [{kind: "cut", item: "electric-furnace"}, {kind: "block"}, {kind: "cut", item: "productivity-module"}],
         limit: "the scaffold holds one copy of the job's seven",
+        no_staged_start: "ruling 60's start refuses the build: a drill drops stone straight into the rail assembler, so a machine that only windowed inserters feed "
+            + "holds items at the opening (\"Machines that only windowed inserters fill hold items at the opening: assembling-machine-3 (unit 376): 164 in, 0 out, "
+            + "0 made\", 2026-11-18, Factorio 2.1.24, master 755eb93e and before). The pick is not recorded in the game",
     },
 ];

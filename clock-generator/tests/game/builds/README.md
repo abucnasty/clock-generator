@@ -936,3 +936,30 @@ All hold: every copy of the build makes its share of the target in every whole w
 - **Retaken in `scaffold-recordings.game.test.ts`** (agricultural science 250 and iron bacteria 380, on the clocks of #818): every copy of the five-copy build makes 656, 784 and 736 of 800 in its first three window
   cycles (the start-up) and 800 in each of the 7 after; both agricultural builds are judged by the standing rule (per copy, every window cycle from the first third of the samples on: cycles 5 to 10, all 800), now both from the staged start (the one with belts under backpressure started from a warm-up before, and on this clock left
   copy 2 short in each of the 3 cycles checked and copy 5 in the first); iron bacteria 10,944 in each window cycle checked, 1,043.3 wake-ups a minute in the game against 358.2 in the simulator.
+
+## The search from every stable clock, from ruling 60's start
+
+`CLOCK_SEARCH_FROM_EVERY_START=1` starts the local choice of Coordinated Sources from every stable clock, not only from those that tie the recommended clock
+([Coordinated Sources](../../../docs/clock-candidates.md#coordinated-sources)). It is off by default, so the record does not select what it picks. Each pick it moves
+is recorded here from ruling 60's start (`staged_start.backpressure`) on the sample's scaffold, in Factorio 2.1.24, and pinned in
+[filled-start-search-clock-controls.json](filled-start-search-clock-controls.json). The generic protocol records the advanced circuit and production science cases
+(`from_every_start` in [missing-recordings-clock-fixtures.ts](missing-recordings-clock-fixtures.ts)); the builds' own probes record the processing unit, car and silo cases
+([filled-start-search-clock.game.test.ts](filled-start-search-clock.game.test.ts), [filled-start-search-clock-fixtures.ts](filled-start-search-clock-fixtures.ts)). Each test makes the clock with the
+switch on (`helpers/search-switch.ts`) and finds it is not the record's. `src/crafting/filled-start-search.generation.test.ts` finds each pin made with the switch on.
+
+| Job (case) | Pick | Steady state | Last loss recovered | Result |
+| --- | --- | --- | --- | --- |
+| `ADVANCED_CIRCUIT_240` and `..._BACKED_UP` (one copy of three) | Coordinated Sources (528, `11c668b4`) | 6,768 | 22,764 | holds: 6 of 6 window cycles before and after the losses |
+| `PROCESSING_UNIT_80_CIRCUIT_EXPORT` and `..._BACKED_UP` | Coordinated Sources (24, `0bdd8324`) | 7,204 | 18,847 | holds: 4,800 of 4,800 in the baseline |
+| `IRON_PLATE_80_CAR_CHEST` | Coordinated Sources (144, `dc5394b0`) | 7,200 | 18,498 | holds: 4,800 of 4,800 in the baseline; the third drill stop lasts one tick |
+| `LITHIUM_PLATE_80_SILO_CHEST` | Coordinated Sources (4,320, `660fda31`) | 9,262 | 34,937 | falls short: 11,456 of 11,520 over the baseline's two whole clock cycles (99.4 %); no entry |
+| `PRODUCTION_SCIENCE_120_TWO_BELTS` and `..._SHARED_PICKUP` | Coordinated Sources (336, `e87ab62b`) | not recorded | | the harness refuses ruling 60's start for this build (`no_staged_start`); no entry |
+
+- **Production science.** A drill drops stone straight into the rail assembler, so a machine that only windowed inserters feed holds items at the opening, which the harness refuses
+  ("Machines that only windowed inserters fill hold items at the opening: assembling-machine-3 (unit 376): 164 in, 0 out, 0 made"). The `..._SHARED_PICKUP` job is a variant with no scaffold of its own.
+- **Lithium silo.** The baseline is two whole clock cycles (8,640 ticks), as the protocol allows for a clock cycle longer than a minute. The fifth furnace ends each cycle 24 to 48 plates short of its 960.
+
+```
+MISSING_RECORDINGS_CAPTURE_DIR=.scratch/search npm run test:game -- tests/game/builds/missing-recordings-clock.game.test.ts -t from-every-start
+BELT_SPEED_CAPTURE_DIR=.scratch/search-family npm run test:game -- tests/game/builds/filled-start-search-clock.game.test.ts
+```

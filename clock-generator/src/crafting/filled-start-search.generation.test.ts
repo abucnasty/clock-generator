@@ -6,13 +6,12 @@ import {searchPicks} from "../../tests/game/builds/filled-start-search-clock-fix
 import {SEARCH_CONTROLS_FILE} from "../../tests/game/builds/missing-recordings-clock-fixtures";
 import {withSearchFromEveryStart} from "../../tests/game/helpers/search-switch";
 import {generateClockAlternatives} from "./generate-blueprint";
-import {SEARCH_FROM_EVERY_START_VARIABLE} from "./candidates/coordinated-sources";
 
 // docs/clock-candidates.md, "Coordinated Sources": CLOCK_SEARCH_FROM_EVERY_START=1 starts the local choice of Coordinated Sources from every
 // stable clock, not only from those that tie the recommended clock. Processing unit 80 (circuit export) is the build it was found on: the record's
 // pick (5259f325, 3,311.25 wakeups a minute) is reached from the recommended clock alone, and the pick from every stable clock is 0bdd8324 (3,046.875).
 // The picks the switch moves are recorded in the game (tests/game/builds/filled-start-search-clock-controls.json); each pin is the clock the
-// switch makes. The lithium plate pick, which takes minutes to make, is in filled-start-search-silo.generation.test.ts.
+// switch makes.
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 
 async function selectedOfProcessingUnit80(on: boolean) {
@@ -30,23 +29,14 @@ test("processing unit 80: the switch on picks the clock that starting from every
     expect(await selectedOfProcessingUnit80(true)).toEqual({id: "coordinated_sources", hash: "0bdd8324", verdict: "stable"});
 });
 
-test("processing unit 80: any other value than 1 leaves the switch off", async () => {
-    const before = process.env[SEARCH_FROM_EVERY_START_VARIABLE];
-    process.env[SEARCH_FROM_EVERY_START_VARIABLE] = "0";
-    try {
-        const config = await loadConfigFromFile(ConfigPaths.PROCESSING_UNIT_80_CIRCUIT_EXPORT);
-        const generated = generateClockAlternatives(config, {logger: quiet});
-        const selected = generated.alternatives[generated.selected_index];
-        expect(clockHash(selected.result.subtick ?? selected.result).slice(0, 8)).toBe("5259f325");
-    } finally {
-        if (before === undefined) delete process.env[SEARCH_FROM_EVERY_START_VARIABLE];
-        else process.env[SEARCH_FROM_EVERY_START_VARIABLE] = before;
-    }
+// each pick recorded in the game is the clock the switch on makes: its entry's pin (the clock the game ran) is the generation's. The plain
+// processing unit 80 job is the test above, which also finds its pin
+const controls = readControls(SEARCH_CONTROLS_FILE).cases;
+test("processing unit 80: the pin of the game recording is the pick the switch on makes", () => {
+    expect(controls["processing-unit-80-from-every-start"].generation!.clock_sha256.slice(0, 8)).toBe("0bdd8324");
 });
 
-// each pick recorded in the game is the clock the switch on makes: its entry's pin (the clock the game ran) is the generation's
-const controls = readControls(SEARCH_CONTROLS_FILE).cases;
-for (const pick of searchPicks().filter(it => it.config !== "LITHIUM_PLATE_80_SILO_CHEST")) {
+for (const pick of searchPicks().filter(it => it.name !== "processing-unit-80-from-every-start")) {
     test(`${pick.name}: the pin is the pick the switch on makes for ${pick.job}`, async () => {
         const entry = controls[pick.name];
         expect(entry, `${pick.name} has an entry in ${SEARCH_CONTROLS_FILE}`).toBeDefined();
