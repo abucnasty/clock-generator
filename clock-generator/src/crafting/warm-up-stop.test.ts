@@ -8,9 +8,15 @@ import { loadConfigFromFile } from "../config/loader";
 import { OpenRange } from "../data-types";
 import { quiet } from "./generate-blueprint-test-helpers";
 import type { StockRecording } from "./machine-stock";
-import { runBuild } from "./plan/unclocked-run";
+import { runBuild, unclockedRun } from "./plan/unclocked-run";
 import * as state from "./runner/steady-state";
+import * as repeat from "./runner/warm-up-repeat";
+import { WarmupStep } from "./runner/steps/warmup-step";
 import { buildAsBuiltConfig } from "./trial";
+
+/** The controls' key and the arming as the run makes them, kept before any spy on them */
+const controlsKeyOf = repeat.controlsKeyOf;
+const warmUpRepeatOf = repeat.warmUpRepeatOf;
 
 /** The metallurgic science clock of 640/3 ticks as built (fixture): it repeats in 640 whole ticks, 3 window cycles */
 async function metallurgic(): Promise<{ built: Config; window_cycle_ticks: number }> {
@@ -76,6 +82,37 @@ function expectStoppedExactly(built: Config, window_cycle_ticks: number, warmup:
     expect(check).toEqual(full_check);
 }
 
+/**
+ * The planning run of a config (every inserter on the plan's controls): the ticks its warm-up ran, and the plan read off
+ * it (the transfers of every inserter and the stability check). Every state key differs with "every key differs", so
+ * the warm-up runs in full; the controls' line of the key counts up at every boundary with "the controls' count grows".
+ */
+function planning(config: Config, keys: "every key differs" | "the controls' count grows" | "as built" = "as built") {
+    const spies = [
+        keys === "every key differs" ? vi.spyOn(state, "simulationStateKey").mockImplementation(context => `tick ${context.tick_provider.getCurrentTick()}`) : undefined,
+        keys === "the controls' count grows" ? vi.spyOn(repeat, "controlsKeyOf").mockImplementation(controls => {
+            const key = controlsKeyOf(controls);
+            let count = 0;
+            return () => `${key()};${count++}`;
+        }) : undefined,
+    ];
+    const warm_ups: number[] = [];
+    const execute = WarmupStep.prototype.execute;
+    const spy = vi.spyOn(WarmupStep.prototype, "execute").mockImplementation(function (this: WarmupStep) {
+        execute.call(this);
+        warm_ups.push(this.ticks_run);
+    });
+    try {
+        const { run } = unclockedRun(config, { logger: quiet });
+        const transfers = [...run.final_history.getAllTransfers().entries()].map(([id, list]) => [id.id, list]);
+        const { repeat_window_cycles: _cycles, repeat_output_items: _items, ...check } = run.stability_check;
+        return { ran: warm_ups[0], plan: { transfers, check } };
+    } finally {
+        spy.mockRestore();
+        spies.forEach(it => it?.mockRestore());
+    }
+}
+
 describe("the warm-up's stop on a repeated state", () => {
     it("stops a window cycle of p/q ticks only on its whole-tick repeat, in the state the full warm-up ends in", async () => {
         const { built, window_cycle_ticks } = await metallurgic();
@@ -95,12 +132,58 @@ describe("the warm-up's stop on a repeated state", () => {
             { full: 17067, ran: { before: 17067, whole_repeats_of: 640 } });
     });
 
-    it("runs the full warm-up where the part that is not clocked holds what the key does not (a latch), or the state has not repeated", async () => {
+    it("stops a build with a latched condition, whose latch the controls' key holds, where its state repeats", async () => {
         const { built, window_cycle_ticks } = await metallurgic();
         const latched = withOutputOn(built, { mode: "CONDITIONAL", rule_set: always_true, latch: { release: never_true } });
-        expect(run(latched, window_cycle_ticks, 80).clock_tick_at_start).toBe(17067);
+        expectStoppedExactly(latched, window_cycle_ticks, 80, { full: 17067, ran: { before: 17067, whole_repeats_of: 640 } });
+    });
+
+    it("runs the full warm-up where the state has not repeated", async () => {
+        const { built, window_cycle_ticks } = await metallurgic();
         // 40 window cycles (8,534 ticks) end before the state repeats
         expect(run(withOutputOn(built, { mode: "CONDITIONAL", rule_set: always_true }), window_cycle_ticks, 40).clock_tick_at_start).toBe(8534);
+    });
+
+    it("stops a planning run where its state and its controls' counts and latches repeat, with the plan the full warm-up gives", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
+        const stopped = planning(config);
+        const full = planning(config, "every key differs");
+        expect(full.ran).toBe(1440);
+        expect(stopped.ran).toBe(1008);
+        expect(stopped.plan).toEqual(full.plan);
+    });
+
+    it("keys the planning controls' own counts: an inserter's items picked up move the controls' key", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
+        // the controls the planning run put its inserters on, and whether its warm-up was armed
+        let installed: repeat.InstalledControl[] = [];
+        let armed: boolean | undefined;
+        const spy = vi.spyOn(repeat, "warmUpRepeatOf").mockImplementation((window_cycle_ticks, controls, warm_up_ticks) => {
+            const result = warmUpRepeatOf(window_cycle_ticks, controls, warm_up_ticks);
+            if (armed === undefined) {
+                installed = [...controls];
+                armed = result.armed;
+            }
+            return result;
+        });
+        let context: ReturnType<typeof unclockedRun>["run"]["simulation_context"];
+        try {
+            context = unclockedRun(config, { logger: quiet }).run.simulation_context;
+        } finally {
+            spy.mockRestore();
+        }
+        expect(armed).toBe(true);
+        const key = controlsKeyOf(installed);
+        const before = key();
+        context.inserters.forEach(it => { it.inserter_state.items_picked_up += 1; });
+        expect(key()).not.toBe(before);
+        context.inserters.forEach(it => { it.inserter_state.items_picked_up -= 1; });
+        expect(key()).toBe(before);
+    });
+
+    it("runs a planning run in full where its controls' counts do not repeat, though the simulation's state does", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
+        expect(planning(config, "the controls' count grows").ran).toBe(1440);
     });
 
     it("stops a build clocked throughout on a whole-tick window cycle where it stopped before", async () => {
