@@ -827,7 +827,7 @@ Recorded at Factorio 2.1.24, all seven holding their target on every copy and re
   recording starts before the recyclers have a recipe, so its copies are the final machines taken from the west, two to a copy.
 - `AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER` (one copy of the job's nine) is recorded from ruling 60's start, not from the plain staged start (see "Loop builds and ruling 60's start"
   below). Its belt is filled only by the foundries' output inserters, which the staged start places with the clock, so no lane under a pickup ever carried anything before them. The staged start
-  counted such a lane as not saturated and failed ("The belts did not saturate", 2026-11-17, Factorio 2.1.24); it now counts a lane that only the inserters of the cell fill as saturated.
+  counted such a lane as not saturated and failed ("The belts did not saturate", 2026-11-17, Factorio 2.1.24); it now counts a lane that only the build's machine inserters fill as saturated.
 
 ```bash
 MISSING_RECORDINGS_CAPTURE_DIR=.scratch/missing-recordings npm run test:game -- tests/game/builds/missing-recordings-clock.game.test.ts -t flying-robot-frame
@@ -920,8 +920,8 @@ All hold: every copy of the build makes its share of the target in every whole w
   drains the bioflux and jellynut belt, so that belt backs up. The loader at the end of the nutrient belt stays: the build puts the jellynut seeds it makes onto that belt (inserter 11), and with it
   blocked the build makes nothing (36,000 ticks, no steady state). So the nutrient belt's drain is as the sample has it, not under backpressure. The probe's output block then removes the two loaders
   of the product. The nutrient cut after the output block lasts 3 ticks in the run of three, so the cut also has a case of its own.
-- **Automation science 120, foundries feeding a belt to an assembler** (one copy of the job's nine). The belt under the assembler's pickup is filled by the foundries' output inserters only, which are
-  inserters of the cell: the harness's first stage counts a lane that only the cell fills as saturated, so the build is placed on empty belts and the fill (the lock on) fills the belt from the
+- **Automation science 120, foundries feeding a belt to an assembler** (one copy of the job's nine). The belt under the assembler's pickup is filled by the foundries' output inserters only, which the
+  harness places with the clock: its first stage counts a lane that only the build's machine inserters fill as saturated, so the build is placed on empty belts and the fill (the lock on) fills the belt from the
   foundries (the lock opened at tick 59,128, the fill ended steady 10,800 ticks after it began). Both pickup lanes of the belt carried nothing in the first stage ("The belts did not saturate" before, 2026-11-18).
 - **Electric furnace 20** (one copy of the job's two). The clock enables three drills; the harness matches the drills of its trial build to the config's by what each drops into, the mod finds them where
   they stand in the build that is made again, and the clock is wired to each. The case keeps `late_recording` (the recording, which the test uses for the build's hardware, starts where the run ends: `settle_ticks`, which the backpressure
