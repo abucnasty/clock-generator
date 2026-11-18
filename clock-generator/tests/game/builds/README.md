@@ -832,6 +832,33 @@ Recorded at Factorio 2.1.24, all seven holding their target on every copy and re
 MISSING_RECORDINGS_CAPTURE_DIR=.scratch/missing-recordings npm run test:game -- tests/game/builds/missing-recordings-clock.game.test.ts -t flying-robot-frame
 ```
 
+### Six more picks, two named as waiting
+
+The same test and probe record six more jobs (Factorio 2.1.24, one copy of the scaffold each, the losses the build has: an ingredient of each belt line, the output block,
+an ingredient). Each holds its share of the target on its copy in every whole clock cycle before the first loss and in the cycle or cycles after the last loss, and recovers from every loss:
+
+| Job | Clock (window cycle) | Copies built | Clock cycles before / after the losses | Steady state | Last loss recovered |
+| --- | --- | --- | --- | --- | --- |
+| `LOGISTIC_SCIENCE_240_DIRECT_INSERT` | Coordinated Sources (576) | 1 of 6 | 6 / 6 | 7,056 | 19,016 |
+| `ADVANCED_CIRCUIT_230` | Pitch Pickups Subtick (12,672 a clock cycle) | 1 of 3 | 1 / 1 | 16,357 | 46,660 |
+| `ADVANCED_CIRCUIT_240` | Takt Batches Observed (528) | 1 of 3 | 6 / 6 | 6,768 | 22,765 |
+| `ADVANCED_CIRCUIT_240_BACKED_UP` (variant) | Takt Batches Observed (528, the same clock) | 1 of 3 | 6 / 6 | 6,768 | 22,765 |
+| `LDS_240` | Takt Batches Observed, 6 swings (288) | 1 of 1 | 12 / 12 | 7,056 | 18,549 |
+| `METALLURGIC_SCIENCE_45` | Time Study Windows Subtick (640) | 1 of 1 | 5 / 5 | 6,800 | 22,542 |
+
+- The logistic science build with direct insertion was recorded before only on the clock that was then selected (Euclidean Swings); this is its selected clock. Its losses are
+  the inserters cut from the belts and the loaders removed; the molten iron comes from infinity pipes and has no loss.
+- The clock cycle of the 230 pick is 12,672 ticks, so a minute holds none: its baseline is one whole clock cycle (the protocol allows a longer baseline with a reason) and
+  the run goes on 12,700 ticks after its last loss, so that the cycle after the losses is whole. It is judged on one cycle before and one after.
+- The two advanced circuit 240 jobs have the same clock; one scaffold and one run each, with the same result. The scaffold's lanes end closed, so the sample builds backpressure
+  on those belts in both.
+- The scaffolds hold one copy of the advanced circuit and logistic science jobs' three and six copies; the joins of the other copies are not in these runs.
+- `ROCKET_FUEL_60` and `ROCKET_FUEL_60_JELLY_HANDS_15_BACKED_UP` are not pinned. Their picks leave three inserters without a window (10, 12 and 13, the nutrient pickups),
+  so the staged start is not their judged start; they wait for ruling 60's state. Runs from the staged start held (the plain job in each of 28 window cycles before and
+  after the losses, the variant in 56), and are kept in the work folder's evidence only. The jelly 15 variant's run is also not of its build: the scaffold has the sample's hands
+  of 16 on the four jelly inserters (the variant has 15), and its input belts drain into chests (the variant has backpressure on them). In both runs the output block removed all four loaders
+  of the scaffold; which of them drain input belts was not checked. A recording of the variant needs a probe that sets the hands and removes the drains.
+
 ## Container and drill builds: the record's picks from the staged start
 
 The car, silo and wagon families above recorded clocks the record no longer selects, from a warm-up and a settle. Five more cases record the
