@@ -1,5 +1,5 @@
 // The environment half of the blast cache key (scripts/blast/key.py): the variables that change what the engine generates are
-// in the key by name and value (none today), a key with none set is the one it always was, and a CLOCK_* variable no list knows
+// in the key by name and value (CLOCK_EXPLORE and CLOCK_SEARCH_FROM_EVERY_START), a key with none set is the one it always was, and a CLOCK_* variable no list knows
 // stops the key: CLOCK_NEW_DISPATCH too, which the engine no longer reads.
 import crypto from 'crypto';
 import fs from 'fs';
@@ -58,6 +58,13 @@ describe('the environment in the blast cache key', () => {
         for (const name of ['CLOCK_PROOF_PHASES', 'CLOCK_RECORDING_CACHE', 'CLOCK_RECORDING_CACHE_DIR', 'CLOCK_RECORDING_CACHE_LOG', 'CLOCK_GENERATOR_ROOT']) {
             expect(engineOf({ [name]: 'x' }).engine, name).toBe(unset);
         }
+    });
+
+    it('keys the search from every start by name and value, so a run with it on never shares an entry with one with it off', () => {
+        const unset = engineOf();
+        const on = engineOf({ CLOCK_SEARCH_FROM_EVERY_START: '1' });
+        expect(on.env).toEqual({ CLOCK_SEARCH_FROM_EVERY_START: '1' });
+        expect(on.engine).not.toBe(unset.engine);
     });
 
     it('fails closed on a CLOCK_* variable that is on no list, naming it', () => {

@@ -14,7 +14,8 @@ import {GENERATED_ALTERNATIVE as GRENADE_ALTERNATIVE, grenadeClockCases} from ".
 import {GENERATED_ALTERNATIVE as PRODUCTIVITY_ALTERNATIVE} from "./productivity-module-80-chest-chain-clock-fixtures";
 import {GENERATED_ALTERNATIVE as UTILITY_ALTERNATIVE} from "./utility-science-480-lds-foundry-chain-clock-fixtures";
 import {PROCESSING_UNIT_80_CIRCUIT_EXPORT_CASES} from "./processing-unit-80-circuit-export-clock-fixtures";
-import {MISSING_RECORDING_CASES} from "./missing-recordings-clock-fixtures";
+import {MISSING_RECORDING_CASES, SEARCH_CONTROLS_FILE} from "./missing-recordings-clock-fixtures";
+import {searchPicks} from "./filled-start-search-clock-fixtures";
 
 /**
  * Every game test that runs a generated clock compares what the game did with a recording, and the recording belongs to
@@ -24,6 +25,12 @@ import {MISSING_RECORDING_CASES} from "./missing-recordings-clock-fixtures";
  */
 const FAMILIES = ["blocked-output", "container", "front", "grenade", "inserter-crafting-240-shared-signal", "iron-ore-voider-400", "iron-plate-80-car-chest", "electromagnetic-science-330-drained-end", "lithium-plate-80-silo-chest", "logistic-science-240-direct-insert", "missing-recordings", "over-hood", "pickup", "processing-unit-80-circuit-export", "productivity-module-80-chest-chain", "steel-plate-26-wagon-chest", "utility-science-480-lds-foundry-chain"]
     .map(family => `${family}-clock-controls.json`);
+/**
+ * The controls of the picks the search from every stable clock makes (CLOCK_SEARCH_FROM_EVERY_START=1, off by default): the record is made with
+ * it off and does not select them, so each pin is tied to the generation with the switch on (src/crafting/filled-start-search.generation.test.ts),
+ * and no link to the record is below
+ */
+const SEARCH_FAMILY = SEARCH_CONTROLS_FILE;
 const hash = /^[0-9a-f]{64}$/;
 /** Entries whose native summary has no known clock yet: the list may only shrink */
 const NOT_YET_TIED: Record<string, string[]> = {};
@@ -35,10 +42,10 @@ const OWNER_CLOCKS: Record<string, Record<string, string>> = {
 
 test("every family of game tests with a controls file is checked here", () => {
     const files = fs.readdirSync(__dirname).filter(file => file.endsWith("-clock-controls.json") && !file.includes("history")).sort();
-    expect(files).toEqual([...FAMILIES].sort());
+    expect(files).toEqual([...FAMILIES, SEARCH_FAMILY].sort());
 });
 
-describe.each(FAMILIES)("%s", file => {
+describe.each([...FAMILIES, SEARCH_FAMILY])("%s", file => {
     const controls = readControls(file);
     test("every native summary names the clock it was recorded on, and the pin names it too", () => {
         expect(Object.keys(controls.cases).length).toBeGreaterThan(0);
@@ -273,6 +280,25 @@ describe("the record", () => {
         test("every generation pin has a job in the record", () => {
             const without = Object.entries(controls.cases).filter(([name, control]) => control.generation && link.jobOf(name) === undefined).map(([name]) => name);
             expect(without).toEqual([]);
+        });
+    });
+
+    describe("the picks of the search from every stable clock", () => {
+        const controls = readControls(SEARCH_FAMILY).cases;
+        const jobs = new Map(searchPicks().map(it => [it.name, it.job]));
+        test("every entry is a case of the search from every stable clock, and every case has an entry", () => {
+            expect(Object.keys(controls).sort()).toEqual([...jobs.keys()].sort());
+        });
+        test("each pin is a clock the record's job does not select (the switch moved it), of an alternative the record's job lists", () => {
+            const found: string[] = [];
+            for (const [name, control] of Object.entries(controls)) {
+                const made = readRecordJob(jobs.get(name)!);
+                if (made === undefined) { found.push(`${name}: record job ${jobs.get(name)} has no result in the record`); continue; }
+                const selected = made.alternatives.find(it => it.id === made.selected)!;
+                if (control.generation!.clock_sha256 === selected.clock_sha256) found.push(`${name}: the pin is the clock the record selects for ${made.job}: the switch does not move it`);
+                if (!made.alternatives.some(it => it.id === control.generation!.selection.id)) found.push(`${name}: record job ${made.job} lists no alternative ${control.generation!.selection.id}`);
+            }
+            expect(found).toEqual([]);
         });
     });
 

@@ -42,8 +42,9 @@ PATHS = ['clock-generator/src', 'clock-generator/resources', 'clock-generator/pa
 
 
 # CLOCK_* variables that change what a blast generates: keyed, by name and value. CLOCK_EXPLORE=1 is read by blast.blastrun.ts (not by the engine), which
-# then passes `explore_strategies`: the jobs also hold the explored clocks, so a run under it has an entry of its own and is never carried from another
-ENV_KEYED: list[str] = ['CLOCK_EXPLORE']
+# then passes `explore_strategies`: the jobs also hold the explored clocks, so a run under it has an entry of its own and is never carried from another.
+# CLOCK_SEARCH_FROM_EVERY_START=1 is read by the engine (the starts of Coordinated Sources' local choice) and moves picks
+ENV_KEYED: list[str] = ['CLOCK_EXPLORE', 'CLOCK_SEARCH_FROM_EVERY_START']
 # changes generation too, but the runner clears it (blast.sh runs every process with `env -u`), so it is never in effect
 ENV_CLEARED = ['CLOCK_PROOF_PHASES']
 # read by the harness or the scripts, not by generation: the game recording store (src/harness) and the sweep scripts' checkout

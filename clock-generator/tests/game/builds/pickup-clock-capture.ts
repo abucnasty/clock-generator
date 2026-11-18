@@ -9,6 +9,7 @@ import {GeneratedClock, recordInFactorio} from "../../../src/harness/factorio-ha
 import {recipesMaking} from "../../../src/harness/recording-output";
 import {Recording} from "../../../src/verification/recording";
 import {FixtureBeltSpeed, speedCapture} from "../helpers/belt-speed-fixtures";
+import {withSearchFromEveryStart} from "../helpers/search-switch";
 import {composeProbeSource} from "../helpers/probe-source";
 import {assertPickupClockHardware} from "./pickup-clock-speed-hardware";
 import {judgeBaseline, judgeBaselineOfFinals, RunRecord} from "../helpers/run-judgement";
@@ -91,6 +92,10 @@ export interface PickupClockScenario {
      * (`options.staged`, `options.finals`): its final machines are found once they have a recipe (steady.after_finals).
      */
     staged?: boolean;
+    /** The staged start is ruling 60's start (`staged_start.backpressure`): the part of the build no clock controls fills first, and the lock opens at the clock's first tick */
+    backpressure?: boolean;
+    /** The clock is the one the generator makes with CLOCK_SEARCH_FROM_EVERY_START on (tests/game/helpers/search-switch.ts); the record, made with it off, does not select it */
+    from_every_start?: boolean;
     probe: {family: string; machine_name?: string; ingredients?: readonly [string, string]; output_to_belt?: boolean;
         trace_ticks?: number; stackSize?: number; assemblers?: number; tail?: number;
         /** The car probe's per-tick series (iron-plate-80-car-chest-series-prelude.lua), with the clock's window cycle in ticks */
@@ -140,7 +145,7 @@ async function prepare(scenario: PickupClockScenario): Promise<Prepared> {
         generated.set(key, kept);
         return kept;
     }
-    const alternatives = generateClockAlternatives(config, {logger: quiet});
+    const alternatives = withSearchFromEveryStart(scenario.from_every_start === true, () => generateClockAlternatives(config, {logger: quiet}));
     const selected = scenario.alternative === undefined ? alternatives.alternatives[alternatives.selected_index]
         : alternatives.alternatives.find(alternative => alternative.id === scenario.alternative);
     if (!selected) throw new Error(`No alternative ${scenario.alternative} for ${scenario.name}`);
@@ -236,7 +241,7 @@ export async function capturePickupClockScenario(scenario: PickupClockScenario) 
             : (await recordInFactorio({factorio: process.env.FACTORIO_PATH!, save: process.env.FACTORIO_HARNESS_SAVE!, config, clock, blueprint, built_clock: scenario.built_clock, copies: scenario.copies,
                 out: path.join(capture.directory, "recording.json"), work_dir: path.join(capture.directory, "game"),
                 ticks: AUDIT_TICKS, settle_ticks: RUN_PROTOCOL.cap + 1,
-                ...(scenario.staged ? {warmup_ticks: 0, staged_start: {}} : {record_at_once: true, warmup_ticks: 3600}),
+                ...(scenario.staged ? {warmup_ticks: 0, staged_start: scenario.backpressure ? {backpressure: {}} : {}} : {record_at_once: true, warmup_ticks: 3600}),
                 seed: [], unclocked: false,
                 lua: composeProbeSource(scenario.probeFile ?? path.join(__dirname, "pickup-clock-speed-probe.lua"), {
                     ...scenario.probe, window: RUN_PROTOCOL.window, expected: expectedPerWindow, baseline: baselineTicks, cap: RUN_PROTOCOL.cap,

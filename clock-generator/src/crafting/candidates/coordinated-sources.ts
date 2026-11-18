@@ -36,7 +36,8 @@ import { verdictWithCopies, type VerdictWithCopies } from "../copies-verdict";
  *   round-robin-polling.ts). No product over the groups is searched, and nothing is ranked by a prediction.
  * - **The starts:** the local choice also starts from each stable clock among the parts whose wakeups a minute tie the recommended
  *   clock's as the selection compares them (`costKey`), every group on that clock's windows (`localChoiceStarts`). The clock is the
- *   result with the fewest wakeups, of equals the recommended clock's start's (`localChoiceFromStarts`).
+ *   result with the fewest wakeups, of equals the recommended clock's start's (`localChoiceFromStarts`). With `CLOCK_SEARCH_FROM_EVERY_START=1`
+ *   every stable part is a start, tied or not (off by default).
  * - **With the copies:** the end of the local choice is judged with the copies, as the listing judges a clock (`verdictWithCopies`); where
  *   it does not hold with them, the local choice runs again and takes only compositions that do (`localChoiceWithCopies`).
  * - **The clock** is then checked as a whole: the one-tick margin here (`holdsWithMargin`), and the checks of every alternative
@@ -582,9 +583,21 @@ export interface LocalChoiceJudge {
 }
 
 /**
+ * The environment variable that starts the local choice from every stable part, not only from those that tie the recommended clock
+ * ("1" turns it on; off where it is not set). It changes what the generator makes, so `scripts/blast/key.py` keys it.
+ */
+export const SEARCH_FROM_EVERY_START_VARIABLE = "CLOCK_SEARCH_FROM_EVERY_START";
+
+/** Whether the switch is on; read where the starts are made, so a test sets it for one generation */
+function searchesFromEveryStart(): boolean {
+    return typeof process !== "undefined" && process.env?.[SEARCH_FROM_EVERY_START_VARIABLE] === "1";
+}
+
+/**
  * The starts of the local choice: the recommended clock (every group at its first choice), then each stable part whose wakeups a
  * minute tie the recommended clock's as the selection compares them (`costKey`), in the order of the parts, where every group has
- * its windows and it is another start than those before it
+ * its windows and it is another start than those before it. With the switch on (`searchesFromEveryStart`), every stable part is a
+ * start, tied or not
  */
 export function localChoiceStarts(
     inserters: readonly GroupedInserter[],
@@ -597,10 +610,12 @@ export function localChoiceStarts(
     const wake_ups = recommended.wake_ups_per_minute;
     if (wake_ups === undefined || wake_ups === null) return starts;
     const keys = new Set([JSON.stringify([...starts[0].choice])]);
+    const from_every_start = searchesFromEveryStart();
     for (const part of parts) {
         const own_wake_ups = part.wake_ups_per_minute;
         if (part === recommended || part.alternative_id === undefined || part.verdict !== "stable" || own_wake_ups === undefined
-            || own_wake_ups === null || costKey({ wake_ups_per_minute: own_wake_ups }) !== costKey({ wake_ups_per_minute: wake_ups })) continue;
+            || own_wake_ups === null
+            || (!from_every_start && costKey({ wake_ups_per_minute: own_wake_ups }) !== costKey({ wake_ups_per_minute: wake_ups }))) continue;
         const own = partGroups(inserters, [part], shared_ticks);
         const choice = new Map(groups.map((group, index) => [group.source,
             group.choices.findIndex(it => JSON.stringify(it.windows) === JSON.stringify(own[index].choices[0].windows))]));
