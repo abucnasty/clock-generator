@@ -18,7 +18,7 @@ import { isNotChecked, judgeSharedLanes, sharedLaneRunsOf } from '../../../../sr
 import type { SharedLaneLoss } from '../../../../src/crafting/shared-lane-verdict';
 import { runOnSharedLanes } from '../../../../src/crafting/shared-lane-model';
 import { OpenRange } from '../../../../src/data-types';
-import type { Config } from '../../../../src/config/schema';
+import { judgedStartOf, type Config } from '../../../../src/config/schema';
 import { lithiumSiloCases } from '../lithium-plate-80-silo-chest-clock-fixtures';
 
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
@@ -124,13 +124,21 @@ const agriculturalScience: JobCheck[] = [
 ];
 
 // The processing unit circuit export (PROCESSING_UNIT_80_CIRCUIT_EXPORT), a real cell (#189) at 80 processing units a second.
+// From the backpressure start its three casting foundries, which no inserter feeds, start full (docs/stability.md, "How a clock is
+// started"): the explicit plan is then made on two output cycles, and the per-hand clock of the grouped hands comes from the
+// one-swing maker; from the cold start (`overrides.judged_start` "cold") the checks read as they did before.
+const circuitExportPlan = (config: Config) => judgedStartOf(config.overrides) === 'cold' ? { ticks: 24, items: 32 } : { ticks: 48, items: 64 };
+const circuitExportPerHand = (config: Config, generated: ClockAlternativesResult) =>
+    byMaker(generated, judgedStartOf(config.overrides) === 'cold' ? 'planned-belt-slack-per-hand' : 'swings-1-per-hand');
 const circuitExport: JobCheck[] = [
     {
-        name: 'Behavior: the explicit one-cycle plan is offered, in 24 ticks with 32 items, on a backed-up belt',
-        run: ({ generated }) => {
+        name: 'Behavior: the explicit plan is offered on a backed-up belt, in 24 ticks with 32 items from the cold start, 48 with 64 from the backpressure start',
+        run: ({ config, generated }) => {
             const plan = byMaker(generated, 'planned-belt-slack');
             expect(plan, 'the explicit behavior plan is offered, independently of the selector').toBeDefined();
-            expect(plan.result.stability_check.as_built).toMatchObject({ holds: true, actual_output_items: 32 });
+            const { ticks, items } = circuitExportPlan(config);
+            expect(plan.result.simulation_duration.ticks).toBe(ticks);
+            expect(plan.result.stability_check.as_built).toMatchObject({ holds: true, actual_output_items: items });
             expect(plan.belt).toEqual({ kind: 'backed_up' });
         },
     },
@@ -139,8 +147,8 @@ const circuitExport: JobCheck[] = [
         // from every loss, so it is remade once with the takers into the target machines (the processing unit machines 2 and 3) unguarded
         // of the per-hand clock the grouped hands make, which the per-branch clock composed from it is recommended over
         name: 'Selection: the 4 inserters with no window are the circuits into the processing unit machines, which the remake leaves unguarded',
-        run: ({ generated }) => {
-            expect(byMaker(generated, 'planned-belt-slack-per-hand').result.always_on_reasons).toEqual(Object.fromEntries([3, 4, 7, 8]
+        run: ({ config, generated }) => {
+            expect(circuitExportPerHand(config, generated).result.always_on_reasons).toEqual(Object.fromEntries([3, 4, 7, 8]
                 .map(number => [`inserter:${number}`, { kind: 'full-duty-cycle', window_cycle_ticks: 24 }])));
         },
     },
@@ -169,13 +177,13 @@ const circuitExport: JobCheck[] = [
         },
     },
     {
-        // the replay from the warm-up inventory is the build stalled in part (the plastic off the belt, inserter 1, picks up
-        // nothing in the window cycle recorded); the long run judges stock from index 960, after 240 warm-up ticks; replaying clock tick 1200
-        // shows the inserters at work
+        // from the cold start the replay from the warm-up inventory is the build stalled in part (the plastic off the belt, inserter 1,
+        // picks up nothing in the window cycle recorded) and replaying clock tick 1200 shows it at work; from the backpressure start the
+        // other way round (4 pickups, then none). Either way the long run judges stock from index 960, after 240 warm-up ticks
         name: 'records a settled period from the clock tick the long run judges, not the stalled first one',
         run: ({ config, generated }) => {
             // the per-hand clock of the grouped hands, which stalls in its first window cycle; the per-branch clock composed from it does not
-            const selected = byMaker(generated, 'planned-belt-slack-per-hand');
+            const selected = circuitExportPerHand(config, generated);
             const first_judged_tick = selected.result.stability_check.as_built?.first_judged_tick;
             expect(first_judged_tick).toBe(960);
             const judged_clock_tick = selected.result.stability_check.as_built?.clock_tick_at_first_judged;
@@ -192,8 +200,14 @@ const circuitExport: JobCheck[] = [
             expect(cold.ticks_before_recording).toBe(240);
             expect(settled.ticks_before_recording).toBe(1200);
             expect(settled.end_tick).toBe(24);
-            expect(swings(cold)).toBe(0);
-            expect(swings(settled)).toBeGreaterThan(0);
+            if (judgedStartOf(config.overrides) === 'cold') {
+                expect(swings(cold)).toBe(0);
+                expect(swings(settled)).toBeGreaterThan(0);
+            } else {
+                // from the backpressure start the first replayed window cycle is not stalled; inserter 1 then takes its plastic in
+                // other window cycles than the one replayed at the settled tick
+                expect([swings(cold), swings(settled)]).toEqual([4, 0]);
+            }
         },
     },
 ];
@@ -615,8 +629,8 @@ const chemical240: JobCheck[] = [
 
 const flyingRobotFrame: JobCheck[] = [
     // no missed swing shows the gap or a full output: unknown, with the missed swings
-    reasonsOfClocks({ takt_batches_observed: { code: "unknown", data: { missed: 426 } }, time_study_windows: { code: "unknown", data: { missed: 429 } },
-        pitch_pickups: { code: "unknown", data: { missed: 426 } } }),
+    reasonsOfClocks({ takt_batches_observed: { code: "unknown", data: { missed: 438 } }, time_study_windows: { code: "unknown", data: { missed: 438 } },
+        pitch_pickups: { code: "unknown", data: { missed: 438 } } }),
     // from flying-robot-frame-output-belt.generation.test.ts: the sample states the output belt of its scaffold (two lines of six copies each). The run
     // of the 12 copies puts every copy's frames on those lines, and the clock the generator selects for the build holds on them.
     {
@@ -729,19 +743,19 @@ const automation240: JobCheck[] = [
             const clock = byId(generated, "takt_batches_observed");
             expect(clock.result.simulation_duration.ticks).toBe(216);
             expect(rowsOf(clock)).toEqual([
-                { at: "2/1", together: "drop 240", label: "Join full on copies 4 and 8", sentence: "42 of 378 swings missed, on each." },
-                { at: "1/1", together: "take 120", label: "Copies 4 and 8 take less", sentence: "They wait for the output belt. Without the output belt, copy 4 still misses 11 of 189 swings here." },
-                { at: "1/2", together: "take 120", label: "Copies 4 and 8 take less", sentence: "They wait for the output belt. Without the output belt, copy 4 still misses 11 of 189 swings here." },
+                { at: "2/1", together: "drop 240", label: "Join full on copies 4 and 8", sentence: "43 of 384 swings missed, on each." },
+                { at: "1/1", together: "take 120", label: "Copies 4 and 8 take less", sentence: "They wait for the output belt. Without the output belt, copy 4 still misses 11 of 192 swings here." },
+                { at: "1/2", together: "take 120", label: "Copies 4 and 8 take less", sentence: "They wait for the output belt. Without the output belt, copy 4 still misses 11 of 192 swings here." },
             ]);
             const cause = clock.checked_lanes!.cause!;
-            expect(cause.headline.text).toBe("Copies 4 and 8 miss 42 of 378 swings each");
+            expect(cause.headline.text).toBe("Copies 4 and 8 miss 43 of 384 swings each");
             expect(cause.cause!.text).toBe("The side belts of copies 4 and 8 are full where they join the automation science pack output belt.");
             // a full join: its code, with the missed output swings and the output swings of copies 4 and 8
-            expect(cause.reason).toEqual({ code: "target_full", data: { missed: 84, swings: 756 } });
+            expect(cause.reason).toEqual({ code: "target_full", data: { missed: 86, swings: 768 } });
             expect(cause.spacing).toBeNull();
-            expect(cause.where.text).toBe("The inserter of copy 4 that drops automation science pack misses 42 of its 378 swings in 63 window cycles, and so does that of copy 8. "
-                + "84 of the 336 swings each one makes wait for room.");
-            expect(cause.alone.text).toBe("The same inserter makes all 378 swings. The clock is right for one copy.");
+            expect(cause.where.text).toBe("The inserter of copy 4 that drops automation science pack misses 43 of its 384 swings in 64 window cycles, and so does that of copy 8. "
+                + "85 of the 341 swings each one makes wait for room.");
+            expect(cause.alone.text).toBe("The same inserter makes all 384 swings. The clock is right for one copy.");
             expect(cause.changes!.text).toBe("With 3 copies, every copy makes every swing. Another clock of this build has no full join: Coordinated Sources, window cycle 216 ticks.");
         },
     },
@@ -754,7 +768,7 @@ const automation240: JobCheck[] = [
             expect(rowsOf(clock)).toEqual([
                 { at: "1/1", together: "take 120", label: "Holds", sentence: "Every copy gets its items." },
                 { at: "1/2", together: "take 120", label: "Holds", sentence: "Every copy gets its items." },
-                { at: "2/1", together: "drop 240", label: "Holds", sentence: "Copies 4 and 8 wait for room at their join in 128 of their 384 swings. No swing is missed." },
+                { at: "2/1", together: "drop 240", label: "Holds", sentence: "Copies 4 and 8 wait for room at their join in 130 of their 390 swings. No swing is missed." },
             ]);
             expect(clock.checked_lanes!.cause).toBeNull();
         },
@@ -763,7 +777,7 @@ const automation240: JobCheck[] = [
         name: "gives the reason code of belt gaps on each lane loss where a missed swing shows the gap, and of a full join on the join clock, with their counts",
         run: ({ generated }) => {
             expect(reasonsOf(generated)).toEqual({
-                takt_batches_observed: { code: "target_full", data: { missed: 84, swings: 756 } },
+                takt_batches_observed: { code: "target_full", data: { missed: 86, swings: 768 } },
                 euclidean_swings: { code: "belt_gaps", data: { missed: 6, with_gap: 3 } },
                 takt_batches_observed_swings_2: { code: "belt_gaps", data: { missed: 16, with_gap: 8 } },
                 takt_batches_swings_1: { code: "belt_gaps", data: { missed: 26, with_gap: 26 } },
@@ -799,18 +813,18 @@ const automation240: JobCheck[] = [
             expect(swings.kind).toBe("join");
             if (swings.kind !== "join") return;
             expect(swings.copies.map(it => ({ copy: it.copy, window_cycles: it.window_cycles, gives: it.gives, made: it.made.join("") })))
-                .toEqual([4, 8].map(copy => ({ copy, window_cycles: 63, gives: 6, made: "565".repeat(21) })));
+                .toEqual([4, 8].map(copy => ({ copy, window_cycles: 64, gives: 6, made: "5" + "565".repeat(21) })));
             // the output inserters drop onto side belts that side-load onto the output belt
             expect(swings.side_belt).toBe(true);
         },
     },
-    // what the output inserters of all 9 copies put down over the judged span: 53,088 packs in 13,608 ticks on the 216-tick
-    // clock, which 240 x (9 x 378 - 84) / (9 x 378) gives from its swings too
+    // what the output inserters of all 9 copies put down over the judged span: 53,920 packs in 13,824 ticks on the 216-tick
+    // clock, which 240 x (9 x 384 - 86) / (9 x 384) gives from its swings too
     {
         name: "gives the rate all the copies made together in the run of the copies, over the judged span, on the four clocks with a loss",
         run: ({ generated }) => {
             const made = (id: string) => byId(generated, id).checked_lanes!.copies_made;
-            expect(made("takt_batches_observed")).toEqual({ items_per_second: 234.074074074, window_cycles: 63 });
+            expect(made("takt_batches_observed")).toEqual({ items_per_second: 234.027777778, window_cycles: 64 });
             expect(made("euclidean_swings")).toEqual({ items_per_second: 238.769230769, window_cycles: 65 });
             expect(made("takt_batches_observed_swings_2")).toEqual({ items_per_second: 236.512820513, window_cycles: 65 });
             expect(made("takt_batches_swings_1")).toEqual({ items_per_second: 234.461538462, window_cycles: 65 });
@@ -820,7 +834,7 @@ const automation240: JobCheck[] = [
     },
     {
         name: "gives the setpoint as the rate of the copies on the stable time study windows clock",
-        run: ({ generated }) => { expect(byId(generated, "time_study_windows").checked_lanes!.copies_made).toEqual({ items_per_second: 240, window_cycles: 64 }); },
+        run: ({ generated }) => { expect(byId(generated, "time_study_windows").checked_lanes!.copies_made).toEqual({ items_per_second: 240, window_cycles: 65 }); },
     },
     {
         name: "gives no rate of the copies on a clock the copies were not run for (it does not hold on one copy)",

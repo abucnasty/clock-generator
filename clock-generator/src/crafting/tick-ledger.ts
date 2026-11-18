@@ -222,6 +222,26 @@ export function withTickMaker<T>(maker: string, work: () => T): T {
  * (`claim: true`) the purpose stays that scope's.
  */
 export function withTickPurpose<T>(purpose: TickPurpose, work: () => T, options: { claim?: boolean } = {}): T {
+    purposes_running.push(purpose);
+    try {
+        return countedUnderPurpose(purpose, work, options);
+    } finally {
+        purposes_running.pop();
+    }
+}
+
+/** The purposes of the work running now, outermost first, whether a ledger is open or not (see `runsThatMakeWindows`) */
+const purposes_running: TickPurpose[] = [];
+
+/** The runs that make or try the windows of a clock: the ones the judged start leaves cold (`judged_start`) */
+const WINDOW_MAKING_PURPOSES: readonly TickPurpose[] = ["margin_check", "window_derivation", "pitch_pickups", "fuel_view"];
+
+/** Whether the work running now is inside a run that makes or tries windows, not one that judges a clock */
+export function runsThatMakeWindows(): boolean {
+    return purposes_running.some(purpose => WINDOW_MAKING_PURPOSES.includes(purpose));
+}
+
+function countedUnderPurpose<T>(purpose: TickPurpose, work: () => T, options: { claim?: boolean }): T {
     const own = scope;
     if (own === undefined || own.claimed) return work();
     const before = own.purpose;

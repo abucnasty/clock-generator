@@ -5,9 +5,9 @@ import type { JobCheck } from '../record-job-checks';
 import { disturbanceTrialOf, COORDINATED_SOURCES_MAKER, selectableAsStable } from '../../../../src/crafting/generate-blueprint';
 import type { ClockAlternative, ClockAlternativesResult } from '../../../../src/crafting/generate-blueprint';
 import { lossId, verdictOf, type DisturbanceTrialReport } from '../../../../src/crafting/disturbance-trial';
-import { START_DEPENDENCE_NOT_CHECKED } from '../../../../src/crafting/start-dependence';
+import { startDependenceNotChecked } from '../../../../src/crafting/start-dependence';
 import { SEARCH_MAKERS } from '../../../../src/crafting/generate-blueprint-test-helpers';
-import type { Config } from '../../../../src/config/schema';
+import { judgedStartOf, type Config } from '../../../../src/config/schema';
 
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 const selectedOf = (generated: ClockAlternativesResult): ClockAlternative => generated.alternatives[generated.selected_index];
@@ -28,14 +28,19 @@ const agriculturalBackedUp: JobCheck[] = [{
     },
 }];
 
-// The processing unit circuit export with "Backed-up belts" on (PROCESSING_UNIT_80_CIRCUIT_EXPORT_BACKED_UP); the other case is the config's job
+// The processing unit circuit export with "Backed-up belts" on (PROCESSING_UNIT_80_CIRCUIT_EXPORT_BACKED_UP); the other case is the config's job.
+// From the backpressure start the explicit plan is made on two output cycles and the per-hand clock comes from the one-swing maker (see
+// samples.ts, the config's job); from the cold start the checks read as they did before.
+const coldStart = (config: Config) => judgedStartOf(config.overrides) === 'cold';
 const circuitExportBackedUp: JobCheck[] = [
     {
-        name: 'Behavior: the explicit one-cycle plan is offered, in 24 ticks with 32 items, for a backed-up belt',
-        run: ({ generated }) => {
+        name: 'Behavior: the explicit plan is offered for a backed-up belt, in 24 ticks with 32 items from the cold start, 48 with 64 from the backpressure start',
+        run: ({ config, generated }) => {
             const plan = byMaker(generated, 'planned-belt-slack');
             expect(plan, 'the explicit behavior plan is offered, independently of the selector').toBeDefined();
-            expect(plan.result.stability_check.as_built).toMatchObject({ holds: true, actual_output_items: 32 });
+            const { ticks, items } = coldStart(config) ? { ticks: 24, items: 32 } : { ticks: 48, items: 64 };
+            expect(plan.result.simulation_duration.ticks).toBe(ticks);
+            expect(plan.result.stability_check.as_built).toMatchObject({ holds: true, actual_output_items: items });
             expect(plan.belt).toEqual({ kind: 'backed_up' });
         },
     },
@@ -44,8 +49,8 @@ const circuitExportBackedUp: JobCheck[] = [
         // from every loss, so it is remade once with the takers into the target machines (the processing unit machines 2 and 3) unguarded
         // of the per-hand clock the grouped hands make, which the per-branch clock composed from it is recommended over
         name: 'Selection: the 4 inserters with no window are the circuits into the processing unit machines, which the remake leaves unguarded',
-        run: ({ generated }) => {
-            expect(byMaker(generated, 'planned-belt-slack-per-hand').result.always_on_reasons).toEqual(Object.fromEntries([3, 4, 7, 8]
+        run: ({ config, generated }) => {
+            expect(byMaker(generated, coldStart(config) ? 'planned-belt-slack-per-hand' : 'swings-1-per-hand').result.always_on_reasons).toEqual(Object.fromEntries([3, 4, 7, 8]
                 .map(number => [`inserter:${number}`, { kind: 'full-duty-cycle', window_cycle_ticks: 24 }])));
         },
     },
@@ -195,9 +200,9 @@ const automation: JobCheck[] = [
     },
     {
         name: 'says plainly that start dependence was not checked, by default',
-        run: ({ generated }) => {
+        run: ({ config, generated }) => {
             expect(generated.start_dependence_checked).toBe(false);
-            expect(generated.start_dependence_note).toBe(START_DEPENDENCE_NOT_CHECKED);
+            expect(generated.start_dependence_note).toBe(startDependenceNotChecked(judgedStartOf(config.overrides)));
             expect(generated.alternatives.every(it => it.assessment.start_dependence === null)).toBe(true);
         },
     },
