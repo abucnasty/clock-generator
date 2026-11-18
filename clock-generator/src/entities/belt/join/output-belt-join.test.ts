@@ -173,18 +173,18 @@ describe("an output belt of several lines, with a side belt of its own for some 
 // side belt's drop tile: the first stack 32 past the entrance's own half
 describe("a drop onto an underground end", () => {
     it("lands past the tile's middle, on the far side from an inserter in line with the belt, and on the end's own half", () => {
-        expect(dropSpotOn({ end: "entrance", inserter: "downstream" })).toBe(179);
-        expect(dropSpotOn({ end: "exit", inserter: "upstream" })).toBe(77);
-        expect(dropSpotOn({ end: "entrance", inserter: "upstream" })).toBe(128);
-        expect(dropSpotOn({ end: "exit", inserter: "downstream" })).toBe(128);
-        expect(dropSpotOn({ end: "entrance", inserter: "beside" })).toBe(128);
+        expect(dropSpotOn({ underground: "entrance", inserter: "downstream" })).toBe(179);
+        expect(dropSpotOn({ underground: "exit", inserter: "upstream" })).toBe(77);
+        expect(dropSpotOn({ underground: "entrance", inserter: "upstream" })).toBe(128);
+        expect(dropSpotOn({ underground: "exit", inserter: "downstream" })).toBe(128);
+        expect(dropSpotOn({ underground: "entrance", inserter: "beside" })).toBe(128);
     });
 
     it("puts the drop's spot on the line of its tile, and a drop onto a straight belt on the tile's middle", () => {
         const belt: OutputBelt = {
             stretches: [{ points: [
-                { drop: 1, lane: "right", drop_tile: { end: "entrance", inserter: "downstream" } },
-                { tiles: 10, drop: 2, lane: "right", drop_tile: { end: "exit", inserter: "upstream" } },
+                { drop: 1, lane: "right", drop_tile: { underground: "entrance", inserter: "downstream" } },
+                { tiles: 10, drop: 2, lane: "right", drop_tile: { underground: "exit", inserter: "upstream" } },
                 { tiles: 2, drop: 3, lane: "right" },
                 { tiles: 3, lane_end: { kind: "infinite" } },
             ] }],

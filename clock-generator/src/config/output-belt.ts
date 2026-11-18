@@ -69,9 +69,9 @@ const SideBeltSchema = z.strictObject({
 });
 
 const DropTileSchema = z.strictObject({
-    end: z.enum(["entrance", "exit"]).describe("The underground end the output inserter drops onto: entrance or exit."),
-    inserter: z.enum(["beside", "upstream", "downstream"]).describe("Where the output inserter stands: beside the end, or in line with the belt, "
-        + "upstream or downstream of the end."),
+    underground: z.enum(["entrance", "exit"]).describe("The underground belt entity the output inserter drops onto: entrance or exit."),
+    inserter: z.enum(["beside", "upstream", "downstream"]).describe("Where the output inserter stands: beside the entity, or in line with the belt, "
+        + "upstream or downstream of it."),
 });
 /** The underground end that an output inserter drops onto, and where the inserter stands */
 export type DropTile = z.infer<typeof DropTileSchema>;
@@ -97,8 +97,8 @@ const PointSchema = z.strictObject({
         + "side-straight (a straight belt), side-entrance (an underground entrance) or side-exit (an underground exit)."),
     drop: z.number().int().positive().describe("The copy, from 1, with the output inserter that drops onto this point. "
         + "Where a copy has k output inserters, number (c - 1) k + j is the j-th of them in the config of copy c.").optional(),
-    drop_tile: DropTileSchema.optional().describe("With `drop`: the underground end that the output inserter drops onto, where the drop tile is not a straight belt. "
-        + "An inserter in line with the belt puts its stacks down past the middle of the tile, and an underground end carries them on its own half only, "
+    drop_tile: DropTileSchema.optional().describe("With `drop`: the underground entrance or exit that the output inserter drops onto, where the drop tile is not a straight belt. "
+        + "An inserter in line with the belt puts its stacks down past the middle of the tile, and an underground entrance or exit carries them on its own half only, "
         + "so the drop lands elsewhere on the tile than on a straight belt."),
     splitter_input: laneSchema("The splitter's input that this stretch ends in").optional(),
     splitter_output: laneSchema("The splitter's output that this stretch starts at").optional(),
@@ -527,7 +527,7 @@ export function outputBeltProblems(belt: OutputBelt, copy_offset: { x: number; y
                 shape.push({ path, message: "State the `layout` of the tile that takes the side load: side-straight, side-entrance or side-exit." });
             }
             if (point.drop === undefined && point.drop_tile !== undefined) {
-                shape.push({ path, message: "`drop_tile` is the underground end a copy's output inserter drops onto: state it with `drop` only." });
+                shape.push({ path, message: "`drop_tile` is the underground entrance or exit a copy's output inserter drops onto: state it with `drop` only." });
             }
             if (point.side_load === undefined && point.layout !== undefined) {
                 shape.push({ path, message: "`layout` is the tile that takes a side load: state it with `side_load` only." });

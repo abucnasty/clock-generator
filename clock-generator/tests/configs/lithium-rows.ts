@@ -51,9 +51,9 @@ export function lithiumRows(sample: Config, form: LithiumRowsForm): Config {
             points.push(points.length === 0 ? what : { tiles, ...what });
             tiles = 0;
         };
-        if (!in_chest.includes(first)) point({ drop: number(first), lane, drop_tile: { end: 'entrance', inserter: 'downstream' } });
+        if (!in_chest.includes(first)) point({ drop: number(first), lane, drop_tile: { underground: 'entrance', inserter: 'downstream' } });
         tiles += 10;
-        point({ drop: number(second), lane, drop_tile: { end: 'exit', inserter: 'upstream' } });
+        point({ drop: number(second), lane, drop_tile: { underground: 'exit', inserter: 'upstream' } });
         tiles += 4;
         if (!in_chest.includes(third)) point({ side_load: [number(third)], lane, layout: 'side-straight' });
         tiles += 10;

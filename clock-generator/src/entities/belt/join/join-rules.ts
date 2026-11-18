@@ -60,7 +60,7 @@ export const IN_LINE_DROP_OFFSET = 51;
 export function dropSpotOn(tile: DropTile): number {
     const spot = tile.inserter === "beside" ? TILE_MIDDLE
         : tile.inserter === "upstream" ? TILE_MIDDLE - IN_LINE_DROP_OFFSET : TILE_MIDDLE + IN_LINE_DROP_OFFSET;
-    return tile.end === "entrance" ? Math.max(spot, TILE_MIDDLE) : Math.min(spot, TILE_MIDDLE);
+    return tile.underground === "entrance" ? Math.max(spot, TILE_MIDDLE) : Math.min(spot, TILE_MIDDLE);
 }
 
 /**
