@@ -49,7 +49,8 @@ take them. `paths.ts` names the ones unit tests load by sample-style keys (`Test
   row: `src/crafting/loss-trials-cold-start.generation.test.ts` checks that the losses of such rows are run from the cold
   start only, where the clock-only check runs many lane phases. With `output_line`, a row of nine 9 tiles apart (in one
   copy or three copies of three) states the output line of the sample's scaffold, each output inserter by its place:
-  `src/crafting/whole-build.generation.test.ts` judges clocks with it against the game.
+  `src/crafting/whole-build.generation.test.ts` and `src/crafting/whole-build-copies.generation.test.ts` judge clocks
+  with it against the game; `whole-build-clocks.ts` holds the rows, clocks and readers they share.
 - `lithium-rows.ts` (`lithiumRows`): the lithium plate sample's config with the output belt of its scaffold stated: two
   rows of three furnaces, each row's plates on a line of its own, as built or with some furnaces' output into a chest that
   removes all. `src/crafting/output-belt-run.test.ts` runs two clocks recorded in the game on it and compares the window
