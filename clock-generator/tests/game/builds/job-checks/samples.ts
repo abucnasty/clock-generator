@@ -170,8 +170,8 @@ const circuitExport: JobCheck[] = [
     },
     {
         // from the cold start the replay from the warm-up inventory is the build stalled in part (the plastic off the belt, inserter 1,
-        // picks up nothing in the window cycle recorded); from the backpressure start its full foundries keep it at work there (4 pickups);
-        // the long run judges stock from index 960, after 240 warm-up ticks; replaying clock tick 1200 shows the inserters at work
+        // picks up nothing in the window cycle recorded) and replaying clock tick 1200 shows it at work; from the backpressure start the
+        // other way round (4 pickups, then none). Either way the long run judges stock from index 960, after 240 warm-up ticks
         name: 'records a settled period from the clock tick the long run judges, not the stalled first one',
         run: ({ config, generated }) => {
             // the per-hand clock of the grouped hands, which stalls in its first window cycle; the per-branch clock composed from it does not
@@ -192,8 +192,14 @@ const circuitExport: JobCheck[] = [
             expect(cold.ticks_before_recording).toBe(240);
             expect(settled.ticks_before_recording).toBe(1200);
             expect(settled.end_tick).toBe(24);
-            expect(swings(cold)).toBe(judgedStartOf(config.overrides) === 'cold' ? 0 : 4);
-            expect(swings(settled)).toBeGreaterThan(0);
+            if (judgedStartOf(config.overrides) === 'cold') {
+                expect(swings(cold)).toBe(0);
+                expect(swings(settled)).toBeGreaterThan(0);
+            } else {
+                // from the backpressure start the first replayed window cycle is not stalled; inserter 1 then takes its plastic in
+                // other window cycles than the one replayed at the settled tick
+                expect([swings(cold), swings(settled)]).toEqual([4, 0]);
+            }
         },
     },
 ];
