@@ -11,6 +11,9 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ## [Unreleased]
 
+### Added
+- ui: a notice where output inserters share a belt line that the configuration does not state
+
 ### Changed
 - generation: Coordinated Sources now checks its clock with every copy while it chooses
 - generation: the chemical science, grenade and utility science samples now judge their output belts
