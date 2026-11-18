@@ -65,6 +65,240 @@
     "clock_sha256": "b43dfd7b1bc71bb06bacc17e15795544004cf07d9b2bfd78870a59f57acb0197"
    }
   },
+  "advanced-circuit-230": {
+   "recorded": {
+    "pr": 0,
+    "commit": "95f45024",
+    "frozen_head": "95f45024",
+    "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
+    "clock_sha256": "9cdc8d06a5bb1887dbff8a99b856b5eb3cd90a3f3506a535b435ae6db58bde85",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 76.666667,
+    "period": 12672,
+    "window": 3600,
+    "expected": 4600,
+    "steady": 16357,
+    "baseline": {
+     "ticks": 12672,
+     "total": 16192,
+     "expected": 16192,
+     "min": 4578,
+     "max": 4620,
+     "held": false,
+     "meets": true,
+     "measured": {
+      "ticks": 12672,
+      "items": 16192,
+      "expected": 16192,
+      "stock_start": 48,
+      "stock_end": 48,
+      "net": 16192
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut electronic-circuit",
+      "start": 29029,
+      "drop": 29111,
+      "release": 29111,
+      "recovered": 34139
+     },
+     {
+      "kind": "block output",
+      "start": 34139,
+      "drop": 34521,
+      "release": 34521,
+      "recovered": 38990
+     },
+     {
+      "kind": "cut coal",
+      "start": 38990,
+      "drop": 39516,
+      "release": 39516,
+      "recovered": 46660
+     }
+    ],
+    "stock": {
+     "lowest": 0,
+     "end": 48,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 46660
+   },
+   "generation": {
+    "period": 12672,
+    "expected": 16192,
+    "verdict": "stable",
+    "selection": {
+     "id": "pitch_pickups_subtick",
+     "holds": true,
+     "rate": 230,
+     "supply": "backed_up"
+    },
+    "clock_sha256": "9cdc8d06a5bb1887dbff8a99b856b5eb3cd90a3f3506a535b435ae6db58bde85"
+   }
+  },
+  "advanced-circuit-240": {
+   "recorded": {
+    "pr": 0,
+    "commit": "95f45024",
+    "frozen_head": "95f45024",
+    "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
+    "clock_sha256": "e45bff6b92a3689f5168704cfc6bb006986a96046d1bd386ee2f44a5483e430c",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 80,
+    "period": 528,
+    "window": 3600,
+    "expected": 4800,
+    "steady": 6768,
+    "baseline": {
+     "ticks": 3600,
+     "total": 4780,
+     "expected": 4800,
+     "min": 4778,
+     "max": 4842,
+     "held": false,
+     "meets": true,
+     "measured": {
+      "ticks": 3168,
+      "items": 4224,
+      "expected": 4224,
+      "stock_start": 40,
+      "stock_end": 40,
+      "net": 4224
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut electronic-circuit",
+      "start": 10368,
+      "drop": 10478,
+      "release": 10478,
+      "recovered": 14144
+     },
+     {
+      "kind": "block output",
+      "start": 14144,
+      "drop": 14503,
+      "release": 14503,
+      "recovered": 18311
+     },
+     {
+      "kind": "cut coal",
+      "start": 18311,
+      "drop": 18782,
+      "release": 18782,
+      "recovered": 22765
+     }
+    ],
+    "stock": {
+     "lowest": 0,
+     "end": 12,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 22765
+   },
+   "generation": {
+    "period": 528,
+    "expected": 704,
+    "verdict": "stable",
+    "selection": {
+     "id": "takt_batches_observed",
+     "holds": true,
+     "rate": 240,
+     "supply": "backed_up"
+    },
+    "clock_sha256": "e45bff6b92a3689f5168704cfc6bb006986a96046d1bd386ee2f44a5483e430c"
+   }
+  },
+  "advanced-circuit-240-backed-up": {
+   "recorded": {
+    "pr": 0,
+    "commit": "95f45024",
+    "frozen_head": "95f45024",
+    "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
+    "clock_sha256": "e45bff6b92a3689f5168704cfc6bb006986a96046d1bd386ee2f44a5483e430c",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 80,
+    "period": 528,
+    "window": 3600,
+    "expected": 4800,
+    "steady": 6768,
+    "baseline": {
+     "ticks": 3600,
+     "total": 4780,
+     "expected": 4800,
+     "min": 4778,
+     "max": 4842,
+     "held": false,
+     "meets": true,
+     "measured": {
+      "ticks": 3168,
+      "items": 4224,
+      "expected": 4224,
+      "stock_start": 40,
+      "stock_end": 40,
+      "net": 4224
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut electronic-circuit",
+      "start": 10368,
+      "drop": 10478,
+      "release": 10478,
+      "recovered": 14144
+     },
+     {
+      "kind": "block output",
+      "start": 14144,
+      "drop": 14503,
+      "release": 14503,
+      "recovered": 18311
+     },
+     {
+      "kind": "cut coal",
+      "start": 18311,
+      "drop": 18782,
+      "release": 18782,
+      "recovered": 22765
+     }
+    ],
+    "stock": {
+     "lowest": 0,
+     "end": 12,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 22765
+   },
+   "generation": {
+    "period": 528,
+    "expected": 704,
+    "verdict": "stable",
+    "selection": {
+     "id": "takt_batches_observed",
+     "holds": true,
+     "rate": 240,
+     "supply": "backed_up"
+    },
+    "clock_sha256": "e45bff6b92a3689f5168704cfc6bb006986a96046d1bd386ee2f44a5483e430c"
+   }
+  },
   "automation-science-240-one-output-swing": {
    "recorded": {
     "pr": 809,
@@ -285,6 +519,77 @@
     "clock_sha256": "6bab541d51f7e1051beb1194f86842e4c8f30c1724b4564851302d19e4dcf808"
    }
   },
+  "lds-240": {
+   "recorded": {
+    "pr": 0,
+    "commit": "95f45024",
+    "frozen_head": "95f45024",
+    "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
+    "clock_sha256": "f857f0f459dfc1bdc292f360461924a62a035e217a2fd75d40dba5e5da94376b",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 240,
+    "period": 288,
+    "window": 3600,
+    "expected": 14400,
+    "steady": 7056,
+    "baseline": {
+     "ticks": 3600,
+     "total": 14380,
+     "expected": 14400,
+     "min": 14368,
+     "max": 14432,
+     "held": false,
+     "meets": true,
+     "measured": {
+      "ticks": 3456,
+      "items": 13824,
+      "expected": 13824,
+      "stock_start": 80,
+      "stock_end": 80,
+      "net": 13824
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut coal",
+      "start": 10656,
+      "drop": 10799,
+      "release": 10799,
+      "recovered": 14613
+     },
+     {
+      "kind": "block output",
+      "start": 14613,
+      "drop": 14757,
+      "release": 14757,
+      "recovered": 18549
+     }
+    ],
+    "stock": {
+     "lowest": 0,
+     "end": 68,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 18549
+   },
+   "generation": {
+    "period": 288,
+    "expected": 1152,
+    "verdict": "stable",
+    "selection": {
+     "id": "takt_batches_observed_swings_6",
+     "holds": true,
+     "rate": 240,
+     "supply": "backed_up"
+    },
+    "clock_sha256": "f857f0f459dfc1bdc292f360461924a62a035e217a2fd75d40dba5e5da94376b"
+   }
+  },
   "logistic-science-240": {
    "recorded": {
     "pr": 809,
@@ -361,6 +666,155 @@
      "supply": "backed_up"
     },
     "clock_sha256": "05fd4bbdccfba05b939e5195c6dfcae215d0cf3a6342f80bb407a803d7a6540c"
+   }
+  },
+  "logistic-science-240-direct-insert": {
+   "recorded": {
+    "pr": 0,
+    "commit": "95f45024",
+    "frozen_head": "95f45024",
+    "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
+    "clock_sha256": "539e717d128ba51e5e67b1b6dd1d300f9a06538a88ca9c1324000ff3e67d52d7",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 40,
+    "period": 576,
+    "window": 3600,
+    "expected": 2400,
+    "steady": 7056,
+    "baseline": {
+     "ticks": 3600,
+     "total": 2396,
+     "expected": 2400,
+     "min": 2396,
+     "max": 2408,
+     "held": false,
+     "meets": true,
+     "measured": {
+      "ticks": 3456,
+      "items": 2304,
+      "expected": 2304,
+      "stock_start": 56,
+      "stock_end": 56,
+      "net": 2304
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut inserter",
+      "start": 10656,
+      "drop": 10824,
+      "release": 10824,
+      "recovered": 14600
+     },
+     {
+      "kind": "block output",
+      "start": 14600,
+      "drop": 15240,
+      "release": 15240,
+      "recovered": 19016
+     }
+    ],
+    "stock": {
+     "lowest": 0,
+     "end": 64,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 19016
+   },
+   "generation": {
+    "period": 576,
+    "expected": 384,
+    "verdict": "stable",
+    "selection": {
+     "id": "coordinated_sources",
+     "holds": true,
+     "rate": 240,
+     "supply": "backed_up"
+    },
+    "clock_sha256": "539e717d128ba51e5e67b1b6dd1d300f9a06538a88ca9c1324000ff3e67d52d7"
+   }
+  },
+  "metallurgic-science-45": {
+   "recorded": {
+    "pr": 0,
+    "commit": "95f45024",
+    "frozen_head": "95f45024",
+    "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
+    "clock_sha256": "6475d7261b4c4acec7f6c281f01373097764cb3b77bddc3907a9665e8d7cf1e5",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 45,
+    "period": 640,
+    "window": 3600,
+    "expected": 2700,
+    "steady": 6800,
+    "baseline": {
+     "ticks": 3600,
+     "total": 2700,
+     "expected": 2700,
+     "min": 2698,
+     "max": 2702,
+     "held": false,
+     "meets": true,
+     "measured": {
+      "ticks": 3200,
+      "items": 2400,
+      "expected": 2400,
+      "stock_start": 17,
+      "stock_end": 17,
+      "net": 2400
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut tungsten-ore",
+      "start": 10400,
+      "drop": 10505,
+      "release": 10505,
+      "recovered": 14456
+     },
+     {
+      "kind": "block output",
+      "start": 14456,
+      "drop": 14575,
+      "release": 14575,
+      "recovered": 18246
+     },
+     {
+      "kind": "cut coal",
+      "start": 18246,
+      "drop": 18803,
+      "release": 18803,
+      "recovered": 22542
+     }
+    ],
+    "stock": {
+     "lowest": 0,
+     "end": 21,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 22542
+   },
+   "generation": {
+    "period": 640,
+    "expected": 480,
+    "verdict": "stable",
+    "selection": {
+     "id": "time_study_windows_subtick",
+     "holds": true,
+     "rate": 45,
+     "supply": "backed_up"
+    },
+    "clock_sha256": "6475d7261b4c4acec7f6c281f01373097764cb3b77bddc3907a9665e8d7cf1e5"
    }
   },
   "processing-unit-15-chest-fed": {
