@@ -237,16 +237,16 @@
     },
     "lithium-silo-swings-7": {
       "recorded": {
-        "pr": 0,
-        "commit": "57c76634",
-        "frozen_head": "57c76634",
-        "note": "recorded under the protocol in game ticks on the engine of this head; pr is set when the PR is opened",
-        "clock_sha256": "61effe3366fe9712e27b307ba9c8b36bac71e6b84e07885d055baca16133438a",
+        "pr": 837,
+        "commit": "05d7dc86",
+        "frozen_head": "05d7dc86",
+        "note": "recorded again under the protocol in game ticks (Factorio 2.1.24) when the output belt came into the run of one copy and the generation moved this clock from 61effe33; the game reaches no steady state with it, as with 61effe33",
+        "clock_sha256": "343b7a92f307168f7dd52c3147c328193c1641e09d67fdaa8b4255b198531fdb",
         "clock_basis": "capture"
       },
       "native": {
         "protocol": "trailing-minute",
-        "generationVerdict": "stable",
+        "generationVerdict": "unstable",
         "target": 80,
         "period": 7560,
         "window": 3600,
@@ -264,11 +264,11 @@
         "verdict": "unstable",
         "selection": {
           "id": "takt_batches_observed_swings_7",
-          "holds": true,
-          "rate": 80,
+          "holds": false,
+          "rate": 76.44444444444444,
           "supply": null
         },
-        "clock_sha256": "61effe3366fe9712e27b307ba9c8b36bac71e6b84e07885d055baca16133438a"
+        "clock_sha256": "343b7a92f307168f7dd52c3147c328193c1641e09d67fdaa8b4255b198531fdb"
       }
     },
     "lithium-silo-selected-staged": {

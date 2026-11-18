@@ -562,7 +562,7 @@ silo before the clock starts, though the config exports it empty.
 [lithium-plate-80-silo-chest-clock-controls.json](lithium-plate-80-silo-chest-clock-controls.json) holds the 4 native summaries, trailing-minute runs
 recorded on Factorio 2.1.24 on engine `57c76634`. **The clock with 3 output swings, in both build orders, and the clock with 1
 output swing hold their target over the baseline and recover after each disturbance, and the output stock guard holds.** The clock
-with 7 output swings is stable in the simulator, and the game reaches no steady state with it within 36,000 ticks:
+with 7 output swings (recorded again on #837, as the generation moved it) reaches no steady state within 36,000 ticks in the game, and the simulator, which runs the output belt in the run of one copy, does not hold it either:
 the output inserters of two furnaces drop onto underground entrances whose exits
 side-load onto the shared output belt, which the config describes as one belt with room for every drop
 ([scope](../../../docs/game-data-and-scope.md)). `clock-controls.test.ts` pins each clock against the record and `game-runs-hold.test.ts` checks it
