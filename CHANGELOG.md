@@ -18,6 +18,9 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: result texts name the start the clocks were judged from, not always the cold start
 - ui: LCM Override and Force Output Swings in Advanced share one layout and line up
 
+### Fixed
+- simulation: the lithium plate build's output inserters wait for their belt as in the game
+
 ## [0.30.0] - 2026-11-18
 
 ### Added

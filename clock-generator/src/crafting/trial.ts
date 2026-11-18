@@ -303,7 +303,7 @@ function clockBuildRun(
     const named_start = run_options.keep_output_buffers === true || run_options.start_stock !== undefined;
     // a clock of whole ticks is counted by its own window cycle, also where the plan's is not whole (a clock rounded down)
     return runBuild(buildAsBuiltConfig(config, windows, window_cycle_ticks, fuel_clocks, run_options.decider_order, main_clock_shift),
-        { logger: quietLogger(logger), cold_start: !named_start, ...(Number.isInteger(window_cycle_ticks) && { window_cycle_ticks }), ...run_options });
+        { logger: quietLogger(logger), cold_start: !named_start, output_belt: true, ...(Number.isInteger(window_cycle_ticks) && { window_cycle_ticks }), ...run_options });
 }
 
 /**
@@ -932,7 +932,7 @@ export function exhaustiveStartPhases(
     const quiet = quietLogger(logger);
     // one run with the full machinery gives the crafting cycle plan, the expected output and the output inserters,
     // which rotating the windows changes nothing of; every phase's cold build reuses them
-    const base = runBuild(as_built, { ...swings, logger: quiet, cold_start: true, factorio_states: false });
+    const base = runBuild(as_built, { ...swings, logger: quiet, cold_start: true, output_belt: true, factorio_states: false });
     const stride_window_cycles = proof_bin.ticks / window_cycle_ticks;
     // the belts with a consumption rate are held to what their consumers take, in the bins the output is
     const exported = exportedItemsOf(base.simulation_context.entity_registry, base.output_inserter_ids);

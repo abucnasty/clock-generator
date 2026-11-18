@@ -53,8 +53,9 @@ take them. `paths.ts` names the ones unit tests load by sample-style keys (`Test
   with it against the game; `whole-build-clocks.ts` holds the rows, clocks and readers they share.
 - `lithium-rows.ts` (`lithiumRows`): the lithium plate sample's config with the output belt of its scaffold stated: two
   rows of three furnaces, each row's plates on a line of its own, as built or with some furnaces' output into a chest that
-  removes all. `src/crafting/output-belt-run.test.ts` runs two clocks recorded in the game on it and compares the window
-  cycles that fall short.
+  removes all. The in-line drops onto the underground ends of each row are stated with `drop_tile`, as the sample states them.
+  `src/crafting/output-belt-run.test.ts` runs two clocks recorded in the game on it and compares the window cycles that
+  fall short.
 - `gear-row.ts` (`gearRow`): a row of gear assemblers on one dead-end turbo belt of iron plate that four chest feeders keep full,
   as the scaffolds of `tests/game/mechanics/input-lane-gap/fixtures/` hold it and the Sidecar exports it. The game test of
   that family builds its clock from it, and `src/crafting/lane-check-from-positions.test.ts` checks the input lane of the row from the

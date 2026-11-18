@@ -1,3 +1,5 @@
+import type { DropTile } from "../../../config/output-belt";
+
 /**
  * The numbers of the per-tick model of belt lines at a join (join-model.ts), each with where it is measured. Positions and
  * lengths are in 1/256 tile; a position is the distance to the downstream end of the stack's line, as the game gives it.
@@ -37,6 +39,29 @@ export const SIDE_LOAD_POINT: Record<ReceivingEntity, Record<SideLoadLane, numbe
     "underground-exit": { downstream: 67, upstream: null },
     "underground-entrance": { downstream: null, upstream: 60 },
 };
+
+/** The middle of a tile, as the distance to its downstream end: the drop spot of an inserter beside a straight belt */
+export const TILE_MIDDLE = 128;
+
+/**
+ * How far past the tile's middle an inserter in line with the belt puts its stacks down: on the far side from the inserter,
+ * 51/256 tile (its drop position is 1.2 tiles from its centre). Measured on the underground ends of LITHIUM_PLATE_80_SILO_CHEST
+ * (Factorio 2.1.24): a hand onto an entrance from downstream lands at 179 - STEP and onto an exit from upstream at 77 - STEP.
+ */
+export const IN_LINE_DROP_OFFSET = 51;
+
+/**
+ * Where an inserter puts its stacks down on an underground end, as the distance to the end's downstream edge. An underground
+ * end carries stacks on its own half only: an entrance on the upstream half (128 to 256), an exit on the downstream half (0 to
+ * 128). A drop spot past that half is held at its edge: an inserter upstream of an entrance puts them down at the middle (the
+ * side belt of the lithium plate build's furnaces 7 and 8 lands at 128 - STEP, in the game as in the model's side belt).
+ * Not measured: a drop onto an exit from downstream of it or from beside it, and onto an entrance from beside it.
+ */
+export function dropSpotOn(tile: DropTile): number {
+    const spot = tile.inserter === "beside" ? TILE_MIDDLE
+        : tile.inserter === "upstream" ? TILE_MIDDLE - IN_LINE_DROP_OFFSET : TILE_MIDDLE + IN_LINE_DROP_OFFSET;
+    return tile.end === "entrance" ? Math.max(spot, TILE_MIDDLE) : Math.min(spot, TILE_MIDDLE);
+}
 
 /**
  * The game's line lengths (LuaTransportLine.line_length) of the entities of the family, as its probe logs them: a straight

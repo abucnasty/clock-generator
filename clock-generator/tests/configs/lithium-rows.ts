@@ -20,8 +20,8 @@ const CHEST = 5;
 /**
  * The lithium plate sample's config (`sample`, as loaded) with its output belt stated, in the form asked. Each row of three
  * furnaces puts its plates onto a line of its own, as the scaffold has it:
- * - the first furnace's output inserter drops in line onto an underground entrance; the second's drops in line onto its
- *   exit, 10 tiles on; the third's drops onto a side belt (an underground pair, 3 tiles) that side-loads onto the line 4
+ * - the first furnace's output inserter drops in line onto an underground entrance, from downstream of it; the second's
+ *   drops in line onto its exit, 10 tiles on, from upstream of it (`drop_tile`); the third's drops onto a side belt (an underground pair, 3 tiles) that side-loads onto the line 4
  *   tiles on, from the line's right side on row 1 and its left side on row 2;
  * - the line turns (row 1 right, row 2 left) and side-loads, 10 tiles on, onto an underground entrance: row 1 from the
  *   entrance's left side, row 2 from its right side. That entrance's line runs 6 tiles to the loader into the infinity chest.
@@ -51,9 +51,9 @@ export function lithiumRows(sample: Config, form: LithiumRowsForm): Config {
             points.push(points.length === 0 ? what : { tiles, ...what });
             tiles = 0;
         };
-        if (!in_chest.includes(first)) point({ drop: number(first), lane });
+        if (!in_chest.includes(first)) point({ drop: number(first), lane, drop_tile: { end: 'entrance', inserter: 'downstream' } });
         tiles += 10;
-        point({ drop: number(second), lane });
+        point({ drop: number(second), lane, drop_tile: { end: 'exit', inserter: 'upstream' } });
         tiles += 4;
         if (!in_chest.includes(third)) point({ side_load: [number(third)], lane, layout: 'side-straight' });
         tiles += 10;
