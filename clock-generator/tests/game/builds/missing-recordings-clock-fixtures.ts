@@ -51,6 +51,21 @@ export interface MissingRecordingCase {
      */
     no_staged_start?: string;
     /**
+     * The job's judged start is ruling 60's state, because its pick leaves inserters without a window (the unclocked part runs and fills first, the
+     * windowed inserters are held off by the clock's lock, and the lock opens at the clock's first tick): the harness's backpressure start
+     */
+    start?: "backpressure";
+    /**
+     * The output block fills the chests the output goes into, where the build has loaders that are not on the output (here they drain the ingredient
+     * belts, which the probe's block would take off, leaving the output as it is). The reason
+     */
+    block_sinks?: string;
+    /**
+     * Lua of its own that runs at the start of the recording, before the probe, for hardware the sample's scaffold does not have (the file in this
+     * folder). A backpressure start runs it at the tick the lock opens
+     */
+    prelude?: string;
+    /**
      * The recorder does not start on machines that have no recipe, and a furnace takes its recipe from its first ingredient: the final machine
      * of this build is a furnace, so the staged start cannot record from the placement. The run is the same, from the placement; the recording
      * (which the test uses for the build's hardware and its copies) starts where the run ends (the harness's `settle_ticks`)
@@ -100,9 +115,11 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
         config: "AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER", copies: 1,
         losses: [{kind: "cut", item: "copper-plate"}, {kind: "block"}, {kind: "cut", item: "iron-gear-wheel"}],
         limit: "the scaffold holds one copy of the job's nine",
+        start: "backpressure",
         no_staged_start: "the harness's staged start fills the belts under the pickups before the cell's inserters are placed, and here only the foundries' "
             + "output inserters (cell inserters, placed with the clock) put anything on the belt: the lanes never saturate (\"The belts did not saturate: "
-            + "the lanes under the pickups were not full for 30 ticks in a row within 10000 ticks\", 2026-11-17, Factorio 2.1.24)",
+            + "the lanes under the pickups were not full for 30 ticks in a row within 10000 ticks\", 2026-11-17, Factorio 2.1.24). The backpressure start "
+            + "(ruling 60's state) saturates the same lanes first and fails the same way (2026-11-18, Factorio 2.1.24)",
     },
     {
         name: "logistic-science-240-direct-insert", job: "config-LOGISTIC_SCIENCE_240_DIRECT_INSERT", config: "LOGISTIC_SCIENCE_240_DIRECT_INSERT", copies: 1,
@@ -139,8 +156,7 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
     {
         name: "rocket-fuel-60", job: "config-ROCKET_FUEL_60", config: "ROCKET_FUEL_60", copies: 1,
         losses: [{kind: "cut", item: "bioflux"}, {kind: "block"}, {kind: "cut", item: "nutrients"}],
-        no_staged_start: "the pick leaves three inserters without a window (10, 12 and 13, the nutrient pickups on belt 3), so the staged start is not the judged start; "
-            + "it waits for ruling 60's state (#804). A run from the staged start on 2026-11-18 (Factorio 2.1.24) held, and is not pinned",
+        start: "backpressure",
     },
     {
         name: "rocket-fuel-60-jelly-hands-15-backed-up", job: "variants-ROCKET_FUEL_60_JELLY_HANDS_15_BACKED_UP", config: "ROCKET_FUEL_60", copies: 1,
@@ -149,10 +165,20 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
             return {...hands, overrides: {...hands.overrides, backed_up_belts: true}};
         },
         losses: [{kind: "cut", item: "bioflux"}, {kind: "block"}, {kind: "cut", item: "nutrients"}],
-        no_staged_start: "the pick leaves three inserters without a window (10, 12 and 13, the nutrient pickups on belt 3), so the staged start is not the judged start; "
-            + "it waits for ruling 60's state (#804). The scaffold also holds the sample's hands of 16 on the four jelly inserters (the variant has 15) and drains the "
-            + "ingredient belts (the variant is backed up), so a run on it is the variant's clock on the sample's hardware: a run from the staged start on 2026-11-18 "
-            + "(Factorio 2.1.24) held on that hardware, and is not pinned",
+        start: "backpressure",
+        prelude: "rocket-fuel-jelly-hands-15-prelude.lua",
+    },
+    {
+        // the nutrient cut after the output block's recovery lasts 3 ticks in the run above (the output is back over its baseline's lowest minute
+        // the tick after the block is released, so the next cut falls and is released within a few ticks): the cut has its own case
+        name: "rocket-fuel-60-jelly-hands-15-backed-up-nutrients", job: "variants-ROCKET_FUEL_60_JELLY_HANDS_15_BACKED_UP", config: "ROCKET_FUEL_60", copies: 1,
+        variant: config => {
+            const hands = withJellyHandsOf15(config);
+            return {...hands, overrides: {...hands.overrides, backed_up_belts: true}};
+        },
+        losses: [{kind: "cut", item: "nutrients"}],
+        start: "backpressure",
+        prelude: "rocket-fuel-jelly-hands-15-prelude.lua",
     },
     {
         name: "stone-brick-120-drill-direct-insert", job: "config-STONE_BRICK_120_DRILL_DIRECT_INSERT", config: "STONE_BRICK_120_DRILL_DIRECT_INSERT", copies: 1,
@@ -166,7 +192,27 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
         // the one input line is the advanced circuits on a belt; the steel comes from a foundry and the stone bricks from furnaces that drills fill
         losses: [{kind: "cut", item: "advanced-circuit"}, {kind: "block"}, {kind: "cut", item: "advanced-circuit"}],
         limit: "the scaffold holds one copy of the job's two",
-        no_staged_start: "the harness wires a drill to the clock only in a build with one drill, and this build has three (stone brick furnaces, one drill each): "
-            + "\"the clock enables drill 1, which was not matched to a drill of the build (3 mining drills)\" (2026-11-17, Factorio 2.1.24)",
+        start: "backpressure",
+        late_recording: "the final machine is a furnace with no recipe at the placement",
+        no_staged_start: "the harness wires a drill to the clock only in a build with one drill, and this build has three (stone brick furnaces, one drill each), in the staged "
+            + "start and in the backpressure start alike: \"the clock enables drill 1, which was not matched to a drill of the build (3 mining drills)\" (2026-11-17 and 2026-11-18, "
+            + "Factorio 2.1.24)",
+    },
+    // every inserter of the build has a window, so the staged start is the judged start. The three losses in a row do not each bite: the
+    // build makes 111 % of its target, the output is back over the target (the run's test of recovery) before it is back over the baseline's
+    // lowest minute (its test of a fall), so the loss after a recovered one falls and recovers within a tick or two. Each loss that follows another
+    // therefore has a case of its own, run from the baseline.
+    {
+        name: "iron-bacteria-380", job: "config-IRON_BACTERIA_380_CULTIVATION", config: "IRON_BACTERIA_380_CULTIVATION", copies: 1,
+        losses: [{kind: "cut", item: "bioflux"}],
+    },
+    {
+        name: "iron-bacteria-380-block", job: "config-IRON_BACTERIA_380_CULTIVATION", config: "IRON_BACTERIA_380_CULTIVATION", copies: 1,
+        losses: [{kind: "block"}],
+        block_sinks: "the scaffold's two loaders drain the bioflux and nutrients belts; the output goes into four void chests",
+    },
+    {
+        name: "iron-bacteria-380-nutrients", job: "config-IRON_BACTERIA_380_CULTIVATION", config: "IRON_BACTERIA_380_CULTIVATION", copies: 1,
+        losses: [{kind: "cut", item: "nutrients"}],
     },
 ];
