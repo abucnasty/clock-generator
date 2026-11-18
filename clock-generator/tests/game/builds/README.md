@@ -831,10 +831,9 @@ Recorded at Factorio 2.1.24, all seven holding their target on every copy and re
   joins of the other copies are not in these runs. The recycler build's output is random: each copy made 2,907 and 2,890 of 2,880 over its 90 window cycles before the
   losses (2,900 and 2,892 of 2,880 after), 12 to 15 of its window cycles short of 32 by a few items, so it is judged on the stretch and not on each window cycle. The staged
   recording starts before the recyclers have a recipe, so its copies are the final machines taken from the west, two to a copy.
-- `AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER` (one copy of the job's nine) cannot be recorded from the staged start: the staged start fills the belts under the
-  pickups before it places the build's inserters, and the only inserters that put anything on this build's belt are the foundries' output inserters, which are placed
-  with the clock; the lanes never saturate ("The belts did not saturate", 2026-11-17, Factorio 2.1.24). The backpressure start (ruling 60's state) fails the same way:
-  it also saturates the belts under the build's pickups first (see "Loop builds and ruling 60's start" below).
+- `AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER` (one copy of the job's nine) is recorded from ruling 60's start, not from the plain staged start (see "Loop builds and ruling 60's start"
+  below). Its belt is filled only by the foundries' output inserters, which the staged start places with the clock, so no lane under a pickup ever carried anything before them. The staged start
+  counted such a lane as not saturated and failed ("The belts did not saturate", 2026-11-17, Factorio 2.1.24); it now counts a lane that only the build's machine inserters fill as saturated.
 
 ```bash
 MISSING_RECORDINGS_CAPTURE_DIR=.scratch/missing-recordings npm run test:game -- tests/game/builds/missing-recordings-clock.game.test.ts -t flying-robot-frame
@@ -888,9 +887,9 @@ sample's scaffold: it is the same clock and the same run as the sample's).
   8,207, 2,400 over the baseline's 3,600 ticks, the output block recovered at 12,097, 25 whole clock cycles judged before and after the loss with none short. Its final
   machine is a furnace, so it has a late recording (`late_recording`, the same reason). Its loss is the output block alone: the stone comes from a drill that drops into the
   furnace, and the generic probe has no drill stop; the supply was not cut. The scaffold holds one copy of the job's three.
-- **Named limit, `ELECTRIC_FURNACE_20`:** it cannot be recorded from the staged start: the harness wires a drill to the clock only in a build with one drill, and this
-  build has three (one for each stone brick furnace): "the clock enables drill 1, which was not matched to a drill of the build (3 mining drills)". It stays
-  in `missing-recordings-clock-fixtures.ts` as `no_staged_start`. The backpressure start fails the same way (see "Loop builds and ruling 60's start" below).
+- **`ELECTRIC_FURNACE_20`:** recorded from ruling 60's start (see "Loop builds and ruling 60's start" below). Its three drills (one for each stone brick furnace) were not wired by the staged
+  start, which wired a drill only in a build with one drill ("the clock enables drill 1, which was not matched to a drill of the build (3 mining drills)", 2026-11-17); the harness now matches the
+  drills of its trial build to the config's and the mod wires the clock to the drills that stand where those stood.
 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/car-staged BELT_CLOCK_CALIBRATE=1 \
@@ -899,7 +898,7 @@ BELT_SPEED_CAPTURE_DIR=.scratch/car-staged BELT_CLOCK_CALIBRATE=1 \
 
 ## Loop builds and ruling 60's start
 
-The generic test of the missing recordings (`missing-recordings-clock.game.test.ts`) records three more jobs on Factorio 2.1.24, one copy of the scaffold each. A case
+The generic test of the missing recordings (`missing-recordings-clock.game.test.ts`) records five more jobs on Factorio 2.1.24, one copy of the scaffold each. A case
 whose pick leaves a part of the build to run before the clock does is started from ruling 60's state, the harness's backpressure start (`start: "backpressure"`:
 the whole build is placed with the clock's lock on, the build runs until every machine made the same in two windows of 3,600 ticks, and the lock opens at the clock's first
 tick; the probe runs there). A case with a Lua file of its own (`prelude`) puts the hardware the scaffold lacks in at that tick, before the probe.
@@ -909,6 +908,8 @@ tick; the probe runs there). A case with a Lua file of its own (`prelude`) puts 
 | `IRON_BACTERIA_380_CULTIVATION` (`iron-bacteria-380`, `-block`, `-nutrients`: one loss each) | Time Study Windows Subtick (1,728, `3f820d74`) | staged | 2 / 2 each | 7,056 | 14,349 (bioflux cut), 14,132 (output block), 14,622 (nutrients cut) |
 | `ROCKET_FUEL_60` | Takt Batches Observed (`482a9448`) | ruling 60's | 28 / 28 | 7,193 | 22,726 |
 | `ROCKET_FUEL_60_JELLY_HANDS_15_BACKED_UP` (variant; `rocket-fuel-60-jelly-hands-15-backed-up` and `-nutrients`) | the variant's clock (`d978b5fd`) | ruling 60's | 56 / 56 each | 7,184 | 18,586 (all three in a row), 14,971 (nutrients cut alone) |
+| `AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER` | Takt Batches Observed (144, `782c7427`) | ruling 60's | 25 / 25 | 7,200 | 23,630 (cut copper plate 14,990, output block 19,310, cut gear wheels 23,630) |
+| `ELECTRIC_FURNACE_20` | Takt Batches Observed (864, `c7c3a86f`) | ruling 60's, `settle_ticks` | 4 / 4 | 7,078 | 23,494 (cut advanced circuits 14,374, output block 19,462, cut advanced circuits 23,494) |
 
 All hold: every copy of the build makes its share of the target in every whole window cycle checked, and the output stock guard holds.
 
@@ -925,12 +926,13 @@ All hold: every copy of the build makes its share of the target in every whole w
   drains the bioflux and jellynut belt, so that belt backs up. The loader at the end of the nutrient belt stays: the build puts the jellynut seeds it makes onto that belt (inserter 11), and with it
   blocked the build makes nothing (36,000 ticks, no steady state). So the nutrient belt's drain is as the sample has it, not under backpressure. The probe's output block then removes the two loaders
   of the product. The nutrient cut after the output block lasts 3 ticks in the run of three, so the cut also has a case of its own.
-- **Named limit, `AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER`.** It cannot be started from ruling 60's state either: the backpressure start saturates the lanes under the pickups of
-  the build first, as the staged start does, and the belt's only supply is the foundries' output inserters, which are inserters of the build: "The belts did not saturate: the lanes under the pickups were
-  not full for 30 ticks in a row within 10000 ticks" (2026-11-18). The case runs with `MISSING_RECORDINGS_TRY_ALL=1`; it needs a harness that lets a lane that nothing but the build fills
-  count as saturated (an empty lane), which is not changed here.
-- **Named limit, `ELECTRIC_FURNACE_20`.** The backpressure start wires the clock's drills as the staged start does, and fails the same way ("the clock enables drill 1, which was not matched to a drill of the
-  build (3 mining drills)", 2026-11-18); it needs the drills matched to the config before the start, as the warm-up path does. The case keeps `late_recording` (`settle_ticks`).
+- **Automation science 120, foundries feeding a belt to an assembler** (one copy of the job's nine). The belt under the assembler's pickup is filled by the foundries' output inserters only, which the
+  harness places with the clock: its first stage counts a lane that only the build's machine inserters fill as saturated, so the build is placed on empty belts and the fill (the lock on) fills the belt from the
+  foundries (the lock opened at tick 59,128, the fill ended steady 10,800 ticks after it began). Both pickup lanes of the belt carried nothing in the first stage ("The belts did not saturate" before, 2026-11-18).
+- **Electric furnace 20** (one copy of the job's two). The clock enables three drills; the harness matches the drills of its trial build to the config's by what each drops into, the mod finds them where
+  they stand in the build that is made again, and the clock is wired to each. The case keeps `late_recording` (the recording, which the test uses for the build's hardware, starts where the run ends: `settle_ticks`, which the backpressure
+  start now honours, so the recording starts that many ticks after the lock opens, as a staged start's does) and the probe counts from `steady.after_finals`.
+  The build makes exactly its target in the baseline (576 of 576 over 3,456 ticks).
 - **Retaken in `scaffold-recordings.game.test.ts`** (agricultural science 250 and iron bacteria 380, on the clocks of #818): every copy of the five-copy build makes 656, 784 and 736 of 800 in its first three window
   cycles (the start-up) and 800 in each of the 7 after; both agricultural builds are judged by the standing rule (per copy, every window cycle from the first third of the samples on: cycles 5 to 10, all 800), now both from the staged start (the one with belts under backpressure started from a warm-up before, and on this clock left
   copy 2 short in each of the 3 cycles checked and copy 5 in the first); iron bacteria 10,944 in each window cycle checked, 1,043.3 wake-ups a minute in the game against 358.2 in the simulator.

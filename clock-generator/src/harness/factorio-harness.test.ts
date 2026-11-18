@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import path from "path";
 import { encodeBlueprintFile } from "../blueprints/serde";
 import {
-    assertBackpressureOpening, assertClockAttached, assertClockPriming, assertRecordableTicks, buildPartsMissingFromConfig, builtCopies, clockInserters, stagedBuildOrder, clockOfBlueprintString, clockWindowCycleTicks, matchBuiltCopies, matchBuiltDrills, matchBuiltInserters, MAX_RECORDED_TICKS,
+    assertBackpressureOpening, assertClockAttached, assertClockPriming, assertRecordableTicks, buildPartsMissingFromConfig, builtCopies, clockInserters, stagedBuildOrder, clockOfBlueprintString, clockWindowCycleTicks, matchBuiltCopies, matchBuiltDrills, matchBuiltInserters, stagedDrillPositions, MAX_RECORDED_TICKS,
     factorioDataDir, missingFromConfigMessage, partCopiesOf, recordedTicks, recordInFactorio, scheduledDrillIds, scheduledInserterIds,
     drillResourceOf,
 } from "./factorio-harness";
@@ -416,6 +416,31 @@ describe("a build that holds the config more than once", () => {
         // a drill into the machine the config's drill does not feed is left out
         const other = { ...build, drills: [{ id: 3, unit_number: 302, name: "electric-mining-drill", mined_item_name: "coal", target: { type: "machine", id: 2 } }] };
         expect(matchBuiltDrills(other, drilled, 2)).toEqual([new Map(), new Map()]);
+    });
+
+    it("tells where the drills of each copy stand, by config drill id, from the middle of the blueprint, for a staged start that builds the blueprint again", () => {
+        const drilled = {
+            ...config,
+            drills: { configs: [{ id: 1, type: "electric-mining-drill", mined_item_name: "coal", speed_bonus: 0, productivity: 0, target: { type: "machine", id: 1 } }] },
+        };
+        const build = {
+            ...described(),
+            drills: [
+                { id: 2, unit_number: 301, name: "electric-mining-drill", mined_item_name: "coal", target: { type: "machine", id: 3 } },
+                { id: 1, unit_number: 300, name: "electric-mining-drill", mined_item_name: "coal", target: { type: "machine", id: 1 } },
+            ],
+            movers: { ...described().movers, drills: [
+                { unit_number: 301, name: "electric-mining-drill", position: { x: 110, y: 12 } },
+                { unit_number: 300, name: "electric-mining-drill", position: { x: 100, y: 12 } },
+            ] },
+        };
+        expect(stagedDrillPositions(build, drilled, [1], { x: 90, y: 10 }, 2)).toEqual({ 1: [{ x: 10, y: 2 }, { x: 20, y: 2 }] });
+        // a drill that no drill of the build matches is refused in a build of several drills
+        const other = { ...build, drills: [{ id: 3, unit_number: 302, name: "electric-mining-drill", mined_item_name: "coal", target: { type: "machine", id: 2 } }] };
+        expect(() => stagedDrillPositions(other, drilled, [1], { x: 90, y: 10 }, 2)).toThrow("The clock names drills 1 of the config, which match no drill of the build (2 mining drills)");
+        // a build with one drill needs no match: the mod wires its one drill
+        const one = { ...other, movers: { ...build.movers, drills: [build.movers.drills[0]] } };
+        expect(stagedDrillPositions(one, drilled, [1], { x: 90, y: 10 }, 2)).toEqual({});
     });
 
     it("refuses a count that is not the one found, in either direction", () => {

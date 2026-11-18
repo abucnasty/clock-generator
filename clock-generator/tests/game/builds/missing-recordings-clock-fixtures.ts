@@ -116,10 +116,6 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
         losses: [{kind: "cut", item: "copper-plate"}, {kind: "block"}, {kind: "cut", item: "iron-gear-wheel"}],
         limit: "the scaffold holds one copy of the job's nine",
         start: "backpressure",
-        no_staged_start: "the harness's staged start fills the belts under the pickups before the cell's inserters are placed, and here only the foundries' "
-            + "output inserters (cell inserters, placed with the clock) put anything on the belt: the lanes never saturate (\"The belts did not saturate: "
-            + "the lanes under the pickups were not full for 30 ticks in a row within 10000 ticks\", 2026-11-17, Factorio 2.1.24). The backpressure start "
-            + "(ruling 60's state) saturates the same lanes first and fails the same way (2026-11-18, Factorio 2.1.24)",
     },
     {
         name: "logistic-science-240-direct-insert", job: "config-LOGISTIC_SCIENCE_240_DIRECT_INSERT", config: "LOGISTIC_SCIENCE_240_DIRECT_INSERT", copies: 1,
@@ -194,9 +190,6 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
         limit: "the scaffold holds one copy of the job's two",
         start: "backpressure",
         late_recording: "the final machine is a furnace with no recipe at the placement",
-        no_staged_start: "the harness wires a drill to the clock only in a build with one drill, and this build has three (stone brick furnaces, one drill each), in the staged "
-            + "start and in the backpressure start alike: \"the clock enables drill 1, which was not matched to a drill of the build (3 mining drills)\" (2026-11-17 and 2026-11-18, "
-            + "Factorio 2.1.24)",
     },
     // every inserter of the build has a window, so the staged start is the judged start. The three losses in a row do not each bite: the
     // build makes 111 % of its target, the output is back over the target (the run's test of recovery) before it is back over the baseline's
