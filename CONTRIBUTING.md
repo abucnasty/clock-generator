@@ -171,14 +171,15 @@ reduction from scheduling changes; do not report a faster test from a less busy 
 
 [`clock-generator/record/`](clock-generator/record/README.md) holds one small JSON file for each of the 86 blast jobs: the clock the generator selects for the
 sample or fixture and every clock it weighed (verdict, holds, rate, window cycle time, wakeups, windows, clock hash). The check named "Rec summary" in CI
-generates the jobs in six shards (`Rec 1/6` to `Rec 6/6`, dealt out by the seconds each job took on a runner,
+generates the jobs in two shards (`Rec 1/2` and `Rec 2/2`, dealt out by the seconds each job took on a runner,
 `clock-generator/ci/record-durations.json`), joins them and compares them with the committed files field by field; a difference fails with a table of job,
 field, before and after in the job summary. The check runs on every pull request to `master` or `hotfix/` that changes more than documentation, and reports
 success on one that changes documentation only. Its name is stable so that it can be a required check. It is never faster than the slowest job
 (the productivity module chest chain). After a change to the jobs or the engine, refresh the durations with
-`node scripts/ci/update-record-durations.js <dir of the downloaded record-jobs-* artifacts of a run>`. The same script prints the shard
-count the durations call for (`--shards` prints only that): the smallest count whose estimated slowest shard is the slowest job, which is 6
-today; set the `shard` list of the `record-shards` job in `.github/workflows/test.yml` to it when it changes.
+`node scripts/ci/update-record-durations.js <dir of the downloaded record-jobs-* artifacts of a run>`. The shard count is the smallest
+whose estimated slowest shard is the slowest job, estimated as `scripts/blast/shard.py plan` deals the jobs (four at a time on a runner), which is 2
+today; set the `shard` list of the `record-shards` job in `.github/workflows/test.yml` to it when it changes. (The count that
+`update-record-durations.js` prints adds a shard's seconds one after another, so it is larger.)
 
 **A selected clock never gets worse unless MOVES.md says so.** The same check sets the selected clock of every job against the record of the pull
 request's base (the first parent of the merge commit CI tests) and fails when one got worse and its job key is not in the lines the pull request adds to
@@ -256,7 +257,7 @@ is never loosened because a job fails it.
 | --- | --- | --- |
 | `Unit 1/4` to `Unit 4/4` and `Code checks`, then `Unit tests` | `npm test` (the units, `clock-controls.test.ts` among them) dealt out by `ci/unit-durations.json`; knip, typecheck, build and lint in `Code checks` | every pull request that changes more than documentation |
 | `Gen 1/5` to `Gen 5/5`, then `Gen summary` | the `*.generation.test.ts` files, dealt out by `ci/generation-durations.json` | ready pull requests to `master` or `hotfix/` that change more than documentation, and releases; on a draft the shards do not run and the check fails (below) |
-| `Rec 1/6` to `Rec 6/6`, then `Rec summary` | the 86 jobs, joined, compared with `record/`, with the properties, the per-job checks and the never-worse rule | ready pull requests to `master` or `hotfix/` that change more than documentation; on a draft the shards do not run and the check fails (below) |
+| `Rec 1/2` and `Rec 2/2`, then `Rec summary` | the 86 jobs, joined, compared with `record/`, with the properties, the per-job checks and the never-worse rule | ready pull requests to `master` or `hotfix/` that change more than documentation; on a draft the shards do not run and the check fails (below) |
 | `UI build`, `UI samples`, `UI browser` | the UI | every pull request that changes more than documentation |
 | `Docs checks` | PORTAL.md and the configuration file fields topic are current, and the bold labels of the user topics are strings of the site, the sidecar or the game ([docs/README.md](docs/README.md#checks)) | every pull request |
 
