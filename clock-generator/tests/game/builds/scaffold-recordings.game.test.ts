@@ -147,6 +147,11 @@ interface ScaffoldBuild {
          * as much in that window cycle.
          */
         dips: { start: number; items: number; copy?: number }[];
+        /**
+         * Judge by the standing rule: per copy, every window cycle that starts at or after the first third of the samples (the start-up
+         * before it is not judged, so no dips are pinned), in place of every window cycle but the first
+         */
+        judged_after_first_third?: boolean;
         /** What the game and the simulator still differ in after the first third of each, as the comparison words it */
         open_issues: string[];
     };
@@ -189,13 +194,15 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         copies: 5,
         // Recorded again 2026-11-18 at Factorio 2.1.24 on Takt Batches (2 output swings each output cycle, a window cycle of 960
         // ticks, clock 997b3c3c: windows on the four egg inserters, #818), from the staged start to steady state and a minute more
-        // (10 window cycles): every copy is short in the same two window cycles, 784 in the second and 736 in the third of 800, and
-        // moves 800 in each of the seven after, from tick 2,880 on. The five copies are alike: copies 1 to 5, by x from the west, as
+        // (10 window cycles): every copy makes 656, 784 and 736 of 800 in its first three window cycles (the start-up) and 800 in each
+        // of the seven after, from tick 2,880 on. Judged by the standing rule (decision 956): per copy, every window cycle from the
+        // first third of the samples on (cycles 5 to 10), all at 800. The five copies are alike: copies 1 to 5, by x from the west, as
         // the copies are found. The machines run at the config's speed and productivity. The clock before (Time-Study Windows,
         // 8de16d68, 400 a copy in a window cycle of 480) was recorded 2026-11-11 with other dips, which belong to it; before
         // the build of five copies the sample's one copy was recorded from the staged start on other clocks (2026-10-24, 2026-11-03).
         staged_start: {
-            dips: [1, 2, 3, 4, 5].flatMap(copy => [{ start: 960, items: 784, copy }, { start: 1920, items: 736, copy }]),
+            dips: [],
+            judged_after_first_third: true,
             open_issues: [],
         },
         wake_ups_open: AGRICULTURAL_SCIENCE_WAKE_UPS_OPEN,
@@ -210,8 +217,8 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     // Windows, clock 8de16d68): recorded 2026-11-11 at Factorio 2.1.24, 400 on each of the five copies in each of the 7
     // window cycles checked. Since windows on the four egg inserters (#818) the same clock is Takt Batches (997b3c3c), and the
     // entry is recorded from the staged start, as the build with belts that move is and as the judged start of the generator
-    // is (the harness does not read `backed_up_belts`: only the clock differs, and it is the same): the same dips as that
-    // build, 2026-11-18, Factorio 2.1.24. Its start before, a warm-up of 300 ticks and a seed of 200 eggs until steady state
+    // is (the harness does not read `backed_up_belts`: only the clock differs, and it is the same): the same start-up as that
+    // build, judged the same way (from the first third of the samples on), 2026-11-18, Factorio 2.1.24. Its start before, a warm-up of 300 ticks and a seed of 200 eggs until steady state
     // and a minute more (4 window cycles), left copy 2 short in each of the 3 window cycles checked (768, 720, 720 of 800) and
     // copy 5 in the first (720) on this clock: a settling the minute does not show the end of, so the entry no longer starts there.
     "agricultural science (belts are backed up)": {
@@ -222,7 +229,8 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         backed_up_belts: true,
         copies: 5,
         staged_start: {
-            dips: [1, 2, 3, 4, 5].flatMap(copy => [{ start: 960, items: 784, copy }, { start: 1920, items: 736, copy }]),
+            dips: [],
+            judged_after_first_third: true,
             open_issues: [],
         },
         wake_ups_open: AGRICULTURAL_SCIENCE_WAKE_UPS_OPEN,
@@ -828,11 +836,17 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             expect(window_cycles.length, `the recording of ${result.recording.sample_count} ticks holds a whole clock period`).toBeGreaterThan(0);
             // the first window cycle is left out: the build may still be settling into the clock. A clock that counts over a minute is
             // recorded over one window cycle, which is checked whole: the settle ended at steady state
-            const checked = window_cycles.length > 1 ? window_cycles.slice(1) : window_cycles;
+            // A staged start judged by the standing rule (`judged_after_first_third`) leaves out the start-up instead: only the window cycles
+            // that start at or after the first third of the samples are judged, as the comparison with the simulator is
+            const judgedOf = <T extends { start: number }>(cycles: T[]): T[] => build.staged_start?.judged_after_first_third
+                ? cycles.filter(it => it.start >= Math.floor(result.recording.sample_count / 3))
+                : (cycles.length > 1 ? cycles.slice(1) : cycles);
+            const checked = judgedOf(window_cycles);
+            expect(checked.length, "the recording holds a window cycle after its first third").toBeGreaterThan(0);
             const wrong_length = checked.filter(it => it.end - it.start !== window_cycle_ticks);
             expect(wrong_length, `every one of the ${checked.length} periods checked lasts ${window_cycle_ticks} ticks, as the clock does`).toEqual([]);
             /** The window cycles checked of a copy in which it moved less than its target */
-            const shortOf = (copy: typeof per_copy[number]) => (copy.per_window_cycle.length > 1 ? copy.per_window_cycle.slice(1) : copy.per_window_cycle)
+            const shortOf = (copy: typeof per_copy[number]) => judgedOf(copy.per_window_cycle)
                 .filter(it => it.items < copy.target - 1e-6).map(it => ({ start: it.start, items: it.items }));
             if (build.own_clock) {
                 // the copies the build's own clock leaves short, and no other: the check of each copy sees what the total hides
@@ -866,7 +880,7 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                 expect(copy_output_inserters).toBeGreaterThan(0);
                 for (const row of rows) {
                     const row_expected = rowTarget(expected_per_copy, row.output_inserters, copy_output_inserters);
-                    const row_checked = row.per_window_cycle.length > 1 ? row.per_window_cycle.slice(1) : row.per_window_cycle;
+                    const row_checked = judgedOf(row.per_window_cycle);
                     const row_copies = row_of_copy.flatMap((y, index) => y === row.y ? [index + 1] : []);
                     expect(row_checked.map(it => ({ start: it.start, items: it.items })).filter(it => it.items < row_expected - 1e-6),
                         `every one of the ${row_checked.length} periods checked of the row at y=${row.y} (${row.output_inserters} output inserters, ${per_row} copies wanted) moves ${row_expected} items of ${config.setpoint.recipe} or more`

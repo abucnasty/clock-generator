@@ -925,6 +925,6 @@ All hold: every copy of the build makes its share of the target in every whole w
   count as saturated (an empty lane), which is not changed here.
 - **Named limit, `ELECTRIC_FURNACE_20`.** The backpressure start wires the clock's drills as the staged start does, and fails the same way ("the clock enables drill 1, which was not matched to a drill of the
   build (3 mining drills)", 2026-11-18); it needs the drills matched to the config before the start, as the warm-up path does. The case keeps `late_recording` (`settle_ticks`).
-- **Retaken in `scaffold-recordings.game.test.ts`** (agricultural science 250 and iron bacteria 380, on the clocks of #818): every copy of the five-copy build is short in the second and third window
-  cycle (784 and 736 of 800) and at 800 in each of the 7 after, in both agricultural builds, now both from the staged start (the one with backed-up belts started from a warm-up before, and on this clock left
+- **Retaken in `scaffold-recordings.game.test.ts`** (agricultural science 250 and iron bacteria 380, on the clocks of #818): every copy of the five-copy build makes 656, 784 and 736 of 800 in its first three window
+  cycles (the start-up) and 800 in each of the 7 after; both agricultural builds are judged by the standing rule (per copy, every window cycle from the first third of the samples on: cycles 5 to 10, all 800), now both from the staged start (the one with backed-up belts started from a warm-up before, and on this clock left
   copy 2 short in each of the 3 cycles checked and copy 5 in the first); iron bacteria 10,944 in each window cycle checked, 1,043.3 wake-ups a minute in the game against 358.2 in the simulator.
