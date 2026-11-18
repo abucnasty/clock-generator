@@ -93,8 +93,8 @@ describe("the staged start of a build the harness had two limits on", () => {
                 log: message => log.push(message),
                 staged_start: {},
             });
-            const wired = Object.values((result.start.clock?.wired_drills ?? {}) as Record<string, { drill: number; unit_number: number }>);
-            expect(wired.map(it => it.drill).sort(), "every drill the clock enables is wired").toEqual([...scheduled_drills].sort());
+            const wired = Object.values(((result.start as { clock?: { wired_drills?: unknown } }).clock?.wired_drills ?? {}) as Record<string, { drill: number; unit_number: number }>);
+            expect(wired.map(it => it.drill).sort((a, b) => a - b), "every drill the clock enables is wired").toEqual([...scheduled_drills].sort((a, b) => a - b));
             expect(new Set(wired.map(it => it.unit_number)).size, "each to its own drill").toBe(wired.length);
             failed = false;
         } finally {

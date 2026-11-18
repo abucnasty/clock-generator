@@ -1089,15 +1089,17 @@ local function end_of(entity)
     return { unit_number = entity.unit_number, type = entity.type, name = entity.name }
 end
 
----Every inserter and loader of the build with the entities at its ends, whatever they are. A recording leaves out an
+---Every inserter, loader and mining drill of the build with the entities at its ends, whatever they are. A recording leaves out an
 ---inserter whose other end it has no type for (a heating tower, a wagon, the ground), and a loader is no inserter,
 ---but each moves items that no clock holds.
 ---@param entities LuaEntity[]
 ---@return table
 local function movers(entities)
-    local found = { inserters = {}, loaders = {} }
+    local found = { inserters = {}, loaders = {}, drills = {} }
     for _, entity in pairs(entities) do
-        if entity.valid and entity.type == "inserter" then
+        if entity.valid and entity.type == "mining-drill" then
+            table.insert(found.drills, { unit_number = entity.unit_number, name = entity.name, position = { x = entity.position.x, y = entity.position.y } })
+        elseif entity.valid and entity.type == "inserter" then
             table.insert(found.inserters, {
                 unit_number = entity.unit_number,
                 name = entity.name,
@@ -1130,6 +1132,32 @@ function harness.describe()
     local described = recorder.describe(game.forces[state.force_name], state.entities)
     described.movers = movers(state.entities)
     return described
+end
+
+---The mining drills of the build that stand at the positions given, by config drill id: the caller matched the drills of a trial
+---build of the same blueprint, which stood where this one does, and does not know the unit numbers of this one
+---@param state table storage.harness
+---@param positions table<string, {x: number, y: number}[]> config drill id -> where its drills stand, from the middle of the blueprint
+---@return table<string, uint[]>
+local function drills_at(state, positions)
+    local found = {}
+    for id, list in pairs(positions) do
+        found[id] = {}
+        for _, at in ipairs(list) do
+            local x, y = state.origin.x + at.x, state.origin.y + at.y
+            local unit_number
+            for _, entity in pairs(state.entities) do
+                if entity.valid and entity.type == "mining-drill" and math.abs(entity.position.x - x) < 0.01 and math.abs(entity.position.y - y) < 0.01 then
+                    unit_number = entity.unit_number
+                end
+            end
+            if not unit_number then
+                error("no mining drill of the build stands at (" .. x .. ", " .. y .. "), where the trial build's drill " .. id .. " stood")
+            end
+            table.insert(found[id], unit_number)
+        end
+    end
+    return found
 end
 
 ---@param state table
@@ -1453,7 +1481,7 @@ local function start_fill(state, job, staged_report)
 end
 
 ---The end of the fill of a backpressure start: what the build holds is reported, the lock is set off, and the kick start, the seeds,
----the probe and the recording start in this tick
+---the probe and the recording start in this tick (the recording settle_ticks ticks later, where the job asks for them)
 ---@param state table storage.harness
 ---@param ended "steady"|"cap"
 local function open_fill(state, ended)
@@ -1514,7 +1542,12 @@ local function open_fill(state, ended)
     }
     fill.lock.get_control_behavior().enabled = false
     seed_and_probe(state, fill.job, opening)
-    start_recording(state)
+    if (fill.job.settle_ticks or 0) > 0 then
+        -- the build runs on for settle_ticks first, as a staged start without the fill does
+        state.record_tick = game.tick + fill.job.settle_ticks
+    else
+        start_recording(state)
+    end
     fill.phase = "open"
     fill.opening = opening
 end
@@ -1603,6 +1636,9 @@ function harness.start(job)
         report.staged = place_staged(state, staged_options)
         if job.clock then
             job.clock.inserters = report.staged.by_config
+            if job.clock.drill_positions then
+                job.clock.drills = drills_at(state, job.clock.drill_positions)
+            end
         end
         if attach then
             report.staged.clock_attach = attach
