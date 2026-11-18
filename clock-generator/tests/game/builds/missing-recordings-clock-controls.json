@@ -67,7 +67,7 @@
   },
   "advanced-circuit-230": {
    "recorded": {
-    "pr": 0,
+    "pr": 823,
     "commit": "95f45024",
     "frozen_head": "95f45024",
     "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
@@ -145,7 +145,7 @@
   },
   "advanced-circuit-240": {
    "recorded": {
-    "pr": 0,
+    "pr": 823,
     "commit": "95f45024",
     "frozen_head": "95f45024",
     "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
@@ -223,7 +223,7 @@
   },
   "advanced-circuit-240-backed-up": {
    "recorded": {
-    "pr": 0,
+    "pr": 823,
     "commit": "95f45024",
     "frozen_head": "95f45024",
     "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
@@ -521,7 +521,7 @@
   },
   "lds-240": {
    "recorded": {
-    "pr": 0,
+    "pr": 823,
     "commit": "95f45024",
     "frozen_head": "95f45024",
     "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
@@ -670,7 +670,7 @@
   },
   "logistic-science-240-direct-insert": {
    "recorded": {
-    "pr": 0,
+    "pr": 823,
     "commit": "95f45024",
     "frozen_head": "95f45024",
     "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
@@ -741,7 +741,7 @@
   },
   "metallurgic-science-45": {
    "recorded": {
-    "pr": 0,
+    "pr": 823,
     "commit": "95f45024",
     "frozen_head": "95f45024",
     "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
