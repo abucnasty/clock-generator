@@ -312,8 +312,9 @@ hash is `builtClockIdentity` of the build's blueprint, recomputed by `clock-cont
   `clock_sha256` (checked by `pickup-clock-cold-start-mechanics.test.ts` against the clock the stored windows build and the fixture's
   pin, and for the runs started at the window cycle's beginning by `clock-controls.test.ts` against the record's selection)
   and `recorded_clock_sha256` (checked by the game test).
-- Nine scaffold-recordings builds expect values that belong to one clock (agricultural science having no dip and no
-  difference after its staged start, agricultural science with backpressure on the belts having no difference, what each of the
+- Nine scaffold-recordings builds expect values that belong to one clock (agricultural science having the dips of its five copies
+  after its staged start and no difference, agricultural science with backpressure on the belts the same (it is recorded from the
+  staged start too), what each of the
   nine copies of automation science moves, the moved inserters of chemical science with a shared foundry, what each of
   the 11 copies of electromagnetic science moves, what each row of military science with grenades moves, what the one copy of
   production science with a drill into the rail assembler moves, what each of the two copies of utility science with
@@ -826,7 +827,8 @@ Recorded at Factorio 2.1.24, all seven holding their target on every copy and re
   recording starts before the recyclers have a recipe, so its copies are the final machines taken from the west, two to a copy.
 - `AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER` (one copy of the job's nine) cannot be recorded from the staged start: the staged start fills the belts under the
   pickups before it places the build's inserters, and the only inserters that put anything on this build's belt are the foundries' output inserters, which are placed
-  with the clock; the lanes never saturate ("The belts did not saturate", 2026-11-17, Factorio 2.1.24). It waits for a start from ruling 60's state.
+  with the clock; the lanes never saturate ("The belts did not saturate", 2026-11-17, Factorio 2.1.24). The backpressure start (ruling 60's state) fails the same way:
+  it also saturates the belts under the cell's pickups first (see "Loop builds and ruling 60's start" below).
 
 ```bash
 MISSING_RECORDINGS_CAPTURE_DIR=.scratch/missing-recordings npm run test:game -- tests/game/builds/missing-recordings-clock.game.test.ts -t flying-robot-frame
@@ -853,11 +855,7 @@ an ingredient). Each holds its share of the target on its copy in every whole cl
 - The two advanced circuit 240 jobs have the same clock; one scaffold and one run each, with the same result. The scaffold's lanes end closed, so the sample builds backpressure
   on those belts in both.
 - The scaffolds hold one copy of the advanced circuit and logistic science jobs' three and six copies; the joins of the other copies are not in these runs.
-- `ROCKET_FUEL_60` and `ROCKET_FUEL_60_JELLY_HANDS_15_BACKED_UP` are not pinned. Their picks leave three inserters without a window (10, 12 and 13, the nutrient pickups),
-  so the staged start is not their judged start; they wait for ruling 60's state. Runs from the staged start held (the plain job in each of 28 window cycles before and
-  after the losses, the variant in 56), and are kept in the work folder's evidence only. The jelly 15 variant's run is also not of its build: the scaffold has the sample's hands
-  of 16 on the four jelly inserters (the variant has 15), and its input belts drain into chests (the variant has backpressure on them). In both runs the output block removed all four loaders
-  of the scaffold; which of them drain input belts was not checked. A recording of the variant needs a probe that sets the hands and removes the drains.
+- `ROCKET_FUEL_60` and `ROCKET_FUEL_60_JELLY_HANDS_15_BACKED_UP` were not pinned here: they are recorded from ruling 60's start under "Loop builds and ruling 60's start" below.
 
 ## Container and drill builds: the record's picks from the staged start
 
@@ -886,9 +884,47 @@ sample's scaffold: it is the same clock and the same run as the sample's).
   furnace, and the generic probe has no drill stop; the supply was not cut. The scaffold holds one copy of the job's three.
 - **Named limit, `ELECTRIC_FURNACE_20`:** it cannot be recorded from the staged start: the harness wires a drill to the clock only in a build with one drill, and this
   build has three (one for each stone brick furnace): "the clock enables drill 1, which was not matched to a drill of the build (3 mining drills)". It stays
-  in `missing-recordings-clock-fixtures.ts` as `no_staged_start`.
+  in `missing-recordings-clock-fixtures.ts` as `no_staged_start`. The backpressure start fails the same way (see "Loop builds and ruling 60's start" below).
 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/car-staged BELT_CLOCK_CALIBRATE=1 \
   npm run test:game -- tests/game/builds/iron-plate-80-car-chest-clock.game.test.ts -t '^car clock: car-selected-staged$'
 ```
+
+## Loop builds and ruling 60's start
+
+The generic test of the missing recordings (`missing-recordings-clock.game.test.ts`) records three more jobs on Factorio 2.1.24, one copy of the scaffold each. A case
+whose pick leaves a part of the build to run before the clock does is started from ruling 60's state, the harness's backpressure start (`start: "backpressure"`:
+the whole cell is placed with the clock's lock on, the build runs until every machine made the same in two windows of 3,600 ticks, and the lock opens at the clock's first
+tick; the probe runs there). A case with a Lua file of its own (`prelude`) puts the hardware the scaffold lacks in at that tick, before the probe.
+
+| Job (case) | Clock | Start | Window cycles before / after the losses | Steady state | Last loss recovered |
+| --- | --- | --- | --- | --- | --- |
+| `IRON_BACTERIA_380_CULTIVATION` (`iron-bacteria-380`, `-block`, `-nutrients`: one loss each) | Time Study Windows Subtick (1,728, `3f820d74`) | staged | 2 / 2 each | 7,056 | 14,349 (bioflux cut), 14,132 (output block), 14,622 (nutrients cut) |
+| `ROCKET_FUEL_60` | Takt Batches Observed (`482a9448`) | ruling 60's | 28 / 28 | 7,193 | 22,726 |
+| `ROCKET_FUEL_60_JELLY_HANDS_15_BACKED_UP` (variant; `rocket-fuel-60-jelly-hands-15-backed-up` and `-nutrients`) | the variant's clock (`d978b5fd`) | ruling 60's | 56 / 56 each | 7,184 | 18,586 (all three in a row), 14,971 (nutrients cut alone) |
+
+All hold: every copy of the build makes its share of the target in every whole window cycle checked, and the output stock guard holds.
+
+- **Iron bacteria.** The build makes 111 % of its target (24,320 of 21,888 over the baseline's 3,456 ticks). The probe ends a loss when the output has fallen below the baseline's lowest minute and
+  counts it recovered when the output is over the target again, so after the first loss the output is over the target but under the baseline's lowest minute, and the next loss "falls" and is
+  released within a tick or two. Three losses in a row therefore test the first one only; each of the three has a case of its own, from the baseline. The output block of the probe takes the loaders off
+  the build, and this scaffold's two loaders drain the bioflux and nutrient belts, so the block case sets `block_sinks`: the probe fills the four void chests the output goes into (the chests the
+  loaders drain into are left). Every inserter of the pick has a window, so the staged start is its judged start. Not run: the other copy (the job has one).
+- **Rocket fuel.** Its inserters 10, 12 and 13 (the nutrient pickups) have no window in `clock_windows`, but they are fuel clocks and the schedule wires them to the clock: in the harness's fill
+  all 13 inserters of the cell are windowed (held off by the lock) and none runs, so the fill held nothing to run before the clock. The three machines are empty at the opening (the
+  lock opened at tick 55,818, 7,200 ticks after the build; the fill ended steady, no inserter was enabled in it). The simulator's fill keeps fuel inserters on (#804); the game's
+  start here does not, and the pick holds from it all the same. This is the run of the plain job from the staged start of 2026-11-18, repeated from ruling 60's start.
+- **Jelly hands 15, backed up.** `rocket-fuel-jelly-hands-15-prelude.lua` sets the four inserters between the machines to a hand of 15 (the scaffold's hold 16) and fills the chest at the loader that
+  drains the bioflux and jellynut belt, so that belt backs up. The loader at the end of the nutrient belt stays: the build puts the jellynut seeds it makes onto that belt (inserter 11), and with it
+  jammed the build makes nothing (36,000 ticks, no steady state). So the nutrient belt's drain is as the sample has it, not backed up. The probe's output block then removes the two loaders
+  of the product. The nutrient cut after the output block lasts 3 ticks in the run of three, so the cut also has a case of its own.
+- **Named limit, `AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER`.** It cannot be started from ruling 60's state either: the backpressure start saturates the lanes under the pickups of
+  the cell first, as the staged start does, and the belt's only supply is the foundries' output inserters, which are cell inserters: "The belts did not saturate: the lanes under the pickups were
+  not full for 30 ticks in a row within 10000 ticks" (2026-11-18). The case runs with `MISSING_RECORDINGS_TRY_ALL=1`; it needs a harness that lets a lane that nothing but the cell fills
+  count as saturated (an empty lane), which is not changed here.
+- **Named limit, `ELECTRIC_FURNACE_20`.** The backpressure start wires the clock's drills as the staged start does, and fails the same way ("the clock enables drill 1, which was not matched to a drill of the
+  build (3 mining drills)", 2026-11-18); it needs the drills matched to the config before the start, as the warm-up path does. The case keeps `late_recording` (`settle_ticks`).
+- **Retaken in `scaffold-recordings.game.test.ts`** (agricultural science 250 and iron bacteria 380, on the clocks of #818): every copy of the five-copy build is short in the second and third window
+  cycle (784 and 736 of 800) and at 800 in each of the 7 after, in both agricultural builds, now both from the staged start (the one with backed-up belts started from a warm-up before, and on this clock left
+  copy 2 short in each of the 3 cycles checked and copy 5 in the first); iron bacteria 10,944 in each window cycle checked, 1,043.3 wake-ups a minute in the game against 358.2 in the simulator.

@@ -519,6 +519,198 @@
     "clock_sha256": "6bab541d51f7e1051beb1194f86842e4c8f30c1724b4564851302d19e4dcf808"
    }
   },
+  "iron-bacteria-380": {
+   "recorded": {
+    "pr": 0,
+    "commit": "bc127323",
+    "frozen_head": "bc127323",
+    "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
+    "clock_sha256": "3f820d74a3102b1138dedff9133fb6a115840ffc562dffbc254d71f7caa7aad2",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 380,
+    "period": 1728,
+    "window": 3600,
+    "expected": 22800,
+    "steady": 7056,
+    "baseline": {
+     "ticks": 3600,
+     "total": 25336,
+     "expected": 22800,
+     "min": 25304,
+     "max": 25360,
+     "held": true,
+     "meets": true,
+     "measured": {
+      "ticks": 3456,
+      "items": 24320,
+      "expected": 21888,
+      "stock_start": 80,
+      "stock_end": 80,
+      "net": 24320
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut bioflux",
+      "start": 10656,
+      "drop": 10756,
+      "release": 10756,
+      "recovered": 14349
+     }
+    ],
+    "stock": {
+     "lowest": 8,
+     "end": 52,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 14349
+   },
+   "generation": {
+    "period": 1728,
+    "expected": 10944,
+    "verdict": "stable",
+    "selection": {
+     "id": "time_study_windows_subtick",
+     "holds": true,
+     "rate": 380,
+     "supply": "moving"
+    },
+    "clock_sha256": "3f820d74a3102b1138dedff9133fb6a115840ffc562dffbc254d71f7caa7aad2"
+   }
+  },
+  "iron-bacteria-380-block": {
+   "recorded": {
+    "pr": 0,
+    "commit": "bc127323",
+    "frozen_head": "bc127323",
+    "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
+    "clock_sha256": "3f820d74a3102b1138dedff9133fb6a115840ffc562dffbc254d71f7caa7aad2",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 380,
+    "period": 1728,
+    "window": 3600,
+    "expected": 22800,
+    "steady": 7056,
+    "baseline": {
+     "ticks": 3600,
+     "total": 25336,
+     "expected": 22800,
+     "min": 25304,
+     "max": 25360,
+     "held": true,
+     "meets": true,
+     "measured": {
+      "ticks": 3456,
+      "items": 24320,
+      "expected": 21888,
+      "stock_start": 80,
+      "stock_end": 80,
+      "net": 24320
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "block output",
+      "start": 10656,
+      "drop": 10673,
+      "release": 10673,
+      "recovered": 14132
+     }
+    ],
+    "stock": {
+     "lowest": 8,
+     "end": 96,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 14132
+   },
+   "generation": {
+    "period": 1728,
+    "expected": 10944,
+    "verdict": "stable",
+    "selection": {
+     "id": "time_study_windows_subtick",
+     "holds": true,
+     "rate": 380,
+     "supply": "moving"
+    },
+    "clock_sha256": "3f820d74a3102b1138dedff9133fb6a115840ffc562dffbc254d71f7caa7aad2"
+   }
+  },
+  "iron-bacteria-380-nutrients": {
+   "recorded": {
+    "pr": 0,
+    "commit": "bc127323",
+    "frozen_head": "bc127323",
+    "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
+    "clock_sha256": "3f820d74a3102b1138dedff9133fb6a115840ffc562dffbc254d71f7caa7aad2",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 380,
+    "period": 1728,
+    "window": 3600,
+    "expected": 22800,
+    "steady": 7056,
+    "baseline": {
+     "ticks": 3600,
+     "total": 25336,
+     "expected": 22800,
+     "min": 25304,
+     "max": 25360,
+     "held": true,
+     "meets": true,
+     "measured": {
+      "ticks": 3456,
+      "items": 24320,
+      "expected": 21888,
+      "stock_start": 80,
+      "stock_end": 80,
+      "net": 24320
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut nutrients",
+      "start": 10656,
+      "drop": 11043,
+      "release": 11043,
+      "recovered": 14622
+     }
+    ],
+    "stock": {
+     "lowest": 8,
+     "end": 56,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 14622
+   },
+   "generation": {
+    "period": 1728,
+    "expected": 10944,
+    "verdict": "stable",
+    "selection": {
+     "id": "time_study_windows_subtick",
+     "holds": true,
+     "rate": 380,
+     "supply": "moving"
+    },
+    "clock_sha256": "3f820d74a3102b1138dedff9133fb6a115840ffc562dffbc254d71f7caa7aad2"
+   }
+  },
   "lds-240": {
    "recorded": {
     "pr": 823,
@@ -971,6 +1163,226 @@
      "supply": "backed_up"
     },
     "clock_sha256": "99e946cc4272d195913824d1ec2629fbc38c9382d68cfa496f4d5f030b179beb"
+   }
+  },
+  "rocket-fuel-60": {
+   "recorded": {
+    "pr": 0,
+    "commit": "bc127323",
+    "frozen_head": "bc127323",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start); pr is set when the PR is opened",
+    "clock_sha256": "482a944834180a775b06031de711688bb82638302a8537197df94b3eba051279",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 60,
+    "period": 128,
+    "window": 3600,
+    "expected": 3600,
+    "steady": 7193,
+    "baseline": {
+     "ticks": 3600,
+     "total": 3600,
+     "expected": 3600,
+     "min": 3588,
+     "max": 3606,
+     "held": false,
+     "meets": true,
+     "measured": {
+      "ticks": 3584,
+      "items": 3584,
+      "expected": 3584,
+      "stock_start": 12,
+      "stock_end": 12,
+      "net": 3584
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut bioflux",
+      "start": 10793,
+      "drop": 10865,
+      "release": 10865,
+      "recovered": 14569
+     },
+     {
+      "kind": "block output",
+      "start": 14569,
+      "drop": 14857,
+      "release": 14857,
+      "recovered": 18534
+     },
+     {
+      "kind": "cut nutrients",
+      "start": 18534,
+      "drop": 18722,
+      "release": 18722,
+      "recovered": 22726
+     }
+    ],
+    "stock": {
+     "lowest": 0,
+     "end": 13,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 22726
+   },
+   "generation": {
+    "period": 128,
+    "expected": 128,
+    "verdict": "stable",
+    "selection": {
+     "id": "takt_batches_observed",
+     "holds": true,
+     "rate": 60,
+     "supply": "moving"
+    },
+    "clock_sha256": "482a944834180a775b06031de711688bb82638302a8537197df94b3eba051279"
+   }
+  },
+  "rocket-fuel-60-jelly-hands-15-backed-up": {
+   "recorded": {
+    "pr": 0,
+    "commit": "bc127323",
+    "frozen_head": "bc127323",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start); pr is set when the PR is opened",
+    "clock_sha256": "d978b5fdb3de3cc4f093acf6fa384275f440c3256e974a7fc50aa1f24cb81985",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 60,
+    "period": 64,
+    "window": 3600,
+    "expected": 3600,
+    "steady": 7184,
+    "baseline": {
+     "ticks": 3600,
+     "total": 3600,
+     "expected": 3600,
+     "min": 3600,
+     "max": 3600,
+     "held": true,
+     "meets": true,
+     "measured": {
+      "ticks": 3584,
+      "items": 3584,
+      "expected": 3584,
+      "stock_start": 10,
+      "stock_end": 10,
+      "net": 3584
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut bioflux",
+      "start": 10784,
+      "drop": 10912,
+      "release": 10912,
+      "recovered": 14623
+     },
+     {
+      "kind": "block output",
+      "start": 14623,
+      "drop": 14839,
+      "release": 14839,
+      "recovered": 14840
+     },
+     {
+      "kind": "cut nutrients",
+      "start": 14840,
+      "drop": 14843,
+      "release": 14843,
+      "recovered": 18586
+     }
+    ],
+    "stock": {
+     "lowest": 2,
+     "end": 12,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 18586
+   },
+   "generation": {
+    "period": 64,
+    "expected": 64,
+    "verdict": "stable",
+    "selection": {
+     "id": "euclidean_swings",
+     "holds": true,
+     "rate": 60,
+     "supply": "moving"
+    },
+    "clock_sha256": "d978b5fdb3de3cc4f093acf6fa384275f440c3256e974a7fc50aa1f24cb81985"
+   }
+  },
+  "rocket-fuel-60-jelly-hands-15-backed-up-nutrients": {
+   "recorded": {
+    "pr": 0,
+    "commit": "bc127323",
+    "frozen_head": "bc127323",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start); pr is set when the PR is opened",
+    "clock_sha256": "d978b5fdb3de3cc4f093acf6fa384275f440c3256e974a7fc50aa1f24cb81985",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 60,
+    "period": 64,
+    "window": 3600,
+    "expected": 3600,
+    "steady": 7184,
+    "baseline": {
+     "ticks": 3600,
+     "total": 3600,
+     "expected": 3600,
+     "min": 3600,
+     "max": 3600,
+     "held": true,
+     "meets": true,
+     "measured": {
+      "ticks": 3584,
+      "items": 3584,
+      "expected": 3584,
+      "stock_start": 10,
+      "stock_end": 10,
+      "net": 3584
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut nutrients",
+      "start": 10784,
+      "drop": 11031,
+      "release": 11031,
+      "recovered": 14971
+     }
+    ],
+    "stock": {
+     "lowest": 2,
+     "end": 12,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 14971
+   },
+   "generation": {
+    "period": 64,
+    "expected": 64,
+    "verdict": "stable",
+    "selection": {
+     "id": "euclidean_swings",
+     "holds": true,
+     "rate": 60,
+     "supply": "moving"
+    },
+    "clock_sha256": "d978b5fdb3de3cc4f093acf6fa384275f440c3256e974a7fc50aa1f24cb81985"
    }
   },
   "stone-brick-120-drill-direct-insert": {

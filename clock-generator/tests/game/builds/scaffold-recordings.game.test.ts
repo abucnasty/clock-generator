@@ -84,18 +84,18 @@ const WAKE_UPS_TOLERANCE = 0.25;
 const AGRICULTURAL_SCIENCE_WAKE_UPS_OPEN = "the game counts a wake of the inserters that bring nutrients to the egg biochambers in the tick after "
     + "their window opens, where the nutrient biochamber puts out the products it holds as they take, and the simulator does not: "
     + "134.3 a minute each in the game against 34.5 to 36.4 in the simulator, 1,361.9 in all against 880.8 (1,383.2 with belts backed up; 2026-10-24; "
-    + "1,791.4 against 1,257.8 on the clock before, whose loop inserters were always on)";
+    + "1,791.4 against 1,257.8 on the clock before, whose loop inserters were always on); "
+    + "these figures are of the one-copy build on the clocks of 2026-10-24: this test does not count the wake-ups of a build of copies, so they were not taken again on the clock of #818 (997b3c3c)";
 /**
- * Iron bacteria: since its two loop inserters have windows the game counts about three times the simulator's wake-ups on
- * every inserter of the build, where the two agreed within the tolerance while they were always on. The series' method
- * is a known miss on biochambers (GOALS.md, goal 2), the harness seeds the loop with 50 bacteria where the simulator's
- * cold start gives it 200, and the loop's steady state depends on the start in the simulator and in the game alike. The
- * clock moves its output in every window cycle all the same, and the game's figure is still far under the simulator's
- * 3,534.7 a minute with the loop always on, which the game was within the tolerance of.
+ * Iron bacteria: with windows on the loop's two inserters the game counts about three times the simulator's wake-ups, where the two agreed
+ * within the tolerance while they were always on. The series' method is a known miss on biochambers (GOALS.md, goal 2), the harness seeds
+ * the loop with 50 bacteria where the simulator's cold start gives it 200, and the loop's steady state depends on the start in the simulator
+ * and in the game alike. The clock moves its output in every window cycle all the same, and the game's figure is still far under the
+ * simulator's 3,534.7 a minute with the loop always on, which the game was within the tolerance of.
  */
-const IRON_BACTERIA_WAKE_UPS_OPEN = "with windows on the loop's two inserters the game counts about three times the simulator's wake-ups "
-    + "on every inserter: 1,499.8 a minute in all against 516.4 (each output inserter 116.7 against 39.6, each loop inserter 79.0 against "
-    + "36.8, each bioflux inserter 437.6 against 142.2; 2026-10-24), where the two agreed while the loop was always on";
+const IRON_BACTERIA_WAKE_UPS_OPEN = "with windows on the loop's two inserters the game counts about three times the simulator's wake-ups: "
+    + "1,043.3 a minute in all against 358.2 on the clock of #818 (Time-Study Windows, 3f820d74; Factorio 2.1.24, 2026-11-18), where the two agreed while the loop was always on; "
+    + "the figures of each inserter (1,499.8 against 516.4 on the clock before, 2026-10-24) were not taken again";
 /**
  * Places in the window cycle the simulator starts the clock at to find the steady state the game settled into, when the
  * wake-ups of its own run are not the game's. Takt Batches on utility science makes 192 a window cycle at 10.7, 26.8 or
@@ -187,19 +187,15 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         seed: [{ target: { recipe: "pentapod-egg" }, item: "pentapod-egg", count: 200 }],
         warmup_ticks: 300,
         copies: 5,
-        // Recorded 2026-11-11 at Factorio 2.1.24 on Time-Study Windows (1 output swing each output cycle, a window cycle of 480
-        // ticks, clock 8de16d68), twice, from the staged start to steady state and a minute more (22 window cycles): both
-        // recordings short in the same window cycles of the settling, on the same copies, by the same items. Copies by x from the
-        // west, as the copies are found: copies 1, 3 and 5 have the bioflux on the pickup's near lane, copies 2 and 4 the
-        // nutrients. Every copy moves 400 in every window cycle from tick 2,880 on (16 window cycles), and the machines run at the
-        // config's speed and productivity. Before the build of five copies the sample's one copy was recorded from the staged
-        // start on other clocks (2026-10-24, 2026-11-03); those values belong to the one-copy build.
+        // Recorded again 2026-11-18 at Factorio 2.1.24 on Takt Batches (2 output swings each output cycle, a window cycle of 960
+        // ticks, clock 997b3c3c: windows on the four egg inserters, #818), from the staged start to steady state and a minute more
+        // (10 window cycles): every copy is short in the same two window cycles, 784 in the second and 736 in the third of 800, and
+        // moves 800 in each of the seven after, from tick 2,880 on. The five copies are alike: copies 1 to 5, by x from the west, as
+        // the copies are found. The machines run at the config's speed and productivity. The clock before (Time-Study Windows,
+        // 8de16d68, 400 a copy in a window cycle of 480) was recorded 2026-11-11 with other dips, which belong to it; before
+        // the build of five copies the sample's one copy was recorded from the staged start on other clocks (2026-10-24, 2026-11-03).
         staged_start: {
-            dips: [
-                { start: 480, items: 368, copy: 2 }, { start: 480, items: 368, copy: 4 }, { start: 480, items: 368, copy: 5 },
-                { start: 960, items: 368, copy: 1 }, { start: 960, items: 368, copy: 3 },
-                { start: 2400, items: 384, copy: 2 }, { start: 2400, items: 384, copy: 4 },
-            ],
+            dips: [1, 2, 3, 4, 5].flatMap(copy => [{ start: 960, items: 784, copy }, { start: 1920, items: 736, copy }]),
             open_issues: [],
         },
         wake_ups_open: AGRICULTURAL_SCIENCE_WAKE_UPS_OPEN,
@@ -212,7 +208,12 @@ const BUILDS: Record<string, ScaffoldBuild> = {
     // until such a trial ran on (2026-10-24). That was the one-copy build. On the five copies the lanes are dead ends, the
     // clocks are made for backed-up belts either way, and the same clock is selected as with belts that move (Time-Study
     // Windows, clock 8de16d68): recorded 2026-11-11 at Factorio 2.1.24, 400 on each of the five copies in each of the 7
-    // window cycles checked
+    // window cycles checked. Since windows on the four egg inserters (#818) the same clock is Takt Batches (997b3c3c), and the
+    // entry is recorded from the staged start, as the build with belts that move is and as the judged start of the generator
+    // is (the harness does not read `backed_up_belts`: only the clock differs, and it is the same): the same dips as that
+    // build, 2026-11-18, Factorio 2.1.24. Its start before, a warm-up of 300 ticks and a seed of 200 eggs until steady state
+    // and a minute more (4 window cycles), left copy 2 short in each of the 3 window cycles checked (768, 720, 720 of 800) and
+    // copy 5 in the first (720) on this clock: a settling the minute does not show the end of, so the entry no longer starts there.
     "agricultural science (belts are backed up)": {
         scaffold: path.join(SAMPLES, "science", "agricultural", "agricultural-250.scaffold"),
         config: ConfigPaths.AGRICULTURAL_SCIENCE_250,
@@ -220,6 +221,10 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         warmup_ticks: 300,
         backed_up_belts: true,
         copies: 5,
+        staged_start: {
+            dips: [1, 2, 3, 4, 5].flatMap(copy => [{ start: 960, items: 784, copy }, { start: 1920, items: 736, copy }]),
+            open_issues: [],
+        },
         wake_ups_open: AGRICULTURAL_SCIENCE_WAKE_UPS_OPEN,
     },
     // abucnasty's build of nine copies (2026-11-11), 9 tiles apart in one row on one input belt whose two lanes are dead
@@ -564,8 +569,10 @@ const BUILDS: Record<string, ScaffoldBuild> = {
         // the machines make bacteria from bacteria, so they are given some to begin with
         seed: [{ target: { recipe: "iron-bacteria-cultivation" }, item: "iron-bacteria", count: 50 }],
         warmup_ticks: 300,
-        // recorded 2026-10-24 on Takt Batches: 6 output swings each output cycle (subtick) with windows on the loop's two inserters (ticks 15 to 23
-        // and 60 to 68 of every 90.95): 10,944 in every one of the 20 repeats of 1,728 ticks after the first
+        // recorded again 2026-11-18 at Factorio 2.1.24 on Time-Study Windows (2 output swings each output cycle, subtick, a window cycle of 1,728
+        // ticks, clock 3f820d74: windows on the loop's inserters, #818): 10,944 in each of the 2 window cycles after the first, no difference between
+        // the game and the simulator in what any inserter or machine moved, and the wake-ups below. Recorded before 2026-10-24 on Takt Batches
+        // with 6 output swings (clock e1c6fc90): 10,944 in every one of the 20 repeats after the first
         wake_ups_open: IRON_BACTERIA_WAKE_UPS_OPEN,
     },
 };
