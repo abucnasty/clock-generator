@@ -14,7 +14,7 @@ import { recordSimulationTimeline } from '../../../../src/crafting/record-timeli
 import { EntityId } from '../../../../src/entities';
 import { GROUP_GAP_TILES } from '../../../../src/crafting/turn-groups';
 import { SEARCH_LABELS } from '../../../../src/crafting/generate-blueprint-test-helpers';
-import type { Config } from '../../../../src/config/schema';
+import { judgedStartOf, type Config } from '../../../../src/config/schema';
 import { lithiumSiloCases } from '../lithium-plate-80-silo-chest-clock-fixtures';
 
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
@@ -116,13 +116,21 @@ const agriculturalScience: JobCheck[] = [
 ];
 
 // The processing unit circuit export (PROCESSING_UNIT_80_CIRCUIT_EXPORT), a real cell (#189) at 80 processing units a second.
+// From the backpressure start its three casting foundries, which no inserter feeds, start full (docs/stability.md, "How a clock is
+// started"): the explicit plan is then made on two output cycles, and the per-hand clock of the grouped hands comes from the
+// one-swing maker; from the cold start (`overrides.judged_start` "cold") the checks read as they did before.
+const circuitExportPlan = (config: Config) => judgedStartOf(config.overrides) === 'cold' ? { ticks: 24, items: 32 } : { ticks: 48, items: 64 };
+const circuitExportPerHand = (config: Config, generated: ClockAlternativesResult) =>
+    byMaker(generated, judgedStartOf(config.overrides) === 'cold' ? 'planned-belt-slack-per-hand' : 'swings-1-per-hand');
 const circuitExport: JobCheck[] = [
     {
-        name: 'Behavior: the explicit one-cycle plan is offered, in 24 ticks with 32 items, on a backed-up belt',
-        run: ({ generated }) => {
+        name: 'Behavior: the explicit plan is offered on a backed-up belt, in 24 ticks with 32 items from the cold start, 48 with 64 from the backpressure start',
+        run: ({ config, generated }) => {
             const plan = byMaker(generated, 'planned-belt-slack');
             expect(plan, 'the explicit behavior plan is offered, independently of the selector').toBeDefined();
-            expect(plan.result.stability_check.as_built).toMatchObject({ holds: true, actual_output_items: 32 });
+            const { ticks, items } = circuitExportPlan(config);
+            expect(plan.result.simulation_duration.ticks).toBe(ticks);
+            expect(plan.result.stability_check.as_built).toMatchObject({ holds: true, actual_output_items: items });
             expect(plan.belt).toEqual({ kind: 'backed_up' });
         },
     },
@@ -131,8 +139,8 @@ const circuitExport: JobCheck[] = [
         // from every loss, so it is remade once with the takers into the target machines (the processing unit machines 2 and 3) unguarded
         // of the per-hand clock the grouped hands make, which the per-branch clock composed from it is recommended over
         name: 'Selection: the 4 inserters with no window are the circuits into the processing unit machines, which the remake leaves unguarded',
-        run: ({ generated }) => {
-            expect(byMaker(generated, 'planned-belt-slack-per-hand').result.always_on_reasons).toEqual(Object.fromEntries([3, 4, 7, 8]
+        run: ({ config, generated }) => {
+            expect(circuitExportPerHand(config, generated).result.always_on_reasons).toEqual(Object.fromEntries([3, 4, 7, 8]
                 .map(number => [`inserter:${number}`, { kind: 'full-duty-cycle', window_cycle_ticks: 24 }])));
         },
     },
@@ -161,13 +169,13 @@ const circuitExport: JobCheck[] = [
         },
     },
     {
-        // the replay from the warm-up inventory is the build stalled in part (the plastic off the belt, inserter 1, picks up
-        // nothing in the window cycle recorded); the long run judges stock from index 960, after 240 warm-up ticks; replaying clock tick 1200
-        // shows the inserters at work
+        // from the cold start the replay from the warm-up inventory is the build stalled in part (the plastic off the belt, inserter 1,
+        // picks up nothing in the window cycle recorded); from the backpressure start its full foundries keep it at work there (4 pickups);
+        // the long run judges stock from index 960, after 240 warm-up ticks; replaying clock tick 1200 shows the inserters at work
         name: 'records a settled period from the clock tick the long run judges, not the stalled first one',
         run: ({ config, generated }) => {
             // the per-hand clock of the grouped hands, which stalls in its first window cycle; the per-branch clock composed from it does not
-            const selected = byMaker(generated, 'planned-belt-slack-per-hand');
+            const selected = circuitExportPerHand(config, generated);
             const first_judged_tick = selected.result.stability_check.as_built?.first_judged_tick;
             expect(first_judged_tick).toBe(960);
             const judged_clock_tick = selected.result.stability_check.as_built?.clock_tick_at_first_judged;
@@ -184,7 +192,7 @@ const circuitExport: JobCheck[] = [
             expect(cold.ticks_before_recording).toBe(240);
             expect(settled.ticks_before_recording).toBe(1200);
             expect(settled.end_tick).toBe(24);
-            expect(swings(cold)).toBe(0);
+            expect(swings(cold)).toBe(judgedStartOf(config.overrides) === 'cold' ? 0 : 4);
             expect(swings(settled)).toBeGreaterThan(0);
         },
     },
