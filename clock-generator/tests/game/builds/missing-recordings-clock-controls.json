@@ -301,7 +301,7 @@
   },
   "automation-science-120-foundries-feed-belt-to-assembler": {
    "recorded": {
-    "pr": 0,
+    "pr": 833,
     "commit": "a05422d7",
     "frozen_head": "a05422d7",
     "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24; pr is set when the PR is opened",
@@ -443,7 +443,7 @@
   },
   "electric-furnace-20": {
    "recorded": {
-    "pr": 0,
+    "pr": 833,
     "commit": "a05422d7",
     "frozen_head": "a05422d7",
     "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start, settle_ticks and steady.after_finals), in Factorio 2.1.24; pr is set when the PR is opened",
