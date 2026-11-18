@@ -59,6 +59,11 @@ The generator takes the windows of a part in one of two ways:
 This costs at most one more check up to the long run for each source of each part that fails as a whole. The generator then sets the
 sources one at a time, from the output upstream, and keeps the setting with the smallest number of wakeups for the full clock.
 
+The generator sets the sources from the recommended clock, and from each stable part whose wakeups a minute tie the recommended
+clock's. The environment variable `CLOCK_SEARCH_FROM_EVERY_START=1` starts it from every stable part. It is off by default and
+changes the selected clock of 15 of the 86 record jobs; the record is made with it off. A blast that sets it
+keys its entry by it (`scripts/blast/key.py`).
+
 The generator then checks that clock with every copy: the lanes the copies share, then the disturbance trials on the copies. Where it
 kept the recommended clock, it checks the recommended clock. These are the checks of the listing, made once for each clock. If the
 clock holds with the copies, the generator keeps that clock. If it does not, the

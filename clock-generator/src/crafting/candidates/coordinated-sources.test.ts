@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CoordinatedSourcesNotApplicable, localChoiceFromStarts, localChoiceStarts, localChoiceWithCopies, onWindowCycles, partGroups, sourceControlsOf, tiledWindows, upstreamOrder,
+import { CoordinatedSourcesNotApplicable, localChoiceFromStarts, localChoiceStarts, localChoiceWithCopies, onWindowCycles, partGroups, SEARCH_FROM_EVERY_START_VARIABLE, sourceControlsOf, tiledWindows, upstreamOrder,
     type GroupedInserter, type LocalChoiceJudge } from "./coordinated-sources";
 import { EntityRouteError } from "../enable-control-router";
 import { collectingParts, offerPart, partKey, partsWanted, coordinatedSourcesInputOf, type CoordinatedSourcesPart } from "./coordinated-sources-parts";
@@ -109,6 +109,24 @@ describe("the starts of the local choice", () => {
         expect(() => localChoiceFromStarts(all, starts, judge(only_from_tied), logger))
             .toThrow(new CoordinatedSourcesNotApplicable("the local choice keeps the recommended clock"));
         expect(logged).toEqual([]);
+    });
+
+    it("are every stable clock where CLOCK_SEARCH_FROM_EVERY_START is 1, tied or not, and never a clock that is not stable", () => {
+        const not_tied = { ...tied, wake_ups_per_minute: 40.001 };
+        const unstable = { ...other, verdict: "unstable" as const };
+        const all = groups([not_tied, unstable]);
+        const before = process.env[SEARCH_FROM_EVERY_START_VARIABLE];
+        try {
+            delete process.env[SEARCH_FROM_EVERY_START_VARIABLE];
+            expect(localChoiceStarts(CHAIN, all, recommended, [not_tied, unstable], 20).map(start => start.part.name)).toEqual(["recommended"]);
+            process.env[SEARCH_FROM_EVERY_START_VARIABLE] = "0";
+            expect(localChoiceStarts(CHAIN, all, recommended, [not_tied, unstable], 20).map(start => start.part.name)).toEqual(["recommended"]);
+            process.env[SEARCH_FROM_EVERY_START_VARIABLE] = "1";
+            expect(localChoiceStarts(CHAIN, all, recommended, [not_tied, unstable], 20).map(start => start.part.name)).toEqual(["recommended", "tied"]);
+        } finally {
+            if (before === undefined) delete process.env[SEARCH_FROM_EVERY_START_VARIABLE];
+            else process.env[SEARCH_FROM_EVERY_START_VARIABLE] = before;
+        }
     });
 
     it("keep the recommended clock's start's result where another start gives the same", () => {
