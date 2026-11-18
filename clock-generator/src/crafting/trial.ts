@@ -21,8 +21,8 @@ import { TARGET_RATE_TOLERANCE } from "./rank";
 import { BlueprintGenerationResult, BuildRun, FractionalSwings, LCM_STABILITY_TOLERANCE, SIMULATION_BUDGET_TICKS, RunOptions, fractionalSwingsOf, SimulationStabilityCheck, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, coldControlledTrialBuild, unclockedRun, provenRepeatBin, runBuild, trialRunOf, withInserterClocks } from "./plan/unclocked-run";
 import { SimulationTick } from "./runner/simulation-tick";
 import { simulationStateKey } from "./runner/steady-state";
-import { inLoopInserterWindows, loopInserterWindows } from "./candidates/loop-windows";
-import type { LoopStockBound } from "./candidates/loop-stock-bound";
+import { inLoopInserterWindows, loopInserterWindows, type OutOfLoopWindows } from "./candidates/loop-windows";
+import { loopStockShortOf, type LoopStockBound } from "./candidates/loop-stock-bound";
 import { CLOCK_STARTS, ClockStart, StartDependence, StartOutcome, cycleOf, startVerdictOf, startsReachingTarget } from "./start-dependence";
 import { plannedWithFractionalSwings } from "./sequence/cycle/output-cycle";
 import { movingPickupPhaseStarts } from "./moving-pickup-phase-starts";
@@ -116,8 +116,9 @@ export interface ClockAssessment {
     /**
      * #516's two-hop bound on the windows of a clock with windows for a loop of machines (`loop_windows` of its result): the
      * margins of what the loop's sources leave for its inserters and of the stock its machines hold over the longest gap
-     * between its windows (see loop-stock-bound.ts). A report: no clock is kept, dropped or ranked by it. Absent on any other
-     * clock.
+     * between its windows (see loop-stock-bound.ts). The windows of a loop's own inserters are kept only where the second
+     * leaves a craft to spare (see `trialWithLoopWindows`); the first is a report, and no clock is ranked by either. Absent on
+     * any other clock.
      */
     loop_stock_bound?: LoopStockBound;
 }
@@ -1496,13 +1497,78 @@ function heldUnderOtherTakerOrders(
     }
 }
 
+/** Ticks between two places tried for windows out of a loop placed one a hand (see `placedOutOfLoopWindows`) */
+const OUT_OF_LOOP_PHASE_STEP_TICKS = 4;
+
+/** Places in a row that have to pass before the windows out of a loop placed one a hand are put at the middle one */
+const OUT_OF_LOOP_PHASE_RUN = 3;
+
+/**
+ * The windows out of a loop that `loopInserterWindows` places one a hand (`phase_slot`) are moved together over their
+ * slot, OUT_OF_LOOP_PHASE_STEP_TICKS at a time from where they open, and the clock with them is checked at each place (the
+ * clock-only check from `start_phases` start phases with its standard long run), until OUT_OF_LOOP_PHASE_RUN places in a
+ * row pass: they are put at the middle one, so that a tick or a few either way still holds. Where no run is that long,
+ * at the middle of the longest, the first of the longest. Where no place passes, or none of them is placed one a hand,
+ * the proposal is returned as it is. On agricultural science's Time-Study clock of one output swing 9 and 10 pass with
+ * their windows opening at ticks 0 to 14 and 42 to 54 of each 96 (tried 2 ticks apart; the other places fail the check, a
+ * moved tick or a loss), so they open at tick 4.
+ */
+function placedOutOfLoopWindows(
+    config: Config,
+    windows: Map<string, OpenRange[]>,
+    proposal: Map<string, OutOfLoopWindows>,
+    window_cycle_ticks: number,
+    start_phases: number,
+    logger: Logger,
+    pickup_phase_cycles: boolean,
+    swings: FractionalSwings,
+): Map<string, OutOfLoopWindows> {
+    const slot = Math.max(0, ...Array.from(proposal.values(), it => it.phase_slot ?? 0));
+    if (slot === 0) {
+        return proposal;
+    }
+    const at = (phase: number) => new Map(Array.from(proposal, ([id, it]) =>
+        [id, it.phase_slot === undefined ? it : { ...it, windows: OpenRange.reduceRanges(rotateRanges(it.windows, phase, window_cycle_ticks)) }] as const));
+    const phases = Array.from({ length: Math.ceil(slot / OUT_OF_LOOP_PHASE_STEP_TICKS) }, (_, k) => k * OUT_OF_LOOP_PHASE_STEP_TICKS);
+    const passesAt = (phase: number) => {
+        const candidate = new Map(windows);
+        for (const [id, it] of at(phase)) {
+            candidate.set(id, it.windows);
+        }
+        const check = runAsBuiltCheck(config, candidate, window_cycle_ticks, logger, start_phases, undefined, FREE_RUNNING_CHECK_TICKS, undefined,
+            pickup_phase_cycles, "hands", swings).check;
+        return check.holds && check.failed_start_offset === undefined;
+    };
+    // in order, until OUT_OF_LOOP_PHASE_RUN places in a row pass: the middle one is the pick
+    const started = Date.now();
+    const passes: boolean[] = [];
+    for (const phase of phases) {
+        passes.push(passesAt(phase));
+        if (passes.length >= OUT_OF_LOOP_PHASE_RUN && passes.slice(-OUT_OF_LOOP_PHASE_RUN).every(it => it)) break;
+    }
+    // else the longest run of places that pass, around the slot, the first of the longest
+    let best: { from: number; length: number } | null = null;
+    for (let from = 0; from < passes.length; from++) {
+        const wraps = passes.length === phases.length && passes.some(it => !it);
+        if (!passes[from] || (from > 0 || wraps) && passes[(from - 1 + passes.length) % passes.length]) continue;
+        let length = 0;
+        while (length < passes.length && passes[(from + length) % passes.length] && (wraps || from + length < passes.length)) length++;
+        if (best === null || length > best.length) best = { from, length };
+    }
+    const picked = best === null ? null : phases[(best.from + Math.floor(best.length / 2)) % phases.length];
+    logger.log(`Loop enable windows placed one a hand: of the places every ${OUT_OF_LOOP_PHASE_STEP_TICKS} ticks of ${slot} tried (${passes.length}, `
+        + `${((Date.now() - started) / 1000).toFixed(1)} s), ` + (picked === null ? "none passes" : `${phases.filter((_, k) => passes[k]).join(", ")} pass; at ${picked}`));
+    return picked === null ? proposal : at(picked);
+}
+
 /**
  * The windows of the inserters of a loop are an optimisation, kept when the build passes the same check with them as it
  * did without: the long run of the check just made (`run`) gives the output of every machine and the hands of every
  * inserter, so no other run is needed to make them. First the windows of the inserters that take out of a loop
  * (`loopInserterWindows`), kept where the check passes with them; then, unless `in_loop` is false, those of the
- * inserters of the loop itself (`inLoopInserterWindows`), kept where the check passes with them and still passes with
- * each set of identical windows of the loop's inserters and of those out of it moved a tick either way
+ * inserters of the loop itself (`inLoopInserterWindows`), kept where the check passes with them, the loop's machines hold
+ * at least a craft's worth over the longest gap between their feeders' windows (`loopStockShortOf`), and the check still
+ * passes with each set of identical windows of the loop's inserters and of those out of it moved a tick either way
  * (`loopWindowsMargin`). Returns the check with what was kept, the windows with theirs in, their ids and item names
  * (identical windows and items share one combinator, as the nutrient inserters of the egg biochambers do), or null when
  * there are none or none passes. Whether the clock with them gets back from a loss is judged where the clock is
@@ -1540,7 +1606,8 @@ export function trialWithLoopWindows(
     const checkOf = (candidate: Map<string, OpenRange[]>, what: string) => runAsBuiltCheck(config, candidate, window_cycle_ticks, logger, start_phases,
         (n, total) => report?.(`Checking the enable windows ${what}, clock start ${n}/${total}`), LOOP_WINDOW_CHECK_TICKS, undefined, pickup_phase_cycles, "wake-ups", swings);
     let kept: (AsBuiltRun & { windows: Map<string, OpenRange[]>; item_names: Map<string, string>; in_loop_ids: string[] }) | null = null;
-    const out_of_loop = loopInserterWindows(config, window_cycle_ticks, run.stock, logger);
+    const out_of_loop = placedOutOfLoopWindows(config, windows, loopInserterWindows(config, window_cycle_ticks, run.stock, logger),
+        window_cycle_ticks, Math.min(start_phases, AS_BUILT_START_PHASES), logger, pickup_phase_cycles, swings);
     if (out_of_loop.size > 0) {
         const looped_windows = new Map(windows);
         for (const [inserter_id, it] of out_of_loop) {
@@ -1564,7 +1631,9 @@ export function trialWithLoopWindows(
             }
             const own_run = checkOf(with_own, "of the loop");
             const why = !passesAsBefore(own_run.check) ? "the as-built check with them does not pass as without"
-                : loopWindowsMargin(config, with_own, [...own.keys(), ...(kept?.item_names.keys() ?? [])], window_cycle_ticks, logger, pickup_phase_cycles, swings);
+                : loopStockShortOf(config, Object.fromEntries(Array.from(with_own, ([id, ranges]) =>
+                    [id, ranges.map(range => ({ start: range.start_inclusive, end: range.end_inclusive }))])), window_cycle_ticks)
+                    ?? loopWindowsMargin(config, with_own, [...own.keys(), ...(kept?.item_names.keys() ?? [])], window_cycle_ticks, logger, pickup_phase_cycles, swings);
             logger.log(`Loop enable windows of the loop's own inserters: ${why === null ? "kept" : `dropped, ${why}`}`);
             if (why === null) {
                 kept = { ...own_run, windows: with_own, in_loop_ids: Array.from(own.keys()),

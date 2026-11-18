@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import { generateClockAlternatives } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { TestConfigPaths } from "../../tests/configs/paths";
+import { ConfigPaths } from "../config/config-paths";
+import { planClockAlternatives, runClockAlternativeTask } from "./alternatives";
 import type { Config } from "../config/schema";
 import { quiet } from "./generate-blueprint-test-helpers";
 
@@ -54,5 +56,33 @@ describe("generateClockForConfig", () => {
             expect(selected.verdict).toBe("stable");
             expect(selected.assessment.disturbance_trial).toMatchObject({ survives: true, broken_by: [] });
         });
+    });
+
+    // #516: the sample of five copies, its clock tried from the starts of the start-dependence check too; the Time-Study
+    // Windows alone are made after the primary clock, as the page makes each alternative
+    describe("agricultural science, five copies: a clock with windows on all four egg inserters", async () => {
+        const sample = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250);
+        const config: Config = { ...sample, overrides: { ...sample.overrides, check_start_dependence: true } };
+
+        // On the clock of one output swing (an output window every 19.2 ticks) the science biochamber is under its block
+        // nearly all the time, so 9 and 10 get a window a hand, 20 ticks of every 96, placed where the clock holds with them;
+        // 5 and 8 take turns after each output window, 11 ticks of every 19.2, which leaves an egg biochamber 9 ticks
+        // without a window of its feeder: it holds a craft's egg to spare and more (loopStockShortOf). The clock holds from
+        // every start and gets back from every loss on every copy.
+        it("offers Time-Study Windows with windows on 5, 8, 9 and 10, stable from every start and every loss, with a craft to spare", () => {
+            const { context } = planClockAlternatives(config, { logger: quiet });
+            const windowed = runClockAlternativeTask(config, context, "derived", { logger: quiet })!.alternatives[0];
+            expect(windowed.maker).toBe("derived");
+            expect(windowed.result.loop_windows?.inserter_ids.slice().sort()).toEqual(["inserter:10", "inserter:5", "inserter:8", "inserter:9"]);
+            expect(windowed.result.loop_windows?.in_loop_ids?.slice().sort()).toEqual(["inserter:5", "inserter:8"]);
+            expect(windowed.verdict).toBe("stable");
+            expect(windowed.assessment.start_dependence?.verdict).toBe("stable");
+            expect(windowed.assessment.disturbance_trial).toMatchObject({ survives: true, broken_by: [] });
+            expect(windowed.assessment.shared_lane_losses ?? []).toEqual([]);
+            expect(windowed.assessment.loop_stock_bound!.sink_stock_margin_crafts).toBeGreaterThanOrEqual(0);
+            for (const id of ["inserter:5", "inserter:8", "inserter:9", "inserter:10"]) {
+                expect(windowed.result.clock_windows[id]?.length ?? 0).toBeGreaterThan(0);
+            }
+        }, 1_200_000);
     });
 });
