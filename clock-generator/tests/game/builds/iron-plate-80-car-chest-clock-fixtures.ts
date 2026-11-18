@@ -86,6 +86,9 @@ export function assertCarHardware(recording: Recording, config: Config): void {
     expect(drills[0].productivity).toBeCloseTo(config.drills!.configs[0].productivity, 6);
 }
 
+/** Ticks the run goes on after its last recovery (steady.lua `tail`), so the stock the last disturbance leaves is recorded settled */
+const CAR_TAIL_TICKS = 14_400;
+
 export async function carScenario(variant: CarCase): Promise<PickupClockScenario> {
     const config = await loadConfigFromFile(ConfigPaths.IRON_PLATE_80_CAR_CHEST);
     return {
@@ -94,7 +97,7 @@ export async function carScenario(variant: CarCase): Promise<PickupClockScenario
         scaffold: () => carScaffold(variant.order),
         alternative: variant.alternative,
         probeFile: path.join(__dirname, "iron-plate-80-car-chest-clock-probe.lua"),
-        probe: {family: "car"},
+        probe: {family: "car", tail: CAR_TAIL_TICKS},
         controls: path.join(__dirname, "iron-plate-80-car-chest-clock-controls.json"),
         assertHardware: assertCarHardware,
     };

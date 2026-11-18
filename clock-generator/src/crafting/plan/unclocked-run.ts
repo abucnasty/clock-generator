@@ -48,6 +48,9 @@ import { WarmupStep } from "../runner/steps/warmup-step";
 import { FullOutputChest, fullOutputChestsOf } from "../full-output-chests";
 import { ExportShortfall, exportShortfallsOfWindowCycle, exportedItemsOf } from "../export-delivery";
 import { simulationStateKey } from "../runner/steady-state";
+import { stateKeyWithLanes } from "../runner/shared-lanes-key";
+import type { SharedLane } from "../../state/shared-lane";
+import { controlsKeyOf, InstalledControl, skipRepeatedTicks, warmUpRepeatOf } from "../runner/warm-up-repeat";
 import { SimulateStep } from "../runner/steps/simulate-step";
 import { RunnerStepType } from "../runner/steps/runner-step";
 import { Logger, defaultLogger } from "../../common/logger";
@@ -528,6 +531,11 @@ export interface RunOptions {
      */
     build_copies?: BuildCopies;
     /**
+     * The lanes a run of the copies shares (`runOnSharedLanes`), which the context's states do not hold: filled by
+     * `on_context` before the first tick, and keyed with the state where the warm-up looks for a repeat (`stateKeyWithLanes`)
+     */
+    shared_lanes?: { readonly lanes: readonly { readonly lane: SharedLane }[] };
+    /**
      * After the run, cut one supply of the build and give it back, several times over, and count what the build makes
      * once it is back (see disturbance-trial.ts). For a run on clock windows alone; nothing is cut in any other run.
      */
@@ -702,7 +710,8 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
 
     // the shadow of the tick ledger: only where a ledger is open; it reads the outputs and changes nothing
     const shadow = tickLedgerOn() ? shadowOfOutputs(build, all_output_inserters, duration, warmup_window_cycle) : undefined;
-    const warmup = warmUp(config, build, controlled, duration, warmup_window_cycle, debug, debug_steps, logger, shadow);
+    const shared_lanes = options.shared_lanes?.lanes.map(it => it.lane) ?? [];
+    const warmup = warmUp(config, build, controlled, duration, warmup_window_cycle, shared_lanes, debug, debug_steps, logger, shadow);
     const repeat_window_cycles = warmup.repeat_window_cycles;
     const repeat_bin = options.detect_repeat === true && (options.simulate_window_cycles ?? 1) > 1 ? provenRepeatBin(config, duration.ticks) : null;
     const simulated = simulate(build, controlled, all_output_inserters, duration, options, debug, debug_steps, logger, repeat_bin, shadow);
@@ -952,6 +961,8 @@ interface ControlledBuild {
     crafting_shares: Map<string, number>;
     always_enabled_by_config: Set<string>;
     inserter_clocks: Map<string, InserterClock>;
+    /** The control each inserter and drill was put on, in the order of the context's lists */
+    installed_controls: InstalledControl[];
 }
 
 /**
@@ -1022,29 +1033,34 @@ function withEnableControls(
     // Swap the controls of the build's context, in place
     // Route to configurable factory if override mode is not AUTO, otherwise use automatic factory
     // a later copy's inserter or drill runs on the control of the config's own (build-copies.ts); a condition reads the
-    // copy's own entities
+    // copy's own entities; what each is put on is kept for the warm-up's proof of a repeat (`warmUpRepeatOf`)
+    const installed_controls: InstalledControl[] = [];
+    const install = (entity_id: EntityId, control: InstalledControl["control"]) => {
+        installed_controls.push({ control, override: enable_control_override_map.get(entity_id.id) });
+        return control;
+    };
     simulation_context.useControls({
         drill: (drill_state) => {
             const entity_id = twinOf(drill_state.entity_id);
             if (configurable_enable_control_factory.hasOverride(entity_id)) {
                 const override_mode = configurable_enable_control_factory.getOverrideOrThrow(entity_id).mode;
                 logger.log(`Using configurable override for drill ${drill_state.entity_id.id} with mode ${override_mode}`);
-                return configurable_enable_control_factory.createForEntityId(entity_id);
+                return install(entity_id, configurable_enable_control_factory.createForEntityId(entity_id));
             }
-            return enable_control_factory.createForEntityId(entity_id);
+            return install(entity_id, enable_control_factory.createForEntityId(entity_id));
         },
         inserter: (inserter_state) => {
             const entity_id = twinOf(inserter_state.entity_id);
             if (configurable_enable_control_factory.hasOverride(entity_id)) {
                 const override_mode = configurable_enable_control_factory.getOverrideOrThrow(entity_id).mode;
                 logger.log(`Using configurable override for inserter ${inserter_state.entity_id.id} with mode ${override_mode}`);
-                return configurable_enable_control_factory.createForEntityId(entity_id, inserter_state.inserter);
+                return install(entity_id, configurable_enable_control_factory.createForEntityId(entity_id, inserter_state.inserter));
             }
-            return enable_control_factory.createForEntityId(entity_id);
+            return install(entity_id, enable_control_factory.createForEntityId(entity_id));
         }
     });
 
-    return { resettable_registry, crafting_shares, always_enabled_by_config, inserter_clocks };
+    return { resettable_registry, crafting_shares, always_enabled_by_config, inserter_clocks, installed_controls };
 }
 
 /** How long a build runs: the window cycle of the clock, and the warmup before it */
@@ -1091,8 +1107,9 @@ function runWindowCyclesOf(output_cycle_plan: OutputCyclePlan, recipe_lcm: numbe
 }
 
 /**
- * Step 2: warms the build up. Returns the window cycles its state repeats over, when the warmup reached a repeating state;
- * a build that is not clocked throughout is not checked for one.
+ * Step 2: warms the build up, and stops where its state repeats wherever its controls let the key prove a repeat
+ * (`warmUpRepeatOf`); in a run of the copies the key holds the lanes they share too. Returns the window cycles its state repeats over, when the warmup reached a repeating state on a
+ * build clocked throughout on the run's window cycle; the stability check reads them, and no other repeat.
  */
 function warmUp(
     config: Config,
@@ -1100,6 +1117,8 @@ function warmUp(
     controlled: ControlledBuild,
     duration: Duration,
     warmup_window_cycle: Duration,
+    /** The lanes a run of the copies shares, which the context's states do not hold: keyed with them (`stateKeyWithLanes`) */
+    shared_lanes: readonly SharedLane[],
     debug: MutableDebugSettingsProvider,
     debug_steps: DebugSteps,
     logger: Logger,
@@ -1112,15 +1131,25 @@ function warmUp(
     // the clocks start here, on a cold build at its tick 0
     resettable_registry.resetAll(true);
     return withDebugFor(debug, debug_steps, RunnerStepType.WARM_UP, () => {
+        const repeat = warmUpRepeatOf(duration.ticks, controlled.installed_controls, warmup_window_cycle.ticks);
+        const controls_key = repeat.armed ? controlsKeyOf(controlled.installed_controls) : undefined;
         const warmup_step = new WarmupStep(simulation_context, warmup_window_cycle,
-            isPurelyClocked(config, duration.ticks)
-                ? { window_cycle_ticks: duration.ticks, key: () => simulationStateKey(simulation_context) }
+            repeat.armed
+                ? { bin_ticks: repeat.bin_ticks, keyed_from_ticks: repeat.keyed_from_ticks, key: () => `${stateKeyWithLanes(simulation_context, shared_lanes)}\n${controls_key!()}` }
                 : undefined, shadow?.warm_up);
         warmup_step.execute();
+        // a stop left out whole repeats: what the controls count in spans of the run moves on by them
+        if (warmup_step.repeat_ticks !== undefined) {
+            skipRepeatedTicks(controlled.installed_controls, Math.ceil(warmup_window_cycle.ticks) - warmup_step.ticks_run);
+        }
         if (warmup_step.ticks_run < warmup_window_cycle.ticks) {
             logger.log(`Warm-up reached a repeating state after ${warmup_step.ticks_run} ticks`);
         }
-        return { repeat_window_cycles: warmup_step.repeat_window_cycles, ticks_run: warmup_step.ticks_run };
+        const repeat_ticks = warmup_step.repeat_ticks;
+        return {
+            repeat_window_cycles: repeat_ticks !== undefined && isPurelyClocked(config, duration.ticks) ? repeat_ticks / duration.ticks : undefined,
+            ticks_run: warmup_step.ticks_run,
+        };
     });
 }
 

@@ -83,7 +83,7 @@ export interface PickupClockScenario {
     /** A probe of its own, in place of pickup-clock-speed-probe.lua: it runs steady.lua with its own disturbances and writes clock-speed.json */
     probeFile?: string;
     probe: {family: string; machine_name?: string; ingredients?: readonly [string, string]; output_to_belt?: boolean;
-        trace_ticks?: number; stackSize?: number; assemblers?: number};
+        trace_ticks?: number; stackSize?: number; assemblers?: number; tail?: number};
     /** The native setup audit, in place of assertPickupClockHardware (which expects a belt-fed input) */
     assertHardware?: (recording: Recording, config: Config, blueprint: string) => void;
     validateRecording?: (recording: Recording, config: Config) => void;

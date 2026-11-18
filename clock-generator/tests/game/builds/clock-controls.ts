@@ -98,12 +98,21 @@ export interface NativeBaseline {
 /**
  * The output stock guard (abucnasty, 2026-11-03): the final machines' output stock at the end of the run (after the last recovery)
  * is no lower than the lowest it was at any tick of the baseline's whole cycles, so a slowly draining stock (underproduction
- * the output inserters would hide) fails the run
+ * the output inserters would hide) fails the run; for a run with a tail, the stock it has settled to after the last recovery
  */
 export interface NativeStockGuard {
     lowest: number;
     end: number | null;
     holds: boolean;
+    /**
+     * Only in a run that asked for a tail (helpers/lua/steady.lua `tail`, #587): the output stock after the last recovery, at
+     * each whole clock cycle (`t` the tick, `stock` the total, `low` the lowest tick since the cycle before). `holds` is then
+     * judged on what it settles to (`settled`, read in the last half of the tail: never below the baseline's lowest, not
+     * falling), and not on the tick the run ended; null `settled`: the run ended before that half. The summaries recorded
+     * before the tail have none of this and keep the rule of the end of the run
+     */
+    after?: {from: number; t: number[]; stock: number[]; low: number[];
+        settled: {from: number; lowest: number; last: number; falling: boolean; holds: boolean} | null};
 }
 
 /** A disturbance: what it was, when it started, when the output fell below the baseline's lowest window and it was released, when the steady-state test was met again */
