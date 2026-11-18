@@ -62,11 +62,53 @@ function rowTotals(run, row) {
 }
 
 /**
+ * What each final machine put out in each clock cycle of `rows` (the rows of series.cycles from the steady-state tick on): its
+ * products times what one is worth, less the stock it gained. A build judged by a count has the count alone.
+ * @param {RunRecord} run
+ * @param {SeriesRow[]} rows
+ * @returns {number[][]} one list a cycle, one number a final machine
+ */
+function cycleOutputs(run, rows) {
+    const finals = list(run.finals);
+    const counted = run.series?.judged_by === "count";
+    return rows.slice(1).map((row, i) => {
+        const before = rows[i];
+        if (counted) return [(list(row.p)[0] ?? 0) - (list(before.p)[0] ?? 0)];
+        return list(row.p).map((made, k) => (made - list(before.p)[k]) * finals[k].worth - ((list(row.s)[k] ?? 0) - (list(before.s)[k] ?? 0)));
+    });
+}
+
+/**
+ * The rows of the baseline's whole clock cycles cut to a whole number of the run's repeat (abucnasty, 2026-11-18). The repeat is the
+ * smallest number r of clock cycles after which what every final machine puts out in a cycle (cycleOutputs) is the same again,
+ * over all the cycles of the baseline, and seen at least twice (2 x r cycles or fewer). A hand in transit at the end of a cycle
+ * moves its product to the next cycle, so a clock whose output inserters drop 96 a cycle on average can drop 88, 102 and 98 in
+ * three cycles: a span of 16 such cycles has one repeat and one cycle over, and reads 16 short. No repeat that fits twice: all the
+ * rows (the run's own cycles are the repeat, as before the rule).
+ * @param {RunRecord} run
+ * @param {SeriesRow[]} rows the rows of the whole cycles, the steady-state tick first
+ * @returns {{rows: SeriesRow[], repeat: number | null}} `repeat` is set only where the cut dropped cycles
+ */
+function wholeRepeats(run, rows) {
+    const outputs = cycleOutputs(run, rows);
+    const same = (/** @type {number[]} */ a, /** @type {number[]} */ b) => a.length === b.length && a.every((value, k) => Math.abs(value - b[k]) < 1e-9);
+    for (let r = 1; 2 * r <= outputs.length; r++) {
+        if (!outputs.every((cycle, i) => i + r >= outputs.length || same(cycle, outputs[i + r]))) continue;
+        const kept = Math.floor(outputs.length / r) * r;
+        return kept === outputs.length ? {rows, repeat: null} : {rows: rows.slice(0, kept + 1), repeat: r};
+    }
+    return {rows, repeat: null};
+}
+
+/**
  * The baseline and the output stock guard, judged from the record (abucnasty, 2026-11-03):
  * - the baseline's whole clock cycles, from the steady-state tick to the last tick in the baseline at which the clock stands where
  *   it stood then, are judged by net output: the final machines' products less the change in their output stock over those
  *   ticks (what leaves them), against the target over those ticks, in whole numbers (net x 60 x d >= n x ticks for the target
  *   n/d a second). No whole cycle in the baseline: it fails (the family names a longer baseline);
+ * - a whole number of the run's repeat (abucnasty, 2026-11-18): where what each final machine puts out in a clock cycle repeats every r cycles
+ *   (see wholeRepeats), the net output is judged over the last whole number of repeats of those cycles, so a hand in transit at the
+ *   end of a part of a repeat is not counted as lost. No repeat seen, or one that fits the cycles exactly: all the whole cycles;
  * - the stock guard: the output stock at the end of the run is no lower than the lowest it was at any tick of those cycles.
  *   A run that asked for a tail (steady.lua `tail`: it goes on after its last recovery) is judged by the stock after settling
  *   instead (judgeStockAfterTail): the stock a disturbance leaves is read once it has settled, not at the tick of the recovery
@@ -96,18 +138,19 @@ function judgeBaseline(run, target) {
     };
     const cycles = list(series.cycles).filter(row => row.t >= steady && row.t <= steady + ticks);
     if (cycles.length < 2 || cycles[0].t !== steady) return {baseline, stock: null};
-    const first = rowTotals(run, cycles[0]), last = rowTotals(run, cycles[cycles.length - 1]);
-    const measuredTicks = cycles[cycles.length - 1].t - steady;
+    const {rows: whole, repeat} = wholeRepeats(run, cycles);
+    const first = rowTotals(run, whole[0]), last = rowTotals(run, whole[whole.length - 1]);
+    const measuredTicks = whole[whole.length - 1].t - steady;
     const items = last.products - first.products;
     const stockStart = first.stock, stockEnd = last.stock;
     const counted = stockStart === null || stockEnd === null;
     const net = counted ? items : items - (stockEnd - stockStart);
     baseline.measured = {ticks: measuredTicks, items, expected: run.expected * measuredTicks / run.window,
-        ...(!counted && {stock_start: stockStart, stock_end: stockEnd}), net};
+        ...(!counted && {stock_start: stockStart, stock_end: stockEnd}), net, ...(repeat !== null && {repeat_cycles: repeat})};
     const [n, d] = rateFraction(target);
     baseline.meets = net * 60 * d >= n * measuredTicks;
     if (counted) return {baseline, stock: null};
-    // the lowest output stock at any tick of the baseline's whole cycles: each row holds the lowest since the row before
+    // the lowest output stock at any tick of all the baseline's whole cycles (not only the whole repeats): each row holds the lowest since the row before
     const lowest = Math.min(stockStart, ...cycles.slice(1).map(row => row.low ?? Infinity));
     const ended = at("end");
     const endStock = ended ? rowTotals(run, ended).stock : null;
@@ -174,12 +217,15 @@ function judgeBaselineOfFinals(run, target, indices) {
         products: indices.reduce((sum, k) => sum + list(row.p)[k] * finals[k].worth, 0),
         stock: indices.reduce((sum, k) => sum + (list(row.s)[k] ?? 0), 0),
     });
-    const first = totals(cycles[0]), last = totals(cycles[cycles.length - 1]);
-    const ticks = cycles[cycles.length - 1].t - steady;
+    // the same whole repeats as judgeBaseline's, found from all the final machines of the build
+    const {rows: whole, repeat} = wholeRepeats(run, cycles);
+    const first = totals(whole[0]), last = totals(whole[whole.length - 1]);
+    const ticks = whole[whole.length - 1].t - steady;
     const items = last.products - first.products;
     const net = items - (last.stock - first.stock);
     const [n, d] = rateFraction(target);
-    return {ticks, items, expected: target * ticks / 60, stock_start: first.stock, stock_end: last.stock, net, meets: net * 60 * d >= n * ticks};
+    return {ticks, items, expected: target * ticks / 60, stock_start: first.stock, stock_end: last.stock, net, meets: net * 60 * d >= n * ticks,
+        ...(repeat !== null && {repeat_cycles: repeat})};
 }
 
 module.exports = {judgeBaseline, judgeBaselineOfFinals, runHolds};

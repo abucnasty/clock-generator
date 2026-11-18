@@ -88,9 +88,11 @@ export interface NativeBaseline {
      * The whole clock cycles in it: from the steady-state tick to the last tick of the baseline at which the clock stands where
      * it stood then, the final machines' products (`items`), their output stock at both ends and the net output (products less
      * the stock gained: what left them), against the target over those ticks; absent where no cycle fits in the baseline. A
-     * build judged by a count has no stock, and its net output is the count
+     * build judged by a count has no stock, and its net output is the count. Where what each final machine puts out in a cycle
+     * repeats every `repeat_cycles` cycles and the baseline holds no whole number of them, the span is cut to a whole number of
+     * repeats (helpers/run-judgement.js wholeRepeats, decision 988); the field is absent where nothing was cut
      */
-    measured?: {ticks: number; items: number; expected: number; stock_start?: number; stock_end?: number; net: number};
+    measured?: {ticks: number; items: number; expected: number; stock_start?: number; stock_end?: number; net: number; repeat_cycles?: number};
     /** The baseline holds (abucnasty, 2026-11-03): the net output of its whole clock cycles makes the target, 100% or more */
     meets: boolean;
 }
