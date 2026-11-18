@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import {describe, expect, it} from "vitest";
 import {judgeBaseline, judgeBaselineOfFinals, runHolds} from "./run-judgement";
 
@@ -153,5 +155,60 @@ describe("judgeBaselineOfFinals", () => {
     it("has nothing to judge without a whole clock cycle or for a build judged by a count", () => {
         expect(judgeBaselineOfFinals({...two, series: {...two.series, cycles: two.series.cycles.slice(0, 1)}}, 10, [0])).toBeNull();
         expect(judgeBaselineOfFinals({...two, series: {...two.series, judged_by: "count" as const}}, 10, [0])).toBeNull();
+    });
+});
+
+// A whole number of the run's repeat (abucnasty, 2026-11-18). The series is the game's own: filled-start search 5, the automation science 240
+// build (one copy, nine assemblers, window cycle 216) on the windows 89341f604ac4 from the staged backpressure start. Its output inserters drop 96
+// a cycle on average; two of the assemblers' hands run in a 3-cycle repeat (they drop 88, 102 and 98), so the 16 cycles of the
+// baseline hold five repeats and a cycle over, which reads 13,808 of 13,824, and the 15 cycles of five repeats read 12,960 of 12,960
+describe("judgeBaseline: a whole number of the run's repeat (abucnasty, 2026-11-18)", () => {
+    const nine = () => JSON.parse(fs.readFileSync(path.join(__dirname, "run-judgement-nine-89341f604ac4.json"), "utf8"));
+    const target = 240;
+    /** the nine's series with `change(k, row index, products)` in place of each assembler's products at each cycle row */
+    const changed = (change: (machine: number, row: number, products: number) => number) => {
+        const run = nine();
+        run.series.cycles = run.series.cycles.map((row: {p: number[]}, i: number) => ({...row, p: row.p.map((products, k) => change(k, i, products))}));
+        return run;
+    };
+
+    it("holds a baseline of 16 cycles of a 3-cycle repeat over its 15 cycles", () => {
+        const {baseline, stock} = judgeBaseline(nine(), target);
+        expect(baseline?.measured).toMatchObject({ticks: 3240, net: 12960, expected: 12960, repeat_cycles: 3});
+        expect(baseline?.meets).toBe(true);
+        expect(runHolds({result: "holds", baseline: baseline!, disturbances: [], stock})).toBe(true);
+    });
+
+    it("keeps the stock guard over all the whole cycles of the baseline", () => {
+        expect(judgeBaseline(nine(), target).stock).toEqual({lowest: 14, end: 154, holds: true});
+    });
+
+    it("fails a run that is truly short: an assembler one product short in every cycle", () => {
+        const short = changed((k, row, products) => k === 3 ? products - row : products);
+        const {baseline} = judgeBaseline(short, target);
+        expect(baseline?.measured).toMatchObject({ticks: 3240, net: 12945, repeat_cycles: 3});
+        expect(baseline?.meets).toBe(false);
+    });
+
+    it("judges all the whole cycles where the output has no repeat seen twice", () => {
+        // one assembler drops 3 fewer in the last cycle only: nothing repeats, so the 16 cycles are judged, as before the rule
+        const odd = changed((k, row, products) => k === 0 && row === 16 ? products - 3 : products);
+        const {baseline} = judgeBaseline(odd, target);
+        expect(baseline?.measured).toMatchObject({ticks: 3456, net: 13805});
+        expect(baseline?.measured?.repeat_cycles).toBeUndefined();
+        expect(baseline?.meets).toBe(false);
+    });
+
+    it("judges all the whole cycles where the repeat fits them exactly (no field written)", () => {
+        const run = nine();
+        run.series.cycles = run.series.cycles.slice(0, 16);
+        const {baseline} = judgeBaseline(run, target);
+        expect(baseline?.measured).toMatchObject({ticks: 3240, net: 12960});
+        expect(baseline?.measured?.repeat_cycles).toBeUndefined();
+    });
+
+    it("judges a copy's final machines over the same whole repeats", () => {
+        // the assemblers 3 and 7: 288 each in every repeat of 3 cycles, 26 and 2/3 a second each, 53 and 1/3 together
+        expect(judgeBaselineOfFinals(nine(), 480 / 9, [2, 6])).toMatchObject({ticks: 3240, net: 2880, meets: true, repeat_cycles: 3});
     });
 });

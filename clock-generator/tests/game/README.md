@@ -62,7 +62,12 @@ one build), and the window cycle time must not decide how long a check runs. One
   run goes on until that happens, and fails if it has not within ten minutes (36,000 ticks).
 - **Baseline:** the minute after steady state. It is judged over its whole clock cycles (from steady state to the last moment in
   the minute when the clock is back where it was then), by **net output**: what the machines made less what of it is still waiting
-  in their output, so only what left them counts. Net output has to be at least the target over those cycles. A build whose clock
+  in their output, so only what left them counts. Net output has to be at least the target over those cycles. They are cut to a
+  whole number of the run's **repeat**: the smallest number of clock cycles after which what each final machine puts out in a cycle
+  (products less stock gained) is the same again, seen at least twice in the baseline (`wholeRepeats` in `helpers/run-judgement.js`,
+  recorded as `repeat_cycles` where it cut). A hand in transit moves a product into the next cycle, so a baseline of 16 cycles of a
+  3-cycle repeat is judged over 15 and not read 16 short; no repeat seen means all the whole cycles, as before. Summaries recorded
+  before the rule keep the verdict they have. A build whose clock
   cycle is longer than a minute asks for a longer baseline, with the reason written next to it, and never over ten minutes
   (36,000 ticks).
 - **Stock guard:** at the end of the run the machines' output stock must be no lower than the lowest it was in the baseline. A
