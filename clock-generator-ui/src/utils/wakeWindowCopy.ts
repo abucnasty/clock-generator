@@ -6,6 +6,7 @@ import type { AlwaysOnReason } from 'clock-generator/browser';
 import { absurd } from 'fp-ts/function';
 import { theName } from 'clock-generator/light';
 import { WAKEUP_DEFINITION } from './glossary';
+import { startNameOf, type JudgedStart } from './judgedStart';
 import { formatNumberText } from './numberText';
 import type { OwnClock, WakeWindow, WakeWindowRow } from './wakeWindows';
 
@@ -20,9 +21,9 @@ const WAKE_UP_DEFINITION = WAKEUP_DEFINITION;
 
 /** What the per-row figure is */
 const WAKE_UPS_COLUMN_HELP =
-    'Wakeups a minute of this inserter, for one copy of the build, counted by the simulator over a long run of the clock '
-    + 'from a cold start. The rows add up to the clock\'s figure in the clocks table, or, where that is an average of start '
-    + 'points, to its figure from a cold start.';
+    'Wakeups a minute of this inserter, for one copy of the build, counted by the simulator over a long run of the clock. '
+    + 'The rows add up to the clock\'s figure in the clocks table, or, where that is an average of start '
+    + 'points, to the figure from its own start.';
 
 // ---- Tunables the notes use -----------------------------------------------------------------------------------------
 
@@ -254,15 +255,16 @@ export function windowOrdinalText(index: number, count: number): string {
 /**
  * Clock window cycle and rows of the clock: "Window cycle time 600 ticks (10 s) · 14 inserters and 2 drills". The wakeups of one
  * copy are the card's: they are said here only where the card has none ("Wakeups not counted") or where these rows are of the
- * cold start's run and the card's figure the average of the start points ("372 wakeups a minute for one copy from a cold start").
+ * run of the start the clock was judged from (`fromStart`) and the card's figure the average of the start points ("372 wakeups
+ * a minute for one copy from the backpressure start").
  */
-export function summaryText(args: { windowCycleTicks: number; inserters: number; drills: number; wakeUps: number | null; fromColdStart?: boolean }): string {
+export function summaryText(args: { windowCycleTicks: number; inserters: number; drills: number; wakeUps: number | null; fromStart?: JudgedStart }): string {
     const counts = args.drills > 0
         ? `${plural(args.inserters, 'inserter', 'inserters')} and ${plural(args.drills, 'drill', 'drills')}`
         : plural(args.inserters, 'inserter', 'inserters');
-    // where the clock's figure is the average of its start points, these rows are of the cold start's run
+    // where the clock's figure is the average of its start points, these rows are of the judged start's run
     const wakeUps = args.wakeUps === null ? 'Wakeups not counted'
-        : args.fromColdStart ? `${formatNumberText(args.wakeUps, { maxDecimals: 0 })} wakeups a minute for one copy from a cold start` : null;
+        : args.fromStart !== undefined ? `${formatNumberText(args.wakeUps, { maxDecimals: 0 })} wakeups a minute for one copy from ${startNameOf(args.fromStart)}` : null;
     return [`Window cycle time ${windowCycleText(args.windowCycleTicks)}`, counts, wakeUps].filter(part => part !== null).join(' · ');
 }
 

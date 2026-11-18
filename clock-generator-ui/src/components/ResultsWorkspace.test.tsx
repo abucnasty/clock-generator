@@ -18,10 +18,12 @@ const gameNames = names({ 'iron-gear-wheel': 'Iron gear wheel', 'copper-plate': 
 type Props = ComponentProps<typeof ResultsWorkspace>;
 
 /** The results of a kept result as the page shows them, with the selection and the workspace's tab kept as the page keeps them */
-function Results({ alternatives, recommendedIndex, initialIndex, initialDetail, onDetailChange, onCardBackToRecommended, swingBackoffReport = null, isRunning = false }: {
+function Results({ alternatives, recommendedIndex, initialIndex, initialDetail, onDetailChange, onCardBackToRecommended, swingBackoffReport = null, isRunning = false, judgedStart }: {
     alternatives: ClockAlternativeView[]; recommendedIndex: number; initialIndex: number; initialDetail: ResultDetail;
     onDetailChange: (detail: ResultDetail) => void; onCardBackToRecommended: () => void; swingBackoffReport?: Props['swingBackoffReport'];
     isRunning?: boolean;
+    /** The start the results were made for, in the config they were generated from; none names none */
+    judgedStart?: 'cold';
 }) {
     const [selectedIndex, setSelectedIndex] = useState(initialIndex);
     const [detail, setDetail] = useState(initialDetail);
@@ -31,7 +33,10 @@ function Results({ alternatives, recommendedIndex, initialIndex, initialDetail, 
         wakeAsTable: false, onWakeAsTableChange: () => {},
         timeline: context.timeline, onTimelineChange: () => {},
         detail, onDetailChange: next => { onDetailChange(next); setDetail(next); },
-        generatedFor: null, generationAssumptions: null, isRunning, error: null,
+        generatedFor: judgedStart === undefined ? null
+            : { key: JSON.stringify({ setpoint: { recipe: 'automation-science-pack', items_per_second: 4, copies: 1 }, machines: [], inserters: [], belts: [], chests: [],
+                overrides: { judged_start: judgedStart } }), recipe: 'automation-science-pack', itemsPerSecond: 4, generatedAt: 0 },
+        generationAssumptions: null, isRunning, error: null,
         alternatives, selectedIndex, onSelect: setSelectedIndex, recommendedIndex,
         onCardBackToRecommended: () => { onCardBackToRecommended(); setSelectedIndex(recommendedIndex); },
         pickRule: null, pending: [], skippedSearches: [], notMade: [], searchedDeeper: false, keptOn: false, canSearchDeeper: true,
@@ -48,11 +53,11 @@ function Results({ alternatives, recommendedIndex, initialIndex, initialDetail, 
 const withInstall = (clock: ClockAlternativeView): ClockAlternativeView => ({ ...clock, install: { book: false, wiring: [], drills: [], lines: {} } });
 
 function results(alternatives: ClockAlternativeView[], recommendedIndex: number, initialIndex: number, initialDetail: ResultDetail = 'overview',
-    swingBackoffReport: Props['swingBackoffReport'] = null) {
+    swingBackoffReport: Props['swingBackoffReport'] = null, judgedStart?: 'cold') {
     const onDetailChange = vi.fn();
     const onCardBackToRecommended = vi.fn();
     const view = show(<Results alternatives={alternatives.map(withInstall)} recommendedIndex={recommendedIndex} initialIndex={initialIndex} initialDetail={initialDetail}
-        onDetailChange={onDetailChange} onCardBackToRecommended={onCardBackToRecommended} swingBackoffReport={swingBackoffReport} />, { names: gameNames });
+        onDetailChange={onDetailChange} onCardBackToRecommended={onCardBackToRecommended} swingBackoffReport={swingBackoffReport} judgedStart={judgedStart} />, { names: gameNames });
     return { ...view, onDetailChange, onCardBackToRecommended };
 }
 
@@ -383,8 +388,18 @@ describe('the card\'s Simulation results', () => {
         for (const gone of ['Tested in the simulator from a cold start', 'starting states', 'was not given, so each is treated',
             'have no type set', 'The blueprint needs Factorio 2.1 or later.']) expect(fold.textContent).not.toContain(gone);
         const model = panel('overview').querySelector('[data-model-assumptions]')!;
-        expect(model.textContent).toContain('Tested from a cold start');
         expect(model.textContent).toContain('starting states');
+    });
+
+    it('say the backpressure start by default, and the cold start only for results made with the switch on', () => {
+        const names = () => panel('overview').querySelector('[data-model-assumptions]')!.textContent!;
+        const first = results(views, index, index);
+        expect(names()).toContain('Tested from the backpressure start');
+        expect(names()).not.toContain('cold start');
+        first.unmount();
+        results(views, index, index, 'overview', null, 'cold');
+        expect(names()).toContain('Tested from a cold start');
+        expect(names()).not.toContain('backpressure start');
     });
 });
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ClockAlternativeView } from '../worker/types';
-import { assumptionsText, freeLaneDropText, modeledDetails, phaseChecksText } from './modelAssumptions';
+import { assumptionsText, freeLaneDropText, modeledDetails, modeledStartText, phaseChecksText } from './modelAssumptions';
 
 describe('assumptionsText', () => {
     const none = { count: 4, missingType: 0, missingQuality: 0, automatic: 0, unavailable: 0 };
@@ -61,5 +61,30 @@ describe('the model texts', () => {
         expect(modeledDetails({ assumptions: { ...assumptions, overrides: undefined } } as unknown as ClockAlternativeView)).toEqual([]);
         expect(modeledDetails({ assumptions: { ...assumptions, overrides: { terminal_swing_count: 3 } } } as unknown as ClockAlternativeView))
             .toEqual(['Explicit run overrides: {"terminal_swing_count":3}.']);
+    });
+
+    it('leaves the start out of the run overrides: modeledStartText says it', () => {
+        const assumptions = { kickStarts: [], outputDrops: [], machineFuel: [] };
+        expect(modeledDetails({ assumptions: { ...assumptions, overrides: { judged_start: 'cold' } } } as unknown as ClockAlternativeView)).toEqual([]);
+        expect(modeledDetails({ assumptions: { ...assumptions, overrides: { judged_start: 'cold', lcm: 2 } } } as unknown as ClockAlternativeView))
+            .toEqual(['Explicit run overrides: {"lcm":2}.']);
+    });
+});
+
+describe('modeledStartText', () => {
+    it('names the backpressure start, with the full supplies and machines it starts with, and never the cold start', () => {
+        const text = modeledStartText('backpressure');
+        expect(text.startsWith('Tested from the backpressure start: every machine and belt that can fill without the clock is full, the clock at its first tick.')).toBe(true);
+        expect(text).not.toContain('cold');
+    });
+
+    it('names the cold start only for the cold start', () => {
+        const text = modeledStartText('cold');
+        expect(text.startsWith('Tested from a cold start: full input, empty machines and inserters, the clock at its first tick.')).toBe(true);
+        expect(text).not.toContain('backpressure');
+    });
+
+    it('ends both with what the test does not promise', () => {
+        for (const start of ['cold', 'backpressure'] as const) expect(modeledStartText(start)).toContain('they do not promise the setpoint in the first window cycle');
     });
 });

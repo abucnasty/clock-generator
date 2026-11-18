@@ -45,7 +45,8 @@ export const TEST_PIPELINE_COPY = {
     holds: (target: string) => `Holds ${target}/s`,
     makesOf: (rate: string, target: string, verb: string) => `${verb} ${rate}/s of ${target}/s`,
     doesNotHold: 'Does not hold its rate',
-    steadyState: 'At steady state, from a cold start.',
+    // the start is said once, in Model and tested starts
+    steadyState: 'At steady state.',
     /** Where the test ran: the lanes the copies share, or in a build of one copy the lanes several of its inserters take from */
     onSharedLanes: (copies: number) => copies > 1 ? 'On the lanes the copies share.' : 'On the lanes several of its inserters take from.',
     notRun: 'Not run',

@@ -145,6 +145,46 @@ async function coldStartSwitchAt(browser, url) {
     return errors;
 }
 
+/**
+ * The result text that names the start (Model and tested starts) after a generation: the backpressure start by default,
+ * the cold start only when the switch was on for it. With `SWITCH_SHOTS` set to a folder, a screenshot of the text goes there.
+ */
+async function startTextAt(browser, url, cold) {
+    const errors = [];
+    const page = await browser.newPage();
+    page.setDefaultTimeout(TIMEOUT_MS);
+    page.on('pageerror', (error) => errors.push(`page: ${error.message}`));
+    try {
+        await page.goto(url);
+        await page.getByRole('button', { name: 'Try an example' }).click();
+        await page.getByRole('dialog').getByRole('button', { name: EXAMPLE }).click();
+        if (cold) {
+            await page.getByRole('button', { name: /^Advanced/ }).click();
+            await page.getByRole('switch', { name: 'Judge from the cold start' }).click();
+        }
+        await page.getByRole('button', { name: 'Generate', exact: true }).click();
+        await page.getByRole('button', { name: 'Copy blueprint' }).waitFor();
+        const results = page.getByRole('button', { name: 'Results', exact: true });
+        if (await results.getAttribute('aria-pressed') !== 'true') await results.click();
+        await page.getByRole('tab', { name: 'Overview' }).click();
+        const model = page.locator('[data-model-assumptions]');
+        await model.waitFor({ state: 'visible' });
+        if (!(await model.innerText()).includes('Tested from')) await model.getByText('Model and tested starts').click();
+        const text = await model.innerText();
+        const [said, notSaid] = cold ? ['Tested from a cold start', 'backpressure start'] : ['Tested from the backpressure start', 'cold start'];
+        if (!text.includes(said)) errors.push(`the result text lacks "${said}": ${text.slice(0, 160)}`);
+        if (text.includes(notSaid)) errors.push(`the result text says "${notSaid}" where the switch is ${cold ? 'on' : 'off'}`);
+        const card = page.locator('[data-result-card]');
+        if ((await card.innerText()).includes(cold ? 'backpressure start' : 'cold start')) errors.push('the result card names the other start');
+        if (process.env.SWITCH_SHOTS) await model.screenshot({ path: `${process.env.SWITCH_SHOTS}/result-text-${cold ? 'cold' : 'default'}.png` });
+    } catch (error) {
+        errors.push(error instanceof Error ? error.message : String(error));
+    } finally {
+        await page.close();
+    }
+    return errors;
+}
+
 /** Reproduces fullscreen output-route repair while a machine draft is dirty. */
 async function repairOutputFocusAt(browser, url) {
     const errors = [];
@@ -372,6 +412,15 @@ try {
                 failed = true;
             } else {
                 console.log(`Turned the cold start switch on and off in a browser on ${name}`);
+            }
+            for (const cold of [false, true]) {
+                const textErrors = await startTextAt(browser, server.resolvedUrls.local[0], cold);
+                if (textErrors.length > 0) {
+                    console.error(`The result text of the ${cold ? 'cold' : 'backpressure'} start failed in a browser on ${name}:\n${textErrors.map((error) => `  ${error}`).join('\n')}`);
+                    failed = true;
+                } else {
+                    console.log(`The result text names the ${cold ? 'cold' : 'backpressure'} start in a browser on ${name}`);
+                }
             }
             const repairErrors = await repairOutputFocusAt(browser, server.resolvedUrls.local[0]);
             if (repairErrors.length > 0) {

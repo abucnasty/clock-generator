@@ -1,5 +1,6 @@
 import type { OscillationFacts, SharedLaneReasonCode } from 'clock-generator/browser';
 import type { ClockAlternativeView } from '../worker/types';
+import { DEFAULT_JUDGED_START, startNameOf, type JudgedStart } from './judgedStart';
 import { formatNumberText } from './numberText';
 import { lossesOf, notTriedOf } from './rateWarning';
 import { fewestDecidersReason, recommendedIndexOf } from './recommendedClock';
@@ -50,7 +51,7 @@ export const SUMMARY_COPY = {
         ['Start-dependent', 'It holds the setpoint from some start points and not from others.'],
     ] as const,
     // under the statuses in the help of the Status column: how the clocks are checked
-    statusChecks: 'The simulator checks the blueprint\'s enable windows from a modeled cold start, including clock-phase checks where available. '
+    statusChecks: (start: JudgedStart) => `The simulator checks the blueprint's enable windows from ${startNameOf(start)}, including clock-phase checks where available. `
         + 'Extended sampled-start checks are separate and optional; Model and tested starts reports what actually ran. '
         + 'Clocks that hold are also assessed for recovery after a supply stop or an output blockage; an unavailable result is not a pass.',
     fewestWakeUps: 'Fewest wakeups',
@@ -63,7 +64,7 @@ export const SUMMARY_COPY = {
     oneCopy: 'one copy',
     // on a build with a loop of machines, whose wake-ups depend on where its clock is when the build starts, a clock's figure is their average
     wakeUpsAverage: (starts: number) => `average of ${starts} start points`,
-    wakeUpsColdStart: (perMinute: number) => `${perMinute} from a cold start`,
+    wakeUpsFromStart: (perMinute: number, start: JudgedStart) => `${perMinute} from ${startNameOf(start)}`,
     recoversYes: 'Yes',
     recoversNo: 'No',
     recoversNotTested: 'Not tested',
@@ -362,7 +363,7 @@ export function wakeUpsAverageOf(clock: Pick<SummaryClock, 'assessment'>): { sta
  * The wake-ups of one copy, rounded as the table rounds them: "18 a minute", "one copy"; "one copy, average of 12 start
  * points" where they are an average (with the cold start's figure where it is far off it); or "Not counted"
  */
-export function wakeUpsText(clock: Pick<SummaryClock, 'assessment'>): { value: string; sub: string } {
+export function wakeUpsText(clock: Pick<SummaryClock, 'assessment'>, start: JudgedStart = DEFAULT_JUDGED_START): { value: string; sub: string } {
     const perMinute = clock.assessment.wake_ups_per_minute;
     if (perMinute === null) {
         return { value: SUMMARY_COPY.wakeUpsNotCounted, sub: '' };
@@ -370,7 +371,7 @@ export function wakeUpsText(clock: Pick<SummaryClock, 'assessment'>): { value: s
     const average = wakeUpsAverageOf(clock);
     const sub = average === null ? SUMMARY_COPY.oneCopy
         : `${SUMMARY_COPY.oneCopy}, ${SUMMARY_COPY.wakeUpsAverage(average.starts)}`
-            + (average.coldStart === null ? '' : `; ${SUMMARY_COPY.wakeUpsColdStart(Math.round(average.coldStart))}`);
+            + (average.coldStart === null ? '' : `; ${SUMMARY_COPY.wakeUpsFromStart(Math.round(average.coldStart), start)}`);
     return { value: SUMMARY_COPY.wakeUps(Math.round(perMinute)), sub };
 }
 

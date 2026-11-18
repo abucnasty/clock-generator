@@ -33,6 +33,7 @@ import type { Config } from 'clock-generator/browser';
 import { configToFormData } from '../utils/configForm/configMapping';
 import { entityOptionsOf } from '../utils/inserterOptions';
 import { useGameNames } from '../hooks/useGameNames';
+import { useJudgedStart } from '../hooks/useJudgedStart';
 
 interface WakeWindowsViewProps {
     cycleView?: boolean;
@@ -94,6 +95,7 @@ function WakeWindowsViewComponent({ alternative, config, cycleView = false, head
     const headingId = `${viewId}-title`;
     const hintId = useId();
     const { itemLabel, recipeLabel } = useGameNames();
+    const judgedStart = useJudgedStart();
     const options = useMemo(() => {
         if (!config) return [];
         const form = configToFormData(config);
@@ -134,7 +136,7 @@ function WakeWindowsViewComponent({ alternative, config, cycleView = false, head
         inserters: rows.filter(row => row.kind === 'inserter').length,
         drills: rows.filter(row => row.kind === 'drill').length,
         wakeUps: counted ? alternative.asBuilt?.wake_ups?.wake_ups_per_minute ?? sumWakeUps(rows) : null,
-        fromColdStart: alternative.assessment?.wake_ups_from_starts !== undefined,
+        fromStart: alternative.assessment?.wake_ups_from_starts !== undefined ? judgedStart : undefined,
     });
 
     return (
