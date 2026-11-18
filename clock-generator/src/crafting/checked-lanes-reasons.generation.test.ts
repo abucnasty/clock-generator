@@ -18,7 +18,9 @@ describe("the reason of each clock with a cause on the shared lanes", () => {
         ["FLYING_ROBOT_FRAME_80", { takt_batches_observed: { code: "unknown", data: { missed: 426 } }, time_study_windows: { code: "unknown", data: { missed: 429 } },
             pitch_pickups: { code: "unknown", data: { missed: 426 } } }],
     ])("of %s", async (sample, reasons) => {
-        const result = generateClockAlternatives(await loadConfigFromFile(ConfigPaths[sample]), { logger: quiet });
+        // from the cold start, as the counts were read (the backpressure start's fill adds a window cycle the copies' check counts)
+        const loaded = await loadConfigFromFile(ConfigPaths[sample]);
+        const result = generateClockAlternatives({ ...loaded, overrides: { ...loaded.overrides, judged_start: "cold" } }, { logger: quiet });
         expect(reasonsOf(result)).toEqual(reasons);
         // the swings of each cause, swing by swing, add up to the counts it carries
         expect(swingSumsOf(result)).toEqual(Object.fromEntries(Object.keys(reasons).map(id => [id, []])));

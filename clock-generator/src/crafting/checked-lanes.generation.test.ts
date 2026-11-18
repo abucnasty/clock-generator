@@ -14,7 +14,9 @@ const clockOf = (result: ClockAlternativesResult, id: string) => result.alternat
 describe("what was checked on the lanes the copies of the automation science 240 build share", () => {
     let result: ClockAlternativesResult;
     beforeAll(async () => {
-        result = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240), { logger: quiet });
+        // from the cold start, as the counts below were read (the backpressure start's fill adds a window cycle the copies' check counts)
+        const sample = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
+        result = generateClockAlternatives({ ...sample, overrides: { ...sample.overrides, judged_start: "cold" } }, { logger: quiet });
     });
 
     it("lists every lane of the build once, with the end the role gives the output lane", () => {
