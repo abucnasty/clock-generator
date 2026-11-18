@@ -304,6 +304,11 @@ export function pitchPickupsTransferWindows(
  */
 export const PITCH_PICKUPS_BACKOFF_VARIABLE = "CLOCK_PITCH_PICKUPS_BACKOFF";
 
+/** Whether the switch is on; read where Pitch Pickups is made, so a test sets it for one generation */
+export function pitchPickupsBacksOffAlways(): boolean {
+    return typeof process !== "undefined" && process.env?.[PITCH_PICKUPS_BACKOFF_VARIABLE] === "1";
+}
+
 /**
  * The full-hand output candidate: the clock of the plan with the output inserters' windows replaced by one swing each,
  * timed so the machine already holds a full hand (`pitchPickupsOutputWindows`), checked and exported as a planned clock is.

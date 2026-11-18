@@ -21,7 +21,7 @@ import { chestDrillFallbackConfig, ChestDrillClock, hasPlannedChestDrill } from 
 import { chestDrillReasons, entityRoutesOf } from "./enable-control-router";
 import { ClockBelt, clockBeltLabel, delayedHandRoomTicks, fuelRoomTicks } from "./clock";
 import { timeDivisionWindowsClock } from "./candidates/time-division-windows";
-import { pitchPickupsClock } from "./candidates/pitch-pickups";
+import { pitchPickupsBacksOffAlways, pitchPickupsClock } from "./candidates/pitch-pickups";
 import { perHandWindowsClock } from "./candidates/round-robin-polling";
 import { timeStudyWindowsClock } from "./candidates/time-study-windows";
 import { phaseShiftedBatchClock } from "./candidates/phase-shifted-batch";
@@ -678,9 +678,10 @@ function alternativeDefinitionsFor(
                 + "let the build go back to its rate by itself when the output machines are full; if it does not, some enable windows are lengthened so a second grab can drain the "
                 + `surplus. Other inserters keep the enable windows of ${TAKT_BATCHES}.`,
             run: () => {
-                // input windows come from the first planned run whose clock passes, most batched first
+                // input windows come from the first planned run whose clock passes, most batched first; with CLOCK_PITCH_PICKUPS_BACKOFF=1
+                // (off by default) the swings back off from the plan's count also where the primary clock does not hold
                 const full_hand: GenerateClockOptions = { ...quiet, lane_hand_room: "always" };
-                if (context.primary_stable) {
+                if (context.primary_stable || pitchPickupsBacksOffAlways()) {
                     return generateClockWithSwingBackoff(base_config, full_hand, pitchPickupsClock);
                 }
                 const stable_lower = lower_counts.find(lower =>
