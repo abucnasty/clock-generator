@@ -16,7 +16,7 @@ import { machinesInOrder, traitsOf } from "../entities/traits/traits-of";
 import { Logger, defaultLogger } from "../common/logger";
 import { DisturbanceTrialVerdict } from "./disturbance-trial";
 import { SharedItemDeadlockRisk, sharedItemDeadlockRisks } from "./deadlock-risk";
-import { disturbanceTrialInsight, beltPickupNotTestedInsights, chestDrillInsights, ClockInsight, clockInsights, deadlockRiskInsight, dropSpacingInsights, lanesExactlyFullInsights, onePerCopyFeedInsights, assumedCopySpacingInsights, droppedOntoSharedLaneInsights, sideLoadedDropInsights, startDependenceInsight, withWakeUpsFromStarts } from "./insights";
+import { disturbanceTrialInsight, beltPickupNotTestedInsights, chestDrillInsights, ClockInsight, clockInsights, deadlockRiskInsight, dropSpacingInsights, lanesExactlyFullInsights, onePerCopyFeedInsights, assumedCopySpacingInsights, droppedOntoSharedLaneInsights, outputLineNotJudgedInsights, sideLoadedDropInsights, startDependenceInsight, withWakeUpsFromStarts } from "./insights";
 import { chestDrillFallbackConfig, ChestDrillClock, hasPlannedChestDrill } from "./chest-drill-windows";
 import { chestDrillReasons, entityRoutesOf } from "./enable-control-router";
 import { ClockBelt, clockBeltLabel, delayedHandRoomTicks, fuelRoomTicks } from "./clock";
@@ -31,11 +31,11 @@ import { primitiveRoundRobinPollingConfigSupported } from "./candidates/round-ro
 import { MAX_OBSERVED_WINDOWS_WINDOW_CYCLE_TICKS, swingCountsListed } from "./planner/window-cycles";
 import { secondaryPlanningCountOf, verificationPlanningConfigOf, withSecondaryPlanningProvenance, type SecondaryPlanningCount } from "./round-robin-polling-primitive-policy";
 import { collectingParts, coordinatedSourcesInputOf, type CoordinatedSourcesInput, type CoordinatedSourcesPart } from "./candidates/coordinated-sources-parts";
-import { coordinatedSourcesClock, withNotAdmitted, type NotAdmittedPart } from "./candidates/coordinated-sources";
+import { coordinatedSourcesClock, onWindowCycles, withNotAdmitted, type NotAdmittedPart } from "./candidates/coordinated-sources";
 import { BlueprintGenerationResult, clockedByConfig, GenerateClockOptions, SimulationStabilityCheck, fractionalStartOf, fractionalSwingsOf } from "./plan/unclocked-run";
 import { EntityTransferCountMap } from "./sequence/cycle/swing-counts";
 import { withRunMemo } from "./plan/run-memo";
-import { CodedError, emitMakerLog, makerLogOn, noteClockLanes, noteClockRun, reasonOf, reasonOfError, timedCheck, timedMaker, withMakerLog } from "./maker-log";
+import { CodedError, emitMakerLog, heldMakerLog, makerLogOn, noteClockLanes, noteClockRun, reasonOf, reasonOfError, timedCheck, timedMaker, withMakerLog, type MakerLogEvent } from "./maker-log";
 import { withTickPurpose } from "./tick-ledger";
 import { madeCompositionEvent, notMadeEvent, resultEvents } from "./maker-log-events";
 import { clockCost, ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, ROUNDED_CLOCK_MAX_FAST, RoundedClock, roundedRateAllowed, searchesToRun, searchesAreNeeded } from "./rank";
@@ -1189,6 +1189,7 @@ function runAlternativeOf(
             ...onePerCopyFeedInsights(config),
             ...assumedCopySpacingInsights(config),
             ...droppedOntoSharedLaneInsights(config),
+            ...outputLineNotJudgedInsights(config),
             ...dropSpacingInsights(trial.result, config),
             ...(start_dependence_note !== null && trial.start_dependence !== null ? [startDependenceInsight(start_dependence_note, trial.start_dependence)] : []),
             ...chestDrillInsights(trial.result, build_names),
@@ -1469,6 +1470,11 @@ const COORDINATED_SOURCES_DESCRIPTION = "The inserters of each source use the en
  * (`assessed_signatures`). A clock made that is not stable is not listed: it goes to `options.on_not_made` with what its check
  * found, and the task gives null. Null also where there is nothing to compose, and where the clock composed is one of those runs':
  * each goes to `options.on_not_made` too, with the parts whose windows were not taken and why.
+ *
+ * It is made on the window cycle of each clock of the input (`onWindowCycles`), around that clock, and the run listed is the one
+ * whose clock the selection puts first, of equals the earlier window cycle's. Its `not_made` entries and its log are the ones
+ * given, those of the first window cycle where none is listed; of the other window cycles the log keeps only the compositions
+ * judged before the end (not `final`).
  */
 export function runCoordinatedSourcesTask(
     given: Config,
@@ -1478,36 +1484,64 @@ export function runCoordinatedSourcesTask(
 ): ClockAlternativeRun | null {
     return withRunMemo(() => {
         const config = withoutOutsideSupply(given);
-        const logger = options.logger ?? defaultLogger;
-        const quiet = quietOptions(options, logger, options.on_progress_detail);
-        const beside_sources = input.parts.find(part => part.alternative_id === input.recommended_id)?.strategy;
-        let not_admitted: readonly NotAdmittedPart[] = [];
-        const on_not_made = options.on_not_made === undefined ? undefined
-            : (clock: NotMadeClock) => options.on_not_made!({ ...clock, reason: withNotAdmitted(clock.reason, not_admitted) });
-        const run = runAlternativeOf({ id: COORDINATED_SOURCES_MAKER, label: COORDINATED_SOURCES_LABEL, description: COORDINATED_SOURCES_DESCRIPTION, strategy: "coordinated_sources",
-            ...(beside_sources !== undefined && { beside_sources }), run: () => coordinatedSourcesClock(config, input, { ...quiet, logger }, it => { not_admitted = it; }) },
-            config, logger, options.on_progress_detail, new Set(assessed_signatures), undefined, on_not_made, false);
-        const listed = run?.alternatives.filter(it => it.verdict === "stable") ?? [];
-        if (run !== null && run.alternatives.length === 0) {
-            on_not_made?.({ id: COORDINATED_SOURCES_MAKER, label: COORDINATED_SOURCES_LABEL, reason: "Made, and the same clock as one made before it, which is listed." });
-            emitMakerLog(() => ({ event: "composition", outcome: "dropped", final: true, parts: null, reason: reasonOf("same_as_listed_clock") }));
-            if (on_not_made !== undefined) emitMakerLog(() => notMadeEvent(COORDINATED_SOURCES_MAKER, reasonOf("same_as_listed_clock")));
-        }
-        if (run !== null && run.alternatives.length > 0 && listed.length === 0) {
-            options.on_not_made?.({ id: COORDINATED_SOURCES_MAKER, label: COORDINATED_SOURCES_LABEL, reason: notStableReason(run.alternatives) });
-        }
-        // the clock made is listed where it is stable, and otherwise logged with what the checks found of it: the clocks the copies drop are here
-        if (run !== null) {
-            for (const alternative of run.alternatives) {
-                const not_stable = reasonOf("not_stable", { verdict: alternative.verdict });
-                emitMakerLog(() => madeCompositionEvent(config, alternative, alternative.verdict === "stable" ? "listed" : "dropped", alternative.verdict === "stable" ? null : not_stable));
+        const tried: { not_made: NotMadeClock[]; events: MakerLogEvent[] }[] = [];
+        const listed = onWindowCycles(input, around => {
+            const not_made: NotMadeClock[] = [];
+            const on_not_made = options.on_not_made === undefined ? undefined : (clock: NotMadeClock) => { not_made.push(clock); };
+            const { value, events } = heldMakerLog(() => coordinatedSourcesRunOf(config, around, { ...options, on_not_made }, assessed_signatures));
+            tried.push({ not_made, events });
+            return value;
+        }, runs => {
+            const { alternatives, selected_index } = combineClockAlternativeRuns([...runs], it => it.ranking);
+            return runs.findIndex(run => run.alternatives.includes(alternatives[selected_index]));
+        });
+        const kept = listed?.index ?? 0;
+        tried.forEach(({ not_made, events }, index) => {
+            for (const event of events) {
+                if (index === kept || (event.event === "composition" && event.final !== true)) emitMakerLog(() => event);
             }
-            if (run.alternatives.length > 0 && listed.length === 0 && options.on_not_made !== undefined) {
-                emitMakerLog(() => notMadeEvent(COORDINATED_SOURCES_MAKER, reasonOf("not_stable", { verdict: run.alternatives[0].verdict })));
-            }
-        }
-        return run === null || listed.length === 0 ? null : { ...run, alternatives: listed };
+            if (index === kept) not_made.forEach(clock => options.on_not_made?.(clock));
+        });
+        return listed?.made ?? null;
     });
+}
+
+/** The per-branch clock composed around the input's recommended clock, on its window cycle (see `runCoordinatedSourcesTask`) */
+function coordinatedSourcesRunOf(
+    config: Config,
+    input: CoordinatedSourcesInput,
+    options: GenerateClockOptions,
+    assessed_signatures: readonly string[],
+): ClockAlternativeRun | null {
+    const logger = options.logger ?? defaultLogger;
+    const quiet = quietOptions(options, logger, options.on_progress_detail);
+    const beside_sources = input.parts.find(part => part.alternative_id === input.recommended_id)?.strategy;
+    let not_admitted: readonly NotAdmittedPart[] = [];
+    const on_not_made = options.on_not_made === undefined ? undefined
+        : (clock: NotMadeClock) => options.on_not_made!({ ...clock, reason: withNotAdmitted(clock.reason, not_admitted) });
+    const run = runAlternativeOf({ id: COORDINATED_SOURCES_MAKER, label: COORDINATED_SOURCES_LABEL, description: COORDINATED_SOURCES_DESCRIPTION, strategy: "coordinated_sources",
+        ...(beside_sources !== undefined && { beside_sources }), run: () => coordinatedSourcesClock(config, input, { ...quiet, logger }, it => { not_admitted = it; }) },
+        config, logger, options.on_progress_detail, new Set(assessed_signatures), undefined, on_not_made, false);
+    const listed = run?.alternatives.filter(it => it.verdict === "stable") ?? [];
+    if (run !== null && run.alternatives.length === 0) {
+        on_not_made?.({ id: COORDINATED_SOURCES_MAKER, label: COORDINATED_SOURCES_LABEL, reason: "Made, and the same clock as one made before it, which is listed." });
+        emitMakerLog(() => ({ event: "composition", outcome: "dropped", final: true, parts: null, reason: reasonOf("same_as_listed_clock") }));
+        if (on_not_made !== undefined) emitMakerLog(() => notMadeEvent(COORDINATED_SOURCES_MAKER, reasonOf("same_as_listed_clock")));
+    }
+    if (run !== null && run.alternatives.length > 0 && listed.length === 0) {
+        options.on_not_made?.({ id: COORDINATED_SOURCES_MAKER, label: COORDINATED_SOURCES_LABEL, reason: notStableReason(run.alternatives) });
+    }
+    // the clock made is listed where it is stable, and otherwise logged with what the checks found of it: the clocks the copies drop are here
+    if (run !== null) {
+        for (const alternative of run.alternatives) {
+            const not_stable = reasonOf("not_stable", { verdict: alternative.verdict });
+            emitMakerLog(() => madeCompositionEvent(config, alternative, alternative.verdict === "stable" ? "listed" : "dropped", alternative.verdict === "stable" ? null : not_stable));
+        }
+        if (run.alternatives.length > 0 && listed.length === 0 && options.on_not_made !== undefined) {
+            emitMakerLog(() => notMadeEvent(COORDINATED_SOURCES_MAKER, reasonOf("not_stable", { verdict: run.alternatives[0].verdict })));
+        }
+    }
+    return run === null || listed.length === 0 ? null : { ...run, alternatives: listed };
 }
 
 /** What the check found of a clock made that is not stable, for its entry in `not_made`: each alternative made, on its window cycle */
@@ -1634,21 +1668,22 @@ function generateAllAlternatives(config: Config, options: GenerateClockOptions):
         total += fallbacks.length;
         generate(fallbacks);
     }
-    // and after every other clock, the per-branch clock, composed from their parts on the window cycle of the one they recommend
+    // and after every other clock, the per-branch clock, composed from their parts on the window cycles of the best two of them,
+    // the one they recommend first (their ids in the selection's order)
     const so_far = combineClockAlternativeRuns(runs, it => it.ranking);
-    const recommended = so_far.alternatives[so_far.selected_index];
-    if (recommended !== undefined && !isExplored("coordinated_sources")) {
+    const ranked_ids = so_far.order.map(index => so_far.alternatives[index].id);
+    if (ranked_ids.length > 0 && !isExplored("coordinated_sources")) {
         current_step = COORDINATED_SOURCES_LABEL;
         total++;
         report();
         runs.push(timedMaker(COORDINATED_SOURCES_MAKER, () =>
-            runCoordinatedSourcesTask(config, coordinatedSourcesInputOf(runs, recommended.id), { ...options, on_progress_detail: report, on_not_made }, signaturesOf(runs))));
+            runCoordinatedSourcesTask(config, coordinatedSourcesInputOf(runs, ranked_ids), { ...options, on_progress_detail: report, on_not_made }, signaturesOf(runs))));
         completed++;
     }
 
     // the explored strategies last, from the same runs: the selection below is of the shipped runs only
     const explored = options.explore_strategies !== true ? undefined : exploredRuns({ config, logger, report, definitions: all_definitions.filter(it => isExplored(it.strategy)),
-        shipped: runs, recommended_id: recommended?.id, verification_cache, settle_unstable: !plan.context.primary_stable, options });
+        shipped: runs, ranked_ids, verification_cache, settle_unstable: !plan.context.primary_stable, options });
 
     current_step = "Done";
     report();
@@ -1678,8 +1713,8 @@ function exploredRuns(input: {
     report: (detail?: string) => void;
     definitions: AlternativeDefinition[];
     shipped: (ClockAlternativeRun | null)[];
-    /** The clock the shipped runs recommend, which Coordinated Sources composes from when it is explored */
-    recommended_id: string | undefined;
+    /** The ids of the shipped runs' clocks in the selection's order, the one they recommend first, which Coordinated Sources composes from when it is explored */
+    ranked_ids: readonly string[];
     verification_cache: Map<string, VerificationAssessment>;
     settle_unstable: boolean;
     options: GenerateClockOptions;
@@ -1699,9 +1734,9 @@ function exploredRuns(input: {
         // not_made is the shipped runs' list, which says why the selected clock is not stable
         made(definition.id, runAlternative(definition, config, logger, report, new Set(shipped_signatures), verification_cache, undefined, input.settle_unstable));
     }
-    if (isExplored("coordinated_sources") && input.recommended_id !== undefined) {
+    if (isExplored("coordinated_sources") && input.ranked_ids.length > 0) {
         report(COORDINATED_SOURCES_LABEL);
-        made(COORDINATED_SOURCES_MAKER, runCoordinatedSourcesTask(config, coordinatedSourcesInputOf(input.shipped, input.recommended_id),
+        made(COORDINATED_SOURCES_MAKER, runCoordinatedSourcesTask(config, coordinatedSourcesInputOf(input.shipped, input.ranked_ids),
             { ...options, on_progress_detail: report, on_not_made: undefined }, shipped_signatures));
     }
     return { runs, same_as_shipped };

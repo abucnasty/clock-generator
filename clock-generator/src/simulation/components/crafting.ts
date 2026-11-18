@@ -9,9 +9,6 @@ import type { Ingress } from "./ingress";
 import type { Placement } from "./placement";
 import { OutputFullCode, Yield, YieldUser } from "./yield";
 
-// absorbs floating point drift when summing fractional per-tick progress
-const PROGRESS_EPSILON = 1e-9;
-
 // The reasons of a change of status whose text never varies, numbered once. A full output's reason and the drop of the
 // output under its block are made from the machine's output at the change (reasonOf).
 const NO_FUEL_TO_BURN = reasonId("machine has no fuel to burn");
@@ -43,10 +40,19 @@ interface CraftTake {
  * Crafting follows Factorio: ingredients are removed when a craft starts and products are added when it finishes. A
  * craft starts whatever the output holds. Products that do not fit under the stack size when they are made are held by
  * the machine (its Yield), which starts no craft and makes no progress until there is room for them.
+ *
+ * The craft underway is kept as the game keeps it (Factorio 2.1.24): in seconds of recipe time, a double, a tick adding
+ * crafting speed / 60 of them at full power. A craft finishes in the tick that sum reaches the recipe time, with no
+ * tolerance, and the rest of the step goes on to the next craft: a rest above 0 starts it in the same tick, a rest of
+ * exactly 0 at the top of the next tick, and a sum that falls short of the recipe time by rounding finishes the craft a
+ * tick late, the next craft starting in that late tick.
  */
 export class Crafting implements EnergyUser, YieldUser {
-    /** The craft underway, from 0 to 1; 0 while none is */
-    public readonly craftingProgress: ProgressState = ProgressState.empty();
+    /** The craft underway, from 0 to 1; 0 while none is. Read and written in recipe seconds (`seconds`) */
+    public readonly craftingProgress: ProgressState;
+
+    /** The craft underway in seconds of recipe time, a double; 0 while none is */
+    private seconds: number = 0;
 
     /** Crafts finished so far: what wakes the inserters that take from the machine (see MachineWakes) */
     public craftCount: number = 0;
@@ -66,7 +72,10 @@ export class Crafting implements EnergyUser, YieldUser {
     public status: CraftingStatus = CraftingStatus.ITEM_INGREDIENT_SHORTAGE;
 
     private readonly yield: Yield;
-    private readonly crafts_per_tick: number;
+    /** The recipe's time in seconds: a craft's length at crafting speed 1 */
+    private readonly recipe_seconds: number;
+    /** The machine's crafting speed: the recipe seconds a second of work makes */
+    private readonly crafting_speed: number;
     /** What starting a craft asks, in recipe order */
     private readonly craft_needs: readonly CraftNeed[];
     /** What a craft takes out, in `machine.inputs` order */
@@ -84,8 +93,17 @@ export class Crafting implements EnergyUser, YieldUser {
         ingress: Ingress,
     ) {
         this.yield = made;
-        this.crafts_per_tick = machine.crafting_rate.crafts_per_tick;
         const recipe = machine.metadata.recipe;
+        this.recipe_seconds = recipe.energy_required;
+        this.crafting_speed = machine.metadata.crafting_speed;
+        // the fraction every reader of a machine's progress sees, read from and written to the recipe seconds
+        const progress = {} as ProgressState;
+        Object.defineProperty(progress, "progress", {
+            get: (): number => this.seconds / this.recipe_seconds,
+            set: (value: number): void => { this.seconds = value * this.recipe_seconds; },
+            enumerable: true,
+        });
+        this.craftingProgress = progress;
         this.craft_needs = recipe.raw.ingredients.map(ingredient => ({
             quantity: new LiveQuantity(ingress.ingredientInventory(ingredient.name), ingredient.name),
             required: recipe.inputsPerCraft.get(ingredient.name)!.amount,
@@ -141,37 +159,41 @@ export class Crafting implements EnergyUser, YieldUser {
 
     /**
      * A working machine's tick: the part of a tick's work its energy pays for, a full productivity bar paid out and the
-     * products it holds put in first, then crafts progressed, started and finished while the budget lasts and no product
-     * waits for room, then the energy spent.
+     * products it holds put in first, then crafts progressed, started and finished while the step lasts and no product
+     * waits for room, then the energy spent. The step is the recipe seconds of the tick, (crafting speed x the share
+     * its energy pays for) / 60; a craft finishes when the step reaches what is left of the recipe time, with no
+     * tolerance, and what is left of the step goes on to the next craft (none when it is exactly 0). The productivity bar
+     * is fed the part of a craft each step makes.
      */
     public tick(): void {
-        const powered_share = this.energy.poweredShare();
-        let budget = this.crafts_per_tick * powered_share;
+        const recipe_seconds = this.recipe_seconds;
+        let step = (this.crafting_speed * this.energy.poweredShare()) / 60;
         let worked = false;
 
         this.yield.release(this);
-        while (budget > PROGRESS_EPSILON && !this.yield.holdsProducts() && !this.yield.barWaits()) {
-            let progress = this.craftingProgress.progress;
-            if (progress <= 0) {
+        while (step > 0 && !this.yield.holdsProducts() && !this.yield.barWaits()) {
+            let seconds = this.seconds;
+            if (seconds <= 0) {
                 if (!this.canStartCraft() || !this.energy.hasFuel()) {
                     break;
                 }
                 this.consume();
-                progress = 0;
+                seconds = 0;
             }
 
-            const step = Math.min(budget, 1 - progress);
-            progress += step;
-            budget -= step;
             worked = true;
-            this.yield.advanceBonus(step);
-
-            if (progress >= 1 - PROGRESS_EPSILON) {
-                this.yield.finishCraft(this);
-                this.craftCount += 1;
-                progress = 0;
+            const rest = recipe_seconds - seconds;
+            if (rest > step) {
+                this.seconds = seconds + step;
+                this.yield.advanceBonus(step / recipe_seconds);
+                break;
             }
-            this.craftingProgress.progress = progress;
+            this.yield.advanceBonus(rest / recipe_seconds);
+            this.seconds = recipe_seconds;
+            this.yield.finishCraft(this);
+            this.craftCount += 1;
+            this.seconds = 0;
+            step -= rest;
         }
 
         this.energy.spend(worked, this);
@@ -179,7 +201,7 @@ export class Crafting implements EnergyUser, YieldUser {
 
     /** Whether a craft is underway (what Energy asks) */
     public craftInProgress(): boolean {
-        return this.craftingProgress.progress > 0;
+        return this.seconds > 0;
     }
 
     /**
@@ -202,16 +224,18 @@ export class Crafting implements EnergyUser, YieldUser {
     }
 
     /**
-     * What of it drives the machine's next ticks, for the machine's key (see simulationStateKey): the status as its code
-     * and the craft underway. The crafts counted and the main product made are running totals: they never repeat.
+     * What of it drives the machine's next ticks, for the machine's key (see simulationStateKey): the status as its code,
+     * whether a craft is underway, and the craft underway in billionths of a craft (ProgressState.keyOf): a craft started
+     * with a rest of a few 1e-16 s keys as underway, though its billionths are 0. The crafts counted and the main product
+     * made are running totals: they never repeat.
      */
     public key(): string {
-        return `${this.status};${this.craftingProgress.progress}`;
+        return `${this.status};${this.seconds > 0};${ProgressState.keyOf(this.seconds / this.recipe_seconds)}`;
     }
 
     /** A snapshot's copy of what `other` holds: the craft underway, the counts and the status */
     public copyFrom(other: Crafting): void {
-        this.craftingProgress.progress = other.craftingProgress.progress;
+        this.seconds = other.seconds;
         this.craftCount = other.craftCount;
         this.craftsStarted = other.craftsStarted;
         this.totalCrafted = other.totalCrafted;

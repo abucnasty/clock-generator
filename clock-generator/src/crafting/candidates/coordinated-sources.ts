@@ -17,7 +17,8 @@ import { verdictWithCopies, type VerdictWithCopies } from "../copies-verdict";
 
 /**
  * The per-branch clock (DESIGN D7, PR 18): each part of the build gets the windows of the clock that fits it, all on one shared
- * window cycle, the window cycle of today's recommended clock.
+ * window cycle, the window cycle of today's recommended clock. Below, "the recommended clock" is the clock it is composed around:
+ * it is composed so on the window cycles of the best two clocks (`onWindowCycles`, `windowCycleClocksOf`), each time around that cycle's clock.
  *
  * - **Parts:** every clock the other makers built for the build (`CoordinatedSourcesPart`): the stable alternatives, every way of the grouped
  *   hands construction (whether its clock holds as a whole or not), the per-hand shape of every way that guards takers, and the alternatives
@@ -180,8 +181,12 @@ interface Trial {
     result: BlueprintGenerationResult;
     /** Whether it holds up to the long run */
     holds_to_long_run: boolean;
-    /** The check up to the long run, which `holdsOf` finishes */
-    check_to_long_run: AsBuiltRun | undefined;
+    /**
+     * The check up to the long run, which `holdsOf` finishes: what it reads of it (the check and the run's result), never the long
+     * run's stock, which is of the length of the window cycle times its window cycles for every machine and inserter. Left out once
+     * `holdsOf` has finished it, and where the clock does not hold to the long run, which nothing finishes.
+     */
+    check_to_long_run: Pick<AsBuiltRun, "result" | "check"> | undefined;
     /** Whether it holds as built (its whole check); undefined until `holdsOf` asks */
     holds?: boolean;
     wake_ups: number | null;
@@ -277,10 +282,11 @@ export function coordinatedSourcesClock(
         const known = trials.get(key);
         if (known !== undefined) return known;
         const map = new Map(Object.entries(windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
-        let check_to_long_run: AsBuiltRun | undefined;
-        const result = finishedClock(made, map, [], lean, left_open, undefined, { through: "long-run", on_as_built: run => { check_to_long_run = run; } });
+        let check_to_long_run: Trial["check_to_long_run"];
+        const result = finishedClock(made, map, [], lean, left_open, undefined, { through: "long-run", on_as_built: run => { check_to_long_run = { result: run.result, check: run.check }; } });
         const as_built = result.stability_check.as_built;
-        const trial: Trial = { windows, map, result, holds_to_long_run: as_built?.holds === true, check_to_long_run,
+        const holds_to_long_run = as_built?.holds === true;
+        const trial: Trial = { windows, map, result, holds_to_long_run, check_to_long_run: holds_to_long_run ? check_to_long_run : undefined,
             wake_ups: as_built?.wake_ups?.wake_ups_per_minute ?? null };
         trials.set(key, trial);
         return trial;
@@ -293,6 +299,7 @@ export function coordinatedSourcesClock(
                 const check = completedClockCheck(made, trial.map, trial.check_to_long_run).check;
                 trial.result = { ...trial.result, stability_check: { ...trial.result.stability_check, holds: check.holds, as_built: check } };
                 trial.holds = check.holds;
+                trial.check_to_long_run = undefined;
             }
         }
         return trial.holds;
@@ -532,6 +539,25 @@ export function coordinatedSourcesClock(
     const result = finishedClock(made, map, [], { ...options, loop_windows: false }, left_open);
     return { ...result, coordinated_sources: { parts: Object.fromEntries(groups.map(group => [group.source, partName(group.choices[current.get(group.source)!].parts[0])])),
         sources: sourceControlsOf(groups, current, result.always_on_reasons ?? {}, logger, config.setpoint.recipe) } };
+}
+
+/**
+ * The per-branch clock on the window cycle of each clock of `input.window_cycle_ids` in turn (the recommended clock's alone where
+ * there are none), each composed around its own clock: `make` is given the input with that clock as the recommended one and gives
+ * what is listed of it, or null. The clock listed is the one `first` puts first of those made (by its index in them), of equals
+ * the earlier window cycle's; `index` is its window cycle's place. Null where none is made.
+ */
+export function onWindowCycles<T>(
+    input: CoordinatedSourcesInput,
+    make: (around: CoordinatedSourcesInput, index: number) => T | null,
+    first: (made: readonly T[]) => number,
+): { made: T; index: number } | null {
+    const made: { made: T; index: number }[] = [];
+    (input.window_cycle_ids ?? [input.recommended_id]).forEach((id, index) => {
+        const it = make({ recommended_id: id, parts: input.parts }, index);
+        if (it !== null) made.push({ made: it, index });
+    });
+    return made.length === 0 ? null : made[first(made.map(it => it.made))];
 }
 
 /** A start of the local choice: the clock it starts from, and the choice of each group that has that clock's windows */

@@ -232,7 +232,11 @@ describe("Yield: what the machine's state keeps of it", () => {
         made.finishCraft(crafting());
         keys.add(made.key());
         expect(keys.size).toBe(4);
-        expect(made.key()).toBe(`${made.pendingOutput};${made.bonusProgress.progress};${made.carryKey()}`);
+        // the bar in billionths of a craft: a quarter of a bar
+        expect(made.key()).toBe(`${made.pendingOutput};250000000;${made.carryKey()}`);
+        // bars less than half a billionth apart key alike
+        made.bonusProgress.progress += 4e-10;
+        expect(made.key()).toBe(`${made.pendingOutput};250000000;${made.carryKey()}`);
         const before = made.key();
         made.productsFinished += 1;
         expect(made.key()).toBe(before);

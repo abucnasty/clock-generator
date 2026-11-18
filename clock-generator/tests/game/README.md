@@ -67,7 +67,9 @@ one build), and the window cycle time must not decide how long a check runs. One
   (36,000 ticks).
 - **Stock guard:** at the end of the run the machines' output stock must be no lower than the lowest it was in the baseline. A
   stock that drains slowly would hide a build that makes too little behind output that still looks right. A build judged by what
-  it takes in (the recyclers, the ore voider) has no output stock to watch and no guard.
+  it takes in (the recyclers, the ore voider) has no output stock to watch and no guard. A run may ask to go on after its last
+  recovery (the `tail` of `helpers/lua/steady.lua`, the iron plate car build does): what a disturbance leaves in the output stock is
+  then read once it has settled, in the last half of the tail, and has to be no lower than the baseline's lowest and not falling.
 - **Disturbances** follow the baseline: each ingredient cut and the output block, one after the other. A disturbance lasts until the
   last minute's output falls below the lowest it had in the baseline (so the loss is real and not a burst missing from the window),
   and is then released. **Recovery** is steady state met again; it has to happen within ten minutes of the release. Ten minutes

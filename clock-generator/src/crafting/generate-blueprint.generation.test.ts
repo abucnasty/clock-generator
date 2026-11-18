@@ -50,11 +50,15 @@ describe("generateClockForConfig", () => {
         });
 
         it("holds the target of 380 a second with 3 hands an inserter a cycle", () => {
-            expect(selected.label).toBe("Takt Batches: 6 output swings each output cycle, subtick clock");
-            expect(selected.verdict).toBe("stable");
-            expect(selected.assessment.items_per_second).toBeCloseTo(380, 6);
+            // since the observed windows give the loop's inserters windows too (#516), they wake fewest and are selected
+            expect(selected.label).toBe("Time-Study Windows: 2 output swings each output cycle, subtick clock");
+            const six = alternatives.find(a => a.label === "Takt Batches: 6 output swings each output cycle, subtick clock")!;
+            for (const clock of [selected, six]) {
+                expect(clock.verdict).toBe("stable");
+                expect(clock.assessment.items_per_second).toBeCloseTo(380, 6);
+            }
             // 6 hands a machine in each of the 3 cycles of the window cycle, over all four output inserters
-            expect(selected.result.stability_check.expected_output_items).toBe(2 * 6 * 16 * 3);
+            expect(six.result.stability_check.expected_output_items).toBe(2 * 6 * 16 * 3);
         });
 
         it("does not call a clock stable whose swings do not come out whole for each output inserter", () => {
@@ -65,16 +69,16 @@ describe("generateClockForConfig", () => {
 
         // a biochamber takes bacteria under a limit of 28, which holds a hand of 16, so a hand it refuses is taken at the next
         // window: each loop inserter gets a window of a swing and a tick for each of its 2 hands a window cycle, from midway
-        // between the openings of its source's first two output windows (inLoopInserterWindows)
-        it("gives the inserters between the machines a window for each hand, and leaves them always enabled in observed windows", () => {
+        // between the openings of its source's first two output windows (inLoopInserterWindows); in the observed windows too
+        it("gives the inserters between the machines a window for each hand, in planned and in observed windows", () => {
+            const six = alternatives.find(a => a.label === "Takt Batches: 6 output swings each output cycle, subtick clock")!;
             for (const id of ["inserter:7", "inserter:8"]) {
-                expect(windows[id]).toEqual([{ start: 15, end: 23 }, { start: 60, end: 68 }]);
+                expect(six.result.clock_windows[id]).toEqual([{ start: 15, end: 23 }, { start: 60, end: 68 }]);
+                expect(windows[id]).toEqual([{ start: 5, end: 13 }, { start: 50, end: 58 }]);
             }
+            expect(six.result.loop_windows?.in_loop_ids?.slice().sort()).toEqual(["inserter:7", "inserter:8"]);
+            expect(selected.maker).toBe("derived-subtick");
             expect(selected.result.loop_windows?.in_loop_ids?.slice().sort()).toEqual(["inserter:7", "inserter:8"]);
-            const observed = alternatives.find(a => a.maker === "derived-subtick")!;
-            expect(observed.verdict).toBe("stable");
-            expect(observed.result.clock_windows["inserter:7"]).toBeUndefined();
-            expect(observed.result.clock_windows["inserter:8"]).toBeUndefined();
         });
 
         // the belt a clock is made for follows the config's lanes, whatever its window cycle: these lanes are not dead ends

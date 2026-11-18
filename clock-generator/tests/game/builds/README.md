@@ -312,12 +312,13 @@ hash is `builtClockIdentity` of the build's blueprint, recomputed by `clock-cont
   `clock_sha256` (checked by `pickup-clock-cold-start-mechanics.test.ts` against the clock the stored windows build and the fixture's
   pin, and for the runs started at the window cycle's beginning by `clock-controls.test.ts` against the record's selection)
   and `recorded_clock_sha256` (checked by the game test).
-- Eight scaffold-recordings builds expect values that belong to one clock (agricultural science having no dip and no
+- Nine scaffold-recordings builds expect values that belong to one clock (agricultural science having no dip and no
   difference after its staged start, agricultural science with backpressure on the belts having no difference, what each of the
   nine copies of automation science moves, the moved inserters of chemical science with a shared foundry, what each of
   the 11 copies of electromagnetic science moves, what each row of military science with grenades moves, what the one copy of
-  production science with a drill into the rail assembler moves, and what each of the two copies of utility science with
-  processing units and low density structures on one belt moves): `scaffold-recordings-clock-pins.json`.
+  production science with a drill into the rail assembler moves, what each of the two copies of utility science with
+  processing units and low density structures on one belt moves, and the output of iron bacteria cultivation):
+  `scaffold-recordings-clock-pins.json`.
 - The agricultural science scaffold's control on the 2-swing clock keeps one line: inserter 11 moves 371.33 a window cycle in the
   game and 370.16 in the simulator. Since #333 the simulator runs a clock of whole ticks by its own window cycle time (960 ticks for
   this one, where the plan has 480), so the run the test compares is twice as long, and its two one-hand dips fall before
@@ -587,11 +588,25 @@ checks; here it is stopped as the supply cut. Do not compare these recordings wi
 families.
 
 [iron-plate-80-car-chest-clock-controls.json](iron-plate-80-car-chest-clock-controls.json) holds the 7 native summaries, 7 trailing-minute runs
-recorded on Factorio 2.1.24. **In all 7 the net output is exact, the machines reach a steady state and every recovery holds, but
-the output stock guard fails: after the last drill stop the furnaces' output stock settles at a lower, steady level, below the
-baseline's lowest.** Each control keeps that failure as a `known_differences` entry
-([#587](https://github.com/abucnasty/clock-generator/issues/587), open).
+recorded on Factorio 2.1.24. In all 7 the net output is exact and the machines reach a steady state; the three recoveries are recorded (the
+second and the third disturbance last one tick each: the trailing minute is still below the baseline's lowest when they start), and in the
+288-tick control the trailing minute falls to 4,722 against 4,800 at tick 15,300, 480 ticks after the last recorded recovery, while the stock is lowest, and is no lower than 4,796 from tick 22,000 (a window of 3,600 ticks is not a whole number of 288-tick cycles). The
+run goes on for 14,400 ticks after its last recovery (the `tail` of `helpers/lua/steady.lua`) and the output stock guard reads the stock
+after it has settled, at each whole window cycle of the last half of the tail ([#587](https://github.com/abucnasty/clock-generator/issues/587)):
+it must be no lower than the baseline's lowest and not falling. The last drill stop empties the car, and what the furnaces keep in their output
+afterwards is not what the run showed at the tick of the recovery: it falls first, then climbs back.
+**The 4 controls of the clocks of 288 and 144 ticks hold the guard**: the stock falls to 0 (288 ticks) or 50 (144 ticks) at its lowest tick after the
+recovery, and settles at 128 and at 194 (122 and 152 at the lowest tick) after about 9,200 and 7,900 ticks, against baseline lowest stocks of 88 and 90.
+The half of the tail the guard reads can start before the stock has settled (the 288-tick clock is still climbing at its start, and its lowest tick
+there is 100): the guard asks only that the stock is never below the baseline's lowest and does not fall. **The 3 controls of the clocks of 72 ticks keep it as a
+`known_differences` entry**: the stock is at 48 (43 at its lowest tick) at every whole window cycle from the recovery on, for the 14,400 ticks of the
+tail, against 80 (70 at its lowest tick) in the baseline. It is a lower, steady level, not a drain; why the level is lower is not found.
 `iron-plate-80-car-chest-clock.generation.test.ts` pins each clock and checks it against its native summary.
+
+The second difference of #587 is a count, not the stock, and it is kept as it was: the scaffold recordings' "iron plates through a car"
+(`scaffold-recordings.game.test.ts`, `crafts_open`) shows the two furnaces finishing 193.17 crafts and productivity bars a window cycle in the game
+under the minute-long recording against 194.00 in the simulator, while the build moves 96 plates in every window cycle; over the 36,000 ticks recorded
+before, the two agreed. The 0.83 crafts (0.4%) are named and not explained here: that recording was not made again for the stock guard.
 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/car-new BELT_CLOCK_CALIBRATE=1 \

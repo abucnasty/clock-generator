@@ -14,6 +14,7 @@ import { Confirmed, QuickTrial, SearchReport, confirm, quickTrial, search } from
 import { busyDeciderRanges, evenlySpacedOutputWindows, outputSwingCountsOf, paddedWindows } from "./transforms";
 import { transitionsOf } from "../sequence/compact-history";
 import { movedOutputSwingWindows } from "./moved-output-swing";
+import { machineLoopsOf } from "./loop-windows";
 
 
 export interface TimeStudyWindowsReport {
@@ -199,6 +200,31 @@ export function deriveTimeStudyWindows(
 }
 
 /**
+ * The windows of the inserters of a loop of machines on observed windows that hold, which leave them always enabled (they
+ * are not read off the run, see `alwaysEnabledInserters`): tried as on planned windows (`trialWithLoopWindows`), from the
+ * clock-only check of the observed windows with the long run they are read from, from as many start phases as the observed
+ * windows were confirmed from. Null where the build has no loop, the options leave the loop's inserters always enabled, or
+ * none of the loop's windows is kept.
+ */
+function feedObserved(
+    config: Config,
+    windows: Map<string, OpenRange[]>,
+    window_cycle_ticks: number,
+    options: GenerateClockOptions,
+    logger: Logger,
+    start_phases: number,
+): ReturnType<typeof trialWithLoopWindows> {
+    if (options.loop_windows === false || machineLoopsOf(config).length === 0) {
+        return null;
+    }
+    const run = runAsBuiltCheck(config, windows, window_cycle_ticks, logger, start_phases,
+        (n, total) => options.on_progress_detail?.(`Checking observed windows for the loop's enable windows, clock start ${n}/${total}`),
+        FREE_RUNNING_CHECK_TICKS, undefined, true);
+    return trialWithLoopWindows(config, windows, window_cycle_ticks, run, start_phases, logger, options.on_progress_detail, true,
+        options.loop_windows !== "out-of-loop");
+}
+
+/**
  * The observed windows candidate: the clock of the plan with the windows of every inserter but the output inserters
  * made anew from what it does in a run of the build under the output windows alone (see `deriveClockWindows`), and
  * for machine-to-machine inserters that wait at their source for a full hand, brief windows that find one
@@ -281,15 +307,23 @@ export function timeStudyWindowsClock(
     if (derived.windows !== null && derived.verification !== null) {
         const full_hand = pitchPickupsTransferWindows(non_deriving_config, derived.windows, derived.verification,
             output_inserter_ids, simulation_context.entity_registry, duration.ticks, logger, options.on_progress_detail);
-        const windows = full_hand?.windows ?? derived.windows;
+        let windows = full_hand?.windows ?? derived.windows;
         if (full_hand) {
             stability_check.as_built = full_hand.check;
             stability_check.holds = full_hand.check.holds;
             report.full_hand_inserters = full_hand.inserters;
         }
+        // the inserters of a loop, which the observed windows leave always enabled, get theirs as on planned windows
+        const fed = stability_check.holds ? feedObserved(non_deriving_config, windows, duration.ticks, options, logger,
+            (stability_check.as_built?.start_phases_checked ?? 0) > AS_BUILT_START_PHASES ? FULL_CHECK_START_PHASES : AS_BUILT_START_PHASES) : null;
+        if (fed !== null) {
+            windows = fed.windows;
+            stability_check.as_built = fed.check;
+        }
         // observed windows are what the inserters did, fuel hands included, and the run shown is the trial of them
         return exportClock(plan, clock, windows, options,
-            { histories: full_hand?.result ?? derived.verification, fuel_hand_room_ticks: {}, derived_clock_windows: report, search: derived.search });
+            { histories: fed?.result ?? full_hand?.result ?? derived.verification, fuel_hand_room_ticks: {}, derived_clock_windows: report, search: derived.search,
+                loop_windows: fed?.loop_windows, item_names: fed?.item_names });
     }
     logger.log("Derived enable windows: no padding passed the as-built check; falling back to the planned enable windows.");
     const fed = feedPlanned();
