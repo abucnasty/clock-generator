@@ -7,7 +7,7 @@ import { OverloadMultiplier } from "../machine/traits/overload-multiplier";
 import { Chest } from "./chest";
 
 /**
- * A rocket silo taken as a chest (phase 1 of roadmap milestone M2). Its rocket inventory takes any item as far as the
+ * A rocket silo taken as a chest. Its rocket inventory takes any item as far as the
  * rocket lifts its weight, and gives items to an inserter; its input slots take its fixed recipe's ingredients up to the
  * automated insertion limit of that recipe at its crafting speed, and give nothing. No craft is run. The recipe and the
  * lift weight are its prototype's, the one its type names; the ingredients are read from that recipe.

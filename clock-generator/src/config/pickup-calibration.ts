@@ -10,7 +10,7 @@ import { beltNameInText, capitalized, inserterNameInText, NO_BUILD, textWords, t
 
 /**
  * A belt pickup outside what belt pickup timing was calibrated on: an item an inserter takes off a belt in stacks other
- * than 4, or with a hand other than 16. Nothing was measured there (follow-up F7), so the simulator's timing is untested.
+ * than 4, or with a hand other than 16. Nothing was measured there, so the simulator's timing is untested.
  */
 export interface UncalibratedBeltPickup {
     inserter_id: number;
@@ -64,7 +64,7 @@ function uncalibratedPickupsOf(config: Config, inserter: InserterConfig, inserte
 
 /**
  * Every belt pickup of a config whose timing is not tested: an item a belt-fed inserter takes in belt stacks other than
- * 4 or with a hand other than 16 (follow-up F7). Only the legendary stack inserter is read, the one inserter allowed to
+ * 4 or with a hand other than 16. Only the legendary stack inserter is read, the one inserter allowed to
  * pick up from a belt; the others are refused for that. Read from the config alone, so that the live editor can show it
  * while the build is half made: an inserter whose recipe, fuel or item the data does not know is left out, never thrown
  * on.

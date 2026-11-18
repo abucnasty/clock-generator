@@ -48,7 +48,7 @@ describe("a belt pickup by an inserter other than the legendary stack inserter",
     ])("is refused with the reason before any check or simulation ($kind)", ({ fields, kind }) => {
         const config = withInserter(1, fields);
         const says = `Inserter 1: picking up from a belt with ${kind} is not supported yet: belt pickup timing is calibrated `
-            + "on the legendary stack inserter only (follow-up F7)";
+            + "on the legendary stack inserter only. Other kinds and qualities work on chests and machines";
         expect(() => validateConfig(config)).toThrow(says);
         expect(() => generateClockAlternatives(config, { logger: quiet })).toThrow(says);
         expect(() => computeMachineTargetRates(config)).toThrow(says);

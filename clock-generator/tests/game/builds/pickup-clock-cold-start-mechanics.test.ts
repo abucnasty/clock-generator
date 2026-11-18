@@ -25,7 +25,7 @@ const recordedCases = [
 /**
  * Runs the simulator does not follow tick for tick, with the reason; their output is held all the same. The one: a hand
  * that comes back from its swing in the tick the output inserter takes the machine's products off its output block
- * waits a tick in the game and not in the simulator (once in 16 window cycles, 5 input ticks; ROADMAP section 7).
+ * waits a tick in the game and not in the simulator (once in 16 window cycles, 5 input ticks).
  */
 const KNOWN_INPUT_DIFFERENCES: Record<string, string> = {
     "turbo-underground-entrance-backed-l1-rot1021": "the hand back from its swing as the output block is lifted, held 1143",

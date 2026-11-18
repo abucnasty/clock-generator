@@ -21,7 +21,7 @@ plates, the first hand judged (later hands are in the recordings). **1,444 scena
 | Inserter kind | the stack inserter at legendary quality at all four belt stack sizes; at normal and legendary quality: inserter, long-handed inserter, fast inserter, bulk inserter, stack inserter | the three qualities between; the burner inserter (needs fuel, refused by the engine) |
 
 **The kinds the pickup refusal lifts for.** The engine refuses a belt pickup for every kind but one: the legendary stack inserter, the only row
-of `BELT_PICKUP_CALIBRATED` (`inserter-spec.ts`; `inserter-scope.ts` refuses the rest with "not supported yet", follow-up F7). The other
+of `BELT_PICKUP_CALIBRATED` (`inserter-spec.ts`; `inserter-scope.ts` refuses the rest with "not supported yet"). The other
 kinds work on chests and machines, and drop on belts, which is what this sweep measures: the **inserter, long-handed inserter, fast
 inserter, bulk inserter and stack inserter, each at any of the five qualities** (the five prototypes of the game data less the burner
 inserter). A drop onto a belt is not refused for any of them. The pickup refusal itself is unchanged.

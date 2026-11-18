@@ -15,23 +15,22 @@ export interface ConfigValidationIssue {
 }
 
 /**
- * What the generator does not model yet, by the `type` a config or a sidecar export names for it, and where on the
- * roadmap (docs/ROADMAP.md) it comes. A config naming one of these is refused with the reason, not with the list of
- * types it takes.
+ * What the generator does not model yet, by the `type` a config or a sidecar export names for it. A config naming one
+ * of these is refused with the reason, not with the list of types it takes.
  */
 export const NOT_SUPPORTED_YET: Readonly<Record<string, string>> = {
-    "rocket-silo": "a rocket silo as a machine, crafting rocket parts and launching, comes with phase 2 of roadmap milestone M2 "
-        + "(containers); a rocket silo is taken as a chest: list it under `chests` with type \"rocket-silo\"",
+    "rocket-silo": "a rocket silo as a machine, crafting rocket parts and launching, is not modelled; "
+        + "a rocket silo is taken as a chest: list it under `chests` with type \"rocket-silo\"",
     "lab": "labs are not modelled: they consume no recipe",
 };
 
 /** The refusal of a build whose target product passes through more than one container on its way out */
 export const CONTAINER_OUTPUT_PATH_REFUSAL = "the target product passes through more than one container on its way out of the build, "
-    + "which is not modelled yet (roadmap milestone M2, containers): the generator models a product taken out of the machine "
+    + "which is not modelled yet: the generator models a product taken out of the machine "
     + "that makes it, or out of the one container that machine's inserters put it into";
 
 /**
- * What the generator leaves out on purpose, not on the roadmap. A config or capture naming one of these is refused
+ * What the generator leaves out on purpose, not for a later version. A config or capture naming one of these is refused
  * with the reason, never modelled as the nearest thing the generator does support.
  */
 export const OUT_OF_SCOPE = {
