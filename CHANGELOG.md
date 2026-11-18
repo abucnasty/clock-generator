@@ -27,7 +27,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 ### Fixed
 - simulation: machines now finish a craft and start the next in the game's tick
 - generation: other-start checks now try other orders of inserters that are always enabled
-- simulation: copies that share a lane now warm up until that lane repeats too
+- simulation: copies that share a lane now run to a steady state of that lane too
 
 ## [0.29.2] - 2026-11-16
 
