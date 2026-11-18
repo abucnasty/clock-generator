@@ -3,10 +3,10 @@
  "cases": {
   "advanced-circuit-240-backed-up-from-every-start": {
    "recorded": {
-    "pr": 0,
+    "pr": 834,
     "commit": "ef68712b",
     "frozen_head": "ef68712b",
-    "note": "recorded from ruling 60's start (staged_start.backpressure) on the pick of CLOCK_SEARCH_FROM_EVERY_START=1, under the protocol in game ticks, in Factorio 2.1.24; pr is set when the PR is opened",
+    "note": "recorded from ruling 60's start (staged_start.backpressure) on the pick of CLOCK_SEARCH_FROM_EVERY_START=1, under the protocol in game ticks, in Factorio 2.1.24",
     "clock_sha256": "11c668b41e9d2f834c7209661c119487e299fbaec1f94508adfb1d3b0010fcf3",
     "clock_basis": "capture"
    },
@@ -81,10 +81,10 @@
   },
   "advanced-circuit-240-from-every-start": {
    "recorded": {
-    "pr": 0,
+    "pr": 834,
     "commit": "ef68712b",
     "frozen_head": "ef68712b",
-    "note": "recorded from ruling 60's start (staged_start.backpressure) on the pick of CLOCK_SEARCH_FROM_EVERY_START=1, under the protocol in game ticks, in Factorio 2.1.24; pr is set when the PR is opened",
+    "note": "recorded from ruling 60's start (staged_start.backpressure) on the pick of CLOCK_SEARCH_FROM_EVERY_START=1, under the protocol in game ticks, in Factorio 2.1.24",
     "clock_sha256": "11c668b41e9d2f834c7209661c119487e299fbaec1f94508adfb1d3b0010fcf3",
     "clock_basis": "capture"
    },
@@ -159,10 +159,10 @@
   },
   "car-from-every-start": {
    "recorded": {
-    "pr": 0,
+    "pr": 834,
     "commit": "ef68712b",
     "frozen_head": "ef68712b",
-    "note": "recorded from ruling 60's start (staged_start.backpressure) on the pick of CLOCK_SEARCH_FROM_EVERY_START=1, under the protocol in game ticks, in Factorio 2.1.24; pr is set when the PR is opened",
+    "note": "recorded from ruling 60's start (staged_start.backpressure) on the pick of CLOCK_SEARCH_FROM_EVERY_START=1, under the protocol in game ticks, in Factorio 2.1.24",
     "clock_sha256": "dc5394b08d4284d7924558276d0eb32b6912fe73db724be095347cbb4aec9a47",
     "clock_basis": "capture"
    },
@@ -556,10 +556,10 @@
   },
   "processing-unit-80-backed-up-from-every-start": {
    "recorded": {
-    "pr": 0,
+    "pr": 834,
     "commit": "ef68712b",
     "frozen_head": "ef68712b",
-    "note": "recorded from ruling 60's start (staged_start.backpressure) on the pick of CLOCK_SEARCH_FROM_EVERY_START=1, under the protocol in game ticks, in Factorio 2.1.24; pr is set when the PR is opened",
+    "note": "recorded from ruling 60's start (staged_start.backpressure) on the pick of CLOCK_SEARCH_FROM_EVERY_START=1, under the protocol in game ticks, in Factorio 2.1.24",
     "clock_sha256": "0bdd8324da86613ce29163c96da05b612f7d46c70c1205cad88ebd5405c24af2",
     "clock_basis": "capture"
    },
@@ -627,10 +627,10 @@
   },
   "processing-unit-80-from-every-start": {
    "recorded": {
-    "pr": 0,
+    "pr": 834,
     "commit": "ef68712b",
     "frozen_head": "ef68712b",
-    "note": "recorded from ruling 60's start (staged_start.backpressure) on the pick of CLOCK_SEARCH_FROM_EVERY_START=1, under the protocol in game ticks, in Factorio 2.1.24; pr is set when the PR is opened",
+    "note": "recorded from ruling 60's start (staged_start.backpressure) on the pick of CLOCK_SEARCH_FROM_EVERY_START=1, under the protocol in game ticks, in Factorio 2.1.24",
     "clock_sha256": "0bdd8324da86613ce29163c96da05b612f7d46c70c1205cad88ebd5405c24af2",
     "clock_basis": "capture"
    },
