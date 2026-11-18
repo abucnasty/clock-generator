@@ -60,6 +60,38 @@ function M.final_machines(entities, recipes, item)
     return finals
 end
 
+--- A staged start: the machines that make the target are not all known in the tick it starts in. A furnace has no recipe until it is
+--- given something to smelt, so `launch(finals, waited)` is called in the first tick when `options.finals` crafting machines of the
+--- build (the final machines of all its copies) have a recipe that makes `options.item`, `waited` ticks in. A build with no furnace
+--- among its final machines launches in the first tick. Fails after `options.finals_bound` ticks (default 18,000).
+function M.after_finals(entities, options, launch)
+    local expected = assert(options.finals, "the number of final machines the staged start waits for")
+    local bound = options.finals_bound or 18000
+    local waited = 0
+    local function found()
+        local ok, finals = pcall(M.final_machines, entities, options.recipes, options.item)
+        return ok and finals or {}
+    end
+    local function try()
+        local finals = found()
+        if #finals >= expected then
+            script.on_nth_tick(1, nil)
+            launch(finals, waited)
+            return true
+        end
+        return false
+    end
+    if try() then return end
+    script.on_nth_tick(1, function()
+        waited = waited + 1
+        if try() then return end
+        if waited >= bound then
+            script.on_nth_tick(1, nil)
+            error("the final machines were not all found within " .. bound .. " ticks of the staged start: " .. #found() .. " of " .. expected)
+        end
+    end)
+end
+
 --- The clock of the build: the decider the harness describes as "Clock for ..." (a generated clock, or one the build came with
 --- that the harness names)
 function M.clock(entities)

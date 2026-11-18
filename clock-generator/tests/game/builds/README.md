@@ -831,3 +831,64 @@ Recorded at Factorio 2.1.24, all seven holding their target on every copy and re
 ```bash
 MISSING_RECORDINGS_CAPTURE_DIR=.scratch/missing-recordings npm run test:game -- tests/game/builds/missing-recordings-clock.game.test.ts -t flying-robot-frame
 ```
+
+### Six more picks, two named as waiting
+
+The same test and probe record six more jobs (Factorio 2.1.24, one copy of the scaffold each, the losses the build has: an ingredient of each belt line, the output block,
+an ingredient). Each holds its share of the target on its copy in every whole clock cycle before the first loss and in the cycle or cycles after the last loss, and recovers from every loss:
+
+| Job | Clock (window cycle) | Copies built | Clock cycles before / after the losses | Steady state | Last loss recovered |
+| --- | --- | --- | --- | --- | --- |
+| `LOGISTIC_SCIENCE_240_DIRECT_INSERT` | Coordinated Sources (576) | 1 of 6 | 6 / 6 | 7,056 | 19,016 |
+| `ADVANCED_CIRCUIT_230` | Pitch Pickups Subtick (12,672 a clock cycle) | 1 of 3 | 1 / 1 | 16,357 | 46,660 |
+| `ADVANCED_CIRCUIT_240` | Takt Batches Observed (528) | 1 of 3 | 6 / 6 | 6,768 | 22,765 |
+| `ADVANCED_CIRCUIT_240_BACKED_UP` (variant) | Takt Batches Observed (528, the same clock) | 1 of 3 | 6 / 6 | 6,768 | 22,765 |
+| `LDS_240` | Takt Batches Observed, 6 swings (288) | 1 of 1 | 12 / 12 | 7,056 | 18,549 |
+| `METALLURGIC_SCIENCE_45` | Time Study Windows Subtick (640) | 1 of 1 | 5 / 5 | 6,800 | 22,542 |
+
+- The logistic science build with direct insertion was recorded before only on the clock that was then selected (Euclidean Swings); this is its selected clock. Its losses are
+  the inserters cut from the belts and the loaders removed; the molten iron comes from infinity pipes and has no loss.
+- The clock cycle of the 230 pick is 12,672 ticks, so a minute holds none: its baseline is one whole clock cycle (the protocol allows a longer baseline with a reason) and
+  the run goes on 12,700 ticks after its last loss, so that the cycle after the losses is whole. It is judged on one cycle before and one after.
+- The two advanced circuit 240 jobs have the same clock; one scaffold and one run each, with the same result. The scaffold's lanes end closed, so the sample builds backpressure
+  on those belts in both.
+- The scaffolds hold one copy of the advanced circuit and logistic science jobs' three and six copies; the joins of the other copies are not in these runs.
+- `ROCKET_FUEL_60` and `ROCKET_FUEL_60_JELLY_HANDS_15_BACKED_UP` are not pinned. Their picks leave three inserters without a window (10, 12 and 13, the nutrient pickups),
+  so the staged start is not their judged start; they wait for ruling 60's state. Runs from the staged start held (the plain job in each of 28 window cycles before and
+  after the losses, the variant in 56), and are kept in the work folder's evidence only. The jelly 15 variant's run is also not of its build: the scaffold has the sample's hands
+  of 16 on the four jelly inserters (the variant has 15), and its input belts drain into chests (the variant has backpressure on them). In both runs the output block removed all four loaders
+  of the scaffold; which of them drain input belts was not checked. A recording of the variant needs a probe that sets the hands and removes the drains.
+
+## Container and drill builds: the record's picks from the staged start
+
+The car, silo and wagon families above recorded clocks the record no longer selects, from a warm-up and a settle. Five more cases record the
+clock the record selects for each job, from the harness's staged start (every inserter of the build placed with the clock in one tick, the car,
+silo and wagon empty at the start), under the family's own probe and protocol: `car-selected-staged` (`IRON_PLATE_80_CAR_CHEST`, Coordinated
+Sources, 144 ticks), `lithium-silo-selected-staged` (`LITHIUM_PLATE_80_SILO_CHEST`, Coordinated Sources, 2,160 ticks),
+`steel-wagon-selected-staged`, `steel-wagon-iron-ore-out-of-period-selected-staged` and `steel-hub-selected-staged` (the three steel jobs, Batched
+Swings with 1 output swing as a subtick clock, 11,520, 3,840 and 11,520 ticks). Their entries are in the three families' controls files, and
+`clock-controls.test.ts` pins each against its record job (`variants-STEEL_HUB_26_CONTAINER_OUTPUT` is the steel build in small, `steelHub`, on the
+sample's scaffold: it is the same clock and the same run as the sample's).
+
+- **How it runs.** `staged: true` in the scenario (`pickup-clock-capture.ts`). The run is the settle, as in the other families, and the recording of
+  the audit follows it: the recorder does not start on machines with no recipe, and a furnace takes its recipe from its first ingredient, so it
+  cannot start at the placement on these builds (the harness's `settle_ticks` is allowed in a staged start for this). The probes count the run from the first tick
+  every final machine has a recipe (`steady.after_finals`: 27 ticks for the car, 340 for the silo, 133 for the sample's wagon, 61 for the wagon with iron ore out of
+  the window cycle); the probes' own check of the inserters' ends is left to the host's audit, as the inserters do not know their ends in the placement tick.
+- **Result, Factorio 2.1.24, all five hold:** steady state at tick 7,201 (car), 5,760 (silo), 15,120 (wagon, hub) and 7,440 (iron ore out of the window cycle);
+  the baseline's net output is the target over whole clock cycles; the three losses (the drill stopped or the holmium plates cut, the output blocked, the same again)
+  each reduce the output and are recovered, the last at tick 14,513, 23,033, 36,728 and 15,778. As in the families above the second and third loss of the car and
+  wagon builds last one tick each, the drill having emptied the container already. The stock guard holds in all five; for the car it is read after the last recovery has
+  settled (#587, #803): lowest 98 in the baseline, 168 once settled, 196 at the end. The 72-tick car clock and its waiver are not involved: the record selects 144 ticks.
+- **Stone brick:** the generic test of the missing recordings records `STONE_BRICK_120_DRILL_DIRECT_INSERT` (Batched Swings observed, 144 ticks): steady state at
+  8,207, 2,400 over the baseline's 3,600 ticks, the output block recovered at 12,097, 25 whole clock cycles judged before and after the loss with none short. Its final
+  machine is a furnace, so it has a late recording (`late_recording`, the same reason). Its loss is the output block alone: the stone comes from a drill that drops into the
+  furnace, and the generic probe has no drill stop; the supply was not cut. The scaffold holds one copy of the job's three.
+- **Named limit, `ELECTRIC_FURNACE_20`:** it cannot be recorded from the staged start: the harness wires a drill to the clock only in a build with one drill, and this
+  build has three (one for each stone brick furnace): "the clock enables drill 1, which was not matched to a drill of the build (3 mining drills)". It stays
+  in `missing-recordings-clock-fixtures.ts` as `no_staged_start`.
+
+```bash
+BELT_SPEED_CAPTURE_DIR=.scratch/car-staged BELT_CLOCK_CALIBRATE=1 \
+  npm run test:game -- tests/game/builds/iron-plate-80-car-chest-clock.game.test.ts -t '^car clock: car-selected-staged$'
+```

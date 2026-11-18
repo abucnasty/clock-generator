@@ -2,7 +2,8 @@
 -- steady state, a baseline of whole clock cycles, then the losses of the case, one after the other, each until the output falls
 -- below the baseline's lowest minute, released, and recovered. A staged start has no settle: the recording is cut where the run
 -- ends (settle.record_samples), as utility-science-120-selected-clock-probe.lua does.
--- options: window, expected, baseline, cap, recover_bound, recipes, item, ticks, losses
+-- options: window, expected, baseline, cap, recover_bound, recipes, item, ticks, losses, tail, finals, late
+-- late: the recording starts where the run ends (settle.finish), not at the placement: the recorder does not start on machines with no recipe, and a furnace has none yet
 -- losses: a list of
 --   {kind = "cut", item}       the item stops arriving: the infinity chests that hold it lose that filter and their stock of it, and it is
 --                              taken off every belt in every tick; hands and machines keep theirs
@@ -157,7 +158,9 @@ for _, loss in ipairs(options.losses) do
 end
 report.sinks, report.loaders = #sinks, #loaders
 local began = game.tick
-local finals = steady.final_machines(entities, options.recipes, options.item)
+-- the run is counted from the first tick the final machines have a recipe (a furnace has none until it is given something to smelt): steady.after_finals
+local function launch(finals, waited)
+report.started_after = waited
 local clock = steady.clock(entities)
 -- where each final machine stands: a staged recording starts before every machine has its recipe, so the host cannot always match the copies
 report.final_positions = {}
@@ -181,6 +184,8 @@ local function run_tail()
             script.on_nth_tick(1, nil)
             report.tail.ended = t
             helpers.write_file("clock-speed.json", helpers.table_to_json(report), false)
+            -- a late recording (options.late) starts where the run ends
+            if options.late then settle.finish() end
         end
     end)
 end
@@ -191,7 +196,7 @@ steady.run{
     report = report, output = "clock-speed.json",
     -- the recording holds samples 0 .. ended + tail
     done = function()
-        settle.record_samples(math.min(options.ticks, game.tick - began + 1 + options.tail + 30))
+        if not options.late then settle.record_samples(math.min(options.ticks, game.tick - began + 1 + options.tail + 30)) end
         -- what the run ended with, for a run that did not recover: the filters of the infinity chests, the hands, the final machines' input
         local final = {chests = {}, hands = {}, machines = {}}
         for _, e in pairs(entities) do
@@ -214,3 +219,5 @@ steady.run{
         run_tail()
     end,
 }
+end
+steady.after_finals(entities, options, launch)

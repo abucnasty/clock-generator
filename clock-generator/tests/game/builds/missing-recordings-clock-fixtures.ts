@@ -1,5 +1,7 @@
+import path from "path";
 import {Config} from "../../../src/config";
 import {ConfigPaths} from "../../../src/config/config-paths";
+import {withJellyHandsOf15} from "../../configs/rocket-fuel-hands";
 
 /**
  * The record jobs that had no game recording of their selected clock from the staged start (the count of 2026-11-18, the jobs with
@@ -21,6 +23,15 @@ export interface MissingRecordingCase {
     /** The record job */
     job: string;
     config: keyof typeof ConfigPaths;
+    /** The scaffold's file name where it is not the config's own with ".scaffold" for ".json" (the advanced circuit samples share one) */
+    scaffold?: string;
+    /**
+     * A baseline longer than the protocol's minute, with the reason (the protocol allows it, at most RUN_PROTOCOL.maxBaseline ticks): a clock
+     * cycle longer than a minute has no whole clock cycle in the minute
+     */
+    baseline?: {ticks: number; reason: string};
+    /** Ticks the run goes on after its last loss, where the clock cycle is longer than the test's 7,200: it must hold a whole clock cycle */
+    tail_ticks?: number;
     /** The job is a variant of the sample: its config */
     variant?: (config: Config) => Config;
     /** The copies the scaffold holds (the config's own `copies` says how many the job has) */
@@ -34,14 +45,21 @@ export interface MissingRecordingCase {
      */
     random_output?: string;
     /**
-     * Why the build cannot be recorded from the staged start: its belts are filled only by inserters that the staged start places with
-     * the clock. The case is not run; the limit is named in the README until a start from ruling 60's state exists (the ruling-60 harness)
+     * Why the staged start is not the judged start of the build: its belts are filled only by inserters that the staged start places with
+     * the clock, or the pick leaves inserters without a window. The case is not run; the limit is named in the README until a start
+     * from ruling 60's state exists (the ruling-60 harness)
      */
     no_staged_start?: string;
+    /**
+     * The recorder does not start on machines that have no recipe, and a furnace takes its recipe from its first ingredient: the final machine
+     * of this build is a furnace, so the staged start cannot record from the placement. The run is the same, from the placement; the recording
+     * (which the test uses for the build's hardware and its copies) starts where the run ends (the harness's `settle_ticks`)
+     */
+    late_recording?: string;
 }
 
 const scaffoldOf = (key: keyof typeof ConfigPaths) => ConfigPaths[key].replace(/\.json$/, ".scaffold");
-export const scaffoldFile = (item: MissingRecordingCase) => scaffoldOf(item.config);
+export const scaffoldFile = (item: MissingRecordingCase) => item.scaffold ? path.join(path.dirname(ConfigPaths[item.config]), item.scaffold) : scaffoldOf(item.config);
 
 export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
     {
@@ -85,5 +103,70 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
         no_staged_start: "the harness's staged start fills the belts under the pickups before the cell's inserters are placed, and here only the foundries' "
             + "output inserters (cell inserters, placed with the clock) put anything on the belt: the lanes never saturate (\"The belts did not saturate: "
             + "the lanes under the pickups were not full for 30 ticks in a row within 10000 ticks\", 2026-11-17, Factorio 2.1.24)",
+    },
+    {
+        name: "logistic-science-240-direct-insert", job: "config-LOGISTIC_SCIENCE_240_DIRECT_INSERT", config: "LOGISTIC_SCIENCE_240_DIRECT_INSERT", copies: 1,
+        // the inserters come on belts from two infinity chests; the molten iron comes from infinity pipes and has no loss
+        losses: [{kind: "cut", item: "inserter"}, {kind: "block"}],
+        limit: "the scaffold holds one copy of the job's six",
+    },
+    {
+        name: "advanced-circuit-230", scaffold: "advanced-circuit.scaffold", job: "config-ADVANCED_CIRCUIT_230", config: "ADVANCED_CIRCUIT_230", copies: 1,
+        tail_ticks: 12_700,
+        baseline: {ticks: 12_672, reason: "the clock cycle is 12,672 ticks (23 window cycles of 550.957): a minute holds no whole clock cycle"},
+        losses: [{kind: "cut", item: "electronic-circuit"}, {kind: "block"}, {kind: "cut", item: "coal"}],
+        limit: "the scaffold holds one copy of the job's three",
+    },
+    {
+        name: "advanced-circuit-240", scaffold: "advanced-circuit.scaffold", job: "config-ADVANCED_CIRCUIT_240", config: "ADVANCED_CIRCUIT_240", copies: 1,
+        losses: [{kind: "cut", item: "electronic-circuit"}, {kind: "block"}, {kind: "cut", item: "coal"}],
+        limit: "the scaffold holds one copy of the job's three",
+    },
+    {
+        name: "advanced-circuit-240-backed-up", scaffold: "advanced-circuit.scaffold", job: "variants-ADVANCED_CIRCUIT_240_BACKED_UP", config: "ADVANCED_CIRCUIT_240", copies: 1,
+        variant: config => ({...config, overrides: {...config.overrides, backed_up_belts: true}}),
+        losses: [{kind: "cut", item: "electronic-circuit"}, {kind: "block"}, {kind: "cut", item: "coal"}],
+        limit: "the scaffold holds one copy of the job's three",
+    },
+    {
+        name: "lds-240", job: "config-LDS_240", config: "LDS_240", copies: 1,
+        losses: [{kind: "cut", item: "coal"}, {kind: "block"}],
+    },
+    {
+        name: "metallurgic-science-45", job: "config-METALLURGIC_SCIENCE_45", config: "METALLURGIC_SCIENCE_45", copies: 1,
+        losses: [{kind: "cut", item: "tungsten-ore"}, {kind: "block"}, {kind: "cut", item: "coal"}],
+    },
+    {
+        name: "rocket-fuel-60", job: "config-ROCKET_FUEL_60", config: "ROCKET_FUEL_60", copies: 1,
+        losses: [{kind: "cut", item: "bioflux"}, {kind: "block"}, {kind: "cut", item: "nutrients"}],
+        no_staged_start: "the pick leaves three inserters without a window (10, 12 and 13, the nutrient pickups on belt 3), so the staged start is not the judged start; "
+            + "it waits for ruling 60's state (#804). A run from the staged start on 2026-11-18 (Factorio 2.1.24) held, and is not pinned",
+    },
+    {
+        name: "rocket-fuel-60-jelly-hands-15-backed-up", job: "variants-ROCKET_FUEL_60_JELLY_HANDS_15_BACKED_UP", config: "ROCKET_FUEL_60", copies: 1,
+        variant: config => {
+            const hands = withJellyHandsOf15(config);
+            return {...hands, overrides: {...hands.overrides, backed_up_belts: true}};
+        },
+        losses: [{kind: "cut", item: "bioflux"}, {kind: "block"}, {kind: "cut", item: "nutrients"}],
+        no_staged_start: "the pick leaves three inserters without a window (10, 12 and 13, the nutrient pickups on belt 3), so the staged start is not the judged start; "
+            + "it waits for ruling 60's state (#804). The scaffold also holds the sample's hands of 16 on the four jelly inserters (the variant has 15) and drains the "
+            + "ingredient belts (the variant is backed up), so a run on it is the variant's clock on the sample's hardware: a run from the staged start on 2026-11-18 "
+            + "(Factorio 2.1.24) held on that hardware, and is not pinned",
+    },
+    {
+        name: "stone-brick-120-drill-direct-insert", job: "config-STONE_BRICK_120_DRILL_DIRECT_INSERT", config: "STONE_BRICK_120_DRILL_DIRECT_INSERT", copies: 1,
+        // the furnace takes its stone from a drill that drops into it: no ingredient line to cut, so the loss is the output block alone
+        losses: [{kind: "block"}],
+        limit: "the scaffold holds one copy of the job's three",
+        late_recording: "the final machine is a furnace with no recipe at the placement",
+    },
+    {
+        name: "electric-furnace-20", job: "config-ELECTRIC_FURNACE_20", config: "ELECTRIC_FURNACE_20", copies: 1,
+        // the one input line is the advanced circuits on a belt; the steel comes from a foundry and the stone bricks from furnaces that drills fill
+        losses: [{kind: "cut", item: "advanced-circuit"}, {kind: "block"}, {kind: "cut", item: "advanced-circuit"}],
+        limit: "the scaffold holds one copy of the job's two",
+        no_staged_start: "the harness wires a drill to the clock only in a build with one drill, and this build has three (stone brick furnaces, one drill each): "
+            + "\"the clock enables drill 1, which was not matched to a drill of the build (3 mining drills)\" (2026-11-17, Factorio 2.1.24)",
     },
 ];

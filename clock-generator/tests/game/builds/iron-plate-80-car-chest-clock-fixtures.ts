@@ -23,15 +23,19 @@ import {PickupClockScenario} from "./pickup-clock-capture";
  * inserter's arm is at home, are recorded in both as well, and the generation test finds them made. The game serves inserters that act on one entity
  * in the same tick in the order of their unit numbers, the last built first (docs/simulator.md): as the build's blueprint
  * has them, the two inserters that take from the car are built before the output inserters; `takers-last` builds them
- * after. The clock with 1 output swing is a further check.
+ * after. The clock with 1 output swing is a further check. `car-selected-staged` is the clock the record selects (Coordinated
+ * Sources, 144 ticks), recorded from the harness's staged start (every inserter placed with the clock, the car and the furnaces as
+ * the start leaves them) under the same probe and protocol.
  */
 export interface CarCase {
     name: string;
     /** The alternative recorded */
-    alternative: "time_study_windows" | "takt_batches_observed_swings_2" | "takt_batches_observed_swings_3" | "takt_batches_observed_swings_1";
+    alternative: "time_study_windows" | "takt_batches_observed_swings_2" | "takt_batches_observed_swings_3" | "takt_batches_observed_swings_1" | "coordinated_sources";
     /** The clock's window cycle in ticks */
     period: 72 | 144 | 288;
     order: "as-built" | "takers-last";
+    /** Recorded from the harness's staged start, not from a warm-up and a settle */
+    staged?: true;
 }
 
 export function carCases(): CarCase[] {
@@ -43,6 +47,7 @@ export function carCases(): CarCase[] {
         {name: "car-swings-3", alternative: "takt_batches_observed_swings_3", period: 72, order: "as-built"},
         {name: "car-swings-3-takers-last", alternative: "takt_batches_observed_swings_3", period: 72, order: "takers-last"},
         {name: "car-swings-1", alternative: "takt_batches_observed_swings_1", period: 72, order: "as-built"},
+        {name: "car-selected-staged", alternative: "coordinated_sources", period: 144, order: "as-built", staged: true},
     ];
 }
 
@@ -96,6 +101,7 @@ export async function carScenario(variant: CarCase): Promise<PickupClockScenario
         config: () => config,
         scaffold: () => carScaffold(variant.order),
         alternative: variant.alternative,
+        staged: variant.staged,
         probeFile: path.join(__dirname, "iron-plate-80-car-chest-clock-probe.lua"),
         probe: {family: "car", tail: CAR_TAIL_TICKS},
         controls: path.join(__dirname, "iron-plate-80-car-chest-clock-controls.json"),
