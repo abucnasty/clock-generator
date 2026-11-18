@@ -49,7 +49,8 @@ async function threeAssemblerGrenade() {
         machines: config.machines.filter(it => it.id !== 5).map(it => it.recipe === "grenade" ? {...it, crafting_speed: 79.358762} : it),
         inserters: config.inserters.filter(it => it.id !== 5 && it.id !== 8),
         drills: {...config.drills!, configs: config.drills!.configs.filter(it => it.id !== 4)},
-        overrides: {...config.overrides, derive_clock_windows: false},
+        // from the cold start: from the backpressure start the casting foundry starts full and the build stops 200 ticks after the cut
+        overrides: {...config.overrides, derive_clock_windows: false, judged_start: "cold" as const},
     };
 }
 

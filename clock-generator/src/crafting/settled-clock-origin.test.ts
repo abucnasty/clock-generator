@@ -25,7 +25,8 @@ function handsDifferingFromStock(replay: ReturnType<typeof recordSimulationTimel
 
 it("replays the judged clock state after the measured warm-up, keeping stock indices relative", async () => {
     const loaded = await loadConfigFromFile(ConfigPaths.PROCESSING_UNIT_80_CIRCUIT_EXPORT);
-    const config = {...loaded, overrides: {...loaded.overrides, terminal_swing_count: 1, lcm: 1}};
+    // from the cold start: from the backpressure start the three casting foundries start full and this plan's check does not hold
+    const config = {...loaded, overrides: {...loaded.overrides, terminal_swing_count: 1, lcm: 1, judged_start: "cold" as const}};
     // Explicit native-pinned 24-tick plan, independent of candidate generation/ranking.
     const windows = Object.fromEntries([
         [16, 0, 0], [17, 0, 0], [23, 0, 0], [24, 0, 0], [2, 4, 13], [9, 4, 13],

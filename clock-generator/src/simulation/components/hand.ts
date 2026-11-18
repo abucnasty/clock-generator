@@ -477,15 +477,19 @@ export class Hand {
      * inserter's state: the status as written, the wait flag, what it holds, and the pickup arm's reach while a part
      * hand fills (the next hand starts its own reach, so an empty or full hand's is no part of it). The scratch's other
      * fields count only within the tick they are written in, and the record of the hand last emptied holds nothing.
+     *
+     * `counts_the_wait` false leaves out how many ticks a hand has waited at a container that has no room for it (its
+     * target-full phase): that count is read by nothing, and grows for as long as the hand waits, so a build that is
+     * still would never repeat (the key of the fill, `BackpressureFillStep`).
      */
-    public key(tick: number): string {
+    public key(tick: number, counts_the_wait: boolean = true): string {
         const scratch = this.scratch;
         const state = this.state;
         const entered = scratch.swing_entered_tick;
         const held = state.held_item;
         const arm = held !== null && held.quantity < this.items.handSizeOf(held.item_name) ? state.pickup_arm?.stateKey(tick) : undefined;
         return `${this.phase};${scratch.saw_sink_blocked};${scratch.window_opens};${entered === null ? null : entered - tick}`
-            + `;${scratch.swing_from};${this.drop.key()};${this.pickup.key()}`
+            + `;${scratch.swing_from};${counts_the_wait || this.phase !== InserterPhase.TARGET_FULL ? this.drop.key() : "waiting"};${this.pickup.key()}`
             + `;${state.status};${state.waits_for_sink};${JSON.stringify(held)};${arm ?? ""}`;
     }
 

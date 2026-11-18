@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.11.0
+Date: 2026-11-17
+  Features:
+    - A staged start can ask for the backpressure start (staged.backpressure): the inserters of the cell are built and the clock is wired with its Clock lock on, the build fills until every crafting machine finished as many products in two windows in a row (or a cap), and then the lock is set off and the recording starts in that tick; the kick start of loops, the seeds and the probe go in at that tick. The status reports the fill (fill: phase, the opening with each machine and inserter of the cell, the counter after the opening)
+---------------------------------------------------------------------------------------------------
 Version: 0.10.1
 Date: 2026-11-10
   Bugfixes:

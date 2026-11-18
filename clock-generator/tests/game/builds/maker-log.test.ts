@@ -250,7 +250,8 @@ describe('the switch of the maker log', () => {
         // and a clock that loses swings on a lane its copies share says which lane, which item, which copies and how many swings
         const events = readLog(on, 'config-FLYING_ROBOT_FRAME_80');
         const lost = events.filter(it => it.event === 'clock').flatMap(it => it.shared_lane_losses as { belt_id: number; lane: number; item: string; copies: number[]; swings_lost: number }[]);
-        expect(lost).toContainEqual({ belt_id: 5, lane: 1, item: 'electronic-circuit', copies: [4, 5, 6], takers_losing: 3, swings_lost: 186 });
+        // from the backpressure start, the default: its fill of one window cycle is counted by the check of the shared lanes (186 from the cold start)
+        expect(lost).toContainEqual({ belt_id: 5, lane: 1, item: 'electronic-circuit', copies: [4, 5, 6], takers_losing: 3, swings_lost: 189 });
         expect(events.find(it => it.event === 'job')!.shared_lanes).toContainEqual({ belt_id: 5, lane: 1, item: 'electronic-circuit' });
         // the events of the first format keep their fields
         for (const [kind, fields] of Object.entries(FIRST_FORMAT_FIELDS)) {

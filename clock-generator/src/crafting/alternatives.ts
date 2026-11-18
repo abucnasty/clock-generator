@@ -1,5 +1,5 @@
 import assert from "../common/assert";
-import type { TargetCounts } from "../config/schema";
+import { judgedStartOf, type TargetCounts } from "../config/schema";
 import { fraction } from "../data-types/fraction";
 import { Config } from "../config";
 import { withoutOutsideSupply } from "../config/outside-supply";
@@ -47,7 +47,7 @@ import { alternativeIdOf, ChestDrillFallbackKind, ClockStrategy, DefinitionSetti
 import { catalogRowOf, fixedTuningMethodOf, routerRowOf, settingChipsOf, strategyRowOf } from "./strategy-catalog";
 import { type ExploredClocks, exploredClocksOf, isExplored } from "./explore";
 import { signalsPerMinuteOf } from "./clock-signals";
-import { START_DEPENDENCE_NOT_CHECKED, StartDependence, startDependenceNote } from "./start-dependence";
+import { StartDependence, startDependenceNote, startDependenceNotChecked } from "./start-dependence";
 import { NotMadeClock, notTriedSentence, WhyNotStable, whyNotStable, whyNotStableClockOf } from "./why-not-stable";
 import { DEFAULT_KICK_START_ITEMS } from "./runner/cold-start";
 import { ClockSharedLaneLoss, fewerCopiesThatHold, isNotChecked } from "./shared-lane-verdict";
@@ -1566,7 +1566,7 @@ function signaturesOf(runs: readonly (ClockAlternativeRun | null)[]): string[] {
 /** The start dependence of a build's clocks in a line: that it was not checked, or which clocks depend on the start */
 export function startDependenceSummary(config: Config, alternatives: readonly Pick<ClockAlternative, "id" | "assessment">[]): Pick<ClockAlternativesResult, "start_dependence_checked" | "start_dependence_note"> {
     if (config.overrides?.check_start_dependence !== true) {
-        return { start_dependence_checked: false, start_dependence_note: START_DEPENDENCE_NOT_CHECKED };
+        return { start_dependence_checked: false, start_dependence_note: startDependenceNotChecked(judgedStartOf(config.overrides)) };
     }
     const dependent = alternatives.filter(it => it.assessment.start_dependence?.verdict === "start-dependent").map(it => it.id);
     const counts = alternatives.flatMap(it => it.assessment.start_dependence?.starts.length ? [it.assessment.start_dependence.starts.length] : []);

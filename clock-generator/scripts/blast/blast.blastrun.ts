@@ -20,7 +20,11 @@
 // CLOCK_EXPLORE (1: generate with `explore_strategies`, the explore mode; every job file then also holds `explored`, see below; key.py
 // keys it, so the run has an entry of its own and never mixes with the normal ones),
 // BLAST_LOG (1: also write the maker log of each job to <BLAST_OUT>/maker-log/<job>.jsonl, see MAKER-LOG.md; it changes no job file, so it is not keyed),
-// BLAST_REPEAT_CHECK (1, with BLAST_LOG: the log also holds the repeat check of each listed clock; it changes no job file, so it is not keyed).
+// BLAST_REPEAT_CHECK (1, with BLAST_LOG: the log also holds the repeat check of each listed clock; it changes no job file, so it is not keyed),
+// BLAST_OVERRIDES (a JSON object merged into each config's `overrides` before it is generated: the side of a flag pair that is on, e.g.
+// {"judged_start":"backpressure"}; it is not in the job list's config hashes, and not keyed, so a run with it is never stored: use --no-store),
+// BLAST_FILL_LOG (a folder: one JSON line a run that asked for the fill of the backpressure start, with the job's key, written to
+// <folder>/<pid>.jsonl; none in a worktree from before the fill).
 //
 // With CLOCK_EXPLORE=1 every job file also holds `explored`: the clock the shipped strategies selected and the best clock of the explored
 // strategies, each with its strategy, verdict and wake-ups a minute, whether the best beats the selected one by the ranking, and every explored
@@ -213,6 +217,21 @@ async function jobChecksModule(): Promise<{ runJobChecks: (job: string, config: 
     return fs.existsSync(file) ? import(file) : undefined;
 }
 
+/** The extra overrides of a run (BLAST_OVERRIDES): the flag that is on, in a pair of a flag off against on */
+const EXTRA_OVERRIDES: Record<string, unknown> | undefined = process.env.BLAST_OVERRIDES ? JSON.parse(process.env.BLAST_OVERRIDES) : undefined;
+const withExtraOverrides = (config: any) => EXTRA_OVERRIDES === undefined ? config : { ...config, overrides: { ...config.overrides, ...EXTRA_OVERRIDES } };
+
+/** Writes what each run that asked for the fill did (BLAST_FILL_LOG), where the build has the fill; a path, as below. Returns the job to name in it */
+async function fillLog(): Promise<{ job: string | undefined } | undefined> {
+    const dir = process.env.BLAST_FILL_LOG;
+    const file = path.resolve(__dirname, '../../../..', 'src', 'crafting', 'runner', 'steps', 'backpressure-fill-step.ts');
+    if (!dir || !fs.existsSync(file)) return undefined;
+    const named: { job: string | undefined } = { job: undefined };
+    fs.mkdirSync(dir, { recursive: true });
+    (await import(file)).observeFills((report: unknown) => fs.appendFileSync(path.join(dir, `${process.pid}.jsonl`), JSON.stringify({ job: named.job, ...(report as object) }) + '\n'));
+    return named;
+}
+
 /** The maker log's writer (tests/game/builds/blast-log.ts), where the build has it: a worktree from before it writes no log. A path, as above */
 async function makerLogModule(): Promise<typeof import('../blast-log') | undefined> {
     const file = path.join(__dirname, '..', 'blast-log.ts');
@@ -281,6 +300,7 @@ test.skipIf(!OUT)('blast', async () => {
     const jobChecks = await jobChecksModule();
     const makerLog = await makerLogModule();
     const recorder = functionRecorder();
+    const fills = await fillLog();
     if (recorder) {
         // what ran before the first job: the engine loading and the job list. Every job depends on it, so it is a record of its own
         const startup = path.join(OUT!, '.functions', '.startup.json');
@@ -295,7 +315,8 @@ test.skipIf(!OUT)('blast', async () => {
         const started = Date.now();
         let body: any;
         try {
-            const config = await job.config();
+            const config = withExtraOverrides(await job.config());
+            if (fills) fills.job = key;
             // the maker log, only where BLAST_LOG asks for it: a generation with no sink builds no event and times nothing. It is written
             // before the job's result, as the footprint is: a result without its log is not made, and a log without a result is overwritten
             const generate = (sink?: MakerLogSink, repeat_check = false) => clocksOf(config, expand, key, properties, jobChecks, sink, repeat_check);
