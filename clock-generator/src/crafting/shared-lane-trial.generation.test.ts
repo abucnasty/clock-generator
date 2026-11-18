@@ -105,18 +105,14 @@ describe("a build whose copies share no lane", () => {
 });
 
 // AUTOMATION_SCIENCE_240: 9 copies on one belt whose two lanes are dead ends. Its selected clock (pitch pickups, 72 ticks)
-// gets back from every loss on one copy, and on the copies a copper plate stop leaves copy 2 short.
+// gets back from every loss on one copy, and on the copies a copper plate stop leaves copy 2 short. The sample as it is, with the
+// trials on the copies on, is a job of the record: "is no recovery, naming the loss on the copies, with the trials on the copies on"
+// is a check of that job (tests/game/builds/job-checks/samples.ts). The clock with the trials switched off is made here.
 describe("the verdict of a clock the trials on the copies break", () => {
-    it("is no recovery, naming the loss on the copies, and stable with the trials on the copies switched off", async () => {
+    it("is stable with the trials on the copies switched off", async () => {
         const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
-        const on = generateClockAlternatives(config, { logger: quiet });
         const off = generateClockAlternatives({ ...config, overrides: { ...config.overrides, disturbance_trials_on_copies: false } }, { logger: quiet });
-        const clock = on.alternatives.find(it => it.id === "pitch_pickups")!;
         const alone = off.alternatives.find(it => it.id === "pitch_pickups")!;
-        expect(clock.verdict).toBe("no recovery");
-        expect(clock.assessment.disturbance_trial).toMatchObject({ survives: false, broken_by: ["copper plate stops arriving on the copies that share a lane"],
-            on_copies: { survives: false, broken_by: "copper plate stops arriving", short: [{ copy: 2 }] } });
-        expect(clock.description).toContain("Copper plate stops arriving at the entry of the copper plate lane");
         expect(alone.verdict).toBe("stable");
         expect(alone.assessment.disturbance_trial?.on_copies).toBeUndefined();
     });

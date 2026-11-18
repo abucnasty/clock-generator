@@ -4,7 +4,7 @@ import { ClockAlternativesResult, generateClockAlternatives } from "./generate-b
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { Config } from "../config/schema";
-import { quiet, withoutSharedLaneFacts } from "./generate-blueprint-test-helpers";
+import { quiet } from "./generate-blueprint-test-helpers";
 import { isNotChecked, SharedLaneLoss } from "./shared-lane-verdict";
 
 /** The config with the lanes it names (by "belt/lane") stated as dead ends, and their belts stating that their items move east */
@@ -62,44 +62,6 @@ describe("the logistic science build with its feed lanes stated as dead ends", (
     });
 });
 
-// CHEMICAL_SCIENCE_240_SHARED_FOUNDRY: Coordinated Sources is composed on 352 ticks from the clocks made before it, and on
-// the advanced-circuit lane its copies share copy 5 takes half of what one copy alone takes. Measured on the sample as it was
-// before it stated the spacing of its copies, the way its belts move and the ends of its lanes, where the lane is an infinite
-// end. The sample now states that its input lanes end in a dead end, and this test is of a lane that flows on: it takes the
-// sample without those facts. The maker judges its clock with the copies while it chooses, and no composition holds with them.
-describe("a composed clock that is not stable on a lane the copies share", () => {
-    it("is not made: the maker keeps the recommended clock, and the result says so in not_made", async () => {
-        const generated = generateClockAlternatives(withoutSharedLaneFacts(await loadConfigFromFile(ConfigPaths.CHEMICAL_SCIENCE_240_SHARED_FOUNDRY)), { logger: quiet });
-        expect(generated.alternatives.some(it => it.maker === "per-branch")).toBe(false);
-        const composed = generated.not_made.find(it => it.id === "per-branch");
-        expect(composed).toMatchObject({ label: "Coordinated Sources" });
-        expect(composed!.reason).toMatch(/^the local choice keeps the recommended clock/);
-    });
-});
-
-// AUTOMATION_SCIENCE_240: 9 copies take iron gear wheel and copper plate from the two dead-ended lanes of belt 1. Under
-// Euclidean Swings (72 ticks) copy 2's inserter 1 makes 62 of the 65 swings it makes alone with each item, every hand of
-// 16 (measured from the hands of the verdict's runs). A loss is said in those swings, never in items or crafts.
-describe("the swings a loss on the automation science build's shared lanes counts", () => {
-    let generated: ClockAlternativesResult;
-    beforeAll(async () => {
-        generated = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240), { logger: quiet });
-    });
-
-    it("are the hands of the runs: 62 of 65 on each input lane for copy 2 under Euclidean Swings", () => {
-        const euclidean = generated.alternatives.find(it => it.id === "euclidean_swings")!;
-        expect(euclidean.result.simulation_duration.ticks).toBe(72);
-        const losses = (euclidean.assessment.shared_lane_losses ?? []).filter((loss): loss is SharedLaneLoss => !isNotChecked(loss));
-        expect(losses.map(loss => [loss.lane, loss.copy, loss.swings, loss.alone_swings, loss.short_swings, loss.items, loss.alone_items]).sort())
-            .toEqual([[1, 2, 62, 65, 0, 992, 1040], [2, 2, 62, 65, 0, 992, 1040]]);
-        expect(losses.map(loss => loss.text.slice(loss.text.indexOf("Its inserter")))).toEqual(expect.arrayContaining([
-            "Its inserter that takes iron gear wheel and copper plate misses 3 of its 65 swings with iron gear wheel in 65 window cycles.",
-            "Its inserter that takes iron gear wheel and copper plate misses 3 of its 65 swings with copper plate in 65 window cycles."]));
-    });
-
-    it("leave no count of items or of crafts in any loss text", () => {
-        const texts = generated.alternatives.flatMap(it => (it.assessment.shared_lane_losses ?? []).map(loss => loss.text));
-        expect(texts.length).toBeGreaterThan(0);
-        for (const text of texts) expect(text).not.toMatch(/takes [\d,]+ in|it takes [\d,]+\.|crafts behind|hands behind/);
-    });
-});
+// The swings a loss on the automation science 240 build's shared lanes counts are checks of that job in the record
+// (tests/game/builds/job-checks/samples.ts), and the 245 s generation of CHEMICAL_SCIENCE_240_SHARED_FOUNDRY without its
+// lane facts is in composed-clock-not-stable-on-shared-lane.generation.test.ts: no file holds more than one long generation.
