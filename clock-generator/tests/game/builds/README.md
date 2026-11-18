@@ -784,7 +784,7 @@ BELT_SPEED_CAPTURE_DIR=.scratch/productivity-module-80-chest-chain-clock-new BEL
 
 [utility-science-120-selected-clock.game.test.ts](utility-science-120-selected-clock.game.test.ts) records the clock the generator selects for
 `UTILITY_SCIENCE_120` (Takt Batches, window cycle 672 ticks, pinned in `scaffold-recordings-clock-pins.json` as "utility science") on the
-sample's scaffold of one copy (17.14 a second), as the config is and with backed-up belts, from the staged start to steady state, a baseline of
+sample's scaffold of one copy (17.14 a second), as the config is and with backpressure on the belts, from the staged start to steady state, a baseline of
 21 whole window cycles (the run is past 21,600 ticks before the loss), then the loss the disturbance trial names: low density structure stops arriving
 (lasting until no craft finishes for a window cycle, restored at the place in the window cycle it was cut at). Recorded at Factorio 2.1.24, both cases the same:
 steady state at tick 7,136, 192 in each of the 21 window cycles, and after the loss the output comes back (recovered at tick 27,632). The simulator's
