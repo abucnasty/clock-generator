@@ -862,6 +862,31 @@ export function matchBuiltDrills(described: any, config: Config, named_copies?: 
 }
 
 /**
+ * Where the drills of a trial build stand, by the config drill id each is matched to (the drills of every copy in a list), from the
+ * middle of the blueprint. A staged start builds the blueprint again after the trial build, so the trial's unit numbers are no
+ * longer the drills of the build: the drills stand where they stood, and the mod finds them there. A build with more than one mining
+ * drill is refused when a drill the clock enables is matched to none; a build with one needs no match, the mod wires its one drill.
+ */
+export function stagedDrillPositions(described: any, config: Config, scheduled: number[], origin: { x: number; y: number }, named_copies?: number): Record<string, { x: number; y: number }[]> {
+    const stands_at = new Map<number, { x: number; y: number }>(Object.values<any>(described.movers?.drills ?? {}).map(it => [it.unit_number, it.position]));
+    const copies = matchBuiltDrills(described, config, named_copies);
+    const missing = copies.flatMap(unit_numbers => scheduled.filter(id => !unit_numbers.has(id)));
+    if (missing.length > 0 && stands_at.size > 1) {
+        throw new Error(`The clock names drills ${Array.from(new Set(missing)).sort((a, b) => a - b).join(", ")} of the config, which match no drill of the build (${stands_at.size} mining drills)`);
+    }
+    const positions: Record<string, { x: number; y: number }[]> = {};
+    for (const unit_numbers of copies) {
+        for (const [config_id, unit_number] of unit_numbers) {
+            const at = stands_at.get(unit_number);
+            if (at !== undefined) {
+                (positions[config_id] ??= []).push({ x: at.x - origin.x, y: at.y - origin.y });
+            }
+        }
+    }
+    return positions;
+}
+
+/**
  * The config chest behind each chest of the build that a matched inserter of the copy takes from or drops into, where
  * the config has one chest of its type. The inserters' match keys a chest end by "chest" and does not tell chests apart,
  * so two chests of one type in the config cannot be told apart and are left out (a drill into either is then refused).
@@ -1512,6 +1537,7 @@ export class HarnessSession {
 
         // trial build: which inserter is which
         let order: { x: number; y: number; config_id: number; copy?: number }[] = [];
+        let drill_positions: Record<string, { x: number; y: number }[]> | undefined;
         let position = options.position;
         if (options.config) {
             const trial = await this.call("harness_build", this.trialJob(options));
@@ -1536,6 +1562,10 @@ export class HarnessSession {
                     throw new Error(missingFromConfigMessage(not_in_config));
                 }
                 assertDrillsWireable(options.clock, options.config);
+                const scheduled_drills = scheduledDrillIds(options.clock.blueprint);
+                if (scheduled_drills.length > 0) {
+                    drill_positions = stagedDrillPositions(described, options.config, scheduled_drills, trial.origin, options.copies);
+                }
             }
             position = trial.origin;
             const cleared = await this.call("harness_clear");
@@ -1587,11 +1617,11 @@ export class HarnessSession {
         }
 
         // second stage: the inserters of the cell and the clock, in one tick
-        let clock: { blueprint: string; inserters: Record<string, number> } | { primed: true } | undefined;
+        let clock: { blueprint: string; inserters: Record<string, number>; drill_positions?: Record<string, { x: number; y: number }[]> } | { primed: true; drill_positions?: Record<string, { x: number; y: number }[]> } | undefined;
         if (priming) {
-            clock = { primed: true };
+            clock = { primed: true, ...(drill_positions && { drill_positions }) };
         } else if (options.clock) {
-            clock = { blueprint: withInserterTags(options.clock), inserters: {} };
+            clock = { blueprint: withInserterTags(options.clock), inserters: {}, ...(drill_positions && { drill_positions }) };
         }
         const start = await this.call("harness_start", {
             clock,

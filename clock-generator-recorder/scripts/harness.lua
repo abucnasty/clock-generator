@@ -99,12 +99,13 @@ local DIRECTION_VECTORS = {
     [defines.direction.west] = { x = -1, y = 0 },
 }
 
----The ends of an inserter ghost: where it picks up from and drops at (a long-handed inserter reaches two tiles)
+---The ends of an inserter or of its ghost: where it picks up from and drops at (a long-handed inserter reaches two tiles)
 ---@param ghost LuaEntity
 ---@return MapPosition pickup, MapPosition drop
 local function inserter_ends(ghost)
     local vector = DIRECTION_VECTORS[ghost.direction] or { x = 0, y = -1 }
-    local reach = ghost.ghost_name == "long-handed-inserter" and 2 or 1
+    local name = ghost.type == "entity-ghost" and ghost.ghost_name or ghost.name
+    local reach = name == "long-handed-inserter" and 2 or 1
     local x, y = ghost.position.x, ghost.position.y
     return { x = x + vector.x * reach, y = y + vector.y * reach }, { x = x - vector.x * reach, y = y - vector.y * reach }
 end
@@ -794,14 +795,83 @@ local function lane_is_full(line)
     return true
 end
 
+-- what puts items on a belt without an inserter: a loader, a linked belt
+local BELT_FEEDER_TYPES = { loader = true, ["loader-1x1"] = true, ["linked-belt"] = true }
+
+---The unit numbers of the belt pieces at a position
+---@param surface LuaSurface
+---@param position MapPosition
+---@return integer[]
+local function belts_at(surface, position)
+    local found = {}
+    for _, belt in pairs(surface.find_entities_filtered({ position = position, type = BELT_PICKUP_TYPES })) do
+        table.insert(found, belt.unit_number)
+    end
+    return found
+end
+
+---Whether the lane is filled by the inserters of the cell and by nothing else: one of them drops onto the belt of the lane or onto a belt
+---upstream of it, and no loader, linked belt, built inserter or mining drill feeds that belt. The inserters of the cell are not built
+---in the first stage, so nothing ever lies on such a lane before the second.
+---@param line LuaTransportLine
+---@param cell_drops table<integer, boolean> the belt pieces the inserters of the cell drop onto
+---@param other_drops table<integer, boolean> the belt pieces a built inserter or a mining drill drops onto
+---@return boolean
+local function lane_filled_by_cell_only(line, cell_drops, other_drops)
+    local pending, looked, by_cell = { line }, 0, false
+    while #pending > 0 do
+        if looked >= 400 then
+            return false
+        end
+        local current = table.remove(pending)
+        looked = looked + 1
+        local owner = current.owner
+        if owner and owner.valid then
+            if BELT_FEEDER_TYPES[owner.type] or other_drops[owner.unit_number] then
+                return false
+            end
+            by_cell = by_cell or cell_drops[owner.unit_number] == true
+        end
+        for _, upstream in pairs(current.input_lines) do
+            table.insert(pending, upstream)
+        end
+    end
+    return by_cell
+end
+
 ---The staged start's first stage: the lanes under the pickup of every belt-fed inserter of the cell, which have to be saturated
 ---before the inserters are built
 ---@param options {saturation_ticks: number?, cap_ticks: number?}
 ---@param ghosts LuaEntity[] the inserters of the cell, still ghosts
 ---@param origin MapPosition
+---@param entities LuaEntity[] what is built of the blueprint
 ---@return table
-local function start_staged_fill(options, ghosts, origin, surface)
+local function start_staged_fill(options, ghosts, origin, surface, entities)
     local lanes, seen = {}, {}
+    local cell_drops, other_drops = {}, {}
+    for _, ghost in ipairs(ghosts) do
+        local _, drop = inserter_ends(ghost)
+        for _, unit_number in ipairs(belts_at(surface, drop)) do
+            cell_drops[unit_number] = true
+        end
+    end
+    for _, entity in ipairs(entities) do
+        if entity.valid then
+            local drop
+            if entity.type == "inserter" then
+                local _, dropped = inserter_ends(entity)
+                drop = dropped
+            elseif entity.type == "mining-drill" then
+                local ok, position = pcall(function() return entity.drop_position end)
+                drop = ok and position or nil
+            end
+            if drop then
+                for _, unit_number in ipairs(belts_at(surface, drop)) do
+                    other_drops[unit_number] = true
+                end
+            end
+        end
+    end
     for _, ghost in ipairs(ghosts) do
         local pickup = inserter_ends(ghost)
         for _, belt in pairs(surface.find_entities_filtered({ position = pickup, type = BELT_PICKUP_TYPES })) do
@@ -809,7 +879,7 @@ local function start_staged_fill(options, ghosts, origin, surface)
                 local key = belt.unit_number .. ":" .. index
                 if not seen[key] then
                     seen[key] = true
-                    table.insert(lanes, { belt = belt, index = index, key = key, full_since = nil, in_use = false })
+                    table.insert(lanes, { belt = belt, index = index, key = key, full_since = nil, in_use = false, cell_only = lane_filled_by_cell_only(belt.get_transport_line(index), cell_drops, other_drops) })
                 end
             end
         end
@@ -830,8 +900,9 @@ end
 ---@param state table storage.harness
 local function staged_tick(state)
     local staged = state.staged
-    local all_full, any_in_use = true, false
+    local all_full, any_in_use, all_cell_only = true, false, true
     for _, lane in ipairs(staged.lanes) do
+        all_cell_only = all_cell_only and lane.cell_only
         local line = lane.belt.valid and lane.belt.get_transport_line(lane.index) or nil
         lane.in_use = line ~= nil and lane_in_use(line)
         if lane.in_use then
@@ -846,13 +917,14 @@ local function staged_tick(state)
             lane.full_since = nil
         end
     end
-    staged.run = (all_full and (any_in_use or #staged.lanes == 0)) and staged.run + 1 or 0
+    -- no lane carries items: the stage waits for the items that have not reached the lanes yet, unless every lane is filled by the cell alone
+    staged.run = (all_full and (any_in_use or #staged.lanes == 0 or all_cell_only)) and staged.run + 1 or 0
     if staged.run >= staged.need_ticks then
         staged.phase = "saturated"
         staged.saturated_tick = game.tick
         staged.lane_log = {}
         for _, lane in ipairs(staged.lanes) do
-            table.insert(staged.lane_log, { belt = lane.belt.unit_number, x = lane.belt.position.x, y = lane.belt.position.y, lane = lane.index, in_use = lane.in_use, full_since = lane.full_since })
+            table.insert(staged.lane_log, { belt = lane.belt.unit_number, x = lane.belt.position.x, y = lane.belt.position.y, lane = lane.index, in_use = lane.in_use, cell_only = lane.cell_only, full_since = lane.full_since })
         end
         state.ready = true
         game.tick_paused = true
@@ -860,7 +932,7 @@ local function staged_tick(state)
         staged.phase = "failed"
         staged.lane_log = {}
         for _, lane in ipairs(staged.lanes) do
-            table.insert(staged.lane_log, { belt = lane.belt.valid and lane.belt.unit_number or nil, lane = lane.index, in_use = lane.in_use, full_since = lane.full_since })
+            table.insert(staged.lane_log, { belt = lane.belt.valid and lane.belt.unit_number or nil, lane = lane.index, in_use = lane.in_use, cell_only = lane.cell_only, full_since = lane.full_since })
         end
         staged.failed = "the lanes under the pickups were not full for " .. staged.need_ticks .. " ticks in a row within " .. staged.cap_ticks .. " ticks"
         game.tick_paused = true
@@ -902,7 +974,7 @@ function harness.build(job)
         ores = ores,
     }
     if job.staged then
-        state.staged = start_staged_fill(job.staged, staged_ghosts, origin, surface)
+        state.staged = start_staged_fill(job.staged, staged_ghosts, origin, surface, entities)
     end
 
     local removed = 0
@@ -1017,15 +1089,17 @@ local function end_of(entity)
     return { unit_number = entity.unit_number, type = entity.type, name = entity.name }
 end
 
----Every inserter and loader of the build with the entities at its ends, whatever they are. A recording leaves out an
+---Every inserter, loader and mining drill of the build with the entities at its ends, whatever they are. A recording leaves out an
 ---inserter whose other end it has no type for (a heating tower, a wagon, the ground), and a loader is no inserter,
 ---but each moves items that no clock holds.
 ---@param entities LuaEntity[]
 ---@return table
 local function movers(entities)
-    local found = { inserters = {}, loaders = {} }
+    local found = { inserters = {}, loaders = {}, drills = {} }
     for _, entity in pairs(entities) do
-        if entity.valid and entity.type == "inserter" then
+        if entity.valid and entity.type == "mining-drill" then
+            table.insert(found.drills, { unit_number = entity.unit_number, name = entity.name, position = { x = entity.position.x, y = entity.position.y } })
+        elseif entity.valid and entity.type == "inserter" then
             table.insert(found.inserters, {
                 unit_number = entity.unit_number,
                 name = entity.name,
@@ -1058,6 +1132,32 @@ function harness.describe()
     local described = recorder.describe(game.forces[state.force_name], state.entities)
     described.movers = movers(state.entities)
     return described
+end
+
+---The mining drills of the build that stand at the positions given, by config drill id: the caller matched the drills of a trial
+---build of the same blueprint, which stood where this one does, and does not know the unit numbers of this one
+---@param state table storage.harness
+---@param positions table<string, {x: number, y: number}[]> config drill id -> where its drills stand, from the middle of the blueprint
+---@return table<string, uint[]>
+local function drills_at(state, positions)
+    local found = {}
+    for id, list in pairs(positions) do
+        found[id] = {}
+        for _, at in ipairs(list) do
+            local x, y = state.origin.x + at.x, state.origin.y + at.y
+            local unit_number
+            for _, entity in pairs(state.entities) do
+                if entity.valid and entity.type == "mining-drill" and math.abs(entity.position.x - x) < 0.01 and math.abs(entity.position.y - y) < 0.01 then
+                    unit_number = entity.unit_number
+                end
+            end
+            if not unit_number then
+                error("no mining drill of the build stands at (" .. x .. ", " .. y .. "), where the trial build's drill " .. id .. " stood")
+            end
+            table.insert(found[id], unit_number)
+        end
+    end
+    return found
 end
 
 ---@param state table
@@ -1381,7 +1481,7 @@ local function start_fill(state, job, staged_report)
 end
 
 ---The end of the fill of a backpressure start: what the build holds is reported, the lock is set off, and the kick start, the seeds,
----the probe and the recording start in this tick
+---the probe and the recording start in this tick (the recording settle_ticks ticks later, where the job asks for them)
 ---@param state table storage.harness
 ---@param ended "steady"|"cap"
 local function open_fill(state, ended)
@@ -1442,7 +1542,12 @@ local function open_fill(state, ended)
     }
     fill.lock.get_control_behavior().enabled = false
     seed_and_probe(state, fill.job, opening)
-    start_recording(state)
+    if (fill.job.settle_ticks or 0) > 0 then
+        -- the build runs on for settle_ticks first, as a staged start without the fill does
+        state.record_tick = game.tick + fill.job.settle_ticks
+    else
+        start_recording(state)
+    end
     fill.phase = "open"
     fill.opening = opening
 end
@@ -1531,6 +1636,9 @@ function harness.start(job)
         report.staged = place_staged(state, staged_options)
         if job.clock then
             job.clock.inserters = report.staged.by_config
+            if job.clock.drill_positions then
+                job.clock.drills = drills_at(state, job.clock.drill_positions)
+            end
         end
         if attach then
             report.staged.clock_attach = attach
