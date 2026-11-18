@@ -247,6 +247,14 @@ The router that gives every inserter and mining drill of the clock the one chose
 **Coordinated Sources**:
 The router that gives the inserters of each source the enable windows of another clock of the build. A source is a machine, belt or chest that inserters take from. All sources use one window cycle: that of the recommended clock, or of the next best-ranked stable clock on a shorter window cycle where the clock composed on it ranks first. The generator sets the sources one at a time, from the output upstream. It keeps the setting with the smallest number of wakeups for the full clock. It is a router, not a strategy.
 
+**Initial clock**:
+The clock that a local choice of Coordinated Sources begins from. One clock maker makes it, for example `takt_swings_1`, `euclidean_swings` or `time_study_windows`. The recommended clock is always one. Each stable clock that ties its wakeups is another. The code's "stable part" is a stable clock of one maker. The two are not the same. A stable part is an initial clock only if it ties the recommended clock. Or the search from every start must be on.
+_Avoid_: starting clock, start (for this meaning; **Cold start** and **Backpressure start** mean the start of a build), starting point
+
+**Refined clock**:
+The clock that a local choice ends at. The local choice begins from an initial clock. It changes the setting of one source at a time and keeps each change that makes fewer wakeups. It stops when no change of one setting makes fewer wakeups. Each initial clock gives one refined clock. The generator then checks the best refined clock with all the copies.
+_Avoid_: end clock, end, improved clock
+
 **Enable Control Strategy override** (short form: **override**):
 The setting that overrides the Enable Control Strategy of one inserter or drill (the configuration's `overrides.enable_control`). Auto lets the generator choose the strategy. Always on, Clocked and Conditional decide the control instead: the router then gives no strategy.
 _Avoid_: enable rule, enable control
