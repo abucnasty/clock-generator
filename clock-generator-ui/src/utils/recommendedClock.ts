@@ -1,6 +1,7 @@
 import type { Config } from 'clock-generator/browser';
 import { combineClockAlternativeRuns, signalsKey } from 'clock-generator/light';
 import type { ClockAlternativeView } from '../worker/types';
+import { DEFAULT_JUDGED_START, startNameOf, type JudgedStart } from './judgedStart';
 import { shownRateOf } from './shownRate';
 import { rateVerbs, type TargetCounts } from './targetCounts';
 
@@ -36,12 +37,12 @@ export const RECOMMENDED_COPY = {
     /** The head of the column of each clock's place in the engine's order, and its help: the seven keys, in order */
     rank: 'Rank',
     rankLead: 'The clocks are ranked by these, in order. Each one decides only between clocks that are equal on the ones before it.',
-    rankKeys: [
+    rankKeys: (start: JudgedStart) => [
         'It holds the setpoint and has recovery. On a build with a deadlock risk, it holds the setpoint. After these come '
             + 'clocks rounded to whole ticks that run at most 0.1% fast, then clocks whose recovery could not be tried, then '
             + 'stable clocks over the setpoint, then all other clocks.',
         'It is nearer to the setpoint, over or under it.',
-        'It holds its output from the modeled cold start.',
+        `It holds its output from ${startNameOf(start)}.`,
         'It has fewer wakeups. On a build with a loop of machines, the average over 12 start points is compared.',
         'It has fewer signals.',
         'It goes back to its rate in fewer window cycles after a supply stop or an output blockage.',
@@ -78,12 +79,12 @@ export const RECOMMENDED_COPY = {
         ` ${othersText(others)} on wakeups, signals and enable windows, so the first one in the list is shown.`,
     recoveryDoesNotDecide: ' The recovery trials do not decide on this build.',
     noneHolds: (rate: string, deadlock: boolean) => deadlock ? `No clock holds ${rate}/s.` : `No clock holds ${rate}/s and has recovery.`,
-    atRateHolds: (rate: string, fewest: boolean) =>
-        ` This one holds ${rate}/s from the modeled cold start${fewest ? ' with the fewest wakeups' : ''}.`,
+    atRateHolds: (rate: string, fewest: boolean, start: JudgedStart) =>
+        ` This one holds ${rate}/s from ${startNameOf(start)}${fewest ? ' with the fewest wakeups' : ''}.`,
     atRateRuns: (rate: string, fewest: boolean) => ` This one runs at ${rate}/s${fewest ? ' with the fewest wakeups' : ''}.`,
     nearest: ' This one runs nearest to it.',
     nearestAt: (itsRate: string) => ` This one runs nearest to it, at ${itsRate}/s.`,
-    nearestHolds: ' Of the equally near clocks, it is the one that holds its output from the modeled cold start.',
+    nearestHolds: (start: JudgedStart) => ` Of the equally near clocks, it is the one that holds its output from ${startNameOf(start)}.`,
     stableOver: (itsRate: string, percent: string) => ` This one is stable and runs over it, at ${itsRate}/s (${percent} over): `
         + 'a stable clock over the setpoint is picked before a clock nearer to it that is unstable or runs under it.',
 };
@@ -132,12 +133,13 @@ export function recommendationReason(
     recommendedIndex: number | null,
     final: boolean,
     stopped = false,
+    start: JudgedStart = DEFAULT_JUDGED_START,
 ): string {
     const pick = recommendedIndex === null ? undefined : alternatives[recommendedIndex];
     if (!pick) {
         return '';
     }
-    const reason = reasonOf(alternatives, pick);
+    const reason = reasonOf(alternatives, pick, start);
     if (final) {
         return reason;
     }
@@ -156,7 +158,7 @@ export function fewestDecidersReason(
     return RECOMMENDED_COPY.fewestDeciders(contenders);
 }
 
-function reasonOf(alternatives: PickableClock[], pick: PickableClock): string {
+function reasonOf(alternatives: PickableClock[], pick: PickableClock, start: JudgedStart): string {
     const { ranking } = pick;
     const rate = figure(pick.assessment.items_per_second - ranking.rate_off_target);
     if (pick.assessment.disturbance_trial === null && pick.assessment.start_dependence?.verdict !== 'start-dependent') {
@@ -165,7 +167,7 @@ function reasonOf(alternatives: PickableClock[], pick: PickableClock): string {
     // on a build with a deadlock risk a clock that holds the rate meets it, recovering or not; elsewhere it is Stable
     const deadlock = pick.deadlockRisk !== null;
     if (!ranking.meets_target_rate) {
-        return nearestReason(alternatives, pick, rate, deadlock);
+        return nearestReason(alternatives, pick, rate, deadlock, start);
     }
     const recovery = pick.verdict === 'no recovery' ? RECOMMENDED_COPY.recoveryDoesNotDecide : '';
     const others = alternatives.filter(other => other !== pick && other.ranking.meets_target_rate);
@@ -214,7 +216,7 @@ function tieOf(pick: PickableClock, others: PickableClock[]): string {
 }
 
 /** Why the pick when no clock qualifies: actual modeled-start rate and sampled starts remain distinct. */
-function nearestReason(alternatives: PickableClock[], pick: PickableClock, rate: string, deadlock: boolean): string {
+function nearestReason(alternatives: PickableClock[], pick: PickableClock, rate: string, deadlock: boolean, start: JudgedStart): string {
     const { ranking } = pick;
     if (pick.assessment.start_dependence?.verdict === 'start-dependent') {
         return `No clock qualifies under the engine's ranking rule. This one is assessed at ${figure(shownRateOf(pick))}/s and reaches the setpoint from only some sampled starts. See Model and tested starts.`;
@@ -230,14 +232,14 @@ function nearestReason(alternatives: PickableClock[], pick: PickableClock, rate:
         // at the rate as the selection compares it, so holding the output decided, then the wake-ups
         // the rate it shows: on a loss on a shared lane, what all the copies made, not the target
         return lead + (ranking.holds_expected_output
-            ? RECOMMENDED_COPY.atRateHolds(figure(shownRateOf(pick)), counted)
+            ? RECOMMENDED_COPY.atRateHolds(figure(shownRateOf(pick)), counted, start)
             : RECOMMENDED_COPY.atRateRuns(figure(shownRateOf(pick)), counted));
     }
     const itsRate = figure(shownRateOf(pick));
     const holdsOverEquallyNear = ranking.holds_expected_output && alternatives.some(other => other !== pick
         && offTargetKey(other.ranking.rate_off_target) === near && !other.ranking.holds_expected_output);
     return lead + (itsRate === rate ? RECOMMENDED_COPY.nearest : RECOMMENDED_COPY.nearestAt(itsRate))
-        + (holdsOverEquallyNear ? RECOMMENDED_COPY.nearestHolds : '');
+        + (holdsOverEquallyNear ? RECOMMENDED_COPY.nearestHolds(start) : '');
 }
 
 /** The last line of the Rank column's help: whether the slower searches ran */

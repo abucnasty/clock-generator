@@ -31,7 +31,9 @@ interface OverridesFormProps {
     /** What the target counts: for the item destroyed, the forced count is of hands brought into a machine, not of output swings */
     counts?: TargetCounts;
     searchForFewerWakeUps?: boolean;
-    onUpdate: (field: 'lcm' | 'terminal_swing_count' | 'search_for_fewer_wake_ups', value: number | boolean | undefined) => void;
+    /** The start every clock is judged from; none named is the backpressure start */
+    judgedStart?: NonNullable<ConfigFormData['overrides']>['judged_start'];
+    onUpdate: (field: 'lcm' | 'terminal_swing_count' | 'search_for_fewer_wake_ups' | 'judged_start', value: number | boolean | string | undefined) => void;
     /** The swing plan of the last check, under the fields */
     planSlot?: ReactNode;
     /** Closed on a first visit, and again when the build is replaced (Import, Paste, Reset) */
@@ -47,6 +49,7 @@ export function OverridesForm({
     terminalSwingCount,
     counts = 'made',
     searchForFewerWakeUps,
+    judgedStart,
     onUpdate,
     planSlot,
     expanded,
@@ -56,6 +59,7 @@ export function OverridesForm({
     const summaryId = useId();
     const forceId = useId();
     const searchId = useId();
+    const startId = useId();
     const force = FORCE_TEXT[counts];
     return (
         <Accordion
@@ -145,6 +149,18 @@ export function OverridesForm({
                         </Box>
                         <Typography id={`${searchId}-help`} variant="caption" color="text.secondary" component="p">
                             Search even when a clock already holds the rate; generation takes longer.
+                        </Typography>
+                    </Box>
+                    <Box>
+                        <FormControlLabel
+                            control={<Switch id={startId} checked={judgedStart === 'cold'} color="primary"
+                                slotProps={{ input: { role: 'switch', 'aria-describedby': `${startId}-help` } }}
+                                onChange={e => onUpdate('judged_start', e.target.checked ? 'cold' : undefined)} />}
+                            label="Judge from the cold start"
+                            sx={{ mr: 0 }}
+                        />
+                        <Typography id={`${startId}-help`} variant="caption" color="text.secondary" component="p">
+                            Off: the backpressure start. On: the cold start, with empty machines.
                         </Typography>
                     </Box>
                 </Box>

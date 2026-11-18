@@ -7,6 +7,8 @@ describe('advancedSetCount', () => {
         expect(advancedSetCount({})).toBe(0);
         expect(advancedSetCount({ backed_up_belts: true })).toBe(0);
         expect(advancedSetCount({ ignored_lcm_ingredients: [] })).toBe(0);
+        // the default start named is no change from the default
+        expect(advancedSetCount({ judged_start: 'backpressure' })).toBe(0);
         // a saved build from when the switch existed: the engine drops the field, and it is not counted
         expect(advancedSetCount({ use_fractional_swings: true } as Parameters<typeof advancedSetCount>[0])).toBe(0);
     });
@@ -15,6 +17,7 @@ describe('advancedSetCount', () => {
         expect(advancedSetCount({ lcm: 60 })).toBe(1);
         expect(advancedSetCount({ terminal_swing_count: 2, search_for_fewer_wake_ups: true })).toBe(2);
         expect(advancedSetCount({ check_start_dependence: false, kick_start_items: 0 })).toBe(2);
+        expect(advancedSetCount({ judged_start: 'cold' })).toBe(1);
         expect(advancedSetCount({
             lcm: 60,
             terminal_swing_count: 2,

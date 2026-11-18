@@ -155,7 +155,9 @@ describe('the status of every clock, in the compare table: the Status column, no
         for (const word of ['Stable', 'Underproduces', 'Overproduces', 'Oscillates', 'No recovery', 'Error', 'Start-dependent']) {
             expect(help.split(word).length - 1, word).toBe(1);
         }
-        expect(help.endsWith(SUMMARY_COPY.statusChecks)).toBe(true);
+        expect(help.endsWith(SUMMARY_COPY.statusChecks('backpressure'))).toBe(true);
+        expect(help).toContain('from the backpressure start');
+        expect(help).not.toContain('cold start');
     });
 
     it('says with every column the word of the Status column, Stable in place of "Recovery: Yes"', () => {
@@ -239,8 +241,8 @@ describe('the Rank column: the engine\'s order', () => {
         const header = screen.getAllByRole('columnheader').find(head => head.textContent === 'Rank')!;
         await user.click(within(header).getByRole('button', { name: 'About Rank' }));
         const help = await screen.findByRole('dialog');
-        expect(within(help).getAllByRole('listitem').map(item => item.textContent)).toEqual(RECOMMENDED_COPY.rankKeys);
-        expect(help.textContent).toBe([RECOMMENDED_COPY.rankLead, ...RECOMMENDED_COPY.rankKeys, RECOMMENDED_COPY.rankTie, RECOMMENDED_COPY.rankFirst,
+        expect(within(help).getAllByRole('listitem').map(item => item.textContent)).toEqual(RECOMMENDED_COPY.rankKeys('backpressure'));
+        expect(help.textContent).toBe([RECOMMENDED_COPY.rankLead, ...RECOMMENDED_COPY.rankKeys('backpressure'), RECOMMENDED_COPY.rankTie, RECOMMENDED_COPY.rankFirst,
             RECOMMENDED_COPY.runSearched].join(''));
     });
 

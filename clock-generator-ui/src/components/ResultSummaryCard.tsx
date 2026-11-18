@@ -24,6 +24,8 @@ import { Disclosure } from './Disclosure';
 import { RecommendedChip } from './RecommendedChip';
 import { WHY_NOT_STABLE_TITLE } from '../utils/whyNotStable';
 import { useGameNames } from '../hooks/useGameNames';
+import { useJudgedStart } from '../hooks/useJudgedStart';
+import type { JudgedStart } from '../utils/judgedStart';
 import { whyNotStableShowsCause } from '../utils/checkedLanes';
 import { DIAGNOSTICS_COPY, hasDiagnostics } from '../utils/diagnostics';
 import { CauseHeadline } from './CheckedLanesView';
@@ -99,7 +101,7 @@ function ClockFacts(props: SelectedProps & { nameRef: RefObject<HTMLHeadingEleme
     const isRecommended = selectedIndex === recommendedIndex;
     const recommended = recommendedIndex === null ? undefined : alternatives[recommendedIndex];
     const makes = makesText(selected, selected.copies);
-    const wakeUps = wakeUpsText(selected);
+    const wakeUps = wakeUpsText(selected, useJudgedStart());
     const signals = signalsText(selected);
     const recovers = recoversOf(selected);
     const { itemLabel } = useGameNames();
@@ -169,11 +171,11 @@ function fewestDecidersMeaning(alternatives: ClockAlternativeView[], index: numb
 }
 
 /** Why this clock is the pick, or how it differs from the pick; empty where there is no pick yet */
-function reasonOf(props: SelectedProps): string {
+function reasonOf(props: SelectedProps, start: JudgedStart): string {
     const { alternatives, selectedIndex, recommendedIndex, isGenerating, selected } = props;
     const recommended = recommendedIndex === null ? undefined : alternatives[recommendedIndex];
     return selectedIndex === recommendedIndex
-        ? recommendationReason(alternatives, recommendedIndex, !isGenerating && !props.stoppedEarly, props.stoppedEarly && !isGenerating)
+        ? recommendationReason(alternatives, recommendedIndex, !isGenerating && !props.stoppedEarly, props.stoppedEarly && !isGenerating, start)
         : recommended ? [pickNameMeaning(alternatives, selectedIndex), differenceFromRecommended(selected, recommended)].filter(Boolean).join(' ') : '';
 }
 
@@ -184,6 +186,7 @@ function reasonOf(props: SelectedProps): string {
 export function ResultSummaryCard(props: ResultSummaryCardProps) {
     const { alternatives, selectedIndex, isGenerating } = props;
     const nameRef = useRef<HTMLHeadingElement>(null);
+    const judgedStart = useJudgedStart();
     const selected = alternatives[selectedIndex];
 
     // a generation that ends with the focus on nothing (Generate was off while it ran) leaves it on the answer
@@ -204,7 +207,7 @@ export function ResultSummaryCard(props: ResultSummaryCardProps) {
 
     const recommended = props.recommendedIndex === null ? undefined : alternatives[props.recommendedIndex];
     const causeAbove = whyNotStableShowsCause(props.whyNotStable, recommended);
-    const reason = selected ? reasonOf({ ...props, selected }) : '';
+    const reason = selected ? reasonOf({ ...props, selected }, judgedStart) : '';
     const beltLine = selected?.beltLabel === '';
     return (
         <Panel title={CARD_COPY.heading} actions={selected ? props.actions : undefined} sx={{ '& > :last-child': { p: 1.5 } }} data-result-card="" data-build-anchor="selected-clock">

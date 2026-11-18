@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { SerializableTransferPlan } from 'clock-generator/browser';
 import { ChestType } from 'clock-generator/light';
 import { belt, bufferChest, build, inserter, machine } from '../../test/fixtures';
+import { formDataToConfig } from './configMapping';
 import * as edits from './edits';
 import {
     createDefaultConfig, type ConfigFormData, type EntityKind, type EnableControlOverride, type InfinityChestFormData, type InserterFormData,
@@ -301,6 +302,13 @@ describe('overrides', () => {
         const config = edits.updateOverrides(createDefaultConfig(), 'lcm', 120);
         expect(config.overrides).toEqual({ lcm: 120 });
         expect('overrides' in edits.updateOverrides(config, 'lcm', undefined)).toBe(false);
+    });
+
+    it('carries the start a build is judged from into the config the engine reads, and takes it out again', () => {
+        const cold = edits.updateOverrides(build(), 'judged_start', 'cold');
+        expect(formDataToConfig(cold).overrides).toEqual({ judged_start: 'cold' });
+        const back = edits.updateOverrides(cold, 'judged_start', undefined);
+        expect(formDataToConfig(back).overrides).toBeUndefined();
     });
 
     const ironPlan = plan({ 1: ['iron-plate'] });

@@ -207,7 +207,7 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
     {
         id: 'holds-the-rate',
         term: 'holds the rate',
-        definition: 'The clock holds its expected output in the modeled cold-start checks while supplies remain available. '
+        definition: 'The clock holds its expected output in the modeled start checks while supplies remain available. '
             + 'A start-dependent clock can hold here. It can still settle differently from other sampled starts, and be ranked unstable.',
         insteadOf: '"meets the target rate", "holds the target rate" (say "holds the setpoint")',
     },

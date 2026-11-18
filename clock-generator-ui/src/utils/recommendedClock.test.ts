@@ -189,15 +189,15 @@ describe('recommendationReason', () => {
         it.each<[string, Clock[], string]>([
             ['says how near the pick runs', [short('far', -3), short('near', -0.5)], none + nearestAt('239.5')],
             ['says the pick holds its output when an equally near clock does not', [short('drifts', -0.5, false), short('holds', 0.5)],
-                none + nearestAt('240.5') + nearestHolds],
+                none + nearestAt('240.5') + nearestHolds('backpressure')],
             ['does not say so when no other clock is equally near', [short('drifts', -2, false), short('holds', 0.5)], none + nearestAt('240.5')],
             ['does not call a clock at the target rate the nearest: it holds the rate from a clean start',
                 [short('more', 0, true, { wake_ups_per_minute: 30 }), short('fewer', 0), short('far', -2)],
-                `${none} This one holds 240/s from the modeled cold start with the fewest wakeups.`],
+                `${none} This one holds 240/s from the backpressure start with the fewest wakeups.`],
             ['says a clock at the rate that does not hold its output only runs at it', [short('drifts', 0, false)],
                 `${none} This one runs at 240/s with the fewest wakeups.`],
             ['says a clock at the rate that holds its output holds it, without the fewest wakeups when they were not counted',
-                [short('uncounted', 0, true, { wake_ups_per_minute: null })], `${none} This one holds 240/s from the modeled cold start.`],
+                [short('uncounted', 0, true, { wake_ups_per_minute: null })], `${none} This one holds 240/s from the backpressure start.`],
             ['does not print the same rate twice when the pick is off by less than the printed figure', [short('close', 0.002)], none + nearest],
             ['says no clock holds the rate on a build with a deadlock risk', [short('near', -0.5, false, { deadlock: true })],
                 'No clock holds 240/s.' + nearestAt('239.5')],
@@ -225,17 +225,35 @@ describe('recommendationReason', () => {
     });
 });
 
+describe('the start the texts name', () => {
+    const clocks = [short('more', 0, true, { wake_ups_per_minute: 30 }), short('far', -2)];
+    const said = (start?: 'cold' | 'backpressure') => recommendationReason(clocks, recommendedIndexOf(clocks), true, false, start);
+
+    it('says the backpressure start by default, and the cold start only for a build judged from it', () => {
+        expect(said()).toContain('This one holds 240/s from the backpressure start');
+        expect(said('backpressure')).toBe(said());
+        expect(said('cold')).toContain('This one holds 240/s from the cold start');
+        expect(said()).not.toContain('cold');
+    });
+
+    it('names the start in the third key of the rank help', () => {
+        expect(RECOMMENDED_COPY.rankKeys('backpressure')[2]).toBe('It holds its output from the backpressure start.');
+        expect(RECOMMENDED_COPY.rankKeys('cold')[2]).toBe('It holds its output from the cold start.');
+    });
+});
+
 describe('RECOMMENDED_COPY', () => {
     it('says "Best so far" and offers "Back to best so far" while clocks are still being made', () => {
         expect(RECOMMENDED_COPY).toMatchObject({ chipWhileGenerating: 'Best so far', backWhileGenerating: 'Back to best so far' });
     });
 
     it('says in the help of the Rank column what ranks first on a build with a deadlock risk', () => {
-        expect(RECOMMENDED_COPY.rankKeys[0]).toContain('On a build with a deadlock risk, it holds the setpoint.');
+        expect(RECOMMENDED_COPY.rankKeys('backpressure')[0]).toContain('On a build with a deadlock risk, it holds the setpoint.');
     });
 
     it('names the seven keys of the engine\'s order in the help of the Rank column, in order, and rank 1 as the recommended clock', () => {
-        const { rankKeys, rankFirst, rankTie } = RECOMMENDED_COPY;
+        const { rankFirst, rankTie } = RECOMMENDED_COPY;
+        const rankKeys = RECOMMENDED_COPY.rankKeys('backpressure');
         expect(rankKeys).toHaveLength(7);
         // the tier, the distance from the setpoint, holding the output, the wakeups, the signals, the recovery, the enable windows
         ['rounded to whole ticks', 'nearer to the setpoint', 'holds its output', 'fewer wakeups', 'fewer signals', 'fewer window cycles', 'fewer enable windows']

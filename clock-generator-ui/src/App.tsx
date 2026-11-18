@@ -1371,6 +1371,7 @@ function App() {
                                     terminalSwingCount={config.overrides?.terminal_swing_count}
                                     counts={targetCounts}
                                     searchForFewerWakeUps={config.overrides?.search_for_fewer_wake_ups}
+                                    judgedStart={config.overrides?.judged_start}
                                     onUpdate={updateOverrides}
                                     expanded={advancedOpen}
                                     onExpandedChange={setAdvancedOpen}

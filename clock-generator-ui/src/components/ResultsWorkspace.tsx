@@ -1,6 +1,8 @@
 import { Alert, Box, Button, Paper, Typography, useMediaQuery, useTheme } from '@mui/material';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Config, NotMadeClock } from 'clock-generator/browser';
+import { JudgedStartContext } from '../hooks/useJudgedStart';
+import { judgedStartOf } from '../utils/judgedStart';
 import type { ResultDetail } from '../utils/resultsView';
 import type { TimelineViewContext } from '../utils/buildViewContext';
 import { SelectedClockContext } from './SelectedClockContext';
@@ -204,6 +206,8 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
         : diagnosticsBeside ? '360px minmax(0, 1fr) minmax(0, 0.8fr)' : '360px minmax(0, 1fr)';
 
     return (
+        // the texts of the shown clocks name the start they were judged from, not the one the form holds now
+        <JudgedStartContext.Provider value={judgedStartOf(saved?.overrides)}>
         <Box>
             {props.staleFor !== null && hasResults && (
                 <StaleResultsBanner generatedFor={props.staleFor} changes={props.changes} onGenerate={props.onGenerate} canGenerate={props.canGenerate} />
@@ -333,5 +337,6 @@ export function ResultsWorkspace(props: ResultsWorkspaceProps) {
                 />
             )}
         </Box>
+        </JudgedStartContext.Provider>
     );
 }

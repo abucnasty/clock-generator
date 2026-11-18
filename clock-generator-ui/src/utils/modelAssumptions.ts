@@ -1,5 +1,6 @@
 import type { ClockAlternativeView, GenerationAssumptions } from '../worker/types';
 import { entityInSentence, machineInSentence, nameInSentence, sentenceStart } from './entityLabel';
+import type { JudgedStart } from './judgedStart';
 
 /** Only actual outcomes count as evaluated; the requested flag and null are never successful checks. */
 export function startCheckSummary(clocks: Pick<ClockAlternativeView, 'assessment'>[], generation: GenerationAssumptions | null): string {
@@ -17,8 +18,11 @@ export function startCheckSummary(clocks: Pick<ClockAlternativeView, 'assessment
         + (missing > 0 ? ` Results for other starting states are unavailable for ${missing}.` : '');
 }
 
-/** The cold start every clock is tested from, with what it does not promise, for the Overview */
-export const MODELED_START = 'Tested from a cold start: full input, empty machines and inserters, the clock at its first tick. The clock is planned on a separate copy of the build, and rates are read at steady state, so they do not promise the setpoint in the first window cycle, or from every state a running build can be in.';
+/** The start every clock is tested from, with what it does not promise, for the Overview */
+export const modeledStartText = (start: JudgedStart): string => (start === 'cold'
+    ? 'Tested from a cold start: full input, empty machines and inserters, the clock at its first tick.'
+    : 'Tested from the backpressure start: every machine and belt that can fill without the clock is full, the clock at its first tick.')
+    + ' The clock is planned on a separate copy of the build, and rates are read at steady state, so they do not promise the setpoint in the first window cycle, or from every state a running build can be in.';
 /** What the tests do not cover, last in the Overview's list */
 export const START_LIMITS = 'None of this covers every stock of items in a running build, the order you build it in, how much a real belt carries, or recovery in the game.';
 /** How many other places in its window cycle the clock was tried from */
@@ -35,6 +39,8 @@ export function modeledDetails(clock: ClockAlternativeView, itemLabel: (id: stri
     recipeLabel: (id: string) => string = (id) => id): string[] {
     const facts = clock.assumptions;
     if (!facts) return [];
+    const { judged_start: _start, ...explicit } = facts.overrides ?? {};
+    void _start;
     const machine = (id: number | string) => sentenceStart(machineInSentence(id, facts.machines, { itemLabel, recipeLabel }));
     return [
         ...facts.kickStarts.map(seed =>
@@ -45,7 +51,8 @@ export function modeledDetails(clock: ClockAlternativeView, itemLabel: (id: stri
             : freeLaneDropText(entityInSentence('belt', drop.beltId, facts.entityNames))),
         ...facts.machineFuel.map(fuel => `${machine(fuel.machineId)}: imported fuel ${nameInSentence(itemLabel(fuel.fuel))}.`),
         // only overrides that are there: an empty set says nothing
-        ...(facts.overrides !== undefined && Object.keys(facts.overrides).length > 0 ? [`Explicit run overrides: ${JSON.stringify(facts.overrides)}.`] : []),
+        // the start is said above, once (modeledStartText)
+        ...(Object.keys(explicit).length > 0 ? [`Explicit run overrides: ${JSON.stringify(explicit)}.`] : []),
     ];
 }
 

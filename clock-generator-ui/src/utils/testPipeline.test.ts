@@ -18,7 +18,7 @@ describe('the tests of a clock, from the result\'s data', () => {
 
     it('one copy fails: the copies and the loss trials are not run', () => {
         expect(said(clock('takt_batches_observed_swings_4'))).toEqual([
-            'failed: Makes 180/s of 240/s | At steady state, from a cold start.',
+            'failed: Makes 180/s of 240/s | At steady state.',
             'not-run: Not run | One copy alone does not hold its rate.',
             'not-run: Not run | One copy alone does not hold its rate.',
         ]);
@@ -26,7 +26,7 @@ describe('the tests of a clock, from the result\'s data', () => {
 
     it('all pass', () => {
         expect(said(clock('time_study_windows'))).toEqual([
-            'passed: Holds 240/s | At steady state, from a cold start.',
+            'passed: Holds 240/s | At steady state.',
             'passed: Holds 240/s | On the lanes the copies share.',
             'passed: Recovers | After a supply stop and after an output blockage.',
         ]);
@@ -34,7 +34,7 @@ describe('the tests of a clock, from the result\'s data', () => {
 
     it('a loss with all the copies: the rate the card shows against the target; one copy recovers', () => {
         expect(said(clock('takt_batches_observed'))).toEqual([
-            'passed: Holds 240/s | At steady state, from a cold start.',
+            'passed: Holds 240/s | At steady state.',
             'failed: Makes 234.07/s of 240/s | On the lanes the copies share.',
             'passed: One copy recovers | The copies are not tried: they do not hold their rate.',
         ]);
@@ -44,7 +44,7 @@ describe('the tests of a clock, from the result\'s data', () => {
         const pitch = clock('pitch_pickups');
         expect(pitch.assessment.disturbance_trial?.on_copies?.survives).toBe(false);
         expect(said(pitch)).toEqual([
-            'passed: Holds 240/s | At steady state, from a cold start.',
+            'passed: Holds 240/s | At steady state.',
             'passed: Holds 240/s | On the lanes the copies share.',
             'failed: The copies do not recover | One copy alone recovers.',
         ]);
@@ -54,7 +54,7 @@ describe('the tests of a clock, from the result\'s data', () => {
         const one = clock('takt_batches_swings_1');
         expect(one.assessment.disturbance_trial?.on_copies).toBeUndefined();
         expect(said(one)).toEqual([
-            'passed: Holds 240/s | At steady state, from a cold start.',
+            'passed: Holds 240/s | At steady state.',
             'failed: Makes 234.46/s of 240/s | On the lanes the copies share.',
             'failed: One copy does not recover | It does not go back to its rate by itself.',
         ]);
@@ -67,7 +67,7 @@ describe('the tests of a clock, from the result\'s data', () => {
         expect(said({ ...clock('takt_batches_observed_swings_4'), copies: 1, checkedLanes: undefined })[1]).toBe('does-not-apply: Does not apply | No lane is used by several inserters.');
         // one copy that does not hold: the clock alone, and the test that comes after it does not run
         expect(said({ ...clock('takt_batches_observed_swings_4'), copies: 1 })).toEqual([
-            'failed: Makes 180/s of 240/s | At steady state, from a cold start.',
+            'failed: Makes 180/s of 240/s | At steady state.',
             'not-run: Not run | The clock alone does not hold its rate.',
             'not-run: Not run | The clock alone does not hold its rate.',
         ]);
@@ -185,12 +185,12 @@ describe('the trials of a loss that breaks the clock, as numbers under the loss 
 
 describe('the first box of a clock whose status is Oscillates', () => {
     it('says the status, as the chip does, where the clock does not hold at the setpoint', () => {
-        expect(said(oscillatingOf(clock('time_study_windows')))[0]).toBe('failed: Oscillates | At steady state, from a cold start.');
+        expect(said(oscillatingOf(clock('time_study_windows')))[0]).toBe('failed: Oscillates | At steady state.');
     });
 
     it('says the rate first where the clock is off the setpoint', () => {
         const off = oscillatingOf(clock('time_study_windows'));
         const shown = { ...off, ranking: { ...off.ranking, rate_off_target: -48 }, assessment: { ...off.assessment, items_per_second: 192 } };
-        expect(said(shown)[0]).toBe('failed: Makes 192/s of 240/s | At steady state, from a cold start.');
+        expect(said(shown)[0]).toBe('failed: Makes 192/s of 240/s | At steady state.');
     });
 });

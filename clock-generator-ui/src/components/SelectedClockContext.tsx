@@ -5,8 +5,9 @@ import { Disclosure } from './Disclosure';
 import type { SwingBackoffReport } from 'clock-generator/browser';
 import type { ClockAlternativeView, GenerationAssumptions } from '../worker/types';
 import type { ResultDetail } from '../utils/resultsView';
-import { MODELED_START, START_LIMITS, modeledDetails, phaseChecksText, startCheckSummary } from '../utils/modelAssumptions';
+import { START_LIMITS, modeledDetails, modeledStartText, phaseChecksText, startCheckSummary } from '../utils/modelAssumptions';
 import { useGameNames } from '../hooks/useGameNames';
+import { useJudgedStart } from '../hooks/useJudgedStart';
 import { formatNumberText } from '../utils/numberText';
 import { FullscreenWorkspace } from './FullscreenWorkspace';
 import { tabProps } from '../utils/tabIds';
@@ -37,6 +38,7 @@ export function SelectedClockContext({ selected, detail: savedDetail, onDetailCh
     children: ReactNode;
 }) {
     const { itemLabel, recipeLabel } = useGameNames();
+    const judgedStart = useJudgedStart();
     const [fullscreen, setFullscreen] = useState(false);
     const diagnosticsTab = !diagnosticsBeside || fullscreen;
     // a saved Diagnostics, where it is no tab, shows Overview and stays saved, for the page at another width
@@ -54,7 +56,7 @@ export function SelectedClockContext({ selected, detail: savedDetail, onDetailCh
         </Tabs>
         <TabBody prefix="result-context" tab="overview" shown={detail === 'overview'}>
             <Disclosure summary="Model and tested starts" open={assumptionsOpen} onToggle={setAssumptionsOpen} sx={{ mt: 1, overflowWrap: 'anywhere' }} data-model-assumptions="">
-                <Typography variant="body2" sx={{ mt: 1 }}>{MODELED_START}</Typography>
+                <Typography variant="body2" sx={{ mt: 1 }}>{modeledStartText(judgedStart)}</Typography>
                 <Typography variant="body2" sx={{ mt: 1 }}>{startCheckSummary([selected], generation)}</Typography>
                 {modeledDetails(selected, itemLabel, recipeLabel).map(line => <Typography key={line} variant="body2" sx={{ mt: 1 }}>{line}</Typography>)}
                 <Typography variant="body2" sx={{ mt: 1 }}>{phaseChecksText(selected.asBuilt?.start_phases_checked)}</Typography>

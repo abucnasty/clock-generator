@@ -106,6 +106,85 @@ async function generateAt(browser, url) {
     return errors;
 }
 
+/**
+ * The cold start switch in Advanced: off on a build that names no start, on after a click (the section then counts it,
+ * "Advanced · 1 set"), off again after a second. With `SWITCH_SHOTS` set to a folder, a screenshot of each state goes there.
+ */
+async function coldStartSwitchAt(browser, url) {
+    const errors = [];
+    const page = await browser.newPage();
+    page.setDefaultTimeout(TIMEOUT_MS);
+    page.on('pageerror', (error) => errors.push(`page: ${error.message}`));
+    page.on('console', (message) => {
+        if (message.type() === 'error') errors.push(`${message.worker() ? 'worker' : 'page'} console: ${message.text()}`);
+    });
+    const shots = process.env.SWITCH_SHOTS;
+    const shoot = async (state) => {
+        if (shots) await page.locator('[data-build-anchor="advanced"]').screenshot({ path: `${shots}/cold-start-switch-${state}.png` });
+    };
+    try {
+        await page.goto(url);
+        await page.getByRole('button', { name: 'Try an example' }).click();
+        await page.getByRole('dialog').getByRole('button', { name: EXAMPLE }).click();
+        const advanced = page.getByRole('button', { name: /^Advanced/ });
+        await advanced.click();
+        const toggle = page.getByRole('switch', { name: 'Judge from the cold start' });
+        await toggle.waitFor();
+        for (const [state, checked] of [['default', false], ['cold', true], ['default-again', false]]) {
+            if (state !== 'default') await toggle.click();
+            if (await toggle.isChecked() !== checked) errors.push(`the cold start switch is ${checked ? 'off' : 'on'} in the state "${state}"`);
+            const counted = (await advanced.innerText()).includes('1 set');
+            if (counted !== checked) errors.push(`Advanced ${counted ? 'counts' : 'does not count'} a setting in the state "${state}"`);
+            if (state !== 'default-again') await shoot(state);
+        }
+    } catch (error) {
+        errors.push(error instanceof Error ? error.message : String(error));
+    } finally {
+        await page.close();
+    }
+    return errors;
+}
+
+/**
+ * The result text that names the start (Model and tested starts) after a generation: the backpressure start by default,
+ * the cold start only when the switch was on for it. With `SWITCH_SHOTS` set to a folder, a screenshot of the text goes there.
+ */
+async function startTextAt(browser, url, cold) {
+    const errors = [];
+    const page = await browser.newPage();
+    page.setDefaultTimeout(TIMEOUT_MS);
+    page.on('pageerror', (error) => errors.push(`page: ${error.message}`));
+    try {
+        await page.goto(url);
+        await page.getByRole('button', { name: 'Try an example' }).click();
+        await page.getByRole('dialog').getByRole('button', { name: EXAMPLE }).click();
+        if (cold) {
+            await page.getByRole('button', { name: /^Advanced/ }).click();
+            await page.getByRole('switch', { name: 'Judge from the cold start' }).click();
+        }
+        await page.getByRole('button', { name: 'Generate', exact: true }).click();
+        await page.getByRole('button', { name: 'Copy blueprint' }).waitFor();
+        const results = page.getByRole('button', { name: 'Results', exact: true });
+        if (await results.getAttribute('aria-pressed') !== 'true') await results.click();
+        await page.getByRole('tab', { name: 'Overview' }).click();
+        const model = page.locator('[data-model-assumptions]');
+        await model.waitFor({ state: 'visible' });
+        if (!(await model.innerText()).includes('Tested from')) await model.getByText('Model and tested starts').click();
+        const text = await model.innerText();
+        const [said, notSaid] = cold ? ['Tested from a cold start', 'backpressure start'] : ['Tested from the backpressure start', 'cold start'];
+        if (!text.includes(said)) errors.push(`the result text lacks "${said}": ${text.slice(0, 160)}`);
+        if (text.includes(notSaid)) errors.push(`the result text says "${notSaid}" where the switch is ${cold ? 'on' : 'off'}`);
+        const card = page.locator('[data-result-card]');
+        if ((await card.innerText()).includes(cold ? 'backpressure start' : 'cold start')) errors.push('the result card names the other start');
+        if (process.env.SWITCH_SHOTS) await model.screenshot({ path: `${process.env.SWITCH_SHOTS}/result-text-${cold ? 'cold' : 'default'}.png` });
+    } catch (error) {
+        errors.push(error instanceof Error ? error.message : String(error));
+    } finally {
+        await page.close();
+    }
+    return errors;
+}
+
 /** Reproduces fullscreen output-route repair while a machine draft is dirty. */
 async function repairOutputFocusAt(browser, url) {
     const errors = [];
@@ -326,6 +405,22 @@ try {
                 failed = true;
             } else {
                 console.log(`Generated the logistic science example in a browser on ${name} in ${((Date.now() - started) / 1000).toFixed(1)} s`);
+            }
+            const switchErrors = await coldStartSwitchAt(browser, server.resolvedUrls.local[0]);
+            if (switchErrors.length > 0) {
+                console.error(`The cold start switch failed in a browser on ${name}:\n${switchErrors.map((error) => `  ${error}`).join('\n')}`);
+                failed = true;
+            } else {
+                console.log(`Turned the cold start switch on and off in a browser on ${name}`);
+            }
+            for (const cold of [false, true]) {
+                const textErrors = await startTextAt(browser, server.resolvedUrls.local[0], cold);
+                if (textErrors.length > 0) {
+                    console.error(`The result text of the ${cold ? 'cold' : 'backpressure'} start failed in a browser on ${name}:\n${textErrors.map((error) => `  ${error}`).join('\n')}`);
+                    failed = true;
+                } else {
+                    console.log(`The result text names the ${cold ? 'cold' : 'backpressure'} start in a browser on ${name}`);
+                }
             }
             const repairErrors = await repairOutputFocusAt(browser, server.resolvedUrls.local[0]);
             if (repairErrors.length > 0) {

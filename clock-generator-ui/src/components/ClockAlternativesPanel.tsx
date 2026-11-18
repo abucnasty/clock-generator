@@ -16,6 +16,7 @@ import {
 import { Fragment, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import type { ClockAlternativeView } from '../hooks/useSimulationWorker';
 import { useHeldOrder } from '../hooks/useHeldOrder';
+import { useJudgedStart } from '../hooks/useJudgedStart';
 import { CLOCK_TABLE_NAME, CLOCK_TABLE_REGION, clockHelpName, termsHelpName } from '../utils/a11yLabels';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
 import { shownRateOf } from '../utils/shownRate';
@@ -120,19 +121,21 @@ const textHelp = (label: string, help: string) => (
 
 /** The (?) of the Status head: each status the column can show, once, then how the clocks are checked */
 function StatusHelp() {
+    const start = useJudgedStart();
     return (
         <HelpButton label={`About ${COMPARE_COPY.status}`}>
             {SUMMARY_COPY.statusHelp.map(([word, meaning]) => (
                 <Typography key={word} variant="body2" sx={{ mb: 0.75 }}><Box component="strong">{word}:</Box> {meaning}</Typography>
             ))}
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>{SUMMARY_COPY.statusChecks}</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>{SUMMARY_COPY.statusChecks(start)}</Typography>
         </HelpButton>
     );
 }
 
 /** The (?) of the Rank head: the engine's seven keys in order, and whether the slower searches ran */
 function RankHelp({ pickRule }: { pickRule: PickRule | null }) {
-    const { rank, rankLead, rankKeys, rankTie, rankFirst } = RECOMMENDED_COPY;
+    const { rank, rankLead, rankTie, rankFirst } = RECOMMENDED_COPY;
+    const rankKeys = RECOMMENDED_COPY.rankKeys(useJudgedStart());
     return (
         <HelpButton label={`About ${rank}`}>
             <Typography variant="body2" sx={{ mb: 0.75 }}>{rankLead}</Typography>
@@ -240,7 +243,7 @@ function cellOf(id: ColumnId, { alternative, index, rank }: ClockRow<ClockAltern
         );
         case 'clock': return <ClockNameCell alternative={alternative} />;
         case 'makes': return formatNumberText(shownRateOf(alternative));
-        case 'wakeUps': return wakeUpsCell(alternative);
+        case 'wakeUps': return <WakeUpsCell alternative={alternative} />;
         case 'signals': return signalsCell(alternative);
         case 'deciders': return alternative.deciders;
         case 'swings': return swingsText(alternative);
@@ -483,9 +486,10 @@ export function CompareClocksDialog({ open, onClose, ...table }: ClockAlternativ
 
 /**
  * The wake-ups of one copy, rounded; under them, where they are the average of the start points, how many, and the
- * cold start's figure where it is far off it; a dash when they were not counted
+ * judged start's figure where it is far off it; a dash when they were not counted
  */
-function wakeUpsCell(alternative: ClockAlternativeView): ReactNode {
+function WakeUpsCell({ alternative }: { alternative: ClockAlternativeView }): ReactNode {
+    const start = useJudgedStart();
     const perMinute = alternative.assessment.wake_ups_per_minute;
     if (perMinute === null) {
         return '—';
@@ -497,7 +501,7 @@ function wakeUpsCell(alternative: ClockAlternativeView): ReactNode {
             {average !== null && (
                 <Typography variant="caption" component="div" color="text.secondary" sx={{ whiteSpace: 'normal', minWidth: '12ch' }} data-wake-ups-average="">
                     {SUMMARY_COPY.wakeUpsAverage(average.starts)}
-                    {average.coldStart !== null && <><br />{SUMMARY_COPY.wakeUpsColdStart(Math.round(average.coldStart))}</>}
+                    {average.coldStart !== null && <><br />{SUMMARY_COPY.wakeUpsFromStart(Math.round(average.coldStart), start)}</>}
                 </Typography>
             )}
         </>

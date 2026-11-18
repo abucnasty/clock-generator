@@ -44,7 +44,9 @@ describe('the Enable windows chart\'s words', () => {
         const args = { windowCycleTicks: 216, inserters: 2, drills: 0 };
         expect(summaryText({ ...args, wakeUps: 192.1 })).toBe('Window cycle time 216 ticks (3.6 s) · 2 inserters');
         expect(summaryText({ ...args, wakeUps: null })).toBe('Window cycle time 216 ticks (3.6 s) · 2 inserters · Wakeups not counted');
-        expect(summaryText({ ...args, wakeUps: 192.1, fromColdStart: true }))
-            .toBe('Window cycle time 216 ticks (3.6 s) · 2 inserters · 192 wakeups a minute for one copy from a cold start');
+        expect(summaryText({ ...args, wakeUps: 192.1, fromStart: 'cold' }))
+            .toBe('Window cycle time 216 ticks (3.6 s) · 2 inserters · 192 wakeups a minute for one copy from the cold start');
+        expect(summaryText({ ...args, wakeUps: 192.1, fromStart: 'backpressure' }))
+            .toBe('Window cycle time 216 ticks (3.6 s) · 2 inserters · 192 wakeups a minute for one copy from the backpressure start');
     });
 });
