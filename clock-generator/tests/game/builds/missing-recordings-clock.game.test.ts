@@ -58,20 +58,28 @@ describe.sequential("the selected clock of a record job from the staged start, w
             const finalsPerCopy = config.machines.filter(machine => recipes.includes(machine.recipe)).length;
             const tailTicks = item.tail_ticks ?? TAIL_TICKS;
             const blueprint = fs.readFileSync(scaffoldFile(item), "utf8").trim();
+            // which inserters the clock's schedule names (the harness wires those to the clock): with the ids that have a window in the pick
+            fs.writeFileSync(path.join(directory, "schedule-inserters.json"), JSON.stringify({
+                scheduled: Array.from(new Set(exported.schedule.inserter_combinators.flatMap((it: any) => it.inserter_ids))).sort((a: any, b: any) => a - b),
+                windows: Object.keys(selected.result.clock_windows ?? {}),
+            }) + "\n");
             const probe = composeProbeSource(path.join(__dirname, "missing-recordings-clock-probe.lua"), {
                 window: RUN_PROTOCOL.window, expected: Math.round(target * RUN_PROTOCOL.window / 60 * 1e6) / 1e6, baseline: item.baseline?.ticks ?? RUN_PROTOCOL.baseline,
                 cap: RUN_PROTOCOL.cap, recipes, item: config.setpoint.recipe, ticks: RUN_PROTOCOL.cap + tailTicks, losses: item.losses, tail: tailTicks,
                 finals: finalsPerCopy * item.copies, late: item.late_recording !== undefined,
+                ...(item.block_sinks !== undefined && {block_sinks: true}),
             });
-            const {recording} = await recordInFactorio({
+            const {recording, start} = await recordInFactorio({
                 factorio: factorio!, save: save!, config, blueprint,
                 clock: {blueprint: encodeBlueprintFile({blueprint: exported.blueprint}), schedule: exported.schedule},
                 copies: item.copies > 1 ? item.copies : undefined,
                 out: path.join(directory, "recording.json"), work_dir: path.join(directory, "game"),
                 ...(item.late_recording === undefined ? {ticks: RUN_PROTOCOL.cap + tailTicks} : {ticks: LATE_RECORDING_TICKS, settle_ticks: RUN_PROTOCOL.cap + tailTicks + 1}),
-                warmup_ticks: 0, staged_start: {}, seed: [], unclocked: false, game_speed: 1000, watch: false, timeout_seconds: 3000,
-                log() {}, lua: probe,
+                warmup_ticks: 0, staged_start: item.start === "backpressure" ? {backpressure: {}} : {}, seed: [], unclocked: false, game_speed: 1000, watch: false, timeout_seconds: 3000,
+                log() {}, lua: item.prelude === undefined ? probe : `do\n${fs.readFileSync(path.join(__dirname, item.prelude), "utf8")}\nend\n${probe}`,
             }) as any;
+            // a backpressure start: what the game reported at the opening (the tick, whether the part no clock holds was steady, what the machines held)
+            if (item.start === "backpressure") fs.writeFileSync(path.join(directory, "opening.json"), JSON.stringify(start?.staged?.backpressure ?? null, null, 1) + "\n");
             const report = JSON.parse(fs.readFileSync(path.join(directory, "game", "script-output", "clock-speed.json"), "utf8"));
             const run = report.protocol;
             expect(run.error, "the probe failed in the game").toBeUndefined();

@@ -8,7 +8,8 @@
 --   {kind = "cut", item}       the item stops arriving: the infinity chests that hold it lose that filter and their stock of it, and it is
 --                              taken off every belt in every tick; hands and machines keep theirs
 --   {kind = "block"}           the output is not taken: the loaders that empty the output belts are removed (rebuilt on release); a build
---                              whose output goes into infinity chests with no loader has those chests refuse what comes (their slots filtered)
+--                              whose output goes into infinity chests with no loader has those chests refuse what comes (their slots filtered);
+--                              options.block_sinks: those chests refuse it also where the build has loaders (they drain its input belts)
 --   {kind = "stop", recipe}    the machines making the recipe are stopped (disabled by script) and what they made and waits is taken
 local entities, surface, _, settle = ...
 local report = {events = {}}
@@ -77,16 +78,23 @@ local function cut(item)
 end
 
 local loaders, sinks = {}, {}
+-- options.block_sinks: the chests the build's loaders drain into are not the output's, and are left as they are
+local drained = {}
+if options.block_sinks then
+    for _, e in pairs(entities) do
+        if e.valid and e.type == "loader" and e.loader_container and e.loader_container.valid then drained[e.loader_container.unit_number] = true end
+    end
+end
 for index, e in pairs(entities) do
     if e.valid and e.type == "loader" then
         table.insert(loaders, {index = index, spec = {name = e.name, position = e.position, direction = e.direction, force = e.force, type = e.loader_type}})
     end
-    if e.valid and e.type == "infinity-container" and e.remove_unfiltered_items and not e.get_infinity_container_filter(1) then table.insert(sinks, e) end
+    if e.valid and e.type == "infinity-container" and e.remove_unfiltered_items and not e.get_infinity_container_filter(1) and not drained[e.unit_number] then table.insert(sinks, e) end
 end
 local block = {
     kind = "block output",
     start = function(t)
-        if #loaders > 0 then
+        if #loaders > 0 and not options.block_sinks then
             for _, l in ipairs(loaders) do entities[l.index].destroy() end
             event(t, "block-output: " .. #loaders .. " loaders removed")
         else
@@ -113,7 +121,7 @@ local block = {
     end,
     -- the recorder reads the build after the probe: the rebuilt loaders take the old ones' places
     release = function(t)
-        if #loaders > 0 then
+        if #loaders > 0 and not options.block_sinks then
             for _, l in ipairs(loaders) do entities[l.index] = assert(surface.create_entity(l.spec)) end
         else
             for _, sink in ipairs(sinks) do
