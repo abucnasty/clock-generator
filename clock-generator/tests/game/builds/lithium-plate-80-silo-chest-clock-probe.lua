@@ -13,7 +13,8 @@ for _, entity in pairs(entities) do
         if pickup == silo then table.insert(empties, entity) end
     end
 end
-assert(#outputs == 6 and #fills == 2 and #empties == 6, "expected 6 output, 2 fill and 6 empty inserters")
+-- the inserters of a staged start (options.staged) are built in the tick the probe runs in and know their targets a tick later: they are counted by the host
+assert(options.staged or (#outputs == 6 and #fills == 2 and #empties == 6), "expected 6 output, 2 fill and 6 empty inserters")
 local sink, supplies = nil, {}
 for _, entity in pairs(entities) do
     if entity.valid and entity.type == "infinity-container" then
@@ -65,9 +66,16 @@ local block = {
         event(t, "restore-output")
     end,
 }
-steady.run{
-    finals = steady.final_machines(entities, options.recipes, options.item), clock = steady.clock(entities),
-    window = options.window, expected = options.expected, baseline = options.baseline, cap = options.cap,
-    disturbances = {cut(), block, cut()},
-    report = report, output = "clock-speed.json", settle = settle,
-}
+-- A staged start (options.staged): its furnaces have no recipe yet, so the run is counted from the first tick the final machines have
+-- one (steady.after_finals)
+local function run(finals, waited)
+    report.started_after = waited
+    steady.run{
+        finals = finals, clock = steady.clock(entities),
+        window = options.window, expected = options.expected, baseline = options.baseline, cap = options.cap,
+        disturbances = {cut(), block, cut()},
+        report = report, output = "clock-speed.json", settle = settle,
+    }
+end
+if options.staged then steady.after_finals(entities, options, run)
+else run(steady.final_machines(entities, options.recipes, options.item), 0) end

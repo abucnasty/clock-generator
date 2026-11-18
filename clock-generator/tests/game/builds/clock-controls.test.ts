@@ -218,7 +218,8 @@ const RECORD_LINKS: Record<string, RecordLink & {runs?: boolean}> = {
         offered: ["per-hand-as-is", "per-hand-backed-up"]},
     "productivity-module-80-chest-chain-clock-controls.json": {jobOf: config("PRODUCTIVITY_MODULE_80_CHEST_CHAIN"), offered: ["generated-one-copy"]},
     "steel-plate-26-wagon-chest-clock-controls.json": {
-        jobOf: name => name === "steel-wagon-iron-ore-out-of-period" ? variant("STEEL_PLATE_26_WAGON_CHEST_IRON_ORE_OUT_OF_PERIOD") : "config-STEEL_PLATE_26_WAGON_CHEST", runs: true,
+        jobOf: name => name.startsWith("steel-wagon-iron-ore-out-of-period") ? variant("STEEL_PLATE_26_WAGON_CHEST_IRON_ORE_OUT_OF_PERIOD")
+            : name.startsWith("steel-hub-") ? variant("STEEL_HUB_26_CONTAINER_OUTPUT") : "config-STEEL_PLATE_26_WAGON_CHEST", runs: true,
         offered: ["steel-wagon-belt-slack", "steel-wagon-belt-slack-fill-last", "steel-wagon-iron-ore-out-of-period"]},
     "utility-science-480-lds-foundry-chain-clock-controls.json": {jobOf: config("UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN")},
 };

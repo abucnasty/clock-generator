@@ -270,6 +270,84 @@
         },
         "clock_sha256": "61effe3366fe9712e27b307ba9c8b36bac71e6b84e07885d055baca16133438a"
       }
+    },
+    "lithium-silo-selected-staged": {
+      "recorded": {
+        "pr": 0,
+        "commit": "6618512f",
+        "frozen_head": "6618512f",
+        "note": "recorded from the staged start under the protocol in game ticks, in Factorio 2.1.24; pr is set when the PR is opened",
+        "clock_sha256": "2b115eb808236f4d4efa9fcf16aa25a8c42f746a71fa2e8da5d6fcab8411b7a1",
+        "clock_basis": "capture"
+      },
+      "native": {
+        "protocol": "trailing-minute",
+        "generationVerdict": "stable",
+        "target": 80,
+        "period": 2160,
+        "window": 3600,
+        "expected": 4800,
+        "steady": 5760,
+        "baseline": {
+          "ticks": 3600,
+          "total": 4806,
+          "expected": 4800,
+          "min": 4778,
+          "max": 4816,
+          "held": false,
+          "meets": true,
+          "measured": {
+            "ticks": 2160,
+            "items": 2880,
+            "expected": 2880,
+            "stock_start": 106,
+            "stock_end": 106,
+            "net": 2880
+          }
+        },
+        "disturbances": [
+          {
+            "kind": "cut holmium-plate",
+            "start": 9360,
+            "drop": 9724,
+            "release": 9724,
+            "recovered": 13853
+          },
+          {
+            "kind": "block output",
+            "start": 13853,
+            "drop": 14686,
+            "release": 14686,
+            "recovered": 18497
+          },
+          {
+            "kind": "cut holmium-plate",
+            "start": 18497,
+            "drop": 18963,
+            "release": 18963,
+            "recovered": 23033
+          }
+        ],
+        "stock": {
+          "lowest": 40,
+          "end": 66,
+          "holds": true
+        },
+        "result": "holds",
+        "ended": 23033
+      },
+      "generation": {
+        "period": 2160,
+        "expected": 2880,
+        "verdict": "stable",
+        "selection": {
+          "id": "coordinated_sources",
+          "holds": true,
+          "rate": 80,
+          "supply": null
+        },
+        "clock_sha256": "2b115eb808236f4d4efa9fcf16aa25a8c42f746a71fa2e8da5d6fcab8411b7a1"
+      }
     }
   }
 }

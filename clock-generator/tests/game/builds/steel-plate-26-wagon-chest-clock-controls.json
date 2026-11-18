@@ -234,6 +234,240 @@
         },
         "clock_sha256": "56d40232d866900fe8445bcc86d73924012eb705864cf573d7e3668a50e382a5"
       }
+    },
+    "steel-wagon-selected-staged": {
+      "recorded": {
+        "pr": 0,
+        "commit": "6618512f",
+        "frozen_head": "6618512f",
+        "note": "recorded from the staged start under the protocol in game ticks, in Factorio 2.1.24; pr is set when the PR is opened",
+        "clock_sha256": "394630eae08f05d03550efdc63ac2122ebf46c722595b6283be45d3d9485899c",
+        "clock_basis": "capture"
+      },
+      "native": {
+        "protocol": "trailing-minute",
+        "generationVerdict": "stable",
+        "target": 26,
+        "period": 11520,
+        "window": 3600,
+        "expected": 1560,
+        "steady": 15120,
+        "baseline": {
+          "ticks": 11520,
+          "total": 4992,
+          "expected": 4992,
+          "min": 1552,
+          "max": 1562,
+          "held": false,
+          "meets": true,
+          "measured": {
+            "ticks": 11520,
+            "items": 4992,
+            "expected": 4992,
+            "stock_start": 28,
+            "stock_end": 28,
+            "net": 4992
+          }
+        },
+        "disturbances": [
+          {
+            "kind": "stop drill",
+            "start": 26640,
+            "drop": 26830,
+            "release": 26830,
+            "recovered": 31411
+          },
+          {
+            "kind": "block output",
+            "start": 31411,
+            "drop": 32046,
+            "release": 32046,
+            "recovered": 32097
+          },
+          {
+            "kind": "stop drill",
+            "start": 32097,
+            "drop": 32265,
+            "release": 32265,
+            "recovered": 36728
+          }
+        ],
+        "stock": {
+          "lowest": 0,
+          "end": 8,
+          "holds": true
+        },
+        "result": "holds",
+        "ended": 36728
+      },
+      "generation": {
+        "period": 11520,
+        "expected": 4992,
+        "verdict": "stable",
+        "selection": {
+          "id": "takt_batches_observed_swings_1_subtick",
+          "holds": true,
+          "rate": 26,
+          "supply": null
+        },
+        "clock_sha256": "394630eae08f05d03550efdc63ac2122ebf46c722595b6283be45d3d9485899c"
+      }
+    },
+    "steel-wagon-iron-ore-out-of-period-selected-staged": {
+      "recorded": {
+        "pr": 0,
+        "commit": "6618512f",
+        "frozen_head": "6618512f",
+        "note": "recorded from the staged start under the protocol in game ticks, in Factorio 2.1.24; pr is set when the PR is opened",
+        "clock_sha256": "507cc5705a29aa86c084513ba18319eb6b2db058270f231cba9cd366c0217b18",
+        "clock_basis": "capture"
+      },
+      "native": {
+        "protocol": "trailing-minute",
+        "generationVerdict": "stable",
+        "target": 26,
+        "period": 3840,
+        "window": 3600,
+        "expected": 1560,
+        "steady": 7440,
+        "baseline": {
+          "ticks": 3840,
+          "total": 1692,
+          "expected": 1664,
+          "min": 1581,
+          "max": 1588,
+          "held": true,
+          "meets": true,
+          "measured": {
+            "ticks": 3840,
+            "items": 1692,
+            "expected": 1664,
+            "stock_start": 33,
+            "stock_end": 45,
+            "net": 1680
+          }
+        },
+        "disturbances": [
+          {
+            "kind": "stop drill",
+            "start": 11280,
+            "drop": 11815,
+            "release": 11815,
+            "recovered": 15774
+          },
+          {
+            "kind": "block output",
+            "start": 15774,
+            "drop": 15775,
+            "release": 15775,
+            "recovered": 15776
+          },
+          {
+            "kind": "stop drill",
+            "start": 15776,
+            "drop": 15777,
+            "release": 15777,
+            "recovered": 15778
+          }
+        ],
+        "stock": {
+          "lowest": 0,
+          "end": 21,
+          "holds": true
+        },
+        "result": "holds",
+        "ended": 15778
+      },
+      "generation": {
+        "period": 3840,
+        "expected": 1664,
+        "verdict": "stable",
+        "selection": {
+          "id": "takt_batches_observed_swings_1_subtick",
+          "holds": true,
+          "rate": 26.000000000000004,
+          "supply": null
+        },
+        "clock_sha256": "507cc5705a29aa86c084513ba18319eb6b2db058270f231cba9cd366c0217b18"
+      }
+    },
+    "steel-hub-selected-staged": {
+      "recorded": {
+        "pr": 0,
+        "commit": "6618512f",
+        "frozen_head": "6618512f",
+        "note": "recorded from the staged start under the protocol in game ticks, in Factorio 2.1.24; pr is set when the PR is opened",
+        "clock_sha256": "394630eae08f05d03550efdc63ac2122ebf46c722595b6283be45d3d9485899c",
+        "clock_basis": "capture"
+      },
+      "native": {
+        "protocol": "trailing-minute",
+        "generationVerdict": "stable",
+        "target": 26,
+        "period": 11520,
+        "window": 3600,
+        "expected": 1560,
+        "steady": 15120,
+        "baseline": {
+          "ticks": 11520,
+          "total": 4992,
+          "expected": 4992,
+          "min": 1552,
+          "max": 1562,
+          "held": false,
+          "meets": true,
+          "measured": {
+            "ticks": 11520,
+            "items": 4992,
+            "expected": 4992,
+            "stock_start": 28,
+            "stock_end": 28,
+            "net": 4992
+          }
+        },
+        "disturbances": [
+          {
+            "kind": "stop drill",
+            "start": 26640,
+            "drop": 26830,
+            "release": 26830,
+            "recovered": 31411
+          },
+          {
+            "kind": "block output",
+            "start": 31411,
+            "drop": 32046,
+            "release": 32046,
+            "recovered": 32097
+          },
+          {
+            "kind": "stop drill",
+            "start": 32097,
+            "drop": 32265,
+            "release": 32265,
+            "recovered": 36728
+          }
+        ],
+        "stock": {
+          "lowest": 0,
+          "end": 8,
+          "holds": true
+        },
+        "result": "holds",
+        "ended": 36728
+      },
+      "generation": {
+        "period": 11520,
+        "expected": 4992,
+        "verdict": "stable",
+        "selection": {
+          "id": "takt_batches_observed_swings_1_subtick",
+          "holds": true,
+          "rate": 26,
+          "supply": null
+        },
+        "clock_sha256": "394630eae08f05d03550efdc63ac2122ebf46c722595b6283be45d3d9485899c"
+      }
     }
   }
 }

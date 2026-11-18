@@ -646,6 +646,97 @@
       "known_differences": {
         "stock_guard": "#587: after the last drill stop the furnaces' output stock settles at a lower, steady level and stays there: 48 at every whole clock cycle of the 14,402 ticks that follow (lowest tick 43), below the baseline's lowest of 70; net output, steady state and every recovery hold. Not a drain; the reason for the level is not found"
       }
+    },
+    "car-selected-staged": {
+      "recorded": {
+        "pr": 0,
+        "commit": "6618512f",
+        "frozen_head": "6618512f",
+        "note": "recorded from the staged start under the protocol in game ticks, in Factorio 2.1.24; pr is set when the PR is opened",
+        "clock_sha256": "8a739e59c5af8e221eca1ca415ee29d895489678dac612916acad7d0037f89e7",
+        "clock_basis": "capture"
+      },
+      "native": {
+        "protocol": "trailing-minute",
+        "generationVerdict": "stable",
+        "target": 80,
+        "period": 144,
+        "window": 3600,
+        "expected": 4800,
+        "steady": 7201,
+        "baseline": {
+          "ticks": 3600,
+          "total": 4844,
+          "expected": 4800,
+          "min": 4844,
+          "max": 4848,
+          "held": true,
+          "meets": true,
+          "measured": {
+            "ticks": 3600,
+            "items": 4844,
+            "expected": 4800,
+            "stock_start": 128,
+            "stock_end": 172,
+            "net": 4800
+          }
+        },
+        "disturbances": [
+          {
+            "kind": "stop drill",
+            "start": 10801,
+            "drop": 10877,
+            "release": 10877,
+            "recovered": 14509
+          },
+          {
+            "kind": "block output",
+            "start": 14509,
+            "drop": 14510,
+            "release": 14510,
+            "recovered": 14511
+          },
+          {
+            "kind": "stop drill",
+            "start": 14511,
+            "drop": 14512,
+            "release": 14512,
+            "recovered": 14513
+          }
+        ],
+        "stock": {
+          "lowest": 98,
+          "end": 196,
+          "holds": true,
+          "after": {
+            "from": 14513,
+            "t": [14545, 14689, 14833, 14977, 15121, 15265, 15409, 15553, 15697, 15841, 15985, 16129, 16273, 16417, 16561, 16705, 16849, 16993, 17137, 17281, 17425, 17569, 17713, 17857, 18001, 18145, 18289, 18433, 18577, 18721, 18865, 19009, 19153, 19297, 19441, 19585, 19729, 19873, 20017, 20161, 20305, 20449, 20593, 20737, 20881, 21025, 21169, 21313, 21457, 21601, 21745, 21889, 22033, 22177, 22321, 22465, 22609, 22753, 22897, 23041, 23185, 23329, 23473, 23617, 23761, 23905, 24049, 24193, 24337, 24481, 24625, 24769, 24913, 25057, 25201, 25345, 25489, 25633, 25777, 25921, 26065, 26209, 26353, 26497, 26641, 26785, 26929, 27073, 27217, 27361, 27505, 27649, 27793, 27937, 28081, 28225, 28369, 28513, 28657, 28801, 28945],
+            "stock": [128, 129, 130, 134, 134, 136, 140, 140, 142, 144, 146, 148, 148, 152, 154, 154, 158, 159, 160, 164, 164, 166, 170, 170, 172, 174, 176, 178, 178, 182, 183, 184, 188, 189, 190, 194, 194, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196],
+            "low": [98, 100, 102, 104, 106, 108, 110, 112, 114, 116, 116, 120, 120, 122, 124, 126, 128, 130, 132, 134, 136, 138, 140, 142, 144, 146, 146, 150, 150, 152, 154, 156, 158, 160, 162, 164, 166, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168, 168],
+            "settled": {
+              "from": 21745,
+              "lowest": 168,
+              "last": 196,
+              "falling": false,
+              "holds": true
+            }
+          }
+        },
+        "result": "holds",
+        "ended": 28945
+      },
+      "generation": {
+        "period": 144,
+        "expected": 192,
+        "verdict": "stable",
+        "selection": {
+          "id": "coordinated_sources",
+          "holds": true,
+          "rate": 80,
+          "supply": null
+        },
+        "clock_sha256": "8a739e59c5af8e221eca1ca415ee29d895489678dac612916acad7d0037f89e7"
+      }
     }
   }
 }

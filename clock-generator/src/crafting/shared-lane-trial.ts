@@ -30,6 +30,7 @@ import { canonicalKey } from "./plan/run-memo";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
 import { runOnSharedLanes } from "./shared-lane-model";
 import { sharedLaneRunsOf } from "./shared-lane-verdict";
+import { SHARED_LANES_JUDGED_BY_RATE } from "./shared-lane-judge-switch";
 import { deciderBuildOrderOf } from "./trial";
 
 /** A copy that is not back at the expected output after a trial on the copies */
@@ -146,7 +147,8 @@ function checkKeysOf(config: Config, clock_windows: SerializableClockWindows, wi
     const decider_orders = runs.readings.map(({ under }) => deciderBuildOrderOf({ ...under, overrides: { ...under.overrides, derive_clock_windows: false } }, windows, window_cycle_ticks));
     const modelled = runs.lanes.map(lane => `${lane.belt_id}/${lane.lane}`);
     return {
-        shared_lanes: canonicalKey([{ check: "shared_lanes", lanes: modelled }, config, decider_orders, clock_windows, window_cycle_ticks]),
+        // the judge of the lanes is part of the key only where it is switched on, so that the key stays as it was with it off
+        shared_lanes: canonicalKey([{ check: "shared_lanes", lanes: modelled, ...(SHARED_LANES_JUDGED_BY_RATE && { by_rate: true }) }, config, decider_orders, clock_windows, window_cycle_ticks]),
         trials: lanes.length === 0 ? null : canonicalKey([{ trial: "copies", lanes }, config, decider_orders, clock_windows, window_cycle_ticks, expected_output_items]),
     };
 }

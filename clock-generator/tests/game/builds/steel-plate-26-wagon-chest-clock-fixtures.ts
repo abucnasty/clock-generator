@@ -9,6 +9,7 @@ import {FactorioBlueprintFile} from "../../../src/blueprints/blueprint";
 import {encodeBlueprintFile} from "../../../src/blueprints/serde";
 import {Recording} from "../../../src/verification/recording";
 import {CLOCK_TEST_SPEEDS} from "../helpers/belt-speed-fixtures";
+import {steelHub} from "../../../src/crafting/container-output.fixture";
 import {PickupClockScenario} from "./pickup-clock-capture";
 
 /**
@@ -22,14 +23,21 @@ import {PickupClockScenario} from "./pickup-clock-capture";
  * in the order of their unit numbers, the last built first (docs/simulator.md): as the build's blueprint has them, the
  * two inserters that put plates and steel into the wagon are built among the three that take from it; `fill-last`
  * builds them after all of them. The clock the config makes with iron ore out of its window cycle (`ignored_lcm_ingredients`;
- * its subtick clock: the clock rounded to 295 ticks makes 26.03 a second) is a second check.
+ * its subtick clock: the clock rounded to 295 ticks makes 26.03 a second) is a second check. The `selected-staged` cases are the clock
+ * the record selects (Batched Swings with 1 output swing, as its subtick clock), recorded from the harness's staged start under the same
+ * probe and protocol: for the sample, for the sample with iron ore out of its window cycle, and for the steel hub of the record's
+ * variants (the build in small, `steelHub`, which the same scaffold builds).
  */
 export interface SteelWagonCase {
     name: string;
     /** The alternative recorded */
-    alternative: "takt_batches_observed_subtick";
+    alternative: "takt_batches_observed_subtick" | "takt_batches_observed_swings_1_subtick";
     /** The items the config leaves out of the window cycle (`overrides.ignored_lcm_ingredients`) */
     ignored_lcm_ingredients?: string[];
+    /** The config is the steel hub of the record's variants (`steelHub`), not the sample's */
+    hub?: true;
+    /** Recorded from the harness's staged start, not from a warm-up and a settle */
+    staged?: true;
     order: "as-built" | "fill-last";
     /** The capture's window cycle of the alternative recorded, in ticks: its subtick clock's (13 window cycles of 886.15 ticks; 13 of 295.38) */
     window_cycle_ticks: number;
@@ -40,12 +48,15 @@ export function steelWagonCases(): SteelWagonCase[] {
         {name: "steel-wagon-belt-slack", alternative: "takt_batches_observed_subtick", order: "as-built", window_cycle_ticks: 11520},
         {name: "steel-wagon-belt-slack-fill-last", alternative: "takt_batches_observed_subtick", order: "fill-last", window_cycle_ticks: 11520},
         {name: "steel-wagon-iron-ore-out-of-period", alternative: "takt_batches_observed_subtick", ignored_lcm_ingredients: ["iron-ore"], order: "as-built", window_cycle_ticks: 3840},
+        {name: "steel-wagon-selected-staged", alternative: "takt_batches_observed_swings_1_subtick", order: "as-built", window_cycle_ticks: 11520, staged: true},
+        {name: "steel-wagon-iron-ore-out-of-period-selected-staged", alternative: "takt_batches_observed_swings_1_subtick", ignored_lcm_ingredients: ["iron-ore"], order: "as-built", window_cycle_ticks: 3840, staged: true},
+        {name: "steel-hub-selected-staged", alternative: "takt_batches_observed_swings_1_subtick", hub: true, order: "as-built", window_cycle_ticks: 11520, staged: true},
     ];
 }
 
 /** The steel build's config, with the items the case leaves out of the window cycle */
 export async function steelWagonConfig(variant: SteelWagonCase): Promise<Config> {
-    const config = await loadConfigFromFile(ConfigPaths.STEEL_PLATE_26_WAGON_CHEST);
+    const config = variant.hub ? steelHub() : await loadConfigFromFile(ConfigPaths.STEEL_PLATE_26_WAGON_CHEST);
     return variant.ignored_lcm_ingredients === undefined ? config
         : {...config, overrides: {...config.overrides, ignored_lcm_ingredients: variant.ignored_lcm_ingredients}};
 }
@@ -100,6 +111,7 @@ export async function steelWagonScenario(variant: SteelWagonCase): Promise<Picku
         alternative: variant.alternative,
         // the subtick clock's output repeats only over its whole window cycle (13 window cycles of the rounded clock), longer than a minute
         baseline: {ticks: variant.window_cycle_ticks, reason: "the subtick clock's output repeats only over its whole period, longer than a minute"},
+        staged: variant.staged,
         probeFile: path.join(__dirname, "steel-plate-26-wagon-chest-clock-probe.lua"),
         probe: {family: "steel-wagon"},
         controls: path.join(__dirname, "steel-plate-26-wagon-chest-clock-controls.json"),
