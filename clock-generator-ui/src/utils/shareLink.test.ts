@@ -320,3 +320,32 @@ describe('shared builds through the real file and worker boundary', () => {
         expect(parseFormConfig(ConfigSchema, readConfigFile(JSON.stringify(decoded.config))).success).toBe(false);
     });
 });
+
+describe('the start a build is judged from, kept by a share link and a saved build', () => {
+    const open = async (link: { version: string; data: string }) => {
+        const decoded = await decodeShareLink(link);
+        if (decoded.kind !== 'build') throw new Error(`Expected a decoded build, not ${decoded.problem}`);
+        const parsed = parseFormConfig(ConfigSchema, readConfigFile(JSON.stringify(decoded.config)));
+        expect(parsed.success).toBe(true);
+        return configToFormData(parsed.data!);
+    };
+
+    it('keeps the cold start through a share link', async () => {
+        const form = await open(await linkTo({ ...smallBuild(), overrides: { judged_start: 'cold' } } as Config));
+        expect(form.overrides?.judged_start).toBe('cold');
+    });
+
+    it('keeps the cold start through a saved build', () => {
+        const form = configToFormData(ConfigSchema.parse({ ...smallBuild(), overrides: { judged_start: 'cold' } }));
+        expect(readSavedConfig(serializeConfig(form))?.overrides?.judged_start).toBe('cold');
+    });
+
+    it('opens a link and a saved build made before the field existed with no start named, so on the default', async () => {
+        const form = await open(await linkTo(smallBuild()));
+        expect(form.overrides?.judged_start).toBeUndefined();
+        const saved = readSavedConfig(serializeConfig(form));
+        expect(saved).not.toBeNull();
+        expect(saved!.overrides?.judged_start).toBeUndefined();
+        expect(formDataToConfig(saved!).overrides?.judged_start).toBeUndefined();
+    });
+});

@@ -11,6 +11,9 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ## [Unreleased]
 
+### Added
+- ui: a switch in Advanced to judge clocks from the cold start
+
 ## [0.30.0] - 2026-11-18
 
 ### Added
