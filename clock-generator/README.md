@@ -563,6 +563,7 @@ timing; a dead end on each input lane (`lane_end`) selects supply with backpress
 - `backed_up_belts`: deprecated; state the `lane_end` of each lane instead. `true` makes each lane that states no end a dead end, `false` an infinite end
 - `search_for_fewer_wake_ups`: run the four searches for every build (default false)
 - `check_start_dependence`: try every clock from other starts than the cold start too, and name the clocks that reach their target from some starts only (default false; see `docs/stability.md`, "Start dependence")
+- `judged_start`: the start every clock is judged from, `"backpressure"` (the part of the build that no clock controls is filled until it settles, then the clock starts) or `"cold"` (machines, buffers and hands empty); default `"backpressure"` (see `docs/stability.md`, "How a clock is started")
 - `kick_start_items`: items a machine that makes its own ingredient (pentapod eggs) is given once when a clock starts (default 200, the same kick start as the harness gives)
 
 `src/config/schema.ts` (`ConfigOverridesSchema`) lists the others. Older files using `non_moving_belts` migrate to
@@ -583,10 +584,12 @@ The simulator assumes saturated input supply. Moving supply times the stacks wit
 
 Every clock names the belt it is made for:
 
-- **moving**: some input lane of the build is not a dead end. The simulator times each pickup from the stacks the hand reaches on the moving lane. Each window of an inserter that picks up from a lane that is not a dead end gets room for one more hand. The room is the ticks that hand takes at one lane stack a tick (`+4 ticks` for a hand of 16 from stacks of 4).
+- **moving**: some input lane of the build is not a dead end. The simulator times each pickup from the stacks the hand reaches on the moving lane.
 - **backed-up belt**: every input lane is a dead end. The belt inserters get the windows they need with backpressure at the pickup.
 
-The belt a clock is made for does not change how it ranks. An input lane that states no `lane_end` is a dead end; state `{"kind": "infinite"}` on a lane whose items move on past the build. A clock that does not hold the expected output is first made again with room for a hand of fuel: each window of an inserter that takes fuel off the belt as well as an ingredient stays open the ticks a hand of fuel takes to fill (`+4 ticks` for a hand of 16 from stacks of 4), because the fuel slot asks for a hand at any tick, ahead of the hands the window is planned for. Its description names the inserters. A clock that does not hold with the room either, or has no such inserter, is listed as unstable.
+Each window of an inserter that picks up from a belt gets room for one more hand, whether the lane is a dead end or not. The room is the ticks that hand takes at one lane stack a tick (`+4 ticks` for a hand of 16 from stacks of 4). A side pickup of an item that both lanes of its belt carry gets no room, because the far lane gives the hand what a gap on the near lane withholds.
+
+The belt a clock is made for does not change how it ranks. An input lane that states no `lane_end` is a dead end; state `{"kind": "infinite"}` on a lane whose items move on past the build. A clock that does not hold the expected output is first made again with room for a hand of fuel, where the build has an inserter that takes fuel off the belt as well as an ingredient. The fuel slot asks for a hand at any tick, ahead of the hands the window is planned for. Where the windows of that inserter get no room for one more hand, each window stays open the ticks a hand of fuel takes to fill (`+4 ticks` for a hand of 16 from stacks of 4). Where they get that room and the fuel is on the lane nearest the inserter, each window stays open for the hand that the fuel delays, on top of that room: the hand cycle, less one tick, less the room for one more hand (6 ticks for a hand cycle of 11 and a room of 4). Elsewhere the room for one more hand already holds the hand of fuel, and a window gets nothing more. The description of the clock names the inserters. A clock that does not hold with the room either, or has no such inserter, is listed as unstable.
 
 #### Searching for fewer wakeups
 

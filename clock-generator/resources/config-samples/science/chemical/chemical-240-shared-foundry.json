@@ -81,7 +81,11 @@
       },
       "sink": {
         "type": "belt",
-        "id": 5
+        "id": 5,
+        "drop": {
+          "lane": 1,
+          "position": 0
+        }
       },
       "stack_size": 16,
       "filters": [
@@ -95,7 +99,11 @@
       },
       "sink": {
         "type": "belt",
-        "id": 5
+        "id": 5,
+        "drop": {
+          "lane": 1,
+          "position": 10
+        }
       },
       "stack_size": 16,
       "filters": [
@@ -109,7 +117,11 @@
       },
       "sink": {
         "type": "belt",
-        "id": 6
+        "id": 6,
+        "drop": {
+          "lane": 1,
+          "position": 0
+        }
       },
       "stack_size": 16,
       "filters": [
@@ -123,7 +135,11 @@
       },
       "sink": {
         "type": "belt",
-        "id": 6
+        "id": 6,
+        "drop": {
+          "lane": 1,
+          "position": 10
+        }
       },
       "stack_size": 16,
       "filters": [

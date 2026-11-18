@@ -12,7 +12,8 @@ hoods; dashed blue lines show underground connections. Actual layouts and screen
 
 All six diagrams use belts running to the right. **Upstream** means where items come from; **downstream**
 means where they go. The underground **entrance** takes items below ground; the **exit** brings them back up.
-Only the exposed half of each endpoint is available for pickup.
+Only the exposed half of an entrance is available for pickup. An inserter beside an exit also reaches the last eighth of
+a tile of its tunnel line, under the hood.
 
 ![Six pickup approaches: side pickups from a straight belt, underground entrance or exit; front-facing entrance or exit; and over-the-hood exit](images/pickup-approaches.svg)
 

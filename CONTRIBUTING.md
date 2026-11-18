@@ -90,7 +90,7 @@ Changelogs and pull requests say "user", never "player".
 - Simulator regressions stay near their implementation. They may read game fixtures without launching Factorio.
 - Full raw recordings and generated probe sources belong in the ignored `clock-generator/.scratch/<topic>/<run>/`, rather than beside committed fixtures.
 - `clock-generator/scripts/`: sweeps and capture helpers, and the tools for checking an engine change, each with its usage in its header:
-  - `blast/blast.sh`: the blast: every sample and fixture generated, every clock exported and hashed, cached by a key of the engine's content and of the environment variables that change what it generates (`CLOCK_EXPLORE` for `--explore`; a `CLOCK_*` variable no list in `key.py` knows stops the command) (`blast.sh key`, `before`, `run`, `select`, `compare`, `record`, `run --explore` with `explore` for the explored strategies, and `run --log` for the maker log of each job: [MAKER-LOG.md](clock-generator/scripts/blast/MAKER-LOG.md)); a run reruns only the jobs a change of the engine reaches, per the functions each job ran (see the header of `blast.sh`).
+  - `blast/blast.sh`: the blast: every sample and fixture generated, every clock exported and hashed, cached by a key of the engine's content and of the environment variables that change what it generates (`CLOCK_EXPLORE` for `--explore`; a `CLOCK_*` variable no list in `key.py` knows stops the command) (`blast.sh key`, `before`, `run`, `select`, `compare`, `record`, `run --explore` with `explore` for the explored strategies, and `run --log` for the maker log of each job: [MAKER-LOG.md](clock-generator/scripts/blast/MAKER-LOG.md)); a run reruns only the jobs a change of the engine reaches, per the functions each job ran (see the header of `blast.sh`). A blast locks its own output folder, so two blasts side by side both run (`BLAST_LOCK` names one lock for blasts that must take turns); its temporary files are made under the cache, not in `/tmp`; `blast.sh same` leaves out the seconds of a job and of its checks.
   - `blast/record.py` (through `blast.sh record write|check`): the record in `clock-generator/record/`, one small JSON per blast job (the selected clock and every other clock it weighed), written from a blast run and checked against one in CI. See [`record/README.md`](clock-generator/record/README.md).
   - `replay/replay.sh`: the replay check of a change that must keep results identical: every blast job's selected clock run with no search (the as-built run, the planning run, a speed run and, with `--losses`, the supply losses), what every entity holds and shows hashed per window cycle, and laid against a base recorded once on the parent commit (`record`, `check`, `explain`).
   - `native/run-lane.sh`: one Factorio lane over a list of game test cases, at most four harness Factorio processes on the machine; `native/expected-from-blast.py` and `native/check.cjs` check a capture's clocks against the blast's.
@@ -146,7 +146,7 @@ hold (a text, a decider's description, the always-on reasons, the fuel view, the
 
 Prioritize reducing repeated generation and simulation work; adding workers is not a substitute, especially
 on CI runners with limited CPU capacity. Preserve every case, phase, clock offset and recovery check.
-CI runs the generation tests in two shards (`Gen 1/2`, `Gen 2/2`: `vitest --shard`, files shared out by their measured CI seconds in
+CI runs the generation tests in five shards (`Gen 1/5` to `Gen 5/5`: `vitest --shard`, files shared out by their measured CI seconds in
 `clock-generator/ci/generation-durations.json`; the count is the `shard` list of the `generation-shards` job in
 `.github/workflows/test.yml`), so a pull request waits for the slowest shard. A file is never split between shards, so the slowest file sets a floor under that time however many
 shards there are.
@@ -171,14 +171,15 @@ reduction from scheduling changes; do not report a faster test from a less busy 
 
 [`clock-generator/record/`](clock-generator/record/README.md) holds one small JSON file for each of the 86 blast jobs: the clock the generator selects for the
 sample or fixture and every clock it weighed (verdict, holds, rate, window cycle time, wakeups, windows, clock hash). The check named "Rec summary" in CI
-generates the jobs in six shards (`Rec 1/6` to `Rec 6/6`, dealt out by the seconds each job took on a runner,
+generates the jobs in two shards (`Rec 1/2` and `Rec 2/2`, dealt out by the seconds each job took on a runner,
 `clock-generator/ci/record-durations.json`), joins them and compares them with the committed files field by field; a difference fails with a table of job,
 field, before and after in the job summary. The check runs on every pull request to `master` or `hotfix/` that changes more than documentation, and reports
 success on one that changes documentation only. Its name is stable so that it can be a required check. It is never faster than the slowest job
 (the productivity module chest chain). After a change to the jobs or the engine, refresh the durations with
-`node scripts/ci/update-record-durations.js <dir of the downloaded record-jobs-* artifacts of a run>`. The same script prints the shard
-count the durations call for (`--shards` prints only that): the smallest count whose estimated slowest shard is the slowest job, which is 6
-today; set the `shard` list of the `record-shards` job in `.github/workflows/test.yml` to it when it changes.
+`node scripts/ci/update-record-durations.js <dir of the downloaded record-jobs-* artifacts of a run>`. The shard count is the smallest
+whose estimated slowest shard is the slowest job, estimated as `scripts/blast/shard.py plan` deals the jobs (four at a time on a runner), which is 2
+today; set the `shard` list of the `record-shards` job in `.github/workflows/test.yml` to it when it changes. (The count that
+`update-record-durations.js` prints adds a shard's seconds one after another, so it is larger.)
 
 **A selected clock never gets worse unless MOVES.md says so.** The same check sets the selected clock of every job against the record of the pull
 request's base (the first parent of the merge commit CI tests) and fails when one got worse and its job key is not in the lines the pull request adds to
@@ -254,9 +255,9 @@ is never loosened because a job fails it.
 
 | Check name | What it does | Runs |
 | --- | --- | --- |
-| Unit tests | knip, typecheck, build, lint, `npm test` (the units, `clock-controls.test.ts` among them) | every pull request that changes more than documentation |
-| `Gen 1/2` and `Gen 2/2`, then `Gen summary` | the `*.generation.test.ts` files, dealt out by `ci/generation-durations.json` | ready pull requests to `master` or `hotfix/` that change more than documentation, and releases; on a draft the shards do not run and the check fails (below) |
-| `Rec 1/6` to `Rec 6/6`, then `Rec summary` | the 86 jobs, joined, compared with `record/`, with the properties, the per-job checks and the never-worse rule | ready pull requests to `master` or `hotfix/` that change more than documentation; on a draft the shards do not run and the check fails (below) |
+| `Unit 1/4` to `Unit 4/4` and `Code checks`, then `Unit tests` | `npm test` (the units, `clock-controls.test.ts` among them) dealt out by `ci/unit-durations.json`; knip, typecheck, build and lint in `Code checks` | every pull request that changes more than documentation |
+| `Gen 1/5` to `Gen 5/5`, then `Gen summary` | the `*.generation.test.ts` files, dealt out by `ci/generation-durations.json` | ready pull requests to `master` or `hotfix/` that change more than documentation, and releases; on a draft the shards do not run and the check fails (below) |
+| `Rec 1/2` and `Rec 2/2`, then `Rec summary` | the 86 jobs, joined, compared with `record/`, with the properties, the per-job checks and the never-worse rule | ready pull requests to `master` or `hotfix/` that change more than documentation; on a draft the shards do not run and the check fails (below) |
 | `UI build`, `UI samples`, `UI browser` | the UI | every pull request that changes more than documentation |
 | `Docs checks` | PORTAL.md and the configuration file fields topic are current, and the bold labels of the user topics are strings of the site, the sidecar or the game ([docs/README.md](docs/README.md#checks)) | every pull request |
 

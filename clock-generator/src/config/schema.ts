@@ -846,12 +846,22 @@ export const ConfigOverridesSchema = z.preprocess(renameLoopSeedItemsToKickStart
      * from every start, start-dependent when it does from some, unstable when it does from none; a start-dependent
      * clock is listed with where it reaches its target and where it settles elsewhere.
      *
-     * By default every clock is judged from the cold start alone, and the generator says that start dependence was
-     * not checked. Takes a few more long runs of every clock.
+     * By default every clock is judged from the start `judged_start` names alone, and the generator says that start
+     * dependence was not checked. Takes a few more long runs of every clock.
      *
      * @default false
      */
-    check_start_dependence: z.boolean().optional().describe("Whether the generator tests each clock from more starts than the cold start."),
+    check_start_dependence: z.boolean().optional().describe("Whether the generator tests each clock from more starts than the one it is judged from (judged_start)."),
+    /**
+     * The start the clocks are judged from. "cold": the machines, buffers and hands are empty when the clock starts at its
+     * tick 0, the belts and chests are the supplies they always are, and a machine that makes its own ingredient is given
+     * its kick start (see `kick_start_items`). "backpressure": the part of the build that no clock controls is first run
+     * until it has settled, with every clocked inserter and drill held off, as a staged scaffold in the game has settled
+     * before its clock starts, and the clock starts from there. The runs that make the clock's windows start cold in both.
+     *
+     * @default "backpressure"
+     */
+    judged_start: z.enum(["cold", "backpressure"]).optional().describe("The start every clock is judged from: the backpressure start (the default: the unclocked part of the build filled until it settles, then the clock), or the cold start."),
     /**
      * Make the disturbance trials again on the copies that share a lane, where the copies share one: a supply stop closes
      * the entry of each shared lane that carries the item, so that the lane drains, and after each trial every copy has to
@@ -894,6 +904,16 @@ export const ConfigOverridesSchema = z.preprocess(renameLoopSeedItemsToKickStart
 
 export type ConfigOverrides = z.infer<typeof ConfigOverridesSchema>;
 
+export type JudgedStart = NonNullable<ConfigOverrides["judged_start"]>;
+
+/** The start a clock is judged from where the config names none (`overrides.judged_start`) */
+export const DEFAULT_JUDGED_START: JudgedStart = "backpressure";
+
+/** The start the clocks of a config are judged from: its `overrides.judged_start`, else the default */
+export function judgedStartOf(overrides: ConfigOverrides | undefined): JudgedStart {
+    return overrides?.judged_start ?? DEFAULT_JUDGED_START;
+}
+
 // ============================================================================
 // Root Config
 // ============================================================================
@@ -914,7 +934,10 @@ export const ConfigSchema = z.preprocess(renameTargetOutputToSetpoint, z.preproc
         + "of belt from the copies to the infinite end, in tiles. The run of the copies moves the output on it, and an output blockage shuts its infinite end."),
 }).superRefine((config, context) => {
     if (config.output_belt !== undefined) {
-        for (const problem of outputBeltProblems(config.output_belt, config.setpoint.copy_offset)) {
+        // the output inserters of a copy: those that drop the target item onto a belt that carries it
+        const outputs = config.inserters.filter(inserter => inserter.sink.type === TargetType.BELT && config.belts.some(belt =>
+            belt.id === inserter.sink.id && belt.lanes.some(lane => lane.ingredient === config.setpoint.recipe))).length;
+        for (const problem of outputBeltProblems(config.output_belt, config.setpoint.copy_offset, outputs)) {
             context.addIssue({ code: "custom", path: ["output_belt", ...problem.path], message: problem.message });
         }
     }

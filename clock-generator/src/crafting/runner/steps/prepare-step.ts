@@ -6,6 +6,7 @@ import { SimulationContext } from "../../sequence";
 import { InserterInterceptor } from "../../sequence/interceptors/inserter-interceptor";
 import { RunnerStep, RunnerStepType } from "./runner-step";
 import { ContainerStorage } from "../../../simulation/components/container-storage";
+import { beginTickLoop } from "../../tick-ledger";
 
 /**
  * PrepareStep simulates the crafting process until all machines are output blocked
@@ -49,6 +50,8 @@ export class PrepareStep implements RunnerStep {
             .filter(chest => context.inserters.some(inserter_state_machine => inserter_state_machine.inserter_state.inserter.source.entity_id.id === chest.entity_id.id))
             .filter(chest => context.inserters.some(inserter_state_machine => inserter_state_machine.inserter_state.inserter.sink.entity_id.id === chest.entity_id.id))
         
+        const start_tick = context.tick_provider.getCurrentTick();
+        const ledger = beginTickLoop("prepare_step", () => context.tick_provider.getCurrentTick() - start_tick);
         while (true) {
             this.kickStartLoopingRecipes();
             simulation_tick.executeForTick();
@@ -98,6 +101,7 @@ export class PrepareStep implements RunnerStep {
 
             break;
         }
+        ledger?.close();
     }
 
     private build(): SimulationTick {

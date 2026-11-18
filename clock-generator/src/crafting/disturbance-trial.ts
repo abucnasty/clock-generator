@@ -28,7 +28,7 @@ import { atRateFrom, branchesScaledTo, cycleAtRate, firstBinAtRate, type BranchB
 import { FactorioDataService, ItemName } from "../data";
 import { Chest, Entity, EntityId, ReadableEntityRegistry } from "../entities";
 import { EntityState, InserterState } from "../state";
-import { simulationStateKey } from "./runner/steady-state";
+import { stateKeyWithLanes } from "./runner/shared-lanes-key";
 import { SimulationContext } from "./sequence/simulation-context";
 import { ExportShortfall, ExportedItem, exportShortfallOfBins } from "./export-delivery";
 import { SPOIL_LIMIT_SHARE } from "../common/rule-constants";
@@ -40,6 +40,7 @@ import type { CopiesTrialVerdict } from "./shared-lane-trial";
 import { COPY_NUMBER_STRIDE, twinOf } from "./sequence/build-copies";
 import type { WindowCycleClock } from "../simulation/controls/enable-control";
 import { textWords } from "./entity-name";
+import { beginTickLoop } from "./tick-ledger";
 
 export type DisturbanceTrial =
     /** Nothing is cut: the run as it is, counted as the runs with a loss are */
@@ -869,6 +870,7 @@ export function runLossTrials(
     const simulation_tick = new SimulationTick(context);
     const now = () => context.tick_provider.getCurrentTick();
     const start_tick = now();
+    const ledger = beginTickLoop("loss_trials", () => now() - start_tick);
     const step = () => simulation_tick.executeForTick();
     const runUntilPhase = (phase: number) => {
         const wanted = ((phase % bin.ticks) + bin.ticks) % bin.ticks;
@@ -878,8 +880,8 @@ export function runLossTrials(
     };
     const dropped = () => groups.reduce((sum, _group, at) => sum + groupDropped(at), 0);
     // the state a run's boundary is compared by: in a run of the copies, the lanes they share too, each brought up to now
-    const stateKey = copies === undefined ? () => simulationStateKey(context)
-        : () => [simulationStateKey(context), ...copies.lanes.map(it => { it.lane.advanceTo(now()); return it.lane.key(); })].join("\n");
+    const shared_lanes = copies?.lanes.map(it => it.lane) ?? [];
+    const stateKey = () => stateKeyWithLanes(context, shared_lanes);
 
     // What the build does: every item an inserter moves and every product a machine finishes is counted, and a
     // machine that crafts moves its bars. A drill puts into a machine without a count, which the stock shows; a drill
@@ -1108,6 +1110,7 @@ export function runLossTrials(
     const recovers = trials.every(trial => trial.recovers);
     const ran_their_course = trials.filter(trial => trial.until_stopped);
     const never_stopped = ran_their_course.some(trial => trial.stopped_after_ticks === null);
+    ledger?.close();
     return {
         loss,
         bin_ticks: bin.ticks,

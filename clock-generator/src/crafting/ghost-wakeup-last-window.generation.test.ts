@@ -15,8 +15,9 @@ describe("ghost-wakeup shaping on a build where it would leave an inserter no wi
     const messages: string[] = [];
     const logger = { log: (m: string) => messages.push(m), info() { }, warn() { }, error() { }, debug() { } };
     const unclocked = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
-    // without the room for one more hand: inserters 1 and 2 would get it, and shaping leaves windows with the room as they are
-    const result = generateClockWithSwingBackoff(unclocked, { verify_as_built: true, lane_hand_room: "never", logger: logger as never });
+    // without the room for one more hand: inserters 1 and 2 would get it, and shaping leaves windows with the room as they are;
+    // without the windows of the egg loop (#516), which change the clock this case was found on
+    const result = generateClockWithSwingBackoff(unclocked, { verify_as_built: true, lane_hand_room: "never", loop_windows: false, logger: logger as never });
 
     it("leaves every window of inserters 1 and 2 as planned", () => {
         expect(messages.some(it => it.includes("inserter:1: shaping would leave it no enable window"))).toBe(true);

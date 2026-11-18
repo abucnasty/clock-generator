@@ -4,7 +4,7 @@ import { AlwaysEnabledControl, EnableControl } from "../../simulation/controls/e
 import { MutableTickProvider } from "../../simulation/current-tick-provider";
 import { CraftingMachineArchetype } from "../../simulation/archetypes/crafting-machine";
 import { InserterArchetype } from "../../simulation/archetypes/inserter";
-import { DEFAULT_TAKER_ORDER, TakerOrder } from "../../simulation/competing-takers";
+import { DEFAULT_TAKER_ORDER, inserterUpdateOrder, TakerOrder, withTakersInOrderOf } from "../../simulation/competing-takers";
 import { Belt, Chest, Entity, EntityId, EntityRegistry, InserterFactory, Machine, WritableEntityRegistry } from "../../entities";
 import { MiningDrill } from "../../entities/drill/mining-drill";
 import { DrillState, EntityState, EntityStateFactory, EntityStateRegistry, InserterState, WritableEntityStateRegistry } from "../../state";
@@ -64,14 +64,19 @@ export class SimulationContext {
     /**
      * The update list (simulation/dispatch.ts), made at the first World and kept by every later one of this context, so a
      * new run goes on from the list the last one left. The list starts as a build leaves it: every inserter active, the
-     * last built (the highest config id) first, as each one built goes to the front. A loaded save's order is not
-     * modelled.
+     * last built (the highest config id) first, as each one built goes to the front. The takers of one machine are put
+     * among their places in `competing_takers_order`, as the World has them (`withTakersInOrderOf`): a build of the same
+     * design in another order. The default order is the list as it is. The order is read here once, so it is set before
+     * the first World. A loaded save's order is not modelled.
      */
     public inserterScheduling(): InserterScheduling {
+        if (this.inserter_scheduling !== null) return this.inserter_scheduling;
         const dispatch = this.inserter_dispatch;
-        return this.inserter_scheduling ??= new InserterScheduling(this,
-            [...this.inserters].sort((a, b) => b.entity_id.number - a.entity_id.number), undefined, undefined,
-            {woken_in_walk: dispatch.woken_in_walk, leaves: dispatch.leaves});
+        const built = [...this.inserters].sort((a, b) => b.entity_id.number - a.entity_id.number);
+        const order = this.competing_takers_order;
+        return this.inserter_scheduling = new InserterScheduling(this,
+            order === DEFAULT_TAKER_ORDER ? built : withTakersInOrderOf(built, inserterUpdateOrder(this.inserters, this.state_registry, order)),
+            undefined, undefined, {woken_in_walk: dispatch.woken_in_walk, leaves: dispatch.leaves});
     }
 
     /** Observe one inserter without changing generation or simulation state. Ticks use this context's provider. */

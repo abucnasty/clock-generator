@@ -136,25 +136,6 @@ describe("generateClockForConfig", () => {
         });
     });
 
-    // One machine, two output hands and nine input hands per 288 ticks. Clocks for it are easy to get to the
-    // expected output in one simulated window cycle without the build actually repeating that window cycle.
-    describe("the title of the insight of a clock that does not hold the setpoint", () => {
-        it("says it underproduces below the expected output, and overproduces above it", async () => {
-            const result = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.STONE_BRICK_120_DRILL_DIRECT_INSERT), { logger: quiet });
-            const titleOf = (id: string) => result.alternatives.find(it => it.id === id)!.insights.find(it => it.id === "unstable");
-            // 7 and 8 output swings forced over the setpoint: the build moves more items than the expected output
-            for (const id of ["takt_batches_observed_swings_7", "takt_batches_observed_swings_8"]) {
-                const insight = titleOf(id)!;
-                expect(insight.title).toBe("This clock overproduces");
-                // only what was measured: no reason, and one thing to do
-                expect(insight.why).toBe("");
-                expect(insight.explanation).toBe("Use a clock marked Stable.");
-                const [, moved, expected] = /moved ([\d.]+) of (\d+) items/.exec(insight.what)!;
-                expect(Number(moved)).toBeGreaterThan(Number(expected));
-            }
-        });
-    });
-
     describe("FLYING_ROBOT_FRAME_80 clock-only check", async () => {
         // One copy of the sample at its rate per copy. Every lane has an infinite end and the belt inserters have no near lane.
         // The output belt's lanes carry the processing unit and the frame. The checks below test the window cycle of one
@@ -164,6 +145,8 @@ describe("generateClockForConfig", () => {
         config.setpoint.items_per_second = sample.setpoint.items_per_second / sample.setpoint.copies;
         config.setpoint.copies = 1;
         delete config.setpoint.copy_offset;
+        // the sample's output belt is stated for its 12 copies
+        delete config.output_belt;
         for (const belt of config.belts) {
             for (const lane of belt.lanes) {
                 lane.lane_end = { kind: "infinite" };

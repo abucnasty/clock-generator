@@ -8,11 +8,13 @@ import { Logger } from "../../common/logger";
 import { positionStep, withWindowsKeepingLength, withWindowsLengthened } from "../clock";
 import { BlueprintGenerationResult, GenerateClockOptions, TrialRun, alwaysEnabledByConfig, clockOfPlan, clockOnlyRunOf, exportClock, unclockedRun, windowsFromHistory } from "../plan/unclocked-run";
 import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, FULL_CHECK_START_PHASES, runAsBuiltCheck, runClockOnBuild, trialWithLoopWindows } from "../trial";
+import { withTickPurpose } from "../tick-ledger";
 import { pitchPickupsTransferWindows } from "./pitch-pickups";
 import { Confirmed, QuickTrial, SearchReport, confirm, quickTrial, search } from "./search";
 import { busyDeciderRanges, evenlySpacedOutputWindows, outputSwingCountsOf, paddedWindows } from "./transforms";
 import { transitionsOf } from "../sequence/compact-history";
 import { movedOutputSwingWindows } from "./moved-output-swing";
+import { machineLoopsOf } from "./loop-windows";
 
 
 export interface TimeStudyWindowsReport {
@@ -142,7 +144,7 @@ export function deriveTimeStudyWindows(
     const as_read = !in_positions && !Number.isInteger(window_cycle_ticks);
     const fixed_windows = new Map([...output_windows, ...drill_windows]);
     report?.(`Simulating with only the output inserters clocked (${label} enable windows)`);
-    const derivation = runClockOnBuild(base_config, fixed_windows, window_cycle_ticks, logger);
+    const derivation = withTickPurpose("window_derivation", () => runClockOnBuild(base_config, fixed_windows, window_cycle_ticks, logger), { claim: true });
     logger.log(`Derived enable windows (${label}): output-only run actual=${derivation.stability_check.actual_output_items} expected=${derivation.stability_check.expected_output_items}`);
     const even_output_windows = as_read ? null
         : evenlySpacedOutputWindows(output_windows, outputSwingCountsOf(derivation, new Set(output_windows.keys()), window_cycle_ticks), window_cycle_ticks);
@@ -195,6 +197,31 @@ export function deriveTimeStudyWindows(
     }
     const best = tried.map(it => it.quick).reduce((a, b) => b.result.stability_check.actual_output_items > a.result.stability_check.actual_output_items ? b : a);
     return { windows: null, end_padding_ticks: null, verification: best.result, as_built: { ...checkOfRun(best.result), holds: false, failed_start_offset: 0 }, even_output_windows, search: reportOf(tried, null) };
+}
+
+/**
+ * The windows of the inserters of a loop of machines on observed windows that hold, which leave them always enabled (they
+ * are not read off the run, see `alwaysEnabledInserters`): tried as on planned windows (`trialWithLoopWindows`), from the
+ * clock-only check of the observed windows with the long run they are read from, from as many start phases as the observed
+ * windows were confirmed from. Null where the build has no loop, the options leave the loop's inserters always enabled, or
+ * none of the loop's windows is kept.
+ */
+function feedObserved(
+    config: Config,
+    windows: Map<string, OpenRange[]>,
+    window_cycle_ticks: number,
+    options: GenerateClockOptions,
+    logger: Logger,
+    start_phases: number,
+): ReturnType<typeof trialWithLoopWindows> {
+    if (options.loop_windows === false || machineLoopsOf(config).length === 0) {
+        return null;
+    }
+    const run = runAsBuiltCheck(config, windows, window_cycle_ticks, logger, start_phases,
+        (n, total) => options.on_progress_detail?.(`Checking observed windows for the loop's enable windows, clock start ${n}/${total}`),
+        FREE_RUNNING_CHECK_TICKS, undefined, true);
+    return trialWithLoopWindows(config, windows, window_cycle_ticks, run, start_phases, logger, options.on_progress_detail, true,
+        options.loop_windows !== "out-of-loop");
 }
 
 /**
@@ -280,15 +307,23 @@ export function timeStudyWindowsClock(
     if (derived.windows !== null && derived.verification !== null) {
         const full_hand = pitchPickupsTransferWindows(non_deriving_config, derived.windows, derived.verification,
             output_inserter_ids, simulation_context.entity_registry, duration.ticks, logger, options.on_progress_detail);
-        const windows = full_hand?.windows ?? derived.windows;
+        let windows = full_hand?.windows ?? derived.windows;
         if (full_hand) {
             stability_check.as_built = full_hand.check;
             stability_check.holds = full_hand.check.holds;
             report.full_hand_inserters = full_hand.inserters;
         }
+        // the inserters of a loop, which the observed windows leave always enabled, get theirs as on planned windows
+        const fed = stability_check.holds ? feedObserved(non_deriving_config, windows, duration.ticks, options, logger,
+            (stability_check.as_built?.start_phases_checked ?? 0) > AS_BUILT_START_PHASES ? FULL_CHECK_START_PHASES : AS_BUILT_START_PHASES) : null;
+        if (fed !== null) {
+            windows = fed.windows;
+            stability_check.as_built = fed.check;
+        }
         // observed windows are what the inserters did, fuel hands included, and the run shown is the trial of them
         return exportClock(plan, clock, windows, options,
-            { histories: full_hand?.result ?? derived.verification, fuel_hand_room_ticks: {}, derived_clock_windows: report, search: derived.search });
+            { histories: fed?.result ?? full_hand?.result ?? derived.verification, fuel_hand_room_ticks: {}, derived_clock_windows: report, search: derived.search,
+                loop_windows: fed?.loop_windows, item_names: fed?.item_names });
     }
     logger.log("Derived enable windows: no padding passed the as-built check; falling back to the planned enable windows.");
     const fed = feedPlanned();

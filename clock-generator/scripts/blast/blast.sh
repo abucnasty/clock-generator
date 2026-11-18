@@ -19,6 +19,11 @@
 #                                           schema). Off by default; it changes no job file and no record file, and the key does not hold it. The
 #                                           switch is BLAST_LOG=1, which the option sets. It turns selection off (--full): a job carried from the
 #                                           cache was not generated, so it has no log; a folder that holds jobs made without a log is refused
+#   blast.sh run <worktree> <out> --repeat-check [-n N] [--no-store] [--no-build]
+#                                           the maker log (--log) with the repeat check of each listed clock that holds on one copy: the clock is run
+#                                           again on its windows narrowed to the ticks its run needed (event repeat_check, MAKER-LOG.md). The switch is
+#                                           BLAST_REPEAT_CHECK=1, which the option sets with BLAST_LOG=1. It runs clocks the generation does not run, so
+#                                           a job takes longer; it changes no job file and no record file, and the key does not hold it
 #   blast.sh run <worktree> <out> --explore [-n N] [--no-store] [--no-build]
 #                                           the explore mode (CLOCK_EXPLORE=1, which works on every command that generates): the engine is asked for the explored
 #                                           strategies as well (`explore_strategies`), and each job file also holds `explored`: the selected clock and the best
@@ -44,8 +49,9 @@
 #   blast.sh compare [--map f] <before> <after> [--json f]   compare.py (folders or cache entries, the latter by key as `list` prints it; --map: a rename map, `old-key new-key` a line, applied to before's jobs, with the renamed jobs' config hashes compared): the clocks, and the results digest
 #                                           (every job file's results_sha256: what the clock hash leaves out) per job and component;
 #                                           exits 1, naming the side, when either side has no jobs
-#   blast.sh same <a> <b>                   whether two jobs folders (or cache entries, by key) hold the same results, job by job;
-#                                           exits 1, naming the side, when either side has no jobs
+#   blast.sh same <a> <b>                   whether two jobs folders (or cache entries, by key) hold the same results, job by job (the
+#                                           job's seconds, the property module's `properties` and the seconds of its checks are
+#                                           timing, not results); exits 1, naming the side, when either side has no jobs
 #   blast.sh slowed <before> <after> [-n N]  the jobs both sides have, most added seconds first (job seconds are stored in every job
 #                                           file): old, new, added seconds and ratio of the top N (default 10), then each
 #                                           side's summed seconds over the shared jobs. Text only, nothing written; sides as
@@ -106,8 +112,12 @@
 #
 # Env: BLAST_DURATIONS (the durations --shard deals out by, default ci/record-durations.json), BLAST_GROUPS, BLAST_SKIP (jobs to leave out; none by default), BLAST_ONLY (run only these jobs, by ConfigPaths name; never cached; the run is complete, and exits 0, when every listed job is done), BLAST_SETUP (comma list of setup files from
 # clock-generator/, e.g. a rule patch; such a run is never cached), BLAST_CACHE (default
-# <main checkout>/clock-generator/.scratch/blast-cache, shared by every worktree of the repository), BLAST_LOCK (the file
-# that lets one blast generate at a time on the machine, default <cache>/.generate.lock).
+# <main checkout>/clock-generator/.scratch/blast-cache, shared by every worktree of the repository), BLAST_LOCK (a file
+# that lets the blasts which name it generate one at a time; by default a blast locks <out>/.generate.lock, its own output
+# folder, so two blasts started side by side both run: the guard admits a job by its memory, and two blasts of -n 4 peaked at
+# 4.55 and 4.20 GiB side by side. Before, one lock of the cache made every second blast on the host wait, because memory ran out
+# with two at once on 2026-10-23).
+# Temporary files (the key's work folder, the folder of `select`) are made under the cache, never in /tmp or TMPDIR.
 # Needs the worktree's own node_modules (scripts/worktree/setup.sh). N defaults to 4: each process is one vitest run
 # and one fork worker on one core, and the 53 jobs of the default groups peak at about 2.8 GiB with 4 (0.24.0), inside the
 # 4.5 GiB at which a 5 GiB guard cap throttles; keep the machine's total in mind when other sessions run.
@@ -116,8 +126,6 @@ HERE=$(cd "$(dirname "$0")" && pwd -P)
 # the main checkout: the parent of the repository's common git folder, the same from every worktree
 MAIN=$(cd "$(git -C "$HERE" rev-parse --path-format=absolute --git-common-dir)/.." && pwd -P)
 CACHE=${BLAST_CACHE:-$MAIN/clock-generator/.scratch/blast-cache}
-if [ -n "${BLAST_LOCK:-}" ]; then LOCK=$BLAST_LOCK
-else LOCK=$CACHE/.generate.lock; fi
 SCRATCH=tests/game/builds/.scratch
 TEST=$SCRATCH/blast.blastrun.ts
 die() { echo "blast.sh: $*" >&2; exit 1; }
@@ -144,7 +152,8 @@ worktree() {
 
 # the key of the worktree as it is: sets KEY, KEYDIR (holds engine.json and _jobs.json), DIRTY
 compute_key() {
-  KEYDIR=$(mktemp -d "${TMPDIR:-/tmp}/blast-key.XXXXXX")
+  mkdir -p "$CACHE" || die "could not make $CACHE"
+  KEYDIR=$(mktemp -d "$CACHE/.blast-key.XXXXXX") || die "could not make a folder under $CACHE"
   trap 'rm -rf "$KEYDIR"' EXIT
   python3 "$HERE/key.py" "$W" > "$KEYDIR/engine.json" || die "key.py failed"
   DIRTY=$(python3 -c "import json,sys; print('\n'.join(json.load(open(sys.argv[1]))['dirty']))" "$KEYDIR/engine.json")
@@ -226,8 +235,10 @@ generate() {
   missing=$(python3 "$HERE/cache.py" missing "$out" "$out/_jobs.json")
   [ "$missing" -ge "$n" ] || n=$missing
   if [ "$n" -gt 0 ]; then
-    # one blast generates at a time on the machine (memory: two at once ran it out on 2026-10-23)
-    mkdir -p "$(dirname "$LOCK")"; exec 9>"$LOCK"
+    # the lock of this folder's own, so that two blasts side by side each run (the guard admits a job by its memory); BLAST_LOCK
+    # makes blasts that name the same file generate one at a time, as every blast did when memory ran out on 2026-10-23
+    local lock=${BLAST_LOCK:-$out/.generate.lock}
+    mkdir -p "$(dirname "$lock")"; exec 9>"$lock"
     if ! flock -n 9; then say "waiting for another blast's generation to end"; flock 9; fi
   else say "no job to generate"; fi
   say "generating $missing jobs into $out with $n processes (logs in $out/.logs/)"
@@ -279,6 +290,7 @@ while [ $# -gt 0 ]; do
     --note) NOTE=$2; shift ;;
     --full) FULL=1 ;;
     --log) export BLAST_LOG=1; FULL=1 ;;
+    --repeat-check) export BLAST_LOG=1 BLAST_REPEAT_CHECK=1; FULL=1 ;;
     --base) BASE=$2; shift ;;
     --made-under) MADE+=("$2"); shift ;;
     --json|--md) ARGS+=("$1" "$2"); shift ;;
@@ -346,7 +358,7 @@ case "$cmd" in
   select)
     worktree "${ARGS[0]:-}"; compute_key; say "key $KEY"
     if [ "$BUILD" = 1 ]; then say "npm run build ($E)"; (cd "$E" && npm run --silent build) || die "npm run build failed"; fi
-    out=$(mktemp -d "${TMPDIR:-/tmp}/blast-select.XXXXXX"); DRY=1; seed "$out"; rm -rf "$out"
+    out=$(mktemp -d "$CACHE/.blast-select.XXXXXX") || die "could not make a folder under $CACHE"; DRY=1; seed "$out"; rm -rf "$out"
     ;;
   store)
     worktree "${ARGS[0]:-}"; src=${ARGS[1]:-}; [ -d "$src" ] && [ -n "$NOTE" ] || die "store <worktree> <jobs-dir> --note <text>"

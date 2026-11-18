@@ -31,12 +31,18 @@ async function factsOf(file: string): Promise<Facts.PlannerFacts> {
 }
 
 /**
- * Of each sample, the edges whose drop spot (`sink.drop.lane`) is not the lane the trait rounds their hand to: none yet.
+ * Of each sample, the edges whose drop spot (`sink.drop.lane`) is not the lane the trait rounds their hand to.
  * The simulator drops on the spot (BeltHandDrop) with a hand rounded to the other lane (inserterHands),
  * and the facts count the drop floor on the spot, so a sample that has one changes the graph and the floors: list it
  * here on purpose, as "<edge>: <rounding lane> -> <drop lane>".
  */
-const MOVED_DROPS: Readonly<Record<string, readonly string[]>> = {};
+const MOVED_DROPS: Readonly<Record<string, readonly string[]>> = {
+    // the grenade build's north line side-loads onto the right lane of the output belt; both lanes carry grenades
+    GRENADE_240_FILLS_BELT_EXACTLY: [
+        "inserter:1/grenade: belt:1/lane:1 -> belt:1/lane:2",
+        "inserter:2/grenade: belt:1/lane:1 -> belt:1/lane:2",
+    ],
+};
 
 describe("the planner facts", () => {
     it("carry the traits field for field: the light types are the traits' types", () => {

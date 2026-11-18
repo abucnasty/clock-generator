@@ -24,13 +24,15 @@ The check names are the `name` values in `test.yml`.
 | Check | Tests | When it starts |
 | --- | --- | --- |
 | Changed files | Finds if a pull request changes only documentation: Markdown files, `docs/` and `clock-generator/docs/` | Pull requests to `master` or `hotfix/`, and runs with `generation` set to `true` |
-| Unit tests | knip, type check, `npm run build`, lint and `npm test` in `clock-generator` | Each run. Not when Changed files finds only documentation. |
-| Docs checks | `PORTAL.md` and the configuration file fields topic agree with their sources. The bold labels of the user topics are correct. | Each run |
-| Gen 1/2, Gen 2/2 | The generation tests, in two shards | When Changed files finds changes that are not documentation, and the pull request is not a draft |
+| Unit 1/4 to Unit 4/4 | `npm test` in `clock-generator`, in four shards | Each run. Not when Changed files finds only documentation. |
+| Code checks | knip, type check, `npm run build` and lint in `clock-generator` | Each run. Not when Changed files finds only documentation. |
+| Unit tests | The result of the Unit shards and Code checks | Each run. Not when Changed files finds only documentation. |
+| Docs checks | `PORTAL.md` and the configuration file fields topic agree with their sources. The bold labels of the user topics are correct. On a pull request, the Markdown lines it adds use none of the glossary Avoid words. | Each run |
+| Gen 1/5 to Gen 5/5 | The generation tests, in five shards | When Changed files finds changes that are not documentation, and the pull request is not a draft |
 | Gen summary | The result of the Gen shards | Pull requests to `master` or `hotfix/`, and runs with `generation` set to `true`. Correct when the changes are only documentation. |
-| Rec 1/6 to Rec 6/6 | The samples and fixtures of the blast, in six shards | Pull requests only, when Changed files finds changes that are not documentation, and the pull request is not a draft |
+| Rec 1/2 to Rec 2/2 | The samples and fixtures of the blast, in two shards | Pull requests only, when Changed files finds changes that are not documentation, and the pull request is not a draft |
 | Rec summary | Compares the results with the record in `clock-generator/record/` | Pull requests to `master` or `hotfix/` only. Correct when the changes are only documentation. |
-| UI build | Lint, icons and the unit tests of the UI | Each run. Not when Changed files finds only documentation. |
+| UI build | Build, knip, lint, icons and the unit tests of the UI | Each run. Not when Changed files finds only documentation. |
 | UI samples | The UI tests that make the clock of each sample | Each run. Not when Changed files finds only documentation. |
 | UI browser | **Generate** in headless Chromium, on the development server and on the production files | Each run. Not when Changed files finds only documentation. |
 

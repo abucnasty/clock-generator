@@ -44,10 +44,10 @@ describe("a clock-only run starts as the staged scaffold does", () => {
 });
 
 describe("a recipe that makes its own ingredient", () => {
-    // no windows: every inserter is always enabled, which is all the seed needs
+    // no windows: every inserter is always enabled, which is all the seed needs; read in the cold start's first tick
     const eggs = async (overrides: Partial<NonNullable<Config["overrides"]>> = {}): Promise<number> => {
         const sample = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250);
-        const config = { ...sample, overrides: { ...sample.overrides, ...overrides } };
+        const config = { ...sample, overrides: { ...sample.overrides, judged_start: "cold" as const, ...overrides } };
         const stock = simulateClockOnly(config, {}, 480, 1, quiet, { warmup_window_cycles: 0 });
         return Math.max(...stock.machines.map(machine => machine.inputs["pentapod-egg"]?.[0] ?? 0));
     };

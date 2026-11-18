@@ -245,7 +245,7 @@ The rule above the strategies. It gives each inserter and mining drill of the cl
 The router that gives every inserter and mining drill of the clock the one chosen strategy. An entity the strategy does not control stays always enabled, with its reason.
 
 **Coordinated Sources**:
-The router that gives the inserters of each source the enable windows of another clock of the build. A source is a machine, belt or chest that inserters take from. All sources use the window cycle of the recommended clock. The generator sets the sources one at a time, from the output upstream. It keeps the setting with the smallest number of wakeups for the full clock. It is a router, not a strategy.
+The router that gives the inserters of each source the enable windows of another clock of the build. A source is a machine, belt or chest that inserters take from. All sources use one window cycle: that of the recommended clock, or of the next best-ranked stable clock on a shorter window cycle where the clock composed on it ranks first. The generator sets the sources one at a time, from the output upstream. It keeps the setting with the smallest number of wakeups for the full clock. It is a router, not a strategy.
 
 **Enable Control Strategy override** (short form: **override**):
 The setting that overrides the Enable Control Strategy of one inserter or drill (the configuration's `overrides.enable_control`). Auto lets the generator choose the strategy. Always on, Clocked and Conditional decide the control instead: the router then gives no strategy.
@@ -296,10 +296,9 @@ _Avoid_: Short (as the label of a row)
 
 **Room for one more hand**:
 Ticks that the generator adds at the end of each enable window of an inserter. It adds them where the inserter takes
-from a lane that is not a dead end. They are the ticks that one more hand takes to fill at one lane stack a tick: 4
-ticks for a hand of 16 from stacks of 4. On such a lane, an empty space or a take upstream can start a hand later than
-the generator planned. Without the room, the window closes on a hand that is not full. A lane with an unknown end gets
-the room. A side pickup of an item on both lanes of its belt gets no room. Its far lane gives what an empty space on
+from a belt, dead end or not. They are the ticks that one more hand takes to fill at one lane stack a tick: 4
+ticks for a hand of 16 from stacks of 4. On a lane, an empty space or a take upstream can start a hand later than
+the generator planned. Without the room, the window closes on a hand that is not full. A side pickup of an item on both lanes of its belt gets no room. Its far lane gives what an empty space on
 its near lane does not give. A project term, as the code says it (`laneHandRoomTicks`).
 _Avoid_: belt slack, belt pickup slack, pickup slack, slack (bare)
 

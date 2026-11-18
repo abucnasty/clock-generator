@@ -1,0 +1,523 @@
+{
+ "meaning": "The record jobs that had no game recording of their selected clock from the staged start (missing-recordings-clock-fixtures.ts), each recorded on the sample's scaffold from the staged start of the harness, as the game test missing-recordings-clock.game.test.ts runs it. `native` is the run under the game tests' protocol, timed in game ticks (tests/game/helpers/lua/steady.lua), recorded in Factorio 2.1.24: steady state (the machines making the target have made it over the trailing 3,600 ticks, no less than a window of whole clock cycles earlier), a baseline judged by net output over its whole clock cycles, then the losses of the case one after the other, each until the output falls below the baseline's lowest minute, released and recovered; `stock` is the output stock guard. A build of copies is also judged on each copy by itself (the verdict.json the test keeps: every whole clock cycle from steady state to the first loss, and every whole clock cycle of the last minute after the last loss); the entries here are the runs that held, and the pick that the simulator calls \"no recovery\" is kept with the game's result. `generation` is the selection, with the sha256 of its exported clock's identity (`clockIdentity`); `recorded` is the recording that is current.",
+ "cases": {
+  "accumulator-320": {
+   "recorded": {
+    "pr": 809,
+    "commit": "b416a030",
+    "frozen_head": "b416a030",
+    "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
+    "clock_sha256": "b43dfd7b1bc71bb06bacc17e15795544004cf07d9b2bfd78870a59f57acb0197",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 320,
+    "period": 972,
+    "window": 3600,
+    "expected": 19200,
+    "steady": 6516,
+    "baseline": {
+     "ticks": 3600,
+     "total": 19170,
+     "expected": 19200,
+     "min": 19170,
+     "max": 19260,
+     "held": false,
+     "meets": true,
+     "measured": {
+      "ticks": 2916,
+      "items": 15552,
+      "expected": 15552,
+      "stock_start": 180,
+      "stock_end": 180,
+      "net": 15552
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "block output",
+      "start": 10116,
+      "drop": 10250,
+      "release": 10250,
+      "recovered": 15174
+     }
+    ],
+    "stock": {
+     "lowest": 0,
+     "end": 300,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 15174
+   },
+   "generation": {
+    "period": 972,
+    "expected": 5184,
+    "verdict": "stable",
+    "selection": {
+     "id": "coordinated_sources",
+     "holds": true,
+     "rate": 320,
+     "supply": null
+    },
+    "clock_sha256": "b43dfd7b1bc71bb06bacc17e15795544004cf07d9b2bfd78870a59f57acb0197"
+   }
+  },
+  "automation-science-240-one-output-swing": {
+   "recorded": {
+    "pr": 809,
+    "commit": "b416a030",
+    "frozen_head": "b416a030",
+    "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
+    "clock_sha256": "0f8a8504f6ec238aa1d6327eddad6779df30c3a4f981cf3120a9dff9c588b87c",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "no recovery",
+    "target": 240,
+    "period": 72,
+    "window": 3600,
+    "expected": 14400,
+    "steady": 7292,
+    "baseline": {
+     "ticks": 3600,
+     "total": 14398,
+     "expected": 14400,
+     "min": 14366,
+     "max": 14434,
+     "held": false,
+     "meets": true,
+     "measured": {
+      "ticks": 3600,
+      "items": 14398,
+      "expected": 14400,
+      "stock_start": 144,
+      "stock_end": 142,
+      "net": 14400
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut copper-plate",
+      "start": 10892,
+      "drop": 10983,
+      "release": 10983,
+      "recovered": 17736
+     }
+    ],
+    "stock": {
+     "lowest": 72,
+     "end": 156,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 17736
+   },
+   "generation": {
+    "period": 72,
+    "expected": 288,
+    "verdict": "no recovery",
+    "selection": {
+     "id": "pitch_pickups",
+     "holds": true,
+     "rate": 240,
+     "supply": "backed_up"
+    },
+    "clock_sha256": "0f8a8504f6ec238aa1d6327eddad6779df30c3a4f981cf3120a9dff9c588b87c"
+   }
+  },
+  "electromagnetic-science-240-recycler-belt-fed": {
+   "recorded": {
+    "pr": 809,
+    "commit": "b416a030",
+    "frozen_head": "b416a030",
+    "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
+    "clock_sha256": "3202663f1c6103642687e14b4a5e1c27b3d5f6276bc557ba3294c350441302c8",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 96,
+    "period": 40,
+    "window": 3600,
+    "expected": 5760,
+    "steady": 7200,
+    "baseline": {
+     "ticks": 3600,
+     "total": 5795,
+     "expected": 5760,
+     "min": 5756,
+     "max": 5800,
+     "held": false,
+     "meets": true,
+     "measured": {
+      "ticks": 3600,
+      "items": 5795,
+      "expected": 5760,
+      "stock_start": 24,
+      "stock_end": 22,
+      "net": 5797
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut accumulator",
+      "start": 10800,
+      "drop": 10955,
+      "release": 10955,
+      "recovered": 14795
+     },
+     {
+      "kind": "block output",
+      "start": 14795,
+      "drop": 24372,
+      "release": 24372,
+      "recovered": 28254
+     },
+     {
+      "kind": "cut superconductor",
+      "start": 28254,
+      "drop": 28454,
+      "release": 28454,
+      "recovered": 32428
+     }
+    ],
+    "stock": {
+     "lowest": 6,
+     "end": 20,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 32428
+   },
+   "generation": {
+    "period": 40,
+    "expected": 64,
+    "verdict": "stable",
+    "selection": {
+     "id": "coordinated_sources",
+     "holds": true,
+     "rate": 240,
+     "supply": "backed_up"
+    },
+    "clock_sha256": "3202663f1c6103642687e14b4a5e1c27b3d5f6276bc557ba3294c350441302c8"
+   }
+  },
+  "flying-robot-frame-80": {
+   "recorded": {
+    "pr": 809,
+    "commit": "b416a030",
+    "frozen_head": "b416a030",
+    "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
+    "clock_sha256": "6bab541d51f7e1051beb1194f86842e4c8f30c1724b4564851302d19e4dcf808",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 80,
+    "period": 288,
+    "window": 3600,
+    "expected": 4800,
+    "steady": 7056,
+    "baseline": {
+     "ticks": 3600,
+     "total": 4800,
+     "expected": 4800,
+     "min": 4776,
+     "max": 4824,
+     "held": false,
+     "meets": true,
+     "measured": {
+      "ticks": 3456,
+      "items": 4608,
+      "expected": 4608,
+      "stock_start": 120,
+      "stock_end": 120,
+      "net": 4608
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut electronic-circuit",
+      "start": 10656,
+      "drop": 10735,
+      "release": 10735,
+      "recovered": 16316
+     },
+     {
+      "kind": "block output",
+      "start": 16316,
+      "drop": 16730,
+      "release": 16730,
+      "recovered": 20400
+     },
+     {
+      "kind": "cut electric-engine-unit",
+      "start": 20400,
+      "drop": 20509,
+      "release": 20509,
+      "recovered": 25261
+     }
+    ],
+    "stock": {
+     "lowest": 0,
+     "end": 96,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 25261
+   },
+   "generation": {
+    "period": 288,
+    "expected": 384,
+    "verdict": "stable",
+    "selection": {
+     "id": "moved_output_swing",
+     "holds": true,
+     "rate": 80,
+     "supply": "backed_up"
+    },
+    "clock_sha256": "6bab541d51f7e1051beb1194f86842e4c8f30c1724b4564851302d19e4dcf808"
+   }
+  },
+  "logistic-science-240": {
+   "recorded": {
+    "pr": 809,
+    "commit": "b416a030",
+    "frozen_head": "b416a030",
+    "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
+    "clock_sha256": "05fd4bbdccfba05b939e5195c6dfcae215d0cf3a6342f80bb407a803d7a6540c",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 480,
+    "period": 176,
+    "window": 3600,
+    "expected": 28800,
+    "steady": 7194,
+    "baseline": {
+     "ticks": 3600,
+     "total": 28820,
+     "expected": 28800,
+     "min": 28732,
+     "max": 28864,
+     "held": false,
+     "meets": true,
+     "measured": {
+      "ticks": 3520,
+      "items": 28160,
+      "expected": 28160,
+      "stock_start": 792,
+      "stock_end": 792,
+      "net": 28160
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut transport-belt",
+      "start": 10794,
+      "drop": 10820,
+      "release": 10820,
+      "recovered": 15290
+     },
+     {
+      "kind": "block output",
+      "start": 15290,
+      "drop": 15391,
+      "release": 15391,
+      "recovered": 15471
+     },
+     {
+      "kind": "cut inserter",
+      "start": 15471,
+      "drop": 15509,
+      "release": 15509,
+      "recovered": 20042
+     }
+    ],
+    "stock": {
+     "lowest": 0,
+     "end": 792,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 20042
+   },
+   "generation": {
+    "period": 176,
+    "expected": 1408,
+    "verdict": "stable",
+    "selection": {
+     "id": "takt_batches_observed",
+     "holds": true,
+     "rate": 239.99999999999997,
+     "supply": "backed_up"
+    },
+    "clock_sha256": "05fd4bbdccfba05b939e5195c6dfcae215d0cf3a6342f80bb407a803d7a6540c"
+   }
+  },
+  "processing-unit-15-chest-fed": {
+   "recorded": {
+    "pr": 809,
+    "commit": "b416a030",
+    "frozen_head": "b416a030",
+    "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
+    "clock_sha256": "887d21be999c0fd4f1126ff40ad21e40bc5e6da68425461a93dc30b1517fa81f",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 15,
+    "period": 384,
+    "window": 3600,
+    "expected": 900,
+    "steady": 7074,
+    "baseline": {
+     "ticks": 3600,
+     "total": 896,
+     "expected": 900,
+     "min": 896,
+     "max": 912,
+     "held": false,
+     "meets": true,
+     "measured": {
+      "ticks": 3456,
+      "items": 864,
+      "expected": 864,
+      "stock_start": 3,
+      "stock_end": 3,
+      "net": 864
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut advanced-circuit",
+      "start": 10674,
+      "drop": 10983,
+      "release": 10983,
+      "recovered": 14786
+     },
+     {
+      "kind": "block output",
+      "start": 14786,
+      "drop": 14824,
+      "release": 14824,
+      "recovered": 14954
+     },
+     {
+      "kind": "cut electronic-circuit",
+      "start": 14954,
+      "drop": 15007,
+      "release": 15007,
+      "recovered": 19010
+     }
+    ],
+    "stock": {
+     "lowest": 0,
+     "end": 16,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 19010
+   },
+   "generation": {
+    "period": 384,
+    "expected": 96,
+    "verdict": "stable",
+    "selection": {
+     "id": "euclidean_swings",
+     "holds": true,
+     "rate": 15,
+     "supply": null
+    },
+    "clock_sha256": "887d21be999c0fd4f1126ff40ad21e40bc5e6da68425461a93dc30b1517fa81f"
+   }
+  },
+  "productivity-module-80-chest-chain": {
+   "recorded": {
+    "pr": 809,
+    "commit": "b416a030",
+    "frozen_head": "b416a030",
+    "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
+    "clock_sha256": "99e946cc4272d195913824d1ec2629fbc38c9382d68cfa496f4d5f030b179beb",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 13.333333,
+    "period": 72,
+    "window": 3600,
+    "expected": 800,
+    "steady": 7437,
+    "baseline": {
+     "ticks": 3600,
+     "total": 801,
+     "expected": 800,
+     "min": 796,
+     "max": 803,
+     "held": false,
+     "meets": true,
+     "measured": {
+      "ticks": 3600,
+      "items": 801,
+      "expected": 800,
+      "stock_start": 9,
+      "stock_end": 10,
+      "net": 800
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut coal",
+      "start": 11037,
+      "drop": 13348,
+      "release": 13348,
+      "recovered": 17805
+     },
+     {
+      "kind": "block output",
+      "start": 17805,
+      "drop": 19074,
+      "release": 19074,
+      "recovered": 22970
+     },
+     {
+      "kind": "stop casting-iron",
+      "start": 22970,
+      "drop": 23479,
+      "release": 23479,
+      "recovered": 27146
+     }
+    ],
+    "stock": {
+     "lowest": 3,
+     "end": 21,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 27146
+   },
+   "generation": {
+    "period": 72,
+    "expected": 16,
+    "verdict": "stable",
+    "selection": {
+     "id": "coordinated_sources",
+     "holds": true,
+     "rate": 80,
+     "supply": "backed_up"
+    },
+    "clock_sha256": "99e946cc4272d195913824d1ec2629fbc38c9382d68cfa496f4d5f030b179beb"
+   }
+  }
+ }
+}

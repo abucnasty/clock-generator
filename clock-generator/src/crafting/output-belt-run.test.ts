@@ -1,14 +1,20 @@
-import { describe, expect, it } from "vitest";
+import fs from "fs";
+import path from "path";
+import { beforeAll, describe, expect, it } from "vitest";
+import { lithiumRows } from "../../tests/configs/lithium-rows";
 import { BeltSpeed } from "../entities/belt";
 import type { OutputBeltJoin } from "../entities/belt/join/output-belt-join";
 import { BeltLane } from "../simulation/components/belt-lane";
 import { OutputBeltDrop, OutputBeltRun } from "./output-belt-run";
+import type { Config } from "../config";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
+import { outputBeltProblems } from "../config/output-belt";
 import { OpenRange } from "../data-types";
+import { EntityId } from "../entities";
 import { simulationStateKey } from "./runner/steady-state";
 import type { SimulationContext } from "./sequence/simulation-context";
-import { runOnSharedLanes } from "./shared-lane-model";
+import { recordInserters, runOnSharedLanes, sharedLaneLayoutOf, type DropRecorder } from "./shared-lane-model";
 import { sharedLaneRunsOf } from "./shared-lane-verdict";
 
 // One copy's side belt (a drop tile and a turned belt, 551 long) side-loads onto an underground exit (128), which runs into
@@ -79,8 +85,8 @@ describe("the output belt in the run of the copies", () => {
         // the drop slot of the first copy's hand holds the key, so the belt's key (and the state of the run) holds it
         const lane = new BeltLane({ ingredient_name: "automation-science-pack", stack_size: 4 }, BeltSpeed.TURBO_TRANSPORT_BELT);
         const twin = new BeltLane({ ingredient_name: "automation-science-pack", stack_size: 4 }, BeltSpeed.TURBO_TRANSPORT_BELT);
-        lane.seedDrop("inserter:2", new OutputBeltDrop(one, 1, true, () => 0, 4, BeltSpeed.TURBO_TRANSPORT_BELT));
-        twin.seedDrop("inserter:2", new OutputBeltDrop(other, 1, true, () => 0, 4, BeltSpeed.TURBO_TRANSPORT_BELT));
+        lane.seedDrop("inserter:2", new OutputBeltDrop(one, 1, 1, true, () => 0, 4, BeltSpeed.TURBO_TRANSPORT_BELT));
+        twin.seedDrop("inserter:2", new OutputBeltDrop(other, 1, 1, true, () => 0, 4, BeltSpeed.TURBO_TRANSPORT_BELT));
         expect(lane.dropKey("inserter:2", 10)).toBe(one.key(10));
         expect(lane.dropKey("inserter:2", 10)).not.toBe(twin.dropKey("inserter:2", 10));
     });
@@ -107,5 +113,109 @@ describe("the output belt in the state of a run of the copies", () => {
         const key = run.output_belt!.key(tick);
         expect(run.output_belt!.stacks(tick).length).toBeGreaterThan(0);
         expect(simulationStateKey(context!).split(key).length - 1).toBe(1);
+    });
+});
+
+/** A clock recorded in the game on the lithium plate build: its windows, and the output swings of a window it was made with */
+interface RecordedClock {
+    readonly window_cycle_ticks: number;
+    readonly output_swings?: number;
+    readonly windows: Readonly<Record<string, readonly { start: number; end: number }[]>>;
+}
+
+/**
+ * Two clocks recorded on the lithium plate build (Factorio 2.1.24, warm-up 3,600 ticks), with only the output path changed
+ * between the runs of a clock:
+ * - `short_in_game` (4,320 ticks, 5,760 plates a window cycle): 5,120, 5,664, 5,680 and 5,680 as built; 5,152 then 5,728
+ *   three times with furnaces 7 and 8 into a chest that removes all; 5,760 in each of four with furnaces 3, 4, 7 and 8
+ *   into it
+ * - `holds_in_game` (2,160 ticks): its 2,880 plates in every window cycle as built, at four starts
+ */
+const LITHIUM_CLOCKS: Readonly<Record<"short_in_game" | "holds_in_game", RecordedClock>> =
+    JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "lithium-plate-80-recorded-clocks.json"), "utf8"));
+/** The ticks of a run, and of its cold start before the window cycles that are judged */
+const LITHIUM_RUN_TICKS = 6 * 4320;
+const LITHIUM_WARM_UP_TICKS = 2 * 4320;
+const LITHIUM_PER_SECOND = 80;
+const quietLogger = { log: () => {}, warn: () => {}, error: () => {}, debug: () => {}, info: () => {} };
+
+/**
+ * The plates that the furnaces' output inserters (onto the belt or into the chest) put down in each window cycle of a run
+ * of the clock on the build from a cold start, after the warm-up
+ */
+function platesByWindowCycle(config: Config, clock: RecordedClock): number[] {
+    return runOfClock(config, clock).plates;
+}
+
+/** `platesByWindowCycle`, with the hands that the output belt took */
+function runOfClock(config: Config, clock: RecordedClock): { plates: number[]; belt_hands: number } {
+    // from the cold start, as the runs were laid against the game's (the reader counts window cycles from its tick 0)
+    const cold: Config = { ...config, overrides: { ...config.overrides, judged_start: "cold" } };
+    const under: Config = clock.output_swings === undefined ? cold
+        : { ...cold, overrides: { ...cold.overrides, terminal_swing_count: clock.output_swings } };
+    const windows = new Map(Object.entries(clock.windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))]));
+    const furnaces = new Set(config.machines.filter(machine => machine.recipe === config.setpoint.recipe).map(machine => machine.id));
+    const output_ids = config.inserters.flatMap((inserter, index) => inserter.source.type === "machine" && furnaces.has(inserter.source.id)
+        ? [EntityId.forInserter(inserter.id ?? index + 1).id] : []);
+    const cycles = LITHIUM_RUN_TICKS / clock.window_cycle_ticks;
+    let recorders: Map<string, DropRecorder> | undefined;
+    const run = runOnSharedLanes(under, windows, clock.window_cycle_ticks, sharedLaneLayoutOf(under, []), cycles, quietLogger,
+        context => { recorders = recordInserters(context, output_ids); });
+    const plates = new Array<number>(cycles).fill(0);
+    for (const recorder of recorders!.values()) {
+        for (const hand of recorder.hands) {
+            const cycle = Math.floor(hand.tick / clock.window_cycle_ticks);
+            if (cycle < cycles) plates[cycle] += hand.items;
+        }
+    }
+    return { plates: plates.slice(LITHIUM_WARM_UP_TICKS / clock.window_cycle_ticks),
+        belt_hands: [...run.output_belt?.hands.values() ?? []].reduce((sum, hands) => sum + hands.length, 0) };
+}
+
+/** The plates of a window cycle of the clock, at the build's 80 a second */
+const targetOf = (clock: RecordedClock) => LITHIUM_PER_SECOND * clock.window_cycle_ticks / 60;
+const fallsShort = (plates: number[], clock: RecordedClock) => Math.min(...plates) < targetOf(clock);
+const holds = (plates: number[], clock: RecordedClock) => plates.every(made => made >= targetOf(clock));
+
+// The lithium plate build's two rows of three furnaces, each row's output on a line of its own: two output inserters
+// drop in line onto underground ends of it, the third onto a side belt that side-loads onto it (tests/configs/lithium-rows.ts).
+// The run of the copies moves the plates on both lines, so a hand that cannot put its plates down waits. The tests compare
+// the direction with the game's (short or full in a window cycle), not the counts.
+describe("the output belt of two lines, with three output inserters on each, on the lithium plate build", () => {
+    let sample: Config;
+    beforeAll(async () => { sample = await loadConfigFromFile(ConfigPaths.LITHIUM_PLATE_80_SILO_CHEST); });
+    const { short_in_game, holds_in_game } = LITHIUM_CLOCKS;
+
+    it("is stated with no problem as built, without the side loads, and with one furnace a row", () => {
+        for (const form of ["as built", "no side loads", "one furnace a row"] as const) {
+            const config = lithiumRows(sample, form);
+            const outputs = config.inserters.filter(inserter => inserter.source.type === "machine" && inserter.sink.type === "belt").length;
+            expect(outputBeltProblems(config.output_belt!, config.setpoint.copy_offset, outputs)).toEqual([]);
+        }
+    });
+
+    it("is stated by the sample as loaded, with no problem, and the sample's run is the same as the test config's", () => {
+        const outputs = sample.inserters.filter(inserter => inserter.source.type === "machine" && inserter.sink.type === "belt").length;
+        expect(outputBeltProblems(sample.output_belt!, sample.setpoint.copy_offset, outputs)).toEqual([]);
+        expect(sample.output_belt).toEqual(lithiumRows(sample, "as built").output_belt);
+        expect(fallsShort(platesByWindowCycle(sample, short_in_game), short_in_game)).toBe(true);
+        expect(holds(platesByWindowCycle(sample, holds_in_game), holds_in_game)).toBe(true);
+    });
+
+    it("as built: the clock short in the game falls short, the clock that holds in the game makes its plates in every window cycle", () => {
+        expect(fallsShort(platesByWindowCycle(lithiumRows(sample, "as built"), short_in_game), short_in_game)).toBe(true);
+        expect(holds(platesByWindowCycle(lithiumRows(sample, "as built"), holds_in_game), holds_in_game)).toBe(true);
+    });
+
+    it("the clock short in the game holds with one furnace a row on the lines, and falls short with two", () => {
+        const one_a_row = runOfClock(lithiumRows(sample, "one furnace a row"), short_in_game);
+        expect(holds(one_a_row.plates, short_in_game)).toBe(true);
+        // furnaces 5 and 6 put their plates on the lines: 4 hands a window, 15 windows a window cycle, 6 window cycles
+        expect(one_a_row.belt_hands).toBeGreaterThanOrEqual(2 * 4 * 15 * 5);
+        expect(fallsShort(platesByWindowCycle(lithiumRows(sample, "no side loads"), short_in_game), short_in_game)).toBe(true);
+    });
+
+    it("without the output belt, each hand on a tile of its own, the clock short in the game holds", () => {
+        expect(holds(platesByWindowCycle({ ...sample, output_belt: undefined }, short_in_game), short_in_game)).toBe(true);
     });
 });

@@ -13,18 +13,30 @@ import { clockIdentity } from '../../../../src/crafting/clock-identity';
 import { recordSimulationTimeline } from '../../../../src/crafting/record-timeline';
 import { EntityId } from '../../../../src/entities';
 import { GROUP_GAP_TILES } from '../../../../src/crafting/turn-groups';
-import { SEARCH_LABELS } from '../../../../src/crafting/generate-blueprint-test-helpers';
-import type { Config } from '../../../../src/config/schema';
+import { SEARCH_LABELS, reasonsOf, swingSumsOf } from '../../../../src/crafting/generate-blueprint-test-helpers';
+import { isNotChecked, judgeSharedLanes, sharedLaneRunsOf } from '../../../../src/crafting/shared-lane-verdict';
+import type { SharedLaneLoss } from '../../../../src/crafting/shared-lane-verdict';
+import { runOnSharedLanes } from '../../../../src/crafting/shared-lane-model';
+import { OpenRange } from '../../../../src/data-types';
+import { judgedStartOf, type Config } from '../../../../src/config/schema';
 import { lithiumSiloCases } from '../lithium-plate-80-silo-chest-clock-fixtures';
 
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 const selectedOf = (generated: ClockAlternativesResult): ClockAlternative => generated.alternatives[generated.selected_index];
 const byMaker = (generated: ClockAlternativesResult, maker: string): ClockAlternative => generated.alternatives.find(alternative => alternative.maker === maker)!;
 const byLabel = (generated: ClockAlternativesResult, label: string): ClockAlternative => generated.alternatives.find(alternative => alternative.label === label)!;
+const byId = (generated: ClockAlternativesResult, id: string): ClockAlternative => generated.alternatives.find(alternative => alternative.id === id)!;
+/** The rows of a clock as the page reads them: belt and lane, the copies' take or drop a second, the state's label and sentence */
+const rowsOf = (clock: ClockAlternative) => clock.checked_lanes!.rows.map(row => ({ at: `${row.belt_id}/${row.lane}`,
+    together: row.together === null ? null : `${row.together.kind} ${row.together.items_per_second}`, label: row.label, sentence: row.sentence }));
 type Entities = ClockAlternative['result']['blueprint']['entities'];
+// the line of an inserter or a drill under a combinator's header: "Inserter 4: [entity=car] → [item=iron-ore] → machine 1 [recipe=iron-plate]"
+const ROUTE_LINE = /^(Inserters?|Drills?) \d+(, \d+)*: /;
+/** The header and the line of counts of a description, without the lines of each inserter between them */
+const headerAndCounts = (description: string | undefined) => (description ?? '').split('\n').filter(line => !ROUTE_LINE.test(line)).slice(0, 2);
 const deciderDescriptions = (alternative: ClockAlternative) => alternative.result.blueprint.entities
     .filter(entity => entity.name === 'decider-combinator')
-    .map(entity => (entity.player_description ?? '').split('\n').slice(0, 2));
+    .map(entity => headerAndCounts(entity.player_description));
 
 // The productivity module chain (PRODUCTIVITY_MODULE_80_CHEST_CHAIN) at 80 modules a second over 6 copies: nine machines with chests between them.
 // Windows made from the hands and the order of the chain hold in one cycle, so no search is run.
@@ -112,13 +124,21 @@ const agriculturalScience: JobCheck[] = [
 ];
 
 // The processing unit circuit export (PROCESSING_UNIT_80_CIRCUIT_EXPORT), a real cell (#189) at 80 processing units a second.
+// From the backpressure start its three casting foundries, which no inserter feeds, start full (docs/stability.md, "How a clock is
+// started"): the explicit plan is then made on two output cycles, and the per-hand clock of the grouped hands comes from the
+// one-swing maker; from the cold start (`overrides.judged_start` "cold") the checks read as they did before.
+const circuitExportPlan = (config: Config) => judgedStartOf(config.overrides) === 'cold' ? { ticks: 24, items: 32 } : { ticks: 48, items: 64 };
+const circuitExportPerHand = (config: Config, generated: ClockAlternativesResult) =>
+    byMaker(generated, judgedStartOf(config.overrides) === 'cold' ? 'planned-belt-slack-per-hand' : 'swings-1-per-hand');
 const circuitExport: JobCheck[] = [
     {
-        name: 'Behavior: the explicit one-cycle plan is offered, in 24 ticks with 32 items, on a backed-up belt',
-        run: ({ generated }) => {
+        name: 'Behavior: the explicit plan is offered on a backed-up belt, in 24 ticks with 32 items from the cold start, 48 with 64 from the backpressure start',
+        run: ({ config, generated }) => {
             const plan = byMaker(generated, 'planned-belt-slack');
             expect(plan, 'the explicit behavior plan is offered, independently of the selector').toBeDefined();
-            expect(plan.result.stability_check.as_built).toMatchObject({ holds: true, actual_output_items: 32 });
+            const { ticks, items } = circuitExportPlan(config);
+            expect(plan.result.simulation_duration.ticks).toBe(ticks);
+            expect(plan.result.stability_check.as_built).toMatchObject({ holds: true, actual_output_items: items });
             expect(plan.belt).toEqual({ kind: 'backed_up' });
         },
     },
@@ -127,8 +147,8 @@ const circuitExport: JobCheck[] = [
         // from every loss, so it is remade once with the takers into the target machines (the processing unit machines 2 and 3) unguarded
         // of the per-hand clock the grouped hands make, which the per-branch clock composed from it is recommended over
         name: 'Selection: the 4 inserters with no window are the circuits into the processing unit machines, which the remake leaves unguarded',
-        run: ({ generated }) => {
-            expect(byMaker(generated, 'planned-belt-slack-per-hand').result.always_on_reasons).toEqual(Object.fromEntries([3, 4, 7, 8]
+        run: ({ config, generated }) => {
+            expect(circuitExportPerHand(config, generated).result.always_on_reasons).toEqual(Object.fromEntries([3, 4, 7, 8]
                 .map(number => [`inserter:${number}`, { kind: 'full-duty-cycle', window_cycle_ticks: 24 }])));
         },
     },
@@ -157,13 +177,13 @@ const circuitExport: JobCheck[] = [
         },
     },
     {
-        // the replay from the warm-up inventory is the build stalled in part (the plastic off the belt, inserter 1, picks up
-        // nothing in the window cycle recorded); the long run judges stock from index 960, after 240 warm-up ticks; replaying clock tick 1200
-        // shows the inserters at work
+        // from the cold start the replay from the warm-up inventory is the build stalled in part (the plastic off the belt, inserter 1,
+        // picks up nothing in the window cycle recorded) and replaying clock tick 1200 shows it at work; from the backpressure start the
+        // other way round (4 pickups, then none). Either way the long run judges stock from index 960, after 240 warm-up ticks
         name: 'records a settled period from the clock tick the long run judges, not the stalled first one',
         run: ({ config, generated }) => {
             // the per-hand clock of the grouped hands, which stalls in its first window cycle; the per-branch clock composed from it does not
-            const selected = byMaker(generated, 'planned-belt-slack-per-hand');
+            const selected = circuitExportPerHand(config, generated);
             const first_judged_tick = selected.result.stability_check.as_built?.first_judged_tick;
             expect(first_judged_tick).toBe(960);
             const judged_clock_tick = selected.result.stability_check.as_built?.clock_tick_at_first_judged;
@@ -180,8 +200,14 @@ const circuitExport: JobCheck[] = [
             expect(cold.ticks_before_recording).toBe(240);
             expect(settled.ticks_before_recording).toBe(1200);
             expect(settled.end_tick).toBe(24);
-            expect(swings(cold)).toBe(0);
-            expect(swings(settled)).toBeGreaterThan(0);
+            if (judgedStartOf(config.overrides) === 'cold') {
+                expect(swings(cold)).toBe(0);
+                expect(swings(settled)).toBeGreaterThan(0);
+            } else {
+                // from the backpressure start the first replayed window cycle is not stalled; inserter 1 then takes its plastic in
+                // other window cycles than the one replayed at the settled tick
+                expect([swings(cold), swings(settled)]).toEqual([4, 0]);
+            }
         },
     },
 ];
@@ -218,10 +244,12 @@ const utility480: JobCheck[] = [
 // Metallurgic science at the speeds the game gives its scaffold, its packs taken into a chest that removes them
 const metallurgic: JobCheck[] = [
     {
-        name: 'the observed windows do not repeat a state in the long run',
+        name: 'the observed windows repeat a state in the long run',
         run: ({ generated }) => {
-            // the long run repeats no state: the game makes 480 and every eighth window cycle 496, 100% of the target over 38 window cycles
-            expect(selectedOf(generated).result.stability_check.as_built?.long_run_proven).toBe(false);
+            // the game makes 480 and every eighth window cycle 496, 100% of the target over 38 window cycles. The long run repeats a
+            // state once the keys hold the craft underway and the productivity bars to a billionth of a craft: the bars' rounding
+            // drift, which a payout never resets, kept the full doubles of one window cycle from equalling those of a later one
+            expect(selectedOf(generated).result.stability_check.as_built?.long_run_proven).toBe(true);
         },
     },
     {
@@ -272,20 +300,54 @@ const electromagnetic330: JobCheck[] = [
         name: 'the simulator tries the loss of each supply and the output not taken away, and gets back from all three',
         run: ({ config, generated }) => lossesRecover(config, generated, [['supply:supercapacitor', true], ['supply:accumulator', true], ['output:electromagnetic-science-pack', true]]),
     },
+    // from src/crafting/checked-lanes.generation.test.ts
+    {
+        name: "on electromagnetic science 330: two input rows, no output row and the chest line",
+        run: ({ generated }) => {
+            const clock = selectedOf(generated);
+            expect(rowsOf(clock)).toEqual([
+                { at: "1/1", together: "take 120", label: "Holds", sentence: "Every copy gets its items." },
+                { at: "1/2", together: "take 120", label: "Holds", sentence: "Every copy gets its items." },
+            ]);
+            expect(clock.checked_lanes!.line.sentence).toBe("Checked with all 11 copies on the lanes they share. Every copy gets its items. "
+                + "The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack.");
+            expect(clock.checked_lanes!.line.output_chests).toEqual([{ chest_id: 1, kind: "infinity-chest", items: ["electromagnetic-science-pack"] }]);
+            expect(reasonsOf(generated)).toEqual({
+                euclidean_swings: { code: "belt_gaps", data: { missed: 162, with_gap: 162 } },
+                takt_batches_swings_2: { code: "belt_gaps", data: { missed: 151, with_gap: 121 } },
+            });
+            expect(swingSumsOf(generated)).toEqual({ euclidean_swings: [], takt_batches_swings_2: [] });
+        },
+    },
 ];
 
 // The lithium plate build (LITHIUM_PLATE_80_SILO_CHEST): the config marks the two drops that side-load onto the shared belt
-const lithium: JobCheck[] = [{
-    name: 'every clock of the build says the two drops side-load onto another belt',
-    run: ({ generated }) => {
-        for (const variant of lithiumSiloCases()) {
-            const chosen = generated.alternatives.find(alternative => alternative.id === variant.alternative)!;
-            expect(chosen.insights.filter(insight => insight.id === 'side-loaded-drop').map(insight => insight.what), variant.name).toEqual([
-                'The inserter (inserter 15) that drops lithium plate drops onto a 3 tile belt buffer that side-loads onto another belt. '
-                + 'The inserter (inserter 16) that drops lithium plate drops onto a 3 tile belt buffer that side-loads onto another belt.']);
-        }
+const lithium: JobCheck[] = [
+    {
+        name: 'every clock of the build says the two drops side-load onto another belt',
+        run: ({ generated }) => {
+            for (const variant of lithiumSiloCases()) {
+                const chosen = generated.alternatives.find(alternative => alternative.id === variant.alternative)!;
+                expect(chosen.insights.filter(insight => insight.id === 'side-loaded-drop').map(insight => insight.what), variant.name).toEqual([
+                    'The inserter (inserter 15) that drops lithium plate drops onto a 3 tile belt buffer that side-loads onto another belt. '
+                    + 'The inserter (inserter 16) that drops lithium plate drops onto a 3 tile belt buffer that side-loads onto another belt.']);
+            }
+        },
     },
-}];
+    // from src/crafting/coordinated-sources.generation.test.ts: the recommended clock is on 4,320 ticks; the clock of 3.335 wakeups a minute that the
+    // game held is composed on 2,160 ticks, the window cycle of the time-division windows, the best-ranked stable clock on another window cycle
+    {
+        name: "the per-branch clock is composed on the window cycle of the next best clock where that gives fewer wakeups than the recommended clock's",
+        run: ({ generated }) => {
+            const recommended = generated.alternatives.filter(it => it.id !== "coordinated_sources")
+                .reduce((best, it) => (it.verdict === "stable" && it.ranking.wake_ups_per_minute! < best.ranking.wake_ups_per_minute! ? it : best));
+            expect([recommended.id, recommended.result.simulation_duration.ticks]).toEqual(["takt_batches_observed_swings_4", 4320]);
+            const selected = selectedOf(generated);
+            expect([selected.id, selected.verdict, selected.result.simulation_duration.ticks]).toEqual(["coordinated_sources", "stable", 2160]);
+            expect(selected.ranking.wake_ups_per_minute).toBeCloseTo(3.335, 3);
+        },
+    },
+];
 
 // The logistic science build with direct insertion (LOGISTIC_SCIENCE_240_DIRECT_INSERT)
 const logisticDirect: JobCheck[] = [{
@@ -345,10 +407,13 @@ const grenade: JobCheck[] = [
                 [[1, 2], 'Group 1 of 2: takes its turn in ticks 1–44 of the 112-tick window cycle. Its combinators stand together, in the order of the turn.'],
                 [[7, 8], 'Group 2 of 2: takes its turn in ticks 57–100 of the 112-tick window cycle. Its combinators stand together, in the order of the turn.'],
             ]);
-            // after the lines that say what the combinator switches on and when, which stay the first two
-            for (const [entity] of groupLines) expect(lines(entity)[2]).toMatch(/^Group /);
-            expect(lines(tagged(blueprint.entities, 'inserters', [1, 2]))[0]).toBe('2 inserters, each [entity=assembling-machine-3] → [entity=turbo-transport-belt] [item=grenade] (1, 2)');
-            expect(lines(tagged(blueprint.entities, 'inserters', [1, 2]))[1]).toBe('1 swing each in 1 enable window per 112-tick window cycle: open 1');
+            // after the lines that say what the combinator switches on and when: the header, the line of each inserter, the counts
+            for (const [entity] of groupLines) expect(lines(entity).filter(line => !ROUTE_LINE.test(line))[2]).toMatch(/^Group /);
+            expect(lines(tagged(blueprint.entities, 'inserters', [1, 2])).slice(0, 3)).toEqual([
+                '2 inserters [item=grenade] (1, 2)',
+                'Inserters 1, 2: [entity=assembling-machine-3] → [item=grenade] → [entity=turbo-transport-belt]',
+                '1 swing each in 1 enable window per 112-tick window cycle: open 1',
+            ]);
         },
     },
     {
@@ -360,7 +425,7 @@ const grenade: JobCheck[] = [
             const [grouped, plain] = [selected.blueprint, flat.blueprint];
             expect(plain.entities.some(entity => (entity.player_description ?? '').includes('Group '))).toBe(false);
             expect(grouped.entities.map(entity => entity.position.x)).not.toEqual(plain.entities.map(entity => entity.position.x));
-            const withoutPlace = (entities: Entities) => entities.map(({ position, player_description, ...rest }) => ({ ...rest, first_lines: (player_description ?? '').split('\n').slice(0, 2) }));
+            const withoutPlace = (entities: Entities) => entities.map(({ position, player_description, ...rest }) => ({ ...rest, first_lines: headerAndCounts(player_description) }));
             expect(withoutPlace(grouped.entities)).toEqual(withoutPlace(plain.entities));
             expect(selected.schedule).toEqual(flat.schedule);
             // the same networks: every window combinator on the one network the filter's output makes, the lock on the same red network
@@ -379,7 +444,7 @@ const grenade: JobCheck[] = [
         name: 'every alternative says the lanes of the belt are exactly full, and the selected clock\'s hands fit between each other',
         run: ({ generated }) => {
             for (const alternative of generated.alternatives) {
-                expect(alternative.insights.find(it => it.id === 'lanes-exactly-full')?.title).toBe('Both lanes of the grenade belt are exactly full');
+                expect(alternative.insights.find(it => it.id === 'lanes-exactly-full')?.title).toBe('The grenade lane (lane 1 of belt 1) and the grenade lane (lane 2 of belt 1) are exactly full');
                 expect(alternative.insights.find(it => it.id === 'drop-spacing')).toBeDefined();
             }
             // the two inserters of a row start in the same tick: the 14 hands of a row land on 14 tiles of the belt's cycle of 14
@@ -541,6 +606,290 @@ const voiderOverbeaconed: JobCheck[] = [
     },
 ];
 
+// What the generation tests of these samples checked on a generation of their own, the sample as it is with the default options: the same
+// generation is the job's now (CONTRIBUTING.md, "Which test a check belongs in"). Each is named by the test it was.
+
+/** The reason beside the status of each clock with a cause on the shared lanes (from checked-lanes-reasons.generation.test.ts): the code of belt gaps
+ * where at least one missed swing shows the gap that the copy before leaves, with the totals over the copies of the cause part; unknown on a lane loss
+ * where none shows the gap or a full output; and the swings of each cause, swing by swing, add up to the counts it carries */
+const reasonsOfClocks = (reasons: Record<string, unknown>): JobCheck => ({
+    name: 'the reason of each clock with a cause on the shared lanes',
+    run: ({ generated }) => {
+        expect(reasonsOf(generated)).toEqual(reasons);
+        expect(swingSumsOf(generated)).toEqual(Object.fromEntries(Object.keys(reasons).map(id => [id, []])));
+    },
+});
+
+const chemical240: JobCheck[] = [
+    reasonsOfClocks({
+        takt_batches_observed: { code: "belt_gaps", data: { missed: 456, with_gap: 228 } },
+        phase_shifted_batch: { code: "belt_gaps", data: { missed: 452, with_gap: 224 } },
+    }),
+];
+
+const flyingRobotFrame: JobCheck[] = [
+    // no missed swing shows the gap or a full output: unknown, with the missed swings
+    reasonsOfClocks({ takt_batches_observed: { code: "unknown", data: { missed: 438 } }, time_study_windows: { code: "unknown", data: { missed: 438 } },
+        pitch_pickups: { code: "unknown", data: { missed: 438 } } }),
+    // from flying-robot-frame-output-belt.generation.test.ts: the sample states the output belt of its scaffold (two lines of six copies each). The run
+    // of the 12 copies puts every copy's frames on those lines, and the clock the generator selects for the build holds on them.
+    {
+        name: "selects the moved output swing clock of 288 ticks, stable",
+        run: ({ generated }) => {
+            const selected = selectedOf(generated);
+            expect(selected.id).toBe("moved_output_swing");
+            expect(selected.verdict).toBe("stable");
+            expect(selected.result.simulation_duration.ticks).toBe(288);
+        },
+    },
+    {
+        name: "runs the output belt with the hands of all 12 copies, and the selected clock loses no swing on it",
+        run: ({ config, generated }) => {
+            const selected = selectedOf(generated);
+            const ticks = selected.result.simulation_duration.ticks;
+            const windows = new Map(Object.entries(selected.result.clock_windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))]));
+            const { readings } = sharedLaneRunsOf(config);
+            const run = runOnSharedLanes(readings[0].under, windows, ticks, readings[0].layouts[0], 12, quiet);
+            expect(run.output_belt).toBeDefined();
+            expect([...run.output_belt!.hands.keys()].sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+            for (const hands of run.output_belt!.hands.values()) expect(hands.length).toBeGreaterThan(0);
+
+            const judged = judgeSharedLanes(config, selected.result.clock_windows, ticks, quiet);
+            expect(judged.simulated).toBe(true);
+            expect(judged.losses).toEqual([]);
+        },
+    },
+];
+
+const militaryScience240: JobCheck[] = [{
+    // from checked-lanes.generation.test.ts
+    name: "on military science 240: its two plain output belts by rate, and its line",
+    run: ({ generated }) => {
+        const clock = selectedOf(generated);
+        expect(clock.checked_lanes!.line.sentence).toBe("Checked with all 5 copies on the lanes they share. Every copy gets its items. On the 2 output belts, only the sum of the drops is checked.");
+        expect(rowsOf(clock).filter(row => row.label === "Rate fits").map(row => row.at)).toEqual(["1/1", "2/1"]);
+        expect(rowsOf(clock).filter(row => row.label === "Holds").map(row => row.at)).toEqual(["3/1", "3/2", "4/1", "4/2"]);
+        // the coal lanes are one per copy: no row
+        expect(rowsOf(clock).some(row => row.at.startsWith("5/") || row.at.startsWith("6/"))).toBe(false);
+    },
+}];
+
+// STONE_BRICK_120_DRILL_DIRECT_INSERT (from output-swings.generation.test.ts): one machine, two output hands and nine input hands per 288 ticks. Clocks for
+// it are easy to get to the expected output in one simulated window cycle without the build actually repeating that window cycle.
+const stoneBrick: JobCheck[] = [{
+    name: "the title of the insight of a clock that does not hold the setpoint says it underproduces below the expected output, and overproduces above it",
+    run: ({ generated }) => {
+        const titleOf = (id: string) => generated.alternatives.find(it => it.id === id)!.insights.find(it => it.id === "unstable");
+        // 7 and 8 output swings forced over the setpoint: the build moves more items than the expected output
+        for (const id of ["takt_batches_observed_swings_7", "takt_batches_observed_swings_8"]) {
+            const insight = titleOf(id)!;
+            expect(insight.title).toBe("This clock overproduces");
+            // only what was measured: no reason, and one thing to do
+            expect(insight.why).toBe("");
+            expect(insight.explanation).toBe("Use a clock marked Stable.");
+            const [, moved, expected] = /moved ([\d.]+) of (\d+) items/.exec(insight.what)!;
+            expect(Number(moved)).toBeGreaterThan(Number(expected));
+        }
+    },
+}];
+
+// AUTOMATION_SCIENCE_240: 9 copies take iron gear wheel and copper plate from the two dead-ended lanes of belt 1, and put the packs on a belt that
+// ends in an infinite end. From checked-lanes.generation.test.ts (the first 12 checks), shared-lane-verdict.generation.test.ts (the next two:
+// under Euclidean Swings (72 ticks) copy 2's inserter 1 makes 62 of the 65 swings it makes alone with each item, every hand of 16, and a loss is said in
+// those swings, never in items or crafts) and shared-lane-trial.generation.test.ts (the last: the selected clock of the pitch pickups, 72 ticks, gets
+// back from every loss on one copy, and on the copies a copper plate stop leaves copy 2 short)
+const automation240: JobCheck[] = [
+    {
+        name: "lists every lane of the build once, with the end the role gives the output lane",
+        run: ({ generated }) => {
+            expect(generated.lanes).toEqual([
+                { belt_id: 1, lane: 1, item: "iron-gear-wheel", role: "input", end: "dead_end", end_given_by: "lane", sharing: "shared", supply_rate: 120, supply_rate_by_default: true, capacity: 120 },
+                { belt_id: 1, lane: 2, item: "copper-plate", role: "input", end: "dead_end", end_given_by: "lane", sharing: "shared", supply_rate: 120, supply_rate_by_default: true, capacity: 120 },
+                { belt_id: 2, lane: 1, item: "automation-science-pack", role: "output", end: "infinite", end_given_by: "role", sharing: "shared", supply_rate: 120, supply_rate_by_default: true, capacity: 120 },
+            ]);
+        },
+    },
+    {
+        name: "on the 72-tick clock: copy 2 short on both input lanes, the output belt not the cause, and the parts the run shows",
+        run: ({ generated }) => {
+            const clock = byId(generated, "euclidean_swings");
+            expect(clock.result.simulation_duration.ticks).toBe(72);
+            expect(rowsOf(clock)).toEqual([
+                { at: "1/1", together: "take 120", label: "Swings missed on copy 2", sentence: "Copy 2 misses 3 of 65 swings." },
+                { at: "1/2", together: "take 120", label: "Swings missed on copy 2", sentence: "Copy 2 misses 3 of 65 swings." },
+                { at: "2/1", together: "drop 240", label: "Not the cause", sentence: "No copy waits at its join." },
+            ]);
+            const cause = clock.checked_lanes!.cause!;
+            expect(cause.headline.text).toBe("Copy 2 misses 6 of 130 swings");
+            // the run shows the copy before's gap on the copper plate lane only; the machine's full output in 5 of the 6
+            expect(cause.cause!.text).toBe("In 3 of the 6 missed swings, the gap that copy 1 leaves on the copper plate lane reaches copy 2 when its inserter must pick up. "
+                + "In 5 of the 6 missed swings, the assembling machine 3 of copy 2 that makes automation science pack has its output full and takes no more items. 2 of the 6 show both.");
+            // 3 of the 6 missed swings show the gap: the reason beside the status
+            expect(cause.reason).toEqual({ code: "belt_gaps", data: { missed: 6, with_gap: 3 } });
+            expect(cause.spacing!.text).toBe("The copies stand 9 tiles apart. It takes 72 ticks for items to travel between copies, and the window cycle is 72 ticks. "
+                + "The 9 copies take every copper plate the lane brings, so the gap does not close on the way.");
+            expect(cause.where.text).toBe("The inserter of copy 2 that takes iron gear wheel and copper plate misses 6 of its 130 swings in 65 window cycles: "
+                + "3 with iron gear wheel and 3 with copper plate. Each swing is a hand of 16.");
+            expect(cause.alone.text).toBe("The same inserter makes all 130 swings. The clock is right for one copy.");
+            expect(cause.changes!.text).toBe("With 8 copies on the iron gear wheel and copper plate lanes, every copy makes every swing. "
+                + "Another clock of this build holds with all 9: Coordinated Sources, window cycle 216 ticks.");
+            expect(cause.changes!.data).toMatchObject({ fewer_copies: 8, other_clock: { id: "coordinated_sources", window_cycle_ticks: 216 } });
+            expect(clock.checked_lanes!.line.sentence).toBe("Checked with all 9 copies on the lanes they share. Copy 2 does not get all its items, and no copy is held back at the output belt.");
+        },
+    },
+    {
+        name: "on the 216-tick clock of observed takt batches: the join of copies 4 and 8 full, both input lanes taking less",
+        run: ({ generated }) => {
+            const clock = byId(generated, "takt_batches_observed");
+            expect(clock.result.simulation_duration.ticks).toBe(216);
+            expect(rowsOf(clock)).toEqual([
+                { at: "2/1", together: "drop 240", label: "Join full on copies 4 and 8", sentence: "43 of 384 swings missed, on each." },
+                { at: "1/1", together: "take 120", label: "Copies 4 and 8 take less", sentence: "They wait for the output belt. Without the output belt, copy 4 still misses 11 of 192 swings here." },
+                { at: "1/2", together: "take 120", label: "Copies 4 and 8 take less", sentence: "They wait for the output belt. Without the output belt, copy 4 still misses 11 of 192 swings here." },
+            ]);
+            const cause = clock.checked_lanes!.cause!;
+            expect(cause.headline.text).toBe("Copies 4 and 8 miss 43 of 384 swings each");
+            expect(cause.cause!.text).toBe("The side belts of copies 4 and 8 are full where they join the automation science pack output belt.");
+            // a full join: its code, with the missed output swings and the output swings of copies 4 and 8
+            expect(cause.reason).toEqual({ code: "target_full", data: { missed: 86, swings: 768 } });
+            expect(cause.spacing).toBeNull();
+            expect(cause.where.text).toBe("The inserter of copy 4 that drops automation science pack misses 43 of its 384 swings in 64 window cycles, and so does that of copy 8. "
+                + "85 of the 341 swings each one makes wait for room.");
+            expect(cause.alone.text).toBe("The same inserter makes all 384 swings. The clock is right for one copy.");
+            expect(cause.changes!.text).toBe("With 3 copies, every copy makes every swing. Another clock of this build has no full join: Coordinated Sources, window cycle 216 ticks.");
+        },
+    },
+    {
+        name: "on the stable time study windows clock: the line and three rows that hold, with the waits at the join counted",
+        run: ({ generated }) => {
+            const clock = byId(generated, "time_study_windows");
+            expect(clock.verdict).toBe("stable");
+            expect(clock.checked_lanes!.line.sentence).toBe("Checked with all 9 copies on the lanes they share. Every copy gets its items, and no copy misses a swing at the output belt.");
+            expect(rowsOf(clock)).toEqual([
+                { at: "1/1", together: "take 120", label: "Holds", sentence: "Every copy gets its items." },
+                { at: "1/2", together: "take 120", label: "Holds", sentence: "Every copy gets its items." },
+                { at: "2/1", together: "drop 240", label: "Holds", sentence: "Copies 4 and 8 wait for room at their join in 130 of their 390 swings. No swing is missed." },
+            ]);
+            expect(clock.checked_lanes!.cause).toBeNull();
+        },
+    },
+    {
+        name: "gives the reason code of belt gaps on each lane loss where a missed swing shows the gap, and of a full join on the join clock, with their counts",
+        run: ({ generated }) => {
+            expect(reasonsOf(generated)).toEqual({
+                takt_batches_observed: { code: "target_full", data: { missed: 86, swings: 768 } },
+                euclidean_swings: { code: "belt_gaps", data: { missed: 6, with_gap: 3 } },
+                takt_batches_observed_swings_2: { code: "belt_gaps", data: { missed: 16, with_gap: 8 } },
+                takt_batches_swings_1: { code: "belt_gaps", data: { missed: 26, with_gap: 26 } },
+            });
+            // the reason is a code: the engine writes no sentence for it
+            for (const clock of generated.alternatives) {
+                for (const text of [clock.description, clock.shared_lane_loss_note ?? ""]) expect(text).not.toMatch(/belt gaps|belt_gaps|target_full/i);
+            }
+        },
+    },
+    {
+        name: "gives the swings of each cause window cycle by window cycle, which add up to the counts the cause carries by copy, inserter and cause",
+        run: ({ generated }) => {
+            expect(swingSumsOf(generated)).toEqual({ takt_batches_observed: [], euclidean_swings: [], takt_batches_observed_swings_2: [], takt_batches_swings_1: [] });
+        },
+    },
+    {
+        name: "on the 72-tick clock: the six window cycles in which the inserter of copy 2 misses a swing, each with what stopped it",
+        run: ({ generated }) => {
+            const swings = byId(generated, "euclidean_swings").checked_lanes!.cause!.swings!;
+            expect(swings.kind).toBe("lane");
+            if (swings.kind !== "lane") return;
+            expect(swings.rows.map(({ missed: _, ...row }) => row)).toEqual([{ copy: 2, inserter_id: 1, items: ["iron-gear-wheel", "copper-plate"],
+                lanes: [{ belt_id: 1, lane: 1 }, { belt_id: 1, lane: 2 }], window_cycles: 65, swings_per_window_cycle: 2 }]);
+            expect(swings.rows[0].missed.map(it => `${it.window_cycle} ${it.missed} ${it.cause}${it.lane_empty ? " empty" : ""}`)).toEqual([
+                "14 1 full", "18 1 both empty", "34 1 full", "42 1 gap empty", "58 1 full", "62 1 both empty"]);
+        },
+    },
+    {
+        name: "on the 216-tick clock: the output swings of copies 4 and 8 in each window cycle, 5, 6, 5 of the 6 the clock gives",
+        run: ({ generated }) => {
+            const swings = byId(generated, "takt_batches_observed").checked_lanes!.cause!.swings!;
+            expect(swings.kind).toBe("join");
+            if (swings.kind !== "join") return;
+            expect(swings.copies.map(it => ({ copy: it.copy, window_cycles: it.window_cycles, gives: it.gives, made: it.made.join("") })))
+                .toEqual([4, 8].map(copy => ({ copy, window_cycles: 64, gives: 6, made: "5" + "565".repeat(21) })));
+            // the output inserters drop onto side belts that side-load onto the output belt
+            expect(swings.side_belt).toBe(true);
+        },
+    },
+    // what the output inserters of all 9 copies put down over the judged span: 53,920 packs in 13,824 ticks on the 216-tick
+    // clock, which 240 x (9 x 384 - 86) / (9 x 384) gives from its swings too
+    {
+        name: "gives the rate all the copies made together in the run of the copies, over the judged span, on the four clocks with a loss",
+        run: ({ generated }) => {
+            const made = (id: string) => byId(generated, id).checked_lanes!.copies_made;
+            expect(made("takt_batches_observed")).toEqual({ items_per_second: 234.027777778, window_cycles: 64 });
+            expect(made("euclidean_swings")).toEqual({ items_per_second: 238.769230769, window_cycles: 65 });
+            expect(made("takt_batches_observed_swings_2")).toEqual({ items_per_second: 236.512820513, window_cycles: 65 });
+            expect(made("takt_batches_swings_1")).toEqual({ items_per_second: 234.461538462, window_cycles: 65 });
+            // the clock-only run's rate is still the setpoint: the rate of the copies changes no assessment
+            expect(byId(generated, "takt_batches_observed").assessment.items_per_second).toBe(240);
+        },
+    },
+    {
+        name: "gives the setpoint as the rate of the copies on the stable time study windows clock",
+        run: ({ generated }) => { expect(byId(generated, "time_study_windows").checked_lanes!.copies_made).toEqual({ items_per_second: 240, window_cycles: 65 }); },
+    },
+    {
+        name: "gives no rate of the copies on a clock the copies were not run for (it does not hold on one copy)",
+        run: ({ generated }) => {
+            const clock = byId(generated, "takt_batches_observed_swings_4");
+            expect(clock.checked_lanes!.line.run_with_copies).toBe(false);
+            expect(clock.checked_lanes!.copies_made).toBeUndefined();
+        },
+    },
+    {
+        name: "gives the description's sentences on a shared-lane loss as a field of their own, word for word",
+        run: ({ generated }) => {
+            for (const [id, lead] of [["euclidean_swings", "It is not stable on a lane its copies share. "], ["takt_batches_observed", "It is not stable on its output belt. "]]) {
+                const clock = byId(generated, id);
+                expect(clock.shared_lane_loss_note!.startsWith(lead)).toBe(true);
+                expect(clock.description).toContain(` ${clock.shared_lane_loss_note}`);
+            }
+            expect(byId(generated, "time_study_windows").shared_lane_loss_note).toBeUndefined();
+        },
+    },
+    {
+        name: "are the hands of the runs: 62 of 65 on each input lane for copy 2 under Euclidean Swings",
+        run: ({ generated }) => {
+            const euclidean = byId(generated, "euclidean_swings");
+            expect(euclidean.result.simulation_duration.ticks).toBe(72);
+            const losses = (euclidean.assessment.shared_lane_losses ?? []).filter((loss): loss is SharedLaneLoss => !isNotChecked(loss));
+            expect(losses.map(loss => [loss.lane, loss.copy, loss.swings, loss.alone_swings, loss.short_swings, loss.items, loss.alone_items]).sort())
+                .toEqual([[1, 2, 62, 65, 0, 992, 1040], [2, 2, 62, 65, 0, 992, 1040]]);
+            expect(losses.map(loss => loss.text.slice(loss.text.indexOf("Its inserter")))).toEqual(expect.arrayContaining([
+                "Its inserter that takes iron gear wheel and copper plate misses 3 of its 65 swings with iron gear wheel in 65 window cycles.",
+                "Its inserter that takes iron gear wheel and copper plate misses 3 of its 65 swings with copper plate in 65 window cycles."]));
+        },
+    },
+    {
+        name: "leave no count of items or of crafts in any loss text",
+        run: ({ generated }) => {
+            const texts = generated.alternatives.flatMap(it => (it.assessment.shared_lane_losses ?? []).map(loss => loss.text));
+            expect(texts.length).toBeGreaterThan(0);
+            for (const text of texts) expect(text).not.toMatch(/takes [\d,]+ in|it takes [\d,]+\.|crafts behind|hands behind/);
+        },
+    },
+    {
+        // the stable clock the generation test compared it with, the same build with the trials on the copies switched off, stays in
+        // shared-lane-trial.generation.test.ts: the check reads only the build as it is
+        name: "is no recovery, naming the loss on the copies, with the trials on the copies on",
+        run: ({ generated }) => {
+            const clock = byId(generated, "pitch_pickups");
+            expect(clock.verdict).toBe("no recovery");
+            expect(clock.assessment.disturbance_trial).toMatchObject({ survives: false, broken_by: ["copper plate stops arriving on the copies that share a lane"],
+                on_copies: { survives: false, broken_by: "copper plate stops arriving", short: [{ copy: 2 }] } });
+            expect(clock.description).toContain("Copper plate stops arriving at the entry of the copper plate lane");
+        },
+    },
+];
+
 export const SAMPLE_CHECKS: Record<string, JobCheck[]> = {
     'config-PRODUCTIVITY_MODULE_80_CHEST_CHAIN': productivityChain,
     'config-AGRICULTURAL_SCIENCE_250': agriculturalScience,
@@ -557,4 +906,9 @@ export const SAMPLE_CHECKS: Record<string, JobCheck[]> = {
     'config-LOGISTIC_SCIENCE_240': logistic,
     'config-IRON_ORE_VOIDER_400_EXACT_SPEED': voiderExact,
     'config-IRON_ORE_VOIDER_400_OVERBEACONED': voiderOverbeaconed,
+    'config-AUTOMATION_SCIENCE_240': automation240,
+    'config-CHEMICAL_SCIENCE_240_SHARED_FOUNDRY': chemical240,
+    'config-FLYING_ROBOT_FRAME_80': flyingRobotFrame,
+    'config-MILITARY_SCIENCE_240': militaryScience240,
+    'config-STONE_BRICK_120_DRILL_DIRECT_INSERT': stoneBrick,
 };

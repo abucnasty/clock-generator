@@ -78,6 +78,8 @@ For a crafting machine the model is the biochamber's, whose parts are the buffer
 
 The effectivity is applied as the fuel burned for a tick of work: the usage over it. It is unrecorded (1 on every burner of 2.1.21).
 
+A craft's progress is kept as the game keeps it, in recipe seconds summed tick by tick as a double ([simulator](simulator.md), "When a craft finishes"). A plate in a stone furnace (192 steps of 1/60 s on 3.2 s) and a steel furnace's plate fall just short of the recipe time by rounding: the game and the simulator finish them a tick after the bar shows 1, that tick tops the buffer up and the next draws a tick's energy with no top-up. An egg (600 steps on 10 s) reaches its recipe time on time and finishes in the tick its bar reaches 1, in 2.1.21 and 2.1.24.
+
 ### The captive biter spawner
 
 A machine whose recipe takes no ingredient at all, item or fluid (the spawner's), never waits for room: the eggs that do not fit under the stack of 100 are lost, nothing is held, and it only stops for fuel. This is keyed on the recipe's ingredients, which the data shows as none for the spawner's and for no other recipe of the game; the recipe's `preserve_products_in_machine_output` flag, which only it sets, is not what the model reads.
@@ -90,7 +92,8 @@ Nothing in a build feeds a drill, so its fuel is assumed supplied without limit 
 
 ### Where the simulator differs from the game
 
-- A craft whose bar sums to exactly 1 (192 steps of 1/192 for a plate in a stone furnace, 600 for an egg) is finished by the game a tick after its bar shows 1: that tick tops the buffer up and the next draws a tick's energy with no top-up. The simulator finishes it in the tick the bar reaches 1, so a machine that stops after such a craft holds a tick of fuel more than the game's from then on (the biochamber's model has it too, since the fuel was first modelled), and the game's bar and product show a tick later. A craft that starts from a restart's 1/15 does not reach 1 exactly and matches.
+- A burner whose fuel pays for exactly the ticks of its crafts, each craft a tick late by rounding (the biochamber on one nutrient: two crafts of 120 ticks), runs out with its last craft a few 1e-15 of a craft short, and that craft waits for fuel. How the game spends that last part was not recorded.
+- The progress of a restart's tick (1/15 of a tick's work) is the crafting speed times 1/15, over 60; the game's arithmetic for it was not recorded.
 - A crafting machine switched off by a script has no counterpart in the simulator; a drill's enable control does.
 - The statuses `no_fuel` begin and end a tick apart from the game's.
 - Modules or beacons on a burner, fuels with a burnt result, two fuels in one slot, spoiling fuel and a burner switched off by a circuit were not recorded.

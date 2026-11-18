@@ -3,6 +3,148 @@
  "cases": {
   "generated-as-is": {
    "recorded": {
+    "pr": 822,
+    "commit": "2dad0d56",
+    "frozen_head": "2dad0d56",
+    "note": "recorded under the protocol in game ticks on the selected per-branch clock of the backpressure start",
+    "clock_sha256": "5259f325f605154be10b5ee75d5255e846d9020bb10a92264d9156beab4e3ace",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 80,
+    "period": 24,
+    "window": 3600,
+    "expected": 4800,
+    "steady": 7208,
+    "baseline": {
+     "ticks": 3600,
+     "total": 4803,
+     "expected": 4800,
+     "min": 4792,
+     "max": 4808,
+     "held": false,
+     "meets": true,
+     "measured": {
+      "ticks": 3600,
+      "items": 4803,
+      "expected": 4800,
+      "stock_start": 9,
+      "stock_end": 12,
+      "net": 4800
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut plastic-bar",
+      "start": 10808,
+      "drop": 11045,
+      "release": 11045,
+      "recovered": 15218
+     },
+     {
+      "kind": "block output and export",
+      "start": 15218,
+      "drop": 15264,
+      "release": 15264,
+      "recovered": 18898
+     }
+    ],
+    "stock": {
+     "lowest": 5,
+     "end": 12,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 18898
+   },
+   "generation": {
+    "period": 24,
+    "expected": 32,
+    "verdict": "stable",
+    "selection": {
+     "id": "coordinated_sources",
+     "holds": true,
+     "rate": 80,
+     "supply": "backed_up"
+    },
+    "clock_sha256": "5259f325f605154be10b5ee75d5255e846d9020bb10a92264d9156beab4e3ace"
+   }
+  },
+  "generated-backed-up": {
+   "recorded": {
+    "pr": 822,
+    "commit": "2dad0d56",
+    "frozen_head": "2dad0d56",
+    "note": "recorded under the protocol in game ticks on the selected per-branch clock of the backpressure start",
+    "clock_sha256": "5259f325f605154be10b5ee75d5255e846d9020bb10a92264d9156beab4e3ace",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 80,
+    "period": 24,
+    "window": 3600,
+    "expected": 4800,
+    "steady": 7208,
+    "baseline": {
+     "ticks": 3600,
+     "total": 4803,
+     "expected": 4800,
+     "min": 4792,
+     "max": 4808,
+     "held": false,
+     "meets": true,
+     "measured": {
+      "ticks": 3600,
+      "items": 4803,
+      "expected": 4800,
+      "stock_start": 9,
+      "stock_end": 12,
+      "net": 4800
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut plastic-bar",
+      "start": 10808,
+      "drop": 11045,
+      "release": 11045,
+      "recovered": 15218
+     },
+     {
+      "kind": "block output and export",
+      "start": 15218,
+      "drop": 15264,
+      "release": 15264,
+      "recovered": 18898
+     }
+    ],
+    "stock": {
+     "lowest": 5,
+     "end": 12,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 18898
+   },
+   "generation": {
+    "period": 24,
+    "expected": 32,
+    "verdict": "stable",
+    "selection": {
+     "id": "coordinated_sources",
+     "holds": true,
+     "rate": 80,
+     "supply": "backed_up"
+    },
+    "clock_sha256": "5259f325f605154be10b5ee75d5255e846d9020bb10a92264d9156beab4e3ace"
+   }
+  },
+  "per-hand-as-is": {
+   "recorded": {
     "pr": 668,
     "commit": "f659fb4b",
     "frozen_head": "f659fb4b",
@@ -64,7 +206,7 @@
     "expected": 32,
     "verdict": "stable",
     "selection": {
-     "id": "round_robin_polling_per_hand",
+     "id": "round_robin_polling_swings_1_per_hand",
      "holds": true,
      "rate": 80,
      "supply": "backed_up"
@@ -72,7 +214,7 @@
     "clock_sha256": "7de289c785c103b91b175bb4d83d8bb2414d7081f9d1c1c41dc3a6e359485037"
    }
   },
-  "generated-backed-up": {
+  "per-hand-backed-up": {
    "recorded": {
     "pr": 0,
     "commit": "bb1598e8",
@@ -135,7 +277,7 @@
     "expected": 32,
     "verdict": "stable",
     "selection": {
-     "id": "round_robin_polling_per_hand",
+     "id": "round_robin_polling_swings_1_per_hand",
      "holds": true,
      "rate": 80,
      "supply": "backed_up"

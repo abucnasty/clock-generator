@@ -19,6 +19,7 @@
         "machine:1",
         "drill:2",
         "machine:2",
+        "belt:1/lane:2#grenade",
         "drill:3",
         "machine:4",
         "drill:4",

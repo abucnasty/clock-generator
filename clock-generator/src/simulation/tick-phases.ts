@@ -100,7 +100,7 @@ export const TICK_PHASES: readonly TickPhaseRow[] = [
     },
     {
         phase: TickPhase.INSERTERS, name: "inserters", entities: "inserters",
-        order: "updates in the update list from the front (simulation/dispatch.ts); then tick observers and Wakes takers before feeders, the takers of one machine in the taker order (inserterUpdateOrder)",
+        order: "updates in the update list from the front (simulation/dispatch.ts), which starts with the takers of one machine in the taker order; then tick observers and Wakes takers before feeders, the takers of one machine in the taker order (inserterUpdateOrder)",
         order_upholds: [2, 3, 4], run_by: "loop",
         steps: [
             { step: InserterStep.PHASE_RULE, name: "phase_rule", does: "the Hand's phase rule; on a change, the status written, then observers, then exit and enter",

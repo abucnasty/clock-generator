@@ -1,10 +1,12 @@
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { Accordion, AccordionDetails, AccordionSummary, Box, Button, Typography } from '@mui/material';
-import { useId, useState } from 'react';
+import { Fragment, useId, useState } from 'react';
 import type { ClockInstallFacts } from '../worker/installFacts';
 import { WIRING_LIST_NAME } from '../utils/a11yLabels';
-import { INSTALL_COPY, installSteps, wiringList, type WiringMoves, type WiringRow } from '../utils/installSteps';
+import { INSTALL_COPY, installSteps, wiringList, type WiringEnd, type WiringMoves, type WiringRow } from '../utils/installSteps';
 import { VISUALLY_HIDDEN } from '../utils/visuallyHidden';
+import { FactorioIcon } from './FactorioIcon';
+import { GameName } from './GameName';
 import { RichText } from './RichText';
 import { WakeRowMoves } from './WakeRowMoves';
 
@@ -50,11 +52,66 @@ interface InstallStepsProps {
     onShowWiring?: () => void;
 }
 
+/** An arrow between two parts of a route; a screen reader hears a comma */
+function Arrow() {
+    return (
+        <>
+            <span aria-hidden="true">→</span>
+            <Box component="span" sx={VISUALLY_HIDDEN}>, </Box>
+        </>
+    );
+}
+
+/** "Machine 2" and the icon of its recipe in brackets, "Machine 2 (icon)" */
+function WiringEndText({ end }: { end: WiringEnd }) {
+    return (
+        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+            <span>{end.label.replace(' ', '\u00a0')}</span>
+            {end.recipe !== undefined && (
+                <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25 }}>
+                    <span aria-hidden="true">(</span>
+                    <FactorioIcon name={end.recipe} size={20} titled fallback={<GameName id={end.recipe} kind="recipe" />} />
+                    <span aria-hidden="true">)</span>
+                </Box>
+            )}
+        </Box>
+    );
+}
+
 /**
- * One inserter or drill: "Inserter 1 — [icon]: Belt 1 to Machine 1", the item as its icon (Wake windows' rows do the same);
- * a screen reader hears "Inserter 1, Iron plate: Belt 1 to Machine 1"
+ * One inserter or drill, as its combinator's description has it: source, the item it moves, then the sink with the recipe
+ * of a machine: "Inserter 1 — Belt 1 → [icon] → Machine 2 ([recipe icon])". A drill is its own source: "Drill 1 → [icon] →
+ * Machine 2". A screen reader hears "Inserter 1, Belt 1, Iron plate, Machine 2, Iron gear". A run that does not name the
+ * ends keeps the earlier line, "Inserter 1 — [icon]: Belt 1 to Machine 1".
  */
 function WiringEntryText({ entry }: { entry: WiringRow['entries'][number] }) {
+    if (entry.to !== undefined) {
+        const items = (
+            <Box component="span" sx={{ display: 'inline-flex', gap: 0.5 }}>
+                {entry.items.map((item, index) => (
+                    <Fragment key={item}>
+                        {index > 0 && <Box component="span" sx={VISUALLY_HIDDEN}>, </Box>}
+                        <FactorioIcon name={item} size={20} titled fallback={<GameName id={item} />} />
+                    </Fragment>
+                ))}
+            </Box>
+        );
+        return (
+            <Box component="span" data-wiring-moves="" sx={{ display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 0.75, maxWidth: '100%' }}>
+                <span>{entry.label}</span>
+                {entry.from !== undefined ? (
+                    <>
+                        <span aria-hidden="true">—</span>
+                        <Box component="span" sx={VISUALLY_HIDDEN}>, </Box>
+                        <WiringEndText end={entry.from} />
+                    </>
+                ) : null}
+                {entry.items.length > 0 && <><Arrow />{items}</>}
+                <Arrow />
+                <WiringEndText end={entry.to} />
+            </Box>
+        );
+    }
     const moves = entry.items.length > 0 || entry.route !== '';
     return (
         <>

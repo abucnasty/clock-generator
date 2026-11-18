@@ -92,23 +92,23 @@ describe('installFactsOf', () => {
             const facts = factsOf({
                 schedule: { counted_ticks: 72, inserter_combinators: combinators },
                 blueprint: described({
-                    3: { description: '[entity=wooden-chest] → [entity=stone-furnace] [item=coal] (inserter 7)\n1 swing in 1 window' },
-                    4: { description: '2 inserters, each [entity=car] → machine 1 [item=iron-ore] (1, 2)\nsecond line' },
+                    3: { description: '1 inserter [item=coal] (7)\nInserter 7: [entity=wooden-chest] → [item=coal] → [entity=stone-furnace]\n1 swing in 1 window' },
+                    4: { description: '2 inserters [item=iron-ore] (1, 2)\nInserters 1, 2: [entity=car] → [item=iron-ore] → machine 1\nsecond line' },
                     5: { description: 'Part of the clock: do not wire or change.' },
                 }),
             });
             expect(facts.lines).toEqual({
-                'inserter:1,2': '2 inserters, each [entity=car] → machine 1 [item=iron-ore] (1, 2)',
-                'inserter:7': '[entity=wooden-chest] → [entity=stone-furnace] [item=coal] (inserter 7)',
+                'inserter:1,2': '2 inserters [item=iron-ore] (1, 2)',
+                'inserter:7': '1 inserter [item=coal] (7)',
             });
         });
 
         it('is found for a drill\'s combinator by its tags, whatever number the entity has', () => {
             const facts = factsOf({
                 schedule: schedule([]),
-                blueprint: described({ 9: { description: '[entity=big-mining-drill] [item=iron-ore] → [entity=car] (drill 1)\nTops the car up', tags: { drills: [1] } } }),
+                blueprint: described({ 9: { description: '1 drill [item=iron-ore] (1)\nDrill 1: [entity=big-mining-drill] → [item=iron-ore] → [entity=car]\nTops the car up', tags: { drills: [1] } } }),
             });
-            expect(facts.lines).toEqual({ 'drill:1': '[entity=big-mining-drill] [item=iron-ore] → [entity=car] (drill 1)' });
+            expect(facts.lines).toEqual({ 'drill:1': '1 drill [item=iron-ore] (1)' });
         });
 
         it('is found for a drill\'s combinator in a clock from before the tags, and left out for a combinator with no description', () => {

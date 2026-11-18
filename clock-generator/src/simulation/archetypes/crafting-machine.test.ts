@@ -353,10 +353,14 @@ describe("Crafting machine with a fuel slot", () => {
         expect(machine_state.inventoryState.getQuantity("yumako-mash")).toBe(8)
     })
 
-    test("burns one nutrient for every two crafts", () => {
+    // a nutrient pays for the 240 ticks of two crafts. 120 steps of 1/30 s fall short of the 4 s by rounding, so the
+    // first craft finishes a tick late and the second, started in that tick, is a few 1e-15 of a craft short when the
+    // energy runs out: it waits for fuel (how the game's burner spends that last sliver was not recorded)
+    test("burns one nutrient for two crafts' ticks of work", () => {
         const { machine_state, machine } = createBiochamberState(12, 1)
         run(machine_state, machine, 600)
-        expect(machine_state.craftCount).toBe(2)
+        expect([machine_state.craftsStarted, machine_state.craftCount]).toEqual([2, 1])
+        expect(machine_state.craftingProgress.progress).toBeGreaterThan(1 - 1e-12)
         expect(machine_state.fuelInventory.getQuantity("nutrients")).toBe(0)
         expect(machine_state.status).toBe(MachineStatus.NO_FUEL)
     })
@@ -374,8 +378,11 @@ describe("Crafting machine with a fuel slot", () => {
         machine_state.ingress.insert("nutrients", 1)
         executeForTicks(machine, 1)
         expect(machine_state.status).toBe(MachineStatus.WORKING)
-        // a craft started once the machine had fuel to burn
+        // a craft started once the machine had fuel to burn; it finishes a tick late, as 120 steps of 1/30 s fall short
+        // of the 4 s by rounding
         run(machine_state, machine, 120)
+        expect([machine_state.craftsStarted, machine_state.craftCount]).toEqual([1, 0])
+        run(machine_state, machine, 1)
         expect(machine_state.craftCount).toBe(1)
     })
 
@@ -402,8 +409,11 @@ describe("Crafting machine with a fuel slot", () => {
         run(machine_state, machine, 180)
         // second craft is half done and has used up the nutrient
         expect(machine_state.craftCount).toBe(1)
+        // the first craft finished a tick late, so the second is a few 1e-15 of a craft short when the energy runs out
         run(machine_state, machine, 100)
-        expect(machine_state.craftCount).toBe(2)
+        expect(machine_state.craftCount).toBe(1)
+        expect(machine_state.craftingProgress.progress).toBeGreaterThan(1 - 1e-12)
+        expect(machine_state.status).toBe(MachineStatus.NO_FUEL)
         machine_state.fuelInventory.addQuantity("nutrients", 1)
         run(machine_state, machine, 400)
         expect(machine_state.craftCount).toBe(4)
@@ -675,13 +685,95 @@ describe("Crafting machine: its steps and observers", () => {
     // one key for the machine, its components' in a fixed order (P4 3.4): Storage, Crafting, Yield, Wakes, Energy
     test("keys what its components keep: its inventories, status and craft, held products and bars, last tick's flags, energy", () => {
         const { machine_state, machine } = gears(0)
-        expect(machine.stateKey()).toBe(`[["iron-gear-wheel",0],["iron-plate",2]];{};[]|${CraftingStatus.ITEM_INGREDIENT_SHORTAGE};0|0;0;[]|false;false;false|`)
+        expect(machine.stateKey()).toBe(`[["iron-gear-wheel",0],["iron-plate",2]];{};[]|${CraftingStatus.ITEM_INGREDIENT_SHORTAGE};false;0|0;0;[]|false;false;false|`)
         executeForTicks(machine, 1)
         expect(machine_state.crafting.status).toBe(CraftingStatus.WORKING)
-        // the plates taken, the half craft, the started craft its Wakes report; an electric machine's energy keys nothing
-        expect(machine.stateKey()).toBe(`[["iron-gear-wheel",0],["iron-plate",0]];{};[]|${CraftingStatus.WORKING};0.5|0;0;[]|false;false;true|`)
+        // the plates taken, the half craft (in billionths of a craft), the started craft its Wakes report; an electric
+        // machine's energy keys nothing
+        expect(machine.stateKey()).toBe(`[["iron-gear-wheel",0],["iron-plate",0]];{};[]|${CraftingStatus.WORKING};true;500000000|0;0;[]|false;false;true|`)
         expect(machine.stateKey()).toBe([machine_state.storageKey(), machine_state.crafting.key(), machine_state.yield.key(),
             machine_state.wakes.key(), machine_state.energy.key()].join("|"))
+    })
+})
+
+/**
+ * Crafts that end on a whole tick in exact arithmetic, as recorded in Factorio 2.1.24 (nine machines, 3,500 ticks each,
+ * ingredients and fuel kept up, products taken every tick). The game keeps a craft's progress in recipe seconds as a
+ * double and adds crafting speed / 60 a tick: the craft finishes in the tick that sum reaches the recipe time, with no
+ * tolerance, and the rest of the step goes on to the next craft. A rest above 0 takes the next craft's ingredients in the
+ * same tick (233/640, 1/60, 1/40, 1/600 of a craft a tick), a rest of exactly 0 in the next tick (1/8), and a sum that
+ * falls short by rounding finishes the craft a tick late, the next craft taking its ingredients in that late tick (1/30
+ * on 0.5 s, 1/192 on 3.2 s). Ticks count from the tick of the first take (tick 1). The productivity bonus counts payouts
+ * (the battery plant pays two in some ticks).
+ */
+describe("Crafting machine: a craft that ends on a whole tick (Factorio 2.1.24)", () => {
+    const TICKS = 3_500
+    const CASES = [
+        { name: "cryogenic plant, battery, prod 200%", recipe: "battery", prototype: "cryogenic-plant", speed: 87.375, productivity: 200,
+            recipe_seconds: 4, takes: [1, 3, 6], finishes: [3, 6, 9], bonus: [3, 3, 6], counts: [1_275, 1_274, 2_548],
+            whole_tick: { finish: 640, take: 640 } },
+        { name: "assembling machine 3, iron gear wheel, speed 1", recipe: "iron-gear-wheel", prototype: "assembling-machine-3", speed: 1, productivity: 0,
+            recipe_seconds: 0.5, takes: [1, 31, 61], finishes: [31, 61, 91], bonus: [], counts: [117, 116, 0],
+            whole_tick: { finish: 31, take: 31 } },
+        { name: "assembling machine 3, iron gear wheel, speed 3.75", recipe: "iron-gear-wheel", prototype: "assembling-machine-3", speed: 3.75, productivity: 0,
+            recipe_seconds: 0.5, takes: [1, 9, 17], finishes: [8, 16, 24], bonus: [], counts: [438, 437, 0],
+            whole_tick: { finish: 8, take: 9 } },
+        { name: "assembling machine 3, copper cable, prod 50%", recipe: "copper-cable", prototype: "assembling-machine-3", speed: 3.75, productivity: 50,
+            recipe_seconds: 0.5, takes: [1, 9, 17], finishes: [8, 16, 24], bonus: [16, 32, 48], counts: [438, 437, 218],
+            whole_tick: { finish: 16, take: 17 } },
+        { name: "chemical plant, plastic bar, prod 300%", recipe: "plastic-bar", prototype: "chemical-plant", speed: 1, productivity: 300,
+            recipe_seconds: 1, takes: [1, 60, 120], finishes: [60, 120, 180], bonus: [21, 41, 60], counts: [59, 58, 174],
+            whole_tick: { finish: 60, take: 60 } },
+        { name: "assembling machine 1, iron gear wheel, speed 0.5", recipe: "iron-gear-wheel", prototype: "assembling-machine-1", speed: 0.5, productivity: 0,
+            recipe_seconds: 0.5, takes: [1, 60, 120], finishes: [60, 120, 180], bonus: [], counts: [59, 58, 0],
+            whole_tick: { finish: 60, take: 60 } },
+        { name: "assembling machine 2, iron gear wheel, speed 0.75", recipe: "iron-gear-wheel", prototype: "assembling-machine-2", speed: 0.75, productivity: 0,
+            recipe_seconds: 0.5, takes: [1, 40, 80], finishes: [40, 80, 120], bonus: [], counts: [88, 87, 0],
+            whole_tick: { finish: 40, take: 40 } },
+        { name: "stone furnace on coal, iron plate", recipe: "iron-plate", prototype: "stone-furnace", speed: 1, productivity: 0, fuel: "coal",
+            recipe_seconds: 3.2, takes: [1, 193, 385], finishes: [193, 385, 577], bonus: [], counts: [19, 18, 0],
+            whole_tick: { finish: 193, take: 193 } },
+        { name: "captive biter spawner on bioflux, biter egg", recipe: "biter-egg", prototype: "captive-biter-spawner", speed: 1, productivity: 0, fuel: "bioflux",
+            recipe_seconds: 10, takes: [1, 600, 1_200], finishes: [600, 1_200, 1_800], bonus: [], counts: [6, 5, 0],
+            whole_tick: { finish: 600, take: 600 } },
+    ]
+
+    /** The ticks of every take (a craft started), finish and bonus payout over TICKS ticks from the first take */
+    const run = ({ recipe, prototype, speed, productivity, fuel }: typeof CASES[number]) => {
+        const metadata = RecipeMetadata.fromRecipeName(recipe)
+        const machine_state = MachineState.forMachine(createMachine(recipe, { prototype, crafting_speed: speed, productivity, ...(fuel && { fuel }) }))
+        const machine = CraftingMachineArchetype.create({ machine_state })
+        const ingredients = metadata.raw.ingredients.filter(it => it.type !== "fluid").map(it => it.name)
+        const products = metadata.raw.results.filter(it => it.type !== "fluid").map(it => it.name)
+        const takes: number[] = [], finishes: number[] = [], bonus: number[] = []
+        let first: number | null = null
+        for (let tick = 1; tick <= TICKS + 5; tick++) {
+            for (const ingredient of ingredients) {
+                if (machine_state.inventoryState.getQuantity(ingredient) < 50) machine_state.inventoryState.addQuantity(ingredient, 100)
+            }
+            if (fuel && machine_state.fuelInventory.getQuantity(fuel) < 5) machine_state.fuelInventory.addQuantity(fuel, 10)
+            const started = machine_state.craftsStarted, finished = machine_state.craftCount, made = machine_state.productsFinished
+            executeForTicks(machine, 1)
+            for (const product of products) machine_state.inventoryState.setQuantity(product, 0)
+            if (machine_state.craftsStarted > started && first === null) first = tick
+            const at = first === null ? null : tick - first + 1
+            if (at === null || at > TICKS) continue
+            for (let n = started; n < machine_state.craftsStarted; n++) takes.push(at)
+            for (let n = finished; n < machine_state.craftCount; n++) finishes.push(at)
+            for (let n = 0; n < (machine_state.productsFinished - made) - (machine_state.craftCount - finished); n++) bonus.push(at)
+        }
+        return { recipe_seconds: metadata.energy_required, takes, finishes, bonus }
+    }
+
+    test.each(CASES)("$name: takes, finishes and bonus payouts in the game's ticks", (game) => {
+        const sim = run(game)
+        expect(sim.recipe_seconds).toBe(game.recipe_seconds)
+        expect({ takes: sim.takes.slice(0, 3), finishes: sim.finishes.slice(0, 3), bonus: sim.bonus.slice(0, 3) })
+            .toEqual({ takes: game.takes, finishes: game.finishes, bonus: game.bonus })
+        // the first craft that ends on a whole tick in exact arithmetic: the tick it finished, the tick the next took
+        const whole = sim.finishes.findIndex(tick => tick >= game.whole_tick.finish)
+        expect({ finish: sim.finishes[whole], take: sim.takes[whole + 1] }).toEqual(game.whole_tick)
+        expect([sim.takes.length, sim.finishes.length, sim.bonus.length]).toEqual(game.counts)
     })
 })
 

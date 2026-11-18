@@ -61,7 +61,9 @@ Sidecar 0.11.0 captures this preference automatically: `near_lane: 1` unmirrored
 with no pickup warning. Classification requires a centered inserter downstream of the entrance, facing against
 the belt's direction. The classifier has rotation checks in all four cardinal directions; actual entrance grabs
 were measured only in this eastbound fixture. Wrong-facing, off-center and upstream inline pickups remain unclassified.
-Supply motion is still a separate config choice and is not inferred from captured geometry.
+Since Sidecar 0.16.0 an export also states the end of each pickup lane, read from the build: a dead end where the line
+stops, an infinite end at a loader that takes everything. These tests still set the deprecated `overrides.backed_up_belts`
+in memory.
 
 Sidecar 0.10.0 reported `inline` and omitted both fields for these same captures. The fixture retains explicit
 settings for the independent simulator comparison. The four-speed sweep below also checks swapped ingredients. Other cardinal orientations' actual grabs and
