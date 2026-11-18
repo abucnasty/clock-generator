@@ -1,4 +1,4 @@
-import { EnableControl, LatchedEnableControl } from "../../../simulation/controls/enable-control";
+import { EnableControl, LatchedEnableControl, READS_KEYED_STATE } from "../../../simulation/controls/enable-control";
 import {
     Condition,
     ComparisonOperator,
@@ -69,7 +69,7 @@ export class ConditionalEnableControlFactory {
             const left = this.resolveValue(condition.left, context);
             const right = this.resolveValue(condition.right, context);
             return this.compare(left, right, condition.operator);
-        });
+        }, READS_KEYED_STATE);
     }
 
     private compare(left: number, right: number, operator: ComparisonOperator): boolean {
