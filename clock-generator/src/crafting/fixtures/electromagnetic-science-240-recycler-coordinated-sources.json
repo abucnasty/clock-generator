@@ -1,0 +1,84 @@
+{
+  "coordinated_sources": {
+    "window_cycle_ticks": 40,
+    "terminal_swing_count": 1,
+    "windows": {
+      "inserter:1": [
+        {
+          "start": 0,
+          "end": 0
+        }
+      ],
+      "inserter:2": [
+        {
+          "start": 0,
+          "end": 0
+        }
+      ],
+      "inserter:9": [
+        {
+          "start": 0,
+          "end": 4
+        }
+      ],
+      "inserter:10": [
+        {
+          "start": 4,
+          "end": 20
+        }
+      ],
+      "inserter:4": [
+        {
+          "start": 2,
+          "end": 11
+        }
+      ],
+      "inserter:3": [
+        {
+          "start": 22,
+          "end": 31
+        }
+      ],
+      "inserter:5": [
+        {
+          "start": 18,
+          "end": 30
+        }
+      ],
+      "inserter:8": [
+        {
+          "start": 18,
+          "end": 30
+        }
+      ],
+      "inserter:6": [
+        {
+          "start": 38,
+          "end": 39
+        },
+        {
+          "start": 0,
+          "end": 7
+        }
+      ],
+      "inserter:7": [
+        {
+          "start": 18,
+          "end": 27
+        }
+      ],
+      "inserter:11": [
+        {
+          "start": 4,
+          "end": 31
+        }
+      ],
+      "inserter:12": [
+        {
+          "start": 4,
+          "end": 20
+        }
+      ]
+    }
+  }
+}
