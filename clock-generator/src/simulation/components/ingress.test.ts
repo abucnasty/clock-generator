@@ -53,6 +53,22 @@ describe("a machine's Ingress", () => {
         expect(ingress.takesNothing()).toBe(false);
     });
 
+    // #759: in the game an egg biochamber of agricultural science refuses nutrients while its output holds 14 or more
+    // eggs. The simulator has the same refusal: nutrients as an ingredient stop at the output block, and only a fuel slot
+    // under its limit still takes a hand of them.
+    it("refuses nutrients into an egg biochamber of agricultural science while its output holds 14 eggs, unless its fuel slot is under its limit", () => {
+        const state = eggs();
+        const fuel_limit = state.machine.fuel_slot!.automated_insertion_limit;
+        expect(state.machine.output.outputBlock.ingredients_blocked_at).toBe(14);
+        state.fuelInventory.setQuantity("nutrients", fuel_limit);
+        state.inventoryState.setQuantity("pentapod-egg", 13);
+        expect(state.ingress.blocked("nutrients")).toBe(false);
+        state.inventoryState.setQuantity("pentapod-egg", 14);
+        expect(state.ingress.blocked("nutrients")).toBe(true);
+        state.fuelInventory.setQuantity("nutrients", fuel_limit - 1);
+        expect(state.ingress.blocked("nutrients")).toBe(false);
+    });
+
     it("blocks a machine that places its results itself at a stack of any one result", () => {
         const state = machineState("electronic-circuit-recycling", { prototype: "recycler", crafting_speed: 0.5, places_results: true });
         expect(state.ingress.outputBlocked()).toBe(false);
