@@ -50,6 +50,7 @@ import { FullOutputChest, fullOutputChestsOf } from "../full-output-chests";
 import { ExportShortfall, exportShortfallsOfWindowCycle, exportedItemsOf } from "../export-delivery";
 import { simulationStateKey } from "../runner/steady-state";
 import { stateKeyWithLanes } from "../runner/shared-lanes-key";
+import { ContainerStorage } from "../../simulation/components/container-storage";
 import type { SharedLane } from "../../state/shared-lane";
 import { controlsKeyOf, InstalledControl, skipRepeatedTicks, warmUpRepeatOf } from "../runner/warm-up-repeat";
 import { SimulateStep } from "../runner/steps/simulate-step";
@@ -525,6 +526,12 @@ export interface RunOptions {
      * Only a check of the simulator against a recording passes it (see simulateClockOnly): a generation never does.
      */
     start_hands?: Record<string, InserterHandContents>;
+    /**
+     * What containers hold when the run starts, by entity id ("chest:3") and item, in place of what filling the build left: a
+     * recording of the game holds no container's contents, so a check of the simulator against one names them. Only such a
+     * check passes it (see simulateClockOnly), with `start_stock`.
+     */
+    start_containers?: Record<string, Record<string, number>>;
     /** Initial lane phases for a simulation trial; transient stock state, separate from saved config geometry. */
     moving_pickup_phases?: MovingPickupPhases;
     /**
@@ -997,6 +1004,15 @@ function setUpTheStart(
                 inserter_state.inventoryState.removeQuantity(inserter_state.held_item.item_name, inserter_state.held_item.quantity);
                 inserter_state.held_item = null;
             }
+        }
+    }
+    for (const [entity_id, items] of Object.entries(options.start_containers ?? {})) {
+        const state = simulation_context.state_registry.getAllStates().find(it => it.entity_id.id === entity_id);
+        assert(state !== undefined && ContainerStorage.is(state), `${entity_id} is not a container of the build`);
+        for (const [item_name, quantity] of Object.entries(items)) {
+            const held = state.getCurrentQuantity(item_name);
+            if (held > quantity) state.take(item_name, held - quantity);
+            else if (held < quantity) state.insert(item_name, quantity - held);
         }
     }
     if (options.start_hands) {

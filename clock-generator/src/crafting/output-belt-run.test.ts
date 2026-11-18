@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import zlib from "zlib";
 import { beforeAll, describe, expect, it } from "vitest";
 import { lithiumRows } from "../../tests/configs/lithium-rows";
 import { BeltSpeed } from "../entities/belt";
@@ -16,6 +17,7 @@ import { simulationStateKey } from "./runner/steady-state";
 import type { SimulationContext } from "./sequence/simulation-context";
 import { recordInserters, runOnSharedLanes, sharedLaneLayoutOf, type DropRecorder } from "./shared-lane-model";
 import { sharedLaneRunsOf } from "./shared-lane-verdict";
+import { simulateClockOnly, type SerializableClockWindows } from "./generate-blueprint";
 
 // One copy's side belt (a drop tile and a turned belt, 551 long) side-loads onto an underground exit (128), which runs into
 // the infinite end's loader: the automation science 240 build's copy 1, with its stretch cut short
@@ -217,5 +219,79 @@ describe("the output belt of two lines, with three output inserters on each, on 
 
     it("without the output belt, each hand on a tile of its own, the clock short in the game holds", () => {
         expect(holds(platesByWindowCycle({ ...sample, output_belt: undefined }, short_in_game), short_in_game)).toBe(true);
+    });
+});
+
+/**
+ * The audit minute of the game's recording of the lithium plate build under the Coordinated Sources pick 660fda31 (4,320-tick
+ * window cycle; Factorio 2.1.24, from ruling 60's start, recorded by filled-start search 2): the run's start options seed the
+ * simulator from its first sample (scripts/seeded-run.js: the machines and hands; the clock at position 1,075; the silo, which
+ * the recording does not hold, at 100 lithium), and `game` holds every inserter's hand and furnace 7's plates from sample 1 on.
+ * Made by filled-start search 5's make-replay-fixture.js.
+ */
+interface SeededReplay {
+    window_cycle_ticks: number;
+    clock_windows: SerializableClockWindows;
+    start: Parameters<typeof simulateClockOnly>[5];
+    game: { samples: number; held: Record<string, number[]>; "machine:7 lithium-plate": number[] };
+}
+const REPLAY: SeededReplay = JSON.parse(zlib.zstdDecompressSync(
+    fs.readFileSync(path.join(__dirname, "fixtures", "lithium-plate-80-silo-660fda31-audit.json.zst"))).toString("utf8"));
+
+/** Each hand of an inserter in a series of what it holds: the tick of its first stack, and the ticks its stacks went down in from there */
+function handsOf(held: readonly number[]): { tick: number; offsets: string }[] {
+    const hands: { tick: number; offsets: string }[] = [];
+    let start: number | null = null, offsets: number[] = [];
+    for (let tick = 1; tick < held.length; tick++) {
+        if (held[tick] >= held[tick - 1]) continue;
+        if (start === null) {
+            start = tick;
+            offsets = [];
+        }
+        offsets.push(tick - start);
+        if (held[tick] === 0) {
+            hands.push({ tick: start, offsets: offsets.join(",") });
+            start = null;
+        }
+    }
+    return hands;
+}
+
+// Inserter 15 (furnace 7) drops onto an underground entrance whose exit side-loads onto its row's line, from the line's right
+// side. The game puts four of each of its window's hands down 0, 1, 3 and 5 ticks after the first, not 0, 1, 2 and 4: in those
+// hands the stub stands full to the drop spot, held at the side load by the plates of inserters 3 and 11 on the line, and it moves on
+// a stack every 2 ticks from the hand's first stack (filled-start search 5's lane recording). Where those plates stand on the line
+// comes from where inserters 3 and 11 put their stacks down on their underground ends (`drop_tile`).
+describe("the output belt in the run of one copy, on the lithium plate build's pick 660fda31", () => {
+    let sample: Config;
+    beforeAll(async () => { sample = await loadConfigFromFile(ConfigPaths.LITHIUM_PLATE_80_SILO_CHEST); });
+    const P = REPLAY.window_cycle_ticks;
+
+    it("lays the seeded run on the game's audit minute: every hand, and furnace 7's plates, at every sample", () => {
+        const stock = simulateClockOnly(sample, REPLAY.clock_windows, P, 2, quietLogger, REPLAY.start);
+        const samples = REPLAY.game.samples;
+        for (const [id, game] of Object.entries(REPLAY.game.held)) {
+            const held = stock.inserters.find(it => it.inserter_id === id)!.held.slice(0, samples);
+            expect({ id, first_parting: held.findIndex((value, tick) => value !== game[tick]) }).toEqual({ id, first_parting: -1 });
+        }
+        const furnace = stock.machines.find(it => it.machine_id === "machine:7")!;
+        expect(furnace.outputs["lithium-plate"].slice(0, samples)).toEqual(REPLAY.game["machine:7 lithium-plate"]);
+    });
+
+    it("from the cold start, takes 58 hands of inserter 15 a window cycle, 5 of them late, and 60 of inserter 16: 11,456 plates in two", () => {
+        const stock = simulateClockOnly(sample, REPLAY.clock_windows, P, 4, quietLogger);
+        const judged = (id: string) => handsOf(stock.inserters.find(it => it.inserter_id === id)!.held)
+            .filter(hand => hand.tick >= P && hand.tick < 3 * P);
+        const late = (id: string) => judged(id).filter(hand => hand.offsets !== "0,1,2,4");
+        // the game's late hands stand at clock values 622, 1,486, 2,350, 3,214 and 4,078: 4 more than the run's ticks of the window cycle
+        expect(late("inserter:15").map(hand => [hand.tick % P, hand.offsets])).toEqual([618, 1482, 2346, 3210, 4074, 618, 1482, 2346, 3210, 4074]
+            .map(tick => [tick, "0,1,3,5"]));
+        expect(judged("inserter:15")).toHaveLength(2 * 58);
+        for (const id of ["inserter:3", "inserter:6", "inserter:11", "inserter:12", "inserter:16"]) {
+            expect({ id, hands: judged(id).length, late: late(id).length }).toEqual({ id, hands: 2 * 60, late: 0 });
+        }
+        // the game's baseline over two window cycles: 11,456 of the 11,520 the target asks
+        const outputs = ["inserter:3", "inserter:6", "inserter:11", "inserter:12", "inserter:15", "inserter:16"];
+        expect(outputs.reduce((sum, id) => sum + judged(id).length * 16, 0)).toBe(11_456);
     });
 });
