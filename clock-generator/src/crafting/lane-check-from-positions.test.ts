@@ -56,8 +56,10 @@ describe("the input-lane check from the positions of the takers", () => {
 describe("the input-lane check on a row of one copy, as the game measured it", () => {
     // the windows of the clock the generator weighs as "euclidean_swings" for each row (the game test checks that it makes them)
     const windows = gearRowEuclideanWindows;
+    // from the cold start, as these counts were laid against the game's (the backpressure start's fill adds one window cycle the check counts)
+    const coldRow = (row: Config): Config => ({ ...row, overrides: { ...row.overrides, judged_start: "cold" } });
     const judged = (machines: number, pitch: number, gears_each: number, window_cycle: number) =>
-        judgeSharedLanes(gearRow({ machines, pitch, items_per_second_each: gears_each }), windows(machines), window_cycle, quiet);
+        judgeSharedLanes(coldRow(gearRow({ machines, pitch, items_per_second_each: gears_each })), windows(machines), window_cycle, quiet);
     const lost = (machines: number, pitch: number, gears_each: number, window_cycle: number) =>
         judged(machines, pitch, gears_each, window_cycle).losses.map(loss => `${loss.inserter_id} ${loss.item} ${loss.swings}/${loss.alone_swings} copy ${loss.copy} of ${loss.copies}`);
     /** The word for a clock that holds its output where only the lanes are judged: unstable when the lanes lose swings */

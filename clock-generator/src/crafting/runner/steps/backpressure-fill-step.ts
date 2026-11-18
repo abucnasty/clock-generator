@@ -5,6 +5,7 @@ import { EntityState } from "../../../state";
 import { SimulationContext } from "../../sequence";
 import { twinOf } from "../../sequence/build-copies";
 import { SimulationTick } from "../simulation-tick";
+import { beginTickLoop } from "../../tick-ledger";
 
 /**
  * The fill of the backpressure start (ruling 60): the build runs with every inserter and drill that a clock will hold
@@ -96,6 +97,17 @@ export class BackpressureFillStep {
     ) { }
 
     public execute(): BackpressureFill {
+        // the fill's ticks are the run's preparation: the tick ledger counts them to its prepare stage, as the prepare step's
+        const start_tick = this.context.tick_provider.getCurrentTick();
+        const ledger = beginTickLoop("prepare_step", () => this.context.tick_provider.getCurrentTick() - start_tick);
+        try {
+            return this.fill();
+        } finally {
+            ledger?.close();
+        }
+    }
+
+    private fill(): BackpressureFill {
         const context = this.context;
         const held_off = this.held_off;
         context.useControls({
