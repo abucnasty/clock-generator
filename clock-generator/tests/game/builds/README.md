@@ -789,6 +789,7 @@ sample's scaffold of one copy (17.14 a second), as the config is and with backed
 (lasting until no craft finishes for a window cycle, restored at the place in the window cycle it was cut at). Recorded at Factorio 2.1.24, both cases the same:
 steady state at tick 7,136, 192 in each of the 21 window cycles, and after the loss the output comes back (recovered at tick 27,632). The simulator's
 verdict for the clock is "no recovery", from the loss on the copies that share a lane; the scaffold holds one copy, so that join is not in this run.
+On the seven-copy scaffold the game agrees with the simulator's "no recovery" (copy 7 stayed at 0 for 45 window cycles after the same stop, the build's known deadlock risk), so the one-copy difference comes from the one-copy scaffold having no shared lane.
 
 ```bash
 UTILITY_120_CAPTURE_DIR=.scratch/utility-120 npm run test:game -- tests/game/builds/utility-science-120-selected-clock.game.test.ts

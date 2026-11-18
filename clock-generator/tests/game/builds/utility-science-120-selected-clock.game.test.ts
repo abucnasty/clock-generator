@@ -18,9 +18,11 @@ import {scaffoldClockPins} from "./scaffold-recordings-clock-pins";
  * sample's scaffold of one copy, as the config is and with its belts backed up, recorded from the staged start under the game
  * tests' protocol: steady state, a baseline of whole window cycles that takes the run past 21,600 ticks, then the loss the
  * generator's disturbance trial says breaks the clock (low density structure stops arriving), until the output falls and after its
- * release. The simulator's verdict for the clock is "no recovery": the game agrees where the clock holds its rate and the output
- * does not come back after the loss. The scaffold holds one copy, so the join of the copies that share a lane (the trial's
- * "on the copies that share a lane") is not in it. The test records and judges; it asserts the baseline and keeps the verdict.
+ * release. The simulator's verdict for the clock is "no recovery": the game differs on this scaffold, where the clock holds its rate
+ * and the output comes back after the loss. The scaffold holds one copy, so the join of the copies that share a lane (the trial's
+ * "on the copies that share a lane") is not in it. On the seven-copy scaffold the game agrees with the simulator's "no recovery"
+ * (copy 7 stayed at 0 for 45 window cycles after the same stop, the build's known deadlock risk), so the one-copy difference comes from
+ * the one-copy scaffold having no shared lane. The test records and judges; it asserts the baseline and keeps the verdict.
  */
 const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 const PIN = "utility science";
