@@ -298,6 +298,13 @@ export function pitchPickupsTransferWindows(
 }
 
 /**
+ * The environment variable that makes Pitch Pickups back off its output swings from the plan's count wherever it is made, also
+ * where the primary clock does not hold ("1" turns it on; off where it is not set). Off, Pitch Pickups there takes the first lower
+ * count whose planned clock holds. It changes what the generator makes, so `scripts/blast/key.py` keys it.
+ */
+export const PITCH_PICKUPS_BACKOFF_VARIABLE = "CLOCK_PITCH_PICKUPS_BACKOFF";
+
+/**
  * The full-hand output candidate: the clock of the plan with the output inserters' windows replaced by one swing each,
  * timed so the machine already holds a full hand (`pitchPickupsOutputWindows`), checked and exported as a planned clock is.
  * Not searched where a full hand would wait past the output block, which would refuse input drops every cycle; the
