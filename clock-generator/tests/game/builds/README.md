@@ -831,3 +831,37 @@ Recorded at Factorio 2.1.24, all seven holding their target on every copy and re
 ```bash
 MISSING_RECORDINGS_CAPTURE_DIR=.scratch/missing-recordings npm run test:game -- tests/game/builds/missing-recordings-clock.game.test.ts -t flying-robot-frame
 ```
+
+## Container and drill builds: the record's picks from the staged start
+
+The car, silo and wagon families above recorded clocks the record no longer selects, from a warm-up and a settle. Five more cases record the
+clock the record selects for each job, from the harness's staged start (every inserter of the build placed with the clock in one tick, the car,
+silo and wagon empty at the start), under the family's own probe and protocol: `car-selected-staged` (`IRON_PLATE_80_CAR_CHEST`, Coordinated
+Sources, 144 ticks), `lithium-silo-selected-staged` (`LITHIUM_PLATE_80_SILO_CHEST`, Coordinated Sources, 2,160 ticks),
+`steel-wagon-selected-staged`, `steel-wagon-iron-ore-out-of-period-selected-staged` and `steel-hub-selected-staged` (the three steel jobs, Batched
+Swings with 1 output swing as a subtick clock, 11,520, 3,840 and 11,520 ticks). Their entries are in the three families' controls files, and
+`clock-controls.test.ts` pins each against its record job (`variants-STEEL_HUB_26_CONTAINER_OUTPUT` is the steel build in small, `steelHub`, on the
+sample's scaffold: it is the same clock and the same run as the sample's).
+
+- **How it runs.** `staged: true` in the scenario (`pickup-clock-capture.ts`). The run is the settle, as in the other families, and the recording of
+  the audit follows it: the recorder does not start on machines with no recipe, and a furnace takes its recipe from its first ingredient, so it
+  cannot start at the placement on these builds (the harness's `settle_ticks` is allowed in a staged start for this). The probes count the run from the first tick
+  every final machine has a recipe (`steady.after_finals`: 27 ticks for the car, 340 for the silo, 133 for the sample's wagon, 61 for the wagon with iron ore out of
+  the window cycle); the probes' own check of the inserters' ends is left to the host's audit, as the inserters do not know their ends in the placement tick.
+- **Result, Factorio 2.1.24, all five hold:** steady state at tick 7,201 (car), 5,760 (silo), 15,120 (wagon, hub) and 7,440 (iron ore out of the window cycle);
+  the baseline's net output is the target over whole clock cycles; the three losses (the drill stopped or the holmium plates cut, the output blocked, the same again)
+  each reduce the output and are recovered, the last at tick 14,513, 23,033, 36,728 and 15,778. As in the families above the second and third loss of the car and
+  wagon builds last one tick each, the drill having emptied the container already. The stock guard holds in all five; for the car it is read after the last recovery has
+  settled (#587, #803): lowest 98 in the baseline, 168 once settled, 196 at the end. The 72-tick car clock and its waiver are not involved: the record selects 144 ticks.
+- **Stone brick:** the generic test of the missing recordings records `STONE_BRICK_120_DRILL_DIRECT_INSERT` (Batched Swings observed, 144 ticks): steady state at
+  8,207, 2,400 over the baseline's 3,600 ticks, the output block recovered at 12,097, 25 whole clock cycles judged before and after the loss with none short. Its final
+  machine is a furnace, so it has a late recording (`late_recording`, the same reason). Its loss is the output block alone: the stone comes from a drill that drops into the
+  furnace, and the generic probe has no drill stop; the supply was not cut. The scaffold holds one copy of the job's three.
+- **Named limit, `ELECTRIC_FURNACE_20`:** it cannot be recorded from the staged start: the harness wires a drill to the clock only in a build with one drill, and this
+  build has three (one for each stone brick furnace): "the clock enables drill 1, which was not matched to a drill of the build (3 mining drills)". It stays
+  in `missing-recordings-clock-fixtures.ts` as `no_staged_start`.
+
+```bash
+BELT_SPEED_CAPTURE_DIR=.scratch/car-staged BELT_CLOCK_CALIBRATE=1 \
+  npm run test:game -- tests/game/builds/iron-plate-80-car-chest-clock.game.test.ts -t '^car clock: car-selected-staged$'
+```

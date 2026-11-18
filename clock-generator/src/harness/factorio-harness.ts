@@ -158,10 +158,11 @@ export interface HarnessOptions {
     /**
      * Build the cell in two stages and record from the tick its inserters and clock are placed in (see StagedStartOptions). The
      * belts, feeders, machines and chests are built first and run until the belts are saturated; then, in one tick, every inserter
-     * of the cell is built in an order that is asked for and the clock is wired. `warmup_ticks` is not used and `settle_ticks`
-     * must be absent: the recording starts the tick after, which the new inserters need to know their ends, with the machines and
-     * their buffers empty. Needs `config`, unless the build
-     * order is a list and there is no clock.
+     * of the cell is built in an order that is asked for and the clock is wired. `warmup_ticks` is not used. The recording starts the
+     * tick after, which the new inserters need to know their ends, with the machines and their buffers empty; with `settle_ticks`
+     * it starts that many ticks later (or where the probe ends the settle), the run itself still from the placement tick. A build
+     * whose machines have no recipe at the placement (a furnace takes its recipe from its first ingredient) needs that: the recorder
+     * does not start on machines with no recipe. Needs `config`, unless the build order is a list and there is no clock.
      */
     staged_start?: StagedStartOptions;
     /**
@@ -1048,9 +1049,6 @@ function assertBuildOptions(options: BuildOptions): void {
     }
     if (options.staged_start) {
         const order = options.staged_start.build_order;
-        if (options.settle_ticks) {
-            throw new Error("A staged start records from the tick its inserters are placed in: settle_ticks has to be absent or 0");
-        }
         if (!options.config && (options.clock || !Array.isArray(order))) {
             throw new Error("A staged start needs the config, to tell which built inserter is which config id (unless the build order is a list and there is no clock)");
         }
@@ -1458,6 +1456,7 @@ export class HarnessSession {
             unclocked: options.unclocked,
             seed: options.seed,
             lua: options.lua,
+            settle_ticks: options.settle_ticks,
             staged: { order, loop_seed: staged.loop_seed, copies: options.copies },
             record: { ticks: options.ticks },
         });

@@ -518,6 +518,70 @@
     },
     "clock_sha256": "99e946cc4272d195913824d1ec2629fbc38c9382d68cfa496f4d5f030b179beb"
    }
+  },
+  "stone-brick-120-drill-direct-insert": {
+   "recorded": {
+    "pr": 0,
+    "commit": "6618512f",
+    "frozen_head": "6618512f",
+    "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
+    "clock_sha256": "ecc4d93eb04408ad2e9c14d020c5a47211a06f64f8f310c57c3c6c828642d662",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 40,
+    "period": 144,
+    "window": 3600,
+    "expected": 2400,
+    "steady": 8207,
+    "baseline": {
+     "ticks": 3600,
+     "total": 2400,
+     "expected": 2400,
+     "min": 2400,
+     "max": 2400,
+     "held": true,
+     "meets": true,
+     "measured": {
+      "ticks": 3600,
+      "items": 2400,
+      "expected": 2400,
+      "stock_start": 100,
+      "stock_end": 100,
+      "net": 2400
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "block output",
+      "start": 11807,
+      "drop": 11959,
+      "release": 11959,
+      "recovered": 12097
+     }
+    ],
+    "stock": {
+     "lowest": 48,
+     "end": 100,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 12097
+   },
+   "generation": {
+    "period": 144,
+    "expected": 96,
+    "verdict": "stable",
+    "selection": {
+     "id": "takt_batches_observed",
+     "holds": true,
+     "rate": 120,
+     "supply": null
+    },
+    "clock_sha256": "ecc4d93eb04408ad2e9c14d020c5a47211a06f64f8f310c57c3c6c828642d662"
+   }
   }
  }
 }

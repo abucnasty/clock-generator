@@ -82,6 +82,13 @@ export interface PickupClockScenario {
     baseline?: {ticks: number; reason: string};
     /** A probe of its own, in place of pickup-clock-speed-probe.lua: it runs steady.lua with its own disturbances and writes clock-speed.json */
     probeFile?: string;
+    /**
+     * The run starts from the harness's staged start (every inserter of the build placed with the clock in one tick, the machines and
+     * containers as the start leaves them), not from a warm-up. The run is the settle, as in the other families, and the recording of
+     * the audit follows it: the recorder cannot start at the placement on furnaces that have no recipe yet. The probe is told
+     * (`options.staged`, `options.finals`): its final machines are found once they have a recipe (steady.after_finals).
+     */
+    staged?: boolean;
     probe: {family: string; machine_name?: string; ingredients?: readonly [string, string]; output_to_belt?: boolean;
         trace_ticks?: number; stackSize?: number; assemblers?: number; tail?: number};
     /** The native setup audit, in place of assertPickupClockHardware (which expects a belt-fed input) */
@@ -224,11 +231,14 @@ export async function capturePickupClockScenario(scenario: PickupClockScenario) 
         const recording = replayDirectory ? JSON.parse(fs.readFileSync(path.join(replayDirectory, "recording.json"), "utf8"))
             : (await recordInFactorio({factorio: process.env.FACTORIO_PATH!, save: process.env.FACTORIO_HARNESS_SAVE!, config, clock, blueprint, built_clock: scenario.built_clock, copies: scenario.copies,
                 out: path.join(capture.directory, "recording.json"), work_dir: path.join(capture.directory, "game"),
-                ticks: AUDIT_TICKS, record_at_once: true, warmup_ticks: 3600, settle_ticks: RUN_PROTOCOL.cap + 1, seed: [], unclocked: false,
+                ticks: AUDIT_TICKS, settle_ticks: RUN_PROTOCOL.cap + 1,
+                ...(scenario.staged ? {warmup_ticks: 0, staged_start: {}} : {record_at_once: true, warmup_ticks: 3600}),
+                seed: [], unclocked: false,
                 lua: composeProbeSource(scenario.probeFile ?? path.join(__dirname, "pickup-clock-speed-probe.lua"), {
                     ...scenario.probe, window: RUN_PROTOCOL.window, expected: expectedPerWindow, baseline: baselineTicks, cap: RUN_PROTOCOL.cap,
                     recipes, item: config.setpoint.recipe, speed: scenario.speed.units / 32, reach,
-                }), game_speed: 1000, watch: false, timeout_seconds: 900, log() {},
+                    ...(scenario.staged && {staged: true, finals}),
+                }), game_speed: 1000, watch: false, timeout_seconds: scenario.staged ? 1800 : 900, log() {},
             })).recording;
         (scenario.assertHardware ?? assertPickupClockHardware)(recording, config, blueprint);
         scenario.validateRecording?.(recording, config);

@@ -25,6 +25,8 @@ const quiet = {log() {}, info() {}, warn() {}, error() {}, debug() {}};
 /** Ticks the run goes on after its last loss is recovered (or after it fails), and of them the last minute judged, whole clock cycles of it */
 const TAIL_TICKS = 7200;
 const RECOVERY_CYCLES_TICKS = 3600;
+/** A late recording (the case's `late_recording`) holds the minute after the run, for the build's hardware and its copies */
+const LATE_RECORDING_TICKS = 3600;
 
 type Row = {t: number; p: number[]; s?: number[]};
 
@@ -58,13 +60,15 @@ describe.sequential("the selected clock of a record job from the staged start, w
             const probe = composeProbeSource(path.join(__dirname, "missing-recordings-clock-probe.lua"), {
                 window: RUN_PROTOCOL.window, expected: Math.round(target * RUN_PROTOCOL.window / 60 * 1e6) / 1e6, baseline: RUN_PROTOCOL.baseline,
                 cap: RUN_PROTOCOL.cap, recipes, item: config.setpoint.recipe, ticks: RUN_PROTOCOL.cap + TAIL_TICKS, losses: item.losses, tail: TAIL_TICKS,
+                finals: finalsPerCopy * item.copies, late: item.late_recording !== undefined,
             });
             const {recording} = await recordInFactorio({
                 factorio: factorio!, save: save!, config, blueprint,
                 clock: {blueprint: encodeBlueprintFile({blueprint: exported.blueprint}), schedule: exported.schedule},
                 copies: item.copies > 1 ? item.copies : undefined,
                 out: path.join(directory, "recording.json"), work_dir: path.join(directory, "game"),
-                ticks: RUN_PROTOCOL.cap + TAIL_TICKS, warmup_ticks: 0, staged_start: {}, seed: [], unclocked: false, game_speed: 1000, watch: false, timeout_seconds: 3000,
+                ...(item.late_recording === undefined ? {ticks: RUN_PROTOCOL.cap + TAIL_TICKS} : {ticks: LATE_RECORDING_TICKS, settle_ticks: RUN_PROTOCOL.cap + TAIL_TICKS + 1}),
+                warmup_ticks: 0, staged_start: {}, seed: [], unclocked: false, game_speed: 1000, watch: false, timeout_seconds: 3000,
                 log() {}, lua: probe,
             }) as any;
             const report = JSON.parse(fs.readFileSync(path.join(directory, "game", "script-output", "clock-speed.json"), "utf8"));

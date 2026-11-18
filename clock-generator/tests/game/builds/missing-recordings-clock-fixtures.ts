@@ -38,6 +38,12 @@ export interface MissingRecordingCase {
      * the clock. The case is not run; the limit is named in the README until a start from ruling 60's state exists (the ruling-60 harness)
      */
     no_staged_start?: string;
+    /**
+     * The recorder does not start on machines that have no recipe, and a furnace takes its recipe from its first ingredient: the final machine
+     * of this build is a furnace, so the staged start cannot record from the placement. The run is the same, from the placement; the recording
+     * (which the test uses for the build's hardware and its copies) starts where the run ends (the harness's `settle_ticks`)
+     */
+    late_recording?: string;
 }
 
 const scaffoldOf = (key: keyof typeof ConfigPaths) => ConfigPaths[key].replace(/\.json$/, ".scaffold");
@@ -85,5 +91,20 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
         no_staged_start: "the harness's staged start fills the belts under the pickups before the cell's inserters are placed, and here only the foundries' "
             + "output inserters (cell inserters, placed with the clock) put anything on the belt: the lanes never saturate (\"The belts did not saturate: "
             + "the lanes under the pickups were not full for 30 ticks in a row within 10000 ticks\", 2026-11-17, Factorio 2.1.24)",
+    },
+    {
+        name: "stone-brick-120-drill-direct-insert", job: "config-STONE_BRICK_120_DRILL_DIRECT_INSERT", config: "STONE_BRICK_120_DRILL_DIRECT_INSERT", copies: 1,
+        // the furnace takes its stone from a drill that drops into it: no ingredient line to cut, so the loss is the output block alone
+        losses: [{kind: "block"}],
+        limit: "the scaffold holds one copy of the job's three",
+        late_recording: "the final machine is a furnace with no recipe at the placement",
+    },
+    {
+        name: "electric-furnace-20", job: "config-ELECTRIC_FURNACE_20", config: "ELECTRIC_FURNACE_20", copies: 1,
+        // the one input line is the advanced circuits on a belt; the steel comes from a foundry and the stone bricks from furnaces that drills fill
+        losses: [{kind: "cut", item: "advanced-circuit"}, {kind: "block"}, {kind: "cut", item: "advanced-circuit"}],
+        limit: "the scaffold holds one copy of the job's two",
+        no_staged_start: "the harness wires a drill to the clock only in a build with one drill, and this build has three (stone brick furnaces, one drill each): "
+            + "\"the clock enables drill 1, which was not matched to a drill of the build (3 mining drills)\" (2026-11-17, Factorio 2.1.24)",
     },
 ];
