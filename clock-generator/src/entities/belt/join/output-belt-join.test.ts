@@ -3,6 +3,7 @@ import path from "path";
 import { describe, expect, it } from "vitest";
 import { copySpacingOf, OutputBelt, outputBeltGeometry } from "../../../config/output-belt";
 import { JoinModel } from "./join-model";
+import { dropSpotOn } from "./join-rules";
 import { outputBeltJoinOf } from "./output-belt-join";
 
 // The automation science 240 build's output belt, as its sample states it
@@ -162,5 +163,33 @@ describe("an output belt of several lines, with a side belt of its own for some 
         }
         expect([...lines].every(line => line.startsWith("stretch 2 ") || line.includes("of stretch 2"))).toBe(true);
         expect(model.stacks()).toEqual([]);
+    });
+});
+
+// The lithium plate build's rows (Factorio 2.1.24, filled-start search 5's lane recording): the first furnace's output inserter
+// drops in line onto an underground entrance from downstream of it, its stacks seen at 19 and 83 on the entrance's own half (179 - 32
+// and 179 + 32 from the tile's end, 128 more than on the half); the second's onto an exit from upstream of it, at 45, 77 and 109
+// (77 and a step either side); the third's from upstream onto the entrance of its side belt, an underground pair, as on a straight
+// side belt's drop tile: the first stack 32 past the entrance's own half
+describe("a drop onto an underground end", () => {
+    it("lands past the tile's middle, on the far side from an inserter in line with the belt, and on the end's own half", () => {
+        expect(dropSpotOn({ underground: "entrance", inserter: "downstream" })).toBe(179);
+        expect(dropSpotOn({ underground: "exit", inserter: "upstream" })).toBe(77);
+        expect(dropSpotOn({ underground: "entrance", inserter: "upstream" })).toBe(128);
+        expect(dropSpotOn({ underground: "exit", inserter: "downstream" })).toBe(128);
+        expect(dropSpotOn({ underground: "entrance", inserter: "beside" })).toBe(128);
+    });
+
+    it("puts the drop's spot on the line of its tile, and a drop onto a straight belt on the tile's middle", () => {
+        const belt: OutputBelt = {
+            stretches: [{ points: [
+                { drop: 1, lane: "right", drop_tile: { underground: "entrance", inserter: "downstream" } },
+                { tiles: 10, drop: 2, lane: "right", drop_tile: { underground: "exit", inserter: "upstream" } },
+                { tiles: 2, drop: 3, lane: "right" },
+                { tiles: 3, lane_end: { kind: "infinite" } },
+            ] }],
+        };
+        const drops = outputBeltJoinOf(outputBeltGeometry(belt, 0)).drops;
+        expect([1, 2, 3].map(copy => drops.get(copy)!.spot)).toEqual([179, 77, 128]);
     });
 });

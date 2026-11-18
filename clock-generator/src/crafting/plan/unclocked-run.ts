@@ -50,6 +50,8 @@ import { FullOutputChest, fullOutputChestsOf } from "../full-output-chests";
 import { ExportShortfall, exportShortfallsOfWindowCycle, exportedItemsOf } from "../export-delivery";
 import { simulationStateKey } from "../runner/steady-state";
 import { stateKeyWithLanes } from "../runner/shared-lanes-key";
+import { installOutputBeltOfOneCopy } from "../output-belt-run";
+import { ContainerStorage } from "../../simulation/components/container-storage";
 import type { SharedLane } from "../../state/shared-lane";
 import { controlsKeyOf, InstalledControl, skipRepeatedTicks, warmUpRepeatOf } from "../runner/warm-up-repeat";
 import { SimulateStep } from "../runner/steps/simulate-step";
@@ -525,8 +527,20 @@ export interface RunOptions {
      * Only a check of the simulator against a recording passes it (see simulateClockOnly): a generation never does.
      */
     start_hands?: Record<string, InserterHandContents>;
+    /**
+     * What containers hold when the run starts, by entity id ("chest:3") and item, in place of what filling the build left: a
+     * recording of the game holds no container's contents, so a check of the simulator against one names them. Only such a
+     * check passes it (see simulateClockOnly), with `start_stock`.
+     */
+    start_containers?: Record<string, Record<string, number>>;
     /** Initial lane phases for a simulation trial; transient stock state, separate from saved config geometry. */
     moving_pickup_phases?: MovingPickupPhases;
+    /**
+     * Run the output belt the config states (`output_belt`, crafting/output-belt-run.ts) in place of each drop tile's own lane,
+     * from the run's start: a run of a clock's windows does (`runClockOnBuild`). A run of the copies puts it in with the lanes
+     * they share (`installSharedLanes`) and never here.
+     */
+    output_belt?: boolean;
     /**
      * Called with the context of a run from a cold start (`cold_start`), once it is built and before its first tick, and
      * not with the context the plan is made on: for a reader that puts something into the run (the lanes the copies
@@ -713,6 +727,8 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
     const build = options.cold_start
         ? (options.fill_start === true ? backpressureBuildOf(config, options, output_cycle_plan, transfer_plan.recipe_lcm, debug, logger) : coldBuildOf(config, options, debug, logger))
         : planned_build;
+    // a run from a start of its own (what a recording held, the output kept) has its output belt from that start
+    if (!options.cold_start) withTheOutputBelt(simulation_context, config, options);
     const controlled = withEnableControls(config, build, output_cycle_plan, transfer_plan.recipe_lcm, logger,
         options.counter_runs_through === true);
     const { duration, warmup_window_cycle } = runWindowCyclesOf(output_cycle_plan, transfer_plan.recipe_lcm, options, logger, window_cycle_ticks => {
@@ -869,8 +885,17 @@ function coldBuildOf(config: Config, options: RunOptions, debug: MutableDebugSet
 
 function withTheColdStart(build: RecordedBuild, config: Config, options: RunOptions): RecordedBuild {
     kickStartLoopingRecipes(build.simulation_context, config.overrides?.kick_start_items ?? DEFAULT_KICK_START_ITEMS);
+    withTheOutputBelt(build.simulation_context, config, options);
     options.on_context?.(build.simulation_context);
     return build;
+}
+
+/**
+ * The output belt the config states, in a run of its own build (`installOutputBeltOfOneCopy`), before its first tick. A run of
+ * the copies puts it in with the lanes they share (`installSharedLanes`, from its `on_context`).
+ */
+function withTheOutputBelt(context: SimulationContext, config: Config, options: RunOptions): void {
+    if (options.output_belt === true && options.build_copies === undefined) installOutputBeltOfOneCopy(context, config);
 }
 
 /**
@@ -901,6 +926,7 @@ function backpressureBuildOf(config: Config, options: RunOptions, output_cycle_p
         reportFill({ window_cycle_ticks, held_off: held_off.size, kept_cold: "fractional_window_cycle" });
         return withTheColdStart(build, config, options);
     }
+    withTheOutputBelt(simulation_context, config, options);
     options.on_context?.(simulation_context);
     const fill = new BackpressureFillStep(simulation_context, held_off, read ? window_cycle_ticks : 1).execute();
     if (fill.end === "cap") {
@@ -997,6 +1023,15 @@ function setUpTheStart(
                 inserter_state.inventoryState.removeQuantity(inserter_state.held_item.item_name, inserter_state.held_item.quantity);
                 inserter_state.held_item = null;
             }
+        }
+    }
+    for (const [entity_id, items] of Object.entries(options.start_containers ?? {})) {
+        const state = simulation_context.state_registry.getAllStates().find(it => it.entity_id.id === entity_id);
+        assert(state !== undefined && ContainerStorage.is(state), `${entity_id} is not a container of the build`);
+        for (const [item_name, quantity] of Object.entries(items)) {
+            const held = state.getCurrentQuantity(item_name);
+            if (held > quantity) state.take(item_name, held - quantity);
+            else if (held < quantity) state.insert(item_name, quantity - held);
         }
     }
     if (options.start_hands) {

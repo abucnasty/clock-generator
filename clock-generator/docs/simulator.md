@@ -345,6 +345,22 @@ down 0, 1, 2 and 4 ticks after it comes. A stack stays in the hand only when the
 the automation science 240 build, that is 8 stacks, as in the game. In the game, that build's drops show the stacks at
 96, 128, 160 and 160 from the end of the drop tile. Behind a full side belt, they are at 153 and 185.
 
+An output inserter in line with the belt that drops onto an underground entrance or exit (`drop_tile`) puts its stacks down
+51/256 tile past the tile's middle, on the far side from it, and the entrance or exit carries them on its own half only: an entrance on
+the upstream half, an exit on the downstream half. So the spot is 179 from the tile's downstream edge onto an entrance from
+downstream, 77 onto an exit from upstream, and the middle onto an entrance from upstream (`dropSpotOn`, `src/entities/belt/join/join-rules.ts`). The
+spot sets where the hand's stacks stand on the line, a step's fraction that they keep to the side loads downstream. On the
+lithium plate build under the Coordinated Sources clock 660fda31 (Factorio 2.1.24), the side belt of furnace 7 is an underground pair whose exit
+side-loads onto its row's line. Five of its 58 hands a window cycle go down 0, 1, 3 and 5 ticks after the first: the pair
+stands full to the drop spot, held at the side load by the plates of furnaces 3 and 5, and moves on a stack every 2 ticks
+from the hand's first stack. With the drops of furnaces 3 and 5 on the middle of their tiles, those plates stand a tick
+earlier at the side load and the run had no hand late.
+
+A config whose section is of one copy (each number an output inserter of the config's own build) has its output belt in
+every run of a clock's windows (`runClockOnBuild`), from the run's start, also a run seeded from a recording. A section of
+several copies is the run of the copies'. The model knows turbo belts with stacks of 4: on other tiers, a run keeps each
+drop tile's own lane.
+
 An output blockage of the product shuts the infinite end: the belt lane is blocked from draining to the belt it joins. Every
 lane upstream backs up from there. A hand is held only when its side belt is full. The blockage does not refuse the
 product at every drop. The end changes from the tick after the next. In the game, an end that a script changes acts

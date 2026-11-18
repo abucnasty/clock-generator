@@ -1,6 +1,6 @@
 import type { BeltLane, OutputBeltGeometry } from "../../../config/output-belt";
 import type { JoinLayout, JoinLine, SideLoad, SplitterSide } from "./join-model";
-import { LOADER_LINE_LENGTH, ReceivingEntity, UNDERGROUND_END_LINE_LENGTH } from "./join-rules";
+import { dropSpotOn, LOADER_LINE_LENGTH, ReceivingEntity, TILE_MIDDLE, UNDERGROUND_END_LINE_LENGTH } from "./join-rules";
 
 /**
  * The output belt of a config as the lines of the join model (join-model.ts): the lines of the derived geometry
@@ -22,7 +22,7 @@ import { LOADER_LINE_LENGTH, ReceivingEntity, UNDERGROUND_END_LINE_LENGTH } from
 /** Where a copy's output inserter puts its stacks down: the middle of its drop tile, as the distance to the line's end */
 export interface OutputBeltDropSpot {
     line: string;
-    /** In 1/256 tile: the middle of the drop tile, the spot of a hand that has no drop spot of its own */
+    /** In 1/256 tile, from the end of the drop tile: its middle, or on an underground end the spot of `dropSpotOn` */
     spot: number;
 }
 
@@ -38,8 +38,6 @@ const LANES: readonly BeltLane[] = ["left", "right"];
 const ENTITY: Record<"side-straight" | "side-entrance" | "side-exit", ReceivingEntity> = {
     "side-straight": "belt", "side-entrance": "underground-entrance", "side-exit": "underground-exit",
 };
-/** The middle of a tile, the spot of a hand without a drop spot (BeltHandDrop) */
-const TILE_MIDDLE = 128;
 
 /** The join model's layout of an output belt, from its derived geometry (see the module's description) */
 export function outputBeltJoinOf(geometry: OutputBeltGeometry): OutputBeltJoin {
@@ -108,7 +106,10 @@ export function outputBeltJoinOf(geometry: OutputBeltGeometry): OutputBeltJoin {
         // the drop tile is the side belt's first tile: its middle is the rest of the line and half a tile from its end
         drops.set(load.sender.side_belt_of_copy, { line: sender.id, spot: sender.length - side_belt.drop_tile_end + TILE_MIDDLE });
     }
-    for (const drop of geometry.drops) drops.set(drop.copy, { line: line(drop.line).id, spot: TILE_MIDDLE });
+    // a drop onto a straight belt from beside it lands about the tile's middle; onto an underground end, about its drop spot there
+    for (const drop of geometry.drops) {
+        drops.set(drop.copy, { line: line(drop.line).id, spot: drop.drop_tile === undefined ? TILE_MIDDLE : dropSpotOn(drop.drop_tile) });
+    }
 
     return {
         layout: {

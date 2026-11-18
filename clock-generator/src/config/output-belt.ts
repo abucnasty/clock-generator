@@ -68,6 +68,14 @@ const SideBeltSchema = z.strictObject({
     right_curves: curvesSchema().optional().describe("The right curves of the side belt after its drop tile."),
 });
 
+const DropTileSchema = z.strictObject({
+    underground: z.enum(["entrance", "exit"]).describe("The underground belt entity the output inserter drops onto: entrance or exit."),
+    inserter: z.enum(["beside", "upstream", "downstream"]).describe("Where the output inserter stands: beside the entity, or in line with the belt, "
+        + "upstream or downstream of it."),
+});
+/** The underground end that an output inserter drops onto, and where the inserter stands */
+export type DropTile = z.infer<typeof DropTileSchema>;
+
 const PointSchema = z.strictObject({
     tiles: z.number().int().positive().optional().describe("The steps from the previous point to this point, as the sidecar's walk counts them. "
         + "Each belt entity is one step. An underground pair is the tiles between its ends. "
@@ -89,6 +97,9 @@ const PointSchema = z.strictObject({
         + "side-straight (a straight belt), side-entrance (an underground entrance) or side-exit (an underground exit)."),
     drop: z.number().int().positive().describe("The copy, from 1, with the output inserter that drops onto this point. "
         + "Where a copy has k output inserters, number (c - 1) k + j is the j-th of them in the config of copy c.").optional(),
+    drop_tile: DropTileSchema.optional().describe("With `drop`: the underground entrance or exit that the output inserter drops onto, where the drop tile is not a straight belt. "
+        + "An inserter in line with the belt puts its stacks down past the middle of the tile, and an underground entrance or exit carries them on its own half only, "
+        + "so the drop lands elsewhere on the tile than on a straight belt."),
     splitter_input: laneSchema("The splitter's input that this stretch ends in").optional(),
     splitter_output: laneSchema("The splitter's output that this stretch starts at").optional(),
     lane_end: withoutOutletWords(z.strictObject({
@@ -234,8 +245,8 @@ export interface OutputBeltGeometry {
     stretches: StretchGeometry[];
     lines: LaneLine[];
     side_loads: SideLoadGeometry[];
-    /** Each drop onto a stretch, with the line that ends at the end of the drop's tile */
-    drops: { copy: number; stretch: number; lane: BeltLane; tile: number; end_at: Lanes; line?: string }[];
+    /** Each drop onto a stretch, with the line that ends at the end of the drop's tile, and the underground end it is on, if it is */
+    drops: { copy: number; stretch: number; lane: BeltLane; tile: number; end_at: Lanes; line?: string; drop_tile?: DropTile }[];
     splitter?: { input_priority: BeltLane; output_priority: BeltLane; inputs: { side: BeltLane; stretch: number }[]; outputs: { side: BeltLane; stretch: number }[] };
     /** The infinite end, with the line of each lane that ends at it */
     infinite_ends: { stretch: number; tile: number; end_at: Lanes; lines?: Record<BeltLane, string> }[];
@@ -306,7 +317,7 @@ export function outputBeltGeometry(belt: OutputBelt, copy_spacing: number): Outp
                     tile, lanes: sideLoadLanes(point.layout!, point.lane!), path });
             } else if (point.drop !== undefined) {
                 places.push({ name: `drop of copy ${point.drop}`, point: at, tile, end_at });
-                drops.push({ copy: point.drop, stretch: n, lane: point.lane!, tile, end_at });
+                drops.push({ copy: point.drop, stretch: n, lane: point.lane!, tile, end_at, ...(point.drop_tile !== undefined && { drop_tile: point.drop_tile }) });
             } else if (point.splitter_output !== undefined) {
                 places.push({ name: `the splitter's ${point.splitter_output} output`, point: at, tile, end_at });
             } else {
@@ -514,6 +525,9 @@ export function outputBeltProblems(belt: OutputBelt, copy_offset: { x: number; y
             }
             if (point.side_load !== undefined && point.layout === undefined) {
                 shape.push({ path, message: "State the `layout` of the tile that takes the side load: side-straight, side-entrance or side-exit." });
+            }
+            if (point.drop === undefined && point.drop_tile !== undefined) {
+                shape.push({ path, message: "`drop_tile` is the underground entrance or exit a copy's output inserter drops onto: state it with `drop` only." });
             }
             if (point.side_load === undefined && point.layout !== undefined) {
                 shape.push({ path, message: "`layout` is the tile that takes a side load: state it with `side_load` only." });

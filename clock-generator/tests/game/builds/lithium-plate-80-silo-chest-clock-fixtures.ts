@@ -21,7 +21,8 @@ import {PickupClockScenario} from "./pickup-clock-capture";
  * in the same tick in the order of their unit numbers, the last built first (docs/simulator.md): as the build's blueprint
  * has them, the two inserters that fill the silo are built before the six that empty it; `fill-last` builds them after.
  * The clock with 1 output swing is a second check. The clock with 7 output swings is the known limit of a drop onto a
- * belt that side-loads downstream (the sample's README): the simulator holds it and the game does not. The config marks
+ * belt that side-loads downstream (the sample's README): the game does not hold it, and since the output belt runs in the run of
+ * one copy (#837) the simulator does not either. The config marks
  * the two drops (`drop_capture`), and the result names them as that limit. `lithium-silo-selected-staged` is the clock the record
  * selects (Coordinated Sources, 2,160 ticks), recorded from the harness's staged start under the same probe and protocol.
  */

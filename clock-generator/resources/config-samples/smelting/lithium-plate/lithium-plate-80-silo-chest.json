@@ -341,16 +341,16 @@
     "stretches": [
       {
         "points": [
-          { "drop": 1, "lane": "right" },
-          { "tiles": 10, "drop": 3, "lane": "right" },
+          { "drop": 1, "lane": "right", "drop_tile": { "underground": "entrance", "inserter": "downstream" } },
+          { "tiles": 10, "drop": 3, "lane": "right", "drop_tile": { "underground": "exit", "inserter": "upstream" } },
           { "tiles": 4, "side_load": [5], "lane": "right", "layout": "side-straight" },
           { "tiles": 10, "right_curves": 1 }
         ]
       },
       {
         "points": [
-          { "drop": 2, "lane": "left" },
-          { "tiles": 10, "drop": 4, "lane": "left" },
+          { "drop": 2, "lane": "left", "drop_tile": { "underground": "entrance", "inserter": "downstream" } },
+          { "tiles": 10, "drop": 4, "lane": "left", "drop_tile": { "underground": "exit", "inserter": "upstream" } },
           { "tiles": 4, "side_load": [6], "lane": "left", "layout": "side-straight" },
           { "tiles": 10, "left_curves": 1 }
         ]

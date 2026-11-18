@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import {
-    clockOf, lossesOf, nineOnLine, onNine, shortAssemblers, threeCopiesOnLine, threeOf, TWO_SWINGS,
-    COORDINATED, COORDINATED_ON_LINE, SIX_OUTPUT_WINDOWS, TIME_STUDY, TWO_OUTPUT_WINDOWS,
+    clockOf, lossesOf, nineOnLine, onNine, shortAssemblers, threeCopiesOnLine, TWO_SWINGS,
+    COORDINATED, COORDINATED_ON_LINE, TIME_STUDY,
 } from "../../tests/configs/whole-build-clocks";
 import { automationRow } from "../../tests/configs/automation-row";
 import { validateConfig } from "./plan/validate-config";
@@ -15,6 +15,15 @@ import { quiet } from "./generate-blueprint-test-helpers";
 // for the automation science sample's scaffold and states its output line; at 6 tiles it stands for no scaffold.
 // The test of three copies of three assemblers (its generation is of its own) is in whole-build-copies.generation.test.ts:
 // no file holds more than one long generation.
+// The row at 9 tiles runs its output line in every run of a clock (src/crafting/output-belt-run.ts). There the 216-tick Takt Batches
+// clock 8191de109ece, a source of Coordinated Sources, falls short: assemblers 4 and 8 make 80 to 92 a window cycle, as in the game
+// (Factorio 2.1.24: no steady state in 36,000 ticks, from ruling 60's start and from a warm-up). Coordinated Sources then
+// recommends 89341f604ac4, not cff3154a9e7b, and the 72-tick clock of two swings is listed as Pitch Pickups', the same windows.
+const TWO_SWINGS_ON_LINE = "pitch_pickups";
+/** Assemblers 3 and 7's windows in the clock recommended at 9 tiles: the output in three windows of 25 ticks, the input in two */
+const THREE_OUTPUT_WINDOWS = [{ start: 1, end: 25 }, { start: 73, end: 97 }, { start: 145, end: 169 }];
+const WIDE_INPUT = [{ start: 0, end: 52 }, { start: 122, end: 215 }];
+
 describe("a whole build of nine identical assemblers, clocked as given", () => {
     let nine: ClockAlternativesResult;
     let six: ClockAlternativesResult;
@@ -31,20 +40,20 @@ describe("a whole build of nine identical assemblers, clocked as given", () => {
     });
 
     it("at 9 tiles: the 72-tick clock is unstable, the second input short, and another clock is recommended", () => {
-        expect(clockOf(nine, TWO_SWINGS).result.simulation_duration.ticks).toBe(72);
-        expect(clockOf(nine, TWO_SWINGS).verdict).toBe("unstable");
-        expect(lossesOf(nine, TWO_SWINGS)).toEqual(["3 copper-plate 56/65", "3 iron-gear-wheel 58/65"]);
+        expect(clockOf(nine, TWO_SWINGS_ON_LINE).result.simulation_duration.ticks).toBe(72);
+        expect(clockOf(nine, TWO_SWINGS_ON_LINE).verdict).toBe("unstable");
+        expect(lossesOf(nine, TWO_SWINGS_ON_LINE)).toEqual(["3 copper-plate 56/65", "3 iron-gear-wheel 58/65"]);
         const selected = nine.alternatives[nine.selected_index];
         expect(selected.id).toBe("coordinated_sources");
         expect(selected.verdict).toBe("stable");
-        // every output opens in six windows, but the eighth assembler's in two; in the game every assembler makes 96 in
-        // each of 99 window cycles under it
-        expect(selected.result.clock_windows).toEqual({ ...onNine(threeOf([SIX_OUTPUT_WINDOWS, SIX_OUTPUT_WINDOWS, SIX_OUTPUT_WINDOWS])),
-            "inserter:16": TWO_OUTPUT_WINDOWS });
+        // every output opens in two windows, but the third and seventh assembler's in three; in the game every output inserter
+        // puts down 96 in each of 100 window cycles under it
+        expect(selected.result.clock_windows).toEqual({ ...onNine(TIME_STUDY),
+            "inserter:6": THREE_OUTPUT_WINDOWS, "inserter:7": WIDE_INPUT, "inserter:14": THREE_OUTPUT_WINDOWS, "inserter:15": WIDE_INPUT });
     });
 
     it("at 6 tiles: the same clock holds and is recommended", () => {
-        expect(clockOf(six, TWO_SWINGS).result.clock_windows).toEqual(clockOf(nine, TWO_SWINGS).result.clock_windows);
+        expect(clockOf(six, TWO_SWINGS).result.clock_windows).toEqual(clockOf(nine, TWO_SWINGS_ON_LINE).result.clock_windows);
         expect(clockOf(six, TWO_SWINGS).verdict).toBe("stable");
         expect(six.alternatives[six.selected_index].id).toBe(TWO_SWINGS);
     });

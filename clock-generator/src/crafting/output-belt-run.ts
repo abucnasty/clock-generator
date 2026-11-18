@@ -235,15 +235,44 @@ function outputInsertersOf(config: Config): number[] {
 }
 
 /**
+ * Puts the output belt of the config into a run of one copy (the config's own build) where its clock starts, empty, as the run
+ * of the copies has it (`installSharedLanes`): a hand onto the output belt is held where the belt is, not only where its own
+ * drop tile is. Where the config states no output belt, where its section is of several copies (their output belt is the run
+ * of the copies'), or where its output inserters drop on belts the model does not know (other than turbo belts with stacks of
+ * 4: the belt speed fixtures run a build on other tiers), the run keeps each drop tile's own lane. Null then.
+ */
+export function installOutputBeltOfOneCopy(context: SimulationContext, config: Config): OutputBeltRun | null {
+    if (config.output_belt === undefined) return null;
+    const outputs = outputInsertersOf(config);
+    // a section of several copies is the run of the copies' (`installSharedLanes`): its own output inserters are not all here
+    const geometry = outputBeltGeometry(config.output_belt, copySpacingOf(config.setpoint.copy_offset) ?? 0);
+    const numbers = [...geometry.drops.map(drop => drop.copy),
+        ...geometry.side_loads.flatMap(load => "side_belt_of_copy" in load.sender ? [load.sender.side_belt_of_copy] : [])];
+    if (numbers.some(number => number > outputs.length)) return null;
+    const modelled = outputs.every(id => {
+        const inserter = context.inserters.find(it => it.entity_id.id === EntityId.forInserter(id).id);
+        const belt_state = inserter && context.state_registry.getStateByEntityIdOrThrow(inserter.inserter_state.inserter.sink.entity_id);
+        return belt_state !== undefined && EntityState.isBelt(belt_state)
+            && belt_state.belt.belt_speed === BeltSpeed.TURBO_TRANSPORT_BELT && belt_state.lanes.every(lane => lane.stack_size === 4);
+    });
+    return modelled ? putOutputBelt(context, config) : null;
+}
+
+/**
  * Puts the output belt of the config into a run of the copies before its first tick: each output inserter that the section
  * names gets a drop slot on the output belt in place of its own local tile. Null where the config states no output belt.
  * A number of the section names a copy's output inserter: with k output inserters a copy, number n is the
  * ((n - 1) mod k + 1)-th of copy floor((n - 1) / k) + 1, so with one it is the copy.
  */
 export function installOutputBelt(context: SimulationContext, config: Config): OutputBeltRun | null {
+    assert(context.tick_provider.getCurrentTick() === 0, "The output belt goes in before the first tick");
+    return putOutputBelt(context, config);
+}
+
+/** The output belt, put in at the tick the run stands at: empty, from there on */
+function putOutputBelt(context: SimulationContext, config: Config): OutputBeltRun | null {
     if (config.output_belt === undefined) return null;
     const now = () => context.tick_provider.getCurrentTick();
-    assert(now() === 0, "The output belt goes in before the first tick");
     const join = outputBeltJoinOf(outputBeltGeometry(config.output_belt, copySpacingOf(config.setpoint.copy_offset) ?? 0));
     const run = new OutputBeltRun(join, now());
     const outputs = outputInsertersOf(config);
