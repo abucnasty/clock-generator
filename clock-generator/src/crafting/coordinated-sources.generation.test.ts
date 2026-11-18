@@ -82,19 +82,8 @@ describe("the per-branch clock of the automation science build", () => {
     });
 });
 
-// LITHIUM_PLATE_80_SILO_CHEST: the recommended clock is on 4,320 ticks; the clock of 3.335 wakeups a minute that the game held is
-// composed on 2,160 ticks, the window cycle of the time-division windows, the best-ranked stable clock on another window cycle
-describe("the per-branch clock of the lithium plate build", () => {
-    it("is composed on the window cycle of the next best clock where that gives fewer wakeups than the recommended clock's", async () => {
-        const generated = generateClockAlternatives(await loadConfigFromFile(ConfigPaths.LITHIUM_PLATE_80_SILO_CHEST), { logger: quiet });
-        const recommended = generated.alternatives.filter(it => it.id !== "coordinated_sources")
-            .reduce((best, it) => (it.verdict === "stable" && it.ranking.wake_ups_per_minute! < best.ranking.wake_ups_per_minute! ? it : best));
-        expect([recommended.id, recommended.result.simulation_duration.ticks]).toEqual(["takt_batches_observed_swings_4", 4320]);
-        const selected = generated.alternatives[generated.selected_index];
-        expect([selected.id, selected.verdict, selected.result.simulation_duration.ticks]).toEqual(["coordinated_sources", "stable", 2160]);
-        expect(selected.ranking.wake_ups_per_minute).toBeCloseTo(3.335, 3);
-    });
-});
+// The per-branch clock of the lithium plate build (LITHIUM_PLATE_80_SILO_CHEST) is a check of that job in the record
+// (tests/game/builds/job-checks/samples.ts): the record's generation is the same one
 
 // ELECTROMAGNETIC_SCIENCE_330: the local choice keeps the recommended clock, which the maker judges with the copies before it refuses
 describe("the per-branch clock of a build where the local choice keeps the recommended clock", () => {
