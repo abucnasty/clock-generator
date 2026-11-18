@@ -1,4 +1,13 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.11.1
+Date: 2026-11-18
+  Bugfixes:
+    - A staged start counts a lane that only the inserters of the cell fill as saturated (no loader, built inserter or mining drill feeds its belt), so a build whose belt the cell alone fills is not refused
+    - A staged start wires the clock to each of several mining drills: the drills of the trial build are matched to the config's by where they stand, and the mod finds them in the build that is made again (clock.drill_positions); a build with one drill is wired as before
+    - A backpressure start records settle_ticks ticks after the lock opens, as a staged start without the fill does
+  Features:
+    - The description of a build lists its mining drills with their positions (movers.drills)
+---------------------------------------------------------------------------------------------------
 Version: 0.11.0
 Date: 2026-11-17
   Features:
