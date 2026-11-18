@@ -326,7 +326,9 @@ describe("the logistic science build of 11 copies on two dead-ended lanes", () =
 // takt_batches_observed of the build (4cc378b0763b) leaves copies 4 and 8 short: their side belts fill at their joins onto
 // the output belt, and their output inserters wait. Time-Study Windows (b1490c9f2c49) keeps every copy at its rate.
 describe("a copy short because its side belt is full at its join onto the output belt", async () => {
-    const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
+    // from the cold start, as measured (the backpressure start's fill adds a window cycle the check counts: 85 of 340 hands)
+    const sample = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
+    const config = { ...sample, overrides: { ...sample.overrides, judged_start: "cold" as const } };
     const output = [{ start: 1, end: 37 }, { start: 109, end: 145 }];
     const clocks: Record<string, SerializableClockWindows> = {
         takt_batches_observed: { "inserter:2": output, "inserter:1": [{ start: 13, end: 38 }, { start: 42, end: 65 }, { start: 133, end: 154 }, { start: 181, end: 193 }] },

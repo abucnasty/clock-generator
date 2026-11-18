@@ -433,7 +433,7 @@ export function removeDrill(prev: ConfigFormData, index: number): ConfigFormData
 export function updateOverrides(
     prev: ConfigFormData,
     field: keyof NonNullable<ConfigFormData['overrides']>,
-    value: number | boolean | string[] | undefined,
+    value: number | boolean | string | string[] | undefined,
 ): ConfigFormData {
     const newOverrides = {
         ...prev.overrides,

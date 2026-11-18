@@ -147,4 +147,12 @@ export class InserterArchetype {
     public stateKey(tick: number): string {
         return `${inventoryKey(this.inserter_state.inventoryState)}|${this.hand.key(tick)}|${this.wakes.key()}`;
     }
+
+    /**
+     * The key as the fill of the backpressure start reads it: `stateKey` without the ticks a hand has waited at a full
+     * container (`Hand.key`), the only part of it that grows in a build that stands still
+     */
+    public fillKey(tick: number): string {
+        return `${inventoryKey(this.inserter_state.inventoryState)}|${this.hand.key(tick, false)}|${this.wakes.key()}`;
+    }
 }

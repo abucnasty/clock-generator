@@ -78,7 +78,10 @@ describe("the fractional swings task", () => {
     // on logistic science it is left out as well, where the primary keeps the belt pickup slack inside its windows (#595)
     // and the run of fractional swings, which adds the slack, makes the same windows with it: a clock the primary beats
     it("is left out where it would make the primary clock again, which made anyway it does", async () => {
-        const config = await loadConfigFromFile(TestConfigPaths.MILITARY_SCIENCE_120_COAL_LANE_PER_COPY);
+        // from the cold start, where the fractional task's run makes the primary clock again (from the backpressure start the
+        // task lists a clock of its own)
+        const sample = await loadConfigFromFile(TestConfigPaths.MILITARY_SCIENCE_120_COAL_LANE_PER_COPY);
+        const config = { ...sample, overrides: { ...sample.overrides, judged_start: "cold" as const } };
         let signature = "";
         const plan = planClockAlternatives(config, options, (_context, _tasks, primary) => { signature = primary; });
         expect(plan.context.fractional_is_primary).toBe(true);

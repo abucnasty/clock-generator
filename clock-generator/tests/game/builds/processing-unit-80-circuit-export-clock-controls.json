@@ -3,11 +3,11 @@
  "cases": {
   "generated-as-is": {
    "recorded": {
-    "pr": 0,
-    "commit": "0bcdeefb",
-    "frozen_head": "0bcdeefb",
-    "note": "recorded under the protocol in game ticks on the selected per-branch clock; pr is set when the PR is opened",
-    "clock_sha256": "a9b0c7f0e0dedbfd2daa143758a780e3b09a77e54eb90848b4bcbf6c95a12911",
+    "pr": 822,
+    "commit": "2dad0d56",
+    "frozen_head": "2dad0d56",
+    "note": "recorded under the protocol in game ticks on the selected per-branch clock of the backpressure start",
+    "clock_sha256": "5259f325f605154be10b5ee75d5255e846d9020bb10a92264d9156beab4e3ace",
     "clock_basis": "capture"
    },
    "native": {
@@ -17,10 +17,10 @@
     "period": 24,
     "window": 3600,
     "expected": 4800,
-    "steady": 7210,
+    "steady": 7208,
     "baseline": {
      "ticks": 3600,
-     "total": 4800,
+     "total": 4803,
      "expected": 4800,
      "min": 4792,
      "max": 4808,
@@ -28,36 +28,36 @@
      "meets": true,
      "measured": {
       "ticks": 3600,
-      "items": 4800,
+      "items": 4803,
       "expected": 4800,
-      "stock_start": 10,
-      "stock_end": 10,
+      "stock_start": 9,
+      "stock_end": 12,
       "net": 4800
      }
     },
     "disturbances": [
      {
       "kind": "cut plastic-bar",
-      "start": 10810,
-      "drop": 11053,
-      "release": 11053,
-      "recovered": 15210
+      "start": 10808,
+      "drop": 11045,
+      "release": 11045,
+      "recovered": 15218
      },
      {
       "kind": "block output and export",
-      "start": 15210,
-      "drop": 15259,
-      "release": 15259,
-      "recovered": 18874
+      "start": 15218,
+      "drop": 15264,
+      "release": 15264,
+      "recovered": 18898
      }
     ],
     "stock": {
-     "lowest": 4,
+     "lowest": 5,
      "end": 12,
      "holds": true
     },
     "result": "holds",
-    "ended": 18874
+    "ended": 18898
    },
    "generation": {
     "period": 24,
@@ -69,16 +69,16 @@
      "rate": 80,
      "supply": "backed_up"
     },
-    "clock_sha256": "a9b0c7f0e0dedbfd2daa143758a780e3b09a77e54eb90848b4bcbf6c95a12911"
+    "clock_sha256": "5259f325f605154be10b5ee75d5255e846d9020bb10a92264d9156beab4e3ace"
    }
   },
   "generated-backed-up": {
    "recorded": {
-    "pr": 0,
-    "commit": "0bcdeefb",
-    "frozen_head": "0bcdeefb",
-    "note": "recorded under the protocol in game ticks on the selected per-branch clock; pr is set when the PR is opened",
-    "clock_sha256": "a9b0c7f0e0dedbfd2daa143758a780e3b09a77e54eb90848b4bcbf6c95a12911",
+    "pr": 822,
+    "commit": "2dad0d56",
+    "frozen_head": "2dad0d56",
+    "note": "recorded under the protocol in game ticks on the selected per-branch clock of the backpressure start",
+    "clock_sha256": "5259f325f605154be10b5ee75d5255e846d9020bb10a92264d9156beab4e3ace",
     "clock_basis": "capture"
    },
    "native": {
@@ -88,10 +88,10 @@
     "period": 24,
     "window": 3600,
     "expected": 4800,
-    "steady": 7210,
+    "steady": 7208,
     "baseline": {
      "ticks": 3600,
-     "total": 4800,
+     "total": 4803,
      "expected": 4800,
      "min": 4792,
      "max": 4808,
@@ -99,36 +99,36 @@
      "meets": true,
      "measured": {
       "ticks": 3600,
-      "items": 4800,
+      "items": 4803,
       "expected": 4800,
-      "stock_start": 10,
-      "stock_end": 10,
+      "stock_start": 9,
+      "stock_end": 12,
       "net": 4800
      }
     },
     "disturbances": [
      {
       "kind": "cut plastic-bar",
-      "start": 10810,
-      "drop": 11053,
-      "release": 11053,
-      "recovered": 15210
+      "start": 10808,
+      "drop": 11045,
+      "release": 11045,
+      "recovered": 15218
      },
      {
       "kind": "block output and export",
-      "start": 15210,
-      "drop": 15259,
-      "release": 15259,
-      "recovered": 18874
+      "start": 15218,
+      "drop": 15264,
+      "release": 15264,
+      "recovered": 18898
      }
     ],
     "stock": {
-     "lowest": 4,
+     "lowest": 5,
      "end": 12,
      "holds": true
     },
     "result": "holds",
-    "ended": 18874
+    "ended": 18898
    },
    "generation": {
     "period": 24,
@@ -140,7 +140,7 @@
      "rate": 80,
      "supply": "backed_up"
     },
-    "clock_sha256": "a9b0c7f0e0dedbfd2daa143758a780e3b09a77e54eb90848b4bcbf6c95a12911"
+    "clock_sha256": "5259f325f605154be10b5ee75d5255e846d9020bb10a92264d9156beab4e3ace"
    }
   },
   "per-hand-as-is": {
@@ -206,7 +206,7 @@
     "expected": 32,
     "verdict": "stable",
     "selection": {
-     "id": "round_robin_polling_per_hand",
+     "id": "round_robin_polling_swings_1_per_hand",
      "holds": true,
      "rate": 80,
      "supply": "backed_up"
@@ -277,7 +277,7 @@
     "expected": 32,
     "verdict": "stable",
     "selection": {
-     "id": "round_robin_polling_per_hand",
+     "id": "round_robin_polling_swings_1_per_hand",
      "holds": true,
      "rate": 80,
      "supply": "backed_up"

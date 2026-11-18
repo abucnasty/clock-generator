@@ -15,6 +15,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: a notice where output inserters share a belt line that the configuration does not state
 
 ### Changed
+- simulation: clocks are judged from the build filled up to its clock, the cold start an option
 - generation: Coordinated Sources now checks its clock with every copy while it chooses
 - generation: the chemical science, grenade and utility science samples now judge their output belts
 - blueprint: combinator descriptions and the wiring reference now show each inserter's source, item and sink
