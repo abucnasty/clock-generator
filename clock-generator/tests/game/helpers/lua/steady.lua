@@ -1,6 +1,10 @@
 -- The game tests' protocol, timed in game ticks (never in clock periods). This helper RECORDS; it judges nothing. What it records
 -- (protocol.series, for the whole run) is judged host-side by tests/game/helpers/run-judgement.js (net output over the baseline's
 -- whole clock cycles, the output stock guard, holds), so a rule that only judges differently needs no new recording.
+-- The baseline is judged over a whole number of the run's repeat (abucnasty, 2026-11-18): the smallest number of clock cycles after which what
+-- every final machine puts out in a cycle (products less the stock gained) is the same again, read from series.cycles, seen twice or
+-- more. A hand in transit at the baseline's end is not lost: a baseline of 16 cycles of a 3-cycle repeat is judged over 15. No repeat
+-- seen: all the whole cycles. This file records the cycles of the whole baseline as before; nothing here picks the span.
 -- It steers the run by what the machines that make the target item finish over the trailing minute:
 --   steady state  the first tick the trailing `window` ticks (3,600) hold `expected` products or more (target rate x 60 s) and
 --                 the trailing window has stopped falling after the warm-up's overshoot (abucnasty, 2026-11-03): it is no lower than

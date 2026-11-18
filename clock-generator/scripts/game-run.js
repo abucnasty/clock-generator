@@ -83,7 +83,7 @@ function describeRun(run, items_per_second) {
         const measured = baseline.measured;
         lines.push(`baseline ${baseline.ticks} ticks: ${baseline.total} made against ${baseline.expected}, trailing window ${baseline.min} to ${baseline.max}, `
             + (measured
-                ? `whole clock cycles over ${measured.ticks} ticks: net output ${measured.net} (made ${measured.items}`
+                ? `whole clock cycles${measured.repeat_cycles ? ` (a whole number of the repeat of ${measured.repeat_cycles})` : ""} over ${measured.ticks} ticks: net output ${measured.net} (made ${measured.items}`
                     + (measured.stock_start !== undefined ? `, output stock ${measured.stock_start} to ${measured.stock_end}` : "")
                     + `) against ${measured.expected}`
                 : "no whole clock cycle in it")
