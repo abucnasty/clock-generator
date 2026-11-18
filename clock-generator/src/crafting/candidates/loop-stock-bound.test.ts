@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ConfigPaths } from "../../config/config-paths";
 import { loadConfigFromFile } from "../../config/loader";
-import { loopStockBound } from "./loop-stock-bound";
+import { loopStockBound, loopStockShortOf } from "./loop-stock-bound";
 import { machineLoopsOf } from "./loop-windows";
 
 /** `count` windows of `ticks` ticks a window cycle, evenly from `offset`, one that runs past the last tick split as a clock writes it */
@@ -39,6 +39,23 @@ describe("loopStockBound", () => {
         expect(bound.inserters[0].source_leftover).toHaveLength(5);
         expect(bound.inserters[0].source_leftover[0]).toMatchObject({ ticks: 96, made: 22.4, taken: 16, hand: 16, margin: -9.6 });
         expect(bound).toMatchObject({ source_leftover_margin: -9.6, sink_stock_margin_crafts: 2.927 });
+    });
+
+    // The gate of #516 (trialWithLoopWindows): an egg biochamber holds 7 eggs when its feeder's last window closes and draws
+    // 32 a window cycle of 480 (93% of its speed), so it keeps a craft's egg to spare over a gap of 89 ticks and not of 90
+    it("leaves an egg biochamber a craft to spare over a gap of 89 ticks between its feeder's windows, and not over 90", async () => {
+        const config = await loadConfigFromFile(ConfigPaths.AGRICULTURAL_SCIENCE_250);
+        const margin = (ticks: number) => loopStockBound(config, {
+            "inserter:5": every(480, 5, 0, ticks), "inserter:8": every(480, 5, 48, ticks),
+        }, 480)!;
+        expect(margin(7).inserters.map(it => it.sink_stock.longest_gap)).toEqual([89, 89]);
+        expect(margin(7).sink_stock_margin_crafts).toBeGreaterThanOrEqual(0);
+        expect(margin(6).inserters.map(it => it.sink_stock.longest_gap)).toEqual([90, 90]);
+        expect(margin(6).sink_stock_margin_crafts).toBeLessThan(0);
+        // the gate itself: the 6-tick windows are refused, the 7-tick ones kept
+        const short = (ticks: number) => loopStockShortOf(config, { "inserter:5": every(480, 5, 0, ticks), "inserter:8": every(480, 5, 48, ticks) }, 480);
+        expect(short(7)).toBeNull();
+        expect(short(6)).toMatch(/^machine:3 holds pentapod-egg for 0\.9\d* crafts after the 90 ticks without a window of its loop feeders/);
     });
 
     it("counts an inserter of the loop that is always on over the whole window cycle, with no gap at its sink", async () => {
