@@ -66,10 +66,26 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
-          cache-dependency-path: clock-generator/package-lock.json
 
-      - run: npm ci
+      # `npm ci` runs only when the cache holds no node_modules for these package files (exact key, no fallback to an older entry);
+      # it saves the entry at once, before any tool writes into node_modules. The key is the same in every job of the engine.
+      - name: Restore node_modules
+        id: modules
+        uses: actions/cache/restore@v4
+        with:
+          path: clock-generator/node_modules
+          key: node-modules-${{ runner.os }}-${{ runner.arch }}-node24-${{ hashFiles('clock-generator/package.json', 'clock-generator/package-lock.json') }}
+
+      - name: Install
+        if: steps.modules.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Save node_modules
+        if: steps.modules.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: clock-generator/node_modules
+          key: node-modules-${{ runner.os }}-${{ runner.arch }}-node24-${{ hashFiles('clock-generator/package.json', 'clock-generator/package-lock.json') }}
 
       # as for the generation tests: vitest starts the files that took longest in the run before. One series for each shard count and shard.
       - name: Durations of the last unit tests
@@ -103,10 +119,26 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
-          cache-dependency-path: clock-generator/package-lock.json
 
-      - run: npm ci
+      # `npm ci` runs only when the cache holds no node_modules for these package files (exact key, no fallback to an older entry);
+      # it saves the entry at once, before any tool writes into node_modules. The key is the same in every job of the engine.
+      - name: Restore node_modules
+        id: modules
+        uses: actions/cache/restore@v4
+        with:
+          path: clock-generator/node_modules
+          key: node-modules-${{ runner.os }}-${{ runner.arch }}-node24-${{ hashFiles('clock-generator/package.json', 'clock-generator/package-lock.json') }}
+
+      - name: Install
+        if: steps.modules.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Save node_modules
+        if: steps.modules.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: clock-generator/node_modules
+          key: node-modules-${{ runner.os }}-${{ runner.arch }}-node24-${{ hashFiles('clock-generator/package.json', 'clock-generator/package-lock.json') }}
 
       - name: Unused files, exports and dependencies
         run: npm run knip
@@ -168,10 +200,26 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
-          cache-dependency-path: clock-generator/package-lock.json
 
-      - run: npm ci
+      # `npm ci` runs only when the cache holds no node_modules for these package files (exact key, no fallback to an older entry);
+      # it saves the entry at once, before any tool writes into node_modules. The key is the same in every job of the engine.
+      - name: Restore node_modules
+        id: modules
+        uses: actions/cache/restore@v4
+        with:
+          path: clock-generator/node_modules
+          key: node-modules-${{ runner.os }}-${{ runner.arch }}-node24-${{ hashFiles('clock-generator/package.json', 'clock-generator/package-lock.json') }}
+
+      - name: Install
+        if: steps.modules.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Save node_modules
+        if: steps.modules.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: clock-generator/node_modules
+          key: node-modules-${{ runner.os }}-${{ runner.arch }}-node24-${{ hashFiles('clock-generator/package.json', 'clock-generator/package-lock.json') }}
 
       - name: PORTAL.md is current
         run: npm run docs:portal -- --check
@@ -299,15 +347,33 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
-          cache-dependency-path: clock-generator/package-lock.json
 
-      - run: npm ci
+      # `npm ci` runs only when the cache holds no node_modules for these package files (exact key, no fallback to an older entry);
+      # it saves the entry at once, before any tool writes into node_modules. The key is the same in every job of the engine.
+      - name: Restore node_modules
+        id: modules
+        uses: actions/cache/restore@v4
+        with:
+          path: clock-generator/node_modules
+          key: node-modules-${{ runner.os }}-${{ runner.arch }}-node24-${{ hashFiles('clock-generator/package.json', 'clock-generator/package-lock.json') }}
+
+      - name: Install
+        if: steps.modules.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Save node_modules
+        if: steps.modules.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: clock-generator/node_modules
+          key: node-modules-${{ runner.os }}-${{ runner.arch }}-node24-${{ hashFiles('clock-generator/package.json', 'clock-generator/package-lock.json') }}
 
       # Vitest starts the files that took longest in the run before; without its results it starts the largest files,
       # and a short file that is one of the slowest, started last, runs alone for minutes. The results are saved at
       # the end of every run (one cache entry each, one series for each shard count and shard: a change of the number
-      # of shards starts new series) and the newest of the shard is restored, after `npm ci`, which empties node_modules.
+      # of shards starts new series) and the newest of the shard is restored after the install of node_modules, which a
+      # miss of the node_modules cache runs as `npm ci`, and that empties node_modules. The node_modules cache entry is saved
+      # before this one is restored, so it never holds these results.
       - name: Durations of the last generation tests
         uses: actions/cache@v4
         with:
@@ -388,14 +454,17 @@ jobs:
     needs: changes
     if: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft != true && needs.changes.outputs.generation == 'true' }}
     runs-on: ubuntu-latest
-    # one runner took 24 minutes for all 86 jobs on 2026-11-05; a shard has about a sixth of them
+    # one runner took 24 minutes for all 86 jobs on 2026-11-05; a shard has about half of them
     timeout-minutes: 25
     strategy:
       # every shard finishes, so that a pull request shows all its failures at once
       fail-fast: false
       matrix:
-        # the smallest count whose estimated slowest shard is the slowest job: `node scripts/ci/update-record-durations.js --shards`
-        shard: [1, 2, 3, 4, 5, 6]
+        # the smallest count whose estimated slowest shard is the slowest job. The estimate is that of the dealing, four jobs at a
+        # time (`python3 scripts/blast/shard.py plan <_jobs.json> ci/record-durations.json <count>`, the last line); with the durations
+        # of 2026-11-17 two shards give 528.7 s, the slowest job. `update-record-durations.js` prints a larger count because it
+        # adds the seconds of a shard one after another
+        shard: [1, 2]
     defaults:
       run:
         working-directory: clock-generator
@@ -407,10 +476,26 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
-          cache-dependency-path: clock-generator/package-lock.json
 
-      - run: npm ci
+      # `npm ci` runs only when the cache holds no node_modules for these package files (exact key, no fallback to an older entry);
+      # it saves the entry at once, before any tool writes into node_modules. The key is the same in every job of the engine.
+      - name: Restore node_modules
+        id: modules
+        uses: actions/cache/restore@v4
+        with:
+          path: clock-generator/node_modules
+          key: node-modules-${{ runner.os }}-${{ runner.arch }}-node24-${{ hashFiles('clock-generator/package.json', 'clock-generator/package-lock.json') }}
+
+      - name: Install
+        if: steps.modules.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Save node_modules
+        if: steps.modules.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: clock-generator/node_modules
+          key: node-modules-${{ runner.os }}-${{ runner.arch }}-node24-${{ hashFiles('clock-generator/package.json', 'clock-generator/package-lock.json') }}
 
       # hosted runners differ in CPU, and the jobs are CPU-bound
       - name: Runner CPU
@@ -537,7 +622,25 @@ jobs:
             clock-generator/package-lock.json
             clock-generator-ui/package-lock.json
 
-      - run: npm ci
+      # as for the engine, for the UI's own node_modules. `npm run build` below still runs `npm ci` in clock-generator (its
+      # `build:deps` script), so this job keeps the npm cache above for that install
+      - name: Restore node_modules
+        id: modules
+        uses: actions/cache/restore@v4
+        with:
+          path: clock-generator-ui/node_modules
+          key: node-modules-ui-${{ runner.os }}-${{ runner.arch }}-node24-${{ hashFiles('clock-generator-ui/package.json', 'clock-generator-ui/package-lock.json') }}
+
+      - name: Install
+        if: steps.modules.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Save node_modules
+        if: steps.modules.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: clock-generator-ui/node_modules
+          key: node-modules-ui-${{ runner.os }}-${{ runner.arch }}-node24-${{ hashFiles('clock-generator-ui/package.json', 'clock-generator-ui/package-lock.json') }}
 
       # installs and builds clock-generator first, then type-checks and bundles the UI
       - run: npm run build
@@ -571,19 +674,50 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
-          cache-dependency-path: |
-            clock-generator/package-lock.json
-            clock-generator-ui/package-lock.json
+
+      # `npm ci` runs only on a miss, in each of the two packages (see the engine's jobs); the keys are those of the jobs above
+      - name: Restore node_modules of the engine
+        id: engine-modules
+        uses: actions/cache/restore@v4
+        with:
+          path: clock-generator/node_modules
+          key: node-modules-${{ runner.os }}-${{ runner.arch }}-node24-${{ hashFiles('clock-generator/package.json', 'clock-generator/package-lock.json') }}
+
+      - name: Install the engine
+        if: steps.engine-modules.outputs.cache-hit != 'true'
+        working-directory: clock-generator
+        run: npm ci
+
+      - name: Save node_modules of the engine
+        if: steps.engine-modules.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: clock-generator/node_modules
+          key: node-modules-${{ runner.os }}-${{ runner.arch }}-node24-${{ hashFiles('clock-generator/package.json', 'clock-generator/package-lock.json') }}
 
       # the tests load the built engine (clock-generator/dist), and the UI links to it
       - name: Build the engine
         working-directory: clock-generator
-        run: npm ci && npm run build
+        run: npm run build
+
+      - name: Restore node_modules of the UI
+        id: ui-modules
+        uses: actions/cache/restore@v4
+        with:
+          path: clock-generator-ui/node_modules
+          key: node-modules-ui-${{ runner.os }}-${{ runner.arch }}-node24-${{ hashFiles('clock-generator-ui/package.json', 'clock-generator-ui/package-lock.json') }}
 
       - name: Install the UI
+        if: steps.ui-modules.outputs.cache-hit != 'true'
         working-directory: clock-generator-ui
         run: npm ci
+
+      - name: Save node_modules of the UI
+        if: steps.ui-modules.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: clock-generator-ui/node_modules
+          key: node-modules-ui-${{ runner.os }}-${{ runner.arch }}-node24-${{ hashFiles('clock-generator-ui/package.json', 'clock-generator-ui/package-lock.json') }}
 
       - name: Sample tests
         working-directory: clock-generator-ui
@@ -613,7 +747,25 @@ jobs:
             clock-generator/package-lock.json
             clock-generator-ui/package-lock.json
 
-      - run: npm ci
+      # as for the engine, for the UI's own node_modules. `npm run build` below still runs `npm ci` in clock-generator (its
+      # `build:deps` script), so this job keeps the npm cache above for that install
+      - name: Restore node_modules
+        id: modules
+        uses: actions/cache/restore@v4
+        with:
+          path: clock-generator-ui/node_modules
+          key: node-modules-ui-${{ runner.os }}-${{ runner.arch }}-node24-${{ hashFiles('clock-generator-ui/package.json', 'clock-generator-ui/package-lock.json') }}
+
+      - name: Install
+        if: steps.modules.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Save node_modules
+        if: steps.modules.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: clock-generator-ui/node_modules
+          key: node-modules-ui-${{ runner.os }}-${{ runner.arch }}-node24-${{ hashFiles('clock-generator-ui/package.json', 'clock-generator-ui/package-lock.json') }}
 
       # the headless Chromium of the playwright version the lockfile pins
       - name: Chromium
