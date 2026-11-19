@@ -134,6 +134,7 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
         // the inserters come on belts from two infinity chests; the molten iron comes from infinity pipes and has no loss
         losses: [{kind: "cut", item: "inserter"}, {kind: "block"}],
         limit: "the scaffold holds one copy of the job's six",
+        start: "backpressure",
     },
     {
         name: "advanced-circuit-230", scaffold: "advanced-circuit.scaffold", job: "config-ADVANCED_CIRCUIT_230", config: "ADVANCED_CIRCUIT_230", copies: 1,

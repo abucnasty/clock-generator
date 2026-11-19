@@ -22,13 +22,16 @@ import {assertFeedBacksUp, PickupClockScenario} from "./pickup-clock-capture";
 export interface LogisticDirectInsertClockCase {
     name: string;
     alternative: string;
+    /** The run starts from ruling 60's start (the harness's backpressure start, `staged_start.backpressure`), not from a free warm-up */
+    staged?: boolean;
+    backpressure?: boolean;
 }
 
 /** The id of the alternative the generated clock is: 96 ticks of fractional swings, the selected one for the config as it is until #595 */
 export const GENERATED_ALTERNATIVE = "euclidean_swings";
 
 export function logisticDirectInsertClockCases(): LogisticDirectInsertClockCase[] {
-    return [{name: "generated-one-copy", alternative: GENERATED_ALTERNATIVE}];
+    return [{name: "generated-one-copy", alternative: GENERATED_ALTERNATIVE, staged: true, backpressure: true}];
 }
 
 const SCAFFOLD = path.join(path.dirname(ConfigPaths.LOGISTIC_SCIENCE_240_DIRECT_INSERT), "logistic-240-direct-insert.scaffold");
@@ -61,6 +64,7 @@ export async function logisticDirectInsertClockScenario(variant: LogisticDirectI
         scaffold: () => fs.readFileSync(SCAFFOLD, "utf8").trim(),
         share: 1 / COPIES, copies: 1,
         alternative: variant.alternative,
+        ...(variant.staged && {staged: true, backpressure: variant.backpressure}),
         probeFile: path.join(__dirname, "logistic-science-240-direct-insert-clock-probe.lua"),
         probe: {family: "logistic-science-240-direct-insert", stackSize: 4},
         controls: path.join(__dirname, "logistic-science-240-direct-insert-clock-controls.json"),

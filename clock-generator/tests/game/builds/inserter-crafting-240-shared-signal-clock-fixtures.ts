@@ -43,12 +43,15 @@ export interface InserterCraftingClockCase {
     alternative?: string;
     /** The config has its belts backed up (`overrides.backed_up_belts`) and the sample's scaffold of one copy is the build */
     backed_up_one_copy?: boolean;
+    /** The run starts from ruling 60's start (the harness's backpressure start, `staged_start.backpressure`), not from a free warm-up */
+    staged?: boolean;
+    backpressure?: boolean;
 }
 
 export function inserterCraftingClockCases(): InserterCraftingClockCase[] {
     return [
         {name: "hand-made-clock-three-copies", kind: "hand-made clock"},
-        {name: "generated-three-copies", kind: "generated clock", alternative: GENERATED_ALTERNATIVE},
+        {name: "generated-three-copies", kind: "generated clock", alternative: GENERATED_ALTERNATIVE, staged: true, backpressure: true},
         {name: "generated-backed-up-one-copy", kind: "generated clock", alternative: BACKED_UP_ALTERNATIVE, backed_up_one_copy: true},
     ];
 }
@@ -176,6 +179,7 @@ export async function inserterCraftingClockScenario(variant: InserterCraftingClo
         keep_built_clock: !generated,
         builtClockSha256: handMadeClockHash,
         ...(generated && {alternative: variant.alternative, copies: COPIES}),
+        ...(variant.staged && {staged: true, backpressure: variant.backpressure}),
         probeFile: path.join(__dirname, "inserter-crafting-240-shared-signal-clock-probe.lua"),
         probe: {family: "inserter-crafting-240-shared-signal-clock", stackSize: 4},
         controls: path.join(__dirname, "inserter-crafting-240-shared-signal-clock-controls.json"),
