@@ -22,7 +22,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 ### Fixed
 - simulation: the lithium plate build's output inserters wait for their belt as in the game
 - generation: Pitch Pickups times full hands where the batched clock fails, as where it holds
-- simulation: automation science 240 keeps the items on its belt before copy 1 through a supply stop
+- simulation: automation science 240 keeps the items on its belt before copy 1 during supply stops
 
 ## [0.30.0] - 2026-11-18
 
