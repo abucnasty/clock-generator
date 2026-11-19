@@ -213,10 +213,10 @@
     },
     "generated-full-build": {
       "recorded": {
-        "pr": 0,
-        "commit": "038ed41a",
-        "frozen_head": "038ed41a",
-        "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
+        "pr": 852,
+        "commit": "214bd7ad",
+        "frozen_head": "214bd7ad",
+        "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24",
         "clock_sha256": "a0b0cff946b4d0fa1d461ff113344e42cb58a6d9c15ba37709729bcb147b7a71",
         "clock_basis": "capture"
       },
@@ -227,7 +227,7 @@
         "period": 112,
         "window": 3600,
         "expected": 14400,
-        "steady": 7354,
+        "steady": 7353,
         "baseline": {
           "ticks": 3600,
           "total": 14394,
@@ -248,24 +248,24 @@
         "disturbances": [
           {
             "kind": "stop foundries",
-            "start": 10954,
-            "drop": 11023,
-            "release": 11023,
-            "recovered": 14907
+            "start": 10953,
+            "drop": 11022,
+            "release": 11022,
+            "recovered": 14906
           },
           {
             "kind": "block output",
-            "start": 14907,
-            "drop": 15158,
-            "release": 15158,
-            "recovered": 19679
+            "start": 14906,
+            "drop": 15157,
+            "release": 15157,
+            "recovered": 19678
           },
           {
             "kind": "stop drills",
-            "start": 19679,
-            "drop": 19771,
-            "release": 19771,
-            "recovered": 23647
+            "start": 19678,
+            "drop": 19770,
+            "release": 19770,
+            "recovered": 23646
           }
         ],
         "stock": {
@@ -274,7 +274,7 @@
           "holds": true
         },
         "result": "holds",
-        "ended": 23647
+        "ended": 23646
       },
       "generation": {
         "period": 112,

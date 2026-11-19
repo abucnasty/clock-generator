@@ -25,6 +25,9 @@ export interface GrenadeClockCase {
     name: string;
     kind: "hand-made clock" | "generated clock";
     build: "one copy" | "full build";
+    /** The run starts from ruling 60's start (the harness's backpressure start, `staged_start.backpressure`), not from a free warm-up */
+    staged?: boolean;
+    backpressure?: boolean;
 }
 
 export function grenadeClockCases(): GrenadeClockCase[] {
@@ -32,7 +35,7 @@ export function grenadeClockCases(): GrenadeClockCase[] {
         {name: "hand-made-one-copy", kind: "hand-made clock", build: "one copy"},
         {name: "hand-made-full-build", kind: "hand-made clock", build: "full build"},
         {name: "generated-one-copy", kind: "generated clock", build: "one copy"},
-        {name: "generated-full-build", kind: "generated clock", build: "full build"},
+        {name: "generated-full-build", kind: "generated clock", build: "full build", staged: true, backpressure: true},
     ];
 }
 
@@ -82,6 +85,7 @@ export async function grenadeClockScenario(variant: GrenadeClockCase): Promise<P
         keep_built_clock: !generated,
         builtClockSha256: () => handMadeClockHash(variant.build),
         ...(generated && {alternative: GENERATED_ALTERNATIVE, copies}),
+        ...(variant.staged && {staged: true, backpressure: variant.backpressure}),
         probeFile: path.join(__dirname, "grenade-clock-probe.lua"),
         probe: {family: "grenade", stackSize: 4},
         controls: path.join(__dirname, "grenade-clock-controls.json"),

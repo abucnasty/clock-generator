@@ -1174,10 +1174,10 @@
   },
   "logistic-science-240-direct-insert": {
    "recorded": {
-    "pr": 823,
-    "commit": "95f45024",
-    "frozen_head": "95f45024",
-    "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
+    "pr": 852,
+    "commit": "214bd7ad",
+    "frozen_head": "214bd7ad",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24",
     "clock_sha256": "539e717d128ba51e5e67b1b6dd1d300f9a06538a88ca9c1324000ff3e67d52d7",
     "clock_basis": "capture"
    },
@@ -1191,7 +1191,7 @@
     "steady": 7056,
     "baseline": {
      "ticks": 3600,
-     "total": 2396,
+     "total": 2400,
      "expected": 2400,
      "min": 2396,
      "max": 2408,
@@ -1210,16 +1210,16 @@
      {
       "kind": "cut inserter",
       "start": 10656,
-      "drop": 10824,
-      "release": 10824,
-      "recovered": 14600
+      "drop": 10823,
+      "release": 10823,
+      "recovered": 14599
      },
      {
       "kind": "block output",
-      "start": 14600,
-      "drop": 15240,
-      "release": 15240,
-      "recovered": 19016
+      "start": 14599,
+      "drop": 15239,
+      "release": 15239,
+      "recovered": 19015
      }
     ],
     "stock": {
@@ -1228,7 +1228,7 @@
      "holds": true
     },
     "result": "holds",
-    "ended": 19016
+    "ended": 19015
    },
    "generation": {
     "period": 576,

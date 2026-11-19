@@ -19,6 +19,11 @@ const FOLDER = path.dirname(ConfigPaths.UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN);
 /** The id of the alternative the generated clock is: the per-branch clock of 168 ticks, which takes the coal inserter's windows from a part one source at a time */
 export const GENERATED_ALTERNATIVE = "coordinated_sources";
 
+/** The case the build records: the generated clock on the scaffold of one copy, from ruling 60's start (the harness's backpressure start, `staged_start.backpressure`) */
+export const UTILITY_SCIENCE_480_CASES = [
+    {name: "generated-one-copy", staged: true, backpressure: true},
+];
+
 /** The scaffold has the five inserters that bring the supplies onto the belts (chest to belt), which the config does not have */
 const SCAFFOLD_FEEDERS = 5;
 
@@ -40,7 +45,8 @@ export function assertUtilityScienceLdsFoundryChainHardware(recording: Recording
 export async function utilityScienceLdsFoundryChainClockScenario(): Promise<PickupClockScenario> {
     const config = await loadConfigFromFile(ConfigPaths.UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN);
     return {
-        name: "generated-one-copy", speed: CLOCK_TEST_SPEEDS[0], backed: false,
+        name: UTILITY_SCIENCE_480_CASES[0].name, speed: CLOCK_TEST_SPEEDS[0], backed: false,
+        staged: UTILITY_SCIENCE_480_CASES[0].staged, backpressure: UTILITY_SCIENCE_480_CASES[0].backpressure,
         config: () => config,
         scaffold: () => fs.readFileSync(path.join(FOLDER, "utility-480-lds-foundry-chain.scaffold"), "utf8").trim(),
         share: 2 / 7,
