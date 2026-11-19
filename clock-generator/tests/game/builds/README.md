@@ -1095,16 +1095,16 @@ MISSING_RECORDINGS_CAPTURE_DIR=.scratch/scaffold-builds npm run test:game -- tes
 ## The side pickup builds, from ruling 60's start
 
 The twelve turbo side pickup builds of the speed coverage (`moving-pickup.game.test.ts`, the different-items fixture with the electromagnetic plant; `same-item-pickup-clock.game.test.ts`, the
-same-item fixture with the gear assembler; each on the straight belt, the underground entrance and the exit, belt moving and backed up) record the selected clock of their record job from ruling 60's start
+same-item fixture with the gear assembler; each on the straight belt, the underground entrance and the exit, belt moving or under backpressure (the cases' `backed`)) record the selected clock of their record job from ruling 60's start
 (`staged: true, backpressure: true` in `capturePickupClockSpeed`) on Factorio 2.1.24, with the standard losses (an ingredient cut, the output block, the other ingredient cut). Each case was run twice with
 the recording cache off, with equal summaries, and is pinned in [pickup-clock-controls.json](pickup-clock-controls.json) (the entry, its clock hash and the game version).
 
 | Job (case) | Clock (window cycle) | Steady state | Losses recovered at | Start before (steady state; losses recovered at) |
 | --- | --- | --- | --- | --- |
-| electromagnetic, straight belt, backed up and moving | Takt Batches Swings 1 (352, `c9c84d59`) | 7,120 | 14,653, 19,005, 22,877 | free warm-up: 7,120; 14,654, 18,878, 22,750 |
-| electromagnetic, underground entrance, backed up | same | 7,120 | 14,653, 19,005, 22,877 | free warm-up: 7,120; 14,782, 18,878, 23,230 |
+| electromagnetic, straight belt, backed and moving | Takt Batches Swings 1 (352, `c9c84d59`) | 7,120 | 14,653, 19,005, 22,877 | free warm-up: 7,120; 14,654, 18,878, 22,750 |
+| electromagnetic, underground entrance, backed | same | 7,120 | 14,653, 19,005, 22,877 | free warm-up: 7,120; 14,782, 18,878, 23,230 |
 | electromagnetic, underground entrance, moving | same | 7,120 | 16,190, 20,414, 24,991 | free warm-up: 7,121; 16,192, 21,824, 25,695 |
-| electromagnetic, underground exit, backed up | same | 7,120 | 14,653, 19,005, 23,101 | free warm-up: 7,120; 14,782, 18,878, 22,878 |
+| electromagnetic, underground exit, backed | same | 7,120 | 14,653, 19,005, 23,101 | free warm-up: 7,120; 14,782, 18,878, 22,878 |
 | electromagnetic, underground exit, moving | same | 7,120 | 16,191, 21,823, 27,455 | free warm-up: 7,121; 16,192, 21,824, 26,112 |
 | same-item, all six | Takt Batches Observed (160, `67586738`) | 7,122 | 14,501, 18,341, 22,181 | free warm-up: 7,123; 14,502, 18,342, 22,182 |
 
