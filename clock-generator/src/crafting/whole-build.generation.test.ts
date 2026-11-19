@@ -51,7 +51,7 @@ describe("a whole build of nine identical assemblers, clocked as given", () => {
         expect(clockOf(six, TWO_SWINGS).result.simulation_duration.ticks).toBe(72);
         expect(judgeSharedLanes(nineOnLine(), windows, 72, quiet).losses
             .map(loss => `${loss.inserter_id} ${loss.item} ${loss.swings}/${loss.alone_swings}`))
-            .toEqual(["3 copper-plate 56/65", "3 iron-gear-wheel 58/65"]);
+            .toEqual(["3 copper-plate 214/245", "3 iron-gear-wheel 215/245"]);
     });
 
     it("at 9 tiles: Pitch Pickups times a full hand in each output window, though the primary clock does not hold", () => {

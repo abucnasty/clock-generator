@@ -14,7 +14,7 @@ describe("a whole build of nine identical assemblers, clocked as given", () => {
     });
 
     it("works with copies of a build that itself holds like assemblers: the copies and the inserters of a copy are both spaced", () => {
-        expect(lossesOf(in_copies, TWO_SWINGS)).toEqual(["3 copper-plate 56/65", "3 iron-gear-wheel 58/65"]);
+        expect(lossesOf(in_copies, TWO_SWINGS)).toEqual(["3 copper-plate 214/245", "3 iron-gear-wheel 215/245"]);
         expect(clockOf(in_copies, TWO_SWINGS).assessment.shared_lane_losses?.map(loss => "copy" in loss ? loss.copy : null)).toEqual([1, 1]);
         // Coordinated Sources is selected with the second assembler's output in two windows. Without the output line it put
         // the first two assemblers' outputs in six (COORDINATED), which the game fails (below). On the nine assemblers, this

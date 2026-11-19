@@ -313,8 +313,8 @@ const electromagnetic330: JobCheck[] = [
                 + "The output goes into a chest of each copy: the infinity chest that holds electromagnetic science pack.");
             expect(clock.checked_lanes!.line.output_chests).toEqual([{ chest_id: 1, kind: "infinity-chest", items: ["electromagnetic-science-pack"] }]);
             expect(reasonsOf(generated)).toEqual({
-                euclidean_swings: { code: "belt_gaps", data: { missed: 162, with_gap: 162 } },
-                takt_batches_swings_2: { code: "belt_gaps", data: { missed: 151, with_gap: 121 } },
+                euclidean_swings: { code: "belt_gaps", data: { missed: 630, with_gap: 630 } },
+                takt_batches_swings_2: { code: "belt_gaps", data: { missed: 567, with_gap: 459 } },
             });
             expect(swingSumsOf(generated)).toEqual({ euclidean_swings: [], takt_batches_swings_2: [] });
         },
@@ -629,8 +629,8 @@ const chemical240: JobCheck[] = [
 
 const flyingRobotFrame: JobCheck[] = [
     // no missed swing shows the gap or a full output: unknown, with the missed swings
-    reasonsOfClocks({ takt_batches_observed: { code: "unknown", data: { missed: 438 } }, time_study_windows: { code: "unknown", data: { missed: 438 } },
-        pitch_pickups: { code: "unknown", data: { missed: 438 } } }),
+    reasonsOfClocks({ takt_batches_observed: { code: "unknown", data: { missed: 1698 } }, time_study_windows: { code: "unknown", data: { missed: 1698 } },
+        pitch_pickups: { code: "unknown", data: { missed: 1698 } } }),
     // from flying-robot-frame-output-belt.generation.test.ts: the sample states the output belt of its scaffold (two lines of six copies each). The run
     // of the 12 copies puts every copy's frames on those lines, and the clock the generator selects for the build holds on them.
     {
@@ -715,22 +715,22 @@ const automation240: JobCheck[] = [
             const clock = byId(generated, "euclidean_swings");
             expect(clock.result.simulation_duration.ticks).toBe(72);
             expect(rowsOf(clock)).toEqual([
-                { at: "1/1", together: "take 120", label: "Swings missed on copy 2", sentence: "Copy 2 misses 3 of 65 swings." },
-                { at: "1/2", together: "take 120", label: "Swings missed on copy 2", sentence: "Copy 2 misses 3 of 65 swings." },
+                { at: "1/1", together: "take 120", label: "Swings missed on copy 2", sentence: "Copy 2 misses 11 of 245 swings." },
+                { at: "1/2", together: "take 120", label: "Swings missed on copy 2", sentence: "Copy 2 misses 11 of 245 swings." },
                 { at: "2/1", together: "drop 240", label: "Not the cause", sentence: "No copy waits at its join." },
             ]);
             const cause = clock.checked_lanes!.cause!;
-            expect(cause.headline.text).toBe("Copy 2 misses 6 of 130 swings");
+            expect(cause.headline.text).toBe("Copy 2 misses 22 of 490 swings");
             // the run shows the copy before's gap on the copper plate lane only; the machine's full output in 5 of the 6
-            expect(cause.cause!.text).toBe("In 3 of the 6 missed swings, the gap that copy 1 leaves on the copper plate lane reaches copy 2 when its inserter must pick up. "
-                + "In 5 of the 6 missed swings, the assembling machine 3 of copy 2 that makes automation science pack has its output full and takes no more items. 2 of the 6 show both.");
-            // 3 of the 6 missed swings show the gap: the reason beside the status
-            expect(cause.reason).toEqual({ code: "belt_gaps", data: { missed: 6, with_gap: 3 } });
+            expect(cause.cause!.text).toBe("In 11 of the 22 missed swings, the gap that copy 1 leaves on the copper plate lane reaches copy 2 when its inserter must pick up. "
+                + "In 17 of the 22 missed swings, the assembling machine 3 of copy 2 that makes automation science pack has its output full and takes no more items. 6 of the 22 show both.");
+            // 11 of the 22 missed swings show the gap: the reason beside the status
+            expect(cause.reason).toEqual({ code: "belt_gaps", data: { missed: 22, with_gap: 11 } });
             expect(cause.spacing!.text).toBe("The copies stand 9 tiles apart. It takes 72 ticks for items to travel between copies, and the window cycle is 72 ticks. "
                 + "The 9 copies take every copper plate the lane brings, so the gap does not close on the way.");
-            expect(cause.where.text).toBe("The inserter of copy 2 that takes iron gear wheel and copper plate misses 6 of its 130 swings in 65 window cycles: "
-                + "3 with iron gear wheel and 3 with copper plate. Each swing is a hand of 16.");
-            expect(cause.alone.text).toBe("The same inserter makes all 130 swings. The clock is right for one copy.");
+            expect(cause.where.text).toBe("The inserter of copy 2 that takes iron gear wheel and copper plate misses 22 of its 490 swings in 245 window cycles: "
+                + "11 with iron gear wheel and 11 with copper plate. Each swing is a hand of 16.");
+            expect(cause.alone.text).toBe("The same inserter makes all 490 swings. The clock is right for one copy.");
             expect(cause.changes!.text).toBe("With 8 copies on the iron gear wheel and copper plate lanes, every copy makes every swing. "
                 + "Another clock of this build holds with all 9: Coordinated Sources, window cycle 216 ticks.");
             expect(cause.changes!.data).toMatchObject({ fewer_copies: 8, other_clock: { id: "coordinated_sources", window_cycle_ticks: 216 } });
@@ -743,19 +743,19 @@ const automation240: JobCheck[] = [
             const clock = byId(generated, "takt_batches_observed");
             expect(clock.result.simulation_duration.ticks).toBe(216);
             expect(rowsOf(clock)).toEqual([
-                { at: "2/1", together: "drop 240", label: "Join full on copies 4 and 8", sentence: "43 of 384 swings missed, on each." },
-                { at: "1/1", together: "take 120", label: "Copies 4 and 8 take less", sentence: "They wait for the output belt. Without the output belt, copy 4 still misses 11 of 192 swings here." },
-                { at: "1/2", together: "take 120", label: "Copies 4 and 8 take less", sentence: "They wait for the output belt. Without the output belt, copy 4 still misses 11 of 192 swings here." },
+                { at: "2/1", together: "drop 240", label: "Join full on copies 4 and 8", sentence: "163 of 1,464 swings missed, on each." },
+                { at: "1/1", together: "take 120", label: "Copies 4 and 8 take less", sentence: "They wait for the output belt. Without the output belt, copy 4 still misses 41 of 732 swings here." },
+                { at: "1/2", together: "take 120", label: "Copies 4 and 8 take less", sentence: "They wait for the output belt. Without the output belt, copy 4 still misses 41 of 732 swings here." },
             ]);
             const cause = clock.checked_lanes!.cause!;
-            expect(cause.headline.text).toBe("Copies 4 and 8 miss 43 of 384 swings each");
+            expect(cause.headline.text).toBe("Copies 4 and 8 miss 163 of 1,464 swings each");
             expect(cause.cause!.text).toBe("The side belts of copies 4 and 8 are full where they join the automation science pack output belt.");
             // a full join: its code, with the missed output swings and the output swings of copies 4 and 8
-            expect(cause.reason).toEqual({ code: "target_full", data: { missed: 86, swings: 768 } });
+            expect(cause.reason).toEqual({ code: "target_full", data: { missed: 326, swings: 2928 } });
             expect(cause.spacing).toBeNull();
-            expect(cause.where.text).toBe("The inserter of copy 4 that drops automation science pack misses 43 of its 384 swings in 64 window cycles, and so does that of copy 8. "
-                + "85 of the 341 swings each one makes wait for room.");
-            expect(cause.alone.text).toBe("The same inserter makes all 384 swings. The clock is right for one copy.");
+            expect(cause.where.text).toBe("The inserter of copy 4 that drops automation science pack misses 163 of its 1,464 swings in 244 window cycles, and so does that of copy 8. "
+                + "325 of the 1,301 swings each one makes wait for room.");
+            expect(cause.alone.text).toBe("The same inserter makes all 1,464 swings. The clock is right for one copy.");
             expect(cause.changes!.text).toBe("With 3 copies, every copy makes every swing. Another clock of this build has no full join: Coordinated Sources, window cycle 216 ticks.");
         },
     },
@@ -768,7 +768,7 @@ const automation240: JobCheck[] = [
             expect(rowsOf(clock)).toEqual([
                 { at: "1/1", together: "take 120", label: "Holds", sentence: "Every copy gets its items." },
                 { at: "1/2", together: "take 120", label: "Holds", sentence: "Every copy gets its items." },
-                { at: "2/1", together: "drop 240", label: "Holds", sentence: "Copies 4 and 8 wait for room at their join in 130 of their 390 swings. No swing is missed." },
+                { at: "2/1", together: "drop 240", label: "Holds", sentence: "Copies 4 and 8 wait for room at their join in 250 of their 750 swings. No swing is missed." },
             ]);
             expect(clock.checked_lanes!.cause).toBeNull();
         },
@@ -777,10 +777,10 @@ const automation240: JobCheck[] = [
         name: "gives the reason code of belt gaps on each lane loss where a missed swing shows the gap, and of a full join on the join clock, with their counts",
         run: ({ generated }) => {
             expect(reasonsOf(generated)).toEqual({
-                takt_batches_observed: { code: "target_full", data: { missed: 86, swings: 768 } },
-                euclidean_swings: { code: "belt_gaps", data: { missed: 6, with_gap: 3 } },
-                takt_batches_observed_swings_2: { code: "belt_gaps", data: { missed: 16, with_gap: 8 } },
-                takt_batches_swings_1: { code: "belt_gaps", data: { missed: 26, with_gap: 26 } },
+                takt_batches_observed: { code: "target_full", data: { missed: 326, swings: 2928 } },
+                euclidean_swings: { code: "belt_gaps", data: { missed: 22, with_gap: 11 } },
+                takt_batches_observed_swings_2: { code: "belt_gaps", data: { missed: 61, with_gap: 31 } },
+                takt_batches_swings_1: { code: "belt_gaps", data: { missed: 98, with_gap: 98 } },
             });
             // the reason is a code: the engine writes no sentence for it
             for (const clock of generated.alternatives) {
@@ -795,15 +795,17 @@ const automation240: JobCheck[] = [
         },
     },
     {
-        name: "on the 72-tick clock: the six window cycles in which the inserter of copy 2 misses a swing, each with what stopped it",
+        name: "on the 72-tick clock: the window cycles in which the inserter of copy 2 misses a swing, each with what stopped it",
         run: ({ generated }) => {
             const swings = byId(generated, "euclidean_swings").checked_lanes!.cause!.swings!;
             expect(swings.kind).toBe("lane");
             if (swings.kind !== "lane") return;
             expect(swings.rows.map(({ missed: _, ...row }) => row)).toEqual([{ copy: 2, inserter_id: 1, items: ["iron-gear-wheel", "copper-plate"],
-                lanes: [{ belt_id: 1, lane: 1 }, { belt_id: 1, lane: 2 }], window_cycles: 65, swings_per_window_cycle: 2 }]);
+                lanes: [{ belt_id: 1, lane: 1 }, { belt_id: 1, lane: 2 }], window_cycles: 245, swings_per_window_cycle: 2 }]);
             expect(swings.rows[0].missed.map(it => `${it.window_cycle} ${it.missed} ${it.cause}${it.lane_empty ? " empty" : ""}`)).toEqual([
-                "14 1 full", "18 1 both empty", "34 1 full", "42 1 gap empty", "58 1 full", "62 1 both empty"]);
+                "10 1 full", "14 1 both empty", "30 1 full", "38 1 gap empty", "54 1 full", "58 1 both empty", "74 1 full", "82 1 gap empty", "98 1 full", "102 1 both empty",
+                "118 1 full", "126 1 gap empty", "142 1 full", "146 1 both empty", "162 1 full", "170 1 gap empty", "186 1 full", "190 1 both empty", "206 1 full", "214 1 gap empty",
+                "230 1 full", "234 1 both empty"]);
         },
     },
     {
@@ -813,7 +815,7 @@ const automation240: JobCheck[] = [
             expect(swings.kind).toBe("join");
             if (swings.kind !== "join") return;
             expect(swings.copies.map(it => ({ copy: it.copy, window_cycles: it.window_cycles, gives: it.gives, made: it.made.join("") })))
-                .toEqual([4, 8].map(copy => ({ copy, window_cycles: 64, gives: 6, made: "5" + "565".repeat(21) })));
+                .toEqual([4, 8].map(copy => ({ copy, window_cycles: 244, gives: 6, made: "5" + "565".repeat(81) })));
             // the output inserters drop onto side belts that side-load onto the output belt
             expect(swings.side_belt).toBe(true);
         },
@@ -824,17 +826,17 @@ const automation240: JobCheck[] = [
         name: "gives the rate all the copies made together in the run of the copies, over the judged span, on the four clocks with a loss",
         run: ({ generated }) => {
             const made = (id: string) => byId(generated, id).checked_lanes!.copies_made;
-            expect(made("takt_batches_observed")).toEqual({ items_per_second: 234.027777778, window_cycles: 64 });
-            expect(made("euclidean_swings")).toEqual({ items_per_second: 238.769230769, window_cycles: 65 });
-            expect(made("takt_batches_observed_swings_2")).toEqual({ items_per_second: 236.512820513, window_cycles: 65 });
-            expect(made("takt_batches_swings_1")).toEqual({ items_per_second: 234.461538462, window_cycles: 65 });
+            expect(made("takt_batches_observed")).toEqual({ items_per_second: 234.061930783, window_cycles: 244 });
+            expect(made("euclidean_swings")).toEqual({ items_per_second: 238.802721088, window_cycles: 245 });
+            expect(made("takt_batches_observed_swings_2")).toEqual({ items_per_second: 236.680272109, window_cycles: 245 });
+            expect(made("takt_batches_swings_1")).toEqual({ items_per_second: 234.612244898, window_cycles: 245 });
             // the clock-only run's rate is still the setpoint: the rate of the copies changes no assessment
             expect(byId(generated, "takt_batches_observed").assessment.items_per_second).toBe(240);
         },
     },
     {
         name: "gives the setpoint as the rate of the copies on the stable time study windows clock",
-        run: ({ generated }) => { expect(byId(generated, "time_study_windows").checked_lanes!.copies_made).toEqual({ items_per_second: 240, window_cycles: 65 }); },
+        run: ({ generated }) => { expect(byId(generated, "time_study_windows").checked_lanes!.copies_made).toEqual({ items_per_second: 240, window_cycles: 125 }); },
     },
     {
         name: "gives no rate of the copies on a clock the copies were not run for (it does not hold on one copy)",
@@ -862,10 +864,10 @@ const automation240: JobCheck[] = [
             expect(euclidean.result.simulation_duration.ticks).toBe(72);
             const losses = (euclidean.assessment.shared_lane_losses ?? []).filter((loss): loss is SharedLaneLoss => !isNotChecked(loss));
             expect(losses.map(loss => [loss.lane, loss.copy, loss.swings, loss.alone_swings, loss.short_swings, loss.items, loss.alone_items]).sort())
-                .toEqual([[1, 2, 62, 65, 0, 992, 1040], [2, 2, 62, 65, 0, 992, 1040]]);
+                .toEqual([[1, 2, 234, 245, 0, 3744, 3920], [2, 2, 234, 245, 0, 3744, 3920]]);
             expect(losses.map(loss => loss.text.slice(loss.text.indexOf("Its inserter")))).toEqual(expect.arrayContaining([
-                "Its inserter that takes iron gear wheel and copper plate misses 3 of its 65 swings with iron gear wheel in 65 window cycles.",
-                "Its inserter that takes iron gear wheel and copper plate misses 3 of its 65 swings with copper plate in 65 window cycles."]));
+                "Its inserter that takes iron gear wheel and copper plate misses 11 of its 245 swings with iron gear wheel in 245 window cycles.",
+                "Its inserter that takes iron gear wheel and copper plate misses 11 of its 245 swings with copper plate in 245 window cycles."]));
         },
     },
     {

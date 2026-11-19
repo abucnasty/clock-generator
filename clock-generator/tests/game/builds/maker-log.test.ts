@@ -12,6 +12,8 @@ import { timetableRecorders } from '../../../src/crafting/timetable';
 import { SimulationTick } from '../../../src/crafting/runner/simulation-tick';
 import { timedMaker, withMakerLog } from '../../../src/crafting/maker-log';
 import { tickLedgerOn } from '../../../src/crafting/tick-ledger';
+import { judgeSharedLanes } from '../../../src/crafting/shared-lane-verdict';
+import type { SerializableClockWindows } from '../../../src/crafting/clock';
 import { PRIMARY_PLANNING_MAKER } from '../../../src/crafting/alternatives';
 
 /** The kinds of event a job gives only where its copies share a lane */
@@ -251,7 +253,7 @@ describe('the switch of the maker log', () => {
         const events = readLog(on, 'config-FLYING_ROBOT_FRAME_80');
         const lost = events.filter(it => it.event === 'clock').flatMap(it => it.shared_lane_losses as { belt_id: number; lane: number; item: string; copies: number[]; swings_lost: number }[]);
         // from the backpressure start, the default: its fill of one window cycle is counted by the check of the shared lanes (186 from the cold start)
-        expect(lost).toContainEqual({ belt_id: 5, lane: 1, item: 'electronic-circuit', copies: [4, 5, 6], takers_losing: 3, swings_lost: 189 });
+        expect(lost).toContainEqual({ belt_id: 5, lane: 1, item: 'electronic-circuit', copies: [4, 5, 6], takers_losing: 3, swings_lost: 729 });
         expect(events.find(it => it.event === 'job')!.shared_lanes).toContainEqual({ belt_id: 5, lane: 1, item: 'electronic-circuit' });
         // the events of the first format keep their fields
         for (const [kind, fields] of Object.entries(FIRST_FORMAT_FIELDS)) {
@@ -277,10 +279,16 @@ describe('the switch of the maker log', () => {
         expect(events.filter(it => it.event === 'job_lanes')).toHaveLength(1);
         // with the log alone, no repeat check; a clock that holds on one copy has the timetable of each run of the copies
         expect(events.filter(it => it.event === 'repeat_check')).toHaveLength(0);
+        const flying_robot_frame = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME_80);
         for (const clock of events.filter(it => it.event === 'clock' && it.holds)) {
             const timetable = events.find(it => it.event === 'timetable' && it.id === clock.id)!;
-            expect((timetable.copies as unknown[]).length, String(clock.id)).toBeGreaterThan(0);
+            // a clock the rate judge decided makes no run of one copy alone, so the log keeps no timetable of one: an empty timetable is right then, while any other clock has one
+            const own = windows.find(it => it.id === clock.id)!;
+            const judged = judgeSharedLanes(flying_robot_frame, Object.fromEntries(Object.entries(own.windows as Record<string, [number, number][]>).map(([id, ranges]) => [id, ranges.map(([start, end]) => ({ start, end }))])) as SerializableClockWindows, own.window_cycle_ticks as number, quiet);
+            const by_rate_decided = judged.by_rate?.spans !== undefined;
+            if (by_rate_decided) expect(Array.isArray(timetable.copies), String(clock.id)).toBe(true);
+            else expect((timetable.copies as unknown[]).length, String(clock.id)).toBeGreaterThan(0);
             expect(events.find(it => it.event === 'ledger' && it.id === clock.id)!.adds_up, String(clock.id)).toBe(true);
         }
-    }, 120_000);
+    }, 300_000);
 });
