@@ -38,15 +38,11 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - simulation: clocks are judged from the build filled up to its clock, the cold start an option
 - generation: Coordinated Sources now checks its clock with every copy while it chooses
 - ui: refusals of builds not supported yet now say what is not supported, with no release or item number
-- generation: the chemical science, grenade and utility science samples now judge their output belts
 - blueprint: combinator descriptions and the wiring reference now show each inserter's source, item and sink
 - simulation: an output belt can now be stated for builds with several output inserters
 - simulation: output belts can now have several lines and a side belt per output inserter
 - simulation: builds that share no lane now check their stated output belt too
-- generation: the lithium plate sample now judges its output belts
-- generation: the military science 240 sample now judges its output belts
-- generation: the logistic science sample now judges its output belt
-- generation: the flying robot frame sample now judges its output belts
+- generation: builds that state their output belts now have their clocks judged with them
 - generation: Coordinated Sources also tries the window cycle of the next best clock
 - generation: agricultural science clocks can now switch all four egg inserters on in windows
 
