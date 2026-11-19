@@ -291,7 +291,12 @@ row gives the code `taker_spacing_unknown`. The copies stand in a row,
 positions, its length is the longer side of its widest machine or drill. The result says the spacing it assumed. Each
 shared lane runs tick by tick with every copy's takers on it (`src/state/shared-lane.ts`): stacks come on at the
 lane's `supply_rate`, move at the belt's speed and leave at its end (`lane_end`: a dead end holds them, an infinite
-end takes them at the lane's capacity; an unknown end is run both ways). A
+end takes them at the lane's capacity; an unknown end is run both ways). The lane starts where its items come on: the
+lane's `supply_tiles` before the middle of copy 1's pickup tile, from the middle of the first tile where the items come
+onto the lane (the most upstream feeder). The lane starts full, so the stock on the belt before copy 1 is on it, and a
+supply stop stops the items there, as stopped feeders do in the game. A lane that states no `supply_tiles` starts 1 tile
+before copy 1's pickup. On the nine copies of automation science 240 (`supply_tiles` 11), a run from the game's state at
+a copper stop follows every copy of the game for 166 ticks; from 1 tile, copy 1 parts after 38 (#737). A
 partial copy holds its share of each shared lane's takers, rounded up for each, the ones furthest upstream, with what their
 machines need. The belt of a lane flows in one direction (`flow_direction`). Without it, the check runs
 the items in each direction along the copies. The verdict has two checks (`src/crafting/shared-lane-verdict.ts`). First,

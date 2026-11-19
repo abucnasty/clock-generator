@@ -61,14 +61,16 @@
           "stack_size": 4,
           "lane_end": {
             "kind": "dead_end"
-          }
+          },
+          "supply_tiles": 11
         },
         {
           "ingredient": "copper-plate",
           "stack_size": 4,
           "lane_end": {
             "kind": "dead_end"
-          }
+          },
+          "supply_tiles": 11
         }
       ]
     },

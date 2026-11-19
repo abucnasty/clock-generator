@@ -38,6 +38,15 @@ describe("the lanes the copies share, laid out as rows", () => {
         expect(row.length_tiles).toBe(50);
     });
 
+    it("starts the lane its supply length before the middle of copy 1's pickup tile, where the lane states one", () => {
+        const [row] = rowsOf(rowConfig({ copies: 3, copy_offset: { x: 18, y: 0 } }, { supply_tiles: 11 }), { x: 1, y: 0 }).rows;
+        // copy 1's first pickup tile has its middle at 0.5: the entry at -10.5, 10.5 tiles before the first reach, which ends at 1
+        expect(row.takers.map(taker => [taker.copy, taker.inserter_id, taker.edge_tiles])).toEqual([
+            [0, "inserter:1", 11.5], [0, "inserter:2", 23.5], [1, "inserter:1", 29.5], [1, "inserter:2", 41.5], [2, "inserter:1", 47.5], [2, "inserter:2", 59.5],
+        ]);
+        expect(row.length_tiles).toBe(59.5);
+    });
+
     it("reads the copy order along the flow: against it, the inserters of a copy stand the other way round", () => {
         const [row] = rowsOf(rowConfig({ copies: 2, copy_offset: { x: 18, y: 0 } }), { x: -1, y: 0 }).rows;
         expect(row.takers.map(taker => [taker.copy, taker.inserter_id, taker.edge_tiles])).toEqual([

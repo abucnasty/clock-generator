@@ -556,7 +556,7 @@ export function itemsCarried(entity_registry: Pick<ReadableEntityRegistry, "getE
  * and a hand is held only when its side belt is full. No belt that carries the item refuses it. The chests the item ends
  * in refuse it as in a run of one copy.
  */
-function switchOf(context: SimulationContext, loss: DisturbanceTrial, copies?: CopiesOnSharedLanes): { cut(): void; restore(): void } {
+export function switchOf(context: SimulationContext, loss: DisturbanceTrial, copies?: CopiesOnSharedLanes): { cut(): void; restore(): void } {
     if (loss.kind === "none" || loss.kind === "excess") {
         return { cut: () => { }, restore: () => { } };
     }

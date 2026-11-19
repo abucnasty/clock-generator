@@ -102,6 +102,12 @@ The items per second that come onto an input lane where it starts. The configura
 the supply rate is the capacity of the lane: on a turbo belt with stacks of 4, 120 items per second. STE: SUPPLY (n)
 and RATE (n), approved.
 
+**Supply length**:
+The belt before copy 1's pickup on an input lane, in tiles: from the middle of the first tile where the items come
+onto the lane to the middle of copy 1's pickup tile. The configuration's `supply_tiles`. The run of the copies starts
+the lane there, full, and a supply stop stops the items there. Without it, the lane starts 1 tile before copy 1's
+pickup. STE: SUPPLY (n) and LENGTH (n), approved.
+
 **Lane role**:
 What the build does with a lane. **Input**: an inserter takes the item of the lane from it, and no inserter drops that
 item on it. **Output**: an inserter drops the item of the lane on it, and no inserter takes that item from it.
