@@ -308,6 +308,18 @@ lane that states no `supply_tiles` starts 1 tile before copy 1's pickup. On the 
 (`supply_tiles` 11), a run from the game's state at a copper stop follows every copy of the game for 166 ticks; from 1
 tile, copy 1 parts after 38 (#737).
 
+Where the config states a lane's feeders, they are its entry in place of the flow at `supply_rate`. A feeder is outside
+supply (an inserter from a chest nothing drops into, onto the belt) with a `drop` spot on the lane. The most upstream
+one stands at the lane's start, the others downstream of it by their drop positions, once for the row. Each feeder puts
+its hand down one stack a tick wherever there is room: a stack lands one belt step past the middle of the feeder's tile,
+or a quarter tile behind the stack ahead, and only less than a quarter tile behind that middle (a stack one belt step
+upstream does not push it back). With an empty hand the arm turns back, picks up and turns out again (its prototype's
+and quality's turn). A dead-ended lane starts as its feeders fill it from empty, and a supply stop stands them, hand and
+arm. On the nine copies of automation science 240 with the scaffold's four feeders stated, the run equals the game's
+lane, feeders and takers on every tick from the start of the clock to the copper stop (7,473 ticks), and a run from the
+game's state at the stop follows every copy through the stop and the restart for 2,829 ticks (#737). The generation
+does not see the feeders yet: it judges the clock on the config without its outside supply.
+
 Standing: on the clocks recorded on #660 (three copies on ore lanes that flow into loaders) and #725 (5.5 copies on
 dead-ended lanes) and on logistic science 240 (11 copies) the run gives the game's verdict on every copy. The size of a
 loss can differ (#660, Takt Batches with 6 swings: copy 3 about 5 of 6 hands an inserter against 4.9 in the game).

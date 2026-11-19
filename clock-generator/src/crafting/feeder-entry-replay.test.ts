@@ -2,8 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
 import { describe, expect, it } from "vitest";
-import { ConfigPaths } from "../config/config-paths";
-import { loadConfigFromFile } from "../config/loader";
+import { automation240WithFeeders } from "../../tests/configs/automation-240-feeders";
 import { OpenRange } from "../data-types";
 import { Logger } from "../common/logger";
 import { SimulationTick } from "./runner/simulation-tick";
@@ -39,7 +38,8 @@ describe("the feeders' entry onto the copper lane of automation science 240 (#73
     it("puts the game's stacks on the lane where and when the game's feeders do, from the opening to the copper stop", async () => {
         const game: GameOpening = JSON.parse(zlib.zstdDecompressSync(
             fs.readFileSync(path.join(__dirname, "fixtures", "automation-science-240-opening-game.json.zst"))).toString("utf8"));
-        const loaded = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
+        // the sample with its scaffold's feeders, the lanes' entries
+        const loaded = await automation240WithFeeders();
         const config = { ...loaded, overrides: { ...loaded.overrides, terminal_swing_count: 1 } };
         // pitch_pickups 0f8a8504, the clock the game ran
         const windows = new Map([["inserter:1", [OpenRange.from(1, 24)]], ["inserter:2", [OpenRange.from(0, 3), OpenRange.from(36, 39)]]]);
