@@ -21,8 +21,10 @@ import type { SimulationContext } from "./sequence/simulation-context";
  * side belt has backed up to its drop tile (8 stacks on the automation science 240 build, as in the game).
  *
  * The output blockage shuts the infinite end: the belt lane is blocked from draining to the belt it joins. Every lane upstream
- * backs up from there, and a hand is held only when its side belt is full. The end change acts from the tick after the
- * next, as an end that a script changes in a tick acts from the next tick in the game. So in a run of one copy too, where the
+ * backs up from there, and a hand is held only when its side belt is full. The opening (the release) acts from the tick after
+ * the one it is made in, as an end that a script empties in a tick in the game: the loader takes its first stack in that next
+ * tick (the iron plate car build's release, Factorio 2.1.24). The shutting (the cut) acts from the tick after the next: no
+ * recording shows when a cut acts on a belt with stacks at its end. So in a run of one copy too, where the
  * config states its output belt (`installOutputBeltOfOneCopy`): a hand is held once its own lane has backed up to its drop, and
  * a drop on the other lane is taken in full until that lane has (on the iron plate car build the left lane's drop is held first
  * and the right lane's never in the game's block, Factorio 2.1.24).
@@ -47,9 +49,8 @@ export class OutputBeltRun {
     private done: number;
     /** Stacks put down in tick `done`, after its movement */
     private put: { line: string; position: number }[] = [];
-    /** End changes made in tick `done`: given with the next tick, they act from the tick after it */
+    /** Cuts made in tick `done`: given with the next tick, they act from the tick after it */
     private ends: EndChange[] = [];
-    private shut = false;
     /** The hands of each copy's output inserters, by the copy's number (from 1) */
     public readonly hands = new Map<number, OutputHand[]>();
     /** The ticks a stack takes to go down on a free drop tile, by the stacks of a hand: 0, 1, 2 and 4 for four */
@@ -136,23 +137,22 @@ export class OutputBeltRun {
         return hand.last - hand.arrival > free;
     }
 
-    /** Shuts the infinite end: the belt lane is blocked from draining to the belt it joins */
+    /** Shuts the infinite end from the tick after the next: the belt lane is blocked from draining to the belt it joins */
     public shutInfiniteEnd(tick: number): void {
         this.advanceTo(tick);
-        this.shut = true;
         this.ends.push(...this.join.infinite_end_lines.map(line => ({ line, end: "shut" as const })));
     }
 
-    /** Opens the infinite end again */
+    /** Opens the infinite end again from the next tick; a cut of this tick, not yet given to the model, never acts */
     public openInfiniteEnd(tick: number): void {
         this.advanceTo(tick);
-        this.shut = false;
-        this.ends.push(...this.join.infinite_end_lines.map(line => ({ line, end: "loader" as const })));
+        this.ends = [];
+        for (const line of this.join.infinite_end_lines) this.model.changeEnd({ line, end: "loader" });
     }
 
     /**
      * The key of what the output belt holds, for the key of a repeated state: every line's stacks by position (not by
-     * the order they were put on, which only grows), the stacks not yet given to the model, the infinite end and its change
+     * the order they were put on, which only grows), the stacks not yet given to the model, the infinite end and its changes
      */
     public key(tick: number): string {
         this.advanceTo(tick);
@@ -167,7 +167,8 @@ export class OutputBeltRun {
             return positions === undefined ? [] : [`${index}:${positions.sort((a, b) => a - b).join(",")}`];
         });
         const put = this.put.map(it => `${this.order.indexOf(it.line)}:${it.position}`).sort().join(",");
-        return `${this.shut ? "shut" : "open"};${this.ends.map(it => it.end).join(",")};${put};${lines.join(" ")}`;
+        const ends = this.join.infinite_end_lines.map(line => this.model.endKey(line)).join(",");
+        return `${ends};${this.ends.map(it => it.end).join(",")};${put};${lines.join(" ")}`;
     }
 
     /** The stacks on the output belt, by line, for a reader */

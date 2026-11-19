@@ -60,7 +60,7 @@ export interface PutOn {
     time: "before-movement" | "after-movement";
 }
 
-/** An end changed in a tick acts from the next tick */
+/** An end changed in a tick acts from the next tick: given with the tick (`TickInput`), or after its movement (`JoinModel.changeEnd`) */
 export interface EndChange {
     line: string;
     end: LineEnd;
@@ -178,11 +178,7 @@ export class JoinModel {
             const line = this.line(change.line);
             line.end = change.end === "loader" && line.end === "shut" ? "opening" : change.end;
         }
-        this.pending = (input.end_changes ?? []).map(change => {
-            const line = this.line(change.line);
-            if (!line.end) throw new Error(`line ${change.line} has no end to change`);
-            return change;
-        });
+        this.pending = (input.end_changes ?? []).map(change => this.endChange(change));
         const put_ons = input.put_ons ?? [];
         for (const put_on of put_ons) {
             const line = this.line(put_on.line);
@@ -211,6 +207,19 @@ export class JoinModel {
         return put_ons.map(put_on => ids.get(put_on)!);
     }
 
+    /**
+     * Changes an end after the last tick's movement, as a script does in that tick: it acts from the next tick, as a change
+     * given with the last tick does. A run that changes an end in the tick it has moved uses this, not the next tick's input.
+     */
+    changeEnd(change: EndChange): void {
+        this.pending.push(this.endChange(change));
+    }
+
+    /** A line's end and the changes to it that act from the next tick, as a key: equal keys act the same from there */
+    endKey(id: string): string {
+        return [this.line(id).end, ...this.pending.filter(change => change.line === id).map(change => change.end)].join(">");
+    }
+
     /** Every stack, by id */
     stacks(): JoinStack[] {
         const all: JoinStack[] = [];
@@ -227,6 +236,11 @@ export class JoinModel {
         const line = this.lines.get(id);
         if (!line) throw new Error(`line ${id} is not in the layout`);
         return line;
+    }
+
+    private endChange(change: EndChange): EndChange {
+        if (!this.line(change.line).end) throw new Error(`line ${change.line} has no end to change`);
+        return change;
     }
 
     private splitter(spec: JoinSplitter): Splitter {

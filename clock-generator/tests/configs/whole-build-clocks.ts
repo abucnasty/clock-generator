@@ -20,19 +20,27 @@ export const lossesOf = (result: ClockAlternativesResult, id: string) => (clockO
     .map(loss => 'inserter_id' in loss ? `${loss.inserter_id} ${loss.item} ${loss.swings}/${loss.alone_swings}` : loss.kind);
 
 const INPUT = [{ start: 0, end: 50 }, { start: 122, end: 149 }, { start: 159, end: 186 }, { start: 215, end: 215 }];
+/** An input window of 24 ticks every 72 */
+const THREE_INPUT_WINDOWS = [1, 73, 145].map(start => ({ start, end: start + 23 }));
 export const TWO_OUTPUT_WINDOWS = [{ start: 1, end: 37 }, { start: 109, end: 145 }];
 export const SIX_OUTPUT_WINDOWS = [0, 36, 72, 108, 144, 180].map(start => ({ start, end: start + 3 }));
-/** A clock of 216 ticks for a build of three of the assemblers (inserters 1, 3 and 5 the inputs, 2, 4 and 6 the outputs), by the outputs' windows */
-export const threeOf = (outputs: readonly (typeof TWO_OUTPUT_WINDOWS)[]): SerializableClockWindows => Object.fromEntries(outputs.flatMap((output, index) =>
-    [[`inserter:${2 * index + 1}`, INPUT], [`inserter:${2 * index + 2}`, output]]));
+/**
+ * A clock of 216 ticks for a build of three of the assemblers (inserters 1, 3 and 5 the inputs, 2, 4 and 6 the outputs), by the
+ * outputs' windows, and the inputs' (the same for each)
+ */
+export const threeOf = (outputs: readonly (typeof TWO_OUTPUT_WINDOWS)[], input: typeof INPUT = INPUT): SerializableClockWindows =>
+    Object.fromEntries(outputs.flatMap((output, index) => [[`inserter:${2 * index + 1}`, input], [`inserter:${2 * index + 2}`, output]]));
 /**
  * The clock that Coordinated Sources selected for three copies of three without the output line (784.241 wakeups a
  * minute), and the one of Time-Study Windows (902.088): the same but for the outputs of the first two assemblers
  */
 export const COORDINATED = threeOf([SIX_OUTPUT_WINDOWS, SIX_OUTPUT_WINDOWS, TWO_OUTPUT_WINDOWS]);
 export const TIME_STUDY = threeOf([TWO_OUTPUT_WINDOWS, TWO_OUTPUT_WINDOWS, TWO_OUTPUT_WINDOWS]);
-/** The clock that Coordinated Sources selects for three copies of three on the output line: the second assembler's output in two windows */
-export const COORDINATED_ON_LINE = threeOf([SIX_OUTPUT_WINDOWS, TWO_OUTPUT_WINDOWS, SIX_OUTPUT_WINDOWS]);
+/**
+ * The clock that Coordinated Sources selects for three copies of three on the output line (150.17 wakeups a minute): every
+ * output in six windows, every input in three
+ */
+export const COORDINATED_ON_LINE = threeOf([SIX_OUTPUT_WINDOWS, SIX_OUTPUT_WINDOWS, SIX_OUTPUT_WINDOWS], THREE_INPUT_WINDOWS);
 /** The same windows on the build of nine: assembler k has those of assembler ((k - 1) mod 3) + 1 */
 export const onNine = (windows: SerializableClockWindows): SerializableClockWindows => Object.fromEntries(Array.from({ length: 18 }, (_, index) =>
     [`inserter:${index + 1}`, windows[`inserter:${(index % 6) + 1}`]]));
