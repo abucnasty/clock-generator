@@ -742,21 +742,21 @@ const automation240: JobCheck[] = [
             expect(cause.where.text).toBe("The inserter of copy 4 that drops automation science pack misses 163 of its 1,464 swings in 244 window cycles, and so does that of copy 8. "
                 + "325 of the 1,301 swings each one makes wait for room.");
             expect(cause.alone.text).toBe("The same inserter makes all 1,464 swings. The clock is right for one copy.");
-            expect(cause.changes!.text).toBe("With 3 copies, every copy makes every swing. Another clock of this build has no full join: Coordinated Sources, window cycle 216 ticks.");
+            expect(cause.changes!.text).toBe("With 3 copies, every copy makes every swing. Another clock of this build has no full join: Coordinated Sources, window cycle 72 ticks.");
         },
     },
     {
-        name: "on the stable time study windows clock: the line and three rows that hold, with the waits at the join counted",
+        // the game's copy 4 makes 96 and 80 packs in turn under this clock, for good (Factorio 2.1.24, #737): with the waits at
+        // the underground entrances the copies do as well, and the clock is unstable
+        name: "on the time study windows clock: copy 4 short at its join, as in the game",
         run: ({ generated }) => {
             const clock = byId(generated, "time_study_windows");
-            expect(clock.verdict).toBe("stable");
-            expect(clock.checked_lanes!.line.sentence).toBe("Checked with all 9 copies on the lanes they share. Every copy gets its items, and no copy misses a swing at the output belt.");
+            expect(clock.verdict).toBe("unstable");
             expect(rowsOf(clock)).toEqual([
-                { at: "1/1", together: "take 120", label: "Holds", sentence: "Every copy gets its items." },
-                { at: "1/2", together: "take 120", label: "Holds", sentence: "Every copy gets its items." },
-                { at: "2/1", together: "drop 240", label: "Holds", sentence: "Copies 4 and 8 wait for room at their join in 166 of 750 swings of copy 4 and 250 of 750 swings of copy 8. No swing is missed." },
+                { at: "2/1", together: "drop 240", label: "Join full on copy 4", sentence: "122 of 1,470 swings missed." },
+                { at: "1/1", together: "take 120", label: "Copy 4 takes less", sentence: "It waits for the output belt." },
+                { at: "1/2", together: "take 120", label: "Copy 4 takes less", sentence: "It waits for the output belt." },
             ]);
-            expect(clock.checked_lanes!.cause).toBeNull();
         },
     },
     {
@@ -764,6 +764,7 @@ const automation240: JobCheck[] = [
         run: ({ generated }) => {
             expect(reasonsOf(generated)).toEqual({
                 takt_batches_observed: { code: "target_full", data: { missed: 326, swings: 2928 } },
+                time_study_windows: { code: "target_full", data: { missed: 122, swings: 1470 } },
                 takt_batches_observed_swings_2: { code: "belt_gaps", data: { missed: 61, with_gap: 31 } },
                 takt_batches_swings_1: { code: "belt_gaps", data: { missed: 110, with_gap: 110 } },
             });
@@ -776,7 +777,7 @@ const automation240: JobCheck[] = [
     {
         name: "gives the swings of each cause window cycle by window cycle, which add up to the counts the cause carries by copy, inserter and cause",
         run: ({ generated }) => {
-            expect(swingSumsOf(generated)).toEqual({ takt_batches_observed: [], takt_batches_observed_swings_2: [], takt_batches_swings_1: [] });
+            expect(swingSumsOf(generated)).toEqual({ takt_batches_observed: [], time_study_windows: [], takt_batches_observed_swings_2: [], takt_batches_swings_1: [] });
         },
     },
     {
@@ -806,8 +807,8 @@ const automation240: JobCheck[] = [
         },
     },
     {
-        name: "gives the setpoint as the rate of the copies on the stable time study windows clock",
-        run: ({ generated }) => { expect(byId(generated, "time_study_windows").checked_lanes!.copies_made).toEqual({ items_per_second: 240, window_cycles: 125 }); },
+        name: "gives the rate of the copies on the time study windows clock, below the setpoint: copy 4 short every other window cycle",
+        run: ({ generated }) => { expect(byId(generated, "time_study_windows").checked_lanes!.copies_made).toEqual({ items_per_second: 237.786848073, window_cycles: 245 }); },
     },
     {
         name: "gives no rate of the copies on a clock the copies were not run for (it does not hold on one copy)",
@@ -820,12 +821,13 @@ const automation240: JobCheck[] = [
     {
         name: "gives the description's sentences on a shared-lane loss as a field of their own, word for word",
         run: ({ generated }) => {
-            for (const [id, lead] of [["takt_batches_observed_swings_2", "It is not stable on a lane its copies share. "], ["takt_batches_observed", "It is not stable on its output belt. "]]) {
+            for (const [id, lead] of [["takt_batches_observed_swings_2", "It is not stable on a lane its copies share. "], ["takt_batches_observed", "It is not stable on its output belt. "],
+                ["time_study_windows", "It is not stable on its output belt. "]]) {
                 const clock = byId(generated, id);
                 expect(clock.shared_lane_loss_note!.startsWith(lead)).toBe(true);
                 expect(clock.description).toContain(` ${clock.shared_lane_loss_note}`);
             }
-            expect(byId(generated, "time_study_windows").shared_lane_loss_note).toBeUndefined();
+            expect(byId(generated, "euclidean_swings").shared_lane_loss_note).toBeUndefined();
         },
     },
     {
@@ -851,9 +853,9 @@ const automation240: JobCheck[] = [
         run: ({ generated }) => {
             const clock = byId(generated, "pitch_pickups");
             expect(clock.verdict).toBe("no recovery");
-            expect(clock.assessment.disturbance_trial).toMatchObject({ survives: false, broken_by: ["iron gear wheel stops arriving on the copies that share a lane"],
-                on_copies: { survives: false, broken_by: "iron gear wheel stops arriving", short: [{ copy: 2 }] } });
-            expect(clock.description).toContain("Iron gear wheel stops arriving at the entry of the iron gear wheel lane");
+            expect(clock.assessment.disturbance_trial).toMatchObject({ survives: false, broken_by: ["copper plate stops arriving on the copies that share a lane"],
+                on_copies: { survives: false, broken_by: "copper plate stops arriving", short: [{ copy: 2 }] } });
+            expect(clock.description).toContain("Copper plate stops arriving at the entry of the copper plate lane");
         },
     },
 ];
