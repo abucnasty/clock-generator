@@ -1,6 +1,7 @@
 import path from "path";
 import {Config} from "../../../src/config";
 import {ConfigPaths} from "../../../src/config/config-paths";
+import {productionScienceSharedPickup} from "../../../src/crafting/generate-blueprint-test-helpers";
 import {withJellyHandsOf15} from "../../configs/rocket-fuel-hands";
 
 /**
@@ -244,5 +245,68 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
         no_staged_start: "ruling 60's start refuses the build: a drill drops stone straight into the rail assembler, so a machine that only windowed inserters feed "
             + "holds items at the opening (\"Machines that only windowed inserters fill hold items at the opening: assembling-machine-3 (unit 376): 164 in, 0 out, "
             + "0 made\", 2026-11-18, Factorio 2.1.24, master 755eb93e and before). The pick is not recorded in the game",
+    },
+    // The scaffold builds of the science packs, recorded from ruling 60's start (the judged start) on every copy the harness can build: the
+    // sample's scaffold holds one copy of utility science 120, production science 120 and its shared pickup variant (the job has seven), two of
+    // utility science 120 with processing units and low density structures on one belt (seven), and five of military science 240 (the job's five);
+    // chemical science 240 with a shared foundry on the sample's one block (the job has 5.5). The
+    // losses are the family's standard ones: an ingredient cut, the output block, an ingredient cut (the README, "How a clock run is timed").
+    {
+        // the pick is "no recovery": the loss the record names for it (the low density structures stop arriving); where the game recovers from it on
+        // this scaffold, which has no copy that shares a lane, the run goes on to the block and the cut of the processing units
+        name: "utility-science-120", job: "config-UTILITY_SCIENCE_120", config: "UTILITY_SCIENCE_120", copies: 1,
+        losses: [{kind: "cut", item: "low-density-structure"}, {kind: "block"}, {kind: "cut", item: "processing-unit"}],
+        limit: "the scaffold holds one copy of the job's seven",
+        start: "backpressure",
+    },
+    {
+        name: "utility-science-120-processing-unit-and-lds-on-one-belt", job: "config-UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT",
+        config: "UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT", copies: 2,
+        losses: [{kind: "cut", item: "low-density-structure"}, {kind: "block"}, {kind: "cut", item: "flying-robot-frame"}],
+        limit: "the scaffold holds two copies of the job's seven",
+        start: "backpressure",
+    },
+    {
+        // the drill drops stone straight into the rail assembler; the electric furnaces and the productivity modules come on one belt from two infinity
+        // chests, the molten iron from infinity pipes, which have no loss
+        name: "production-science-120-two-belts", job: "config-PRODUCTION_SCIENCE_120_TWO_BELTS", config: "PRODUCTION_SCIENCE_120_TWO_BELTS", copies: 1,
+        losses: [{kind: "cut", item: "electric-furnace"}, {kind: "block"}, {kind: "cut", item: "productivity-module"}],
+        limit: "the scaffold holds one copy of the job's seven",
+        start: "backpressure",
+        no_staged_start: "ruling 60's start refuses the build on the selected pick too: a drill drops stone straight into the rail assembler, so a machine that only "
+            + "windowed inserters feed holds items at the opening (\"Machines that only windowed inserters fill hold items at the opening: assembling-machine-3 "
+            + "(unit 376): 164 in, 0 out, 0 made\", 2026-11-19, Factorio 2.1.24, master 214bd7ad). The job is not recorded in the game; the limit is in the README",
+    },
+    {
+        name: "production-science-120-two-belts-shared-pickup", job: "variants-PRODUCTION_SCIENCE_120_TWO_BELTS_SHARED_PICKUP", config: "PRODUCTION_SCIENCE_120_TWO_BELTS", copies: 1,
+        variant: productionScienceSharedPickup,
+        losses: [{kind: "cut", item: "electric-furnace"}, {kind: "block"}, {kind: "cut", item: "productivity-module"}],
+        limit: "the scaffold holds one copy of the job's seven",
+        start: "backpressure",
+        no_staged_start: "ruling 60's start refuses the build on the selected pick too: a drill drops stone straight into the rail assembler, so a machine that only "
+            + "windowed inserters feed holds items at the opening (\"Machines that only windowed inserters fill hold items at the opening: assembling-machine-3 "
+            + "(unit 376): 164 in, 0 out, 0 made\", 2026-11-19, Factorio 2.1.24, master 214bd7ad). The job is not recorded in the game; the limit is in the README",
+    },
+    {
+        name: "chemical-science-240-shared-foundry", job: "config-CHEMICAL_SCIENCE_240_SHARED_FOUNDRY", config: "CHEMICAL_SCIENCE_240_SHARED_FOUNDRY", copies: 1,
+        losses: [{kind: "cut", item: "sulfur"}, {kind: "block"}, {kind: "cut", item: "advanced-circuit"}],
+        limit: "the sample's scaffold holds one block, one of the job's 5.5 copies; abucnasty's whole build (5.5 copies) is not built from ruling 60's start: its staged start "
+            + "refuses the build (\"The clock names inserters 2, 4, 6, 8, 10, 12, 14, 16, 18, 20 of the config, which match no inserter of the build in copy 6 of 6\": the part copy "
+            + "holds some of the config's inserters, and the staged start's wiring check does not take that into account)",
+        start: "backpressure",
+    },
+    {
+        name: "chemical-science-240-shared-foundry-backed-up", job: "variants-CHEMICAL_SCIENCE_240_SHARED_FOUNDRY_BACKED_UP", config: "CHEMICAL_SCIENCE_240_SHARED_FOUNDRY", copies: 1,
+        variant: config => ({...config, overrides: {...config.overrides, backed_up_belts: true}}),
+        losses: [{kind: "cut", item: "sulfur"}, {kind: "block"}, {kind: "cut", item: "advanced-circuit"}],
+        limit: "the sample's scaffold holds one block, one of the job's 5.5 copies; abucnasty's whole build (5.5 copies) is not built from ruling 60's start: its staged start "
+            + "refuses the build (\"The clock names inserters 2, 4, 6, 8, 10, 12, 14, 16, 18, 20 of the config, which match no inserter of the build in copy 6 of 6\": the part copy "
+            + "holds some of the config's inserters, and the staged start's wiring check does not take that into account)",
+        start: "backpressure",
+    },
+    {
+        name: "military-science-240", job: "config-MILITARY_SCIENCE_240", config: "MILITARY_SCIENCE_240", copies: 5,
+        losses: [{kind: "cut", item: "stone-wall"}, {kind: "block"}, {kind: "cut", item: "coal"}],
+        start: "backpressure",
     },
 ];
