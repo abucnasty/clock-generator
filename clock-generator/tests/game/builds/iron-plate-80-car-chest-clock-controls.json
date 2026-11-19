@@ -649,7 +649,7 @@
     },
     "car-selected-staged": {
       "recorded": {
-        "pr": 0,
+        "pr": 858,
         "commit": "8e0cd17e",
         "frozen_head": "8e0cd17e",
         "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24",
