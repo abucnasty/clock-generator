@@ -65,6 +65,22 @@ export interface LaneRow {
     readonly feeders?: readonly SharedLaneFeeder[];
 }
 
+/** The feeders of each lane of a build that has any, by `laneKeyOf` (`laneFeedersOfConfig`) */
+export type LaneFeeders = ReadonlyMap<string, readonly SharedLaneFeeder[]>;
+
+const laneKeyOf = (belt_id: number, lane: 1 | 2) => `${belt_id}/${lane}`;
+
+/**
+ * The feeders of every lane of a config that states any (`laneFeedersOf`): taken from the config as given, before its
+ * outside supply is left out of the build that is clocked, so that the runs of the copies have them
+ */
+export function laneFeedersOfConfig(config: Config): LaneFeeders {
+    return new Map(config.belts.flatMap(belt => ([1, 2] as const).flatMap(lane => {
+        const feeders = laneFeedersOf(config, belt.id, lane);
+        return feeders.length === 0 ? [] : [[laneKeyOf(belt.id, lane), feeders] as const];
+    })));
+}
+
 /**
  * The feeders of a lane: the config's outside supply (outside-supply.ts, inserters from a chest nothing drops into) that
  * drops onto the lane, with a drop spot (`drop`) on it. They stand once for the row, upstream of copy 1: the most upstream
@@ -191,7 +207,7 @@ function partCopyOf(config: Config, chosen: ReadonlySet<string>, lane_takers: Re
  * from the feeders to copy 1 and its stock are on the lane, and a supply stop stops the items there, as the game's
  * feeders do. A lane that states none starts a tile before the first reach.
  */
-export function sharedLaneLayoutOf(config: Config, lanes: readonly LaidOutLane[]): SharedLaneLayout {
+export function sharedLaneLayoutOf(config: Config, lanes: readonly LaidOutLane[], lane_feeders?: LaneFeeders): SharedLaneLayout {
     const offset = config.setpoint.copy_offset;
     const copies = config.setpoint.copies;
     const whole = Math.floor(copies), part = copies - whole;
@@ -246,7 +262,7 @@ export function sharedLaneLayoutOf(config: Config, lanes: readonly LaidOutLane[]
         const entry = supply_tiles === undefined ? first_reach - ENTRY_TILES : placed[0].middle - supply_tiles;
         assert(entry <= first_reach + 1e-9, `Lane ${lane} of belt ${belt_id} states supply_tiles ${supply_tiles}, which puts its supply inside copy 1's pickup`);
         const end = Math.max(...placed.map(it => it.high));
-        const feeders = laneFeedersOf(config, belt_id, lane);
+        const feeders = lane_feeders?.get(laneKeyOf(belt_id, lane)) ?? laneFeedersOf(config, belt_id, lane);
         return {
             belt_id, lane, flow, copies: shared ? copy_count : 1, length_tiles: end - entry, step_tiles: step, step_stated: offset !== undefined,
             takers: placed.map(it => ({ copy: it.copy, inserter_id: it.inserter_id, edge_tiles: it.high - entry, length_tiles: it.high - it.low })),

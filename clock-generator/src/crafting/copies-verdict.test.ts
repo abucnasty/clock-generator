@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { automationRow } from "../../tests/configs/automation-row";
 import { quiet } from "./generate-blueprint-test-helpers";
-import { type CopiesChecks, verdictWithCopies } from "./copies-verdict";
+import { buildFeeders, type CopiesChecks, verdictWithCopies, withBuildFeeders } from "./copies-verdict";
+import { ConfigPaths } from "../config/config-paths";
+import { loadConfigFromFile } from "../config/loader";
+import { withoutOutsideSupply } from "../config/outside-supply";
+import { type LaneFeeders, laneFeedersOfConfig } from "./shared-lane-model";
+import { copiesCheckKeys } from "./shared-lane-trial";
+import { sharedLaneRunsOf } from "./shared-lane-verdict";
 import { currentRunMemo, withRunMemo } from "./plan/run-memo";
 import { SecondaryPlanningInvariantError } from "./round-robin-polling-primitive-policy";
 import type { CopiesTrialVerdict } from "./shared-lane-trial";
@@ -107,5 +113,33 @@ describe("the verdict of a clock with the copies", () => {
         expect(() => verdictWithCopies(clock, one_copy, true, "Pitch Pickups", quiet, checks)).toThrow(SecondaryPlanningInvariantError);
         const trials = counted(holds, () => { throw new SecondaryPlanningInvariantError("broken"); });
         expect(() => verdictWithCopies(clock, trials.one_copy, true, "Pitch Pickups", quiet, trials.checks)).toThrow(SecondaryPlanningInvariantError);
+    });
+});
+
+describe("the feeders of the build a generation is given", () => {
+    it("are kept for the checks with the copies while the generation runs, and none outside it", async () => {
+        const sample = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
+        expect(buildFeeders()).toBeUndefined();
+        const kept = withBuildFeeders(sample, () => {
+            // a generation inside, of a build with no feeders, has none; the outer one's come back after it
+            expect(withBuildFeeders(withoutOutsideSupply(sample), () => buildFeeders())).toBeUndefined();
+            return buildFeeders();
+        });
+        expect(buildFeeders()).toBeUndefined();
+        expect([...kept!.keys()].sort()).toEqual(["1/1", "1/2"]);
+        for (const feeders of kept!.values()) expect(feeders.map(feeder => [feeder.spot_tiles, feeder.hand_items])).toEqual([[0, 16], [1, 16]]);
+    });
+
+    it("lay out the lanes of the clocked build and key its checks with the copies", async () => {
+        const sample = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
+        const clocked = withoutOutsideSupply(sample);
+        const feeders = laneFeedersOfConfig(sample);
+        const rows = (given?: LaneFeeders) => sharedLaneRunsOf(clocked, undefined, given).readings[0].layouts[0].rows;
+        expect(rows().every(row => row.feeders === undefined)).toBe(true);
+        expect(rows(feeders).map(row => row.feeders?.length)).toEqual([2, 2]);
+        const windows = { "inserter:1": [{ start: 1, end: 24 }], "inserter:2": [{ start: 0, end: 3 }] };
+        const without = copiesCheckKeys(clocked, windows, 72, 64), with_feeders = copiesCheckKeys(clocked, windows, 72, 64, feeders);
+        expect(with_feeders.shared_lanes).not.toBe(without.shared_lanes);
+        expect(with_feeders.trials).not.toBe(without.trials);
     });
 });

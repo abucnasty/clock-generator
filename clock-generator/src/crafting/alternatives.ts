@@ -51,7 +51,7 @@ import { StartDependence, startDependenceNote, startDependenceNotChecked } from 
 import { NotMadeClock, notTriedSentence, WhyNotStable, whyNotStable, whyNotStableClockOf } from "./why-not-stable";
 import { DEFAULT_KICK_START_ITEMS } from "./runner/cold-start";
 import { ClockSharedLaneLoss, fewerCopiesThatHold, isNotChecked } from "./shared-lane-verdict";
-import { isInternalError, SharedLaneCheck, verdictWithCopies, VerdictWithCopies } from "./copies-verdict";
+import { buildFeeders, isInternalError, SharedLaneCheck, verdictWithCopies, VerdictWithCopies, withBuildFeeders } from "./copies-verdict";
 import { buildLanesOf, BuildLane, CheckedLanes, checkedLanesOf, withOtherClocks } from "./checked-lanes";
 import { buildToNameOf, entityNamesInSentence } from "./build-names";
 import { capitalized, drillNameInText, insertersInSentence, textWords } from "./entity-name";
@@ -1126,7 +1126,7 @@ function runAlternativeOf(
             let fewer: ReturnType<typeof fewerCopiesThatHold> = null;
             if (judgement !== null && judgement.losses.length > 0) {
                 try {
-                    fewer = timedCheck("fewer_copies", () => withTickPurpose("fewer_copies", () => fewerCopiesThatHold(with_swings, trial.result.clock_windows, trial.clock_window_cycle, logger), { claim: true }));
+                    fewer = timedCheck("fewer_copies", () => withTickPurpose("fewer_copies", () => fewerCopiesThatHold(with_swings, trial.result.clock_windows, trial.clock_window_cycle, logger, undefined, buildFeeders()), { claim: true }));
                 } catch (error) {
                     if (isInternalError(error)) throw error;
                     logger.warn(`Clock "${label}": the runs with fewer copies on the shared lanes could not be made: ${error instanceof Error ? error.message : String(error)}`);
@@ -1323,7 +1323,7 @@ export function planClockAlternatives(
      */
     on_tasks?: (context: ClockAlternativeContext, tasks: ClockAlternativeTask[], primary_signature: string) => void,
 ): ClockAlternativesPlan {
-    return withRunMemo(() => planPrimaryAndTasks(withoutOutsideSupply(config), options, on_tasks));
+    return withRunMemo(() => withBuildFeeders(config, () => planPrimaryAndTasks(withoutOutsideSupply(config), options, on_tasks)));
 }
 
 function planPrimaryAndTasks(
@@ -1425,7 +1425,7 @@ export function runClockAlternativeTask(
     /** Signatures of clocks other runs assess, as the primary alternative's (see planClockAlternatives) */
     assessed_signatures: readonly string[] = [],
 ): ClockAlternativeRun | null {
-    return withRunMemo(() => runTask(withoutOutsideSupply(config), context, task_id, options, assessed_signatures));
+    return withRunMemo(() => withBuildFeeders(config, () => runTask(withoutOutsideSupply(config), context, task_id, options, assessed_signatures)));
 }
 
 function runTask(
@@ -1469,7 +1469,7 @@ export function runCoordinatedSourcesTask(
     options: GenerateClockOptions = {},
     assessed_signatures: readonly string[] = [],
 ): ClockAlternativeRun | null {
-    return withRunMemo(() => {
+    return withRunMemo(() => withBuildFeeders(given, () => {
         const config = withoutOutsideSupply(given);
         const tried: { not_made: NotMadeClock[]; events: MakerLogEvent[] }[] = [];
         const listed = onWindowCycles(input, around => {
@@ -1490,7 +1490,7 @@ export function runCoordinatedSourcesTask(
             if (index === kept) not_made.forEach(clock => options.on_not_made?.(clock));
         });
         return listed?.made ?? null;
-    });
+    }));
 }
 
 /** The per-branch clock composed around the input's recommended clock, on its window cycle (see `runCoordinatedSourcesTask`) */
@@ -1588,7 +1588,7 @@ export function generateClockAlternatives(
     config: Config,
     options: GenerateClockOptions = {}
 ): ClockAlternativesResult {
-    return withMakerLog(options.maker_log, () => withRunMemo(() => generateAllAlternatives(withoutOutsideSupply(config), options)),
+    return withMakerLog(options.maker_log, () => withRunMemo(() => withBuildFeeders(config, () => generateAllAlternatives(withoutOutsideSupply(config), options))),
         { repeat_check: options.maker_log_repeat_check === true });
 }
 

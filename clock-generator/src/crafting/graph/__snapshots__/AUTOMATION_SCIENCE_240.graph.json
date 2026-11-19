@@ -42,6 +42,20 @@
       "ports": []
     },
     {
+      "key": "chest:1",
+      "kind": "container",
+      "ports": [
+        "chest:1#copper-plate"
+      ]
+    },
+    {
+      "key": "chest:2",
+      "kind": "container",
+      "ports": [
+        "chest:2#iron-gear-wheel"
+      ]
+    },
+    {
       "key": "sink",
       "kind": "sink",
       "ports": []
@@ -107,19 +121,135 @@
         "denominator": 11
       },
       "terminal": "output-lane"
+    },
+    {
+      "key": "inserter:3/copper-plate",
+      "via": "inserter",
+      "entity": "inserter:3",
+      "group": "inserter:3",
+      "item": "copper-plate",
+      "from": "chest:1#copper-plate",
+      "from_ports": [
+        "chest:1#copper-plate"
+      ],
+      "to": "belt:1/lane:2#copper-plate",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:4/copper-plate",
+      "via": "inserter",
+      "entity": "inserter:4",
+      "group": "inserter:4",
+      "item": "copper-plate",
+      "from": "chest:1#copper-plate",
+      "from_ports": [
+        "chest:1#copper-plate"
+      ],
+      "to": "belt:1/lane:2#copper-plate",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:5/iron-gear-wheel",
+      "via": "inserter",
+      "entity": "inserter:5",
+      "group": "inserter:5",
+      "item": "iron-gear-wheel",
+      "from": "chest:2#iron-gear-wheel",
+      "from_ports": [
+        "chest:2#iron-gear-wheel"
+      ],
+      "to": "belt:1/lane:1#iron-gear-wheel",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
+    },
+    {
+      "key": "inserter:6/iron-gear-wheel",
+      "via": "inserter",
+      "entity": "inserter:6",
+      "group": "inserter:6",
+      "item": "iron-gear-wheel",
+      "from": "chest:2#iron-gear-wheel",
+      "from_ports": [
+        "chest:2#iron-gear-wheel"
+      ],
+      "to": "belt:1/lane:1#iron-gear-wheel",
+      "lands_in": "lane",
+      "hand": 16,
+      "floor_cycle": 11,
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "terminal": null
     }
   ],
   "components": [],
   "order": [
-    "belt:1/lane:1#iron-gear-wheel",
+    "chest:1#copper-plate",
     "belt:1/lane:2#copper-plate",
+    "chest:2#iron-gear-wheel",
+    "belt:1/lane:1#iron-gear-wheel",
     "machine:1",
     "belt:2/lane:1#automation-science-pack",
     "sink"
   ],
   "shared": {
-    "out": [],
-    "in": [],
+    "out": [
+      {
+        "at": "chest:1#copper-plate",
+        "item": "copper-plate",
+        "edges": [
+          "inserter:3/copper-plate",
+          "inserter:4/copper-plate"
+        ]
+      },
+      {
+        "at": "chest:2#iron-gear-wheel",
+        "item": "iron-gear-wheel",
+        "edges": [
+          "inserter:5/iron-gear-wheel",
+          "inserter:6/iron-gear-wheel"
+        ]
+      }
+    ],
+    "in": [
+      {
+        "at": "belt:1/lane:1#iron-gear-wheel",
+        "item": "iron-gear-wheel",
+        "edges": [
+          "inserter:5/iron-gear-wheel",
+          "inserter:6/iron-gear-wheel"
+        ]
+      },
+      {
+        "at": "belt:1/lane:2#copper-plate",
+        "item": "copper-plate",
+        "edges": [
+          "inserter:3/copper-plate",
+          "inserter:4/copper-plate"
+        ]
+      }
+    ],
     "lanes": []
   },
   "terminal": [

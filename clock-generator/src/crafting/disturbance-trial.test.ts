@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
+import { withoutOutsideSupply } from "../config/outside-supply";
 import {
     clockCountsOneAt, countedOnTheClock, disturbanceTrialsOf, judgedCopies, judgedOnTheClock, judgedTogether, judgeRecovery, LATE_AFTER_WINDOW_CYCLES, LOSS_PLACES, LOSS_SHARES, lossId, lossLabel, lossLimitOf, lossTrialsPartOfTheWay,
     lossTrialsUntilStopped, LossOutcome, LossTrial, MAX_LOSS_WINDOW_CYCLES, MAX_RECOVERY_WINDOW_CYCLES, MAX_RUN_ON_WINDOW_CYCLES, plannedTrialsOf, reportOf, RUN_ON_EXACT_WINDOW_CYCLES,
@@ -402,7 +403,8 @@ describe("the losses a build can have", () => {
     let config: Config;
 
     beforeAll(async () => {
-        config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
+        // the build the generation clocks: without the sample's feeders (outside supply)
+        config = withoutOutsideSupply(await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240));
     });
 
     it("are one for each item that comes off a belt and one for each that leaves on one, the product of the build among them", () => {

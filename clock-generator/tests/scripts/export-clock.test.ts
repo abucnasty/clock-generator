@@ -76,7 +76,8 @@ describe('export-clock.js on automation science', () => {
         expect(cells).toHaveLength(1);
         const [cell] = cells;
         expect(cell).toMatchObject({ name: 'automation-240', config: 'automation-240.json', problems: [], instances: [[0, 0]] });
-        expect(Object.keys(cell.inserters).map(Number).sort()).toEqual(config.inserters.map((_: unknown, index: number) => index + 1));
+        // the clocked inserters, the copy's own: the sample's feeders (outside supply, after them) get no cell id
+        expect(Object.keys(cell.inserters).map(Number).sort()).toEqual([1, 2]);
         const at = new Set<string>();
         for (const [id, inserter] of Object.entries<{ name: string; offset: number[]; wired: boolean; has_wire: boolean }>(cell.inserters)) {
             // it stands where the scaffold has an inserter of that name, each once
@@ -86,7 +87,7 @@ describe('export-clock.js on automation science', () => {
             at.add(`${x},${y}`);
             expect(inserter).toMatchObject({ wired: false, has_wire: false });
         }
-        expect(at.size).toBe(config.inserters.length);
+        expect(at.size).toBe(2);
     });
 
     // The refusal does not depend on the build, so it is tested on a small one: a second generation of automation science would be slow.
