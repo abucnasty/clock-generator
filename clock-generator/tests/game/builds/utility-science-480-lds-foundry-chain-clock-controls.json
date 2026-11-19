@@ -3,10 +3,10 @@
  "cases": {
   "generated-one-copy": {
    "recorded": {
-    "pr": 0,
+    "pr": 852,
     "commit": "214bd7ad",
     "frozen_head": "214bd7ad",
-    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24; pr is set when the PR is opened",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24",
     "clock_sha256": "53fb2eed02c29f57b296f40fc0e78a929702a1b2bf7c864000342dbdd2669df7",
     "clock_basis": "capture"
    },

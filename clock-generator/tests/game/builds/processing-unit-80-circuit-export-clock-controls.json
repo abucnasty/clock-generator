@@ -3,10 +3,10 @@
  "cases": {
   "generated-as-is": {
    "recorded": {
-    "pr": 822,
+    "pr": 852,
     "commit": "214bd7ad",
     "frozen_head": "214bd7ad",
-    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24; pr is set when the PR is opened",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24",
     "clock_sha256": "5259f325f605154be10b5ee75d5255e846d9020bb10a92264d9156beab4e3ace",
     "clock_basis": "capture"
    },
@@ -74,10 +74,10 @@
   },
   "generated-backed-up": {
    "recorded": {
-    "pr": 822,
+    "pr": 852,
     "commit": "214bd7ad",
     "frozen_head": "214bd7ad",
-    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24; pr is set when the PR is opened",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24",
     "clock_sha256": "5259f325f605154be10b5ee75d5255e846d9020bb10a92264d9156beab4e3ace",
     "clock_basis": "capture"
    },
