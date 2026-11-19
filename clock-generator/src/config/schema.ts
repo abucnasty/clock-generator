@@ -1,4 +1,4 @@
-import { BELT_PICKUP_LAYOUTS, pickupLayoutProblem } from "../common/belt-pickup-layout";
+import { BELT_PICKUP_LAYOUTS, pickupLaneLength, pickupLayoutProblem } from "../common/belt-pickup-layout";
 import { BeltPickupCaptureSchema, normalizePickupCaptureConfig, pickupCaptureProblem } from "./pickup-capture";
 import { sideLoadedPickupRefusal } from "./errors";
 import { z } from "zod";
@@ -614,6 +614,15 @@ const BeltLaneConfigSchema = z.object({
     supply_rate: z.number().positive().optional().describe("The items per second that come onto the lane where it starts. The default is the lane's capacity."),
     lane_end: LaneEndConfigSchema.optional().describe("The end of the lane. Without it, the deprecated backed_up_belts sets the end if the configuration states it. If not, the role of the lane sets the end: an input or a buffer lane is a dead end, an output lane is an infinite end."),
     sharing: LaneSharingConfigSchema.optional().describe("shared (default): all copies take from this lane. per_copy: each copy has a lane of its own."),
+    /**
+     * The supply length: the belt before copy 1's pickup, in tiles along the flow from the middle of the first tile where the
+     * items come onto the lane (the most upstream feeder) to the middle of copy 1's pickup tile (the most upstream taker of
+     * the config's copy). The run of the copies starts the lane there (crafting/shared-lane-model.ts `sharedLaneLayoutOf`),
+     * full, so the stock on it is the game's, and a supply stop stops the items there. Without it the lane starts 1 tile
+     * before copy 1's pickup.
+     */
+    supply_tiles: z.number().finite().positive().optional().describe("The belt before copy 1's pickup, in tiles: from the middle of the first tile where the items come onto the lane "
+        + "to the middle of copy 1's pickup tile, along the flow. Without it, the items come onto the lane 1 tile before copy 1's pickup."),
 });
 
 const ExportBeltLaneConfigSchema = BeltLaneConfigSchema.extend({
@@ -1018,6 +1027,29 @@ export const ConfigSchema = z.preprocess(renameTargetOutputToSetpoint, z.preproc
             context.addIssue({ code: "custom", path: ["belts", belt_index, "lanes", lane_index, "lane_end"],
                 message: `Lane ${lane_index + 1} of belt ${belt.id} states a consumption rate and a lane end. The consumption rate `
                     + "states what leaves the end of the lane. Remove the lane end." });
+        });
+    });
+    // the supply length of a lane: the belt before a pickup of the lane, so a lane with a taker, and longer than half its pickup
+    config.belts.forEach((belt, belt_index) => {
+        belt.lanes.forEach((lane, lane_index) => {
+            if (lane.supply_tiles === undefined) return;
+            const path = ["belts", belt_index, "lanes", lane_index, "supply_tiles"];
+            const name = `Lane ${lane_index + 1} of belt ${belt.id}`;
+            const takers = config.inserters.flatMap(inserter => inserter.source.type === TargetType.BELT && inserter.source.id === belt.id
+                && (inserter.filters === undefined || inserter.filters.length === 0
+                    || (inserter.filter_mode === "blacklist" ? !inserter.filters.includes(lane.ingredient) : inserter.filters.includes(lane.ingredient)))
+                ? [inserter.source] : []);
+            if (takers.length === 0) {
+                context.addIssue({ code: "custom", path, message: `${name} states supply_tiles ${lane.supply_tiles}, and no inserter takes ${lane.ingredient} from it. `
+                    + "The supply length is the belt before the first pickup of a lane. Remove supply_tiles." });
+                return;
+            }
+            const half = Math.max(...takers.map(source => pickupLaneLength(source.pickup_layout ?? "side-straight", lane_index + 1, source.pickup_length ?? 1))) / 2;
+            if (lane.supply_tiles < half) {
+                context.addIssue({ code: "custom", path, message: `${name} states supply_tiles ${lane.supply_tiles}, less than half the pickup of an inserter that takes from it `
+                    + `(${half} tiles): the items would come onto the lane inside the pickup. State the tiles from the middle of the first tile where the items come `
+                    + "onto the lane to the middle of copy 1's pickup tile." });
+            }
         });
     });
     // a drop spot is all or none per belt: the lane rule needs every stack on it

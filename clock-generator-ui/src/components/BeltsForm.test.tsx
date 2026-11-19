@@ -155,7 +155,8 @@ describe('the Lane end field', () => {
         await user.click(screen.getByRole('option', { name: /^Not stated/ }));
         const written = onUpdate.mock.lastCall![1].lanes[0];
         expect('lane_end' in written).toBe(false);
-        expect(written).toEqual({ ingredient: 'iron-gear-wheel', stack_size: 4 });
+        // the sample's supply length, which has no field, stays
+        expect(written).toEqual({ ingredient: 'iron-gear-wheel', stack_size: 4, supply_tiles: 11 });
     });
 
     it('shows a pasted unknown end, which cannot be chosen, with its sentence, until another end is chosen', async () => {

@@ -301,6 +301,13 @@ of a copy is behind its target over the same window cycles; a machine of a parti
 copy's target. Where nothing is behind, the shortfall is stock that moved between the two runs, and the clock holds
 ([stability](stability.md#copies-that-share-a-lane)).
 
+A shared lane starts where its items come on: the lane's `supply_tiles` before the middle of copy 1's pickup tile, from
+the middle of the first tile where the items come onto the lane (the most upstream feeder). The lane starts full, so the
+stock on the belt before copy 1 is on it, and a supply stop stops the items there, as stopped feeders do in the game. A
+lane that states no `supply_tiles` starts 1 tile before copy 1's pickup. On the nine copies of automation science 240
+(`supply_tiles` 11), a run from the game's state at a copper stop follows every copy of the game for 166 ticks; from 1
+tile, copy 1 parts after 38 (#737).
+
 Standing: on the clocks recorded on #660 (three copies on ore lanes that flow into loaders) and #725 (5.5 copies on
 dead-ended lanes) and on logistic science 240 (11 copies) the run gives the game's verdict on every copy. The size of a
 loss can differ (#660, Takt Batches with 6 swings: copy 3 about 5 of 6 hands an inserter against 4.9 in the game).

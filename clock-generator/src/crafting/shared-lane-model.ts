@@ -74,7 +74,7 @@ export interface SharedLaneLayout {
     readonly copies: BuildCopies;
 }
 
-/** The lane between the entry and the first reach, in tiles: the entry stands a tile upstream of the row */
+/** The lane between the entry and the first reach, in tiles, where the lane states no `supply_tiles`: the entry stands a tile upstream of the row */
 const ENTRY_TILES = 1;
 
 /** The longer side of an entity in tiles: the config does not say which way a machine is turned */
@@ -157,6 +157,10 @@ function partCopyOf(config: Config, chosen: ReadonlySet<string>, lane_takers: Re
  * A config without the positions of a lane's takers has the takers of a copy a tile apart in the config's order, and the
  * copies one copy's width apart (`copyWidthTiles`), unless `copy_offset` says how far apart they stand. The width is
  * never less than a tile for each taker, so that the takers of two copies never stand on one tile.
+ *
+ * The lane starts where its items come on: its `supply_tiles` before the middle of copy 1's pickup tile, so that the belt
+ * from the feeders to copy 1 and its stock are on the lane, and a supply stop stops the items there, as the game's
+ * feeders do. A lane that states none starts a tile before the first reach.
  */
 export function sharedLaneLayoutOf(config: Config, lanes: readonly LaidOutLane[]): SharedLaneLayout {
     const offset = config.setpoint.copy_offset;
@@ -188,7 +192,7 @@ export function sharedLaneLayoutOf(config: Config, lanes: readonly LaidOutLane[]
         // the step places the copies after the first, so only a lane that more than one copy shares needs it: a lane one copy
         // alone takes from may run any way, across copy_offset too
         assert(step > 0 || !(shared && copies > 1), `The copies on lane ${lane} of belt ${belt_id} need copy_offset along the lane`);
-        return [{ belt_id, lane, flow, shared, takers, step, item }];
+        return [{ belt_id, lane, flow, shared, takers, step, item, supply_tiles: belt.lanes[lane - 1].supply_tiles }];
     });
 
     // the part copy: its share of each shared lane's takers, those furthest upstream, and what they need
@@ -198,16 +202,20 @@ export function sharedLaneLayoutOf(config: Config, lanes: readonly LaidOutLane[]
     const part_copy = part > 0 && shared_lanes.length > 0 ? partCopyOf(config, chosen, lane_takers) : null;
     const copy_count = shared_lanes.length === 0 ? 1 : whole + (part_copy !== null ? 1 : 0);
 
-    const rows = laid.map(({ belt_id, lane, flow, shared, takers, step }) => {
-        const placed: { copy: number; inserter_id: string; low: number; high: number }[] = [];
+    const rows = laid.map(({ belt_id, lane, flow, shared, takers, step, supply_tiles }) => {
+        const placed: { copy: number; inserter_id: string; middle: number; low: number; high: number }[] = [];
         for (let copy = 0; copy < (shared ? copy_count : 1); copy++) {
             const of_copy = copy < whole ? takers : takers.filter(taker => part_copy!.has(taker.inserter_id));
             for (const taker of of_copy) {
                 const middle = taker.at + copy * step;
-                placed.push({ copy, inserter_id: taker.inserter_id, low: middle - taker.length / 2, high: middle + taker.length / 2 });
+                placed.push({ copy, inserter_id: taker.inserter_id, middle, low: middle - taker.length / 2, high: middle + taker.length / 2 });
             }
         }
-        const entry = Math.min(...placed.map(it => it.low)) - ENTRY_TILES;
+        // the lane starts where the items come onto it: the supply length before copy 1's pickup tile, the first taker's
+        // middle, where the config states it (the schema refuses one inside a pickup); else a tile before the first reach
+        const first_reach = Math.min(...placed.map(it => it.low));
+        const entry = supply_tiles === undefined ? first_reach - ENTRY_TILES : placed[0].middle - supply_tiles;
+        assert(entry <= first_reach + 1e-9, `Lane ${lane} of belt ${belt_id} states supply_tiles ${supply_tiles}, which puts its supply inside copy 1's pickup`);
         const end = Math.max(...placed.map(it => it.high));
         return {
             belt_id, lane, flow, copies: shared ? copy_count : 1, length_tiles: end - entry, step_tiles: step, step_stated: offset !== undefined,

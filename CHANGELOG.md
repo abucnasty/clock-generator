@@ -13,6 +13,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ### Added
 - ui: a switch in Advanced to judge clocks from the cold start
+- simulation: an input lane can state the length of belt before the first copy
 
 ### Changed
 - ui: result texts name the start the clocks were judged from, not always the cold start
@@ -23,6 +24,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - simulation: the lithium plate build's output inserters wait for their belt as in the game
 - simulation: on one-copy builds an output block fills the stated output belt before machines stop
 - generation: Pitch Pickups times full hands where the batched clock fails, as where it holds
+- simulation: automation science 240 keeps the items on its belt before copy 1 during supply stops
 
 ## [0.30.0] - 2026-11-18
 
