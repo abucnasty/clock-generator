@@ -813,11 +813,10 @@ where the build has input lines, the productivity module chain's own (coal, outp
 every ingredient from fluids or machines (accumulator). A build of copies is judged on each copy by itself: every whole window cycle from steady state to the first
 loss, and every whole window cycle of the last minute after the last loss. The controls are in
 [missing-recordings-clock-controls.json](missing-recordings-clock-controls.json); the test keeps each run, its verdict and its controls entry in `MISSING_RECORDINGS_CAPTURE_DIR`.
-Recorded at Factorio 2.1.24, all seven holding their target on every copy and recovering from every loss:
+Recorded at Factorio 2.1.24, all six holding their target on every copy and recovering from every loss (`AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING` was the seventh: it is recorded again from ruling 60's start, see "Scaffold builds from ruling 60's start" below):
 
 | Job | Clock (window cycle) | Copies built | Window cycles per copy before / after the losses | Steady state | Last loss recovered |
 | --- | --- | --- | --- | --- | --- |
-| `AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING` | Pitch Pickups (72) | 9 of 9 | 50 / 50 | 7,292 | 17,736 |
 | `FLYING_ROBOT_FRAME_80` | Moved Output Swing (288) | 12 of 12 | 12 / 12 | 7,056 | 25,261 |
 | `PRODUCTIVITY_MODULE_80_CHEST_CHAIN` | Coordinated Sources (72) | 1 of 6 | 50 / 50 | 7,437 | 27,146 |
 | `ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED` | Coordinated Sources (40) | 2 of 5 | 90 / 90 | 7,200 | 32,428 |
@@ -825,8 +824,6 @@ Recorded at Factorio 2.1.24, all seven holding their target on every copy and re
 | `LOGISTIC_SCIENCE_240` | Takt Batches (176) | 22 of 11 (two rows) | 20 / 20 | 7,194 | 20,042 |
 | `ACCUMULATOR_320` | Coordinated Sources (972) | 9 of 9 | 3 / 3 | 6,516 | 15,174 |
 
-- The first pick is "no recovery" in the simulator (copper plate stops arriving on the copies that share a lane). In the game all nine copies keep their rate and
-  the output comes back after that loss, so the game and the simulator differ, as for utility science 120 above.
 - Named limits: the scaffold of the productivity module chain holds one copy of the job's six, and that of the electromagnetic science recycler build two of five; the
   joins of the other copies are not in these runs. The recycler build's output is random: each copy made 2,907 and 2,890 of 2,880 over its 90 window cycles before the
   losses (2,900 and 2,892 of 2,880 after), 12 to 15 of its window cycles short of 32 by a few items, so it is judged on the stretch and not on each window cycle. The staged
@@ -905,7 +902,7 @@ tick; the probe runs there). A case with a Lua file of its own (`prelude`) puts 
 
 | Job (case) | Clock | Start | Window cycles before / after the losses | Steady state | Last loss recovered |
 | --- | --- | --- | --- | --- | --- |
-| `IRON_BACTERIA_380_CULTIVATION` (`iron-bacteria-380`, `-block`, `-nutrients`: one loss each) | Time Study Windows Subtick (1,728, `3f820d74`) | staged | 2 / 2 each | 7,056 | 14,349 (bioflux cut), 14,132 (output block), 14,622 (nutrients cut) |
+| `IRON_BACTERIA_380_CULTIVATION` (`iron-bacteria-380`, `-block`, `-nutrients`: one loss each) | Time Study Windows Subtick (1,728, `3f820d74`) | ruling 60's | 2 / 2 each | 7,056 | 14,348 (bioflux cut), 14,131 (output block), 14,621 (nutrients cut) |
 | `ROCKET_FUEL_60` | Takt Batches Observed (`482a9448`) | ruling 60's | 28 / 28 | 7,193 | 22,726 |
 | `ROCKET_FUEL_60_JELLY_HANDS_15_BACKED_UP` (variant; `rocket-fuel-60-jelly-hands-15-backed-up` and `-nutrients`) | the variant's clock (`d978b5fd`) | ruling 60's | 56 / 56 each | 7,184 | 18,586 (all three in a row), 14,971 (nutrients cut alone) |
 | `AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER` | Takt Batches Observed (144, `782c7427`) | ruling 60's | 25 / 25 | 7,200 | 23,630 (cut copper plate 14,990, output block 19,310, cut gear wheels 23,630) |
@@ -917,7 +914,7 @@ All hold: every copy of the build makes its share of the target in every whole w
   counts it recovered when the output is over the target again, so after the first loss the output is over the target but under the baseline's lowest minute, and the next loss "falls" and is
   released within a tick or two. Three losses in a row therefore test the first one only; each of the three has a case of its own, from the baseline. The output block of the probe takes the loaders off
   the build, and this scaffold's two loaders drain the bioflux and nutrient belts, so the block case sets `block_sinks`: the probe fills the four void chests the output goes into (the chests the
-  loaders drain into are left). Every inserter of the recommended clock has a window, so the staged start is its judged start. Not run: the other copy (the job has one).
+  loaders drain into are left). Recorded from ruling 60's start since 2026-11-19 (the three cases were first recorded from the plain staged start, 2026-11-18, with the same results to a tick or two). Not run: the other copy (the job has one).
 - **Rocket fuel.** Its inserters 10, 12 and 13 (the nutrient pickups) have no window in `clock_windows`, but they are fuel clocks and the schedule wires them to the clock: in the harness's fill
   all 13 inserters of the build are windowed (held off by the lock) and none runs, so the fill held nothing to run before the clock. The three machines are empty at the opening (the
   lock opened at tick 55,818, 7,200 ticks after the build; the fill ended steady, no inserter was enabled in it). The simulator's fill keeps fuel inserters on (#804); the game's
@@ -936,6 +933,35 @@ All hold: every copy of the build makes its share of the target in every whole w
 - **Retaken in `scaffold-recordings.game.test.ts`** (agricultural science 250 and iron bacteria 380, on the clocks of #818): every copy of the five-copy build makes 656, 784 and 736 of 800 in its first three window
   cycles (the start-up) and 800 in each of the 7 after; both agricultural builds are judged by the standing rule (per copy, every window cycle from the first third of the samples on: cycles 5 to 10, all 800), now both from the staged start (the one with belts under backpressure started from a warm-up before, and on this clock left
   copy 2 short in each of the 3 cycles checked and copy 5 in the first); iron bacteria 10,944 in each window cycle checked, 1,043.3 wake-ups a minute in the game against 358.2 in the simulator.
+
+## Scaffold builds from ruling 60's start
+
+Six record jobs of the multi-copy scaffold builds and the two biochamber loop builds, each recorded from ruling 60's start (`start: "backpressure"`, 2026-11-19, Factorio 2.1.24) on every copy of its
+scaffold, by the generic test of the missing recordings, and each recorded twice: both runs give the same summary and the same per-copy result, to the tick. Each case judges every copy by itself: its whole window cycles from steady
+state to the first loss, and the whole window cycles of the last minute after the last loss. The scaffold pins of `scaffold-recordings.game.test.ts` stay as they are.
+
+| Job (case) | Clock (window cycle) | Copies built | Window cycles per copy before / after the losses | Steady state | Last loss recovered | Result |
+| --- | --- | --- | --- | --- | --- | --- |
+| `AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING` (`automation-science-240-one-output-swing`) | Coordinated Sources (72, `37805909`) | 9 of 9 | 50 / 50 | 7,701 | 28,403 (gear wheel cut 18,159, output block 22,574, copper plate cut 28,403) | holds |
+| `AGRICULTURAL_SCIENCE_250` (`agricultural-science-250`) | Takt Batches Observed, 2 swings (960, `997b3c3c`) | 5 of 5 | 3 / 3 | 6,524 | 24,959 (bioflux cut 15,841, output block 19,572, nutrients cut 24,959) | holds |
+| `AGRICULTURAL_SCIENCE_250_BACKED_UP` (`agricultural-science-250-backed-up`) | the same clock | 5 of 5 | 3 / 3 | 6,524 | 24,959 | holds |
+| `IRON_BACTERIA_380_CULTIVATION` | see "Loop builds and ruling 60's start" above | 1 of 1 | 2 / 2 each | 7,056 | 14,348 / 14,131 / 14,621 | holds |
+| `AUTOMATION_SCIENCE_240` (`automation-science-240`) | Coordinated Sources (72, `0bc638ab`) | 9 of 9 | 50 / 50 | 7,200 | 16,823 | copy 2 short after the losses, not pinned |
+| `ELECTROMAGNETIC_SCIENCE_330` (`electromagnetic-science-330`) | Takt Batches Observed (2,112, `c3b310df`) | 11 of 11 | 1 / 1 | 5,712 | 37,644 | copies 1 and 3 short after the losses, not pinned |
+
+- **Agricultural science.** The harness does not read `backed_up_belts`, so the build and its backed-up variant are the same run: the same clock, the same result to the tick (as their scaffold pins say). The scaffold's four loaders
+  drain the bioflux and nutrients belts and the packs go into infinity chests, so the case sets `block_sinks` (the output block fills those chests). All five copies make 800 in every window cycle judged.
+- **Automation science 240, copy 2.** In the case with three losses in a row the output block and the copper plate cut last 5 and 4 ticks (the gear wheel cut recovers over the target before it is over the baseline's lowest minute), and after them
+  copy 2 settles into a cycle of five window cycles that makes 30 of 32 once and 34 once (a hand of 2 moves from one window cycle to the next); it makes 1,600 of 1,600 over the 50 window cycles of the last minute,
+  and is short by 2 in 10 of them. Each loss alone (`automation-science-240-gear`, `-block`, `-copper`, from the baseline) holds on all nine copies in every window cycle. The case with the three is the family's standard one, so the job is not pinned.
+- **Electromagnetic science 330.** A window cycle is 2,112 ticks (one whole window cycle judged before the first loss: steady state 5,712, first loss 9,312). After the supercapacitor cut, one copy is short by one hand (16 of 1,056) in the
+  last judged window cycle: copies 1 and 3 in the run of three losses (their window cycles alternate 1,040 and 1,072, and make 2,112 of 2,112 in two), copy 10 in the case of the cut alone (`electromagnetic-science-330-supercapacitors`).
+  The accumulator cut (`-accumulators`) and the output block (`-block`) alone hold on all eleven copies. In the run of three the output block lasted 22 ticks. The job is not pinned.
+- The cases `automation-science-240-gear`, `-block`, `-copper` and `electromagnetic-science-330-accumulators`, `-block`, `-supercapacitors` have no entry in the controls file: they stand beside the case that does not hold, to say which loss it is.
+
+```
+MISSING_RECORDINGS_CAPTURE_DIR=.scratch/judged-start npm run test:game -- tests/game/builds/missing-recordings-clock.game.test.ts -t 'agricultural-science-250: '
+```
 
 ## The search from every stable clock, from ruling 60's start
 

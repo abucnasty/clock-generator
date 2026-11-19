@@ -89,11 +89,72 @@ const scaffoldOf = (key: keyof typeof ConfigPaths) => ConfigPaths[key].replace(/
 export const scaffoldFile = (item: MissingRecordingCase) => item.scaffold ? path.join(path.dirname(ConfigPaths[item.config]), item.scaffold) : scaffoldOf(item.config);
 
 export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
+    // the multi-copy scaffold builds and the loop builds, each from ruling 60's start (the judged start), every copy the scaffold holds
+    {
+        // nine copies on one input belt (gear wheels on one lane, copper plates on the other, both dead ends); the one loader of the scaffold takes the packs
+        // off the output line, so the output block removes it
+        name: "automation-science-240", job: "config-AUTOMATION_SCIENCE_240", config: "AUTOMATION_SCIENCE_240", copies: 9,
+        losses: [{kind: "cut", item: "iron-gear-wheel"}, {kind: "block"}, {kind: "cut", item: "copper-plate"}],
+        start: "backpressure",
+    },
+    // the three losses in a row of the case above do not each bite: the output is back over the target before it is back over the baseline's lowest
+    // minute, so the block and the copper plate cut lasted 5 and 4 ticks. Each loss has a case of its own from the baseline, to say which one leaves copy 2 short
+    {
+        name: "automation-science-240-gear", job: "config-AUTOMATION_SCIENCE_240", config: "AUTOMATION_SCIENCE_240", copies: 9,
+        losses: [{kind: "cut", item: "iron-gear-wheel"}],
+        start: "backpressure",
+    },
+    {
+        name: "automation-science-240-block", job: "config-AUTOMATION_SCIENCE_240", config: "AUTOMATION_SCIENCE_240", copies: 9,
+        losses: [{kind: "block"}],
+        start: "backpressure",
+    },
+    {
+        name: "automation-science-240-copper", job: "config-AUTOMATION_SCIENCE_240", config: "AUTOMATION_SCIENCE_240", copies: 9,
+        losses: [{kind: "cut", item: "copper-plate"}],
+        start: "backpressure",
+    },
     {
         name: "automation-science-240-one-output-swing", job: "variants-AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING", config: "AUTOMATION_SCIENCE_240", copies: 9,
         variant: config => ({...config, overrides: {...config.overrides, terminal_swing_count: 1}}),
-        // the pick is "no recovery": the loss the record names for it (copper plate stops arriving on the copies that share a lane)
-        losses: [{kind: "cut", item: "copper-plate"}],
+        losses: [{kind: "cut", item: "iron-gear-wheel"}, {kind: "block"}, {kind: "cut", item: "copper-plate"}],
+        start: "backpressure",
+    },
+    {
+        // five copies; the scaffold's four loaders drain the bioflux and nutrient belts, and the packs go into infinity chests, so the output block fills those
+        name: "agricultural-science-250", job: "config-AGRICULTURAL_SCIENCE_250", config: "AGRICULTURAL_SCIENCE_250", copies: 5,
+        losses: [{kind: "cut", item: "bioflux"}, {kind: "block"}, {kind: "cut", item: "nutrients"}],
+        start: "backpressure",
+        block_sinks: "the scaffold's loaders drain the bioflux and nutrients belts; the packs go into infinity chests",
+    },
+    {
+        name: "agricultural-science-250-backed-up", job: "variants-AGRICULTURAL_SCIENCE_250_BACKED_UP", config: "AGRICULTURAL_SCIENCE_250", copies: 5,
+        variant: config => ({...config, overrides: {...config.overrides, backed_up_belts: true}}),
+        losses: [{kind: "cut", item: "bioflux"}, {kind: "block"}, {kind: "cut", item: "nutrients"}],
+        start: "backpressure",
+        block_sinks: "the scaffold's loaders drain the bioflux and nutrients belts; the packs go into infinity chests",
+    },
+    {
+        // eleven plants on one belt of accumulators and supercapacitors, dead-ended; the packs go into infinity chests (no loader)
+        name: "electromagnetic-science-330", job: "config-ELECTROMAGNETIC_SCIENCE_330", config: "ELECTROMAGNETIC_SCIENCE_330", copies: 11,
+        losses: [{kind: "cut", item: "accumulator"}, {kind: "block"}, {kind: "cut", item: "supercapacitor"}],
+        start: "backpressure",
+    },
+    // the output block lasted 22 ticks in the run above (the accumulator cut recovers over the target before it is over the baseline's lowest minute): each loss has a case of its own
+    {
+        name: "electromagnetic-science-330-accumulators", job: "config-ELECTROMAGNETIC_SCIENCE_330", config: "ELECTROMAGNETIC_SCIENCE_330", copies: 11,
+        losses: [{kind: "cut", item: "accumulator"}],
+        start: "backpressure",
+    },
+    {
+        name: "electromagnetic-science-330-block", job: "config-ELECTROMAGNETIC_SCIENCE_330", config: "ELECTROMAGNETIC_SCIENCE_330", copies: 11,
+        losses: [{kind: "block"}],
+        start: "backpressure",
+    },
+    {
+        name: "electromagnetic-science-330-supercapacitors", job: "config-ELECTROMAGNETIC_SCIENCE_330", config: "ELECTROMAGNETIC_SCIENCE_330", copies: 11,
+        losses: [{kind: "cut", item: "supercapacitor"}],
+        start: "backpressure",
     },
     {
         name: "flying-robot-frame-80", job: "config-FLYING_ROBOT_FRAME_80", config: "FLYING_ROBOT_FRAME_80", copies: 12,
@@ -203,22 +264,25 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
         start: "backpressure",
         late_recording: "the final machine is a furnace with no recipe at the placement",
     },
-    // every inserter of the build has a window, so the staged start is the judged start. The three losses in a row do not each bite: the
+    // the build is recorded from ruling 60's start, the judged start. The three losses in a row do not each bite: the
     // build makes 111 % of its target, the output is back over the target (the run's test of recovery) before it is back over the baseline's
     // lowest minute (its test of a fall), so the loss after a recovered one falls and recovers within a tick or two. Each loss that follows another
     // therefore has a case of its own, run from the baseline.
     {
         name: "iron-bacteria-380", job: "config-IRON_BACTERIA_380_CULTIVATION", config: "IRON_BACTERIA_380_CULTIVATION", copies: 1,
         losses: [{kind: "cut", item: "bioflux"}],
+        start: "backpressure",
     },
     {
         name: "iron-bacteria-380-block", job: "config-IRON_BACTERIA_380_CULTIVATION", config: "IRON_BACTERIA_380_CULTIVATION", copies: 1,
         losses: [{kind: "block"}],
+        start: "backpressure",
         block_sinks: "the scaffold's two loaders drain the bioflux and nutrients belts; the output goes into four void chests",
     },
     {
         name: "iron-bacteria-380-nutrients", job: "config-IRON_BACTERIA_380_CULTIVATION", config: "IRON_BACTERIA_380_CULTIVATION", copies: 1,
         losses: [{kind: "cut", item: "nutrients"}],
+        start: "backpressure",
     },
     // the picks of the search from every stable clock (CLOCK_SEARCH_FROM_EVERY_START=1) that the generic protocol records, each from ruling 60's
     // start with the losses of the job's own case above
