@@ -498,11 +498,11 @@ baseline's whole window cycles is the target, every loss falls and is recovered,
 | `front-exit-turbo-mirrored-backed-different-items` and `...-moving-config-...` | Takt Batches Swings 1 (352, `fbc4f307`) | 7,120 | 14,429 / 18,525 / 22,397 | 7,120; 14,430 / 18,526 / 22,526 |
 | `front-exit-turbo-unmirrored-backed-different-items` and `...-moving-config-...` | Takt Batches Swings 1 (352, `c9c84d59`) | 7,120 | 14,653 / 19,005 / 22,877 | 7,120; 14,654 / 18,878 / 22,750 |
 
-- **The start changes little.** Every inserter of these builds has a window (the game's report of the opening, `opening.json`, says so), so the fill holds nothing back and no inserter moves in it:
-  the start equals a plain staged start in effect, as for the grenade build below. The four same-item entrances give one run (same clock, same steady state, same recoveries), and so do the two exits of each mirroring state (backed up and moving config:
-  the exit's belt is backed up in the game whatever the config says). Why the four same-item runs agree to the tick was not isolated.
+- **The fill moves nothing.** Every inserter of these builds has a window (the game's report of the opening, `opening.json`, says so), so the fill holds nothing back and no inserter moves in it:
+  the start equals a plain staged start in effect, as for the grenade build below. The four same-item entrances give one run (same clock, same steady state, same recoveries), and so do the two exits of each mirroring state (backpressure and moving config:
+  the exit's belt has backpressure in the game whatever the config says). Why the four same-item runs agree to the tick was not isolated.
 - **A waiver goes.** `front-entrance-turbo-unmirrored-moving-different-items` carried a stock-guard waiver (#691: output stock 30 against the baseline's lowest 32 at the last recovery). From this start
-  the stock guard holds (lowest 5, end 75), so the entry has no `known_differences` any more.
+  the stock guard holds (lowest 5, last 75), so the entry has no `known_differences` any more.
 - No probe text changed. `scripts/recording_count.py` now reads `staged: true, backpressure: true` in a case, or in the scenario builder for every case, as ruling 60's start (before, only the missing-recordings fixtures read so).
 
 ```bash
