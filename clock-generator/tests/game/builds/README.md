@@ -897,6 +897,32 @@ net output is the target over whole clock cycles, the stock guard holds, and the
 - The baseline of the 230 pick is its one whole clock cycle of 12,672 ticks (16,192 of 16,192), as before; the run goes on 12,700 ticks after its last loss.
 - The stone brick build's only loss is the output block (the stone comes from a drill that drops into the furnace); it recovers at tick 11,086, 286 ticks after it starts.
 
+## The container outputs and the steel wagon builds, from ruling 60's start
+
+**Steel wagon builds (three jobs).** The three staged cases that carry the selected clock (`steel-wagon-selected-staged`, `steel-wagon-iron-ore-out-of-period-selected-staged`, `steel-hub-selected-staged`)
+now say `staged: true, backpressure: true`, so the run starts from ruling 60's state (Factorio 2.1.24, `CLOCK_RECORDING_CACHE=off`). Each is repeated once and gives the same summary, tick for tick.
+They hold, and the controls carry the same values as the plain staged start gave: the lock opened 7,200 ticks after the build was placed (tick 55,525 to 55,528 in the game), both furnaces
+were empty (fed by windowed inserters only), and no windowed inserter moved in the fill. The plain staged start is the judged start in effect for this build, as for grenade above.
+
+| Job (case) | Clock (window cycle) | Steady state | Baseline (net, whole window cycle) | Losses recovered at |
+| --- | --- | --- | --- | --- |
+| `STEEL_PLATE_26_WAGON_CHEST` (`steel-wagon-selected-staged`) | Batched Swings, 1 output swing, subtick (11,520, `394630ea`) | 15,120 | 4,992 of 4,992 | 31,411 (drill), 32,097 (output block), 36,728 (drill) |
+| `STEEL_HUB_26_CONTAINER_OUTPUT` (`steel-hub-selected-staged`) | the same clock (11,520, `394630ea`) | 15,120 | 4,992 of 4,992 | the same run |
+| `STEEL_PLATE_26_WAGON_CHEST_IRON_ORE_OUT_OF_PERIOD` (`steel-wagon-iron-ore-out-of-period-selected-staged`) | Batched Swings, 1 output swing, subtick (3,840, `507cc570`) | 7,440 | 1,680 of 1,664 | 15,774 (drill), 15,776 (output block), 15,778 (drill) |
+
+- The stock guard holds in all three. The second and third loss of the iron-ore case last one tick each: the drill had emptied the wagon already.
+
+**Container outputs (six jobs): named limit, the harness refuses the start.** The six cases of `container-clock-fixtures.ts` stay on the free warm-up. Asked for ruling 60's start
+(`staged: true, backpressure: true`, Factorio 2.1.24, 2026-11-19, one run each; the six cases give the same refusal) the harness stops in the fill, before the run:
+"Windowed inserters held items during the fill with the lock on: unit 99 (config id 1)" (the car, tank and legendary mixed-wagon cases name both supply inserters, ids 1 and 2). The supply
+inserter takes from an infinity chest that is full from the first tick: with a diagnostic line added to the recorder for one run (not kept), the first item in its hand was seen in the tick the inserter was built
+(tick 48,325, the fill's start tick), when the circuit had not yet disabled it. The harness counts every hand held from that tick (`moved`), and the leak check of the same fill starts one tick later. The
+other windowed inserters (into the machine, out of it) hold nothing in the fill. No harness change is made here; the cases are not changed from the warm-up that holds today.
+
+```bash
+BELT_SPEED_CAPTURE_DIR=.scratch/judged-start-6 npm run test:game -- tests/game/builds/steel-plate-26-wagon-chest-clock.game.test.ts -t '^steel wagon clock: steel-wagon-selected-staged$'
+```
+
 ## Container and drill builds: the record's picks from the staged start
 
 The car, silo and wagon families above recorded clocks the record no longer selects, from a warm-up and a settle. Five more cases record the
