@@ -116,5 +116,37 @@
       "item_filter": [],
       "remove_unfiltered_items": true
     }
-  ]
+  ],
+  "output_belt": {
+    "stretches": [
+      {
+        "points": [
+          {
+            "drop": 2,
+            "lane": "right",
+            "drop_tile": {
+              "underground": "entrance",
+              "inserter": "downstream"
+            }
+          },
+          {
+            "tiles": 9,
+            "drop": 1,
+            "lane": "left",
+            "drop_tile": {
+              "underground": "exit",
+              "inserter": "upstream"
+            }
+          },
+          {
+            "tiles": 11,
+            "right_curves": 1,
+            "lane_end": {
+              "kind": "infinite"
+            }
+          }
+        ]
+      }
+    ]
+  }
 }
