@@ -22,7 +22,8 @@ let run: ReturnType<typeof spawnSync>;
 beforeAll(() => {
     out = fs.mkdtempSync(path.join(os.tmpdir(), 'export-clock-'));
     run = spawnSync('node', [script('export-clock.js'), 'AUTOMATION_SCIENCE_240', `--out=${out}`, '--alternative=selected', '--always-on'], { cwd: root, encoding: 'utf-8' });
-}, 120_000);
+    // its lanes run in lines at their underground entrances, which takes the generation longer
+}, 240_000);
 /**
  * The clock the generator selects for the sample: the one folder the export writes besides the always-on arm. The export is
  * what these tests check; which clock is selected is the generator's, and the record pins it.

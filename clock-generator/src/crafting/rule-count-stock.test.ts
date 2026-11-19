@@ -22,7 +22,9 @@ describe("the rule count of a simulated run", () => {
     let selected: ReturnType<typeof generateClockAlternatives>["alternatives"][number];
 
     beforeAll(async () => {
-        config = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240);
+        const sample = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240);
+        // its lanes as one line each (no underground entrances): the selected clock is the same either way, and lines cost time
+        config = { ...sample, belts: sample.belts.map(belt => ({ ...belt, lanes: belt.lanes.map(lane => ({ ...lane, underground_entrances: undefined })) })) as Config["belts"] };
         const { alternatives, selected_index } = generateClockAlternatives(config, { logger: quiet });
         selected = alternatives[selected_index];
         clock = alternatives.find(alternative => alternative.maker === "planned-belt-slack")!;
