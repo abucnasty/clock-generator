@@ -335,7 +335,7 @@ function replayCarBlock(sample: Config, run: CarBlockCase): CarBlockCase["game"]
     runClockOnBuild(config, windows, P, quietLogger, { warmup_window_cycles: 0, simulate_window_cycles: 1, record_histories: false,
         factorio_states: false, on_context: it => { context = it; } });
     const step = new SimulationTick(context!);
-    const clock = [...context!.inserters, ...context!.drills].map(it => it.control.asked).find(isWindowCycleClock)!;
+    const clock = [...context!.inserters, ...context!.drills].flatMap(it => isWindowCycleClock(it.control.asked) ? [it.control.asked] : [])[0];
     const position = () => ((clock.clockTick() % P) + P) % P;
     const furnaces = context!.machines.map(it => it.machine_state).sort((a, b) => a.entity_id.number - b.entity_id.number);
     const outputs = furnaces.map(furnace => context!.inserters.map(it => it.inserter_state)
