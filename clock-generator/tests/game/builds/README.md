@@ -963,3 +963,32 @@ switch on (`helpers/search-switch.ts`) and finds it is not the record's. `src/cr
 MISSING_RECORDINGS_CAPTURE_DIR=.scratch/search npm run test:game -- tests/game/builds/missing-recordings-clock.game.test.ts -t from-every-start
 BELT_SPEED_CAPTURE_DIR=.scratch/search-family npm run test:game -- tests/game/builds/filled-start-search-clock.game.test.ts
 ```
+
+## The scaffold builds of four science packs, from ruling 60's start
+
+The generic test of the missing recordings (`missing-recordings-clock.game.test.ts`) records the selected clock of these jobs from ruling 60's start (`start: "backpressure"`) on the
+sample's scaffold, on every copy the scaffold holds, with the standard losses (an ingredient cut, the output block, an ingredient cut), in Factorio 2.1.24. Each run was made twice
+with equal summaries. They are pinned in [missing-recordings-clock-controls.json](missing-recordings-clock-controls.json); the scaffold pins of the same builds stay in `scaffold-recordings.game.test.ts`.
+
+| Job (case) | Clock | Copies built | Steady state | Last loss recovered | Result |
+| --- | --- | --- | --- | --- | --- |
+| `UTILITY_SCIENCE_120` (`utility-science-120`) | Takt Batches Observed (672, `8c6d44c1`) | 1 of 7 | 7,135 | 25,951 (cut low density structure 15,871, output block 20,575, cut processing unit 25,951) | holds and recovers from all three; the record says "no recovery" |
+| `UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT` | Coordinated Sources (336, `4d76e238`) | 2 of 7 | 6,960 | 23,312 | holds: both copies 960 of 960 in each of 10 window cycles before and after the losses |
+| `MILITARY_SCIENCE_240` | Coordinated Sources (80, `4c0ccc46`) | 5 of 5 | 7,200 | 23,713 | holds: each copy 2,880 of 2,880 |
+| `CHEMICAL_SCIENCE_240_SHARED_FOUNDRY` and `..._BACKED_UP` | Coordinated Sources (352, `f1a4c258`) | 1 block of 5.5 | 7,120 | 24,929 | holds: 2,560 of 2,560; the two jobs have the same clock and the same run |
+| `PRODUCTION_SCIENCE_120_TWO_BELTS` and `..._SHARED_PICKUP` | Euclidean Swings (336, `fdadf120`) | none | | | not recorded: ruling 60's start refuses the build |
+
+- **Utility science 120.** The record's verdict for the clock is "no recovery", from the loss of low density structures on the copies that share a lane. The scaffold holds one copy, so no lane is shared
+  and the game recovers from the loss (as in "Utility science 120: the selected clock from the staged start" above, now from ruling 60's start). The seven-copy scaffold is not in the repository.
+- **Chemical science.** abucnasty's whole build (5.5 copies, `chemical-science-240-shared-foundry-full-build.blueprint`) is refused by the staged start: "The clock names inserters 2, 4, 6, 8, 10, 12, 14, 16, 18, 20
+  of the config, which match no inserter of the build in copy 6 of 6". The part copy holds some of the config's inserters. The warm-up path of the harness takes that into account when it wires the clock, and the staged path does not (read from `src/harness/factorio-harness.ts`; not changed here).
+- **Production science.** A drill drops stone straight into the rail assembler, so a machine that only windowed inserters feed holds items at the opening: "Machines that only windowed inserters fill hold items at the opening:
+  assembling-machine-3 (unit 376): 164 in, 0 out, 0 made" (both jobs, twice each). The build holds one copy of the job's seven.
+- **Military science.** The scaffold holds the job's five copies, 9 tiles apart.
+
+```
+MISSING_RECORDINGS_CAPTURE_DIR=.scratch/scaffold-builds npm run test:game -- tests/game/builds/missing-recordings-clock.game.test.ts -t 'utility-science-120|military-science-240|chemical-science-240'
+```
+
+`scripts/recording_count.py <commit> <out.md>` counts which record jobs have a recording that holds from ruling 60's start (usage in its docstring). A job built on fewer copies than the job has reads
+"ruling 60's start: N of M copies built" there, whatever its `limit` says.
