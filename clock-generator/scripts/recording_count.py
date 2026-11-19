@@ -140,14 +140,20 @@ def start_of_controls(repo, name, sources):
 
 
 def staged_case_names(repo, sources):
-    """Case names a family's fixtures mark `staged: true` (a plain staged start; only the search cases add `backpressure`, and those are skipped)"""
-    names = set()
+    """The start of a family's fixtures, read from their text: (case name -> "staged" or "backpressure", the start of every case of a file whose scenario sets `staged: true, backpressure: true` itself)
+
+    A case literal (`{name: "...", ..., staged: true}`) marks that case a plain staged start, and one that also says `backpressure: true` ruling 60's start (the family's scenario passes both on).
+    A fixtures file whose scenario function says `staged: true, backpressure: true` on a line of its own starts every case it builds that way (cases named by a template, like the over-the-hood ones)."""
+    names = {}
+    family = None
     for b in sources:
         text = code_only(repo.show(BUILDS + b))
         for m in re.finditer(r'\{name: "([^"]+)"[^{}]*\}', text):
             if re.search(r"\bstaged: true\b", m.group(0)):
-                names.add(m.group(1))
-    return names
+                names[m.group(1)] = "backpressure" if re.search(r"\bbackpressure: true\b", m.group(0)) else "staged"
+        if re.search(r"^\s+staged: true, backpressure: true,\s*$", text, re.M):
+            family = "backpressure"
+    return names, family
 
 
 def capture_scenario_start(repo, sources):
@@ -233,7 +239,7 @@ def main(commit, out_path):
         stem = f[: -len("-clock-controls.json")] if f.endswith("-clock-controls.json") else f[: -len("-controls.json")]
         sources = [b for b in builds_files if b.endswith(".ts") and not b.endswith(".test.ts") and f in repo.show(BUILDS + b)]
         start_file, evidence = start_of_controls(repo, f, sources)
-        staged_names = staged_case_names(repo, [b for b in sources if b.endswith("-fixtures.ts")])
+        staged_names, staged_family = staged_case_names(repo, [b for b in sources if b.endswith("-fixtures.ts")])
         scenario_start = capture_scenario_start(repo, [b for b in sources if not b.endswith("-fixtures.ts")])
         missing = missing_cases(repo) if f == MISSING_FILE else {}
         file_versions = versions_of(data["meaning"])
@@ -244,7 +250,7 @@ def main(commit, out_path):
                 copies, backpressure = missing[case]
                 start = "backpressure" if backpressure else "staged"
             elif start_file == "capture":
-                start = "staged" if case in staged_names else scenario_start or "free warm-up"
+                start = staged_names.get(case, staged_family or scenario_start or "free warm-up")
             else:
                 start = start_file
             hashes = sorted({h for h in [(e.get("recorded") or {}).get("clock_sha256"), (e.get("generation") or {}).get("clock_sha256")] if h})
