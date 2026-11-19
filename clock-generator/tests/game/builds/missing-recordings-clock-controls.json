@@ -299,6 +299,162 @@
     "clock_sha256": "e45bff6b92a3689f5168704cfc6bb006986a96046d1bd386ee2f44a5483e430c"
    }
   },
+  "agricultural-science-250": {
+   "recorded": {
+    "pr": 0,
+    "commit": "214bd7ad",
+    "frozen_head": "214bd7ad",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), Factorio 2.1.24, every copy the scaffold holds; pr is set when the PR is opened",
+    "clock_sha256": "997b3c3c1a04f50f219d2d6dfa5c3c345dc86da2abcd497fec965ac110bc945b",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 250,
+    "period": 960,
+    "window": 3600,
+    "expected": 15000,
+    "steady": 6524,
+    "baseline": {
+     "ticks": 3600,
+     "total": 15075,
+     "expected": 15000,
+     "min": 14860,
+     "max": 15140,
+     "held": false,
+     "meets": true,
+     "measured": {
+      "ticks": 2880,
+      "items": 12000,
+      "expected": 12000,
+      "stock_start": 120,
+      "stock_end": 120,
+      "net": 12000
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut bioflux",
+      "start": 10124,
+      "drop": 10252,
+      "release": 10252,
+      "recovered": 15841
+     },
+     {
+      "kind": "block output",
+      "start": 15841,
+      "drop": 15908,
+      "release": 15908,
+      "recovered": 19572
+     },
+     {
+      "kind": "cut nutrients",
+      "start": 19572,
+      "drop": 19929,
+      "release": 19929,
+      "recovered": 24959
+     }
+    ],
+    "stock": {
+     "lowest": 0,
+     "end": 130,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 24959
+   },
+   "generation": {
+    "period": 960,
+    "expected": 4000,
+    "verdict": "stable",
+    "selection": {
+     "id": "takt_batches_observed_swings_2",
+     "holds": true,
+     "rate": 250,
+     "supply": "backed_up"
+    },
+    "clock_sha256": "997b3c3c1a04f50f219d2d6dfa5c3c345dc86da2abcd497fec965ac110bc945b"
+   }
+  },
+  "agricultural-science-250-backed-up": {
+   "recorded": {
+    "pr": 0,
+    "commit": "214bd7ad",
+    "frozen_head": "214bd7ad",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), Factorio 2.1.24, every copy the scaffold holds; pr is set when the PR is opened",
+    "clock_sha256": "997b3c3c1a04f50f219d2d6dfa5c3c345dc86da2abcd497fec965ac110bc945b",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 250,
+    "period": 960,
+    "window": 3600,
+    "expected": 15000,
+    "steady": 6524,
+    "baseline": {
+     "ticks": 3600,
+     "total": 15075,
+     "expected": 15000,
+     "min": 14860,
+     "max": 15140,
+     "held": false,
+     "meets": true,
+     "measured": {
+      "ticks": 2880,
+      "items": 12000,
+      "expected": 12000,
+      "stock_start": 120,
+      "stock_end": 120,
+      "net": 12000
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut bioflux",
+      "start": 10124,
+      "drop": 10252,
+      "release": 10252,
+      "recovered": 15841
+     },
+     {
+      "kind": "block output",
+      "start": 15841,
+      "drop": 15908,
+      "release": 15908,
+      "recovered": 19572
+     },
+     {
+      "kind": "cut nutrients",
+      "start": 19572,
+      "drop": 19929,
+      "release": 19929,
+      "recovered": 24959
+     }
+    ],
+    "stock": {
+     "lowest": 0,
+     "end": 130,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 24959
+   },
+   "generation": {
+    "period": 960,
+    "expected": 4000,
+    "verdict": "stable",
+    "selection": {
+     "id": "takt_batches_observed_swings_2",
+     "holds": true,
+     "rate": 250,
+     "supply": "backed_up"
+    },
+    "clock_sha256": "997b3c3c1a04f50f219d2d6dfa5c3c345dc86da2abcd497fec965ac110bc945b"
+   }
+  },
   "automation-science-120-foundries-feed-belt-to-assembler": {
    "recorded": {
     "pr": 833,
@@ -379,66 +535,80 @@
   },
   "automation-science-240-one-output-swing": {
    "recorded": {
-    "pr": 809,
-    "commit": "b416a030",
-    "frozen_head": "b416a030",
-    "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
-    "clock_sha256": "0f8a8504f6ec238aa1d6327eddad6779df30c3a4f981cf3120a9dff9c588b87c",
+    "pr": 0,
+    "commit": "214bd7ad",
+    "frozen_head": "214bd7ad",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), Factorio 2.1.24, every copy the scaffold holds; pr is set when the PR is opened",
+    "clock_sha256": "37805909997de1c8fa9caee378cd87239d1bad9bc94b9844a4c51a4ccb140627",
     "clock_basis": "capture"
    },
    "native": {
     "protocol": "trailing-minute",
-    "generationVerdict": "no recovery",
+    "generationVerdict": "stable",
     "target": 240,
     "period": 72,
     "window": 3600,
     "expected": 14400,
-    "steady": 7292,
+    "steady": 7701,
     "baseline": {
      "ticks": 3600,
-     "total": 14398,
+     "total": 14366,
      "expected": 14400,
-     "min": 14366,
-     "max": 14434,
+     "min": 14336,
+     "max": 14480,
      "held": false,
      "meets": true,
      "measured": {
       "ticks": 3600,
-      "items": 14398,
+      "items": 14366,
       "expected": 14400,
-      "stock_start": 144,
-      "stock_end": 142,
+      "stock_start": 150,
+      "stock_end": 116,
       "net": 14400
      }
     },
     "disturbances": [
      {
+      "kind": "cut iron-gear-wheel",
+      "start": 11301,
+      "drop": 11356,
+      "release": 11356,
+      "recovered": 18159
+     },
+     {
+      "kind": "block output",
+      "start": 18159,
+      "drop": 18421,
+      "release": 18421,
+      "recovered": 22574
+     },
+     {
       "kind": "cut copper-plate",
-      "start": 10892,
-      "drop": 10983,
-      "release": 10983,
-      "recovered": 17736
+      "start": 22574,
+      "drop": 22704,
+      "release": 22704,
+      "recovered": 28403
      }
     ],
     "stock": {
-     "lowest": 72,
-     "end": 156,
+     "lowest": 0,
+     "end": 202,
      "holds": true
     },
     "result": "holds",
-    "ended": 17736
+    "ended": 28403
    },
    "generation": {
     "period": 72,
     "expected": 288,
-    "verdict": "no recovery",
+    "verdict": "stable",
     "selection": {
-     "id": "pitch_pickups",
+     "id": "coordinated_sources",
      "holds": true,
      "rate": 240,
      "supply": "backed_up"
     },
-    "clock_sha256": "0f8a8504f6ec238aa1d6327eddad6779df30c3a4f981cf3120a9dff9c588b87c"
+    "clock_sha256": "37805909997de1c8fa9caee378cd87239d1bad9bc94b9844a4c51a4ccb140627"
    }
   },
   "chemical-science-240-shared-foundry": {
@@ -834,9 +1004,9 @@
   "iron-bacteria-380": {
    "recorded": {
     "pr": 0,
-    "commit": "bc127323",
-    "frozen_head": "bc127323",
-    "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
+    "commit": "214bd7ad",
+    "frozen_head": "214bd7ad",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), Factorio 2.1.24, every copy the scaffold holds; pr is set when the PR is opened",
     "clock_sha256": "3f820d74a3102b1138dedff9133fb6a115840ffc562dffbc254d71f7caa7aad2",
     "clock_basis": "capture"
    },
@@ -850,7 +1020,7 @@
     "steady": 7056,
     "baseline": {
      "ticks": 3600,
-     "total": 25336,
+     "total": 25328,
      "expected": 22800,
      "min": 25304,
      "max": 25360,
@@ -860,8 +1030,8 @@
       "ticks": 3456,
       "items": 24320,
       "expected": 21888,
-      "stock_start": 80,
-      "stock_end": 80,
+      "stock_start": 96,
+      "stock_end": 96,
       "net": 24320
      }
     },
@@ -869,9 +1039,9 @@
      {
       "kind": "cut bioflux",
       "start": 10656,
-      "drop": 10756,
-      "release": 10756,
-      "recovered": 14349
+      "drop": 10755,
+      "release": 10755,
+      "recovered": 14348
      }
     ],
     "stock": {
@@ -880,7 +1050,7 @@
      "holds": true
     },
     "result": "holds",
-    "ended": 14349
+    "ended": 14348
    },
    "generation": {
     "period": 1728,
@@ -898,9 +1068,9 @@
   "iron-bacteria-380-block": {
    "recorded": {
     "pr": 0,
-    "commit": "bc127323",
-    "frozen_head": "bc127323",
-    "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
+    "commit": "214bd7ad",
+    "frozen_head": "214bd7ad",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), Factorio 2.1.24, every copy the scaffold holds; pr is set when the PR is opened",
     "clock_sha256": "3f820d74a3102b1138dedff9133fb6a115840ffc562dffbc254d71f7caa7aad2",
     "clock_basis": "capture"
    },
@@ -914,7 +1084,7 @@
     "steady": 7056,
     "baseline": {
      "ticks": 3600,
-     "total": 25336,
+     "total": 25328,
      "expected": 22800,
      "min": 25304,
      "max": 25360,
@@ -924,8 +1094,8 @@
       "ticks": 3456,
       "items": 24320,
       "expected": 21888,
-      "stock_start": 80,
-      "stock_end": 80,
+      "stock_start": 96,
+      "stock_end": 96,
       "net": 24320
      }
     },
@@ -933,9 +1103,9 @@
      {
       "kind": "block output",
       "start": 10656,
-      "drop": 10673,
-      "release": 10673,
-      "recovered": 14132
+      "drop": 10672,
+      "release": 10672,
+      "recovered": 14131
      }
     ],
     "stock": {
@@ -944,7 +1114,7 @@
      "holds": true
     },
     "result": "holds",
-    "ended": 14132
+    "ended": 14131
    },
    "generation": {
     "period": 1728,
@@ -962,9 +1132,9 @@
   "iron-bacteria-380-nutrients": {
    "recorded": {
     "pr": 0,
-    "commit": "bc127323",
-    "frozen_head": "bc127323",
-    "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
+    "commit": "214bd7ad",
+    "frozen_head": "214bd7ad",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), Factorio 2.1.24, every copy the scaffold holds; pr is set when the PR is opened",
     "clock_sha256": "3f820d74a3102b1138dedff9133fb6a115840ffc562dffbc254d71f7caa7aad2",
     "clock_basis": "capture"
    },
@@ -978,7 +1148,7 @@
     "steady": 7056,
     "baseline": {
      "ticks": 3600,
-     "total": 25336,
+     "total": 25328,
      "expected": 22800,
      "min": 25304,
      "max": 25360,
@@ -988,8 +1158,8 @@
       "ticks": 3456,
       "items": 24320,
       "expected": 21888,
-      "stock_start": 80,
-      "stock_end": 80,
+      "stock_start": 96,
+      "stock_end": 96,
       "net": 24320
      }
     },
@@ -997,9 +1167,9 @@
      {
       "kind": "cut nutrients",
       "start": 10656,
-      "drop": 11043,
-      "release": 11043,
-      "recovered": 14622
+      "drop": 11042,
+      "release": 11042,
+      "recovered": 14621
      }
     ],
     "stock": {
@@ -1008,7 +1178,7 @@
      "holds": true
     },
     "result": "holds",
-    "ended": 14622
+    "ended": 14621
    },
    "generation": {
     "period": 1728,
