@@ -105,7 +105,9 @@ const automation: JobCheck[] = [
     },
     {
         // the trials of disturbanceTrialOf are of one copy; the clock's verdict also has the trials on the copies that share a lane
-        name: 'a clock that gets the disturbance trials is run once with nothing cut on one copy, where it recovers and makes what the generator\'s own check found; the recommended clock has no recovery as the copies that share a lane do not recover',
+        // with the entrance waits on the lanes (#737), Coordinated Sources recovers on the copies too and is the recommended clock;
+        // Euclidean Swings still has no recovery on the copies
+        name: 'a clock that gets the disturbance trials is run once with nothing cut on one copy, where it recovers and makes what the generator\'s own check found; the recommended clock recovers on the copies that share a lane, and Euclidean Swings does not',
         run: ({ config, generated }) => {
             const selected = selectedOf(generated);
             const report = reportOf(config, selected);
@@ -113,11 +115,12 @@ const automation: JobCheck[] = [
             expect(report.undisturbed.recovers).toBe(true);
             expect(report.undisturbed.expected_per_bin).toBe(selected.result.stability_check.expected_output_items);
             expect(report.survives).toBe(true);
-            const trial = selected.assessment.disturbance_trial;
-            expect(selected.verdict).toBe('no recovery');
-            expect(trial?.survives).toBe(false);
-            expect(trial?.on_copies?.survives).toBe(false);
-            expect(trial?.broken_by.every(loss => loss.endsWith('on the copies that share a lane'))).toBe(true);
+            expect(selected.verdict).toBe('stable');
+            expect(selected.assessment.disturbance_trial?.survives).toBe(true);
+            const euclidean = generated.alternatives.find(it => it.id === 'euclidean_swings')!;
+            expect(euclidean.verdict).toBe('no recovery');
+            expect(euclidean.assessment.disturbance_trial?.on_copies?.survives).toBe(false);
+            expect(euclidean.assessment.disturbance_trial?.broken_by.every(loss => loss.endsWith('on the copies that share a lane'))).toBe(true);
         },
     },
     {

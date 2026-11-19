@@ -67,14 +67,16 @@
           "stack_size": 4,
           "lane_end": {
             "kind": "dead_end"
-          }
+          },
+          "underground_entrances": [-6, 1, 11, 21, 31, 41, 51, 61, 71, 81, 91]
         },
         {
           "ingredient": "supercapacitor",
           "stack_size": 4,
           "lane_end": {
             "kind": "dead_end"
-          }
+          },
+          "underground_entrances": [-6, 1, 11, 21, 31, 41, 51, 61, 71, 81, 91]
         }
       ]
     }

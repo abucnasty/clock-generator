@@ -83,7 +83,9 @@ describe("request-local duplicate verification", () => {
     it("shares requested sampled-start assessments along with recovery", async () => {
         const logistic = await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240);
         const starts = vi.spyOn(trial, "startDependenceVerdictOf");
-        const generated = generateClockAlternatives({...logistic,
+        // the lanes as one line each (no underground entrances): what is shared does not depend on them, and lines cost time
+        const belts = logistic.belts.map(belt => ({...belt, lanes: belt.lanes.map(lane => ({...lane, underground_entrances: undefined}))})) as typeof logistic.belts;
+        const generated = generateClockAlternatives({...logistic, belts,
             overrides: {...logistic.overrides, check_start_dependence: true}}, {logger: quiet});
         const keys = starts.mock.calls.map(([config, result]) => signature(config, result));
         expect(keys.length).toBeGreaterThan(1);

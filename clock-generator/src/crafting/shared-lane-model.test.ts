@@ -3,7 +3,10 @@ import { Config, ConfigSchema } from "../config/schema";
 import { Logger } from "../common/logger";
 import { OpenRange } from "../data-types";
 import { FlowDirection } from "../entities/traits/lane-facts";
-import { SharedLaneLayout, sharedLaneLayoutOf, runOnSharedLanes } from "./shared-lane-model";
+import { ConfigPaths } from "../config/config-paths";
+import { loadConfigFromFile } from "../config/loader";
+import { SharedLaneLayout, lineEndsOf, sharedLaneLayoutOf, runOnSharedLanes } from "./shared-lane-model";
+import { sharedLaneRunsOf } from "./shared-lane-verdict";
 import { runClockOnBuild } from "./trial";
 
 /** One copy: two takers of one belt lane, 12 tiles apart, and a machine for each */
@@ -150,6 +153,60 @@ function handsOfTaker(config: Config, layout: SharedLaneLayout | null): string {
     });
     return JSON.stringify(hands);
 }
+
+describe("the line ends of a row's lane, from its underground entrances", () => {
+    // nine copies 9 tiles apart, one taker a copy without positions, as automation science 240 has them
+    const automation = (): Config => {
+        const config = rowConfig({ copies: 9, copy_offset: { x: 9, y: 0 } });
+        return { ...config, machines: config.machines.slice(0, 1), inserters: [{ id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 } }] } as Config;
+    };
+    const row = () => rowsOf(automation(), { x: 1, y: 0 }).rows[0];
+
+    it("puts each entrance in tiles from the lane's entry, copy 1's pickup tile a tile and a half from it, and leaves out one upstream of the entry", () => {
+        // the entrances of the automation science scaffold, as measured on it (#737): the one 7 tiles upstream of copy 1 is not on this lane
+        expect(row().length_tiles).toBe(74);
+        expect(lineEndsOf(row(), [-7, 1, 10, 19, 28, 37, 46, 55, 64])).toEqual([2.5, 11.5, 20.5, 29.5, 38.5, 47.5, 56.5, 65.5]);
+    });
+
+    it("is none for a lane that states no entrances, or none on the lane", () => {
+        expect(lineEndsOf(row(), undefined)).toBeNull();
+        expect(lineEndsOf(row(), [-7])).toBeNull();
+    });
+
+    it("refuses an entrance at or past the lane's end, the last copy's reach, naming the lane and the fix", () => {
+        expect(() => lineEndsOf(row(), [1, 72.5])).toThrow("Lane 1 of belt 1 states underground entrances at 72.5 tiles from copy 1's pickup, at or past the lane's end at 72.5 tiles, "
+            + "the last copy's reach. Remove them: only an entrance with an exit after it, upstream of the last copy, cuts the lane.");
+    });
+
+    it("runs the copies on a lane in lines where the lane states its entrances, and on one line where it states none: the lane keys its lines", () => {
+        // four gear copies 4 tiles apart: the lane runs 1.5 tiles to copy 1's pickup tile's middle and ends at 14
+        const lanesOf = (lane: Record<string, unknown>) => {
+            const config = gearConfig({ lane_end: { kind: "dead_end" }, ...lane }, 4);
+            return runOnSharedLanes(config, gearWindows, 120, rowsOf(config, { x: 1, y: 0 }), 2, quiet).lanes[0].key();
+        };
+        expect(lanesOf({})).not.toContain("lines");
+        expect(lanesOf({ underground_entrances: [1, 5, 9] })).toContain("lines");
+        // the lines run to a dead end only: a lane with an infinite end is one line, whatever it states
+        expect(lanesOf({ lane_end: { kind: "infinite" }, underground_entrances: [1, 5, 9] })).not.toContain("lines");
+    });
+});
+
+describe("the samples whose shared lanes cross underground entrances", () => {
+    // each scaffold's entrances with an exit after them, in tiles from copy 1's pickup (#737): every lane the copies share
+    // that crosses them states them, and its run of the copies cuts it there
+    it.each([
+        ["AUTOMATION_SCIENCE_240", ["1/1", "1/2"], 9],
+        ["ELECTROMAGNETIC_SCIENCE_330", ["1/1", "1/2"], 10],
+        ["LOGISTIC_SCIENCE_240", ["2/1", "2/2"], 10],
+        ["MILITARY_SCIENCE_240", ["3/1", "3/2", "4/1", "4/2"], 4],
+    ] as const)("%s loads, and its lanes %j run in lines (%i line ends each)", async (name, keys, ends) => {
+        const config = await loadConfigFromFile(ConfigPaths[name]);
+        const rows = sharedLaneRunsOf(config).readings.flatMap(reading => reading.layouts.flatMap(layout => layout.rows)).filter(it => it.copies > 1);
+        const cut = new Map(rows.map(it => [`${it.belt_id}/${it.lane}`,
+            lineEndsOf(it, config.belts.find(belt => belt.id === it.belt_id)!.lanes[it.lane - 1].underground_entrances)?.length ?? 0]));
+        expect(keys.map(key => cut.get(key))).toEqual(keys.map(() => ends));
+    });
+});
 
 describe("the model run with one copy and one taker on the lane", () => {
     it.each([[{ lane_end: { kind: "dead_end" } }], [{ lane_end: { kind: "infinite" } }]])("gives the hands of the run without it (%j)", lane => {

@@ -623,6 +623,17 @@ const BeltLaneConfigSchema = z.object({
      */
     supply_tiles: z.number().finite().positive().optional().describe("The belt before copy 1's pickup, in tiles: from the middle of the first tile where the items come onto the lane "
         + "to the middle of copy 1's pickup tile, along the flow. Without it, the items come onto the lane 1 tile before copy 1's pickup."),
+    /**
+     * Where the game cuts the lane into lines: the middle of each underground entrance that has an exit after it, in tiles
+     * along the lane from the middle of copy 1's pickup tile (the most upstream taker of the config's copy), upstream
+     * negative, from upstream to downstream. A lane that states them runs as lines cut there (state/shared-lane.ts
+     * `SharedLaneLines`), so that a stack can wait one tick at an entrance as in the game; without them the lane is one line.
+     * An entrance at or upstream of where the lane starts in the run of the copies is left out. Read only on a lane the
+     * copies share that ends in a dead end: any other lane runs as one line.
+     */
+    underground_entrances: z.array(z.number().finite()).optional().describe("The underground entrances of a lane that the copies share: the middle of each "
+        + "entrance that has an exit after it, in tiles along the lane from the middle of copy 1's pickup tile, upstream negative, from upstream to downstream. "
+        + "A stack waits one tick at an entrance as in the game. Read only on a shared lane with a dead end. Without it, the lane runs as one line."),
 });
 
 const ExportBeltLaneConfigSchema = BeltLaneConfigSchema.extend({
@@ -1049,6 +1060,25 @@ export const ConfigSchema = z.preprocess(renameTargetOutputToSetpoint, z.preproc
                 context.addIssue({ code: "custom", path, message: `${name} states supply_tiles ${lane.supply_tiles}, less than half the pickup of an inserter that takes from it `
                     + `(${half} tiles): the items would come onto the lane inside the pickup. State the tiles from the middle of the first tile where the items come `
                     + "onto the lane to the middle of copy 1's pickup tile." });
+            }
+        });
+    });
+    // the underground entrances of a lane: some, in order. A lane each copy has to itself, or one that does not end in a
+    // dead end, runs as one line whatever it states (shared-lane-model.ts `installSharedLanes`), so that a lane end or a
+    // sharing chosen on the page never meets a refusal of a field the page does not show
+    config.belts.forEach((belt, belt_index) => {
+        (belt.lanes as readonly { underground_entrances?: number[] }[]).forEach((lane, lane_index) => {
+            const entrances = lane.underground_entrances;
+            if (entrances === undefined) return;
+            const path = ["belts", belt_index, "lanes", lane_index, "underground_entrances"];
+            const name = `Lane ${lane_index + 1} of belt ${belt.id}`;
+            if (entrances.length === 0) {
+                context.addIssue({ code: "custom", path, message: `${name} states no underground entrance. Remove underground_entrances from a lane with no `
+                    + "underground belt, or write the middle of each entrance that has an exit after it." });
+            }
+            if (entrances.some((entrance, at) => at > 0 && entrance <= entrances[at - 1])) {
+                context.addIssue({ code: "custom", path, message: `${name} states its underground entrances out of order or more than once. Write each entrance `
+                    + "once, in tiles along the lane from the middle of copy 1's pickup tile, from upstream to downstream." });
             }
         });
     });

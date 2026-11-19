@@ -326,7 +326,8 @@ describe("the logistic science build of 11 copies on two dead-ended lanes", () =
 
 // The automation science 240 build states its output belt. In the game (three recordings of the whole build) the clock
 // takt_batches_observed of the build (4cc378b0763b) leaves copies 4 and 8 short: their side belts fill at their joins onto
-// the output belt, and their output inserters wait. Time-Study Windows (b1490c9f2c49) keeps every copy at its rate.
+// the output belt, and their output inserters wait. Under Time-Study Windows (b1490c9f2c49) the game's copy 4 makes 96 and
+// 80 packs in turn, for good (two recordings, Factorio 2.1.24): its join is full every other window cycle.
 describe("a copy short because its side belt is full at its join onto the output belt", async () => {
     // from the cold start, as measured (the backpressure start's fill adds a window cycle the check counts: 85 of 340 hands)
     const sample = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
@@ -357,22 +358,27 @@ describe("a copy short because its side belt is full at its join onto the output
         expect(losses.every(loss => loss.join_full !== undefined && loss.side_belt_waits === undefined)).toBe(true);
     });
 
-    it("finds no copy short under the clock that holds every copy", () => {
-        expect(judgeSharedLanes(config, clocks.time_study_windows, 216, quiet).losses).toEqual([]);
+    it("finds copy 4's join full under Time-Study Windows, whose copy 4 makes 96 and 80 packs in turn in the game", () => {
+        const { losses } = judgeSharedLanes(config, clocks.time_study_windows, 216, quiet);
+        expect(losses.map(loss => loss.copy)).toEqual([4, 4]);
+        for (const loss of losses) {
+            expect([loss.join_full, loss.swings, loss.alone_swings, loss.short_swings]).toEqual([{ held_hands: 96, hands: 352, target_swings: 384 }, 176, 192, 0]);
+        }
     });
 
-    // With one output swing a cycle, Time-Study Windows leaves copy 4 short on the input lanes with or without the output
-    // belt (inserter 1 takes 1,024 where it takes 1,040 alone; machine 1 is 10 crafts behind either way). Its side belt
-    // holds 2 of its 128 hands, which is not the cause.
+    // With one output swing a cycle, these windows leave copy 4 short on the gear lane with or without the output belt. Its
+    // side belt holds 1 of its 130 hands, which is not the cause.
     it("names the input lane where the output belt does not make the copy further behind, with the held hands as a fact", () => {
         const one_swing = { ...config, overrides: { ...config.overrides, terminal_swing_count: 1 } };
         const windows = { "inserter:1": [{ start: 1, end: 20 }], "inserter:2": [{ start: 2, end: 21 }, { start: 38, end: 56 }] };
         const copy4 = judgeSharedLanes(one_swing, windows, 72, quiet).losses.filter(loss => loss.copy === 4);
-        expect(copy4.length).toBe(2);
+        expect(copy4.length).toBe(1);
         for (const loss of copy4) {
             expect(loss.join_full).toBeUndefined();
-            expect(loss.side_belt_waits).toEqual({ held_hands: 2, hands: 128 });
-            expect(loss.text).toMatch(/^The (iron gear wheel|copper plate) lane ends in a dead end\. The 9 copies take (iron gear wheel|copper plate) from it\. When the belt flows east, copy 4 from the entry does not get sufficient items\. Its inserter that takes iron gear wheel and copper plate misses 1 of its 65 swings with (iron gear wheel|copper plate) in 65 window cycles\. Its output inserter also waits for room on its side belt in 2 of its 128 swings\.$/);
+            expect(loss.side_belt_waits).toEqual({ held_hands: 1, hands: 130 });
+            expect(loss.text).toBe("The iron gear wheel lane ends in a dead end. The 9 copies take iron gear wheel from it. When the belt flows east, copy 4 from the entry does not get "
+                + "sufficient items. Its inserter that takes iron gear wheel and copper plate misses 1 of its 65 swings with iron gear wheel in 65 window cycles. "
+                + "Its output inserter also waits for room on its side belt in 1 of its 130 swings.");
         }
     });
 });

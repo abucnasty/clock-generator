@@ -77,7 +77,8 @@ describe("the per-branch clock of the automation science build", () => {
         expect(zero.filter(event => event.outcome === "listed")).toEqual([]);
         const selected = generated.alternatives[generated.selected_index];
         expect([selected.id, selected.verdict]).toEqual(["coordinated_sources", "stable"]);
-        expect(selected.ranking.wake_ups_per_minute).toBeCloseTo(70.065, 3);
+        // 72 ticks with the waits at the lanes' underground entrances (#737); 70.065 on a 216-tick clock before them
+        expect(selected.ranking.wake_ups_per_minute).toBeCloseTo(70.195, 3);
         expect(selected.result.coordinated_sources!.parts).toEqual({ "belt:1": "takt_batches_observed_swings_2", "machine:1": "euclidean_swings" });
     });
 });

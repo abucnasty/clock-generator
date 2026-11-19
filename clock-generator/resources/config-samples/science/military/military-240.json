@@ -194,7 +194,8 @@
           "lane_end": {
             "kind": "dead_end"
           },
-          "sharing": "shared"
+          "sharing": "shared",
+          "underground_entrances": [-6, 3, 12, 21, 30]
         },
         {
           "ingredient": "piercing-rounds-magazine",
@@ -202,7 +203,8 @@
           "lane_end": {
             "kind": "dead_end"
           },
-          "sharing": "shared"
+          "sharing": "shared",
+          "underground_entrances": [-6, 3, 12, 21, 30]
         }
       ]
     },
@@ -217,7 +219,8 @@
           "lane_end": {
             "kind": "dead_end"
           },
-          "sharing": "shared"
+          "sharing": "shared",
+          "underground_entrances": [-6, 3, 12, 21, 30]
         },
         {
           "ingredient": "stone-wall",
@@ -225,7 +228,8 @@
           "lane_end": {
             "kind": "dead_end"
           },
-          "sharing": "shared"
+          "sharing": "shared",
+          "underground_entrances": [-6, 3, 12, 21, 30]
         }
       ]
     },

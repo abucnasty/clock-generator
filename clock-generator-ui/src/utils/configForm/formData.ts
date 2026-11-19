@@ -90,9 +90,10 @@ export interface InserterFormData {
 
 /**
  * The lane facts a lane of the config may state; a fact the lane does not state is left out, never written as a default.
- * The supply length (`supply_tiles`) has no field on the page: a loaded lane keeps it as it is
+ * The supply length (`supply_tiles`) and the underground entrances (`underground_entrances`) have no field on the page:
+ * a loaded lane keeps them as they are
  */
-type LaneFactsFormData = Pick<Config['belts'][number]['lanes'][number], 'supply_rate' | 'lane_end' | 'sharing' | 'supply_tiles'>;
+type LaneFactsFormData = Pick<Config['belts'][number]['lanes'][number], 'supply_rate' | 'lane_end' | 'sharing' | 'supply_tiles' | 'underground_entrances'>;
 
 export interface BeltLaneFormData extends LaneFactsFormData {
     ingredient: string;
