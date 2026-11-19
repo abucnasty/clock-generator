@@ -320,7 +320,7 @@ lane, feeders and takers on every tick from the start of the clock to the copper
 game's state at the stop follows every copy through the stop and the restart for 2,829 ticks (#737). The generation
 does not see the feeders yet: it judges the clock on the config without its outside supply.
 
-A shared lane with a dead end that states its `underground_entrances` (the middle of each entrance with an exit after
+A shared lane of `lane_end` `dead_end` that states its `underground_entrances` (the middle of each entrance with an exit after
 it, in tiles from the middle of copy 1's pickup tile, upstream negative) runs as the game's lines: the game cuts a lane at
 each such entrance and moves only the lines on its list, in the order they went on it, before the inserters take. So a
 stack at an entrance can wait one tick where one line would move it (`SharedLaneLines` in `src/state/shared-lane.ts`).
