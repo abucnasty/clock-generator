@@ -20,15 +20,14 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 ### Changed
 - ui: result texts name the start the clocks were judged from, not always the cold start
 - ui: LCM Override and Force Output Swings in Advanced share one layout and line up
-- simulation: the iron plate car sample states its output belt
 
 ### Fixed
-- simulation: the lithium plate build's output inserters wait for their belt as in the game
+- simulation: output inserters dropping onto underground belts wait for their belt as in the game
 - simulation: on one-copy builds an output block fills the stated output belt before machines stop
 - simulation: after an output block, a stated output belt starts moving in the game's tick
 - generation: Pitch Pickups times full hands where the batched clock fails, as where it holds
-- simulation: automation science 240 keeps the items on its belt before copy 1 during supply stops
-- simulation: automation science 240 copies share input lanes their feeders fill as in the game
+- simulation: shared input lanes keep the belt's items before the first copy during supply stops
+- simulation: copies sharing an input lane take items as their feeders put them on
 
 ## [0.30.0] - 2026-11-18
 

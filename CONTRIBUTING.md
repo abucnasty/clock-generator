@@ -67,8 +67,9 @@ lines: put longer lists in a `<details>` block. The slots that carry a rule:
 Changelogs and pull requests say "user", never "player".
 
 - `CHANGELOG.md`, for the generator and its UI, is shown in the app. It lists only what a user notices, under the Keep a
-  Changelog headings, one entry per change: `<area>: <change>`, at most 15 words after the area and no full stop. Name
-  the build, item, field or result that changes; leave out field names, geometry, mechanisms and reasons. The areas:
+  Changelog headings, one entry per change: `<area>: <change>`, at most 15 words after the area and no full stop. Describe
+  the change as a user meets it in their own build: name the item, field or result that changes, never a sample,
+  scaffold or test build (they are for testing, not for users); leave out field names, geometry, mechanisms and reasons. The areas:
   - `simulation`: how the game is modelled
   - `generation`: which potential clocks are found, and which becomes the selected clock
   - `blueprint`: what the user takes into the game
