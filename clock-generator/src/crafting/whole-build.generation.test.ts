@@ -45,7 +45,7 @@ describe("a whole build of nine identical assemblers, clocked as given", () => {
         const windows = clockOf(six, TWO_SWINGS).result.clock_windows;
         expect(clockOf(six, TWO_SWINGS).result.simulation_duration.ticks).toBe(72);
         expect(judgeSharedLanes(nineOnLine(), windows, 72, quiet).losses
-            .map(loss => 'inserter_id' in loss ? `${loss.inserter_id} ${loss.item} ${loss.swings}/${loss.alone_swings}` : loss.kind))
+            .map(loss => `${loss.inserter_id} ${loss.item} ${loss.swings}/${loss.alone_swings}`))
             .toEqual(["3 copper-plate 56/65", "3 iron-gear-wheel 58/65"]);
     });
 
