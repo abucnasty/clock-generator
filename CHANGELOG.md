@@ -26,6 +26,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - simulation: after an output block, a stated output belt starts moving in the game's tick
 - generation: Pitch Pickups times full hands where the batched clock fails, as where it holds
 - simulation: automation science 240 keeps the items on its belt before copy 1 during supply stops
+- simulation: automation science 240 copies share input lanes their feeders fill as in the game
 
 ## [0.30.0] - 2026-11-18
 

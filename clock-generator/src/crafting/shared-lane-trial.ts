@@ -28,7 +28,7 @@ import { lanesInSentence, NO_BUILD, type BuildToName } from "./entity-name";
 import { DisturbanceTrial, disturbanceTrialsOf, LossOutcome, lossLabel, lossLimitOf, type SkippedTrial, trialCountOf, type TrialCount, withEveryTrialCounted } from "./disturbance-trial";
 import { canonicalKey } from "./plan/run-memo";
 import { createEntityRegistryFromConfig } from "./sequence/simulation-context";
-import { runOnSharedLanes } from "./shared-lane-model";
+import { LaneFeeders, runOnSharedLanes } from "./shared-lane-model";
 import { sharedLaneRunsOf } from "./shared-lane-verdict";
 import { SHARED_LANES_JUDGED_BY_RATE } from "./shared-lane-judge-switch";
 import { deciderBuildOrderOf } from "./trial";
@@ -104,8 +104,8 @@ export function describeCopiesShort(loss: DisturbanceTrial, lanes: readonly stri
  * Made every time it is asked: the verdict with the copies (copies-verdict.ts) keeps it for a generation.
  */
 export function copiesDisturbanceTrial(config: Config, clock_windows: SerializableClockWindows, window_cycle_ticks: number,
-    expected_output_items: number, logger: Logger): CopiesTrialVerdict | null {
-    const { lanes, readings } = sharedLaneRunsOf(config);
+    expected_output_items: number, logger: Logger, feeders?: LaneFeeders): CopiesTrialVerdict | null {
+    const { lanes, readings } = sharedLaneRunsOf(config, undefined, feeders);
     if (!lanes.some(lane => lane.shared)) return null;
     return triedOnCopies(config, lanes, readings, clock_windows, window_cycle_ticks, expected_output_items, logger);
 }
@@ -129,17 +129,19 @@ export function copiesTrialKey(config: Config, clock_windows: SerializableClockW
  * without the memo, and an error of the config or the windows is met there, where the check's own handling gives it.
  */
 export function copiesCheckKeys(config: Config, clock_windows: SerializableClockWindows, window_cycle_ticks: number,
-    expected_output_items: number): { shared_lanes: string | null; trials: string | null } {
+    expected_output_items: number, feeders?: LaneFeeders): { shared_lanes: string | null; trials: string | null } {
     try {
-        return checkKeysOf(config, clock_windows, window_cycle_ticks, expected_output_items);
+        return checkKeysOf(config, clock_windows, window_cycle_ticks, expected_output_items, feeders);
     } catch {
         return { shared_lanes: null, trials: null };
     }
 }
 
 function checkKeysOf(config: Config, clock_windows: SerializableClockWindows, window_cycle_ticks: number,
-    expected_output_items: number): { shared_lanes: string | null; trials: string | null } {
-    const runs = sharedLaneRunsOf(config);
+    expected_output_items: number, feeders?: LaneFeeders): { shared_lanes: string | null; trials: string | null } {
+    const runs = sharedLaneRunsOf(config, undefined, feeders);
+    // the feeders of the lanes, where the build has any, are part of both keys: the runs of the copies take their items from them
+    const fed = feeders === undefined || feeders.size === 0 ? {} : { feeders: [...feeders].sort(([a], [b]) => a.localeCompare(b)) };
     const lanes = runs.lanes.filter(lane => lane.shared).map(lane => `${lane.belt_id}/${lane.lane}`);
     if (runs.lanes.length === 0) return { shared_lanes: null, trials: null };
     const windows = new Map(Object.entries(clock_windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
@@ -148,8 +150,8 @@ function checkKeysOf(config: Config, clock_windows: SerializableClockWindows, wi
     const modelled = runs.lanes.map(lane => `${lane.belt_id}/${lane.lane}`);
     return {
         // the judge of the lanes is part of the key only where it is switched on, so that the key stays as it was with it off
-        shared_lanes: canonicalKey([{ check: "shared_lanes", lanes: modelled, ...(SHARED_LANES_JUDGED_BY_RATE && { by_rate: true }) }, config, decider_orders, clock_windows, window_cycle_ticks]),
-        trials: lanes.length === 0 ? null : canonicalKey([{ trial: "copies", lanes }, config, decider_orders, clock_windows, window_cycle_ticks, expected_output_items]),
+        shared_lanes: canonicalKey([{ check: "shared_lanes", lanes: modelled, ...(SHARED_LANES_JUDGED_BY_RATE && { by_rate: true }), ...fed }, config, decider_orders, clock_windows, window_cycle_ticks]),
+        trials: lanes.length === 0 ? null : canonicalKey([{ trial: "copies", lanes, ...fed }, config, decider_orders, clock_windows, window_cycle_ticks, expected_output_items]),
     };
 }
 

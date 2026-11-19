@@ -1,4 +1,5 @@
 import { expect, it } from 'vitest';
+import { withoutOutsideSupply } from '../config/outside-supply';
 import { Config, ConfigSchema } from '../config/schema';
 import { loadConfigFromFile } from '../config/loader';
 import { ConfigPaths } from '../config/config-paths';
@@ -13,7 +14,7 @@ import { TickByHand } from './runner/tick-by-hand.fixture';
 
 const item = 'automation-science-pack';
 async function disposalConfig(explicit = false): Promise<Config> {
-    const sample = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
+    const sample = withoutOutsideSupply(await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240));
     return ConfigSchema.parse({ ...sample,
         chests: [{ id: 1, type: 'infinity-chest', item_filter: [], remove_unfiltered_items: true }],
         inserters: sample.inserters.map(inserter => inserter.source.type === 'machine'

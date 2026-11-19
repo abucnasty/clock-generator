@@ -23,7 +23,7 @@ import { createEntityRegistryFromConfig, SimulationContext } from "./sequence/si
 import { buildToNameOf } from "./build-names";
 import { capitalized, inserterNameInText, theName, lanesInSentence, NO_BUILD, textWords, type BuildToName } from "./entity-name";
 import { droppedOnto, ModelLane, modelLanesOf, takenLanesOf, takenTogether, takerSpacingUnknown } from "./shared-lane-lanes";
-import { DropRecorder, HandDropped, LaidOutLane, LaneRow, recordInserters, runOnSharedLanes, SharedLaneLayout, sharedLaneLayoutOf } from "./shared-lane-model";
+import { DropRecorder, HandDropped, LaidOutLane, LaneFeeders, LaneRow, recordInserters, runOnSharedLanes, SharedLaneLayout, sharedLaneLayoutOf } from "./shared-lane-model";
 import type { OutputBeltRun } from "./output-belt-run";
 import { recordHandConditions, TakerConditions } from "./hand-conditions";
 import { InserterTimetableRecord, recordTimetable, timetableOf as timetableLineOf, windowRangesOf } from "./timetable";
@@ -1329,7 +1329,7 @@ function joinIsTheCause(behind: BehindTarget, reference: RunOfCopies, rates: Tar
  * the lanes of unknown end (a dead end, then an infinite end, where one the copies share has an unknown end) the config under
  * it and its layouts, one for each way the items move, those with the same rows once.
  */
-export function sharedLaneRunsOf(config: Config, copies_on_lanes?: number): { lanes: { belt_id: number; lane: 1 | 2; shared: boolean }[]; readings: { under: Config; layouts: SharedLaneLayout[] }[] } {
+export function sharedLaneRunsOf(config: Config, copies_on_lanes?: number, feeders?: LaneFeeders): { lanes: { belt_id: number; lane: 1 | 2; shared: boolean }[]; readings: { under: Config; layouts: SharedLaneLayout[] }[] } {
     const lanes = modelLanesOf(config);
     // fewer copies on the lanes: the takers of the copies after the first `copies_on_lanes` leave the rows and take from stocks of their own
     const onLanes = (layout: SharedLaneLayout): SharedLaneLayout => copies_on_lanes === undefined ? layout
@@ -1339,7 +1339,7 @@ export function sharedLaneRunsOf(config: Config, copies_on_lanes?: number): { la
     return { lanes, readings: Array.from({ length: readings }, (_, reading) => {
         const under = configUnder(config, lanes, reading);
         // a layout whose rows are those of one run already is not run again: the same rows give the same run
-        const layouts = [...new Map(laidOutLanesOf(under, lanes).map(laid => onLanes(sharedLaneLayoutOf(under, laid))).map(layout => [JSON.stringify(layout), layout])).values()];
+        const layouts = [...new Map(laidOutLanesOf(under, lanes).map(laid => onLanes(sharedLaneLayoutOf(under, laid, feeders))).map(layout => [JSON.stringify(layout), layout])).values()];
         return { under, layouts };
     }) };
 }
@@ -1388,9 +1388,9 @@ function lanesForLog(readings: SharedLanesForLog["readings"], judged_runs: reado
  * target rate in the same run (`standing`).
  */
 export function judgeSharedLanes(config: Config, clock_windows: SerializableClockWindows, window_cycle_ticks: number, logger: Logger,
-    options: { copies_on_lanes?: number; for_log?: boolean; by_rate?: boolean } = {}): SharedLaneJudgement {
+    options: { copies_on_lanes?: number; for_log?: boolean; by_rate?: boolean; feeders?: LaneFeeders } = {}): SharedLaneJudgement {
     return judgedOnLanes(config, clock_windows, window_cycle_ticks, logger, options.copies_on_lanes, new Map(), options.for_log === true,
-        options.by_rate ?? SHARED_LANES_JUDGED_BY_RATE);
+        options.by_rate ?? SHARED_LANES_JUDGED_BY_RATE, options.feeders);
 }
 
 /**
@@ -1399,7 +1399,7 @@ export function judgeSharedLanes(config: Config, clock_windows: SerializableCloc
  * makes each once (`fewerCopiesThatHold`)
  */
 function judgedOnLanes(config: Config, clock_windows: SerializableClockWindows, window_cycle_ticks: number, logger: Logger,
-    copies_on_lanes: number | undefined, alone_runs: Map<string, AloneRun>, for_log = false, by_rate_on = false): SharedLaneJudgement {
+    copies_on_lanes: number | undefined, alone_runs: Map<string, AloneRun>, for_log = false, by_rate_on = false, feeders?: LaneFeeders): SharedLaneJudgement {
     const lanes = modelLanesOf(config);
     const keys = lanes.map(lane => `${lane.belt_id}/${lane.lane}`);
     if (lanes.length === 0) {
@@ -1516,7 +1516,7 @@ function judgedOnLanes(config: Config, clock_windows: SerializableClockWindows, 
     function judgedByRate(): { judgement: SharedLaneJudgement } | { open_case: RateJudgeOpenCase } {
         const found: Judged[] = [];
         let most = 1;
-        for (const [reading, { under, layouts }] of sharedLaneRunsOf(config, copies_on_lanes).readings.entries()) {
+        for (const [reading, { under, layouts }] of sharedLaneRunsOf(config, copies_on_lanes, feeders).readings.entries()) {
             const taker_ids = [...new Set(layouts[0].rows.flatMap(row => row.takers.map(taker => taker.inserter_id)))];
             for (const layout of layouts) {
                 const once = copiesRunOf(under, layout, windows, window_cycle_ticks, window_cycles, logger, ends);
@@ -1555,7 +1555,7 @@ function judgedOnLanes(config: Config, clock_windows: SerializableClockWindows, 
         by_rate = { spans: [1, 2, 4].filter(multiple => multiple <= most).map(multiple => multiple * window_cycles) };
         return { judgement: judged(found, most > 1) };
     }
-    for (const [reading, { under, layouts }] of sharedLaneRunsOf(config, copies_on_lanes).readings.entries()) {
+    for (const [reading, { under, layouts }] of sharedLaneRunsOf(config, copies_on_lanes, feeders).readings.entries()) {
         const facts = laneFactsOfConfig(under);
         const taker_ids = [...new Set(layouts[0].rows.flatMap(row => row.takers.map(taker => taker.inserter_id)))];
         const alone = aloneOf(reading, under, taker_ids, window_cycles);
@@ -1618,9 +1618,9 @@ function judgedOnLanes(config: Config, clock_windows: SerializableClockWindows, 
  * copies share no lane the verdict runs.
  */
 export function fewerCopiesThatHold(config: Config, clock_windows: SerializableClockWindows, window_cycle_ticks: number, logger: Logger,
-    by_rate: boolean = SHARED_LANES_JUDGED_BY_RATE):
+    by_rate: boolean = SHARED_LANES_JUDGED_BY_RATE, feeders?: LaneFeeders):
     { copies: number | null; tried: { copies: number; holds: boolean }[]; one_copy_short?: { inserter_id: number; missed: number; swings: number }[] } | null {
-    const layout = sharedLaneRunsOf(config).readings[0]?.layouts[0];
+    const layout = sharedLaneRunsOf(config, undefined, feeders).readings[0]?.layouts[0];
     if (layout === undefined) return null;
     const slots = Math.max(0, ...layout.rows.flatMap(row => row.takers.map(taker => taker.copy))) + 1;
     if (slots < 2) return null;
@@ -1632,7 +1632,7 @@ export function fewerCopiesThatHold(config: Config, clock_windows: SerializableC
     const alone_runs = new Map<string, AloneRun>();
     while (low <= high) {
         const middle = Math.floor((low + high) / 2);
-        const judged = judgedOnLanes(config, clock_windows, window_cycle_ticks, logger, middle, alone_runs, false, by_rate);
+        const judged = judgedOnLanes(config, clock_windows, window_cycle_ticks, logger, middle, alone_runs, false, by_rate, feeders);
         const holds = judged.losses.length === 0;
         tried.push({ copies: middle, holds });
         if (holds) {

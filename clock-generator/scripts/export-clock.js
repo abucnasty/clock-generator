@@ -42,6 +42,7 @@ const { scaffoldOf } = require("./scaffold-of");
 const { ConfigPaths } = dist("config/config-paths.js");
 const { generateClockAlternatives, clockFromWindows } = dist("crafting/generate-blueprint.js");
 const { encodeBlueprintFile } = dist("blueprints/serde.js");
+const { withoutOutsideSupply } = dist("config/outside-supply.js");
 
 const INSERTERS_TAG = "clock_generator_inserters";
 const write = (file, value) => fs.writeFileSync(file, JSON.stringify(value, null, 1));
@@ -171,10 +172,12 @@ function armOf(alternative, clock, config_path, selected_id, always_on = false) 
         const blueprint = JSON.parse(zlib.inflateSync(Buffer.from(text.slice(1), "base64")).toString("utf-8"));
         const anchor = (arg("anchor") ?? "0,0").split(",").map(Number);
         const { cellOf } = require("./scaffold-cells");
-        const { cell, matched } = cellOf({ blueprint, config, name, clock_file: `${name}.json`, anchor });
+        // the clocked build's inserters: the outside supply (the feeders) gets no window and no cell id
+        const clocked = withoutOutsideSupply(config);
+        const { cell, matched } = cellOf({ blueprint, config: clocked, name, clock_file: `${name}.json`, anchor });
         write(path.join(out_dir, "cells.json"), { cells: [cell] });
         written.push("cells.json");
-        console.log(`${name}: cells.json, ${matched} of ${config.inserters.length} inserters found in ${path.basename(scaffold)}${cell.problems.length > 0 ? `; problems: ${cell.problems.join("; ")}` : ""}`);
+        console.log(`${name}: cells.json, ${matched} of ${clocked.inserters.length} inserters found in ${path.basename(scaffold)}${cell.problems.length > 0 ? `; problems: ${cell.problems.join("; ")}` : ""}`);
     }
     write(path.join(out_dir, "written.json"), { config: config_path, files: written });
 })().catch(error => {

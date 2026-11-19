@@ -1,4 +1,5 @@
 import {describe, expect, test, vi} from "vitest";
+import { withoutOutsideSupply } from "../../config/outside-supply";
 import type {Config} from "../../config";
 import {ConfigPaths} from "../../config/config-paths";
 import {loadConfigFromFile} from "../../config/loader";
@@ -66,7 +67,8 @@ describe("planned windows", () => {
         }],
         ["automation science", ConfigPaths.AUTOMATION_SCIENCE_240, { "inserter:1": ["60-90"], "inserter:2": ["1-54"] }],
     ])("%s", async (_, path, windows) => {
-        expect(plannedWindows(await loadConfigFromFile(path), ACTIVATION_ORDER)).toEqual(windows);
+        // the build the generation plans: without its outside supply
+        expect(plannedWindows(withoutOutsideSupply(await loadConfigFromFile(path)), ACTIVATION_ORDER)).toEqual(windows);
     });
 });
 

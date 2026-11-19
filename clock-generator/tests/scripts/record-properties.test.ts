@@ -5,6 +5,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { ConfigPaths } from '../../src/config/config-paths';
 import { loadConfigFromFile } from '../../src/config/loader';
 import type { Config } from '../../src/config/schema';
+import { withoutOutsideSupply } from '../../src/config/outside-supply';
 import { Entity } from '../../src/entities';
 import { createEntityRegistryFromConfig } from '../../src/crafting/sequence/simulation-context';
 import { checkProperties, EXCEPTIONS, moduleSha256, PROPERTIES } from '../game/builds/record-properties';
@@ -15,7 +16,7 @@ let inserter_numbers: number[];
 
 beforeAll(async () => {
     config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
-    const registry = createEntityRegistryFromConfig(config);
+    const registry = createEntityRegistryFromConfig(withoutOutsideSupply(config));
     always_on = registry.getAll().filter(it => Entity.isInserter(it) || Entity.isDrill(it)).map(it => it.entity_id.id);
     inserter_numbers = always_on.filter(id => id.startsWith('inserter:')).map(id => Number(id.slice('inserter:'.length)));
 });

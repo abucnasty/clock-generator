@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ConfigPaths } from "../../config/config-paths";
 import { loadConfigFromFile } from "../../config/loader";
+import { withoutOutsideSupply } from "../../config/outside-supply";
 import { BeltConfigSchema, Config, ConfigSchema } from "../../config/schema";
 import { beltLaneFactsOf } from "../../light";
 import { variantJobs } from "../../../tests/game/builds/variant-jobs";
@@ -34,7 +35,11 @@ const no_roles = { of: () => null };
 /** Whether every input lane of the config is a dead end, by the ends its lane facts give */
 const inputLanesAreDeadEnds = (config: Config) => everyInputLaneIsDeadEnd(config, laneFactsOfConfig(config));
 /** The roles of the lanes of a config, from what its inserters carry */
-const rolesOf = (config: Config) => laneRolesOf(config, carriedItemsOf(config));
+/** The roles the engine gives the lanes (laneFactsOfConfig, and the UI's lane-roles): of the build without its outside supply */
+const rolesOf = (given: Config) => {
+    const config = withoutOutsideSupply(given);
+    return laneRolesOf(config, carriedItemsOf(config));
+};
 
 describe("the lane facts of a config", () => {
     it("gives every lane a dead end when the config's belts are backed up", () => {

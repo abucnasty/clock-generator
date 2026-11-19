@@ -11,33 +11,39 @@
   },
   "unbounded_sources": [
     {
-      "vertex": "belt:1/lane:1#iron-gear-wheel",
-      "kind": "nothing-drops-on"
+      "vertex": "chest:1#copper-plate",
+      "kind": "infinity-supply"
     },
     {
-      "vertex": "belt:1/lane:2#copper-plate",
-      "kind": "nothing-drops-on"
+      "vertex": "chest:2#iron-gear-wheel",
+      "kind": "infinity-supply"
     }
   ],
   "groups": [
     {
       "key": "group:1",
       "members": [
+        "belt:1/lane:2#copper-plate",
+        "belt:1/lane:1#iron-gear-wheel",
         "machine:1",
         "belt:2/lane:1#automation-science-pack"
       ],
       "edges": [
         "inserter:1/copper-plate",
         "inserter:1/iron-gear-wheel",
-        "inserter:2/automation-science-pack"
+        "inserter:2/automation-science-pack",
+        "inserter:3/copper-plate",
+        "inserter:4/copper-plate",
+        "inserter:5/iron-gear-wheel",
+        "inserter:6/iron-gear-wheel"
       ],
       "window_cycles": [
         {"swings":4,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":144,"denominator":1},"cycles":1,"window_cycle_ticks":144,"kept":true},
-        {"swings":5,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":180,"denominator":1},"cycles":2,"window_cycle_ticks":360,"kept":true},
-        {"swings":6,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":216,"denominator":1},"cycles":1,"window_cycle_ticks":216,"kept":true},
-        {"swings":3,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":108,"denominator":1},"cycles":2,"window_cycle_ticks":216,"kept":true},
-        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":72,"denominator":1},"cycles":1,"window_cycle_ticks":72,"kept":true},
-        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":36,"denominator":1},"cycles":2,"window_cycle_ticks":72,"kept":true},
+        {"swings":5,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":180,"denominator":1},"cycles":4,"window_cycle_ticks":720,"kept":true},
+        {"swings":6,"fractional":false,"listed_as":"higher","cycle_ticks":{"numerator":216,"denominator":1},"cycles":2,"window_cycle_ticks":432,"kept":true},
+        {"swings":3,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":108,"denominator":1},"cycles":4,"window_cycle_ticks":432,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":72,"denominator":1},"cycles":2,"window_cycle_ticks":144,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":36,"denominator":1},"cycles":4,"window_cycle_ticks":144,"kept":true},
         {"swings":4,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":144,"denominator":1},"cycles":1,"window_cycle_ticks":144,"kept":true}
       ],
       "utilization": [

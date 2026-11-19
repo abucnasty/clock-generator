@@ -221,6 +221,66 @@
         "looping_ingredients": [],
         "seeded": false
       }
+    },
+    {
+      "key": "chest:1",
+      "kind": "container",
+      "entity": "chest:1",
+      "storage": {
+        "kind": "constant",
+        "chest_type": "infinity-chest",
+        "capacity_by_item": [
+          {
+            "item": "copper-plate",
+            "capacity": null
+          }
+        ],
+        "accepts": [
+          "copper-plate"
+        ],
+        "gives": [
+          "copper-plate"
+        ],
+        "items_put_in": [],
+        "never_refuses": true,
+        "constant_supply": true,
+        "slots": null,
+        "input_slots": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
+    },
+    {
+      "key": "chest:2",
+      "kind": "container",
+      "entity": "chest:2",
+      "storage": {
+        "kind": "constant",
+        "chest_type": "infinity-chest",
+        "capacity_by_item": [
+          {
+            "item": "iron-gear-wheel",
+            "capacity": null
+          }
+        ],
+        "accepts": [
+          "iron-gear-wheel"
+        ],
+        "gives": [
+          "iron-gear-wheel"
+        ],
+        "items_put_in": [],
+        "never_refuses": true,
+        "constant_supply": true,
+        "slots": null,
+        "input_slots": null
+      },
+      "spoilage": {
+        "items": [],
+        "loss_limit_share": 0.75
+      }
     }
   ],
   "edges": [
@@ -394,6 +454,226 @@
       },
       "belt_pickup_calibrated": true,
       "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:3/copper-plate",
+      "via": "inserter",
+      "entity": "inserter:3",
+      "group": "inserter:3",
+      "item": "copper-plate",
+      "from": "chest:1",
+      "to": "belt:1/lane:2",
+      "from_lanes": [],
+      "lands_in": "lane",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "copper-plate"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 5,
+        "cycle": 12,
+        "pickup_to_drop": 9,
+        "per_second": {
+          "numerator": 80,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 4,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:4/copper-plate",
+      "via": "inserter",
+      "entity": "inserter:4",
+      "group": "inserter:4",
+      "item": "copper-plate",
+      "from": "chest:1",
+      "to": "belt:1/lane:2",
+      "from_lanes": [],
+      "lands_in": "lane",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "copper-plate"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 5,
+        "cycle": 12,
+        "pickup_to_drop": 9,
+        "per_second": {
+          "numerator": 80,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 4,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:5/iron-gear-wheel",
+      "via": "inserter",
+      "entity": "inserter:5",
+      "group": "inserter:5",
+      "item": "iron-gear-wheel",
+      "from": "chest:2",
+      "to": "belt:1/lane:1",
+      "from_lanes": [],
+      "lands_in": "lane",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "iron-gear-wheel"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 5,
+        "cycle": 12,
+        "pickup_to_drop": 9,
+        "per_second": {
+          "numerator": 80,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 4,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
+    },
+    {
+      "key": "inserter:6/iron-gear-wheel",
+      "via": "inserter",
+      "entity": "inserter:6",
+      "group": "inserter:6",
+      "item": "iron-gear-wheel",
+      "from": "chest:2",
+      "to": "belt:1/lane:1",
+      "from_lanes": [],
+      "lands_in": "lane",
+      "hand": {
+        "prototype": "stack-inserter",
+        "quality": "legendary",
+        "by_item": 16,
+        "nominal": 16,
+        "research": 16,
+        "items": [
+          "iron-gear-wheel"
+        ],
+        "full_hand": {
+          "at_placing_source": true,
+          "elsewhere": true
+        },
+        "wait_for_full_hand": true,
+        "grab_less_to_match_belt_stack": true,
+        "max_belt_stack_size": 4
+      },
+      "rotation_ticks": 3,
+      "planned": {
+        "pickup": 1,
+        "drop": 5,
+        "cycle": 12,
+        "pickup_to_drop": 9,
+        "per_second": {
+          "numerator": 80,
+          "denominator": 1
+        }
+      },
+      "floor": {
+        "pickup": 1,
+        "drop": 4,
+        "cycle": 11
+      },
+      "floor_standing": {
+        "pickup": "measured",
+        "drop": "measured",
+        "cycle": "measured"
+      },
+      "ceiling": {
+        "numerator": 960,
+        "denominator": 11
+      },
+      "belt_pickup_calibrated": true,
+      "enable_latency_ticks": 2
     }
   ],
   "capacity_groups": [
@@ -420,6 +700,50 @@
         {
           "edge": "inserter:2/automation-science-pack",
           "item": "automation-science-pack",
+          "hand": 16,
+          "floor_cycle": 11
+        }
+      ]
+    },
+    {
+      "group": "inserter:3",
+      "edges": [
+        {
+          "edge": "inserter:3/copper-plate",
+          "item": "copper-plate",
+          "hand": 16,
+          "floor_cycle": 11
+        }
+      ]
+    },
+    {
+      "group": "inserter:4",
+      "edges": [
+        {
+          "edge": "inserter:4/copper-plate",
+          "item": "copper-plate",
+          "hand": 16,
+          "floor_cycle": 11
+        }
+      ]
+    },
+    {
+      "group": "inserter:5",
+      "edges": [
+        {
+          "edge": "inserter:5/iron-gear-wheel",
+          "item": "iron-gear-wheel",
+          "hand": 16,
+          "floor_cycle": 11
+        }
+      ]
+    },
+    {
+      "group": "inserter:6",
+      "edges": [
+        {
+          "edge": "inserter:6/iron-gear-wheel",
+          "item": "iron-gear-wheel",
           "hand": 16,
           "floor_cycle": 11
         }

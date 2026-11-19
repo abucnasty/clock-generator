@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import zlib from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
@@ -16,13 +17,15 @@ import { sharedLaneRunsOf } from "./shared-lane-verdict";
 
 /**
  * The game's copper stop on the nine copies of AUTOMATION_SCIENCE_240 with one output swing (issue #737, the P1 cut): the
- * copper feeders of the scaffold stop 11 tiles before copy 1's pickup, with the belt between them full. Per tick from the
- * cut, each copy's copper, gears, packs, crafting and productivity bars, its taker's hand and its output hand, as the
- * game's probe read them at the start of the tick (fixtures/automation-science-240-copper-stop-game.json).
+ * copper feeders of the scaffold stop 11 tiles before copy 1's pickup, with the belt between them full, and start again
+ * 1,466 ticks later. Per tick from the cut to the tick before the next parting (+2,830, copy 4's taker), each copy's
+ * copper, gears, packs, crafting and productivity bars, its taker's hand and its output hand, as the game's probe read
+ * them at the start of the tick (fixtures/automation-science-240-copper-stop-game.json.zst).
  */
 interface GameStop {
     window_cycle_ticks: number;
     cut: number;
+    restore: number;
     columns: string[];
     rows: number[][];
 }
@@ -55,8 +58,10 @@ function columnsOf(context: SimulationContext): () => Map<string, number> {
 }
 
 describe("the copper stop of the game on the nine copies of automation science 240 (#737)", () => {
-    it("follows the game from the cut while the feeders stand 11 tiles before copy 1 with the belt full", async () => {
-        const game: GameStop = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "automation-science-240-copper-stop-game.json"), "utf8"));
+    it("follows the game from the cut through the stop and the restart while the feeders stand 11 tiles before copy 1", async () => {
+        const game: GameStop = JSON.parse(zlib.zstdDecompressSync(
+            fs.readFileSync(path.join(__dirname, "fixtures", "automation-science-240-copper-stop-game.json.zst"))).toString("utf8"));
+        // the sample states its scaffold's feeders, the lanes' entries
         const loaded = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
         const config = { ...loaded, overrides: { ...loaded.overrides, terminal_swing_count: 1 } };
         // pitch_pickups 0f8a8504, the clock the game ran
@@ -75,21 +80,30 @@ describe("the copper stop of the game on the nine copies of automation science 2
         const cut_place = (at(game.rows[0], "reading") - 3 + game.window_cycle_ticks) % game.window_cycle_ticks;
         for (let t = 0; t < 100 * game.window_cycle_ticks || place() !== cut_place; t++) tick.executeForTick();
 
-        // the trial's supply stop of copper: the copper lane's entry closes after the read of the cut's tick, as the game's feeders do
+        // the game's last copper stack at the cut stands 1/8 tile upstream of the first feeder's tile middle (x 387.375),
+        // where that feeder put it down: the lane holds it when the stop closes the entry
+        const copper = model.lanes[model.rows.findIndex(row => under.belts.find(belt => belt.id === row.belt_id)!.lanes[row.lane - 1].ingredient === COPPER)];
+        copper.advanceTo(ctx.tick_provider.getCurrentTick());
+        const last_stack_at_cut = copper.stackPositions().at(-1);
+
+        // the trial's supply stop of copper: the copper lane's entry closes after the read of the cut's tick, as the game's
+        // feeders stop, and opens after the read of the restore's tick, as they start again
         const stop = switchOf(ctx, { kind: "supply", item: COPPER }, {
             lanes: model.rows.map((row, index) => ({ belt_entity_id: EntityId.forBelt(row.belt_id).id,
                 item: under.belts.find(belt => belt.id === row.belt_id)!.lanes[row.lane - 1].ingredient, lane: model.lanes[index] })),
         });
         const parted: string[] = [];
-        game.rows.forEach((row, index) => {
+        game.rows.forEach(row => {
             const model_row = read();
             for (const [name, value] of model_row) {
                 const same = name.startsWith("progress") || name.startsWith("bonus") ? Math.abs(value - at(row, name)) < 1e-3 : value === at(row, name);
                 if (!same && parted.length < 5) parted.push(`${name} at ${at(row, "t")}: game ${at(row, name)}, model ${value}`);
             }
-            if (index === 0) stop.cut();
+            if (at(row, "t") === game.cut) stop.cut();
+            if (at(row, "t") === game.restore) stop.restore();
             tick.executeForTick();
         });
         expect(parted).toEqual([]);
+        expect(last_stack_at_cut).toEqual([-0.125, 4]);
     });
 });

@@ -13,6 +13,7 @@ import { currentRunMemo } from "./plan/run-memo";
 import { SecondaryPlanningInvariantError } from "./round-robin-polling-primitive-policy";
 import { copiesCheckKeys, copiesDisturbanceTrial, CopiesTrialVerdict } from "./shared-lane-trial";
 import { ClockSharedLaneLoss, judgeSharedLanes, SharedLaneJudgement, sharedLanesNotChecked } from "./shared-lane-verdict";
+import { LaneFeeders, laneFeedersOfConfig } from "./shared-lane-model";
 
 /**
  * An error of the generator itself, which fails the generation: not a clock that could not be made, so no maker's fallback
@@ -71,9 +72,35 @@ export interface CopiesChecks {
     trials(config: Config, windows: SerializableClockWindows, window_cycle_ticks: number, expected_output_items: number, logger: Logger): CopiesTrialVerdict | null;
 }
 
+/** The feeders of the lanes of the build the generation that is running was given (`withBuildFeeders`) */
+let build_feeders: LaneFeeders | undefined;
+
+/**
+ * Runs a generation of `given` with the feeders of its lanes (`laneFeedersOfConfig`) kept for the checks with the copies:
+ * the generation clocks the config without its outside supply (outside-supply.ts), and the feeders are that supply, so
+ * the copies' lanes take their items from them only through here. A generation inside one that is running keeps the
+ * feeders of its own build, and the outer one's come back when it ends.
+ */
+export function withBuildFeeders<T>(given: Config, generate: () => T): T {
+    const outer = build_feeders;
+    build_feeders = laneFeedersOfConfig(given);
+    try {
+        return generate();
+    } finally {
+        build_feeders = outer;
+    }
+}
+
+/** The feeders of the lanes of the build being generated, where it states any (`withBuildFeeders`) */
+export function buildFeeders(): LaneFeeders | undefined {
+    return build_feeders === undefined || build_feeders.size === 0 ? undefined : build_feeders;
+}
+
 const GENERATOR_CHECKS: CopiesChecks = {
-    sharedLanes: (config, windows, window_cycle_ticks, logger, options) => judgeSharedLanes(config, windows, window_cycle_ticks, logger, { for_log: options?.for_log === true }),
-    trials: copiesDisturbanceTrial,
+    sharedLanes: (config, windows, window_cycle_ticks, logger, options) => judgeSharedLanes(config, windows, window_cycle_ticks, logger,
+        { for_log: options?.for_log === true, feeders: buildFeeders() }),
+    trials: (config, windows, window_cycle_ticks, expected_output_items, logger) =>
+        copiesDisturbanceTrial(config, windows, window_cycle_ticks, expected_output_items, logger, buildFeeders()),
 };
 
 /** A clock's verdict with the copies (`verdictWithCopies`) */
@@ -109,7 +136,7 @@ export function verdictWithCopies(
 ): VerdictWithCopies {
     const { config, windows, window_cycle_ticks, expected_output_items } = clock;
     const memo = currentRunMemo();
-    const keys = memo === undefined ? { shared_lanes: null, trials: null } : copiesCheckKeys(config, windows, window_cycle_ticks, expected_output_items);
+    const keys = memo === undefined ? { shared_lanes: null, trials: null } : copiesCheckKeys(config, windows, window_cycle_ticks, expected_output_items, buildFeeders());
     // the facts of the lanes for the maker log are kept only where a generation asked for a log
     const judge = () => timedCheck("shared_lane_check", () => withTickPurpose("shared_lane_check", () =>
         checks.sharedLanes(config, windows, window_cycle_ticks, logger, { for_log: makerLogOn() }), { claim: true }));

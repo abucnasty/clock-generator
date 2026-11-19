@@ -23,15 +23,74 @@ interface Reach {
     last_take_tick: number;
 }
 
+/**
+ * An inserter that puts the lane's items onto it from a chest that never runs out (a feeder): where it puts them down, and
+ * how its arm moves. It is never disabled by a clock: it runs as the game runs an unwired inserter.
+ */
+export interface SharedLaneFeeder {
+    /** Its drop spot, the middle of its belt tile, in tiles from the lane's entry along the flow */
+    readonly spot_tiles: number;
+    /** Items in a full hand; it puts them down a stack of the lane's stack size at a time, the last one what is left */
+    readonly hand_items: number;
+    /** Ticks the arm turns each way between the chest and the belt */
+    readonly rotation_ticks: number;
+    /** Ticks it takes to pick a hand up from the chest */
+    readonly pickup_ticks: number;
+}
+
 /** What a shared lane is made of: the belt, the stack size, its supply rate at the entry and its end */
 export interface SharedLaneArgs {
     readonly belt_speed: BeltSpeed;
     readonly stack_size: number;
-    /** Items a second that come onto the lane at its entry */
+    /** Items a second that come onto the lane at its entry, where it has no feeders */
     readonly supply_rate: Ratio;
     readonly lane_end: LaneEnd;
     /** Where the lane ends, in tiles from its entry */
     readonly length_tiles: number;
+    /**
+     * The inserters that put the items onto the lane, upstream first; where they are given, the items come on as their
+     * drops do (`FeederState`), in place of a flow at `supply_rate`
+     */
+    readonly feeders?: readonly SharedLaneFeeder[];
+}
+
+/**
+ * Where a stack put down at `spot` lands on a lane whose stacks moved this tick, `stacks` from the head: one belt step
+ * downstream of the spot, or a quarter tile behind the nearest stack ahead of it, and only strictly less than a quarter
+ * tile behind the spot; null where there is no room. A stack one belt step upstream of the landing (a follower) does not
+ * push it back: the new stack goes in ahead of it, and the follower stands until the spacing opens again. This is
+ * `LaneTraffic`'s landing (lane-traffic.ts) but for the follower, which the game shows: the gear feeders of the
+ * automation science 240 scaffold, twice in a recording of its copper stop (Factorio 2.1.24, #737).
+ */
+export function dropLanding(spot: number, speed: number, stacks: readonly { x: number }[]): number | null {
+    let landing = spot + speed;
+    // the stacks a spacing or more ahead of the first landing leave it where it is: start from the most downstream one nearer
+    let first = stacks.length;
+    while (first > 0 && stacks[first - 1].x < landing + STACK_SPACING) first--;
+    for (let index = first; index < stacks.length; index++) {
+        const x = stacks[index].x;
+        // the stacks are in order from the head: once one is at or behind the landing less a step, so is every later one
+        if (x <= landing - speed) break;
+        landing = Math.min(landing, x - STACK_SPACING);
+    }
+    return landing <= spot - STACK_SPACING ? null : landing;
+}
+
+/**
+ * A feeder as it runs: a full hand goes down one stack a tick wherever `dropLanding` finds room, the empty hand turns back
+ * to the chest, picks a hand up and turns out again. Timed on the legendary stack inserters of the automation science 240
+ * scaffold (Factorio 2.1.24, #737): after the tick its last stack goes down the arm turns back, picks up, turns
+ * out, and tries its next stack the tick after (2 rotations + the pickup + 1 ticks); a hand is full from the pickup's tick.
+ */
+interface FeederState {
+    readonly spot: number;
+    readonly hand_items: number;
+    readonly rotation_ticks: number;
+    readonly away_ticks: number;
+    /** Items in the hand */
+    hand: number;
+    /** Ticks the arm still turns or picks up before it tries a stack; 0 at the belt */
+    away: number;
 }
 
 /**
@@ -44,7 +103,10 @@ export interface SharedLaneArgs {
  * The supply is a flow, not a queue: what the entry cannot put on while the lane is full at the entry is lost, as the
  * belt upstream of the entry is not part of the model. The entry is where the items come onto the lane: the lane's supply
  * length (`supply_tiles`) before copy 1's pickup, so the belt from the feeders to copy 1 is on the lane
- * (shared-lane-model.ts `sharedLaneLayoutOf`).
+ * (shared-lane-model.ts `sharedLaneLayoutOf`). Where the lane's feeders are given, they are the supply in place of the
+ * flow: each puts its hand down a stack at a time where there is room at its spot (`dropLanding`), so the holes and the
+ * places of the stacks at the entry are the game's. A feeder's stack may land up to 1/8 tile upstream of its spot, so
+ * upstream of the entry where the feeder stands there.
  *
  * Positions are in 1/256 tile, as the pickup stocks have them (`BackpressurePickupLane`, `BeltPickupLane`); a stack
  * takes 64 units.
@@ -64,6 +126,8 @@ export class SharedLane {
     private tick = 0;
     /** Whether the entry is closed: nothing comes onto the lane, and its bank stays as it was at the close */
     private entry_closed = false;
+    /** The feeders, upstream first; none where the lane takes its items as a flow at the supply rate */
+    private readonly feeders: FeederState[];
     /** Items on the lane at the start */
     public readonly initial: number;
     /** Items the entry put on and the infinite end took off, from the start */
@@ -81,9 +145,36 @@ export class SharedLane {
         // both banks start full, so that a rate of the lane's capacity keeps up from the first tick
         this.supply_bank = this.stack_size * 60 * this.supply.denominator;
         this.infinite_end_bank = this.infinite_end === null ? 0 : this.stack_size * 60 * this.infinite_end.denominator;
-        // the lane starts full: a stack every spacing from the end back to the entry
-        for (let x = this.end; x >= 0; x -= STACK_SPACING) this.stacks.push({ x, count: this.stack_size });
+        // each feeder starts at the belt with a full hand
+        this.feeders = (args.feeders ?? []).map(feeder => {
+            assert(feeder.hand_items > 0 && feeder.rotation_ticks >= 0 && feeder.pickup_ticks >= 0, "A feeder carries a hand and turns forwards");
+            return {
+                spot: Math.round(feeder.spot_tiles * 256), hand_items: feeder.hand_items, rotation_ticks: feeder.rotation_ticks,
+                away_ticks: 2 * feeder.rotation_ticks + feeder.pickup_ticks, hand: feeder.hand_items, away: 0,
+            };
+        });
+        if (this.feeders.length > 0 && this.infinite_end === null) {
+            // the lane starts full as its feeders fill it: from empty until it stands, every feeder at the belt with what its
+            // hand still holds, as the game's lane stands before the build starts
+            this.fillFromFeeders();
+            this.supplied = 0;
+        } else {
+            // the lane starts full: a stack every spacing from the end back to the entry
+            for (let x = this.end; x >= 0; x -= STACK_SPACING) this.stacks.push({ x, count: this.stack_size });
+        }
         this.initial = this.items();
+    }
+
+    /** The feeders fill the empty lane, tick by tick, until no stack moves, no feeder puts a stack down and none is away */
+    private fillFromFeeders(): void {
+        // a lane of n stacks fills in fewer than n hands' turns and n ticks of travel each: a bound, not a guess of the length
+        const bound = (this.end / STACK_SPACING + 2) * (Math.max(...this.feeders.map(feeder => feeder.away_ticks)) + this.end / this.speed + 2);
+        for (let tick = 0; tick < bound; tick++) {
+            const moved = this.move();
+            const fed = this.feed();
+            if (!moved && !fed && this.feeders.every(feeder => feeder.away === 0)) return;
+        }
+        assert(false, "The feeders never filled the lane");
     }
 
     /** A taker's reach: the stretch of `length_tiles` that ends downstream at `edge_tiles` from the entry */
@@ -105,7 +196,8 @@ export class SharedLane {
     /**
      * Closes the entry from the next tick the lane runs: nothing more comes onto the lane, whose stacks go on moving and
      * being taken, so that it drains. What the entry's bank held stays, and it puts its next stack on when it is opened
-     * and there is room, as before the close. The lane is brought up to `tick` first: the close takes effect after it.
+     * and there is room, as before the close. Feeders stand as they are, hand and arm, as the game's stand when they are
+     * disabled by script. The lane is brought up to `tick` first: the close takes effect after it.
      */
     public closeEntry(tick: number): void {
         this.advanceTo(tick);
@@ -133,24 +225,66 @@ export class SharedLane {
                 stacks.shift();
             }
         }
-        const speed = this.speed;
-        for (let index = 0; index < stacks.length; index++) {
-            const stack = stacks[index];
-            // the head stops at the end until the infinite end takes it; every other stack keeps its spacing behind the one ahead
-            const limit = index === 0 ? this.end : stacks[index - 1].x - STACK_SPACING;
-            stack.x = Math.max(stack.x, Math.min(stack.x + speed, limit));
-        }
+        this.move();
         if (this.entry_closed) return;
+        if (this.feeders.length > 0) {
+            this.feed();
+            return;
+        }
         const unit = 60 * this.supply.denominator, full = this.stack_size * unit;
         this.supply_bank = Math.min(this.supply_bank + this.supply.numerator, full);
         const tail = stacks[stacks.length - 1];
         if (this.supply_bank >= full && (tail === undefined || tail.x >= STACK_SPACING)) {
             // a stack that comes on right behind the tail keeps the spacing, as a compressed feed does; one into a gap
             // comes on at most one tick's travel past the entry
-            stacks.push({ x: tail === undefined ? 0 : Math.min(tail.x - STACK_SPACING, speed), count: this.stack_size });
+            stacks.push({ x: tail === undefined ? 0 : Math.min(tail.x - STACK_SPACING, this.speed), count: this.stack_size });
             this.supply_bank -= full;
             this.supplied += this.stack_size;
         }
+    }
+
+    /** Every stack moves: the head stops at the end until the infinite end takes it, every other keeps its spacing behind the one ahead; whether any moved */
+    private move(): boolean {
+        const stacks = this.stacks, speed = this.speed;
+        let moved = false;
+        for (let index = 0; index < stacks.length; index++) {
+            const stack = stacks[index];
+            const limit = index === 0 ? this.end : stacks[index - 1].x - STACK_SPACING;
+            const x = Math.max(stack.x, Math.min(stack.x + speed, limit));
+            if (x !== stack.x) moved = true;
+            stack.x = x;
+        }
+        return moved;
+    }
+
+    /**
+     * The feeders' part of a tick, after the stacks moved, upstream feeder first: each at the belt puts a stack down where
+     * it lands (`dropLanding`), or waits with its hand; each away turns or picks up. Whether any put a stack down.
+     */
+    private feed(): boolean {
+        const stacks = this.stacks;
+        let fed = false;
+        for (const feeder of this.feeders) {
+            if (feeder.away > 0) {
+                feeder.away--;
+                // the arm has turned back and picked a hand up: it turns out from the next tick
+                if (feeder.away === feeder.rotation_ticks) feeder.hand = feeder.hand_items;
+                continue;
+            }
+            const landing = dropLanding(feeder.spot, this.speed, stacks);
+            if (landing === null) continue;
+            let index = stacks.length;
+            while (index > 0 && stacks[index - 1].x < landing) index--;
+            const count = Math.min(this.stack_size, feeder.hand);
+            stacks.splice(index, 0, { x: landing, count });
+            this.supplied += count;
+            fed = true;
+            feeder.hand -= count;
+            if (feeder.hand > 0) continue;
+            feeder.away = feeder.away_ticks;
+            if (feeder.away === feeder.rotation_ticks) feeder.hand = feeder.hand_items;
+        }
+        return fed;
     }
 
     /** The most upstream stack in the reach, as the pickup stocks choose: its index, or -1 */
@@ -188,7 +322,18 @@ export class SharedLane {
 
     /** Everything a later tick of the lane reads, for the state key */
     public key(): string {
-        return `${this.entry_closed ? "closed;" : ""}${this.supply_bank};${this.infinite_end_bank};${this.stacks.map(stack => `${stack.x}:${stack.count}`).join(",")}`;
+        const feeders = this.feeders.length === 0 ? "" : `${this.feeders.map(feeder => `${feeder.hand}/${feeder.away}`).join(",")};`;
+        return `${this.entry_closed ? "closed;" : ""}${feeders}${this.supply_bank};${this.infinite_end_bank};${this.stacks.map(stack => `${stack.x}:${stack.count}`).join(",")}`;
+    }
+
+    /** The items in each feeder's hand now, upstream first */
+    public feederHands(): number[] {
+        return this.feeders.map(feeder => feeder.hand);
+    }
+
+    /** Every stack on the lane now, from the head: its place in tiles from the entry, and its count */
+    public stackPositions(): (readonly [tiles: number, count: number])[] {
+        return this.stacks.map(stack => [stack.x / 256, stack.count] as const);
     }
 
     /** The items on the lane now */

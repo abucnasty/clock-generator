@@ -1,4 +1,5 @@
 import { expect, it } from 'vitest';
+import { withoutOutsideSupply } from '../config/outside-supply';
 import { loadConfigFromFile } from '../config/loader';
 import { ConfigPaths } from '../config/config-paths';
 import { ConfigSchema } from '../config/schema';
@@ -10,7 +11,7 @@ import { TickByHand } from './runner/tick-by-hand.fixture';
 const item = 'automation-science-pack';
 
 it('fills a cargo wagon at the end of the line to its last free slot, then holds its output inserter at target full', async () => {
-    const sample = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
+    const sample = withoutOutsideSupply(await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240));
     // 39 of its 40 slots hold wood: one slot, a stack of 200 packs, is left
     const contents = Array.from({ length: 39 }, (_, index) => ({ slot: index + 2, item: 'wood', count: 100 }));
     const context = SimulationContext.fromConfig(ConfigSchema.parse({ ...sample,

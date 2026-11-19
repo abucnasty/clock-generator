@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
+import { withoutOutsideSupply } from "../config/outside-supply";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import type { Config } from "../config/schema";
@@ -30,7 +31,7 @@ beforeAll(async () => {
     // The sample states that both lanes of its input belt end in a dead end. On such a lane the full-hand clock gives the input
     // inserter no room for one more hand, so the inserter never waits with a part hand on its machine's list. These tests count
     // the wake-ups of that wait, so this copy keeps a lane that flows on, as the sample had before it stated its ends.
-    const sample = withoutSharedLaneFacts(await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240));
+    const sample = withoutSharedLaneFacts(withoutOutsideSupply(await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240)));
     config = { ...sample, overrides: { ...sample.overrides, terminal_swing_count: 1 } };
     // the full-hand clock, which these tests count wake-ups and states on: the per-branch clock composed from today's makers wakes
     // none of these inserters, and Euclidean Swings, which holds without the room for one more hand, wakes none either
