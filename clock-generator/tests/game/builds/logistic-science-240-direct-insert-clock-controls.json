@@ -3,10 +3,10 @@
   "cases": {
     "generated-one-copy": {
       "recorded": {
-        "pr": 0,
-        "commit": "052a4129bb7dc2bb1ee24bd3d0a092cd36ba6891",
-        "frozen_head": "052a4129bb7dc2bb1ee24bd3d0a092cd36ba6891",
-        "note": "recorded under the protocol in game ticks on the engine of this head with the tests of the branch that added it; pr is set when the PR is opened",
+        "pr": 852,
+        "commit": "214bd7ad",
+        "frozen_head": "214bd7ad",
+        "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24",
         "clock_sha256": "fdfe060fff30fe5241a9cf234623a3a00b8a9578e0b021743c326f4679337304",
         "clock_basis": "capture"
       },
@@ -17,7 +17,7 @@
         "period": 96,
         "window": 3600,
         "expected": 2400,
-        "steady": 8155,
+        "steady": 7152,
         "baseline": {
           "ticks": 3600,
           "total": 2400,
@@ -30,25 +30,25 @@
             "ticks": 3552,
             "items": 2368,
             "expected": 2368,
-            "stock_start": 40,
-            "stock_end": 40,
+            "stock_start": 12,
+            "stock_end": 12,
             "net": 2368
           }
         },
         "disturbances": [
           {
             "kind": "cut inserter",
-            "start": 11755,
-            "drop": 11858,
-            "release": 11858,
-            "recovered": 15624
+            "start": 10752,
+            "drop": 10801,
+            "release": 10801,
+            "recovered": 14567
           },
           {
             "kind": "block output",
-            "start": 15624,
-            "drop": 16164,
-            "release": 16164,
-            "recovered": 19848
+            "start": 14567,
+            "drop": 15107,
+            "release": 15107,
+            "recovered": 18791
           }
         ],
         "stock": {
@@ -57,7 +57,7 @@
           "holds": true
         },
         "result": "holds",
-        "ended": 19848
+        "ended": 18791
       },
       "generation": {
         "period": 96,

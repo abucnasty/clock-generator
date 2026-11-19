@@ -237,8 +237,8 @@ export async function capturePickupClockScenario(scenario: PickupClockScenario) 
         // the copies of the config the build holds: those the clock is wired to, or the config's copies times the build's share of them
         const buildCopies = scenario.copies ?? Math.round((config.setpoint.copies ?? 1) * share);
         const finals = config.machines.filter(machine => recipes.includes(machine.recipe)).length * buildCopies;
-        const recording = replayDirectory ? JSON.parse(fs.readFileSync(path.join(replayDirectory, "recording.json"), "utf8"))
-            : (await recordInFactorio({factorio: process.env.FACTORIO_PATH!, save: process.env.FACTORIO_HARNESS_SAVE!, config, clock, blueprint, built_clock: scenario.built_clock, copies: scenario.copies,
+        const recorded = replayDirectory ? undefined
+            : await recordInFactorio({factorio: process.env.FACTORIO_PATH!, save: process.env.FACTORIO_HARNESS_SAVE!, config, clock, blueprint, built_clock: scenario.built_clock, copies: scenario.copies,
                 out: path.join(capture.directory, "recording.json"), work_dir: path.join(capture.directory, "game"),
                 ticks: AUDIT_TICKS, settle_ticks: RUN_PROTOCOL.cap + 1,
                 ...(scenario.staged ? {warmup_ticks: 0, staged_start: scenario.backpressure ? {backpressure: {}} : {}} : {record_at_once: true, warmup_ticks: 3600}),
@@ -248,7 +248,12 @@ export async function capturePickupClockScenario(scenario: PickupClockScenario) 
                     recipes, item: config.setpoint.recipe, speed: scenario.speed.units / 32, reach,
                     ...(scenario.staged && {staged: true, finals}),
                 }, scenario.probePrelude), game_speed: 1000, watch: false, timeout_seconds: scenario.staged ? 1800 : 900, log() {},
-            })).recording;
+            });
+        const recording = recorded ? recorded.recording : JSON.parse(fs.readFileSync(path.join(replayDirectory!, "recording.json"), "utf8"));
+        // a backpressure start: what the game reported at the opening (the tick, whether the part no clock holds was steady, what the machines held)
+        if (recorded && scenario.backpressure) {
+            fs.writeFileSync(path.join(capture.directory, "opening.json"), JSON.stringify((recorded.start as {staged?: {backpressure?: unknown}} | undefined)?.staged?.backpressure ?? null, null, 1) + "\n");
+        }
         (scenario.assertHardware ?? assertPickupClockHardware)(recording, config, blueprint);
         scenario.validateRecording?.(recording, config);
         const report = JSON.parse(fs.readFileSync(path.join(replayDirectory ?? capture.directory, "game/script-output/clock-speed.json"), "utf8"));
