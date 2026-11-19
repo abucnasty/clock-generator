@@ -105,7 +105,7 @@ describe("a build whose copies share no lane", () => {
 });
 
 // AUTOMATION_SCIENCE_240: 9 copies on one belt whose two lanes are dead ends. Its selected clock (pitch pickups, 72 ticks)
-// gets back from every loss on one copy, and on the copies a copper plate stop leaves copy 2 short. The sample as it is, with the
+// gets back from every loss on one copy, and on the copies an iron gear wheel stop leaves copy 2 short. The sample as it is, with the
 // trials on the copies on, is a job of the record: "is no recovery, naming the loss on the copies, with the trials on the copies on"
 // is a check of that job (tests/game/builds/job-checks/samples.ts). The clock with the trials switched off is made here.
 describe("the verdict of a clock the trials on the copies break", () => {

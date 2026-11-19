@@ -883,9 +883,9 @@ const automation240: JobCheck[] = [
         run: ({ generated }) => {
             const clock = byId(generated, "pitch_pickups");
             expect(clock.verdict).toBe("no recovery");
-            expect(clock.assessment.disturbance_trial).toMatchObject({ survives: false, broken_by: ["copper plate stops arriving on the copies that share a lane"],
-                on_copies: { survives: false, broken_by: "copper plate stops arriving", short: [{ copy: 2 }] } });
-            expect(clock.description).toContain("Copper plate stops arriving at the entry of the copper plate lane");
+            expect(clock.assessment.disturbance_trial).toMatchObject({ survives: false, broken_by: ["iron gear wheel stops arriving on the copies that share a lane"],
+                on_copies: { survives: false, broken_by: "iron gear wheel stops arriving", short: [{ copy: 2 }] } });
+            expect(clock.description).toContain("Iron gear wheel stops arriving at the entry of the iron gear wheel lane");
         },
     },
 ];

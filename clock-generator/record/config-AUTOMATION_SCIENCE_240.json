@@ -3,7 +3,7 @@
   "job": "config-AUTOMATION_SCIENCE_240",
   "group": "config",
   "name": "AUTOMATION_SCIENCE_240",
-  "config_sha256": "c86de72c1473cf9409b384697cbf5317fd420afaef996b0d2e561f71a230c48a",
+  "config_sha256": "0014e3232e888da0805dd6dce4e8968b34974838b7614bf3a91dd280e280ef4a",
   "job_results_sha256": "0416aa1f432cf25013376aca9e26e9735f4fea13fa61efe562fa6009252164a2",
   "selected": "coordinated_sources",
   "selected_windows": {
@@ -19,7 +19,7 @@
     {"id": "takt_batches_observed_swings_6", "verdict": "unstable", "holds": false, "rate": 160, "supply": "backed_up", "window_cycle_ticks": 216, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "dcbf6dfd1132c4e74c47ba5207c64b241424c349b972c8d880fc4229e09a7183", "windows_sha256": "fe3ca4f171e96463377e72def289acd2a88e065cfdf930e73b9034c9172d8440", "results_sha256": "e05fc6638061eca47b5307cb1306eddb98c96a3887bf6be184b17058e5c7dd83"},
     {"id": "takt_batches_observed_swings_2", "verdict": "unstable", "holds": true, "rate": 240, "supply": "backed_up", "window_cycle_ticks": 72, "wake_ups": 50.174, "descriptions_cut": 0, "clock_sha256": "114b4a4851b948628988396f30a5fdeae701db5a3d1eb90eafea039f55956b62", "windows_sha256": "be717abcfbfe58b17d717d1037872c6d6895f4926f8afd93544fe8c315113a09", "results_sha256": "3843cafeb53532b0f8eb5943afede202c3e462e2915b49960d9cf89cc960308f"},
     {"id": "takt_batches_swings_1", "verdict": "unstable", "holds": true, "rate": 240, "supply": "backed_up", "window_cycle_ticks": 72, "wake_ups": 123.448, "descriptions_cut": 0, "clock_sha256": "694342a59ebb1abb81f002fe5612eb49e66f63a96379a2c33ea15965eeba0d58", "windows_sha256": "cd02cd648b7aec0bc22e5aad8e6d831146f20bf88bab583d2d00619b1e38d5a9", "results_sha256": "2d6a19730064d614fd8df7c7463273a6aa44d08076036a1e361847e3bafbd988"},
-    {"id": "pitch_pickups", "verdict": "no recovery", "holds": true, "rate": 240, "supply": "backed_up", "window_cycle_ticks": 72, "wake_ups": 50.174, "descriptions_cut": 0, "clock_sha256": "0f8a8504f6ec238aa1d6327eddad6779df30c3a4f981cf3120a9dff9c588b87c", "windows_sha256": "721d85354e639f06c28968724efcbb97d167cb77fd65db81e9fbdb2ed32e2495", "results_sha256": "3125bd54216d1e176df6fadaaea69fd39e36a23a6fa7a92c56d2547d0dcdd825"},
+    {"id": "pitch_pickups", "verdict": "no recovery", "holds": true, "rate": 240, "supply": "backed_up", "window_cycle_ticks": 72, "wake_ups": 50.174, "descriptions_cut": 0, "clock_sha256": "0f8a8504f6ec238aa1d6327eddad6779df30c3a4f981cf3120a9dff9c588b87c", "windows_sha256": "721d85354e639f06c28968724efcbb97d167cb77fd65db81e9fbdb2ed32e2495", "results_sha256": "8ba9e54aa92002486f767856aaa950b3d0cd72577b92f567aa401c637c776d08"},
     {"id": "coordinated_sources", "verdict": "stable", "holds": true, "rate": 240, "supply": "backed_up", "window_cycle_ticks": 216, "wake_ups": 70.065, "descriptions_cut": 0, "clock_sha256": "75bf8985934ac4c9af2c495771f850fa1da1fdd9c9d2276390d044f3aa0c18de", "windows_sha256": "0fff8ff2c08506d4dd02c54664b7adb58e794ba6471994711afe4f3d2d8b6e1a", "results_sha256": "35a18b271eca74f9f0138fc91d656f7a4720b7280ae11b88f30e88af93e8516c"}
   ]
 }
