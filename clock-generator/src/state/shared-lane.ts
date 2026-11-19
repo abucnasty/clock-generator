@@ -60,7 +60,7 @@ export interface SharedLaneArgs {
  * tile behind the spot; null where there is no room. A stack one belt step upstream of the landing (a follower) does not
  * push it back: the new stack goes in ahead of it, and the follower stands until the spacing opens again. This is
  * `LaneTraffic`'s landing (lane-traffic.ts) but for the follower, which the game shows: the gear feeders of the
- * automation science 240 scaffold at ticks 9,170 and 9,602 of verdict gaps 16's recording (Factorio 2.1.24).
+ * automation science 240 scaffold, twice in a recording of its copper stop (Factorio 2.1.24, #737).
  */
 export function dropLanding(spot: number, speed: number, stacks: readonly { x: number }[]): number | null {
     let landing = spot + speed;
@@ -79,7 +79,7 @@ export function dropLanding(spot: number, speed: number, stacks: readonly { x: n
 /**
  * A feeder as it runs: a full hand goes down one stack a tick wherever `dropLanding` finds room, the empty hand turns back
  * to the chest, picks a hand up and turns out again. Timed on the legendary stack inserters of the automation science 240
- * scaffold (Factorio 2.1.24, verdict gaps 21): after the tick its last stack goes down the arm turns back, picks up, turns
+ * scaffold (Factorio 2.1.24, #737): after the tick its last stack goes down the arm turns back, picks up, turns
  * out, and tries its next stack the tick after (2 rotations + the pickup + 1 ticks); a hand is full from the pickup's tick.
  */
 interface FeederState {
