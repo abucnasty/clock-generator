@@ -118,7 +118,9 @@ export interface HarnessOptions {
      * The clock the build came with, named by the test, for a build whose clock is not one the generator made (it has no
      * "Clock for ..." description). Without `clock` and `unclocked` that clock is kept and the recording is cut by it,
      * and its window cycle replaces the one read off a generated clock; with a generated `clock` it is the clock removed to
-     * make room for it. Not with `unclocked`, nor in a staged start.
+     * make room for it. Not with `unclocked`. A staged start takes it only with a generated `clock`: the trial build and the first
+     * stage free the inserters the removed clock held (as the warm-up path does), so the copies are found and the furnaces get
+     * their recipe.
      */
     built_clock?: BuiltClock;
     /**
@@ -1179,6 +1181,53 @@ export function drillResourceOf(options: Pick<BuildOptions, "drill_resource" | "
     return mined.size === 1 ? Array.from(mined)[0] : undefined;
 }
 
+/**
+ * The blueprint a staged start builds: the build as the test gave it, with the clock it came with named when the test names it
+ * (`built_clock`), so the game finds that clock as it finds a generated one and removes it with the combinators and wires that hang on it
+ */
+function stagedBlueprint(options: BuildOptions): string {
+    return options.built_clock ? blueprintWithNamedClock(options.blueprint, options.built_clock) : options.blueprint;
+}
+
+/**
+ * Whether the inserters the removed clock held run free until the clock that replaces it is wired. A clock built by hand gates its
+ * inserters with a condition that holds only while its signal is on the wire: left without it they would wait for a signal that never
+ * comes, so the machines they feed would have no recipe or ingredients when the build is matched. The warm-up path frees them the same way.
+ */
+function freesHandMadeClock(options: BuildOptions): boolean {
+    return options.built_clock !== undefined && options.clock !== undefined;
+}
+
+/** What the game is asked to build for the trial build of a staged start, which tells which built inserter is which */
+export function trialBuildJob(options: BuildOptions) {
+    return {
+        blueprint: stagedBlueprint(options),
+        surface: options.surface,
+        position: options.position,
+        clock: "remove",
+        free_warmup: freesHandMadeClock(options),
+        warmup_ticks: options.staged_start?.trial_build_ticks ?? 900,
+        speed: options.game_speed,
+        drill_resource: drillResourceOf(options),
+    };
+}
+
+/** What the game is asked to build for the first stage of a staged start: all but the inserters of the cell, in the place the trial build stood in */
+export function firstStageJob(options: BuildOptions, position: BuildOptions["position"]) {
+    const staged = options.staged_start!;
+    const replaces_clock = options.clock !== undefined || options.unclocked;
+    return {
+        blueprint: stagedBlueprint(options),
+        surface: options.surface,
+        position,
+        clock: replaces_clock ? "remove" : "keep",
+        free_warmup: freesHandMadeClock(options),
+        speed: options.game_speed,
+        drill_resource: drillResourceOf(options),
+        staged: { saturation_ticks: staged.saturation_ticks, cap_ticks: staged.saturation_cap_ticks },
+    };
+}
+
 function assertBuildOptions(options: BuildOptions): void {
     if (options.clock && !options.config) {
         throw new Error("A clock needs the config it was generated from, to find the inserters its combinators name");
@@ -1187,8 +1236,9 @@ function assertBuildOptions(options: BuildOptions): void {
         throw new Error("`copies` is how many copies of the config a generated clock is wired to, at least one copy: a whole number, or whole "
             + "copies and one part copy with the fraction of the config's copies: it needs a clock");
     }
-    if (options.built_clock && (options.unclocked || options.staged_start)) {
-        throw new Error("A named clock of the build is kept or replaced: it cannot be asked for with an unclocked run or a staged start");
+    if (options.built_clock && (options.unclocked || (options.staged_start && !options.clock))) {
+        throw new Error("A named clock of the build is kept or replaced: it cannot be asked for with an unclocked run, "
+            + "and a staged start takes it only with a generated clock to replace it");
     }
     if (options.built_clock) {
         // the blueprint is checked against the clock named before anything is built
@@ -1384,15 +1434,7 @@ export class HarnessSession {
 
     /** What the game is asked to build for the trial build of a staged start, which tells which built inserter is which */
     private trialJob(options: BuildOptions) {
-        return {
-            blueprint: options.blueprint,
-            surface: options.surface,
-            position: options.position,
-            clock: "remove",
-            warmup_ticks: options.staged_start?.trial_build_ticks ?? 900,
-            speed: options.game_speed,
-            drill_resource: drillResourceOf(options),
-        };
+        return trialBuildJob(options);
     }
 
     /**
@@ -1533,7 +1575,6 @@ export class HarnessSession {
             options.log(`Removed the ${cleared.removed} entities of the build before`);
         }
         this.has_build = true;
-        const replaces_clock = options.clock !== undefined || options.unclocked;
 
         // trial build: which inserter is which
         let order: { x: number; y: number; config_id: number; copy?: number }[] = [];
@@ -1574,15 +1615,7 @@ export class HarnessSession {
         }
 
         // first stage: everything but the inserters of the cell, until the belts are saturated
-        const build = await this.call("harness_build", {
-            blueprint: options.blueprint,
-            surface: options.surface,
-            position,
-            clock: replaces_clock ? "remove" : "keep",
-            speed: options.game_speed,
-            drill_resource: drillResourceOf(options),
-            staged: { saturation_ticks: staged.saturation_ticks, cap_ticks: staged.saturation_cap_ticks },
-        });
+        const build = await this.call("harness_build", firstStageJob(options, position));
         const not_built = Object.values<string>(build.failed);
         if (not_built.length > 0) {
             throw new Error(`Could not build ${not_built.length} of the blueprint's entities: ${Array.from(new Set(not_built)).join(", ")}`);
