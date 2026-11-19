@@ -436,6 +436,33 @@ Use the generation cache and replay variables above with a fresh capture directo
 `BELT_CLOCK_TRACE_PICKUPS=1` retains 64 ticks of native held/stock and machine-inventory snapshots before the first disturbance
 and after each restoration; it does not feed observations into the simulator.
 
+## The over-the-hood operating clocks, from ruling 60's start
+
+The 8 jobs of `over-hood-pickup-clock.game.test.ts` (`overhood-over-hood-turbo-*` in the record; the one input inserter picks over a hood from a belt, moving or under backpressure) now start from ruling 60's state, the
+harness's backpressure start (`staged: true, backpressure: true` in `overHoodClockScenario`, as `pickup-clock-capture.ts` reads them), on Factorio 2.1.24. Each run is repeated once with the
+recording cache off and gives the same run, tick for tick (steady state, every loss, the baseline and the stock guard); the game's report of the opening is kept in `opening.json` beside each run:
+the one machine is empty and fed by windowed inserters only, and no inserter has moved. The clock of each job is the one its entry pinned (`clock_sha256` unchanged); no probe text changed.
+
+| Case | Clock (window cycle, hash) | Steady state | Losses recovered at | Baseline net output | Start before (steady state; losses recovered at) |
+| --- | --- | --- | --- | --- | --- |
+| `mirrored-backed-different-items` | takt_batches_observed_swings_6 (960, `4a0f8700`) | 6,480 | 14,668 (cut iron-plate), 21,421 (block output), 26,199 (cut copper-cable) | 288 of 288 | free warm-up: 6,480; 14,669, 21,422, 26,200 |
+| `mirrored-backed-same-item` | takt_batches_observed (960, `c8799379`) | 7,846 | 15,528 (cut iron-plate), 16,488 (block output), 17,478 (cut iron-plate) | 288 of 288 | free warm-up: 6,482; 14,569, 15,529, 16,519 |
+| `mirrored-moving-different-items` | takt_batches_observed (320, `71884f6c`) | 7,120 | 14,765 (cut iron-plate), 21,201 (block output), 21,569 (cut copper-cable) | 352 of 352 | free warm-up: 7,120; 14,766, 21,202, 21,568 |
+| `mirrored-moving-same-item` | takt_batches_observed (960, `c8799379`) | 7,846 | 15,528 (cut iron-plate), 16,488 (block output), 17,478 (cut iron-plate) | 288 of 288 | free warm-up: 6,482; 14,569, 15,529, 16,519 |
+| `unmirrored-backed-different-items` | euclidean_swings (800, `8e8ac597`) | 6,800 | 12,137 (cut iron-plate), 15,322 (block output), 19,387 (cut copper-cable) | 320 of 320 | free warm-up: 6,803; 12,138, 15,323, 19,388 |
+| `unmirrored-backed-same-item` | takt_batches_observed (960, `c8799379`) | 7,846 | 15,528 (cut iron-plate), 16,488 (block output), 17,478 (cut iron-plate) | 288 of 288 | free warm-up: 6,482; 14,569, 15,529, 16,519 |
+| `unmirrored-moving-different-items` | takt_batches_observed (320, `d56fbdb9`) | 7,120 | 12,235 (cut iron-plate), 13,171 (block output), 15,735 (cut copper-cable) | 352 of 352 | free warm-up: 7,128; 10,920, 11,242, 15,096 |
+| `unmirrored-moving-same-item` | takt_batches_observed (960, `c8799379`) | 7,846 | 15,528 (cut iron-plate), 16,488 (block output), 17,478 (cut iron-plate) | 288 of 288 | free warm-up: 6,482; 14,569, 15,529, 16,519 |
+
+All hold: the net output over the baseline's whole window cycles is the target, every loss falls and is recovered, and the output stock guard holds. Four cases differ from their free warm-up run by a tick or two only
+(`mirrored-backed-different-items`, `mirrored-moving-different-items`, `unmirrored-backed-different-items`: steady state 0 to 3 ticks earlier, losses recovered 0 to 1 ticks earlier). The four same-item cases (mirrored or not, moving or
+under backpressure) pin one clock and make the same run in every case, as before (the two lanes carry the same item); from this start the machine reaches steady state later (7,846 against 6,482) and the first loss is recovered
+959 ticks later. `unmirrored-moving-different-items` reaches steady state 8 ticks earlier and recovers its losses 639 to 1,929 ticks later.
+
+```bash
+BELT_SPEED_CAPTURE_DIR=.scratch/judged-start-9 npm run test:game -- tests/game/builds/over-hood-pickup-clock.game.test.ts -t '^operating clock: over-hood-turbo-unmirrored-moving-different-items$'
+```
+
 ## Front pickup operating clocks
 
 `front-pickup-clock.game.test.ts` enumerates 48 controls ([front-clock-fixtures.ts](front-clock-fixtures.ts)):
@@ -643,6 +670,36 @@ composed in before the probe, so no recording made without it changes key): `ser
 output stock, the car's ore, the drill's status, the clock's counter and the stack in each taker's hand from 10 window cycles before each drill stop to 40
 after it, and at each whole window cycle from steady state on both furnaces' products finished and productivity bars. The run and its summary are as
 without the option.
+
+## Drill-fed builds, the ore voider and the blocked output, from ruling 60's start
+
+Eight record jobs record the clock the record selects from ruling 60's state, the harness's backpressure start (`staged: true, backpressure: true` in the case, as `pickup-clock-capture.ts` reads
+them; the ore voider's own capture asks for `staged_start: {backpressure: {}}` and keeps the game's report of the opening in `opening.json`), on Factorio 2.1.24. Each run was repeated once with
+the recording cache off and gives the same summary, tick for tick. The car and silo cases were recorded from a plain staged start before, the ore voider and blocked output cases from a free warm-up.
+
+| Job (case) | Clock (window cycle) | Copies built | Steady state | Losses recovered at | Start before (steady state; losses recovered at) |
+| --- | --- | --- | --- | --- | --- |
+| `IRON_PLATE_80_CAR_CHEST` (`car-selected-staged`) | `coordinated_sources` (144, `8a739e59`) | 1 of 1 | 7,201 | 14,509 (drill stopped), 14,511 (output block), 14,513 (drill stopped) | plain staged start: the same run |
+| `LITHIUM_PLATE_80_SILO_CHEST` (`lithium-silo-selected-staged`) | `coordinated_sources` (2,160, `2b115eb8`) | 1 of 1 | 5,760 | 13,853 (holmium cut), 18,497 (output block), 23,033 (holmium cut) | plain staged start: the same run |
+| `IRON_ORE_VOIDER_400_EXACT_SPEED` (`ore-voider-exact-speed`) | `time_division_windows` (144, `719cfc48`) | 1 of 1 | 7,200 | 10,815 (ore cut), 10,823 (output block) | free warm-up: 7,200; 10,816, 10,824 |
+| `IRON_ORE_VOIDER_400_OVERBEACONED` (`ore-voider-overbeaconed`) | `takt_batches_observed` (144, `d540d9e1`) | 1 of 1 | 7,200 | 10,816, 10,824 | free warm-up: 7,200; 10,817, 10,825 |
+| blocked output, stack size 1 (`blocked-output-turbo-stack-1`) | `takt_batches` (192, `21ebc2b1`) | 1 of 1 | 7,056 | 14,910 | free warm-up: 7,071; 15,103 |
+| blocked output, stack size 2 (`blocked-output-turbo-stack-2`) | `takt_batches_observed` (192, `1b12f1e0`) | 1 of 1 | 7,060 | 15,508 | free warm-up: 7,071; 15,509 |
+| blocked output, stack size 3 (`blocked-output-turbo-stack-3`) | `phase_shifted_batch` (1,440, `aed3a5df`) | 1 of 1 | 6,802 | 15,622 | free warm-up: 6,803; 15,623 |
+| blocked output, stack size 4 (`blocked-output-turbo-stack-4`) | `takt_batches_observed` (192, `d6f9260c`) | 1 of 1 | 7,056 | 16,460 | free warm-up: 7,071; 16,461 |
+
+All hold: the net output over the baseline's whole window cycles is the target (car 4,800 of 4,800, silo 2,880 of 2,880, ore voider 24,000 of 24,000, blocked output 288 of 288 at stack sizes 1, 2 and 4 and 240 of
+240 at stack size 3), every loss falls and is recovered, and the output stock guard holds (the ore voider is judged by a count, as before: the ore destroyed and the share of crafts that gave ore back
+stay inside the binomial range, the car is never full). The car and silo runs are the same as from the plain staged start in every value that is pinned.
+
+- **Every inserter of these builds has a window.** The opening reports (`opening.json`) hold every inserter of each build as windowed (4 of the car build, 6 of the ore voider, 2 of the blocked output), no machine fed by an
+  inserter with no window, and no windowed inserter moved in the fill. The start equals a plain staged start in effect, as for the grenade and logistic builds above; the car's drill and the supply chests are the part no clock holds.
+- **The ore voider's exact-speed job holds.** The guess that the recycler's random returns could leave it short did not show: the destroyed ore is 23,997 of 24,000 over the baseline, within 232.
+
+```bash
+BELT_SPEED_CAPTURE_DIR=.scratch/judged-start-7 BELT_CLOCK_CALIBRATE=1 npm run test:game -- tests/game/builds/blocked-output-clock.game.test.ts -t '^blocked output clock: blocked-output-turbo-stack-1$'
+ORE_VOIDER_CAPTURE_DIR=.scratch/judged-start-7-voider npm run test:game -- tests/game/builds/iron-ore-voider-400-clock.game.test.ts -t '^ore voider clock: ore-voider-exact-speed$'
+```
 
 ## A cargo wagon as the hub of a steel build
 
@@ -1115,3 +1172,32 @@ MISSING_RECORDINGS_CAPTURE_DIR=.scratch/scaffold-builds npm run test:game -- tes
 
 `scripts/recording_count.py <commit> <out.md>` counts which record jobs have a recording that holds from ruling 60's start (usage in its docstring). A job built on fewer copies than the job has reads
 "ruling 60's start: N of M copies built" there, whatever its `limit` says.
+
+## The side pickup builds, from ruling 60's start
+
+The twelve turbo side pickup builds of the speed coverage (`moving-pickup.game.test.ts`, the different-items fixture with the electromagnetic plant; `same-item-pickup-clock.game.test.ts`, the
+same-item fixture with the gear assembler; each on the straight belt, the underground entrance and the exit, belt moving or under backpressure (the cases' `backed`)) record the selected clock of their record job from ruling 60's start
+(`staged: true, backpressure: true` in `capturePickupClockSpeed`) on Factorio 2.1.24, with the standard losses (an ingredient cut, the output block, the other ingredient cut). Each case was run twice with
+the recording cache off, with equal summaries, and is pinned in [pickup-clock-controls.json](pickup-clock-controls.json) (the entry, its clock hash and the game version).
+
+| Job (case) | Clock (window cycle) | Steady state | Losses recovered at | Start before (steady state; losses recovered at) |
+| --- | --- | --- | --- | --- |
+| electromagnetic, straight belt, backed and moving | Takt Batches Swings 1 (352, `c9c84d59`) | 7,120 | 14,653, 19,005, 22,877 | free warm-up: 7,120; 14,654, 18,878, 22,750 |
+| electromagnetic, underground entrance, backed | same | 7,120 | 14,653, 19,005, 22,877 | free warm-up: 7,120; 14,782, 18,878, 23,230 |
+| electromagnetic, underground entrance, moving | same | 7,120 | 16,190, 20,414, 24,991 | free warm-up: 7,121; 16,192, 21,824, 25,695 |
+| electromagnetic, underground exit, backed | same | 7,120 | 14,653, 19,005, 23,101 | free warm-up: 7,120; 14,782, 18,878, 22,878 |
+| electromagnetic, underground exit, moving | same | 7,120 | 16,191, 21,823, 27,455 | free warm-up: 7,121; 16,192, 21,824, 26,112 |
+| same-item, all six | Takt Batches Observed (160, `67586738`) | 7,122 | 14,501, 18,341, 22,181 | free warm-up: 7,123; 14,502, 18,342, 22,182 |
+
+All twelve hold: the net output over the baseline's whole window cycles is the target (1,760 of 1,760 for the electromagnetic builds, 352 of 352 for the same-item builds), every loss falls and is recovered,
+and the output stock guard holds. The one machine of each build is filled only by inserters with a window, so no inserter moves in the fill (`opening.json` beside each run): the start equals a plain staged start in effect, as for the grenade build above,
+and the runs differ from the free warm-up's by a tick or a few hundred ticks of recovery only. The straight belt and the same-item builds give one run whatever the belt supply; the electromagnetic underground builds
+recover later when the belt moves, as before.
+
+```bash
+BELT_SPEED_CAPTURE_DIR=.scratch/judged-start-10 npm run test:game -- tests/game/builds/moving-pickup.game.test.ts -t '^speed coverage: electromagnetic-turbo-underground-exit-moving$'
+```
+
+`recording_count.py` reads the start of these cases from `staged: true, backpressure: true` in the code that builds their scenario (`capture_scenario_start`). The two front exit jobs of the electromagnetic clock
+(`front-exit-turbo-unmirrored-backed-different-items`, `front-exit-turbo-unmirrored-moving-config-different-items`) share the clock hash `c9c84d59` and read as holding from these recordings; their own cases in
+`front-clock-controls.json` stay as they were recorded.

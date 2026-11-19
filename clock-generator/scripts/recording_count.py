@@ -5,9 +5,9 @@ For each job of the record (`clock-generator/record/<job>.json`) it lists the ga
 counts. A recording counts ("holds from ruling 60's start") when it:
   - is at the job's selected clock hash;
   - starts from ruling 60's start (the backpressure start: every entity that needs no clocked entity is full, the clock
-    starts at the first tick its lock is off): `start: "backpressure"` in the missing-recordings fixtures; in the other
-    fixtures `staged: true, backpressure: true`; `staged: true` alone is a plain staged start, which is not the judged
-    start, and the rest is a free warm-up;
+    starts at the first tick its lock is off): `start: "backpressure"` in the missing-recordings fixtures, or
+    `staged: true, backpressure: true` in the code that builds a family's scenario (the pickup speed coverage); in the
+    other fixtures `staged: true` is a plain staged start, which is not the judged start, and the rest is a free warm-up;
   - builds at least the job's copies, so every copy is judged;
   - ran at least one loss;
   - holds: the stored run holds its baseline and recovers from every loss (`runHolds`, a stock-guard waiver honoured).
@@ -114,7 +114,8 @@ def versions_of(text):
 def start_of_controls(repo, name, sources):
     """How the game tests of a controls file start the recording, read from their code: (start, evidence files)"""
     texts = {f: repo.show(BUILDS + f) for f in sources}
-    imported = {f for f, t in texts.items() if "pickup-clock-capture" in t}
+    # the files that run a scenario through the capture (a fixture that only imports its helpers or types does not)
+    imported = {f for f, t in texts.items() if "capturePickupClockScenario" in code_only(t)}
     chain = set(texts)
     # a game test of the family imports the fixtures that name the controls file: add the game tests and what they import
     for f in repo.ls(BUILDS):
@@ -124,44 +125,49 @@ def start_of_controls(repo, name, sources):
             if any("./" + os.path.splitext(s)[0] in t for s in sources) or base in sources:
                 chain.add(base)
                 texts[base] = t
-                if "pickup-clock-capture" in t:
+                if "capturePickupClockScenario" in code_only(t):
                     imported.add(base)
     if imported:
         # a game test that runs the capture protocol records by pickup-clock-capture.ts alone: its start is that file's
         # the capture holds both starts (the scenario's `staged`, `backpressure`): the start is per case, read from the fixtures
         return "capture", ["pickup-clock-capture.ts"]
     staged = sorted(f for f in chain if "staged_start" in code_only(texts[f]))
-    free = sorted(f for f in chain if re.search(r"warmup_ticks:\s*\d+", code_only(texts[f])))
+    # a staged start runs no warm-up (`warmup_ticks: 0`): only a warm-up of ticks is a free warm-up
+    free = sorted(f for f in chain if re.search(r"warmup_ticks:\s*[1-9]\d*", code_only(texts[f])))
     if staged and not free:
-        return "staged", staged
+        # `staged_start: {backpressure: ...}` is ruling 60's start, `staged_start: {...}` another staged start
+        return ("backpressure" if any(re.search(r"staged_start:\s*\{\s*backpressure\b", code_only(texts[f])) for f in staged) else "staged"), staged
     if free and not staged:
         return "free warm-up", free
     return None, sorted(chain)
 
 
 def staged_case_names(repo, sources):
-    """Case names a family's fixtures mark `staged: true` (a plain staged start; only the search cases add `backpressure`, and those are skipped)"""
-    names = set()
+    """The start of a family's fixtures, read from their text: (case name -> "staged" or "backpressure", the start of every case of a file whose scenario sets `staged: true, backpressure: true` itself)
+
+    A case literal (`{name: "...", ..., staged: true}`) marks that case a plain staged start, and one that also says `backpressure: true` ruling 60's start (the family's scenario passes both on).
+    A fixtures file whose scenario function says `staged: true, backpressure: true` on a line of its own starts every case it builds that way (cases named by a template, like the over-the-hood ones)."""
+    names = {}
+    family = None
     for b in sources:
         text = code_only(repo.show(BUILDS + b))
         for m in re.finditer(r'\{name: "([^"]+)"[^{}]*\}', text):
             if re.search(r"\bstaged: true\b", m.group(0)):
-                names.add(m.group(1))
-    return names
-
-
-def backpressure_case_names(repo, sources):
-    """(names, all) of a family's cases that start from ruling 60's start: the case literals that say `staged: true, backpressure: true`,
-    and `all` where the fixtures' scenario builder sets both for every case (a line of just `staged: true, backpressure: true,`)"""
-    names, every = set(), False
-    for b in sources:
-        text = code_only(repo.show(BUILDS + b))
-        for m in re.finditer(r'\{name: "([^"]+)"[^{}]*\}', text):
-            if re.search(r"\bstaged: true, backpressure: true\b", m.group(0)):
-                names.add(m.group(1))
+                names[m.group(1)] = "backpressure" if re.search(r"\bbackpressure: true\b", m.group(0)) else "staged"
         if re.search(r"^\s+staged: true, backpressure: true,\s*$", text, re.M):
-            every = True
-    return names, every
+            family = "backpressure"
+    return names, family
+
+
+def capture_scenario_start(repo, sources):
+    """The start every case of a family gets from the file that builds its capture scenario (not a fixtures file with a literal per case):
+    `staged: true, backpressure: true` in its code is ruling 60's start (the pickup speed coverage); None where no source says so"""
+    for b in sources:
+        if b.endswith(".test.ts") or b == "pickup-clock-capture.ts":
+            continue
+        if re.search(r"\bstaged: true, backpressure: true\b", code_only(repo.show(BUILDS + b))):
+            return "backpressure"
+    return None
 
 
 def missing_cases(repo):
@@ -236,8 +242,8 @@ def main(commit, out_path):
         stem = f[: -len("-clock-controls.json")] if f.endswith("-clock-controls.json") else f[: -len("-controls.json")]
         sources = [b for b in builds_files if b.endswith(".ts") and not b.endswith(".test.ts") and f in repo.show(BUILDS + b)]
         start_file, evidence = start_of_controls(repo, f, sources)
-        staged_names = staged_case_names(repo, [b for b in sources if b.endswith("-fixtures.ts")])
-        backpressure_names, backpressure_all = backpressure_case_names(repo, [b for b in sources if b.endswith("-fixtures.ts")])
+        staged_names, staged_family = staged_case_names(repo, [b for b in sources if b.endswith("-fixtures.ts")])
+        scenario_start = capture_scenario_start(repo, [b for b in sources if not b.endswith("-fixtures.ts")])
         missing = missing_cases(repo) if f == MISSING_FILE else {}
         file_versions = versions_of(data["meaning"])
         for case in sorted(data["cases"]):
@@ -247,7 +253,7 @@ def main(commit, out_path):
                 copies, backpressure = missing[case]
                 start = "backpressure" if backpressure else "staged"
             elif start_file == "capture":
-                start = "backpressure" if backpressure_all or case in backpressure_names else "staged" if case in staged_names else "free warm-up"
+                start = staged_names.get(case, staged_family or scenario_start or "free warm-up")
             else:
                 start = start_file
             hashes = sorted({h for h in [(e.get("recorded") or {}).get("clock_sha256"), (e.get("generation") or {}).get("clock_sha256")] if h})
@@ -416,7 +422,7 @@ def main(commit, out_path):
       "'recorded at another clock': a file names the job's build but no file pins the selected hash. 'none': no file names the job. "
       "'start not known': the start of the only recordings cannot be read. "
       "The cases of `filled-start-search-clock-controls.json` (the picks of the search from every stable clock) are other picks than the record's and are left out. "
-      "The start is read per case: the missing-recordings fixtures say `start: \"backpressure\"` or not; in the other fixtures `staged: true, backpressure: true` (in the case, or for every case in the scenario builder) is ruling 60's start, `staged: true` alone is a plain staged start and the rest a free warm-up.")
+      "The start is read per case: the missing-recordings fixtures say `start: \"backpressure\"` or not; in the other fixtures `staged: true` is a plain staged start and the rest a free warm-up; `backpressure` is set only by the search cases.")
     w("")
     w("What the partial recordings lack (best recording of each job):")
     w("")

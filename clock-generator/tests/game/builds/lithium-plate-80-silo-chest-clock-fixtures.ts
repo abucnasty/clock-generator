@@ -24,7 +24,7 @@ import {PickupClockScenario} from "./pickup-clock-capture";
  * belt that side-loads downstream (the sample's README): the game does not hold it, and since the output belt runs in the run of
  * one copy (#837) the simulator does not either. The config marks
  * the two drops (`drop_capture`), and the result names them as that limit. `lithium-silo-selected-staged` is the clock the record
- * selects (Coordinated Sources, 2,160 ticks), recorded from the harness's staged start under the same probe and protocol.
+ * selects (Coordinated Sources, 2,160 ticks), recorded from ruling 60's start (the harness's backpressure start) under the same probe and protocol.
  */
 export interface LithiumSiloCase {
     name: string;
@@ -35,6 +35,8 @@ export interface LithiumSiloCase {
     order: "as-built" | "fill-last";
     /** Recorded from the harness's staged start, not from a warm-up and a settle */
     staged?: true;
+    /** The staged start is ruling 60's start (the harness's backpressure start, `staged_start.backpressure`), not a plain staged start */
+    backpressure?: true;
 }
 
 export function lithiumSiloCases(): LithiumSiloCase[] {
@@ -44,7 +46,7 @@ export function lithiumSiloCases(): LithiumSiloCase[] {
         {name: "lithium-silo-swings-1", alternative: "takt_batches_observed_swings_1", order: "as-built"},
         {name: "lithium-silo-swings-7", alternative: "takt_batches_observed_swings_7", order: "as-built",
             known_limit: "side-loaded-drop"},
-        {name: "lithium-silo-selected-staged", alternative: "coordinated_sources", order: "as-built", staged: true},
+        {name: "lithium-silo-selected-staged", alternative: "coordinated_sources", order: "as-built", staged: true, backpressure: true},
     ];
 }
 
@@ -99,6 +101,7 @@ export function lithiumSiloScenario(variant: LithiumSiloCase): PickupClockScenar
         // the clock with 7 output swings repeats over 7,560 ticks, longer than a minute
         ...(variant.alternative === "takt_batches_observed_swings_7" && {baseline: {ticks: 7560, reason: "the clock's output repeats over its 7,560-tick period, longer than a minute"}}),
         staged: variant.staged,
+        backpressure: variant.backpressure,
         probeFile: path.join(__dirname, "lithium-plate-80-silo-chest-clock-probe.lua"),
         probe: {family: "lithium-silo"},
         controls: path.join(__dirname, "lithium-plate-80-silo-chest-clock-controls.json"),
