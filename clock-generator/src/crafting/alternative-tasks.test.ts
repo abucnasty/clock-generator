@@ -14,8 +14,14 @@ describe("belt supply alternative tasks", () => {
     const otherSupply = (plan: ReturnType<typeof planClockAlternatives>) =>
         plan.tasks.filter(task => task.id === "planned" || task.id === "planned-moving-belt");
 
+    // the automation sample's lanes as one line each (no underground entrances): the tasks do not depend on them, and lines cost time
+    const automation = async () => {
+        const sample = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
+        return {...sample, belts: sample.belts.map(belt => ({...belt, lanes: belt.lanes.map(lane => ({...lane, underground_entrances: undefined}))})) as typeof sample.belts};
+    };
+
     it("offers no clock for another supply to a config whose belts move, with or without belt windows", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
+        const config = await automation();
         expect(config.inserters.some(inserter => inserter.source.type === "belt")).toBe(true);
         expect(otherSupply(planClockAlternatives(config, options))).toEqual([]);
         const always_enabled = {...config, inserters: config.inserters.map(inserter => inserter.source.type === "belt"
@@ -35,7 +41,7 @@ describe("belt supply alternative tasks", () => {
     });
 
     it("offers no clock for another supply to a config whose belts are backed up, not even as a fallback", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.AUTOMATION_SCIENCE_240);
+        const config = await automation();
         const plan = planClockAlternatives({...config,
             overrides: {...config.overrides, backed_up_belts: true, search_for_fewer_wake_ups: true}}, options);
         expect(otherSupply(plan)).toEqual([]);

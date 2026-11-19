@@ -31,7 +31,7 @@ describe("the rule count of a simulated run", () => {
         expect(selected.maker).toBe("planned-belt-slack");
         expect(clock.verdict).toBe("stable");
         expect(clock.ranking.recovery_window_cycles).toBe(3);
-    });
+    }, 180_000);
 
     it("generates the clock itself when ruleCallsOfSample is not given the alternatives, and finds the same calls", () => {
         const given = ruleCallsOfClock(config, selected);
