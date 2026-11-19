@@ -647,6 +647,36 @@ output stock, the car's ore, the drill's status, the clock's counter and the sta
 after it, and at each whole window cycle from steady state on both furnaces' products finished and productivity bars. The run and its summary are as
 without the option.
 
+## Drill-fed builds, the ore voider and the blocked output, from ruling 60's start
+
+Eight record jobs record the clock the record selects from ruling 60's state, the harness's backpressure start (`staged: true, backpressure: true` in the case, as `pickup-clock-capture.ts` reads
+them; the ore voider's own capture asks for `staged_start: {backpressure: {}}` and keeps the game's report of the opening in `opening.json`), on Factorio 2.1.24. Each run was repeated once with
+the recording cache off and gives the same summary, tick for tick. The car and silo cases were recorded from a plain staged start before, the ore voider and blocked output cases from a free warm-up.
+
+| Job (case) | Clock (window cycle) | Copies built | Steady state | Losses recovered at | Start before (steady state; losses recovered at) |
+| --- | --- | --- | --- | --- | --- |
+| `IRON_PLATE_80_CAR_CHEST` (`car-selected-staged`) | `coordinated_sources` (144, `8a739e59`) | 1 of 1 | 7,201 | 14,509 (drill stopped), 14,511 (output block), 14,513 (drill stopped) | plain staged start: the same run |
+| `LITHIUM_PLATE_80_SILO_CHEST` (`lithium-silo-selected-staged`) | `coordinated_sources` (2,160, `2b115eb8`) | 1 of 1 | 5,760 | 13,853 (holmium cut), 18,497 (output block), 23,033 (holmium cut) | plain staged start: the same run |
+| `IRON_ORE_VOIDER_400_EXACT_SPEED` (`ore-voider-exact-speed`) | `time_division_windows` (144, `719cfc48`) | 1 of 1 | 7,200 | 10,815 (ore cut), 10,823 (output block) | free warm-up: 7,200; 10,816, 10,824 |
+| `IRON_ORE_VOIDER_400_OVERBEACONED` (`ore-voider-overbeaconed`) | `takt_batches_observed` (144, `d540d9e1`) | 1 of 1 | 7,200 | 10,816, 10,824 | free warm-up: 7,200; 10,817, 10,825 |
+| blocked output, stack size 1 (`blocked-output-turbo-stack-1`) | `takt_batches` (192, `21ebc2b1`) | 1 of 1 | 7,056 | 14,910 | free warm-up: 7,071; 15,103 |
+| blocked output, stack size 2 (`blocked-output-turbo-stack-2`) | `takt_batches_observed` (192, `1b12f1e0`) | 1 of 1 | 7,060 | 15,508 | free warm-up: 7,071; 15,509 |
+| blocked output, stack size 3 (`blocked-output-turbo-stack-3`) | `phase_shifted_batch` (1,440, `aed3a5df`) | 1 of 1 | 6,802 | 15,622 | free warm-up: 6,803; 15,623 |
+| blocked output, stack size 4 (`blocked-output-turbo-stack-4`) | `takt_batches_observed` (192, `d6f9260c`) | 1 of 1 | 7,056 | 16,460 | free warm-up: 7,071; 16,461 |
+
+All hold: the net output over the baseline's whole window cycles is the target (car 4,800 of 4,800, silo 2,880 of 2,880, ore voider 24,000 of 24,000, blocked output 288 of 288 at stack sizes 1, 2 and 4 and 240 of
+240 at stack size 3), every loss falls and is recovered, and the output stock guard holds (the ore voider is judged by a count, as before: the ore destroyed and the share of crafts that gave ore back
+stay inside the binomial range, the car is never full). The car and silo runs are the same as from the plain staged start in every value that is pinned.
+
+- **Every inserter of these builds has a window.** The opening reports (`opening.json`) hold every inserter of each build as windowed (4 of the car build, 6 of the ore voider, 2 of the blocked output), no machine fed by an
+  inserter with no window, and no windowed inserter moved in the fill. The start equals a plain staged start in effect, as for the grenade and logistic builds above; the car's drill and the supply chests are the part no clock holds.
+- **The ore voider's exact-speed job holds.** The guess that the recycler's random returns could leave it short did not show: the destroyed ore is 23,997 of 24,000 over the baseline, within 232.
+
+```bash
+BELT_SPEED_CAPTURE_DIR=.scratch/judged-start-7 BELT_CLOCK_CALIBRATE=1 npm run test:game -- tests/game/builds/blocked-output-clock.game.test.ts -t '^blocked output clock: blocked-output-turbo-stack-1$'
+ORE_VOIDER_CAPTURE_DIR=.scratch/judged-start-7-voider npm run test:game -- tests/game/builds/iron-ore-voider-400-clock.game.test.ts -t '^ore voider clock: ore-voider-exact-speed$'
+```
+
 ## A cargo wagon as the hub of a steel build
 
 `steel-plate-26-wagon-chest-clock.game.test.ts` enumerates 3 controls ([steel-plate-26-wagon-chest-clock-fixtures.ts](steel-plate-26-wagon-chest-clock-fixtures.ts)) on

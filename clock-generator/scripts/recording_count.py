@@ -114,7 +114,8 @@ def versions_of(text):
 def start_of_controls(repo, name, sources):
     """How the game tests of a controls file start the recording, read from their code: (start, evidence files)"""
     texts = {f: repo.show(BUILDS + f) for f in sources}
-    imported = {f for f, t in texts.items() if "pickup-clock-capture" in t}
+    # the files that run a scenario through the capture (a fixture that only imports its helpers or types does not)
+    imported = {f for f, t in texts.items() if "capturePickupClockScenario" in code_only(t)}
     chain = set(texts)
     # a game test of the family imports the fixtures that name the controls file: add the game tests and what they import
     for f in repo.ls(BUILDS):
@@ -124,16 +125,18 @@ def start_of_controls(repo, name, sources):
             if any("./" + os.path.splitext(s)[0] in t for s in sources) or base in sources:
                 chain.add(base)
                 texts[base] = t
-                if "pickup-clock-capture" in t:
+                if "capturePickupClockScenario" in code_only(t):
                     imported.add(base)
     if imported:
         # a game test that runs the capture protocol records by pickup-clock-capture.ts alone: its start is that file's
         # the capture holds both starts (the scenario's `staged`, `backpressure`): the start is per case, read from the fixtures
         return "capture", ["pickup-clock-capture.ts"]
     staged = sorted(f for f in chain if "staged_start" in code_only(texts[f]))
-    free = sorted(f for f in chain if re.search(r"warmup_ticks:\s*\d+", code_only(texts[f])))
+    # a staged start runs no warm-up (`warmup_ticks: 0`): only a warm-up of ticks is a free warm-up
+    free = sorted(f for f in chain if re.search(r"warmup_ticks:\s*[1-9]\d*", code_only(texts[f])))
     if staged and not free:
-        return "staged", staged
+        # `staged_start: {backpressure: ...}` is ruling 60's start, `staged_start: {...}` another staged start
+        return ("backpressure" if any(re.search(r"staged_start:\s*\{\s*backpressure\b", code_only(texts[f])) for f in staged) else "staged"), staged
     if free and not staged:
         return "free warm-up", free
     return None, sorted(chain)
