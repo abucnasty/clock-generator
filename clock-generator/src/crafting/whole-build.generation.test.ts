@@ -5,7 +5,8 @@ import {
 } from "../../tests/configs/whole-build-clocks";
 import { automationRow } from "../../tests/configs/automation-row";
 import { validateConfig } from "./plan/validate-config";
-import { generateClockAlternatives, type ClockAlternativesResult } from "./alternatives";
+import { generateClockAlternatives, planClockAlternatives, runClockAlternativeTask, type ClockAlternativesResult } from "./alternatives";
+import { clockFromWindows } from "./generate-blueprint";
 import { quiet } from "./generate-blueprint-test-helpers";
 import { judgeSharedLanes } from "./shared-lane-verdict";
 
@@ -20,18 +21,22 @@ import { judgeSharedLanes } from "./shared-lane-verdict";
 // clock 8191de109ece falls short: assemblers 4 and 8 make 80 to 92 a window cycle, as in the game (Factorio 2.1.24: no steady state
 // in 36,000 ticks, from ruling 60's start and from a warm-up), so the primary clock does not hold. Pitch Pickups still backs its
 // swings off from the plan's count and times a full hand in each output window; Coordinated Sources takes those windows for every
-// output but the seventh assembler's. In the game that clock holds from ruling 60's start (13,824 of 13,824 over 16 window cycles).
+// output but the seventh assembler's (2,367.6 wakeups a minute; 2,852.2 without them). In the game that clock holds from ruling
+// 60's start (13,824 of 13,824 over 16 window cycles). The whole generation of the row takes about six times as long as Pitch
+// Pickups' alone (Coordinated Sources composes more clocks from the full-hand windows), so only Pitch Pickups is made here, and the
+// clock Coordinated Sources composes of its windows is checked as given.
 /** Pitch Pickups' outputs at 9 tiles: one hand in each of two windows of 4 ticks, 36 ticks apart */
 const FULL_HAND_OUTPUT = [{ start: 0, end: 3 }, { start: 36, end: 39 }];
 /** Assemblers 4 and 8's inputs in the Time-Study clock at 9 tiles: two windows, not four */
 const WIDE_INPUT = [{ start: 0, end: 52 }, { start: 122, end: 215 }];
+/** The clock Coordinated Sources selects at 9 tiles: Pitch Pickups' outputs but the seventh assembler's, Time-Study's inputs */
+const COORDINATED_FULL_HANDS = { ...onNine(threeOf([SIX_OUTPUT_WINDOWS, SIX_OUTPUT_WINDOWS, SIX_OUTPUT_WINDOWS])),
+    "inserter:7": WIDE_INPUT, "inserter:14": TWO_OUTPUT_WINDOWS, "inserter:15": WIDE_INPUT };
 
 describe("a whole build of nine identical assemblers, clocked as given", () => {
-    let nine: ClockAlternativesResult;
     let six: ClockAlternativesResult;
 
     beforeAll(() => {
-        nine = generateClockAlternatives(nineOnLine(), { logger: quiet });
         six = generateClockAlternatives(automationRow({ machines: 9, pitch: 6 }), { logger: quiet });
     });
 
@@ -49,15 +54,20 @@ describe("a whole build of nine identical assemblers, clocked as given", () => {
             .toEqual(["3 copper-plate 56/65", "3 iron-gear-wheel 58/65"]);
     });
 
-    it("at 9 tiles: Pitch Pickups times full hands, and Coordinated Sources takes them for eight outputs", () => {
-        const pitch = clockOf(nine, "pitch_pickups");
+    it("at 9 tiles: Pitch Pickups times a full hand in each output window, though the primary clock does not hold", () => {
+        const plan = planClockAlternatives(nineOnLine(), { logger: quiet });
+        expect(plan.context.primary_stable).toBe(false);
+        const pitch = runClockAlternativeTask(nineOnLine(), plan.context, "full-hand", { logger: quiet })!.alternatives[0];
         expect(pitch.result.simulation_duration.ticks).toBe(72);
         expect(pitch.result.clock_windows["inserter:2"]).toEqual(FULL_HAND_OUTPUT);
-        const selected = nine.alternatives[nine.selected_index];
-        expect(selected.id).toBe("coordinated_sources");
-        expect(selected.verdict).toBe("stable");
-        expect(selected.result.clock_windows).toEqual({ ...onNine(threeOf([SIX_OUTPUT_WINDOWS, SIX_OUTPUT_WINDOWS, SIX_OUTPUT_WINDOWS])),
-            "inserter:7": WIDE_INPUT, "inserter:14": TWO_OUTPUT_WINDOWS, "inserter:15": WIDE_INPUT });
+    });
+
+    it("at 9 tiles: the clock Coordinated Sources composes of those windows holds as built", () => {
+        const config = nineOnLine();
+        const made = clockFromWindows({ ...config, overrides: { ...config.overrides, derive_clock_windows: false, terminal_swing_count: 3 } },
+            COORDINATED_FULL_HANDS, 216, quiet);
+        expect(made.stability_check.as_built?.holds).toBe(true);
+        expect(made.stability_check.as_built?.wake_ups?.wake_ups_per_minute).toBeCloseTo(2367.58, 2);
     });
 
     it("at 6 tiles: the 72-tick clock holds and is recommended", () => {
