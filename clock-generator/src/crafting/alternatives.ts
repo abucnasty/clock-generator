@@ -452,20 +452,17 @@ function beltNote(config: Config, result: BlueprintGenerationResult): string {
 }
 
 /**
- * Every alternative after the primary one. `known_stable` answers from runs that already finished, so the full-hand
- * alternative only re-simulates a planned run when it was not generated yet (e.g. in another worker). A clock that does
- * not hold is made again with room for a hand of fuel where the build has an inserter that takes fuel off a belt (see
- * withFuelHandRoomWhereNeeded).
+ * Every alternative after the primary one. A clock that does not hold is made again with room for a hand of fuel where the
+ * build has an inserter that takes fuel off a belt (see withFuelHandRoomWhereNeeded).
  */
 function alternativeDefinitions(
     config: Config,
     context: ClockAlternativeContext,
     quiet: GenerateClockOptions,
-    known_stable: (id: string) => boolean | undefined = () => undefined,
     with_chest_drill_fallbacks: boolean = true,
 ): AlternativeDefinition[] {
-    const definitions = withChestDrillFallbacks(alternativeDefinitionsWithFuelHandRoom(config, context, quiet, known_stable), config,
-        with_chest_drill_fallbacks, fallback_config => alternativeDefinitions(fallback_config, context, quiet, known_stable, false));
+    const definitions = withChestDrillFallbacks(alternativeDefinitionsWithFuelHandRoom(config, context, quiet), config,
+        with_chest_drill_fallbacks, fallback_config => alternativeDefinitions(fallback_config, context, quiet, false));
     // the same alternatives made with shared windows, made when one of them is a clock of the grouped hands rule (except
     // where a definition goes without, see no_shared_windows), and with the inserters that take out of a loop always
     // enabled, made when a clock with windows for them does not meet goal 1
@@ -473,13 +470,13 @@ function alternativeDefinitions(
     let without_loop: AlternativeDefinition[] | undefined;
     let without_in_loop: AlternativeDefinition[] | undefined;
     return definitions.map(definition => ({ ...definition, ...(definition.no_shared_windows !== true && { shared_windows: () => {
-        shared ??= alternativeDefinitionsWithFuelHandRoom(config, context, { ...quiet, shared_windows: true }, known_stable);
+        shared ??= alternativeDefinitionsWithFuelHandRoom(config, context, { ...quiet, shared_windows: true });
         return shared.find(it => it.id === definition.id);
     } }), without_loop_windows: () => {
-        without_loop ??= alternativeDefinitionsWithFuelHandRoom(config, context, { ...quiet, loop_windows: false }, known_stable);
+        without_loop ??= alternativeDefinitionsWithFuelHandRoom(config, context, { ...quiet, loop_windows: false });
         return without_loop.find(it => it.id === definition.id);
     }, without_in_loop_windows: () => {
-        without_in_loop ??= alternativeDefinitionsWithFuelHandRoom(config, context, { ...quiet, loop_windows: "out-of-loop" }, known_stable);
+        without_in_loop ??= alternativeDefinitionsWithFuelHandRoom(config, context, { ...quiet, loop_windows: "out-of-loop" });
         return without_in_loop.find(it => it.id === definition.id);
     } }));
 }
@@ -488,11 +485,10 @@ function alternativeDefinitionsWithFuelHandRoom(
     config: Config,
     context: ClockAlternativeContext,
     quiet: GenerateClockOptions,
-    known_stable: (id: string) => boolean | undefined,
 ): AlternativeDefinition[] {
-    let definitions = alternativeDefinitionsFor(config, context, quiet, known_stable);
+    let definitions = alternativeDefinitionsFor(config, context, quiet);
     if (takesFuelOffABelt(config)) {
-        const with_fuel_hand_room = alternativeDefinitionsFor(config, context, { ...quiet, fuel_hand_room: true }, known_stable);
+        const with_fuel_hand_room = alternativeDefinitionsFor(config, context, { ...quiet, fuel_hand_room: true });
         definitions = definitions.map(definition => {
             const with_room = with_fuel_hand_room.find(it => it.id === definition.id);
             return with_room === undefined ? definition
@@ -541,7 +537,6 @@ function alternativeDefinitionsFor(
     config: Config,
     context: ClockAlternativeContext,
     quiet: GenerateClockOptions,
-    known_stable: (id: string) => boolean | undefined,
 ): AlternativeDefinition[] {
     const secondary = secondaryPlanningCountOf(config, context);
     const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false,
@@ -677,18 +672,10 @@ function alternativeDefinitionsFor(
                 + "searched with clock-only checks, preferring the fewest pickups that wait for items. The timing must "
                 + "let the build go back to its rate by itself when the output machines are full; if it does not, some enable windows are lengthened so a second grab can drain the "
                 + `surplus. Other inserters keep the enable windows of ${TAKT_BATCHES}.`,
-            run: () => {
-                // input windows come from the first planned run whose clock passes, most batched first
-                const full_hand: GenerateClockOptions = { ...quiet, lane_hand_room: "always" };
-                if (context.primary_stable) {
-                    return generateClockWithSwingBackoff(base_config, full_hand, pitchPickupsClock);
-                }
-                const stable_lower = lower_counts.find(lower =>
-                    known_stable(`swings-${lower}`) ?? holds(withSwings(lower, { ...quiet, on_progress_detail: undefined })));
-                return stable_lower === undefined
-                    ? generateClockWithSwingBackoff(base_config, full_hand, pitchPickupsClock)
-                    : pitchPickupsClock({ ...base_config, overrides: { ...base_config.overrides, terminal_swing_count: stable_lower } }, full_hand);
-            },
+            // the swings back off from the plan's count until a clock holds, whether or not the primary clock holds. Started instead at
+            // the first lower count whose planned clock holds where the primary did not, it ended on that count's planned windows on the
+            // row of nine automation science assemblers on their line, which lost the full-hand windows Coordinated Sources is built from
+            run: () => generateClockWithSwingBackoff(base_config, { ...quiet, lane_hand_room: "always" }, pitchPickupsClock),
             search: true,
         },
         // Round-Robin Polling with a shorter window cycle, where its first plan's window cycle was not too long, so the primary did not try it: a fallback, made
@@ -1622,15 +1609,13 @@ function generateAllAlternatives(config: Config, options: GenerateClockOptions):
     const plan = planClockAlternatives(config, { ...options, on_progress_detail: report, on_not_made });
     completed++;
 
-    const stable_by_id = new Map<string, boolean>();
     // Request-local: a new generation (or changed config/data) never inherits another run's verdict.
     const verification_cache = new Map<string, VerificationAssessment>();
     if (plan.primary?.alternatives[0]) {
         const {disturbance_trial, disturbance_trial_not_tried, start_dependence} = plan.primary.alternatives[0].assessment;
         verification_cache.set(plan.primary.signature, {disturbance_trial, disturbance_trial_not_tried, start_dependence});
     }
-    const known_stable = (id: string) => stable_by_id.get(id);
-    const all_definitions = runnable(alternativeDefinitions(config, plan.context, quietOptions(options, logger, report), known_stable), options);
+    const all_definitions = runnable(alternativeDefinitions(config, plan.context, quietOptions(options, logger, report)), options);
     // the explored ones are made after every shipped one and take no part in choosing what is made or selected (see exploredRuns)
     const definitions = all_definitions.filter(definition => !isExplored(definition.strategy));
     // listed in the order of the definitions, whichever are made first
@@ -1642,10 +1627,6 @@ function generateAllAlternatives(config: Config, options: GenerateClockOptions):
             const run = timedMaker(definition.id, () => runAlternative(definition, config, logger, report, undefined, verification_cache, on_not_made, !plan.context.primary_stable));
             completed++;
             runs[1 + definitions.indexOf(definition)] = run;
-            if (run) {
-                // what the full-hand alternative is built on is a run that holds, as before a loss was ever tried
-                stable_by_id.set(definition.id, run.alternatives[0].assessment.holds);
-            }
         }
     };
 
