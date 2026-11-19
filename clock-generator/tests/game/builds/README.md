@@ -937,6 +937,41 @@ All hold: every copy of the build makes its share of the target in every whole w
   cycles (the start-up) and 800 in each of the 7 after; both agricultural builds are judged by the standing rule (per copy, every window cycle from the first third of the samples on: cycles 5 to 10, all 800), now both from the staged start (the one with belts under backpressure started from a warm-up before, and on this clock left
   copy 2 short in each of the 3 cycles checked and copy 5 in the first); iron bacteria 10,944 in each window cycle checked, 1,043.3 wake-ups a minute in the game against 358.2 in the simulator.
 
+## The builds with a case file of their own, from ruling 60's start
+
+Five families record the clock the record selects for their jobs under their own probe and protocol. Their cases that carry the selected clock (not the hand-made clocks, the
+alternatives the record offers, or the one-copy backed-up case of the inserter build) now start from ruling 60's state, the harness's backpressure start
+(`staged: true, backpressure: true` in the case, as `pickup-clock-capture.ts` reads them), on Factorio 2.1.24. Each run is repeated once with the recording cache off and gives the same
+run, tick for tick, and the same judgement of each copy. `pickup-clock-capture.ts` keeps the game's report of the opening in `opening.json` beside the run. The generic case of the
+logistic science build with direct insertion (`start: "backpressure"` in `missing-recordings-clock-fixtures.ts`) is run the same way.
+
+| Job (case) | Clock (window cycle) | Copies built | Steady state | Losses recovered at | Start before (steady state; losses recovered at) |
+| --- | --- | --- | --- | --- | --- |
+| `PROCESSING_UNIT_80_CIRCUIT_EXPORT` and `..._BACKED_UP` (`generated-as-is`, `generated-backed-up`) | Coordinated Sources (24, `5259f325`) | 1 of 1 | 7,200 | 15,145 (plastic bar cut), 18,823 (output block) | free warm-up: 7,208; 15,218, 18,898 |
+| `UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN` (`generated-one-copy`) | Coordinated Sources (168, `53fb2eed`) | 1 of 3.5 | 7,130 | 16,102 (coal cut), 21,142 (output block), 26,350 (units cut) | free warm-up: 7,131; 16,439, 21,479, 26,687 |
+| `INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK` and `..._BACKED_UP` (`generated-three-copies`) | Coordinated Sources (72, `ba4e269d`) | 3 of 3 | 7,200 | 15,772 (ore cut), 15,909 (output block), 15,945 (circuits cut) | free warm-up: 7,200; 15,586, 15,763, 15,835 |
+| `GRENADE_240_FILLS_BELT_EXACTLY` (`generated-full-build`) | Round-Robin Polling (112, `a0b0cff9`) | 7 of 7 | 7,353 | 14,906 (foundries stopped), 19,678 (output block), 23,646 (drills stopped) | free warm-up: 7,354; 14,907, 19,679, 23,647 |
+| `LOGISTIC_SCIENCE_240_DIRECT_INSERT` (generic case `logistic-science-240-direct-insert`) | Coordinated Sources (576, `539e717d`) | 1 of 6 | 7,056 | 14,599 (inserters cut), 19,015 (output block) | plain staged start: 7,056; 14,600, 19,016 |
+| `LOGISTIC_SCIENCE_240_DIRECT_INSERT_TWO_OUTPUT_SWINGS` (`generated-one-copy`) | Euclidean Swings (96, `fdfe060f`) | 1 of 6 | 7,152 | 14,567 (inserters cut), 18,791 (output block) | free warm-up: 8,155; 15,624, 19,848 |
+
+All hold: the net output over the baseline's whole window cycles is the target (processing unit 4,800 of 4,800, utility 8,064 of 8,064, inserter 14,400 of 14,400, grenade 14,336 of 14,336,
+logistic 2,304 of 2,304 and 2,368 of 2,368), every loss falls and is recovered, and the output stock guard holds. On the inserter build each of the three copies makes its 4,800 over the
+baseline, and on the grenade build each of the seven its 2,048.
+
+- **Processing unit 80 (the pick the triage marks at risk).** The start differs from the free warm-up's by a few ticks (steady state 8 ticks earlier, the plastic cut recovered 73 ticks and
+  the output block 75 ticks earlier) and the run holds the same. The fill ends steady 7,200 ticks after the build is placed; two machines are filled by inserters with no window, four only by windowed ones and three by no inserter;
+  no windowed inserter moved in the fill.
+- **Inserter crafting.** Six machines are filled by inserters with no window, the fill ends steady after 14,400 ticks (two windows), and 12 inserters with no window moved in it.
+- **Grenade, utility science 480, logistic science with direct insertion.** Every inserter of these builds has a window, so the fill holds nothing back
+  and no inserter moves in it (no machine is filled by an inserter with no window): their start is the plain staged start in effect, as for rocket fuel above.
+- **Named limits (copies).** The sample's scaffold of the utility science 480 build holds one copy of the job's 3.5 (137.14 packs a second of 480), and that of the logistic science build with direct insertion one of the job's six (40 of 240);
+  the joins of the other copies (the lanes they share) are not in these runs, and the harness builds the copies a blueprint holds, not more. The jobs are judged on the one copy.
+- **The two processing unit 80 cases the record offers and does not select** (`per-hand-as-is`, `per-hand-backed-up`, the 24-tick clock of the hands in groups) and the hand-made clocks stay as they were recorded, from a free warm-up.
+
+```bash
+BELT_SPEED_CAPTURE_DIR=.scratch/judged-start-5 npm run test:game -- tests/game/builds/grenade-clock.game.test.ts -t '^grenade clock: generated-full-build$'
+```
+
 ## The search from every stable clock, from ruling 60's start
 
 `CLOCK_SEARCH_FROM_EVERY_START=1` starts the local choice of Coordinated Sources from every stable clock, not only from those that tie the recommended clock
