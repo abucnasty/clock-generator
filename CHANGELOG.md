@@ -9,12 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the tests, are in the git history.
 Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#changelogs).
 
-## [Unreleased]
+## [0.31.0] - 2026-11-19
 
 ### Added
 - ui: a switch in Advanced to judge clocks from the cold start
 - simulation: an input lane can state the length of belt before the first copy
 - simulation: items on shared input lanes wait a tick at underground belt entrances
+- simulation: an output inserter can state the underground belt end it drops onto
 
 ### Changed
 - ui: result texts name the start the clocks were judged from, not always the cold start
