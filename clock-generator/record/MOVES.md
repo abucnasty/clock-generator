@@ -9,7 +9,7 @@ CI checks this file: the "Record check" fails when a selected clock got worse th
 request adds to this file.
 
 ## An output block's release acts in the game's tick (#846)
-1 job moved, no selected clock, verdict, hold, rate or wakeups. After an output block, the end of the output belt the config states opens from the tick after the release, as the game's loader takes its first stack in the tick after the release (Factorio 2.1.24, the iron plate car build: its seeded replay now equals the game's plates in every tick on both recorded series). The cut keeps its timing. Accepted by abucnasty (question 1014).
+1 job moved, no selected clock, verdict, hold, rate or wakeups. After an output block, the output belt the config states drains again from the tick after the release, as the game's loader takes its first stack in the tick after the release (Factorio 2.1.24, the iron plate car build: its seeded replay now equals the game's plates in every tick on both recorded series). The cut keeps its timing. Accepted by abucnasty (question 1014).
 - config-LOGISTIC_SCIENCE_240: takt_batches_observed (selected, stable, clock unchanged): `results_sha256` only; its trial on the copies recovers after 8 window cycles, was 7 (the output-block trial cut at 44 with a 137-tick loss falls back to 656 of 704 packs in its seventh window cycle after 688 in its sixth); worse by one window cycle, the simulator mechanic named above, not recorded in the game
 
 ## The lane the copies share starts at its supply (#845)
