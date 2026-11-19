@@ -441,6 +441,162 @@
     "clock_sha256": "0f8a8504f6ec238aa1d6327eddad6779df30c3a4f981cf3120a9dff9c588b87c"
    }
   },
+  "chemical-science-240-shared-foundry": {
+   "recorded": {
+    "pr": 851,
+    "commit": "239eb857",
+    "frozen_head": "239eb857",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), Factorio 2.1.24; the second run gave the same summary",
+    "clock_sha256": "f1a4c258c9f84bdc4bec98305e57588b3904cf59d278159476fc6d4734f96899",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 43.636364,
+    "period": 352,
+    "window": 3600,
+    "expected": 2618.181818,
+    "steady": 7120,
+    "baseline": {
+     "ticks": 3600,
+     "total": 2624,
+     "expected": 2618.181818,
+     "min": 2608,
+     "max": 2624,
+     "held": false,
+     "meets": true,
+     "measured": {
+      "ticks": 3520,
+      "items": 2560,
+      "expected": 2559.9999998222224,
+      "stock_start": 40,
+      "stock_end": 40,
+      "net": 2560
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut sulfur",
+      "start": 10720,
+      "drop": 11038,
+      "release": 11038,
+      "recovered": 15425
+     },
+     {
+      "kind": "block output",
+      "start": 15425,
+      "drop": 15966,
+      "release": 15966,
+      "recovered": 20353
+     },
+     {
+      "kind": "cut advanced-circuit",
+      "start": 20353,
+      "drop": 20542,
+      "release": 20542,
+      "recovered": 24929
+     }
+    ],
+    "stock": {
+     "lowest": 0,
+     "end": 40,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 24929
+   },
+   "generation": {
+    "period": 352,
+    "expected": 256,
+    "verdict": "stable",
+    "selection": {
+     "id": "coordinated_sources",
+     "holds": true,
+     "rate": 240,
+     "supply": "backed_up"
+    },
+    "clock_sha256": "f1a4c258c9f84bdc4bec98305e57588b3904cf59d278159476fc6d4734f96899"
+   }
+  },
+  "chemical-science-240-shared-foundry-backed-up": {
+   "recorded": {
+    "pr": 851,
+    "commit": "239eb857",
+    "frozen_head": "239eb857",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), Factorio 2.1.24; the second run gave the same summary",
+    "clock_sha256": "f1a4c258c9f84bdc4bec98305e57588b3904cf59d278159476fc6d4734f96899",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 43.636364,
+    "period": 352,
+    "window": 3600,
+    "expected": 2618.181818,
+    "steady": 7120,
+    "baseline": {
+     "ticks": 3600,
+     "total": 2624,
+     "expected": 2618.181818,
+     "min": 2608,
+     "max": 2624,
+     "held": false,
+     "meets": true,
+     "measured": {
+      "ticks": 3520,
+      "items": 2560,
+      "expected": 2559.9999998222224,
+      "stock_start": 40,
+      "stock_end": 40,
+      "net": 2560
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut sulfur",
+      "start": 10720,
+      "drop": 11038,
+      "release": 11038,
+      "recovered": 15425
+     },
+     {
+      "kind": "block output",
+      "start": 15425,
+      "drop": 15966,
+      "release": 15966,
+      "recovered": 20353
+     },
+     {
+      "kind": "cut advanced-circuit",
+      "start": 20353,
+      "drop": 20542,
+      "release": 20542,
+      "recovered": 24929
+     }
+    ],
+    "stock": {
+     "lowest": 0,
+     "end": 40,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 24929
+   },
+   "generation": {
+    "period": 352,
+    "expected": 256,
+    "verdict": "stable",
+    "selection": {
+     "id": "coordinated_sources",
+     "holds": true,
+     "rate": 240,
+     "supply": "backed_up"
+    },
+    "clock_sha256": "f1a4c258c9f84bdc4bec98305e57588b3904cf59d278159476fc6d4734f96899"
+   }
+  },
   "electric-furnace-20": {
    "recorded": {
     "pr": 833,
@@ -1165,6 +1321,84 @@
     "clock_sha256": "6475d7261b4c4acec7f6c281f01373097764cb3b77bddc3907a9665e8d7cf1e5"
    }
   },
+  "military-science-240": {
+   "recorded": {
+    "pr": 851,
+    "commit": "239eb857",
+    "frozen_head": "239eb857",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), Factorio 2.1.24; the second run gave the same summary",
+    "clock_sha256": "4c0ccc46218a3e48c6950439233703e31316535ec7b607e2f7e4725d54bbb665",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 240,
+    "period": 80,
+    "window": 3600,
+    "expected": 14400,
+    "steady": 7200,
+    "baseline": {
+     "ticks": 3600,
+     "total": 14400,
+     "expected": 14400,
+     "min": 14360,
+     "max": 14440,
+     "held": false,
+     "meets": true,
+     "measured": {
+      "ticks": 3600,
+      "items": 14400,
+      "expected": 14400,
+      "stock_start": 200,
+      "stock_end": 200,
+      "net": 14400
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut stone-wall",
+      "start": 10800,
+      "drop": 10946,
+      "release": 10946,
+      "recovered": 15496
+     },
+     {
+      "kind": "block output",
+      "start": 15496,
+      "drop": 15577,
+      "release": 15577,
+      "recovered": 19487
+     },
+     {
+      "kind": "cut coal",
+      "start": 19487,
+      "drop": 19586,
+      "release": 19586,
+      "recovered": 23713
+     }
+    ],
+    "stock": {
+     "lowest": 0,
+     "end": 24,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 23713
+   },
+   "generation": {
+    "period": 80,
+    "expected": 320,
+    "verdict": "stable",
+    "selection": {
+     "id": "coordinated_sources",
+     "holds": true,
+     "rate": 240,
+     "supply": "backed_up"
+    },
+    "clock_sha256": "4c0ccc46218a3e48c6950439233703e31316535ec7b607e2f7e4725d54bbb665"
+   }
+  },
   "processing-unit-15-chest-fed": {
    "recorded": {
     "pr": 850,
@@ -1603,6 +1837,162 @@
      "supply": null
     },
     "clock_sha256": "ecc4d93eb04408ad2e9c14d020c5a47211a06f64f8f310c57c3c6c828642d662"
+   }
+  },
+  "utility-science-120": {
+   "recorded": {
+    "pr": 851,
+    "commit": "239eb857",
+    "frozen_head": "239eb857",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), Factorio 2.1.24; the second run gave the same summary",
+    "clock_sha256": "8c6d44c1bf947b06ff0a6348abfa9543c3b3c8c358b68bc84db4338deec2977c",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "no recovery",
+    "target": 17.142857,
+    "period": 672,
+    "window": 3600,
+    "expected": 1028.571429,
+    "steady": 7135,
+    "baseline": {
+     "ticks": 3600,
+     "total": 1020,
+     "expected": 1028.571429,
+     "min": 1020,
+     "max": 1044,
+     "held": false,
+     "meets": true,
+     "measured": {
+      "ticks": 3360,
+      "items": 960,
+      "expected": 960.0000004000001,
+      "stock_start": 22,
+      "stock_end": 22,
+      "net": 960
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut low-density-structure",
+      "start": 10735,
+      "drop": 10886,
+      "release": 10886,
+      "recovered": 15871
+     },
+     {
+      "kind": "block output",
+      "start": 15871,
+      "drop": 16354,
+      "release": 16354,
+      "recovered": 20575
+     },
+     {
+      "kind": "cut processing-unit",
+      "start": 20575,
+      "drop": 20775,
+      "release": 20775,
+      "recovered": 25951
+     }
+    ],
+    "stock": {
+     "lowest": 10,
+     "end": 22,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 25951
+   },
+   "generation": {
+    "period": 672,
+    "expected": 192,
+    "verdict": "no recovery",
+    "selection": {
+     "id": "takt_batches_observed",
+     "holds": true,
+     "rate": 120,
+     "supply": "backed_up"
+    },
+    "clock_sha256": "8c6d44c1bf947b06ff0a6348abfa9543c3b3c8c358b68bc84db4338deec2977c"
+   }
+  },
+  "utility-science-120-processing-unit-and-lds-on-one-belt": {
+   "recorded": {
+    "pr": 851,
+    "commit": "239eb857",
+    "frozen_head": "239eb857",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), Factorio 2.1.24; the second run gave the same summary",
+    "clock_sha256": "4d76e23812f7488a2b89e06cc1931527d215c6ec13e69a90d3c7ada3d8c73fcb",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 34.285714,
+    "period": 336,
+    "window": 3600,
+    "expected": 2057.142857,
+    "steady": 6960,
+    "baseline": {
+     "ticks": 3600,
+     "total": 2052,
+     "expected": 2057.142857,
+     "min": 2052,
+     "max": 2064,
+     "held": false,
+     "meets": true,
+     "measured": {
+      "ticks": 3360,
+      "items": 1920,
+      "expected": 1919.9999998666665,
+      "stock_start": 12,
+      "stock_end": 12,
+      "net": 1920
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut low-density-structure",
+      "start": 10560,
+      "drop": 10657,
+      "release": 10657,
+      "recovered": 14912
+     },
+     {
+      "kind": "block output",
+      "start": 14912,
+      "drop": 15361,
+      "release": 15361,
+      "recovered": 19260
+     },
+     {
+      "kind": "cut flying-robot-frame",
+      "start": 19260,
+      "drop": 19393,
+      "release": 19393,
+      "recovered": 23312
+     }
+    ],
+    "stock": {
+     "lowest": 0,
+     "end": 48,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 23312
+   },
+   "generation": {
+    "period": 336,
+    "expected": 192,
+    "verdict": "stable",
+    "selection": {
+     "id": "coordinated_sources",
+     "holds": true,
+     "rate": 120,
+     "supply": "backed_up"
+    },
+    "clock_sha256": "4d76e23812f7488a2b89e06cc1931527d215c6ec13e69a90d3c7ada3d8c73fcb"
    }
   }
  }
