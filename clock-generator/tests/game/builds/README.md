@@ -901,8 +901,8 @@ net output is the target over whole clock cycles, the stock guard holds, and the
 
 **Steel wagon builds (three jobs).** The three staged cases that carry the selected clock (`steel-wagon-selected-staged`, `steel-wagon-iron-ore-out-of-period-selected-staged`, `steel-hub-selected-staged`)
 now say `staged: true, backpressure: true`, so the run starts from ruling 60's state (Factorio 2.1.24, `CLOCK_RECORDING_CACHE=off`). Each is repeated once and gives the same summary, tick for tick.
-They hold, and the controls carry the same values as the plain staged start gave: the lock opened 7,200 ticks after the build was placed (tick 55,525 to 55,528 in the game), both furnaces
-were empty (fed by windowed inserters only), and no windowed inserter moved in the fill. The plain staged start is the judged start in effect for this build, as for grenade above.
+They hold, and the controls carry the same values as the plain staged start gave. All five inserters and the drill have a window (the game's report of the clock's wires), so the lock holds everything back and
+nothing fills before the clock: the lock opened 7,200 ticks after the build was placed (tick 55,525 to 55,528 in the game), both furnaces were empty, and no windowed inserter moved in the fill.
 
 | Job (case) | Clock (window cycle) | Steady state | Baseline (net, whole window cycle) | Losses recovered at |
 | --- | --- | --- | --- | --- |
@@ -913,11 +913,11 @@ were empty (fed by windowed inserters only), and no windowed inserter moved in t
 - The stock guard holds in all three. The second and third loss of the iron-ore case last one tick each: the drill had emptied the wagon already.
 
 **Container outputs (six jobs): named limit, the harness refuses the start.** The six cases of `container-clock-fixtures.ts` stay on the free warm-up. Asked for ruling 60's start
-(`staged: true, backpressure: true`, Factorio 2.1.24, 2026-11-19, one run each; the six cases give the same refusal) the harness stops in the fill, before the run:
+(`staged: true, backpressure: true`, Factorio 2.1.24, 2026-11-19, two runs of each case with the same refusal and the same units) the harness stops in the fill, before the run:
 "Windowed inserters held items during the fill with the lock on: unit 99 (config id 1)" (the car, tank and legendary mixed-wagon cases name both supply inserters, ids 1 and 2). The supply
 inserter takes from an infinity chest that is full from the first tick: with a diagnostic line added to the recorder for one run (not kept), the first item in its hand was seen in the tick the inserter was built
 (tick 48,325, the fill's start tick), when the circuit had not yet disabled it. The harness counts every hand held from that tick (`moved`), and the leak check of the same fill starts one tick later. The
-other windowed inserters (into the machine, out of it) hold nothing in the fill. No harness change is made here; the cases are not changed from the warm-up that holds today.
+other windowed inserters (into the machine, out of it) hold nothing in the fill. `PROCESSING_UNIT_15_CHEST_FED` (a windowed inserter from a full infinity chest into a machine) passes the same fill; what differs from the container builds is not established. No harness change is made here; the cases are not changed from the warm-up that holds today.
 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/judged-start-6 npm run test:game -- tests/game/builds/steel-plate-26-wagon-chest-clock.game.test.ts -t '^steel wagon clock: steel-wagon-selected-staged$'
