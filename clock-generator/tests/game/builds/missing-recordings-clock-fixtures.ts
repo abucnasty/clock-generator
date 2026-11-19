@@ -113,6 +113,7 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
     {
         name: "processing-unit-15-chest-fed", job: "config-PROCESSING_UNIT_15_CHEST_FED", config: "PROCESSING_UNIT_15_CHEST_FED", copies: 1,
         losses: [{kind: "cut", item: "advanced-circuit"}, {kind: "block"}, {kind: "cut", item: "electronic-circuit"}],
+        start: "backpressure",
     },
     {
         name: "logistic-science-240", job: "config-LOGISTIC_SCIENCE_240", config: "LOGISTIC_SCIENCE_240", copies: 22,
@@ -141,25 +142,30 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
         baseline: {ticks: 12_672, reason: "the clock cycle is 12,672 ticks (23 window cycles of 550.957): a minute holds no whole clock cycle"},
         losses: [{kind: "cut", item: "electronic-circuit"}, {kind: "block"}, {kind: "cut", item: "coal"}],
         limit: "the scaffold holds one copy of the job's three",
+        start: "backpressure",
     },
     {
         name: "advanced-circuit-240", scaffold: "advanced-circuit.scaffold", job: "config-ADVANCED_CIRCUIT_240", config: "ADVANCED_CIRCUIT_240", copies: 1,
         losses: [{kind: "cut", item: "electronic-circuit"}, {kind: "block"}, {kind: "cut", item: "coal"}],
         limit: "the scaffold holds one copy of the job's three",
+        start: "backpressure",
     },
     {
         name: "advanced-circuit-240-backed-up", scaffold: "advanced-circuit.scaffold", job: "variants-ADVANCED_CIRCUIT_240_BACKED_UP", config: "ADVANCED_CIRCUIT_240", copies: 1,
         variant: config => ({...config, overrides: {...config.overrides, backed_up_belts: true}}),
         losses: [{kind: "cut", item: "electronic-circuit"}, {kind: "block"}, {kind: "cut", item: "coal"}],
         limit: "the scaffold holds one copy of the job's three",
+        start: "backpressure",
     },
     {
         name: "lds-240", job: "config-LDS_240", config: "LDS_240", copies: 1,
         losses: [{kind: "cut", item: "coal"}, {kind: "block"}],
+        start: "backpressure",
     },
     {
         name: "metallurgic-science-45", job: "config-METALLURGIC_SCIENCE_45", config: "METALLURGIC_SCIENCE_45", copies: 1,
         losses: [{kind: "cut", item: "tungsten-ore"}, {kind: "block"}, {kind: "cut", item: "coal"}],
+        start: "backpressure",
     },
     {
         name: "rocket-fuel-60", job: "config-ROCKET_FUEL_60", config: "ROCKET_FUEL_60", copies: 1,
@@ -194,6 +200,7 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
         losses: [{kind: "block"}],
         limit: "the scaffold holds one copy of the job's three",
         late_recording: "the final machine is a furnace with no recipe at the placement",
+        start: "backpressure",
     },
     {
         name: "electric-furnace-20", job: "config-ELECTRIC_FURNACE_20", config: "ELECTRIC_FURNACE_20", copies: 1,

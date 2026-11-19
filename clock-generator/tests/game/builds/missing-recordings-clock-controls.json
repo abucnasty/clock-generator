@@ -1,5 +1,5 @@
 {
- "meaning": "The record jobs that had no game recording of their selected clock from the staged start (missing-recordings-clock-fixtures.ts), each recorded on the sample's scaffold from the staged start of the harness, as the game test missing-recordings-clock.game.test.ts runs it. `native` is the run under the game tests' protocol, timed in game ticks (tests/game/helpers/lua/steady.lua), recorded in Factorio 2.1.24: steady state (the machines making the target have made it over the trailing 3,600 ticks, no less than a window of whole clock cycles earlier), a baseline judged by net output over its whole clock cycles, then the losses of the case one after the other, each until the output falls below the baseline's lowest minute, released and recovered; `stock` is the output stock guard. A build of copies is also judged on each copy by itself (the verdict.json the test keeps: every whole clock cycle from steady state to the first loss, and every whole clock cycle of the last minute after the last loss); the entries here are the runs that held, and the pick that the simulator calls \"no recovery\" is kept with the game's result. `generation` is the selection, with the sha256 of its exported clock's identity (`clockIdentity`); `recorded` is the recording that is current.",
+ "meaning": "The record jobs that had no game recording of their selected clock from the staged start (missing-recordings-clock-fixtures.ts), each recorded on the sample's scaffold from the staged start of the harness, as the game test missing-recordings-clock.game.test.ts runs it. `native` is the run under the game tests' protocol, timed in game ticks (tests/game/helpers/lua/steady.lua), recorded in Factorio 2.1.24: steady state (the machines making the target have made it over the trailing 3,600 ticks, no less than a window of whole clock cycles earlier), a baseline judged by net output over its whole clock cycles, then the losses of the case one after the other, each until the output falls below the baseline's lowest minute, released and recovered; `stock` is the output stock guard. A build of copies is also judged on each copy by itself (the verdict.json the test keeps: every whole clock cycle from steady state to the first loss, and every whole clock cycle of the last minute after the last loss); the entries here are the runs that held, and the pick that the simulator calls \"no recovery\" is kept with the game's result. `generation` is the selection, with the sha256 of its exported clock's identity (`clockIdentity`); `recorded` is the recording that is current. A case with start \"backpressure\" in the fixtures is recorded from ruling 60's start (the harness's backpressure start) and its entry says so in recorded.note.",
  "cases": {
   "accumulator-320": {
    "recorded": {
@@ -67,10 +67,10 @@
   },
   "advanced-circuit-230": {
    "recorded": {
-    "pr": 823,
-    "commit": "95f45024",
-    "frozen_head": "95f45024",
-    "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
+    "pr": 0,
+    "commit": "214bd7ad",
+    "frozen_head": "214bd7ad",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24; pr is set when the PR is opened",
     "clock_sha256": "9cdc8d06a5bb1887dbff8a99b856b5eb3cd90a3f3506a535b435ae6db58bde85",
     "clock_basis": "capture"
    },
@@ -81,7 +81,7 @@
     "period": 12672,
     "window": 3600,
     "expected": 4600,
-    "steady": 16357,
+    "steady": 16356,
     "baseline": {
      "ticks": 12672,
      "total": 16192,
@@ -102,24 +102,24 @@
     "disturbances": [
      {
       "kind": "cut electronic-circuit",
-      "start": 29029,
-      "drop": 29111,
-      "release": 29111,
-      "recovered": 34139
+      "start": 29028,
+      "drop": 29110,
+      "release": 29110,
+      "recovered": 34138
      },
      {
       "kind": "block output",
-      "start": 34139,
-      "drop": 34521,
-      "release": 34521,
-      "recovered": 38990
+      "start": 34138,
+      "drop": 34520,
+      "release": 34520,
+      "recovered": 38989
      },
      {
       "kind": "cut coal",
-      "start": 38990,
-      "drop": 39516,
-      "release": 39516,
-      "recovered": 46660
+      "start": 38989,
+      "drop": 39515,
+      "release": 39515,
+      "recovered": 46659
      }
     ],
     "stock": {
@@ -128,7 +128,7 @@
      "holds": true
     },
     "result": "holds",
-    "ended": 46660
+    "ended": 46659
    },
    "generation": {
     "period": 12672,
@@ -145,10 +145,10 @@
   },
   "advanced-circuit-240": {
    "recorded": {
-    "pr": 823,
-    "commit": "95f45024",
-    "frozen_head": "95f45024",
-    "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
+    "pr": 0,
+    "commit": "214bd7ad",
+    "frozen_head": "214bd7ad",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24; pr is set when the PR is opened",
     "clock_sha256": "e45bff6b92a3689f5168704cfc6bb006986a96046d1bd386ee2f44a5483e430c",
     "clock_basis": "capture"
    },
@@ -162,7 +162,7 @@
     "steady": 6768,
     "baseline": {
      "ticks": 3600,
-     "total": 4780,
+     "total": 4784,
      "expected": 4800,
      "min": 4778,
      "max": 4842,
@@ -181,23 +181,23 @@
      {
       "kind": "cut electronic-circuit",
       "start": 10368,
-      "drop": 10478,
-      "release": 10478,
-      "recovered": 14144
+      "drop": 10477,
+      "release": 10477,
+      "recovered": 14143
      },
      {
       "kind": "block output",
-      "start": 14144,
-      "drop": 14503,
-      "release": 14503,
-      "recovered": 18311
+      "start": 14143,
+      "drop": 14502,
+      "release": 14502,
+      "recovered": 18310
      },
      {
       "kind": "cut coal",
-      "start": 18311,
-      "drop": 18782,
-      "release": 18782,
-      "recovered": 22765
+      "start": 18310,
+      "drop": 18781,
+      "release": 18781,
+      "recovered": 22764
      }
     ],
     "stock": {
@@ -206,7 +206,7 @@
      "holds": true
     },
     "result": "holds",
-    "ended": 22765
+    "ended": 22764
    },
    "generation": {
     "period": 528,
@@ -223,10 +223,10 @@
   },
   "advanced-circuit-240-backed-up": {
    "recorded": {
-    "pr": 823,
-    "commit": "95f45024",
-    "frozen_head": "95f45024",
-    "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
+    "pr": 0,
+    "commit": "214bd7ad",
+    "frozen_head": "214bd7ad",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24; pr is set when the PR is opened",
     "clock_sha256": "e45bff6b92a3689f5168704cfc6bb006986a96046d1bd386ee2f44a5483e430c",
     "clock_basis": "capture"
    },
@@ -240,7 +240,7 @@
     "steady": 6768,
     "baseline": {
      "ticks": 3600,
-     "total": 4780,
+     "total": 4784,
      "expected": 4800,
      "min": 4778,
      "max": 4842,
@@ -259,23 +259,23 @@
      {
       "kind": "cut electronic-circuit",
       "start": 10368,
-      "drop": 10478,
-      "release": 10478,
-      "recovered": 14144
+      "drop": 10477,
+      "release": 10477,
+      "recovered": 14143
      },
      {
       "kind": "block output",
-      "start": 14144,
-      "drop": 14503,
-      "release": 14503,
-      "recovered": 18311
+      "start": 14143,
+      "drop": 14502,
+      "release": 14502,
+      "recovered": 18310
      },
      {
       "kind": "cut coal",
-      "start": 18311,
-      "drop": 18782,
-      "release": 18782,
-      "recovered": 22765
+      "start": 18310,
+      "drop": 18781,
+      "release": 18781,
+      "recovered": 22764
      }
     ],
     "stock": {
@@ -284,7 +284,7 @@
      "holds": true
     },
     "result": "holds",
-    "ended": 22765
+    "ended": 22764
    },
    "generation": {
     "period": 528,
@@ -869,10 +869,10 @@
   },
   "lds-240": {
    "recorded": {
-    "pr": 823,
-    "commit": "95f45024",
-    "frozen_head": "95f45024",
-    "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
+    "pr": 0,
+    "commit": "214bd7ad",
+    "frozen_head": "214bd7ad",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24; pr is set when the PR is opened",
     "clock_sha256": "f857f0f459dfc1bdc292f360461924a62a035e217a2fd75d40dba5e5da94376b",
     "clock_basis": "capture"
    },
@@ -886,7 +886,7 @@
     "steady": 7056,
     "baseline": {
      "ticks": 3600,
-     "total": 14380,
+     "total": 14368,
      "expected": 14400,
      "min": 14368,
      "max": 14432,
@@ -896,8 +896,8 @@
       "ticks": 3456,
       "items": 13824,
       "expected": 13824,
-      "stock_start": 80,
-      "stock_end": 80,
+      "stock_start": 92,
+      "stock_end": 92,
       "net": 13824
      }
     },
@@ -905,16 +905,16 @@
      {
       "kind": "cut coal",
       "start": 10656,
-      "drop": 10799,
-      "release": 10799,
-      "recovered": 14613
+      "drop": 10798,
+      "release": 10798,
+      "recovered": 14612
      },
      {
       "kind": "block output",
-      "start": 14613,
-      "drop": 14757,
-      "release": 14757,
-      "recovered": 18549
+      "start": 14612,
+      "drop": 14756,
+      "release": 14756,
+      "recovered": 18548
      }
     ],
     "stock": {
@@ -923,7 +923,7 @@
      "holds": true
     },
     "result": "holds",
-    "ended": 18549
+    "ended": 18548
    },
    "generation": {
     "period": 288,
@@ -1089,10 +1089,10 @@
   },
   "metallurgic-science-45": {
    "recorded": {
-    "pr": 823,
-    "commit": "95f45024",
-    "frozen_head": "95f45024",
-    "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
+    "pr": 0,
+    "commit": "214bd7ad",
+    "frozen_head": "214bd7ad",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24; pr is set when the PR is opened",
     "clock_sha256": "6475d7261b4c4acec7f6c281f01373097764cb3b77bddc3907a9665e8d7cf1e5",
     "clock_basis": "capture"
    },
@@ -1116,8 +1116,8 @@
       "ticks": 3200,
       "items": 2400,
       "expected": 2400,
-      "stock_start": 17,
-      "stock_end": 17,
+      "stock_start": 1,
+      "stock_end": 1,
       "net": 2400
      }
     },
@@ -1125,23 +1125,23 @@
      {
       "kind": "cut tungsten-ore",
       "start": 10400,
-      "drop": 10505,
-      "release": 10505,
-      "recovered": 14456
+      "drop": 10504,
+      "release": 10504,
+      "recovered": 14455
      },
      {
       "kind": "block output",
-      "start": 14456,
-      "drop": 14575,
-      "release": 14575,
-      "recovered": 18246
+      "start": 14455,
+      "drop": 14574,
+      "release": 14574,
+      "recovered": 18245
      },
      {
       "kind": "cut coal",
-      "start": 18246,
-      "drop": 18803,
-      "release": 18803,
-      "recovered": 22542
+      "start": 18245,
+      "drop": 18802,
+      "release": 18802,
+      "recovered": 22541
      }
     ],
     "stock": {
@@ -1150,7 +1150,7 @@
      "holds": true
     },
     "result": "holds",
-    "ended": 22542
+    "ended": 22541
    },
    "generation": {
     "period": 640,
@@ -1167,10 +1167,10 @@
   },
   "processing-unit-15-chest-fed": {
    "recorded": {
-    "pr": 809,
-    "commit": "b416a030",
-    "frozen_head": "b416a030",
-    "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
+    "pr": 0,
+    "commit": "214bd7ad",
+    "frozen_head": "214bd7ad",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24; pr is set when the PR is opened",
     "clock_sha256": "887d21be999c0fd4f1126ff40ad21e40bc5e6da68425461a93dc30b1517fa81f",
     "clock_basis": "capture"
    },
@@ -1181,7 +1181,7 @@
     "period": 384,
     "window": 3600,
     "expected": 900,
-    "steady": 7074,
+    "steady": 7073,
     "baseline": {
      "ticks": 3600,
      "total": 896,
@@ -1202,24 +1202,24 @@
     "disturbances": [
      {
       "kind": "cut advanced-circuit",
-      "start": 10674,
-      "drop": 10983,
-      "release": 10983,
-      "recovered": 14786
+      "start": 10673,
+      "drop": 10982,
+      "release": 10982,
+      "recovered": 14785
      },
      {
       "kind": "block output",
-      "start": 14786,
-      "drop": 14824,
-      "release": 14824,
-      "recovered": 14954
+      "start": 14785,
+      "drop": 14823,
+      "release": 14823,
+      "recovered": 14953
      },
      {
       "kind": "cut electronic-circuit",
-      "start": 14954,
-      "drop": 15007,
-      "release": 15007,
-      "recovered": 19010
+      "start": 14953,
+      "drop": 15006,
+      "release": 15006,
+      "recovered": 19009
      }
     ],
     "stock": {
@@ -1228,7 +1228,7 @@
      "holds": true
     },
     "result": "holds",
-    "ended": 19010
+    "ended": 19009
    },
    "generation": {
     "period": 384,
@@ -1544,9 +1544,9 @@
   "stone-brick-120-drill-direct-insert": {
    "recorded": {
     "pr": 0,
-    "commit": "6618512f",
-    "frozen_head": "6618512f",
-    "note": "recorded under the protocol in game ticks from the staged start; pr is set when the PR is opened",
+    "commit": "214bd7ad",
+    "frozen_head": "214bd7ad",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24; pr is set when the PR is opened",
     "clock_sha256": "ecc4d93eb04408ad2e9c14d020c5a47211a06f64f8f310c57c3c6c828642d662",
     "clock_basis": "capture"
    },
@@ -1557,7 +1557,7 @@
     "period": 144,
     "window": 3600,
     "expected": 2400,
-    "steady": 8207,
+    "steady": 7200,
     "baseline": {
      "ticks": 3600,
      "total": 2400,
@@ -1578,19 +1578,19 @@
     "disturbances": [
      {
       "kind": "block output",
-      "start": 11807,
-      "drop": 11959,
-      "release": 11959,
-      "recovered": 12097
+      "start": 10800,
+      "drop": 10950,
+      "release": 10950,
+      "recovered": 11086
      }
     ],
     "stock": {
-     "lowest": 48,
+     "lowest": 49,
      "end": 100,
      "holds": true
     },
     "result": "holds",
-    "ended": 12097
+    "ended": 11086
    },
    "generation": {
     "period": 144,
