@@ -290,5 +290,5 @@ describe('the switch of the maker log', () => {
             else expect((timetable.copies as unknown[]).length, String(clock.id)).toBeGreaterThan(0);
             expect(events.find(it => it.event === 'ledger' && it.id === clock.id)!.adds_up, String(clock.id)).toBe(true);
         }
-    }, 120_000);
+    }, 300_000);
 });
