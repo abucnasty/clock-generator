@@ -628,11 +628,12 @@ const BeltLaneConfigSchema = z.object({
      * along the lane from the middle of copy 1's pickup tile (the most upstream taker of the config's copy), upstream
      * negative, from upstream to downstream. A lane that states them runs as lines cut there (state/shared-lane.ts
      * `SharedLaneLines`), so that a stack can wait one tick at an entrance as in the game; without them the lane is one line.
-     * An entrance at or upstream of where the lane starts in the run of the copies is left out.
+     * An entrance at or upstream of where the lane starts in the run of the copies is left out. Read only on a lane the
+     * copies share that ends in a dead end: any other lane runs as one line.
      */
     underground_entrances: z.array(z.number().finite()).optional().describe("The underground entrances of a lane that the copies share: the middle of each "
         + "entrance that has an exit after it, in tiles along the lane from the middle of copy 1's pickup tile, upstream negative, from upstream to downstream. "
-        + "A stack waits one tick at an entrance as in the game. Without it, the lane runs as one line."),
+        + "A stack waits one tick at an entrance as in the game. Read only on a shared lane with a dead end. Without it, the lane runs as one line."),
 });
 
 const ExportBeltLaneConfigSchema = BeltLaneConfigSchema.extend({
@@ -1062,9 +1063,11 @@ export const ConfigSchema = z.preprocess(renameTargetOutputToSetpoint, z.preproc
             }
         });
     });
-    // the underground entrances of a lane: some, in order, on a lane the copies share, which runs to a dead end
+    // the underground entrances of a lane: some, in order. A lane each copy has to itself, or one that does not end in a
+    // dead end, runs as one line whatever it states (shared-lane-model.ts `installSharedLanes`), so that a lane end or a
+    // sharing chosen on the page never meets a refusal of a field the page does not show
     config.belts.forEach((belt, belt_index) => {
-        (belt.lanes as readonly { underground_entrances?: number[]; sharing?: string; lane_end?: { kind: string }; consumption_per_second?: number }[]).forEach((lane, lane_index) => {
+        (belt.lanes as readonly { underground_entrances?: number[] }[]).forEach((lane, lane_index) => {
             const entrances = lane.underground_entrances;
             if (entrances === undefined) return;
             const path = ["belts", belt_index, "lanes", lane_index, "underground_entrances"];
@@ -1076,17 +1079,6 @@ export const ConfigSchema = z.preprocess(renameTargetOutputToSetpoint, z.preproc
             if (entrances.some((entrance, at) => at > 0 && entrance <= entrances[at - 1])) {
                 context.addIssue({ code: "custom", path, message: `${name} states its underground entrances out of order or more than once. Write each entrance `
                     + "once, in tiles along the lane from the middle of copy 1's pickup tile, from upstream to downstream." });
-            }
-            if (lane.sharing === "per_copy") {
-                context.addIssue({ code: "custom", path, message: `${name} is a lane of each copy, and only a lane that the copies share runs as lines. `
-                    + "Remove its underground entrances, or state the lane as shared." });
-            }
-            // an end other than a dead end: stated, an export lane's consumption, or every unstated end infinite (backed_up_belts false)
-            const not_dead_end = lane.lane_end !== undefined ? lane.lane_end.kind !== "dead_end"
-                : lane.consumption_per_second !== undefined || config.overrides?.backed_up_belts === false;
-            if (not_dead_end) {
-                context.addIssue({ code: "custom", path, message: `${name} states underground entrances, and a lane in lines runs to a dead end only. `
-                    + "Remove its underground entrances, or state its lane_end as dead_end if the lane stops after the last copy." });
             }
         });
     });

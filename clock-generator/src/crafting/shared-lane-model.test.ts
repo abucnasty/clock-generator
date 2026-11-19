@@ -186,6 +186,8 @@ describe("the line ends of a row's lane, from its underground entrances", () => 
         };
         expect(lanesOf({})).not.toContain("lines");
         expect(lanesOf({ underground_entrances: [1, 5, 9] })).toContain("lines");
+        // the lines run to a dead end only: a lane with an infinite end is one line, whatever it states
+        expect(lanesOf({ lane_end: { kind: "infinite" }, underground_entrances: [1, 5, 9] })).not.toContain("lines");
     });
 });
 

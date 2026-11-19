@@ -369,7 +369,7 @@ export function lineEndsOf(row: LaneRow, entrances: readonly number[] | undefine
 
 /**
  * Puts the model into a context of the copies (build-copies.ts) before its first tick: each row's lane runs as one
- * `SharedLane` (as lines cut at its underground entrances where the lane states them, `lineEndsOf`), and each taker of
+ * `SharedLane` (as lines cut at its underground entrances where a lane with a dead end states them, `lineEndsOf`), and each taker of
  * each copy reaches it in place of a stock of its own, its hands recorded. A lane of
  * unknown end is not run here: it is run under each end in turn by the caller. Where the config states its output belt,
  * each copy's output inserter puts its stacks onto it (output-belt-run.ts); else each puts them on a tile of its own.
@@ -387,7 +387,8 @@ export function installSharedLanes(context: SimulationContext, config: Config, r
         const belt = config.belts.find(it => it.id === row.belt_id)!;
         const belt_state = context.state_registry.getStateByEntityIdOrThrow(EntityId.forBelt(row.belt_id));
         assert(EntityState.isBelt(belt_state), `Belt ${row.belt_id} is not a belt`);
-        const cuts = lineEndsOf(row, belt.lanes[row.lane - 1].underground_entrances);
+        // the lines run to a dead end only: a lane with another end runs as one line, whatever entrances it states
+        const cuts = lane_facts.lane_end.kind === "dead_end" ? lineEndsOf(row, belt.lanes[row.lane - 1].underground_entrances) : null;
         const lane = new SharedLane({
             belt_speed: belt_state.belt.belt_speed, stack_size: belt.lanes[row.lane - 1].stack_size,
             supply_rate: lane_facts.supply_rate, lane_end: lane_facts.lane_end, length_tiles: row.length_tiles,

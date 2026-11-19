@@ -39,19 +39,11 @@ describe("the underground entrances of a lane", () => {
                 + "or write the middle of each entrance that has an exit after it." }]);
     });
 
-    it("are refused on a lane each copy has to itself: only a lane the copies share runs as lines", () => {
-        expect(problems(configWith({ sharing: "per_copy", underground_entrances: [1, 10] }))).toEqual([{ path: PATH,
-            message: "Lane 1 of belt 1 is a lane of each copy, and only a lane that the copies share runs as lines. Remove its underground entrances, or state the lane as shared." }]);
-    });
-
-    it("are refused on a lane whose end is not a dead end: a lane in lines runs to a dead end only", () => {
-        const message = "Lane 1 of belt 1 states underground entrances, and a lane in lines runs to a dead end only. "
-            + "Remove its underground entrances, or state its lane_end as dead_end if the lane stops after the last copy.";
-        for (const lane_end of [{ kind: "infinite" }, { kind: "unknown" }]) {
-            expect(problems(configWith({ lane_end, underground_entrances: [1, 10] }))).toEqual([{ path: PATH, message }]);
-        }
-        expect(problems(configWith({ underground_entrances: [1, 10] }, { overrides: { backed_up_belts: false } }))).toEqual([{ path: PATH, message }]);
-        expect(problems(configWith({ underground_entrances: [1, 10] }, { strategy: "export", consumption: 30 }))).toEqual([{ path: PATH, message }]);
+    it("are taken on a lane of each copy or one that does not end in a dead end, which runs as one line: an end or a sharing chosen later meets no refusal", () => {
+        expect(problems(configWith({ sharing: "per_copy", underground_entrances: [1, 10] }))).toEqual([]);
+        for (const lane_end of [{ kind: "infinite" }, { kind: "unknown" }]) expect(problems(configWith({ lane_end, underground_entrances: [1, 10] }))).toEqual([]);
+        expect(problems(configWith({ underground_entrances: [1, 10] }, { overrides: { backed_up_belts: false } }))).toEqual([]);
+        expect(problems(configWith({ underground_entrances: [1, 10] }, { strategy: "export", consumption: 30 }))).toEqual([]);
     });
 
     it("are refused where a number is not finite", () => {

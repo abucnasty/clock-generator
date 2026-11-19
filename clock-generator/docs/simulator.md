@@ -320,18 +320,18 @@ lane, feeders and takers on every tick from the start of the clock to the copper
 game's state at the stop follows every copy through the stop and the restart for 2,829 ticks (#737). The generation
 does not see the feeders yet: it judges the clock on the config without its outside supply.
 
-A shared lane that states its `underground_entrances` (the middle of each entrance with an exit after it, in tiles from
-the middle of copy 1's pickup tile, upstream negative) runs as the game's lines: the game cuts a lane at each such
-entrance and moves only the lines on its list, in the order they went on it, before the inserters take. So a stack at an
-entrance's end can wait one tick where one line would move it (`SharedLaneLines` in `src/state/shared-lane.ts`). An
-entrance at or upstream of the lane's start is left out. A lane that states none is one line, moved whole each tick. On
-the nine copies of automation science 240, with the scaffold's entrances stated, a run from the game's state at a copper
-stop follows every copy of the game to the end of the recording, 6,525 ticks after the stop, and the copper lane waits
-where and when the game's waits, every time (55 waits). Under the Time-Study Windows clock (b1490c9f2c49) the run equals
-the game's on every tick of 11,620, both lanes stack for stack, and copy 4 makes 96 and 80 in turn, as in the game; as one
-line it settles at 96. The takes of one tick go onto the list downstream first, which fits these recordings; the game's
-own order of them is not established. A wait at a joint of two plain belts (x 390.0 on that scaffold, gears) is not
-modelled.
+A shared lane with a dead end that states its `underground_entrances` (the middle of each entrance with an exit after
+it, in tiles from the middle of copy 1's pickup tile, upstream negative) runs as the game's lines: the game cuts a lane at
+each such entrance and moves only the lines on its list, in the order they went on it, before the inserters take. So a
+stack at an entrance can wait one tick where one line would move it (`SharedLaneLines` in `src/state/shared-lane.ts`).
+An entrance at or upstream of where the lane starts is left out. Any other lane is one line, moved whole each tick. The
+samples of automation science 240, electromagnetic science 330, logistic science 240 and military science 240 state
+their scaffolds' entrances. On the nine copies of automation science 240, a run from the game's state at a copper stop
+follows every copy of the game through the 6,525 ticks recorded after the stop, and the copper lane waits where and
+when the game's waits, every time (55 waits). Under the Time-Study Windows clock (b1490c9f2c49) the run equals the
+game's on every tick of 11,620, and copy 4 makes 96 and 80 packs in turn, as in the game; as one line it settles at 96.
+The takes of one tick go onto the list downstream first, which fits these recordings; the game's own order of them is
+not established. A wait at a joint of two plain belts (x 390.0 on that scaffold, gears) is not modelled.
 
 Standing: on the clocks recorded on #660 (three copies on ore lanes that flow into loaders) and #725 (5.5 copies on
 dead-ended lanes) and on logistic science 240 (11 copies) the run gives the game's verdict on every copy. The size of a
