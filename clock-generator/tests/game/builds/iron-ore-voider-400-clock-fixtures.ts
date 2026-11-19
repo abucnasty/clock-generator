@@ -163,13 +163,16 @@ export async function captureOreVoider(variant: OreVoiderCase): Promise<OreVoide
         // the baseline is the protocol's minute: the clock's cycle is its window cycle, which a minute holds whole
         expect(RUN_PROTOCOL.baseline % window_cycle_ticks, "a whole number of the clock's window cycles in the baseline").toBe(0);
         const expectedPerWindow = Math.round(config.setpoint.items_per_second * RUN_PROTOCOL.window / 60 * 1e6) / 1e6;
-        const {recording} = await recordInFactorio({factorio: process.env.FACTORIO_PATH!, save: process.env.FACTORIO_HARNESS_SAVE!, config,
+        const {recording, start} = await recordInFactorio({factorio: process.env.FACTORIO_PATH!, save: process.env.FACTORIO_HARNESS_SAVE!, config,
             clock: {blueprint: encodeBlueprintFile({blueprint: exported.blueprint}), schedule: exported.schedule}, blueprint: scaffoldOf(config_path),
             out: path.join(capture.directory, "recording.json"), work_dir: path.join(capture.directory, "game"),
-            ticks: 3600, record_at_once: true, warmup_ticks: 600, settle_ticks: RUN_PROTOCOL.cap + 1, seed: [], unclocked: false,
+            // ruling 60's start (the harness's backpressure start): the four feeds are the cell's windowed inserters, so the recycler and the car start empty and the run counts from the clock's first tick
+            ticks: 3600, warmup_ticks: 0, staged_start: {backpressure: {}}, settle_ticks: RUN_PROTOCOL.cap + 1, seed: [], unclocked: false,
             lua: composeProbeSource(path.join(__dirname, "iron-ore-voider-400-clock-probe.lua"),
                 {window_cycle_ticks, window: RUN_PROTOCOL.window, expected: expectedPerWindow, baseline: RUN_PROTOCOL.baseline, cap: RUN_PROTOCOL.cap}),
-            game_speed: 1000, watch: false, timeout_seconds: 900, log() {}});
+            game_speed: 1000, watch: false, timeout_seconds: 1800, log() {}});
+        // what the game reported at the opening: the tick, whether the part no clock holds was steady, what the machines held
+        fs.writeFileSync(path.join(capture.directory, "opening.json"), JSON.stringify((start as {staged?: {backpressure?: unknown}} | undefined)?.staged?.backpressure ?? null, null, 1) + "\n");
         // the build as Sidecar exports it: the recycler puts its results into the car
         const exported_config = recording.config as {machines?: {result_target?: unknown}[]; chests?: {type: string; id: number}[]};
         const car = exported_config.chests?.find(chest => chest.type === "car");

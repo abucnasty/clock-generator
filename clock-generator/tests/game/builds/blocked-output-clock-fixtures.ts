@@ -14,7 +14,11 @@ import {PickupClockScenario} from "./pickup-clock-capture";
  * does), which would also change what a belt-fed input finds on its belt: the input here is fed from a chest, so only the
  * drop sees it.
  */
-export interface BlockedOutputClockCase {name: string; speed: FixtureBeltSpeed; stackSize: 1 | 2 | 3 | 4}
+export interface BlockedOutputClockCase {
+    name: string; speed: FixtureBeltSpeed; stackSize: 1 | 2 | 3 | 4;
+    /** The run starts from ruling 60's start (the harness's backpressure start, `staged_start.backpressure`), not from a free warm-up */
+    staged?: true; backpressure?: true;
+}
 
 /** A legendary assembler 3 without modules or beacons: 1.25 x 2.5 */
 export const BLOCKED_OUTPUT_CRAFTING_SPEED = 3.125;
@@ -26,9 +30,15 @@ export const BLOCKED_OUTPUT_TARGET = 5;
  */
 export const BLOCKED_OUTPUT_OUTLET_TILES = 10;
 export function blockedOutputClockCases(): BlockedOutputClockCase[] {
-    return CLOCK_TEST_SPEEDS.flatMap(speed => ([1, 2, 3, 4] as const).map(stackSize => ({
-        name: `blocked-output-${speed.name}-stack-${stackSize}`, speed, stackSize,
-    })));
+    // the game tests run the turbo tier only (CLOCK_TEST_SPEEDS); each case is written out so a reader of the cases finds its start
+    const [speed] = CLOCK_TEST_SPEEDS;
+    if (speed.name !== "turbo") throw new Error("the cases below are of the turbo tier");
+    return [
+        {name: "blocked-output-turbo-stack-1", speed, stackSize: 1, staged: true, backpressure: true},
+        {name: "blocked-output-turbo-stack-2", speed, stackSize: 2, staged: true, backpressure: true},
+        {name: "blocked-output-turbo-stack-3", speed, stackSize: 3, staged: true, backpressure: true},
+        {name: "blocked-output-turbo-stack-4", speed, stackSize: 4, staged: true, backpressure: true},
+    ];
 }
 
 export function blockedOutputClockConfig(variant: BlockedOutputClockCase): Config {
@@ -90,6 +100,7 @@ export function blockedOutputClockScenario(variant: BlockedOutputClockCase): Pic
     return {
         name: variant.name, speed: variant.speed, backed: false,
         config: () => blockedOutputClockConfig(variant), scaffold: () => blockedOutputClockScaffold(variant),
+        staged: variant.staged, backpressure: variant.backpressure,
         probeFile: path.join(__dirname, "blocked-output-clock-probe.lua"),
         probe: {family: "chest-fed", stackSize: variant.stackSize},
         controls: path.join(__dirname, "blocked-output-clock-controls.json"),
