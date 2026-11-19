@@ -36,6 +36,8 @@ export interface CarCase {
     order: "as-built" | "takers-last";
     /** Recorded from the harness's staged start, not from a warm-up and a settle */
     staged?: true;
+    /** The staged start is ruling 60's start (the harness's backpressure start, `staged_start.backpressure`), not a plain staged start */
+    backpressure?: true;
 }
 
 export function carCases(): CarCase[] {
@@ -47,7 +49,7 @@ export function carCases(): CarCase[] {
         {name: "car-swings-3", alternative: "takt_batches_observed_swings_3", period: 72, order: "as-built"},
         {name: "car-swings-3-takers-last", alternative: "takt_batches_observed_swings_3", period: 72, order: "takers-last"},
         {name: "car-swings-1", alternative: "takt_batches_observed_swings_1", period: 72, order: "as-built"},
-        {name: "car-selected-staged", alternative: "coordinated_sources", period: 144, order: "as-built", staged: true},
+        {name: "car-selected-staged", alternative: "coordinated_sources", period: 144, order: "as-built", staged: true, backpressure: true},
     ];
 }
 
@@ -111,6 +113,7 @@ export async function carScenario(variant: CarCase): Promise<PickupClockScenario
         scaffold: () => carScaffold(variant.order),
         alternative: variant.alternative,
         staged: variant.staged,
+        backpressure: variant.backpressure,
         probeFile: path.join(__dirname, "iron-plate-80-car-chest-clock-probe.lua"),
         probe: {family: "car", tail: CAR_TAIL_TICKS, ...(series && {series: {period: variant.period}})},
         probePrelude: series ? CAR_SERIES_PRELUDE : undefined,

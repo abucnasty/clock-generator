@@ -130,22 +130,24 @@ def start_of_controls(repo, name, sources):
         # the capture holds both starts (the scenario's `staged`, `backpressure`): the start is per case, read from the fixtures
         return "capture", ["pickup-clock-capture.ts"]
     staged = sorted(f for f in chain if "staged_start" in code_only(texts[f]))
-    free = sorted(f for f in chain if re.search(r"warmup_ticks:\s*\d+", code_only(texts[f])))
+    # a staged start runs no warm-up (`warmup_ticks: 0`): only a warm-up of ticks is a free warm-up
+    free = sorted(f for f in chain if re.search(r"warmup_ticks:\s*[1-9]\d*", code_only(texts[f])))
     if staged and not free:
-        return "staged", staged
+        # `staged_start: {backpressure: ...}` is ruling 60's start, `staged_start: {...}` another staged start
+        return ("backpressure" if any(re.search(r"staged_start:\s*\{\s*backpressure\b", code_only(texts[f])) for f in staged) else "staged"), staged
     if free and not staged:
         return "free warm-up", free
     return None, sorted(chain)
 
 
 def staged_case_names(repo, sources):
-    """Case names a family's fixtures mark `staged: true` (a plain staged start; only the search cases add `backpressure`, and those are skipped)"""
-    names = set()
+    """Case names a family's fixtures mark `staged: true`, with their start: `backpressure` when the case literal also says `backpressure: true` (ruling 60's start), else `staged` (a plain staged start)"""
+    names = {}
     for b in sources:
         text = code_only(repo.show(BUILDS + b))
         for m in re.finditer(r'\{name: "([^"]+)"[^{}]*\}', text):
             if re.search(r"\bstaged: true\b", m.group(0)):
-                names.add(m.group(1))
+                names[m.group(1)] = "backpressure" if re.search(r"\bbackpressure: true\b", m.group(0)) else "staged"
     return names
 
 
@@ -231,7 +233,7 @@ def main(commit, out_path):
                 copies, backpressure = missing[case]
                 start = "backpressure" if backpressure else "staged"
             elif start_file == "capture":
-                start = "staged" if case in staged_names else "free warm-up"
+                start = staged_names.get(case, "free warm-up")
             else:
                 start = start_file
             hashes = sorted({h for h in [(e.get("recorded") or {}).get("clock_sha256"), (e.get("generation") or {}).get("clock_sha256")] if h})
