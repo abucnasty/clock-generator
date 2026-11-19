@@ -99,17 +99,20 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
     {
         name: "flying-robot-frame-80", job: "config-FLYING_ROBOT_FRAME_80", config: "FLYING_ROBOT_FRAME_80", copies: 12,
         losses: [{kind: "cut", item: "electronic-circuit"}, {kind: "block"}, {kind: "cut", item: "electric-engine-unit"}],
+        start: "backpressure",
     },
     {
         name: "productivity-module-80-chest-chain", job: "config-PRODUCTIVITY_MODULE_80_CHEST_CHAIN", config: "PRODUCTIVITY_MODULE_80_CHEST_CHAIN", copies: 1,
         losses: [{kind: "cut", item: "coal"}, {kind: "block"}, {kind: "stop", recipe: "casting-iron"}],
         limit: "the scaffold holds one copy of the job's six",
+        start: "backpressure",
     },
     {
         name: "electromagnetic-science-240-recycler-belt-fed", job: "config-ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED", config: "ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED", copies: 2,
         losses: [{kind: "cut", item: "accumulator"}, {kind: "block"}, {kind: "cut", item: "superconductor"}],
         limit: "the scaffold holds two copies of the job's five",
         random_output: "the recyclers give back what the game rolls",
+        start: "backpressure",
     },
     {
         name: "processing-unit-15-chest-fed", job: "config-PROCESSING_UNIT_15_CHEST_FED", config: "PROCESSING_UNIT_15_CHEST_FED", copies: 1,
@@ -119,10 +122,12 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
     {
         name: "logistic-science-240", job: "config-LOGISTIC_SCIENCE_240", config: "LOGISTIC_SCIENCE_240", copies: 22,
         losses: [{kind: "cut", item: "transport-belt"}, {kind: "block"}, {kind: "cut", item: "inserter"}],
+        start: "backpressure",
     },
     {
         name: "accumulator-320", job: "config-ACCUMULATOR_320", config: "ACCUMULATOR_320", copies: 9,
         losses: [{kind: "block"}],
+        start: "backpressure",
     },
     {
         name: "automation-science-120-foundries-feed-belt-to-assembler", job: "config-AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER",

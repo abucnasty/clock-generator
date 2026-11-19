@@ -818,18 +818,27 @@ Recorded at Factorio 2.1.24, all seven holding their target on every copy and re
 | Job | Clock (window cycle) | Copies built | Window cycles per copy before / after the losses | Steady state | Last loss recovered |
 | --- | --- | --- | --- | --- | --- |
 | `AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING` | Pitch Pickups (72) | 9 of 9 | 50 / 50 | 7,292 | 17,736 |
-| `FLYING_ROBOT_FRAME_80` | Moved Output Swing (288) | 12 of 12 | 12 / 12 | 7,056 | 25,261 |
-| `PRODUCTIVITY_MODULE_80_CHEST_CHAIN` | Coordinated Sources (72) | 1 of 6 | 50 / 50 | 7,437 | 27,146 |
-| `ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED` | Coordinated Sources (40) | 2 of 5 | 90 / 90 | 7,200 | 32,428 |
+| `FLYING_ROBOT_FRAME_80` | Moved Output Swing (288) | 12 of 12 | 12 / 12 | 7,056 | 25,260 |
+| `PRODUCTIVITY_MODULE_80_CHEST_CHAIN` | Coordinated Sources (72) | 1 of 6 | 50 / 50 | 7,436 | 27,145 |
+| `ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED` | Coordinated Sources (40) | 2 of 5 | 90 / 90 | 7,200 | 32,427 |
 | `PROCESSING_UNIT_15_CHEST_FED` | Euclidean Swings (384) | 1 of 1 | 9 / 9 | 7,074 | 19,010 |
-| `LOGISTIC_SCIENCE_240` | Takt Batches (176) | 22 of 11 (two rows) | 20 / 20 | 7,194 | 20,042 |
-| `ACCUMULATOR_320` | Coordinated Sources (972) | 9 of 9 | 3 / 3 | 6,516 | 15,174 |
+| `LOGISTIC_SCIENCE_240` | Takt Batches (176) | 22 of 11 (two rows) | 20 / 20 | 7,193 | 20,041 |
+| `ACCUMULATOR_320` | Coordinated Sources (972) | 9 of 9 | 3 / 3 | 6,518 | 15,173 |
 
+- **Start.** The first pick (`AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING`) and the processing unit 15 job start from the plain staged start. The five other rows
+  (flying robot frame 80, productivity module chain, electromagnetic recycler build, logistic science 240, accumulator 320) are recorded from ruling 60's start
+  (`start: "backpressure"`, see "Loop builds and ruling 60's start" below): the lock holds the clocked inserters off, the unclocked part fills and runs until every
+  machine made the same in two windows of 3,600 ticks, and the lock opens at the clock's first tick. The values in the table for those five are the runs from that
+  start (Factorio 2.1.24, 2026-11-19, each repeated on a second run with the same result on every copy, window cycle and loss); the runs from the plain staged start
+  before it differed by at most two ticks in steady state and in the last recovery. Every copy built holds its share in every whole window cycle checked, before and after the losses.
 - The first pick is "no recovery" in the simulator (copper plate stops arriving on the copies that share a lane). In the game all nine copies keep their rate and
   the output comes back after that loss, so the game and the simulator differ, as for utility science 120 above.
 - Named limits: the scaffold of the productivity module chain holds one copy of the job's six, and that of the electromagnetic science recycler build two of five; the
-  joins of the other copies are not in these runs. The recycler build's output is random: each copy made 2,907 and 2,890 of 2,880 over its 90 window cycles before the
-  losses (2,900 and 2,892 of 2,880 after), 12 to 15 of its window cycles short of 32 by a few items, so it is judged on the stretch and not on each window cycle. The staged
+  joins of the other copies are not in these runs. The harness builds the copies the scaffold blueprint holds and no more: asked for the job's copies (2026-11-19, Factorio 2.1.24,
+  ruling 60's start) it refuses before the run, "The test says the build holds the config 6 times, and the build holds it 1: a copy is a group of machines that inserters move items
+  between, with a machine for every machine of the config" (the recycler build: 5 times, holds it 2). The same holds for the automation science 120 build (9 times, holds it 1) and the
+  electric furnace 20 build (2 times, holds it 1) below. The recycler build's output is random: each copy made 2,907 and 2,890 of 2,880 over its 90 window cycles before the
+  losses (2,900 and 2,892 of 2,880 after), 12 to 15 of its window cycles short of 32 by a few items, so it is judged on the stretch and not on each window cycle. The
   recording starts before the recyclers have a recipe, so its copies are the final machines taken from the west, two to a copy.
 - `AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER` (one copy of the job's nine) is recorded from ruling 60's start, not from the plain staged start (see "Loop builds and ruling 60's start"
   below). Its belt is filled only by the foundries' output inserters, which the staged start places with the clock, so no lane under a pickup ever carried anything before them. The staged start
