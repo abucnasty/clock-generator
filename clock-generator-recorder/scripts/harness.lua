@@ -406,12 +406,69 @@ local function find_clock_network(entities)
         table.insert(combinators, entity)
     end
     local inserters = {}
+    local network = {}
+    for _, combinator in pairs(combinators) do
+        network[combinator.unit_number] = true
+    end
     for unit_number, entity in pairs(reachable(combinators, function(it) return not COMBINATOR_TYPES[it.type] or only_relays(it) end)) do
+        network[unit_number] = true
         if entity.type == "inserter" then
             inserters[unit_number] = entity
         end
     end
-    return combinators, inserters
+    return combinators, inserters, network
+end
+
+---The key of a ghost in the lists of ghosts_on_network: where it stands in the blueprint, as place_staged names it
+---@param ghost LuaEntity
+---@param origin MapPosition
+---@return string
+local function ghost_key(ghost, origin)
+    return string.format("%.2f,%.2f", ghost.position.x - origin.x, ghost.position.y - origin.y)
+end
+
+---The inserters of the cell still ghosts (a staged start) that read the clock a build came with: wired to its combinators, or over
+---a wire to another inserter, a pole or a relay that is, as find_clock_network walks the built ones. Read before the clock is removed,
+---while the ghosts still hold the wires of the blueprint.
+---@param ghosts LuaEntity[]
+---@param network table<uint, boolean> unit numbers of the clock's combinators and what hangs on them (find_clock_network)
+---@param origin MapPosition
+---@return table<string, boolean> by ghost_key
+local function ghosts_on_network(ghosts, network, origin)
+    local neighbours, held = {}, {}
+    for _, ghost in ipairs(ghosts) do
+        if ghost.valid then
+            local found = {}
+            local ok, connectors = pcall(function() return ghost.get_wire_connectors(false) end)
+            if ok and connectors then
+                for _, connector in pairs(connectors) do
+                    if connector.wire_type ~= defines.wire_type.copper then
+                        for _, connection in pairs(connector.connections) do
+                            table.insert(found, connection.target.owner)
+                        end
+                    end
+                end
+            end
+            neighbours[ghost_key(ghost, origin)] = found
+        end
+    end
+    local changed = true
+    while changed do
+        changed = false
+        for key, found in pairs(neighbours) do
+            if not held[key] then
+                for _, neighbour in ipairs(found) do
+                    if neighbour.valid and ((neighbour.unit_number and network[neighbour.unit_number])
+                        or (not neighbour.unit_number and held[ghost_key(neighbour, origin)])) then
+                        held[key] = true
+                        changed = true
+                        break
+                    end
+                end
+            end
+        end
+    end
+    return held
 end
 
 ---@param inserter LuaEntity
@@ -940,7 +997,7 @@ local function staged_tick(state)
 end
 
 ---Build the blueprint and pause the game, after the warm-up when one is asked for
----@param job {blueprint: string, surface: string?, force: string?, position: MapPosition?, clock: "keep"|"remove"|nil, free_warmup: boolean?, warmup_ticks: number?, speed: number?, drill_resource: string?} speed: the game's speed from here on; it stays what it is when absent. drill_resource: the ore put under every mining drill of the blueprint. free_warmup: with clock "remove", the inserters the removed clock held run free until the new clock is wired
+---@param job {blueprint: string, surface: string?, force: string?, position: MapPosition?, clock: "keep"|"remove"|nil, free_warmup: boolean?, warmup_ticks: number?, speed: number?, drill_resource: string?} speed: the game's speed from here on; it stays what it is when absent. drill_resource: the ore put under every mining drill of the blueprint. free_warmup: with clock "remove", the inserters the removed clock held run free until the new clock is wired; in a staged build the cell's inserters it held are built free too
 ---@return table report
 function harness.build(job)
     local surface = game.surfaces[job.surface or "nauvis"]
@@ -979,7 +1036,11 @@ function harness.build(job)
 
     local removed = 0
     if job.clock == "remove" then
-        local combinators, inserters = find_clock_network(entities)
+        local combinators, inserters, network = find_clock_network(entities)
+        if job.free_warmup and state.staged then
+            -- the cell's inserters are still ghosts: the ones that read this clock run free when they are built, as the built ones do
+            state.free_ghosts = ghosts_on_network(staged_ghosts, network, origin)
+        end
         local gone = {}
         for _, combinator in pairs(combinators) do
             gone[combinator.unit_number] = true
@@ -1027,7 +1088,11 @@ function harness.build(job)
         clocked_inserters = clocked,
         tick = game.tick,
         origin = origin,
-        staged = state.staged and { cell_inserters = #staged_ghosts, lanes = #state.staged.lanes } or nil,
+        staged = state.staged and { cell_inserters = #staged_ghosts, lanes = #state.staged.lanes, held_by_clock = (function()
+            local count = 0
+            for _ in pairs(state.free_ghosts or {}) do count = count + 1 end
+            return count
+        end)() } or nil,
     }
 end
 
@@ -1215,6 +1280,12 @@ local function place_staged(state, options)
             fulfil_item_requests(entity, proxy)
         end
         table.insert(state.entities, entity)
+        if state.free_ghosts and state.free_ghosts[key(x, y)] then
+            -- it read the clock the build came with: the clock that replaces it frees it or wires it (attach_clock), as for an inserter built in the first stage
+            state.clocked_inserters = state.clocked_inserters or {}
+            state.clocked_inserters[entity.unit_number] = entity
+            run_without_circuit(entity)
+        end
         table.insert(placed, { unit_number = entity.unit_number, name = entity.name, config_id = config_id, copy = copy, x = x, y = y, tick = game.tick })
         if config_id then
             name_unit(config_id, entity.unit_number)
