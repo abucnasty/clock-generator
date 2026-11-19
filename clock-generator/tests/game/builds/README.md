@@ -975,7 +975,7 @@ state to the first loss, and the whole window cycles of the last minute after th
 | `AUTOMATION_SCIENCE_240` (`automation-science-240`) | Coordinated Sources (72, `0bc638ab`) | 9 of 9 | 50 / 50 | 7,200 | 16,823 | copy 2 short after the losses, not pinned |
 | `ELECTROMAGNETIC_SCIENCE_330` (`electromagnetic-science-330`) | Takt Batches Observed (2,112, `c3b310df`) | 11 of 11 | 1 / 1 | 5,712 | 37,644 | copies 1 and 3 short after the losses, not pinned |
 
-- **Agricultural science.** The harness does not read `backed_up_belts`, so the build and its backed-up variant are the same run: the same clock, the same result to the tick (as their scaffold pins say). The scaffold's four loaders
+- **Agricultural science.** The harness does not read `backed_up_belts`, so the build and its variant with belts under backpressure are the same run: the same clock, the same result to the tick (as their scaffold pins say). The scaffold's four loaders
   drain the bioflux and nutrients belts and the packs go into infinity chests, so the case sets `block_sinks` (the output block fills those chests). All five copies make 800 in every window cycle judged.
 - **Automation science 240, copy 2.** In the case with three losses in a row the output block and the copper plate cut last 5 and 4 ticks (the gear wheel cut recovers over the target before it is over the baseline's lowest minute), and after them
   copy 2 settles into a cycle of five window cycles that makes 30 of 32 once and 34 once (a hand of 2 moves from one window cycle to the next); it makes 1,600 of 1,600 over the 50 window cycles of the last minute,
