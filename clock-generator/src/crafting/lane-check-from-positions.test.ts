@@ -6,8 +6,10 @@ import { quiet } from "./generate-blueprint-test-helpers";
 import { flowsAcrossCopySpacing, modelLanesOf, takenTogether, takerSpacingUnknown } from "./shared-lane-lanes";
 import { sharedLaneLayoutOf } from "./shared-lane-model";
 import { checkedLanesOf, sharedLanesOf } from "./checked-lanes";
-import { assumedCopySpacings, judgeSharedLanes } from "./shared-lane-verdict";
+import { assumedCopySpacings, judgeSharedLanes as judgeSharedLanesOnDefault } from "./shared-lane-verdict";
 import { clockVerdictOf, type ClockAssessment } from "./trial";
+// These tests pin the comparison with a run of one copy alone, which the rate judge (shared-lane-judge-switch.ts) leaves for its open cases.
+const judgeSharedLanes = (...[config, windows, cycle, logger, options]: Parameters<typeof judgeSharedLanesOnDefault>) => judgeSharedLanesOnDefault(config, windows, cycle, logger, { by_rate: false, ...options });
 
 // the check of the shared lanes runs on a lane that two or more like inserters take from: those of several copies, and those
 // of a build of one copy, each where its position puts it
