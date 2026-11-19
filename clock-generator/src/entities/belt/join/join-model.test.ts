@@ -68,6 +68,19 @@ describe("movement", () => {
         expect(rows[8]).toEqual([]);
     });
 
+    test("an end changed after a tick's movement acts from the next tick, as one given with the tick it is changed in", () => {
+        const inputs: Record<number, TickInput> = { 0: { put_ons: [before("loader", 127)] }, 2: { put_ons: [before("loader", 127)] } };
+        const given = run(new JoinModel({ lines: [{ id: "loader", length: LOADER_LINE_LENGTH, end: "shut" }] }), 8,
+            { ...inputs, 4: { end_changes: [{ line: "loader", end: "loader" }] } });
+        const model = new JoinModel({ lines: [{ id: "loader", length: LOADER_LINE_LENGTH, end: "shut" }] });
+        const rows = run(model, 4, inputs);
+        model.changeEnd({ line: "loader", end: "loader" });
+        rows.push(...run(model, 3));
+        expect(rows).toEqual(given);
+        expect(rows[5]).toEqual([["loader", 64]]);
+        expect(() => new JoinModel({ lines: STRAIGHT }).changeEnd({ line: "a", end: "shut" })).toThrow("has no end to change");
+    });
+
     test("a loader that is shut holds its stacks from the next tick", () => {
         const model = new JoinModel({ lines: [{ id: "loader", length: LOADER_LINE_LENGTH, end: "loader" }] });
         const rows = run(model, 4, { 0: { put_ons: [before("loader", 127)], end_changes: [{ line: "loader", end: "shut" }] } });
