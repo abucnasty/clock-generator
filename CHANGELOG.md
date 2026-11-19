@@ -15,7 +15,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: a switch in Advanced to judge clocks from the cold start
 - simulation: an input lane can state the length of belt before the first copy
 - simulation: items on shared input lanes wait a tick at underground belt entrances
-- simulation: an output inserter can state the underground belt end it drops onto
+- simulation: an output inserter can state which underground belt it drops onto
 
 ### Changed
 - ui: result texts name the start the clocks were judged from, not always the cold start
