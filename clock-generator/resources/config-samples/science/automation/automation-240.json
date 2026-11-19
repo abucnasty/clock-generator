@@ -111,7 +111,8 @@
           "lane_end": {
             "kind": "dead_end"
           },
-          "supply_tiles": 11
+          "supply_tiles": 11,
+          "underground_entrances": [-7, 1, 10, 19, 28, 37, 46, 55, 64]
         },
         {
           "ingredient": "copper-plate",
@@ -119,7 +120,8 @@
           "lane_end": {
             "kind": "dead_end"
           },
-          "supply_tiles": 11
+          "supply_tiles": 11,
+          "underground_entrances": [-7, 1, 10, 19, 28, 37, 46, 55, 64]
         }
       ]
     },

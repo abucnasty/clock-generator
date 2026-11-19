@@ -100,14 +100,16 @@
           "stack_size": 4,
           "lane_end": {
             "kind": "dead_end"
-          }
+          },
+          "underground_entrances": [-5, 1, 7, 13, 19, 25, 31, 37, 43, 49, 55]
         },
         {
           "ingredient": "inserter",
           "stack_size": 4,
           "lane_end": {
             "kind": "dead_end"
-          }
+          },
+          "underground_entrances": [-5, 1, 7, 13, 19, 25, 31, 37, 43, 49, 55]
         }
       ]
     }
