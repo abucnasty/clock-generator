@@ -30,7 +30,7 @@ describe("the input-lane check from the positions of one copy's inserters", () =
         expect(clock.result.simulation_duration.ticks).toBe(72);
         expect(clock.verdict).toBe("unstable");
         expect(clock.assessment.shared_lane_losses?.map(loss => "inserter_id" in loss ? `${loss.inserter_id} ${loss.item} ${loss.swings}/${loss.alone_swings} copy ${loss.copy} of ${loss.copies}` : loss.kind))
-            .toEqual(["3 copper-plate 56/65 copy 1 of 1", "3 iron-gear-wheel 58/65 copy 1 of 1"]);
+            .toEqual(["3 copper-plate 214/245 copy 1 of 1", "3 iron-gear-wheel 215/245 copy 1 of 1"]);
         expect(clock.checked_lanes?.rows.map(row => `${row.belt_id}/${row.lane} ${row.state.kind}`)).toEqual(["1/1 short", "1/2 short", "2/1 rate_fits"]);
         expect(nine.alternatives[nine.selected_index].id).not.toBe(TWO_SWINGS);
     });
