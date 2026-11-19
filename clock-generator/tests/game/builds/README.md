@@ -620,7 +620,7 @@ output stock, the car's ore, the drill's status, the clock's counter and the sta
 after it, and at each whole window cycle from steady state on both furnaces' products finished and productivity bars. The run and its summary are as
 without the option.
 
-## Drill-fed cells, the ore voider and the blocked output, from ruling 60's start
+## Drill-fed builds, the ore voider and the blocked output, from ruling 60's start
 
 Eight record jobs record the clock the record selects from ruling 60's state, the harness's backpressure start (`staged: true, backpressure: true` in the case, as `pickup-clock-capture.ts` reads
 them; the ore voider's own capture asks for `staged_start: {backpressure: {}}` and keeps the game's report of the opening in `opening.json`), on Factorio 2.1.24. Each run was repeated once with
@@ -641,7 +641,7 @@ All hold: the net output over the baseline's whole window cycles is the target (
 240 at stack size 3), every loss falls and is recovered, and the output stock guard holds (the ore voider is judged by a count, as before: the ore destroyed and the share of crafts that gave ore back
 stay inside the binomial range, the car is never full). The car and silo runs are the same as from the plain staged start in every value that is pinned.
 
-- **Every inserter of these builds has a window.** The opening reports (`opening.json`) hold every inserter of each cell as windowed (4 of the car build, 6 of the ore voider, 2 of the blocked output), no machine fed by an
+- **Every inserter of these builds has a window.** The opening reports (`opening.json`) hold every inserter of each build as windowed (4 of the car build, 6 of the ore voider, 2 of the blocked output), no machine fed by an
   inserter with no window, and no windowed inserter moved in the fill. The start equals a plain staged start in effect, as for the grenade and logistic builds above; the car's drill and the supply chests are the part no clock holds.
 - **The ore voider's exact-speed job holds.** The guess that the recycler's random returns could leave it short did not show: the destroyed ore is 23,997 of 24,000 over the baseline, within 232.
 
