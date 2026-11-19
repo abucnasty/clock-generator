@@ -219,7 +219,7 @@ const RECORD_LINKS: Record<string, RecordLink & {runs?: boolean}> = {
     // its game test records fractional swings, selected until #595 (batched swings with the slack inside its windows since)
     "logistic-science-240-direct-insert-clock-controls.json": {jobOf: config("LOGISTIC_SCIENCE_240_DIRECT_INSERT"), offered: ["generated-one-copy"]},
     // the jobs of the missing recordings that were not recorded from the staged start (missing-recordings-clock-fixtures.ts); each entry is the job's selection
-    // the one output swing build's game run is of Pitch Pickups, selected until the feeders' entry (#847: the pick is Euclidean Swings since)
+    // the one output swing build's game run is of Pitch Pickups, selected until the feeders' entry (#847: the Recommended clock is Euclidean Swings since)
     "missing-recordings-clock-controls.json": {jobOf: name => MISSING_RECORDING_CASES.find(it => it.name === name)?.job, runs: true, offered: ["automation-science-240-one-output-swing"]},
     "processing-unit-80-circuit-export-clock-controls.json": {
         jobOf: name => name.endsWith("-backed-up") ? variant("PROCESSING_UNIT_80_CIRCUIT_EXPORT_BACKED_UP") : "config-PROCESSING_UNIT_80_CIRCUIT_EXPORT",

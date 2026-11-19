@@ -11,7 +11,7 @@ request adds to this file.
 ## The feeders put their stacks onto the supply lane as the game does (#847)
 2 jobs moved, one selected clock. The four feeders of the automation science 240 scaffold put their hands down on the lane the copies share a stack a tick, each where the game lands it (Factorio 2.1.24, k104c and k104b: the model equals the recorded lane, hands and takers in every tick of 7,473). The copper plate stop of the trials now ends as the game's two-stop sequence does. Accepted by abucnasty (ruling 1029).
 - config-AUTOMATION_SCIENCE_240 (coordinated_sources stays selected): euclidean_swings: unstable -> no recovery, no loss in its steady run now; `results_sha256` also of pitch_pickups, takt_batches_swings_1 and time_study_windows, and `config_sha256`
-- variants-AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING: selected pitch_pickups (50.17 wake-ups a minute) -> euclidean_swings (0), windows inserter:1 1-24 -> 1-20 and inserter:2 0-3,36-39 -> 1-12,37-48,73-73; euclidean_swings: unstable -> no recovery; `results_sha256` of pitch_pickups and time_study_windows, `config_sha256`; better, the pick has no wake-ups
+- variants-AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING: recommended pitch_pickups (50.17 wake-ups a minute) -> euclidean_swings (0), windows inserter:1 1-24 -> 1-20 and inserter:2 0-3,36-39 -> 1-12,37-48,73-73; euclidean_swings: unstable -> no recovery; `results_sha256` of pitch_pickups and time_study_windows, `config_sha256`; better, the Recommended clock has no wake-ups
 
 ## An output block's release acts in the game's tick (#846)
 1 job moved, no selected clock, verdict, hold, rate or wakeups. After an output block, the output belt the config states drains again from the tick after the release, as the game's loader takes its first stack in the tick after the release (Factorio 2.1.24, the iron plate car build: its seeded replay now equals the game's plates in every tick on both recorded series). The cut keeps its timing. Accepted by abucnasty (question 1014).
@@ -172,7 +172,7 @@ A new router, Coordinated Sources (id `coordinated_sources`; its maker, the id i
 - config-LOGISTIC_SCIENCE_240_DIRECT_INSERT: selected takt_batches_observed -> coordinated_sources, 200.069 -> 100.035, window cycle 576 (game: 384 / 384 in 6 of 6, 100.0 (100.0))
 - config-PRODUCTIVITY_MODULE_80_CHEST_CHAIN: selected round_robin_polling -> coordinated_sources, 666.25 -> 620, window cycle 72 (game: 16 / 16 in 49 of 49, 623.2 (630.6))
 - config-UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT: selected takt_batches_observed -> coordinated_sources, 42.985 -> 32.239, window cycle 336 (game: 96 / 96 in 10 of 10, 32.2 (32.1))
-- variants-AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING: selected pitch_pickups -> coordinated_sources, 50.174 -> 0, window cycle 72 (game: 32 / 32 in 49 of 49, 0.0 (0.0))
+- variants-AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING: recommended pitch_pickups -> coordinated_sources, 50.174 -> 0, window cycle 72 (game: 32 / 32 in 49 of 49, 0.0 (0.0))
 
 ## Loop windows report #516's two-hop bound (#516)
 A clock with windows for a loop of machines now carries #516's two-hop bound in its assessment (`loop_stock_bound`), a report that keeps, drops and ranks nothing: only the results digest of those clocks moves, no clock, verdict or wakeup count.
