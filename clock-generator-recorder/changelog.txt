@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.11.2
+Date: 2026-11-18
+  Bugfixes:
+    - A staged build with free_warmup frees the inserters the removed clock held, as the warm-up path does: the cell's inserters still ghosts that read it are built free, so the unclocked part of the build fills and its furnaces get their recipe
+---------------------------------------------------------------------------------------------------
 Version: 0.11.1
 Date: 2026-11-18
   Bugfixes:

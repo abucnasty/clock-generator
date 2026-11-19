@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import path from "path";
+import zlib from "zlib";
 import { encodeBlueprintFile } from "../blueprints/serde";
 import {
     assertBackpressureOpening, assertClockAttached, assertClockPriming, assertRecordableTicks, buildPartsMissingFromConfig, builtCopies, clockInserters, stagedBuildOrder, clockOfBlueprintString, clockWindowCycleTicks, matchBuiltCopies, matchBuiltDrills, matchBuiltInserters, stagedDrillPositions, MAX_RECORDED_TICKS,
     factorioDataDir, missingFromConfigMessage, partCopiesOf, recordedTicks, recordInFactorio, scheduledDrillIds, scheduledInserterIds,
-    drillResourceOf,
+    drillResourceOf, trialBuildJob, firstStageJob,
 } from "./factorio-harness";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
@@ -586,6 +587,47 @@ describe("a clock the build came with", () => {
         await expect(run({ built_clock, unclocked: true }, counter(215))).rejects.toThrow("kept or replaced");
         await expect(run({ built_clock, staged_start: { build_order: "ascending" } }, counter(215))).rejects.toThrow("kept or replaced");
         await expect(run({ built_clock }, counter(100))).rejects.toThrow("not the 216 asked for");
+    });
+
+    it("is replaced by the clock of a staged start, which names it in the blueprint first", async () => {
+        const built_clock = { counter: 5, window_cycle_ticks: 216, first_value: 0 as const };
+        const swapped = { blueprint: "0", schedule: { counted_ticks: 100, inserter_combinators: [] } };
+        await expect(run({ built_clock, clock: swapped, config: {}, staged_start: { build_order: "ascending" } }, counter(215))).rejects.toThrow("Factorio not found");
+        await expect(run({ built_clock, clock: swapped, config: {}, staged_start: { build_order: "ascending" } }, counter(100))).rejects.toThrow("not the 216 asked for");
+    });
+
+    describe("in a staged start's trial build and first stage", () => {
+        const built_clock = { counter: 5, window_cycle_ticks: 216, first_value: 0 as const };
+        const swapped = { blueprint: "0", schedule: { counted_ticks: 100, inserter_combinators: [] } };
+        const staged = (more: object) => ({
+            factorio: "/nowhere/factorio", save: "/nowhere/save.zip", blueprint: counter(215), out: "/nowhere/recording.json",
+            ticks: 600, warmup_ticks: 0, seed: [], unclocked: false, game_speed: 1000, timeout_seconds: 1, log: () => { },
+            config: {}, staged_start: { build_order: "ascending" as const }, ...more,
+        }) as unknown as Parameters<typeof trialBuildJob>[0];
+        const named = (blueprint: string) => JSON.parse(zlib.inflateSync(Buffer.from(blueprint.slice(1), "base64")).toString("utf-8")).blueprint.entities[0].player_description;
+
+        it("frees the inserters the hand-made clock held, as the warm-up path leaves them", () => {
+            const options = staged({ built_clock, clock: swapped });
+            expect(trialBuildJob(options).free_warmup).toBe(true);
+            expect(firstStageJob(options, { x: 3, y: 4 }).free_warmup).toBe(true);
+            expect(firstStageJob(options, { x: 3, y: 4 }).position).toEqual({ x: 3, y: 4 });
+        });
+
+        it("names the clock the build came with in both, so the game removes it", () => {
+            const options = staged({ built_clock, clock: swapped });
+            expect(named(trialBuildJob(options).blueprint)).toMatch(/^Clock for /);
+            expect(named(firstStageJob(options, undefined).blueprint)).toMatch(/^Clock for /);
+            expect(trialBuildJob(options).clock).toBe("remove");
+            expect(firstStageJob(options, undefined).clock).toBe("remove");
+        });
+
+        it("leaves a staged start without a named clock as it was: the blueprint as given, no inserter freed", () => {
+            const options = staged({ clock: swapped });
+            expect(trialBuildJob(options).free_warmup).toBe(false);
+            expect(firstStageJob(options, undefined).free_warmup).toBe(false);
+            expect(trialBuildJob(options).blueprint).toBe(options.blueprint);
+            expect(firstStageJob(options, undefined).blueprint).toBe(options.blueprint);
+        });
     });
 });
 
