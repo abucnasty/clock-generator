@@ -96,7 +96,8 @@ const CAR_TAIL_TICKS = 14_400;
 
 /**
  * A test-only option, off by default (`CAR_SERIES=1`): the probe also keeps a row a tick around each drill stop and a row at each whole
- * window cycle (iron-plate-80-car-chest-series-prelude.lua), written to the capture directory as series.json. It only reads the game; the
+ * window cycle, and a row a tick around the output block with both output inserters' hands and the output belt's lanes
+ * (iron-plate-80-car-chest-series-prelude.lua), written to the capture directory as series.json. It only reads the game; the
  * summary of a run, and every recording made without the option, are as they were (#587).
  */
 const CAR_SERIES_PRELUDE = path.join(__dirname, "iron-plate-80-car-chest-series-prelude.lua");
