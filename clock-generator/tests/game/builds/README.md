@@ -818,18 +818,27 @@ Recorded at Factorio 2.1.24, all seven holding their target on every copy and re
 | Job | Clock (window cycle) | Copies built | Window cycles per copy before / after the losses | Steady state | Last loss recovered |
 | --- | --- | --- | --- | --- | --- |
 | `AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING` | Pitch Pickups (72) | 9 of 9 | 50 / 50 | 7,292 | 17,736 |
-| `FLYING_ROBOT_FRAME_80` | Moved Output Swing (288) | 12 of 12 | 12 / 12 | 7,056 | 25,261 |
-| `PRODUCTIVITY_MODULE_80_CHEST_CHAIN` | Coordinated Sources (72) | 1 of 6 | 50 / 50 | 7,437 | 27,146 |
-| `ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED` | Coordinated Sources (40) | 2 of 5 | 90 / 90 | 7,200 | 32,428 |
+| `FLYING_ROBOT_FRAME_80` | Moved Output Swing (288) | 12 of 12 | 12 / 12 | 7,056 | 25,260 |
+| `PRODUCTIVITY_MODULE_80_CHEST_CHAIN` | Coordinated Sources (72) | 1 of 6 | 50 / 50 | 7,436 | 27,145 |
+| `ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED` | Coordinated Sources (40) | 2 of 5 | 90 / 90 | 7,200 | 32,427 |
 | `PROCESSING_UNIT_15_CHEST_FED` | Euclidean Swings (384) | 1 of 1 | 9 / 9 | 7,074 | 19,010 |
-| `LOGISTIC_SCIENCE_240` | Takt Batches (176) | 22 of 11 (two rows) | 20 / 20 | 7,194 | 20,042 |
-| `ACCUMULATOR_320` | Coordinated Sources (972) | 9 of 9 | 3 / 3 | 6,516 | 15,174 |
+| `LOGISTIC_SCIENCE_240` | Takt Batches (176) | 22 of 11 (two rows) | 20 / 20 | 7,193 | 20,041 |
+| `ACCUMULATOR_320` | Coordinated Sources (972) | 9 of 9 | 3 / 3 | 6,518 | 15,173 |
 
+- **Start.** The first pick (`AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING`) and the processing unit 15 job start from the plain staged start. The five other rows
+  (flying robot frame 80, productivity module chain, electromagnetic recycler build, logistic science 240, accumulator 320) are recorded from ruling 60's start
+  (`start: "backpressure"`, see "Loop builds and ruling 60's start" below): the lock holds the clocked inserters off, the unclocked part fills and runs until every
+  machine made the same in two windows of 3,600 ticks, and the lock opens at the clock's first tick. The values in the table for those five are the runs from that
+  start (Factorio 2.1.24, 2026-11-19, each repeated on a second run with the same result on every copy, window cycle and loss); the runs from the plain staged start
+  before it differed by at most two ticks in steady state and in the last recovery. Every copy built holds its share in every whole window cycle checked, before and after the losses.
 - The first pick is "no recovery" in the simulator (copper plate stops arriving on the copies that share a lane). In the game all nine copies keep their rate and
   the output comes back after that loss, so the game and the simulator differ, as for utility science 120 above.
 - Named limits: the scaffold of the productivity module chain holds one copy of the job's six, and that of the electromagnetic science recycler build two of five; the
-  joins of the other copies are not in these runs. The recycler build's output is random: each copy made 2,907 and 2,890 of 2,880 over its 90 window cycles before the
-  losses (2,900 and 2,892 of 2,880 after), 12 to 15 of its window cycles short of 32 by a few items, so it is judged on the stretch and not on each window cycle. The staged
+  joins of the other copies are not in these runs. The harness builds the copies the scaffold blueprint holds and no more: asked for the job's copies (2026-11-19, Factorio 2.1.24,
+  ruling 60's start) it refuses before the run, "The test says the build holds the config 6 times, and the build holds it 1: a copy is a group of machines that inserters move items
+  between, with a machine for every machine of the config" (the recycler build: 5 times, holds it 2). The same holds for the automation science 120 build (9 times, holds it 1) and the
+  electric furnace 20 build (2 times, holds it 1) below. The recycler build's output is random: each copy made 2,907 and 2,890 of 2,880 over its 90 window cycles before the
+  losses (2,900 and 2,892 of 2,880 after), 12 to 15 of its window cycles short of 32 by a few items, so it is judged on the stretch and not on each window cycle. The
   recording starts before the recyclers have a recipe, so its copies are the final machines taken from the west, two to a copy.
 - `AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER` (one copy of the job's nine) is recorded from ruling 60's start, not from the plain staged start (see "Loop builds and ruling 60's start"
   below). Its belt is filled only by the foundries' output inserters, which the staged start places with the clock, so no lane under a pickup ever carried anything before them. The staged start
@@ -860,7 +869,33 @@ an ingredient). Each holds its share of the target on its copy in every whole cl
 - The two advanced circuit 240 jobs have the same clock; one scaffold and one run each, with the same result. The scaffold's lanes end closed, so the sample builds backpressure
   on those belts in both.
 - The scaffolds hold one copy of the advanced circuit and logistic science jobs' three and six copies; the joins of the other copies are not in these runs.
+- The figures of this table and of the one above for `PROCESSING_UNIT_15_CHEST_FED` are of the plain staged start; the controls now hold the runs from ruling 60's start, in "Seven of these picks again, from ruling 60's start" below.
 - `ROCKET_FUEL_60` and `ROCKET_FUEL_60_JELLY_HANDS_15_BACKED_UP` were not pinned here: they are recorded from ruling 60's start under "Loop builds and ruling 60's start" below.
+
+## Seven of these picks again, from ruling 60's start
+
+The plain staged start is not the judged start. Seven jobs of the two tables above and of the stone brick note below are recorded again by the same test and probe, with
+`start: "backpressure"` in their cases (Factorio 2.1.24, one copy of the scaffold each, the same losses, `CLOCK_RECORDING_CACHE=off`): the build is placed with the
+clock's lock on, runs until every machine made the same in two windows of 3,600 ticks, and the lock opens at the clock's first tick. A second run of each, with
+no change, gave the same verdict, summary and controls entry (only the tick the lock opens at differs, by 1 to 6 ticks). The entries in
+[missing-recordings-clock-controls.json](missing-recordings-clock-controls.json) are these runs, and replace the ones of the plain staged start. Every job holds: the baseline's
+net output is the target over whole clock cycles, the stock guard holds, and the copy makes its share in every whole clock cycle before the first loss and in the cycles after the last one.
+
+| Job | Clock (window cycle) | Opening: machines at the lock | Clock cycles before / after the losses | Steady state | Last loss recovered |
+| --- | --- | --- | --- | --- | --- |
+| `PROCESSING_UNIT_15_CHEST_FED` | Euclidean Swings (384, `887d21be`) | the plant empty, its two inserters windowed | 9 / 9 | 7,073 | 19,009 |
+| `LDS_240` | Takt Batches Observed, 6 swings (288, `f857f0f4`) | four foundries and the plastic plant empty | 12 / 12 | 7,056 | 18,548 |
+| `METALLURGIC_SCIENCE_45` | Time Study Windows Subtick (640, `6475d726`) | empty | 5 / 5 | 6,800 | 22,541 |
+| `ADVANCED_CIRCUIT_230` | Pitch Pickups Subtick (12,672 a clock cycle, `9cdc8d06`) | two cable foundries full (200 cables), the circuit plants and the plastic plant empty | 1 / 1 | 16,356 | 46,659 |
+| `ADVANCED_CIRCUIT_240` | Takt Batches Observed (528, `e45bff6b`) | as the 230 | 6 / 6 | 6,768 | 22,764 |
+| `ADVANCED_CIRCUIT_240_BACKED_UP` (variant) | the same clock (528, `e45bff6b`) | as the 230 | 6 / 6 | 6,768 | 22,764 |
+| `STONE_BRICK_120_DRILL_DIRECT_INSERT` | Batched Swings observed (144, `ecc4d93e`) | the furnace holds 24 stone and 100 bricks (the drill and the furnace run before the clock) | 25 / 25 | 7,200 | 11,086 |
+
+- The lock opened 7,200 ticks after the build was placed (10,800 for the stone brick build, whose furnace has no recipe at the placement and keeps `late_recording`).
+- **Named limit, copies.** The four jobs of three copies (the two advanced circuit 240 jobs, 230 and stone brick 120) are recorded on one copy: the harness builds the blueprint it is
+  given, the sample's scaffold is one copy, and no scaffold of three copies of these builds exists, so the joins of the other two copies are not in these runs.
+- The baseline of the 230 pick is its one whole clock cycle of 12,672 ticks (16,192 of 16,192), as before; the run goes on 12,700 ticks after its last loss.
+- The stone brick build's only loss is the output block (the stone comes from a drill that drops into the furnace); it recovers at tick 11,086, 286 ticks after it starts.
 
 ## Container and drill builds: the record's picks from the staged start
 
@@ -883,7 +918,7 @@ sample's scaffold: it is the same clock and the same run as the sample's).
   each reduce the output and are recovered, the last at tick 14,513, 23,033, 36,728 and 15,778. As in the families above the second and third loss of the car and
   wagon builds last one tick each, the drill having emptied the container already. The stock guard holds in all five; for the car it is read after the last recovery has
   settled (#587, #803): lowest 98 in the baseline, 168 once settled, 196 at the end. The 72-tick car clock and its waiver are not involved: the record selects 144 ticks.
-- **Stone brick:** the generic test of the missing recordings records `STONE_BRICK_120_DRILL_DIRECT_INSERT` (Batched Swings observed, 144 ticks): steady state at
+- **Stone brick** (the figures here are of the plain staged start; the controls now hold the run from ruling 60's start, in "Seven of these picks again" above): the generic test of the missing recordings records `STONE_BRICK_120_DRILL_DIRECT_INSERT` (Batched Swings observed, 144 ticks): steady state at
   8,207, 2,400 over the baseline's 3,600 ticks, the output block recovered at 12,097, 25 whole clock cycles judged before and after the loss with none short. Its final
   machine is a furnace, so it has a late recording (`late_recording`, the same reason). Its loss is the output block alone: the stone comes from a drill that drops into the
   furnace, and the generic probe has no drill stop; the supply was not cut. The scaffold holds one copy of the job's three.
@@ -998,3 +1033,32 @@ switch on (`helpers/search-switch.ts`) and finds it is not the record's. `src/cr
 MISSING_RECORDINGS_CAPTURE_DIR=.scratch/search npm run test:game -- tests/game/builds/missing-recordings-clock.game.test.ts -t from-every-start
 BELT_SPEED_CAPTURE_DIR=.scratch/search-family npm run test:game -- tests/game/builds/filled-start-search-clock.game.test.ts
 ```
+
+## The scaffold builds of four science packs, from ruling 60's start
+
+The generic test of the missing recordings (`missing-recordings-clock.game.test.ts`) records the selected clock of these jobs from ruling 60's start (`start: "backpressure"`) on the
+sample's scaffold, on every copy the scaffold holds, with the standard losses (an ingredient cut, the output block, an ingredient cut), in Factorio 2.1.24. Each run was made twice
+with equal summaries. They are pinned in [missing-recordings-clock-controls.json](missing-recordings-clock-controls.json); the scaffold pins of the same builds stay in `scaffold-recordings.game.test.ts`.
+
+| Job (case) | Clock | Copies built | Steady state | Last loss recovered | Result |
+| --- | --- | --- | --- | --- | --- |
+| `UTILITY_SCIENCE_120` (`utility-science-120`) | Takt Batches Observed (672, `8c6d44c1`) | 1 of 7 | 7,135 | 25,951 (cut low density structure 15,871, output block 20,575, cut processing unit 25,951) | holds and recovers from all three; the record says "no recovery" |
+| `UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT` | Coordinated Sources (336, `4d76e238`) | 2 of 7 | 6,960 | 23,312 | holds: both copies 960 of 960 in each of 10 window cycles before and after the losses |
+| `MILITARY_SCIENCE_240` | Coordinated Sources (80, `4c0ccc46`) | 5 of 5 | 7,200 | 23,713 | holds: each copy 2,880 of 2,880 |
+| `CHEMICAL_SCIENCE_240_SHARED_FOUNDRY` and `..._BACKED_UP` | Coordinated Sources (352, `f1a4c258`) | 1 block of 5.5 | 7,120 | 24,929 | holds: 2,560 of 2,560; the two jobs have the same clock and the same run |
+| `PRODUCTION_SCIENCE_120_TWO_BELTS` and `..._SHARED_PICKUP` | Euclidean Swings (336, `fdadf120`) | none | | | not recorded: ruling 60's start refuses the build |
+
+- **Utility science 120.** The record's verdict for the clock is "no recovery", from the loss of low density structures on the copies that share a lane. The scaffold holds one copy, so no lane is shared
+  and the game recovers from the loss (as in "Utility science 120: the selected clock from the staged start" above, now from ruling 60's start). The seven-copy scaffold is not in the repository.
+- **Chemical science.** abucnasty's whole build (5.5 copies, `chemical-science-240-shared-foundry-full-build.blueprint`) is refused by the staged start: "The clock names inserters 2, 4, 6, 8, 10, 12, 14, 16, 18, 20
+  of the config, which match no inserter of the build in copy 6 of 6". The partial copy holds some of the config's inserters. The warm-up path of the harness takes that into account when it wires the clock, and the staged path does not (read from `src/harness/factorio-harness.ts`; not changed here).
+- **Production science.** A drill drops stone straight into the rail assembler, so a machine that only windowed inserters feed holds items at the opening: "Machines that only windowed inserters fill hold items at the opening:
+  assembling-machine-3 (unit 376): 164 in, 0 out, 0 made" (both jobs, twice each). The build holds one copy of the job's seven.
+- **Military science.** The scaffold holds the job's five copies, 9 tiles apart.
+
+```
+MISSING_RECORDINGS_CAPTURE_DIR=.scratch/scaffold-builds npm run test:game -- tests/game/builds/missing-recordings-clock.game.test.ts -t 'utility-science-120|military-science-240|chemical-science-240'
+```
+
+`scripts/recording_count.py <commit> <out.md>` counts which record jobs have a recording that holds from ruling 60's start (usage in its docstring). A job built on fewer copies than the job has reads
+"ruling 60's start: N of M copies built" there, whatever its `limit` says.
