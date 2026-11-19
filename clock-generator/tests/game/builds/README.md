@@ -508,6 +508,30 @@ recorded figures of all 48 against the simulator without generating: the first h
 entrance clocks are byte-identical to the over-the-hood pins of the same speed, mirroring, supply and family;
 the builds differ in the game, so each has its own control.
 
+### The twelve turbo controls, from ruling 60's start
+
+The twelve turbo entries of [front-clock-controls.json](front-clock-controls.json) (the record's `front-*` jobs) were recorded again on Factorio 2.1.24 from ruling 60's start, the
+harness's backpressure start (`staged: true, backpressure: true` in `frontClockScenario`, as `pickup-clock-capture.ts` reads them); before, they started from a free warm-up.
+Each ran twice with the recording cache off and the two runs are the same tick for tick (a third run, of the pinned file, matches it too). All 12 hold: the net output over the
+baseline's whole window cycles is the target, every loss falls and is recovered, and the output stock guard holds. Each job is one copy (the build holds one).
+
+| Job | Clock (window cycle) | Steady state | Losses recovered at | Free warm-up before (steady state; losses recovered at) |
+| --- | --- | --- | --- | --- |
+| `front-entrance-turbo-mirrored-backed-different-items` | Takt Batches Observed, 6 swings (960, `4a0f8700`) | 6,480 | 14,669 / 21,422 / 26,222 | 6,492; 14,670 / 21,423 / 26,223 |
+| `front-entrance-turbo-mirrored-moving-different-items` | Takt Batches Observed (320, `3b13c3ad`) | 7,122 | 14,765 / 21,203 / 21,567 | 7,120; 14,763 / 21,202 / 21,570 |
+| `front-entrance-turbo-unmirrored-backed-different-items` | Euclidean Swings (800, `8e8ac597`) | 6,800 | 12,139 / 15,322 / 19,388 | 6,804; 15,323 / 17,822 / 21,035 |
+| `front-entrance-turbo-unmirrored-moving-different-items` | Takt Batches Observed (320, `d56fbdb9`) | 7,120 | 12,222 / 15,464 / 19,323 | 7,120; 14,789 / 15,109 / 15,491 |
+| the four `front-entrance-turbo-*-same-item` (mirrored and unmirrored, backed and moving) | Takt Batches Observed (960, `c8799379`) | 7,847 | 15,529 / 16,489 / 17,478 | 6,888; 14,570 / 15,530 / 16,519 |
+| `front-exit-turbo-mirrored-backed-different-items` and `...-moving-config-...` | Takt Batches Swings 1 (352, `fbc4f307`) | 7,120 | 14,429 / 18,525 / 22,397 | 7,120; 14,430 / 18,526 / 22,526 |
+| `front-exit-turbo-unmirrored-backed-different-items` and `...-moving-config-...` | Takt Batches Swings 1 (352, `c9c84d59`) | 7,120 | 14,653 / 19,005 / 22,877 | 7,120; 14,654 / 18,878 / 22,750 |
+
+- **The fill moves nothing.** Every inserter of these builds has a window (the game's report of the opening, `opening.json`, says so), so the fill holds nothing back and no inserter moves in it:
+  the start equals a plain staged start in effect, as for the grenade build below. The four same-item entrances give one run (same clock, same steady state, same recoveries), and so do the two exits of each mirroring state (backpressure and moving config:
+  the exit's belt has backpressure in the game whatever the config says). Why the four same-item runs agree to the tick was not isolated.
+- **A waiver goes.** `front-entrance-turbo-unmirrored-moving-different-items` carried a stock-guard waiver (#691: output stock 30 against the baseline's lowest 32 at the last recovery). From this start
+  the stock guard holds (lowest 5, last 75), so the entry has no `known_differences` any more.
+- No probe text changed. `scripts/recording_count.py` now reads `staged: true, backpressure: true` in a case, or in the scenario builder for every case, as ruling 60's start (before, only the missing-recordings fixtures read so).
+
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/front-clock-new \
   npm run test:game -- tests/game/builds/front-pickup-clock.game.test.ts \
