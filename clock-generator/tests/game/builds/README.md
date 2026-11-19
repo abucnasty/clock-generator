@@ -860,7 +860,33 @@ an ingredient). Each holds its share of the target on its copy in every whole cl
 - The two advanced circuit 240 jobs have the same clock; one scaffold and one run each, with the same result. The scaffold's lanes end closed, so the sample builds backpressure
   on those belts in both.
 - The scaffolds hold one copy of the advanced circuit and logistic science jobs' three and six copies; the joins of the other copies are not in these runs.
+- The figures of this table and of the one above for `PROCESSING_UNIT_15_CHEST_FED` are of the plain staged start; the controls now hold the runs from ruling 60's start, in "Seven of these picks again, from ruling 60's start" below.
 - `ROCKET_FUEL_60` and `ROCKET_FUEL_60_JELLY_HANDS_15_BACKED_UP` were not pinned here: they are recorded from ruling 60's start under "Loop builds and ruling 60's start" below.
+
+## Seven of these picks again, from ruling 60's start
+
+The plain staged start is not the judged start. Seven jobs of the two tables above and of the stone brick note below are recorded again by the same test and probe, with
+`start: "backpressure"` in their cases (Factorio 2.1.24, one copy of the scaffold each, the same losses, `CLOCK_RECORDING_CACHE=off`): the build is placed with the
+clock's lock on, runs until every machine made the same in two windows of 3,600 ticks, and the lock opens at the clock's first tick. A second run of each, with
+no change, gave the same verdict, summary and controls entry (only the tick the lock opens at differs, by 1 to 6 ticks). The entries in
+[missing-recordings-clock-controls.json](missing-recordings-clock-controls.json) are these runs, and replace the ones of the plain staged start. Every job holds: the baseline's
+net output is the target over whole clock cycles, the stock guard holds, and the copy makes its share in every whole clock cycle before the first loss and in the cycles after the last one.
+
+| Job | Clock (window cycle) | Opening: machines at the lock | Clock cycles before / after the losses | Steady state | Last loss recovered |
+| --- | --- | --- | --- | --- | --- |
+| `PROCESSING_UNIT_15_CHEST_FED` | Euclidean Swings (384, `887d21be`) | the plant empty, its two inserters windowed | 9 / 9 | 7,073 | 19,009 |
+| `LDS_240` | Takt Batches Observed, 6 swings (288, `f857f0f4`) | four foundries and the plastic plant empty | 12 / 12 | 7,056 | 18,548 |
+| `METALLURGIC_SCIENCE_45` | Time Study Windows Subtick (640, `6475d726`) | empty | 5 / 5 | 6,800 | 22,541 |
+| `ADVANCED_CIRCUIT_230` | Pitch Pickups Subtick (12,672 a clock cycle, `9cdc8d06`) | two cable foundries full (200 cables), the circuit plants and the plastic plant empty | 1 / 1 | 16,356 | 46,659 |
+| `ADVANCED_CIRCUIT_240` | Takt Batches Observed (528, `e45bff6b`) | as the 230 | 6 / 6 | 6,768 | 22,764 |
+| `ADVANCED_CIRCUIT_240_BACKED_UP` (variant) | the same clock (528, `e45bff6b`) | as the 230 | 6 / 6 | 6,768 | 22,764 |
+| `STONE_BRICK_120_DRILL_DIRECT_INSERT` | Batched Swings observed (144, `ecc4d93e`) | the furnace holds 24 stone and 100 bricks (the drill and the furnace run before the clock) | 25 / 25 | 7,200 | 11,086 |
+
+- The lock opened 7,200 ticks after the build was placed (10,800 for the stone brick build, whose furnace has no recipe at the placement and keeps `late_recording`).
+- **Named limit, copies.** The four jobs of three copies (the two advanced circuit 240 jobs, 230 and stone brick 120) are recorded on one copy: the harness builds the blueprint it is
+  given, the sample's scaffold is one copy, and no scaffold of three copies of these builds exists, so the joins of the other two copies are not in these runs.
+- The baseline of the 230 pick is its one whole clock cycle of 12,672 ticks (16,192 of 16,192), as before; the run goes on 12,700 ticks after its last loss.
+- The stone brick build's only loss is the output block (the stone comes from a drill that drops into the furnace); it recovers at tick 11,086, 286 ticks after it starts.
 
 ## Container and drill builds: the record's picks from the staged start
 
@@ -883,7 +909,7 @@ sample's scaffold: it is the same clock and the same run as the sample's).
   each reduce the output and are recovered, the last at tick 14,513, 23,033, 36,728 and 15,778. As in the families above the second and third loss of the car and
   wagon builds last one tick each, the drill having emptied the container already. The stock guard holds in all five; for the car it is read after the last recovery has
   settled (#587, #803): lowest 98 in the baseline, 168 once settled, 196 at the end. The 72-tick car clock and its waiver are not involved: the record selects 144 ticks.
-- **Stone brick:** the generic test of the missing recordings records `STONE_BRICK_120_DRILL_DIRECT_INSERT` (Batched Swings observed, 144 ticks): steady state at
+- **Stone brick** (the figures here are of the plain staged start; the controls now hold the run from ruling 60's start, in "Seven of these picks again" above): the generic test of the missing recordings records `STONE_BRICK_120_DRILL_DIRECT_INSERT` (Batched Swings observed, 144 ticks): steady state at
   8,207, 2,400 over the baseline's 3,600 ticks, the output block recovered at 12,097, 25 whole clock cycles judged before and after the loss with none short. Its final
   machine is a furnace, so it has a late recording (`late_recording`, the same reason). Its loss is the output block alone: the stone comes from a drill that drops into the
   furnace, and the generic probe has no drill stop; the supply was not cut. The scaffold holds one copy of the job's three.
