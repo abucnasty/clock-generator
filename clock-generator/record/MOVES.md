@@ -8,6 +8,11 @@ a line that names the reason and lists the jobs. A pull request that moves no re
 CI checks this file: the "Record check" fails when a selected clock got worse than in the base and its job key is not in the lines the pull
 request adds to this file.
 
+## The feeders put their stacks onto the supply lane as the game does (#847)
+2 jobs moved, one selected clock. The four feeders of the automation science 240 scaffold put their hands down on the lane the copies share a stack a tick, each where the game lands it (Factorio 2.1.24, k104c and k104b: the model equals the recorded lane, hands and takers in every tick of 7,473). The copper plate stop of the trials now ends as the game's two-stop sequence does. Accepted by abucnasty (ruling 1029).
+- config-AUTOMATION_SCIENCE_240 (coordinated_sources stays selected): euclidean_swings: unstable -> no recovery, no loss in its steady run now; `results_sha256` also of pitch_pickups, takt_batches_swings_1 and time_study_windows, and `config_sha256`
+- variants-AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING: selected pitch_pickups (50.17 wake-ups a minute) -> euclidean_swings (0), windows inserter:1 1-24 -> 1-20 and inserter:2 0-3,36-39 -> 1-12,37-48,73-73; euclidean_swings: unstable -> no recovery; `results_sha256` of pitch_pickups and time_study_windows, `config_sha256`; better, the pick has no wake-ups
+
 ## An output block's release acts in the game's tick (#846)
 1 job moved, no selected clock, verdict, hold, rate or wakeups. After an output block, the output belt the config states drains again from the tick after the release, as the game's loader takes its first stack in the tick after the release (Factorio 2.1.24, the iron plate car build: its seeded replay now equals the game's plates in every tick on both recorded series). The cut keeps its timing. Accepted by abucnasty (question 1014).
 - config-LOGISTIC_SCIENCE_240: takt_batches_observed (selected, stable, clock unchanged): `results_sha256` only; its trial on the copies recovers after 8 window cycles, was 7 (the output-block trial cut at 44 with a 137-tick loss falls back to 656 of 704 packs in its seventh window cycle after 688 in its sixth); worse by one window cycle, the simulator mechanic named above, not recorded in the game
