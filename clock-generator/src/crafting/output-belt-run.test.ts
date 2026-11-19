@@ -18,6 +18,10 @@ import type { SimulationContext } from "./sequence/simulation-context";
 import { recordInserters, runOnSharedLanes, sharedLaneLayoutOf, type DropRecorder } from "./shared-lane-model";
 import { sharedLaneRunsOf } from "./shared-lane-verdict";
 import { simulateClockOnly, type SerializableClockWindows } from "./generate-blueprint";
+import { switchOf } from "./disturbance-trial";
+import { runClockOnBuild } from "./trial";
+import { SimulationTick } from "./runner/simulation-tick";
+import { isWindowCycleClock } from "../simulation/controls/enable-control";
 
 // One copy's side belt (a drop tile and a turned belt, 551 long) side-loads onto an underground exit (128), which runs into
 // the infinite end's loader: the automation science 240 build's copy 1, with its stretch cut short
@@ -294,4 +298,116 @@ describe("the output belt in the run of one copy, on the lithium plate build's p
         const outputs = ["inserter:3", "inserter:6", "inserter:11", "inserter:12", "inserter:15", "inserter:16"];
         expect(outputs.reduce((sum, id) => sum + judged(id).length * 16, 0)).toBe(11_456);
     });
+});
+
+/**
+ * The game's output block on the iron plate car build (Factorio 2.1.24, the car probe with `CAR_SERIES=1`): the probe fills the
+ * chest that the output belt's loader empties into, then empties it again (the release). For each case, the game's state of both
+ * furnaces at the seed tick, the block's and release's ticks, the game's ticks of a whole window cycle, and from the seed on, every
+ * tick's plates in each furnace and in each output inserter's hand. Made by the output belt backup's make-fixture.js.
+ */
+interface CarBlockCase {
+    name: string;
+    terminal_swing_count: number;
+    window_cycle_ticks: number;
+    windows: SerializableClockWindows;
+    seed: { tick: number; clock: number; furnaces: { plates: number; ore: number; crafting_progress: number; bonus_progress: number }[] };
+    block_tick: number;
+    release_tick: number;
+    cycle_ticks: number[];
+    game: Record<"stock_1" | "stock_2" | "out_hand_1" | "out_hand_2", number[]>;
+}
+const CAR_BLOCK: { cases: CarBlockCase[] } = JSON.parse(zlib.zstdDecompressSync(
+    fs.readFileSync(path.join(__dirname, "fixtures", "iron-plate-80-car-output-block.json.zst"))).toString("utf8"));
+/** The game's clock counter against the simulator's clock position (verdict gaps 11's alignment of the car's series) */
+const CAR_CLOCK_SHIFT = 3;
+
+/**
+ * The simulator put at the game's state at the seed tick, after its own steady state, then the game's block and release at the
+ * game's ticks through the loss trials' own switch: from there every tick is a game tick. Each tick's row is read before the
+ * probe acts in it, then the tick runs, as the game's rows are.
+ */
+function replayCarBlock(sample: Config, run: CarBlockCase): CarBlockCase["game"] {
+    const P = run.window_cycle_ticks;
+    const config: Config = { ...sample, overrides: { ...sample.overrides, terminal_swing_count: run.terminal_swing_count, derive_clock_windows: false } };
+    const windows = new Map(Object.entries(run.windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))]));
+    let context: SimulationContext | undefined;
+    runClockOnBuild(config, windows, P, quietLogger, { warmup_window_cycles: 0, simulate_window_cycles: 1, record_histories: false,
+        factorio_states: false, on_context: it => { context = it; } });
+    const step = new SimulationTick(context!);
+    const clock = [...context!.inserters, ...context!.drills].flatMap(it => isWindowCycleClock(it.control.asked) ? [it.control.asked] : [])[0];
+    const position = () => ((clock.clockTick() % P) + P) % P;
+    const furnaces = context!.machines.map(it => it.machine_state).sort((a, b) => a.entity_id.number - b.entity_id.number);
+    const outputs = furnaces.map(furnace => context!.inserters.map(it => it.inserter_state)
+        .find(it => it.inserter.source.entity_id.id === furnace.entity_id.id)!);
+    const want = ((run.seed.clock - CAR_CLOCK_SHIFT) % P + P) % P;
+    for (let tick = 0; tick < 7200 || position() !== want; tick++) step.executeForTick();
+    furnaces.forEach((furnace, at) => {
+        const seed = run.seed.furnaces[at];
+        furnace.inventoryState.setQuantity("iron-plate", seed.plates);
+        furnace.ingress.ingredientInventory("iron-ore").setQuantity("iron-ore", seed.ore);
+        furnace.craftingProgress.progress = seed.crafting_progress;
+        furnace.bonusProgress.progress = seed.bonus_progress;
+    });
+    const output = switchOf(context!, { kind: "output", item: "iron-plate" });
+    const rows: CarBlockCase["game"] = { stock_1: [], stock_2: [], out_hand_1: [], out_hand_2: [] };
+    for (let tick = run.seed.tick; tick < run.seed.tick + run.game.stock_1.length; tick++) {
+        furnaces.forEach((furnace, at) => rows[at === 0 ? "stock_1" : "stock_2"].push(furnace.inventoryState.getQuantity("iron-plate")));
+        outputs.forEach((inserter, at) => rows[at === 0 ? "out_hand_1" : "out_hand_2"].push(inserter.held_item?.quantity ?? 0));
+        if (tick === run.block_tick) output.cut();
+        if (tick === run.release_tick) output.restore();
+        step.executeForTick();
+    }
+    return rows;
+}
+
+/** The first tick from which a hand holds plates for more than `ticks` ticks on end: the hand cannot put them down. Null where it never does. */
+function firstHeld(held: readonly number[], from: number, ticks = 8): number | null {
+    for (let run = 0, at = 0; at < held.length; at++) {
+        run = held[at] > 0 ? run + 1 : 0;
+        if (run > ticks) return from + at - ticks;
+    }
+    return null;
+}
+
+/**
+ * The window cycles after the release in which a case's plates may part from the game's. On car-swings-1 furnace 1's hand waits
+ * at the release: the run's loader takes its first stack a tick after the game's (the run gives an end change to the join model
+ * with the tick after the one it is made in, and the join model acts on it from the tick after that), and furnace 1 runs a tick
+ * behind until it is back in step, 148 ticks on. With the release a tick earlier the replay lays on the game's every tick.
+ */
+const RELEASE_LAG_WINDOW_CYCLES: Readonly<Record<string, number>> = { "car-swings-1": 3 };
+
+// The two furnaces' output inserters drop in line onto the ends of one underground pair: furnace 2's onto the entrance, on the
+// right lane, furnace 1's onto the exit, on the left lane, 11 tiles before the loader. Under the block the left lane backs up to
+// the exit first: furnace 1's hand is held, and its plates fill it to its output limit, while furnace 2's are taken in full all through
+// the block (its lane is 9 tiles longer, through the tunnel). The simulator refused both furnaces' plates from the block's first tick.
+describe("the output belt in the run of one copy, under the output block of the iron plate car build", () => {
+    let sample: Config;
+    beforeAll(async () => { sample = await loadConfigFromFile(ConfigPaths.IRON_PLATE_80_CAR_CHEST); });
+
+    for (const run of CAR_BLOCK.cases) {
+        const lag_until = run.release_tick + (RELEASE_LAG_WINDOW_CYCLES[run.name] ?? 0) * run.window_cycle_ticks;
+        const judged = (tick: number) => tick <= run.release_tick || tick > lag_until;
+
+        it(`${run.name}: holds furnace 1's hand at the game's tick, never furnace 2's, and both furnaces' plates are the game's in every window cycle`, () => {
+            const replay = replayCarBlock(sample, run);
+            const at = (series: number[], tick: number) => series[tick - run.seed.tick];
+            const cycle_ticks = run.cycle_ticks.filter(judged);
+            const cycles = cycle_ticks.map(tick => ({ tick, plates: [at(replay.stock_1, tick), at(replay.stock_2, tick)] }));
+            expect(cycles).toEqual(cycle_ticks.map(tick => ({ tick, plates: [at(run.game.stock_1, tick), at(run.game.stock_2, tick)] })));
+            expect(firstHeld(replay.out_hand_1, run.seed.tick)).toBe(firstHeld(run.game.out_hand_1, run.seed.tick));
+            expect(firstHeld(run.game.out_hand_1, run.seed.tick)).toBeGreaterThan(run.block_tick);
+            expect(firstHeld(replay.out_hand_2, run.seed.tick)).toBeNull();
+            expect(firstHeld(run.game.out_hand_2, run.seed.tick)).toBeNull();
+        });
+
+        it(`${run.name}: lays on the game's plates in every tick from the seed${RELEASE_LAG_WINDOW_CYCLES[run.name] ? ", but in the window cycles after the release" : ""}`, () => {
+            const replay = replayCarBlock(sample, run);
+            for (const key of ["stock_1", "stock_2"] as const) {
+                const parted = replay[key].flatMap((plates, at) => plates === run.game[key][at] ? [] : [run.seed.tick + at]);
+                expect({ key, parted: parted.filter(judged) }).toEqual({ key, parted: [] });
+            }
+        });
+    }
 });

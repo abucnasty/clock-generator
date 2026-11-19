@@ -35,7 +35,7 @@ import { SPOIL_LIMIT_SHARE } from "../common/rule-constants";
 import { ContainerStorage } from "../simulation/components/container-storage";
 import { DropBy } from "../simulation/components/ports";
 import type { SharedLane } from "../state/shared-lane";
-import type { OutputBeltRun } from "./output-belt-run";
+import { outputBeltOfOneCopy, type OutputBeltRun } from "./output-belt-run";
 import type { CopiesTrialVerdict } from "./shared-lane-trial";
 import { COPY_NUMBER_STRIDE, twinOf } from "./sequence/build-copies";
 import type { WindowCycleClock } from "../simulation/controls/enable-control";
@@ -551,18 +551,19 @@ export function itemsCarried(entity_registry: Pick<ReadableEntityRegistry, "getE
  * from it; the belt of such a lane does not withhold the item, which would stop every hand on it at once. Every other belt
  * and infinity chest withholds it as in a run of one copy.
  *
- * In a run of the copies whose config states its output belt, an output blockage of the item the output belt takes away
- * shuts its infinite end: the belt lane is blocked from draining to the belt it joins. Every lane upstream backs up from there,
- * and a hand is held only when its side belt is full. No belt that carries the item refuses it. The chests the item ends
- * in refuse it as in a run of one copy.
+ * Where the config states its output belt, in a run of the copies or of one copy (`outputBeltOfOneCopy`), an output blockage
+ * of the item the output belt takes away shuts its infinite end: the belt lane is blocked from draining to the belt it joins.
+ * Every lane upstream backs up from there, and a hand is held only when its own lane is full to its drop. No belt that carries
+ * the item refuses it. The chests the item ends in refuse it as in a run with no output belt.
  */
-function switchOf(context: SimulationContext, loss: DisturbanceTrial, copies?: CopiesOnSharedLanes): { cut(): void; restore(): void } {
+export function switchOf(context: SimulationContext, loss: DisturbanceTrial, copies?: CopiesOnSharedLanes): { cut(): void; restore(): void } {
     if (loss.kind === "none" || loss.kind === "excess") {
         return { cut: () => { }, restore: () => { } };
     }
     const now = () => context.tick_provider.getCurrentTick();
     const entries = loss.kind === "supply" ? (copies?.lanes ?? []).filter(it => it.item === loss.item) : [];
-    const output_belt = loss.kind === "output" && copies?.output_belt?.item === loss.item ? copies.output_belt.belt : undefined;
+    const stated = copies?.output_belt ?? outputBeltOfOneCopy(context);
+    const output_belt = loss.kind === "output" && stated?.item === loss.item ? stated.belt : undefined;
     const entry_belts = new Set(entries.map(it => it.belt_entity_id));
     // on every belt and chest that gives the item, or that the build puts it into
     const inserters = context.inserters.map(it => it.inserter_state.inserter);
