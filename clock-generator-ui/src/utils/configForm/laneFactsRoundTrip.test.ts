@@ -88,7 +88,8 @@ describe('each lane fact round-trips', () => {
     it.each([{ kind: 'dead_end' as const }, { kind: 'infinite' as const }, { kind: 'unknown' as const }, undefined])('lane end %o, a supply rate, a sharing and a flow direction, through a file, a saved build, a share link and a paste', async lane_end => {
         const form = edited(lane_end);
         const config = formDataToConfig(form);
-        const lane = { ingredient: 'iron-gear-wheel', stack_size: 4, ...(lane_end && { lane_end }), supply_rate: 45, sharing: 'per_copy' };
+        // the sample's supply length stays as the file states it
+        const lane = { ingredient: 'iron-gear-wheel', stack_size: 4, ...(lane_end && { lane_end }), supply_tiles: 11, supply_rate: 45, sharing: 'per_copy' };
         expect(plain(config.belts[0])).toEqual({ id: 1, type: 'turbo-transport-belt', flow_direction: 12, lanes: [lane, plain(config.belts[0].lanes[1])] });
         const file = formDataToConfig(configToFormData(configFile(JSON.stringify(config))));
         const pasted = formDataToConfig(applyPaste(configToFormData(configFile(automation)), { machines: [], drills: [], inserters: [], chests: [],
@@ -101,7 +102,7 @@ describe('each lane fact round-trips', () => {
 
     it('takes a stated fact away again, leaving no key', () => {
         const form = edited({ kind: 'infinite' });
-        const lane = ['lane_end', 'supply_rate', 'sharing'].reduce((it, field) => laneFieldUpdate(it, field as 'lane_end', undefined), form.belts[0].lanes[0]);
+        const lane = ['lane_end', 'supply_rate', 'sharing', 'supply_tiles'].reduce((it, field) => laneFieldUpdate(it, field as 'lane_end', undefined), form.belts[0].lanes[0]);
         expect(Object.keys(lane)).toEqual(['ingredient', 'stack_size']);
     });
 
