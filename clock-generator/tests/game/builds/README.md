@@ -940,7 +940,7 @@ All hold: every copy of the build makes its share of the target in every whole w
 ## The builds with a case file of their own, from ruling 60's start
 
 Five families record the clock the record selects for their jobs under their own probe and protocol. Their cases that carry the selected clock (not the hand-made clocks, the
-alternatives the record offers, or the one-copy backed-up case of the inserter build) now start from ruling 60's state, the harness's backpressure start
+alternatives the record offers, or the one-copy case of the inserter build with backpressure on its belts) now start from ruling 60's state, the harness's backpressure start
 (`staged: true, backpressure: true` in the case, as `pickup-clock-capture.ts` reads them), on Factorio 2.1.24. Each run is repeated once with the recording cache off and gives the same
 run, tick for tick, and the same judgement of each copy. `pickup-clock-capture.ts` keeps the game's report of the opening in `opening.json` beside the run. The generic case of the
 logistic science build with direct insertion (`start: "backpressure"` in `missing-recordings-clock-fixtures.ts`) is run the same way.
