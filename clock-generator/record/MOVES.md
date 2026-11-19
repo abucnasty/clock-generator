@@ -8,6 +8,12 @@ a line that names the reason and lists the jobs. A pull request that moves no re
 CI checks this file: the "Record check" fails when a selected clock got worse than in the base and its job key is not in the lines the pull
 request adds to this file.
 
+## An item waits a tick at an underground entrance on the lanes that state their entrances (#848)
+2 jobs moved, one selected clock each. A lane that states its underground entrances (`underground_entrances`) runs as one line from entrance to entrance, so the item waits a tick across an entrance as the game does (Factorio 2.1.24: the model equals the recorded game on every tick from 2,379 to 13,998). Accepted by abucnasty (ruling 1043). Other config hashes of the four samples that state entrances changed with the field.
+- config-AUTOMATION_SCIENCE_240: selected coordinated_sources 75bf8985 (window cycle 216 ticks) -> 0bc638ab (72 ticks), wake-ups 70.065 -> 70.195 a minute, more wake-ups; time_study_windows: stable -> unstable (the old pin was wrong: the game holds the new clock 32 of 32 on every copy); `results_sha256` of the other clocks, `config_sha256`
+- variants-AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING: selected euclidean_swings 64237bf3 (no recovery) -> coordinated_sources 37805909 (stable, 76.824 wake-ups a minute); better, the clock holds; `results_sha256` of the other clocks, `config_sha256`
+- config-ELECTROMAGNETIC_SCIENCE_330, config-LOGISTIC_SCIENCE_240, config-MILITARY_SCIENCE_240: `config_sha256` only
+
 ## The feeders put their stacks onto the supply lane as the game does (#847)
 2 jobs moved, one selected clock. The four feeders of the automation science 240 scaffold put their hands down on the lane the copies share a stack a tick, each where the game lands it (Factorio 2.1.24, k104c and k104b: the model equals the recorded lane, hands and takers in every tick of 7,473). The copper plate stop of the trials now ends as the game's two-stop sequence does. Accepted by abucnasty (ruling 1029).
 - config-AUTOMATION_SCIENCE_240 (coordinated_sources stays selected): euclidean_swings: unstable -> no recovery, no loss in its steady run now; `results_sha256` also of pitch_pickups, takt_batches_swings_1 and time_study_windows, and `config_sha256`

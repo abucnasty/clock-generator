@@ -3,7 +3,7 @@
   "job": "config-LOGISTIC_SCIENCE_240",
   "group": "config",
   "name": "LOGISTIC_SCIENCE_240",
-  "config_sha256": "e5688e53e723e0c1d3638565da0730f9fc07873a2b8de863bed39d961606b4b5",
+  "config_sha256": "982e4a143f1e94dc9ea3c5807afff30d940cfaa5d3a0dcb682b241539caf01bc",
   "job_results_sha256": "64c78f2160c1c45da5043bccd0344a439fd517fd66314bef0b495fa763adf9ef",
   "selected": "takt_batches_observed",
   "selected_windows": {
