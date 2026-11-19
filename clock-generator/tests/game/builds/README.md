@@ -436,6 +436,33 @@ Use the generation cache and replay variables above with a fresh capture directo
 `BELT_CLOCK_TRACE_PICKUPS=1` retains 64 ticks of native held/stock and machine-inventory snapshots before the first disturbance
 and after each restoration; it does not feed observations into the simulator.
 
+## The over-the-hood operating clocks, from ruling 60's start
+
+The 8 jobs of `over-hood-pickup-clock.game.test.ts` (`overhood-over-hood-turbo-*` in the record; the one input inserter picks over a hood from a belt, moving or under backpressure) now start from ruling 60's state, the
+harness's backpressure start (`staged: true, backpressure: true` in `overHoodClockScenario`, as `pickup-clock-capture.ts` reads them), on Factorio 2.1.24. Each run is repeated once with the
+recording cache off and gives the same run, tick for tick (steady state, every loss, the baseline and the stock guard); the game's report of the opening is kept in `opening.json` beside each run:
+the one machine is empty and fed by windowed inserters only, and no inserter has moved. The clock of each job is the one its entry pinned (`clock_sha256` unchanged); no probe text changed.
+
+| Case | Clock (window cycle, hash) | Steady state | Losses recovered at | Baseline net output | Start before (steady state; losses recovered at) |
+| --- | --- | --- | --- | --- | --- |
+| `mirrored-backed-different-items` | takt_batches_observed_swings_6 (960, `4a0f8700`) | 6,480 | 14,668 (cut iron-plate), 21,421 (block output), 26,199 (cut copper-cable) | 288 of 288 | free warm-up: 6,480; 14,669, 21,422, 26,200 |
+| `mirrored-backed-same-item` | takt_batches_observed (960, `c8799379`) | 7,846 | 15,528 (cut iron-plate), 16,488 (block output), 17,478 (cut iron-plate) | 288 of 288 | free warm-up: 6,482; 14,569, 15,529, 16,519 |
+| `mirrored-moving-different-items` | takt_batches_observed (320, `71884f6c`) | 7,120 | 14,765 (cut iron-plate), 21,201 (block output), 21,569 (cut copper-cable) | 352 of 352 | free warm-up: 7,120; 14,766, 21,202, 21,568 |
+| `mirrored-moving-same-item` | takt_batches_observed (960, `c8799379`) | 7,846 | 15,528 (cut iron-plate), 16,488 (block output), 17,478 (cut iron-plate) | 288 of 288 | free warm-up: 6,482; 14,569, 15,529, 16,519 |
+| `unmirrored-backed-different-items` | euclidean_swings (800, `8e8ac597`) | 6,800 | 12,137 (cut iron-plate), 15,322 (block output), 19,387 (cut copper-cable) | 320 of 320 | free warm-up: 6,803; 12,138, 15,323, 19,388 |
+| `unmirrored-backed-same-item` | takt_batches_observed (960, `c8799379`) | 7,846 | 15,528 (cut iron-plate), 16,488 (block output), 17,478 (cut iron-plate) | 288 of 288 | free warm-up: 6,482; 14,569, 15,529, 16,519 |
+| `unmirrored-moving-different-items` | takt_batches_observed (320, `d56fbdb9`) | 7,120 | 12,235 (cut iron-plate), 13,171 (block output), 15,735 (cut copper-cable) | 352 of 352 | free warm-up: 7,128; 10,920, 11,242, 15,096 |
+| `unmirrored-moving-same-item` | takt_batches_observed (960, `c8799379`) | 7,846 | 15,528 (cut iron-plate), 16,488 (block output), 17,478 (cut iron-plate) | 288 of 288 | free warm-up: 6,482; 14,569, 15,529, 16,519 |
+
+All hold: the net output over the baseline's whole window cycles is the target, every loss falls and is recovered, and the output stock guard holds. Four cases differ from their free warm-up run by a tick or two only
+(`mirrored-backed-different-items`, `mirrored-moving-different-items`, `unmirrored-backed-different-items`: steady state 0 to 3 ticks earlier, losses recovered 0 to 1 ticks earlier). The four same-item cases (mirrored or not, moving or
+under backpressure) pin one clock and make the same run in every case, as before (the two lanes carry the same item); from this start the machine reaches steady state later (7,846 against 6,482) and the first loss is recovered
+959 ticks later. `unmirrored-moving-different-items` reaches steady state 8 ticks earlier and recovers its losses 639 to 1,929 ticks later.
+
+```bash
+BELT_SPEED_CAPTURE_DIR=.scratch/judged-start-9 npm run test:game -- tests/game/builds/over-hood-pickup-clock.game.test.ts -t '^operating clock: over-hood-turbo-unmirrored-moving-different-items$'
+```
+
 ## Front pickup operating clocks
 
 `front-pickup-clock.game.test.ts` enumerates 48 controls ([front-clock-fixtures.ts](front-clock-fixtures.ts)):
