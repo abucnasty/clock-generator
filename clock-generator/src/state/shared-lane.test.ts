@@ -3,7 +3,7 @@ import { BeltSpeed } from "../entities/belt";
 import { BackpressurePickupLane } from "./backpressure-pickup-lane";
 import { BeltPickupLane } from "./belt-pickup-lane";
 import { BeltPickupStock } from "./belt-pickup-stock";
-import { SharedLane } from "./shared-lane";
+import { dropLanding, SharedLane, SharedLaneFeeder } from "./shared-lane";
 
 const ratio = (numerator: number, denominator = 1) => ({ numerator, denominator });
 const TURBO = BeltSpeed.TURBO_TRANSPORT_BELT;
@@ -77,5 +77,70 @@ describe("a shared lane with takers in a row", () => {
         expect(reach.take(5, 16)).toBe(0);
         expect(reach.take(6, 2)).toBe(2);
         expect(reach.peek(6)?.count).toBe(2);
+    });
+});
+
+/** The automation science 240 scaffold's copper feeders: legendary stack inserters a tile apart, hands of 16 */
+const FEEDERS: SharedLaneFeeder[] = [
+    { spot_tiles: 0, hand_items: 16, rotation_ticks: 3, pickup_ticks: 1 },
+    { spot_tiles: 1, hand_items: 16, rotation_ticks: 3, pickup_ticks: 1 },
+];
+
+describe("a stack put down on a moving lane", () => {
+    // a turbo lane steps 32 units a tick; a stack takes 64; positions increase downstream
+    const SPOT = 128, STEP = 32;
+
+    it("lands a belt step past its spot where nothing is near", () => {
+        expect(dropLanding(SPOT, STEP, [])).toBe(SPOT + STEP);
+        expect(dropLanding(SPOT, STEP, [{ x: SPOT + STEP + 64 }])).toBe(SPOT + STEP);
+    });
+
+    it("lands a quarter tile behind the stack ahead, but only strictly less than a quarter tile behind its spot", () => {
+        expect(dropLanding(SPOT, STEP, [{ x: SPOT + 64 }])).toBe(SPOT);
+        expect(dropLanding(SPOT, STEP, [{ x: SPOT + 32 }])).toBe(SPOT - 32);
+        expect(dropLanding(SPOT, STEP, [{ x: SPOT + 32 }, { x: SPOT - 32 }])).toBeNull();
+    });
+
+    it("is not pushed back by a stack one belt step upstream of its landing, as the game's gear feeders show", () => {
+        expect(dropLanding(SPOT, STEP, [{ x: SPOT + 96 }, { x: SPOT }])).toBe(SPOT + 32);
+        expect(dropLanding(SPOT, STEP, [{ x: SPOT + 96 }, { x: SPOT + 32 }])).toBe(SPOT - 32);
+    });
+});
+
+describe("a shared lane fed by feeders", () => {
+    it("starts full as its feeders fill it, the first feeder's last stack up to 1/8 tile upstream of its spot", () => {
+        const lane = new SharedLane({ belt_speed: TURBO, stack_size: 4, supply_rate: ratio(120), lane_end: { kind: "dead_end" }, length_tiles: 11, feeders: FEEDERS });
+        const stacks = lane.stackPositions();
+        expect(stacks[0]).toEqual([11, 4]);
+        expect(stacks.at(-1)![0]).toBeGreaterThan(-0.25);
+        stacks.slice(1).forEach(([tiles], index) => expect(stacks[index][0] - tiles).toBe(0.25));
+        expect(lane.supplied).toBe(0);
+        expect(lane.initial).toBe(lane.items());
+    });
+
+    it("loses nothing: what is on the lane is what the feeders put on less what the takers took", () => {
+        const lane = new SharedLane({ belt_speed: TURBO, stack_size: 4, supply_rate: ratio(120), lane_end: { kind: "dead_end" }, length_tiles: 11, feeders: FEEDERS });
+        const reaches = [lane.reachOf(6, 1), lane.reachOf(11, 1)];
+        let taken = 0;
+        for (let tick = 1; tick <= 600; tick++) for (const reach of reaches) taken += bursts(20)(tick) ? reach.take(tick, 16) : 0;
+        lane.advanceTo(600);
+        expect(taken).toBeGreaterThan(0);
+        expect(lane.supplied).toBeGreaterThan(0);
+        expect(lane.initial + lane.supplied - taken).toBe(lane.items());
+    });
+
+    it("stands its feeders while the entry is closed, hands and arms as they were", () => {
+        const lane = new SharedLane({ belt_speed: TURBO, stack_size: 4, supply_rate: ratio(120), lane_end: { kind: "dead_end" }, length_tiles: 11, feeders: FEEDERS });
+        const reach = lane.reachOf(1.5, 1);
+        for (let tick = 1; tick <= 40; tick++) reach.take(tick, 16);
+        lane.closeEntry(40);
+        const key = lane.key().split(";").slice(0, 2).join(";");
+        const supplied = lane.supplied;
+        for (let tick = 41; tick <= 100; tick++) reach.take(tick, 16);
+        expect(lane.key().split(";").slice(0, 2).join(";")).toBe(key);
+        expect(lane.supplied).toBe(supplied);
+        lane.openEntry(100);
+        lane.advanceTo(110);
+        expect(lane.supplied).toBeGreaterThan(supplied);
     });
 });

@@ -1,11 +1,15 @@
 import assert from "../common/assert";
 import { pickupLaneLength } from "../common/belt-pickup-layout";
 import { Config } from "../config";
+import { outsideSupplyOf, withoutOutsideSupply } from "../config/outside-supply";
+import { TargetType } from "../config/schema";
 import { EntityId } from "../entities";
+import { fullResearchHandSize, inserterSpecFor, rotationTicks } from "../entities/inserter/metadata/inserter-spec";
+import { DEFAULT_INSERTER_QUALITY, InserterType } from "../entities/inserter/metadata/inserter-type";
 import { laneFactsOfConfig } from "../entities/traits/build-traits";
 import { BeltPickupStock } from "../state/belt-pickup-stock";
 import { EntityState } from "../state/entity-state";
-import { SharedLane } from "../state/shared-lane";
+import { SharedLane, SharedLaneFeeder } from "../state/shared-lane";
 import { FactorioDataService, ItemName } from "../data";
 import type { TileSize } from "../data/factorio-data-types";
 import type { InserterArchetype } from "../simulation/archetypes/inserter";
@@ -57,6 +61,31 @@ export interface LaneRow {
     /** Whether the step is the config's `copy_offset`, or one the layout assumed for want of it */
     readonly step_stated: boolean;
     readonly takers: readonly RowTaker[];
+    /** The inserters that put the lane's items onto it, where the config states them (`laneFeedersOf`) */
+    readonly feeders?: readonly SharedLaneFeeder[];
+}
+
+/**
+ * The feeders of a lane: the config's outside supply (outside-supply.ts, inserters from a chest nothing drops into) that
+ * drops onto the lane, with a drop spot (`drop`) on it. They stand once for the row, upstream of copy 1: the most upstream
+ * one at the lane's entry (its `supply_tiles` before copy 1's pickup), the others downstream of it by the distance between
+ * their drop positions. Each one's arm is its prototype's and quality's (`rotationTicks`), and its hand is its stack size
+ * or what all research gives. Empty where the config states none, or one without a drop spot on the lane: the lane then
+ * takes its items as a flow at its supply rate.
+ */
+export function laneFeedersOf(config: Config, belt_id: number, lane: 1 | 2): SharedLaneFeeder[] {
+    const supply = outsideSupplyOf(config);
+    const on_lane = config.inserters.flatMap((inserter, index) => supply.inserters.has(index) && inserter.sink.type === TargetType.BELT
+        && inserter.sink.id === belt_id && inserter.sink.drop?.lane === lane ? [{ inserter, position: inserter.sink.drop.position }] : []);
+    if (on_lane.length === 0) return [];
+    const upstream = Math.min(...on_lane.map(it => it.position));
+    return on_lane.sort((a, b) => a.position - b.position).map(({ inserter, position }) => {
+        const prototype = inserter.prototype ?? InserterType.STACK_INSERTER, quality = inserter.quality ?? DEFAULT_INSERTER_QUALITY;
+        return {
+            spot_tiles: position - upstream, hand_items: inserter.stack_size ?? fullResearchHandSize(prototype),
+            rotation_ticks: rotationTicks(prototype, quality), pickup_ticks: inserterSpecFor(prototype, quality).machine.pickup.ticks,
+        };
+    });
 }
 
 /** A lane the layout lays out, the way its items move, and whether the copies share it or each copy has a lane of its own */
@@ -217,9 +246,11 @@ export function sharedLaneLayoutOf(config: Config, lanes: readonly LaidOutLane[]
         const entry = supply_tiles === undefined ? first_reach - ENTRY_TILES : placed[0].middle - supply_tiles;
         assert(entry <= first_reach + 1e-9, `Lane ${lane} of belt ${belt_id} states supply_tiles ${supply_tiles}, which puts its supply inside copy 1's pickup`);
         const end = Math.max(...placed.map(it => it.high));
+        const feeders = laneFeedersOf(config, belt_id, lane);
         return {
             belt_id, lane, flow, copies: shared ? copy_count : 1, length_tiles: end - entry, step_tiles: step, step_stated: offset !== undefined,
             takers: placed.map(it => ({ copy: it.copy, inserter_id: it.inserter_id, edge_tiles: it.high - entry, length_tiles: it.high - it.low })),
+            ...(feeders.length > 0 && { feeders }),
         };
     });
     const later = Array.from({ length: copy_count - 1 }, (_, index): "whole" | ReadonlySet<string> => index + 1 < whole ? "whole" : part_copy!);
@@ -322,6 +353,7 @@ export function installSharedLanes(context: SimulationContext, config: Config, r
         const lane = new SharedLane({
             belt_speed: belt_state.belt.belt_speed, stack_size: belt.lanes[row.lane - 1].stack_size,
             supply_rate: lane_facts.supply_rate, lane_end: lane_facts.lane_end, length_tiles: row.length_tiles,
+            ...(row.feeders !== undefined && { feeders: row.feeders }),
         });
         lanes.push(lane);
         for (const taker of row.takers) {
@@ -353,7 +385,8 @@ export function installSharedLanes(context: SimulationContext, config: Config, r
  * Runs a build on the windows of a clock from a cold start, as `runClockOnBuild` does, with every copy of the layout
  * built (each with its own machines) and the rows' lanes shared by them (`installSharedLanes`). It judges nothing: it
  * gives what each taker of each copy put down, at the ticks of the run (the clock stands at 0 in its first tick), for a
- * reader to compare. `on_context` lets the reader put recorders of its own into the run's context before its first tick.
+ * reader to compare. `on_context` lets the reader put recorders of its own into the run's context before its first tick,
+ * with the model as installed in it.
  *
  * With `disturbance_trial`, the trials of its loss follow the run (disturbance-trial.ts), on the copies: a supply stop
  * closes the entry of each lane of the rows that carries the item, and each copy's output is judged on its own.
@@ -365,21 +398,23 @@ export function runOnSharedLanes(
     layout: SharedLaneLayout,
     window_cycles: number,
     logger: Logger,
-    on_context?: (context: SimulationContext) => void,
+    on_context?: (context: SimulationContext, model: SharedLaneRun) => void,
     disturbance_trial?: DisturbanceTrialOptions,
 ): SharedLaneRun {
     let model: SharedLaneRun | undefined;
     const copies: CopiesOnSharedLanes = { lanes: [] };
-    const run = runClockOnBuild({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, windows, window_cycle_ticks, logger, {
+    // the copies run without the outside supply (its feeders are the rows' entries, laid out once for the row)
+    const clocked = withoutOutsideSupply(config);
+    const run = runClockOnBuild({ ...clocked, overrides: { ...clocked.overrides, derive_clock_windows: false } }, windows, window_cycle_ticks, logger, {
         simulate_window_cycles: window_cycles, record_histories: false, factorio_states: false, build_copies: layout.copies,
         shared_lanes: copies,
         ...(disturbance_trial !== undefined && { disturbance_trial: { ...disturbance_trial, copies } }),
         on_context: context => {
-            model = installSharedLanes(context, config, layout.rows);
+            model = installSharedLanes(context, clocked, layout.rows);
             copies.lanes = model.rows.map((row, index) => ({ belt_entity_id: EntityId.forBelt(row.belt_id).id,
                 item: config.belts.find(belt => belt.id === row.belt_id)!.lanes[row.lane - 1].ingredient, lane: model!.lanes[index] }));
             if (model.output_belt !== undefined) copies.output_belt = { item: config.setpoint.recipe, belt: model.output_belt };
-            on_context?.(context);
+            on_context?.(context, model);
         },
     });
     assert(model !== undefined, "The run made no context");

@@ -48,6 +48,54 @@
       "filters": [
         "automation-science-pack"
       ]
+    },
+    {
+      "source": {
+        "type": "chest",
+        "id": 1
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1,
+        "drop": { "lane": 2, "position": 0 }
+      },
+      "stack_size": 16
+    },
+    {
+      "source": {
+        "type": "chest",
+        "id": 1
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1,
+        "drop": { "lane": 2, "position": 1 }
+      },
+      "stack_size": 16
+    },
+    {
+      "source": {
+        "type": "chest",
+        "id": 2
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1,
+        "drop": { "lane": 1, "position": 0 }
+      },
+      "stack_size": 16
+    },
+    {
+      "source": {
+        "type": "chest",
+        "id": 2
+      },
+      "sink": {
+        "type": "belt",
+        "id": 1,
+        "drop": { "lane": 1, "position": 1 }
+      },
+      "stack_size": 16
     }
   ],
   "belts": [
@@ -85,7 +133,18 @@
       ]
     }
   ],
-  "chests": [],
+  "chests": [
+    {
+      "type": "infinity-chest",
+      "id": 1,
+      "item_filter": [{ "item_name": "copper-plate", "request_count": 100 }]
+    },
+    {
+      "type": "infinity-chest",
+      "id": 2,
+      "item_filter": [{ "item_name": "iron-gear-wheel", "request_count": 100 }]
+    }
+  ],
   "overrides": {},
   "output_belt": {
     "side_belt": {
