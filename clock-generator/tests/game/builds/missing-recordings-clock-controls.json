@@ -67,7 +67,7 @@
   },
   "advanced-circuit-230": {
    "recorded": {
-    "pr": 0,
+    "pr": 850,
     "commit": "214bd7ad",
     "frozen_head": "214bd7ad",
     "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24; pr is set when the PR is opened",
@@ -145,7 +145,7 @@
   },
   "advanced-circuit-240": {
    "recorded": {
-    "pr": 0,
+    "pr": 850,
     "commit": "214bd7ad",
     "frozen_head": "214bd7ad",
     "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24; pr is set when the PR is opened",
@@ -223,7 +223,7 @@
   },
   "advanced-circuit-240-backed-up": {
    "recorded": {
-    "pr": 0,
+    "pr": 850,
     "commit": "214bd7ad",
     "frozen_head": "214bd7ad",
     "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24; pr is set when the PR is opened",
@@ -869,7 +869,7 @@
   },
   "lds-240": {
    "recorded": {
-    "pr": 0,
+    "pr": 850,
     "commit": "214bd7ad",
     "frozen_head": "214bd7ad",
     "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24; pr is set when the PR is opened",
@@ -1089,7 +1089,7 @@
   },
   "metallurgic-science-45": {
    "recorded": {
-    "pr": 0,
+    "pr": 850,
     "commit": "214bd7ad",
     "frozen_head": "214bd7ad",
     "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24; pr is set when the PR is opened",
@@ -1167,7 +1167,7 @@
   },
   "processing-unit-15-chest-fed": {
    "recorded": {
-    "pr": 0,
+    "pr": 850,
     "commit": "214bd7ad",
     "frozen_head": "214bd7ad",
     "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24; pr is set when the PR is opened",
@@ -1543,7 +1543,7 @@
   },
   "stone-brick-120-drill-direct-insert": {
    "recorded": {
-    "pr": 0,
+    "pr": 850,
     "commit": "214bd7ad",
     "frozen_head": "214bd7ad",
     "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24; pr is set when the PR is opened",
