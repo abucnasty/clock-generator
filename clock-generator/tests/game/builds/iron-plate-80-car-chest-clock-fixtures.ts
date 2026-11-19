@@ -24,8 +24,7 @@ import {PickupClockScenario} from "./pickup-clock-capture";
  * in the same tick in the order of their unit numbers, the last built first (docs/simulator.md): as the build's blueprint
  * has them, the two inserters that take from the car are built before the output inserters; `takers-last` builds them
  * after. The clock with 1 output swing is a further check. `car-selected-staged` is the clock the record selects (Coordinated
- * Sources, 144 ticks), recorded from the harness's staged start (every inserter placed with the clock, the car and the furnaces as
- * the start leaves them) under the same probe and protocol.
+ * Sources, 144 ticks), recorded from ruling 60's start (the harness's backpressure start) under the same probe and protocol.
  */
 export interface CarCase {
     name: string;

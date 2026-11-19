@@ -17,7 +17,7 @@ import {PickupClockScenario} from "./pickup-clock-capture";
 export interface BlockedOutputClockCase {
     name: string; speed: FixtureBeltSpeed; stackSize: 1 | 2 | 3 | 4;
     /** The run starts from ruling 60's start (the harness's backpressure start, `staged_start.backpressure`), not from a free warm-up */
-    staged: true; backpressure: true;
+    staged?: true; backpressure?: true;
 }
 
 /** A legendary assembler 3 without modules or beacons: 1.25 x 2.5 */

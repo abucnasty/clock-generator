@@ -24,7 +24,7 @@ import {PickupClockScenario} from "./pickup-clock-capture";
  * belt that side-loads downstream (the sample's README): the game does not hold it, and since the output belt runs in the run of
  * one copy (#837) the simulator does not either. The config marks
  * the two drops (`drop_capture`), and the result names them as that limit. `lithium-silo-selected-staged` is the clock the record
- * selects (Coordinated Sources, 2,160 ticks), recorded from the harness's staged start under the same probe and protocol.
+ * selects (Coordinated Sources, 2,160 ticks), recorded from ruling 60's start (the harness's backpressure start) under the same probe and protocol.
  */
 export interface LithiumSiloCase {
     name: string;
