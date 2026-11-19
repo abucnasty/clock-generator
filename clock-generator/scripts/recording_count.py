@@ -5,8 +5,9 @@ For each job of the record (`clock-generator/record/<job>.json`) it lists the ga
 counts. A recording counts ("holds from ruling 60's start") when it:
   - is at the job's selected clock hash;
   - starts from ruling 60's start (the backpressure start: every entity that needs no clocked entity is full, the clock
-    starts at the first tick its lock is off): `start: "backpressure"` in the missing-recordings fixtures; in the other
-    fixtures `staged: true` is a plain staged start, which is not the judged start, and the rest is a free warm-up;
+    starts at the first tick its lock is off): `start: "backpressure"` in the missing-recordings fixtures, or
+    `staged: true, backpressure: true` in the code that builds a family's scenario (the pickup speed coverage); in the
+    other fixtures `staged: true` is a plain staged start, which is not the judged start, and the rest is a free warm-up;
   - builds at least the job's copies, so every copy is judged;
   - ran at least one loss;
   - holds: the stored run holds its baseline and recovers from every loss (`runHolds`, a stock-guard waiver honoured).
@@ -155,6 +156,17 @@ def staged_case_names(repo, sources):
     return names, family
 
 
+def capture_scenario_start(repo, sources):
+    """The start every case of a family gets from the file that builds its capture scenario (not a fixtures file with a literal per case):
+    `staged: true, backpressure: true` in its code is ruling 60's start (the pickup speed coverage); None where no source says so"""
+    for b in sources:
+        if b.endswith(".test.ts") or b == "pickup-clock-capture.ts":
+            continue
+        if re.search(r"\bstaged: true, backpressure: true\b", code_only(repo.show(BUILDS + b))):
+            return "backpressure"
+    return None
+
+
 def missing_cases(repo):
     """The missing-recordings fixtures: case name to (copies the scaffold holds, ruling 60's start asked)"""
     text = code_only(repo.show(BUILDS + MISSING_FIXTURES))
@@ -228,6 +240,7 @@ def main(commit, out_path):
         sources = [b for b in builds_files if b.endswith(".ts") and not b.endswith(".test.ts") and f in repo.show(BUILDS + b)]
         start_file, evidence = start_of_controls(repo, f, sources)
         staged_names, staged_family = staged_case_names(repo, [b for b in sources if b.endswith("-fixtures.ts")])
+        scenario_start = capture_scenario_start(repo, [b for b in sources if not b.endswith("-fixtures.ts")])
         missing = missing_cases(repo) if f == MISSING_FILE else {}
         file_versions = versions_of(data["meaning"])
         for case in sorted(data["cases"]):
@@ -237,7 +250,7 @@ def main(commit, out_path):
                 copies, backpressure = missing[case]
                 start = "backpressure" if backpressure else "staged"
             elif start_file == "capture":
-                start = staged_names.get(case, staged_family or "free warm-up")
+                start = staged_names.get(case, staged_family or scenario_start or "free warm-up")
             else:
                 start = start_file
             hashes = sorted({h for h in [(e.get("recorded") or {}).get("clock_sha256"), (e.get("generation") or {}).get("clock_sha256")] if h})

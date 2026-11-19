@@ -1118,3 +1118,32 @@ MISSING_RECORDINGS_CAPTURE_DIR=.scratch/scaffold-builds npm run test:game -- tes
 
 `scripts/recording_count.py <commit> <out.md>` counts which record jobs have a recording that holds from ruling 60's start (usage in its docstring). A job built on fewer copies than the job has reads
 "ruling 60's start: N of M copies built" there, whatever its `limit` says.
+
+## The side pickup builds, from ruling 60's start
+
+The twelve turbo side pickup builds of the speed coverage (`moving-pickup.game.test.ts`, the different-items fixture with the electromagnetic plant; `same-item-pickup-clock.game.test.ts`, the
+same-item fixture with the gear assembler; each on the straight belt, the underground entrance and the exit, belt moving or under backpressure (the cases' `backed`)) record the selected clock of their record job from ruling 60's start
+(`staged: true, backpressure: true` in `capturePickupClockSpeed`) on Factorio 2.1.24, with the standard losses (an ingredient cut, the output block, the other ingredient cut). Each case was run twice with
+the recording cache off, with equal summaries, and is pinned in [pickup-clock-controls.json](pickup-clock-controls.json) (the entry, its clock hash and the game version).
+
+| Job (case) | Clock (window cycle) | Steady state | Losses recovered at | Start before (steady state; losses recovered at) |
+| --- | --- | --- | --- | --- |
+| electromagnetic, straight belt, backed and moving | Takt Batches Swings 1 (352, `c9c84d59`) | 7,120 | 14,653, 19,005, 22,877 | free warm-up: 7,120; 14,654, 18,878, 22,750 |
+| electromagnetic, underground entrance, backed | same | 7,120 | 14,653, 19,005, 22,877 | free warm-up: 7,120; 14,782, 18,878, 23,230 |
+| electromagnetic, underground entrance, moving | same | 7,120 | 16,190, 20,414, 24,991 | free warm-up: 7,121; 16,192, 21,824, 25,695 |
+| electromagnetic, underground exit, backed | same | 7,120 | 14,653, 19,005, 23,101 | free warm-up: 7,120; 14,782, 18,878, 22,878 |
+| electromagnetic, underground exit, moving | same | 7,120 | 16,191, 21,823, 27,455 | free warm-up: 7,121; 16,192, 21,824, 26,112 |
+| same-item, all six | Takt Batches Observed (160, `67586738`) | 7,122 | 14,501, 18,341, 22,181 | free warm-up: 7,123; 14,502, 18,342, 22,182 |
+
+All twelve hold: the net output over the baseline's whole window cycles is the target (1,760 of 1,760 for the electromagnetic builds, 352 of 352 for the same-item builds), every loss falls and is recovered,
+and the output stock guard holds. The one machine of each build is filled only by inserters with a window, so no inserter moves in the fill (`opening.json` beside each run): the start equals a plain staged start in effect, as for the grenade build above,
+and the runs differ from the free warm-up's by a tick or a few hundred ticks of recovery only. The straight belt and the same-item builds give one run whatever the belt supply; the electromagnetic underground builds
+recover later when the belt moves, as before.
+
+```bash
+BELT_SPEED_CAPTURE_DIR=.scratch/judged-start-10 npm run test:game -- tests/game/builds/moving-pickup.game.test.ts -t '^speed coverage: electromagnetic-turbo-underground-exit-moving$'
+```
+
+`recording_count.py` reads the start of these cases from `staged: true, backpressure: true` in the code that builds their scenario (`capture_scenario_start`). The two front exit jobs of the electromagnetic clock
+(`front-exit-turbo-unmirrored-backed-different-items`, `front-exit-turbo-unmirrored-moving-config-different-items`) share the clock hash `c9c84d59` and read as holding from these recordings; their own cases in
+`front-clock-controls.json` stay as they were recorded.

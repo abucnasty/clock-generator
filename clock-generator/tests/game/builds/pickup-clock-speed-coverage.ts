@@ -90,5 +90,7 @@ export function capturePickupClockSpeed(variant: ClockCase) {
         name: variant.name, speed: variant.speed, backed: variant.backed,
         config: () => pickupClockConfig(variant), scaffold: () => pickupClockScaffold(variant),
         probe: {family: variant.family}, controls: path.join(__dirname, "pickup-clock-controls.json"),
+        // ruling 60's start: the harness's backpressure start (`staged_start.backpressure`), not a free warm-up
+        staged: true, backpressure: true,
     });
 }
