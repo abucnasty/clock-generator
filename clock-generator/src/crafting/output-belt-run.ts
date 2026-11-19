@@ -1,5 +1,6 @@
 import assert from "../common/assert";
 import { Config } from "../config";
+import type { ItemName } from "../data";
 import { copySpacingOf, outputBeltGeometry } from "../config/output-belt";
 import { BeltSpeed } from "../entities/belt";
 import { EndChange, JoinModel, PutOn } from "../entities/belt/join/join-model";
@@ -21,7 +22,10 @@ import type { SimulationContext } from "./sequence/simulation-context";
  *
  * The output blockage shuts the infinite end: the belt lane is blocked from draining to the belt it joins. Every lane upstream
  * backs up from there, and a hand is held only when its side belt is full. The end change acts from the tick after the
- * next, as an end that a script changes in a tick acts from the next tick in the game.
+ * next, as an end that a script changes in a tick acts from the next tick in the game. So in a run of one copy too, where the
+ * config states its output belt (`installOutputBeltOfOneCopy`): a hand is held once its own lane has backed up to its drop, and
+ * a drop on the other lane is taken in full until that lane has (on the iron plate car build the left lane's drop is held first
+ * and the right lane's never in the game's block, Factorio 2.1.24).
  *
  * The join model takes an inserter's drop after the tick's movement. A hand that puts a stack down in tick t sees the
  * stacks as they stand after the movement of tick t; its stack is then given to the model as put on before the movement
@@ -234,6 +238,17 @@ function outputInsertersOf(config: Config): number[] {
     return found;
 }
 
+/** The output belt of a run of one copy, by the run's context, with the item it takes away (`installOutputBeltOfOneCopy`) */
+const one_copy_belts = new WeakMap<SimulationContext, { item: ItemName; belt: OutputBeltRun }>();
+
+/**
+ * The output belt that `installOutputBeltOfOneCopy` put into the run of this context, with the item it takes away: an output
+ * blockage of that item shuts its infinite end, as in the run of the copies. Undefined where it put none in.
+ */
+export function outputBeltOfOneCopy(context: SimulationContext): { item: ItemName; belt: OutputBeltRun } | undefined {
+    return one_copy_belts.get(context);
+}
+
 /**
  * Puts the output belt of the config into a run of one copy (the config's own build) where its clock starts, empty, as the run
  * of the copies has it (`installSharedLanes`): a hand onto the output belt is held where the belt is, not only where its own
@@ -242,6 +257,12 @@ function outputInsertersOf(config: Config): number[] {
  * 4: the belt speed fixtures run a build on other tiers), the run keeps each drop tile's own lane. Null then.
  */
 export function installOutputBeltOfOneCopy(context: SimulationContext, config: Config): OutputBeltRun | null {
+    const run = oneCopyOutputBelt(context, config);
+    if (run !== null) one_copy_belts.set(context, { item: config.setpoint.recipe, belt: run });
+    return run;
+}
+
+function oneCopyOutputBelt(context: SimulationContext, config: Config): OutputBeltRun | null {
     if (config.output_belt === undefined) return null;
     const outputs = outputInsertersOf(config);
     // a section of several copies is the run of the copies' (`installSharedLanes`): its own output inserters are not all here
