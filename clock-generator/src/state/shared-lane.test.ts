@@ -144,3 +144,74 @@ describe("a shared lane fed by feeders", () => {
         expect(lane.supplied).toBeGreaterThan(supplied);
     });
 });
+
+/**
+ * A lane of four lines, A to D downstream, cut at 2, 4 and 6 tiles: a full dead end of 8 tiles, as the game cuts a lane
+ * at its underground entrances (SharedLaneLines)
+ */
+describe("a shared lane in lines", () => {
+    const args = { belt_speed: TURBO, stack_size: 4, supply_rate: ratio(120), lane_end: { kind: "dead_end" }, length_tiles: 8 } as const;
+    const lanes = () => ({ one: new SharedLane(args), lines: new SharedLane({ ...args, lines: { cuts_tiles: [2, 4, 6] } }) });
+    /** Where every stack stands, tick by tick: as the reach of the whole lane sees them */
+    const positions = (lane: SharedLane, tick: number) => lane.reachOf(8, 8).snapshot(tick).map(([position]) => position);
+
+    it("refuses lines on a lane with an infinite end, or line ends outside the lane or out of order", () => {
+        expect(() => new SharedLane({ ...args, lane_end: { kind: "infinite" }, lines: { cuts_tiles: [2, 4, 6] } })).toThrow(/dead end/);
+        expect(() => new SharedLane({ ...args, lines: { cuts_tiles: [2, 8] } })).toThrow(/go up inside it/);
+        expect(() => new SharedLane({ ...args, lines: { cuts_tiles: [4, 2] } })).toThrow(/go up inside it/);
+    });
+
+    it("starts full and standing, as one line does", () => {
+        const { one, lines } = lanes();
+        for (let tick = 0; tick < 10; tick++) expect(positions(lines, tick)).toEqual(positions(one, tick));
+    });
+
+    it("keeps a follower waiting one tick at a line's end where its line was updated while the leader's line was off the list", () => {
+        // a take in line A (1 to 2 tiles) puts A on the list; a tick later a take in line D puts D and C on after it, while B
+        // stands off the list: A is updated first and cannot move, B goes on only when C moves, and A has had its tick
+        const [one_line, in_lines] = Object.values(lanes()).map(lane => Array.from({ length: 40 }, (_, tick) => {
+            if (tick === 10) expect(lane.reachOf(2, 1).take(10, 4)).toBe(4);
+            if (tick === 11) expect(lane.reachOf(8, 1).take(11, 4)).toBe(4);
+            return positions(lane, tick);
+        }));
+        // up to the take in D the two agree; in the tick after it the stack at A's downstream end (2 tiles from the entry, 6
+        // from the reach's edge) stands in the lane of lines and moves in the one line: one tick, then they agree again for good
+        expect(in_lines.slice(0, 12)).toEqual(one_line.slice(0, 12));
+        expect(in_lines[12]).toContain(6 * 256);
+        expect(one_line[12]).not.toContain(6 * 256);
+        expect(in_lines.slice(14)).toEqual(one_line.slice(14));
+    });
+
+    it("invents no wait where a pickup puts its line and the line feeding it on: takes downstream alone move the lines as one line", () => {
+        const { one, lines } = lanes();
+        const taken = [one, lines].map(lane => {
+            const reaches = [lane.reachOf(8, 1), lane.reachOf(5, 1), lane.reachOf(3, 1)];
+            return Array.from({ length: 600 }, (_, tick) => reaches.map((reach, at) => tick % (11 + 4 * at) === at ? reach.take(tick, 4) : 0));
+        });
+        expect(taken[1]).toEqual(taken[0]);
+        for (let tick = 600; tick < 620; tick++) expect(positions(lines, tick)).toEqual(positions(one, tick));
+    });
+
+    it("puts the line a feeder drops onto on the list: a lane fed by feeders loses nothing in lines", () => {
+        const fed = new SharedLane({ ...args, length_tiles: 11, feeders: FEEDERS, lines: { cuts_tiles: [3, 7] } });
+        const reaches = [fed.reachOf(6, 1), fed.reachOf(11, 1)];
+        let taken = 0;
+        for (let tick = 1; tick <= 600; tick++) for (const reach of reaches) taken += bursts(20)(tick) ? reach.take(tick, 16) : 0;
+        fed.advanceTo(600);
+        expect(taken).toBeGreaterThan(0);
+        expect(fed.supplied).toBeGreaterThan(0);
+        expect(fed.initial + fed.supplied - taken).toBe(fed.items());
+    });
+
+    it("keys the lines on the list and the takes of the tick, so that two lanes that will move apart do not key alike", () => {
+        const { lines } = lanes();
+        const other = new SharedLane({ ...args, lines: { cuts_tiles: [2, 4, 6] } });
+        lines.advanceTo(5);
+        other.advanceTo(5);
+        expect(lines.key()).toBe(other.key());
+        lines.reachOf(8, 1).take(5, 4);
+        other.reachOf(8, 1).take(5, 4);
+        expect(lines.key()).toBe(other.key());
+        expect(lines.key()).not.toBe(new SharedLane(args).key());
+    });
+});
