@@ -101,4 +101,44 @@ describe("the staged start of a build the harness had two limits on", () => {
             await session.close(failed);
         }
     }, 960_000);
+
+    test("a backpressure start records settle_ticks after its lock opens, so the recording keeps the furnaces that had no recipe at the opening: inserter crafting 240", async context => {
+        context.skip(WHY_SKIPPED !== null, WHY_SKIPPED ?? undefined);
+        scratch ??= fs.mkdtempSync(path.join(os.tmpdir(), "staged-start-settle-"));
+        const config_path = ConfigPaths.INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK;
+        const config = await loadConfigFromFile(config_path);
+        const generated = generateClockAlternatives(config, { logger: quiet });
+        const selected = generated.alternatives[generated.selected_index];
+        const exported = selected.result.subtick ?? selected.result;
+        const clock = { blueprint: encodeBlueprintFile({ blueprint: exported.blueprint }), schedule: exported.schedule };
+        const settle_ticks = 600;
+
+        const log: string[] = [];
+        const session = new CachedHarnessSession({ factorio: FACTORIO!, save: SAVE!, work_dir: path.join(scratch, "settle-work"), timeout_seconds: 900, log: message => log.push(message) });
+        let failed = true;
+        try {
+            const result = await session.record({
+                blueprint: scaffoldOf(config_path),
+                out: path.join(scratch, "settle.json"),
+                ticks: 60,
+                settle_ticks,
+                warmup_ticks: 0,
+                seed: [],
+                config,
+                clock,
+                unclocked: false,
+                game_speed: 1000,
+                timeout_seconds: 900,
+                log: message => log.push(message),
+                staged_start: { backpressure: {} },
+            });
+            const opening = (result.start as { staged?: { backpressure?: { tick: number } } }).staged?.backpressure;
+            expect(opening, "the game reported the opening of the fill").toBeDefined();
+            expect(result.recording.start_game_tick - opening!.tick, "the recording begins settle_ticks after the lock was set off").toBeGreaterThanOrEqual(settle_ticks);
+            expect(result.recording.machines.length, "every machine of the config is recorded: a furnace has a recipe by then").toBe(config.machines.length);
+            failed = false;
+        } finally {
+            await session.close(failed);
+        }
+    }, 960_000);
 });
