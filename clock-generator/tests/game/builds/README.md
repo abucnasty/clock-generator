@@ -438,7 +438,7 @@ and after each restoration; it does not feed observations into the simulator.
 
 ## The over-the-hood operating clocks, from ruling 60's start
 
-The 8 jobs of `over-hood-pickup-clock.game.test.ts` (`overhood-over-hood-turbo-*` in the record; the one input inserter picks over a hood from a belt, moving or backed-up supply) now start from ruling 60's state, the
+The 8 jobs of `over-hood-pickup-clock.game.test.ts` (`overhood-over-hood-turbo-*` in the record; the one input inserter picks over a hood from a belt, moving or under backpressure) now start from ruling 60's state, the
 harness's backpressure start (`staged: true, backpressure: true` in `overHoodClockScenario`, as `pickup-clock-capture.ts` reads them), on Factorio 2.1.24. Each run is repeated once with the
 recording cache off and gives the same run, tick for tick (steady state, every loss, the baseline and the stock guard); the game's report of the opening is kept in `opening.json` beside each run:
 the one machine is empty and fed by windowed inserters only, and no inserter has moved. The clock of each job is the one its entry pinned (`clock_sha256` unchanged); no probe text changed.
@@ -456,7 +456,7 @@ the one machine is empty and fed by windowed inserters only, and no inserter has
 
 All hold: the net output over the baseline's whole window cycles is the target, every loss falls and is recovered, and the output stock guard holds. Four cases differ from their free warm-up run by a tick or two only
 (`mirrored-backed-different-items`, `mirrored-moving-different-items`, `unmirrored-backed-different-items`: steady state 0 to 3 ticks earlier, losses recovered 0 to 1 ticks earlier). The four same-item cases (mirrored or not, moving or
-backed-up supply) pin one clock and make the same run in every case, as before (the two lanes carry the same item); from this start the machine reaches steady state later (7,846 against 6,482) and the first loss is recovered
+under backpressure) pin one clock and make the same run in every case, as before (the two lanes carry the same item); from this start the machine reaches steady state later (7,846 against 6,482) and the first loss is recovered
 959 ticks later. `unmirrored-moving-different-items` reaches steady state 8 ticks earlier and recovers its losses 639 to 1,929 ticks later.
 
 ```bash
