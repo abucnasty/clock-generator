@@ -9,7 +9,7 @@ CI checks this file: the "Record check" fails when a selected clock got worse th
 request adds to this file.
 
 ## An output block backs up a one-copy build's stated output belt (#844)
-2 jobs moved, no selected clock, verdict, hold, rate or wakeups. The iron plate car sample states its output belt, and in a run of one copy an output blockage shuts the end of the output belt the config states, so its lanes back up as in the game (Factorio 2.1.24: the car's block holds furnace 1's hand on the left lane and never furnace 2's).
+2 jobs moved, no selected clock, verdict, hold, rate or wakeups. The iron plate car sample states its output belt, and in a run of one copy an output blockage stops the output belt the config states from draining, so its lanes back up as in the game (Factorio 2.1.24: the car's block holds furnace 1's hand on the left lane and never furnace 2's).
 - config-IRON_PLATE_80_CAR_CHEST: `config_sha256`, and `results_sha256` of every clock (their insights; the config now states the belt line its output inserters share)
 - config-LITHIUM_PLATE_80_SILO_CHEST: takt_batches_observed_swings_4: `results_sha256` only (its output trials run on the output belt)
 
