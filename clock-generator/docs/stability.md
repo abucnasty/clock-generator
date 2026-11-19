@@ -124,9 +124,9 @@ Where the copies of a build take from one lane, each clock that holds on one cop
 1. **The takers.** Each inserter of each copy that takes from a shared lane is compared with the same inserter in a run of one copy alone, over the whole window cycles of the second half of the run. An inserter that puts down fewer of the lane's items than in the run of one copy is short.
 2. **The machines and the output inserters.** A shortfall is a loss only where a machine or an output inserter of a copy is behind its target in the same run, over the same window cycles: a machine by more than one craft, an output inserter by more than one hand. A machine's target is the crafts that one copy needs from it for the setpoint. An output inserter's target is the items of the product that it puts down in the output cycle. Where no machine and no output inserter is behind, the shortfall is stock that moved between the two runs, and the clock holds.
 
-#### The rate judge (#733, behind a switch)
+#### The rate judge (#733, on by default)
 
-With the switch on (`clock-generator/src/crafting/shared-lane-judge-switch.ts`, off by default), the machines and the output inserters are the first judge, and the run of one copy alone is made only to name a loss:
+The rate judge is on by default (`clock-generator/src/crafting/shared-lane-judge-switch.ts`). The machines and the output inserters are the first judge, and the run of one copy alone is made only to name a loss:
 
 | Run of the copies | Made where | Holds where |
 |---|---|---|

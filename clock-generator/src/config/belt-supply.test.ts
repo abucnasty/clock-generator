@@ -75,6 +75,33 @@ describe("lane facts in the configuration", () => {
     ])("refuses %s", (_, lane) => {
         expect(ConfigSchema.safeParse(configWith(lane)).success).toBe(false);
     });
+
+    /** A copy that takes the lane's iron plate: an inserter from the belt, at the end of an underground belt (half a tile) or beside it */
+    const takenWith = (lane: Record<string, unknown>, source: Record<string, unknown> = {}) => ({
+        ...configWith(lane),
+        machines: [{ id: 1, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 1 }],
+        inserters: [{ id: 1, source: { type: "belt", id: 1, ...source }, sink: { type: "machine", id: 1 } }],
+    });
+
+    it("keeps the supply length of a lane that an inserter takes from", () => {
+        expect(ConfigSchema.parse(takenWith({ supply_tiles: 11 })).belts[0].lanes[0]).toEqual({ ingredient: "iron-plate", stack_size: 4, supply_tiles: 11 });
+        expect(ConfigSchema.parse(takenWith({ supply_tiles: 0.25 }, { pickup_length: 0.5, pickup_layout: "front-exit" })).belts[0].lanes[0].supply_tiles).toBe(0.25);
+    });
+
+    it.each<[string, Record<string, unknown>]>([["zero", { supply_tiles: 0 }], ["a negative length", { supply_tiles: -3 }], ["text", { supply_tiles: "11" }]])(
+        "refuses a supply length of %s", (_, lane) => {
+            expect(ConfigSchema.safeParse(takenWith(lane)).success).toBe(false);
+        });
+
+    it("refuses a supply length on a lane that no inserter takes from, and names the lane", async () => {
+        await expect(parseConfig(JSON.stringify(configWith({ supply_tiles: 11 }))))
+            .rejects.toThrow("Lane 1 of belt 1 states supply_tiles 11, and no inserter takes iron-plate from it.");
+    });
+
+    it("refuses a supply length that puts the supply inside the pickup, and names the lane", async () => {
+        await expect(parseConfig(JSON.stringify(takenWith({ supply_tiles: 0.25 }))))
+            .rejects.toThrow("Lane 1 of belt 1 states supply_tiles 0.25, less than half the pickup of an inserter that takes from it (0.5 tiles)");
+    });
 });
 
 describe("the words of a lane end before the infinite end", () => {

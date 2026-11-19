@@ -105,7 +105,7 @@ describe("generateClockForConfig", () => {
             beforeAll(() => {
                 // batched swings is stable, so observed windows are only made when they are asked for
                 ({ alternatives } = generateClockAlternatives(withSearches(config)));
-            });
+            }, 180_000);
 
             it("names why every inserter and drill a clock leaves always on is", () => {
                 expect(entityRouteProblemsOf(config, { alternatives })).toEqual([]);

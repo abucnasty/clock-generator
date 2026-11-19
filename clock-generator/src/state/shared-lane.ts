@@ -42,7 +42,9 @@ export interface SharedLaneArgs {
  * they stand, and that travels on with them where they move.
  *
  * The supply is a flow, not a queue: what the entry cannot put on while the lane is full at the entry is lost, as the
- * belt upstream of the entry is not part of the model.
+ * belt upstream of the entry is not part of the model. The entry is where the items come onto the lane: the lane's supply
+ * length (`supply_tiles`) before copy 1's pickup, so the belt from the feeders to copy 1 is on the lane
+ * (shared-lane-model.ts `sharedLaneLayoutOf`).
  *
  * Positions are in 1/256 tile, as the pickup stocks have them (`BackpressurePickupLane`, `BeltPickupLane`); a stack
  * takes 64 units.
