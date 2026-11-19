@@ -5,10 +5,12 @@ import { Config } from "../config/schema";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import { SerializableClockWindows } from "./clock";
-import { behindTargetIn, CopyMade, describeSharedLaneLoss, fewerCopiesThatHold, judgedCopiesMade, judgeSharedLanes, RunOfCopies, SharedLaneJudgement, SharedLaneLoss, TargetRates } from "./shared-lane-verdict";
+import { behindTargetIn, CopyMade, describeSharedLaneLoss, fewerCopiesThatHold, judgedCopiesMade, judgeSharedLanes as judgeSharedLanesOnDefault, RunOfCopies, SharedLaneJudgement, SharedLaneLoss, TargetRates } from "./shared-lane-verdict";
 import { withoutSharedLaneFacts } from "./generate-blueprint-test-helpers";
 import { lithiumRows } from "../../tests/configs/lithium-rows";
 import { checkedLanesOf } from "./checked-lanes";
+// These tests pin the comparison with a run of one copy alone, which the rate judge (shared-lane-judge-switch.ts) leaves for its open cases.
+const judgeSharedLanes = (...[config, windows, cycle, logger, options]: Parameters<typeof judgeSharedLanesOnDefault>) => judgeSharedLanesOnDefault(config, windows, cycle, logger, { by_rate: false, ...options });
 
 const quiet = { log: () => {}, warn: () => {}, error: () => {}, debug: () => {} };
 

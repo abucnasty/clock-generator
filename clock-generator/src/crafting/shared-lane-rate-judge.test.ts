@@ -152,9 +152,9 @@ describe("the cases #733 leaves open", () => {
         expect(rateOpenCaseOfBuild(config)).toBeNull();
     });
 
-    it("is off by default: the run of one copy alone judges, and the judgement says nothing of the rate", async () => {
+    it("with the switch off for the call: the run of one copy alone judges, and the judgement says nothing of the rate", async () => {
         const config = withFacts(await loadConfigFromFile(ConfigPaths.LOGISTIC_SCIENCE_240), { "2/1": dead_end, "2/2": dead_end });
-        const judged = judgeSharedLanes(config, { "inserter:1": [{ start: 52, end: 71 }, { start: 76, end: 95 }], "inserter:2": [{ start: 1, end: 49 }] }, 176, quiet);
+        const judged = judgeSharedLanes(config, { "inserter:1": [{ start: 52, end: 71 }, { start: 76, end: 95 }], "inserter:2": [{ start: 1, end: 49 }] }, 176, quiet, { by_rate: false });
         expect(judged.by_rate).toBeUndefined();
     });
 });
