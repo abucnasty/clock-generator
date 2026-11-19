@@ -67,6 +67,8 @@ export function overHoodClockScaffold(variant: OverHoodClockCase): string {
 export function overHoodClockScenario(variant: OverHoodClockCase): PickupClockScenario {
     return {
         name: variant.name, speed: variant.speed, backed: variant.backed,
+        // ruling 60's start (the harness's backpressure start, `staged_start.backpressure`), not a free warm-up
+        staged: true, backpressure: true,
         config: () => overHoodClockConfig(variant), scaffold: () => overHoodClockScaffold(variant),
         probe: {family: "compact", machine_name: "assembling-machine-3", output_to_belt: true,
             ingredients: ["iron-plate", variant.family === "different-items" ? "copper-cable" : "iron-plate"]},
