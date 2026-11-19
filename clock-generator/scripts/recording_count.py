@@ -6,7 +6,8 @@ counts. A recording counts ("holds from ruling 60's start") when it:
   - is at the job's selected clock hash;
   - starts from ruling 60's start (the backpressure start: every entity that needs no clocked entity is full, the clock
     starts at the first tick its lock is off): `start: "backpressure"` in the missing-recordings fixtures; in the other
-    fixtures `staged: true` is a plain staged start, which is not the judged start, and the rest is a free warm-up;
+    fixtures `staged: true, backpressure: true`; `staged: true` alone is a plain staged start, which is not the judged
+    start, and the rest is a free warm-up;
   - builds at least the job's copies, so every copy is judged;
   - ran at least one loss;
   - holds: the stored run holds its baseline and recovers from every loss (`runHolds`, a stock-guard waiver honoured).
@@ -149,6 +150,20 @@ def staged_case_names(repo, sources):
     return names
 
 
+def backpressure_case_names(repo, sources):
+    """(names, all) of a family's cases that start from ruling 60's start: the case literals that say `staged: true, backpressure: true`,
+    and `all` where the fixtures' scenario builder sets both for every case (a line of just `staged: true, backpressure: true,`)"""
+    names, every = set(), False
+    for b in sources:
+        text = code_only(repo.show(BUILDS + b))
+        for m in re.finditer(r'\{name: "([^"]+)"[^{}]*\}', text):
+            if re.search(r"\bstaged: true, backpressure: true\b", m.group(0)):
+                names.add(m.group(1))
+        if re.search(r"^\s+staged: true, backpressure: true,\s*$", text, re.M):
+            every = True
+    return names, every
+
+
 def missing_cases(repo):
     """The missing-recordings fixtures: case name to (copies the scaffold holds, ruling 60's start asked)"""
     text = code_only(repo.show(BUILDS + MISSING_FIXTURES))
@@ -222,6 +237,7 @@ def main(commit, out_path):
         sources = [b for b in builds_files if b.endswith(".ts") and not b.endswith(".test.ts") and f in repo.show(BUILDS + b)]
         start_file, evidence = start_of_controls(repo, f, sources)
         staged_names = staged_case_names(repo, [b for b in sources if b.endswith("-fixtures.ts")])
+        backpressure_names, backpressure_all = backpressure_case_names(repo, [b for b in sources if b.endswith("-fixtures.ts")])
         missing = missing_cases(repo) if f == MISSING_FILE else {}
         file_versions = versions_of(data["meaning"])
         for case in sorted(data["cases"]):
@@ -231,7 +247,7 @@ def main(commit, out_path):
                 copies, backpressure = missing[case]
                 start = "backpressure" if backpressure else "staged"
             elif start_file == "capture":
-                start = "staged" if case in staged_names else "free warm-up"
+                start = "backpressure" if backpressure_all or case in backpressure_names else "staged" if case in staged_names else "free warm-up"
             else:
                 start = start_file
             hashes = sorted({h for h in [(e.get("recorded") or {}).get("clock_sha256"), (e.get("generation") or {}).get("clock_sha256")] if h})
@@ -400,7 +416,7 @@ def main(commit, out_path):
       "'recorded at another clock': a file names the job's build but no file pins the selected hash. 'none': no file names the job. "
       "'start not known': the start of the only recordings cannot be read. "
       "The cases of `filled-start-search-clock-controls.json` (the picks of the search from every stable clock) are other picks than the record's and are left out. "
-      "The start is read per case: the missing-recordings fixtures say `start: \"backpressure\"` or not; in the other fixtures `staged: true` is a plain staged start and the rest a free warm-up; `backpressure` is set only by the search cases.")
+      "The start is read per case: the missing-recordings fixtures say `start: \"backpressure\"` or not; in the other fixtures `staged: true, backpressure: true` (in the case, or for every case in the scenario builder) is ruling 60's start, `staged: true` alone is a plain staged start and the rest a free warm-up.")
     w("")
     w("What the partial recordings lack (best recording of each job):")
     w("")
