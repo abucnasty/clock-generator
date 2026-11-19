@@ -113,7 +113,8 @@ def versions_of(text):
 def start_of_controls(repo, name, sources):
     """How the game tests of a controls file start the recording, read from their code: (start, evidence files)"""
     texts = {f: repo.show(BUILDS + f) for f in sources}
-    imported = {f for f, t in texts.items() if "pickup-clock-capture" in t}
+    # the files that run a scenario through the capture (a fixture that only imports its helpers or types does not)
+    imported = {f for f, t in texts.items() if "capturePickupClockScenario" in code_only(t)}
     chain = set(texts)
     # a game test of the family imports the fixtures that name the controls file: add the game tests and what they import
     for f in repo.ls(BUILDS):
@@ -123,7 +124,7 @@ def start_of_controls(repo, name, sources):
             if any("./" + os.path.splitext(s)[0] in t for s in sources) or base in sources:
                 chain.add(base)
                 texts[base] = t
-                if "pickup-clock-capture" in t:
+                if "capturePickupClockScenario" in code_only(t):
                     imported.add(base)
     if imported:
         # a game test that runs the capture protocol records by pickup-clock-capture.ts alone: its start is that file's
