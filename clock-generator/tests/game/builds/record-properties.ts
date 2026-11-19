@@ -14,6 +14,7 @@ import { EntityId } from '../../../src/entities';
 import { deciderBuildOrder } from '../../../src/crafting/decider-order';
 import type { ClockAlternativesResult } from '../../../src/crafting/generate-blueprint';
 import { entityRouteProblems } from '../../../src/crafting/generate-blueprint-test-helpers';
+import { withoutOutsideSupply } from '../../../src/config/outside-supply';
 import { createEntityRegistryFromConfig } from '../../../src/crafting/sequence/simulation-context';
 
 export const PROPERTIES = [
@@ -72,7 +73,8 @@ const close = (a: number, b: number, digits: number) => Math.abs(a - b) < Math.p
  * string is a problem)
  */
 function entityRoutesTotal(config: Config, alternative: Alternative): string[] {
-    return entityRouteProblems(config, alternative.result, alternative.id);
+    // the build the generation clocks: its outside supply (feeders from chests) stays as built, with no route
+    return entityRouteProblems(withoutOutsideSupply(config), alternative.result, alternative.id);
 }
 
 /**

@@ -8,6 +8,7 @@ import { lossId, verdictOf, type DisturbanceTrialReport } from '../../../../src/
 import { startDependenceNotChecked } from '../../../../src/crafting/start-dependence';
 import { SEARCH_MAKERS } from '../../../../src/crafting/generate-blueprint-test-helpers';
 import { judgedStartOf, type Config } from '../../../../src/config/schema';
+import { withoutOutsideSupply } from '../../../../src/config/outside-supply';
 
 const quiet = { log() { }, info() { }, warn() { }, error() { }, debug() { } };
 const selectedOf = (generated: ClockAlternativesResult): ClockAlternative => generated.alternatives[generated.selected_index];
@@ -76,7 +77,8 @@ const reports = new WeakMap<object, DisturbanceTrialReport>();
 /** The backpressure-loss report of an alternative, made once for the checks of a job that read it */
 const reportOf = (config: Config, alternative: ClockAlternative): DisturbanceTrialReport => {
     if (!reports.has(alternative)) {
-        reports.set(alternative, disturbanceTrialOf(config, alternative.result.clock_windows, alternative.result.simulation_duration.ticks,
+        // on the build the generation clocks: its outside supply (the feeders) is no output of the build
+        reports.set(alternative, disturbanceTrialOf(withoutOutsideSupply(config), alternative.result.clock_windows, alternative.result.simulation_duration.ticks,
             alternative.result.stability_check.expected_output_items, quiet));
     }
     return reports.get(alternative)!;
@@ -89,7 +91,7 @@ const reportOf = (config: Config, alternative: ClockAlternative): DisturbanceTri
 const BROKEN_AUTOMATION_WINDOWS = { "inserter:1": [{ start: 1, end: 20 }], "inserter:2": [{ start: 1, end: 21 }, { start: 37, end: 56 }, { start: 73, end: 73 }] };
 const brokenReportOf = (config: Config, generated: ClockAlternativesResult): DisturbanceTrialReport => {
     const fractional = byMaker(generated, 'fractional');
-    return disturbanceTrialOf(config, BROKEN_AUTOMATION_WINDOWS, fractional.result.simulation_duration.ticks,
+    return disturbanceTrialOf(withoutOutsideSupply(config), BROKEN_AUTOMATION_WINDOWS, fractional.result.simulation_duration.ticks,
         fractional.result.stability_check.expected_output_items, quiet);
 };
 const automation: JobCheck[] = [
