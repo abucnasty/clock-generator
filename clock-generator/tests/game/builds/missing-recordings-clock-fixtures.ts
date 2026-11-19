@@ -291,7 +291,7 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
         name: "chemical-science-240-shared-foundry", job: "config-CHEMICAL_SCIENCE_240_SHARED_FOUNDRY", config: "CHEMICAL_SCIENCE_240_SHARED_FOUNDRY", copies: 1,
         losses: [{kind: "cut", item: "sulfur"}, {kind: "block"}, {kind: "cut", item: "advanced-circuit"}],
         limit: "the sample's scaffold holds one block, one of the job's 5.5 copies; abucnasty's whole build (5.5 copies) is not built from ruling 60's start: its staged start "
-            + "refuses the build (\"The clock names inserters 2, 4, 6, 8, 10, 12, 14, 16, 18, 20 of the config, which match no inserter of the build in copy 6 of 6\": the part copy "
+            + "refuses the build (\"The clock names inserters 2, 4, 6, 8, 10, 12, 14, 16, 18, 20 of the config, which match no inserter of the build in copy 6 of 6\": the partial copy "
             + "holds some of the config's inserters, and the staged start's wiring check does not take that into account)",
         start: "backpressure",
     },
@@ -300,7 +300,7 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
         variant: config => ({...config, overrides: {...config.overrides, backed_up_belts: true}}),
         losses: [{kind: "cut", item: "sulfur"}, {kind: "block"}, {kind: "cut", item: "advanced-circuit"}],
         limit: "the sample's scaffold holds one block, one of the job's 5.5 copies; abucnasty's whole build (5.5 copies) is not built from ruling 60's start: its staged start "
-            + "refuses the build (\"The clock names inserters 2, 4, 6, 8, 10, 12, 14, 16, 18, 20 of the config, which match no inserter of the build in copy 6 of 6\": the part copy "
+            + "refuses the build (\"The clock names inserters 2, 4, 6, 8, 10, 12, 14, 16, 18, 20 of the config, which match no inserter of the build in copy 6 of 6\": the partial copy "
             + "holds some of the config's inserters, and the staged start's wiring check does not take that into account)",
         start: "backpressure",
     },

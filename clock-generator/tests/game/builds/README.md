@@ -981,7 +981,7 @@ with equal summaries. They are pinned in [missing-recordings-clock-controls.json
 - **Utility science 120.** The record's verdict for the clock is "no recovery", from the loss of low density structures on the copies that share a lane. The scaffold holds one copy, so no lane is shared
   and the game recovers from the loss (as in "Utility science 120: the selected clock from the staged start" above, now from ruling 60's start). The seven-copy scaffold is not in the repository.
 - **Chemical science.** abucnasty's whole build (5.5 copies, `chemical-science-240-shared-foundry-full-build.blueprint`) is refused by the staged start: "The clock names inserters 2, 4, 6, 8, 10, 12, 14, 16, 18, 20
-  of the config, which match no inserter of the build in copy 6 of 6". The part copy holds some of the config's inserters. The warm-up path of the harness takes that into account when it wires the clock, and the staged path does not (read from `src/harness/factorio-harness.ts`; not changed here).
+  of the config, which match no inserter of the build in copy 6 of 6". The partial copy holds some of the config's inserters. The warm-up path of the harness takes that into account when it wires the clock, and the staged path does not (read from `src/harness/factorio-harness.ts`; not changed here).
 - **Production science.** A drill drops stone straight into the rail assembler, so a machine that only windowed inserters feed holds items at the opening: "Machines that only windowed inserters fill hold items at the opening:
   assembling-machine-3 (unit 376): 164 in, 0 out, 0 made" (both jobs, twice each). The build holds one copy of the job's seven.
 - **Military science.** The scaffold holds the job's five copies, 9 tiles apart.
