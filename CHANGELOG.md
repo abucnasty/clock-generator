@@ -12,7 +12,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 ## [Unreleased]
 
 ### Fixed
-
+- simulation: a setpoint named by a recipe counts that recipe's main product
 - generation: builds with an inserter taking a by-product off the output machine now generate
 
 ## [0.31.0] - 2026-11-19

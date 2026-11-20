@@ -244,13 +244,15 @@ function runStreaming(
     }
 }
 
-function handleValidate(requestId: number, config: Config): void {
+function handleValidate(requestId: number, given: Config): void {
     try {
+        const config = engineBuildOf(given);
         requireValidConfig(config);
         const validation = clockGenerator.validateConfig(config);
         // a build of several identical copies is clocked as given; Build check notes it, with one copy where it can be offered
         const repeated = clockGenerator.findRepeatedUnits(config);
-        const recovery = repeated.gcd > 1 ? repeatedUnitsRecoveryOf(repeated.copies, config) : undefined;
+        // the offer is of the build as the form holds it, which the page matches it with and writes the conversion into
+        const recovery = repeated.gcd > 1 ? repeatedUnitsRecoveryOf(repeated.copies, given) : undefined;
         postResponse({ type: 'validated', requestId, validation, ...(recovery && { recovery }) });
     } catch (error) {
         const { message } = failureOf(error, 'Check failed');
@@ -301,6 +303,14 @@ function internalErrorOf(error: unknown): InternalError {
         dataMismatch: missingSections.length > 0 };
 }
 
+/**
+ * The build as the engine reads it: a setpoint that the site's picker named by a recipe counts that recipe's main product.
+ * The form keeps the name it was given, so only what goes to the engine is read this way.
+ */
+function engineBuildOf(config: Config): Config {
+    return clockGenerator.readRecipeSetpointAsItem(config) as Config;
+}
+
 /** Planning and Check share the strict schema; editable persisted drafts do not bypass spatial constraints. */
 function requireValidConfig(config: Config): void {
     const parsed = clockGenerator.ConfigSchema.safeParse(config);
@@ -314,7 +324,7 @@ function checkRepeatedUnitConversion(config: Config): CheckedRepeatedUnitConvers
     if (plan.kind === 'unavailable') return { kind: 'unavailable', stage: 'proof', reason: plan.reason, repeatedGroups: repeatedGroups() };
     try {
         requireValidConfig(plan.candidate);
-        return { kind: 'available', plan, validation: clockGenerator.validateConfig(plan.candidate) };
+        return { kind: 'available', plan, validation: clockGenerator.validateConfig(engineBuildOf(plan.candidate)) };
     } catch (error) {
         // Planning's existing assertion type includes target-capacity/period refusals, and the feasibility pass refuses
         // a target no clock could carry. Untyped errors and native programmer failures must remain query-failed, never a
@@ -451,11 +461,20 @@ function savedConfig(config: unknown): EngineAnswers['saved-config'] {
 
 /** An imported config file, which can hold what the form exports, e.g. an inserter end left unset; a former type is read as the machine */
 function configFile(config: unknown): EngineAnswers['config-file'] {
-    const result = parseFormConfig(clockGenerator.ConfigSchema, clockGenerator.migrateMachineTypes(config));
+    const form = clockGenerator.migrateMachineTypes(config);
+    const result = parseFormConfig(clockGenerator.ConfigSchema, form);
     if (!result.success) {
         throw new clockGenerator.ConfigValidationError(result.error);
     }
-    return withoutBeltSetting(result.data);
+    return withoutBeltSetting(withSetpointNameOf(result.data, form));
+}
+
+/** The setpoint of an imported file as the file names it: the schema reads a recipe's name as its item, and the form keeps the name */
+function withSetpointNameOf(read: Config, file: unknown): Config {
+    const record = (value: unknown): Record<string, unknown> | undefined => typeof value === 'object' && value !== null ? value as Record<string, unknown> : undefined;
+    const given = record(file);
+    const name = record(given?.setpoint ?? given?.target_output)?.recipe;
+    return typeof name === 'string' ? { ...read, setpoint: { ...read.setpoint, recipe: name } } : read;
 }
 
 /** The inserters a note on lanes is about, each once, in order; none where the lanes cannot be read, as the note then says nothing */
@@ -467,7 +486,10 @@ function insertersOf(lanes: () => readonly { inserter_ids: readonly number[] }[]
     }
 }
 
-function answer(query: EngineQuery): EngineAnswers[EngineQuery['kind']] {
+function answer(asked: EngineQuery): EngineAnswers[EngineQuery['kind']] {
+    // an imported or saved config, and the conversion of repeated units, are of the form's own state, which keeps the name that the setpoint was given
+    const query = 'config' in asked && !['saved-config', 'config-file', 'repeated-unit-conversion'].includes(asked.kind)
+        ? { ...asked, config: engineBuildOf(asked.config as Config) } : asked;
     switch (query.kind) {
         case 'timeline-recording':
             return clockGenerator.recordSimulationTimeline(query.request);
@@ -532,8 +554,9 @@ function handleQuery(requestId: number, query: EngineQuery): void {
     }
 }
 
-function handlePlan(runId: number, given: Config, debugSteps: DebugSteps, streamLogs: boolean): void {
+function handlePlan(runId: number, asked: Config, debugSteps: DebugSteps, streamLogs: boolean): void {
     runStreaming(runId, debugSteps, streamLogs, (options) => {
+        const given = engineBuildOf(asked);
         requireValidConfig(given);
         // the build that is clocked, which the clocks and their views are of: outside supply gets no window
         const config = clockGenerator.withoutOutsideSupply(given);
@@ -549,7 +572,7 @@ function handlePlan(runId: number, given: Config, debugSteps: DebugSteps, stream
 
 function handleTask(
     runId: number,
-    given: Config,
+    asked: Config,
     debugSteps: DebugSteps,
     streamLogs: boolean,
     context: import('clock-generator/browser').ClockAlternativeContext,
@@ -558,6 +581,7 @@ function handleTask(
     coordinatedSources?: import('clock-generator/browser').CoordinatedSourcesInput,
 ): void {
     runStreaming(runId, debugSteps, streamLogs, (options) => {
+        const given = engineBuildOf(asked);
         requireValidConfig(given);
         // the build that is clocked, which the clocks and their views are of: outside supply gets no window
         const config = clockGenerator.withoutOutsideSupply(given);

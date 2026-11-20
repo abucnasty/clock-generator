@@ -4,6 +4,7 @@ import { RecipeMetadata } from "../entities/machine/recipe/recipe-metadata";
 import { computeMachineFacts } from "../entities/traits/machine-facts-of";
 import { targetRateMaxOf } from "../crafting/feasibility/max-rate";
 import { dropLanesOf, lanesCapacityOf } from "./lane-capacity-validator";
+import { outputItemOf as mainProductOf } from "./migrate-recipe-setpoint";
 import { BeltConfig, ChestConfig, Config, ConfigSchema, InserterConfig, MachineConfiguration, MiningDrillConfig, TargetProductionRateConfig, TargetProductionRateConfigSchema } from "./schema";
 
 /**
@@ -133,15 +134,6 @@ export function inferSuggestedTarget(machines: readonly MachineConfiguration[]):
         return group.recipe < best.recipe ? group : best;
     });
     return O.some({ recipe: best.product, items_per_second: best.items_per_second, copies: 1 });
-}
-
-/** The main product of a recipe, null for an unknown recipe or one with no item product */
-function mainProductOf(recipe: string): string | null {
-    try {
-        return RecipeMetadata.fromRecipeName(recipe).output.name;
-    } catch {
-        return null;
-    }
 }
 
 /**

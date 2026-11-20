@@ -86,13 +86,16 @@ describe('a coverage check that comes before anything read the game data', () =>
     it('refuses a config missing an inserter in Node, before any simulation', async () => {
         vi.resetModules();
         await import('../data/factorio-data-file');
-        const { FactorioDataService: data } = await import('../data/factorio-data-service');
-        const { generateClockAlternatives } = await import('../crafting/generate-blueprint');
         const { parseConfig: parse } = await import('./loader');
         const fs = await import('fs');
         // without the machines' former type, which is read with the data
         const raw = JSON.parse(fs.readFileSync(TestConfigPaths.BAD_ACCUMULATOR_CONFIG, 'utf-8'));
         const config = await parse(JSON.stringify({ ...raw, machines: raw.machines.map(({ type: _type, ...machine }: { type?: string }) => machine) }));
+        // the load reads the data (a setpoint named by a recipe is read as its item); the generation then starts in a script with none read
+        vi.resetModules();
+        await import('../data/factorio-data-file');
+        const { FactorioDataService: data } = await import('../data/factorio-data-service');
+        const { generateClockAlternatives } = await import('../crafting/generate-blueprint');
         expect(data.isInitialized()).toBe(false);
         expect(() => generateClockAlternatives(config, { logger: quiet })).toThrow(
             "Missing inserter coverage (2 issues):\n  - Machine 1 (accumulator): missing input inserter for 'iron-plate'\n"

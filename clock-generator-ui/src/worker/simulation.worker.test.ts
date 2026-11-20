@@ -676,3 +676,54 @@ describe('an unexpected error in the check is not an engine refusal', () => {
         }
     });
 });
+
+describe('a setpoint named by a recipe, as the picker stores it', () => {
+    /** One biochamber on jellynut-processing, which makes jelly, with an inserter for each ingredient and each result */
+    const jellynut = (recipe: string) => {
+        const supply = (id: number, ingredient: string) => ({ id, type: 'transport-belt', flow_direction: 0,
+            lanes: [{ ingredient, stack_size: 1, lane_end: { kind: 'unknown' } }, { ingredient, stack_size: 1, lane_end: { kind: 'unknown' } }] });
+        return { setpoint: { recipe, items_per_second: 1, copies: 1 },
+            machines: [{ id: 1, recipe: 'jellynut-processing', productivity: 0, crafting_speed: 2, prototype: 'biochamber' }],
+            inserters: [
+                { id: 1, source: { type: 'belt', id: 3, pickup_length: 1 }, sink: { type: 'machine', id: 1 }, stack_size: 1 },
+                { id: 2, source: { type: 'belt', id: 4, pickup_length: 1 }, sink: { type: 'machine', id: 1 }, stack_size: 1 },
+                { id: 3, source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 1 }, stack_size: 1, filters: ['jelly'] },
+                { id: 4, source: { type: 'machine', id: 1 }, sink: { type: 'belt', id: 2 }, stack_size: 1, filters: ['jellynut-seed'] },
+            ],
+            belts: [
+                { id: 1, type: 'transport-belt', lanes: [{ ingredient: 'jelly', stack_size: 1 }, { ingredient: 'jelly', stack_size: 1 }] },
+                { id: 2, type: 'transport-belt', lanes: [{ ingredient: 'jellynut-seed', stack_size: 1 }] },
+                supply(3, 'jellynut'), supply(4, 'nutrients'),
+            ],
+            chests: [] } as unknown as Config;
+    };
+
+    it('Check finds the machines that make the recipe main product, and leaves the config as it was', async () => {
+        const named = jellynut('jellynut-processing');
+        const before = structuredClone(named);
+        expect(await send({ type: 'validate', requestId: 31, config: jellynut('jelly') })).toMatchObject({ type: 'validated' });
+        expect(await send({ type: 'validate', requestId: 32, config: named })).toMatchObject({ type: 'validated' });
+        expect(named).toEqual(before);
+    });
+
+    it('offers the conversion of repeated units for the build as the form holds it, with the recipe name', async () => {
+        const one = jellynut('jellynut-processing');
+        // two units that share the belts, as 2 units set as one copy
+        const named: Config = { ...one,
+            machines: [one.machines[0], { ...one.machines[0], id: 2 }],
+            inserters: [...one.inserters, ...one.inserters.map(inserter => ({ ...inserter, id: (inserter.id ?? 0) + 4,
+                source: inserter.source.type === 'machine' ? { ...inserter.source, id: 2 } : inserter.source,
+                sink: inserter.sink.type === 'machine' ? { ...inserter.sink, id: 2 } : inserter.sink }))] };
+        const response = await send({ type: 'validate', requestId: 33, config: named });
+        expect(response).toMatchObject({ type: 'validated', recovery: { kind: 'repeated-units', sourceConfigKey: JSON.stringify(named), detectedCopies: 2 } });
+        const conversion = await ask({ kind: 'repeated-unit-conversion', config: named });
+        expect(conversion).toMatchObject({ kind: 'available' });
+        if (conversion.kind === 'available') expect(conversion.plan.candidate.setpoint.recipe).toBe('jellynut-processing');
+    });
+
+    it('is answered as the item in the queries, and kept as the recipe in an imported file', async () => {
+        const named = jellynut('jellynut-processing');
+        expect(await ask({ kind: 'target-rate-max', config: named })).toEqual(await ask({ kind: 'target-rate-max', config: jellynut('jelly') }));
+        expect((await ask({ kind: 'config-file', config: named })).setpoint.recipe).toBe('jellynut-processing');
+    });
+});
