@@ -350,9 +350,6 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
         losses: [{kind: "cut", item: "electric-furnace"}, {kind: "block"}, {kind: "cut", item: "productivity-module"}],
         limit: "the scaffold holds one copy of the job's seven",
         start: "backpressure",
-        no_staged_start: "ruling 60's start refuses the build on the selected pick too: a drill drops stone straight into the rail assembler, so a machine that only "
-            + "windowed inserters feed holds items at the opening (\"Machines that only windowed inserters fill hold items at the opening: assembling-machine-3 "
-            + "(unit 376): 164 in, 0 out, 0 made\", 2026-11-19, Factorio 2.1.24, master 214bd7ad). The job is not recorded in the game; the limit is in the README",
     },
     {
         name: "production-science-120-two-belts-shared-pickup", job: "variants-PRODUCTION_SCIENCE_120_TWO_BELTS_SHARED_PICKUP", config: "PRODUCTION_SCIENCE_120_TWO_BELTS", copies: 1,
@@ -360,9 +357,6 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
         losses: [{kind: "cut", item: "electric-furnace"}, {kind: "block"}, {kind: "cut", item: "productivity-module"}],
         limit: "the scaffold holds one copy of the job's seven",
         start: "backpressure",
-        no_staged_start: "ruling 60's start refuses the build on the selected pick too: a drill drops stone straight into the rail assembler, so a machine that only "
-            + "windowed inserters feed holds items at the opening (\"Machines that only windowed inserters fill hold items at the opening: assembling-machine-3 "
-            + "(unit 376): 164 in, 0 out, 0 made\", 2026-11-19, Factorio 2.1.24, master 214bd7ad). The job is not recorded in the game; the limit is in the README",
     },
     {
         name: "chemical-science-240-shared-foundry", job: "config-CHEMICAL_SCIENCE_240_SHARED_FOUNDRY", config: "CHEMICAL_SCIENCE_240_SHARED_FOUNDRY", copies: 1,
