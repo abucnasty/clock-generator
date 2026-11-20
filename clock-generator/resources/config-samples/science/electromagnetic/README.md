@@ -53,3 +53,8 @@ blueprint is unchanged; losses use script disable flags and restore the original
 
 The test also checks that the clock selected for this config holds and has recovery in the simulator, is stable, takes turns,
 and leaves no inserter always on.
+
+## The scaffold of the job's copies
+
+`electromagnetic-240-recycler-belt-fed.scaffold` is warbaque's blueprint of two copies; the job has five. `electromagnetic-240-recycler-belt-fed-five-copies.blueprint` holds five copies 13 tiles apart, made by repeating the
+copy along the input belts. Only the game tests use it (`tests/game/builds/missing-recordings-clock.game.test.ts`); `npm run record` and `electromagnetic-science-240-recycler-belt-fed-clock.game.test.ts` build the blueprint of two copies.
