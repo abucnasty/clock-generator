@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { readConfigFile, readSavedConfig } from './usePersistedConfigForm';
+import formerSetpoint from '../../../clock-generator/src/config/fixtures/legacy/recipe-setpoint.json?raw';
+import { readConfigFile, readSavedConfig, serializeConfig } from './usePersistedConfigForm';
 import { readSidecarExport } from '../utils/sidecarExport';
 
 // A build saved by the site before the setpoint was named so keeps its `target_output`, and `loop_seed_items` in its overrides.
@@ -63,5 +64,35 @@ describe('a build saved or exported under the former period_duration_ticks', () 
         expect(inserter).toMatchObject({ window_cycle_ticks: 60 });
         expect(drill).toMatchObject({ window_cycle_ticks: 90 });
         expect(inserter).not.toHaveProperty('period_duration_ticks');
+    });
+});
+
+// A build saved or exported before the setpoint named its item holds `recipe` in it: the engine's fixture of that file, with the chests the form holds.
+// The name it holds is a recipe's, and stays as it is: the form keeps what the build was given, and the engine reads it.
+const recipeHeld = JSON.stringify({ ...JSON.parse(formerSetpoint), chests: [] });
+
+describe('a build saved or exported when its setpoint held `recipe`', () => {
+    it('is read from the browser\'s storage with `item` set to the name it held, and no `recipe`', () => {
+        const form = readSavedConfig(recipeHeld)!;
+        expect(form.setpoint).toMatchObject({ item: 'jellynut-processing', items_per_second: 1, copies: 1 });
+        expect(form.setpoint).not.toHaveProperty('recipe');
+    });
+
+    it('is read from an imported file, or a share link, with `item` set to the name it held, and no `recipe`', () => {
+        const { setpoint } = readConfigFile(recipeHeld) as { setpoint: object };
+        expect(setpoint).toMatchObject({ item: 'jellynut-processing', items_per_second: 1, copies: 1 });
+        expect(setpoint).not.toHaveProperty('recipe');
+    });
+
+    it('keeps the `item` of a file that holds both', () => {
+        const both = JSON.stringify({ ...JSON.parse(recipeHeld), setpoint: { ...JSON.parse(formerSetpoint).setpoint, item: 'jelly' } });
+        expect((readConfigFile(both) as { setpoint: object }).setpoint).toMatchObject({ item: 'jelly' });
+        expect((readConfigFile(both) as { setpoint: object }).setpoint).not.toHaveProperty('recipe');
+    });
+
+    it('is saved with `item` and no `recipe`', () => {
+        const saved = JSON.parse(serializeConfig(readSavedConfig(recipeHeld)!)) as { setpoint: object };
+        expect(saved.setpoint).toMatchObject({ item: 'jellynut-processing' });
+        expect(saved.setpoint).not.toHaveProperty('recipe');
     });
 });

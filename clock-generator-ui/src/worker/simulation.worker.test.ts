@@ -1,10 +1,11 @@
 import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
+import formerSetpoint from '../../../clock-generator/src/config/fixtures/legacy/recipe-setpoint.json?raw';
 import grenadeSample from '../../../clock-generator/resources/config-samples/intermediates/grenade/grenade-240-fills-belt-exactly.json?raw';
 import militarySample from '../../../clock-generator/resources/config-samples/science/military/military-240.json?raw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LATEST_SIDECAR_VERSION, type Config, type DebugSteps } from 'clock-generator/browser';
 import type { EngineAnswers, EngineQuery, LiveCoverage, PastedEntities, PrimaryCompletedResponse, ValidationFailedResponse, WorkerRequest, WorkerResponse } from './types';
-import { readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
+import { readConfigFile, readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
 import { configToFormData, formDataToConfig } from '../utils/configForm/configMapping';
 import { createDefaultConfig } from '../utils/configForm/formData';
 import { applyPaste } from '../utils/pastePreview';
@@ -725,5 +726,33 @@ describe('a setpoint named by a recipe, as the picker stores it', () => {
         const named = jellynut('jellynut-processing');
         expect(await ask({ kind: 'target-rate-max', config: named })).toEqual(await ask({ kind: 'target-rate-max', config: jellynut('jelly') }));
         expect((await ask({ kind: 'config-file', config: named })).setpoint.recipe).toBe('jellynut-processing');
+    });
+});
+
+// A file, a share link or a saved build from before the setpoint named its item holds `recipe`: the engine's fixture of it, with the form's chests.
+describe('a setpoint that holds `recipe`', () => {
+    const former = { ...JSON.parse(formerSetpoint), chests: [] };
+    const heldBy = (form: unknown) => (form as { setpoint: Record<string, unknown> }).setpoint;
+
+    it('opens from a file with `item` set to the name it held, not resolved', async () => {
+        const read = heldBy(await ask({ kind: 'config-file', config: former }));
+        expect(read).toMatchObject({ item: 'jellynut-processing', items_per_second: 1, copies: 1 });
+        expect(read).not.toHaveProperty('recipe');
+        // as the page hands it: its former names read first
+        expect(heldBy(await ask({ kind: 'config-file', config: readConfigFile(JSON.stringify(former)) }))).toMatchObject({ item: 'jellynut-processing' });
+    });
+
+    it('opens from a saved form with `item` set to the name it held, not resolved', async () => {
+        const answer = await ask({ kind: 'saved-config', config: former });
+        expect(heldBy(answer.form)).toMatchObject({ item: 'jellynut-processing', items_per_second: 1, copies: 1 });
+        expect(heldBy(answer.form)).not.toHaveProperty('recipe');
+        expect(answer.problem).toBeNull();
+        expect(heldBy((await ask({ kind: 'saved-config', config: readSavedConfig(JSON.stringify(former)) })).form)).toMatchObject({ item: 'jellynut-processing' });
+    });
+
+    it('keeps the name it held where the rate is out of bounds, as the form shows it to be fixed', async () => {
+        const zero = { ...former, setpoint: { ...former.setpoint, items_per_second: 0 } };
+        expect(heldBy(await ask({ kind: 'config-file', config: zero }))).toMatchObject({ item: 'jellynut-processing', items_per_second: 0 });
+        expect(heldBy((await ask({ kind: 'saved-config', config: zero })).form)).toMatchObject({ item: 'jellynut-processing' });
     });
 });

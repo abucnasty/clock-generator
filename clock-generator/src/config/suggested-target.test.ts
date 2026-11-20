@@ -65,6 +65,31 @@ describe("parseSuggestedTarget", () => {
     });
 });
 
+describe("parseSuggestedTarget, for the field the Sidecar writes (`recipe`) and the one a setpoint holds (`item`)", () => {
+    const pasted = { recipe: "transport-belt", items_per_second: 3, copies: 1 };
+
+    it("gives a pasted `recipe` as the target's `item`, with the rest as it was", () => {
+        expect(parseSuggestedTarget(pasted)).toEqual(O.some({ item: "transport-belt", items_per_second: 3, copies: 1 }));
+        expect(O.toNullable(parseSuggestedTarget(pasted))).not.toHaveProperty("recipe");
+    });
+
+    it("takes a pasted `item` as it is, and takes `item` where both are given", () => {
+        const item = { item: "transport-belt", items_per_second: 3, copies: 1 };
+        expect(parseSuggestedTarget(item)).toEqual(O.some(item));
+        expect(parseSuggestedTarget({ ...pasted, item: "iron-gear-wheel" })).toEqual(O.some({ ...item, item: "iron-gear-wheel" }));
+    });
+
+    it("gives None for an empty name under either key", () => {
+        expect(parseSuggestedTarget({ ...pasted, recipe: "" })).toEqual(O.none);
+        expect(parseSuggestedTarget({ item: "", items_per_second: 3, copies: 1 })).toEqual(O.none);
+    });
+
+    it("names the item of a target worked out from the machines", () => {
+        expect(O.toNullable(inferSuggestedTarget(machines(assembler("iron-gear-wheel"))))).toHaveProperty("item", "iron-gear-wheel");
+        expect(O.toNullable(inferSuggestedTarget(machines(assembler("iron-gear-wheel"))))).not.toHaveProperty("recipe");
+    });
+});
+
 describe("inferSuggestedTarget", () => {
     it("suggests the product of a single machine at its output rate", () => {
         const gear = assembler("iron-gear-wheel");

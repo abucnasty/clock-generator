@@ -56,6 +56,14 @@ it('merges a field failure from Check with the live field issue and retains its 
     expect(issues.some(issue => issue.source === 'engine')).toBe(false);
 });
 
+it('points a field failure at the setpoint\'s item, with no live field issue beside it, to the target recipe', () => {
+    const issues = buildValidationIssues({ ...none, machines: config.machines,
+        failure: { message: 'Required item', diagnostics: [{ kind: 'field', path: ['setpoint', 'item'], message: 'Required' }] } });
+    expect(issues.filter(issue => issue.id === 'target-recipe')).toHaveLength(1);
+    expect(issues.find(issue => issue.id === 'target-recipe')?.fieldTarget).toEqual({ kind: 'target-recipe' });
+    expect(issues.some(issue => issue.source === 'engine')).toBe(false);
+});
+
 it('does not hide an unrelated engine refusal behind an existing live error', () => {
     const issues = collect([empty], [], { message: 'Independent simulation refusal' });
     expect(issues).toHaveLength(2);
@@ -158,6 +166,7 @@ it('has no refusal once the build has changed: the check then no longer counts a
 it.each([
     [['setpoint', 'items_per_second'], 'Items per Second: Required'],
     [['setpoint', 'recipe'], 'Recipe: Required'],
+    [['setpoint', 'item'], 'Recipe: Required'],
     [['machines', 1, 'recipe'], 'Machine 8 recipe: Required'],
     [['inserters', 0, 'source', 'pickup_layout'], 'Inserter 4 source pickup layout: Required'],
     [['belts', 0, 'lanes', 1, 'stack_size'], 'Belt 9 lane 2 stack size: Required'],
