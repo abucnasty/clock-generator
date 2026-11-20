@@ -8,7 +8,7 @@ a line that names the reason and lists the jobs. A pull request that moves no re
 CI checks this file: the "Record check" fails when a selected clock got worse than in the base and its job key is not in the lines the pull
 request adds to this file.
 
-## Five samples' copy spacing fits their copy (#PR)
+## Five samples' copy spacing fits their copy (#863)
 4 config files, 6 jobs moved, no selected clock, verdict, hold, rate or wake-ups. `copy_offset` of advanced circuit 230 and 240 is 12 (was 10), of electric furnace 20 and logistic science 240 direct insert 13 (was 12): the width of the machines of one copy in its scaffold, so copy 2 no longer stands on copy 1. The spacing is abucnasty's ruling 1069.
 - config-ADVANCED_CIRCUIT_230, config-ELECTRIC_FURNACE_20: `config_sha256` only
 - config-ADVANCED_CIRCUIT_240, variants-ADVANCED_CIRCUIT_240_BACKED_UP: `results_sha256` of the assessment of coordinated_sources and euclidean_swings, and `config_sha256`; no clock, verdict or rate moved
