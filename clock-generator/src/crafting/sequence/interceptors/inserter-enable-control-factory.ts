@@ -13,7 +13,7 @@ import { computeSimulationMode, SimulationMode, simulationModeForInput } from ".
 import { OutputCyclePlan } from "../cycle/output-cycle";
 import { Duration, OpenRange } from "../../../data-types";
 import { SwingDistribution } from "../cycle/swing-distribution";
-import { InserterClock, alwaysEnabledInserters } from "../unplanned-inserter-clock";
+import { InserterClock, alwaysEnabledInserters, isByProductOnlyInserter } from "../unplanned-inserter-clock";
 import { Logger } from "../../../common/logger";
 import { ContainerStorage } from "../../../simulation/components/container-storage";
 
@@ -112,6 +112,10 @@ export class EnableControlFactory {
         this.terminal_machine_states = this.findFinalMachines();
         this.terminal_inserter_states = this.findFinalInserters();
         this.always_enabled_ids = new Set(alwaysEnabledInserters({ getAll: () => this.entities }).map(it => it.entity_id.id));
+        // the plan leaves these out on purpose (their own clock or the config's always enabled), so no input inserter's windows wait on them
+        const entity_registry = { getAll: () => this.entities, getEntityById: (id: EntityId) => this.entities.find(it => it.entity_id.id === id.id) ?? null };
+        this.by_product_only_ids = new Set(this.entities.filter(Entity.isInserter)
+            .filter(it => isByProductOnlyInserter(entity_registry, it)).map(it => it.entity_id.id));
     }
 
     /** The inserters and machines of the build */
@@ -124,6 +128,9 @@ export class EnableControlFactory {
     private readonly output_sources = new Map<string, { machine: MachineState; container: ContainerStorage | null }>();
 
     private readonly always_enabled_ids: ReadonlySet<string>;
+
+    /** The inserters that only take a by-product no machine uses away: not in the transfer plan */
+    private readonly by_product_only_ids: ReadonlySet<string>;
 
     public createForEntityId(entity_id: EntityId): EnableControl {
 
@@ -786,7 +793,8 @@ export class EnableControlFactory {
         const output_inserters_for_sink = this.entity_state_registry
             .getAllStates()
             .filter(EntityState.isInserter)
-            .filter(i => i.inserter.source.entity_id.id === sink_state.machine.entity_id.id);
+            .filter(i => i.inserter.source.entity_id.id === sink_state.machine.entity_id.id)
+            .filter(i => !this.by_product_only_ids.has(i.inserter.entity_id.id));
 
         const output_inserter_enable_ranges = OpenRange.reduceRanges(
             output_inserters_for_sink.map(output_inserter_state => {
