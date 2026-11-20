@@ -533,6 +533,84 @@
     "clock_sha256": "782c742702cdf841d67621527b01eeeeed5e5d0739db98afa50c6b5bc9fe058e"
    }
   },
+  "automation-science-240": {
+   "recorded": {
+    "pr": 0,
+    "commit": "5bc872b4",
+    "frozen_head": "5bc872b4",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), Factorio 2.1.24, every copy the scaffold holds; pr is set when the PR is opened",
+    "clock_sha256": "0bc638ab0ead361b58611ee131073be7a21ca7a684dcc47d2358bcc98df6ed4f",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 240,
+    "period": 72,
+    "window": 3600,
+    "expected": 14400,
+    "steady": 7200,
+    "baseline": {
+     "ticks": 3600,
+     "total": 14400,
+     "expected": 14400,
+     "min": 14400,
+     "max": 14400,
+     "held": true,
+     "meets": true,
+     "measured": {
+      "ticks": 3600,
+      "items": 14400,
+      "expected": 14400,
+      "stock_start": 160,
+      "stock_end": 160,
+      "net": 14400
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut iron-gear-wheel",
+      "start": 10800,
+      "drop": 10842,
+      "release": 10842,
+      "recovered": 16814
+     },
+     {
+      "kind": "block output",
+      "start": 16814,
+      "drop": 16817,
+      "release": 16817,
+      "recovered": 16819
+     },
+     {
+      "kind": "cut copper-plate",
+      "start": 16819,
+      "drop": 16822,
+      "release": 16822,
+      "recovered": 16823
+     }
+    ],
+    "stock": {
+     "lowest": 20,
+     "end": 54,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 16823
+   },
+   "generation": {
+    "period": 72,
+    "expected": 288,
+    "verdict": "stable",
+    "selection": {
+     "id": "coordinated_sources",
+     "holds": true,
+     "rate": 240,
+     "supply": "backed_up"
+    },
+    "clock_sha256": "0bc638ab0ead361b58611ee131073be7a21ca7a684dcc47d2358bcc98df6ed4f"
+   }
+  },
   "automation-science-240-one-output-swing": {
    "recorded": {
     "pr": 0,
@@ -921,6 +999,84 @@
      "supply": "backed_up"
     },
     "clock_sha256": "3202663f1c6103642687e14b4a5e1c27b3d5f6276bc557ba3294c350441302c8"
+   }
+  },
+  "electromagnetic-science-330": {
+   "recorded": {
+    "pr": 0,
+    "commit": "5bc872b4",
+    "frozen_head": "5bc872b4",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), Factorio 2.1.24, every copy the scaffold holds; pr is set when the PR is opened",
+    "clock_sha256": "c3b310dfca640fc0e4b8fa39dffacaf22f061eb094908129e29e66b5c4895d72",
+    "clock_basis": "capture"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 330,
+    "period": 2112,
+    "window": 3600,
+    "expected": 19800,
+    "steady": 5712,
+    "baseline": {
+     "ticks": 3600,
+     "total": 19789,
+     "expected": 19800,
+     "min": 19778,
+     "max": 19822,
+     "held": false,
+     "meets": true,
+     "measured": {
+      "ticks": 2112,
+      "items": 11616,
+      "expected": 11616,
+      "stock_start": 154,
+      "stock_end": 154,
+      "net": 11616
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut accumulator",
+      "start": 9312,
+      "drop": 9340,
+      "release": 9340,
+      "recovered": 22860
+     },
+     {
+      "kind": "block output",
+      "start": 22860,
+      "drop": 22870,
+      "release": 22870,
+      "recovered": 22882
+     },
+     {
+      "kind": "cut supercapacitor",
+      "start": 22882,
+      "drop": 22887,
+      "release": 22887,
+      "recovered": 37644
+     }
+    ],
+    "stock": {
+     "lowest": 0,
+     "end": 235,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 37644
+   },
+   "generation": {
+    "period": 2112,
+    "expected": 11616,
+    "verdict": "stable",
+    "selection": {
+     "id": "takt_batches_observed",
+     "holds": true,
+     "rate": 330,
+     "supply": "backed_up"
+    },
+    "clock_sha256": "c3b310dfca640fc0e4b8fa39dffacaf22f061eb094908129e29e66b5c4895d72"
    }
   },
   "flying-robot-frame-80": {
@@ -1645,6 +1801,162 @@
      "supply": null
     },
     "clock_sha256": "887d21be999c0fd4f1126ff40ad21e40bc5e6da68425461a93dc30b1517fa81f"
+   }
+  },
+  "production-science-120-two-belts": {
+   "recorded": {
+    "pr": 861,
+    "commit": "fef6c58e",
+    "frozen_head": "fef6c58e",
+    "clock_sha256": "fdadf1208da4052e7de2e474352e3d5ac85118d67e9042890a803fd46a0bacb8",
+    "clock_basis": "capture",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), Factorio 2.1.24; the second run gave the same summary; one copy of the job's seven"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 17.142857,
+    "period": 336,
+    "window": 3600,
+    "expected": 1028.571429,
+    "steady": 6960,
+    "baseline": {
+     "ticks": 3600,
+     "total": 1026,
+     "expected": 1028.571429,
+     "min": 1026,
+     "max": 1032,
+     "held": false,
+     "meets": true,
+     "measured": {
+      "ticks": 3360,
+      "items": 960,
+      "expected": 960.0000004000001,
+      "stock_start": 20,
+      "stock_end": 20,
+      "net": 960
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut electric-furnace",
+      "start": 10560,
+      "drop": 10726,
+      "release": 10726,
+      "recovered": 15985
+     },
+     {
+      "kind": "block output",
+      "start": 15985,
+      "drop": 16009,
+      "release": 16009,
+      "recovered": 16070
+     },
+     {
+      "kind": "cut productivity-module",
+      "start": 16070,
+      "drop": 16438,
+      "release": 16438,
+      "recovered": 21697
+     }
+    ],
+    "stock": {
+     "lowest": 0,
+     "end": 8,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 21697
+   },
+   "generation": {
+    "period": 336,
+    "expected": 96,
+    "verdict": "stable",
+    "selection": {
+     "id": "euclidean_swings",
+     "holds": true,
+     "rate": 120,
+     "supply": "backed_up"
+    },
+    "clock_sha256": "fdadf1208da4052e7de2e474352e3d5ac85118d67e9042890a803fd46a0bacb8"
+   }
+  },
+  "production-science-120-two-belts-shared-pickup": {
+   "recorded": {
+    "pr": 861,
+    "commit": "fef6c58e",
+    "frozen_head": "fef6c58e",
+    "clock_sha256": "fdadf1208da4052e7de2e474352e3d5ac85118d67e9042890a803fd46a0bacb8",
+    "clock_basis": "capture",
+    "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), Factorio 2.1.24; the second run gave the same summary; one copy of the job's seven"
+   },
+   "native": {
+    "protocol": "trailing-minute",
+    "generationVerdict": "stable",
+    "target": 17.142857,
+    "period": 336,
+    "window": 3600,
+    "expected": 1028.571429,
+    "steady": 6960,
+    "baseline": {
+     "ticks": 3600,
+     "total": 1026,
+     "expected": 1028.571429,
+     "min": 1026,
+     "max": 1032,
+     "held": false,
+     "meets": true,
+     "measured": {
+      "ticks": 3360,
+      "items": 960,
+      "expected": 960.0000004000001,
+      "stock_start": 20,
+      "stock_end": 20,
+      "net": 960
+     }
+    },
+    "disturbances": [
+     {
+      "kind": "cut electric-furnace",
+      "start": 10560,
+      "drop": 10726,
+      "release": 10726,
+      "recovered": 15985
+     },
+     {
+      "kind": "block output",
+      "start": 15985,
+      "drop": 16009,
+      "release": 16009,
+      "recovered": 16070
+     },
+     {
+      "kind": "cut productivity-module",
+      "start": 16070,
+      "drop": 16438,
+      "release": 16438,
+      "recovered": 21697
+     }
+    ],
+    "stock": {
+     "lowest": 0,
+     "end": 8,
+     "holds": true
+    },
+    "result": "holds",
+    "ended": 21697
+   },
+   "generation": {
+    "period": 336,
+    "expected": 96,
+    "verdict": "stable",
+    "selection": {
+     "id": "euclidean_swings",
+     "holds": true,
+     "rate": 120,
+     "supply": "backed_up"
+    },
+    "clock_sha256": "fdadf1208da4052e7de2e474352e3d5ac85118d67e9042890a803fd46a0bacb8"
    }
   },
   "productivity-module-80-chest-chain": {
