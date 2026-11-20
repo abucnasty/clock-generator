@@ -711,7 +711,7 @@ describe('a setpoint named by a recipe, as the picker stores it', () => {
         // two units that share the belts, as 2 units set as one copy
         const named: Config = { ...one,
             machines: [one.machines[0], { ...one.machines[0], id: 2 }],
-            inserters: [...one.inserters, ...one.inserters.map(inserter => ({ ...inserter, id: inserter.id + 4,
+            inserters: [...one.inserters, ...one.inserters.map(inserter => ({ ...inserter, id: (inserter.id ?? 0) + 4,
                 source: inserter.source.type === 'machine' ? { ...inserter.source, id: 2 } : inserter.source,
                 sink: inserter.sink.type === 'machine' ? { ...inserter.sink, id: 2 } : inserter.sink }))] };
         const response = await send({ type: 'validate', requestId: 33, config: named });
