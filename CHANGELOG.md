@@ -9,25 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the tests, are in the git history.
 Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#changelogs).
 
-## [Unreleased]
+## [0.31.0] - 2026-11-19
 
 ### Added
 - ui: a switch in Advanced to judge clocks from the cold start
 - simulation: an input lane can state the length of belt before the first copy
 - simulation: items on shared input lanes wait a tick at underground belt entrances
+- simulation: an output inserter can state which underground belt it drops onto
 
 ### Changed
 - ui: result texts name the start the clocks were judged from, not always the cold start
 - ui: LCM Override and Force Output Swings in Advanced share one layout and line up
-- simulation: the iron plate car sample states its output belt
 
 ### Fixed
-- simulation: the lithium plate build's output inserters wait for their belt as in the game
+- simulation: output inserters dropping onto underground belts wait for their belt as in the game
 - simulation: on one-copy builds an output block fills the stated output belt before machines stop
 - simulation: after an output block, a stated output belt starts moving in the game's tick
 - generation: Pitch Pickups times full hands where the batched clock fails, as where it holds
-- simulation: automation science 240 keeps the items on its belt before copy 1 during supply stops
-- simulation: automation science 240 copies share input lanes their feeders fill as in the game
+- simulation: shared input lanes keep the belt's items before the first copy during supply stops
+- simulation: copies sharing an input lane take items as their feeders put them on
 
 ## [0.30.0] - 2026-11-18
 
@@ -38,15 +38,11 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - simulation: clocks are judged from the build filled up to its clock, the cold start an option
 - generation: Coordinated Sources now checks its clock with every copy while it chooses
 - ui: refusals of builds not supported yet now say what is not supported, with no release or item number
-- generation: the chemical science, grenade and utility science samples now judge their output belts
 - blueprint: combinator descriptions and the wiring reference now show each inserter's source, item and sink
 - simulation: an output belt can now be stated for builds with several output inserters
 - simulation: output belts can now have several lines and a side belt per output inserter
 - simulation: builds that share no lane now check their stated output belt too
-- generation: the lithium plate sample now judges its output belts
-- generation: the military science 240 sample now judges its output belts
-- generation: the logistic science sample now judges its output belt
-- generation: the flying robot frame sample now judges its output belts
+- generation: builds that state their output belts now have their clocks judged with them
 - generation: Coordinated Sources also tries the window cycle of the next best clock
 - generation: agricultural science clocks can now switch all four egg inserters on in windows
 
