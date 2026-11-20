@@ -92,7 +92,7 @@ export function alwaysEnabledInserters(entity_registry: Pick<ReadableEntityRegis
  * An inserter that only takes by-products no machine in the config uses just clears them out of the machine,
  * whatever it puts them on. Nothing in the chain depends on its rate, so it is not part of the plan.
  */
-export function isByProductOnlyInserter(entity_registry: ReadableEntityRegistry, inserter: Inserter): boolean {
+export function isByProductOnlyInserter(entity_registry: Pick<ReadableEntityRegistry, "getAll" | "getEntityById">, inserter: Inserter): boolean {
     const source = entity_registry.getEntityById(inserter.source.entity_id);
     if (!source || !Entity.isMachine(source) || inserter.filtered_items.size === 0) {
         return false;

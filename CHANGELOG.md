@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 From 0.6.0 on, it lists only what people generating clocks will notice. Changes that only matter to working on the generator, such as the recorder, the harness and the tests, are in the git history.
 Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#changelogs).
 
+## [Unreleased]
+
+### Fixed
+
+- generation: builds with an inserter taking a by-product off the output machine now generate
+
 ## [0.31.0] - 2026-11-19
 
 ### Added
