@@ -10,5 +10,5 @@
 
 `utility-120.scaffold` and `utility-120-processing-unit-and-lds-on-one-belt.scaffold` hold one copy and two copies. The jobs have seven. `utility-120-seven-copies.blueprint` and
 `utility-120-processing-unit-and-lds-on-one-belt-seven-copies.blueprint` hold seven copies each, 9 tiles apart, made by repeating each scaffold's copy along its belts: the copies take from the
-same input belts, each copy has its own output belt and void chest, and the belts end as the scaffold's end. Only the game tests use them (`tests/game/builds/missing-recordings-clock.game.test.ts`);
+same input belts, each copy has its own output belt and void chest, and the belts stop where the scaffold's belts stop. Only the game tests use them (`tests/game/builds/missing-recordings-clock.game.test.ts`);
 `npm run record` builds the one-copy scaffolds.

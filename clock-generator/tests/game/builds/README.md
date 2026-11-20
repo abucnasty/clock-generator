@@ -1217,8 +1217,8 @@ A scaffold of one or two copies leaves the joins of the other copies out of a ru
 as `<stem>-<N>-copies.blueprint` (`<stem>-<role>.blueprint`, a blueprint string that is not the one-copy scaffold). Each repeats the scaffold's copy along its belts at the build's spacing, so the copies share the input belts and
 each copy has its own output belt and void chest. They are used by the game tests only (`missing-recordings-clock.game.test.ts`, the case's `scaffold`); `npm run record` still builds the one-copy scaffolds.
 The belts of each were traced with the pinned belt tracer (`trace.py`, which agrees with the game on 596 of 596 reads of the automation science 240 scaffold's output side; its input side and three side-load cases are not pinned,
-and it sizes only 3x3 assemblers) and compared with the scaffold: no overlap, the same unpaired undergrounds, the same ends of the shared lines, one line to a loader for each copy, and every belt piece of the stamp has a
-piece of the scaffold of the same kind at a whole pitch (the belt that ends at the scaffold's last copy runs on through the others).
+and it sizes only 3x3 assemblers) and compared with the scaffold: no overlap, the same unpaired undergrounds, the same last tiles of the shared lines, one line to a loader for each copy, and every belt tile of the stamp has a
+tile of the scaffold of the same kind at a whole pitch (the belt that stops at the scaffold's last copy runs on through the others).
 
 The selected clock of each job, from ruling 60's start, every copy, the standard losses (Factorio 2.1.24, `CLOCK_RECORDING_CACHE=off`, each run twice with equal summaries and equal per-copy verdicts), pinned in
 [missing-recordings-clock-controls.json](missing-recordings-clock-controls.json):
