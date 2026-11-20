@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import {describe, expect, it} from "vitest";
-import {judgeBaseline, judgeBaselineOfFinals, runHolds} from "./run-judgement";
+import {judgeAfterLoss, judgeBaseline, judgeBaselineOfFinals, runHolds} from "./run-judgement";
 
 // one final machine worth 1 a product, 10 products a 60-tick cycle (10 a second), steady state at tick 3,600, a baseline of
 // 3,600 ticks: 60 whole cycles, then the end of the run at 7,200
@@ -210,5 +210,51 @@ describe("judgeBaseline: a whole number of the run's repeat (abucnasty, 2026-11-
     it("judges a copy's final machines over the same whole repeats", () => {
         // the assemblers 3 and 7: 288 each in every repeat of 3 cycles, 26 and 2/3 a second each, 53 and 1/3 together
         expect(judgeBaselineOfFinals(nine(), 480 / 9, [2, 6])).toMatchObject({ticks: 3240, net: 2880, meets: true, repeat_cycles: 3});
+    });
+});
+
+// What a copy puts out after the last loss, over a whole number of the run's repeat (decision 1057, abucnasty's 988 for the baseline). The
+// series is the game's own: copy 10 (unit 1075) of the electromagnetic science 330 build, 11 copies, ruling 60's start, the supercapacitor lane cut at
+// 9,312 (Factorio 2.1.24), from diag2-capture/electromagnetic-science-330-supercapacitors in 2026-11-judged-start-recordings-2/evidence and its
+// work folder 2026-11-em-330-supercapacitor. The copy makes all 1,056 packs of every 2,112-tick cycle, but its two output inserters take 67 and 65
+// hands in turn, so its net output reads 1,040 and 1,072 in turn: a cycle that ends a hand early reads 16 short. The rows are the test's own tail
+// rows (1,740 + k x 2,112); the run's tail began at 24,972 and the copy had settled into the pattern from 12,300
+describe("judgeAfterLoss: a whole number of the run's repeat (decision 1057)", () => {
+    const recorded = JSON.parse(fs.readFileSync(path.join(__dirname, "run-judgement-em330-copy10.json"), "utf8")) as {rows: {t: number; p: number[]; s: number[]}[]};
+    const finals = [{worth: 1}];
+    const target = 30; // 1,056 packs in 2,112 ticks: 30 a second
+    const from = (t: number) => recorded.rows.filter(row => row.t >= t);
+
+    it("holds copy 10 over the cycles it was recorded to run after the loss: 1,040 and 1,072 in turn are 2,112 in a repeat of two", () => {
+        // 6 rows, 5 cycles: 1,040 1,072 1,040 1,072 1,040; the repeat of two is seen twice, the last four cycles are judged
+        const after = judgeAfterLoss(finals, from(20748), [0], target, 10_560);
+        expect(after.cycles.map(cycle => cycle.net)).toEqual([2112, 2112]);
+        expect(after.short).toEqual([]);
+        expect(after.total).toEqual({net: 4224, expected: 4224});
+        expect(after.repeat_cycles).toBe(2);
+    });
+
+    it("judges one cycle of the last minute as before where the tail holds no repeat twice (the recorded tail: three cycles)", () => {
+        const tail = from(24972);
+        expect(tail.map(row => row.t)).toEqual([24972, 27084, 29196, 31308]);
+        const after = judgeAfterLoss(finals, tail, [0], target);
+        expect(after.cycles.map(cycle => cycle.net)).toEqual([1040]);
+        expect(after.short).toHaveLength(1);
+        expect(after.repeat_cycles).toBeUndefined();
+    });
+
+    it("fails a copy that is truly short: one pack short in every repeat", () => {
+        // one pack less in the products of every second cycle, from the first cycle of the span on
+        const short = from(20748).map((row, i) => ({...row, p: [row.p[0] - Math.floor((i + 1) / 2)]}));
+        const after = judgeAfterLoss(finals, short, [0], target, 10_560);
+        expect(after.repeat_cycles).toBe(2);
+        expect(after.short.length).toBeGreaterThan(0);
+        expect(after.short.every(cycle => cycle.net === 2111)).toBe(true);
+    });
+
+    it("fails a copy that is a hand short in every cycle (no repeat to cut)", () => {
+        const short = from(20748).map((row, i) => ({...row, p: [row.p[0] - 16 * i]}));
+        const after = judgeAfterLoss(finals, short, [0], target, 10_560);
+        expect(after.short.length).toBeGreaterThan(0);
     });
 });

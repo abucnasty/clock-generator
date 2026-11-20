@@ -228,4 +228,33 @@ function judgeBaselineOfFinals(run, target, indices) {
         ...(repeat !== null && {repeat_cycles: repeat})};
 }
 
-module.exports = {judgeBaseline, judgeBaselineOfFinals, runHolds};
+/**
+ * What a copy of a build puts out after the last loss, judged from the rows of the run's tail (the missing-recordings probe: one row
+ * for each whole clock cycle from the tick of the last recovery on, products and output stock of every final machine): the
+ * products of the copy's final machines less the stock they gained, in each whole clock cycle of the last `ticks` of the tail (at
+ * least two rows: one cycle), against the copy's target. A cycle that falls short is listed.
+ * @param {{worth: number}[]} finals every final machine of the run
+ * @param {SeriesRow[]} tail the rows of the tail, the oldest first
+ * @param {number[]} indices the copy's final machines, as places in `finals`
+ * @param {number} target products a second of this copy
+ * @param {number} ticks how much of the tail's end is judged (a minute: the protocol's)
+ */
+function judgeAfterLoss(finals, tail, indices, target, ticks = 3600) {
+    const tailEnd = tail.length > 0 ? tail[tail.length - 1].t : 0;
+    // the whole clock cycles of at least `ticks`: a clock cycle longer than that is judged as the one cycle that ends the run
+    const lastMinute = tail.filter(row => row.t >= tailEnd - ticks);
+    const rows = lastMinute.length >= 2 ? lastMinute : tail.slice(-2);
+    const perTick = target / 60;
+    const net = (/** @type {SeriesRow} */ from, /** @type {SeriesRow} */ to) => indices.reduce((sum, k) =>
+        sum + (list(to.p)[k] - list(from.p)[k]) * finals[k].worth - ((list(to.s)[k] ?? 0) - (list(from.s)[k] ?? 0)), 0);
+    const cycles = [];
+    for (let i = 1; i < rows.length; i++) {
+        const span = rows[i].t - rows[i - 1].t;
+        cycles.push({t: rows[i - 1].t, ticks: span, net: net(rows[i - 1], rows[i]), expected: perTick * span});
+    }
+    const short = cycles.filter(cycle => cycle.net < cycle.expected - 1e-6);
+    const total = {net: cycles.reduce((sum, it) => sum + it.net, 0), expected: cycles.reduce((sum, it) => sum + it.expected, 0)};
+    return {cycles, short, total};
+}
+
+module.exports = {judgeBaseline, judgeBaselineOfFinals, judgeAfterLoss, runHolds};

@@ -9,6 +9,7 @@ import {recordInFactorio} from "../../../src/harness/factorio-harness";
 import {recipesMaking} from "../../../src/harness/recording-output";
 import {matchCopies} from "../../../src/verification/entity-copies";
 import {composeProbeSource} from "../helpers/probe-source";
+import {judgeAfterLoss} from "../helpers/run-judgement";
 import {withSearchFromEveryStart} from "../helpers/search-switch";
 import {clockHash, clockToRun, expectedNativeSummary, readRecordJob} from "./clock-controls";
 import {controlsFileOf, MISSING_RECORDING_CASES, scaffoldFile} from "./missing-recordings-clock-fixtures";
@@ -135,18 +136,9 @@ describe.sequential("the selected clock of a record job from the staged start, w
                 }
                 const short = cycles.filter(cycle => cycle.net < cycle.expected - 1e-6);
                 // after the losses: the whole clock cycles of the last minute of the tail (the run goes on TAIL_TICKS after its last
-                // loss is recovered, or after it fails)
-                const tailRows = (report.tail?.rows ?? []) as Row[];
-                const tailEnd = tailRows.length > 0 ? tailRows[tailRows.length - 1].t : 0;
-                // the whole clock cycles of at least a minute: a clock cycle longer than a minute is judged as the one cycle that ends the run
-                const lastMinute = tailRows.filter(row => row.t >= tailEnd - RECOVERY_CYCLES_TICKS);
-                const judgedTail = lastMinute.length >= 2 ? lastMinute : tailRows.slice(-2);
-                const after: {t: number; ticks: number; net: number; expected: number}[] = [];
-                for (let i = 1; i < judgedTail.length; i++) {
-                    const ticks = judgedTail[i].t - judgedTail[i - 1].t;
-                    after.push({t: judgedTail[i - 1].t, ticks, net: net(indices, judgedTail[i - 1], judgedTail[i]), expected: expectedPerTick * ticks});
-                }
-                const afterShort = after.filter(cycle => cycle.net < cycle.expected - 1e-6);
+                // loss is recovered, or after it fails), judged by helpers/run-judgement.js
+                const afterTheLosses = judgeAfterLoss(finals, (report.tail?.rows ?? []) as Row[], indices, perCopy, RECOVERY_CYCLES_TICKS);
+                const after = afterTheLosses.cycles, afterShort = afterTheLosses.short;
                 const total = (list: {net: number; expected: number}[]) => ({net: list.reduce((sum, it) => sum + it.net, 0), expected: list.reduce((sum, it) => sum + it.expected, 0)});
                 return {copy: index + 1, final_machines: indices.length, window_cycles_judged: cycles.length, window_cycles_short: short, total: total(cycles),
                     window_cycles_after_the_losses: after.length, window_cycles_short_after_the_losses: afterShort, total_after_the_losses: total(after)};
