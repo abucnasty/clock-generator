@@ -136,12 +136,14 @@ describe.sequential("the selected clock of a record job from the staged start, w
                 }
                 const short = cycles.filter(cycle => cycle.net < cycle.expected - 1e-6);
                 // after the losses: the whole clock cycles of the last minute of the tail (the run goes on TAIL_TICKS after its last
-                // loss is recovered, or after it fails), judged by helpers/run-judgement.js
-                const afterTheLosses = judgeAfterLoss(finals, (report.tail?.rows ?? []) as Row[], indices, perCopy, RECOVERY_CYCLES_TICKS);
+                // loss is recovered, or after it fails), over a whole number of the run's repeat (helpers/run-judgement.js, decision 1057)
+                const afterTheLosses = judgeAfterLoss(finals, (report.tail?.rows ?? []) as Row[], indices, perCopy, item.tail_judged_ticks ?? RECOVERY_CYCLES_TICKS);
                 const after = afterTheLosses.cycles, afterShort = afterTheLosses.short;
                 const total = (list: {net: number; expected: number}[]) => ({net: list.reduce((sum, it) => sum + it.net, 0), expected: list.reduce((sum, it) => sum + it.expected, 0)});
                 return {copy: index + 1, final_machines: indices.length, window_cycles_judged: cycles.length, window_cycles_short: short, total: total(cycles),
-                    window_cycles_after_the_losses: after.length, window_cycles_short_after_the_losses: afterShort, total_after_the_losses: total(after)};
+                    window_cycles_after_the_losses: after.length, window_cycles_short_after_the_losses: afterShort, total_after_the_losses: total(after),
+                    // the repeat in clock cycles where the output repeats every r > 1 cycles: the cycles above are repeats of r cycles each
+                    ...(afterTheLosses.repeat_cycles !== undefined && {repeat_cycles_after_the_losses: afterTheLosses.repeat_cycles})};
             });
             const verdict = {
                 case: item.name, job: item.job, final: report.final, clock: clockHash(exported), generation_verdict: selected.verdict, game_version: report.game_version ?? null,

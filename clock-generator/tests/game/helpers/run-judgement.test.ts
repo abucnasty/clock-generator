@@ -252,9 +252,35 @@ describe("judgeAfterLoss: a whole number of the run's repeat (decision 1057)", (
         expect(after.short.every(cycle => cycle.net === 2111)).toBe(true);
     });
 
-    it("fails a copy that is a hand short in every cycle (no repeat to cut)", () => {
+    it("fails a copy that is a hand short in every cycle: 16 packs less in each", () => {
         const short = from(20748).map((row, i) => ({...row, p: [row.p[0] - 16 * i]}));
         const after = judgeAfterLoss(finals, short, [0], target, 10_560);
+        expect(after.repeat_cycles).toBe(2);
+        expect(after.short.map(cycle => cycle.net)).toEqual([2080, 2080]);
+    });
+});
+
+// The same rule on the automation science 240 build (decision 1052): nine copies, a window cycle of 72 ticks, 32 packs a cycle wanted of each, ruling 60's start,
+// the three losses in a row (run1-capture/automation-science-240 of 2026-11-judged-start-recordings-2/evidence; run 2 is the same run). Copy 2's output
+// inserters drop 32, 32, 32, 30, 34 in a repeat of five cycles (160 packs, the target of five cycles): a minute of 50 cycles has 10 repeats, and the
+// game test judged the 10 cycles of 30 short
+describe("judgeAfterLoss: automation science 240, copy 2 (decision 1052)", () => {
+    const recorded = JSON.parse(fs.readFileSync(path.join(__dirname, "run-judgement-automation-240-copy2.json"), "utf8")) as {rows: {t: number; p: number[]; s: number[]}[]};
+    const finals = [{worth: 1}];
+    const target = 32 * 60 / 72;
+
+    it("holds copy 2 over its 10 repeats of five cycles", () => {
+        const after = judgeAfterLoss(finals, recorded.rows, [0], target);
+        expect(after.repeat_cycles).toBe(5);
+        expect(after.cycles).toHaveLength(10);
+        expect(after.short).toEqual([]);
+        expect(after.total).toEqual({net: 1600, expected: 1600});
+    });
+
+    it("fails a copy that is a pack short in every repeat", () => {
+        const short = recorded.rows.map((row, i) => ({...row, p: [row.p[0] - Math.floor(i / 5)]}));
+        const after = judgeAfterLoss(finals, short, [0], target);
         expect(after.short.length).toBeGreaterThan(0);
     });
 });
+

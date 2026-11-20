@@ -892,7 +892,7 @@ steady state, a baseline of whole window cycles, then the losses of the case one
 then 7,200 ticks more. The losses are the standard cuts of the families above (an ingredient cut of each input line, the output block, an ingredient cut)
 where the build has input lines, the productivity module chain's own (coal, output, iron foundries stopped), and the output block alone for a build that takes
 every ingredient from fluids or machines (accumulator). A build of copies is judged on each copy by itself: every whole window cycle from steady state to the first
-loss, and every whole window cycle of the last minute after the last loss. The controls are in
+loss, and every whole window cycle of the last minute after the last loss. Where what a copy puts out in a window cycle repeats every r > 1 cycles (its output inserters take 67 and 65 hands in turn, so a cycle reads 1,072 and 1,040), and the judged part holds the repeat twice, the last whole repeats are judged against r cycles of target ([run-judgement.js](../helpers/run-judgement.js) `judgeAfterLoss`, as the baseline's `wholeRepeats`); a case lengthens its tail and the judged part with `tail_ticks` and `tail_judged_ticks`. The controls are in
 [missing-recordings-clock-controls.json](missing-recordings-clock-controls.json); the test keeps each run, its verdict and its controls entry in `MISSING_RECORDINGS_CAPTURE_DIR`.
 Recorded at Factorio 2.1.24, all six holding their target on every copy and recovering from every loss (`AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING` was the seventh: it is recorded again from ruling 60's start, see "Scaffold builds from ruling 60's start" below):
 
