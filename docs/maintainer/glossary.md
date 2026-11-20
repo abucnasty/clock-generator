@@ -48,7 +48,7 @@ The product a build must make and the rate it must hold, in items per second, fo
 clock never changes it. Control theory: the setpoint (Janert p.21-22, who uses it for rate targets). In IEC terms it is
 the command variable (IEC 351-48-09): it comes from outside, and the control does not change it. IEC's reference
 variable (351-48-02) is the input of a comparing element in closed-loop control, so the open-loop clock has none. A
-setpoint at the maximum rate of the build leaves no time for recovery (Janert p.22). The site's **Setpoint** panel.
+setpoint at the maximum rate of the build leaves no time for recovery. The site's **Setpoint** panel.
 _Avoid_: target output, target rate, goal, control frequency (that is the window cycle time)
 
 **Secondary setpoint**:
