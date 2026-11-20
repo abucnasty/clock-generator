@@ -1,8 +1,13 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.11.4
+Date: 2026-11-19
+  Bugfixes:
+    - A backpressure start holds a drill the clock gives a window to still from its first stage (the machine it drops into is empty at the opening, as the lock asks), and the opening reports what the mining drills of the build drop into (drill_fed_by on each machine, "unclocked" for a drill with no window, "windowed" for one the clock wires), so a machine a drill without a window fills is not counted as one that only windowed inserters fill
+---------------------------------------------------------------------------------------------------
 Version: 0.11.3
 Date: 2026-11-19
   Bugfixes:
-    - The opening of a backpressure start reports what the mining drills of the build drop into (drill_fed_by on each machine, "unclocked" for a drill with no window, "windowed" for one the clock wires), so a machine a drill without a window fills is not counted as one that only windowed inserters fill
+    - The fill of a backpressure start no longer counts what a windowed inserter holds in the tick it is built as a move: its hand and its circuit are checked from the same tick (the job names it, checks_from_ticks), and the game reports the first and last tick each hand held an item (first_held_tick, last_held_tick) in place of moved
 ---------------------------------------------------------------------------------------------------
 Version: 0.11.2
 Date: 2026-11-18

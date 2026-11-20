@@ -583,8 +583,8 @@ slots and stack sizes from the game data, plus 8 window cycles; up to 321 window
 lasts 4 window cycles (the disposal chest is filled), and recovery is judged over 40 window cycles after each disturbance, the first
 6 after the release left out. Do not compare these recordings window cycle for window cycle with the 2-window-cycle families.
 
-[container-clock-controls.json](container-clock-controls.json) holds the 6 native summaries, recorded on Factorio 2.1.21
-at commit `000ad913`. **All 6 recommended clocks are stable, meet exact baseline output (63 window cycles), drop to 0 in every
+[container-clock-controls.json](container-clock-controls.json) holds the 6 native summaries, recorded on Factorio 2.1.24 from
+ruling 60's start (see "The container outputs and the steel wagon builds, from ruling 60's start" below). **All 6 recommended clocks are stable, meet exact baseline output (63 window cycles), drop to 0 in every
 disturbance and are exact in all 33 judged window cycles after each.** `container-clock-mechanics.test.ts` checks all 6 without
 generating: each container's slots and stock in the simulator, the cut lengths against the stock, the window cycles the game
 took to run dry under each cut, and the controls against the fixture configs. `clock-controls.test.ts` checks
@@ -993,12 +993,22 @@ nothing fills before the clock: the lock opened 7,200 ticks after the build was 
 
 - The stock guard holds in all three. The second and third loss of the iron-ore case last one tick each: the drill had emptied the wagon already.
 
-**Container outputs (six jobs): named limit, the harness refuses the start.** The six cases of `container-clock-fixtures.ts` stay on the free warm-up. Asked for ruling 60's start
-(`staged: true, backpressure: true`, Factorio 2.1.24, 2026-11-19, two runs of each case with the same refusal and the same units) the harness stops in the fill, before the run:
-"Windowed inserters held items during the fill with the lock on: unit 99 (config id 1)" (the car, tank and legendary mixed-wagon cases name both supply inserters, ids 1 and 2). The supply
-inserter takes from an infinity chest that is full from the first tick: with a diagnostic line added to the recorder for one run (not kept), the first item in its hand was seen in the tick the inserter was built
-(tick 48,325, the fill's start tick), when the circuit had not yet disabled it. The harness counts every hand held from that tick (`moved`), and the leak check of the same fill starts one tick later. The
-other windowed inserters (into the machine, out of it) hold nothing in the fill. `PROCESSING_UNIT_15_CHEST_FED` (a windowed inserter from a full infinity chest into a machine) passes the same fill; what differs from the container builds is not established. No harness change is made here; the cases are not changed from the warm-up that holds today.
+**Container outputs (six jobs): recorded from ruling 60's start.** The six cases of `container-clock-fixtures.ts` now say `staged: true, backpressure: true` (Factorio 2.1.24, 2026-11-19,
+`CLOCK_RECORDING_CACHE=off`). They first stopped in the fill, before the run: "Windowed inserters held items during the fill with the lock on" (unit 99, config id 1; ids 1 and 2 in the car, tank and
+legendary mixed-wagon cases). The supply inserter takes from an infinity chest that is full from the first tick, and its hand held an item (16 iron plates or copper cable) in the tick it was built,
+before the circuit disabled it, and in no later tick. The harness counted that tick (`moved`), where the leak check of the same fill starts two ticks after the build. Both checks now start from one
+constant (`FILL_CHECKS_FROM_TICKS` in `factorio-harness.ts`, passed to the game in the job): the game reports the first and the last tick of each hand and the host judges them from that tick. A hand in the
+build tick is no move; a hand in any tick from the third on is still refused (`factorio-harness.test.ts`).
+
+Each case was run twice and gives the same summary, tick for tick (the tick the lock opens at differs by up to 5, as elsewhere). Every job holds, and the controls carry these runs:
+
+| Job (case) | Clock (window cycle) | Steady state | Baseline (net, whole window cycle) | Losses recovered at |
+| --- | --- | --- | --- | --- |
+| `containers-container-car-mixed`, `-tank-mixed`, `-wagon-legendary-mixed` | Takt Batches Observed (384, `3834ac13`) | 7,144 | 288 of 288 | 14,542 (iron plate cut), 18,382 (output block), 22,312 (copper cable cut) |
+| `containers-container-wagon-filtered`, `-wagon-legendary`, `-wagon-normal` | Takt Batches Observed (192, `8f2876cb`) | 7,056 | 288 of 288 | 14,536 (iron plate cut), 18,376 (output block), 22,216 (iron plate cut) |
+
+- The lock opened about 7,200 ticks after the build was placed, and the stock guard holds in all six. Only the supply inserters from the infinity chests hold anything in the build tick; the inserter into the machine and the one out of it hold nothing.
+- `PROCESSING_UNIT_15_CHEST_FED` passes the same fill with a stack inserter at a full infinity chest as well; by reading the cases (no new run) the two things that differ are the sink (a machine, where the container builds drop into a chest) and the inserter's item filter (the container supplies name one, the plant's does not). Which of the two decides was not run.
 
 ```bash
 BELT_SPEED_CAPTURE_DIR=.scratch/judged-start-6 npm run test:game -- tests/game/builds/steel-plate-26-wagon-chest-clock.game.test.ts -t '^steel wagon clock: steel-wagon-selected-staged$'

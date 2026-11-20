@@ -241,6 +241,19 @@ export interface BackpressureFillOptions {
 const DEFAULT_FILL_WINDOW_TICKS = 3600;
 const DEFAULT_FILL_CAP_TICKS = 36_000;
 
+/**
+ * The fill's checks of its windowed inserters (that the circuit disables each, and that its hand holds nothing) start this many
+ * ticks after the tick the inserters were built. An inserter built with the clock's lock on does not know its circuit condition in
+ * its first tick: a supply inserter at a full infinity chest picks up in that tick, before the circuit disables it. Both checks
+ * count from the same tick: the game side takes this number in the job, the host side judges the hands from it.
+ */
+export const FILL_CHECKS_FROM_TICKS = 2;
+
+/** The first tick of the fill the windowed inserters are checked in */
+export function fillChecksFromTick(started_tick: number): number {
+    return started_tick + FILL_CHECKS_FROM_TICKS;
+}
+
 /** What the game reports of a backpressure start at the tick its lock is set off (harness.lua, the fill) */
 export interface BackpressureOpening {
     /** The tick the lock was set off and the recording started in */
@@ -261,7 +274,7 @@ export interface BackpressureOpening {
      * `machineFedBy`. windows: products finished in each window
      */
     machines: BackpressureMachine[] | Record<string, BackpressureMachine>;
-    /** Every inserter of the cell, whether the clock holds it, what its hand holds at the opening and whether it held anything in the fill */
+    /** Every inserter of the cell, whether the clock holds it, what its hand holds at the opening and the ticks of the fill its hand held an item in */
     inserters: BackpressureInserter[] | Record<string, BackpressureInserter>;
     /** The main counter after each of the first ticks with the lock off */
     counter_after?: number[] | Record<string, number>;
@@ -284,7 +297,14 @@ interface BackpressureInserter {
     config_id?: number;
     windowed: boolean;
     held: number;
-    moved: boolean;
+    /** The first and the last tick the hand held an item from the tick the inserter was built on; absent when it held nothing */
+    first_held_tick?: number;
+    last_held_tick?: number;
+}
+
+/** Whether the hand of an inserter held an item in a tick of the fill from which the fill checks its windowed inserters (fillChecksFromTick) */
+function heldInChecks(inserter: BackpressureInserter, started_tick: number): boolean {
+    return inserter.last_held_tick !== undefined && inserter.last_held_tick >= fillChecksFromTick(started_tick);
 }
 
 /**
@@ -319,7 +339,7 @@ export function assertBackpressureOpening(opening: BackpressureOpening | undefin
     if (holding.length > 0) {
         throw new Error(`Windowed inserters hold items at the opening: ${holding.map(it => `unit ${it.unit_number} (config id ${it.config_id}) holds ${it.held}`).join("; ")}`);
     }
-    const moved = listOf(opening.inserters).filter(inserter => inserter.windowed && inserter.moved);
+    const moved = listOf(opening.inserters).filter(inserter => inserter.windowed && heldInChecks(inserter, opening.started_tick));
     if (moved.length > 0) {
         throw new Error(`Windowed inserters held items during the fill with the lock on: ${moved.map(it => `unit ${it.unit_number} (config id ${it.config_id})`).join("; ")}`);
     }
@@ -1682,6 +1702,7 @@ export class HarnessSession {
                 ...(staged.backpressure && { backpressure: {
                     window_ticks: staged.backpressure.window_ticks ?? DEFAULT_FILL_WINDOW_TICKS,
                     cap_ticks: staged.backpressure.cap_ticks ?? DEFAULT_FILL_CAP_TICKS,
+                    checks_from_ticks: FILL_CHECKS_FROM_TICKS,
                 } }),
             },
             record: { ticks: options.ticks },
@@ -1755,7 +1776,10 @@ export class HarnessSession {
         }
         for (const inserter of listOf(opening.inserters)) {
             log(`Inserter unit ${inserter.unit_number} (config id ${inserter.config_id ?? "none"}): ${inserter.windowed ? "windowed" : "no window"}, `
-                + `holds ${inserter.held} at the opening, ${inserter.moved ? "held items in the fill" : "held nothing in the fill"}`);
+                + `holds ${inserter.held} at the opening, `
+                + (inserter.last_held_tick === undefined ? "held nothing in the fill"
+                    : `held items in the fill from tick ${inserter.first_held_tick} to ${inserter.last_held_tick}`
+                    + (heldInChecks(inserter, opening.started_tick) ? "" : ` (before tick ${fillChecksFromTick(opening.started_tick)}, where the checks start)`)));
         }
         const fed = (by: string) => machines.filter(machine => machineFedBy(machine) === by);
         const holding = (list: BackpressureMachine[]) => list.filter(machine => machine.input > 0 || machine.output > 0).length;
