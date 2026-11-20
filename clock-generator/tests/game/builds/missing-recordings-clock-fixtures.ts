@@ -1,6 +1,7 @@
 import path from "path";
 import {Config} from "../../../src/config";
 import {ConfigPaths} from "../../../src/config/config-paths";
+import {productionScienceSharedPickup} from "../../../src/crafting/generate-blueprint-test-helpers";
 import {withJellyHandsOf15} from "../../configs/rocket-fuel-hands";
 
 /**
@@ -89,38 +90,105 @@ const scaffoldOf = (key: keyof typeof ConfigPaths) => ConfigPaths[key].replace(/
 export const scaffoldFile = (item: MissingRecordingCase) => item.scaffold ? path.join(path.dirname(ConfigPaths[item.config]), item.scaffold) : scaffoldOf(item.config);
 
 export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
+    // the multi-copy scaffold builds and the loop builds, each from ruling 60's start (the judged start), every copy the scaffold holds
+    {
+        // nine copies on one input belt (gear wheels on one lane, copper plates on the other, both dead ends); the one loader of the scaffold takes the packs
+        // off the output line, so the output block removes it
+        name: "automation-science-240", job: "config-AUTOMATION_SCIENCE_240", config: "AUTOMATION_SCIENCE_240", copies: 9,
+        losses: [{kind: "cut", item: "iron-gear-wheel"}, {kind: "block"}, {kind: "cut", item: "copper-plate"}],
+        start: "backpressure",
+    },
+    // the three losses in a row of the case above do not each bite: the output is back over the target before it is back over the baseline's lowest
+    // minute, so the block and the copper plate cut lasted 5 and 4 ticks. Each loss has a case of its own from the baseline, to say which one leaves copy 2 short
+    {
+        name: "automation-science-240-gear", job: "config-AUTOMATION_SCIENCE_240", config: "AUTOMATION_SCIENCE_240", copies: 9,
+        losses: [{kind: "cut", item: "iron-gear-wheel"}],
+        start: "backpressure",
+    },
+    {
+        name: "automation-science-240-block", job: "config-AUTOMATION_SCIENCE_240", config: "AUTOMATION_SCIENCE_240", copies: 9,
+        losses: [{kind: "block"}],
+        start: "backpressure",
+    },
+    {
+        name: "automation-science-240-copper", job: "config-AUTOMATION_SCIENCE_240", config: "AUTOMATION_SCIENCE_240", copies: 9,
+        losses: [{kind: "cut", item: "copper-plate"}],
+        start: "backpressure",
+    },
     {
         name: "automation-science-240-one-output-swing", job: "variants-AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING", config: "AUTOMATION_SCIENCE_240", copies: 9,
         variant: config => ({...config, overrides: {...config.overrides, terminal_swing_count: 1}}),
-        // the pick is "no recovery": the loss the record names for it (copper plate stops arriving on the copies that share a lane)
-        losses: [{kind: "cut", item: "copper-plate"}],
+        losses: [{kind: "cut", item: "iron-gear-wheel"}, {kind: "block"}, {kind: "cut", item: "copper-plate"}],
+        start: "backpressure",
+    },
+    {
+        // five copies; the scaffold's four loaders drain the bioflux and nutrient belts, and the packs go into infinity chests, so the output block fills those
+        name: "agricultural-science-250", job: "config-AGRICULTURAL_SCIENCE_250", config: "AGRICULTURAL_SCIENCE_250", copies: 5,
+        losses: [{kind: "cut", item: "bioflux"}, {kind: "block"}, {kind: "cut", item: "nutrients"}],
+        start: "backpressure",
+        block_sinks: "the scaffold's loaders drain the bioflux and nutrients belts; the packs go into infinity chests",
+    },
+    {
+        name: "agricultural-science-250-backed-up", job: "variants-AGRICULTURAL_SCIENCE_250_BACKED_UP", config: "AGRICULTURAL_SCIENCE_250", copies: 5,
+        variant: config => ({...config, overrides: {...config.overrides, backed_up_belts: true}}),
+        losses: [{kind: "cut", item: "bioflux"}, {kind: "block"}, {kind: "cut", item: "nutrients"}],
+        start: "backpressure",
+        block_sinks: "the scaffold's loaders drain the bioflux and nutrients belts; the packs go into infinity chests",
+    },
+    {
+        // eleven plants on one belt of accumulators and supercapacitors, dead-ended; the packs go into infinity chests (no loader)
+        name: "electromagnetic-science-330", job: "config-ELECTROMAGNETIC_SCIENCE_330", config: "ELECTROMAGNETIC_SCIENCE_330", copies: 11,
+        losses: [{kind: "cut", item: "accumulator"}, {kind: "block"}, {kind: "cut", item: "supercapacitor"}],
+        start: "backpressure",
+    },
+    // the output block lasted 22 ticks in the run above (the accumulator cut recovers over the target before it is over the baseline's lowest minute): each loss has a case of its own
+    {
+        name: "electromagnetic-science-330-accumulators", job: "config-ELECTROMAGNETIC_SCIENCE_330", config: "ELECTROMAGNETIC_SCIENCE_330", copies: 11,
+        losses: [{kind: "cut", item: "accumulator"}],
+        start: "backpressure",
+    },
+    {
+        name: "electromagnetic-science-330-block", job: "config-ELECTROMAGNETIC_SCIENCE_330", config: "ELECTROMAGNETIC_SCIENCE_330", copies: 11,
+        losses: [{kind: "block"}],
+        start: "backpressure",
+    },
+    {
+        name: "electromagnetic-science-330-supercapacitors", job: "config-ELECTROMAGNETIC_SCIENCE_330", config: "ELECTROMAGNETIC_SCIENCE_330", copies: 11,
+        losses: [{kind: "cut", item: "supercapacitor"}],
+        start: "backpressure",
     },
     {
         name: "flying-robot-frame-80", job: "config-FLYING_ROBOT_FRAME_80", config: "FLYING_ROBOT_FRAME_80", copies: 12,
         losses: [{kind: "cut", item: "electronic-circuit"}, {kind: "block"}, {kind: "cut", item: "electric-engine-unit"}],
+        start: "backpressure",
     },
     {
         name: "productivity-module-80-chest-chain", job: "config-PRODUCTIVITY_MODULE_80_CHEST_CHAIN", config: "PRODUCTIVITY_MODULE_80_CHEST_CHAIN", copies: 1,
         losses: [{kind: "cut", item: "coal"}, {kind: "block"}, {kind: "stop", recipe: "casting-iron"}],
         limit: "the scaffold holds one copy of the job's six",
+        start: "backpressure",
     },
     {
         name: "electromagnetic-science-240-recycler-belt-fed", job: "config-ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED", config: "ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED", copies: 2,
         losses: [{kind: "cut", item: "accumulator"}, {kind: "block"}, {kind: "cut", item: "superconductor"}],
         limit: "the scaffold holds two copies of the job's five",
         random_output: "the recyclers give back what the game rolls",
+        start: "backpressure",
     },
     {
         name: "processing-unit-15-chest-fed", job: "config-PROCESSING_UNIT_15_CHEST_FED", config: "PROCESSING_UNIT_15_CHEST_FED", copies: 1,
         losses: [{kind: "cut", item: "advanced-circuit"}, {kind: "block"}, {kind: "cut", item: "electronic-circuit"}],
+        start: "backpressure",
     },
     {
         name: "logistic-science-240", job: "config-LOGISTIC_SCIENCE_240", config: "LOGISTIC_SCIENCE_240", copies: 22,
         losses: [{kind: "cut", item: "transport-belt"}, {kind: "block"}, {kind: "cut", item: "inserter"}],
+        start: "backpressure",
     },
     {
         name: "accumulator-320", job: "config-ACCUMULATOR_320", config: "ACCUMULATOR_320", copies: 9,
         losses: [{kind: "block"}],
+        start: "backpressure",
     },
     {
         name: "automation-science-120-foundries-feed-belt-to-assembler", job: "config-AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER",
@@ -134,6 +202,7 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
         // the inserters come on belts from two infinity chests; the molten iron comes from infinity pipes and has no loss
         losses: [{kind: "cut", item: "inserter"}, {kind: "block"}],
         limit: "the scaffold holds one copy of the job's six",
+        start: "backpressure",
     },
     {
         name: "advanced-circuit-230", scaffold: "advanced-circuit.scaffold", job: "config-ADVANCED_CIRCUIT_230", config: "ADVANCED_CIRCUIT_230", copies: 1,
@@ -141,25 +210,30 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
         baseline: {ticks: 12_672, reason: "the clock cycle is 12,672 ticks (23 window cycles of 550.957): a minute holds no whole clock cycle"},
         losses: [{kind: "cut", item: "electronic-circuit"}, {kind: "block"}, {kind: "cut", item: "coal"}],
         limit: "the scaffold holds one copy of the job's three",
+        start: "backpressure",
     },
     {
         name: "advanced-circuit-240", scaffold: "advanced-circuit.scaffold", job: "config-ADVANCED_CIRCUIT_240", config: "ADVANCED_CIRCUIT_240", copies: 1,
         losses: [{kind: "cut", item: "electronic-circuit"}, {kind: "block"}, {kind: "cut", item: "coal"}],
         limit: "the scaffold holds one copy of the job's three",
+        start: "backpressure",
     },
     {
         name: "advanced-circuit-240-backed-up", scaffold: "advanced-circuit.scaffold", job: "variants-ADVANCED_CIRCUIT_240_BACKED_UP", config: "ADVANCED_CIRCUIT_240", copies: 1,
         variant: config => ({...config, overrides: {...config.overrides, backed_up_belts: true}}),
         losses: [{kind: "cut", item: "electronic-circuit"}, {kind: "block"}, {kind: "cut", item: "coal"}],
         limit: "the scaffold holds one copy of the job's three",
+        start: "backpressure",
     },
     {
         name: "lds-240", job: "config-LDS_240", config: "LDS_240", copies: 1,
         losses: [{kind: "cut", item: "coal"}, {kind: "block"}],
+        start: "backpressure",
     },
     {
         name: "metallurgic-science-45", job: "config-METALLURGIC_SCIENCE_45", config: "METALLURGIC_SCIENCE_45", copies: 1,
         losses: [{kind: "cut", item: "tungsten-ore"}, {kind: "block"}, {kind: "cut", item: "coal"}],
+        start: "backpressure",
     },
     {
         name: "rocket-fuel-60", job: "config-ROCKET_FUEL_60", config: "ROCKET_FUEL_60", copies: 1,
@@ -194,6 +268,7 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
         losses: [{kind: "block"}],
         limit: "the scaffold holds one copy of the job's three",
         late_recording: "the final machine is a furnace with no recipe at the placement",
+        start: "backpressure",
     },
     {
         name: "electric-furnace-20", job: "config-ELECTRIC_FURNACE_20", config: "ELECTRIC_FURNACE_20", copies: 1,
@@ -203,22 +278,25 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
         start: "backpressure",
         late_recording: "the final machine is a furnace with no recipe at the placement",
     },
-    // every inserter of the build has a window, so the staged start is the judged start. The three losses in a row do not each bite: the
+    // the build is recorded from ruling 60's start, the judged start. The three losses in a row do not each bite: the
     // build makes 111 % of its target, the output is back over the target (the run's test of recovery) before it is back over the baseline's
     // lowest minute (its test of a fall), so the loss after a recovered one falls and recovers within a tick or two. Each loss that follows another
     // therefore has a case of its own, run from the baseline.
     {
         name: "iron-bacteria-380", job: "config-IRON_BACTERIA_380_CULTIVATION", config: "IRON_BACTERIA_380_CULTIVATION", copies: 1,
         losses: [{kind: "cut", item: "bioflux"}],
+        start: "backpressure",
     },
     {
         name: "iron-bacteria-380-block", job: "config-IRON_BACTERIA_380_CULTIVATION", config: "IRON_BACTERIA_380_CULTIVATION", copies: 1,
         losses: [{kind: "block"}],
+        start: "backpressure",
         block_sinks: "the scaffold's two loaders drain the bioflux and nutrients belts; the output goes into four void chests",
     },
     {
         name: "iron-bacteria-380-nutrients", job: "config-IRON_BACTERIA_380_CULTIVATION", config: "IRON_BACTERIA_380_CULTIVATION", copies: 1,
         losses: [{kind: "cut", item: "nutrients"}],
+        start: "backpressure",
     },
     // the picks of the search from every stable clock (CLOCK_SEARCH_FROM_EVERY_START=1) that the generic protocol records, each from ruling 60's
     // start with the losses of the job's own case above
@@ -244,5 +322,68 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
         no_staged_start: "ruling 60's start refuses the build: a drill drops stone straight into the rail assembler, so a machine that only windowed inserters feed "
             + "holds items at the opening (\"Machines that only windowed inserters fill hold items at the opening: assembling-machine-3 (unit 376): 164 in, 0 out, "
             + "0 made\", 2026-11-18, Factorio 2.1.24, master 755eb93e and before). The pick is not recorded in the game",
+    },
+    // The scaffold builds of the science packs, recorded from ruling 60's start (the judged start) on every copy the harness can build: the
+    // sample's scaffold holds one copy of utility science 120, production science 120 and its shared pickup variant (the job has seven), two of
+    // utility science 120 with processing units and low density structures on one belt (seven), and five of military science 240 (the job's five);
+    // chemical science 240 with a shared foundry on the sample's one block (the job has 5.5). The
+    // losses are the family's standard ones: an ingredient cut, the output block, an ingredient cut (the README, "How a clock run is timed").
+    {
+        // the pick is "no recovery": the loss the record names for it (the low density structures stop arriving); where the game recovers from it on
+        // this scaffold, which has no copy that shares a lane, the run goes on to the block and the cut of the processing units
+        name: "utility-science-120", job: "config-UTILITY_SCIENCE_120", config: "UTILITY_SCIENCE_120", copies: 1,
+        losses: [{kind: "cut", item: "low-density-structure"}, {kind: "block"}, {kind: "cut", item: "processing-unit"}],
+        limit: "the scaffold holds one copy of the job's seven",
+        start: "backpressure",
+    },
+    {
+        name: "utility-science-120-processing-unit-and-lds-on-one-belt", job: "config-UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT",
+        config: "UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT", copies: 2,
+        losses: [{kind: "cut", item: "low-density-structure"}, {kind: "block"}, {kind: "cut", item: "flying-robot-frame"}],
+        limit: "the scaffold holds two copies of the job's seven",
+        start: "backpressure",
+    },
+    {
+        // the drill drops stone straight into the rail assembler; the electric furnaces and the productivity modules come on one belt from two infinity
+        // chests, the molten iron from infinity pipes, which have no loss
+        name: "production-science-120-two-belts", job: "config-PRODUCTION_SCIENCE_120_TWO_BELTS", config: "PRODUCTION_SCIENCE_120_TWO_BELTS", copies: 1,
+        losses: [{kind: "cut", item: "electric-furnace"}, {kind: "block"}, {kind: "cut", item: "productivity-module"}],
+        limit: "the scaffold holds one copy of the job's seven",
+        start: "backpressure",
+        no_staged_start: "ruling 60's start refuses the build on the selected pick too: a drill drops stone straight into the rail assembler, so a machine that only "
+            + "windowed inserters feed holds items at the opening (\"Machines that only windowed inserters fill hold items at the opening: assembling-machine-3 "
+            + "(unit 376): 164 in, 0 out, 0 made\", 2026-11-19, Factorio 2.1.24, master 214bd7ad). The job is not recorded in the game; the limit is in the README",
+    },
+    {
+        name: "production-science-120-two-belts-shared-pickup", job: "variants-PRODUCTION_SCIENCE_120_TWO_BELTS_SHARED_PICKUP", config: "PRODUCTION_SCIENCE_120_TWO_BELTS", copies: 1,
+        variant: productionScienceSharedPickup,
+        losses: [{kind: "cut", item: "electric-furnace"}, {kind: "block"}, {kind: "cut", item: "productivity-module"}],
+        limit: "the scaffold holds one copy of the job's seven",
+        start: "backpressure",
+        no_staged_start: "ruling 60's start refuses the build on the selected pick too: a drill drops stone straight into the rail assembler, so a machine that only "
+            + "windowed inserters feed holds items at the opening (\"Machines that only windowed inserters fill hold items at the opening: assembling-machine-3 "
+            + "(unit 376): 164 in, 0 out, 0 made\", 2026-11-19, Factorio 2.1.24, master 214bd7ad). The job is not recorded in the game; the limit is in the README",
+    },
+    {
+        name: "chemical-science-240-shared-foundry", job: "config-CHEMICAL_SCIENCE_240_SHARED_FOUNDRY", config: "CHEMICAL_SCIENCE_240_SHARED_FOUNDRY", copies: 1,
+        losses: [{kind: "cut", item: "sulfur"}, {kind: "block"}, {kind: "cut", item: "advanced-circuit"}],
+        limit: "the sample's scaffold holds one block, one of the job's 5.5 copies; abucnasty's whole build (5.5 copies) is not built from ruling 60's start: its staged start "
+            + "refuses the build (\"The clock names inserters 2, 4, 6, 8, 10, 12, 14, 16, 18, 20 of the config, which match no inserter of the build in copy 6 of 6\": the partial copy "
+            + "holds some of the config's inserters, and the staged start's wiring check does not take that into account)",
+        start: "backpressure",
+    },
+    {
+        name: "chemical-science-240-shared-foundry-backed-up", job: "variants-CHEMICAL_SCIENCE_240_SHARED_FOUNDRY_BACKED_UP", config: "CHEMICAL_SCIENCE_240_SHARED_FOUNDRY", copies: 1,
+        variant: config => ({...config, overrides: {...config.overrides, backed_up_belts: true}}),
+        losses: [{kind: "cut", item: "sulfur"}, {kind: "block"}, {kind: "cut", item: "advanced-circuit"}],
+        limit: "the sample's scaffold holds one block, one of the job's 5.5 copies; abucnasty's whole build (5.5 copies) is not built from ruling 60's start: its staged start "
+            + "refuses the build (\"The clock names inserters 2, 4, 6, 8, 10, 12, 14, 16, 18, 20 of the config, which match no inserter of the build in copy 6 of 6\": the partial copy "
+            + "holds some of the config's inserters, and the staged start's wiring check does not take that into account)",
+        start: "backpressure",
+    },
+    {
+        name: "military-science-240", job: "config-MILITARY_SCIENCE_240", config: "MILITARY_SCIENCE_240", copies: 5,
+        losses: [{kind: "cut", item: "stone-wall"}, {kind: "block"}, {kind: "cut", item: "coal"}],
+        start: "backpressure",
     },
 ];

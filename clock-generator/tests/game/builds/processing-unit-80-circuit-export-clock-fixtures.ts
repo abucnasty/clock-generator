@@ -36,11 +36,14 @@ export interface ProcessingUnitCircuitExportClockCase {
     backed: boolean;
     /** The id of the alternative the case records */
     alternative: string;
+    /** The run starts from ruling 60's start (the harness's backpressure start, `staged_start.backpressure`), not from a free warm-up */
+    staged?: boolean;
+    backpressure?: boolean;
 }
 
 export const PROCESSING_UNIT_80_CIRCUIT_EXPORT_CASES: ProcessingUnitCircuitExportClockCase[] = [
-    {name: "generated-as-is", backed: false, alternative: GENERATED_ALTERNATIVE},
-    {name: "generated-backed-up", backed: true, alternative: GENERATED_ALTERNATIVE},
+    {name: "generated-as-is", backed: false, alternative: GENERATED_ALTERNATIVE, staged: true, backpressure: true},
+    {name: "generated-backed-up", backed: true, alternative: GENERATED_ALTERNATIVE, staged: true, backpressure: true},
     {name: "per-hand-as-is", backed: false, alternative: PER_HAND_ALTERNATIVE},
     {name: "per-hand-backed-up", backed: true, alternative: PER_HAND_ALTERNATIVE},
 ];
@@ -68,6 +71,7 @@ export async function processingUnitCircuitExportClockScenario(variant: Processi
         config: () => config,
         scaffold: () => fs.readFileSync(path.join(FOLDER, "processing-unit-80-circuit-export.scaffold"), "utf8").trim(),
         alternative: variant.alternative,
+        ...(variant.staged && {staged: true, backpressure: variant.backpressure}),
         probeFile: path.join(__dirname, "processing-unit-80-circuit-export-clock-probe.lua"),
         probe: {family: "processing-unit-80-circuit-export"},
         controls: path.join(__dirname, "processing-unit-80-circuit-export-clock-controls.json"),

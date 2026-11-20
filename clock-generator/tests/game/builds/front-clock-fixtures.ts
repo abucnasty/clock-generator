@@ -104,6 +104,8 @@ export function frontClockScenario(variant: FrontClockCase): PickupClockScenario
         // the front exit is backed up in the game whatever its config says
         name: variant.name, speed: variant.speed, backed: variant.endpoint === "exit" || variant.backed,
         config: () => frontClockConfig(variant), scaffold: () => frontClockScaffold(variant),
+        // ruling 60's start: the harness's backpressure start (`staged_start.backpressure`), not a free warm-up
+        staged: true, backpressure: true,
         probe: variant.endpoint === "entrance"
             ? {family: "compact", machine_name: "assembling-machine-3", output_to_belt: true, ingredients}
             : {family: "electromagnetic"},

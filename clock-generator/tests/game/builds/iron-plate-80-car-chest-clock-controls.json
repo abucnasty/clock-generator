@@ -649,10 +649,10 @@
     },
     "car-selected-staged": {
       "recorded": {
-        "pr": 0,
-        "commit": "6618512f",
-        "frozen_head": "6618512f",
-        "note": "recorded from the staged start under the protocol in game ticks, in Factorio 2.1.24; pr is set when the PR is opened",
+        "pr": 858,
+        "commit": "8e0cd17e",
+        "frozen_head": "8e0cd17e",
+        "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24",
         "clock_sha256": "8a739e59c5af8e221eca1ca415ee29d895489678dac612916acad7d0037f89e7",
         "clock_basis": "capture"
       },
