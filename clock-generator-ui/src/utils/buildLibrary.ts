@@ -1,3 +1,4 @@
+import { renameSetpointRecipeToItem, renameTargetOutputToSetpoint } from 'clock-generator/light';
 import { exampleTitle } from './exampleBuilds';
 
 /**
@@ -106,13 +107,14 @@ export function readIndex(text: string | null): IndexRead {
     return { kind: 'ok', index: { version: LIBRARY_VERSION, builds: rows }, writable: version <= LIBRARY_VERSION };
 }
 
-/** The target recipe of a saved build; '' when the text cannot be read */
+/** The target of a saved build, as it names it; '' when the text cannot be read */
 function recipeOfSavedText(text: string | null): string {
     if (text === null) return '';
     try {
-        const parsed = JSON.parse(text);
-        const recipe = (parsed?.setpoint ?? parsed?.target_output)?.recipe;
-        return typeof recipe === 'string' ? recipe : '';
+        // a build saved before the setpoint named its item holds `recipe`, one saved before it was named so `target_output`
+        const parsed = renameSetpointRecipeToItem(renameTargetOutputToSetpoint(JSON.parse(text))) as { setpoint?: { item?: unknown } } | null;
+        const item = parsed?.setpoint?.item;
+        return typeof item === 'string' ? item : '';
     } catch {
         return '';
     }

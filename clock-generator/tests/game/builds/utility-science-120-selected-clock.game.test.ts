@@ -50,11 +50,11 @@ for (const backed of [false, true]) {
         expect(clockHash(exported), "the selected clock is the one pinned").toBe(scaffoldClockPins[PIN].clock_sha256);
         // the scaffold holds one of the config's seven copies: 17.14 a second
         const target = config.setpoint.items_per_second / config.setpoint.copies;
-        const recipes = [...recipesMaking(config, config.setpoint.recipe)];
+        const recipes = [...recipesMaking(config, config.setpoint.item)];
         const blueprint = fs.readFileSync(path.join(path.dirname(ConfigPaths.UTILITY_SCIENCE_120), "utility-120.scaffold"), "utf8").trim();
         const probe = composeProbeSource(path.join(__dirname, "utility-science-120-selected-clock-probe.lua"), {
             window: WINDOW, expected: Math.round(target * WINDOW / 60 * 1e6) / 1e6, baseline: BASELINE, cap: CAP, recover_bound: RECOVER_BOUND, period,
-            recipes, item: config.setpoint.recipe, ticks: CAP,
+            recipes, item: config.setpoint.item, ticks: CAP,
         });
         const {recording} = await recordInFactorio({
             factorio: factorio!, save: save!, config, blueprint,

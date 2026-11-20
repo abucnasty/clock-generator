@@ -780,7 +780,7 @@ describe("Crafting machine: a craft that ends on a whole tick (Factorio 2.1.24)"
 describe("Crafting machine in a control swap", () => {
     // an assembler fed from an infinity chest, its gears taken into a car (the shape of the phase table's trace build)
     const BUILD: Config = ConfigSchema.parse({
-        setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+        setpoint: { item: "iron-gear-wheel", items_per_second: 1, copies: 1 },
         machines: [{ id: 1, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 1 }],
         inserters: [
             { id: 1, source: { type: "chest", id: 1 }, sink: { type: "machine", id: 1 }, filters: ["iron-plate"] },

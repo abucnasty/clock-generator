@@ -5,6 +5,7 @@ import { computeMachineFacts } from "../entities/traits/machine-facts-of";
 import { targetRateMaxOf } from "../crafting/feasibility/max-rate";
 import { dropLanesOf, lanesCapacityOf } from "./lane-capacity-validator";
 import { outputItemOf as mainProductOf } from "./migrate-recipe-setpoint";
+import { renameRecipeToItem } from "./migrate-setpoint";
 import { BeltConfig, ChestConfig, Config, ConfigSchema, InserterConfig, MachineConfiguration, MiningDrillConfig, TargetProductionRateConfig, TargetProductionRateConfigSchema } from "./schema";
 
 /**
@@ -43,12 +44,13 @@ export interface PastedRest {
 }
 
 const SuggestedTargetSchema = TargetProductionRateConfigSchema.extend({
-    recipe: TargetProductionRateConfigSchema.shape.recipe.min(1),
+    item: TargetProductionRateConfigSchema.shape.item.min(1),
 });
 
 /** The `suggested_target` of a sidecar export, None when it is missing or not a valid target. Never throws. */
 export function parseSuggestedTarget(raw: unknown): O.Option<TargetProductionRateConfig> {
-    const result = SuggestedTargetSchema.safeParse(raw);
+    // the Sidecar writes `recipe`, as before: it is read as the item
+    const result = SuggestedTargetSchema.safeParse(renameRecipeToItem(raw));
     return result.success ? O.some(result.data) : O.none;
 }
 
@@ -133,7 +135,7 @@ export function inferSuggestedTarget(machines: readonly MachineConfiguration[]):
         }
         return group.recipe < best.recipe ? group : best;
     });
-    return O.some({ recipe: best.product, items_per_second: best.items_per_second, copies: 1 });
+    return O.some({ item: best.product, items_per_second: best.items_per_second, copies: 1 });
 }
 
 /**
@@ -174,7 +176,7 @@ function outputBeltOf(product: string, machines: readonly MachineConfiguration[]
  * every selected machine in it, and the conversion to copies keeps the rate, so the total is what the belt takes.
  */
 function heldToOutputBelt(suggestion: SuggestedTarget, machines: readonly MachineConfiguration[], outputs: PastedOutputs): SuggestedTarget {
-    const product = suggestion.target.recipe;
+    const product = suggestion.target.item;
     const belt = outputBeltOf(product, machines, outputs);
     // what the machines make, from their facts too: a sidecar that holds its suggestion to the belt exports the belt's rate
     const made = Math.max(suggestion.target.items_per_second, machinesRateOf(product, machines));
@@ -204,10 +206,10 @@ function machinesRateOf(product: string, machines: readonly MachineConfiguration
  */
 function heldToBuild(suggestion: SuggestedTarget, machines: readonly MachineConfiguration[], outputs: PastedOutputs, rest: PastedRest): SuggestedTarget {
     if (outputs.belts.length === 0) return suggestion;
-    const product = suggestion.target.recipe;
+    const product = suggestion.target.item;
     const made = suggestion.belt_limit?.machines_per_second ?? Math.max(suggestion.target.items_per_second, machinesRateOf(product, machines));
     const parsed = ConfigSchema.safeParse({
-        setpoint: { recipe: product, items_per_second: made, copies: suggestion.target.copies }, overrides: {},
+        setpoint: { item: product, items_per_second: made, copies: suggestion.target.copies }, overrides: {},
         machines, inserters: outputs.inserters, belts: outputs.belts, chests: rest.chests,
         ...(rest.drills.length > 0 && { drills: { configs: rest.drills } }),
     });

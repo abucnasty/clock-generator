@@ -15,7 +15,7 @@ import { TickByHand } from './runner/tick-by-hand.fixture';
 
 function cell(): Config {
     return ConfigSchema.parse({
-        setpoint: {recipe: 'supercapacitor', items_per_second: 0.1, copies: 1},
+        setpoint: {item: 'supercapacitor', items_per_second: 0.1, copies: 1},
         machines: [
             {id: 1, recipe: 'processing-unit-recycling', prototype: 'recycler', crafting_speed: 1, productivity: 0, result_target: {type: 'machine', id: 2}},
             {id: 2, recipe: 'supercapacitor', prototype: 'electromagnetic-plant', crafting_speed: 1, productivity: 50},

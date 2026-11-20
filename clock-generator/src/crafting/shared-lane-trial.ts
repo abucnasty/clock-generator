@@ -160,7 +160,7 @@ function triedOnCopies(config: Config, lanes: ReturnType<typeof sharedLaneRunsOf
     const windows = new Map(Object.entries(clock_windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     const shared_keys = lanes.filter(lane => lane.shared).map(lane => `${lane.belt_id}/${lane.lane}`);
     const registry = createEntityRegistryFromConfig(config);
-    const losses = disturbanceTrialsOf(registry, config.setpoint.recipe);
+    const losses = disturbanceTrialsOf(registry, config.setpoint.item);
     const loss_limit = lossLimitOf(registry);
     const base: CopiesTrialVerdict = { survives: true, lanes: shared_keys, expected_output_items, recovered_after_window_cycles: 0 };
     const not_judged = new Set<number>();
@@ -198,7 +198,7 @@ function triedOnCopies(config: Config, lanes: ReturnType<typeof sharedLaneRunsOf
                         ...(count !== null && { trial_counts: [count] }),
                         ...(not_judged.size > 0 && { copies_not_judged: [...not_judged].sort((a, b) => a - b) }),
                         text: describeCopiesShort(loss, loss_lanes.length > 0 ? loss_lanes : shared_keys, copies, short, expected_output_items,
-                            loss.kind === "output" && under.output_belt !== undefined && loss.item === under.setpoint.recipe, buildToNameOf(config)) };
+                            loss.kind === "output" && under.output_belt !== undefined && loss.item === under.setpoint.item, buildToNameOf(config)) };
                 }
                 recovered = Math.max(recovered, (outcome.recovered_after_bins ?? 0) * outcome.window_cycles_per_bin);
             }

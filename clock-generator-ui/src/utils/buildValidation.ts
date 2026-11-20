@@ -78,7 +78,7 @@ export function navigateToOutputRouteRepair(issue: Pick<InserterCoverageIssue, '
 
 /** The words of a config key as a player reads them: the form's labels where it has one, else the key with spaces */
 const FIELD_LABELS: Record<string, string> = {
-    setpoint: 'Setpoint', items_per_second: 'Items per Second', recipe: 'Recipe', copies: 'Copies',
+    setpoint: 'Setpoint', items_per_second: 'Items per Second', item: 'Recipe', recipe: 'Recipe', copies: 'Copies',
     overrides: 'Advanced settings',
 };
 const label = (key: string | number) => typeof key === 'number' ? String(key + 1) : FIELD_LABELS[key] ?? words(key);
@@ -189,7 +189,7 @@ export function buildValidationIssues(input: Input): BuildValidationIssue[] {
         const [group, index, key] = diagnostic.path;
         let fieldTarget: FocusTarget | undefined;
         if (group === 'setpoint') {
-            if (index === 'recipe') fieldTarget = { kind: 'target-recipe' };
+            if (index === 'item') fieldTarget = { kind: 'target-recipe' };
             if (index === 'items_per_second') fieldTarget = { kind: 'target-rate' };
             if (index === 'copies') fieldTarget = { kind: 'target-copies' };
         }

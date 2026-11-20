@@ -29,7 +29,7 @@ const laneNameOf = (config: Config, belt_id: number, lane: number): LaneName =>
 export function jobEvent(config: Config): MakerLogEvent {
     const lanes = modelLanesOf(config);
     return {
-        event: "job", format: MAKER_LOG_FORMAT, recipe: config.setpoint.recipe, copies: config.setpoint.copies ?? 1,
+        event: "job", format: MAKER_LOG_FORMAT, recipe: config.setpoint.item, copies: config.setpoint.copies ?? 1,
         copy_offset: config.setpoint.copy_offset === undefined ? null : { x: config.setpoint.copy_offset.x, y: config.setpoint.copy_offset.y },
         shared_lanes: lanes.filter(lane => lane.shared).map(lane => laneNameOf(config, lane.belt_id, lane.lane)),
         unknown_end_lanes: lanes.filter(lane => !lane.shared).map(lane => laneNameOf(config, lane.belt_id, lane.lane)),

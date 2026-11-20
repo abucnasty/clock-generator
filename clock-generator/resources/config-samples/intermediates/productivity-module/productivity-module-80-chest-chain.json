@@ -1,6 +1,6 @@
 {
   "setpoint": {
-    "recipe": "productivity-module",
+    "item": "productivity-module",
     "items_per_second": 80,
     "copies": 6
   },

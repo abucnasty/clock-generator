@@ -1,6 +1,6 @@
 {
   "setpoint": {
-    "recipe": "low-density-structure",
+    "item": "low-density-structure",
     "items_per_second": 240,
     "copies": 1
   },

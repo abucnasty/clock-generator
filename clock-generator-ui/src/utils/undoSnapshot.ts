@@ -106,7 +106,7 @@ const itemsOf = (form: ConfigFormData, kind: EntityKind): { id: number; _uuid: s
 /** A fallback for ordinary form edits; destructive actions keep their more specific messages. */
 export function describeConfigEdit(before: ConfigFormData, after: ConfigFormData): { message: string; key: string } {
     const changed = (a: unknown, b: unknown) => JSON.stringify(a) !== JSON.stringify(b);
-    const TARGET_FIELDS = { recipe: 'target recipe', items_per_second: 'Items per Second', copies: 'Copies', counts: 'Counts' } as const;
+    const TARGET_FIELDS = { item: 'target recipe', items_per_second: 'Items per Second', copies: 'Copies', counts: 'Counts' } as const;
     for (const field of Object.keys(TARGET_FIELDS) as (keyof typeof TARGET_FIELDS)[]) {
         if (changed(before.setpoint[field], after.setpoint[field])) {
             return { message: `Updated ${TARGET_FIELDS[field]}.`, key: `target:${field}` };

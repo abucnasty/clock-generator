@@ -1,6 +1,6 @@
 {
   "setpoint": {
-    "recipe": "advanced-circuit",
+    "item": "advanced-circuit",
     "items_per_second": 240,
     "copies": 3,
     "copy_offset": {

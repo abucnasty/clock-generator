@@ -25,7 +25,7 @@ function refusalOf(config: Config): unknown {
  */
 function build(copies: number, items_per_second: number, crafting_speed: number, sharing: 'per_copy' | 'shared' = 'per_copy') {
     return ConfigSchema.parse({
-        setpoint: { recipe: 'iron-gear-wheel', copies, items_per_second },
+        setpoint: { item: 'iron-gear-wheel', copies, items_per_second },
         machines: [{ id: 1, recipe: 'iron-gear-wheel', productivity: 0, crafting_speed }],
         inserters: [
             { source: { type: 'belt', id: 1 }, sink: { type: 'machine', id: 1 }, stack_size: 4, filters: ['iron-plate'] },
@@ -59,7 +59,7 @@ describe('target capacity agrees with actual engine validation', () => {
             const config = build(copies, 1, crafting_speed);
             const facts = computeMachineFacts(config.machines[0]);
             expect(facts.output_rate_ratio).toBeDefined();
-            const max = machinesMaxOf(config.setpoint.recipe, [{ id: 1, facts }])!;
+            const max = machinesMaxOf(config.setpoint.item, [{ id: 1, facts }])!;
             const capacity = totalMachineCapacity(max, copies);
             expect(capacity).not.toBeNull();
             if (capacity === null) throw new Error('Expected supported exact capacity');
@@ -221,9 +221,9 @@ describe('over the samples, a target the field allows is never refused by a feas
         const machines = config.machines.map((machine, index) => ({
             id: machine.id,
             facts: computeMachineFacts(machine),
-            comesBack: resultComesBack(form.machines[index], form.inserters, config.setpoint.recipe),
+            comesBack: resultComesBack(form.machines[index], form.inserters, config.setpoint.item),
         }));
-        const machinesMax = machinesMaxOf(config.setpoint.recipe, machines, counts);
+        const machinesMax = machinesMaxOf(config.setpoint.item, machines, counts);
         const max = rateMaxOf(machinesMax, { max: targetRateMaxOf(config), current: true });
         if (max === null) return;
         checked++;

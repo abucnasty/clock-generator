@@ -38,7 +38,7 @@ export function configKeyOf(config: Config): string {
 export function generatedForOf(config: Config, at: number = Date.now()): GeneratedFor {
     return {
         key: configKeyOf(config),
-        recipe: config.setpoint.recipe,
+        recipe: config.setpoint.item,
         itemsPerSecond: config.setpoint.items_per_second,
         ...(config.setpoint.counts === 'destroyed' && { counts: 'destroyed' as const }),
         generatedAt: at,

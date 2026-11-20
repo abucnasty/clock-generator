@@ -293,7 +293,7 @@ export type EntityKind = 'machines' | 'inserters' | 'belts' | 'chests' | 'drills
 
 export interface ConfigFormData {
     setpoint: {
-        recipe: string;
+        item: string;
         items_per_second: number;
         /** Number of duplicate setups being modeled (multiplier for ratio calculations) */
         copies: number;
@@ -316,7 +316,7 @@ export interface ConfigFormData {
 
 export const createDefaultConfig = (): ConfigFormData => ({
     setpoint: {
-        recipe: '',
+        item: '',
         items_per_second: 1,
         copies: 1,
     },

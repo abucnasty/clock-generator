@@ -17,7 +17,7 @@ import {
 
 /** A form that can be turned into a config: a recipe, a rate and one machine */
 const form = (): ConfigFormData => build({
-    setpoint: { recipe: 'electronic-circuit', items_per_second: 240, copies: 1 },
+    setpoint: { item: 'electronic-circuit', items_per_second: 240, copies: 1 },
     machines: [machine(1, { recipe: 'electronic-circuit' })],
 });
 

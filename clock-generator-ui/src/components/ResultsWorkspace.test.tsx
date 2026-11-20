@@ -34,7 +34,7 @@ function Results({ alternatives, recommendedIndex, initialIndex, initialDetail, 
         timeline: context.timeline, onTimelineChange: () => {},
         detail, onDetailChange: next => { onDetailChange(next); setDetail(next); },
         generatedFor: judgedStart === undefined ? null
-            : { key: JSON.stringify({ setpoint: { recipe: 'automation-science-pack', items_per_second: 4, copies: 1 }, machines: [], inserters: [], belts: [], chests: [],
+            : { key: JSON.stringify({ setpoint: { item: 'automation-science-pack', items_per_second: 4, copies: 1 }, machines: [], inserters: [], belts: [], chests: [],
                 overrides: { judged_start: judgedStart } }), recipe: 'automation-science-pack', itemsPerSecond: 4, generatedAt: 0 },
         generationAssumptions: null, isRunning, error: null,
         alternatives, selectedIndex, onSelect: setSelectedIndex, recommendedIndex,

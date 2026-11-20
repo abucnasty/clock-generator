@@ -601,7 +601,7 @@ export function outputLineNotJudgedInsights(config: Config): ClockInsight[] {
     if (config.output_belt !== undefined) return [];
     let lanes;
     try {
-        lanes = sharedLanesOf(config).filter(lane => lane.role === "output" && lane.item === config.setpoint.recipe);
+        lanes = sharedLanesOf(config).filter(lane => lane.role === "output" && lane.item === config.setpoint.item);
     } catch {
         return [];
     }

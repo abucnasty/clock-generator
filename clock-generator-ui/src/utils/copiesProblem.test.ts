@@ -8,7 +8,7 @@ const invalid = [0, -1, Infinity, -Infinity, NaN, 0.0001, 1 / 3];
 
 describe('Copies field and engine schema agreement', () => {
     it.each([...valid, ...invalid])('uses the same boundary for %s', copies => {
-        const setpoint = { recipe: 'iron-gear-wheel', items_per_second: 1, copies };
+        const setpoint = { item: 'iron-gear-wheel', items_per_second: 1, copies };
         const accepted = TargetProductionRateConfigSchema.safeParse(setpoint).success;
         expect(accepted).toBe(valid.includes(copies));
         expect(copiesProblem(copies) === null).toBe(accepted);

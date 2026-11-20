@@ -2,7 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { ConfigSchema } from "./schema";
-import { mainProductOf, outputItemOf, readRecipeSetpointAsItem, renameRecipeToItem } from "./migrate-recipe-setpoint";
+import { mainProductOf, outputItemOf, readRecipeSetpointAsItem } from "./migrate-recipe-setpoint";
+import { renameRecipeToItem } from "./migrate-setpoint";
 
 // the former field is `recipe`; the setpoint names its item as `item`
 const build = (setpoint: { recipe?: string; item?: string; counts?: string }, ...recipes: string[]) =>
@@ -43,7 +44,7 @@ describe("a setpoint named by a recipe", () => {
         expect(Object.keys(read)).toEqual(Object.keys(config));
         expect(Object.keys(read.setpoint as object)).toEqual(Object.keys(config.setpoint).map(name => name === "recipe" ? "item" : name));
         expect(Object.keys(config.setpoint)).toContain(key);
-        expect((config.setpoint as Record<string, string>)[key]).toBe("jellynut-processing");
+        expect((config.setpoint as unknown as Record<string, string>)[key]).toBe("jellynut-processing");
     });
 
     it("loads under `item` alone, and under `recipe` alone as `item` with no `recipe` left, where the name is already an item", () => {

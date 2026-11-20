@@ -1,6 +1,6 @@
 {
   "setpoint": {
-    "recipe": "grenade",
+    "item": "grenade",
     "items_per_second": 240,
     "copies": 7,
     "copy_offset": {

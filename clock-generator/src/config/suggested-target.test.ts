@@ -32,7 +32,7 @@ function factsRate(machine: MachineInput): number {
 }
 
 describe("parseSuggestedTarget", () => {
-    const valid = { recipe: "transport-belt", items_per_second: 3, copies: 1 };
+    const valid = { item: "transport-belt", items_per_second: 3, copies: 1 };
 
     it("takes a valid target as it is", () => {
         expect(parseSuggestedTarget(valid)).toEqual(O.some(valid));
@@ -52,7 +52,7 @@ describe("parseSuggestedTarget", () => {
         ["null", null],
         ["a string", "transport-belt"],
         ["an empty object", {}],
-        ["an empty recipe", { ...valid, recipe: "" }],
+        ["an empty item", { ...valid, item: "" }],
         ["a rate of 0", { ...valid, items_per_second: 0 }],
         ["a negative rate", { ...valid, items_per_second: -1 }],
         ["a rate as a string", { ...valid, items_per_second: "3" }],
@@ -94,7 +94,7 @@ describe("inferSuggestedTarget", () => {
     it("suggests the product of a single machine at its output rate", () => {
         const gear = assembler("iron-gear-wheel");
         expect(inferSuggestedTarget(machines(gear))).toEqual(
-            O.some({ recipe: "iron-gear-wheel", items_per_second: factsRate(gear), copies: 1 }),
+            O.some({ item: "iron-gear-wheel", items_per_second: factsRate(gear), copies: 1 }),
         );
         expect(factsRate(gear)).toBeCloseTo(1.5);
     });
@@ -109,7 +109,7 @@ describe("inferSuggestedTarget", () => {
     it("skips an intermediate product for the one that consumes it", () => {
         const belt = assembler("transport-belt");
         expect(inferSuggestedTarget(machines(assembler("iron-gear-wheel"), belt))).toEqual(
-            O.some({ recipe: "transport-belt", items_per_second: factsRate(belt), copies: 1 }),
+            O.some({ item: "transport-belt", items_per_second: factsRate(belt), copies: 1 }),
         );
         expect(factsRate(belt)).toBeCloseTo(3);
     });
@@ -119,7 +119,7 @@ describe("inferSuggestedTarget", () => {
         const cable = assembler("copper-cable");
         expect(factsRate(cable)).toBeGreaterThan(factsRate(gear));
         for (const order of [[gear, cable], [cable, gear]]) {
-            expect(O.toNullable(inferSuggestedTarget(machines(...order)))?.recipe).toBe("copper-cable");
+            expect(O.toNullable(inferSuggestedTarget(machines(...order)))?.item).toBe("copper-cable");
         }
     });
 
@@ -128,18 +128,18 @@ describe("inferSuggestedTarget", () => {
         const cable = assembler("copper-cable", 0.75);
         expect(factsRate(gear)).toBe(factsRate(cable));
         for (const order of [[gear, cable], [cable, gear]]) {
-            expect(O.toNullable(inferSuggestedTarget(machines(...order)))?.recipe).toBe("copper-cable");
+            expect(O.toNullable(inferSuggestedTarget(machines(...order)))?.item).toBe("copper-cable");
         }
     });
 
     it("names the main product, not the recipe", () => {
         const rocket_fuel = assembler("rocket-fuel-from-jelly", 2);
         expect(inferSuggestedTarget(machines(rocket_fuel))).toEqual(
-            O.some({ recipe: "rocket-fuel", items_per_second: factsRate(rocket_fuel), copies: 1 }),
+            O.some({ item: "rocket-fuel", items_per_second: factsRate(rocket_fuel), copies: 1 }),
         );
         const foundry = assembler("casting-iron", 4);
         expect(O.toNullable(inferSuggestedTarget(machines(foundry)))).toEqual(
-            { recipe: "iron-plate", items_per_second: factsRate(foundry), copies: 1 },
+            { item: "iron-plate", items_per_second: factsRate(foundry), copies: 1 },
         );
     });
 
@@ -152,7 +152,7 @@ describe("inferSuggestedTarget", () => {
     it("counts the part of a product productivity ignores as the machine facts do, and a recipe consuming its own product is final", () => {
         const egg: MachineInput = { recipe: "pentapod-egg", crafting_speed: 2, productivity: 50, prototype: "biochamber" };
         const suggested = O.toNullable(inferSuggestedTarget(machines(egg)));
-        expect(suggested).toEqual({ recipe: "pentapod-egg", items_per_second: factsRate(egg), copies: 1 });
+        expect(suggested).toEqual({ item: "pentapod-egg", items_per_second: factsRate(egg), copies: 1 });
         // (2 - 1) * 1.5 + 1 eggs per 15 s craft at speed 2
         expect(suggested?.items_per_second).toBeCloseTo(2.5 * 2 / 15);
     });
@@ -166,9 +166,9 @@ describe("inferSuggestedTarget", () => {
     ])("agrees with the hand-written target of the sample %s", file => {
         const sample = JSON.parse(fs.readFileSync(
             path.resolve(__dirname, "../../resources/config-samples", file), "utf8",
-        )) as { machines: MachineConfiguration[], setpoint: { recipe: string, items_per_second: number, copies: number } };
+        )) as { machines: MachineConfiguration[], setpoint: { item: string, items_per_second: number, copies: number } };
         const suggested = O.toNullable(inferSuggestedTarget(sample.machines));
-        expect(suggested?.recipe).toBe(sample.setpoint.recipe);
+        expect(suggested?.item).toBe(sample.setpoint.item);
         expect(suggested!.items_per_second * sample.setpoint.copies).toBeGreaterThanOrEqual(sample.setpoint.items_per_second);
         expect(suggested?.copies).toBe(1);
     });
@@ -181,14 +181,14 @@ describe("inferSuggestedTarget", () => {
         const gear = assembler("iron-gear-wheel");
         expect(inferSuggestedTarget(machines(assembler("no-such-recipe")))).toEqual(O.none);
         expect(inferSuggestedTarget(machines(assembler("no-such-recipe"), gear))).toEqual(
-            O.some({ recipe: "iron-gear-wheel", items_per_second: factsRate(gear), copies: 1 }),
+            O.some({ item: "iron-gear-wheel", items_per_second: factsRate(gear), copies: 1 }),
         );
     });
 
     it("suggests nothing when the recipes consume each other's products", () => {
         // the speed module is made of advanced circuits, and recycling it gives advanced circuits back
-        expect(O.toNullable(inferSuggestedTarget(machines(assembler("speed-module"))))?.recipe).toBe("speed-module");
-        expect(O.toNullable(inferSuggestedTarget(machines(assembler("speed-module-recycling"))))?.recipe).toBe("advanced-circuit");
+        expect(O.toNullable(inferSuggestedTarget(machines(assembler("speed-module"))))?.item).toBe("speed-module");
+        expect(O.toNullable(inferSuggestedTarget(machines(assembler("speed-module-recycling"))))?.item).toBe("advanced-circuit");
         expect(inferSuggestedTarget(machines(assembler("speed-module"), assembler("speed-module-recycling")))).toEqual(O.none);
     });
 });
@@ -198,12 +198,12 @@ describe("suggestedTargetOf", () => {
 
     it("takes the mod's target over the machines", () => {
         const from_mod = { recipe: "transport-belt", items_per_second: 10, copies: 1 };
-        expect(suggestedTargetOf(from_mod, gear)).toEqual(O.some({ target: from_mod, source: "mod" }));
+        expect(suggestedTargetOf(from_mod, gear)).toEqual(O.some({ target: { item: "transport-belt", items_per_second: 10, copies: 1 }, source: "mod" }));
     });
 
     it("works it out from the machines when the mod's target is invalid or missing", () => {
         const inferred = O.some({
-            target: { recipe: "iron-gear-wheel", items_per_second: factsRate(gear[0]), copies: 1 },
+            target: { item: "iron-gear-wheel", items_per_second: factsRate(gear[0]), copies: 1 },
             source: "inferred",
         });
         expect(suggestedTargetOf({ recipe: "", items_per_second: -1 }, gear)).toEqual(inferred);
@@ -239,7 +239,7 @@ describe("suggestedTargetOf, held to the belt the product is put on", () => {
         expect(from_mod(machines).items_per_second).toBeCloseTo(248.006, 3);
         for (const raw of [from_mod(machines), undefined]) {
             const suggested = O.toNullable(suggestedTargetOf(raw, machines, outputs));
-            expect(suggested?.target).toEqual({ recipe: "automation-science-pack", items_per_second: 240, copies: 1 });
+            expect(suggested?.target).toEqual({ item: "automation-science-pack", items_per_second: 240, copies: 1 });
             expect(suggested?.belt_limit).toEqual({ belt_id: 2, machines_per_second: from_mod(machines).items_per_second });
         }
     });
@@ -253,7 +253,7 @@ describe("suggestedTargetOf, held to the belt the product is put on", () => {
             return { machines, outputs: { ...outputs, belts } };
         };
         const configAt = (items_per_second: number, machines: MachineConfiguration[], outputs: { inserters: InserterConfig[], belts: BeltConfig[] }) =>
-            ConfigSchema.parse({ setpoint: { recipe: "automation-science-pack", items_per_second, copies: 1 }, overrides: {}, machines,
+            ConfigSchema.parse({ setpoint: { item: "automation-science-pack", items_per_second, copies: 1 }, overrides: {}, machines,
                 inserters: outputs.inserters, belts: outputs.belts, chests: [] }) as Config;
 
         it("lowers it to an input lane that allows less than the output belt, and gives the engine's words for that limit", () => {
@@ -262,7 +262,7 @@ describe("suggestedTargetOf, held to the belt the product is put on", () => {
             const suggested = O.toNullable(suggestedTargetOf(from_mod(machines), machines, outputs, { chests: [], drills: [] }));
             const most = targetRateMaxOf(configAt(made, machines, outputs));
             expect(most?.cut).toMatch(/^C2 /);
-            expect(suggested).toEqual({ target: { recipe: "automation-science-pack", items_per_second: 120, copies: 1 }, source: "mod",
+            expect(suggested).toEqual({ target: { item: "automation-science-pack", items_per_second: 120, copies: 1 }, source: "mod",
                 build_limit: { machines_per_second: made, text: most!.limit } });
             expect(most!.limit).toMatch(/^At most 60 a second of (copper plate|iron gear wheel) reaches the machines/);
             // at the suggested rate the site's check finds nothing above the most
@@ -288,7 +288,7 @@ describe("suggestedTargetOf, held to the belt the product is put on", () => {
     it("keeps the reason for an export the sidecar already lowered to what the belt carries", () => {
         const { machines, outputs } = pasted(9);
         const lowered = { recipe: "automation-science-pack", items_per_second: 240, copies: 1 };
-        expect(O.toNullable(suggestedTargetOf(lowered, machines, outputs))).toEqual({ target: lowered, source: "mod",
+        expect(O.toNullable(suggestedTargetOf(lowered, machines, outputs))).toEqual({ target: { item: lowered.recipe, items_per_second: 240, copies: 1 }, source: "mod",
             belt_limit: { belt_id: 2, machines_per_second: from_mod(machines).items_per_second } });
     });
 
@@ -297,7 +297,7 @@ describe("suggestedTargetOf, held to the belt the product is put on", () => {
         const suggested = O.toNullable(suggestedTargetOf(from_mod(machines), machines, outputs));
         expect(suggested?.target.items_per_second).toBe(120);
         // the build as the paste gives it, with the suggestion as its setpoint
-        const config = { setpoint: { recipe: "automation-science-pack", items_per_second: 120, copies: 1 }, overrides: {}, machines,
+        const config = { setpoint: { item: "automation-science-pack", items_per_second: 120, copies: 1 }, overrides: {}, machines,
             inserters: outputs.inserters, belts: outputs.belts, chests: [] };
         const most = targetRateMaxOf(ConfigSchema.parse(config) as Config);
         expect(most?.cut).toBe("C3 automation-science-pack");
@@ -359,7 +359,7 @@ describe("exports of every sidecar version", () => {
 
         const suggested = O.toNullable(suggestedTargetOf(pasted.suggested_target, parsed));
         expect(suggested?.source).toBe(version === "0.8.0" ? "mod" : "inferred");
-        expect(suggested?.target.recipe).toBe("transport-belt");
+        expect(suggested?.target.item).toBe("transport-belt");
         expect(suggested?.target.items_per_second).toBeCloseTo(3);
     });
 

@@ -21,7 +21,7 @@ beforeAll(async () => { config = await loadConfigFromFile(SAMPLE); });
 
 function outputCounts(config: Config): Set<number> {
     const recording = simulateRecording(config, OLD_WINDOWS, 1056, 36_960);
-    return new Set(outputPerWindowCycle(recording, recipesMaking(config, config.setpoint.recipe)).slice(-20).map(p => p.items));
+    return new Set(outputPerWindowCycle(recording, recipesMaking(config, config.setpoint.item)).slice(-20).map(p => p.items));
 }
 
 describe("moving pickup affects the verdict of the old default clock", () => {

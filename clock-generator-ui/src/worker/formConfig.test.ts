@@ -37,7 +37,7 @@ describe('parseFormConfig', () => {
     });
 
     it('preserves imported geometry, fuel and explicit overrides, refuses unsupported geometry edits, and keeps mixed-drop drafts recoverable', () => {
-        let form = edits.updateSetpoint(createDefaultConfig(), 'recipe', 'rocket-fuel');
+        let form = edits.updateSetpoint(createDefaultConfig(), 'item', 'rocket-fuel');
         form.machines[0] = { ...form.machines[0], recipe: 'rocket-fuel-from-jelly', prototype: 'biochamber', fuel: 'nutrients' };
         form = edits.addBelt(form);
         form = edits.addBelt(form);
@@ -90,7 +90,7 @@ describe('parseFormConfig', () => {
     });
 
     it('gives the checked config when nothing is wrong with it', () => {
-        const form = edits.updateSetpoint(createDefaultConfig(), 'recipe', 'iron-gear-wheel');
+        const form = edits.updateSetpoint(createDefaultConfig(), 'item', 'iron-gear-wheel');
         const result = exportAndImport(form);
         expect(result.success).toBe(true);
         expect(result.data).toEqual(ConfigSchema.parse(formDataToConfig(form)));

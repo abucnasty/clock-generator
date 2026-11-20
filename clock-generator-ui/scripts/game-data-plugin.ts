@@ -48,7 +48,7 @@ function copyGameData(): void {
         return {
             id,
             file,
-            recipe: config.setpoint.recipe,
+            recipe: config.setpoint.item,
             items_per_second: config.setpoint.items_per_second,
             ...(config.setpoint.counts === 'destroyed' && { counts: 'destroyed' }),
             copies: config.setpoint.copies ?? 1,

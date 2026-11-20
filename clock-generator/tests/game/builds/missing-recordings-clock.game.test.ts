@@ -63,7 +63,7 @@ describe.sequential("the selected clock of a record job from the staged start, w
             const jobCopies = config.setpoint.copies ?? 1;
             const perCopy = config.setpoint.items_per_second / jobCopies;
             const target = perCopy * item.copies;
-            const recipes = [...recipesMaking(config, config.setpoint.recipe)];
+            const recipes = [...recipesMaking(config, config.setpoint.item)];
             const finalsPerCopy = config.machines.filter(machine => recipes.includes(machine.recipe)).length;
             const tailTicks = item.tail_ticks ?? TAIL_TICKS;
             const blueprint = fs.readFileSync(scaffoldFile(item), "utf8").trim();
@@ -74,7 +74,7 @@ describe.sequential("the selected clock of a record job from the staged start, w
             }) + "\n");
             const probe = composeProbeSource(path.join(__dirname, "missing-recordings-clock-probe.lua"), {
                 window: RUN_PROTOCOL.window, expected: Math.round(target * RUN_PROTOCOL.window / 60 * 1e6) / 1e6, baseline: item.baseline?.ticks ?? RUN_PROTOCOL.baseline,
-                cap: RUN_PROTOCOL.cap, recipes, item: config.setpoint.recipe, ticks: RUN_PROTOCOL.cap + tailTicks, losses: item.losses, tail: tailTicks,
+                cap: RUN_PROTOCOL.cap, recipes, item: config.setpoint.item, ticks: RUN_PROTOCOL.cap + tailTicks, losses: item.losses, tail: tailTicks,
                 finals: finalsPerCopy * item.copies, late: item.late_recording !== undefined,
                 ...(item.block_sinks !== undefined && {block_sinks: true}),
             });

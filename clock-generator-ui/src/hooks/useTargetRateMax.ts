@@ -29,7 +29,7 @@ export function useTargetRateMax(config: Config, enabled: boolean): TargetRateMa
     const [answer, setAnswer] = useState<Answer | null>(null);
     useEffect(() => {
         const asked = JSON.parse(key) as Config;
-        if (!enabled || !asked.setpoint.recipe) return;
+        if (!enabled || !asked.setpoint.item) return;
         let current = true;
         const timer = setTimeout(() => {
             if (!(asked.setpoint.items_per_second > 0)) asked.setpoint.items_per_second = 1;

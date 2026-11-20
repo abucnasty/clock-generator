@@ -13,13 +13,13 @@ const former = (extra: object = {}) => JSON.stringify({
 describe('a build saved or exported under the former names', () => {
     it('is read from the browser\'s storage with its setpoint and its kick start', () => {
         const form = readSavedConfig(former())!;
-        expect(form.setpoint).toMatchObject({ recipe: 'iron-gear-wheel', items_per_second: 2 });
+        expect(form.setpoint).toMatchObject({ item: 'iron-gear-wheel', items_per_second: 2 });
         expect(form.overrides).toEqual({ kick_start_items: 40 });
         expect('target_output' in form).toBe(false);
     });
 
     it('is read from an imported file with its setpoint and its kick start', () => {
-        expect(readConfigFile(former())).toMatchObject({ setpoint: { recipe: 'iron-gear-wheel' }, overrides: { kick_start_items: 40 } });
+        expect(readConfigFile(former())).toMatchObject({ setpoint: { item: 'iron-gear-wheel' }, overrides: { kick_start_items: 40 } });
     });
 
     it('is told for a build file, not read as an export of the mod', () => {
@@ -30,7 +30,7 @@ describe('a build saved or exported under the former names', () => {
 // A build saved or exported before the window cycle time was named so keeps `period_duration_ticks` in each Clocked override.
 const clockedBefore = (extra: object = {}) => ({ mode: 'CLOCKED', ranges: [{ start: 0, end: 10 }], period_duration_ticks: 120, ...extra });
 const withClocked = (inserter: object, drill: object) => JSON.stringify({
-    setpoint: { recipe: 'iron-gear-wheel', items_per_second: 2, copies: 1 },
+    setpoint: { item: 'iron-gear-wheel', items_per_second: 2, copies: 1 },
     machines: [{ id: 1, recipe: 'iron-gear-wheel', productivity: 0, crafting_speed: 1.25 }],
     inserters: [{ source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 1 }, stack_size: 16, overrides: { enable_control: inserter } }],
     belts: [], chests: [],

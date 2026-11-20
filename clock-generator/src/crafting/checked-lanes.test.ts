@@ -11,7 +11,7 @@ type Parts = Partial<Pick<Config, "machines" | "inserters" | "belts" | "override
 function configOf(parts: Parts): Config {
     const { copies = 3, ...rest } = parts;
     return ConfigSchema.parse({
-        setpoint: { recipe: "iron-gear-wheel", items_per_second: copies, copies, copy_offset: { x: 4, y: 0 } },
+        setpoint: { item: "iron-gear-wheel", items_per_second: copies, copies, copy_offset: { x: 4, y: 0 } },
         machines: [{ id: 1, recipe: "iron-gear-wheel", crafting_speed: 1, productivity: 0 }], belts: [], inserters: [], ...rest,
     }) as Config;
 }

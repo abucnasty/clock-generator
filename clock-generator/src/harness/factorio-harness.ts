@@ -735,7 +735,7 @@ export function partCopiesOf(config: Config): PartCopy[] {
             if (part) parts.set(JSON.stringify([...part].sort()), part);
         }
     }
-    const finals = config.machines.filter(machine => recipesMaking(config, config.setpoint.recipe).has(machine.recipe));
+    const finals = config.machines.filter(machine => recipesMaking(config, config.setpoint.item).has(machine.recipe));
     const inserter_ids = config.inserters.map((inserter, index) => ({ inserter, id: EntityId.forInserter(inserter.id ?? index + 1).id }));
     return Array.from(parts.values()).map(ids => {
         const held = finals.filter(machine => ids.has(EntityId.forMachine(machine.id).id)).map(machine => {

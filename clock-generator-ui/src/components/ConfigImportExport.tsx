@@ -197,7 +197,7 @@ export function ConfigImportExport({
     const canImport = hasImportWork && !preview?.geometryProblem && (!preview?.crossings.length || acknowledgedCurrent);
 
     // Simplification can replace a complete import, never a category the user chose to retain.
-    const canSimplify = pendingImport && !pendingImport.reduction && canImport && pendingImport.fill && prospectiveTarget.recipe !== ''
+    const canSimplify = pendingImport && !pendingImport.reduction && canImport && pendingImport.fill && prospectiveTarget.item !== ''
         && preview?.counts.every(row => (row.incoming === 0 || row.replacing) && (row.current === 0 || row.replacing));
     let simplificationConfig: Config | null = null;
     if (canSimplify && pendingImport) {
@@ -356,7 +356,7 @@ export function ConfigImportExport({
         setPendingImport({ ...validated, fill, pickupWarnings: read.pickupWarnings });
         // everything there is, except a target the player has already set; the first exports had machines only
         setImportSelections({
-            target: fill !== null && currentTarget.recipe === '',
+            target: fill !== null && currentTarget.item === '',
             machines: validated.machines.length > 0,
             drills: !read.legacy && validated.drills.length > 0,
             inserters: !read.legacy && validated.inserters.length > 0,
@@ -364,7 +364,7 @@ export function ConfigImportExport({
             chests: !read.legacy && validated.chests.length > 0,
         });
         return null;
-    }, [currentTarget.recipe]);
+    }, [currentTarget.item]);
 
     const handleFileChange = useCallback(
         async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -757,14 +757,14 @@ export function ConfigImportExport({
                                 />
                                 <Typography id={TARGET_CAPTION_ID} variant="body2" color="text.secondary" sx={{ ml: 4 }}>
                                     {targetRowCaption(pendingImport.fill.source, pendingImport.fill.beltLimit, pendingImport.fill.buildLimit)}
-                                    {currentTarget.recipe !== '' && ` ${replacesTargetNote(currentTarget, recipeLabel)}`}
+                                    {currentTarget.item !== '' && ` ${replacesTargetNote(currentTarget, recipeLabel)}`}
                                 </Typography>
                                 {maximumTargetNote(pendingImport.fill.source) && <Typography id={TARGET_MAXIMUM_ID} variant="body2" color="text.secondary" sx={{ ml: 4 }}>
                                     {maximumTargetNote(pendingImport.fill.source)}
                                 </Typography>}
                             </Box>
                         ) : (
-                            currentTarget.recipe === '' && (
+                            currentTarget.item === '' && (
                                 <Typography variant="body2" color="text.secondary">
                                     {NO_TARGET_NOTE}
                                 </Typography>

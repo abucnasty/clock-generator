@@ -121,7 +121,7 @@ export type MachineConfiguration = z.infer<typeof MachineConfigurationSchema>;
 /**
  * Schema for target production rate configuration.
  * 
- * @property recipe - The recipe name to produce
+ * @property item - The name of the item that the setpoint counts
  * @property items_per_second - Target production rate in items per second
  * @property copies - How many identical units the build holds side by side. The config describes ONE unit, and the
  *   generator plans that unit and multiplies the output rate by `copies`. It is a positive number and may be
@@ -142,7 +142,7 @@ export const TARGET_COUNTS = ["made", "destroyed"] as const;
 export type TargetCounts = typeof TARGET_COUNTS[number];
 
 export const TargetProductionRateConfigSchema = z.object({
-    recipe: z.string().describe("The name of the item that the setpoint counts. The name of a recipe is read as its main product, where a machine of the build makes it."),
+    item: z.string().describe("The name of the item that the setpoint counts. The name of a recipe is read as its main product, where a machine of the build makes it."),
     items_per_second: z.number().positive().describe("The rate of the setpoint for all copies together, in items per second."),
     copies: z.number().positive().refine(isShortDecimalCopies, {
         message: COPIES_DECIMAL_ERROR,
@@ -158,7 +158,7 @@ export const TargetProductionRateConfigSchema = z.object({
     copy_offset: MapPositionSchema.optional().describe("The distance from this build to the next copy, in tiles."),
     /**
      * What the rate counts. "made" (the default; every config before 0.24.0 has no `counts` and is read so): the item
-     * `recipe` names is made by the build and taken out of it. "destroyed": the item is taken into the build from
+     * `item` names is made by the build and taken out of it. "destroyed": the item is taken into the build from
      * outside it and destroyed there, by a machine that places its results itself (a recycler that voids ore); the rate
      * is what the inserters that bring it in from outside put into those machines, and what the machines give back of
      * it is not counted.
@@ -957,7 +957,7 @@ export const ConfigSchema = z.preprocess(renameTargetOutputToSetpoint, z.preproc
     if (config.output_belt !== undefined) {
         // the output inserters of a copy: those that drop the target item onto a belt that carries it
         const outputs = config.inserters.filter(inserter => inserter.sink.type === TargetType.BELT && config.belts.some(belt =>
-            belt.id === inserter.sink.id && belt.lanes.some(lane => lane.ingredient === config.setpoint.recipe))).length;
+            belt.id === inserter.sink.id && belt.lanes.some(lane => lane.ingredient === config.setpoint.item))).length;
         for (const problem of outputBeltProblems(config.output_belt, config.setpoint.copy_offset, outputs)) {
             context.addIssue({ code: "custom", path: ["output_belt", ...problem.path], message: problem.message });
         }

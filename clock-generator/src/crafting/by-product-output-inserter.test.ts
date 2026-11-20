@@ -11,7 +11,7 @@ const inserter = (id: number, source: object, sink: object, extra: object = {}) 
  * machine of the build uses) out to a belt of its own: the plan leaves it out, and it runs on its own clock.
  */
 const build = (seed_inserter_extra: object = {}) => JSON.stringify({
-    setpoint: { recipe: "jelly", items_per_second: 1, copies: 1 },
+    setpoint: { item: "jelly", items_per_second: 1, copies: 1 },
     machines: [{ id: 1, recipe: "jellynut-processing", prototype: "biochamber", crafting_speed: 2, productivity: 0 }],
     belts: [
         { id: 1, type: "turbo-transport-belt", lanes: [lane("jellynut", true), lane("jellynut", true)] },

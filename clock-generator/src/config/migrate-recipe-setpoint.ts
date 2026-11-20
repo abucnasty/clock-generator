@@ -1,4 +1,5 @@
 import { RecipeMetadata } from "../entities/machine/recipe/recipe-metadata";
+import { renameSetpointRecipeToItem } from "./migrate-setpoint";
 
 /**
  * The item that a machine on a recipe counts as its output: the item result with the largest expected amount per craft
@@ -33,7 +34,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /**
  * Read a setpoint that names a recipe, not an item, once: the site's setpoint picker lists recipes and stores the recipe's
- * name, but the setpoint counts an item (the schema's `recipe`). Where no machine of the build makes the name as its output,
+ * name, but the setpoint counts an item (the schema's `item`). The setpoint's former `recipe` is read as `item` first
+ * ({@link renameRecipeToItem}). Where no machine of the build makes the name as its output,
  * and the main product of the recipe of that name is made by one, the setpoint loads with that item in place of
  * the name, at the same place in the object. Any other setpoint stays as it is: a name that a machine makes (an item that
  * is also the name of a recipe with another main product), a name that is no recipe or no machine makes the main product of,
@@ -41,20 +43,21 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * step of the schema.
  */
 export function readRecipeSetpointAsItem(value: unknown): unknown {
-    if (!isRecord(value) || !isRecord(value.setpoint) || !Array.isArray(value.machines)) {
-        return value;
+    const config = renameSetpointRecipeToItem(value);
+    if (!isRecord(config) || !isRecord(config.setpoint) || !Array.isArray(config.machines)) {
+        return config;
     }
-    const setpoint = value.setpoint;
-    if (typeof setpoint.recipe !== "string" || (setpoint.counts ?? "made") !== "made") {
-        return value;
+    const setpoint = config.setpoint;
+    if (typeof setpoint.item !== "string" || (setpoint.counts ?? "made") !== "made") {
+        return config;
     }
-    const made = new Set(value.machines.flatMap(machine => isRecord(machine) && typeof machine.recipe === "string" ? [outputItemOf(machine.recipe)] : []));
-    if (made.has(setpoint.recipe)) {
-        return value;
+    const made = new Set(config.machines.flatMap(machine => isRecord(machine) && typeof machine.recipe === "string" ? [outputItemOf(machine.recipe)] : []));
+    if (made.has(setpoint.item)) {
+        return config;
     }
-    const product = mainProductOf(setpoint.recipe);
+    const product = mainProductOf(setpoint.item);
     if (product === null || !made.has(product)) {
-        return value;
+        return config;
     }
-    return { ...value, setpoint: { ...setpoint, recipe: product } };
+    return { ...config, setpoint: { ...setpoint, item: product } };
 }

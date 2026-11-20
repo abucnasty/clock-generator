@@ -43,13 +43,13 @@ function pendingCheck() {
 }
 
 /** A saved build making a gear wheel a second */
-const saved = { ...createDefaultConfig(), setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 } };
+const saved = { ...createDefaultConfig(), setpoint: { item: 'iron-gear-wheel', items_per_second: 1, copies: 1 } };
 const withCopies = (form: ConfigFormData, copies: number) => ({ ...form, setpoint: { ...form.setpoint, copies } });
 
 function savedBuilds() {
     const initial = mount(), snapshot = initial.captureBuildMutation(), meta = initial.library.currentMeta;
     const first = run(() => initial.library.addBuild(saved, 'First'));
-    const second = run(() => initial.library.addBuild({ ...createDefaultConfig(), setpoint: { recipe: 'copper-cable', items_per_second: 2, copies: 1 } }, 'Second'));
+    const second = run(() => initial.library.addBuild({ ...createDefaultConfig(), setpoint: { item: 'copper-cable', items_per_second: 2, copies: 1 } }, 'Second'));
     run(() => initial.library.restore({ meta, form: snapshot.form }));
     return { hook: latest(), first: first.id, second: second.id };
 }
@@ -119,7 +119,7 @@ describe('async build loading ownership', () => {
         if (outcome === 'failed') older.reject(new Error('Old worker failure'));
         expect(await settle(openFirst)).toBe(false);
         expect(latest().library.currentId).toBe(second);
-        expect(latest().config.setpoint.recipe).toBe('copper-cable');
+        expect(latest().config.setpoint.item).toBe('copper-cable');
         expect(latest().loadNotice).toBeNull();
         expect(localStorage.getItem(backupKey(first))).toBeNull();
     });

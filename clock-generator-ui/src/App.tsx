@@ -538,8 +538,8 @@ function App() {
     // the most the machines making the target recipe can make (or destroy, for a target that counts the item destroyed): a target above it is a problem
     const targetCounts = countsOf(config.setpoint);
     const machinesWithReturn = useMemo(() => config.machines.map(machine => ({ ...machine,
-        comesBack: resultComesBack(machine, config.inserters, config.setpoint.recipe) })), [config.machines, config.inserters, config.setpoint.recipe]);
-    const machinesOnlyMax = useMachinesMax(config.setpoint.recipe, machinesWithReturn, targetCounts);
+        comesBack: resultComesBack(machine, config.inserters, config.setpoint.item) })), [config.machines, config.inserters, config.setpoint.item]);
+    const machinesOnlyMax = useMachinesMax(config.setpoint.item, machinesWithReturn, targetCounts);
     // the engine's own limit, which counts the inserters and belts too, as the check that refuses a target above it does
     const feasibleMax = useTargetRateMax(engineConfig, isInitialized);
     const machinesMax = useMemo(() => rateMaxOf(machinesOnlyMax, feasibleMax), [machinesOnlyMax, feasibleMax]);
@@ -1077,7 +1077,7 @@ function App() {
     }
     const sharedReplacesBlank = blankBuild && library.currentMeta.name === null;
     const sharedTitle = (build: SharedBuild) => build.name
-        ?? (build.config.setpoint.recipe === '' ? UNTITLED_BUILD : recipeTitle(build.config.setpoint.recipe, recipeLabel));
+        ?? (build.config.setpoint.item === '' ? UNTITLED_BUILD : recipeTitle(build.config.setpoint.item, recipeLabel));
     const handleOpenShared = useCallback(() => {
         const build = shared.accept();
         if (!build) return;
@@ -1085,7 +1085,7 @@ function App() {
         const previous = library.currentMeta;
         const replaceId = sharedReplacesBlank ? previous.id : undefined;
         const title = build.name
-            ?? (build.config.setpoint.recipe === '' ? UNTITLED_BUILD : recipeTitle(build.config.setpoint.recipe, recipeLabel));
+            ?? (build.config.setpoint.item === '' ? UNTITLED_BUILD : recipeTitle(build.config.setpoint.item, recipeLabel));
         // the build the link added, which its Undo takes out again (none when it took the empty build's place)
         const added: { id?: string } = {};
         const complete = offerUndoOfBuild(sharedOpenedMessage(title, build.never_note), {
@@ -1240,14 +1240,14 @@ function App() {
                             )}
 
                             <SetpointForm
-                                recipe={config.setpoint.recipe}
+                                recipe={config.setpoint.item}
                                 itemsPerSecond={config.setpoint.items_per_second}
                                 copies={config.setpoint.copies}
                                 counts={targetCounts}
                                 machinesMax={machinesMax}
                                 recipeNames={recipeNames}
                                 destroyedItemNames={destroyedItemNames}
-                                onRecipeChange={(recipe) => updateSetpoint('recipe', recipe)}
+                                onRecipeChange={(recipe) => updateSetpoint('item', recipe)}
                                 onItemsPerSecondChange={(value) => updateSetpoint('items_per_second', value)}
                                 onCountsChange={(counts) => updateSetpoint('counts', counts === 'made' ? undefined : counts)}
                                 onCopiesChange={(value) => updateSetpoint('copies', value)}

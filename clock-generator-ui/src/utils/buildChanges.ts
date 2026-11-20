@@ -94,8 +94,8 @@ export function buildChangesOf(generated: Config, current: Config, recipeLabel: 
     const changes: string[] = [];
     const before = generated.setpoint;
     const after = current.setpoint;
-    if (before.recipe !== after.recipe) {
-        changes.push(`Recipe (${nameInSentence(recipeLabel(before.recipe))} → ${nameInSentence(recipeLabel(after.recipe))})`);
+    if (before.item !== after.item) {
+        changes.push(`Recipe (${nameInSentence(recipeLabel(before.item))} → ${nameInSentence(recipeLabel(after.item))})`);
     }
     if (before.items_per_second !== after.items_per_second) {
         changes.push(`Items per second (${figure(before.items_per_second)} → ${figure(after.items_per_second)})`);

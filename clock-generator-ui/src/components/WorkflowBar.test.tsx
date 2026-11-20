@@ -83,7 +83,7 @@ it("does not open Copy's warning for the pointer it comes in under or the focus 
 });
 
 it('leaves Generate on for the other blocking errors, which it goes to instead', () => {
-    const fieldError = { message: 'x', diagnostics: [{ kind: 'field' as const, path: ['setpoint', 'recipe'], message: 'Required' }] };
+    const fieldError = { message: 'x', diagnostics: [{ kind: 'field' as const, path: ['setpoint', 'item'], message: 'Required' }] };
     show(<WorkflowBar {...bar(fieldError)} />);
     expect((screen.getByRole('button', { name: 'Generate' }) as HTMLButtonElement).disabled).toBe(false);
 });

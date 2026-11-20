@@ -1,6 +1,6 @@
 {
   "setpoint": {
-    "recipe": "accumulator",
+    "item": "accumulator",
     "items_per_second": 320,
     "copies": 9,
     "copy_offset": {

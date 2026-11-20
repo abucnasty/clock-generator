@@ -163,7 +163,7 @@ function copiesOf(key) {
                 factorio: process.env.FACTORIO_PATH, save: process.env.FACTORIO_HARNESS_SAVE,
                 blueprint: fs.readFileSync(scaffold, "utf-8").trim(), out: file,
                 ticks: RECORDED_TICKS, warmup_ticks: build.warmup_ticks, settle_ticks: GAME_RUN.cap + 1, seed: build.seed,
-                lua: steadyProbeSource(target_per_second, config.setpoint.recipe, recipesMaking(config, config.setpoint.recipe), "record-clock-steady.json"), work_dir,
+                lua: steadyProbeSource(target_per_second, config.setpoint.item, recipesMaking(config, config.setpoint.item), "record-clock-steady.json"), work_dir,
                 clock: { blueprint: encodeBlueprintFile({ blueprint: exported.blueprint }), schedule: exported.schedule }, config,
                 copies: copies > 1 ? copies : undefined, unclocked: false, game_speed: 1000, timeout_seconds: 900, log: () => { }, cache: false,
             })).recording;
@@ -178,7 +178,7 @@ function copiesOf(key) {
     // a subtick clock's repeat can leave a float a hair off the whole number of items
     const expected = Math.round(result.stability_check.expected_output_items * copies * clock_ticks / window_cycle_ticks * 1e6) / 1e6;
     // the first window cycle is cut where the recording starts
-    const window_cycles = outputPerWindowCycle(recording, recipesMaking(config, config.setpoint.recipe)).slice(1);
+    const window_cycles = outputPerWindowCycle(recording, recipesMaking(config, config.setpoint.item)).slice(1);
     const tally = {};
     window_cycles.forEach(p => tally[p.items] = (tally[p.items] ?? 0) + 1);
     console.log(`  game: ${window_cycles.length} periods, expected ${expected} a period, moved`, JSON.stringify(tally));

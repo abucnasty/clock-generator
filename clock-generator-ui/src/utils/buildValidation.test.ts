@@ -50,7 +50,7 @@ it('retains real missing connections and their repair options while deduplicatin
 
 it('merges a field failure from Check with the live field issue and retains its edit action', () => {
     const issues = buildValidationIssues({ ...none, fieldProblems, machines: config.machines,
-        failure: { message: 'Required recipe', diagnostics: [{ kind: 'field', path: ['setpoint', 'recipe'], message: 'Required' }] } });
+        failure: { message: 'Required recipe', diagnostics: [{ kind: 'field', path: ['setpoint', 'item'], message: 'Required' }] } });
     expect(issues.filter(issue => issue.id === 'target-recipe')).toHaveLength(1);
     expect(issues.find(issue => issue.id === 'target-recipe')?.fieldTarget).toEqual({ kind: 'target-recipe' });
     expect(issues.some(issue => issue.source === 'engine')).toBe(false);
@@ -165,7 +165,6 @@ it('has no refusal once the build has changed: the check then no longer counts a
 // the schema's errors keep a place to find, in the names the page shows
 it.each([
     [['setpoint', 'items_per_second'], 'Items per Second: Required'],
-    [['setpoint', 'recipe'], 'Recipe: Required'],
     [['setpoint', 'item'], 'Recipe: Required'],
     [['machines', 1, 'recipe'], 'Machine 8 recipe: Required'],
     [['inserters', 0, 'source', 'pickup_layout'], 'Inserter 4 source pickup layout: Required'],

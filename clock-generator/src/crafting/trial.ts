@@ -734,7 +734,7 @@ export function disturbanceTrialOf(
     const outcomeOf = (loss: DisturbanceTrialOptions["loss"]): LossOutcome =>
         withEveryTrialCounted(runOf(loss), skipped => runOf(loss, skipped));
     const registry = createEntityRegistryFromConfig(config);
-    const losses: DisturbanceTrial[] = [...disturbanceTrialsOf(registry, config.setpoint.recipe), ...excesses];
+    const losses: DisturbanceTrial[] = [...disturbanceTrialsOf(registry, config.setpoint.item), ...excesses];
     // a build whose items spoil is tried with losses shorter than its loss limit only
     const loss_limit = lossLimitOf(registry);
     const tried = (loss: DisturbanceTrial, index: number): LossOutcome => {

@@ -453,7 +453,7 @@ export function runOnSharedLanes(
             model = installSharedLanes(context, clocked, layout.rows);
             copies.lanes = model.rows.map((row, index) => ({ belt_entity_id: EntityId.forBelt(row.belt_id).id,
                 item: config.belts.find(belt => belt.id === row.belt_id)!.lanes[row.lane - 1].ingredient, lane: model!.lanes[index] }));
-            if (model.output_belt !== undefined) copies.output_belt = { item: config.setpoint.recipe, belt: model.output_belt };
+            if (model.output_belt !== undefined) copies.output_belt = { item: config.setpoint.item, belt: model.output_belt };
             on_context?.(context, model);
         },
     });

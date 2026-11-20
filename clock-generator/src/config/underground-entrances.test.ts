@@ -7,7 +7,7 @@ import { ConfigSchema } from "./schema";
  */
 describe("the underground entrances of a lane", () => {
     const configWith = (lane: Record<string, unknown>, more: { strategy?: "export"; overrides?: Record<string, unknown>; consumption?: number } = {}) => ({
-        setpoint: { recipe: "automation-science-pack", items_per_second: 240, copies: 9, copy_offset: { x: 9, y: 0 } },
+        setpoint: { item: "automation-science-pack", items_per_second: 240, copies: 9, copy_offset: { x: 9, y: 0 } },
         machines: [], inserters: [],
         belts: [{ id: 1, type: "turbo-transport-belt", flow_direction: 4, ...(more.strategy && { strategy: more.strategy }),
             lanes: [{ ingredient: "copper-plate", stack_size: 4, ...(more.consumption !== undefined && { consumption_per_second: more.consumption }), ...lane }] }],

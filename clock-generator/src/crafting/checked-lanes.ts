@@ -277,7 +277,7 @@ export function sharedLanesOf(config: Config, lanes: readonly BuildLane[] = buil
 
 /** The belts the config's output inserters drop the target's item onto, and the chests they or the machines put it into */
 function outputEndsOf(config: Config): { belts: Set<number>; chests: Set<number> } {
-    const item = config.setpoint.recipe;
+    const item = config.setpoint.item;
     const belts = new Set<number>(), chests = new Set<number>();
     const makers = new Set(config.machines.filter(machine => machine.recipe === item).map(machine => machine.id));
     for (const inserter of config.inserters) {
@@ -293,7 +293,7 @@ function outputEndsOf(config: Config): { belts: Set<number>; chests: Set<number>
 
 /** The output inserter of the config that drops the target's item onto a belt, by number; undefined where there is not one */
 function outputInserterOf(config: Config): number | undefined {
-    const item = config.setpoint.recipe;
+    const item = config.setpoint.item;
     const found = config.inserters.flatMap((inserter, index) => inserter.sink.type === "belt"
         && config.belts.find(belt => belt.id === inserter.sink.id)?.lanes.some(lane => lane.ingredient === item) ? [inserter.id ?? index + 1] : []);
     return found.length === 1 ? found[0] : undefined;
@@ -587,7 +587,7 @@ function causeOf(input: { config: Config; build: BuildToName; losses: readonly S
     if (kind === "join") {
         const at_join = copiesAtFullJoin(losses);
         const named = at_join.map(it => it.copy);
-        const output_item = words.item(config.setpoint.recipe);
+        const output_item = words.item(config.setpoint.item);
         const one = named.length === 1;
         const output_inserter = outputInserterOf(config);
         const swinger = (copy: number) => output_inserter === undefined ? `the output inserter of copy ${copy}` : inserterOfCopy(output_inserter, copy, build);
@@ -613,7 +613,7 @@ function causeOf(input: { config: Config; build: BuildToName; losses: readonly S
                 where: { text: at_join.map(it => `${capitalized(inserters(it.copy))} miss ${figure(it.missed)} of their ${figure(it.swings)} swings in ${losses[0].window_cycles} window cycles. `
                     + `${figure(it.held_hands)} of the ${figure(it.hands)} swings they make wait for room.`).join(" "),
                 data: { takers: at_join.map(it => ({ copy: it.copy, inserter_id: named_by(it.copy), missed: it.missed, swings: it.swings,
-                    items: [{ item: config.setpoint.recipe, missed: it.missed, swings: it.swings }] })) } },
+                    items: [{ item: config.setpoint.item, missed: it.missed, swings: it.swings }] })) } },
                 alone: { text: alone_swings === undefined ? "The run with each output inserter on a tile of its own does not record them."
                     : makes_all ? `With each on a tile of its own, the same inserters make all ${figure(needed)} swings. The clock is right for one copy.`
                         : `With each on a tile of its own, the same inserters make ${figure(alone_swings)} of the ${figure(needed)} swings their target needs.`,
@@ -642,7 +642,7 @@ function causeOf(input: { config: Config; build: BuildToName; losses: readonly S
                 data: { copies: named.map(copy => ({ copy })) } },
             spacing: null,
             where: { text: where, data: { takers: at_join.map(it => ({ copy: it.copy, inserter_id: output_inserter ?? 0, missed: it.missed, swings: it.swings,
-                items: [{ item: config.setpoint.recipe, missed: it.missed, swings: it.swings }] })) } },
+                items: [{ item: config.setpoint.item, missed: it.missed, swings: it.swings }] })) } },
             alone: { text: alone_swings === undefined ? "The run of one copy alone does not record the output inserter."
                 : makes_all ? `The same inserter makes all ${figure(needed)} swings. The clock is right for one copy.`
                     : `Alone, the same inserter makes ${figure(alone_swings)} of the ${figure(needed)} swings its target needs.`,

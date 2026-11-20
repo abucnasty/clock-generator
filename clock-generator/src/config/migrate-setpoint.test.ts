@@ -25,7 +25,7 @@ describe("the former target_output of a config", () => {
         current.setpoint = current.target_output;
         delete current.target_output;
         const config = await parseConfig(text);
-        expect(config.setpoint.recipe).toBe("iron-gear-wheel");
+        expect(config.setpoint.item).toBe("iron-gear-wheel");
         expect(config).toEqual(await parseConfig(JSON.stringify(current)));
     });
 });

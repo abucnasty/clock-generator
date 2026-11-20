@@ -15,7 +15,7 @@ type Parts = Partial<Pick<Config, "machines" | "inserters" | "belts" | "chests" 
 
 function configOf(parts: Parts): Config {
     return ConfigSchema.parse({
-        setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+        setpoint: { item: "iron-gear-wheel", items_per_second: 1, copies: 1 },
         machines: [], belts: [], inserters: [], ...parts,
     }) as Config;
 }

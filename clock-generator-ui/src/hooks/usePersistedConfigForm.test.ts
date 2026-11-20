@@ -36,7 +36,7 @@ describe('readSavedConfig', () => {
 
     it('reads the saved form state with the legacy fields migrated', () => {
         const saved = JSON.stringify({
-            setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+            setpoint: { item: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
             machines: [{ id: 1, recipe: 'iron-gear-wheel', productivity: 0, crafting_speed: 1 }],
             inserters: [{ source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 1 }, stack_size: 16 }],
             chests: [{ id: 1, storage_size: 2, item_filter: 'iron-gear-wheel' }],
@@ -49,7 +49,7 @@ describe('readSavedConfig', () => {
 
     it('loads a form saved with next ids, dropping them and keeping its ids as saved', () => {
         const saved = JSON.stringify({
-            setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+            setpoint: { item: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
             machines: [1, 3].map((id) => ({ id, recipe: 'iron-gear-wheel', productivity: 0, crafting_speed: 1 })),
             inserters: [1, 4].map((id) => ({ id, source: { type: 'machine', id: 1 }, sink: { type: 'machine', id: 3 }, stack_size: 16 })),
             belts: [],
@@ -68,7 +68,7 @@ describe('readSavedConfig', () => {
     it('reads the Never on override of an inserter and a drill, which is removed, as Auto', () => {
         const drill = { id: 1, type: 'electric-mining-drill', mined_item_name: 'iron-ore', speed_bonus: 0, productivity: 0, target: { type: 'machine', id: 1 }, overrides: { enable_control: { mode: 'NEVER' } } };
         const saved = JSON.stringify({
-            setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+            setpoint: { item: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
             machines: [{ id: 1, recipe: 'iron-gear-wheel', productivity: 0, crafting_speed: 1 }],
             inserters: [{ id: 3, source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 1 }, stack_size: 16, overrides: { enable_control: { mode: 'NEVER' } } }],
             chests: [{ id: 1, storage_size: 2, item_filter: 'iron-gear-wheel' }],

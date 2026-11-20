@@ -19,7 +19,7 @@ const gears = { recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 1 };
  * own: two branches that share no node
  */
 const twoBranches: Config = {
-    setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+    setpoint: { item: "iron-gear-wheel", items_per_second: 1, copies: 1 },
     machines: [{ id: 1, ...gears }, { id: 2, ...gears }],
     belts: [belt(1, [lane("iron-plate", { lane_end: { kind: "infinite" } })]), belt(2, [lane("iron-plate", { lane_end: { kind: "infinite" } })])],
     chests: [infinityChest(3, ["iron-gear-wheel"]), infinityChest(4, ["iron-gear-wheel"])],

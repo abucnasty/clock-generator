@@ -194,7 +194,7 @@ describe('automatic whole-swing period eligibility', () => {
 });
 
 describe('strict period limits and existing arithmetic policies', () => {
-    const plain = (): Config => ({ setpoint: { recipe: 'iron-plate', items_per_second: 16, copies: 1 },
+    const plain = (): Config => ({ setpoint: { item: 'iron-plate', items_per_second: 16, copies: 1 },
         machines: [{ id: 1, recipe: 'iron-plate', productivity: 0, crafting_speed: 100 }], belts: [],
         chests: [{ id: 1, type: 'infinity-chest', item_filter: [{ item_name: 'iron-ore', request_count: 100 }] },
             { id: 2, type: 'infinity-chest', item_filter: [], remove_unfiltered_items: true }],

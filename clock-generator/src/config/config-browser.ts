@@ -28,7 +28,7 @@ export type ConfigParseResult =
  * ```typescript
  * const config = parseConfigFromObject({
  *   setpoint: {
- *     recipe: "electronic-circuit",
+ *     item: "electronic-circuit",
  *     items_per_second: 1.5,
  *     machines: 2
  *   },

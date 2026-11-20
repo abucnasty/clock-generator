@@ -1,6 +1,6 @@
 {
   "setpoint": {
-    "recipe": "iron-bacteria",
+    "item": "iron-bacteria",
     "items_per_second": 380,
     "copies": 1
   },

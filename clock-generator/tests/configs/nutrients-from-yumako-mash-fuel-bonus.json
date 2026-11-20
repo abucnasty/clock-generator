@@ -1,6 +1,6 @@
 {
   "setpoint": {
-    "recipe": "nutrients",
+    "item": "nutrients",
     "items_per_second": 3,
     "copies": 1
   },

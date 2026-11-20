@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parseConfig } from "./loader";
 
 const config = (chest: Record<string, unknown>, machine_type?: string) => JSON.stringify({
-    setpoint: { recipe: "iron-plate", items_per_second: 1, copies: 1 },
+    setpoint: { item: "iron-plate", items_per_second: 1, copies: 1 },
     machines: [{ id: 1, recipe: "iron-plate", productivity: 0, crafting_speed: 1, ...(machine_type ? { type: machine_type } : {}) }],
     inserters: [],
     belts: [],

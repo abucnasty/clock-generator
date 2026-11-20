@@ -45,7 +45,7 @@ describe("a target that counts an item destroyed", () => {
 
     it("is what a target written as the recycler's returns is refused for, with the rate to write", async () => {
         // the cut of the benchmark as it was first written: the 400/3 ore a second the recycler gives back, as made
-        const as_cut = (config: Config): Config => ({ ...config, setpoint: { recipe: "iron-ore", items_per_second: 133.333333333, copies: 1 } });
+        const as_cut = (config: Config): Config => ({ ...config, setpoint: { item: "iron-ore", items_per_second: 133.333333333, copies: 1 } });
         await expect(planOf(as_cut)).rejects.toThrow("Machine 1 places the iron-ore of the target into chest:1, and the build takes all of it "
             + "back into the machine: none leaves the build, so it is not made. A machine that destroys an item it is brought is planned "
             + "on what it destroys: set `setpoint.counts` to \"destroyed\" and `items_per_second` to the iron-ore it is brought from "

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { maximumTargetNote, NO_TARGET_NOTE, replacesTargetNote, targetRowCaption, targetRowLabel, targetToFill } from './pasteTarget';
 
 const suggestion = (items_per_second: number, source: 'mod' | 'inferred' = 'inferred') => ({
-    target: { recipe: 'logistic-science-pack', items_per_second, copies: 1 },
+    target: { item: 'logistic-science-pack', items_per_second, copies: 1 },
     source,
 });
 
@@ -27,13 +27,13 @@ describe('targetToFill', () => {
     });
 
     it('keeps the recipe and the copies', () => {
-        expect(targetToFill({ target: { recipe: 'iron-gear-wheel', items_per_second: 2, copies: 3 }, source: 'mod' }))
-            .toEqual({ recipe: 'iron-gear-wheel', items_per_second: 2, copies: 3 });
+        expect(targetToFill({ target: { item: 'iron-gear-wheel', items_per_second: 2, copies: 3 }, source: 'mod' }))
+            .toEqual({ item: 'iron-gear-wheel', items_per_second: 2, copies: 3 });
     });
 
     it('keeps the gap to the next copy where the export states one', () => {
-        expect(targetToFill({ target: { recipe: 'iron-gear-wheel', items_per_second: 2, copies: 1, copy_offset: { x: 0, y: -7 } }, source: 'mod' }))
-            .toEqual({ recipe: 'iron-gear-wheel', items_per_second: 2, copies: 1, copy_offset: { x: 0, y: -7 } });
+        expect(targetToFill({ target: { item: 'iron-gear-wheel', items_per_second: 2, copies: 1, copy_offset: { x: 0, y: -7 } }, source: 'mod' }))
+            .toEqual({ item: 'iron-gear-wheel', items_per_second: 2, copies: 1, copy_offset: { x: 0, y: -7 } });
     });
 });
 
@@ -41,9 +41,9 @@ describe('the words of the Setpoint row', () => {
     const name = (id: string) => (id === 'logistic-science-pack' ? 'Logistic science pack' : id);
 
     it('names the target as a ceiling', () => {
-        expect(targetRowLabel({ recipe: 'logistic-science-pack', items_per_second: 22.968, copies: 1 }, name))
+        expect(targetRowLabel({ item: 'logistic-science-pack', items_per_second: 22.968, copies: 1 }, name))
             .toBe('Setpoint: Logistic science pack, up to 22.968/s, 1 copy');
-        expect(targetRowLabel({ recipe: 'iron-gear-wheel', items_per_second: 240, copies: 11 }, name))
+        expect(targetRowLabel({ item: 'iron-gear-wheel', items_per_second: 240, copies: 11 }, name))
             .toBe('Setpoint: iron-gear-wheel, up to 240/s, 11 copies');
     });
 
@@ -69,7 +69,7 @@ describe('the words of the Setpoint row', () => {
     });
 
     it('says which target it replaces', () => {
-        expect(replacesTargetNote({ recipe: 'logistic-science-pack', items_per_second: 240, copies: 11 }, name))
+        expect(replacesTargetNote({ item: 'logistic-science-pack', items_per_second: 240, copies: 11 }, name))
             .toBe('Tick to replace your current target (logistic science pack at 240/s).');
     });
 

@@ -110,7 +110,7 @@ export function automationRow(options: AutomationRowOptions): Config {
     ]);
     return {
         setpoint: {
-            recipe: 'automation-science-pack', items_per_second: options.items_per_second ?? 240, copies: options.copies ?? 1,
+            item: 'automation-science-pack', items_per_second: options.items_per_second ?? 240, copies: options.copies ?? 1,
             ...(options.copy_offset !== undefined && { copy_offset: options.copy_offset }),
         },
         machines,

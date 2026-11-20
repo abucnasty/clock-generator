@@ -19,7 +19,7 @@ import {
 const BASE = 'https://clock-generator.example/';
 
 const smallBuild = (): Config => ({
-    setpoint: { recipe: 'iron-gear-wheel', items_per_second: 2.5, copies: 1 },
+    setpoint: { item: 'iron-gear-wheel', items_per_second: 2.5, copies: 1 },
     machines: [{ id: 1, recipe: 'iron-gear-wheel', productivity: 0, crafting_speed: 1.25 }],
     inserters: [{ source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 1 }, stack_size: 16 }],
     belts: [],
@@ -27,7 +27,7 @@ const smallBuild = (): Config => ({
 } as unknown as Config);
 
 const bigBuild = (): Config => ({
-    setpoint: { recipe: 'electronic-circuit', items_per_second: 30, copies: 4 },
+    setpoint: { item: 'electronic-circuit', items_per_second: 30, copies: 4 },
     machines: [
         { id: 1, recipe: 'electronic-circuit', productivity: 0.5, crafting_speed: 2.5 },
         { id: 2, recipe: 'copper-cable', productivity: 0, crafting_speed: 2.5 },
@@ -207,12 +207,12 @@ describe('share links made before the setpoint and the kick start were named so'
         const decoded = await decodeShareLink(await formerLink());
         if (decoded.kind !== 'build') throw new Error(`Expected a decoded build, not ${decoded.problem}`);
         const file = readConfigFile(JSON.stringify(decoded.config)) as { setpoint: unknown; overrides: unknown };
-        expect(file.setpoint).toEqual({ recipe: 'iron-gear-wheel', items_per_second: 2.5, copies: 1 });
+        expect(file.setpoint).toEqual({ item: 'iron-gear-wheel', items_per_second: 2.5, copies: 1 });
         expect(file.overrides).toEqual({ kick_start_items: 50 });
         expect('target_output' in file).toBe(false);
         const parsed = parseFormConfig(ConfigSchema, file);
         expect(parsed.success).toBe(true);
-        expect(parsed.data!.setpoint.recipe).toBe('iron-gear-wheel');
+        expect(parsed.data!.setpoint.item).toBe('iron-gear-wheel');
         expect(parsed.data!.overrides?.kick_start_items).toBe(50);
     });
 

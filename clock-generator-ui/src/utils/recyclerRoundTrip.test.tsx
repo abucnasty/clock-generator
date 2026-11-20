@@ -17,7 +17,7 @@ const config = ConfigSchema.parse(exact);
 describe('a target that counts the item destroyed, and a recycler\'s result target', () => {
     it('are read from the sample as they are written', () => {
         const form = configToFormData(config);
-        expect(form.setpoint).toEqual({ recipe: 'iron-ore', items_per_second: 400, copies: 1, counts: 'destroyed' });
+        expect(form.setpoint).toEqual({ item: 'iron-ore', items_per_second: 400, copies: 1, counts: 'destroyed' });
         expect(form.machines[0].result_target).toEqual({ type: 'chest', id: 1 });
         expect(form.chests.map(chest => [chest.id, chest.type])).toEqual([[1, 'car'], [2, 'infinity-chest']]);
     });
@@ -33,7 +33,7 @@ describe('a target that counts the item destroyed, and a recycler\'s result targ
     });
 
     it('leave a config without them as it was: it counts the item made, and its machines have no result target', () => {
-        const plain: Config = { setpoint: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
+        const plain: Config = { setpoint: { item: 'iron-plate', items_per_second: 1, copies: 1 },
             machines: [{ id: 1, recipe: 'iron-plate', crafting_speed: 5, productivity: 0, prototype: 'electric-furnace' }], belts: [], inserters: [], chests: [] };
         const form = configToFormData(plain);
         expect('counts' in form.setpoint).toBe(false);

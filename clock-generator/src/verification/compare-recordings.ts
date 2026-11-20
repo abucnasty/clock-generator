@@ -437,7 +437,7 @@ export function compareRecordings(
         }
     }
 
-    const recipes = recipesMaking(config, config.setpoint.recipe);
+    const recipes = recipesMaking(config, config.setpoint.item);
     const window_cycles_from = (side: Side) => new Set(side.window_cycles.map(window_cycle => window_cycle.start));
     const outputOf = (side: Side) => {
         const kept = window_cycles_from(side);

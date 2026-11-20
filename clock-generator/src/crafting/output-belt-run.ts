@@ -229,7 +229,7 @@ export class OutputBeltDrop extends LaneTraffic {
 
 /** The output inserters of the config, in its order: those that drop the target item onto a belt that carries it */
 function outputInsertersOf(config: Config): number[] {
-    const item = config.setpoint.recipe;
+    const item = config.setpoint.item;
     const found = config.inserters.flatMap((inserter, index) => {
         if (inserter.sink.type !== "belt") return [];
         const belt = config.belts.find(it => it.id === inserter.sink.id);
@@ -259,7 +259,7 @@ export function outputBeltOfOneCopy(context: SimulationContext): { item: ItemNam
  */
 export function installOutputBeltOfOneCopy(context: SimulationContext, config: Config): OutputBeltRun | null {
     const run = oneCopyOutputBelt(context, config);
-    if (run !== null) one_copy_belts.set(context, { item: config.setpoint.recipe, belt: run });
+    if (run !== null) one_copy_belts.set(context, { item: config.setpoint.item, belt: run });
     return run;
 }
 

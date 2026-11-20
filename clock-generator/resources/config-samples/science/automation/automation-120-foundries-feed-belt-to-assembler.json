@@ -1,6 +1,6 @@
 {
   "setpoint": {
-    "recipe": "automation-science-pack",
+    "item": "automation-science-pack",
     "items_per_second": 120,
     "copies": 9
   },

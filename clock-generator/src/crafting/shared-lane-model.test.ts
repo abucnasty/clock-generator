@@ -12,7 +12,7 @@ import { runClockOnBuild } from "./trial";
 /** One copy: two takers of one belt lane, 12 tiles apart, and a machine for each */
 function rowConfig(setpoint: Partial<Config["setpoint"]>, lane: Record<string, unknown> = {}): Config {
     return ConfigSchema.parse({
-        setpoint: { recipe: "processing-unit", items_per_second: 1, copies: 1, ...setpoint },
+        setpoint: { item: "processing-unit", items_per_second: 1, copies: 1, ...setpoint },
         machines: [
             { id: 1, recipe: "processing-unit", productivity: 0, crafting_speed: 1, position: { x: 0.5, y: -2 } },
             { id: 2, recipe: "processing-unit", productivity: 0, crafting_speed: 1, position: { x: 12.5, y: -2 } },
@@ -115,7 +115,7 @@ describe("the lanes the copies share, laid out as rows", () => {
 /** One copy of a gear build: one taker of an iron plate lane into an assembler, its gears into a chest */
 function gearConfig(lane: Record<string, unknown>, copies = 1): Config {
     return ConfigSchema.parse({
-        setpoint: { recipe: "iron-gear-wheel", items_per_second: 2.5 * copies, copies, copy_offset: { x: 4, y: 0 } },
+        setpoint: { item: "iron-gear-wheel", items_per_second: 2.5 * copies, copies, copy_offset: { x: 4, y: 0 } },
         machines: [{ id: 1, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 1.25, position: { x: 0.5, y: -2 } }],
         inserters: [
             { id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 }, stack_size: 16, position: { x: 0.5, y: 0.5 } },

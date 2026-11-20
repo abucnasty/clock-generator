@@ -22,7 +22,7 @@ import { PROBLEM_TEXT, type Problem } from './firstProblem';
 /** A build as the page holds it: a target, a machine, and two inserters */
 function form(): ConfigFormData {
     let config = createDefaultConfig();
-    config = edits.updateSetpoint(config, 'recipe', 'logistic-science-pack');
+    config = edits.updateSetpoint(config, 'item', 'logistic-science-pack');
     config = edits.updateSetpoint(config, 'items_per_second', 240);
     config = edits.updateMachine(config, 0, 'recipe', 'logistic-science-pack');
     return edits.addInserter(edits.addInserter(config));

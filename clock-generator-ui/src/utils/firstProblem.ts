@@ -82,7 +82,7 @@ export interface Problem {
 }
 
 interface ProblemsInput {
-    setpoint: { recipe: string; items_per_second: number; copies: number; counts?: TargetCounts };
+    setpoint: { item: string; items_per_second: number; copies: number; counts?: TargetCounts };
     machines: { id: number; recipe: string }[];
     /** The most the machines making (or, for a target that counts the item destroyed, destroying) the target item can make; null or left out while it is not known */
     machinesMax?: MachinesMax | null;
@@ -95,7 +95,7 @@ interface ProblemsInput {
  */
 export function problemsOf({ setpoint, machines, machinesMax = null }: ProblemsInput): Problem[] {
     const problems: Problem[] = [];
-    if (!setpoint.recipe) {
+    if (!setpoint.item) {
         problems.push({ text: PROBLEM_TEXT.noRecipe, target: { kind: 'target-recipe' } });
     }
     if (!(setpoint.items_per_second > 0)) {
@@ -118,7 +118,7 @@ export function problemsOf({ setpoint, machines, machinesMax = null }: ProblemsI
     }
     // the engine's check refuses such a target too; said here, the player is sent to the field instead of a failed check
     const capacity = machinesMax ? totalMachineCapacity(machinesMax, setpoint.copies) : null;
-    if (capacity !== null && setpoint.recipe && isTargetAboveMax(setpoint.items_per_second, setpoint.copies, machinesMax)) {
+    if (capacity !== null && setpoint.item && isTargetAboveMax(setpoint.items_per_second, setpoint.copies, machinesMax)) {
         problems.push({
             text: PROBLEM_TEXT.rateAboveMax(capacity, countsOf(setpoint), machinesMax?.otherLimit === undefined),
             target: { kind: 'target-rate' },

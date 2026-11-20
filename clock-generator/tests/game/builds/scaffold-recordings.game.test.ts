@@ -694,7 +694,7 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                 `the selected clock counts ${window_cycle_ticks} ticks, over the ${MAX_RECORDED_WINDOW_CYCLE} ticks one period of a recording may take`);
             // a subtick clock's repeat and a rate per copy can leave a float a hair off the whole number of items
             const copies = build.copies ?? 1;
-            const recipes = [...recipesMaking(config, config.setpoint.recipe)];
+            const recipes = [...recipesMaking(config, config.setpoint.item)];
             const finals_per_copy = config.machines.filter(machine => recipes.includes(machine.recipe)).length;
             // a count with a fraction is whole copies and one part copy, held to its share of a copy's output (partCopiesOf, the
             // generator's part copy); the build's output and its final machines are the whole copies' and the part copy's
@@ -719,7 +719,7 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             // report into the game's script-output, which the build has a folder of its own for (all builds share the one game
             // watched)
             const probe = composeProbeSource(path.join(__dirname, "scaffold-recordings-probe.lua"), {
-                window: WINDOW_TICKS, expected: expected_per_window, recipes, item: config.setpoint.recipe, cap: SETTLE_CAP_TICKS,
+                window: WINDOW_TICKS, expected: expected_per_window, recipes, item: config.setpoint.item, cap: SETTLE_CAP_TICKS,
                 output: STEADY_REPORT, staged: !!build.staged_start, ticks: SETTLE_CAP_TICKS,
             });
             const work_dir = WATCH ? path.join(scratch, "watch-game") : `${base}-game`;
@@ -782,12 +782,12 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                 config,
                 { expected_output_per_window_cycle: expected },
             );
-            const window_cycles = outputPerWindowCycle(result.recording, recipesMaking(config, config.setpoint.recipe));
+            const window_cycles = outputPerWindowCycle(result.recording, recipesMaking(config, config.setpoint.item));
             // a build of copies: what each row of copies (the output inserters at one height) moved in each window cycle, as the game recorded it
             const row_of = new Map(inserter_positions.map(it => [it.unit_number, it.y]));
-            const output_unit_numbers = outputInserters(result.recording, recipesMaking(config, config.setpoint.recipe)).map(it => it.unit_number!);
+            const output_unit_numbers = outputInserters(result.recording, recipesMaking(config, config.setpoint.item)).map(it => it.unit_number!);
             const row_ys = Array.from(new Set(output_unit_numbers.map(unit => row_of.get(unit)))).filter((y): y is number => y !== undefined).sort((a, b) => a - b);
-            const outputs = outputInserters(result.recording, recipesMaking(config, config.setpoint.recipe));
+            const outputs = outputInserters(result.recording, recipesMaking(config, config.setpoint.item));
             /** What the given output inserters moved in each window cycle, as the game recorded their hands */
             const movedPerWindowCycle = (members: typeof outputs) => window_cycles.map(window_cycle => ({ start: window_cycle.start, end: window_cycle.end, items: members.reduce((sum, inserter) => {
                 const held = inserter.samples.held_count;
@@ -883,25 +883,25 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
                     const row_checked = judgedOf(row.per_window_cycle);
                     const row_copies = row_of_copy.flatMap((y, index) => y === row.y ? [index + 1] : []);
                     expect(row_checked.map(it => ({ start: it.start, items: it.items })).filter(it => it.items < row_expected - 1e-6),
-                        `every one of the ${row_checked.length} periods checked of the row at y=${row.y} (${row.output_inserters} output inserters, ${per_row} copies wanted) moves ${row_expected} items of ${config.setpoint.recipe} or more`
+                        `every one of the ${row_checked.length} periods checked of the row at y=${row.y} (${row.output_inserters} output inserters, ${per_row} copies wanted) moves ${row_expected} items of ${config.setpoint.item} or more`
                         + (dips.length > 0 ? ", but those its copies were short in after the staged start" : "")).toEqual(shortBy(row_copies, row_expected));
                 }
                 // each copy on its own: a copy the others starve on a lane they share is short here, whatever the rows and the build make;
                 // the part copy against its share
                 expect(per_copy.length, `the build holds ${copies} copies`).toBe(Math.ceil(copies - 1e-9));
                 for (const copy of per_copy) {
-                    expect(shortOf(copy), `every period checked of ${copy.part ? "the part copy" : "copy"} ${copy.copy} of ${copies} moves ${copy.target} items of ${config.setpoint.recipe} or more`
+                    expect(shortOf(copy), `every period checked of ${copy.part ? "the part copy" : "copy"} ${copy.copy} of ${copies} moves ${copy.target} items of ${config.setpoint.item} or more`
                         + (dips.length > 0 ? ", but those it was short in after the staged start" : ""))
                         .toEqual(dips.filter(dip => dip.copy === copy.copy).map(dip => ({ start: dip.start, items: dip.items })));
                 }
                 expect(checked.filter(it => it.items < expected - 1e-6).map(it => ({ start: it.start, items: it.items })),
-                    `every one of the ${checked.length} periods checked moves ${expected} items of ${config.setpoint.recipe} or more over the ${copies} copies`
+                    `every one of the ${checked.length} periods checked moves ${expected} items of ${config.setpoint.item} or more over the ${copies} copies`
                     + (dips.length > 0 ? ", but those its copies were short in after the staged start" : "")).toEqual(shortBy(per_copy.map(copy => copy.copy), expected));
                 return;
             }
             const short = checked.filter(it => it.items !== expected);
             expect(short.map(it => ({ start: it.start, items: it.items })),
-                `every one of the ${checked.length} periods checked moves ${expected} items of ${config.setpoint.recipe}`
+                `every one of the ${checked.length} periods checked moves ${expected} items of ${config.setpoint.item}`
                 + (build.staged_start ? ", but those the game was short in after the staged start" : "")).toEqual(build.staged_start?.dips ?? []);
 
             // goal 2: the long run of the selected clock counts the wake-ups the game shows (a build of one copy, on a generated clock)

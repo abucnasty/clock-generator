@@ -1,6 +1,6 @@
 {
   "setpoint": {
-    "recipe": "logistic-science-pack",
+    "item": "logistic-science-pack",
     "items_per_second": 240,
     "copies": 11,
     "copy_offset": {

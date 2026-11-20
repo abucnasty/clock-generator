@@ -7,7 +7,7 @@ import { buildChangesOf, buildChangesText } from './buildChanges';
 /** A build as the page holds it: a target, a machine, three inserters and a belt */
 function form(): ConfigFormData {
     let config = createDefaultConfig();
-    config = edits.updateSetpoint(config, 'recipe', 'logistic-science-pack');
+    config = edits.updateSetpoint(config, 'item', 'logistic-science-pack');
     config = edits.updateSetpoint(config, 'items_per_second', 240);
     config = edits.updateMachine(config, 0, 'recipe', 'logistic-science-pack');
     config = edits.addInserter(edits.addInserter(edits.addInserter(config)));
@@ -33,7 +33,7 @@ const changes = (edit: Edit, base = form(), recipeLabel?: (id: string) => string
 const text = (edit: Edit) => buildChangesText(formDataToConfig(form()), formDataToConfig(edit(form())));
 
 describe('buildChangesOf', () => {
-    const toAutomation: Edit = (config) => edits.updateSetpoint(config, 'recipe', 'automation-science-pack');
+    const toAutomation: Edit = (config) => edits.updateSetpoint(config, 'item', 'automation-science-pack');
 
     // what it lists, the edit made to the build (`form()`, or the build given last), and the changes listed
     it.each<[string, Edit, string[], ConfigFormData?]>([
