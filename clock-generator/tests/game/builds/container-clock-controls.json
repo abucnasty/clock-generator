@@ -4,9 +4,9 @@
     "container-car-mixed": {
       "recorded": {
         "pr": 0,
-        "commit": "038ed41a",
-        "frozen_head": "038ed41a",
-        "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
+        "commit": "50bdc018",
+        "frozen_head": "50bdc018",
+        "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24; a second run gave the same summary",
         "clock_sha256": "3834ac13326977058cfa7ae2da7d7f1c65a44325322f701af4ad33a3e36828a2",
         "clock_basis": "capture"
       },
@@ -17,7 +17,7 @@
         "period": 384,
         "window": 3600,
         "expected": 300,
-        "steady": 7056,
+        "steady": 7144,
         "baseline": {
           "ticks": 3600,
           "total": 299,
@@ -30,32 +30,32 @@
             "ticks": 3456,
             "items": 288,
             "expected": 288,
-            "stock_start": 12,
-            "stock_end": 12,
+            "stock_start": 3,
+            "stock_end": 3,
             "net": 288
           }
         },
         "disturbances": [
           {
             "kind": "cut iron-plate",
-            "start": 10656,
-            "drop": 10789,
-            "release": 10789,
-            "recovered": 14543
+            "start": 10744,
+            "drop": 10878,
+            "release": 10878,
+            "recovered": 14542
           },
           {
             "kind": "block output",
-            "start": 14543,
-            "drop": 14634,
-            "release": 14634,
-            "recovered": 18383
+            "start": 14542,
+            "drop": 14633,
+            "release": 14633,
+            "recovered": 18382
           },
           {
             "kind": "cut copper-cable",
-            "start": 18383,
-            "drop": 18517,
-            "release": 18517,
-            "recovered": 22313
+            "start": 18382,
+            "drop": 18516,
+            "release": 18516,
+            "recovered": 22312
           }
         ],
         "stock": {
@@ -64,7 +64,7 @@
           "holds": true
         },
         "result": "holds",
-        "ended": 22313
+        "ended": 22312
       },
       "generation": {
         "period": 384,
@@ -82,9 +82,9 @@
     "container-tank-mixed": {
       "recorded": {
         "pr": 0,
-        "commit": "038ed41a",
-        "frozen_head": "038ed41a",
-        "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
+        "commit": "50bdc018",
+        "frozen_head": "50bdc018",
+        "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24; a second run gave the same summary",
         "clock_sha256": "3834ac13326977058cfa7ae2da7d7f1c65a44325322f701af4ad33a3e36828a2",
         "clock_basis": "capture"
       },
@@ -93,6 +93,84 @@
         "generationVerdict": "stable",
         "target": 5,
         "period": 384,
+        "window": 3600,
+        "expected": 300,
+        "steady": 7144,
+        "baseline": {
+          "ticks": 3600,
+          "total": 299,
+          "expected": 300,
+          "min": 299,
+          "max": 303,
+          "held": false,
+          "meets": true,
+          "measured": {
+            "ticks": 3456,
+            "items": 288,
+            "expected": 288,
+            "stock_start": 3,
+            "stock_end": 3,
+            "net": 288
+          }
+        },
+        "disturbances": [
+          {
+            "kind": "cut iron-plate",
+            "start": 10744,
+            "drop": 10878,
+            "release": 10878,
+            "recovered": 14542
+          },
+          {
+            "kind": "block output",
+            "start": 14542,
+            "drop": 14633,
+            "release": 14633,
+            "recovered": 18382
+          },
+          {
+            "kind": "cut copper-cable",
+            "start": 18382,
+            "drop": 18516,
+            "release": 18516,
+            "recovered": 22312
+          }
+        ],
+        "stock": {
+          "lowest": 0,
+          "end": 3,
+          "holds": true
+        },
+        "result": "holds",
+        "ended": 22312
+      },
+      "generation": {
+        "period": 384,
+        "expected": 32,
+        "verdict": "stable",
+        "selection": {
+          "id": "takt_batches_observed",
+          "holds": true,
+          "rate": 5,
+          "supply": null
+        },
+        "clock_sha256": "3834ac13326977058cfa7ae2da7d7f1c65a44325322f701af4ad33a3e36828a2"
+      }
+    },
+    "container-wagon-filtered": {
+      "recorded": {
+        "pr": 0,
+        "commit": "50bdc018",
+        "frozen_head": "50bdc018",
+        "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24; a second run gave the same summary",
+        "clock_sha256": "8f2876cb937d8d4c656c02744984034dc96392929fedd7740832c108d5bb0b14",
+        "clock_basis": "capture"
+      },
+      "native": {
+        "protocol": "trailing-minute",
+        "generationVerdict": "stable",
+        "target": 5,
+        "period": 192,
         "window": 3600,
         "expected": 300,
         "steady": 7056,
@@ -117,110 +195,32 @@
           {
             "kind": "cut iron-plate",
             "start": 10656,
-            "drop": 10789,
-            "release": 10789,
-            "recovered": 14543
+            "drop": 10782,
+            "release": 10782,
+            "recovered": 14536
           },
           {
             "kind": "block output",
-            "start": 14543,
-            "drop": 14634,
-            "release": 14634,
-            "recovered": 18383
+            "start": 14536,
+            "drop": 14622,
+            "release": 14622,
+            "recovered": 18376
           },
           {
-            "kind": "cut copper-cable",
-            "start": 18383,
-            "drop": 18517,
-            "release": 18517,
-            "recovered": 22313
+            "kind": "cut iron-plate",
+            "start": 18376,
+            "drop": 18462,
+            "release": 18462,
+            "recovered": 22216
           }
         ],
         "stock": {
           "lowest": 0,
-          "end": 3,
+          "end": 12,
           "holds": true
         },
         "result": "holds",
-        "ended": 22313
-      },
-      "generation": {
-        "period": 384,
-        "expected": 32,
-        "verdict": "stable",
-        "selection": {
-          "id": "takt_batches_observed",
-          "holds": true,
-          "rate": 5,
-          "supply": null
-        },
-        "clock_sha256": "3834ac13326977058cfa7ae2da7d7f1c65a44325322f701af4ad33a3e36828a2"
-      }
-    },
-    "container-wagon-filtered": {
-      "recorded": {
-        "pr": 0,
-        "commit": "57c76634",
-        "frozen_head": "57c76634",
-        "note": "recorded under the protocol in game ticks on the engine of this head; pr is set when the PR is opened",
-        "clock_sha256": "8f2876cb937d8d4c656c02744984034dc96392929fedd7740832c108d5bb0b14",
-        "clock_basis": "capture"
-      },
-      "native": {
-        "protocol": "trailing-minute",
-        "generationVerdict": "stable",
-        "target": 5,
-        "period": 192,
-        "window": 3600,
-        "expected": 300,
-        "steady": 7076,
-        "baseline": {
-          "ticks": 3600,
-          "total": 299,
-          "expected": 300,
-          "min": 299,
-          "max": 303,
-          "held": false,
-          "meets": true,
-          "measured": {
-            "ticks": 3456,
-            "items": 288,
-            "expected": 288,
-            "stock_start": 22,
-            "stock_end": 22,
-            "net": 288
-          }
-        },
-        "disturbances": [
-          {
-            "kind": "cut iron-plate",
-            "start": 10676,
-            "drop": 10783,
-            "release": 10783,
-            "recovered": 14537
-          },
-          {
-            "kind": "block output",
-            "start": 14537,
-            "drop": 14623,
-            "release": 14623,
-            "recovered": 18377
-          },
-          {
-            "kind": "cut iron-plate",
-            "start": 18377,
-            "drop": 18463,
-            "release": 18463,
-            "recovered": 22217
-          }
-        ],
-        "stock": {
-          "lowest": 8,
-          "end": 20,
-          "holds": true
-        },
-        "result": "holds",
-        "ended": 22217
+        "ended": 22216
       },
       "generation": {
         "period": 192,
@@ -243,9 +243,9 @@
     "container-wagon-legendary": {
       "recorded": {
         "pr": 0,
-        "commit": "57c76634",
-        "frozen_head": "57c76634",
-        "note": "recorded under the protocol in game ticks on the engine of this head; pr is set when the PR is opened",
+        "commit": "50bdc018",
+        "frozen_head": "50bdc018",
+        "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24; a second run gave the same summary",
         "clock_sha256": "8f2876cb937d8d4c656c02744984034dc96392929fedd7740832c108d5bb0b14",
         "clock_basis": "capture"
       },
@@ -254,89 +254,6 @@
         "generationVerdict": "stable",
         "target": 5,
         "period": 192,
-        "window": 3600,
-        "expected": 300,
-        "steady": 7076,
-        "baseline": {
-          "ticks": 3600,
-          "total": 299,
-          "expected": 300,
-          "min": 299,
-          "max": 303,
-          "held": false,
-          "meets": true,
-          "measured": {
-            "ticks": 3456,
-            "items": 288,
-            "expected": 288,
-            "stock_start": 22,
-            "stock_end": 22,
-            "net": 288
-          }
-        },
-        "disturbances": [
-          {
-            "kind": "cut iron-plate",
-            "start": 10676,
-            "drop": 10783,
-            "release": 10783,
-            "recovered": 14537
-          },
-          {
-            "kind": "block output",
-            "start": 14537,
-            "drop": 14623,
-            "release": 14623,
-            "recovered": 18377
-          },
-          {
-            "kind": "cut iron-plate",
-            "start": 18377,
-            "drop": 18463,
-            "release": 18463,
-            "recovered": 22217
-          }
-        ],
-        "stock": {
-          "lowest": 8,
-          "end": 20,
-          "holds": true
-        },
-        "result": "holds",
-        "ended": 22217
-      },
-      "generation": {
-        "period": 192,
-        "expected": 16,
-        "verdict": "stable",
-        "selection": {
-          "id": "takt_batches_observed",
-          "holds": true,
-          "rate": 5,
-          "supply": null
-        },
-        "clock_sha256": "8f2876cb937d8d4c656c02744984034dc96392929fedd7740832c108d5bb0b14"
-      },
-      "previous": {
-        "id": "time_division_windows",
-        "clock_sha256": "043fabae947152aa1078ccf8f508bdf01a46f9ce171ebd89c336fb070a77a349"
-      },
-      "second_cut_held_simulated": 47
-    },
-    "container-wagon-legendary-mixed": {
-      "recorded": {
-        "pr": 0,
-        "commit": "038ed41a",
-        "frozen_head": "038ed41a",
-        "note": "recorded under the protocol in game ticks before the PR was opened; pr is set when it is",
-        "clock_sha256": "3834ac13326977058cfa7ae2da7d7f1c65a44325322f701af4ad33a3e36828a2",
-        "clock_basis": "capture"
-      },
-      "native": {
-        "protocol": "trailing-minute",
-        "generationVerdict": "stable",
-        "target": 5,
-        "period": 384,
         "window": 3600,
         "expected": 300,
         "steady": 7056,
@@ -361,23 +278,106 @@
           {
             "kind": "cut iron-plate",
             "start": 10656,
-            "drop": 10789,
-            "release": 10789,
-            "recovered": 14543
+            "drop": 10782,
+            "release": 10782,
+            "recovered": 14536
           },
           {
             "kind": "block output",
-            "start": 14543,
-            "drop": 14634,
-            "release": 14634,
-            "recovered": 18383
+            "start": 14536,
+            "drop": 14622,
+            "release": 14622,
+            "recovered": 18376
+          },
+          {
+            "kind": "cut iron-plate",
+            "start": 18376,
+            "drop": 18462,
+            "release": 18462,
+            "recovered": 22216
+          }
+        ],
+        "stock": {
+          "lowest": 0,
+          "end": 12,
+          "holds": true
+        },
+        "result": "holds",
+        "ended": 22216
+      },
+      "generation": {
+        "period": 192,
+        "expected": 16,
+        "verdict": "stable",
+        "selection": {
+          "id": "takt_batches_observed",
+          "holds": true,
+          "rate": 5,
+          "supply": null
+        },
+        "clock_sha256": "8f2876cb937d8d4c656c02744984034dc96392929fedd7740832c108d5bb0b14"
+      },
+      "previous": {
+        "id": "time_division_windows",
+        "clock_sha256": "043fabae947152aa1078ccf8f508bdf01a46f9ce171ebd89c336fb070a77a349"
+      },
+      "second_cut_held_simulated": 47
+    },
+    "container-wagon-legendary-mixed": {
+      "recorded": {
+        "pr": 0,
+        "commit": "50bdc018",
+        "frozen_head": "50bdc018",
+        "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24; a second run gave the same summary",
+        "clock_sha256": "3834ac13326977058cfa7ae2da7d7f1c65a44325322f701af4ad33a3e36828a2",
+        "clock_basis": "capture"
+      },
+      "native": {
+        "protocol": "trailing-minute",
+        "generationVerdict": "stable",
+        "target": 5,
+        "period": 384,
+        "window": 3600,
+        "expected": 300,
+        "steady": 7144,
+        "baseline": {
+          "ticks": 3600,
+          "total": 299,
+          "expected": 300,
+          "min": 299,
+          "max": 303,
+          "held": false,
+          "meets": true,
+          "measured": {
+            "ticks": 3456,
+            "items": 288,
+            "expected": 288,
+            "stock_start": 3,
+            "stock_end": 3,
+            "net": 288
+          }
+        },
+        "disturbances": [
+          {
+            "kind": "cut iron-plate",
+            "start": 10744,
+            "drop": 10878,
+            "release": 10878,
+            "recovered": 14542
+          },
+          {
+            "kind": "block output",
+            "start": 14542,
+            "drop": 14633,
+            "release": 14633,
+            "recovered": 18382
           },
           {
             "kind": "cut copper-cable",
-            "start": 18383,
-            "drop": 18517,
-            "release": 18517,
-            "recovered": 22313
+            "start": 18382,
+            "drop": 18516,
+            "release": 18516,
+            "recovered": 22312
           }
         ],
         "stock": {
@@ -386,7 +386,7 @@
           "holds": true
         },
         "result": "holds",
-        "ended": 22313
+        "ended": 22312
       },
       "generation": {
         "period": 384,
@@ -404,9 +404,9 @@
     "container-wagon-normal": {
       "recorded": {
         "pr": 0,
-        "commit": "57c76634",
-        "frozen_head": "57c76634",
-        "note": "recorded under the protocol in game ticks on the engine of this head; pr is set when the PR is opened",
+        "commit": "50bdc018",
+        "frozen_head": "50bdc018",
+        "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24; a second run gave the same summary",
         "clock_sha256": "8f2876cb937d8d4c656c02744984034dc96392929fedd7740832c108d5bb0b14",
         "clock_basis": "capture"
       },
@@ -417,7 +417,7 @@
         "period": 192,
         "window": 3600,
         "expected": 300,
-        "steady": 7076,
+        "steady": 7056,
         "baseline": {
           "ticks": 3600,
           "total": 299,
@@ -430,41 +430,41 @@
             "ticks": 3456,
             "items": 288,
             "expected": 288,
-            "stock_start": 22,
-            "stock_end": 22,
+            "stock_start": 12,
+            "stock_end": 12,
             "net": 288
           }
         },
         "disturbances": [
           {
             "kind": "cut iron-plate",
-            "start": 10676,
-            "drop": 10783,
-            "release": 10783,
-            "recovered": 14537
+            "start": 10656,
+            "drop": 10782,
+            "release": 10782,
+            "recovered": 14536
           },
           {
             "kind": "block output",
-            "start": 14537,
-            "drop": 14623,
-            "release": 14623,
-            "recovered": 18377
+            "start": 14536,
+            "drop": 14622,
+            "release": 14622,
+            "recovered": 18376
           },
           {
             "kind": "cut iron-plate",
-            "start": 18377,
-            "drop": 18463,
-            "release": 18463,
-            "recovered": 22217
+            "start": 18376,
+            "drop": 18462,
+            "release": 18462,
+            "recovered": 22216
           }
         ],
         "stock": {
-          "lowest": 8,
-          "end": 20,
+          "lowest": 0,
+          "end": 12,
           "holds": true
         },
         "result": "holds",
-        "ended": 22217
+        "ended": 22216
       },
       "generation": {
         "period": 192,
