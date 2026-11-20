@@ -1513,7 +1513,7 @@ local function start_fill(state, job, staged_report)
     local function add(unit_number, config_id)
         local entity = by_unit_number[unit_number]
         if entity then
-            table.insert(cell, { entity = entity, config_id = config_id, windowed = windowed[unit_number] == true, moved = false })
+            table.insert(cell, { entity = entity, config_id = config_id, windowed = windowed[unit_number] == true })
             if not windowed[unit_number] then
                 unclocked_count = unclocked_count + 1
             end
@@ -1537,6 +1537,7 @@ local function start_fill(state, job, staged_report)
         started_tick = game.tick,
         window_ticks = options.window_ticks,
         cap_ticks = options.cap_ticks,
+        checks_from_ticks = options.checks_from_ticks,
         lock = lock,
         combinators = combinators,
         windowed = windowed,
@@ -1548,7 +1549,7 @@ local function start_fill(state, job, staged_report)
         counter_after = {},
     }
     return clock_report, { lock_unit = lock.unit_number, started_tick = game.tick, windowed = windowed_count, unclocked = unclocked_count,
-        window_ticks = options.window_ticks, cap_ticks = options.cap_ticks }
+        window_ticks = options.window_ticks, cap_ticks = options.cap_ticks, checks_from_ticks = options.checks_from_ticks }
 end
 
 ---The end of the fill of a backpressure start: what the build holds is reported, the lock is set off, and the kick start, the seeds,
@@ -1593,7 +1594,7 @@ local function open_fill(state, ended)
         if entity.valid then
             local hand = entity.held_stack
             table.insert(inserters, { unit_number = entity.unit_number, config_id = member.config_id, windowed = member.windowed,
-                held = hand.valid_for_read and hand.count or 0, moved = member.moved })
+                held = hand.valid_for_read and hand.count or 0, first_held_tick = member.first_held_tick, last_held_tick = member.last_held_tick })
         end
     end
     local leaked = {}
@@ -1629,8 +1630,10 @@ end
 ---@param state table storage.harness
 local function fill_tick(state)
     local fill = state.fill
-    -- an inserter built in the tick the fill started knows its circuit condition after its first tick
-    local checks = game.tick > fill.started_tick + 1
+    -- an inserter built in the tick the fill started knows its circuit condition after its first tick: its circuit is checked from
+    -- checks_from_ticks after that tick (the host's FILL_CHECKS_FROM_TICKS); its hand is reported from the first tick on and the host
+    -- judges it from the same one
+    local checks = game.tick >= fill.started_tick + fill.checks_from_ticks
     for _, member in ipairs(fill.cell) do
         local entity = member.entity
         if entity.valid then
@@ -1646,7 +1649,8 @@ local function fill_tick(state)
                 end
             end
             if entity.held_stack.valid_for_read then
-                member.moved = true
+                member.first_held_tick = member.first_held_tick or game.tick
+                member.last_held_tick = game.tick
             end
         end
     end

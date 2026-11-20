@@ -152,6 +152,8 @@ export function assertContainerHardware(recording: Recording, config: Config, va
 export function containerClockScenario(variant: ContainerClockCase): PickupClockScenario {
     return {
         name: variant.name, speed: CLOCK_TEST_SPEEDS[0], backed: false,
+        // ruling 60's start: the harness's backpressure start
+        staged: true, backpressure: true,
         config: () => containerClockConfig(variant), scaffold: () => containerClockScaffold(variant),
         probeFile: path.join(__dirname, "container-clock-probe.lua"),
         probe: {family: "container", cuts: variant.recipe === "iron-gear-wheel" ? ["iron-plate", "iron-plate"] : ["iron-plate", "copper-cable"]} as PickupClockScenario["probe"],
