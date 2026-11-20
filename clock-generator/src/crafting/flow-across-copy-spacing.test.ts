@@ -17,7 +17,7 @@ function withBelt3(config: Config, flow_direction: 0 | 4 | 8 | 12 | undefined, l
     }) };
 }
 
-// three copies 10 tiles apart along x; belt 3 carries coal on both lanes, which every copy takes from
+// three copies 12 tiles apart along x; belt 3 carries coal on both lanes, which every copy takes from
 describe("a belt whose stated flow direction is across the copy spacing", () => {
     let config: Config;
     beforeAll(async () => {
@@ -32,7 +32,7 @@ describe("a belt whose stated flow direction is across the copy spacing", () => 
         expect(refusal).toBeInstanceOf(FlowAcrossCopySpacingError);
         const message = (refusal as Error).message;
         expect(message).toContain("Belt 3 states flow_direction 8 (south), and the copies share both lanes of belt 3.");
-        expect(message).toContain("copy_offset (10, 0) puts the copies along x");
+        expect(message).toContain("copy_offset (12, 0) puts the copies along x");
         expect(message).toContain("4 (east) or 12 (west)");
         expect(message).toContain("State the way the belt flows along the row of copies, 4 (east) or 12 (west), or remove flow_direction from the belt.");
     });

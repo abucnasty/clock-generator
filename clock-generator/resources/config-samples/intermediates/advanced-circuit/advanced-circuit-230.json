@@ -4,7 +4,7 @@
     "items_per_second": 230,
     "copies": 3,
     "copy_offset": {
-      "x": 10,
+      "x": 12,
       "y": 0
     }
   },
