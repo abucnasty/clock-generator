@@ -43,6 +43,12 @@ export interface MissingRecordingCase {
     baseline?: {ticks: number; reason: string};
     /** Ticks the run goes on after its last loss, where the clock cycle is longer than the test's 7,200: it must hold a whole clock cycle */
     tail_ticks?: number;
+    /**
+     * How much of the tail's end is judged after the losses where it is not the protocol's minute (RECOVERY_CYCLES_TICKS): a copy whose output
+     * repeats every r clock cycles is judged over a whole number of the repeat (helpers/run-judgement.js judgeAfterLoss, decision 1057), and a
+     * repeat is seen only where the judged part holds it twice
+     */
+    tail_judged_ticks?: number;
     /** The job is a variant of the sample: its config */
     variant?: (config: Config) => Config;
     /** The copies the scaffold holds (the config's own `copies` says how many the job has) */
@@ -140,6 +146,9 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
         name: "electromagnetic-science-330", job: "config-ELECTROMAGNETIC_SCIENCE_330", config: "ELECTROMAGNETIC_SCIENCE_330", copies: 11,
         losses: [{kind: "cut", item: "accumulator"}, {kind: "block"}, {kind: "cut", item: "supercapacitor"}],
         start: "backpressure",
+        // after the supercapacitor cut a copy makes every craft, but its output inserters take 67 and 65 hands in turn over 2,112 ticks (the net of a
+        // cycle reads 1,072 and 1,040): a repeat of two cycles, judged over the five cycles of the tail's last 10,560 ticks (the recording's limit of 72,000 ticks allows a tail of 18,000)
+        tail_ticks: 18_000, tail_judged_ticks: 10_560,
     },
     // the output block lasted 22 ticks in the run above (the accumulator cut recovers over the target before it is over the baseline's lowest minute): each loss has a case of its own
     {
