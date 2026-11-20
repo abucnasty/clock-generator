@@ -914,7 +914,7 @@ Recorded at Factorio 2.1.24, all six holding their target on every copy and reco
   before it differed by at most two ticks in steady state and in the last recovery. Every copy built holds its share in every whole window cycle checked, before and after the losses.
 - The first pick is "no recovery" in the simulator (copper plate stops arriving on the copies that share a lane). In the game all nine copies keep their rate and
   the output comes back after that loss, so the game and the simulator differ, as for utility science 120 above.
-- Named limits: the scaffold of the productivity module chain holds one copy of the job's six, and that of the electromagnetic science recycler build two of five; the
+- Named limits: the scaffold of the productivity module chain holds one copy of the job's six, and that of the electromagnetic science recycler build two of five (it is recorded on five copies below, "The stamped scaffolds of the job's copies"); the
   joins of the other copies are not in these runs. The harness builds the copies the scaffold blueprint holds and no more: asked for the job's copies (2026-11-19, Factorio 2.1.24,
   ruling 60's start) it refuses before the run, "The test says the build holds the config 6 times, and the build holds it 1: a copy is a group of machines that inserters move items
   between, with a machine for every machine of the config" (the recycler build: 5 times, holds it 2). The same holds for the automation science 120 build (9 times, holds it 1) and the
@@ -1185,7 +1185,7 @@ with equal summaries. They are pinned in [missing-recordings-clock-controls.json
 | `PRODUCTION_SCIENCE_120_TWO_BELTS` and `..._SHARED_PICKUP` | Euclidean Swings (336, `fdadf120`) | none | | | not recorded: ruling 60's start refuses the build |
 
 - **Utility science 120.** The record's verdict for the clock is "no recovery", from the loss of low density structures on the copies that share a lane. The scaffold holds one copy, so no lane is shared
-  and the game recovers from the loss (as in "Utility science 120: the selected clock from the staged start" above, now from ruling 60's start). The seven-copy scaffold is not in the repository.
+  and the game recovers from the loss (as in "Utility science 120: the selected clock from the staged start" above, now from ruling 60's start). The seven-copy scaffold of the jobs is recorded below, "The stamped scaffolds of the job's copies".
 - **Chemical science.** abucnasty's whole build (5.5 copies, `chemical-science-240-shared-foundry-full-build.blueprint`) is refused by the staged start: "The clock names inserters 2, 4, 6, 8, 10, 12, 14, 16, 18, 20
   of the config, which match no inserter of the build in copy 6 of 6". The partial copy holds some of the config's inserters. The warm-up path of the harness takes that into account when it wires the clock, and the staged path does not (read from `src/harness/factorio-harness.ts`; not changed here).
 - **Production science.** A drill drops stone straight into the rail assembler, so a machine that only windowed inserters feed holds items at the opening: "Machines that only windowed inserters fill hold items at the opening:
@@ -1198,6 +1198,39 @@ MISSING_RECORDINGS_CAPTURE_DIR=.scratch/scaffold-builds npm run test:game -- tes
 
 `scripts/recording_count.py <commit> <out.md>` counts which record jobs have a recording that holds from ruling 60's start (usage in its docstring). A job built on fewer copies than the job has reads
 "ruling 60's start: N of M copies built" there, whatever its `limit` says.
+
+## The stamped scaffolds of the job's copies, from ruling 60's start
+
+A scaffold of one or two copies leaves the joins of the other copies out of a run, so four of the builds have a scaffold of all the job's copies beside the one-copy scaffold, in the item's folder of `resources/config-samples/`
+as `<stem>-<N>-copies.blueprint` (`<stem>-<role>.blueprint`, a blueprint string that is not the one-copy scaffold). Each repeats the scaffold's copy along its belts at the build's spacing, so the copies share the input belts and
+each copy has its own output belt and void chest. They are used by the game tests only (`missing-recordings-clock.game.test.ts`, the case's `scaffold`); `npm run record` still builds the one-copy scaffolds.
+The belts of each were traced with the pinned belt tracer (`trace.py`, which agrees with the game on 596 of 596 reads of the automation science 240 scaffold's output side; its input side and three side-load cases are not pinned,
+and it sizes only 3x3 assemblers) and compared with the scaffold: no overlap, the same unpaired undergrounds, the same ends of the shared lines, one line to a loader for each copy, and every belt piece of the stamp has a
+piece of the scaffold of the same kind at a whole pitch (the belt that ends at the scaffold's last copy runs on through the others).
+
+The selected clock of each job, from ruling 60's start, every copy, the standard losses (Factorio 2.1.24, `CLOCK_RECORDING_CACHE=off`, each run twice with equal summaries and equal per-copy verdicts), pinned in
+[missing-recordings-clock-controls.json](missing-recordings-clock-controls.json):
+
+| Job (case) | Clock | Copies built | Steady state | Last loss recovered | Result |
+| --- | --- | --- | --- | --- | --- |
+| `UTILITY_SCIENCE_120` (`utility-science-120`) | Takt Batches Observed (672, `8c6d44c1`) | 7 of 7 | 7,135 | 21,919 (cut low density structure 16,225, output block 16,543, cut processing unit 21,919) | holds: each copy 960 of 960 in each of 5 window cycles before and after the losses; recovers from the low density structure stop, where the record says "no recovery" |
+| `UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT` (`utility-science-120-processing-unit-and-lds-on-one-belt`) | Coordinated Sources (336, `4d76e238`) | 7 of 7 | 6,960 | 19,576 | holds: each copy 960 of 960 in each of 10 window cycles before and after the losses |
+| the same, the flying robot frame cut from the baseline (`...-frames`) | the same | 7 of 7 | 6,960 | 14,892 | holds, same result |
+| `ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED` (`electromagnetic-science-240-recycler-belt-fed`) | Coordinated Sources (40, `3202663f`) | 5 of 5 | 7,200 | 15,175 | holds on each copy's stretch (2,880 to 2,907 of 2,880 before the losses, 2,885 to 2,899 after); the recyclers' returns are random, so a copy's window cycles fall short of 32 by a few items (12 to 19 of 90) |
+| the same, the output block from the baseline (`...-block`) | the same | 5 of 5 | 7,200 | 23,579 | holds on the stretch, each copy |
+| the same, the superconductor cut from the baseline (`...-superconductors`) | the same | 5 of 5 | 7,200 | 15,472 | **not pinned**: copy 5 makes 2,877 of 2,880 in the last minute after the cut (both runs); the other four make 2,881 to 2,909 |
+
+- **Why the split cases.** After a loss that recovers, the output is back over the target before it is back over the baseline's lowest minute, so the next loss in the same run falls and is released within a few ticks: the
+  output block and the superconductor cut of the electromagnetic run lasted 4 and 2 ticks, and the flying robot frame cut of the utility run 20 ticks. Each such loss has a case of its own, from the baseline, as the cases of the other builds in this file.
+- **Utility science 120** is the record's "no recovery" pick (copy 7 stays at 0 after an LDS stop in an earlier game run on a seven-copy build, read in "Utility science 120: the selected clock from the staged start" above). On this scaffold every copy recovers and
+  the run holds. That differs from the record; the cause is not established. Untested: the start (the earlier run was not from ruling 60's start).
+- **Electromagnetic 240, the superconductor cut.** The recyclers give back what the game rolls, so a copy's last minute can fall a few items short of 2,880 with nothing wrong with the clock; copy 5's 2,877 is 0.1% short.
+  The case is kept in the fixtures with no pin, and the job's other cases hold.
+- **Production science 120** (both jobs): see the section below.
+
+```
+MISSING_RECORDINGS_CAPTURE_DIR=.scratch/stamped BELT_CLOCK_CALIBRATE=1 CLOCK_RECORDING_CACHE=off npm run test:game -- tests/game/builds/missing-recordings-clock.game.test.ts -t 'utility-science-120|electromagnetic-science-240-recycler'
+```
 
 ## The side pickup builds, from ruling 60's start
 
