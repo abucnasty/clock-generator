@@ -3,7 +3,7 @@
   "cases": {
     "container-car-mixed": {
       "recorded": {
-        "pr": 0,
+        "pr": 860,
         "commit": "50bdc018",
         "frozen_head": "50bdc018",
         "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24; a second run gave the same summary",
@@ -81,7 +81,7 @@
     },
     "container-tank-mixed": {
       "recorded": {
-        "pr": 0,
+        "pr": 860,
         "commit": "50bdc018",
         "frozen_head": "50bdc018",
         "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24; a second run gave the same summary",
@@ -159,7 +159,7 @@
     },
     "container-wagon-filtered": {
       "recorded": {
-        "pr": 0,
+        "pr": 860,
         "commit": "50bdc018",
         "frozen_head": "50bdc018",
         "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24; a second run gave the same summary",
@@ -242,7 +242,7 @@
     },
     "container-wagon-legendary": {
       "recorded": {
-        "pr": 0,
+        "pr": 860,
         "commit": "50bdc018",
         "frozen_head": "50bdc018",
         "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24; a second run gave the same summary",
@@ -325,7 +325,7 @@
     },
     "container-wagon-legendary-mixed": {
       "recorded": {
-        "pr": 0,
+        "pr": 860,
         "commit": "50bdc018",
         "frozen_head": "50bdc018",
         "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24; a second run gave the same summary",
@@ -403,7 +403,7 @@
     },
     "container-wagon-normal": {
       "recorded": {
-        "pr": 0,
+        "pr": 860,
         "commit": "50bdc018",
         "frozen_head": "50bdc018",
         "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), in Factorio 2.1.24; a second run gave the same summary",
