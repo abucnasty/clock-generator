@@ -256,7 +256,9 @@ export interface BackpressureOpening {
     leaks: { ticks: number; first_tick?: number; units: number[] | Record<string, number> };
     /**
      * Every crafting machine of the build. fed_by: "unclocked" when an inserter with no window drops into it, "windowed" when
-     * only windowed inserters do, "none" when no inserter does (fluids or loaders only). windows: products finished in each window
+     * only windowed inserters do, "none" when no inserter does (fluids or loaders only). drill_fed_by: the same for the mining
+     * drills that drop into it (a drill with a window is one the clock wires); older reports have none. Read both through
+     * `machineFedBy`. windows: products finished in each window
      */
     machines: BackpressureMachine[] | Record<string, BackpressureMachine>;
     /** Every inserter of the cell, whether the clock holds it, what its hand holds at the opening and whether it held anything in the fill */
@@ -265,11 +267,12 @@ export interface BackpressureOpening {
     counter_after?: number[] | Record<string, number>;
 }
 
-interface BackpressureMachine {
+export interface BackpressureMachine {
     unit_number: number;
     name: string;
     recipe?: string;
     fed_by: "unclocked" | "windowed" | "none";
+    drill_fed_by?: "unclocked" | "windowed" | "none";
     input: number;
     output: number;
     products_finished: number;
@@ -282,6 +285,15 @@ interface BackpressureInserter {
     windowed: boolean;
     held: number;
     moved: boolean;
+}
+
+/**
+ * What fills a machine at the opening: "unclocked" when an inserter or a mining drill with no window drops into it (ruling 60: what
+ * does not depend on a clocked entity is full at the start), else "windowed" when only windowed inserters or drills do, else "none"
+ */
+export function machineFedBy(machine: Pick<BackpressureMachine, "fed_by" | "drill_fed_by">): "unclocked" | "windowed" | "none" {
+    const feeders = [machine.fed_by, machine.drill_fed_by ?? "none"];
+    return feeders.includes("unclocked") ? "unclocked" : feeders.includes("windowed") ? "windowed" : "none";
 }
 
 /** A list the game wrote: as an object of its keys when it has one entry, or none */
@@ -312,7 +324,7 @@ export function assertBackpressureOpening(opening: BackpressureOpening | undefin
         throw new Error(`Windowed inserters held items during the fill with the lock on: ${moved.map(it => `unit ${it.unit_number} (config id ${it.config_id})`).join("; ")}`);
     }
     const machines = listOf(opening.machines);
-    const filled = machines.filter(machine => machine.fed_by === "windowed" && (machine.input > 0 || machine.output > 0 || machine.products_finished > 0));
+    const filled = machines.filter(machine => machineFedBy(machine) === "windowed" && (machine.input > 0 || machine.output > 0 || machine.products_finished > 0));
     if (filled.length > 0) {
         throw new Error(`Machines that only windowed inserters fill hold items at the opening: `
             + filled.map(it => `${it.name} (unit ${it.unit_number}): ${it.input} in, ${it.output} out, ${it.products_finished} made`).join("; "));
@@ -1213,7 +1225,7 @@ export function trialBuildJob(options: BuildOptions) {
 }
 
 /** What the game is asked to build for the first stage of a staged start: all but the inserters of the cell, in the place the trial build stood in */
-export function firstStageJob(options: BuildOptions, position: BuildOptions["position"]) {
+export function firstStageJob(options: BuildOptions, position: BuildOptions["position"], drill_positions?: Record<string, { x: number; y: number }[]>) {
     const staged = options.staged_start!;
     const replaces_clock = options.clock !== undefined || options.unclocked;
     return {
@@ -1225,6 +1237,9 @@ export function firstStageJob(options: BuildOptions, position: BuildOptions["pos
         speed: options.game_speed,
         drill_resource: drillResourceOf(options),
         staged: { saturation_ticks: staged.saturation_ticks, cap_ticks: staged.saturation_cap_ticks },
+        // ruling 60's start: a drill the clock gives a window to depends on a clocked entity, so it stands still until the fill (the lock is on,
+        // the clock wired), and the machine it drops into is empty at the opening like one that only windowed inserters fill
+        ...(staged.backpressure && drill_positions && { hold_drills: drill_positions }),
     };
 }
 
@@ -1615,7 +1630,7 @@ export class HarnessSession {
         }
 
         // first stage: everything but the inserters of the cell, until the belts are saturated
-        const build = await this.call("harness_build", firstStageJob(options, position));
+        const build = await this.call("harness_build", firstStageJob(options, position, drill_positions));
         const not_built = Object.values<string>(build.failed);
         if (not_built.length > 0) {
             throw new Error(`Could not build ${not_built.length} of the blueprint's entities: ${Array.from(new Set(not_built)).join(", ")}`);
@@ -1733,7 +1748,8 @@ export class HarnessSession {
         const opening: BackpressureOpening & Record<string, any> = filled.fill.opening;
         const machines = listOf(opening.machines);
         for (const machine of machines) {
-            const fed_by = machine.fed_by === "none" ? "no inserter drops into it" : machine.fed_by === "windowed" ? "only windowed inserters drop into it" : "an inserter with no window drops into it";
+            const by = machineFedBy(machine);
+            const fed_by = by === "none" ? "no inserter or drill drops into it" : by === "windowed" ? "only windowed inserters or drills drop into it" : "an inserter or a drill with no window drops into it";
             log(`Machine ${machine.name} (unit ${machine.unit_number}, ${machine.recipe ?? "no recipe"}; ${fed_by}): `
                 + `made ${listOf(machine.windows).join(", ")} in the windows of the fill; at the opening ${machine.input} in, ${machine.output} out, ${machine.products_finished} made`);
         }
@@ -1741,12 +1757,12 @@ export class HarnessSession {
             log(`Inserter unit ${inserter.unit_number} (config id ${inserter.config_id ?? "none"}): ${inserter.windowed ? "windowed" : "no window"}, `
                 + `holds ${inserter.held} at the opening, ${inserter.moved ? "held items in the fill" : "held nothing in the fill"}`);
         }
-        const fed = (by: string) => machines.filter(machine => machine.fed_by === by);
+        const fed = (by: string) => machines.filter(machine => machineFedBy(machine) === by);
         const holding = (list: BackpressureMachine[]) => list.filter(machine => machine.input > 0 || machine.output > 0).length;
         log(`The lock was set off in tick ${opening.tick}, ${opening.tick - opening.started_tick} ticks after the inserters were built, `
             + (opening.ended === "steady" ? "with the part no clock holds steady" : `at the cap: the part no clock holds was not steady`)
-            + `. Machines an inserter with no window fills: ${fed("unclocked").length}, ${holding(fed("unclocked"))} hold items; `
-            + `machines only windowed inserters fill: ${fed("windowed").length}, ${holding(fed("windowed"))} hold items; machines no inserter fills: ${fed("none").length}`);
+            + `. Machines an inserter or drill with no window fills: ${fed("unclocked").length}, ${holding(fed("unclocked"))} hold items; `
+            + `machines only windowed inserters or drills fill: ${fed("windowed").length}, ${holding(fed("windowed"))} hold items; machines no inserter or drill fills: ${fed("none").length}`);
         assertBackpressureOpening(opening);
         return opening;
     }

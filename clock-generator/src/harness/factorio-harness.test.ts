@@ -3,7 +3,7 @@ import path from "path";
 import zlib from "zlib";
 import { encodeBlueprintFile } from "../blueprints/serde";
 import {
-    assertBackpressureOpening, assertClockAttached, assertClockPriming, assertRecordableTicks, buildPartsMissingFromConfig, builtCopies, clockInserters, stagedBuildOrder, clockOfBlueprintString, clockWindowCycleTicks, matchBuiltCopies, matchBuiltDrills, matchBuiltInserters, stagedDrillPositions, MAX_RECORDED_TICKS,
+    assertBackpressureOpening, machineFedBy, assertClockAttached, assertClockPriming, assertRecordableTicks, buildPartsMissingFromConfig, builtCopies, clockInserters, stagedBuildOrder, clockOfBlueprintString, clockWindowCycleTicks, matchBuiltCopies, matchBuiltDrills, matchBuiltInserters, stagedDrillPositions, MAX_RECORDED_TICKS,
     factorioDataDir, missingFromConfigMessage, partCopiesOf, recordedTicks, recordInFactorio, scheduledDrillIds, scheduledInserterIds,
     drillResourceOf, trialBuildJob, firstStageJob,
 } from "./factorio-harness";
@@ -628,6 +628,15 @@ describe("a clock the build came with", () => {
             expect(trialBuildJob(options).blueprint).toBe(options.blueprint);
             expect(firstStageJob(options, undefined).blueprint).toBe(options.blueprint);
         });
+
+        it("holds the drill the clock gives a window to still from its build in ruling 60's start, and no drill in another staged start", () => {
+            // production science 120: the drill drops stone into the rail assembler, and the clock has a window for it
+            const drills = { "1": [{ x: 12.5, y: -3.5 }] };
+            const backpressure = staged({ clock: swapped, staged_start: { build_order: "ascending" as const, backpressure: {} } });
+            expect((firstStageJob(backpressure, undefined, drills) as any).hold_drills).toEqual(drills);
+            expect(firstStageJob(backpressure, undefined) as object).not.toHaveProperty("hold_drills");
+            expect(firstStageJob(staged({ clock: swapped }), undefined, drills) as object).not.toHaveProperty("hold_drills");
+        });
     });
 });
 
@@ -792,6 +801,33 @@ describe("a backpressure start in a staged start", () => {
         const moving = { ...opening.machines[0], windows: [449, 450] };
         expect(() => assertBackpressureOpening({ ...opening, machines: [moving] }))
             .toThrow("The fill ended as steady, and foundry (unit 7) made 449, then 450 in its last two windows");
+    });
+});
+
+describe("the opening of a backpressure start, with a mining drill that drops into a machine", () => {
+    // the production science build of ruling 60's start: a big mining drill drops stone straight into the rail assembler, which two
+    // windowed stack inserters also fill. The drill has no window, so it is full at the opening like every entity no clock holds
+    const rail_assembler = { unit_number: 376, name: "assembling-machine-3", recipe: "rail", fed_by: "windowed" as const, input: 164, output: 0, products_finished: 0, windows: [0, 0] };
+    const opening = {
+        tick: 9000, started_tick: 1800, ended: "steady" as const, window_ticks: 3600, counter: 1, leaks: { ticks: 0, units: [] },
+        machines: [rail_assembler],
+        inserters: [{ unit_number: 20, config_id: 1, windowed: true, held: 0, moved: false }],
+    };
+
+    it("takes a rail assembler that holds stone from a drill with no window, with windowed stack inserters beside it", () => {
+        const filled = { ...opening, machines: [{ ...rail_assembler, drill_fed_by: "unclocked" as const }] };
+        expect(machineFedBy(filled.machines[0])).toBe("unclocked");
+        expect(() => assertBackpressureOpening(filled)).not.toThrow();
+    });
+
+    it("still refuses a machine that only windowed inserters, or only a drill with a window, fill and that holds items", () => {
+        const message = "Machines that only windowed inserters fill hold items at the opening: assembling-machine-3 (unit 376): 164 in, 0 out, 0 made";
+        expect(() => assertBackpressureOpening(opening)).toThrow(message);
+        expect(() => assertBackpressureOpening({ ...opening, machines: [{ ...rail_assembler, drill_fed_by: "none" as const }] })).toThrow(message);
+        expect(() => assertBackpressureOpening({ ...opening, machines: [{ ...rail_assembler, drill_fed_by: "windowed" as const }] })).toThrow(message);
+        const drill_only = { ...rail_assembler, fed_by: "none" as const, drill_fed_by: "windowed" as const };
+        expect(machineFedBy(drill_only)).toBe("windowed");
+        expect(() => assertBackpressureOpening({ ...opening, machines: [drill_only] })).toThrow(message);
     });
 });
 

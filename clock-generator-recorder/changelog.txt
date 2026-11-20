@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.11.3
+Date: 2026-11-19
+  Bugfixes:
+    - The opening of a backpressure start reports what the mining drills of the build drop into (drill_fed_by on each machine, "unclocked" for a drill with no window, "windowed" for one the clock wires), so a machine a drill without a window fills is not counted as one that only windowed inserters fill
+---------------------------------------------------------------------------------------------------
 Version: 0.11.2
 Date: 2026-11-18
   Bugfixes:

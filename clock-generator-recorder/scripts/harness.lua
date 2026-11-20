@@ -997,7 +997,7 @@ local function staged_tick(state)
 end
 
 ---Build the blueprint and pause the game, after the warm-up when one is asked for
----@param job {blueprint: string, surface: string?, force: string?, position: MapPosition?, clock: "keep"|"remove"|nil, free_warmup: boolean?, warmup_ticks: number?, speed: number?, drill_resource: string?} speed: the game's speed from here on; it stays what it is when absent. drill_resource: the ore put under every mining drill of the blueprint. free_warmup: with clock "remove", the inserters the removed clock held run free until the new clock is wired; in a staged build the cell's inserters it held are built free too
+---@param job {blueprint: string, surface: string?, force: string?, position: MapPosition?, clock: "keep"|"remove"|nil, free_warmup: boolean?, warmup_ticks: number?, speed: number?, drill_resource: string?, hold_drills: table<string, {x: number, y: number}[]>?} hold_drills: the drills the clock gives a window to, by config id and where they stand from the middle of the blueprint: they are disabled by script from the build until a backpressure fill has them wired to the clock with its lock on. speed: the game's speed from here on; it stays what it is when absent. drill_resource: the ore put under every mining drill of the blueprint. free_warmup: with clock "remove", the inserters the removed clock held run free until the new clock is wired; in a staged build the cell's inserters it held are built free too
 ---@return table report
 function harness.build(job)
     local surface = game.surfaces[job.surface or "nauvis"]
@@ -1032,6 +1032,29 @@ function harness.build(job)
     }
     if job.staged then
         state.staged = start_staged_fill(job.staged, staged_ghosts, origin, surface, entities)
+    end
+
+    -- the drills the clock gives a window to are disabled by script from the build on: a drill that runs in the first stage fills the machine
+    -- it drops into before the clock is wired, though ruling 60's start has nothing that depends on a clocked entity run before the lock
+    -- is on. The fill sets them free once the clock is wired with its lock on, which holds them off (fill_tick)
+    if job.hold_drills then
+        state.held_drills = {}
+        for id, list in pairs(job.hold_drills) do
+            for _, at in ipairs(list) do
+                local x, y = origin.x + at.x, origin.y + at.y
+                local found
+                for _, entity in pairs(entities) do
+                    if entity.valid and entity.type == "mining-drill" and math.abs(entity.position.x - x) < 0.01 and math.abs(entity.position.y - y) < 0.01 then
+                        found = entity
+                    end
+                end
+                if not found then
+                    error("no mining drill of the build stands at (" .. x .. ", " .. y .. "), where the trial build's drill " .. id .. " stood")
+                end
+                found.disabled_by_script = true
+                table.insert(state.held_drills, found)
+            end
+        end
     end
 
     local removed = 0
@@ -1502,6 +1525,11 @@ local function start_fill(state, job, staged_report)
             windowed_count = windowed_count + 1
         end
     end
+    -- the drills the clock wires have a window; the others run in the fill
+    local windowed_drills = {}
+    for _, wired in pairs(clock_report.wired_drills) do
+        windowed_drills[wired.unit_number] = true
+    end
     local by_unit_number = {}
     for _, entity in pairs(state.entities) do
         if entity.valid and entity.unit_number then
@@ -1540,6 +1568,8 @@ local function start_fill(state, job, staged_report)
         lock = lock,
         combinators = combinators,
         windowed = windowed,
+        windowed_drills = windowed_drills,
+        held_drills = state.held_drills,
         cell = cell,
         machines = machines,
         leaks = { ticks = 0, units = {} },
@@ -1569,17 +1599,36 @@ local function open_fill(state, ended)
             end
         end
     end
+    -- the same for the mining drills: a drill with no window runs in the fill and drops into its machine like an inserter with
+    -- none (the game tells the drop target once the drill has dropped)
+    local drill_feeders, drills = {}, {}
+    for _, entity in pairs(state.entities) do
+        if entity.valid and entity.type == "mining-drill" then
+            local ok, drop = pcall(function() return entity.drop_target end)
+            local ok_position, position = pcall(function() return entity.drop_position end)
+            table.insert(drills, { unit_number = entity.unit_number, name = entity.name, windowed = fill.windowed_drills[entity.unit_number] == true,
+                drops_into = ok and drop and drop.valid and drop.unit_number or nil, drops_into_name = ok and drop and drop.valid and drop.name or nil,
+                drop_position = ok_position and position and { x = position.x, y = position.y } or nil })
+            if ok and drop and drop.valid and drop.unit_number then
+                local fed = drill_feeders[drop.unit_number] or {}
+                if fill.windowed_drills[entity.unit_number] then fed.windowed = true else fed.unclocked = true end
+                drill_feeders[drop.unit_number] = fed
+            end
+        end
+    end
     local machines = {}
     for _, machine in ipairs(fill.machines) do
         local entity = machine.entity
         if entity.valid then
             local fed = feeders[entity.unit_number]
+            local drilled = drill_feeders[entity.unit_number]
             local ok, recipe = pcall(function() return entity.get_recipe() end)
             table.insert(machines, {
                 unit_number = entity.unit_number,
                 name = entity.name,
                 recipe = ok and recipe and recipe.name or nil,
                 fed_by = fed == nil and "none" or (fed.unclocked and "unclocked" or "windowed"),
+                drill_fed_by = drilled == nil and "none" or (drilled.unclocked and "unclocked" or "windowed"),
                 input = entity.get_inventory(defines.inventory.crafter_input).get_item_count(),
                 output = entity.get_inventory(defines.inventory.crafter_output).get_item_count(),
                 products_finished = entity.products_finished,
@@ -1608,6 +1657,7 @@ local function open_fill(state, ended)
         counter = clock_counter(fill.combinators),
         leaks = { ticks = fill.leaks.ticks, first_tick = fill.leaks.first_tick, units = leaked },
         machines = machines,
+        drills = drills,
         inserters = inserters,
         seeds = {},
     }
@@ -1649,6 +1699,15 @@ local function fill_tick(state)
                 member.moved = true
             end
         end
+    end
+    -- a drill held from its build is set free once the circuit reads it (the lock is on, so the clock holds it off in its turn)
+    if checks and fill.held_drills then
+        for _, drill in pairs(fill.held_drills) do
+            if drill.valid then
+                drill.disabled_by_script = false
+            end
+        end
+        fill.held_drills = nil
     end
     local elapsed = game.tick - fill.started_tick
     if elapsed > 0 and elapsed % fill.window_ticks == 0 then
