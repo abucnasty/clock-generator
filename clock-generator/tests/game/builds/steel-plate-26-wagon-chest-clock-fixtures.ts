@@ -38,6 +38,8 @@ export interface SteelWagonCase {
     hub?: true;
     /** Recorded from the harness's staged start, not from a warm-up and a settle */
     staged?: true;
+    /** The staged start is ruling 60's start (the harness's backpressure start, `staged_start.backpressure`) */
+    backpressure?: true;
     order: "as-built" | "fill-last";
     /** The capture's window cycle of the alternative recorded, in ticks: its subtick clock's (13 window cycles of 886.15 ticks; 13 of 295.38) */
     window_cycle_ticks: number;
@@ -48,9 +50,9 @@ export function steelWagonCases(): SteelWagonCase[] {
         {name: "steel-wagon-belt-slack", alternative: "takt_batches_observed_subtick", order: "as-built", window_cycle_ticks: 11520},
         {name: "steel-wagon-belt-slack-fill-last", alternative: "takt_batches_observed_subtick", order: "fill-last", window_cycle_ticks: 11520},
         {name: "steel-wagon-iron-ore-out-of-period", alternative: "takt_batches_observed_subtick", ignored_lcm_ingredients: ["iron-ore"], order: "as-built", window_cycle_ticks: 3840},
-        {name: "steel-wagon-selected-staged", alternative: "takt_batches_observed_swings_1_subtick", order: "as-built", window_cycle_ticks: 11520, staged: true},
-        {name: "steel-wagon-iron-ore-out-of-period-selected-staged", alternative: "takt_batches_observed_swings_1_subtick", ignored_lcm_ingredients: ["iron-ore"], order: "as-built", window_cycle_ticks: 3840, staged: true},
-        {name: "steel-hub-selected-staged", alternative: "takt_batches_observed_swings_1_subtick", hub: true, order: "as-built", window_cycle_ticks: 11520, staged: true},
+        {name: "steel-wagon-selected-staged", alternative: "takt_batches_observed_swings_1_subtick", order: "as-built", window_cycle_ticks: 11520, staged: true, backpressure: true},
+        {name: "steel-wagon-iron-ore-out-of-period-selected-staged", alternative: "takt_batches_observed_swings_1_subtick", ignored_lcm_ingredients: ["iron-ore"], order: "as-built", window_cycle_ticks: 3840, staged: true, backpressure: true},
+        {name: "steel-hub-selected-staged", alternative: "takt_batches_observed_swings_1_subtick", hub: true, order: "as-built", window_cycle_ticks: 11520, staged: true, backpressure: true},
     ];
 }
 
@@ -112,6 +114,7 @@ export async function steelWagonScenario(variant: SteelWagonCase): Promise<Picku
         // the subtick clock's output repeats only over its whole window cycle (13 window cycles of the rounded clock), longer than a minute
         baseline: {ticks: variant.window_cycle_ticks, reason: "the subtick clock's output repeats only over its whole period, longer than a minute"},
         staged: variant.staged,
+        backpressure: variant.backpressure,
         probeFile: path.join(__dirname, "steel-plate-26-wagon-chest-clock-probe.lua"),
         probe: {family: "steel-wagon"},
         controls: path.join(__dirname, "steel-plate-26-wagon-chest-clock-controls.json"),
