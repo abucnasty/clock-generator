@@ -8,6 +8,13 @@ a line that names the reason and lists the jobs. A pull request that moves no re
 CI checks this file: the "Record check" fails when a selected clock got worse than in the base and its job key is not in the lines the pull
 request adds to this file.
 
+## Five samples' copy spacing fits their copy (#PR)
+4 config files, 6 jobs moved, no selected clock, verdict, hold, rate or wake-ups. `copy_offset` of advanced circuit 230 and 240 is 12 (was 10), of electric furnace 20 and logistic science 240 direct insert 13 (was 12): the width of the machines of one copy in its scaffold, so copy 2 no longer stands on copy 1. The spacing is abucnasty's ruling 1069.
+- config-ADVANCED_CIRCUIT_230, config-ELECTRIC_FURNACE_20: `config_sha256` only
+- config-ADVANCED_CIRCUIT_240, variants-ADVANCED_CIRCUIT_240_BACKED_UP: `results_sha256` of the assessment of coordinated_sources and euclidean_swings, and `config_sha256`; no clock, verdict or rate moved
+- config-LOGISTIC_SCIENCE_240_DIRECT_INSERT: `results_sha256` of the assessment of euclidean_swings and takt_batches_observed_swings_3, and `config_sha256`; no clock, verdict or rate moved
+- variants-LOGISTIC_SCIENCE_240_DIRECT_INSERT_TWO_OUTPUT_SWINGS: `results_sha256` of the assessment of euclidean_swings, and `config_sha256`; no clock, verdict or rate moved
+
 ## An item waits a tick at an underground entrance on the lanes that state their entrances (#848)
 2 jobs moved, one selected clock each. A lane that states its underground entrances (`underground_entrances`) runs as one line from entrance to entrance, so the item waits a tick across an entrance as the game does (Factorio 2.1.24: the model equals the recorded game on every tick from 2,379 to 13,998). Accepted by abucnasty (ruling 1043). Other config hashes of the four samples that state entrances changed with the field.
 - config-AUTOMATION_SCIENCE_240: selected coordinated_sources 75bf8985 (window cycle 216 ticks) -> 0bc638ab (72 ticks), wake-ups 70.065 -> 70.195 a minute, more wake-ups; time_study_windows: stable -> unstable (the old pin was wrong: the game holds the new clock 32 of 32 on every copy); `results_sha256` of the other clocks, `config_sha256`
