@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mainProductOf, readRecipeSetpointAsItem } from "./migrate-recipe-setpoint";
+import { mainProductOf, outputItemOf, readRecipeSetpointAsItem } from "./migrate-recipe-setpoint";
 
 const build = (setpoint: { recipe: string; counts?: string }, ...recipes: string[]) =>
     ({ setpoint: { items_per_second: 1, copies: 1, ...setpoint }, machines: recipes.map((recipe, index) => ({ id: index + 1, recipe })), inserters: [] });
@@ -9,7 +9,14 @@ describe("the main product of a recipe", () => {
     it("is the result with the largest expected amount per craft", () => {
         expect(mainProductOf("jellynut-processing")).toBe("jelly");
         expect(mainProductOf("iron-gear-wheel")).toBe("iron-gear-wheel");
-        expect(mainProductOf("iron-bacteria")).toBe("spoilage");
+    });
+
+    it("is the item the game data names as the main product, where it names one: never the byproduct", () => {
+        for (const bacteria of ["iron-bacteria", "copper-bacteria"]) {
+            expect(mainProductOf(bacteria)).toBe(bacteria);
+            // a machine on the recipe counts its largest result, which is the byproduct
+            expect(outputItemOf(bacteria)).toBe("spoilage");
+        }
     });
 
     it("is null for a name that is no recipe, and for a recipe that makes no item", () => {
@@ -41,6 +48,11 @@ describe("a setpoint named by a recipe", () => {
         }
         const bacteria = build({ recipe: "iron-bacteria" }, "iron-bacteria", "iron-bacteria-cultivation");
         expect(readRecipeSetpointAsItem(bacteria)).toBe(bacteria);
+        // a machine on the recipe of that name makes the bacteria only as a byproduct: the setpoint is never read as the byproduct
+        for (const name of ["iron-bacteria", "copper-bacteria"]) {
+            const byproduct = build({ recipe: name }, name);
+            expect(readRecipeSetpointAsItem(byproduct)).toBe(byproduct);
+        }
     });
 
     it("stays as typed where it is neither an item a machine makes nor a recipe whose main product one makes", () => {
