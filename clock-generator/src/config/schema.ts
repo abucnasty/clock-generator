@@ -17,6 +17,7 @@ import { migrateBeltSupplyOverrides } from "./migrate-belt-supply";
 import { dropFractionalSwingsOverride } from "./migrate-fractional-swings";
 import { renameLoopSeedItemsToKickStart } from "./migrate-kick-start";
 import { renameTargetOutputToSetpoint } from "./migrate-setpoint";
+import { readRecipeSetpointAsItem } from "./migrate-recipe-setpoint";
 import { readNeverOverrideAsAuto } from "./migrate-never-override";
 import { renameClockedPeriodToWindowCycle } from "./migrate-window-cycle";
 import { migrateBlockedSlotFilter } from "./migrate-blocked-slots";
@@ -141,7 +142,7 @@ export const TARGET_COUNTS = ["made", "destroyed"] as const;
 export type TargetCounts = typeof TARGET_COUNTS[number];
 
 export const TargetProductionRateConfigSchema = z.object({
-    recipe: z.string().describe("The name of the item that the setpoint counts."),
+    recipe: z.string().describe("The name of the item that the setpoint counts. The name of a recipe is read as its main product, where a machine of the build makes it."),
     items_per_second: z.number().positive().describe("The rate of the setpoint for all copies together, in items per second."),
     copies: z.number().positive().refine(isShortDecimalCopies, {
         message: COPIES_DECIMAL_ERROR,
@@ -938,7 +939,7 @@ export function judgedStartOf(overrides: ConfigOverrides | undefined): JudgedSta
 // Root Config
 // ============================================================================
 
-export const ConfigSchema = z.preprocess(renameTargetOutputToSetpoint, z.preprocess(normalizePickupCaptureConfig, z.object({
+export const ConfigSchema = z.preprocess(renameTargetOutputToSetpoint, z.preprocess(readRecipeSetpointAsItem, z.preprocess(normalizePickupCaptureConfig, z.object({
     setpoint: TargetProductionRateConfigSchema.describe("The setpoint: the product that the build must make, and the rate it must hold. The clock never changes it."),
     machines: z.array(MachineConfigurationSchema).describe("The machines of the build."),
     drills: DrillsConfigSchema.optional().describe("The mining drills of the build."),
@@ -1099,7 +1100,7 @@ export const ConfigSchema = z.preprocess(renameTargetOutputToSetpoint, z.preproc
                 "give every inserter that drops on a belt a `drop` (lane and position), or none"
         });
     }
-})));
+}))));
 
 /** Parsed configs have explicit pickup geometry on every belt source. */
 export type ParsedConfig = z.infer<typeof ConfigSchema>;
