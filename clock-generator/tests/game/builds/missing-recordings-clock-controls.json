@@ -847,9 +847,9 @@
   },
   "electromagnetic-science-240-recycler-belt-fed": {
    "recorded": {
-    "pr": 0,
-    "commit": "0b4c8d2c",
-    "frozen_head": "0b4c8d2c",
+    "pr": 864,
+    "commit": "3528ce23",
+    "frozen_head": "3528ce23",
     "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), Factorio 2.1.24, on the stamped scaffold of the job's copies; the second run gave the same summary",
     "clock_sha256": "3202663f1c6103642687e14b4a5e1c27b3d5f6276bc557ba3294c350441302c8",
     "clock_basis": "capture"
@@ -925,9 +925,9 @@
   },
   "electromagnetic-science-240-recycler-belt-fed-block": {
    "recorded": {
-    "pr": 0,
-    "commit": "0b4c8d2c",
-    "frozen_head": "0b4c8d2c",
+    "pr": 864,
+    "commit": "3528ce23",
+    "frozen_head": "3528ce23",
     "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), Factorio 2.1.24, on the stamped scaffold of the job's copies; the second run gave the same summary",
     "clock_sha256": "3202663f1c6103642687e14b4a5e1c27b3d5f6276bc557ba3294c350441302c8",
     "clock_basis": "capture"
@@ -1713,9 +1713,9 @@
   },
   "production-science-120-two-belts": {
    "recorded": {
-    "pr": 0,
-    "commit": "0b4c8d2c",
-    "frozen_head": "0b4c8d2c",
+    "pr": 864,
+    "commit": "3528ce23",
+    "frozen_head": "3528ce23",
     "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), Factorio 2.1.24, on the stamped scaffold of the job's copies; the second run gave the same summary",
     "clock_sha256": "fdadf1208da4052e7de2e474352e3d5ac85118d67e9042890a803fd46a0bacb8",
     "clock_basis": "capture"
@@ -1791,9 +1791,9 @@
   },
   "production-science-120-two-belts-shared-pickup": {
    "recorded": {
-    "pr": 0,
-    "commit": "0b4c8d2c",
-    "frozen_head": "0b4c8d2c",
+    "pr": 864,
+    "commit": "3528ce23",
+    "frozen_head": "3528ce23",
     "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), Factorio 2.1.24, on the stamped scaffold of the job's copies; the second run gave the same summary",
     "clock_sha256": "fdadf1208da4052e7de2e474352e3d5ac85118d67e9042890a803fd46a0bacb8",
     "clock_basis": "capture"
@@ -2231,9 +2231,9 @@
   },
   "utility-science-120": {
    "recorded": {
-    "pr": 0,
-    "commit": "0b4c8d2c",
-    "frozen_head": "0b4c8d2c",
+    "pr": 864,
+    "commit": "3528ce23",
+    "frozen_head": "3528ce23",
     "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), Factorio 2.1.24, on the stamped scaffold of the job's copies; the second run gave the same summary",
     "clock_sha256": "8c6d44c1bf947b06ff0a6348abfa9543c3b3c8c358b68bc84db4338deec2977c",
     "clock_basis": "capture"
@@ -2309,9 +2309,9 @@
   },
   "utility-science-120-processing-unit-and-lds-on-one-belt": {
    "recorded": {
-    "pr": 0,
-    "commit": "0b4c8d2c",
-    "frozen_head": "0b4c8d2c",
+    "pr": 864,
+    "commit": "3528ce23",
+    "frozen_head": "3528ce23",
     "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), Factorio 2.1.24, on the stamped scaffold of the job's copies; the second run gave the same summary",
     "clock_sha256": "4d76e23812f7488a2b89e06cc1931527d215c6ec13e69a90d3c7ada3d8c73fcb",
     "clock_basis": "capture"
@@ -2387,9 +2387,9 @@
   },
   "utility-science-120-processing-unit-and-lds-on-one-belt-frames": {
    "recorded": {
-    "pr": 0,
-    "commit": "0b4c8d2c",
-    "frozen_head": "0b4c8d2c",
+    "pr": 864,
+    "commit": "3528ce23",
+    "frozen_head": "3528ce23",
     "note": "recorded under the protocol in game ticks from ruling 60's start (the harness's backpressure start), Factorio 2.1.24, on the stamped scaffold of the job's copies; the second run gave the same summary",
     "clock_sha256": "4d76e23812f7488a2b89e06cc1931527d215c6ec13e69a90d3c7ada3d8c73fcb",
     "clock_basis": "capture"
