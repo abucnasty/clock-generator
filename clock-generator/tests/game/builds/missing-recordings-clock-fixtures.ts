@@ -169,9 +169,25 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
         start: "backpressure",
     },
     {
-        name: "electromagnetic-science-240-recycler-belt-fed", job: "config-ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED", config: "ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED", copies: 2,
+        name: "electromagnetic-science-240-recycler-belt-fed", job: "config-ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED", config: "ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED", copies: 5,
+        scaffold: "electromagnetic-240-recycler-belt-fed-five-copies.blueprint",
         losses: [{kind: "cut", item: "accumulator"}, {kind: "block"}, {kind: "cut", item: "superconductor"}],
-        limit: "the scaffold holds two copies of the job's five",
+        random_output: "the recyclers give back what the game rolls",
+        start: "backpressure",
+    },
+    // the block and the superconductor cut after the accumulator cut's recovery last 1 tick each in the run above (the output is back over the target before it is back
+    // over the baseline's lowest minute, so the next loss falls and is released at once): each has a case of its own, from the baseline
+    {
+        name: "electromagnetic-science-240-recycler-belt-fed-block", job: "config-ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED", config: "ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED", copies: 5,
+        scaffold: "electromagnetic-240-recycler-belt-fed-five-copies.blueprint",
+        losses: [{kind: "block"}],
+        random_output: "the recyclers give back what the game rolls",
+        start: "backpressure",
+    },
+    {
+        name: "electromagnetic-science-240-recycler-belt-fed-superconductors", job: "config-ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED", config: "ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED", copies: 5,
+        scaffold: "electromagnetic-240-recycler-belt-fed-five-copies.blueprint",
+        losses: [{kind: "cut", item: "superconductor"}],
         random_output: "the recyclers give back what the game rolls",
         start: "backpressure",
     },
@@ -331,38 +347,40 @@ export const MISSING_RECORDING_CASES: MissingRecordingCase[] = [
     {
         // the pick is "no recovery": the loss the record names for it (the low density structures stop arriving); where the game recovers from it on
         // this scaffold, which has no copy that shares a lane, the run goes on to the block and the cut of the processing units
-        name: "utility-science-120", job: "config-UTILITY_SCIENCE_120", config: "UTILITY_SCIENCE_120", copies: 1,
+        name: "utility-science-120", job: "config-UTILITY_SCIENCE_120", config: "UTILITY_SCIENCE_120", copies: 7,
+        scaffold: "utility-120-seven-copies.blueprint",
         losses: [{kind: "cut", item: "low-density-structure"}, {kind: "block"}, {kind: "cut", item: "processing-unit"}],
-        limit: "the scaffold holds one copy of the job's seven",
         start: "backpressure",
     },
     {
         name: "utility-science-120-processing-unit-and-lds-on-one-belt", job: "config-UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT",
-        config: "UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT", copies: 2,
+        config: "UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT", copies: 7,
+        scaffold: "utility-120-processing-unit-and-lds-on-one-belt-seven-copies.blueprint",
         losses: [{kind: "cut", item: "low-density-structure"}, {kind: "block"}, {kind: "cut", item: "flying-robot-frame"}],
-        limit: "the scaffold holds two copies of the job's seven",
+        start: "backpressure",
+    },
+    // the flying robot frame cut after the block's recovery lasts 4 ticks in the run above (the output is back over its baseline's lowest minute by 18 items only): it has a case of its own, from the baseline
+    {
+        name: "utility-science-120-processing-unit-and-lds-on-one-belt-frames", job: "config-UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT",
+        config: "UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT", copies: 7,
+        scaffold: "utility-120-processing-unit-and-lds-on-one-belt-seven-copies.blueprint",
+        losses: [{kind: "cut", item: "flying-robot-frame"}],
         start: "backpressure",
     },
     {
         // the drill drops stone straight into the rail assembler; the electric furnaces and the productivity modules come on one belt from two infinity
         // chests, the molten iron from infinity pipes, which have no loss
-        name: "production-science-120-two-belts", job: "config-PRODUCTION_SCIENCE_120_TWO_BELTS", config: "PRODUCTION_SCIENCE_120_TWO_BELTS", copies: 1,
+        name: "production-science-120-two-belts", job: "config-PRODUCTION_SCIENCE_120_TWO_BELTS", config: "PRODUCTION_SCIENCE_120_TWO_BELTS", copies: 7,
+        scaffold: "production-120-two-belts-seven-copies.blueprint",
         losses: [{kind: "cut", item: "electric-furnace"}, {kind: "block"}, {kind: "cut", item: "productivity-module"}],
-        limit: "the scaffold holds one copy of the job's seven",
         start: "backpressure",
-        no_staged_start: "ruling 60's start refuses the build on the selected pick too: a drill drops stone straight into the rail assembler, so a machine that only "
-            + "windowed inserters feed holds items at the opening (\"Machines that only windowed inserters fill hold items at the opening: assembling-machine-3 "
-            + "(unit 376): 164 in, 0 out, 0 made\", 2026-11-19, Factorio 2.1.24, master 214bd7ad). The job is not recorded in the game; the limit is in the README",
     },
     {
-        name: "production-science-120-two-belts-shared-pickup", job: "variants-PRODUCTION_SCIENCE_120_TWO_BELTS_SHARED_PICKUP", config: "PRODUCTION_SCIENCE_120_TWO_BELTS", copies: 1,
+        name: "production-science-120-two-belts-shared-pickup", job: "variants-PRODUCTION_SCIENCE_120_TWO_BELTS_SHARED_PICKUP", config: "PRODUCTION_SCIENCE_120_TWO_BELTS", copies: 7,
+        scaffold: "production-120-two-belts-seven-copies.blueprint",
         variant: productionScienceSharedPickup,
         losses: [{kind: "cut", item: "electric-furnace"}, {kind: "block"}, {kind: "cut", item: "productivity-module"}],
-        limit: "the scaffold holds one copy of the job's seven",
         start: "backpressure",
-        no_staged_start: "ruling 60's start refuses the build on the selected pick too: a drill drops stone straight into the rail assembler, so a machine that only "
-            + "windowed inserters feed holds items at the opening (\"Machines that only windowed inserters fill hold items at the opening: assembling-machine-3 "
-            + "(unit 376): 164 in, 0 out, 0 made\", 2026-11-19, Factorio 2.1.24, master 214bd7ad). The job is not recorded in the game; the limit is in the README",
     },
     {
         name: "chemical-science-240-shared-foundry", job: "config-CHEMICAL_SCIENCE_240_SHARED_FOUNDRY", config: "CHEMICAL_SCIENCE_240_SHARED_FOUNDRY", copies: 1,
