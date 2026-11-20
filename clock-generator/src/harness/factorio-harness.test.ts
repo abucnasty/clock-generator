@@ -3,7 +3,7 @@ import path from "path";
 import zlib from "zlib";
 import { encodeBlueprintFile } from "../blueprints/serde";
 import {
-    assertBackpressureOpening, assertClockAttached, assertClockPriming, assertRecordableTicks, buildPartsMissingFromConfig, builtCopies, clockInserters, stagedBuildOrder, clockOfBlueprintString, clockWindowCycleTicks, matchBuiltCopies, matchBuiltDrills, matchBuiltInserters, stagedDrillPositions, MAX_RECORDED_TICKS,
+    assertBackpressureOpening, FILL_CHECKS_FROM_TICKS, fillChecksFromTick, assertClockAttached, assertClockPriming, assertRecordableTicks, buildPartsMissingFromConfig, builtCopies, clockInserters, stagedBuildOrder, clockOfBlueprintString, clockWindowCycleTicks, matchBuiltCopies, matchBuiltDrills, matchBuiltInserters, stagedDrillPositions, MAX_RECORDED_TICKS,
     factorioDataDir, missingFromConfigMessage, partCopiesOf, recordedTicks, recordInFactorio, scheduledDrillIds, scheduledInserterIds,
     drillResourceOf, trialBuildJob, firstStageJob,
 } from "./factorio-harness";
@@ -767,8 +767,8 @@ describe("a backpressure start in a staged start", () => {
             { unit_number: 8, name: "assembling-machine-3", recipe: "chemical-science-pack", fed_by: "windowed" as const, input: 0, output: 0, products_finished: 0, windows: [0, 0] },
         ],
         inserters: [
-            { unit_number: 20, config_id: 1, windowed: true, held: 0, moved: false },
-            { unit_number: 21, config_id: 2, windowed: false, held: 4, moved: true },
+            { unit_number: 20, config_id: 1, windowed: true, held: 0 },
+            { unit_number: 21, config_id: 2, windowed: false, held: 4, first_held_tick: 1800, last_held_tick: 1900 },
         ],
     };
 
@@ -778,13 +778,29 @@ describe("a backpressure start in a staged start", () => {
         expect(() => assertBackpressureOpening({ ...opening, ended: "cap", machines: { 1: { ...opening.machines[0], windows: [449, 450, 449] } } })).not.toThrow();
     });
 
+    it("counts the hand of a windowed inserter from the same tick as the check of its circuit", () => {
+        const from = opening.started_tick + FILL_CHECKS_FROM_TICKS;
+        expect(fillChecksFromTick(opening.started_tick)).toBe(from);
+        const held = (first_held_tick: number, last_held_tick: number) => ({ ...opening, inserters: [{ ...opening.inserters[0], first_held_tick, last_held_tick }] });
+        // an item in the hand in the tick the inserter was built, before its circuit disables it, is no move
+        expect(() => assertBackpressureOpening(held(opening.started_tick, opening.started_tick))).not.toThrow();
+        // a hand in any later tick of the fill still is one, from the first tick the circuit is checked, and so is one that began in the build tick and lasts
+        for (const tick of [from, from + 1, opening.tick - 1]) {
+            expect(() => assertBackpressureOpening(held(tick, tick))).toThrow("Windowed inserters held items during the fill with the lock on: unit 20 (config id 1)");
+        }
+        expect(() => assertBackpressureOpening(held(opening.started_tick, from))).toThrow("held items during the fill");
+        expect(() => assertBackpressureOpening(held(opening.started_tick, from - 1))).not.toThrow();
+        // an inserter with no window is not asked to hold nothing
+        expect(() => assertBackpressureOpening({ ...opening, inserters: [{ ...opening.inserters[1], first_held_tick: from, last_held_tick: from }] })).not.toThrow();
+    });
+
     it("is refused when the game did not report it, a windowed inserter was enabled or holds items, a machine only they fill holds items, or a steady fill is not steady", () => {
         expect(() => assertBackpressureOpening(undefined)).toThrow("did not report the opening of the backpressure fill");
         expect(() => assertBackpressureOpening({ ...opening, leaks: { ticks: 2, first_tick: 1801, units: [20] } }))
             .toThrow("Windowed inserters were enabled for 2 ticks of the fill with the lock on, first at tick 1801: units 20");
         expect(() => assertBackpressureOpening({ ...opening, inserters: [{ ...opening.inserters[0], held: 3 }] }))
             .toThrow("Windowed inserters hold items at the opening: unit 20 (config id 1) holds 3");
-        expect(() => assertBackpressureOpening({ ...opening, inserters: [{ ...opening.inserters[0], moved: true }] }))
+        expect(() => assertBackpressureOpening({ ...opening, inserters: [{ ...opening.inserters[0], first_held_tick: 1802, last_held_tick: 1802 }] }))
             .toThrow("Windowed inserters held items during the fill with the lock on: unit 20 (config id 1)");
         const filled = { ...opening.machines[1], input: 5, products_finished: 1 };
         expect(() => assertBackpressureOpening({ ...opening, machines: [opening.machines[0], filled] }))

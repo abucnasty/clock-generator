@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.11.3
+Date: 2026-11-19
+  Bugfixes:
+    - The fill of a backpressure start no longer counts what a windowed inserter holds in the tick it is built as a move: its hand and its circuit are checked from the same tick (the job names it, checks_from_ticks), and the game reports the first and last tick each hand held an item (first_held_tick, last_held_tick) in place of moved
+---------------------------------------------------------------------------------------------------
 Version: 0.11.2
 Date: 2026-11-18
   Bugfixes:
