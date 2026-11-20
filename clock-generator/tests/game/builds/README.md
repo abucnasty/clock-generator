@@ -1182,14 +1182,16 @@ with equal summaries. They are pinned in [missing-recordings-clock-controls.json
 | `UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT` | Coordinated Sources (336, `4d76e238`) | 2 of 7 | 6,960 | 23,312 | holds: both copies 960 of 960 in each of 10 window cycles before and after the losses |
 | `MILITARY_SCIENCE_240` | Coordinated Sources (80, `4c0ccc46`) | 5 of 5 | 7,200 | 23,713 | holds: each copy 2,880 of 2,880 |
 | `CHEMICAL_SCIENCE_240_SHARED_FOUNDRY` and `..._BACKED_UP` | Coordinated Sources (352, `f1a4c258`) | 1 block of 5.5 | 7,120 | 24,929 | holds: 2,560 of 2,560; the two jobs have the same clock and the same run |
-| `PRODUCTION_SCIENCE_120_TWO_BELTS` and `..._SHARED_PICKUP` | Euclidean Swings (336, `fdadf120`) | none | | | not recorded: ruling 60's start refuses the build |
+| `PRODUCTION_SCIENCE_120_TWO_BELTS` and `..._SHARED_PICKUP` | Euclidean Swings (336, `fdadf120`) | 1 of 7 | 6,960 | 21,697 (cut electric furnace 15,985, output block 16,070, cut productivity module 21,697) | holds: 960 of 960 in each of 10 window cycles before and after the losses; both jobs have the same clock and the same run |
 
 - **Utility science 120.** The record's verdict for the clock is "no recovery", from the loss of low density structures on the copies that share a lane. The scaffold holds one copy, so no lane is shared
   and the game recovers from the loss (as in "Utility science 120: the selected clock from the staged start" above, now from ruling 60's start). The seven-copy scaffold is not in the repository.
 - **Chemical science.** abucnasty's whole build (5.5 copies, `chemical-science-240-shared-foundry-full-build.blueprint`) is refused by the staged start: "The clock names inserters 2, 4, 6, 8, 10, 12, 14, 16, 18, 20
   of the config, which match no inserter of the build in copy 6 of 6". The partial copy holds some of the config's inserters. The warm-up path of the harness takes that into account when it wires the clock, and the staged path does not (read from `src/harness/factorio-harness.ts`; not changed here).
-- **Production science.** A drill drops stone straight into the rail assembler, so a machine that only windowed inserters feed holds items at the opening: "Machines that only windowed inserters fill hold items at the opening:
-  assembling-machine-3 (unit 376): 164 in, 0 out, 0 made" (both jobs, twice each). The build holds one copy of the job's seven.
+- **Production science.** The clock gives the drill that drops stone into the rail assembler a window, so the drill depends on a clocked entity. Before, it ran in the first stage and put 164 stone into the rail assembler
+  before the lock was on, and the harness refused the start ("Machines that only windowed inserters fill hold items at the opening: assembling-machine-3 (unit 376): 164 in, 0 out, 0 made", both jobs, twice each).
+  The first stage now builds a drill with a window disabled by script, and the fill sets it free once the clock is wired with its lock on: the rail assembler is empty at the opening, as a machine only windowed inserters fill is.
+  A drill with no window runs in the fill, and a machine it fills counts as unclocked. The build holds one copy of the job's seven.
 - **Military science.** The scaffold holds the job's five copies, 9 tiles apart.
 
 ```
