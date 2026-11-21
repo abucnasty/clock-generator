@@ -186,3 +186,15 @@ it('notes a build of identical copies as an advisory of its own, which does not 
         text: 'This build holds 9 identical copies.' });
     expect(buildValidationIssues({ ...none, repeatedCopies: null })).toEqual([]);
 });
+
+it('words a refused setpoint in the site\'s sentence, at the setpoint\'s recipe field, and keeps the engine\'s technical string out of the text', () => {
+    const technical = 'not-counted-yet: item=jellynut-seed choice=jelly';
+    const issues = collect([], [], { message: technical, diagnostics: [{ kind: 'field', path: ['setpoint', 'item'], message: technical,
+        reason: { code: 'not-counted-yet', item: 'jellynut-seed', choice: 'jelly' } }] });
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({ source: 'field', blocksGeneration: true, fieldTarget: { kind: 'target-recipe' },
+        text: 'Recipe: jellynut-seed is not counted yet; choose jelly' });
+    const none = collect([], [], { message: 'x', diagnostics: [{ kind: 'field', path: ['setpoint', 'item'], message: 'no-countable-output: recipe=sulfuric-acid',
+        reason: { code: 'no-countable-output', recipe: 'sulfuric-acid' } }] });
+    expect(none[0].text).toBe('Recipe: sulfuric-acid has no output a setpoint can count; choose another recipe');
+});

@@ -368,3 +368,35 @@ describe("exports of every sidecar version", () => {
         expect(checkSidecarImport(LATEST_SIDECAR_VERSION, parsed)).toEqual(O.none);
     });
 });
+
+describe("a paste whose machines make a recipe with several outputs", () => {
+    // the paste counts what the engine counts (`outputItemOf`), whatever the setpoint's rule offers
+    it.each([
+        ["iron-bacteria", "spoilage"],
+        ["copper-bacteria", "spoilage"],
+        ["metallic-asteroid-reprocessing", "metallic-asteroid-chunk"],
+        ["kovarex-enrichment-process", "uranium-235"],
+        ["jellynut-processing", "jelly"],
+    ])("suggests the item the engine counts for %s: %s", (recipe, item) => {
+        const machine = assembler(recipe);
+        expect(inferSuggestedTarget(machines(machine))).toEqual(O.some({ item, items_per_second: factsRate(machine), copies: 1 }));
+        expect(O.toNullable(suggestedTargetOf(undefined, machines(machine), { inserters: [], belts: [] }, { chests: [], drills: [] }))?.target.item).toBe(item);
+    });
+
+    it("sums the machines of the two bacteria recipes as spoilage", () => {
+        const both = machines(assembler("iron-bacteria"), assembler("copper-bacteria"));
+        expect(O.toNullable(inferSuggestedTarget(both))?.items_per_second).toBeCloseTo(factsRate(both[0]) + factsRate(both[1]), 10);
+    });
+
+    it("keeps a pasted setpoint that names an item the engine does not count yet, and loses the build's limit: the check of the build refuses it", () => {
+        const pasted = { recipe: "jellynut-seed", items_per_second: 1, copies: 1 };
+        const sample = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../../resources/config-samples/science/automation/automation-240.json"), "utf8")) as Config;
+        const build = machines(assembler("jellynut-processing"));
+        const suggested = O.toNullable(suggestedTargetOf(pasted, build, { inserters: [], belts: [sample.belts[1]] }, { chests: [], drills: [] }));
+        expect(suggested).toEqual({ target: { item: "jellynut-seed", items_per_second: 1, copies: 1 }, source: "mod" });
+        expect(suggested).not.toHaveProperty("build_limit");
+        const refused = ConfigSchema.safeParse({ setpoint: suggested!.target, machines: build, inserters: [], belts: [] });
+        expect(refused.success).toBe(false);
+        expect(refused.error?.issues.some(issue => issue.path.join(".") === "setpoint.item")).toBe(true);
+    });
+});

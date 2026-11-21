@@ -2,7 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { ConfigSchema } from "./schema";
-import { mainProductOf, outputItemOf, readRecipeSetpointAsItem } from "./migrate-recipe-setpoint";
+import { outputItemOf, readRecipeSetpointAsItem } from "./migrate-recipe-setpoint";
+import { setpointOutputOf } from "../data/setpoint-output";
 import { renameRecipeToItem } from "./migrate-setpoint";
 
 // the former field is `recipe`; the setpoint names its item as `item`
@@ -11,23 +12,22 @@ const build = (setpoint: { recipe?: string; item?: string; counts?: string }, ..
 const itemOf = (value: unknown) => (value as { setpoint: { item: string } }).setpoint.item;
 const KEYS = ["item", "recipe"] as const;
 
-describe("the main product of a recipe", () => {
+describe("the output a machine on a recipe counts", () => {
     it("is the result with the largest expected amount per craft", () => {
-        expect(mainProductOf("jellynut-processing")).toBe("jelly");
-        expect(mainProductOf("iron-gear-wheel")).toBe("iron-gear-wheel");
+        expect(outputItemOf("jellynut-processing")).toBe("jelly");
+        expect(outputItemOf("iron-gear-wheel")).toBe("iron-gear-wheel");
     });
 
-    it("is the item the game data names as the main product, where it names one: never the byproduct", () => {
+    it("is the byproduct of the two bacteria recipes, which the setpoint's rule preselects", () => {
         for (const bacteria of ["iron-bacteria", "copper-bacteria"]) {
-            expect(mainProductOf(bacteria)).toBe(bacteria);
-            // a machine on the recipe counts its largest result, which is the byproduct
             expect(outputItemOf(bacteria)).toBe("spoilage");
+            expect(setpointOutputOf(bacteria)).toMatchObject({ item: "spoilage" });
         }
     });
 
     it("is null for a name that is no recipe, and for a recipe that makes no item", () => {
-        expect(mainProductOf("iron-ore-not-a-recipe")).toBeNull();
-        expect(mainProductOf("sulfuric-acid")).toBeNull();
+        expect(outputItemOf("iron-ore-not-a-recipe")).toBeNull();
+        expect(outputItemOf("sulfuric-acid")).toBeNull();
     });
 });
 
@@ -66,7 +66,7 @@ describe("a setpoint named by a recipe", () => {
     });
 
     it.each(KEYS)("stays as it is where a machine of the build makes the name: an item that is also the name of a recipe, under `%s`", key => {
-        expect(mainProductOf("iron-ore-recycling")).toBe("iron-ore");
+        expect(outputItemOf("iron-ore-recycling")).toBe("iron-ore");
         const stays = (config: unknown, name: string, ...rest: string[]) => {
             const read = readRecipeSetpointAsItem(config);
             if (key === "item") expect(read).toBe(config);
@@ -76,10 +76,6 @@ describe("a setpoint named by a recipe", () => {
             stays(build({ [key]: name }, recipe), name, recipe);
         }
         stays(build({ [key]: "iron-bacteria" }, "iron-bacteria", "iron-bacteria-cultivation"), "iron-bacteria", "iron-bacteria", "iron-bacteria-cultivation");
-        // a machine on the recipe of that name makes the bacteria only as a byproduct: the setpoint is never read as the byproduct
-        for (const name of ["iron-bacteria", "copper-bacteria"]) {
-            stays(build({ [key]: name }, name), name, name);
-        }
     });
 
     it.each(KEYS)("stays as typed where it is neither an item a machine makes nor a recipe whose main product one makes, under `%s`", key => {

@@ -150,3 +150,24 @@ describe('fractional Copies and metadata draft round trips', () => {
         expect(parseFormConfig(schema, formDataToConfig(createDefaultConfig())).success).toBe(false);
     });
 });
+
+describe('parseFormConfig, for a setpoint the engine does not count yet', () => {
+    const jellyForm = (item: string) => ({ ...formDataToConfig(createDefaultConfig()), setpoint: { item, items_per_second: 1, copies: 1 },
+        machines: [{ id: 1, recipe: 'jellynut-processing', productivity: 0, crafting_speed: 1 }] });
+
+    it('accepts the refusal of the setpoint\'s item, which the form shows and Check refuses, and keeps what it holds', () => {
+        for (const item of ['jellynut-seed', 'sulfuric-acid']) {
+            const form = jellyForm(item);
+            const strict = ConfigSchema.safeParse(form);
+            expect(strict.success).toBe(false);
+            const parsed = parseFormConfig(ConfigSchema, form);
+            expect(parsed.success).toBe(true);
+            expect(parsed.data).toBe(form);
+        }
+    });
+
+    it('still refuses a structure that is broken next to it', () => {
+        const form = { ...jellyForm('jellynut-seed'), machines: 'none' };
+        expect(parseFormConfig(ConfigSchema, form).success).toBe(false);
+    });
+});
