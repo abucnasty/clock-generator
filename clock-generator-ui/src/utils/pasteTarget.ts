@@ -4,7 +4,7 @@ import { entityLabel, nameInSentence } from './entityLabel';
 
 /** A target output, as the form and the export hold it */
 export interface TargetValues {
-    recipe: string;
+    item: string;
     items_per_second: number;
     copies: number;
     /** Where the next copy stands; the export states it where the selection shows copies at one spacing */
@@ -26,8 +26,8 @@ export function targetToFill(suggestion: SuggestedTarget): TargetValues {
     // lands above the true maximum (22.9689999…) takes the step back, so the target never asks for more than it
     const nudged = Math.floor(max * scale + 1e-6) / scale;
     const floored = nudged > max ? nudged - 1 / scale : nudged;
-    const { recipe, copies, copy_offset } = suggestion.target;
-    return { recipe, items_per_second: Math.round(floored * scale) / scale, copies,
+    const { item, copies, copy_offset } = suggestion.target;
+    return { item, items_per_second: Math.round(floored * scale) / scale, copies,
         ...(copy_offset !== undefined && { copy_offset: { x: copy_offset.x, y: copy_offset.y } }) };
 }
 
@@ -39,7 +39,7 @@ const copiesText = (copies: number) => `${copies} ${copies === 1 ? 'copy' : 'cop
  * science pack, up to 22.968/s, 1 copy"
  */
 export function targetRowLabel(target: TargetValues, name: (id: string) => string): string {
-    return `Setpoint: ${name(target.recipe)}, up to ${formatNumberText(target.items_per_second, { maxDecimals: TARGET_DECIMALS })}/s, ${copiesText(target.copies)}`;
+    return `Setpoint: ${name(target.item)}, up to ${formatNumberText(target.items_per_second, { maxDecimals: TARGET_DECIMALS })}/s, ${copiesText(target.copies)}`;
 }
 
 /**
@@ -79,7 +79,7 @@ export function maximumTargetNote(source: SuggestedTarget['source']): string | n
 
 /** Said under the row when Target Output is already set, so the row starts unticked */
 export function replacesTargetNote(current: TargetValues, name: (id: string) => string): string {
-    return `Tick to replace your current target (${nameInSentence(name(current.recipe))} at ${formatNumberText(current.items_per_second)}/s).`;
+    return `Tick to replace your current target (${nameInSentence(name(current.item))} at ${formatNumberText(current.items_per_second)}/s).`;
 }
 
 export const NO_TARGET_NOTE = 'Could not tell what the build makes. Set the setpoint after importing.';

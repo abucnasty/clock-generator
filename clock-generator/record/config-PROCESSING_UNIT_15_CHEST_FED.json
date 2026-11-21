@@ -3,7 +3,7 @@
   "job": "config-PROCESSING_UNIT_15_CHEST_FED",
   "group": "config",
   "name": "PROCESSING_UNIT_15_CHEST_FED",
-  "config_sha256": "cbe20287dce2cbc05a203255870fb17156364e17226b87d796dd10a3eba12430",
+  "config_sha256": "73318da9b2bf852f3cd14c662de03823b53733d35c07adcd97f6b86b38ac8173",
   "job_results_sha256": "557bd54ae160f26da07015c76fecf76d8bcbcc8acdeddf3566c34d2b1d05efc8",
   "selected": "euclidean_swings",
   "selected_windows": {

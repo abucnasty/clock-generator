@@ -35,7 +35,7 @@ describe("the rules of the game", () => {
         // GOALS.md: the limit is the automated insertion limit + 64, and in practice the drill stops at a minimum of
         // 114 items, the stack of stone (50) + 64. The function takes the larger of the stack and the limit, + 64.
         const machineInto = (recipe: string) => createEntityRegistryFromConfig(ConfigSchema.parse({
-            setpoint: { recipe, items_per_second: 0.1, copies: 1 }, belts: [], inserters: [],
+            setpoint: { item: recipe, items_per_second: 0.1, copies: 1 }, belts: [], inserters: [],
             machines: [{ id: 1, recipe, crafting_speed: 0.5, productivity: 0 }],
             drills: { configs: [{ id: 1, type: "big-mining-drill", mined_item_name: "stone", speed_bonus: 5, productivity: 440, target: { type: "machine", id: 1 } }] } }));
 
@@ -101,7 +101,7 @@ describe("the rules of the game", () => {
         // one inserter of a hand of `hand` that takes iron plates off lane 1 and copper cable off lane 2 of a turbo belt
         const roomOf = (lanes: { iron_stack: number; iron_end?: LaneEnd; cable_stack?: number; cable_end?: LaneEnd },
             hand = 16, backed_up_belts = false) => laneHandRoomTicks(createEntityRegistryFromConfig(ConfigSchema.parse({
-            setpoint: { recipe: "electronic-circuit", items_per_second: 1, copies: 1 },
+            setpoint: { item: "electronic-circuit", items_per_second: 1, copies: 1 },
             machines: [{ id: 1, recipe: "electronic-circuit", crafting_speed: 1, productivity: 0 }],
             inserters: [
                 { id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 }, stack_size: hand },
@@ -160,7 +160,7 @@ describe("the rules of the game", () => {
             // wheels (it takes iron plates only); a pickup with no layout named is a side pickup on a straight belt
             const roomOfLanes = (lanes: [string, string], pickup: { pickup_layout?: "front-exit"; pickup_length?: 0.5 } = {},
                 lane_end?: LaneEnd) => laneHandRoomTicks(createEntityRegistryFromConfig(ConfigSchema.parse({
-                setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+                setpoint: { item: "iron-gear-wheel", items_per_second: 1, copies: 1 },
                 machines: [{ id: 1, recipe: "iron-gear-wheel", crafting_speed: 1, productivity: 0 }],
                 inserters: [
                     { id: 1, source: { type: "belt", id: 1, ...pickup }, sink: { type: "machine", id: 1 }, stack_size: 16 },

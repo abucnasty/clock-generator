@@ -10,7 +10,7 @@ vi.mock('../worker/engineClient', () => ({ askEngine }));
 
 /** A gear build whose output inserter's filters are a blacklist of iron plates, as Sidecar captures one */
 const blacklisting = (fields: object = {}): Config => ({
-    setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+    setpoint: { item: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
     machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }],
     inserters: [
         { id: 1, source: { type: 'belt', id: 1, pickup_length: 1 }, sink: { type: 'machine', id: 1 } },

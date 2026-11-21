@@ -65,7 +65,7 @@ export { fraction } from "./data-types/fraction";
 export { migrateBeltSupplyOverrides } from "./config/migrate-belt-supply";
 export { dropFractionalSwingsOverride } from "./config/migrate-fractional-swings";
 export { renameLoopSeedItemsToKickStart } from "./config/migrate-kick-start";
-export { renameTargetOutputToSetpoint } from "./config/migrate-setpoint";
+export { renameSetpointRecipeToItem, renameTargetOutputToSetpoint } from "./config/migrate-setpoint";
 export { neverOverrideEntitiesOf, readNeverOverridesInConfig, type NeverOverrideEntity } from "./config/migrate-never-override";
 export { renameClockedPeriodInConfig } from "./config/migrate-window-cycle";
 export { BLOCKED_SLOT_MARKERS } from "./config/migrate-blocked-slots";

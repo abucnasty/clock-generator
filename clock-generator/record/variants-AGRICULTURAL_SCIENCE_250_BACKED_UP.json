@@ -3,7 +3,7 @@
   "job": "variants-AGRICULTURAL_SCIENCE_250_BACKED_UP",
   "group": "variants",
   "name": "AGRICULTURAL_SCIENCE_250_BACKED_UP",
-  "config_sha256": "c25501d100c78c106183413faa310f234c59532bbde77426bfc07d2277a8fdee",
+  "config_sha256": "890fda92255ea53a7ebcd3d63b7f2ed71f58fb5835ddfd6cd7ca059fe219254a",
   "job_results_sha256": "3e4c12b9144ea280ec67a32e42ecf6d9f60d7d8c1f7f1e286a12dd139f65d96b",
   "selected": "takt_batches_observed_swings_2",
   "selected_windows": {

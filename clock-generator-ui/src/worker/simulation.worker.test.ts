@@ -1,10 +1,11 @@
 import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
+import formerSetpoint from '../../../clock-generator/src/config/fixtures/legacy/recipe-setpoint.json?raw';
 import grenadeSample from '../../../clock-generator/resources/config-samples/intermediates/grenade/grenade-240-fills-belt-exactly.json?raw';
 import militarySample from '../../../clock-generator/resources/config-samples/science/military/military-240.json?raw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LATEST_SIDECAR_VERSION, type Config, type DebugSteps } from 'clock-generator/browser';
 import type { EngineAnswers, EngineQuery, LiveCoverage, PastedEntities, PrimaryCompletedResponse, ValidationFailedResponse, WorkerRequest, WorkerResponse } from './types';
-import { readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
+import { readConfigFile, readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
 import { configToFormData, formDataToConfig } from '../utils/configForm/configMapping';
 import { createDefaultConfig } from '../utils/configForm/formData';
 import { applyPaste } from '../utils/pastePreview';
@@ -70,7 +71,7 @@ async function primaryOf(config: Config, streamLogs = false) {
 
 it('answers output-transfer queries from the engine for both recycler products and their actual separate routes', async () => {
     const config: Config = {
-        setpoint: { recipe: 'supercapacitor', items_per_second: 1, copies: 1 },
+        setpoint: { item: 'supercapacitor', items_per_second: 1, copies: 1 },
         machines: [
             { id: 1, recipe: 'processing-unit-recycling', crafting_speed: 1, productivity: 0, prototype: 'recycler', result_target: { type: 'machine', id: 2 } },
             { id: 2, recipe: 'supercapacitor', crafting_speed: 1, productivity: 0, prototype: 'electromagnetic-plant' },
@@ -110,7 +111,7 @@ it.each(['blocked', 'markers'] as const)('keeps blocked container slots through 
         ],
     });
     const config = formDataToConfig(pastedAndSaved(pasted));
-    config.setpoint = { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 };
+    config.setpoint = { item: 'iron-gear-wheel', items_per_second: 1, copies: 1 };
     expect(config.chests![0]).toEqual({ id: 1, type: 'car',
         slot_filters: [{ slot: 1, item: 'iron-plate' }, ...Array.from({ length: 79 }, (_, i) => ({ slot: i + 2, blocked: true }))] });
     expect(await send({ type: 'validate', requestId: 201, config })).toMatchObject({ type: 'validated' });
@@ -156,7 +157,7 @@ it('suggests no more than the output belt carries: nine automation science assem
             prototype: 'stack-inserter', quality: 'legendary' })),
     });
     expect(pasted.suggested_target).toEqual({ _tag: 'Some', value: {
-        target: { recipe: 'automation-science-pack', items_per_second: 240, copies: 1 }, source: 'mod',
+        target: { item: 'automation-science-pack', items_per_second: 240, copies: 1 }, source: 'mod',
         belt_limit: { belt_id: 2, machines_per_second: 248.00625000000002 } } });
 });
 
@@ -194,7 +195,7 @@ describe('repeated units: Check clocks them as given and offers the recomputed c
      * plates a second from the plate lane they share, of the 7.5 it gets
      */
     const source: Config = {
-        setpoint: { recipe: 'iron-gear-wheel', items_per_second: 3.5, copies: 0.5 },
+        setpoint: { item: 'iron-gear-wheel', items_per_second: 3.5, copies: 0.5 },
         machines: Array.from({ length: 8 }, (_, i) => ({ id: i + 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 })),
         inserters: Array.from({ length: 8 }, (_, i) => [
             { id: 2 * i + 1, source: { type: 'belt' as const, id: 1 }, sink: { type: 'machine' as const, id: i + 1 }, stack_size: 1, filters: ['iron-plate'] },
@@ -277,7 +278,7 @@ describe('repeated units: Check clocks them as given and offers the recomputed c
 
 it('replays detailed activity through the real worker query without changing the saved config', async () => {
     const config = {
-        setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+        setpoint: { item: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
         machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }],
         inserters: [
             { source: { type: 'belt', id: 1 }, sink: { type: 'machine', id: 1 }, stack_size: 1 },
@@ -311,7 +312,7 @@ describe('a captured inserter kind, quality and filter mode', () => {
         expect(pasted.guidance).toMatchObject({ _tag: 'None' });
         const saved = formDataToConfig(pastedAndSaved(pasted));
         expect((await ask({ kind: 'saved-config', config: saved })).problem).toBeNull();
-        return { ...formDataToConfig(configToFormData(saved)), setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 } } as Config;
+        return { ...formDataToConfig(configToFormData(saved)), setpoint: { item: 'iron-gear-wheel', items_per_second: 1, copies: 1 } } as Config;
     };
     // read as a whitelist, the blacklist would leave the gears without an output inserter and offer a new belt for them
     const blacklist = { filters: ['iron-plate'], filter_mode: 'blacklist' };
@@ -350,7 +351,7 @@ describe('a captured inserter kind, quality and filter mode', () => {
 describe('inserters that take from a belt into chests (#650)', () => {
     // the shape of the build in the issue: belts fill two chests by inserter (3 and 5), and a machine takes from one of them
     const config = {
-        setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+        setpoint: { item: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
         machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }],
         inserters: [
             { id: 1, source: { type: 'belt', id: 1, pickup_length: 1 }, sink: { type: 'machine', id: 1 } },
@@ -405,7 +406,7 @@ describe('inserters that take from a belt into chests (#650)', () => {
 describe('live advice on a gear assembler, which does not block', () => {
     /** A gear assembler fed by a legendary stack inserter with its full hand, from a belt of the given stack size */
     const gears = ({ stack_size = 4, ...target }: { stack_size?: number } & Partial<Config['setpoint']> = {}) => ({
-        setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1, ...target },
+        setpoint: { item: 'iron-gear-wheel', items_per_second: 1, copies: 1, ...target },
         machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }],
         inserters: [
             { id: 1, source: { type: 'belt', id: 1, pickup_length: 1 }, sink: { type: 'machine', id: 1 } },
@@ -460,7 +461,7 @@ describe('live advice on a gear assembler, which does not block', () => {
 
 it('loads an imported build file that carries the former Fractional swings override, without it', async () => {
     const config = {
-        setpoint: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
+        setpoint: { item: 'iron-plate', items_per_second: 1, copies: 1 },
         machines: [{ id: 1, recipe: 'iron-plate', crafting_speed: 2, productivity: 0, prototype: 'electric-furnace' }],
         inserters: [], belts: [],
     };
@@ -477,7 +478,7 @@ it("gives the crafting machines, fills a prototype's rule on import and paste, a
 
     const furnace = { id: 1, recipe: 'iron-plate', crafting_speed: 2, productivity: 0, prototype: 'electric-furnace' };
     const config = {
-        setpoint: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
+        setpoint: { item: 'iron-plate', items_per_second: 1, copies: 1 },
         machines: [furnace], inserters: [], belts: [],
     };
     // a former type is read as the machine, in a build file, a saved build and a paste from an older Sidecar
@@ -566,7 +567,7 @@ describe('a build that states no lane end and no belt setting', () => {
 describe("a clock's replay", () => {
     // one input lane states an infinite end, another input lane and the output lane state nothing
     const mixed = {
-        setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+        setpoint: { item: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
         machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }, { id: 2, recipe: 'copper-cable', crafting_speed: 1, productivity: 0 }],
         inserters: [
             { source: { type: 'belt', id: 1 }, sink: { type: 'machine', id: 1 } },
@@ -682,7 +683,7 @@ describe('a setpoint named by a recipe, as the picker stores it', () => {
     const jellynut = (recipe: string) => {
         const supply = (id: number, ingredient: string) => ({ id, type: 'transport-belt', flow_direction: 0,
             lanes: [{ ingredient, stack_size: 1, lane_end: { kind: 'unknown' } }, { ingredient, stack_size: 1, lane_end: { kind: 'unknown' } }] });
-        return { setpoint: { recipe, items_per_second: 1, copies: 1 },
+        return { setpoint: { item: recipe, items_per_second: 1, copies: 1 },
             machines: [{ id: 1, recipe: 'jellynut-processing', productivity: 0, crafting_speed: 2, prototype: 'biochamber' }],
             inserters: [
                 { id: 1, source: { type: 'belt', id: 3, pickup_length: 1 }, sink: { type: 'machine', id: 1 }, stack_size: 1 },
@@ -718,12 +719,40 @@ describe('a setpoint named by a recipe, as the picker stores it', () => {
         expect(response).toMatchObject({ type: 'validated', recovery: { kind: 'repeated-units', sourceConfigKey: JSON.stringify(named), detectedCopies: 2 } });
         const conversion = await ask({ kind: 'repeated-unit-conversion', config: named });
         expect(conversion).toMatchObject({ kind: 'available' });
-        if (conversion.kind === 'available') expect(conversion.plan.candidate.setpoint.recipe).toBe('jellynut-processing');
+        if (conversion.kind === 'available') expect(conversion.plan.candidate.setpoint.item).toBe('jellynut-processing');
     });
 
     it('is answered as the item in the queries, and kept as the recipe in an imported file', async () => {
         const named = jellynut('jellynut-processing');
         expect(await ask({ kind: 'target-rate-max', config: named })).toEqual(await ask({ kind: 'target-rate-max', config: jellynut('jelly') }));
-        expect((await ask({ kind: 'config-file', config: named })).setpoint.recipe).toBe('jellynut-processing');
+        expect((await ask({ kind: 'config-file', config: named })).setpoint.item).toBe('jellynut-processing');
+    });
+});
+
+// A file, a share link or a saved build from before the setpoint named its item holds `recipe`: the engine's fixture of it, with the form's chests.
+describe('a setpoint that holds `recipe`', () => {
+    const former = { ...JSON.parse(formerSetpoint), chests: [] };
+    const heldBy = (form: unknown) => (form as { setpoint: Record<string, unknown> }).setpoint;
+
+    it('opens from a file with `item` set to the name it held, not resolved', async () => {
+        const read = heldBy(await ask({ kind: 'config-file', config: former }));
+        expect(read).toMatchObject({ item: 'jellynut-processing', items_per_second: 1, copies: 1 });
+        expect(read).not.toHaveProperty('recipe');
+        // as the page hands it: its former names read first
+        expect(heldBy(await ask({ kind: 'config-file', config: readConfigFile(JSON.stringify(former)) }))).toMatchObject({ item: 'jellynut-processing' });
+    });
+
+    it('opens from a saved form with `item` set to the name it held, not resolved', async () => {
+        const answer = await ask({ kind: 'saved-config', config: former });
+        expect(heldBy(answer.form)).toMatchObject({ item: 'jellynut-processing', items_per_second: 1, copies: 1 });
+        expect(heldBy(answer.form)).not.toHaveProperty('recipe');
+        expect(answer.problem).toBeNull();
+        expect(heldBy((await ask({ kind: 'saved-config', config: readSavedConfig(JSON.stringify(former)) })).form)).toMatchObject({ item: 'jellynut-processing' });
+    });
+
+    it('keeps the name it held where the rate is out of bounds, as the form shows it to be fixed', async () => {
+        const zero = { ...former, setpoint: { ...former.setpoint, items_per_second: 0 } };
+        expect(heldBy(await ask({ kind: 'config-file', config: zero }))).toMatchObject({ item: 'jellynut-processing', items_per_second: 0 });
+        expect(heldBy((await ask({ kind: 'saved-config', config: zero })).form)).toMatchObject({ item: 'jellynut-processing' });
     });
 });

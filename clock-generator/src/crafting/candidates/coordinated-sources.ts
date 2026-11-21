@@ -539,7 +539,7 @@ export function coordinatedSourcesClock(
         + `${trials.size} clocks simulated`);
     const result = finishedClock(made, map, [], { ...options, loop_windows: false }, left_open);
     return { ...result, coordinated_sources: { parts: Object.fromEntries(groups.map(group => [group.source, partName(group.choices[current.get(group.source)!].parts[0])])),
-        sources: sourceControlsOf(groups, current, result.always_on_reasons ?? {}, logger, config.setpoint.recipe) } };
+        sources: sourceControlsOf(groups, current, result.always_on_reasons ?? {}, logger, config.setpoint.item) } };
 }
 
 /**

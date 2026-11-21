@@ -7,7 +7,7 @@ import { renameClockedPeriodInConfig, renameClockedPeriodToWindowCycle } from ".
 const FORMER = "period_duration_ticks";
 const clocked = (cycle: object) => ({ mode: "CLOCKED", ranges: [{ start: 0, end: 10 }], ...cycle });
 const build = (inserter_control: object, drill_control: object) => JSON.stringify({
-    setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+    setpoint: { item: "iron-gear-wheel", items_per_second: 1, copies: 1 },
     machines: [{ id: 1, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 1.25, prototype: "assembling-machine-3" }],
     inserters: [{ source: { type: "machine", id: 1 }, sink: { type: "chest", id: 1 }, stack_size: 16, overrides: { enable_control: inserter_control } }],
     belts: [],

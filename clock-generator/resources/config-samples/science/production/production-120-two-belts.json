@@ -1,6 +1,6 @@
 {
   "setpoint": {
-    "recipe": "production-science-pack",
+    "item": "production-science-pack",
     "items_per_second": 120,
     "copies": 7,
     "copy_offset": {

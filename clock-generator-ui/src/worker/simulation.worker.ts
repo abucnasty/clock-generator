@@ -8,7 +8,7 @@ import { missingDataSections, type InternalError } from '../utils/internalError'
  */
 
 import type { z } from 'zod';
-import type { LaneRole } from 'clock-generator/light';
+import { renameSetpointRecipeToItem, renameTargetOutputToSetpoint, type LaneRole } from 'clock-generator/light';
 import type { ClockAlternativeRun, Config, DebugSteps, LogMessage, Logger, MachineToName, NotMadeClock, SearchRangeEdge } from 'clock-generator/browser';
 import { parseFormConfig } from './formConfig';
 import { laneRolesAnswer } from './laneRoles';
@@ -449,7 +449,7 @@ const hasPrototype = (machine: unknown): boolean => typeof machine === 'object' 
  * its recipe), and why it cannot be loaded, or null when it can
  */
 function savedConfig(config: unknown): EngineAnswers['saved-config'] {
-    const form = clockGenerator.migrateMachineTypes(config);
+    const form = clockGenerator.migrateMachineTypes(renameSetpointRecipeToItem(config));
     const before = typeof config === 'object' && config !== null && 'machines' in config && Array.isArray(config.machines) ? config.machines : [];
     const marked = typeof form === 'object' && form !== null && 'machines' in form && Array.isArray(form.machines)
         ? { ...form, machines: form.machines.map((machine: unknown, index: number) => hasPrototype(machine) && !hasPrototype(before[index])
@@ -461,7 +461,7 @@ function savedConfig(config: unknown): EngineAnswers['saved-config'] {
 
 /** An imported config file, which can hold what the form exports, e.g. an inserter end left unset; a former type is read as the machine */
 function configFile(config: unknown): EngineAnswers['config-file'] {
-    const form = clockGenerator.migrateMachineTypes(config);
+    const form = clockGenerator.migrateMachineTypes(renameSetpointRecipeToItem(config));
     const result = parseFormConfig(clockGenerator.ConfigSchema, form);
     if (!result.success) {
         throw new clockGenerator.ConfigValidationError(result.error);
@@ -472,9 +472,9 @@ function configFile(config: unknown): EngineAnswers['config-file'] {
 /** The setpoint of an imported file as the file names it: the schema reads a recipe's name as its item, and the form keeps the name */
 function withSetpointNameOf(read: Config, file: unknown): Config {
     const record = (value: unknown): Record<string, unknown> | undefined => typeof value === 'object' && value !== null ? value as Record<string, unknown> : undefined;
-    const given = record(file);
-    const name = record(given?.setpoint ?? given?.target_output)?.recipe;
-    return typeof name === 'string' ? { ...read, setpoint: { ...read.setpoint, recipe: name } } : read;
+    const given = record(renameSetpointRecipeToItem(renameTargetOutputToSetpoint(file)));
+    const name = record(given?.setpoint)?.item;
+    return typeof name === 'string' ? { ...read, setpoint: { ...read.setpoint, item: name } } : read;
 }
 
 /** The inserters a note on lanes is about, each once, in order; none where the lanes cannot be read, as the note then says nothing */

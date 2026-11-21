@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
-import { ChestType, dropFractionalSwingsOverride, migrateBeltSupplyOverrides, migrateMiningProductivityLevel, readNeverOverridesInConfig, renameClockedPeriodInConfig, renameLoopSeedItemsToKickStart, renameTargetOutputToSetpoint } from 'clock-generator/light';
+import { ChestType, dropFractionalSwingsOverride, migrateBeltSupplyOverrides, migrateMiningProductivityLevel, readNeverOverridesInConfig, renameClockedPeriodInConfig, renameLoopSeedItemsToKickStart, renameSetpointRecipeToItem, renameTargetOutputToSetpoint } from 'clock-generator/light';
 import { askEngine } from '../worker/engineClient';
 import {
     backupKey,
@@ -90,7 +90,7 @@ function migrateChests(chests: unknown[]): ChestFormData[] {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function readFormerNames(parsed: unknown): any {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const config = readNeverOverridesInConfig(renameClockedPeriodInConfig(renameTargetOutputToSetpoint(parsed))) as any;
+    const config = readNeverOverridesInConfig(renameClockedPeriodInConfig(renameSetpointRecipeToItem(renameTargetOutputToSetpoint(parsed)))) as any;
     return typeof config?.overrides === 'object' && config.overrides !== null
         ? { ...config, overrides: renameLoopSeedItemsToKickStart(config.overrides) } : config;
 }
@@ -241,7 +241,7 @@ export interface BuildMutationSnapshot {
 const newBuildMeta = (id: string, form: ConfigFormData, name: string | null, now: number): BuildMeta => ({
     id,
     name,
-    recipe: form.setpoint.recipe,
+    recipe: form.setpoint.item,
     createdAt: now,
     openedAt: now,
 });
@@ -492,7 +492,7 @@ export function usePersistedConfigForm() {
         if (!wrote) return;
         setConflict((state) => nextConflict(state, { kind: 'saved-here' }));
         const own = indexRef.current.builds.find((build) => build.id === current.id);
-        const recipe = current.form.setpoint.recipe;
+        const recipe = current.form.setpoint.item;
         if (deletedElsewhereRef.current && own) {
             // deleted in another tab: this edit lists it again
             deletedElsewhereRef.current = false;

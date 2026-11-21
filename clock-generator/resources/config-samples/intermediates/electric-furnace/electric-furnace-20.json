@@ -1,6 +1,6 @@
 {
   "setpoint": {
-    "recipe": "electric-furnace",
+    "item": "electric-furnace",
     "items_per_second": 20,
     "copies": 2,
     "copy_offset": {

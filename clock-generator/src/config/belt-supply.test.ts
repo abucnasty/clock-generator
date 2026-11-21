@@ -6,7 +6,7 @@ import { loadConfigFromFile, parseConfig } from "./loader";
 describe("backed-up belt configuration", () => {
     it.each([false, true])("migrates the former setting %s to the canonical config name", async value => {
         const input = {
-            setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+            setpoint: { item: "iron-gear-wheel", items_per_second: 1, copies: 1 },
             machines: [], inserters: [], belts: [], overrides: { non_moving_belts: value },
         };
         for (const config of [ConfigSchema.parse(input), await parseConfig(JSON.stringify(input))]) {
@@ -35,7 +35,7 @@ describe("backed-up belt configuration", () => {
 
 describe("lane facts in the configuration", () => {
     const configWith = (lane: Record<string, unknown>, strategy?: "export") => ({
-        setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+        setpoint: { item: "iron-gear-wheel", items_per_second: 1, copies: 1 },
         machines: [], inserters: [],
         belts: [{ id: 1, type: "turbo-transport-belt", ...(strategy && { strategy }), lanes: [{ ingredient: "iron-plate", stack_size: 4, ...lane }] }],
     });
@@ -106,7 +106,7 @@ describe("lane facts in the configuration", () => {
 
 describe("the words of a lane end before the infinite end", () => {
     const configWith = (lane_end: Record<string, unknown>) => JSON.stringify({
-        setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+        setpoint: { item: "iron-gear-wheel", items_per_second: 1, copies: 1 },
         machines: [], inserters: [],
         belts: [{ id: 1, type: "turbo-transport-belt", lanes: [{ ingredient: "iron-plate", stack_size: 4, lane_end }] }],
     });

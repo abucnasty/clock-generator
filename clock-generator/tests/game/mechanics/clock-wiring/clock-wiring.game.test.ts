@@ -83,13 +83,13 @@ describe("the harness wires the clock to the build", () => {
             log: () => { },
         });
 
-        const window_cycles = outputPerWindowCycle(result.recording, recipesMaking(config, config.setpoint.recipe));
+        const window_cycles = outputPerWindowCycle(result.recording, recipesMaking(config, config.setpoint.item));
         // the first window cycle is left out: the build may still be settling into the clock
         const checked = window_cycles.slice(1);
         expect(checked.length, `the recording of ${result.recording.sample_count} ticks holds whole clock periods after the first`).toBeGreaterThan(1);
         const wrong_length = checked.filter(it => it.end - it.start !== window_cycle_ticks);
         expect(wrong_length, `every one of the ${checked.length} periods checked lasts ${window_cycle_ticks} ticks`).toEqual([]);
         const short = checked.filter(it => it.items !== expected);
-        expect(short, `every one of the ${checked.length} periods checked moves ${expected} items of ${config.setpoint.recipe}`).toEqual([]);
+        expect(short, `every one of the ${checked.length} periods checked moves ${expected} items of ${config.setpoint.item}`).toEqual([]);
     }, 960_000);
 });

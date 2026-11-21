@@ -277,7 +277,7 @@ function judge(ctx, simRecording) {
 
     // production bins: items dropped by the inserters that take the product out, which the game's recording names
     const { outputInserters, recipesMaking } = dist("harness/recording-output.js");
-    const outputIds = outputInserters(game, recipesMaking(config, config.setpoint.recipe)).map(it => gameMatch.inserters.get(it.id)).filter(id => id !== undefined);
+    const outputIds = outputInserters(game, recipesMaking(config, config.setpoint.item)).map(it => gameMatch.inserters.get(it.id)).filter(id => id !== undefined);
     const dropped = (series, window_cycles) => window_cycles.map(window_cycle_ticks => {
         let items = 0;
         for (const id of outputIds) {

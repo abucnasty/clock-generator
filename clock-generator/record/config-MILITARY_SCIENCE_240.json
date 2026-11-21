@@ -3,7 +3,7 @@
   "job": "config-MILITARY_SCIENCE_240",
   "group": "config",
   "name": "MILITARY_SCIENCE_240",
-  "config_sha256": "f2f581377a2ea9041cf19a08de71dead257cf173096eda2e611c6707be484516",
+  "config_sha256": "28763e0b785116a85eb4482a5824401527c483887b6d448d4e561a298fe75335",
   "job_results_sha256": "1b97503d153577f926ad39519752cc71cca9a0c1850f4864d4af61f63bcc3bb9",
   "selected": "coordinated_sources",
   "selected_windows": {

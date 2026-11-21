@@ -19,7 +19,7 @@ describe("the military science sample", () => {
     }, 180_000);
 
     it("is five copies of a mirrored pair, 9 tiles apart, at 240 a second", () => {
-        expect(config.setpoint).toMatchObject({ recipe: "military-science-pack", items_per_second: 240, copies: 5, copy_offset: { x: 9, y: 0 } });
+        expect(config.setpoint).toMatchObject({ item: "military-science-pack", items_per_second: 240, copies: 5, copy_offset: { x: 9, y: 0 } });
         expect(config.machines.map(machine => machine.recipe))
             .toEqual(["military-science-pack", "military-science-pack", "grenade", "grenade", "casting-iron"]);
         // one coal inserter for each grenade assembler, as built

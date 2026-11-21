@@ -140,7 +140,7 @@ export function shareLinkNotice(length: number): 'ok' | 'long' | 'too-long' {
  * Without `withRecipe` it starts at the rate, for a build already named after its recipe in the line above.
  */
 export function sharedBuildSummary(config: Config, recipeLabel: (id: string) => string, { withRecipe = true } = {}): string {
-    const { recipe, items_per_second, copies, counts: targetCounts } = config.setpoint;
+    const { item, items_per_second, copies, counts: targetCounts } = config.setpoint;
     const counts = [
         [config.machines.length, 'machine', 'machines'],
         [config.drills?.configs.length ?? 0, 'drill', 'drills'],
@@ -150,7 +150,7 @@ export function sharedBuildSummary(config: Config, recipeLabel: (id: string) => 
     ] as const;
     const rate = `${formatNumberText(items_per_second)}/s${targetCounts === 'destroyed' ? ' destroyed' : ''}`;
     const parts = [
-        withRecipe ? `${recipe === '' ? 'No target recipe' : recipeTitle(recipe, recipeLabel)} at ${rate}` : rate,
+        withRecipe ? `${item === '' ? 'No target recipe' : recipeTitle(item, recipeLabel)} at ${rate}` : rate,
         countOf(copies, 'copy', 'copies'),
     ];
     const entities = counts.filter(([n]) => n > 0).map(([n, one, many]) => countOf(n, one, many));

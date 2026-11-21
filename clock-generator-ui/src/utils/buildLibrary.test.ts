@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import formerSetpoint from '../../../clock-generator/src/config/fixtures/legacy/recipe-setpoint.json?raw';
 import { build } from '../test/fixtures';
 import {
     backupKey,
@@ -51,7 +52,7 @@ function fakeStorage(entries: Record<string, string> = {}, { full = false } = {}
     return { storage, map, writes };
 }
 
-const savedForm = (recipe: string) => JSON.stringify(build({ setpoint: { recipe, items_per_second: 1, copies: 1 } }));
+const savedForm = (recipe: string) => JSON.stringify(build({ setpoint: { item: recipe, items_per_second: 1, copies: 1 } }));
 
 const meta = (id: string, more: Partial<BuildMeta> = {}): BuildMeta => ({ id, name: null, recipe: '', createdAt: 1, openedAt: 1, ...more });
 const indexOf = (...builds: BuildMeta[]): LibraryIndex => ({ version: 1, builds });
@@ -63,6 +64,10 @@ describe('openLibrary: migration', () => {
         ['on empty storage', undefined, ''],
         ['from the single saved build, with its recipe', savedForm('logistic-science-pack'), 'logistic-science-pack'],
         ['when the saved text cannot be read, with no recipe', '{broken', ''],
+        // a build saved before the setpoint named its item holds `recipe`, and one saved before the setpoint was named so `target_output`
+        ['from a saved build that holds the former `recipe` of its setpoint', formerSetpoint, 'jellynut-processing'],
+        ['from a saved build that holds the former `target_output`', JSON.stringify({ target_output: JSON.parse(formerSetpoint).setpoint }), 'jellynut-processing'],
+        ['from a saved build where `item` and `recipe` are both given, the item', JSON.stringify({ setpoint: { ...JSON.parse(formerSetpoint).setpoint, item: 'jelly' } }), 'jelly'],
     ])('gives one default build %s, writes only the index and leaves the saved text as it was', (_, text, recipe) => {
         const { storage, map, writes } = fakeStorage(text === undefined ? {} : { [LEGACY_BUILD_KEY]: text });
         const library = openLibrary(storage, null, 100);

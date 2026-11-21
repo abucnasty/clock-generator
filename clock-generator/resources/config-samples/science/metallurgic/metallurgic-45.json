@@ -1,6 +1,6 @@
 {
   "setpoint": {
-    "recipe": "metallurgic-science-pack",
+    "item": "metallurgic-science-pack",
     "items_per_second": 45,
     "copies": 1
   },

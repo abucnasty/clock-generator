@@ -12,7 +12,7 @@ beforeAll(() => {
     FactorioDataService.findRecipeOrThrow("iron-gear-wheel");
 });
 
-const target = (copies: number) => ({ recipe: "iron-gear-wheel", items_per_second: 240, copies });
+const target = (copies: number) => ({ item: "iron-gear-wheel", items_per_second: 240, copies });
 
 /** The per-copy rate of a target of 240 a second, as the exact fraction it is stored in */
 const perCopy = (copies: number) => TargetProductionRate.fromConfig(target(copies)).machine_production_rate.amount_per_second;
@@ -64,7 +64,7 @@ describe("the copies validator with a fractional number of copies", () => {
     const lane = (ingredient: string) => ({ type: "transport-belt", lanes: [{ ingredient, stack_size: 1 }] });
     /** Two identical machines, each fed from belt 1 and dropping on belt 2 */
     const twoUnits = (copies: number): Config => ({
-        setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies },
+        setpoint: { item: "iron-gear-wheel", items_per_second: 1, copies },
         machines: [gear(1), gear(2)],
         inserters: [1, 2].flatMap(id => [
             { source: { type: "belt", id: 1 }, sink: { type: "machine", id }, stack_size: 1 },
@@ -92,7 +92,7 @@ describe("a clock for a fractional number of copies", () => {
     // each copy takes its plates from a lane of its own: summed over 5.5 copies they are more than one lane of a
     // transport belt gives
     const build = (copies: number, items_per_second: number): Config => ({
-        setpoint: { recipe: "iron-gear-wheel", items_per_second, copies },
+        setpoint: { item: "iron-gear-wheel", items_per_second, copies },
         machines: [{ id: 1, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 1 }],
         inserters: [
             { id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 }, stack_size: 1, filters: ["iron-plate"] },

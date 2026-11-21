@@ -83,7 +83,7 @@ async function pasted(current: ConfigFormData, text: string): Promise<ConfigForm
         suggested_target: read.suggestedTarget });
     const suggestion = Option.toNullable(validated.suggested_target);
     const fill = suggestion ? targetToFill(suggestion) : null;
-    const selections = { target: fill !== null && current.setpoint.recipe === '', machines: validated.machines.length > 0,
+    const selections = { target: fill !== null && current.setpoint.item === '', machines: validated.machines.length > 0,
         drills: validated.drills.length > 0, inserters: validated.inserters.length > 0, belts: validated.belts.length > 0,
         chests: validated.chests.length > 0 };
     return applyPaste(current, validated, selections, selections.target ? fill ?? undefined : undefined);
@@ -135,14 +135,14 @@ describe('a paste from Factorio', () => {
     it('makes the copy spacing of the export the setpoint\'s, with the lane end and the flow direction it states', async () => {
         const config = formDataToConfig(await pasted(createDefaultConfig(), exported({ flow_direction: 4,
             lanes: [{ ingredient: 'iron-plate', stack_size: 4, lane_end: { kind: 'infinite' } }] }, { x: 5, y: 0 })));
-        expect(config.setpoint).toEqual({ recipe: 'iron-gear-wheel', items_per_second: 0.5, copies: 1, copy_offset: { x: 5, y: 0 } });
+        expect(config.setpoint).toEqual({ item: 'iron-gear-wheel', items_per_second: 0.5, copies: 1, copy_offset: { x: 5, y: 0 } });
         expect(plain(config.belts)).toEqual([{ id: 1, type: 'turbo-transport-belt', flow_direction: 4,
             lanes: [{ ingredient: 'iron-plate', stack_size: 4, lane_end: { kind: 'infinite' } }] }]);
     });
 
     it('writes no copy spacing where the export gives none', async () => {
         const config = formDataToConfig(await pasted(createDefaultConfig(), exported({ lanes: [{ ingredient: 'iron-plate', stack_size: 4 }] })));
-        expect(config.setpoint).toEqual({ recipe: 'iron-gear-wheel', items_per_second: 0.5, copies: 1 });
+        expect(config.setpoint).toEqual({ item: 'iron-gear-wheel', items_per_second: 0.5, copies: 1 });
     });
 
     it('writes no lane end where the export states none, and the form shows the end the engine gives the lane by its role', async () => {

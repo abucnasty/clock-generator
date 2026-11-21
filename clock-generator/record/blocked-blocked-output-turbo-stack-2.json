@@ -3,7 +3,7 @@
   "job": "blocked-blocked-output-turbo-stack-2",
   "group": "blocked",
   "name": "blocked-output-turbo-stack-2",
-  "config_sha256": "0ee5f5df006e48490a72a11b817143f41e3e667ba3d60ee834b1dd3d53b22ed3",
+  "config_sha256": "895b7141c5b18b51d9d145ff5d4b051fe57698bea5fa89173bdb0632802b0856",
   "job_results_sha256": "9042648eb20fbf11f9ba5371b53e49301b0f64399adacada626c444904220058",
   "selected": "takt_batches_observed",
   "selected_windows": {

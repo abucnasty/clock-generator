@@ -242,7 +242,7 @@ Here is a complete configuration for a utility science pack build. Recipe names 
   "setpoint": {
     "copies": 7,
     "items_per_second": 120,
-    "recipe": "utility-science-pack"
+    "item": "utility-science-pack"
   }
 }
 ```

@@ -18,7 +18,7 @@ import {
 /** Three machines, a belt, two chests, two drills, inserters between them, one with a rule and one forced on */
 function form(): ConfigFormData {
     let config = createDefaultConfig();
-    config = edits.updateSetpoint(config, 'recipe', 'electronic-circuit');
+    config = edits.updateSetpoint(config, 'item', 'electronic-circuit');
     config = edits.addMachine(edits.addMachine(config));
     config = edits.updateMachine(config, 0, 'recipe', 'copper-cable');
     config = edits.addBelt(config);

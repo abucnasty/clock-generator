@@ -34,7 +34,7 @@ describe('selective Paste preview', () => {
         const result = pastePreview(form, incoming, { ...none, machines: true });
         expect(result.counts.map(row => row.category)).toEqual(['machines', 'drills', 'inserters', 'belts', 'chests']);
         expect(result.counts[0]).toEqual({ category: 'machines', current: 4, incoming: 2, result: 2, replacing: true });
-        expect(form.setpoint.recipe).toBe('');
+        expect(form.setpoint.item).toBe('');
         expect(pastePreview(form, incoming, none).counts[0]).toMatchObject({ current: 4, incoming: 2, result: 4, replacing: false });
     });
     it('retains current entities for selected empty categories and absent raw drills', () => {
@@ -102,7 +102,7 @@ describe('atomic selective Paste', () => {
             ...current(), machines: [formMachine(1, { recipe: '' })], inserters: [formInserter(2, { _forced_always: true })],
             belts: [belt(4, { lanes: [{ ingredient: '', stack_size: 1 }] })], drills: { configs: [formDrill(3)] },
             chests: [infinityChest(5, { _chest_settings: { buffer_filter: 'coal', storage_size: 2 } })],
-            setpoint: { recipe: '', copies: 0, items_per_second: 0 }, overrides: { backed_up_belts: true },
+            setpoint: { item: '', copies: 0, items_per_second: 0 }, overrides: { backed_up_belts: true },
         };
         const before = structuredClone({ form, incoming });
         for (let mask = 0; mask < 32; mask++) {
@@ -148,7 +148,7 @@ describe('atomic selective Paste', () => {
     });
 
     it('replaces Target Output only when both selected and supplied', () => {
-        const form = current(), target = { recipe: 'iron-plate', copies: 2, items_per_second: 10 };
+        const form = current(), target = { item: 'iron-plate', copies: 2, items_per_second: 10 };
         expect(applyPaste(form, empty(), none, target).setpoint).toBe(form.setpoint);
         expect(applyPaste(form, empty(), { ...none, target: true }).setpoint).toBe(form.setpoint);
         expect(applyPaste(form, empty(), { ...none, target: true }, target).setpoint).toBe(target);

@@ -18,7 +18,7 @@ export const INTRO_STORAGE_KEY = 'clock-generator-intro-dismissed';
 
 /** Nothing entered yet: no target recipe, no machine with a recipe, and no inserters, belts, chests or drills */
 export function isBlankBuild(config: Pick<ConfigFormData, 'setpoint' | 'machines' | 'inserters' | 'belts' | 'chests' | 'drills'>): boolean {
-    return config.setpoint.recipe === ''
+    return config.setpoint.item === ''
         && config.machines.every((machine) => machine.recipe === '')
         && config.inserters.length === 0
         && config.belts.length === 0

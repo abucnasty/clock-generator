@@ -13,7 +13,7 @@ import { WarmupStep } from "./runner/steps/warmup-step";
  */
 function gearCopies(plates_per_second: number, copies = 2): Config {
     return ConfigSchema.parse({
-        setpoint: { recipe: "iron-gear-wheel", items_per_second: 2.5 * copies, copies, copy_offset: { x: 4, y: 0 } },
+        setpoint: { item: "iron-gear-wheel", items_per_second: 2.5 * copies, copies, copy_offset: { x: 4, y: 0 } },
         machines: [{ id: 1, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 1.25, position: { x: 0.5, y: -2 } }],
         inserters: [
             { id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 }, stack_size: 10, position: { x: 0.5, y: 0.5 } },

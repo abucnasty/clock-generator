@@ -3,7 +3,7 @@
   "job": "config-METALLURGIC_SCIENCE_45",
   "group": "config",
   "name": "METALLURGIC_SCIENCE_45",
-  "config_sha256": "e46eded322624f76bebecce7ccf3b776e79f98300ddf56440d6b72628532874a",
+  "config_sha256": "55f1a574b54960f7ba51b31afeeb43e114feef7c91178e9ecc386773c79bb7fe",
   "job_results_sha256": "414148eae95dde1d871d44e65b82b8fd1fd702daf5f203a6d39793854b53a55a",
   "selected": "time_study_windows_subtick",
   "selected_windows": {

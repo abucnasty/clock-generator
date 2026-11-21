@@ -15,7 +15,7 @@ function jellynutBuild(setpoint_recipe: string, counts?: "made" | "destroyed"): 
     const supply = (id: number, ingredient: string) => ({ id, type: "transport-belt", flow_direction: 0,
         lanes: [{ ingredient, stack_size: 1, lane_end: { kind: "unknown" } }, { ingredient, stack_size: 1, lane_end: { kind: "unknown" } }] });
     return JSON.stringify({
-        setpoint: { recipe: setpoint_recipe, items_per_second: 1, copies: 1, ...(counts === undefined ? {} : { counts }) },
+        setpoint: { item: setpoint_recipe, items_per_second: 1, copies: 1, ...(counts === undefined ? {} : { counts }) },
         machines: [{ id: 1, recipe: "jellynut-processing", productivity: 0, crafting_speed: 2, prototype: "biochamber" }],
         inserters: [
             { id: 1, source: { type: "belt", id: 3, pickup_length: 1 }, sink: { type: "machine", id: 1 }, stack_size: 1 },

@@ -18,7 +18,7 @@ const iron = (fields: Partial<Lane> = {}): Lane => ({ ingredient: "iron-plate", 
 /** One machine fed by one inserter from belt 1, which has the lanes given; with `backed_up_belts` set as given */
 function configOf(lanes: Lane[], backed_up_belts?: boolean): Config {
     return ConfigSchema.parse({
-        setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+        setpoint: { item: "iron-gear-wheel", items_per_second: 1, copies: 1 },
         machines: [{ id: 1, recipe: "iron-gear-wheel", crafting_speed: 1, productivity: 0 }],
         inserters: [{ id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 } }],
         belts: [{ id: 1, type: "transport-belt", lanes }],

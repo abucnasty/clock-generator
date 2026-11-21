@@ -3,7 +3,7 @@
   "job": "config-UTILITY_SCIENCE_120",
   "group": "config",
   "name": "UTILITY_SCIENCE_120",
-  "config_sha256": "95d28519271532fd94f81197bd0625c3a0b95d96284f49ed282caba982beaec9",
+  "config_sha256": "fbe48c1a3af38dd833b0d1e7589afbf0753d9cec81d4ed52b25616aa7e4138d2",
   "job_results_sha256": "0957b08a07d29ed26160b26991ad0ffcb6cdbc92076c07c34db881c3d891c5db",
   "selected": "takt_batches_observed",
   "selected_windows": {

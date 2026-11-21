@@ -106,8 +106,8 @@ for (const [name, run] of Object.entries(controls.runs)) test(`clocked cold star
             out: path.join(capture.directory, "recording.json"), work_dir: path.join(capture.directory, "game"),
             ticks: COLD_START_CAP_TICKS, warmup_ticks: 0, staged_start: {saturation_ticks: backed ? 1200 : 30, ...(run.build_order && {build_order: run.build_order})},
             seed: [], lua: composeProbeSource(path.join(__dirname, "pickup-clock-cold-start-probe.lua"), {ticks: COLD_START_CAP_TICKS, window_cycle_ticks: P, units,
-                window: 3600, expected: config.setpoint.items_per_second * 60, recipes: [...recipesMaking(config, config.setpoint.recipe)],
-                item: config.setpoint.recipe}),
+                window: 3600, expected: config.setpoint.items_per_second * 60, recipes: [...recipesMaking(config, config.setpoint.item)],
+                item: config.setpoint.item}),
             unclocked: false, game_speed: 1000, watch: false, timeout_seconds: 1500, log() {}, ...(run.position && {position: run.position}),
         })).recording;
         const report = JSON.parse(fs.readFileSync(path.join(capture.directory, "game/script-output/clock-cold-start.json"), "utf8")) as Report;

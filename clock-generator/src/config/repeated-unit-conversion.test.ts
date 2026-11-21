@@ -11,7 +11,7 @@ import { FeasibilityError } from './errors';
  */
 function eightUnits(): Config {
     return {
-        setpoint: { recipe: 'iron-gear-wheel', items_per_second: 3.5, copies: 0.5 },
+        setpoint: { item: 'iron-gear-wheel', items_per_second: 3.5, copies: 0.5 },
         machines: Array.from({ length: 8 }, (_, i) => ({ id: i + 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 })),
         inserters: Array.from({ length: 8 }, (_, i) => [
             { id: 2 * i + 1, source: { type: 'belt' as const, id: 1, near_lane: 1 as const }, sink: { type: 'machine' as const, id: i + 1 }, stack_size: 1, filters: ['iron-plate'] },
@@ -73,7 +73,7 @@ describe('complete repeated-unit conversion', () => {
     function twoCopies(xs: number[], side: number[] = xs.map(() => 1)): Config {
         const speeds = [1, 1, 2, 1, 1, 2];
         return {
-            setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+            setpoint: { item: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
             machines: xs.map((x, i) => ({ id: i + 1, recipe: 'iron-gear-wheel', crafting_speed: speeds[i], productivity: 0, position: { x, y: 3 } })),
             inserters: xs.flatMap((x, i) => [
                 { id: 2 * i + 1, source: { type: 'belt' as const, id: 1 }, sink: { type: 'machine' as const, id: i + 1 }, position: { x, y: 1 } },
@@ -119,7 +119,7 @@ describe('complete repeated-unit conversion', () => {
 
     it('retains the complete composite GCD unit, internal buffers/drills, fuel, rules and nontrivial ID maps', () => {
         const source: Config = {
-            setpoint: { recipe: 'iron-plate', items_per_second: 1, copies: 1 },
+            setpoint: { item: 'iron-plate', items_per_second: 1, copies: 1 },
             machines: Array.from({ length: 6 }, (_, i) => ({ id: i + 1, recipe: 'iron-plate', crafting_speed: i < 4 ? 1 : 2, productivity: 0, prototype: 'stone-furnace', fuel: 'coal' })),
             chests: [
                 ...Array.from({ length: 6 }, (_, i) => ({ id: i + 1, type: 'buffer-chest' as const, storage_size: 2, item_filter: 'iron-plate' })),
@@ -304,7 +304,7 @@ describe('complete repeated-unit conversion', () => {
         });
         const units = [unit(1), unit(2)];
         const source = ConfigSchema.parse({
-            setpoint: { recipe: 'iron-ore', items_per_second: 400, copies: 1, counts: 'destroyed' },
+            setpoint: { item: 'iron-ore', items_per_second: 400, copies: 1, counts: 'destroyed' },
             machines: units.map(it => it.machine), inserters: units.flatMap(it => it.inserters), belts: [], chests: units.flatMap(it => it.chests),
         }) as Config;
         expect(planRepeatedUnitConversion(source)).toMatchObject({ kind: 'unavailable', reason: { code: 'unsupported-boundary' } });

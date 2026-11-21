@@ -3,7 +3,7 @@
   "job": "variants-AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING",
   "group": "variants",
   "name": "AUTOMATION_SCIENCE_240_ONE_OUTPUT_SWING",
-  "config_sha256": "6fe76cd0a85e150432c6d74ff97e7bbf70f59026f5a144c095b41e5036bbab33",
+  "config_sha256": "1ac4adbedbfd07263ac1574fc5d91ae1c3e62a2f4ea849107f2f309b89a82e29",
   "job_results_sha256": "76ec7b75173dd1586b60050cd540a5878b580a5e90c30fb80ce7cdbc13452e3a",
   "selected": "coordinated_sources",
   "selected_windows": {

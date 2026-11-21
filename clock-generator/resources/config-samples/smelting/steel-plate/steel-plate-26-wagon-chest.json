@@ -1,6 +1,6 @@
 {
   "setpoint": {
-    "recipe": "steel-plate",
+    "item": "steel-plate",
     "items_per_second": 26,
     "copies": 1
   },

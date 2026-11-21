@@ -19,7 +19,7 @@ const belt = (id: number, ingredient: string): Config['belts'][number] => ({
 const inserter = (source: Inserter['source'], sink: Inserter['sink']): Inserter => ({ source, sink, stack_size: 1 });
 
 const config = (parts: Partial<Config> & { copies?: number }): Config => ({
-    setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: parts.copies ?? 1 },
+    setpoint: { item: 'iron-gear-wheel', items_per_second: 1, copies: parts.copies ?? 1 },
     machines: [],
     inserters: [],
     belts: [],

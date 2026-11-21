@@ -1,6 +1,6 @@
 {
   "setpoint": {
-    "recipe": "agricultural-science-pack",
+    "item": "agricultural-science-pack",
     "items_per_second": 50,
     "copies": 1
   },

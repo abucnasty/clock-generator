@@ -3,7 +3,7 @@
   "job": "variants-STEEL_PLATE_26_WAGON_CHEST_IRON_ORE_OUT_OF_PERIOD",
   "group": "variants",
   "name": "STEEL_PLATE_26_WAGON_CHEST_IRON_ORE_OUT_OF_PERIOD",
-  "config_sha256": "00b031f95ef5a594b7740e164b541fbe73ae3b72494d00a91435965f68a73435",
+  "config_sha256": "b887267daaae51e13f08aa73b6d422a2ccd5bc7943295289281a292937fdb4d4",
   "job_results_sha256": "7dc8da3b872fec8d5e2a64912b03a99a1488d2f4a2e38cae4cf3ecfc940bed92",
   "selected": "takt_batches_observed_swings_1_subtick",
   "selected_windows": {

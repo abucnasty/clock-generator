@@ -5,7 +5,7 @@ import { readConfigFile, readSavedConfig, serializeConfig } from './usePersisted
 import { formDataToConfig } from '../utils/configForm/configMapping';
 import { createDefaultConfig } from '../utils/configForm/formData';
 
-const setpoint = { recipe: 'electromagnetic-science-pack', items_per_second: 240, copies: 5 };
+const setpoint = { item: 'electromagnetic-science-pack', items_per_second: 240, copies: 5 };
 /** The native metadata of a steel chest, besides its id and position */
 const steelChest = { storage_size: 48, item_filter: 'electromagnetic-science-pack', prototype: 'steel-chest' };
 const typedChest = { type: ChestType.BUFFER_CHEST, id: 3, ...steelChest, position: { x: -598.5, y: 0 } };

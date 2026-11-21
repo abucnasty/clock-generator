@@ -9,8 +9,10 @@ const LEGACY = path.join(__dirname, "fixtures", "legacy");
 
 describe("the former target_output of a config", () => {
     it("is read as the setpoint, at the same place, and nothing else is changed", () => {
-        const config = { target_output: { recipe: "iron-gear-wheel" }, machines: [] };
-        expect(renameTargetOutputToSetpoint(config)).toEqual({ setpoint: { recipe: "iron-gear-wheel" }, machines: [] });
+        // this step renames the object's place only: what the object holds is the next step's
+        const held = { recipe: "iron-gear-wheel" };
+        const config = { target_output: held, machines: [] };
+        expect(renameTargetOutputToSetpoint(config)).toEqual({ setpoint: held, machines: [] });
         expect(Object.keys(renameTargetOutputToSetpoint(config) as object)).toEqual(["setpoint", "machines"]);
     });
 
@@ -25,7 +27,7 @@ describe("the former target_output of a config", () => {
         current.setpoint = current.target_output;
         delete current.target_output;
         const config = await parseConfig(text);
-        expect(config.setpoint.recipe).toBe("iron-gear-wheel");
+        expect(config.setpoint.item).toBe("iron-gear-wheel");
         expect(config).toEqual(await parseConfig(JSON.stringify(current)));
     });
 });

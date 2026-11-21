@@ -3,7 +3,7 @@
   "job": "config-IRON_ORE_VOIDER_400_OVERBEACONED",
   "group": "config",
   "name": "IRON_ORE_VOIDER_400_OVERBEACONED",
-  "config_sha256": "3da23dd858f56d5088047abfaa7a3723cd7213a09b15ea8c89f7d5eb2361b3ca",
+  "config_sha256": "5dc5bed17378a1d6d564c029a910e8c320a58fe2f08e5c35cce390f1caff6b28",
   "job_results_sha256": "76d72185568213e0007bbe632293414f02850cf646e8ff69db81cda07428b032",
   "selected": "takt_batches_observed",
   "selected_windows": {

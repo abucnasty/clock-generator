@@ -21,7 +21,7 @@ type Overrides = Omit<Partial<Input>, 'setpoint'> & { setpoint?: Partial<Input['
 
 /** A build with no field problem; `setpoint` changes only the fields it gives */
 const filledIn = ({ setpoint, ...overrides }: Overrides = {}): Input => ({
-    setpoint: { recipe: 'logistic-science-pack', items_per_second: 240, copies: 1, ...setpoint },
+    setpoint: { item: 'logistic-science-pack', items_per_second: 240, copies: 1, ...setpoint },
     machines: [{ id: 1, recipe: 'logistic-science-pack' }],
     ...overrides,
 });
@@ -47,12 +47,12 @@ describe('problemsOf', () => {
     });
 
     it('fixing the target recipe of the default build leaves the machine recipe first', () => {
-        const [first] = problemsIn(updateSetpoint(createDefaultConfig(), 'recipe', 'logistic-science-pack'));
+        const [first] = problemsIn(updateSetpoint(createDefaultConfig(), 'item', 'logistic-science-pack'));
         expect(first).toEqual(machineProblem(1));
     });
 
     it.each<[string, Overrides, Problem]>([
-        ['a target without a recipe', { setpoint: { recipe: '' } }, recipeProblem],
+        ['a target without a recipe', { setpoint: { item: '' } }, recipeProblem],
         ['a rate of 0', { setpoint: { items_per_second: 0 } }, rateProblem],
         ['a rate below 0', { setpoint: { items_per_second: -3 } }, rateProblem],
         ['0 copies', { setpoint: { copies: 0 } }, { text: PROBLEM_TEXT.noCopies, target: { kind: 'target-copies' } }],
@@ -63,7 +63,7 @@ describe('problemsOf', () => {
 
     it('puts the target first, then each machine without a recipe, in machine order', () => {
         const machines = [{ id: 1, recipe: 'a' }, { id: 2, recipe: '' }, { id: 3, recipe: '' }];
-        expect(problemsOf(filledIn({ setpoint: { recipe: '', items_per_second: 0 }, machines })))
+        expect(problemsOf(filledIn({ setpoint: { item: '', items_per_second: 0 }, machines })))
             .toEqual([recipeProblem, rateProblem, machineProblem(2), machineProblem(3)]);
     });
 });
@@ -93,7 +93,7 @@ describe('a target more than the machines can make', () => {
 describe('a target that counts the item destroyed, more than the machines can destroy', () => {
     // Machine 1 of the exact-speed ore voider: 540 crafts a second, a quarter of an ore given back by each
     const machinesMax = { machineIds: [1], perCopy: 405, perCopyRatio: { numerator: 405, denominator: 1 } };
-    const at = (items_per_second: number) => filledIn({ setpoint: { recipe: 'iron-ore', items_per_second, copies: 1, counts: 'destroyed' }, machinesMax });
+    const at = (items_per_second: number) => filledIn({ setpoint: { item: 'iron-ore', items_per_second, copies: 1, counts: 'destroyed' }, machinesMax });
 
     it('says destroy, goes to Items per Second, and is not there for the 400 the sample asks', () => {
         expect(problemsOf(at(406))).toEqual([{ text: PROBLEM_TEXT.rateAboveMax(405, 'destroyed'), target: { kind: 'target-rate' } }]);

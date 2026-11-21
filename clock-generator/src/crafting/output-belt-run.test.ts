@@ -160,7 +160,7 @@ function runOfClock(config: Config, clock: RecordedClock): { plates: number[]; b
     const under: Config = clock.output_swings === undefined ? cold
         : { ...cold, overrides: { ...cold.overrides, terminal_swing_count: clock.output_swings } };
     const windows = new Map(Object.entries(clock.windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))]));
-    const furnaces = new Set(config.machines.filter(machine => machine.recipe === config.setpoint.recipe).map(machine => machine.id));
+    const furnaces = new Set(config.machines.filter(machine => machine.recipe === config.setpoint.item).map(machine => machine.id));
     const output_ids = config.inserters.flatMap((inserter, index) => inserter.source.type === "machine" && furnaces.has(inserter.source.id)
         ? [EntityId.forInserter(inserter.id ?? index + 1).id] : []);
     const cycles = LITHIUM_RUN_TICKS / clock.window_cycle_ticks;

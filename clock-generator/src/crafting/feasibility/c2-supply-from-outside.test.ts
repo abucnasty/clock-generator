@@ -9,7 +9,7 @@ import { belt, feasibilityOfConfig, infinityChest, inserter, lane, withTarget } 
  * = 174.55.
  */
 const gears: Config = {
-    setpoint: { recipe: "iron-gear-wheel", items_per_second: 60, copies: 1 },
+    setpoint: { item: "iron-gear-wheel", items_per_second: 60, copies: 1 },
     machines: [{ id: 1, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 1000 }],
     belts: [belt(1, [lane("iron-plate", { lane_end: { kind: "infinite" } })])],
     chests: [infinityChest(2, ["iron-gear-wheel"])],

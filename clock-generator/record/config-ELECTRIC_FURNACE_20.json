@@ -3,7 +3,7 @@
   "job": "config-ELECTRIC_FURNACE_20",
   "group": "config",
   "name": "ELECTRIC_FURNACE_20",
-  "config_sha256": "20dbe50d5486cf389965264460b1d5a085acd0391250c28a8bd5ce08e3ee2769",
+  "config_sha256": "f8c04322fdac58dcc1e983fbbfd21adbfa75b4eea3eddd410e2b1c88d7cdc9d1",
   "job_results_sha256": "65b13053d7b5652be405ed1abfe16c06a82fe492dbb429a33072ad8117427db9",
   "selected": "takt_batches_observed",
   "selected_windows": {

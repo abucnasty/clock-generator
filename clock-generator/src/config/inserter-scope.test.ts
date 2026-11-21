@@ -11,7 +11,7 @@ import { BeltPickupSinkError } from "./errors";
 import { createInserterCoverageValidator, validateInserterCoverage } from "./inserter-coverage-validator";
 
 const base = () => ({
-    setpoint: { recipe: "iron-gear-wheel", items_per_second: 1, copies: 1 },
+    setpoint: { item: "iron-gear-wheel", items_per_second: 1, copies: 1 },
     machines: [{ id: 1, recipe: "iron-gear-wheel", crafting_speed: 1, productivity: 0 }],
     inserters: [
         { id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 }, stack_size: 16 },

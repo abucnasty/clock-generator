@@ -233,7 +233,7 @@ export async function capturePickupClockScenario(scenario: PickupClockScenario) 
         if (scenario.baseline && (!scenario.baseline.reason.trim() || baselineTicks > RUN_PROTOCOL.maxBaseline || baselineTicks <= RUN_PROTOCOL.baseline)) {
             throw new Error(`${scenario.name}: a longer baseline needs a reason and at most ${RUN_PROTOCOL.maxBaseline} ticks`);
         }
-        const recipes = [...recipesMaking(config, config.setpoint.recipe)];
+        const recipes = [...recipesMaking(config, config.setpoint.item)];
         // the copies of the config the build holds: those the clock is wired to, or the config's copies times the build's share of them
         const buildCopies = scenario.copies ?? Math.round((config.setpoint.copies ?? 1) * share);
         const finals = config.machines.filter(machine => recipes.includes(machine.recipe)).length * buildCopies;
@@ -245,7 +245,7 @@ export async function capturePickupClockScenario(scenario: PickupClockScenario) 
                 seed: [], unclocked: false,
                 lua: composeProbeSource(scenario.probeFile ?? path.join(__dirname, "pickup-clock-speed-probe.lua"), {
                     ...scenario.probe, window: RUN_PROTOCOL.window, expected: expectedPerWindow, baseline: baselineTicks, cap: RUN_PROTOCOL.cap,
-                    recipes, item: config.setpoint.recipe, speed: scenario.speed.units / 32, reach,
+                    recipes, item: config.setpoint.item, speed: scenario.speed.units / 32, reach,
                     ...(scenario.staged && {staged: true, finals}),
                 }, scenario.probePrelude), game_speed: 1000, watch: false, timeout_seconds: scenario.staged ? 1800 : 900, log() {},
             });

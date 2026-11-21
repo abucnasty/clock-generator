@@ -67,14 +67,14 @@ const sum = values => values.reduce((a, b) => a + b, 0);
 const share = x => `${(x * 100).toFixed(2)}%`;
 
 /**
- * The setpoint from a config (`setpoint.recipe`, `setpoint.items_per_second`) or a claim file ({ item, claim } or { item, rate, amount,
+ * The setpoint from a config (`setpoint.item`, `setpoint.items_per_second`) or a claim file ({ item, claim } or { item, rate, amount,
  * builds_per_copy, lane_rate }), with the options laid over it. A rate needs its amount and builds per copy stated: the config holds
  * neither the items a finished product makes nor how many builds a copy of the grid holds.
  * @returns {{ item: string, claim: number|null, rate: number|null, amount: number|null, builds_per_copy: number|null, lane_rate: number|null }}
  */
 function setpointOf(file, options = {}) {
     const base = file && file.setpoint && typeof file.setpoint === "object"
-        ? { item: file.setpoint.recipe, rate: file.setpoint.items_per_second }
+        ? { item: file.setpoint.item, rate: file.setpoint.items_per_second }
         : file ?? {};
     const pick = name => options[name] ?? base[name] ?? null;
     const number = (name, value) => {

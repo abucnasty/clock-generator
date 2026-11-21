@@ -31,8 +31,8 @@ export function targetInsertersOf(machine: Machine, target: TargetItem, registry
 }
 
 /** The target of a config's `setpoint` */
-export function targetItemOf(setpoint: { recipe: ItemName; counts?: TargetCounts }): TargetItem {
-    return { item: setpoint.recipe, counts: setpoint.counts ?? "made" };
+export function targetItemOf(setpoint: { item: ItemName; counts?: TargetCounts }): TargetItem {
+    return { item: setpoint.item, counts: setpoint.counts ?? "made" };
 }
 
 /**

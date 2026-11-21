@@ -7,7 +7,7 @@ import type { LaneRow } from "./shared-lane-model";
 /** Copies of one taker of an iron plate lane into a gear assembler, its gears into a chest, the lane fed at the rate given */
 function laneConfig(supply_rate: number, items_per_second = 1, copies = 3): Config {
     return ConfigSchema.parse({
-        setpoint: { recipe: "iron-gear-wheel", items_per_second: items_per_second * copies, copies, copy_offset: { x: 4, y: 0 } },
+        setpoint: { item: "iron-gear-wheel", items_per_second: items_per_second * copies, copies, copy_offset: { x: 4, y: 0 } },
         machines: [{ id: 1, recipe: "iron-gear-wheel", productivity: 0, crafting_speed: 1.25, position: { x: 0.5, y: -2 } }],
         inserters: [
             { id: 1, source: { type: "belt", id: 1 }, sink: { type: "machine", id: 1 }, stack_size: 16, position: { x: 0.5, y: 0.5 } },

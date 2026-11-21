@@ -3,7 +3,7 @@
   "job": "variants-LOGISTIC_SCIENCE_240_DIRECT_INSERT_TWO_OUTPUT_SWINGS",
   "group": "variants",
   "name": "LOGISTIC_SCIENCE_240_DIRECT_INSERT_TWO_OUTPUT_SWINGS",
-  "config_sha256": "11fed2f169acecd4bfa017d51d692851e76b0fc43b75f8d04fb969a25418780a",
+  "config_sha256": "06354d1a5ffe2f2b33feda99fa174d4a5ce360125d681656b33e07c231564132",
   "job_results_sha256": "e7bdda5e8e8e0b5e5a0e4ee2ec4f27c1e98de3001812cbc3b6fc8f6d9c7306f3",
   "selected": "euclidean_swings",
   "selected_windows": {

@@ -113,7 +113,7 @@ describe('what is said once', () => {
 it('says what a clock kept before the engine gave the lanes was made for, without the belts; nothing for one that gives them (Makes says the copies)', () => {
     const view = viewOf(AUTOMATION_240, 'time_study_windows');
     const kept = { ...view, assumptions: { ...view.assumptions, lanes: undefined } };
-    const saved = { setpoint: { recipe: 'automation-science-pack', items_per_second: 240, copies: 9 } };
+    const saved = { setpoint: { item: 'automation-science-pack', items_per_second: 240, copies: 9 } };
     expect(madeForLead(saved, kept)).toBe('Made for 9 copies of your build.');
     expect(madeForLead(saved, view)).toBe('');
     expect(madeForLead(null, kept)).toBe('These results are for a saved build whose metadata is unavailable.');

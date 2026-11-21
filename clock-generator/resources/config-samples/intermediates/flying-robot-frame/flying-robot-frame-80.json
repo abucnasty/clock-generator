@@ -1,6 +1,6 @@
 {
   "setpoint": {
-    "recipe": "flying-robot-frame",
+    "item": "flying-robot-frame",
     "items_per_second": 80,
     "copies": 12,
     "copy_offset": {

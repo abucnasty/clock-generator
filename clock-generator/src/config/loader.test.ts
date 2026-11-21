@@ -14,13 +14,13 @@ describe("parseConfig", () => {
                 "setpoint": {
                     "copies": 2,
                     "items_per_second": 1.5,
-                    "recipe": "electronic-circuit"
+                    "item": "electronic-circuit"
                 }
             }`;
 
             const config = await parseConfig(json);
 
-            expect(config.setpoint.recipe).toBe("electronic-circuit");
+            expect(config.setpoint.item).toBe("electronic-circuit");
             expect(config.setpoint.items_per_second).toBe(1.5);
             expect(config.setpoint.copies).toBe(2);
             expect(config.machines).toEqual([]);
@@ -47,7 +47,7 @@ describe("parseConfig", () => {
                 "setpoint": {
                     "copies": 1,
                     "items_per_second": 2,
-                    "recipe": "iron-gear-wheel"
+                    "item": "iron-gear-wheel"
                 }
             }`;
 
@@ -84,7 +84,7 @@ describe("parseConfig", () => {
                 "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
-                    "recipe": "electronic-circuit"
+                    "item": "electronic-circuit"
                 }
             }`;
 
@@ -125,7 +125,7 @@ describe("parseConfig", () => {
                 "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
-                    "recipe": "electronic-circuit"
+                    "item": "electronic-circuit"
                 }
             }`;
 
@@ -156,7 +156,7 @@ describe("parseConfig", () => {
                 "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
-                    "recipe": "electronic-circuit"
+                    "item": "electronic-circuit"
                 }
             }`;
 
@@ -192,7 +192,7 @@ describe("parseConfig", () => {
                 "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
-                    "recipe": "electronic-circuit"
+                    "item": "electronic-circuit"
                 }
             }`;
 
@@ -225,7 +225,7 @@ describe("parseConfig", () => {
                 "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
-                    "recipe": "iron-plate"
+                    "item": "iron-plate"
                 }
             }`;
 
@@ -255,7 +255,7 @@ describe("parseConfig", () => {
                 "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
-                    "recipe": "electronic-circuit"
+                    "item": "electronic-circuit"
                 }
             }`;
 
@@ -290,7 +290,7 @@ describe("parseConfig", () => {
                 "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
-                    "recipe": "test"
+                    "item": "test"
                 }
             }`;
 
@@ -325,7 +325,7 @@ describe("parseConfig", () => {
                 "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
-                    "recipe": "test"
+                    "item": "test"
                 }
             }`;
 
@@ -359,7 +359,7 @@ describe("parseConfig", () => {
                 "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
-                    "recipe": "test"
+                    "item": "test"
                 }
             }`;
 
@@ -404,7 +404,7 @@ describe("parseConfig", () => {
                 "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
-                    "recipe": "test"
+                    "item": "test"
                 }
             }`;
 
@@ -451,7 +451,7 @@ describe("parseConfig", () => {
                 "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
-                    "recipe": "test"
+                    "item": "test"
                 }
             }`;
 
@@ -493,7 +493,7 @@ describe("parseConfig", () => {
                 "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
-                    "recipe": "test"
+                    "item": "test"
                 }
             }`;
 
@@ -531,7 +531,7 @@ describe("parseConfig", () => {
                 "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
-                    "recipe": "test"
+                    "item": "test"
                 }
             }`;
 
@@ -574,7 +574,7 @@ describe("parseConfig", () => {
                 "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
-                    "recipe": "test"
+                    "item": "test"
                 }
             }`;
 
@@ -610,7 +610,7 @@ describe("parseConfig", () => {
                 "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
-                    "recipe": "test"
+                    "item": "test"
                 }
             }`;
 
@@ -644,7 +644,7 @@ describe("parseConfig", () => {
                 "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
-                    "recipe": "test"
+                    "item": "test"
                 }
             }`;
 
@@ -661,7 +661,7 @@ describe("parseConfig", () => {
                 "inserters": [],
                 "machines": [],
                 "setpoint": {
-                    "recipe": "electronic-circuit"
+                    "item": "electronic-circuit"
                 }
             }`;
 
@@ -676,7 +676,7 @@ describe("parseConfig", () => {
                 "setpoint": {
                     "copies": 1,
                     "items_per_second": "not a number",
-                    "recipe": "electronic-circuit"
+                    "item": "electronic-circuit"
                 }
             }`;
 
@@ -702,7 +702,7 @@ describe("parseConfig", () => {
                 "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
-                    "recipe": "test"
+                    "item": "test"
                 }
             }`;
 
@@ -732,7 +732,7 @@ describe("parseConfig", () => {
                 "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
-                    "recipe": "test"
+                    "item": "test"
                 }
             }`;
 
@@ -759,7 +759,7 @@ describe("parseConfig", () => {
                 "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
-                    "recipe": "test"
+                    "item": "test"
                 }
             }`;
 
@@ -774,7 +774,7 @@ describe("parseConfig", () => {
                 "setpoint": {
                     "copies": 1,
                     "items_per_second": -1,
-                    "recipe": "electronic-circuit"
+                    "item": "electronic-circuit"
                 }
             }`;
 
@@ -797,7 +797,7 @@ describe("parseConfig", () => {
                 "setpoint": {
                     "items_per_second": "invalid",
                     "machines": -1,
-                    "recipe": 123
+                    "item": 123
                 }
             }`;
 
@@ -821,7 +821,7 @@ describe("parseConfig", () => {
                 "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
-                    "recipe": "test"
+                    "item": "test"
                 }
             }`;
 
@@ -846,7 +846,7 @@ describe("parseConfig", () => {
                 "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
-                    "recipe": "test"
+                    "item": "test"
                 }
             }`;
 
@@ -886,7 +886,7 @@ describe("parseConfig", () => {
                 "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
-                    "recipe": "test"
+                    "item": "test"
                 }
             }`;
 
@@ -907,7 +907,7 @@ describe("parseConfigSafe", () => {
                 "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
-                    "recipe": "test"
+                    "item": "test"
                 }
             }`;
 
@@ -915,7 +915,7 @@ describe("parseConfigSafe", () => {
 
         expect(result.success).toBe(true);
         if (result.success) {
-            expect(result.config.setpoint.recipe).toBe("test");
+            expect(result.config.setpoint.item).toBe("test");
         }
     });
 
@@ -923,7 +923,7 @@ describe("parseConfigSafe", () => {
         const json = `{
                 "machines": [],
                 "setpoint": {
-                    "recipe": "test"
+                    "item": "test"
                 }
             }`;
 
@@ -946,7 +946,7 @@ describe("ConfigValidationError", () => {
                 "setpoint": {
                     "copies": 1,
                     "items_per_second": 1,
-                    "recipe": 123
+                    "item": 123
                 }
             }`;
 
@@ -955,7 +955,7 @@ describe("ConfigValidationError", () => {
         } catch (error) {
             expect(error).toBeInstanceOf(ConfigValidationError);
             const validationError = error as ConfigValidationError;
-            expect(validationError.message).toContain("recipe");
+            expect(validationError.message).toContain("item");
         }
     });
 
@@ -963,7 +963,7 @@ describe("ConfigValidationError", () => {
         const json = `{
                 "machines": [],
                 "setpoint": {
-                    "recipe": "test"
+                    "item": "test"
                 }
             }`;
 
@@ -986,7 +986,7 @@ describe("a drop spot on a belt", () => {
         belts: [{ id: 3, type: "turbo-transport-belt", lanes: [{ ingredient: "utility-science-pack", stack_size: 4 }] }],
         inserters,
         machines: [],
-        setpoint: { copies: 1, items_per_second: 1, recipe: "utility-science-pack" }
+        setpoint: { copies: 1, items_per_second: 1, item: "utility-science-pack" }
     });
     const drop = (position: number) => ({ type: "belt", id: 3, drop: { lane: 1, position } });
 

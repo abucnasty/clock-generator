@@ -20,7 +20,7 @@ export interface TargetProductionRate {
 
 function fromConfig(config: TargetProductionRateConfig): TargetProductionRate {
 
-    const recipe = config.recipe;
+    const recipe = config.item;
 
     const target_output_per_tick = fraction(config.items_per_second)
         .divide(TICKS_PER_SECOND)

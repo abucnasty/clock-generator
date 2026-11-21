@@ -7,7 +7,7 @@ import { configKeyOf, generatedForOf, generatedForText, isStale, madeAtText, STA
 /** A build as the page holds it: a target, a machine, and two inserters that differ */
 function form(): ConfigFormData {
     let config = createDefaultConfig();
-    config = edits.updateSetpoint(config, 'recipe', 'logistic-science-pack');
+    config = edits.updateSetpoint(config, 'item', 'logistic-science-pack');
     config = edits.updateSetpoint(config, 'items_per_second', 240);
     config = edits.updateMachine(config, 0, 'recipe', 'logistic-science-pack');
     config = edits.addInserter(edits.addInserter(config));
@@ -35,7 +35,7 @@ describe('isStale', () => {
 
     it.each<[string, Edit]>([
         ['the target rate goes from 240 to 200', (config) => edits.updateSetpoint(config, 'items_per_second', 200)],
-        ['the recipe changes', (config) => edits.updateSetpoint(config, 'recipe', 'automation-science-pack')],
+        ['the recipe changes', (config) => edits.updateSetpoint(config, 'item', 'automation-science-pack')],
         ['a machine is added', (config) => edits.addMachine(config)],
         ['the inserters are reordered', (config) => edits.reorderInserters(config, 0, 1)],
         ['an override changes', (config) => edits.updateOverrides(config, 'lcm', 120)],
@@ -60,7 +60,7 @@ describe('generatedForOf', () => {
         const generatedFor = generatedForOf(formDataToConfig(config), 1_000);
         const key = keyOf(config);
         config = edits.updateSetpoint(config, 'items_per_second', 200);
-        config = edits.updateSetpoint(config, 'recipe', 'automation-science-pack');
+        config = edits.updateSetpoint(config, 'item', 'automation-science-pack');
         expect(generatedFor).toEqual({
             key,
             recipe: 'logistic-science-pack',

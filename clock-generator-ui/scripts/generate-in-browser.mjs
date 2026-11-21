@@ -264,7 +264,7 @@ async function repairOutputFocusAt(browser, url) {
     });
 
     const config = {
-        setpoint: { recipe: 'supercapacitor', items_per_second: 0.1, copies: 1 },
+        setpoint: { item: 'supercapacitor', items_per_second: 0.1, copies: 1 },
         machines: [
             { id: 1, recipe: 'processing-unit-recycling', crafting_speed: 1, productivity: 0, prototype: 'recycler', result_target: { type: 'machine', id: 2 } },
             { id: 2, recipe: 'supercapacitor', crafting_speed: 1, productivity: 50, prototype: 'electromagnetic-plant' },
@@ -286,7 +286,7 @@ async function repairOutputFocusAt(browser, url) {
     };
 
     const scrapConfig = {
-        setpoint: { recipe: 'scrap', items_per_second: 0.5, copies: 1, counts: 'destroyed' },
+        setpoint: { item: 'scrap', items_per_second: 0.5, copies: 1, counts: 'destroyed' },
         machines: [{ id: 1, recipe: 'scrap-recycling', crafting_speed: 0.5, productivity: 300, prototype: 'recycler', result_target: { type: 'chest', id: 1 } }],
         chests: [{ id: 1, type: 'infinity-chest', remove_unfiltered_items: true }],
         inserters: [],

@@ -199,7 +199,7 @@ export function toPlannerFacts(config: Config): PlannerFacts {
     return {
         schema: 1,
         target: {
-            item: target.recipe,
+            item: target.item,
             counts: target.counts ?? "made",
             items_per_second: target.items_per_second,
             copies: target.copies,

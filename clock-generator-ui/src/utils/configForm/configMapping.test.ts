@@ -10,7 +10,7 @@ import { readSavedConfig } from '../../hooks/usePersistedConfigForm';
 import { decodeShareLink, encodeShareLink, readShareHash } from '../shareLink';
 
 const imported = {
-    setpoint: { recipe: 'electronic-circuit', items_per_second: 10, copies: 1 },
+    setpoint: { item: 'electronic-circuit', items_per_second: 10, copies: 1 },
     machines: [
         { id: 1, recipe: 'copper-cable', productivity: 0, crafting_speed: 2 },
         { id: 2, recipe: 'electronic-circuit', productivity: 50, crafting_speed: 2, type: 'machine' },
@@ -49,7 +49,7 @@ const importedWith = (fields: Record<string, unknown>) => ({ ...imported, ...fie
 describe('canonical repeated-unit form application', () => {
     it('retains source UUIDs and forced metadata through composite extraction and refuses an inconsistent payload', () => {
         const form = configToFormData({
-            setpoint: { recipe: 'iron-gear-wheel', items_per_second: 4, copies: 0.5 },
+            setpoint: { item: 'iron-gear-wheel', items_per_second: 4, copies: 0.5 },
             machines: Array.from({ length: 6 }, (_, i) => ({ id: i + 1, recipe: i < 4 ? 'iron-gear-wheel' : 'copper-cable', crafting_speed: 1, productivity: 0 })),
             belts: [
                 { id: 1, type: 'transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1 }, { ingredient: 'copper-plate', stack_size: 1 }] },
@@ -84,7 +84,7 @@ describe('canonical repeated-unit form application', () => {
 
     it('leaves out the inserters that fill the input belt from chests, with their chests', () => {
         const form = configToFormData({
-            setpoint: { recipe: 'iron-gear-wheel', items_per_second: 2, copies: 1 },
+            setpoint: { item: 'iron-gear-wheel', items_per_second: 2, copies: 1 },
             machines: Array.from({ length: 4 }, (_, i) => ({ id: i + 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 })),
             belts: [
                 { id: 1, type: 'transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1, lane_end: { kind: 'dead_end' } }] },
@@ -183,7 +183,7 @@ describe('configToFormData', () => {
 
     it('imports an infinity chest without item_filter as empty while preserving removal disabled through a round trip', () => {
         const raw = {
-            setpoint: { recipe: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
+            setpoint: { item: 'iron-gear-wheel', items_per_second: 1, copies: 1 },
             machines: [{ id: 1, recipe: 'iron-gear-wheel', crafting_speed: 1, productivity: 0 }],
             inserters: [{ id: 1, source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 1 }, stack_size: 1, filters: ['iron-gear-wheel'] }],
             chests: [{ id: 1, type: ChestType.INFINITY_CHEST, remove_unfiltered_items: false }],

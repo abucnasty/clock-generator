@@ -20,7 +20,7 @@ function gearUnits(fed: boolean): Config {
     );
     const chest = (id: number) => ({ id, type: 'infinity-chest' as const, item_filter: [{ item_name: 'iron-plate', request_count: 100 }] });
     return {
-        setpoint: { recipe: 'iron-gear-wheel', items_per_second: 3.5, copies: 0.5 },
+        setpoint: { item: 'iron-gear-wheel', items_per_second: 3.5, copies: 0.5 },
         machines, inserters,
         belts: [
             { id: 1, type: 'transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1, lane_end: { kind: 'dead_end' } }] },

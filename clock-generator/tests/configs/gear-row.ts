@@ -61,7 +61,7 @@ export function gearRow(options: GearRowOptions): Config {
         position: { x: machine.position.x, y: 4.5 },
     }));
     return {
-        setpoint: { recipe: 'iron-gear-wheel', items_per_second: options.items_per_second_each * options.machines, copies: 1 },
+        setpoint: { item: 'iron-gear-wheel', items_per_second: options.items_per_second_each * options.machines, copies: 1 },
         machines,
         inserters: [...feeders, ...row],
         belts: [

@@ -45,7 +45,7 @@ async function threeAssemblerGrenade() {
     const config = await loadConfigFromFile(ConfigPaths.GRENADE_240_FILLS_BELT_EXACTLY);
     return {
         ...config,
-        setpoint: {recipe: config.setpoint.recipe, items_per_second: 28.98, copies: 1},
+        setpoint: {item: config.setpoint.item, items_per_second: 28.98, copies: 1},
         machines: config.machines.filter(it => it.id !== 5).map(it => it.recipe === "grenade" ? {...it, crafting_speed: 79.358762} : it),
         inserters: config.inserters.filter(it => it.id !== 5 && it.id !== 8),
         drills: {...config.drills!, configs: config.drills!.configs.filter(it => it.id !== 4)},

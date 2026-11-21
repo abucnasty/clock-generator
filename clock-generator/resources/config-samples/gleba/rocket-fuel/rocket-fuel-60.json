@@ -1,6 +1,6 @@
 {
   "setpoint": {
-    "recipe": "rocket-fuel",
+    "item": "rocket-fuel",
     "items_per_second": 60,
     "copies": 1
   },

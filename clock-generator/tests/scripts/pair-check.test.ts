@@ -118,7 +118,7 @@ describe('pair-check judge', () => {
 
 describe('pair-check setpointOf', () => {
     it('takes the item and rate of a config, and needs the amount and builds a copy stated', () => {
-        const config = { setpoint: { recipe: 'science', items_per_second: 240, copies: 9 } };
+        const config = { setpoint: { item: 'science', items_per_second: 240, copies: 9 } };
         expect(() => setpointOf(config)).toThrow('--amount');
         expect(setpointOf(config, { amount: 1, builds_per_copy: 1 })).toMatchObject({ item: 'science', rate: 240, amount: 1, builds_per_copy: 1 });
     });

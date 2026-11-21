@@ -343,7 +343,7 @@ describe("a clock whose recovery could not be tried", () => {
         expect(searchesAreNeeded([{ signature: "one", alternatives: [untried("untried"), clock("recovers")] }], it => it)).toBe(false);
     });
 
-    const config = { setpoint: { recipe: "iron-plate", items_per_second: 80 } } as Config;
+    const config = { setpoint: { item: "iron-plate", items_per_second: 80 } } as Config;
     const assessment = (overrides: Partial<ClockAssessment>): ClockAssessment =>
         ({ holds: true, disturbance_trial: null, items_per_second: 80, wake_ups_per_minute: 200, start_dependence: null, ...overrides });
     const ranked = (overrides: Partial<ClockAssessment>, deadlock = false): ClockRanking => {
@@ -393,7 +393,7 @@ describe("a clock rounded down to whole ticks", () => {
         expect(searchesAreNeeded([{ signature: "one", alternatives: [rounded("rounded")] }], it => it)).toBe(true);
     });
 
-    const config = { setpoint: { recipe: "iron-gear-wheel", items_per_second: 9.97 } } as Config;
+    const config = { setpoint: { item: "iron-gear-wheel", items_per_second: 9.97 } } as Config;
     const ranked = (items_per_second: number, rounded_clock: Partial<RoundedClock> | undefined) => {
         const assessment: ClockAssessment = { holds: true, items_per_second, wake_ups_per_minute: 13.4, start_dependence: null,
             disturbance_trial: { survives: true, broken_by: [], recovered_after_window_cycles: 2 } };
