@@ -3,7 +3,7 @@
   "job": "config-CHEMICAL_SCIENCE_240_SHARED_FOUNDRY",
   "group": "config",
   "name": "CHEMICAL_SCIENCE_240_SHARED_FOUNDRY",
-  "config_sha256": "50140043817a734bb6cb643652e5d3bc02c95959b93e4c710d6a072e59fce62b",
+  "config_sha256": "923877ef0f4ffc3634c9968f5052dd3dd0db2a10e2f3d0aeeb88878f958b1e77",
   "job_results_sha256": "58c2516f4f387716ae6565f6c8188ba6d006a452656c8e88738dd8616b8040cd",
   "selected": "coordinated_sources",
   "selected_windows": {

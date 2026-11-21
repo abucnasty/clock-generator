@@ -3,7 +3,7 @@
   "job": "variants-PRODUCTION_SCIENCE_120_TWO_BELTS_SHARED_PICKUP",
   "group": "variants",
   "name": "PRODUCTION_SCIENCE_120_TWO_BELTS_SHARED_PICKUP",
-  "config_sha256": "72a0864931baef5243e170c6afe365015cc1f315b2cde1bf9cfc491df9f7fefb",
+  "config_sha256": "0d9bf898bf15aaadfd882f498b176bae770763d50f594dc9f4ccaeb5c60826a0",
   "job_results_sha256": "14763ea279c68e619a05aad8054a6ba2ec567e52ed9a8e9188760270213d26e5",
   "selected": "euclidean_swings",
   "selected_windows": {

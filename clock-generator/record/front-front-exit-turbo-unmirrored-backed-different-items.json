@@ -3,7 +3,7 @@
   "job": "front-front-exit-turbo-unmirrored-backed-different-items",
   "group": "front",
   "name": "front-exit-turbo-unmirrored-backed-different-items",
-  "config_sha256": "2e9578528cdb971f388b2d844b9730716f26cf610e22d62a17fd64876f873655",
+  "config_sha256": "66dbbcb7cef9315a0fc1b8f835663e698c269ef6e55bffb275c60025df2ab602",
   "job_results_sha256": "1a80ffa6081bfe3a87700718a8e1ca4042ef08c3a3db12887b30259d326d23e1",
   "selected": "takt_batches_swings_1",
   "selected_windows": {

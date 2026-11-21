@@ -3,7 +3,7 @@
   "job": "config-ROCKET_FUEL_60",
   "group": "config",
   "name": "ROCKET_FUEL_60",
-  "config_sha256": "be78f33115a2cda778f0f84a01081bb0e0ac916e776b9b85cc361f2c1481aa92",
+  "config_sha256": "00ba16c584b272ee238484cc516cff9f7dc9784988f89334039312c52e10ee58",
   "job_results_sha256": "4e9ad2ef2038e507d831b3eb271c601332388ee2ea7943223fa3970e0f19e96c",
   "selected": "takt_batches_observed",
   "selected_windows": {

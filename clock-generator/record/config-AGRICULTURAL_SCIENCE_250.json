@@ -3,7 +3,7 @@
   "job": "config-AGRICULTURAL_SCIENCE_250",
   "group": "config",
   "name": "AGRICULTURAL_SCIENCE_250",
-  "config_sha256": "b7c7113bd905bad48446ef1d668c138df57b96fcebc6e7283a0708e7cfde6669",
+  "config_sha256": "8ee743c5c0c5b3bb330674db593b2a2c0ea6232deab8866c66bf19c76d2057e9",
   "job_results_sha256": "3e4c12b9144ea280ec67a32e42ecf6d9f60d7d8c1f7f1e286a12dd139f65d96b",
   "selected": "takt_batches_observed_swings_2",
   "selected_windows": {

@@ -3,7 +3,7 @@
   "job": "config-LOGISTIC_SCIENCE_240_DIRECT_INSERT",
   "group": "config",
   "name": "LOGISTIC_SCIENCE_240_DIRECT_INSERT",
-  "config_sha256": "a3881539030ddffbbb8f1e5180cf9006c8d29605ef129a56f38468664ffd8104",
+  "config_sha256": "bcb01295dde4e60c57eeaa1f28051791869baafcb568d7e657ac509cb831c4f0",
   "job_results_sha256": "035f6980e6d33841328de492328a10dd8e57d2beea696750a4ff9a5c413eaaf8",
   "selected": "coordinated_sources",
   "selected_windows": {

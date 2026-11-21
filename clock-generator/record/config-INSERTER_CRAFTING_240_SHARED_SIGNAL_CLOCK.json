@@ -3,7 +3,7 @@
   "job": "config-INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK",
   "group": "config",
   "name": "INSERTER_CRAFTING_240_SHARED_SIGNAL_CLOCK",
-  "config_sha256": "3de81b1e973c4a6d7e47288d08ecaaf11502739188865af44dd9c12448f19e40",
+  "config_sha256": "a5ddfaff16aefc601ef765e1e1721b29900416c8e5061c48078ebe2a94f0eba5",
   "job_results_sha256": "a23dad72aef089dbdfba6fb139bb776f388035920c4a33581806c8c7f2c0f9de",
   "selected": "coordinated_sources",
   "selected_windows": {

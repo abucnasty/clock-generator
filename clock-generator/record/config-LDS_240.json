@@ -3,7 +3,7 @@
   "job": "config-LDS_240",
   "group": "config",
   "name": "LDS_240",
-  "config_sha256": "054355f5ad0f0b432d24d459491e686a2993f354b3a8ba5d0bb550ca61ec918c",
+  "config_sha256": "4e431e9db8587f8a529636772faff365aac839130a6f1ac410e3c83fe8b4d583",
   "job_results_sha256": "fd63c899ad6ca5f35288930cc09657812742bea30d948354933c06635b73f867",
   "selected": "takt_batches_observed_swings_6",
   "selected_windows": {

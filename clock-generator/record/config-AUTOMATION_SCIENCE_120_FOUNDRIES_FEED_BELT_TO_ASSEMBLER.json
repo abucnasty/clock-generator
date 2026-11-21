@@ -3,7 +3,7 @@
   "job": "config-AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER",
   "group": "config",
   "name": "AUTOMATION_SCIENCE_120_FOUNDRIES_FEED_BELT_TO_ASSEMBLER",
-  "config_sha256": "b8a9ddb5a25adcc77d812e73f46078d66468d88eaa7886c1e4792c16573d50fa",
+  "config_sha256": "4d238cf4469d3042332612e469a70d646b22cbaff87df8a048bc58e18050baba",
   "job_results_sha256": "8596daf0314de3a968ae98724d8b2345f73a4e3cc12535b9f291defa8219e0c3",
   "selected": "takt_batches_observed",
   "selected_windows": {

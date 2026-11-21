@@ -3,7 +3,7 @@
   "job": "variants-ADVANCED_CIRCUIT_240_BACKED_UP",
   "group": "variants",
   "name": "ADVANCED_CIRCUIT_240_BACKED_UP",
-  "config_sha256": "b724bec25d1c1213e67591d887e3082f6dde727abed40d26cb46a873118dd90d",
+  "config_sha256": "dfde4e00dc0d6a759504971cc3dc0d7cf8115ab7f192ba1f1751225bfaa0e36b",
   "job_results_sha256": "42d152c279e1df837c5dea58ea5915ccceeed0f8ec891daf3bae6be7d80d5f9e",
   "selected": "takt_batches_observed",
   "selected_windows": {

@@ -3,7 +3,7 @@
   "job": "config-STEEL_PLATE_26_WAGON_CHEST",
   "group": "config",
   "name": "STEEL_PLATE_26_WAGON_CHEST",
-  "config_sha256": "4ef2f3b325102e980506b90bd259bca56acc39b5070dabbe4fab1c9bfa981c7a",
+  "config_sha256": "ffe3513591d75de9269d886281d2d43d966b2630c45749cb01b6171bd66813ce",
   "job_results_sha256": "ac579efa9e68e9156a6644a768ff2dd260994f18231958d75bd06cb7547f3870",
   "selected": "takt_batches_observed_swings_1_subtick",
   "selected_windows": {

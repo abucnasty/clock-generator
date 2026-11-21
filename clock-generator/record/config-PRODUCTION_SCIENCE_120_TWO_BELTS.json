@@ -3,7 +3,7 @@
   "job": "config-PRODUCTION_SCIENCE_120_TWO_BELTS",
   "group": "config",
   "name": "PRODUCTION_SCIENCE_120_TWO_BELTS",
-  "config_sha256": "b279416fdbedc9cd78d22f202c741ef077c2d49e1786f55d7aecba8c0f780330",
+  "config_sha256": "082ea4893e06f5dd4b75bc9bd1a33942ebaba5cefe232b64b3f17432f21f5104",
   "job_results_sha256": "14763ea279c68e619a05aad8054a6ba2ec567e52ed9a8e9188760270213d26e5",
   "selected": "euclidean_swings",
   "selected_windows": {

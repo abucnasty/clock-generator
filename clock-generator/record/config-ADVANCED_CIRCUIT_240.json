@@ -3,7 +3,7 @@
   "job": "config-ADVANCED_CIRCUIT_240",
   "group": "config",
   "name": "ADVANCED_CIRCUIT_240",
-  "config_sha256": "1573551891353d51a59f500c36b1c910d587b2036a611199b54aeadabe56c4d7",
+  "config_sha256": "057b2729fa841baa07d3830650369b72e5ae52c7221ae0ce3268775d5864d74a",
   "job_results_sha256": "42d152c279e1df837c5dea58ea5915ccceeed0f8ec891daf3bae6be7d80d5f9e",
   "selected": "takt_batches_observed",
   "selected_windows": {

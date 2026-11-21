@@ -3,7 +3,7 @@
   "job": "containers-container-wagon-normal",
   "group": "containers",
   "name": "container-wagon-normal",
-  "config_sha256": "770ca89ab1c91d21d0a542c685bad01f5f05daea6a3f261e42f1a09136fb8631",
+  "config_sha256": "a42ed5fd0a9eba831b9167be785445e9678d00dabd2140fc30cc69e83b8bd9f3",
   "job_results_sha256": "9042648eb20fbf11f9ba5371b53e49301b0f64399adacada626c444904220058",
   "selected": "takt_batches_observed",
   "selected_windows": {

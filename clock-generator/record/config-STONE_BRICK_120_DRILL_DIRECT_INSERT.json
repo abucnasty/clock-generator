@@ -3,7 +3,7 @@
   "job": "config-STONE_BRICK_120_DRILL_DIRECT_INSERT",
   "group": "config",
   "name": "STONE_BRICK_120_DRILL_DIRECT_INSERT",
-  "config_sha256": "78c274855fa06ec5423447b8323f6846fc5889b37190beeabba51c30a9bf91b3",
+  "config_sha256": "715f5b290f37dc1f31171b00deca477dce4a56f04949c6c81b3942dd36a97bc6",
   "job_results_sha256": "bc8c4849df5582f1a79c532312d70f16a4ffe6eb1cc8a2c7796f9d1f4580432e",
   "selected": "takt_batches_observed",
   "selected_windows": {
