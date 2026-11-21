@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { COPIES_DECIMAL_ERROR } from 'clock-generator/light';
 import { copiesProblem } from '../utils/copiesProblem';
 import { readConfigFile, readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
-import { ConfigSchema } from 'clock-generator/browser';
+import { ConfigSchema, FactorioDataService } from 'clock-generator/browser';
 import { inserter } from '../test/fixtures';
 import { configToFormData, formDataToConfig } from '../utils/configForm/configMapping';
 import * as edits from '../utils/configForm/edits';
@@ -152,6 +153,8 @@ describe('fractional Copies and metadata draft round trips', () => {
 });
 
 describe('parseFormConfig, for a setpoint the engine does not count yet', () => {
+    // the refusal reads the game data, which the worker loads
+    beforeAll(() => { FactorioDataService.initialize(JSON.parse(factorioData)); });
     const jellyForm = (item: string) => ({ ...formDataToConfig(createDefaultConfig()), setpoint: { item, items_per_second: 1, copies: 1 },
         machines: [{ id: 1, recipe: 'jellynut-processing', productivity: 0, crafting_speed: 1 }] });
 

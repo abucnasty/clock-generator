@@ -13,6 +13,8 @@ export function parseFormConfig<T>(schema: z.ZodType<T>, config: unknown): z.Zod
     if (result.success || !result.error.issues.every((issue) => issue.code === 'too_small' || issue.code === 'too_big'
         || (issue.code === 'custom' && issue.path.length === 2 && issue.path[0] === 'setpoint'
             && issue.path[1] === 'copies' && issue.message === COPIES_DECIMAL_ERROR)
+        // a setpoint that names an output the engine does not count yet: the form shows it with the words, Check refuses it
+        || (issue.code === 'custom' && issue.params?.reason !== undefined && issue.path.length === 2 && issue.path[0] === 'setpoint' && issue.path[1] === 'item')
         || (issue.code === 'custom' && issue.params?.editable_chest_settings === true
             && issue.path.length === 3 && issue.path[0] === 'chests' && issue.path[2] === 'item_filter')
         // Spatial cross-field issues are editable drafts, not broken saved structures. Check/Generate still parse

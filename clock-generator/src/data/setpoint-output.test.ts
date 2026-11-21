@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import "./factorio-data-file";
 import type { Ingredient } from "./factorio-data-types";
 import { FactorioDataService } from "./factorio-data-service";
-import { RecipeMetadata } from "../entities/machine/recipe/recipe-metadata";
+import { expectedAmount, RecipeMetadata } from "../entities/machine/recipe/recipe-metadata";
 import { setpointOutputOf } from "./setpoint-output";
 
 type RawResult = { type: string; name: string; amount: number; main_product?: string } & Record<string, unknown>;
@@ -102,21 +102,34 @@ describe("the output a setpoint counts for a recipe", () => {
 
     it("is the item the engine counts, for every recipe with an item result", () => {
         // for the bacteria recipes the engine counts spoilage there, and the rule preselects it
+        let usable = 0;
         for (const name of names.filter(name => itemResultsOf(raw[name]).length > 0)) {
             const output = setpointOutputOf(name);
-            expect(output, name).toMatchObject({ kind: "output", item: RecipeMetadata.fromRecipeName(name).output.name });
+            let counted: string | null = null;
+            try { counted = RecipeMetadata.fromRecipeName(name).output.name; } catch { /* a recipe with an item that the game data lacks: no machine can make it */ }
+            if (counted === null) {
+                // the engine cannot read it; the rule still gives the item with the largest expected amount of the data's own results
+                const largest = itemResultsOf(raw[name]).reduce((best, result) => expectedAmount(result as unknown as Ingredient) > expectedAmount(best as unknown as Ingredient) ? result : best);
+                expect(output, name).toMatchObject({ kind: "output", item: largest.name });
+                continue;
+            }
+            usable += 1;
+            expect(output, name).toMatchObject({ kind: "output", item: counted });
         }
+        // 57 of the 629 name an item that the game data lacks, which no machine can be set to make
+        expect(usable).toBe(572);
     });
 
     it("lists every choice among the recipe's item results, never a result the data leaves out of the stats", () => {
         for (const name of names) {
             const output = setpointOutputOf(name);
             if (output?.kind !== "output") continue;
-            const recipe = FactorioDataService.findRecipeOrThrow(name);
-            for (const item of output.choices) expect(recipe.results.some(result => result.name === item), `${name} ${item}`).toBe(true);
+            const recipe = FactorioDataService.findRecipe(name)!;
+            const results = recipe.results.filter(result => result.type === "item");
+            for (const item of output.choices) expect(results.some(result => result.name === item), `${name} ${item}`).toBe(true);
             if (output.choices.length > 0) expect(output.choices).toContain(output.item);
-            if (recipe.results.length > 1 && output.choices.length > 0) {
-                for (const item of output.choices) expect(recipe.results.find(result => result.name === item)?.ignored_by_stats ?? 0, `${name} ${item}`).toBe(0);
+            if (results.length > 1 && output.choices.length > 0) {
+                for (const item of output.choices) expect(results.find(result => result.name === item)?.ignored_by_stats ?? 0, `${name} ${item}`).toBe(0);
             }
         }
     });

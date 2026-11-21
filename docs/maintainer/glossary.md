@@ -44,8 +44,9 @@ One thing in the game: a machine, inserter, belt, chest or drill. The game's wor
 _Avoid_: object, piece
 
 **Setpoint**:
-The product a build must make and the rate it must hold, in items per second, for all copies. Set by the user; the
-clock never changes it. Control theory: the setpoint (Janert p.21-22, who uses it for rate targets). In IEC terms it is
+The item a build must make and the rate it must hold, in items per second, for all copies. Set by the user; the
+clock never changes it. It names one item. A recipe with more than one output is not the setpoint: the user selects
+one of its outputs. Control theory: the setpoint (Janert p.21-22, who uses it for rate targets). In IEC terms it is
 the command variable (IEC 351-48-09): it comes from outside, and the control does not change it. IEC's reference
 variable (351-48-02) is the input of a comparing element in closed-loop control, so the open-loop clock has none. A
 setpoint at the maximum rate of the build leaves no time for recovery. The site's **Setpoint** panel.

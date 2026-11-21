@@ -8,7 +8,7 @@ import { missingDataSections, type InternalError } from '../utils/internalError'
  */
 
 import type { z } from 'zod';
-import { renameSetpointRecipeToItem, renameTargetOutputToSetpoint, type LaneRole } from 'clock-generator/light';
+import { renameSetpointRecipeToItem, renameTargetOutputToSetpoint, type LaneRole, type SetpointReason } from 'clock-generator/light';
 import type { ClockAlternativeRun, Config, DebugSteps, LogMessage, Logger, MachineToName, NotMadeClock, SearchRangeEdge } from 'clock-generator/browser';
 import { parseFormConfig } from './formConfig';
 import { laneRolesAnswer } from './laneRoles';
@@ -267,7 +267,7 @@ function handleValidate(requestId: number, given: Config): void {
                 : error instanceof clockGenerator.BeltPickupSinkError
                     ? [{ kind: 'inserters' as const, ids: error.inserter_ids, message: error.message }]
                 : error instanceof clockGenerator.ConfigValidationError
-                    ? error.zodError.issues.map(issue => ({ kind: 'field' as const, path: issue.path as (string | number)[], message: issue.message }))
+                    ? error.zodError.issues.map(issue => ({ kind: 'field' as const, path: issue.path as (string | number)[], message: issue.message, ...reasonOf(issue) }))
                     // a build no clock can hold: its opening once, and each problem the engine found on its own
                     : error instanceof clockGenerator.FeasibilityError
                         ? [{ kind: 'refusal' as const, opening: error.opening, problems: error.problems }]
@@ -355,6 +355,12 @@ function failureOf(error: unknown, fallback: string): { message: string; stack?:
     return { message: error instanceof Error ? error.message : fallback, stack: error instanceof Error ? error.stack : undefined };
 }
 
+/** The engine's reason for a refused setpoint, where the issue carries one */
+function reasonOf(issue: object): { reason?: SetpointReason } {
+    const reason = (issue as { params?: { reason?: SetpointReason } }).params?.reason;
+    return reason === undefined ? {} : { reason };
+}
+
 function lookups(): FactorioLookups {
     const data = clockGenerator.FactorioDataService;
     const recipeNames = data.getAllRecipeNames();
@@ -365,6 +371,7 @@ function lookups(): FactorioLookups {
             recipes.set(name, {
                 ingredients: recipe.ingredients.map(ing => ing.name),
                 results: recipe.results.map(res => res.name),
+                output: clockGenerator.setpointOutputOf(name) ?? undefined,
             });
         } catch {
             // a recipe the generator cannot use has no info

@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { ConfigSchema } from "./schema";
 import { ConfigValidationError } from "./errors";
-import { refusalOfPick, refusalOfPickIn } from "./setpoint-refusal";
-import { setpointOutputOf } from "../data/setpoint-output";
+import { refusalOfPickIn } from "./setpoint-refusal";
+import { refusalOfPick } from "./setpoint-check";
+import { setpointOutputOf, type SetpointOutput } from "../data/setpoint-output";
 
 const build = (setpoint: { item?: string; recipe?: string; counts?: string }, ...recipes: string[]) => ({
     setpoint: { items_per_second: 1, copies: 1, ...setpoint },
@@ -37,21 +38,20 @@ describe("the refusal of a pick the engine does not count yet", () => {
         expect(refusalOfPick("copper-ore", ["advanced-metallic-asteroid-crushing", "copper-ore-recycling"])).toBeNull();
     });
 
-    it("refuses the bacterium and not spoilage on a build of a bacteria recipe (the engine counts spoilage)", () => {
-        expect(refusalOfPick("iron-bacteria", ["iron-bacteria"])).toBeNull();
+    it("refuses the bacterium, not spoilage, on a build of a bacteria recipe alone (the engine counts spoilage)", () => {
+        expect(refusalOfPick("iron-bacteria", ["iron-bacteria"])).toEqual({ code: "not-counted-yet", item: "iron-bacteria", choice: "spoilage" });
+        expect(refusalOfPick("copper-bacteria", ["copper-bacteria"])).toEqual({ code: "not-counted-yet", item: "copper-bacteria", choice: "spoilage" });
         expect(refusalOfPick("spoilage", ["iron-bacteria"])).toBeNull();
+        // a machine of the build that makes the bacterium as its own output keeps it
         expect(refusalOfPick("iron-bacteria", ["iron-bacteria", "iron-bacteria-cultivation"])).toBeNull();
-        expect(refusalOfPick("copper-bacteria", ["copper-bacteria"])).toBeNull();
     });
 
-    it("refuses the bacterium picked within the bacteria recipe alone, a choice that is not preselected", () => {
-        // `refusalOfPick` reads the recipe's choices: the bacterium is a choice, spoilage the preselected one
-        const output = setpointOutputOf("iron-bacteria");
-        expect(refusalOfPickIn("iron-bacteria", ["iron-bacteria"], () => output)).toBeNull();
-        expect(output).toMatchObject({ item: "spoilage" });
-        // a pick that is a choice, not the preselected one and made by no recipe of the list
-        expect(refusalOfPickIn("iron-bacteria", ["x"], () => ({ kind: "output", item: "spoilage", choices: ["iron-bacteria", "spoilage"] })))
-            .toEqual({ code: "not-counted-yet", item: "iron-bacteria", choice: "spoilage" });
+    it("judges an item from the outputs it is given, without the game data", () => {
+        const output: SetpointOutput = { kind: "output", item: "spoilage", choices: ["iron-bacteria", "spoilage"] };
+        expect(refusalOfPickIn("iron-bacteria", ["x"], () => output)).toEqual({ code: "not-counted-yet", item: "iron-bacteria", choice: "spoilage" });
+        expect(refusalOfPickIn("spoilage", ["x"], () => output)).toBeNull();
+        expect(refusalOfPickIn("iron-bacteria", ["x"], () => ({ kind: "none" }))).toBeNull();
+        expect(refusalOfPickIn("iron-bacteria", ["x"], () => null)).toBeNull();
     });
 
     it("has no refusal for the reprocessings and kovarex, which have no choice to refuse", () => {
@@ -75,6 +75,15 @@ describe("a config whose setpoint names an output the engine does not count yet"
             .toEqual([{ path: "setpoint.item", reason: { code: "not-counted-yet", item: "jellynut-seed", choice: "jelly" } }]);
         expect(reasonsOf(build({ item: "copper-ore" }, "advanced-metallic-asteroid-crushing"))[0].reason).toEqual({ code: "not-counted-yet", item: "copper-ore", choice: "iron-ore" });
         expect(reasonsOf(build({ item: "uranium-235" }, "uranium-processing"))[0].reason).toMatchObject({ item: "uranium-235", choice: "uranium-238" });
+    });
+
+    it("is refused for the smaller result of a recycling recipe", () => {
+        const output = setpointOutputOf("atomic-bomb-recycling");
+        if (output?.kind !== "output") throw new Error("a recycling recipe has an output");
+        const smaller = output.choices.find(item => item !== output.item)!;
+        expect(reasonsOf(build({ item: smaller }, "atomic-bomb-recycling")))
+            .toEqual([{ path: "setpoint.item", reason: { code: "not-counted-yet", item: smaller, choice: output.item } }]);
+        expect(itemOf(build({ item: output.item }, "atomic-bomb-recycling"))).toBe(output.item);
     });
 
     it("carries the technical string in the issue's message, no sentence for a user", () => {

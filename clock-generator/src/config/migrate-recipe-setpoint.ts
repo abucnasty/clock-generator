@@ -1,4 +1,5 @@
 import { RecipeMetadata } from "../entities/machine/recipe/recipe-metadata";
+import { setpointOutputOf } from "../data/setpoint-output";
 import { renameSetpointRecipeToItem } from "./migrate-setpoint";
 
 /**
@@ -13,34 +14,18 @@ export function outputItemOf(recipe: string): string | null {
     }
 }
 
-/**
- * The main product of a recipe, the one item of it that a setpoint can count: the item that the game data names as the
- * recipe's `main_product` (iron-bacteria, whose spoilage is a byproduct), where it names one of the item results, else the
- * item result with the largest expected amount per craft. Null where the recipe is not in the game data or makes no item.
- */
-export function mainProductOf(recipe: string): string | null {
-    try {
-        const metadata = RecipeMetadata.fromRecipeName(recipe);
-        const named: unknown = metadata.raw.main_product;
-        return typeof named === "string" && metadata.outputs.some(result => result.name === named) ? named : metadata.output.name;
-    } catch {
-        return null;
-    }
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /**
- * Read a setpoint that names a recipe, not an item, once: the site's setpoint picker lists recipes and stores the recipe's
- * name, but the setpoint counts an item (the schema's `item`). The setpoint's former `recipe` is read as `item` first
- * ({@link renameRecipeToItem}). Where no machine of the build makes the name as its output,
- * and the main product of the recipe of that name is made by one, the setpoint loads with that item in place of
- * the name, at the same place in the object. Any other setpoint stays as it is: a name that a machine makes (an item that
- * is also the name of a recipe with another main product), a name that is no recipe or no machine makes the main product of,
- * and a setpoint that counts an item destroyed. Share links and saved builds that hold a recipe's name load through this
- * step of the schema.
+ * Read a setpoint that names a recipe, not an item, once: the site's setpoint picker once stored the recipe's name, but the
+ * setpoint counts an item (the schema's `item`). The setpoint's former `recipe` is read as `item` first
+ * ({@link renameRecipeToItem}). Where no machine of the build makes the name as its output, and a machine makes the output
+ * the setpoint takes of the recipe of that name (`setpointOutputOf`), the setpoint loads with that item in place of the
+ * name, at the same place in the object. Any other setpoint stays as it is: a name that a machine makes (an item that is
+ * also the name of a recipe), a name that is no recipe or whose output no machine makes, and a setpoint that counts an item
+ * destroyed. Share links and saved builds that hold a recipe's name load through this step of the schema.
  */
 export function readRecipeSetpointAsItem(value: unknown): unknown {
     const config = renameSetpointRecipeToItem(value);
@@ -55,9 +40,9 @@ export function readRecipeSetpointAsItem(value: unknown): unknown {
     if (made.has(setpoint.item)) {
         return config;
     }
-    const product = mainProductOf(setpoint.item);
-    if (product === null || !made.has(product)) {
+    const output = setpointOutputOf(setpoint.item);
+    if (output?.kind !== "output" || !made.has(output.item)) {
         return config;
     }
-    return { ...config, setpoint: { ...setpoint, item: product } };
+    return { ...config, setpoint: { ...setpoint, item: output.item } };
 }

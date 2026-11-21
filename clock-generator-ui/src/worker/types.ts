@@ -1,6 +1,7 @@
 import type { InternalError } from '../utils/internalError';
 import type { ValidationDiagnostic } from '../utils/buildValidation';
 import type { z } from 'zod';
+import type { SetpointOutput } from 'clock-generator/light';
 import type {
     CoordinatedSourcesInput,
     AlwaysOnReasons,
@@ -444,6 +445,8 @@ export interface CraftingMachineData {
 export interface RecipeInfo {
     ingredients: string[];
     results: string[];
+    /** What a setpoint counts for the recipe, and what it offers to choose from; left out where a test or a recipe has none */
+    output?: SetpointOutput;
 }
 
 /** The names the forms offer and what each recipe takes and makes, from the game data */

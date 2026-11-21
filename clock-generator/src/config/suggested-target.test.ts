@@ -383,12 +383,15 @@ describe("a paste whose machines make a recipe with several outputs", () => {
         expect(O.toNullable(suggestedTargetOf(undefined, machines(machine), { inserters: [], belts: [] }, { chests: [], drills: [] }))?.target.item).toBe(item);
     });
 
-    it("sums the machines of the two bacteria recipes as spoilage", () => {
-        const both = machines(assembler("iron-bacteria"), assembler("copper-bacteria"));
-        expect(O.toNullable(inferSuggestedTarget(both))?.items_per_second).toBeCloseTo(factsRate(both[0]) + factsRate(both[1]), 10);
+    it("counts the machines of the two bacteria recipes as the one product spoilage, and takes the group that makes the most", () => {
+        const iron = assembler("iron-bacteria");
+        const copper = assembler("copper-bacteria");
+        const both = machines(iron, copper);
+        const best = Math.max(factsRate(both[0]), factsRate(both[1]));
+        expect(inferSuggestedTarget(both)).toEqual(O.some({ item: "spoilage", items_per_second: best, copies: 1 }));
     });
 
-    it("keeps a pasted setpoint that names an item the engine does not count yet, and loses the build's limit: the check of the build refuses it", () => {
+    it("keeps a pasted setpoint that names an item the engine does not count yet as pasted, without a build limit: the check of the build refuses it", () => {
         const pasted = { recipe: "jellynut-seed", items_per_second: 1, copies: 1 };
         const sample = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../../resources/config-samples/science/automation/automation-240.json"), "utf8")) as Config;
         const build = machines(assembler("jellynut-processing"));

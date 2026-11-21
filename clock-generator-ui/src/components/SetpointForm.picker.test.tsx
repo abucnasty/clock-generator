@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { screen, within } from '@testing-library/react';
+import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import type { SetpointOutput } from 'clock-generator/light';
 import { names, show } from '../test/fixtures';
@@ -23,14 +24,23 @@ type Props = Parameters<typeof SetpointForm>[0];
 const props: Props = { recipe: 'iron-gear-wheel', itemsPerSecond: 1, copies: 1, counts: 'made', machinesMax: null,
     recipeNames: Object.keys(OUTPUTS), recipeOutputOf: recipe => OUTPUTS[recipe] ?? null, machineRecipes: ['iron-gear-wheel'],
     onRecipeChange: () => {}, onItemsPerSecondChange: () => {}, onCountsChange: () => {}, onCopiesChange: () => {} };
-const form = (overrides: Partial<Props> = {}) => show(<SetpointForm {...props} {...overrides} />, { names: gameNames });
+/** The page holds the setpoint's item, which the form reports changes of */
+function Page(given: Props) {
+    const [item, setItem] = useState(given.recipe);
+    return <SetpointForm {...given} recipe={item} onRecipeChange={value => { setItem(value); given.onRecipeChange(value); }} />;
+}
+const form = (overrides: Partial<Props> = {}) => show(<Page {...props} {...overrides} />, { names: gameNames });
 const recipeField = () => screen.getByRole('button', { name: TARGET_RECIPE_NAME }) as HTMLInputElement;
 const outputField = () => screen.queryByRole('combobox', { name: 'Output' });
 
+/** Opens the recipe picker, finds the recipe by its name, and applies it */
 async function pick(user: ReturnType<typeof form>['user'], recipe: string) {
     await user.click(recipeField());
     const dialog = screen.getByRole('dialog', { name: `Choose a recipe for ${TARGET_RECIPE_NAME}` });
-    await user.click(within(dialog).getByRole('button', { name: gameNames.recipe[recipe] }));
+    const name = gameNames.recipe[recipe] ?? recipe;
+    await user.type(within(dialog).getByRole('textbox'), name);
+    await user.click(within(dialog).getByRole('button', { name }));
+    await user.click(within(dialog).getByRole('button', { name: 'Apply' }));
 }
 
 describe('the setpoint picker, for a recipe with several outputs', () => {
@@ -94,9 +104,7 @@ describe('the setpoint picker, for a recipe with one output or none to choose', 
     it('saves the name as typed for a recipe the lookups do not know', async () => {
         const onRecipeChange = vi.fn();
         const { user } = form({ onRecipeChange, recipeNames: ['grenade'], recipeOutputOf: () => null });
-        await user.click(recipeField());
-        const dialog = screen.getByRole('dialog', { name: `Choose a recipe for ${TARGET_RECIPE_NAME}` });
-        await user.click(within(dialog).getByRole('button', { name: 'grenade' }));
+        await pick(user, 'grenade');
         expect(onRecipeChange).toHaveBeenCalledExactlyOnceWith('grenade');
     });
 });
@@ -104,7 +112,7 @@ describe('the setpoint picker, for a recipe with one output or none to choose', 
 describe('the setpoint picker, for a saved item it cannot place', () => {
     it('shows an item that no machine makes as it is, with no choice', () => {
         form({ recipe: 'jelly', machineRecipes: ['iron-gear-wheel'] });
-        expect(recipeField().value).toBe('jelly');
+        expect(recipeField().value).toBe('Jelly');
         expect(outputField()).toBeNull();
     });
 
@@ -112,5 +120,29 @@ describe('the setpoint picker, for a saved item it cannot place', () => {
         form({ recipe: 'jellynut-processing', machineRecipes: ['jellynut-processing'] });
         expect(recipeField().value).toBe('Jellynut processing');
         expect(outputField()).toBeNull();
+    });
+});
+
+describe('the setpoint picker, for a saved or pasted setpoint the engine refuses', () => {
+    it('says what the engine does not count yet for an output of a recipe of the build that is not the one it counts', () => {
+        form({ recipe: 'jellynut-seed', machineRecipes: ['jellynut-processing'] });
+        expect(screen.getByText('jellynut-seed is not counted yet; choose jelly')).toBeDefined();
+        expect(recipeField().value).toBe('Jellynut seed');
+        expect(outputField()).toBeNull();
+    });
+
+    it('says a recipe with no item result has no output a setpoint can count', () => {
+        form({ recipe: 'sulfuric-acid', machineRecipes: ['iron-gear-wheel'] });
+        expect(screen.getByText('sulfuric-acid has no output a setpoint can count; choose another recipe')).toBeDefined();
+    });
+
+    it('says nothing for an item the engine counts', () => {
+        form({ recipe: 'jelly', machineRecipes: ['jellynut-processing'] });
+        expect(screen.queryByText(/not counted yet/)).toBeNull();
+    });
+
+    it('says nothing where the setpoint counts an item destroyed', () => {
+        form({ recipe: 'jellynut-seed', machineRecipes: ['jellynut-processing'], counts: 'destroyed', destroyedItemNames: ['jellynut-seed'] });
+        expect(screen.queryByText(/not counted yet/)).toBeNull();
     });
 });
