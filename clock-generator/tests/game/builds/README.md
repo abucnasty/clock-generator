@@ -1101,18 +1101,18 @@ state to the first loss, and the whole window cycles of the last minute after th
 | `AGRICULTURAL_SCIENCE_250` (`agricultural-science-250`) | Takt Batches Observed, 2 swings (960, `997b3c3c`) | 5 of 5 | 3 / 3 | 6,524 | 24,959 (bioflux cut 15,841, output block 19,572, nutrients cut 24,959) | holds |
 | `AGRICULTURAL_SCIENCE_250_BACKED_UP` (`agricultural-science-250-backed-up`) | the same clock | 5 of 5 | 3 / 3 | 6,524 | 24,959 | holds |
 | `IRON_BACTERIA_380_CULTIVATION` | see "Loop builds and ruling 60's start" above | 1 of 1 | 2 / 2 each | 7,056 | 14,348 / 14,131 / 14,621 | holds |
-| `AUTOMATION_SCIENCE_240` (`automation-science-240`) | Coordinated Sources (72, `0bc638ab`) | 9 of 9 | 50 / 50 | 7,200 | 16,823 | copy 2 short after the losses, not pinned |
-| `ELECTROMAGNETIC_SCIENCE_330` (`electromagnetic-science-330`) | Takt Batches Observed (2,112, `c3b310df`) | 11 of 11 | 1 / 1 | 5,712 | 37,644 | copies 1 and 3 short after the losses, not pinned |
+| `AUTOMATION_SCIENCE_240` (`automation-science-240`) | Coordinated Sources (72, `0bc638ab`) | 9 of 9 | 50 / 50 | 7,200 | 16,823 | holds: every copy, copy 2 over whole repeats; pinned |
+| `ELECTROMAGNETIC_SCIENCE_330` (`electromagnetic-science-330`) | Takt Batches Observed (2,112, `c3b310df`) | 11 of 11 | 1 / 1 | 5,712 | 37,644 | holds: every copy, copies 1 and 3 over whole repeats; pinned |
 
 - **Agricultural science.** The harness does not read `backed_up_belts`, so the build and its variant with belts under backpressure are the same run: the same clock, the same result to the tick (as their scaffold pins say). The scaffold's four loaders
   drain the bioflux and nutrients belts and the packs go into infinity chests, so the case sets `block_sinks` (the output block fills those chests). All five copies make 800 in every window cycle judged.
 - **Automation science 240, copy 2.** In the case with three losses in a row the output block and the copper plate cut last 5 and 4 ticks (the gear wheel cut recovers over the target before it is over the baseline's lowest minute), and after them
   copy 2 settles into a cycle of five window cycles that makes 30 of 32 once and 34 once (a hand of 2 moves from one window cycle to the next); it makes 1,600 of 1,600 over the 50 window cycles of the last minute,
-  and is short by 2 in 10 of them. Each loss alone (`automation-science-240-gear`, `-block`, `-copper`, from the baseline) holds on all nine copies in every window cycle. The case with the three is the family's standard one, so the job is not pinned.
+  and is short by 2 in 10 of them. Each loss alone (`automation-science-240-gear`, `-block`, `-copper`, from the baseline) holds on all nine copies in every window cycle. A copy after a loss is judged over whole repeats (see the paragraph on `judgeAfterLoss` above): copy 2 makes 1,600 of 1,600 over the last 10 window cycles (two repeats of five), so the case with the three losses holds and is pinned (clock `0bc638ab`, run ends at tick 16,823).
 - **Electromagnetic science 330.** A window cycle is 2,112 ticks (one whole window cycle judged before the first loss: steady state 5,712, first loss 9,312). After the supercapacitor cut, one copy is short by one hand (16 of 1,056) in the
   last judged window cycle: copies 1 and 3 in the run of three losses (their window cycles alternate 1,040 and 1,072, and make 2,112 of 2,112 in two), copy 10 in the case of the cut alone (`electromagnetic-science-330-supercapacitors`).
-  The accumulator cut (`-accumulators`) and the output block (`-block`) alone hold on all eleven copies. In the run of three the output block lasted 22 ticks. The job is not pinned.
-- The cases `automation-science-240-gear`, `-block`, `-copper` and `electromagnetic-science-330-accumulators`, `-block`, `-supercapacitors` have no entry in the controls file: they stand beside the case that does not hold, to say which loss it is.
+  The accumulator cut (`-accumulators`) and the output block (`-block`) alone hold on all eleven copies. In the run of three the output block lasted 22 ticks. A copy after a loss is judged over whole repeats: copies 1 and 3 make 4,224 of 4,224 over the last two window cycles (one repeat of two) and the other nine copies 5,280 of 5,280 over five, so the case with the three losses holds and is pinned (clock `c3b310df`, run ends at tick 37,644, with a tail of 18,000 ticks after the last recovery).
+- The cases `automation-science-240-gear`, `-block`, `-copper` and `electromagnetic-science-330-accumulators`, `-block`, `-supercapacitors` have no entry in the controls file: they stand beside the case with the three losses, to say which loss each is.
 
 ```
 MISSING_RECORDINGS_CAPTURE_DIR=.scratch/judged-start npm run test:game -- tests/game/builds/missing-recordings-clock.game.test.ts -t 'agricultural-science-250: '
@@ -1146,7 +1146,7 @@ baseline, and on the grenade build each of the seven its 2,048.
 - **Grenade, utility science 480, logistic science with direct insertion.** Every inserter of these builds has a window, so the fill holds nothing back
   and no inserter moves in it (no machine is filled by an inserter with no window): their start is the plain staged start in effect, as for rocket fuel above.
 - **Named limits (copies).** The sample's scaffold of the utility science 480 build holds one copy of the job's 3.5 (137.14 packs a second of 480), and that of the logistic science build with direct insertion one of the job's six (40 of 240);
-  the joins of the other copies (the lanes they share) are not in these runs, and the harness builds the copies a blueprint holds, not more. The jobs are judged on the one copy.
+  the joins of the other copies (the lanes they share) are not in these runs, and the harness builds the copies a blueprint holds, not more. The jobs are judged on the one copy. This holds for `LOGISTIC_SCIENCE_240_DIRECT_INSERT_TWO_OUTPUT_SWINGS` (Euclidean Swings, 96 ticks) too: it runs on the same one-copy scaffold of the job's six, and the chemical science jobs below (`CHEMICAL_SCIENCE_240_SHARED_FOUNDRY` and its `_BACKED_UP` variant) are judged on one block of the job's 5.5.
 - **The two processing unit 80 cases the record offers and does not select** (`per-hand-as-is`, `per-hand-backed-up`, the 24-tick clock of the hands in groups) and the hand-made clocks stay as they were recorded, from a free warm-up.
 
 ```bash
@@ -1191,7 +1191,7 @@ with equal summaries. They are pinned in [missing-recordings-clock-controls.json
 | `UTILITY_SCIENCE_120` (`utility-science-120`) | Takt Batches Observed (672, `8c6d44c1`) | 1 of 7 | 7,135 | 25,951 (cut low density structure 15,871, output block 20,575, cut processing unit 25,951) | holds and recovers from all three; the record says "no recovery" |
 | `UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT` | Coordinated Sources (336, `4d76e238`) | 2 of 7 | 6,960 | 23,312 | holds: both copies 960 of 960 in each of 10 window cycles before and after the losses |
 | `MILITARY_SCIENCE_240` | Coordinated Sources (80, `4c0ccc46`) | 5 of 5 | 7,200 | 23,713 | holds: each copy 2,880 of 2,880 |
-| `CHEMICAL_SCIENCE_240_SHARED_FOUNDRY` and `..._BACKED_UP` | Coordinated Sources (352, `f1a4c258`) | 1 block of 5.5 | 7,120 | 24,929 | holds: 2,560 of 2,560; the two jobs have the same clock and the same run |
+| `CHEMICAL_SCIENCE_240_SHARED_FOUNDRY` and `CHEMICAL_SCIENCE_240_SHARED_FOUNDRY_BACKED_UP` | Coordinated Sources (352, `f1a4c258`) | 1 block of 5.5 | 7,120 | 24,929 | holds: 2,560 of 2,560; the two jobs have the same clock and the same run |
 | `PRODUCTION_SCIENCE_120_TWO_BELTS` and `..._SHARED_PICKUP` | Euclidean Swings (336, `fdadf120`) | 1 of 7 | 6,960 | 21,697 (cut electric furnace 15,985, output block 16,070, cut productivity module 21,697) | holds: 960 of 960 in each of 10 window cycles before and after the losses; both jobs have the same clock and the same run |
 
 - **Utility science 120.** The record's verdict for the clock is "no recovery", from the loss of low density structures on the copies that share a lane. The scaffold holds one copy, so no lane is shared
