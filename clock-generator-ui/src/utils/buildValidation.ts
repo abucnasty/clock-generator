@@ -1,4 +1,6 @@
 import type { InserterCoverageIssue, MachinePrototypeIssue, UncalibratedBeltPickup } from 'clock-generator/browser';
+import type { SetpointReason } from 'clock-generator/light';
+import { setpointRefusalWords } from './setpointRefusalText';
 import { advisoryLine, type Advisory, type SideLoadedDropFact } from './advisory';
 import type { ChestFormData, InserterFormData } from './configForm/formData';
 import { entityLabel, entityLabelIn } from './entityLabel';
@@ -8,7 +10,8 @@ import { coverageHandledByChestIssue, outputChestIssueTitle, type OutputChestIss
 /** Structured check failures retain their identity when they cross the worker boundary. */
 export type ValidationDiagnostic =
     | { kind: 'coverage'; issue: InserterCoverageIssue }
-    | { kind: 'field'; path: (string | number)[]; message: string }
+    /** `reason`: why the engine refused a setpoint (its code and data), which the page words in place of `message` */
+    | { kind: 'field'; path: (string | number)[]; message: string; reason?: SetpointReason }
     /** The engine refuses the build as a whole: its opening sentence, once, and each problem it found in its own words */
     | { kind: 'refusal'; opening?: string; problems: string[] }
     /** The engine refuses the inserters it names, by id, in the text it gives */
@@ -200,7 +203,7 @@ export function buildValidationIssues(input: Input): BuildValidationIssue[] {
         if (chest && key === 'item_filter' && input.chestIssues.some(issue => issue.chest.id === chest.id && issue.kind === 'removal-disabled')) continue;
         const stablePath = diagnostic.path.map((part, position) => position === 1 && typeof part === 'number'
             ? group === 'chests' ? input.chests[part]?.id ?? part : group === 'machines' ? input.machines[part]?.id ?? part : part : part);
-        add(field(fieldTarget ? focusIdOf(fieldTarget) : `field:${stablePath.join('.')}`, `${fieldLocation(diagnostic.path, input)}: ${diagnostic.message}`, fieldTarget));
+        add(field(fieldTarget ? focusIdOf(fieldTarget) : `field:${stablePath.join('.')}`, `${fieldLocation(diagnostic.path, input)}: ${diagnostic.reason ? setpointRefusalWords(diagnostic.reason) : diagnostic.message}`, fieldTarget));
     }
     // a Check that stopped at the refusal shown live says the same: one issue per cause
     if (input.failure && !input.failure.diagnostics?.length && input.failure.message !== input.scopeRefusal) {

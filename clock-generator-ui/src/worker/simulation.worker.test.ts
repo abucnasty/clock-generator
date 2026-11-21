@@ -727,6 +727,44 @@ describe('a setpoint named by a recipe, as the picker stores it', () => {
         expect(await ask({ kind: 'target-rate-max', config: named })).toEqual(await ask({ kind: 'target-rate-max', config: jellynut('jelly') }));
         expect((await ask({ kind: 'config-file', config: named })).setpoint.item).toBe('jellynut-processing');
     });
+
+    const seedReason = { code: 'not-counted-yet', item: 'jellynut-seed', choice: 'jelly' };
+    const technical = 'not-counted-yet: item=jellynut-seed choice=jelly';
+
+    it('Check refuses an output the engine does not count yet, with the code in the field diagnostic and the technical string as the message', async () => {
+        const response = await send({ type: 'validate', requestId: 41, config: jellynut('jellynut-seed') }) as ValidationFailedResponse;
+        expect(response.type).toBe('validation-failed');
+        expect(response.message).toContain(technical);
+        expect(response.diagnostics).toEqual([{ kind: 'field', path: ['setpoint', 'item'], message: technical, reason: seedReason }]);
+        expect(await send({ type: 'validate', requestId: 42, config: jellynut('jelly') })).toMatchObject({ type: 'validated' });
+    });
+
+    it('a run of a refused build answers an error with the technical string', async () => {
+        const response = await send({ type: 'plan', runId: 7, config: jellynut('jellynut-seed'), debugSteps: noDebug, streamLogs: false });
+        expect(response).toMatchObject({ type: 'error', runId: 7, message: expect.stringContaining(technical) });
+        expect(response).not.toHaveProperty('diagnostics');
+    });
+
+    it('Check refuses a recipe with no item result, with the code of it', async () => {
+        const config = { ...jellynut('jelly'), setpoint: { item: 'sulfuric-acid', items_per_second: 1, copies: 1 } } as Config;
+        const response = await send({ type: 'validate', requestId: 43, config }) as ValidationFailedResponse;
+        expect(response.diagnostics).toEqual([{ kind: 'field', path: ['setpoint', 'item'], message: 'no-countable-output: recipe=sulfuric-acid',
+            reason: { code: 'no-countable-output', recipe: 'sulfuric-acid' } }]);
+    });
+
+    it('a saved form and an imported file that hold such a setpoint open as they are, for Check to refuse', async () => {
+        const form = { ...jellynut('jellynut-seed'), chests: [] };
+        expect((await ask({ kind: 'saved-config', config: form })).problem).toBeNull();
+        expect((await ask({ kind: 'config-file', config: form })).setpoint.item).toBe('jellynut-seed');
+    });
+
+    it('carries, in the lookups, what each recipe offers as the setpoint output', async () => {
+        const { recipes } = await ask({ kind: 'lookups' });
+        expect(recipes.get('jellynut-processing')?.output).toEqual({ kind: 'output', item: 'jelly', choices: ['jellynut-seed', 'jelly'] });
+        expect(recipes.get('iron-bacteria')?.output).toEqual({ kind: 'output', item: 'spoilage', choices: ['iron-bacteria', 'spoilage'] });
+        expect(recipes.get('kovarex-enrichment-process')?.output).toEqual({ kind: 'output', item: 'uranium-235', choices: [] });
+        expect(recipes.get('sulfuric-acid')?.output).toEqual({ kind: 'none' });
+    });
 });
 
 // A file, a share link or a saved build from before the setpoint named its item holds `recipe`: the engine's fixture of it, with the form's chests.

@@ -246,8 +246,8 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
     {
         id: 'setpoint',
         term: 'setpoint',
-        definition: 'The product your build must make, and the rate it must hold, for all copies. The rate is in items per second. '
-            + 'You set it. The clock never changes it.',
+        definition: 'The item your build must make, and the rate it must hold, for all copies. The rate is in items per second. '
+            + 'You set it. The clock never changes it. It names one item. For a recipe with more than one output, you select the output.',
         insteadOf: 'target output, target rate, goal',
     },
     {

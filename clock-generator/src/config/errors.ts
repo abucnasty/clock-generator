@@ -1,4 +1,5 @@
 import { ZodError } from "zod";
+import type { SetpointReason } from "./setpoint-refusal";
 
 /**
  * Represents a single validation error with user-friendly details.
@@ -12,6 +13,8 @@ export interface ConfigValidationIssue {
     expected?: string;
     /** Actual value received */
     received?: unknown;
+    /** Why the engine refused a setpoint (its code and data), for the page to word; `message` is its technical string */
+    reason?: SetpointReason;
 }
 
 /**
@@ -103,6 +106,10 @@ export class ConfigValidationError extends Error {
                 path,
                 message: issue.message ?? "Invalid value"
             };
+            const reason = (issue as { params?: { reason?: SetpointReason } }).params?.reason;
+            if (reason !== undefined) {
+                formattedIssue.reason = reason;
+            }
 
             // Extract expected/received info when available
             if ("expected" in issue) {

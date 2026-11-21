@@ -8,6 +8,12 @@ export interface Ingredient {
   type: "item" | "fluid",
   name: ItemName,
   amount: number
+  /** A result's chance on its own roll (the jellynut seed's 0.02) */
+  independent_probability?: number
+  /** A result's slice of one roll that the recipe's results share (uranium processing: uranium-235 takes 0 to 0.007) */
+  shared_probability?: { min: number, max: number }
+  /** The amount of the item that the game leaves out of its production statistics: the catalyst or the chunk a recipe returns */
+  ignored_by_stats?: number
 }
 
 export type RecipeName = string;

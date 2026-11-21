@@ -18,6 +18,8 @@ import { dropFractionalSwingsOverride } from "./migrate-fractional-swings";
 import { renameLoopSeedItemsToKickStart } from "./migrate-kick-start";
 import { renameTargetOutputToSetpoint } from "./migrate-setpoint";
 import { readRecipeSetpointAsItem } from "./migrate-recipe-setpoint";
+import { reasonString } from "./setpoint-refusal";
+import { refusalOfSetpoint } from "./setpoint-check";
 import { readNeverOverrideAsAuto } from "./migrate-never-override";
 import { renameClockedPeriodToWindowCycle } from "./migrate-window-cycle";
 import { migrateBlockedSlotFilter } from "./migrate-blocked-slots";
@@ -142,7 +144,7 @@ export const TARGET_COUNTS = ["made", "destroyed"] as const;
 export type TargetCounts = typeof TARGET_COUNTS[number];
 
 export const TargetProductionRateConfigSchema = z.object({
-    item: z.string().describe("The name of the item that the setpoint counts. The name of a recipe is read as its main product, where a machine of the build makes it."),
+    item: z.string().describe("The name of the item that the setpoint counts. The name of a recipe is read as the output the setpoint counts of it, where a machine of the build makes it."),
     items_per_second: z.number().positive().describe("The rate of the setpoint for all copies together, in items per second."),
     copies: z.number().positive().refine(isShortDecimalCopies, {
         message: COPIES_DECIMAL_ERROR,
@@ -954,6 +956,14 @@ export const ConfigSchema = z.preprocess(renameTargetOutputToSetpoint, z.preproc
     output_belt: OutputBeltSchema.optional().describe("The output belt: the side belt that each copy's output inserter drops on, and the stretches "
         + "of belt from the copies to the infinite end, in tiles. The run of the copies moves the output on it, and an output blockage shuts its infinite end."),
 }).superRefine((config, context) => {
+    // a setpoint counts one output of one recipe, and the engine counts the one it counts today: a pick of another output,
+    // or of a recipe that has no item result, is refused with the code and its data (the page words it)
+    if (FactorioDataService.isAvailable() && (config.setpoint.counts ?? "made") === "made") {
+        const reason = refusalOfSetpoint(config.setpoint.item, config.machines.map(machine => machine.recipe));
+        if (reason !== null) {
+            context.addIssue({ code: "custom", path: ["setpoint", "item"], params: { reason }, message: reasonString(reason) });
+        }
+    }
     if (config.output_belt !== undefined) {
         // the output inserters of a copy: those that drop the target item onto a belt that carries it
         const outputs = config.inserters.filter(inserter => inserter.sink.type === TargetType.BELT && config.belts.some(belt =>

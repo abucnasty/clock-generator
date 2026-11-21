@@ -1,4 +1,8 @@
 import { Box, MenuItem, Paper, TextField, Typography } from '@mui/material';
+import { useState } from 'react';
+import { refusalOfPickIn, type SetpointOutput, type SetpointReason } from 'clock-generator/light';
+import { useGameNames } from '../hooks/useGameNames';
+import { setpointRefusalWords } from '../utils/setpointRefusalText';
 import { COPY_OFFSET_MIN_TILES, copyOffsetOf, copyOffsetShown, SIDES, type CopyOffset, type Side } from '../utils/copyOffset';
 import { HelpButton } from './HelpButton';
 import { copiesProblem } from '../utils/copiesProblem';
@@ -23,6 +27,11 @@ interface SetpointFormProps {
     recipeNames: string[];
     /** The items the build's machines take in, which a target that counts an item destroyed is chosen from */
     destroyedItemNames?: string[];
+    /** What a setpoint counts for a recipe and what it offers to choose from (the engine's rule); null for a name that is no recipe the lookups know */
+    recipeOutputOf?: (recipe: string) => SetpointOutput | null;
+    /** The recipes of the build's machines, in order: a saved setpoint opens with the recipe of the first that makes its item */
+    machineRecipes?: readonly string[];
+    /** Called with the item the setpoint counts: the output of the chosen recipe, or the output chosen of its several */
     onRecipeChange: (recipe: string) => void;
     onItemsPerSecondChange: (value: number) => void;
     onCountsChange: (counts: TargetCounts) => void;
@@ -44,6 +53,8 @@ export function SetpointForm({
     machinesMax,
     recipeNames,
     destroyedItemNames = [],
+    recipeOutputOf = () => null,
+    machineRecipes = [],
     onRecipeChange,
     onItemsPerSecondChange,
     onCountsChange,
@@ -54,6 +65,36 @@ export function SetpointForm({
     copyOffsetNote,
 }: SetpointFormProps) {
     const shown = copyOffsetShown(copyOffset);
+    const { itemLabel } = useGameNames();
+    // What the user picked, kept while the item it was picked at is still the setpoint's: a recipe that saved no item (refused)
+    // and an output that was refused leave the item as it was
+    const [pick, setPick] = useState<{ recipe: string; choice: string | null; item: string; reason: SetpointReason | null } | null>(null);
+    const made = counts === 'made';
+    const live = made && pick !== null && pick.item === recipe ? pick : null;
+    const ofMachines = made && live === null ? machineRecipes.find(name => { const output = recipeOutputOf(name); return output?.kind === 'output' && output.item === recipe; }) : undefined;
+    const shownRecipe = live?.recipe ?? ofMachines ?? recipe;
+    const output = live !== null || ofMachines !== undefined ? recipeOutputOf(shownRecipe) : null;
+    const choices = output?.kind === 'output' && output.choices.length > 1 ? output.choices : null;
+    const chooseRecipe = (name: string | null) => {
+        const picked = name ?? '';
+        const found = picked === '' || !made ? null : recipeOutputOf(picked);
+        if (found === null) { setPick(null); onRecipeChange(picked); return; }
+        if (found.kind === 'none') { setPick({ recipe: picked, choice: null, item: recipe, reason: { code: 'no-countable-output', recipe: picked } }); return; }
+        setPick({ recipe: picked, choice: found.item, item: found.item, reason: null });
+        onRecipeChange(found.item);
+    };
+    const chooseOutput = (item: string) => {
+        const reason = refusalOfPickIn(item, [shownRecipe], recipeOutputOf);
+        setPick({ recipe: shownRecipe, choice: item, item: reason === null ? item : recipe, reason });
+        if (reason === null) onRecipeChange(item);
+    };
+    // a setpoint that holds a refused item (a saved build, a file, a paste) shows the words as a pick would
+    const held: SetpointReason | null = made && live === null && ofMachines === undefined
+        ? refusalOfPickIn(recipe, machineRecipes, recipeOutputOf)
+            ?? (recipeOutputOf(recipe)?.kind === 'none' ? { code: 'no-countable-output', recipe } : null)
+        : null;
+    const recipeReason = held ?? (live?.reason?.code === 'no-countable-output' ? live.reason : null);
+    const outputReason = live?.reason?.code === 'not-counted-yet' ? live.reason : null;
     return (
         // the heading is focused by script when the intro card or a dialog that held the focus goes
         <Paper component="section" variant="outlined" data-build-anchor="target" aria-labelledby={SETPOINT_HEADING_ID}
@@ -71,8 +112,9 @@ export function SetpointForm({
                     dropdownMinWidth={300}
                     size="small"
                     options={counts === 'destroyed' ? destroyedItemNames : recipeNames}
-                    value={recipe || null}
-                    onChange={(newValue) => onRecipeChange(newValue || '')}
+                    value={shownRecipe || null}
+                    onChange={chooseRecipe}
+                    errorText={recipeReason ? setpointRefusalWords(recipeReason) : undefined}
                     label="Recipe"
                     placeholder="Search recipes..."
                     required
@@ -118,6 +160,13 @@ export function SetpointForm({
                     problem={copiesProblem(copies)}
                     preserveInputOnBlur={Boolean(copiesProblem(copies))}
                 />
+                {choices && (
+                    <TextField select size="small" label="Output" value={live?.choice ?? recipe} onChange={event => chooseOutput(event.target.value)}
+                        error={outputReason !== null} helperText={outputReason ? setpointRefusalWords(outputReason) : undefined}
+                        sx={{ minWidth: 0, gridColumn: '1 / -1' }}>
+                        {choices.map(item => <MenuItem key={item} value={item}>{itemLabel(item)}</MenuItem>)}
+                    </TextField>
+                )}
             </Box>
             {showCopyOffset && onCopyOffsetChange && (
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 1, rowGap: 0.5, mt: 1 }}>

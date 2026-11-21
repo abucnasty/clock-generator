@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { COPIES_DECIMAL_ERROR } from 'clock-generator/light';
 import { copiesProblem } from '../utils/copiesProblem';
 import { readConfigFile, readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
-import { ConfigSchema } from 'clock-generator/browser';
+import { ConfigSchema, FactorioDataService } from 'clock-generator/browser';
 import { inserter } from '../test/fixtures';
 import { configToFormData, formDataToConfig } from '../utils/configForm/configMapping';
 import * as edits from '../utils/configForm/edits';
@@ -148,5 +149,28 @@ describe('fractional Copies and metadata draft round trips', () => {
     ])('does not allow %s', (_, path, message) => {
         const schema = ConfigSchema.superRefine((_value, ctx) => ctx.addIssue({ code: z.ZodIssueCode.custom, path, message }));
         expect(parseFormConfig(schema, formDataToConfig(createDefaultConfig())).success).toBe(false);
+    });
+});
+
+describe('parseFormConfig, for a setpoint the engine does not count yet', () => {
+    // the refusal reads the game data, which the worker loads
+    beforeAll(() => { FactorioDataService.initialize(JSON.parse(factorioData)); });
+    const jellyForm = (item: string) => ({ ...formDataToConfig(createDefaultConfig()), setpoint: { item, items_per_second: 1, copies: 1 },
+        machines: [{ id: 1, recipe: 'jellynut-processing', productivity: 0, crafting_speed: 1 }] });
+
+    it('accepts the refusal of the setpoint\'s item, which the form shows and Check refuses, and keeps what it holds', () => {
+        for (const item of ['jellynut-seed', 'sulfuric-acid']) {
+            const form = jellyForm(item);
+            const strict = ConfigSchema.safeParse(form);
+            expect(strict.success).toBe(false);
+            const parsed = parseFormConfig(ConfigSchema, form);
+            expect(parsed.success).toBe(true);
+            expect(parsed.data).toBe(form);
+        }
+    });
+
+    it('still refuses a structure that is broken next to it', () => {
+        const form = { ...jellyForm('jellynut-seed'), machines: 'none' };
+        expect(parseFormConfig(ConfigSchema, form).success).toBe(false);
     });
 });

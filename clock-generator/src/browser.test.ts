@@ -84,6 +84,7 @@ describe("the light entry", () => {
             "config/migrate-never-override.ts",
             "config/migrate-setpoint.ts",
             "config/migrate-window-cycle.ts",
+            "config/setpoint-refusal.ts",
             "crafting/candidates/coordinated-sources-parts.ts",
             "crafting/entity-name.ts",
             "crafting/machine-name.ts",

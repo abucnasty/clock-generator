@@ -546,6 +546,9 @@ function App() {
     // what a target that counts an item destroyed is chosen from: the items the build's machines take in
     const destroyedItemNames = useMemo(() => Array.from(new Set(config.machines.flatMap(machine =>
         machine.recipe ? getRecipeInfo(machine.recipe)?.ingredients ?? [] : []))).sort(), [config.machines, getRecipeInfo]);
+    // what a setpoint counts for each recipe (the engine's rule, from the lookups), and the recipes the build's machines make
+    const recipeOutputOf = useCallback((recipe: string) => getRecipeInfo(recipe)?.output ?? null, [getRecipeInfo]);
+    const machineRecipes = useMemo(() => config.machines.map(machine => machine.recipe).filter(Boolean), [config.machines]);
     // what keeps the build from being clocked, and so where Generate goes instead
     const validationIssues = useMemo(() => buildValidationIssues({
         fieldProblems: problemsOf({
@@ -1247,6 +1250,8 @@ function App() {
                                 machinesMax={machinesMax}
                                 recipeNames={recipeNames}
                                 destroyedItemNames={destroyedItemNames}
+                                recipeOutputOf={recipeOutputOf}
+                                machineRecipes={machineRecipes}
                                 onRecipeChange={(recipe) => updateSetpoint('item', recipe)}
                                 onItemsPerSecondChange={(value) => updateSetpoint('items_per_second', value)}
                                 onCountsChange={(counts) => updateSetpoint('counts', counts === 'made' ? undefined : counts)}
