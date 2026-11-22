@@ -1,3 +1,4 @@
+import { rateDecimal } from "../config/setpoint-rate";
 import { describe, it, expect, beforeAll } from "vitest";
 import { generateClockForConfig, generateClockAlternatives, type BlueprintGenerationResult, type ClockAlternative } from "./generate-blueprint";
 import { loadConfigFromFile, parseConfig } from "../config/loader";
@@ -142,7 +143,7 @@ describe("generateClockForConfig", () => {
         // machine, not lanes that copies share. They need a stable planned clock to shift and to cut.
         const sample = await loadConfigFromFile(ConfigPaths.FLYING_ROBOT_FRAME_80);
         const config = structuredClone(sample);
-        config.setpoint.items_per_second = sample.setpoint.items_per_second / sample.setpoint.copies;
+        config.setpoint.items_per_second = rateDecimal(sample.setpoint.items_per_second) / sample.setpoint.copies;
         config.setpoint.copies = 1;
         delete config.setpoint.copy_offset;
         // the sample's output belt is stated for its 12 copies

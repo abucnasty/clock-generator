@@ -1,3 +1,4 @@
+import { subtickClockForWindowCycle, windowCycleTicks, type WindowCycle } from "../common/subtick-window-cycle";
 import { EnableControlRange } from "../config/schema";
 import { OpenRange } from "../data-types";
 import { Entity, handSizeFor, ReadableEntityRegistry } from "../entities";
@@ -6,7 +7,6 @@ import { backpressureHandGrabTicks } from "../state/backpressure-pickup-lane";
 import { CIRCUIT_LATENCY_TICKS } from "../common/rule-constants";
 import { stacksOf } from "../entities/traits/timing";
 import { isDeadEnd } from "../entities/traits/lane-facts";
-import { subtickClockForWindowCycle } from "../common/subtick-window-cycle";
 
 
 
@@ -200,17 +200,19 @@ export function backpressureHandTicks(entity_registry: ReadableEntityRegistry): 
  * The step between two positions of a window cycle's clock: a tick, or 1/q tick on a p/q-tick window cycle with a subtick
  * clock. Null for a fractional window cycle with no subtick clock, whose windows are left as they are.
  */
-export function positionStep(window_cycle_ticks: number): number | null {
-    if (Number.isInteger(window_cycle_ticks)) {
+export function positionStep(window_cycle: WindowCycle): number | null {
+    const window_cycle_ticks = windowCycleTicks(window_cycle);
+    if (typeof window_cycle === "number" ? Number.isInteger(window_cycle) : window_cycle.denominator === 1) {
         return 1;
     }
-    const subtick = subtickClockForWindowCycle(window_cycle_ticks);
+    const subtick = subtickClockForWindowCycle(window_cycle_ticks, typeof window_cycle === "number" ? undefined : window_cycle);
     return subtick === null ? null : 1 / subtick.scale;
 }
 
 /** The last position a window can end on without running past the end of the window cycle */
-export function lastPosition(window_cycle_ticks: number): number {
-    const step = positionStep(window_cycle_ticks);
+export function lastPosition(window_cycle: WindowCycle): number {
+    const window_cycle_ticks = windowCycleTicks(window_cycle);
+    const step = positionStep(window_cycle);
     return step === null ? window_cycle_ticks : window_cycle_ticks - step;
 }
 
@@ -221,8 +223,8 @@ export function lastPosition(window_cycle_ticks: number): number {
  * but the one that starts on a whole tick. This is the most it covers: e - s + 1 for a window read off whole ticks, and
  * the ticks of a window made in positions (`windowOfTicks`), so reading a window again gives the same.
  */
-export function windowTicks(range: OpenRange, window_cycle_ticks: number): number {
-    const step = positionStep(window_cycle_ticks);
+export function windowTicks(range: OpenRange, window_cycle: WindowCycle): number {
+    const step = positionStep(window_cycle);
     if (step === null || step === 1) {
         return range.end_inclusive - range.start_inclusive + 1;
     }
@@ -234,8 +236,8 @@ export function windowTicks(range: OpenRange, window_cycle_ticks: number): numbe
  * A window of `ticks` ticks from `start`, open for that many ticks in every window cycle: on a p/q-tick window cycle its
  * q * ticks positions, the last 1/q tick before start + ticks. Not carried over the end of the window cycle.
  */
-export function windowOfTicks(start: number, ticks: number, window_cycle_ticks: number): OpenRange {
-    const step = positionStep(window_cycle_ticks) ?? 1;
+export function windowOfTicks(start: number, ticks: number, window_cycle: WindowCycle): OpenRange {
+    const step = positionStep(window_cycle) ?? 1;
     return OpenRange.from(start, start + ticks - step);
 }
 
@@ -243,12 +245,13 @@ export function windowOfTicks(start: number, ticks: number, window_cycle_ticks: 
  * A p/q-tick window cycle's windows as whole windows: the start of each and the ticks it covers (`windowTicks`), where a
  * window carried over the end of the window cycle (one to its last position and one from 0) is one window
  */
-function windowsOf(ranges: readonly OpenRange[], window_cycle_ticks: number, step: number): { start: number; ticks: number; wraps: boolean }[] {
+function windowsOf(ranges: readonly OpenRange[], window_cycle: WindowCycle, step: number): { start: number; ticks: number; wraps: boolean }[] {
+    const window_cycle_ticks = windowCycleTicks(window_cycle);
     const sorted = [...ranges].sort((a, b) => a.start_inclusive - b.start_inclusive);
     const last = sorted[sorted.length - 1];
     const wraps = sorted.length > 1 && sorted[0].start_inclusive === 0 && last.end_inclusive >= window_cycle_ticks - step - 1e-9;
     const windows = (wraps ? sorted.slice(1, -1) : sorted)
-        .map(range => ({ start: range.start_inclusive, ticks: windowTicks(range, window_cycle_ticks), wraps: false }));
+        .map(range => ({ start: range.start_inclusive, ticks: windowTicks(range, window_cycle), wraps: false }));
     if (wraps) {
         // the positions from the last window's start to the end of the window cycle, then from 0 to the first's end
         const positions = Math.round((window_cycle_ticks - last.start_inclusive) / step) + Math.round(sorted[0].end_inclusive / step) + 1;
@@ -265,15 +268,16 @@ function windowsOf(ranges: readonly OpenRange[], window_cycle_ticks: number, ste
  */
 function withWindowTicks(
     ranges: readonly OpenRange[],
-    window_cycle_ticks: number,
+    window_cycle: WindowCycle,
     step: number,
     ticksOf: (ticks: number) => number,
     carry_over: boolean,
 ): OpenRange[] {
+    const window_cycle_ticks = windowCycleTicks(window_cycle);
     const most = Math.floor(window_cycle_ticks + 1e-9);
-    const made = windowsOf(ranges, window_cycle_ticks, step).flatMap(window => {
+    const made = windowsOf(ranges, window_cycle, step).flatMap(window => {
         const ticks = Math.min(ticksOf(window.ticks), most);
-        const range = windowOfTicks(0, ticks, window_cycle_ticks);
+        const range = windowOfTicks(0, ticks, window_cycle);
         if (carry_over || window.wraps) {
             return rotateRanges([range], window.start, window_cycle_ticks);
         }
@@ -287,9 +291,9 @@ function withWindowTicks(
  * cycle, a window up to the end of the window cycle stopping at its last position (a padding). The windows as they are
  * on any other window cycle.
  */
-export function withWindowTicksUpToTheEnd(ranges: OpenRange[], window_cycle_ticks: number, ticksOf: (ticks: number) => number): OpenRange[] {
-    const step = positionStep(window_cycle_ticks);
-    return step === null || step === 1 || ranges.length === 0 ? ranges : withWindowTicks(ranges, window_cycle_ticks, step, ticksOf, false);
+export function withWindowTicksUpToTheEnd(ranges: OpenRange[], window_cycle: WindowCycle, ticksOf: (ticks: number) => number): OpenRange[] {
+    const step = positionStep(window_cycle);
+    return step === null || step === 1 || ranges.length === 0 ? ranges : withWindowTicks(ranges, window_cycle, step, ticksOf, false);
 }
 
 /**
@@ -297,13 +301,13 @@ export function withWindowTicksUpToTheEnd(ranges: OpenRange[], window_cycle_tick
  * on a p/q-tick window cycle a window read off whole ticks covers that many in every window cycle. The windows as they
  * are on a whole-tick window cycle, and on a fractional one with no subtick clock.
  */
-export function withWindowsKeepingLength(windows: Map<string, OpenRange[]>, window_cycle_ticks: number): Map<string, OpenRange[]> {
-    const step = positionStep(window_cycle_ticks);
+export function withWindowsKeepingLength(windows: Map<string, OpenRange[]>, window_cycle: WindowCycle): Map<string, OpenRange[]> {
+    const step = positionStep(window_cycle);
     if (step === null || step === 1) {
         return windows;
     }
     return new Map(Array.from(windows, ([key, ranges]) => [key, ranges.length === 0 ? ranges
-        : withWindowTicks(ranges, window_cycle_ticks, step, ticks => ticks, false)]));
+        : withWindowTicks(ranges, window_cycle, step, ticks => ticks, false)]));
 }
 
 /**
@@ -314,18 +318,19 @@ export function withWindowsKeepingLength(windows: Map<string, OpenRange[]>, wind
 export function withWindowsAtLeast(
     windows: Map<string, OpenRange[]>,
     least_ticks: ReadonlyMap<string, number>,
-    window_cycle_ticks: number,
+    window_cycle: WindowCycle,
 ): Map<string, OpenRange[]> {
+    const window_cycle_ticks = windowCycleTicks(window_cycle);
     const result = new Map<string, OpenRange[]>();
-    const step = positionStep(window_cycle_ticks);
+    const step = positionStep(window_cycle);
     for (const [key, ranges] of windows) {
         const ticks = least_ticks.get(key) ?? 0;
-        if (ticks === 0 || step === null || ranges.every(r => windowTicks(r, window_cycle_ticks) >= ticks)) {
+        if (ticks === 0 || step === null || ranges.every(r => windowTicks(r, window_cycle) >= ticks)) {
             result.set(key, ranges);
             continue;
         }
         if (step !== 1) {
-            result.set(key, withWindowTicks(ranges, window_cycle_ticks, step, length => Math.max(length, ticks), true));
+            result.set(key, withWindowTicks(ranges, window_cycle, step, length => Math.max(length, ticks), true));
             continue;
         }
         const lengthened = ranges.flatMap(r => {
@@ -345,10 +350,11 @@ export function withWindowsAtLeast(
 export function withWindowsLengthened(
     windows: Map<string, OpenRange[]>,
     ticks_by_key: ReadonlyMap<string, number>,
-    window_cycle_ticks: number,
+    window_cycle: WindowCycle,
 ): Map<string, OpenRange[]> {
+    const window_cycle_ticks = windowCycleTicks(window_cycle);
     const result = new Map<string, OpenRange[]>();
-    const step = positionStep(window_cycle_ticks);
+    const step = positionStep(window_cycle);
     for (const [key, ranges] of windows) {
         const ticks = ticks_by_key.get(key) ?? 0;
         if (ticks === 0 || step === null) {
@@ -356,7 +362,7 @@ export function withWindowsLengthened(
             continue;
         }
         if (step !== 1) {
-            result.set(key, ranges.length === 0 ? ranges : withWindowTicks(ranges, window_cycle_ticks, step, length => length + ticks, true));
+            result.set(key, ranges.length === 0 ? ranges : withWindowTicks(ranges, window_cycle, step, length => length + ticks, true));
             continue;
         }
         const extended = ranges.flatMap(r => {

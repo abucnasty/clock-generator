@@ -1,3 +1,4 @@
+import type { Ratio } from "../../entities/traits/ratio";
 import { Duration, OpenRange } from "../../data-types";
 import { TickProvider } from "../current-tick-provider";
 import { subtickClockForWindowCycle, wholeBounds } from "../../common/subtick-window-cycle";
@@ -48,9 +49,9 @@ export function isWindowCycleClock(it: unknown): it is WindowCycleClock {
  * and whether a p/q-tick window cycle answers in whole 1/q ticks, which repeat every p ticks (floats drift). Null for a
  * control that is not a clock.
  */
-export function clockRepeatFacts(it: unknown): { window_cycle_ticks: number; start_latency_ticks: number; exact_subtick_positions: boolean } | null {
+export function clockRepeatFacts(it: unknown): { window_cycle_ticks: number; start_latency_ticks: number; exact_subtick_positions: boolean; exact_ticks?: Ratio } | null {
     return it instanceof ClockedEnableControl
-        ? { window_cycle_ticks: it.windowCycleDuration.ticks, start_latency_ticks: it.start_latency_ticks, exact_subtick_positions: it.exact_subtick_positions }
+        ? { window_cycle_ticks: it.windowCycleDuration.ticks, start_latency_ticks: it.start_latency_ticks, exact_subtick_positions: it.exact_subtick_positions, ...(it.windowCycleDuration.exact_ticks && { exact_ticks: it.windowCycleDuration.exact_ticks }) }
         : null;
 }
 
@@ -167,7 +168,7 @@ class ClockWindows {
     /** A p/q-tick window cycle's windows in whole 1/q ticks, when the clock answers exactly; null to work in floats */
     private readonly subtick: SubtickPositions | null = null;
 
-    constructor(private readonly window_cycle_ticks: number, ranges: ReadonlyArray<OpenRange>, exact_subtick_positions: boolean = false) {
+    constructor(private readonly window_cycle_ticks: number, ranges: ReadonlyArray<OpenRange>, exact_subtick_positions: boolean = false, exact?: Ratio) {
         const sorted = [...ranges].sort((a, b) => a.start_inclusive - b.start_inclusive);
         for (const range of sorted) {
             if (this.ends.length > 0 && range.start_inclusive <= this.ends[this.ends.length - 1]) {
@@ -178,7 +179,7 @@ class ClockWindows {
             }
         }
         this.whole_ticks = Number.isInteger(window_cycle_ticks) && window_cycle_ticks > 0;
-        const subtick = exact_subtick_positions ? subtickClockForWindowCycle(window_cycle_ticks) : null;
+        const subtick = exact_subtick_positions ? subtickClockForWindowCycle(window_cycle_ticks, exact) : null;
         if (subtick !== null) {
             this.subtick = new SubtickPositions(subtick.window_cycle_ticks, subtick.scale, this.starts, this.ends);
         }
@@ -316,7 +317,7 @@ class ClockedEnableControl implements EnableControl, Resettable, WindowCycleCloc
         public readonly runs_through_steps: boolean = false,
         public readonly exact_subtick_positions: boolean = true,
     ) {
-        this.windows = new ClockWindows(windowCycleDuration.ticks, enabledRanges, exact_subtick_positions);
+        this.windows = new ClockWindows(windowCycleDuration.ticks, enabledRanges, exact_subtick_positions, windowCycleDuration.exact_ticks);
     }
 
     public isEnabled(): boolean {

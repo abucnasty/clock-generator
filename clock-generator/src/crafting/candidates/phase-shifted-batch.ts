@@ -1,3 +1,4 @@
+import { windowCycleTicks, type WindowCycle } from "../../common/subtick-window-cycle";
 import { Config } from "../../config";
 import { OpenRange } from "../../data-types";
 import { EntityId, EntityType } from "../../entities";
@@ -42,11 +43,12 @@ export interface ShiftedCycleCandidate {
 export function shiftedCycleCandidates(
     planned_windows: Map<string, OpenRange[]>,
     cycle_ticks: number,
-    window_cycle_ticks: number,
+    window_cycle: WindowCycle,
 ): ShiftedCycleCandidate[] {
+    const window_cycle_ticks = windowCycleTicks(window_cycle);
     const cycles = Math.round(window_cycle_ticks / cycle_ticks);
     // a tick, or the 1/q tick between two positions of a subtick clock
-    const position = positionStep(window_cycle_ticks);
+    const position = positionStep(window_cycle);
     if (position === null || cycles < 2) {
         return [];
     }
@@ -228,11 +230,12 @@ function shiftedCycleWindows(
     /** The entity behind each key of the windows */
     entity_ids: ReadonlyMap<string, EntityId>,
     cycle_ticks: number,
-    window_cycle_ticks: number,
+    window_cycle: WindowCycle,
     logger: Logger,
     report?: (detail: string) => void,
 ): { windows: Map<string, OpenRange[]>; search: SearchReport; verified: Confirmed } | null {
-    const candidates = shiftedCycleCandidates(planned_windows, cycle_ticks, window_cycle_ticks);
+    const window_cycle_ticks = windowCycleTicks(window_cycle);
+    const candidates = shiftedCycleCandidates(planned_windows, cycle_ticks, window_cycle);
     const describe = (candidate: ShiftedCycleCandidate) =>
         `output cycle ${candidate.cycle_index + 1} ${Math.abs(candidate.shift_ticks)} ticks ${candidate.shift_ticks < 0 ? "earlier" : "later"}`;
 
@@ -240,13 +243,13 @@ function shiftedCycleWindows(
         candidates,
         quick: (candidate, index) => {
             report?.(`Shift ${index + 1}/${candidates.length} (${describe(candidate)})`);
-            return quickTrial(config, candidate.windows, window_cycle_ticks, logger);
+            return quickTrial(config, candidate.windows, window_cycle, logger);
         },
         // candidates are listed per cycle in shift order; the shifts around the planned position are not used and end a run
         neighbours: (a, b) => a.selectable && b.selectable && a.cycle_index === b.cycle_index && Math.sign(a.shift_ticks) === Math.sign(b.shift_ticks),
         eligible: candidate => candidate.selectable,
         tieBreak: (a, b) => Math.abs(a.candidate.shift_ticks) - Math.abs(b.candidate.shift_ticks),
-        confirm: ({ candidate, quick }) => confirm(config, candidate.windows, window_cycle_ticks, logger, describe(candidate), report, quick.run),
+        confirm: ({ candidate, quick }) => confirm(config, candidate.windows, window_cycle, logger, describe(candidate), report, quick.run),
     });
     logger.log(`Phase-Shifted Batch: ${tried.filter(it => it.quick.holds).length} of ${candidates.length} shifts pass the quick trial`);
     if (picked === null || pick === null) {
@@ -294,9 +297,10 @@ export function phaseShiftedBatchClock(config: Config, options: GenerateClockOpt
     const plan = unclockedRun(config, options);
     const clock = clockOfPlan(plan, options);
     // on a p/q-tick window cycle the shifts are made of windows as long in every window cycle as in the planning run
+    const window_cycle = plan.run.duration.exact_ticks ?? plan.run.duration.ticks;
     const shifted = shiftedCycleWindows(
         { ...config, overrides: { ...config.overrides, derive_clock_windows: false } },
-        withWindowsKeepingLength(clock.windows, plan.run.duration.ticks), plan.entity_ids, plan.run.output_cycle_plan.total_duration.ticks, plan.run.duration.ticks, plan.logger, options.on_progress_detail,
+        withWindowsKeepingLength(clock.windows, window_cycle), plan.entity_ids, plan.run.output_cycle_plan.total_duration.ticks, window_cycle, plan.logger, options.on_progress_detail,
     );
     const report = shifted === null ? undefined : {
         ...shifted.search,

@@ -6,7 +6,7 @@ import { defaultLogger } from "../common/logger";
 import { roundRobinPollingClock } from "./candidates/round-robin-polling";
 import { timeStudyWindowsClock } from "./candidates/time-study-windows";
 import { exhaustClockOfPlan } from "./candidates/exhaust-clock";
-import { BlueprintGenerationResult, GenerateClockOptions, UnclockedRun, PlannedClock, SwingAttemptResult, SwingBackoffReport, checkedClock, clockOfPlan, clockOfWindows, handRoomInsideWindows, unclockedRun } from "./plan/unclocked-run";
+import { BlueprintGenerationResult, GenerateClockOptions, UnclockedRun, PlannedClock, SwingAttemptResult, SwingBackoffReport, DEFAULT_WARMUP_WINDOW_CYCLES, checkedClock, clockOfPlan, clockOfWindows, handRoomInsideWindows, unclockedRun } from "./plan/unclocked-run";
 import { type GhostWindow, windowsWithoutGhostWakeUps } from "./plan/ghost-windows";
 import { ghostWakeUpsOfStock } from "./wake-ups";
 import { inserterEnds } from "./inserter-counters";
@@ -19,6 +19,10 @@ import { OpenRange } from "../data-types";
 import { primitiveRoundRobinPollingOptionsSupported, verifiedPrimitiveRoundRobinPollingClock } from "./candidates/round-robin-polling-primitive-verified";
 import type { PrimitiveRoundRobinPollingAttemptReport } from "./round-robin-polling-primitive-policy";
 import { FractionalSwingsRefusedError, fractionalSwingsWholeAt } from "./sequence/cycle/swing-distribution";
+import { currentRunMemo } from "./plan/run-memo";
+import { graphOf } from "./feasibility/assert-feasible";
+import { machineLoopsOf } from "./candidates/loop-windows";
+import { fillsAreObserved } from "./runner/steps/backpressure-fill-step";
 
 /** New budget-pruned results retain planner-unit requests separately from legacy final-taker aggregate reporting. */
 export function terminalCountForAlternativePlanning(result: Pick<BlueprintGenerationResult, 'used_terminal_swing_count' | 'swing_backoff_report' | 'primitive_round_robin_polling' | 'secondary_planning'>): number {
@@ -44,6 +48,16 @@ export function generateClockForConfig(
     given: Config,
     options: GenerateClockOptions = {}
 ): BlueprintGenerationResult {
+    return generatePlannedClock(given, options);
+}
+
+/** The fractional alternative in a sequential listing with quiet logs. The reporter reads live options. */
+export function generateClockForQuietFractionalAlternative(given: Config, options: GenerateClockOptions,
+    progressIsUnobserved: () => boolean): BlueprintGenerationResult {
+    return generatePlannedClock(given, options, () => !fillsAreObserved() && progressIsUnobserved());
+}
+
+function generatePlannedClock(given: Config, options: GenerateClockOptions, trialIsUnobserved?: () => boolean): BlueprintGenerationResult {
     // the build that is clocked: outside supply gets no window (outside-supply.ts)
     const config = withoutOutsideSupply(given);
     if (config.overrides?.derive_clock_windows) {
@@ -79,7 +93,7 @@ export function generateClockForConfig(
         // then the planning run's windows with the room for one hand they hold already, where they wake fewer than that
         const inside = withHandRoomInside(made, plan, primary, options);
         // and last its windows shaped against ghost wakeups, where that wakes fewer
-        return withoutGhostWakeUps(made, inside, options);
+        return withoutGhostWakeUps(made, inside, options, trialIsUnobserved);
     }
     const grouped = roundRobinPollingClock(plan, options);
     if (grouped !== null && grouped.stability_check.holds) {
@@ -218,7 +232,8 @@ function checkedAndKept(made: MadeClocks, plan: UnclockedRun, clock: PlannedCloc
  * the primary gets back from. The windows with room for one more hand or for a hand of fuel, the windows of a loop, and
  * the windows of an inserter that would keep none, are left as they are.
  */
-function withoutGhostWakeUps(made: MadeClocks, primary: BlueprintGenerationResult, options: GenerateClockOptions): BlueprintGenerationResult {
+function withoutGhostWakeUps(made: MadeClocks, primary: BlueprintGenerationResult, options: GenerateClockOptions,
+    trialIsUnobserved?: () => boolean): BlueprintGenerationResult {
     const kept = made.get(primary);
     const stock = kept?.run?.stock;
     if (kept === undefined || stock === undefined || !(primary.stability_check.as_built?.holds ?? false)) {
@@ -251,14 +266,16 @@ function withoutGhostWakeUps(made: MadeClocks, primary: BlueprintGenerationResul
     const textOf = (moved: readonly GhostWindow[]) => moved.map(it => `${it.inserter_id} ${it.window.start_inclusive}-${it.window.end_inclusive}`
         + ` -> ${it.shaped === null ? "dropped" : `${it.shaped.start_inclusive}-${it.shaped.end_inclusive}`}`).join(", ");
     // checked on a copy of the plan: the check writes the as-built result into the stability check of the plan it is given
-    const checked = (shaped_windows: Map<string, OpenRange[]>) => checkedClock(
-        { ...plan, run: { ...plan.run, stability_check: { ...plan.run.stability_check, as_built: undefined } } }, clock, shaped_windows, options);
+    const ownPlan = (): UnclockedRun => ({ ...plan, run: { ...plan.run, stability_check: { ...plan.run.stability_check, as_built: undefined } } });
+    const checked = (shaped_windows: Map<string, OpenRange[]>) => checkedClock(ownPlan(), clock, shaped_windows, options);
     const fewer = (it: BlueprintGenerationResult, than: BlueprintGenerationResult) => (it.stability_check.as_built?.holds ?? false)
         && wake_ups(it) !== undefined && wake_ups(than) !== undefined && wake_ups(it)! < wake_ups(than)!;
     // every window shaped at once; where that does not hold or wake fewer, the windows of one inserter at a time, kept
     // where they wake fewer than what is kept so far
     let best = primary, best_windows = windows;
     const moved: GhostWindow[] = [];
+    // A callback in the original check can change the inputs or register for progress before a retry begins.
+    let unobserved_since_original = trialIsUnobserved?.() === true;
     const all = checked(shaped.windows);
     const inserters = Array.from(new Set(shaped.shaped.map(it => it.inserter_id)));
     if (fewer(all, primary)) {
@@ -270,9 +287,17 @@ function withoutGhostWakeUps(made: MadeClocks, primary: BlueprintGenerationResul
         if (inserters.length > 1) for (const id of inserters) {
             const own = new Map(best_windows);
             own.set(id, shaped.windows.get(id)!);
-            const one = checked(own);
+            const kept_wakeups = wake_ups(best);
+            unobserved_since_original &&= trialIsUnobserved?.() === true;
+            const previous_wakeups = unobserved_since_original && kept_wakeups !== undefined && Number.isFinite(kept_wakeups)
+                ? repeatedGhostTrialWakeups(plan, options, all, shaped.windows, own) : undefined;
+            const one = previous_wakeups === undefined || kept_wakeups === undefined ? checked(own)
+                : checkedClock(ownPlan(), clock, own, options, undefined, wakeups => {
+                    unobserved_since_original &&= trialIsUnobserved?.() === true;
+                    return unobserved_since_original && wakeups === previous_wakeups && wakeups >= kept_wakeups;
+                });
             const shaped_of = shaped.shaped.filter(it => it.inserter_id === id);
-            if (fewer(one, best)) {
+            if (one !== null && fewer(one, best)) {
                 best = one;
                 best_windows = own;
                 moved.push(...shaped_of);
@@ -294,6 +319,32 @@ function withoutGhostWakeUps(made: MadeClocks, primary: BlueprintGenerationResul
     return { ...best, ...(primary.window_maker !== undefined && { window_maker: primary.window_maker }),
         ghost_wakeup_windows: moved.map(it => ({ inserter_id: it.inserter_id, window: range(it.window), shaped: it.shaped === null ? null : range(it.shaped),
             ghost_wake_ups: it.ghost_wake_ups })) };
+}
+
+/** A shifted run already finished for this exact attempt in the all-windows check. */
+function repeatedGhostTrialWakeups(plan: UnclockedRun, options: GenerateClockOptions, all: BlueprintGenerationResult,
+    original: ReadonlyMap<string, OpenRange[]>, retry: ReadonlyMap<string, OpenRange[]>): number | undefined {
+    const check = all.stability_check.as_built;
+    const ticks = plan.run.duration.ticks;
+    const first_span_ticks = (DEFAULT_WARMUP_WINDOW_CYCLES + 1) * ticks;
+    if (check?.failed_start_offset === undefined || check.failed_start_offset <= 0 || check.taker_orders_checked !== undefined
+        || !Number.isInteger(ticks) || first_span_ticks >= (currentRunMemo()?.min_ticks ?? Infinity)
+        || options.debug !== undefined || options.debug_steps !== undefined
+        || (typeof process !== "undefined" && process.env?.CLOCK_PROOF_PHASES === "1")
+        || all.chest_drills !== undefined || Object.keys(all.unplanned_inserter_clocks ?? {}).length > 0) return undefined;
+    // Integer windows within the cycle rotate without a range clamp. Keep map and range order for the installed deciders.
+    const earlier = Array.from(original);
+    if (retry.size !== earlier.length || !Array.from(retry).every(([id, windows], index) => {
+        const [old_id, old_windows] = earlier[index];
+        return id === old_id && windows.length === old_windows.length && windows.every((range, at) => {
+            const { start_inclusive: start, end_inclusive: end } = range;
+            return Number.isInteger(start) && Number.isInteger(end) && start >= 0 && end >= start && end < ticks
+                && Object.is(start, old_windows[at].start_inclusive) && Object.is(end, old_windows[at].end_inclusive);
+        });
+    })) return undefined;
+    // An unavailable graph does not rule out a loop check or its side effects.
+    if (options.loop_windows !== false && (graphOf(plan.config) === null || machineLoopsOf(plan.config).length > 0)) return undefined;
+    return check.wake_ups?.wake_ups_per_minute;
 }
 
 /**
@@ -355,7 +406,7 @@ export function generateClockWithSwingBackoff(
     const window_cycle_rejections: SwingWindowCycleRejection[] = [];
     let requested_initial_count: number | undefined;
     let first_window_cycle_refusal: ClockWindowCycleLimitError | undefined;
-    let window_cycle_frontier: Generator<SwingWindowCycleRejection> | undefined;
+    let window_cycle_frontier: ReturnType<typeof wholeSwingWindowCyclesBelow> | undefined;
     let generated_count: number | undefined;
     let primitive_attempt: PrimitiveRoundRobinPollingAttemptReport | undefined;
     const can_lower_refused_fractions = !swing_count_forced && options.fractional_swings === true;
@@ -367,9 +418,9 @@ export function generateClockWithSwingBackoff(
             const ceiling = candidate.overrides?.terminal_swing_count ?? Infinity;
             let eligible: number | undefined;
             for (let next = window_cycle_frontier.next(); !next.done; next = window_cycle_frontier.next()) {
-                const window_cycle = next.value;
+                const { at_limit, ...window_cycle } = next.value;
                 if (window_cycle.terminal_swing_count > ceiling) continue;
-                if (window_cycle.window_cycle_ticks >= window_cycle.limit_ticks) window_cycle_rejections.push(window_cycle);
+                if (at_limit ?? (window_cycle.window_cycle_ticks >= window_cycle.limit_ticks)) window_cycle_rejections.push(window_cycle);
                 else { eligible = window_cycle.terminal_swing_count; break; }
             }
             if (eligible === undefined) return null;

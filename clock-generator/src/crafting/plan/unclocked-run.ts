@@ -1,3 +1,5 @@
+import { compareRateToCapacity, composedPeriod, periodAtLimit, rateText } from "../../config/setpoint-rate";
+import { fractionOf, ratioOf, type Ratio } from "../../entities/traits/ratio";
 import { BuildCopies, twinOf } from "../sequence/build-copies";
 import { ClockWindowCycleLimitError, SIMULATION_BUDGET_TICKS, type SwingWindowCyclePruning } from "./clock-window-cycle-limit";
 import { assertOutputTransferGenerationSupported } from "../../config/output-transfer-generation";
@@ -453,14 +455,14 @@ export interface GenerationProgress {
 }
 
 /** Whether a run plans with fractional swings (RunOptions.fractional_swings), as the trials of a clock pass it on */
-export type FractionalSwings = Pick<RunOptions, "fractional_swings">;
+export type FractionalSwings = Pick<RunOptions, "fractional_swings" | "exact_window_cycle">;
 
 /**
  * How a run of a clock planned on this cycle is planned: with fractional swings where the cycle was (the "Fractional
  * swings" alternative), else as every other run
  */
-export function fractionalSwingsOf(output_cycle_plan: OutputCyclePlan): FractionalSwings {
-    return plannedWithFractionalSwings(output_cycle_plan) ? { fractional_swings: true } : {};
+export function fractionalSwingsOf(output_cycle_plan: OutputCyclePlan, period?: Ratio): FractionalSwings {
+    return { ...(plannedWithFractionalSwings(output_cycle_plan) && { fractional_swings: true }), ...(period && { exact_window_cycle: period }) };
 }
 
 // The output swings a cycle the machines of a plan's run make, as fractional swings plan them; no serialized field
@@ -480,6 +482,8 @@ export function fractionalStartOf(output_cycle_plan: OutputCyclePlan): Fraction 
  * the trial of a clock (`runBuild`).
  */
 export interface RunOptions {
+    /** The verified period of the clock under trial, when it comes from a rate pair. */
+    exact_window_cycle?: Ratio;
     /**
      * Plan the build's crafting cycle with fractional swings (GenerateClockOptions.fractional_swings): asked for by the
      * planning runs of that alternative, and by every run of a clock planned so (`fractionalSwingsOf`)
@@ -730,7 +734,7 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
     // a run from a start of its own (what a recording held, the output kept) has its output belt from that start
     if (!options.cold_start) withTheOutputBelt(simulation_context, config, options);
     const controlled = withEnableControls(config, build, output_cycle_plan, transfer_plan.recipe_lcm, logger,
-        options.counter_runs_through === true);
+        options.counter_runs_through === true, options.exact_window_cycle);
     const { duration, warmup_window_cycle } = runWindowCyclesOf(output_cycle_plan, transfer_plan.recipe_lcm, options, logger, window_cycle_ticks => {
         // A shared final chest's reported count aggregates several machines. Planner overrides are per machine.
         const terminal_swing_count = config.setpoint.counts === "destroyed"
@@ -751,7 +755,7 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
     const shared_lanes = options.shared_lanes?.lanes.map(it => it.lane) ?? [];
     const warmup = warmUp(config, build, controlled, duration, warmup_window_cycle, shared_lanes, debug, debug_steps, logger, shadow);
     const repeat_window_cycles = warmup.repeat_window_cycles;
-    const repeat_bin = options.detect_repeat === true && (options.simulate_window_cycles ?? 1) > 1 ? provenRepeatBin(config, duration.ticks) : null;
+    const repeat_bin = options.detect_repeat === true && (options.simulate_window_cycles ?? 1) > 1 ? provenRepeatBin(config, duration.ticks, duration.exact_ticks) : null;
     const simulated = simulate(build, controlled, all_output_inserters, duration, options, debug, debug_steps, logger, repeat_bin, shadow);
     shadow?.finish();
     // the recorded run is over: what it recorded is sealed once, and the run, the memo and every result share that copy
@@ -1096,6 +1100,7 @@ function withEnableControls(
     logger: Logger,
     /** Whether a clock of the game of a p/q-tick window cycle runs through too, where they run through (`RunOptions.counter_runs_through`) */
     counter_runs_through: boolean = false,
+    trial_window_cycle?: Ratio,
 ): ControlledBuild {
     const { simulation_context, relative_tick_provider } = build;
     // the clocks of the game (an inserter's own clock, a configured clocked control) run on through the start of a later
@@ -1121,6 +1126,7 @@ function withEnableControls(
         game_tick_provider,
         exact_subtick_positions,
         counter_runs_through,
+        trial_window_cycle,
     );
 
     // Fuel is not part of the plan, so the fuel inserters swing on clocks of their own that repeat within the window cycle
@@ -1199,14 +1205,22 @@ function shadowOfOutputs(build: RecordedBuild, all_output_inserters: InserterSta
     return beginShadow(duration.ticks, Math.floor(warmup_window_cycle.ticks / duration.ticks), output_states.length, () => output_states.map(state => state.items_dropped));
 }
 
+export const DEFAULT_WARMUP_WINDOW_CYCLES = 10;
+
 /** The window cycle of the plan and the warmup, shortened where a long window cycle would take it past SIMULATION_BUDGET_TICKS */
 function runWindowCyclesOf(output_cycle_plan: OutputCyclePlan, recipe_lcm: number, options: RunOptions, logger: Logger,
     overLimit: (window_cycle_ticks: number) => ClockWindowCycleLimitError): RunWindowCycles {
-    const duration: Duration = Duration.ofTicks(options.window_cycle_ticks ?? options.timeline_recording?.window_cycle_ticks ?? OutputCyclePlan.ticksOfCycles(output_cycle_plan, recipe_lcm));
-    if (Number.isFinite(duration.ticks) && duration.ticks > 0 && duration.ticks >= SIMULATION_BUDGET_TICKS) throw overLimit(duration.ticks);
-    assert(Number.isFinite(duration.ticks) && duration.ticks > 0 && duration.ticks < SIMULATION_BUDGET_TICKS, `Window cycle time of ${duration.ticks} ticks exceeds maximum allowed ${SIMULATION_BUDGET_TICKS} ticks`);
+    const override = options.window_cycle_ticks ?? options.timeline_recording?.window_cycle_ticks;
+    const exact = output_cycle_plan.production_rate.exact_setpoint;
+    const period = options.exact_window_cycle ? fractionOf(options.exact_window_cycle)
+        : exact && override === undefined ? composedPeriod(output_cycle_plan.total_duration_ticks, recipe_lcm, exact) : undefined;
+    const duration = Duration.ofTicks(override ?? period?.toDecimal() ?? OutputCyclePlan.ticksOfCycles(output_cycle_plan, recipe_lcm));
+    if (period) duration.exact_ticks = ratioOf(period);
+    const over_limit = period ? periodAtLimit(period, SIMULATION_BUDGET_TICKS, true) : duration.ticks >= SIMULATION_BUDGET_TICKS;
+    if (Number.isFinite(duration.ticks) && duration.ticks > 0 && over_limit) throw overLimit(duration.ticks);
+    assert(Number.isFinite(duration.ticks) && duration.ticks > 0 && !over_limit, `Window cycle time of ${duration.ticks} ticks exceeds maximum allowed ${SIMULATION_BUDGET_TICKS} ticks`);
     // a recording of a settled window cycle runs the build that long from its cold start, as the long run of the clock does
-    const requested_warmup_window_cycles = Math.max(options.warmup_window_cycles ?? 10, options.timeline_recording?.settle_window_cycles ?? 0);
+    const requested_warmup_window_cycles = Math.max(options.warmup_window_cycles ?? DEFAULT_WARMUP_WINDOW_CYCLES, options.timeline_recording?.settle_window_cycles ?? 0);
     // long window cycles (large ingredient LCMs) get fewer warmup window cycles to stay under the tick budget
     const warmup_window_cycles = Math.min(requested_warmup_window_cycles, Math.floor((SIMULATION_BUDGET_TICKS - 1) / duration.ticks));
     const exact_ticks = options.timeline_recording?.settle_ticks;
@@ -1250,7 +1264,7 @@ function warmUp(
     // the clocks start here, on a cold build at its tick 0
     resettable_registry.resetAll(true);
     return withDebugFor(debug, debug_steps, RunnerStepType.WARM_UP, () => {
-        const repeat = warmUpRepeatOf(duration.ticks, controlled.installed_controls, warmup_window_cycle.ticks);
+        const repeat = warmUpRepeatOf(duration.ticks, controlled.installed_controls, warmup_window_cycle.ticks, duration.exact_ticks);
         const controls_key = repeat.armed ? controlsKeyOf(controlled.installed_controls) : undefined;
         const warmup_step = new WarmupStep(simulation_context, warmup_window_cycle,
             repeat.armed
@@ -1283,11 +1297,11 @@ export function coldControlledTrialBuild(
     config: Config,
     output_cycle_plan: OutputCyclePlan,
     recipe_lcm: number,
-    options: Pick<RunOptions, "competing_takers_order" | "moving_pickup_phases">,
+    options: Pick<RunOptions, "competing_takers_order" | "moving_pickup_phases" | "exact_window_cycle">,
     logger: Logger,
 ): SimulationContext {
     const build = coldBuildOf(config, options, DebugSettingsProvider.mutable(), logger);
-    const controlled = withEnableControls(config, build, output_cycle_plan, recipe_lcm, logger);
+    const controlled = withEnableControls(config, build, output_cycle_plan, recipe_lcm, logger, false, options.exact_window_cycle);
     const context = build.simulation_context;
     detachHistoryObservers(build, context);
     controlled.resettable_registry.resetAll(true);
@@ -1590,13 +1604,13 @@ function disturbanceTrialOf(
     const trial_context = build.simulation_context;
     detachHistoryObservers(build, trial_context);
     const loss_window_cycle = options.disturbance_trial.window_cycle_ticks;
-    const repeat = subtickClockForWindowCycle(loss_window_cycle);
+    const repeat = subtickClockForWindowCycle(loss_window_cycle, options.exact_window_cycle);
     const bin = Number.isInteger(loss_window_cycle) ? { ticks: loss_window_cycle, window_cycles: 1 }
         : repeat === null ? null : { ticks: repeat.window_cycle_ticks, window_cycles: repeat.scale };
     assert(bin !== null, `A clock of ${Number(loss_window_cycle.toFixed(3))} ticks does not repeat in whole ticks, so its output cannot be counted by the window cycle`);
     const own_clock_ticks = Array.from(controlled.inserter_clocks.values()).filter(clock => clock.own_clock).map(clock => clock.modulus);
     // boundaries a whole proven bin apart repeat for good; in bins of the window cycle that is every `stride`-th boundary
-    const proven_bin = provenRepeatBin(config, loss_window_cycle);
+    const proven_bin = provenRepeatBin(config, loss_window_cycle, options.exact_window_cycle);
     const proof_stride = proven_bin !== null && Number.isInteger(proven_bin.ticks / bin.ticks) ? proven_bin.ticks / bin.ticks : null;
     // the belts with a consumption rate have to keep receiving it, as the output keeps coming
     const inserter_states = new Map(trial_context.inserters.map(it => [it.inserter_state.entity_id.id, it.inserter_state] as const));
@@ -1794,6 +1808,7 @@ export function clockOfWindows(
     options: Pick<GenerateClockOptions, "lane_hand_room" | "fuel_hand_room"> = {},
 ): PlannedClock {
     const { config, logger, run: { simulation_context, duration, total_expected_output } } = plan;
+    const window_cycle = duration.exact_ticks ?? duration.ticks;
     const full_lane_hand_room = laneHandRoomTicks(simulation_context.entity_registry);
     // on a window cycle of part ticks the room is added only where the clock does not hold without it, asked for always or not
     const asked = options.lane_hand_room ?? "trial";
@@ -1812,17 +1827,17 @@ export function clockOfWindows(
     // where a lane has backpressure every window of an inserter that takes from it lasts as long as a hand takes from the
     // lanes at rest at the belt's speed, and the room for one more hand is added after that.
     const backpressure_hand_ticks = backpressureHandTicks(simulation_context.entity_registry);
-    const base_windows = withWindowsAtLeast(withWindowsLengthened(unslacked_windows, fuel_hand_room, duration.ticks), backpressure_hand_ticks, duration.ticks);
+    const base_windows = withWindowsAtLeast(withWindowsLengthened(unslacked_windows, fuel_hand_room, window_cycle), backpressure_hand_ticks, window_cycle);
     const trial = mode === "trial"
         ? laneHandRoomTrial(config, base_windows, full_lane_hand_room, duration.ticks, total_expected_output, logger,
-            fractionalSwingsOf(plan.run.output_cycle_plan))
+            fractionalSwingsOf(plan.run.output_cycle_plan, plan.run.duration.exact_ticks))
         : null;
     const use_lane_hand_room = mode === "always" || (trial !== null && trial.helps);
     const added = use_lane_hand_room ? full_lane_hand_room : new Map<string, number>();
     const belt = clockBeltOf(config, simulation_context.entity_registry, unslacked_windows);
     // the trial already checked the windows with the room: its run is handed over, with the exact map it ran on
     const verified = use_lane_hand_room ? trial?.verified ?? null : null;
-    const windows = verified !== null ? verified.windows : withWindowsLengthened(base_windows, added, duration.ticks);
+    const windows = verified !== null ? verified.windows : withWindowsLengthened(base_windows, added, window_cycle);
     // the room the windows have, added after them or inside them already
     const lane_hand_room = inside ?? added;
     // the windows that carry a result that comes by chance get room for its spread (a target that counts an item destroyed)
@@ -1913,7 +1928,7 @@ export function exportClock(
     for (const [key, name] of extras.item_names ?? []) {
         item_names.set(key, name);
     }
-    const subtick_clock = subtickClockForWindowCycle(duration.ticks);
+    const subtick_clock = subtickClockForWindowCycle(duration.ticks, duration.exact_ticks);
 
     // before the blueprint, which exports the fuel clocks this settles on
     const { inserter_clocks, fuel_plan, fuel_consumption_view } = settledFuelClocks(plan, windows, options);
@@ -2035,7 +2050,7 @@ function settledFuelClocks(
     if (!has_fuel_inserter || options.fuel_consumption_view === false) {
         return keptFromThePlan(undefined);
     }
-    const swings = fractionalSwingsOf(plan.run.output_cycle_plan);
+    const swings = fractionalSwingsOf(plan.run.output_cycle_plan, plan.run.duration.exact_ticks);
     const planned_view = fuelConsumptionView(config, windows, inserter_clocks, duration.ticks, logger, false, 0, swings);
     if (planned_view === undefined) {
         return keptFromThePlan(planned_view);
@@ -2107,43 +2122,54 @@ export function clockOnlyRunOf(run: TrialRun): ClockOnlyRun {
  * dispatch (simulation/dispatch.ts) they are tried where it does not hold too, and kept where the clock holds with them:
  * a clock planned for a loop can fail with the loop running free and hold with its windows.
  */
+type ClockCheckExtras = Pick<ClockExportExtras, "search" | "left_open"> & {
+    /** A search's confirmation that passed on exactly `windows`, whose early stages the check here takes over */
+    verified?: { windows: Map<string, OpenRange[]>; run: AsBuiltRun };
+    /** Given the clock-only check the verdict is of, with the windows it ran on (the loop's added where it has them) */
+    on_as_built?: (run: AsBuiltRun, windows: Map<string, OpenRange[]>) => void;
+    /** Stops after a holding long run. `completedClockCheck` finishes it. */
+    through?: "long-run";
+};
+
+export function checkedClock(plan: UnclockedRun, clock: PlannedClock, windows: Map<string, OpenRange[]>,
+    options: GenerateClockOptions, extras: undefined, discard_after_long_run: (wakeups: number) => boolean): BlueprintGenerationResult | null;
+export function checkedClock(plan: UnclockedRun, clock: PlannedClock, windows: Map<string, OpenRange[]>,
+    options?: GenerateClockOptions, extras?: ClockCheckExtras): BlueprintGenerationResult;
 export function checkedClock(
     plan: UnclockedRun,
     clock: PlannedClock,
     windows: Map<string, OpenRange[]>,
     options: GenerateClockOptions = {},
-    extras: Pick<ClockExportExtras, "search" | "left_open"> & {
-        /** A search's confirmation that passed on exactly `windows`, whose early stages the check here takes over */
-        verified?: { windows: Map<string, OpenRange[]>; run: AsBuiltRun };
-        /** Given the clock-only check the verdict is of, with the windows it ran on (the loop's added where it has them) */
-        on_as_built?: (run: AsBuiltRun, windows: Map<string, OpenRange[]>) => void;
-        /**
-         * "long-run": the clock-only check stops after its long run where it holds there (see runAsBuiltCheck), and
-         * `completedClockCheck` finishes it; the check, the verdict and the export are then of the check that far
-         */
-        through?: "long-run";
-    } = {},
-): BlueprintGenerationResult {
+    extras: ClockCheckExtras = {},
+    discard_after_long_run?: (wakeups: number) => boolean,
+): BlueprintGenerationResult | null {
     const { config, logger, run: { stability_check, total_expected_output, duration, output_cycle_plan } } = plan;
-    const swings = fractionalSwingsOf(output_cycle_plan);
+    const window_cycle = duration.exact_ticks ?? duration.ticks;
+    const swings = fractionalSwingsOf(output_cycle_plan, duration.exact_ticks);
     const long_run_ticks = longRunTicksOf(plan);
     let clock_only_run: ClockOnlyRun | undefined;
     let loop_windows: BlueprintGenerationResult["loop_windows"];
     let item_names: ReadonlyMap<string, string> | undefined;
     if (options.verify_as_built ?? false) {
+        const report = (n: number, total: number) => options.on_progress_detail?.(`Checking clock-only output, clock start ${n}/${total}`);
+        // a confirmed search pick ran the same unshifted run, pickup phase starts and long run on these windows
+        const passed = extras.verified !== undefined && extras.verified.windows === windows
+            ? { run: extras.verified.run, long_run_ticks: FREE_RUNNING_CHECK_TICKS } : undefined;
+        const input = [config, windows, window_cycle, logger, AS_BUILT_START_PHASES, report, long_run_ticks,
+            passed, false, "loop-windows", swings] as const;
         // the identical check may have run for the room's trial on exactly these windows (see clockOfPlan)
         const as_built_run = clock.as_built_run !== null && windows === clock.windows ? clock.as_built_run
-            : runAsBuiltCheck(config, windows, duration.ticks, logger, AS_BUILT_START_PHASES,
-                (n, total) => options.on_progress_detail?.(`Checking clock-only output, clock start ${n}/${total}`),
-                long_run_ticks,
-                // a confirmed search pick ran the same unshifted run, pickup phase starts and long run on these windows
-                extras.verified !== undefined && extras.verified.windows === windows
-                    ? { run: extras.verified.run, long_run_ticks: FREE_RUNNING_CHECK_TICKS } : undefined,
-                false, "loop-windows", swings, extras.through ?? "starts");
+            : discard_after_long_run === undefined ? runAsBuiltCheck(...input, extras.through ?? "starts")
+                : runAsBuiltCheck(...input, discard_after_long_run);
+        if (as_built_run === null) {
+            // A discarded retry can still fail to export. Give the caller that error without publishing a partial check.
+            exportClock(plan, clock, windows, options);
+            return null;
+        }
         let kept_run = as_built_run;
         // also where the clock does not hold without them: the windows of a loop can make it hold
         if (options.loop_windows !== false) {
-            const looped = trialWithLoopWindows(config, windows, duration.ticks, as_built_run, AS_BUILT_START_PHASES, logger, options.on_progress_detail,
+            const looped = trialWithLoopWindows(config, windows, window_cycle, as_built_run, AS_BUILT_START_PHASES, logger, options.on_progress_detail,
                 false, options.loop_windows !== "out-of-loop", swings);
             if (looped !== null) {
                 kept_run = looped;
@@ -2178,7 +2204,7 @@ function longRunTicksOf(plan: UnclockedRun): number {
  */
 export function completedClockCheck(plan: UnclockedRun, windows: Map<string, OpenRange[]>, run: AsBuiltRun): AsBuiltRun {
     return completedAsBuiltCheck(plan.config, windows, plan.run.duration.ticks, plan.logger, run, AS_BUILT_START_PHASES, longRunTicksOf(plan),
-        fractionalSwingsOf(plan.run.output_cycle_plan));
+        fractionalSwingsOf(plan.run.output_cycle_plan, plan.run.duration.exact_ticks));
 }
 
 /** The crafting cycle of a build, with the machines that make the target item and the inserters that take it out */
@@ -2229,7 +2255,8 @@ function outputsOfPreparedBuild(config: Config, simulation_context: SimulationCo
 
     // Find all output machines: the machines that produce the target output item, or that destroy it
     const target = { item: target_production_rate.machine_production_rate.item, counts: target_production_rate.counts };
-    const returned = returnedTargetRefusal(target, target_production_rate.total_production_rate.amount_per_second.toDecimal(), simulation_context.entity_registry);
+    const returned = returnedTargetRefusal(target, target_production_rate.exact_setpoint ?? target_production_rate.total_production_rate.amount_per_second.toDecimal(),
+        simulation_context.entity_registry);
     if (returned !== null) {
         throw new Error(returned);
     }
@@ -2242,15 +2269,21 @@ function outputsOfPreparedBuild(config: Config, simulation_context: SimulationCo
     );
 
     // validate setpoint can be met
-    const total_output_capacity_per_second = output_machine_state_machines
-        .map(it => targetCapacityPerSecond(it.machine_state.machine, target, config, simulation_context.entity_registry))
-        .reduce((a, b) => a.add(b), fraction(0))
-        .multiply(fraction(config.setpoint.copies));
-    assert(total_output_capacity_per_second.toDecimal() >= target_production_rate.total_production_rate.amount_per_second.toDecimal(),
-       "The current configuration cannot meet the setpoint. " +
-       `Total output capacity is ${total_output_capacity_per_second.toDecimal()} items/second, ` +
-       `but the setpoint is ${target_production_rate.total_production_rate.amount_per_second.toDecimal()} items/second.`
-    )
+    const capacities = output_machine_state_machines
+        .map(it => targetCapacityPerSecond(it.machine_state.machine, target, config, simulation_context.entity_registry));
+    const rate = target_production_rate.exact_setpoint;
+    if (rate) {
+        const capacity = compareRateToCapacity(rate, capacities.map(ratioOf), config.setpoint.copies);
+        assert(!capacity.above, `The current configuration cannot meet the setpoint. Total output capacity is ${capacity.bound} items/second, but the setpoint is ${rateText(rate)} items/second.`);
+    } else {
+        const total_output_capacity_per_second = capacities.reduce((a, b) => a.add(b), fraction(0))
+            .multiply(fraction(config.setpoint.copies));
+        assert(total_output_capacity_per_second.toDecimal() >= target_production_rate.total_production_rate.amount_per_second.toDecimal(),
+           "The current configuration cannot meet the setpoint. " +
+           `Total output capacity is ${total_output_capacity_per_second.toDecimal()} items/second, ` +
+           `but the setpoint is ${target_production_rate.total_production_rate.amount_per_second.toDecimal()} items/second.`
+        );
+    }
 
     // Every inserter that takes the target item out of the build, or out of the container its machine puts it into; a
     // machine can have several
@@ -2289,11 +2322,12 @@ export function transferPlanOf(config: Config, output_cycle_plan: OutputCyclePla
 
     const ignored = ignoredLcmItemsOf(config, output_cycle_plan);
     const ignored_ingredients = ignored.length > 0 ? ignored : undefined;
-    const computed_lcm = EntityTransferCountMap.lcm(swing_counts, ignored_ingredients);
+    const serializable_transfer_plan = EntityTransferCountMap.serialize(swing_counts, ignored_ingredients, output_cycle_plan.production_rate.exact_setpoint);
+    const { computed_lcm } = serializable_transfer_plan;
     return {
         computed_lcm,
         recipe_lcm: config.overrides?.lcm ?? computed_lcm,
-        serializable_transfer_plan: EntityTransferCountMap.serialize(swing_counts, ignored_ingredients),
+        serializable_transfer_plan,
     };
 }
 
@@ -2525,7 +2559,7 @@ function isClockedThroughout(config: Config, window_cycle_ticks: number): boolea
  * (see mergedClockTicks). Null when some control decides from more than the tick (AUTO), or no whole-tick
  * repeat exists: a repeated state then proves nothing.
  */
-export function provenRepeatBin(config: Config, window_cycle_ticks: number): { ticks: number; window_cycles: number } | null {
+export function provenRepeatBin(config: Config, window_cycle_ticks: number, exact?: Ratio): { ticks: number; window_cycles: number } | null {
     const moduli = new Set<number>();
     const fixed = (control: EnableControlOverrideConfig | undefined): boolean => {
         if (control === undefined) {
@@ -2544,7 +2578,7 @@ export function provenRepeatBin(config: Config, window_cycle_ticks: number): { t
         || !(config.drills?.configs ?? []).every(drill => fixed(drill.overrides?.enable_control))) {
         return null;
     }
-    const repeat = subtickClockForWindowCycle(window_cycle_ticks);
+    const repeat = subtickClockForWindowCycle(window_cycle_ticks, exact);
     const base = Number.isInteger(window_cycle_ticks) ? { ticks: window_cycle_ticks, window_cycles: 1 }
         : repeat === null ? null : { ticks: repeat.window_cycle_ticks, window_cycles: repeat.scale };
     if (base === null) {

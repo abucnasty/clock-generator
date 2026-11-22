@@ -1,3 +1,4 @@
+import { rateDecimal } from "../../config/setpoint-rate";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { loadConfigFromFile } from "../../config/loader";
 import { ConfigPaths } from "../../config/config-paths";
@@ -14,6 +15,9 @@ import { ClockWindowCycleLimitError } from "../plan/clock-window-cycle-limit";
 import * as unplanned from "../sequence/unplanned-inserter-clock";
 import { roundRobinPollingPlan, RoundRobinPollingNotApplicable, heldAtTurn, roomAtTurn, type RoundRobinPollingComposition } from "./round-robin-polling";
 import { assertAcyclicGroupedDependencies, constructPrimitiveRoundRobinPolling } from "./round-robin-polling-primitive";
+import * as machineTraits from "../../entities/traits/traits-of";
+import { gearSetpoint } from "../../../tests/configs/fractional-setpoint";
+import { validateConfig } from "../plan/validate-config";
 
 describe("pure primitive grouped construction", () => {
     let config: Config;
@@ -171,7 +175,7 @@ describe("pure primitive grouped construction", () => {
     });
 
     it.each([500000, 600000])("rejects primitive period %s before computing/unrolling by-product clocks", window_cycle_ticks => {
-        const too_slow = { ...config, setpoint: { ...config.setpoint, items_per_second: config.setpoint.items_per_second * 40 / window_cycle_ticks } };
+        const too_slow = { ...config, setpoint: { ...config.setpoint, items_per_second: rateDecimal(config.setpoint.items_per_second) * 40 / window_cycle_ticks } };
         const compute = vi.spyOn(unplanned, "unplannedInserterClocks");
         try {
             expect(() => constructPrimitiveRoundRobinPolling(too_slow)).toThrow(ClockWindowCycleLimitError);
@@ -234,4 +238,53 @@ describe("pure primitive grouped construction", () => {
             expect(attempt.result.busy).toEqual(old.busy);
         }
     });
+});
+
+
+it("checks both planning guards against the exact machine capacity", () => {
+    const capacity = vi.spyOn(machineTraits, "mainProductRateOf").mockReturnValue(fraction(7, 6));
+    try {
+        const equal = gearSetpoint({ numerator: 7, denominator: 6 });
+        const above = gearSetpoint({ numerator: 8400000000000300, denominator: 7200000000000257 });
+        delete equal.overrides;
+        delete above.overrides;
+        for (const check of [validateConfig, constructPrimitiveRoundRobinPolling]) {
+            expect(() => check(above)).toThrow(/8400000000000300\/7200000000000257/);
+            try { check(equal); } catch (error) {
+                // A whole-only candidate can still refuse this fractional period after capacity passed.
+                expect(String(error)).toMatch(/whole|integer|fractional/i);
+            }
+        }
+    } finally { capacity.mockRestore(); }
+});
+
+// Two plates per gear, divided equally among its feeders. Only the output hand sets the grouped period.
+function gearWithInputHands(hands: number[]): Config {
+    const config = gearSetpoint({ numerator: 1, denominator: 1 });
+    return {
+        ...config, overrides: undefined,
+        inserters: [
+            config.inserters[1],
+            ...hands.map((stack_size, index) => ({ ...config.inserters[0], id: index + 3, stack_size })),
+        ],
+    };
+}
+
+it.each([
+    { hands: [11, 13], expected: 143 },
+    // All nine denominators share a factor of nine. The repeated 59 adds no factor to their LCM.
+    { hands: [59, 61, 67, 71, 73, 79, 83, 89, 59], expected: 6_564_105_581_825_223 },
+])("reports the full transfer LCM $expected with a one-cycle grouped output", ({ hands, expected }) => {
+    const result = constructPrimitiveRoundRobinPolling(gearWithInputHands(hands));
+    expect(result.grouped_cycles).toBe(1);
+    expect(result.transfer_plan.computed_lcm).toBe(expected);
+});
+
+it("refuses an unrepresentable reported LCM even when the grouped output needs only one cycle", () => {
+    // Replacing the repeated 59 with 97 grows the true LCM to 636718241437046631.
+    const config = gearWithInputHands([59, 61, 67, 71, 73, 79, 83, 89, 97]);
+    const legacy = constructPrimitiveRoundRobinPolling({ ...config, setpoint: { ...config.setpoint, items_per_second: 1 } });
+    expect(legacy.grouped_cycles).toBe(1);
+    expect(Number.isSafeInteger(legacy.transfer_plan.computed_lcm)).toBe(false);
+    expect(() => constructPrimitiveRoundRobinPolling(config)).toThrow(/cycle multiplier at 1\/1 items\/s exceeds exact precision/);
 });

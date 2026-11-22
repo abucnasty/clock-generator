@@ -349,3 +349,14 @@ describe('the start a build is judged from, kept by a share link and a saved bui
         expect(formDataToConfig(saved!).overrides?.judged_start).toBeUndefined();
     });
 });
+
+it('shares a reduced pair and opens it through the editable config reader', async () => {
+    const config = smallBuild();
+    config.setpoint.items_per_second = { denominator: 7, numerator: 16 };
+    const decoded = await decodeShareLink(await linkTo(config));
+    expect(decoded.kind).toBe('build');
+    if (decoded.kind !== 'build') throw new Error('expected a shared build');
+    const opened = parseFormConfig(ConfigSchema, decoded.config);
+    expect(JSON.stringify(opened.data?.setpoint.items_per_second)).toBe('{"numerator":16,"denominator":7}');
+    expect(sharedBuildSummary(opened.data!, id => id)).toContain('16/7');
+});

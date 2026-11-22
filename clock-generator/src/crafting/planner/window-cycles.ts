@@ -1,3 +1,4 @@
+import { composedPeriod, periodAtLimit } from "../../config/setpoint-rate";
 /**
  * The main-period choices of a build: the output swing counts today's alternatives are listed for (the planned count,
  * the counts above and below the main one, and fractional swings), each with its window cycle, kept or
@@ -111,12 +112,14 @@ function choiceOf(count: ListedCount, group: number): WindowCycleChoice {
         listed_as: count.listed_as,
     };
     const cycles = count.measure.override_lcm ?? count.measure.group_cycles[group];
-    const window_cycle_ticks = count.measure.cycle_ticks.multiply(cycles).toDecimal();
+    const rate = count.cycle.production_rate.exact_setpoint;
+    const period = composedPeriod(count.measure.cycle_ticks, cycles, rate);
+    const window_cycle_ticks = period.toDecimal();
     const base = { ...head, cycle_ticks: ratioOf(count.measure.cycle_ticks), cycles, window_cycle_ticks };
-    if (window_cycle_ticks >= SIMULATION_BUDGET_TICKS) {
+    if (periodAtLimit(period, SIMULATION_BUDGET_TICKS, !!rate)) {
         return { ...base, pruned: { rule: "P-limit", terms: { window_cycle_ticks, limit_ticks: SIMULATION_BUDGET_TICKS } } };
     }
-    const counter_ticks = counterOverLimitOf(window_cycle_ticks);
+    const counter_ticks = counterOverLimitOf(window_cycle_ticks, rate && ratioOf(period));
     return counter_ticks !== null
         ? { ...base, pruned: { rule: "P-limit", terms: { window_cycle_ticks, limit_ticks: SIMULATION_BUDGET_TICKS, counter_ticks } } }
         : { ...base, kept: true };
@@ -175,7 +178,7 @@ export function plannedWindowCyclesOf(
     const max_swings = input.max_swings;
     const atCount = (count: number, listed_as: WindowCycleListing) => planned(OutputCyclePlan.create(target, registry, config, fraction(count),
         { ...overrides, terminal_swing_count: count }), listed_as);
-    const under = (count: PlannedCount) => count.measure.main_window_cycle.toDecimal() < SIMULATION_BUDGET_TICKS;
+    const under = (count: PlannedCount) => !periodAtLimit(count.measure.main_window_cycle, SIMULATION_BUDGET_TICKS, !!target.exact_setpoint);
 
     // the planning run's count, then today's swing backoff while the window cycle is over the limit; the main clock's count
     // is the first under it, or the planned one where there is none

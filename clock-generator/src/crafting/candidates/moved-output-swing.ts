@@ -1,3 +1,4 @@
+import { windowCycleTicks, type WindowCycle } from "../../common/subtick-window-cycle";
 import { Config } from "../../config";
 import { createEntityRegistryFromConfig } from "../sequence/simulation-context";
 import { OpenRange } from "../../data-types";
@@ -30,19 +31,20 @@ export interface MovedOutputSwingCandidate {
  */
 export function movedOutputSwingCandidates(
     output_windows: Map<string, OpenRange[]>,
-    window_cycle_ticks: number,
+    window_cycle: WindowCycle,
     step_ticks: number,
 ): MovedOutputSwingCandidate[] {
+    const window_cycle_ticks = windowCycleTicks(window_cycle);
     const sorted = new Map(Array.from(output_windows, ([key, ranges]) =>
         [key, [...ranges].sort((a, b) => a.start_inclusive - b.start_inclusive)] as const));
     const count = Math.min(...Array.from(sorted.values(), ranges => ranges.length));
     // a tick, or the 1/q tick between two positions of a subtick clock
-    const position = positionStep(window_cycle_ticks);
+    const position = positionStep(window_cycle);
     if (position === null || sorted.size === 0 || count < 2
         || Array.from(sorted.values()).some(ranges => ranges.length !== count)) {
         return [];
     }
-    const last = lastPosition(window_cycle_ticks);
+    const last = lastPosition(window_cycle);
 
     // shifts every output inserter has room for, per moved window
     const room: { window_index: number; min: number; max: number }[] = [];
@@ -51,7 +53,7 @@ export function movedOutputSwingCandidates(
         let max = Infinity;
         for (const ranges of sorted.values()) {
             const window = ranges[window_index];
-            const length = windowTicks(window, window_cycle_ticks);
+            const length = windowTicks(window, window_cycle);
             const next_start = window_index + 1 < count ? ranges[window_index + 1].start_inclusive : ranges[0].start_inclusive + window_cycle_ticks;
             min = Math.max(min, ranges[window_index - 1].end_inclusive + length + position - window.start_inclusive);
             max = Math.min(max, next_start - length - position - window.end_inclusive, last - window.end_inclusive);
@@ -87,7 +89,7 @@ export function movedOutputSwingWindows(
     planned_history: InventoryTransferHistory,
     output_inserter_ids: Set<string>,
     lane_hand_room: Map<string, number>,
-    window_cycle_ticks: number,
+    window_cycle: WindowCycle,
     step_ticks: number,
     logger: Logger,
     report?: (detail: string) => void,
@@ -96,19 +98,19 @@ export function movedOutputSwingWindows(
     // read off the whole ticks of the planning run: on a p/q-tick window cycle made again in the clock's positions, as long
     // in every window cycle as in the planning run's
     const planned_windows = withWindowsKeepingLength(
-        windowsFromHistory(planned_history, createEntityRegistryFromConfig(config), alwaysEnabledByConfig(config)), window_cycle_ticks);
+        windowsFromHistory(planned_history, createEntityRegistryFromConfig(config), alwaysEnabledByConfig(config)), window_cycle);
     const output_windows = new Map(Array.from(planned_windows).filter(([key]) => output_inserter_ids.has(key)));
     const drill_ids = new Set(Array.from(planned_history.keys()).filter(EntityId.isDrill).map(it => it.id));
     const drill_windows = new Map(Array.from(planned_windows).filter(([key]) => drill_ids.has(key)));
 
-    const candidates = movedOutputSwingCandidates(output_windows, window_cycle_ticks, step_ticks);
+    const candidates = movedOutputSwingCandidates(output_windows, window_cycle, step_ticks);
     const describe = (candidate: MovedOutputSwingCandidate) => `output swing ${candidate.window_index + 1} moved ${candidate.shift_ticks} ticks`;
     const { picked, pick, tried } = search<MovedOutputSwingCandidate, QuickTrial & { derived: TimeStudyWindows }, Confirmed>({
         candidates,
         // each position gets its own observed windows, with the padding search and its pick taken on the quick trial
         quick: (candidate, index) => {
             const derived = deriveTimeStudyWindows(base_config, candidate.output_windows, drill_windows, output_inserter_ids,
-                lane_hand_room, window_cycle_ticks, describe(candidate), logger,
+                lane_hand_room, window_cycle, describe(candidate), logger,
                 report && (detail => report(`Position ${index + 1}/${candidates.length}: ${detail}`)), false);
             // only the windows that pass are read again; the runs of a position that does not are let go
             return derived.windows === null
@@ -118,7 +120,7 @@ export function movedOutputSwingWindows(
         // candidates are listed per moved window in shift order, so neighbours in the list are neighbours in time
         neighbours: (a, b) => a.window_index === b.window_index,
         tieBreak: (a, b) => Math.abs(a.candidate.shift_ticks) - Math.abs(b.candidate.shift_ticks),
-        confirm: ({ candidate, quick }) => confirm(base_config, quick.derived.windows!, window_cycle_ticks, logger, describe(candidate), report, quick.derived.verified, true),
+        confirm: ({ candidate, quick }) => confirm(base_config, quick.derived.windows!, window_cycle, logger, describe(candidate), report, quick.derived.verified, true),
     });
     logger.log(`Moved Output Swing: ${tried.filter(it => it.quick.holds).length} of ${candidates.length} positions pass the quick trial`);
     if (picked === null || pick === null) {

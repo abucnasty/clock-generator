@@ -1,3 +1,4 @@
+import { canonicalRate } from 'clock-generator/light';
 import { missingDataSections, type InternalError } from '../utils/internalError';
 /**
  * Web Worker for running clock-generator simulation.
@@ -308,7 +309,7 @@ function internalErrorOf(error: unknown): InternalError {
  * The form keeps the name it was given, so only what goes to the engine is read this way.
  */
 function engineBuildOf(config: Config): Config {
-    return clockGenerator.readRecipeSetpointAsItem(config) as Config;
+    return canonicalRate(clockGenerator.readRecipeSetpointAsItem(config)) as Config;
 }
 
 /** Planning and Check share the strict schema; editable persisted drafts do not bypass spatial constraints. */
@@ -341,7 +342,7 @@ function checkRepeatedUnitConversion(config: Config): CheckedRepeatedUnitConvers
 function repeatedUnitsRecoveryOf(units: readonly { machine_ids: readonly number[] }[], config: Config): RepeatedUnitsRecovery {
     const checked = checkRepeatedUnitConversion(config);
     return {
-        kind: 'repeated-units', sourceConfigKey: JSON.stringify(config),
+        kind: 'repeated-units', sourceConfigKey: JSON.stringify(canonicalRate(config)),
         detectedCopies: units.length, configuredCopies: config.setpoint.copies,
         units: units.map(unit => ({ machine_ids: [...unit.machine_ids] })),
         conversion: checked.kind === 'available'
@@ -463,7 +464,7 @@ function savedConfig(config: unknown): EngineAnswers['saved-config'] {
             ? { ...(machine as object), _prototype_source: 'recipe' } : machine) }
         : form;
     const result = parseFormConfig(clockGenerator.ConfigSchema, marked);
-    return result.success ? { problem: null, form: withoutBeltSetting(marked) } : { problem: result.error.message, form: marked };
+    return result.success ? { problem: null, form: withoutBeltSetting(canonicalRate(marked)) } : { problem: result.error.message, form: marked };
 }
 
 /** An imported config file, which can hold what the form exports, e.g. an inserter end left unset; a former type is read as the machine */

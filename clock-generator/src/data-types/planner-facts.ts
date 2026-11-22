@@ -1,3 +1,4 @@
+import type { SetpointRate } from "../config/setpoint-rate";
 /**
  * The planner facts of a build (toPlannerFacts, crafting/facts/to-planner-facts.ts): a projection of its traits
  * (entities/traits/build-traits.ts) as plain, JSON-safe nodes and edges, the input of the planner graph and the
@@ -336,7 +337,7 @@ export interface CapacityGroup {
 export interface PlannerTarget {
     readonly item: string;
     readonly counts: "made" | "destroyed";
-    readonly items_per_second: number;
+    readonly items_per_second: SetpointRate;
     readonly copies: number;
     readonly per_copy: FactsRatio;
 }

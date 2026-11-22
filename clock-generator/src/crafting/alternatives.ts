@@ -1,3 +1,4 @@
+import { rateDecimal, rateText } from "../config/setpoint-rate";
 import assert from "../common/assert";
 import { judgedStartOf, type TargetCounts } from "../config/schema";
 import { fraction } from "../data-types/fraction";
@@ -25,7 +26,7 @@ import { pitchPickupsClock } from "./candidates/pitch-pickups";
 import { perHandWindowsClock } from "./candidates/round-robin-polling";
 import { timeStudyWindowsClock } from "./candidates/time-study-windows";
 import { phaseShiftedBatchClock } from "./candidates/phase-shifted-batch";
-import { generateClockForConfig, generateClockWithSwingBackoff, terminalCountForAlternativePlanning } from "./generate-clock";
+import { generateClockForConfig, generateClockForQuietFractionalAlternative, generateClockWithSwingBackoff, terminalCountForAlternativePlanning } from "./generate-clock";
 import { primitiveRoundRobinPollingOptionsSupported, verifiedPrimitiveRoundRobinPollingClock } from "./candidates/round-robin-polling-primitive-verified";
 import { meteredTakersClock } from "./candidates/metered-takers";
 import { primitiveRoundRobinPollingConfigSupported } from "./candidates/round-robin-polling-primitive";
@@ -285,6 +286,17 @@ function quietOptions(options: GenerateClockOptions, logger: Logger, report?: (d
     };
 }
 
+const quiet_fractional_generator = Symbol();
+type QuietAlternativeOptions = GenerateClockOptions & {
+    [quiet_fractional_generator]?: (config: Config, options: GenerateClockOptions) => BlueprintGenerationResult;
+};
+
+/** Read the live engine-owned options without invoking a progress getter. */
+function ownedProgressIsUnobserved(options: GenerateClockOptions): boolean {
+    const progress = Object.getOwnPropertyDescriptor(options, "on_progress");
+    return progress === undefined ? !("on_progress" in options) : "value" in progress && progress.value === undefined;
+}
+
 /**
  * Whether the clock-only check reached the expected output from the start the generator gives a clock (the "holds"
  * of a clock's assessment), or the planning run did, where no clock-only check ran
@@ -459,7 +471,7 @@ function beltNote(config: Config, result: BlueprintGenerationResult): string {
 function alternativeDefinitions(
     config: Config,
     context: ClockAlternativeContext,
-    quiet: GenerateClockOptions,
+    quiet: QuietAlternativeOptions,
     with_chest_drill_fallbacks: boolean = true,
 ): AlternativeDefinition[] {
     const definitions = withChestDrillFallbacks(alternativeDefinitionsWithFuelHandRoom(config, context, quiet), config,
@@ -485,7 +497,7 @@ function alternativeDefinitions(
 function alternativeDefinitionsWithFuelHandRoom(
     config: Config,
     context: ClockAlternativeContext,
-    quiet: GenerateClockOptions,
+    quiet: QuietAlternativeOptions,
 ): AlternativeDefinition[] {
     let definitions = alternativeDefinitionsFor(config, context, quiet);
     if (takesFuelOffABelt(config)) {
@@ -537,7 +549,7 @@ const EVEN_HANDS_DESCRIPTION = "One enable window for each hand an inserter move
 function alternativeDefinitionsFor(
     config: Config,
     context: ClockAlternativeContext,
-    quiet: GenerateClockOptions,
+    quiet: QuietAlternativeOptions,
 ): AlternativeDefinition[] {
     const secondary = secondaryPlanningCountOf(config, context);
     const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false,
@@ -574,7 +586,8 @@ function alternativeDefinitionsFor(
                 + "between 1 and 2 swings instead of rounding, which can need fewer or shorter enable windows.",
             strategy: "euclidean_swings" as const,
             // planned with fractional swings asked for: its clock's runs are planned so too, as its cycle plan says
-            run: () => generateClockWithSwingBackoff(base_config, { ...quiet, fractional_swings: true }),
+            run: () => generateClockWithSwingBackoff(base_config, { ...quiet, fractional_swings: true },
+                quiet[quiet_fractional_generator]),
             // the config it is checked on is the alternatives' own, as with the other definitions, and stays so for its
             // chest drill fallbacks, whose own configs would otherwise take its place (withChestDrillFallbacks)
             planned_on: config,
@@ -1068,6 +1081,7 @@ function runAlternativeOf(
         start_dependence: StartDependence | null;
         /** The ticks of a window cycle it is run at */
         clock_window_cycle: number;
+        exact_window_cycle?: BlueprintGenerationResult["simulation_duration"]["exact_ticks"];
     }
     /** The stability check of a trial with its output as the clock is listed by (see `withSettledOutput`), made once per trial */
     const settled_checks = new Map<SimulationStabilityCheck, Map<number, SimulationStabilityCheck>>();
@@ -1076,7 +1090,7 @@ function runAlternativeOf(
         const by_window_cycle = settled_checks.get(check) ?? new Map<number, SimulationStabilityCheck>();
         settled_checks.set(check, by_window_cycle);
         if (!by_window_cycle.has(trial.clock_window_cycle)) {
-            by_window_cycle.set(trial.clock_window_cycle, withSettledOutput(used.planned_on ?? config, trial.result, trial.clock_window_cycle, logger).stability_check);
+            by_window_cycle.set(trial.clock_window_cycle, withSettledOutput(used.planned_on ?? config, trial.result, trial.exact_window_cycle ?? trial.clock_window_cycle, logger).stability_check);
         }
         return by_window_cycle.get(trial.clock_window_cycle)!;
     };
@@ -1094,7 +1108,7 @@ function runAlternativeOf(
                     { ...(used.planned_on ?? config), overrides: { ...(used.planned_on ?? config).overrides, terminal_swing_count: trial.result.used_terminal_swing_count } },
                     trial.result.clock_windows, trial.clock_window_cycle, expected_output_items,
                     exact && trial.result.loop_windows !== undefined ? LOOP_WINDOW_CHECK_TICKS : FREE_RUNNING_CHECK_TICKS, logger,
-                    fractionalSwingsOf(trial.result.output_cycle_plan));
+                    fractionalSwingsOf(trial.result.output_cycle_plan, trial.exact_window_cycle));
             } catch (error) {
                 logger.log(`Clock "${label}" could not be started from other places: ${error instanceof Error ? error.message : String(error)}`);
                 made = null;
@@ -1119,7 +1133,7 @@ function runAlternativeOf(
         if (!verdicts_with_copies_of.has(trial)) {
             const on = used.planned_on ?? config;
             verdicts_with_copies_of.set(trial, verdictWithCopies({ config: { ...on, overrides: { ...on.overrides, terminal_swing_count: trial.result.used_terminal_swing_count } },
-                windows: trial.result.clock_windows, window_cycle_ticks: trial.clock_window_cycle, expected_output_items: trial.result.stability_check.expected_output_items },
+                windows: trial.result.clock_windows, window_cycle_ticks: trial.exact_window_cycle ?? trial.clock_window_cycle, expected_output_items: trial.result.stability_check.expected_output_items },
             () => trial.loss.disturbance_trial?.survives === true, config.overrides?.disturbance_trials_on_copies !== false, label, logger));
         }
         return verdicts_with_copies_of.get(trial)!;
@@ -1140,7 +1154,7 @@ function runAlternativeOf(
             let fewer: ReturnType<typeof fewerCopiesThatHold> = null;
             if (judgement !== null && judgement.losses.length > 0) {
                 try {
-                    fewer = timedCheck("fewer_copies", () => withTickPurpose("fewer_copies", () => fewerCopiesThatHold(with_swings, trial.result.clock_windows, trial.clock_window_cycle, logger, undefined, buildFeeders()), { claim: true }));
+                    fewer = timedCheck("fewer_copies", () => withTickPurpose("fewer_copies", () => fewerCopiesThatHold(with_swings, trial.result.clock_windows, trial.exact_window_cycle ?? trial.clock_window_cycle, logger, undefined, buildFeeders()), { claim: true }));
                 } catch (error) {
                     if (isInternalError(error)) throw error;
                     logger.warn(`Clock "${label}": the runs with fewer copies on the shared lanes could not be made: ${error instanceof Error ? error.message : String(error)}`);
@@ -1218,7 +1232,7 @@ function runAlternativeOf(
             noteClockRun(clock.result, { config: { ...planned_on, overrides: { ...planned_on.overrides, terminal_swing_count: tried_as.result.used_terminal_swing_count } },
                 windows: tried_as.result.clock_windows, window_cycle_ticks: tried_as.clock_window_cycle, expected_output_items,
                 long_run_ticks: tried_as === exact_trial && tried_as.result.loop_windows !== undefined ? LOOP_WINDOW_CHECK_TICKS : FREE_RUNNING_CHECK_TICKS,
-                swings: fractionalSwingsOf(tried_as.result.output_cycle_plan) });
+                swings: fractionalSwingsOf(tried_as.result.output_cycle_plan, tried_as.exact_window_cycle) });
         }
         const ranking = rankingOf(clock, config);
         // where its wake-ups decide the selection, a clock of a build with a loop, whose wake-ups depend on how it starts, is ranked by their mean
@@ -1234,10 +1248,10 @@ function runAlternativeOf(
             insights: withWakeUpsFromStarts(clock.insights, from_starts) };
         return { ...with_mean, ranking: rankingOf(with_mean, config) };
     };
-    const exact_trial: Trial = { result, held, loss, start_dependence, clock_window_cycle: window_cycle_ticks };
+    const exact_trial: Trial = { result, held, loss, start_dependence, clock_window_cycle: window_cycle_ticks, exact_window_cycle: result.simulation_duration.exact_ticks };
     const exact = alternativeOf(exact_trial, { id, label, description_suffix: "", result });
     logger.log(`Clock "${label}": windows=${inserter_window_count} verdict=${exact.verdict} stable=${disturbance_trial?.survives ?? "not tried"} as-built=${as_built?.actual_output_items}/${expected_output_items} planned=${actual_output_items} belt=${clockBeltLabel(belt) || "none"}`);
-    if (Number.isInteger(window_cycle_ticks)) {
+    if (result.simulation_duration.exact_ticks ? result.simulation_duration.exact_ticks.denominator === 1 : Number.isInteger(window_cycle_ticks)) {
         return { signature, alternatives: [exact] };
     }
     // a window cycle that is not a whole number of ticks is exported with its subtick clock where it has one: listed as that
@@ -1258,9 +1272,10 @@ function runAlternativeOf(
     // with no subtick clock its blueprint counts the window cycle rounded down (blueprint.ts): listed as that clock, it is
     // judged by its own rate. One whose rate may meet goal 1 (at most 0.1% fast, within the machines) is tried on its
     // own window cycle
-    const rounded_ticks = Math.floor(window_cycle_ticks);
+    const period = result.simulation_duration.exact_ticks;
+    const rounded_ticks = period ? Number(BigInt(period.numerator) / BigInt(period.denominator)) : Math.floor(window_cycle_ticks);
     const rounded_rate = itemsPerSecondOverCopies(expected_output_items, rounded_ticks, copies);
-    const target = config.setpoint.items_per_second;
+    const target = rateDecimal(config.setpoint.items_per_second);
     const runs_fast = rounded_rate / target - 1;
     const within_machines = rounded_rate <= outputCapacityPerSecond(config) * (1 + 1e-9);
     const may_meet = roundedRateAllowed({ runs_fast, within_machines });
@@ -1281,7 +1296,7 @@ function runAlternativeOf(
     if (rounded_trial !== null) {
         logger.log(`Clock "${label}" rounded to ${rounded_ticks} ticks (runs ${fast}): holds=${rounded_trial.held} stable=${rounded_trial.loss.disturbance_trial?.survives ?? "not tried"}`);
     }
-    return { signature, alternatives: [alternativeOf(rounded_trial ?? { ...exact_trial, clock_window_cycle: rounded_ticks }, {
+    return { signature, alternatives: [alternativeOf(rounded_trial ?? { ...exact_trial, clock_window_cycle: rounded_ticks, exact_window_cycle: undefined }, {
         id,
         label: `${label} (rounded to ${rounded_ticks} ticks, ${fast})`,
         listing: { rounded: { window_cycle_ticks: rounded_ticks, runs_fast } },
@@ -1600,13 +1615,24 @@ export function startDependenceSummary(config: Config, alternatives: readonly Pi
  */
 export function generateClockAlternatives(
     config: Config,
-    options: GenerateClockOptions = {}
+    options: GenerateClockOptions = {},
 ): ClockAlternativesResult {
-    return withMakerLog(options.maker_log, () => withRunMemo(() => withBuildFeeders(config, () => generateAllAlternatives(withoutOutsideSupply(config), options))),
+    // Public calls can read caller-initialized game data and report progress through caller options.
+    return generateAlternativesWithOptions(config, options, false);
+}
+
+/** The command-line listing owns both its options and its quiet logger. */
+export function generateQuietClockAlternatives(config: Config): ClockAlternativesResult {
+    return generateAlternativesWithOptions(config, { logger: { log() {}, warn() {}, error() {}, debug() {} } }, true);
+}
+
+function generateAlternativesWithOptions(config: Config, options: GenerateClockOptions, owns_options: boolean): ClockAlternativesResult {
+    return withMakerLog(options.maker_log, () => withRunMemo(() => withBuildFeeders(config, () =>
+        generateAllAlternatives(withoutOutsideSupply(config), options, owns_options))),
         { repeat_check: options.maker_log_repeat_check === true });
 }
 
-function generateAllAlternatives(config: Config, options: GenerateClockOptions): ClockAlternativesResult {
+function generateAllAlternatives(config: Config, options: GenerateClockOptions, owns_options: boolean): ClockAlternativesResult {
     const logger = options.logger ?? defaultLogger;
     let current_step = TAKT_BATCHES;
     let completed = 0;
@@ -1629,7 +1655,12 @@ function generateAllAlternatives(config: Config, options: GenerateClockOptions):
         const {disturbance_trial, disturbance_trial_not_tried, start_dependence} = plan.primary.alternatives[0].assessment;
         verification_cache.set(plan.primary.signature, {disturbance_trial, disturbance_trial_not_tried, start_dependence});
     }
-    const all_definitions = runnable(alternativeDefinitions(config, plan.context, quietOptions(options, logger, report)), options);
+    const quiet: QuietAlternativeOptions = quietOptions(options, logger, report);
+    if (owns_options) {
+        quiet[quiet_fractional_generator] = (config, trial_options) =>
+            generateClockForQuietFractionalAlternative(config, trial_options, () => ownedProgressIsUnobserved(options));
+    }
+    const all_definitions = runnable(alternativeDefinitions(config, plan.context, quiet), options);
     // the explored ones are made after every shipped one and take no part in choosing what is made or selected (see exploredRuns)
     const definitions = all_definitions.filter(definition => !isExplored(definition.strategy));
     // listed in the order of the definitions, whichever are made first
@@ -1747,7 +1778,8 @@ export function whyNotStableOf(
     const clocks = alternatives.map(alternative => whyNotStableClockOf({ ...alternative,
         as_built: alternative.result.stability_check.as_built, expected_output_items: alternative.result.stability_check.expected_output_items }));
     return whyNotStable(clocks, selected_index, {
-        target_items_per_second: config.setpoint.items_per_second,
+        target_items_per_second: rateDecimal(config.setpoint.items_per_second),
+        ...(typeof config.setpoint.items_per_second !== "number" && { target_rate_text: rateText(config.setpoint.items_per_second) }),
         not_made,
         entity_names: entityNamesInSentence(config),
     });

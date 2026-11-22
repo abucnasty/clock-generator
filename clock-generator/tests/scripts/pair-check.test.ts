@@ -117,6 +117,13 @@ describe('pair-check judge', () => {
 });
 
 describe('pair-check setpointOf', () => {
+    it('reads a reduced config pair for measurement and preserves the rate in metadata', () => {
+        const config = (rate: unknown) => ({ setpoint: { item: 'gear', items_per_second: rate } });
+        const options = { amount: 1, builds_per_copy: 1 };
+        expect(setpointOf(config({ denominator: 7, numerator: 16 }), options).rate).toEqual({ numerator: 16, denominator: 7 });
+        expect(() => setpointOf(config({ numerator: 32, denominator: 14 }), options)).toThrow('reduced');
+        expect(setpointOf(config({ denominator: 7, numerator: 16 }), { ...options, rate: 2 }).rate).toBe(2);
+    });
     it('takes the item and rate of a config, and needs the amount and builds a copy stated', () => {
         const config = { setpoint: { item: 'science', items_per_second: 240, copies: 9 } };
         expect(() => setpointOf(config)).toThrow('--amount');

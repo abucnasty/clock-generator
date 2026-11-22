@@ -1,3 +1,4 @@
+import { canonicalRate } from 'clock-generator/light';
 import type { Config, RuleSet } from 'clock-generator/browser';
 import { ChestType } from 'clock-generator/light';
 import { withDefaultPickupType } from '../pickupGeometry';
@@ -47,7 +48,7 @@ function mapEnableControlOverride(ec: {
 /** The form state of an imported config; `prototypeSource` says where its machines' prototypes came from (an example's are the sample's) */
 export function configToFormData(imported: Config, prototypeSource?: MachineFormData['_prototype_source']): ConfigFormData {
     return {
-        setpoint: imported.setpoint,
+        setpoint: canonicalRate(imported).setpoint,
         machines: imported.machines.map((m) => ({
             id: m.id,
             _uuid: crypto.randomUUID(),
@@ -168,7 +169,7 @@ export function formDataToConfig(config: ConfigFormData): Config {
     // Strip the UI-only fields (every entity's _uuid, an inserter's _forced_always) before handing the config to any
     // external consumer.
     return {
-        ...config,
+        ...canonicalRate(config),
         machines: config.machines.map(({ _prototype_source: _s, ...machine }) => { void _s; return toConfig(machine); }),
         inserters: config.inserters.map(({ _forced_always: _f, ...ins }) => {
             void _f;

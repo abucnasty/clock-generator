@@ -32,6 +32,11 @@ describe("the output a machine on a recipe counts", () => {
 });
 
 describe("a setpoint named by a recipe", () => {
+    it("retains an explicit fractional rate when identifying the output item", () => {
+        const original = build({ recipe: "jellynut-processing" }, "jellynut-processing");
+        const config = { ...original, setpoint: { ...original.setpoint, items_per_second: { numerator: 16, denominator: 7 } } };
+        expect(readRecipeSetpointAsItem(config)).toMatchObject({ setpoint: { item: "jelly", items_per_second: config.setpoint.items_per_second } });
+    });
     it.each(KEYS)("is read as the main product of the recipe, where a machine of the build makes it, under `%s`", key => {
         const config = build({ [key]: "jellynut-processing", counts: "made" }, "jellynut-processing");
         expect(readRecipeSetpointAsItem(config)).toEqual(build({ item: "jelly", counts: "made" }, "jellynut-processing"));

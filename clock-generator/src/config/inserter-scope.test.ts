@@ -6,7 +6,7 @@ import { validateConfig } from "../crafting/plan/validate-config";
 import { generateClockAlternatives } from "../crafting/generate-blueprint";
 import { computeMachineTargetRates } from "../crafting/machine-target-rates";
 import { Entity } from "../entities/entity";
-import { insertersScopeProblem } from "./inserter-scope";
+import { beltPickupSinkRefusal, insertersScopeProblem } from "./inserter-scope";
 import { BeltPickupSinkError } from "./errors";
 import { createInserterCoverageValidator, validateInserterCoverage } from "./inserter-coverage-validator";
 
@@ -198,7 +198,7 @@ describe("a belt pickup that drops into anything but a machine", () => {
         });
     };
     const both = "Inserters 3 and 5 take from a belt and drop into something other than a machine: "
-        + "inserter 3 takes from belt 2 and drops into chest 2; inserter 5 takes from belt 3 and drops into chest 3. "
+        + "Inserter 3 takes from Belt 2 and drops into Chest 2; Inserter 5 takes from Belt 3 and drops into Chest 3. "
         + "Taking from a belt into anything but a machine is not supported, so this build cannot be clocked. "
         + "Make each of them drop into a machine, so that the machine is fed straight from the belt.";
 
@@ -212,9 +212,15 @@ describe("a belt pickup that drops into anything but a machine", () => {
             let thrown: unknown;
             try { run(); } catch (error) { thrown = error; }
             expect(thrown).toBeInstanceOf(BeltPickupSinkError);
-            expect((thrown as BeltPickupSinkError).message).toBe(both);
-            expect((thrown as BeltPickupSinkError).inserter_ids).toEqual([3, 5]);
-            expect((thrown as BeltPickupSinkError).inserters.map(it => [it.belt_id, it.sink])).toEqual([[2, { type: "chest", id: 2 }], [3, { type: "chest", id: 3 }]]);
+            expect(thrown).toMatchObject({
+                name: "BeltPickupSinkError",
+                inserter_ids: [3, 5],
+                inserters: [
+                    { inserter_id: 3, belt_id: 2, sink: { type: "chest", id: 2 } },
+                    { inserter_id: 5, belt_id: 3, sink: { type: "chest", id: 3 } },
+                ],
+                message: both,
+            });
         }
     });
 
@@ -225,9 +231,12 @@ describe("a belt pickup that drops into anything but a machine", () => {
     it("says it in the singular for one inserter", () => {
         const config = beltIntoChests();
         const one = ConfigSchema.parse({ ...config, inserters: config.inserters.filter(inserter => inserter.id !== 5) });
-        expect(() => validateConfig(one)).toThrow(
-            "Inserter 3 takes from belt 2 and drops into chest 2. Taking from a belt into anything but a machine is not supported, "
-            + "so this build cannot be clocked. Make that inserter drop into a machine, so that the machine is fed straight from the belt.");
+        expect(beltPickupSinkRefusal(one)).toMatchObject({
+            inserter_ids: [3],
+            inserters: [{ inserter_id: 3, belt_id: 2, sink: { type: "chest", id: 2 } }],
+            message: "Inserter 3 takes from Belt 2 and drops into Chest 2. Taking from a belt into anything but a machine is not supported, "
+                + "so this build cannot be clocked. Make that inserter drop into a machine, so that the machine is fed straight from the belt.",
+        });
     });
 
     it("names a belt as the sink with onto, and an inserter without an id by its place in the list", () => {
@@ -236,15 +245,55 @@ describe("a belt pickup that drops into anything but a machine", () => {
             ...config.inserters.filter(inserter => inserter.id !== 3 && inserter.id !== 5),
             { source: { type: "belt", id: 2 }, sink: { type: "belt", id: 3 }, stack_size: 16 },
         ] });
-        expect(insertersScopeProblem(onto)).toMatch(/^Inserter 4 takes from belt 2 and drops onto belt 3\. /);
+        expect(beltPickupSinkRefusal(onto)).toMatchObject({
+            inserter_ids: [4],
+            inserters: [{ inserter_id: 4, belt_id: 2, sink: { type: "belt", id: 3 } }],
+            message: "Inserter 4 takes from Belt 2 and drops onto Belt 3. Taking from a belt into anything but a machine is not supported, "
+                + "so this build cannot be clocked. Make that inserter drop into a machine, so that the machine is fed straight from the belt.",
+        });
+    });
+
+    it("names the configured container in the text and keeps the chest endpoint in the error", () => {
+        const config = beltIntoChests();
+        const wagon = ConfigSchema.parse({
+            ...config,
+            chests: [config.chests![0], { id: 2, type: "cargo-wagon" }, { id: 3, type: "cargo-wagon" }],
+            inserters: config.inserters.filter(inserter => inserter.id !== 5),
+        });
+        const refusal = beltPickupSinkRefusal(wagon)!;
+        expect(refusal.inserters).toEqual([{ inserter_id: 3, belt_id: 2, sink: { type: "chest", id: 2 } }]);
+        expect(refusal.inserter_ids).toEqual([3]);
+        const ending = " Taking from a belt into anything but a machine is not supported, so this build cannot be clocked. "
+            + "Make that inserter drop into a machine, so that the machine is fed straight from the belt.";
+        expect(refusal.message).toBe("Inserter 3 takes from Belt 2 and drops into Cargo wagon 2." + ending);
+        expect(new BeltPickupSinkError(refusal.inserters).message).toBe("Inserter 3 takes from Belt 2 and drops into Chest 2." + ending);
+    });
+
+    it("keeps config order and refuses the route before pickup kind, blacklist and coverage", () => {
+        const config = beltIntoChests();
+        const competing = ConfigSchema.parse({
+            ...config,
+            inserters: config.inserters.filter(inserter => inserter.id !== 2).reverse().map(inserter => inserter.id === 3
+                ? { ...inserter, prototype: "long-handed-inserter", filters: ["iron-plate"], filter_mode: "blacklist" }
+                : inserter),
+        });
+        expect(() => validateConfig(competing)).toThrow(BeltPickupSinkError);
+        const refusal = beltPickupSinkRefusal(competing)!;
+        expect(refusal.inserter_ids).toEqual([5, 3]);
+        expect(refusal.inserters).toEqual([
+            { inserter_id: 5, belt_id: 3, sink: { type: "chest", id: 3 } },
+            { inserter_id: 3, belt_id: 2, sink: { type: "chest", id: 2 } },
+        ]);
+        expect(refusal.message).toMatch(/^Inserters 5 and 3 .*: Inserter 5 takes from Belt 3 and drops into Chest 3; Inserter 3 takes from Belt 2 /);
     });
 
     it("leaves one that carries nothing alone: its chest takes none of the belt's items, or its filters leave them out", () => {
         const config = beltIntoChests();
         const none = ConfigSchema.parse({ ...config, belts: config.belts.map(belt => belt.id === 2 ? { ...belt, lanes: [{ ingredient: "copper-plate", stack_size: 4 }] } : belt) });
-        expect(insertersScopeProblem(none)).toMatch(/^Inserter 5 takes from belt 3 /);
+        expect(insertersScopeProblem(none)).toMatch(/^Inserter 5 takes from Belt 3 /);
         const filtered = ConfigSchema.parse({ ...config, inserters: config.inserters.map(inserter => inserter.id === 5 ? { ...inserter, filters: ["iron-plate"] } : inserter) });
-        expect(insertersScopeProblem(filtered)).toMatch(/^Inserter 3 takes from belt 2 /);
+        expect(insertersScopeProblem(filtered)).toMatch(/^Inserter 3 takes from Belt 2 /);
+        expect(beltPickupSinkRefusal({ ...config, chests: [config.chests![0]], belts: [] })).toBeNull();
     });
 
     it("leaves a belt that feeds a machine, and a machine into a chest, alone", () => {

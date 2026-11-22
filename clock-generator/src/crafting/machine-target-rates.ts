@@ -1,3 +1,4 @@
+import { isPositiveRate } from "../config/setpoint-rate";
 import { assertOutputTransferGenerationSupported } from "../config/output-transfer-generation";
 import assert from "../common/assert";
 import { Config } from "../config";
@@ -35,7 +36,7 @@ export interface MachineTargetRate {
 export function computeMachineTargetRates(config: Config): MachineTargetRate[] {
     assertOutputTransferGenerationSupported(config);
     validateCopies(config);
-    assert(Number.isFinite(config.setpoint.items_per_second) && config.setpoint.items_per_second > 0,
+    assert(isPositiveRate(config.setpoint.items_per_second),
         "Set a positive setpoint to see at-target rates.");
     assertInserterCoverage(config);
     assertFeasible(config);

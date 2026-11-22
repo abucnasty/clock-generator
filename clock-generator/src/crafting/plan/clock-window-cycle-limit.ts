@@ -1,3 +1,4 @@
+import type { Ratio } from "../../entities/traits/ratio";
 import { SubtickWindowCycle, subtickClockForWindowCycle } from "../../common/subtick-window-cycle";
 
 /**
@@ -13,14 +14,14 @@ export const SIMULATION_BUDGET_TICKS = 500_000;
  * where the window cycle is fractional and p is under SIMULATION_BUDGET_TICKS. Null for a whole-tick window cycle, and for a counter
  * one run cannot hold (`counterOverLimitOf`), whose clock keeps the sampled checks of one window cycle.
  */
-export function wholeCounterOf(window_cycle_ticks: number): SubtickWindowCycle | null {
-    const counter = subtickClockForWindowCycle(window_cycle_ticks);
+export function wholeCounterOf(window_cycle_ticks: number, exact?: Ratio): SubtickWindowCycle | null {
+    const counter = subtickClockForWindowCycle(window_cycle_ticks, exact);
     return counter !== null && counter.window_cycle_ticks < SIMULATION_BUDGET_TICKS ? counter : null;
 }
 
 /** The ticks of a fractional window cycle's counter where one run cannot hold it; else null */
-export function counterOverLimitOf(window_cycle_ticks: number): number | null {
-    const counter = subtickClockForWindowCycle(window_cycle_ticks);
+export function counterOverLimitOf(window_cycle_ticks: number, exact?: Ratio): number | null {
+    const counter = subtickClockForWindowCycle(window_cycle_ticks, exact);
     return counter !== null && counter.window_cycle_ticks >= SIMULATION_BUDGET_TICKS ? counter.window_cycle_ticks : null;
 }
 

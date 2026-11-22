@@ -1,3 +1,4 @@
+import { rateDecimal, rateText, type SetpointRate } from "../../../config/setpoint-rate";
 import { TargetCounts } from "../../../config/schema";
 import { ItemName } from "../../../data";
 import { Entity, Inserter, Machine, ReadableEntityRegistry } from "../../../entities";
@@ -42,7 +43,7 @@ export function targetItemOf(setpoint: { item: ItemName; counts?: TargetCounts }
  * target to write instead: the item destroyed, at the rate the given one stands for (crafts are what comes back over its
  * expected amount a craft; each destroys what it uses less what comes back). Null for any other target.
  */
-export function returnedTargetRefusal(target: TargetItem, items_per_second: number, registry: Registry): string | null {
+export function returnedTargetRefusal(target: TargetItem, items_per_second: SetpointRate, registry: Registry): string | null {
     if (target.counts !== "made") {
         return null;
     }
@@ -54,11 +55,12 @@ export function returnedTargetRefusal(target: TargetItem, items_per_second: numb
         }
         const back = machine.output.amount_per_craft.toDecimal();
         const used = machine.inputs.getOrThrow(target.item).ingredient.amount;
-        const destroyed = Number((items_per_second * (used - back) / back).toFixed(6));
+        const destroyed = Number((rateDecimal(items_per_second) * (used - back) / back).toFixed(6));
+        const requested = typeof items_per_second === "number" ? Number(items_per_second.toFixed(6)) : rateText(items_per_second);
         return `Machine ${machine.entity_id.number} places the ${target.item} of the target into ${machine.result_target}, and the build takes `
             + "all of it back into the machine: none leaves the build, so it is not made. A machine that destroys an item it is brought "
             + `is planned on what it destroys: set \`setpoint.counts\` to "destroyed" and \`items_per_second\` to the ${target.item} it is `
-            + `brought from outside, ${destroyed} for the ${Number(items_per_second.toFixed(6))} a second it gives back.`;
+            + `brought from outside, ${destroyed} for the ${requested} a second it gives back.`;
     }
     return null;
 }

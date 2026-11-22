@@ -1,3 +1,4 @@
+import { rateDecimal } from "../../../src/config/setpoint-rate";
 import { SAMPLE_BUILDS_DIR } from "../helpers/fixture-paths";
 import fs from "fs";
 import os from "os";
@@ -680,7 +681,7 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             expect(holds, `the selected clock (${selected.label}) is stable in the simulator`).toBe(true);
             // a clock of fractional swings can leave the rate a hair off the whole number (240 reads 239.99999999999997)
             expect(selected.assessment.items_per_second, `the selected clock (${selected.label}) reaches the target rate in the simulator`)
-                .toBeCloseTo(config.setpoint.items_per_second, 6);
+                .toBeCloseTo(rateDecimal(config.setpoint.items_per_second), 6);
             }
 
             // A fractional window cycle is built as a subtick clock, which counts the whole ticks after which the window cycle
@@ -703,10 +704,10 @@ describe.sequential("the selected clock holds the target rate in Factorio", () =
             expect(part !== undefined || copies === whole_copies, `the config has a part copy for the ${copies - whole_copies} of a copy the build holds`).toBe(true);
             const counted_copies = whole_copies + (part?.share ?? 0);
             const part_finals = part ? config.machines.filter(machine => recipes.includes(machine.recipe) && part.ids.has(`machine:${machine.id}`)).length : 0;
-            const expected_per_copy = Math.round(config.setpoint.items_per_second / config.setpoint.copies * window_cycle_ticks / 60 * 1e6) / 1e6;
+            const expected_per_copy = Math.round(rateDecimal(config.setpoint.items_per_second) / config.setpoint.copies * window_cycle_ticks / 60 * 1e6) / 1e6;
             const expected = Math.round(expected_per_copy * counted_copies * 1e6) / 1e6;
             // what the machines that make the target item have to finish over the trailing minute for steady state
-            const expected_per_window = Math.round(config.setpoint.items_per_second / config.setpoint.copies * counted_copies * WINDOW_TICKS / 60 * 1e6) / 1e6;
+            const expected_per_window = Math.round(rateDecimal(config.setpoint.items_per_second) / config.setpoint.copies * counted_copies * WINDOW_TICKS / 60 * 1e6) / 1e6;
             // the clock with its schedule as the generator made it, which the harness wires without reading descriptions
             const exported = selected ? subtick ?? selected.result : null;
             // the dips and issues this build expects were seen on one clock: on another they say nothing

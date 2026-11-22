@@ -361,3 +361,5 @@ export { deriveOutputTransfers } from "./config/output-transfer";
 export type { OutputTransferTarget, OutputTransferResult, OutputTransferSummary } from "./config/output-transfer";
 export { outputTransferGenerationIssues, assertOutputTransferGenerationSupported } from "./config/output-transfer-generation";
 export type { OutputTransferGenerationIssue } from "./config/output-transfer-generation";
+
+export type { SetpointRate } from "./config/setpoint-rate";

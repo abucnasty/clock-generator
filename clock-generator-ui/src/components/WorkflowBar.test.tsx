@@ -87,3 +87,16 @@ it('leaves Generate on for the other blocking errors, which it goes to instead',
     show(<WorkflowBar {...bar(fieldError)} />);
     expect((screen.getByRole('button', { name: 'Generate' }) as HTMLButtonElement).disabled).toBe(false);
 });
+
+it('disables Check and Generate after a checked form acquires an invalid rate', () => {
+    const props = bar();
+    const view = show(<WorkflowBar {...props} checkStatus="valid" />);
+    view.rerender(<WorkflowBar {...props} invalid_rate />);
+    for (const name of [CHECK_TEXT.checkOnly, CHECK_TEXT.generate]) {
+        const button = screen.getByText(name).closest('button')!;
+        expect(button.disabled).toBe(true);
+        fireEvent.click(button);
+    }
+    expect(props.onCheckOnly).not.toHaveBeenCalled();
+    expect(props.onGenerate).not.toHaveBeenCalled();
+});

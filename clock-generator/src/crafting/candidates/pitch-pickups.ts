@@ -1,3 +1,4 @@
+import { windowCycleTicks, type WindowCycle } from "../../common/subtick-window-cycle";
 import { Config } from "../../config";
 import { alwaysEnabledInserters } from "../sequence/unplanned-inserter-clock";
 import { OpenRange } from "../../data-types";
@@ -86,13 +87,14 @@ function pitchPickupsOutputWindows(
     windows: Map<string, OpenRange[]>,
     output_swings: Map<string, number>,
     output_machine_ids: Set<string>,
-    window_cycle_ticks: number,
+    window_cycle: WindowCycle,
     logger: Logger,
     report?: (detail: string) => void,
     count_waits = false,
     /** Judge each lane-phase start of the trials over its repeating cycle (see runAsBuiltCheck): observed windows do */
     pickup_phase_cycles = false,
 ): PitchPickupsWindows | null {
+    const window_cycle_ticks = windowCycleTicks(window_cycle);
     const swing_counts = Array.from(new Set(Array.from(output_swings.values(), s => Math.round(s * 1e6) / 1e6)));
     if (swing_counts.length !== 1 || !Number.isInteger(swing_counts[0]) || swing_counts[0] < 1) {
         return null;
@@ -151,7 +153,7 @@ function pitchPickupsOutputWindows(
         return ticks;
     };
 
-    const planned_run = runClockOnBuild(config, windows, window_cycle_ticks, logger);
+    const planned_run = runClockOnBuild(config, windows, window_cycle, logger);
     const planned = pickupStats(planned_run);
     const extra_grabs = (planned.pickups - planned.swings) / Math.max(1, planned.swings);
     const waits = planned.slow / Math.max(1, planned.swings);
@@ -165,7 +167,7 @@ function pitchPickupsOutputWindows(
     }
 
     const recovers = (candidate_windows: Map<string, OpenRange[]>) => FULL_HAND_RECOVERY_WINDOW_CYCLES.every(warmup_window_cycles =>
-        runClockOnBuild(config, candidate_windows, window_cycle_ticks, logger, { keep_output_buffers: true, warmup_window_cycles }).stability_check.holds);
+        runClockOnBuild(config, candidate_windows, window_cycle, logger, { keep_output_buffers: true, warmup_window_cycles }).stability_check.holds);
     // shortest spare first: longer windows let more grabs wait for items
     const recoveringTiming = (timing: Timing, label: string) => {
         if (recovers(build(timing))) {
@@ -176,7 +178,7 @@ function pitchPickupsOutputWindows(
                 report?.(`Searching spare output capacity (${label}, every ${every} enable windows +${ticks} ticks)`);
                 const spare = { every, ticks };
                 const spare_windows = build(timing, spare);
-                const result = runClockOnBuild(config, spare_windows, window_cycle_ticks, logger);
+                const result = runClockOnBuild(config, spare_windows, window_cycle, logger);
                 if (result.stability_check.holds && recovers(spare_windows)) {
                     return { spare, output_full: outputFullTicks(result), slow: slowPickups(result) };
                 }
@@ -198,7 +200,7 @@ function pitchPickupsOutputWindows(
         quick: (timing, index) => {
             report?.(`Searching Pitch Pickups timing (${index + 1}/${timings.length})`);
             const timing_windows = build(timing);
-            const trial = quickTrial(config, timing_windows, window_cycle_ticks, logger, pickup_phase_cycles);
+            const trial = quickTrial(config, timing_windows, window_cycle, logger, pickup_phase_cycles);
             return trial.holds
                 ? { holds: true, output_full: outputFullTicks(trial.result), slow: slowPickups(trial.result), windows: timing_windows, run: trial.run }
                 : { holds: false, output_full: 0, slow: 0, windows: timing_windows, run: trial.run };
@@ -223,7 +225,7 @@ function pitchPickupsOutputWindows(
             }
             // without spare capacity the windows are the quick trial's, whose check the confirmation takes over
             const candidate_windows = recovery.spare ? build(timing, recovery.spare) : quick.windows;
-            const confirmed = confirm(config, candidate_windows, window_cycle_ticks, logger, label, report,
+            const confirmed = confirm(config, candidate_windows, window_cycle, logger, label, report,
                 recovery.spare ? undefined : quick.run, pickup_phase_cycles);
             logger.log(`Pitch Pickups: ${label}, ${output_full} output-full ticks, ${slow} slow pickups, stable=${confirmed !== null}`);
             return confirmed === null ? null : { ...confirmed, windows: candidate_windows };
@@ -262,7 +264,7 @@ export function pitchPickupsTransferWindows(
     verification: TrialRun,
     output_inserter_ids: Set<string>,
     entity_registry: ReadableEntityRegistry,
-    window_cycle_ticks: number,
+    window_cycle: WindowCycle,
     logger: Logger,
     report?: (detail: string) => void,
 ): { windows: Map<string, OpenRange[]>; result: TrialRun; check: AsBuiltStabilityCheck; inserters: string[] } | null {
@@ -288,7 +290,7 @@ export function pitchPickupsTransferWindows(
         }
         // the windows around these are observed windows, checked as they are (see timeStudyWindowsClock)
         const found = pitchPickupsOutputWindows(config, current?.windows ?? windows, new Map([[entity_id.id, transfers.length]]),
-            new Set([source.entity_id.id]), window_cycle_ticks, logger, report, true, true);
+            new Set([source.entity_id.id]), window_cycle, logger, report, true, true);
         if (found) {
             current = found;
             inserters.push(entity_id.id);
@@ -321,7 +323,7 @@ export function pitchPickupsClock(config: Config, options: GenerateClockOptions 
         { ...config, overrides: { ...config.overrides, derive_clock_windows: false } },
         base.windows, output_swings,
         new Set(output_inserters.map(os => os.inserter.source.entity_id.id)),
-        duration.ticks, plan.logger, options.on_progress_detail,
+        duration.exact_ticks ?? duration.ticks, plan.logger, options.on_progress_detail,
     );
     // On a p/q-tick window cycle the room for one more hand is decided on this clock's own windows, not on the planned
     // clock's it builds on: where the planned windows took the room, the timing is searched first on them without it,

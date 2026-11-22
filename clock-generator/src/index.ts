@@ -6,3 +6,5 @@
 import './data/factorio-data-file';
 
 export * from './browser';
+
+export type { SetpointRate } from "./config/setpoint-rate";

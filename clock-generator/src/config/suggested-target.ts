@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { pipe } from "fp-ts/function";
 import * as O from "fp-ts/Option";
 import { RecipeMetadata } from "../entities/machine/recipe/recipe-metadata";
@@ -15,7 +16,7 @@ import { BeltConfig, ChestConfig, Config, ConfigSchema, InserterConfig, MachineC
  * switch off.
  */
 export interface SuggestedTarget {
-    target: TargetProductionRateConfig;
+    target: NumericTarget;
     /** "mod": the export carried it; "inferred": worked out from the pasted machines */
     source: "mod" | "inferred";
     /**
@@ -43,12 +44,16 @@ export interface PastedRest {
     drills: readonly MiningDrillConfig[];
 }
 
-const SuggestedTargetSchema = TargetProductionRateConfigSchema.extend({
+type NumericTarget = TargetProductionRateConfig & { items_per_second: number };
+
+const SuggestedTargetSchema = z.object({
+    ...TargetProductionRateConfigSchema.shape,
+    items_per_second: z.number().positive(),
     item: TargetProductionRateConfigSchema.shape.item.min(1),
 });
 
 /** The `suggested_target` of a sidecar export, None when it is missing or not a valid target. Never throws. */
-export function parseSuggestedTarget(raw: unknown): O.Option<TargetProductionRateConfig> {
+export function parseSuggestedTarget(raw: unknown): O.Option<NumericTarget> {
     // the Sidecar writes `recipe`, as before: it is read as the item
     const result = SuggestedTargetSchema.safeParse(renameRecipeToItem(raw));
     return result.success ? O.some(result.data) : O.none;
@@ -111,7 +116,7 @@ function recipeGroupOf(recipe: string, machines: readonly MachineConfiguration[]
  *    name sorts first, then the one whose recipe name does.
  * 6. Its rate is the sum of the output rates of its machines, as the machine facts give them; copies is 1.
  */
-export function inferSuggestedTarget(machines: readonly MachineConfiguration[]): O.Option<TargetProductionRateConfig> {
+export function inferSuggestedTarget(machines: readonly MachineConfiguration[]): O.Option<NumericTarget> {
     const by_recipe = new Map<string, MachineConfiguration[]>();
     for (const machine of machines) {
         by_recipe.set(machine.recipe, [...(by_recipe.get(machine.recipe) ?? []), machine]);

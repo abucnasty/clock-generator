@@ -1,3 +1,4 @@
+import { canonicalRate } from 'clock-generator/light';
 import { COPIES_DECIMAL_ERROR } from 'clock-generator/light';
 import type { z } from 'zod';
 
@@ -10,7 +11,11 @@ import type { z } from 'zod';
  */
 export function parseFormConfig<T>(schema: z.ZodType<T>, config: unknown): z.ZodSafeParseResult<T> {
     const result = schema.safeParse(config);
-    if (result.success || !result.error.issues.every((issue) => issue.code === 'too_small' || issue.code === 'too_big'
+    if (result.success) return { success: true, data: canonicalRate(result.data) };
+    if (result.error.issues.some(issue => issue.path[0] === 'setpoint' && issue.path[1] === 'items_per_second'
+        && (issue.path.length > 2 || (issue.code === 'custom' && issue.params?.rate_precision !== true)))) return result;
+    if (!result.error.issues.every((issue) => issue.code === 'too_small' || issue.code === 'too_big'
+        || (issue.code === 'custom' && issue.params?.rate_precision === true && issue.path.join('.') === 'setpoint.items_per_second')
         || (issue.code === 'custom' && issue.path.length === 2 && issue.path[0] === 'setpoint'
             && issue.path[1] === 'copies' && issue.message === COPIES_DECIMAL_ERROR)
         // a setpoint that names an output the engine does not count yet: the form shows it with the words, Check refuses it
@@ -24,5 +29,5 @@ export function parseFormConfig<T>(schema: z.ZodType<T>, config: unknown): z.Zod
             && issue.path[3] === 'drop'))) {
         return result;
     }
-    return { success: true, data: config as T };
+    return { success: true, data: canonicalRate(config) as T };
 }

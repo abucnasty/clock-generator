@@ -211,7 +211,7 @@ function chestBase(chest: BuildToName["chests"][number], words: ItemWords): stri
 }
 
 /** The name of chest `id`: "buffer chest that holds iron plate", "car", "car (car 1)", "chest 2" where the build does not have it */
-export function chestNameInText(id: number, build: BuildToName, options: NameOptions = {}): string {
+export function chestNameInText(id: number, build: Pick<BuildToName, "chests">, options: NameOptions = {}): string {
     const words = textWords(options.words);
     const chest = build.chests.find(it => it.id === id);
     if (chest === undefined) return `chest ${id}`;
@@ -220,6 +220,13 @@ export function chestNameInText(id: number, build: BuildToName, options: NameOpt
     const number = VEHICLES.has(chest.kind) ? `${words.item(chest.kind)} ${id}` : `chest ${id}`;
     return VEHICLES.has(chest.kind) || chest.holds.length === 0 ? `${base} (${number})`
         : `${words.item(chest.kind)} (${number}) that holds ${listedInText(chest.holds.map(words.item))}`;
+}
+
+/** The container a placer fills, retaining "chest N" for an ordinary chest or an unknown kind */
+export function placedChestInSentence(id: number, chests: BuildToName["chests"]): string {
+    const chest = chests.find(it => it.id === id);
+    if (chest === undefined || !VEHICLES.has(chest.kind)) return `chest ${id}`;
+    return theName(chestNameInText(id, { chests }, { words: { item: kind => kind.replace(/-/g, " ") } }));
 }
 
 /** The name of drill `id`: "drill that mines stone", "drill (drill 2) that mines stone", "drill 3" where the build does not have it */

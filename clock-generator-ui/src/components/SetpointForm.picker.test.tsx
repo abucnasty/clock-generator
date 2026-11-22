@@ -44,6 +44,13 @@ async function pick(user: ReturnType<typeof form>['user'], recipe: string) {
 }
 
 describe('the setpoint picker, for a recipe with several outputs', () => {
+    it('keeps the exact total while picking another output recipe', async () => {
+        const onItemsPerSecondChange = vi.fn();
+        const { user } = form({ itemsPerSecond: { numerator: 16, denominator: 7 }, onItemsPerSecondChange });
+        await pick(user, 'jellynut-processing');
+        expect(screen.getByRole<HTMLInputElement>('textbox', { name: 'Items per Second' }).value).toBe('16/7');
+        expect(onItemsPerSecondChange).not.toHaveBeenCalled();
+    });
     it('shows a second choice of the outputs, the one the engine counts selected, and saves that item, with no machine of the recipe in the build', async () => {
         const onRecipeChange = vi.fn();
         const { user } = form({ onRecipeChange });

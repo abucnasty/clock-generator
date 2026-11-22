@@ -1,3 +1,4 @@
+import { rateDecimal } from "../../../src/config/setpoint-rate";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -49,7 +50,7 @@ for (const backed of [false, true]) {
         const period = selected.result.subtick?.clock.window_cycle_ticks ?? selected.result.simulation_duration.ticks;
         expect(clockHash(exported), "the selected clock is the one pinned").toBe(scaffoldClockPins[PIN].clock_sha256);
         // the scaffold holds one of the config's seven copies: 17.14 a second
-        const target = config.setpoint.items_per_second / config.setpoint.copies;
+        const target = rateDecimal(config.setpoint.items_per_second) / config.setpoint.copies;
         const recipes = [...recipesMaking(config, config.setpoint.item)];
         const blueprint = fs.readFileSync(path.join(path.dirname(ConfigPaths.UTILITY_SCIENCE_120), "utility-120.scaffold"), "utf8").trim();
         const probe = composeProbeSource(path.join(__dirname, "utility-science-120-selected-clock-probe.lua"), {

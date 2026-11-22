@@ -1,3 +1,4 @@
+import { rateDecimal } from "../../../src/config/setpoint-rate";
 import fs from "fs";
 import path from "path";
 import {describe, expect, test} from "vitest";
@@ -61,7 +62,7 @@ describe.sequential("the selected clock of a record job from the staged start, w
             }
 
             const jobCopies = config.setpoint.copies ?? 1;
-            const perCopy = config.setpoint.items_per_second / jobCopies;
+            const perCopy = rateDecimal(config.setpoint.items_per_second) / jobCopies;
             const target = perCopy * item.copies;
             const recipes = [...recipesMaking(config, config.setpoint.item)];
             const finalsPerCopy = config.machines.filter(machine => recipes.includes(machine.recipe)).length;

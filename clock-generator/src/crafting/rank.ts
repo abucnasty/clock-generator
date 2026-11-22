@@ -1,3 +1,4 @@
+import { rateDecimal } from "../config/setpoint-rate";
 import { Config } from "../config";
 import { compareBy } from "../common/compare-by";
 import { ClockAlternative, ClockAlternativeRun } from "./alternatives";
@@ -105,7 +106,7 @@ export function roundedRateAllowed(rounded: Pick<RoundedClock, "runs_fast" | "wi
 
 /** How a clock ranks, from its assessment and verdict, and the deadlock risks of its build */
 export function rankingOf(clock: Omit<ClockAlternative, "ranking">, config: Config): ClockRanking {
-    const target = config.setpoint.items_per_second;
+    const target = rateDecimal(config.setpoint.items_per_second);
     const rate_off_target = clock.assessment.items_per_second - target;
     // on a build with a deadlock risk the recovery verdict does not decide: see `meets_target_rate`
     const counts_as_holding = clock.deadlock_risks.length > 0 ? clock.verdict !== "unstable" : clock.verdict === "stable";

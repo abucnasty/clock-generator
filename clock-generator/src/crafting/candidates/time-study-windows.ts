@@ -1,3 +1,4 @@
+import { windowCycleTicks, type WindowCycle } from "../../common/subtick-window-cycle";
 import { Config } from "../../config";
 import { alwaysEnabledInserters } from "../sequence/unplanned-inserter-clock";
 import { createEntityRegistryFromConfig } from "../sequence/simulation-context";
@@ -65,7 +66,7 @@ function deriveClockWindows(
     planned_history: InventoryTransferHistory,
     output_inserter_ids: Set<string>,
     lane_hand_room: Map<string, number>,
-    window_cycle_ticks: number,
+    window_cycle: WindowCycle,
     logger: Logger,
     report?: (detail: string) => void,
 ): TimeStudyWindows {
@@ -77,20 +78,20 @@ function deriveClockWindows(
     const deriveFrom = (planned_windows: Map<string, OpenRange[]>, in_positions: boolean, label: string): TimeStudyWindows => {
         const output_windows = new Map(Array.from(planned_windows).filter(([key]) => output_inserter_ids.has(key)));
         const drill_windows = new Map(Array.from(planned_windows).filter(([key]) => drill_ids.has(key)));
-        const planned = deriveTimeStudyWindows(base_config, output_windows, drill_windows, output_inserter_ids, lane_hand_room, window_cycle_ticks,
+        const planned = deriveTimeStudyWindows(base_config, output_windows, drill_windows, output_inserter_ids, lane_hand_room, window_cycle,
             `planned output${label}`, logger, report, true, in_positions);
         if (planned.windows !== null || planned.even_output_windows === null) {
             return planned;
         }
         // Bunched output swings (e.g. a double swing then a long gap) can leave a partial stack in hand when the window closes
-        const even = deriveTimeStudyWindows(base_config, planned.even_output_windows, drill_windows, output_inserter_ids, lane_hand_room, window_cycle_ticks,
+        const even = deriveTimeStudyWindows(base_config, planned.even_output_windows, drill_windows, output_inserter_ids, lane_hand_room, window_cycle,
             `evenly spaced output${label}`, logger, report, true, in_positions);
         if (even.windows !== null) {
             return even;
         }
         return (even.as_built?.actual_output_items ?? 0) > (planned.as_built?.actual_output_items ?? 0) ? even : planned;
     };
-    const step = positionStep(window_cycle_ticks);
+    const step = positionStep(window_cycle);
     if (step === null || step === 1) {
         return deriveFrom(read, true, "");
     }
@@ -99,7 +100,7 @@ function deriveClockWindows(
         return as_read;
     }
     // where neither holds, the first try is what is reported, as before the second existed
-    const kept = deriveFrom(withWindowsKeepingLength(read, window_cycle_ticks), true, ", in the clock's positions");
+    const kept = deriveFrom(withWindowsKeepingLength(read, window_cycle), true, ", in the clock's positions");
     return kept.windows !== null ? kept : as_read;
 }
 
@@ -129,7 +130,7 @@ export function deriveTimeStudyWindows(
     output_inserter_ids: Set<string>,
     /** The room for one more hand of each inserter that picks up from a belt (laneHandRoomTicks), added to its windows */
     lane_hand_room: Map<string, number>,
-    window_cycle_ticks: number,
+    window_cycle: WindowCycle,
     label: string,
     logger: Logger,
     report?: (detail: string) => void,
@@ -141,13 +142,14 @@ export function deriveTimeStudyWindows(
      */
     in_positions: boolean = true,
 ): TimeStudyWindows {
+    const window_cycle_ticks = windowCycleTicks(window_cycle);
     const as_read = !in_positions && !Number.isInteger(window_cycle_ticks);
     const fixed_windows = new Map([...output_windows, ...drill_windows]);
     report?.(`Simulating with only the output inserters clocked (${label} enable windows)`);
-    const derivation = withTickPurpose("window_derivation", () => runClockOnBuild(base_config, fixed_windows, window_cycle_ticks, logger), { claim: true });
+    const derivation = withTickPurpose("window_derivation", () => runClockOnBuild(base_config, fixed_windows, window_cycle, logger), { claim: true });
     logger.log(`Derived enable windows (${label}): output-only run actual=${derivation.stability_check.actual_output_items} expected=${derivation.stability_check.expected_output_items}`);
     const even_output_windows = as_read ? null
-        : evenlySpacedOutputWindows(output_windows, outputSwingCountsOf(derivation, new Set(output_windows.keys()), window_cycle_ticks), window_cycle_ticks);
+        : evenlySpacedOutputWindows(output_windows, outputSwingCountsOf(derivation, new Set(output_windows.keys()), window_cycle_ticks), window_cycle);
     const reportOf = (tried: { candidate: number; quick: QuickTrial }[], picked: number | null): SearchReport => ({
         kind: "padding",
         candidates: tried.map(it => ({ row: 1, setting: it.candidate, holds: it.quick.holds })),
@@ -177,10 +179,10 @@ export function deriveTimeStudyWindows(
     const { picked, pick, tried } = search<number, QuickTrial & { windows: Map<string, OpenRange[]>; result: TrialRun; run: AsBuiltRun }, Confirmed>({
         candidates: DERIVED_WINDOW_END_PADDING_CANDIDATES,
         quick: padding => {
-            const padded = paddedWindows(unpadded, busy_windows.keys(), padding, window_cycle_ticks, !as_read);
-            const windows = as_read ? padded : withWindowsLengthened(padded, lane_hand_room, window_cycle_ticks);
+            const padded = paddedWindows(unpadded, busy_windows.keys(), padding, window_cycle, !as_read);
+            const windows = as_read ? padded : withWindowsLengthened(padded, lane_hand_room, window_cycle);
             report?.(`Trying ${ticks(padding)}`);
-            const trial = quickTrial(base_config, windows, window_cycle_ticks, logger, true);
+            const trial = quickTrial(base_config, windows, window_cycle, logger, true);
             logger.log(`Derived enable windows (${label}): end padding ${padding} -> actual=${trial.result.stability_check.actual_output_items} holds=${trial.holds}`);
             return { ...trial, windows };
         },
@@ -189,7 +191,7 @@ export function deriveTimeStudyWindows(
         // the paddings are listed smallest first, and the page shows the candidates of shifts only (simulation.worker.ts)
         in_order: true,
         confirm: ({ candidate: padding, quick }) => confirm_pick
-            ? confirm(base_config, quick.windows, window_cycle_ticks, logger, ticks(padding), report, quick.run, true)
+            ? confirm(base_config, quick.windows, window_cycle, logger, ticks(padding), report, quick.run, true)
             : { result: quick.result, check: checkOfRun(quick.result) },
     });
     if (picked !== null && pick !== null) {
@@ -209,7 +211,7 @@ export function deriveTimeStudyWindows(
 function feedObserved(
     config: Config,
     windows: Map<string, OpenRange[]>,
-    window_cycle_ticks: number,
+    window_cycle: WindowCycle,
     options: GenerateClockOptions,
     logger: Logger,
     start_phases: number,
@@ -217,10 +219,10 @@ function feedObserved(
     if (options.loop_windows === false || machineLoopsOf(config).length === 0) {
         return null;
     }
-    const run = runAsBuiltCheck(config, windows, window_cycle_ticks, logger, start_phases,
+    const run = runAsBuiltCheck(config, windows, window_cycle, logger, start_phases,
         (n, total) => options.on_progress_detail?.(`Checking observed windows for the loop's enable windows, clock start ${n}/${total}`),
         FREE_RUNNING_CHECK_TICKS, undefined, true);
-    return trialWithLoopWindows(config, windows, window_cycle_ticks, run, start_phases, logger, options.on_progress_detail, true,
+    return trialWithLoopWindows(config, windows, window_cycle, run, start_phases, logger, options.on_progress_detail, true,
         options.loop_windows !== "out-of-loop");
 }
 
@@ -248,16 +250,17 @@ export function timeStudyWindowsClock(
     const clock = clockOfPlan(plan, options);
     const { logger, run } = plan;
     const { stability_check, duration, final_history, output_inserter_ids, output_machine_state_machines, simulation_context } = run;
+    const window_cycle = duration.exact_ticks ?? duration.ticks;
     const planned_windows = clock.windows;
     const planned_stable = stability_check.holds;
     const non_deriving_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
-    const planned_run = runAsBuiltCheck(non_deriving_config, planned_windows, duration.ticks, logger, AS_BUILT_START_PHASES,
+    const planned_run = runAsBuiltCheck(non_deriving_config, planned_windows, window_cycle, logger, AS_BUILT_START_PHASES,
         (n, total) => options.on_progress_detail?.(`Checking planned windows, clock start ${n}/${total}`), FREE_RUNNING_CHECK_TICKS, undefined, true);
     let planned_check = planned_run.check;
     let clock_only_run = clockOnlyRunOf(planned_run.result);
     if (planned_stable && planned_check.holds) {
         // the check just made covered the unshifted run, every pickup phase start and the long run on these windows
-        planned_check = runAsBuiltCheck(non_deriving_config, planned_windows, duration.ticks, logger, FULL_CHECK_START_PHASES,
+        planned_check = runAsBuiltCheck(non_deriving_config, planned_windows, window_cycle, logger, FULL_CHECK_START_PHASES,
             (n, total) => options.on_progress_detail?.(`Confirming planned windows, clock start ${n}/${total}`),
             FREE_RUNNING_CHECK_TICKS, { run: planned_run, long_run_ticks: FREE_RUNNING_CHECK_TICKS }, true).check;
     }
@@ -265,7 +268,7 @@ export function timeStudyWindowsClock(
     // the windows of the inserters of a loop are part of the planned windows, kept or dropped here as without derivation
     const feedPlanned = () => {
         const fed = planned_stable && planned_check.holds && options.loop_windows !== false
-            ? trialWithLoopWindows(non_deriving_config, planned_windows, duration.ticks, { check: planned_check, stock: planned_run.stock },
+            ? trialWithLoopWindows(non_deriving_config, planned_windows, window_cycle, { check: planned_check, stock: planned_run.stock },
                 planned_check.start_phases_checked > AS_BUILT_START_PHASES ? FULL_CHECK_START_PHASES : AS_BUILT_START_PHASES, logger, options.on_progress_detail, true,
                 options.loop_windows !== "out-of-loop")
             : null;
@@ -286,13 +289,13 @@ export function timeStudyWindowsClock(
     }
 
     const uneven = mode !== "moved_output_swing" ? null : movedOutputSwingWindows(
-        config, final_history, output_inserter_ids, clock.lane_hand_room, duration.ticks,
+        config, final_history, output_inserter_ids, clock.lane_hand_room, window_cycle,
         Math.min(...output_machine_state_machines.map(it => it.machine_state.machine.crafting_rate.ticks_per_craft)),
         logger, options.on_progress_detail);
     // without a moved swing that works there is nothing to export; plain observed windows are their own alternative
     const derived: Omit<TimeStudyWindows, "even_output_windows" | "search"> & { search?: SearchReport } = mode === "moved_output_swing"
         ? uneven ?? { windows: null, end_padding_ticks: null, verification: null, as_built: null }
-        : deriveClockWindows(config, final_history, output_inserter_ids, clock.lane_hand_room, duration.ticks, logger, options.on_progress_detail);
+        : deriveClockWindows(config, final_history, output_inserter_ids, clock.lane_hand_room, window_cycle, logger, options.on_progress_detail);
     const report: TimeStudyWindowsReport = {
         succeeded: derived.windows !== null,
         kept_planned_windows: false,
@@ -306,7 +309,7 @@ export function timeStudyWindowsClock(
 
     if (derived.windows !== null && derived.verification !== null) {
         const full_hand = pitchPickupsTransferWindows(non_deriving_config, derived.windows, derived.verification,
-            output_inserter_ids, simulation_context.entity_registry, duration.ticks, logger, options.on_progress_detail);
+            output_inserter_ids, simulation_context.entity_registry, window_cycle, logger, options.on_progress_detail);
         let windows = full_hand?.windows ?? derived.windows;
         if (full_hand) {
             stability_check.as_built = full_hand.check;
@@ -314,7 +317,7 @@ export function timeStudyWindowsClock(
             report.full_hand_inserters = full_hand.inserters;
         }
         // the inserters of a loop, which the observed windows leave always enabled, get theirs as on planned windows
-        const fed = stability_check.holds ? feedObserved(non_deriving_config, windows, duration.ticks, options, logger,
+        const fed = stability_check.holds ? feedObserved(non_deriving_config, windows, window_cycle, options, logger,
             (stability_check.as_built?.start_phases_checked ?? 0) > AS_BUILT_START_PHASES ? FULL_CHECK_START_PHASES : AS_BUILT_START_PHASES) : null;
         if (fed !== null) {
             windows = fed.windows;

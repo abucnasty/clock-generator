@@ -1,3 +1,4 @@
+import { decimalOf, type Ratio } from "../../../entities/traits/ratio";
 import assert from "../../../common/assert";
 import { EntityId, Inserter } from "../../../entities";
 import { AlwaysEnabledControl, EnableControl } from "../../../simulation/controls/enable-control";
@@ -46,6 +47,7 @@ export class ConfigurableEnableControlFactory {
         private readonly exact_subtick_positions: boolean = true,
         /** Whether a clock of a p/q-tick window cycle runs through as well (`runThroughTicks`), given a game tick provider */
         private readonly counter_runs_through: boolean = false,
+        private readonly trial_window_cycle?: Ratio,
     ) {
         this.conditional_factory = new ConditionalEnableControlFactory(entity_state_registry);
     }
@@ -104,7 +106,7 @@ export class ConfigurableEnableControlFactory {
         override: Extract<EnableControlOverrideConfig, { mode: "CLOCKED" }>
     ): EnableControl {
         const window_cycle_duration = override.window_cycle_ticks !== undefined
-            ? Duration.ofTicks(override.window_cycle_ticks)
+            ? Duration.ofTicks(override.window_cycle_ticks, this.trial_window_cycle && decimalOf(this.trial_window_cycle) === override.window_cycle_ticks ? this.trial_window_cycle : undefined)
             : this.output_cycle_plan.total_duration;
 
         // Validate and warn if ranges exceed cycle duration

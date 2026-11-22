@@ -91,7 +91,7 @@ export function beltPickupSinkRefusal(config: BeltPickupSinkConfig): BeltPickupS
         found.push({ inserter_id: inserter.id ?? index + 1, belt_id: inserter.source.id,
             sink: { type: inserter.sink.type === "belt" ? "belt" : "chest", id: inserter.sink.id } });
     });
-    return found.length === 0 ? null : new BeltPickupSinkError(found);
+    return found.length === 0 ? null : new BeltPickupSinkError(found, config.chests);
 }
 
 /**

@@ -137,6 +137,7 @@ export function timeDivisionWindowsClock(config: Config, options: GenerateClockO
     for (const inserter of registry.getAll().filter(Entity.isInserter)) assertTimeDivisionWindowsSource(inserter);
     const plan = unclockedRun(config, options);
     const { simulation_context, swing_counts, recipe_lcm, duration, always_enabled_by_config, inserter_clocks } = plan.run;
+    assert(!duration.exact_ticks || duration.exact_ticks.denominator === 1, `Time-Division Windows need a window cycle time of whole ticks, not ${duration.ticks}`);
     assert(always_enabled_by_config.size === 0 && inserter_clocks.size === 0 && alwaysEnabledInserters(simulation_context.entity_registry).length === 0,
         "Time-Division Windows are not made for a build with inserters outside the plan");
     // a window that carries a result that comes by chance gets room for its spread, as the plan's do

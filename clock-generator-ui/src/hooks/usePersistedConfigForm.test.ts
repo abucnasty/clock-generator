@@ -169,3 +169,12 @@ describe('fractional library document serialization', () => {
         expect(serializeConfig(form)).toBe(text);
     });
 });
+
+it('saves and reopens the total rate when Copies makes it too precise to run', () => {
+    const form = createDefaultConfig();
+    form.setpoint.items_per_second = { denominator: 100000000000000, numerator: 1 };
+    form.setpoint.copies = 2;
+    const saved = serializeConfig(form);
+    expect(JSON.stringify(JSON.parse(saved).setpoint.items_per_second)).toBe('{"numerator":1,"denominator":100000000000000}');
+    expect(readSavedConfig(saved)?.setpoint).toEqual(form.setpoint);
+});

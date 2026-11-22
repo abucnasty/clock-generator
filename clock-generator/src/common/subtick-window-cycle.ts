@@ -1,3 +1,10 @@
+import { decimalOf, type Ratio } from "../entities/traits/ratio";
+
+/** A window cycle in ticks; a plan from a rational setpoint supplies its verified pair. */
+export type WindowCycle = number | Ratio;
+
+export const windowCycleTicks = (cycle: WindowCycle): number => typeof cycle === "number" ? cycle : decimalOf(cycle);
+
 /** A fractional window cycle as p/q ticks with small integers: the count of a subtick clock and the units of its position */
 export interface SubtickWindowCycle {
     /** p: the whole ticks the subtick clock counts, q window cycles */
@@ -9,7 +16,12 @@ export interface SubtickWindowCycle {
 const MAX_SUBTICK_SCALE = 1000;
 
 /** A fractional window cycle as p/q ticks with small integers (e.g. 550.9565... = 12672/23), or null */
-export function subtickClockForWindowCycle(window_cycle_ticks: number): SubtickWindowCycle | null {
+export function subtickClockForWindowCycle(window_cycle_ticks: number, exact?: Ratio): SubtickWindowCycle | null {
+    if (exact) {
+        const { numerator, denominator } = exact;
+        return denominator >= 2 && denominator <= MAX_SUBTICK_SCALE && BigInt(numerator) * BigInt(denominator) < 2n ** 31n
+            ? { window_cycle_ticks: numerator, scale: denominator } : null;
+    }
     if (Number.isInteger(window_cycle_ticks)) {
         return null;
     }

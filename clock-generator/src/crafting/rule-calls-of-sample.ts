@@ -48,7 +48,9 @@ export interface RuleCallsOfClock {
  */
 function clockedStockOf(config: Config, selected: ClockAlternative, logger: Logger): { stock: StockRecording; from_tick: number } {
     const result = selected.result;
-    const window_cycle_ticks = result.simulation_duration.ticks;
+    const rounded = result.simulation_duration.exact_ticks === undefined ? undefined : selected.rounded;
+    const period = rounded?.tried_on_its_window_cycle ? undefined : result.simulation_duration.exact_ticks;
+    const window_cycle_ticks = rounded?.tried_on_its_window_cycle ? rounded.window_cycle_ticks : result.simulation_duration.ticks;
     const long_run = result.stability_check.as_built?.wake_ups;
     assert(long_run !== undefined, `The recommended clock (${selected.id}, ${selected.verdict}) has no long-run wakeup count: its check failed `
         + "before the long run, or the window cycle time is too long for one");
@@ -58,12 +60,12 @@ function clockedStockOf(config: Config, selected: ClockAlternative, logger: Logg
     // the one that gives the ticks the long run counted is the one the generator ran
     const tried = new Set<number>();
     for (const check_ticks of [FREE_RUNNING_CHECK_TICKS, LOOP_WINDOW_CHECK_TICKS]) {
-        const window_cycles = longRunWindowCyclesOf(window_cycle_ticks, check_ticks);
+        const window_cycles = longRunWindowCyclesOf(window_cycle_ticks, check_ticks, period);
         if (window_cycles <= 1 || tried.has(window_cycles)) {
             continue;
         }
         tried.add(window_cycles);
-        const run = runClockOnBuild({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, windows, window_cycle_ticks, logger,
+        const run = runClockOnBuild({ ...config, overrides: { ...config.overrides, derive_clock_windows: false } }, windows, period ?? window_cycle_ticks, logger,
             { simulate_window_cycles: window_cycles, machine_stock: true, factorio_states: false, detect_repeat: true });
         const stock = run.machine_stock;
         assert(stock !== undefined, "The run recorded no stock");

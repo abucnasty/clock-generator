@@ -25,7 +25,9 @@ after the engine reads the file: a field with a default is required, but a confi
 |---|---|---|---|
 | `setpoint` | object | yes | The setpoint: the product that the build must make, and the rate it must hold. The clock never changes it. |
 | `setpoint.item` | string | yes | The name of the item that the setpoint counts. The name of a recipe is read as the output the setpoint counts of it, where a machine of the build makes it. |
-| `setpoint.items_per_second` | number > 0 | yes | The rate of the setpoint for all copies together, in items per second. |
+| `setpoint.items_per_second` | number > 0 or object | yes | The rate of the setpoint for all copies together, in items per second, as a positive number or a reduced fraction. |
+| `setpoint.items_per_second.numerator` | integer > 0 | yes | A positive whole number, in lowest terms with the denominator. |
+| `setpoint.items_per_second.denominator` | integer > 0 | yes | The positive whole number that divides the numerator. |
 | `setpoint.copies` | number > 0 | yes | The number of identical builds in the game, which can be partial, for example 2.25. The fraction is a part copy: on each lane that the copies share, it holds that fraction of a copy's inserters, with the machines that they feed. In the check of the shared lanes, a machine of the part copy is held to its share of a whole copy's target ([stability](../../clock-generator/docs/stability.md#copies-that-share-a-lane)). |
 | `setpoint.copy_offset` | object | no | The distance from this build to the next copy, in tiles. |
 | `setpoint.copy_offset.x` | number | yes | The x coordinate, in tiles. |

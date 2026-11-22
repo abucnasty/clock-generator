@@ -67,7 +67,7 @@ describe('what the rate counts', () => {
     it.each([
         { counts: 'destroyed', itemsPerSecond: 500, line: /^At most 405\/s: Machine 1 destroys 405\/s\./ },
         { counts: 'made', itemsPerSecond: 500, line: /^At most 405\/s: Machine 1 makes 405\/s\./ },
-        { counts: 'destroyed', itemsPerSecond: 400, line: /^$/ },
+        { counts: 'destroyed', itemsPerSecond: 400, line: /e.g. 2, 2.5 or 16\/7/ },
     ] as const)('says what the machines make or destroy in the problem line under Items per Second, past what they can ($counts, $itemsPerSecond/s)', ({ counts, itemsPerSecond, line }) => {
         form({ recipe: 'iron-ore', itemsPerSecond, copies: 1, counts, machinesMax: max });
         // the line is read with the field
@@ -169,4 +169,80 @@ describe('the gap between copies', () => {
         await user.keyboard('{ArrowUp}');
         expect(onCopyOffsetChange).toHaveBeenLastCalledWith({ x: 1, y: 0 });
     });
+});
+
+it('keeps slash entry editable and commits its reduced total independently of Copies', async () => {
+    function Editor() {
+        const [rate, setRate] = useState<Props['itemsPerSecond']>(3);
+        const [copies, setCopies] = useState(1);
+        return <SetpointForm {...props} itemsPerSecond={rate} copies={copies} onCopiesChange={setCopies} onItemsPerSecondChange={setRate} />;
+    }
+    const { user } = show(<Editor />);
+    const input = screen.getByRole('textbox', { name: /Items per Second/ }) as HTMLInputElement;
+    await user.clear(input);
+    await user.type(input, '32 / 14');
+    await user.tab();
+    expect(input.value).toBe('16/7');
+    const copies = screen.getByRole<HTMLInputElement>('textbox', { name: 'Copies' });
+    await user.clear(copies);
+    await user.type(copies, '2.25{Tab}');
+    expect(input.value).toBe('16/7');
+    expect(screen.getByText('64/63 items/s per copy')).toBeDefined();
+    await user.clear(input);
+    await user.type(input, '16/0{Enter}');
+    expect(input.value).toBe('16/0');
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(screen.getByText('Denominator must be more than 0.')).toBeDefined();
+    await user.keyboard('{End}{Backspace}7{Tab}');
+    expect(input.value).toBe('16/7');
+});
+
+it.each([
+    '', '0', '-1', 'NaN', 'Infinity', '1/0', '1/-3', '1/2/3', '16/7 items/s', '1/', '1+2', '5%',
+    '9007199254740992/2', '11111111111111111/1', '1,234.5',
+    '١٢٬٣٤٫٥', '１，，２３４．５', '١٬٢٣٤，٥٦٧٫٨', '١٫٢٬٣٤٥',
+    '١٬٢٣٤/7', '16/１，２３４', '١٬٢٣٤٫٥ items/s', '１，２３４．５+1',
+])(
+    'retains an invalid pasted rate and clears the previous checked value (%j)', async text => {
+        const changed = vi.fn();
+        function Editor() {
+            const [rate, setRate] = useState<Props['itemsPerSecond']>({ numerator: 16, denominator: 7 });
+            return <SetpointForm {...props} itemsPerSecond={rate} onItemsPerSecondChange={next => { setRate(next); changed(next); }} />;
+        }
+        const { user } = show(<Editor />);
+        const field = screen.getByRole<HTMLInputElement>('textbox', { name: 'Items per Second' });
+        await user.clear(field);
+        if (text) await user.paste(text);
+        await user.keyboard('{Enter}');
+        expect(changed).toHaveBeenLastCalledWith(0);
+        expect(field.value).toBe(text);
+        expect(field.getAttribute('aria-invalid')).toBe('true');
+    });
+
+it.each([
+    ['2', 2], ['2.5', 2.5], ['２．５', 2.5], ['٢٫٥', 2.5], ['＋۲٫۵', 2.5], ['二.五', 2.5],
+    ['١٬٢٣٤٫٥', 1234.5], ['１，２３４．５', 1234.5], ['１２，３４５，６７８', 12345678],
+    ['000000000000000016 / 0008', { numerator: 2, denominator: 1 }],
+] as const)(
+    'commits the wire type entered (%s)', async (text, expected) => {
+        const changed = vi.fn();
+        function Editor() {
+            const [rate, setRate] = useState<Props['itemsPerSecond']>(3);
+            return <SetpointForm {...props} itemsPerSecond={rate} onItemsPerSecondChange={next => { setRate(next); changed(next); }} />;
+        }
+        const { user } = show(<Editor />);
+        const field = screen.getByRole<HTMLInputElement>('textbox', { name: 'Items per Second' });
+        await user.click(field);
+        await user.keyboard('{Control>}a{/Control}');
+        await user.paste(text);
+        await user.tab();
+        expect(changed).toHaveBeenLastCalledWith(expected);
+        expect(field.getAttribute('aria-invalid')).toBe('false');
+    });
+
+it('marks a reopened zero draft as invalid on its rate field', () => {
+    form({ itemsPerSecond: 0 });
+    const field = screen.getByRole<HTMLInputElement>('textbox', { name: 'Items per Second' });
+    expect(field.getAttribute('aria-invalid')).toBe('true');
+    expect(screen.getByText('Rate must be more than 0.')).toBeDefined();
 });

@@ -1,3 +1,4 @@
+import { rateDecimal } from "../config/setpoint-rate";
 import path from "path";
 import {beforeAll, describe, expect, test} from "vitest";
 import {ClockAlternativesResult, generateClockAlternatives} from "./generate-blueprint";
@@ -46,7 +47,7 @@ describe("the car paste at 80.78/s", () => {
         expect(subtick.rounded).toBeUndefined();
         expect(Math.floor(subtick.result.simulation_duration.ticks)).toBe(285);
         const rounded_rate = subtick.result.stability_check.expected_output_items * 60 / 285 * (paste_config.setpoint.copies ?? 1);
-        expect(rounded_rate / paste_config.setpoint.items_per_second - 1).toBeLessThan(0.001);
+        expect(rounded_rate / rateDecimal(paste_config.setpoint.items_per_second) - 1).toBeLessThan(0.001);
         expect(rounded_rate).toBeGreaterThan(outputCapacityPerSecond(paste_config));
     });
 

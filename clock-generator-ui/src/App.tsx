@@ -542,7 +542,7 @@ function App() {
     const machinesOnlyMax = useMachinesMax(config.setpoint.item, machinesWithReturn, targetCounts);
     // the engine's own limit, which counts the inserters and belts too, as the check that refuses a target above it does
     const feasibleMax = useTargetRateMax(engineConfig, isInitialized);
-    const machinesMax = useMemo(() => rateMaxOf(machinesOnlyMax, feasibleMax), [machinesOnlyMax, feasibleMax]);
+    const machinesMax = useMemo(() => rateMaxOf(machinesOnlyMax, feasibleMax, config.setpoint.items_per_second), [machinesOnlyMax, feasibleMax, config.setpoint.items_per_second]);
     // what a target that counts an item destroyed is chosen from: the items the build's machines take in
     const destroyedItemNames = useMemo(() => Array.from(new Set(config.machines.flatMap(machine =>
         machine.recipe ? getRecipeInfo(machine.recipe)?.ingredients ?? [] : []))).sort(), [config.machines, getRecipeInfo]);
@@ -568,6 +568,7 @@ function App() {
             : error && errorRecovery?.sourceConfigKey === configKey ? { message: error } : undefined,
     }), [config.setpoint, config.machines, config.chests, config.inserters, config.belts, checkedCoverage, chestIssues, machinesMax, gameNames, validation, checkStatus, error, errorRecovery, configKey, outputGenerationIssues, repeatedCopiesText]);
     const problems = useMemo(() => validationIssues.filter(issue => issue.blocksGeneration), [validationIssues]);
+    const invalid_rate = problems.some(problem => problem.fieldTarget?.kind === 'target-rate');
     // the inserters the engine's refusal names, live or from the last check: their rows are outlined while it stands
     const refusedInserterIds = useMemo(() => refusedInserterIdsOf(problems), [problems]);
     // the engine's refusal is for the build as the last check saw it: any change to the build takes it away
@@ -708,7 +709,7 @@ function App() {
                 validate(config).then((outcome) => {
                     setCheckingFor(null);
                     const next = afterCheck(outcome);
-                    if (next === 'generate') {
+                    if (next === 'generate' && configKeyOf(config) === configKeyRef.current) {
                         start(config);
                     } else if (next === 'go-to-check-error') {
                         goToCheckError();
@@ -1138,7 +1139,7 @@ function App() {
                             toolsMenuItems={toolsMenuItems}
                             onInstall={blueprintString ? () => setInstallOpen(true) : undefined}
                             onCheckOnly={handleCheckOnly}
-                            checkDisabled={busy}
+                            checkDisabled={busy || invalid_rate}
                             renderControls={(paste, menu) => (
                                 <WorkflowBar
                                     entryAction={paste}
@@ -1170,6 +1171,7 @@ function App() {
                                     onGenerate={handleGenerate}
                                     onCheckOnly={handleCheckOnly}
                                     primaryAction={conversionIsNextStep ? null : primaryAction}
+                                    invalid_rate={invalid_rate}
                                     busy={busy}
                                     checking={checking}
                                     checkStatus={checkStatus}
@@ -1242,7 +1244,7 @@ function App() {
                                 />
                             )}
 
-                            <SetpointForm
+                            <SetpointForm key={library.currentId}
                                 recipe={config.setpoint.item}
                                 itemsPerSecond={config.setpoint.items_per_second}
                                 copies={config.setpoint.copies}
@@ -1446,7 +1448,7 @@ function App() {
                                 staleFor={staleFor}
                                 changes={staleChanges}
                                 onGenerate={handleGenerate}
-                                canGenerate={!busy}
+                                canGenerate={!busy && !invalid_rate}
                                 stoppedEarly={stoppedEarly}
                                 pickGone={pickGone}
                                 copied={copy.copied}

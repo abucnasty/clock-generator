@@ -1,4 +1,7 @@
+import { rateText, type SetpointRate } from "./setpoint-rate";
 import { ZodError } from "zod";
+import { chestName, type ChestType } from "../common/entity-types";
+import { placedChestInSentence, type BuildToName } from "../crafting/entity-name";
 import type { SetpointReason } from "./setpoint-refusal";
 
 /**
@@ -264,16 +267,18 @@ export class BeltPickupSinkError extends Error {
     /** The ids of the inserters, in the config's order */
     public readonly inserter_ids: number[];
 
-    constructor(inserters: BeltPickupSinkInserter[]) {
-        super(BeltPickupSinkError.formatMessage(inserters));
+    constructor(inserters: BeltPickupSinkInserter[], chests: readonly { id: number; type: ChestType }[] = []) {
+        super(BeltPickupSinkError.formatMessage(inserters, chests));
         this.name = 'BeltPickupSinkError';
         this.inserters = inserters;
         this.inserter_ids = inserters.map(it => it.inserter_id);
     }
 
-    private static formatMessage(inserters: BeltPickupSinkInserter[]): string {
-        const route = (it: BeltPickupSinkInserter) =>
-            `takes from belt ${it.belt_id} and drops ${it.sink.type === 'belt' ? 'onto' : 'into'} ${it.sink.type} ${it.sink.id}`;
+    private static formatMessage(inserters: BeltPickupSinkInserter[], chests: readonly { id: number; type: ChestType }[]): string {
+        const route = ({ belt_id, sink }: BeltPickupSinkInserter) => {
+            const drop = sink.type === 'belt' ? `onto Belt ${sink.id}` : `into ${chestName(chests.find(chest => chest.id === sink.id)?.type, sink.id)}`;
+            return `takes from Belt ${belt_id} and drops ${drop}`;
+        };
         const rule = 'Taking from a belt into anything but a machine is not supported, so this build cannot be clocked.';
         if (inserters.length === 1) {
             return `Inserter ${inserters[0].inserter_id} ${route(inserters[0])}. ${rule} `
@@ -282,7 +287,7 @@ export class BeltPickupSinkError extends Error {
         const ids = inserters.map(it => String(it.inserter_id));
         const list = `${ids.slice(0, -1).join(', ')} and ${ids[ids.length - 1]}`;
         return `Inserters ${list} take from a belt and drop into something other than a machine: `
-            + `${inserters.map(it => `inserter ${it.inserter_id} ${route(it)}`).join('; ')}. ${rule} `
+            + `${inserters.map(it => `Inserter ${it.inserter_id} ${route(it)}`).join('; ')}. ${rule} `
             + 'Make each of them drop into a machine, so that the machine is fed straight from the belt.';
     }
 }
@@ -598,8 +603,8 @@ export interface SharedHandTarget {
  * The text of an inserter that takes several of a placer's results out of its target (sharedHandRefusal): `items` are
  * the game's names, as a sentence has them
  */
-export function sharedHandText(inserter: number, items: readonly string[], target: SharedHandTarget): string {
-    const where = `${target.type} ${target.number}`;
+export function sharedHandText(inserter: number, items: readonly string[], target: SharedHandTarget, chests: BuildToName["chests"] = []): string {
+    const where = target.type === 'chest' ? placedChestInSentence(target.number, chests) : `machine ${target.number}`;
     return `Inserter ${inserter} takes ${items.slice(0, -1).join(", ")} and ${items[items.length - 1]} out of ${where}. `
         + "An inserter that holds part of a hand of one of them takes only more of that one, so the others pile up in "
         + `${where}, and once it is full the one it waits for cannot come in: the build stops for good. Give each result an `
@@ -656,6 +661,10 @@ function limitText(limit: FeasibilityLimit): string {
 
 /** The text of one issue, as a player reads it */
 export function describeFeasibilityIssue(issue: FeasibilityIssue): string {
+    return describeFeasibilityIssueIn(issue, []);
+}
+
+function describeFeasibilityIssueIn(issue: FeasibilityIssue, shared_hand_chests: BuildToName["chests"]): string {
     const terms = issue.terms;
     switch (terms.rule) {
         case 'C1': {
@@ -746,7 +755,7 @@ export function describeFeasibilityIssue(issue: FeasibilityIssue): string {
                 + `${one ? `chest ${then.ends[0].container} is` : 'they are'} full, the machine stops for good.${others}`;
         }
         case 'S2':
-            return sharedHandText(terms.inserter, terms.items, terms.target);
+            return sharedHandText(terms.inserter, terms.items, terms.target, shared_hand_chests);
         case 'S3': {
             const all = terms.rows.every(row => row.gives === row.takes);
             const rows = terms.rows.map(row => `${terms.rows.length === 1 ? '' : `${row.item}: `}a craft gives ${formatRate(row.gives)} and takes ${formatRate(row.takes)}`);
@@ -771,9 +780,10 @@ export class FeasibilityError extends Error {
     public readonly problems: string[];
 
     /** `target` is the config's, in all: where it is shared by copies, the message says its figures are for one copy */
-    constructor(issues: FeasibilityIssue[], target: { items_per_second: number; copies: number } | null = null) {
+    constructor(issues: FeasibilityIssue[], target: { items_per_second: SetpointRate; copies: number } | null = null,
+        shared_hand_chests: BuildToName["chests"] = []) {
         const opening = FeasibilityError.openingOf(target);
-        const problems = issues.map(describeFeasibilityIssue);
+        const problems = issues.map(issue => describeFeasibilityIssueIn(issue, shared_hand_chests));
         super(`${opening} ${problems.join(' ')}`);
         this.name = 'FeasibilityError';
         this.issues = issues;
@@ -781,10 +791,13 @@ export class FeasibilityError extends Error {
         this.problems = problems;
     }
 
-    private static openingOf(target: { items_per_second: number; copies: number } | null): string {
+    private static openingOf(target: { items_per_second: SetpointRate; copies: number } | null): string {
         // copies as configured: a short decimal (copies-value.ts), never rounded the way a rate is
+        if (target !== null && target.copies === 1 && typeof target.items_per_second !== 'number') {
+            return `No clock can hold this build's setpoint of ${rateText(target.items_per_second)} a second:`;
+        }
         const copies = target === null || target.copies === 1 ? ''
-            : ` of ${formatRate(target.items_per_second)} a second over ${target.copies} copies (every figure here is for one copy)`;
+            : ` of ${typeof target.items_per_second === "number" ? formatRate(target.items_per_second) : rateText(target.items_per_second)} a second over ${target.copies} copies (every figure here is for one copy)`;
         return `No clock can hold this build's setpoint${copies}:`;
     }
 }

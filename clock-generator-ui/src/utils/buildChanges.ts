@@ -1,10 +1,11 @@
+import { rateText, type SetpointRate } from 'clock-generator/light';
 import type { Config } from 'clock-generator/browser';
 import type { ChestType } from 'clock-generator/light';
 import { entityLabelIn, nameInSentence, type LabelKind } from './entityLabel';
 import { COUNTS_TEXT, countsLabel, countsOf } from './targetCounts';
 
 /** A rate or count as the sentences print it: at most two decimals, no trailing zeros */
-const figure = (value: number) => Number(value.toFixed(2)).toString();
+const figure = (value: SetpointRate) => typeof value === 'number' ? Number(value.toFixed(2)).toString() : rateText(value);
 
 /** The same JSON for the same values, whatever order the keys were written in */
 function canonical(value: unknown): string {
@@ -97,7 +98,7 @@ export function buildChangesOf(generated: Config, current: Config, recipeLabel: 
     if (before.item !== after.item) {
         changes.push(`Recipe (${nameInSentence(recipeLabel(before.item))} → ${nameInSentence(recipeLabel(after.item))})`);
     }
-    if (before.items_per_second !== after.items_per_second) {
+    if (!same(before.items_per_second, after.items_per_second)) {
         changes.push(`Items per second (${figure(before.items_per_second)} → ${figure(after.items_per_second)})`);
     }
     if (before.copies !== after.copies) {

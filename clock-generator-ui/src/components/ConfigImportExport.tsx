@@ -1,3 +1,4 @@
+import { canonicalRate } from 'clock-generator/light';
 import { pickupCaptureWarningMessage, sideLoadedDropMessage } from "../utils/sidecarExport";
 import { Check, Download, Upload, ContentPaste, MoreVert, RestartAlt, Science, MenuBook, Link, DarkModeOutlined, LightModeOutlined, BrightnessAutoOutlined } from '@mui/icons-material';
 import { Box, Button, Alert, Tooltip, FormControlLabel, Checkbox, Typography, IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Divider, TextField, useMediaQuery, useTheme } from '@mui/material';
@@ -213,7 +214,7 @@ export function ConfigImportExport({
         };
     }
 
-    const forceFullImport = simplificationConfig !== null && pendingImport?.repeatedSourceKey === JSON.stringify(simplificationConfig);
+    const forceFullImport = simplificationConfig !== null && pendingImport?.repeatedSourceKey === JSON.stringify(canonicalRate(simplificationConfig));
 
     // the Paste from Factorio dialog, open when the clipboard could not be used, with why
     const [pasteDialog, setPasteDialog] = useState<{ prompt: PastePrompt | null; id: number; session: number } | null>(null);
@@ -240,7 +241,7 @@ export function ConfigImportExport({
 
     const handleExport = useCallback(() => {
         if (!config) return;
-        const jsonString = JSON.stringify(config, null, 2);
+        const jsonString = JSON.stringify(canonicalRate(config), null, 2);
         const blob = new Blob([jsonString], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -707,7 +708,7 @@ export function ConfigImportExport({
 
                 {pendingImport && <ImportSimplification config={simplificationConfig} applied={pendingImport.reduction}
                     onRepeated={sourceKey => {
-                        if (simplificationConfig && sourceKey === JSON.stringify(simplificationConfig) && pendingImport.repeatedSourceKey !== sourceKey)
+                        if (simplificationConfig && sourceKey === JSON.stringify(canonicalRate(simplificationConfig)) && pendingImport.repeatedSourceKey !== sourceKey)
                             setPendingImport(current => current === pendingImport ? { ...current, repeatedSourceKey: sourceKey } : current);
                     }}
                     onRestore={() => {
@@ -715,7 +716,7 @@ export function ConfigImportExport({
                         if (pendingImport.originalSelections) setImportSelections(pendingImport.originalSelections);
                     }}
                     onSimplify={plan => {
-                        if (!simplificationConfig || plan.sourceConfigKey !== JSON.stringify(simplificationConfig)) return;
+                        if (!simplificationConfig || plan.sourceConfigKey !== JSON.stringify(canonicalRate(simplificationConfig))) return;
                         const candidate = plan.candidate;
                         setPendingImport({
                             ...pendingImport,

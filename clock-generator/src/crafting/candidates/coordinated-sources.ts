@@ -272,6 +272,8 @@ export function coordinatedSourcesClock(
     if (!Number.isInteger(shared_ticks)) refuse(`not offered on a fractional window cycle (${shared_ticks} ticks)`,
         reasonOf("window_cycle_not_whole", { window_cycle_ticks: shared_ticks }));
     const made = sharedPlan(config, recommended);
+    if (made.run.duration.exact_ticks && made.run.duration.exact_ticks.denominator !== 1) refuse(`not offered on a fractional window cycle (${shared_ticks} ticks)`,
+        reasonOf("window_cycle_not_whole", { window_cycle_ticks: shared_ticks }));
     const registry = made.run.simulation_context.entity_registry;
     const inserters: GroupedInserter[] = registry.getAll().filter(Entity.isInserter)
         .map(it => ({ id: it.entity_id.id, source: it.source.entity_id.id, sink: it.sink.entity_id.id }));

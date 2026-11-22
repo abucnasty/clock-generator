@@ -1,3 +1,4 @@
+import { rateDecimal } from "../../../../src/config/setpoint-rate";
 import { SAMPLE_BUILDS_DIR } from "../../helpers/fixture-paths";
 import fs from "fs";
 import os from "os";
@@ -59,7 +60,7 @@ describe("the harness wires the clock to the build", () => {
         const subtick = selected.result.subtick;
         const window_cycle_ticks = subtick?.clock.window_cycle_ticks ?? selected.result.simulation_duration.ticks;
         // what the nine copies move together: one copy's share of the target, as many times
-        const expected = Math.round(config.setpoint.items_per_second / config.setpoint.copies * COPIES * window_cycle_ticks / 60 * 1e6) / 1e6;
+        const expected = Math.round(rateDecimal(config.setpoint.items_per_second) / config.setpoint.copies * COPIES * window_cycle_ticks / 60 * 1e6) / 1e6;
         // the clock with its schedule as the generator made it, which the harness wires without reading descriptions
         const exported = subtick ?? selected.result;
         const result = await recordInFactorio({

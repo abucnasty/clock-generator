@@ -1,3 +1,4 @@
+import { composedPeriod, periodAtLimit } from '../config/setpoint-rate';
 import assert from '../common/assert';
 import type { Config } from '../config/schema';
 import { fraction } from '../data-types/fraction';
@@ -15,7 +16,7 @@ import type { SwingWindowCycleRejection, WholeSwingArithmeticSnapshot } from './
 export function* wholeSwingWindowCyclesBelow(
     snapshot: WholeSwingArithmeticSnapshot,
     limit_ticks: number,
-): Generator<SwingWindowCycleRejection> {
+): Generator<SwingWindowCycleRejection & { at_limit?: boolean }> {
     const config = JSON.parse(snapshot.config_json) as Config;
     assert(config.setpoint.counts !== 'destroyed', 'Whole-swing window cycle time arithmetic needs an item-made target with integer output swings.');
     assert(Number.isSafeInteger(snapshot.terminal_swing_count) && snapshot.terminal_swing_count >= 1,
@@ -24,12 +25,13 @@ export function* wholeSwingWindowCyclesBelow(
     const target = TargetProductionRate.fromConfig(config.setpoint);
     for (let count = snapshot.terminal_swing_count - 1; count >= 1; count--) {
         const plan = OutputCyclePlan.create(target, registry, config, fraction(count), { ...config.overrides, terminal_swing_count: count });
-        const computed_lcm = EntityTransferCountMap.lcm(plan.entity_transfer_map, config.overrides?.ignored_lcm_ingredients);
+        const computed_lcm = EntityTransferCountMap.lcm(plan.entity_transfer_map, config.overrides?.ignored_lcm_ingredients, target.exact_setpoint);
         const effective_lcm = config.overrides?.lcm ?? computed_lcm;
-        const window_cycle_ticks = OutputCyclePlan.ticksOfCycles(plan, effective_lcm);
+        const period = target.exact_setpoint && composedPeriod(plan.total_duration_ticks, effective_lcm, target.exact_setpoint);
+        const window_cycle_ticks = period?.toDecimal() ?? OutputCyclePlan.ticksOfCycles(plan, effective_lcm);
         assert(Number.isFinite(window_cycle_ticks) && window_cycle_ticks > 0,
             `Window cycle time of ${window_cycle_ticks} ticks exceeds maximum allowed ${limit_ticks} ticks`);
         yield { terminal_swing_count: count, base_cycle_ticks: plan.total_duration_ticks.toDecimal(),
-            computed_lcm, effective_lcm, window_cycle_ticks, limit_ticks };
+            computed_lcm, effective_lcm, window_cycle_ticks, limit_ticks, ...(period && { at_limit: periodAtLimit(period, limit_ticks, true) }) };
     }
 }

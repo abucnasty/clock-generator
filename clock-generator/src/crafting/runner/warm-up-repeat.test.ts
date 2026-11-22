@@ -173,3 +173,8 @@ describe("the warm-up's stop on a repeated state", () => {
         expect(warmUp(600, 60, ticks => String(ticks))).toEqual({ ticks_run: 600, repeat_ticks: undefined, keyed: [0, 60, 120, 180, 240, 300, 360, 420, 480, 540] });
     });
 });
+
+it("does not prove a repeating counter from a nearby whole period", () => {
+    const period = { numerator: 10499999999, denominator: 100000000 };
+    expect(warmUpRepeatOf(period.numerator / period.denominator, [], 1050, period)).toEqual({ armed: false, reason: "no whole-tick repeat" });
+});

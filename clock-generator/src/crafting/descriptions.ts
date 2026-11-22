@@ -4,6 +4,7 @@
  * whole numbers (line 2), then anything unusual. The combinators that make up the clock say so in one line. Lines come
  * in order of how much they matter: Factorio keeps 500 bytes of a description (fitPlayerDescription drops the rest).
  */
+import { exactRateUnits, rateText, type SetpointRate } from "../config/setpoint-rate";
 import Fraction from "../data-types/fraction";
 import { OpenRange } from "../data-types";
 import { MAX_PLAYER_DESCRIPTION_BYTES, SignalId } from "../blueprints/components";
@@ -396,7 +397,7 @@ function idsText(inserters: number[], drills: number[]): string {
  */
 export function clockDescriptionLines(args: {
     item_name: string;
-    items_per_second: number;
+    items_per_second: SetpointRate;
     copies: number;
     window_cycle_text: string;
     drills: boolean;
@@ -404,9 +405,14 @@ export function clockDescriptionLines(args: {
     not_clocked: { inserters: number[]; drills: number[] };
 }): string[] {
     const item = itemIcons([args.item_name]);
-    const rate = args.copies === 1
-        ? `${formatRate(args.items_per_second)}/s`
-        : `${formatRate(args.items_per_second)}/s over ${formatRate(args.copies)} copies (${formatRate(args.items_per_second / args.copies)}/s each)`;
+    const { items_per_second, copies } = args;
+    const total = typeof items_per_second === "number" ? formatRate(items_per_second) : rateText(items_per_second);
+    let rate = `${total}/s`;
+    if (copies !== 1) {
+        const each = typeof items_per_second === "number" ? formatRate(items_per_second / copies)
+            : exactRateUnits(items_per_second, copies).copy_second.toString();
+        rate += ` over ${formatRate(copies)} copies (${each}/s each)`;
+    }
     const lines = [
         `Clock for ${item} ${rate}. ${args.window_cycle_text}`,
         `Wire every other combinator's output to the ${args.drills ? "inserters and drills" : "inserters"} it names${args.copies > 1 ? ", in every copy" : ""}; set them Enable if Anything > 0${args.drills ? ", drills with Read resources off" : ""}`,

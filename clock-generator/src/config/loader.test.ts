@@ -6,6 +6,13 @@ import { MiningDrillType } from "../entities";
 
 describe("parseConfig", () => {
     describe("valid configurations", () => {
+        it("reads a denominator-first rate through the JSON file entry", async () => {
+            const source = { belts: [], inserters: [], machines: [], setpoint: {
+                copies: 2.25, items_per_second: { denominator: 7, numerator: 16 }, item: "iron-gear-wheel" } };
+            const parsed = await parseConfig(JSON.stringify(source));
+            expect(JSON.stringify(parsed.setpoint.items_per_second)).toBe('{"numerator":16,"denominator":7}');
+            expect(parsed.setpoint.copies).toBe(2.25);
+        });
         it("should parse a minimal valid config", async () => {
             const json = `{
                 "belts": [],

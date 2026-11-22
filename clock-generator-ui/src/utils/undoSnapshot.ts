@@ -1,3 +1,4 @@
+import { canonicalRate } from 'clock-generator/light';
 import { idList, selectionLabel } from './bulkEdit';
 import { ChestType } from 'clock-generator/light';
 import * as edits from './configForm/edits';
@@ -52,7 +53,7 @@ export function createUndoEntry(id: number, message: string, before: ConfigFormD
 
 /** Equal by value: a field that commits on blur may give a new object with the same values */
 export function sameForm(a: ConfigFormData, b: ConfigFormData): boolean {
-    return a === b || JSON.stringify(a) === JSON.stringify(b);
+    return a === b || JSON.stringify(canonicalRate(a)) === JSON.stringify(canonicalRate(b));
 }
 
 /**
@@ -108,7 +109,7 @@ export function describeConfigEdit(before: ConfigFormData, after: ConfigFormData
     const changed = (a: unknown, b: unknown) => JSON.stringify(a) !== JSON.stringify(b);
     const TARGET_FIELDS = { item: 'target recipe', items_per_second: 'Items per Second', copies: 'Copies', counts: 'Counts' } as const;
     for (const field of Object.keys(TARGET_FIELDS) as (keyof typeof TARGET_FIELDS)[]) {
-        if (changed(before.setpoint[field], after.setpoint[field])) {
+        if (changed(canonicalRate(before).setpoint[field], canonicalRate(after).setpoint[field])) {
             return { message: `Updated ${TARGET_FIELDS[field]}.`, key: `target:${field}` };
         }
     }

@@ -123,3 +123,6 @@ export type {
 } from "./data-types/planner-graph";
 
 export { catalogRowOf, routerRowOf, settingChipsOf, strategyRowOf } from "./crafting/strategy-catalog";
+
+export type { SetpointRate } from "./config/setpoint-rate";
+export { canonicalRate, compareRateToCapacity, exactRateUnits, isPositiveRate, isRatePair, rateDecimal, rateText, RATE_PRECISION_ERROR } from "./config/setpoint-rate";

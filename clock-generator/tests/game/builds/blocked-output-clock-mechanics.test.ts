@@ -1,3 +1,4 @@
+import { rateDecimal } from "../../../src/config/setpoint-rate";
 import {describe, expect, test} from "vitest";
 import {SerializableClockWindows} from "../../../src/crafting/clock";
 import {disturbanceTrialOf} from "../../../src/crafting/trial";
@@ -104,7 +105,7 @@ describe("the recorded controls of the blocked-output fixtures", () => {
         const variant = cases.find(it => it.name === name)!;
         const {native, generation} = controls[name];
         const config = blockedOutputClockConfig(variant);
-        expectRunIsConsistent(native, generation!, config.setpoint.items_per_second);
+        expectRunIsConsistent(native, generation!, rateDecimal(config.setpoint.items_per_second));
         expect(native.target).toBe(BLOCKED_OUTPUT_TARGET);
         // five gears a second over the window cycle: 16 in 192 ticks, or 120 in 1,440 where the hand of 15 rules out 192
         expect({period: native.period, expected: generation!.expected}).toEqual({period: windowCycleOf(variant).ticks, expected: windowCycleOf(variant).expected});

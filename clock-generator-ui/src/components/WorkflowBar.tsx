@@ -33,6 +33,7 @@ interface WorkflowBarProps {
     onGenerate: () => void;
     /** Checks the build without generating and without moving the page */
     onCheckOnly: () => void;
+    invalid_rate?: boolean;
     /** The filled action; null when a current recovery offers the next step outside this toolbar. */
     primaryAction: NextStep | null;
     /** A check or a generation is running: both buttons are off */
@@ -102,6 +103,7 @@ export function WorkflowBar({
     progressStore,
     onGenerate,
     onCheckOnly,
+    invalid_rate = false,
     primaryAction,
     busy,
     checking,
@@ -346,7 +348,7 @@ export function WorkflowBar({
                                     pressedAtRef.current = performance.now();
                                     onCheckOnly();
                                 }}
-                                disabled={busy}
+                                disabled={busy || invalid_rate}
                                 aria-describedby={note ? ELEMENT_IDS.blockReason : undefined}
                                 startIcon={checking === 'check-only' ? <CircularProgress size={16} color="inherit" aria-hidden /> : undefined}
                             >
@@ -365,7 +367,7 @@ export function WorkflowBar({
                                 onClick={onGenerate}
                                 color={generateFilled ? 'secondary' : 'inherit'}
                                 // refused: the count chip beside the buttons says what, and the tooltip why it is off
-                                disabled={busy || refused}
+                                disabled={busy || refused || invalid_rate}
                                 aria-describedby={note || refused ? ELEMENT_IDS.blockReason : undefined}
                                 startIcon={isLoading || checking === 'generate' ? <CircularProgress size={16} color="inherit" aria-hidden /> : undefined}
                             >

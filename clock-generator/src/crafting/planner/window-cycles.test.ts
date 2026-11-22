@@ -5,6 +5,8 @@ import { loadConfigFromFile } from "../../config/loader";
 import { productionScienceSharedPickup } from "../generate-blueprint-test-helpers";
 import { planOfConfig, planOfSample } from "./plan-test-helpers";
 import { swingCountsListed } from "./window-cycles";
+import { gearSetpoint } from "../../../tests/configs/fractional-setpoint";
+import { validateConfig } from "../plan/validate-config";
 
 /** A choice as [swings, listed as, window cycle ticks, kept or the rule that prunes it] */
 const brief = (choice: WindowCycleChoice) => [choice.swings, choice.listed_as, "window_cycle_ticks" in choice ? choice.window_cycle_ticks : null,
@@ -87,4 +89,14 @@ describe("the composition into the main period", () => {
         // the config's lcm sets the group's window cycle too
         expect(plan.groups[0].window_cycles[0]).toMatchObject({ cycles: 5 });
     });
+});
+
+
+it("cancels a period denominator when composing the main window and refuses an oversized composition", () => {
+    const config = gearSetpoint();
+    config.overrides = { terminal_swing_count: 1, lcm: 4 };
+    expect(planOfConfig(config).plan.composition?.main_window_cycle.exact).toEqual({ numerator: 105, denominator: 1 });
+    const large = gearSetpoint({ numerator: 342857142857143, denominator: 150000000000000 });
+    large.overrides = { terminal_swing_count: 1, lcm: 4 };
+    expect(() => validateConfig(large)).toThrow(/precision|period.*exact/i);
 });

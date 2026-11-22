@@ -1,3 +1,4 @@
+import { canonicalRate, rateText } from 'clock-generator/light';
 import type { Config } from 'clock-generator/browser';
 import { cleanName, recipeTitle } from './buildLibrary';
 import { formatNumberText } from './numberText';
@@ -87,7 +88,7 @@ async function inflate(bytes: Uint8Array, limit: number): Promise<Uint8Array | '
 
 /** The link that carries the build; `base` is the page's address without its hash */
 export async function encodeShareLink(payload: { name: string | null; config: Config }, base: string): Promise<string> {
-    const json = JSON.stringify({ name: payload.name, config: payload.config });
+    const json = JSON.stringify({ name: payload.name, config: canonicalRate(payload.config) });
     const data = toBase64Url(await deflate(new TextEncoder().encode(json)));
     return `${base}#${SHARE_PARAM}=${SHARE_VERSION}.${data}`;
 }
@@ -148,7 +149,7 @@ export function sharedBuildSummary(config: Config, recipeLabel: (id: string) => 
         [config.belts.length, 'belt', 'belts'],
         [config.chests?.length ?? 0, 'chest', 'chests'],
     ] as const;
-    const rate = `${formatNumberText(items_per_second)}/s${targetCounts === 'destroyed' ? ' destroyed' : ''}`;
+    const rate = `${typeof items_per_second === 'number' ? formatNumberText(items_per_second) + '/s' : rateText(items_per_second) + ' items/s'}${targetCounts === 'destroyed' ? ' destroyed' : ''}`;
     const parts = [
         withRecipe ? `${item === '' ? 'No target recipe' : recipeTitle(item, recipeLabel)} at ${rate}` : rate,
         countOf(copies, 'copy', 'copies'),

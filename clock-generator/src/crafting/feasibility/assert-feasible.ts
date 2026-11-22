@@ -1,3 +1,4 @@
+import type { SetpointRate } from "../../config/setpoint-rate";
 /**
  * The feasibility pass (P3 design section 3): one linear pass over a build's planner graph that refuses, before any
  * simulation, a build no clock could carry. It checks necessary conditions only, from true maxima and exact fractions,
@@ -18,7 +19,8 @@ import { plannerGraphOf } from "../graph/build-graph";
 import { Cut, cutsOf, refuses } from "./checks";
 import { demandOf } from "./demand";
 import { utilizationsOf, GroupUtilization } from "./utilization";
-import { loopTrapIssues, sharedHandIssues } from "./traps";
+import type { BuildToName } from "../entity-name";
+import { loopTrapIssues, numberOf, sharedHandIssues } from "./traps";
 
 const RULE_ORDER: readonly FeasibilityRule[] = ["S1", "S2", "S3", "C1", "C2", "C3", "C4", "C5", "C6", "C7"];
 
@@ -64,7 +66,11 @@ export function feasibilityOf(facts: PlannerFacts, graph: PlannerGraph): Feasibi
     return { cuts, issues: issues.sort((a, b) => RULE_ORDER.indexOf(a.rule) - RULE_ORDER.indexOf(b.rule)), utilizations: utilizationsOf(demand) };
 }
 
-const checked = new WeakMap<Config, { issues: readonly FeasibilityIssue[]; target: { items_per_second: number; copies: number } }>();
+const checked = new WeakMap<Config, {
+    issues: readonly FeasibilityIssue[];
+    target: { items_per_second: SetpointRate; copies: number };
+    shared_hand_chests: BuildToName["chests"];
+}>();
 
 /**
  * The facts and graph of a config, or null where they cannot be built: the config is refused elsewhere, as today. Every
@@ -88,13 +94,19 @@ export function assertFeasible(config: Config): void {
     let found = checked.get(config);
     if (found === undefined) {
         const built = graphOf(config);
+        const issues = built === null ? [] : feasibilityOf(built.facts, built.graph).issues;
+        const shared_hand_chests = built !== null && issues.some(issue => issue.rule === "S2")
+            ? built.facts.nodes.flatMap(node => node.kind === "container"
+                ? [{ id: numberOf(node.key), kind: node.storage.chest_type, holds: [] }] : [])
+            : [];
         found = {
-            issues: built === null ? [] : feasibilityOf(built.facts, built.graph).issues,
+            issues,
             target: { items_per_second: config.setpoint.items_per_second, copies: config.setpoint.copies },
+            shared_hand_chests,
         };
         checked.set(config, found);
     }
     if (found.issues.length > 0) {
-        throw new FeasibilityError([...found.issues], found.target);
+        throw new FeasibilityError([...found.issues], found.target, found.shared_hand_chests);
     }
 }

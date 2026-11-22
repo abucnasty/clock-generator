@@ -1,3 +1,4 @@
+import { canonicalRate, isPositiveRate } from 'clock-generator/light';
 import { useEffect, useMemo, useState } from 'react';
 import type { Config, TargetRateMax } from 'clock-generator/browser';
 import { askEngine } from '../worker/engineClient';
@@ -23,7 +24,7 @@ interface TargetRateMaxResult {
  * maximum does not move; for another build it is not shown, and the machines' own maximum stands.
  */
 export function useTargetRateMax(config: Config, enabled: boolean): TargetRateMaxResult {
-    const key = useMemo(() => JSON.stringify(config), [config]);
+    const key = useMemo(() => JSON.stringify(canonicalRate(config)), [config]);
     // a rate of nothing yet, or not a number, is asked as 1: the maximum is the same, and the engine can work it out
     const build = useMemo(() => JSON.stringify({ ...config, setpoint: { ...config.setpoint, items_per_second: 0 } }), [config]);
     const [answer, setAnswer] = useState<Answer | null>(null);
@@ -32,7 +33,7 @@ export function useTargetRateMax(config: Config, enabled: boolean): TargetRateMa
         if (!enabled || !asked.setpoint.item) return;
         let current = true;
         const timer = setTimeout(() => {
-            if (!(asked.setpoint.items_per_second > 0)) asked.setpoint.items_per_second = 1;
+            if (!isPositiveRate(asked.setpoint.items_per_second)) asked.setpoint.items_per_second = 1;
             askEngine({ kind: 'target-rate-max', config: asked }).then(
                 max => { if (current) setAnswer({ build, key, max }); },
                 // an answer that fails leaves the machines' maximum standing

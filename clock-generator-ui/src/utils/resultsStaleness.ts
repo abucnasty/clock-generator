@@ -1,3 +1,5 @@
+import { canonicalRate, rateText } from 'clock-generator/light';
+import type { SetpointRate } from 'clock-generator/light';
 import type { Config } from 'clock-generator/browser';
 import type { TargetCounts } from './targetCounts';
 import { nameInSentence } from './entityLabel';
@@ -21,7 +23,7 @@ export const STALE_GENERATE_AGAIN = 'Generate again';
 export interface GeneratedFor {
     key: string;
     recipe: string;
-    itemsPerSecond: number;
+    itemsPerSecond: SetpointRate;
     /** What the rate counts, when it is the item destroyed; none, the item made */
     counts?: TargetCounts;
     generatedAt: number;
@@ -32,7 +34,7 @@ export interface GeneratedFor {
  * same build. Every edit to the form, putting a value back included, gives the key of the form as it now is.
  */
 export function configKeyOf(config: Config): string {
-    return JSON.stringify(config);
+    return JSON.stringify(canonicalRate(config));
 }
 
 export function generatedForOf(config: Config, at: number = Date.now()): GeneratedFor {
@@ -56,7 +58,7 @@ export function isStale(generatedFor: GeneratedFor | null, currentKey: string): 
  * letter lower case
  */
 export function generatedForText({ recipe, itemsPerSecond, counts }: GeneratedFor, recipeLabel: (id: string) => string = (id) => id): string {
-    return `${nameInSentence(recipeLabel(recipe))} at ${Number(itemsPerSecond.toFixed(2)).toString()}/s${counts === 'destroyed' ? ' destroyed' : ''}`;
+    return `${nameInSentence(recipeLabel(recipe))} at ${typeof itemsPerSecond === 'number' ? Number(itemsPerSecond.toFixed(2)).toString() : rateText(itemsPerSecond)}/s${counts === 'destroyed' ? ' destroyed' : ''}`;
 }
 
 /** "made at 14:02" for clocks made today, "made on 12 Oct" for clocks made before, in the player's own format */
