@@ -13,10 +13,12 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ### Added
 - ui: the setpoint picker lets you choose the output of a recipe with several outputs
+- generation: a clock for builds where one machine feeds several machines that make the target
 - ui: enter an exact fraction in the setpoint rate field
 
 ### Changed
 - ui: configuration files name the setpoint's item; older files still open
+- generation: quiet command-line generation does less work
 
 ## [0.31.1] - 2026-11-20
 

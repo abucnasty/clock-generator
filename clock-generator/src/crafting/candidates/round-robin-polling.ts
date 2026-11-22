@@ -29,7 +29,7 @@ const MIN_DRILL_WINDOW_TICKS = 2;
 /** Ticks a stage opens after the one before it, for the inserters that fill the machine a taker takes from: staged, then compact */
 const FEEDER_OFFSETS_TICKS = [16, 1];
 /** Ticks every group of windows is moved either way to see that the clock does not hold at one placement only */
-const MARGIN_SHIFT_TICKS = 1;
+export const MARGIN_SHIFT_TICKS = 1;
 
 /** How the windows of one way are made: see roundRobinPollingClock, which makes them in every way and ranks the clocks */
 export interface RoundRobinPollingOptions {

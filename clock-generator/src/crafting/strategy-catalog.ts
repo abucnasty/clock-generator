@@ -65,8 +65,8 @@ export type WindowCycleSetting =
     /** The same construction at the generator's own swing count, so the whole window cycle is shorter */
     | { kind: "shorter_window_cycle" };
 
-/** Which inserters share enable windows, or get one window a swing */
-export type SharedWindowsSetting = "shared_enable_windows" | "window_a_swing";
+/** Which inserters share enable windows, get one window a swing, or are the only ones clocked (the metered takers) */
+export type SharedWindowsSetting = "shared_enable_windows" | "window_a_swing" | "metered_takers";
 
 /** Which entities of a loop of machines have enable windows */
 export type LoopsSetting = "loop_windows" | "loop_exits_only";
@@ -122,7 +122,8 @@ export function settingChipsOf(settings: ClockSettings): SettingChip[] {
     }
     if (settings.shared_windows !== undefined) {
         chips.push({ field: "shared_windows", value: settings.shared_windows,
-            label: settings.shared_windows === "shared_enable_windows" ? "shared enable windows" : "one enable window a swing" });
+            label: settings.shared_windows === "shared_enable_windows" ? "shared enable windows"
+                : settings.shared_windows === "metered_takers" ? "metered takers, the rest always enabled" : "one enable window a swing" });
     }
     if (settings.loops !== undefined) {
         chips.push({ field: "loops", value: settings.loops, label: settings.loops === "loop_windows" ? "kanban pull: loop windows" : "kanban pull: loop exits only" });

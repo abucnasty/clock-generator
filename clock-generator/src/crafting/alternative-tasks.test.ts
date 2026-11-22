@@ -56,6 +56,14 @@ describe("belt supply alternative tasks", () => {
     });
 });
 
+describe("Round-Robin Polling with metered takers", () => {
+    it("is a fallback task: it waits until no clock made before it is stable", async () => {
+        const plan = planClockAlternatives(await loadConfigFromFile(ConfigPaths.STONE_BRICK_120_DRILL_DIRECT_INSERT), options);
+        expect(plan.tasks.find(task => task.id === "metered-takers"))
+            .toEqual({id: "metered-takers", label: "Round-Robin Polling, metered takers", only_when_needed: true, fallback: true});
+    });
+});
+
 describe("output swing counts above the planned one", () => {
     const swingTasks = (plan: ReturnType<typeof planClockAlternatives>) => plan.tasks.map(task => task.id).filter(id => /^swings-\d+$/.test(id));
 

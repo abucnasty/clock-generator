@@ -176,6 +176,10 @@ export function observeFills(observer: FillObserver): () => void {
     return () => { observers.delete(observer); };
 }
 
+export function fillsAreObserved(): boolean {
+    return observers.size > 0;
+}
+
 export function reportFill(report: FillReport): void {
     for (const observer of observers) observer(report);
 }
