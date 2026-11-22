@@ -1,5 +1,6 @@
 import { OpenRange } from "../../data-types";
 import { Entity, EntityId, handSizeFor, Inserter, Machine } from "../../entities";
+import { traitsOf, traitsOfMachine } from "../../entities/traits/traits-of";
 import { fullHandOf } from "../../entities/traits/hand";
 import type { Config } from "../../config";
 import { BlueprintGenerationResult, unclockedRun, type UnclockedRun } from "../plan/unclocked-run";
@@ -12,12 +13,12 @@ import type { Logger } from "../../common/logger";
 
 /**
  * Metered takers: where one machine hands an ingredient to two or more of the machines that make the target, only those
- * takers are clocked. Each opens for a full pickup and the following swing entry, its windows a hand's share of
+ * takers are clocked. Each opens for a full pickup and the following swing entry, its enable windows a hand's share of
  * the window cycle apart, and the takers of one source open in turn, a share of that apart. Every other inserter and drill
- * has one window of the whole cycle: it is always enabled, and the insertion limits and output blocks meter it.
+ * has one enable window for the whole window cycle: it is always enabled, and the insertion limits and output blocks meter it.
  * The window cycle is the plan's at the smallest output swing count (on a recipe LCM of 1) where each taker moves whole
- * hands and whole crafts of its machine a cycle, so the hands of the target machines repeat every window cycle. A count
- * whose windows fail the as-built check or the margin check is refused, and the next count is tried.
+ * hands and whole crafts of its machine per window cycle, so the hands of the target machines repeat every window cycle. A count
+ * whose enable windows fail the as-built check or the margin check is refused, and the next count is tried.
  */
 const MAX_SWINGS = 12;
 
@@ -60,21 +61,32 @@ function unproved(taker: Taker, cause: string, why: string): CodedError {
         reasonOf("metered_window_unproved", { inserter, cause }));
 }
 
-/** The direct machine ports must move the planned item and whole hand under the taker's own window. */
+/** The direct machine ports must move the planned item and whole hand under the taker's own enable window. */
 function checkRoutes(plan: UnclockedRun, takers: Taker[]): void {
-    const arms = plan.run.simulation_context.entity_registry.getAll().filter(Entity.isInserter);
+    const entities = plan.run.simulation_context.entity_registry.getAll();
+    const arms = entities.filter(Entity.isInserter);
+    const drills = entities.filter(Entity.isDrill);
+    const traits = traitsOf(plan.config);
     const metered = new Set(takers.map(taker => taker.inserter));
     for (const taker of takers) {
         const { inserter, item } = taker;
         const id = inserter.entity_id.id;
         if (plan.run.always_enabled_by_config.has(id) || plan.run.inserter_clocks.has(id)) {
-            throw unproved(taker, "control", "the taker does not use the metered window");
+            throw unproved(taker, "control", "the taker does not use the metered enable window");
         }
         const hand = handSizeFor(inserter, item);
         const transfer = plan.run.swing_counts.get(inserter.entity_id)!;
         if (inserter.filtered_items.size !== 1 || !inserter.filtered_items.has(item) || !fullHandOf(inserter.metadata.type).elsewhere
             || !Number.isSafeInteger(hand) || hand < 1 || hand !== transfer.stack_size) {
             throw unproved(taker, "hand", "the direct route must wait for a whole hand of one planned item");
+        }
+        const drill = drills.find(other => other.sink_id.id === taker.sink.entity_id.id && other.item.name === item);
+        if (drill !== undefined) {
+            throw unproved(taker, "shared_route", `drill ${drill.entity_id.number} also supplies ${item} to the target`);
+        }
+        const placement = traitsOfMachine(traits, taker.source).placement;
+        if (placement?.target != null && placement.per_result.some(result => result.item === item && result.lands_in !== null)) {
+            throw unproved(taker, "shared_route", `the source also places ${item} into ${placement.target}`);
         }
         for (const arm of arms) {
             if (arm === inserter || !arm.filtered_items.has(item)) continue;
@@ -89,10 +101,10 @@ function checkRoutes(plan: UnclockedRun, takers: Taker[]): void {
 }
 
 /** One ready pickup step fills the hand. The next update enters the outbound swing. */
-function meteredWindows(plan: UnclockedRun, takers: Taker[], hands: number[], T: number): Map<string, OpenRange[]> | CodedError {
-    const windows = new Map<string, OpenRange[]>();
+function meteredEnableWindows(plan: UnclockedRun, takers: Taker[], hands: number[], window_cycle_ticks: number): Map<string, OpenRange[]> | CodedError {
+    const enable_windows = new Map<string, OpenRange[]>();
     for (const entity of plan.run.simulation_context.entity_registry.getAll()) {
-        if (Entity.isInserter(entity) || Entity.isDrill(entity)) windows.set(entity.entity_id.id, [OpenRange.from(0, T - 1)]);
+        if (Entity.isInserter(entity) || Entity.isDrill(entity)) enable_windows.set(entity.entity_id.id, [OpenRange.from(0, window_cycle_ticks - 1)]);
     }
     const sources = [...new Set(takers.map(it => it.source))];
     for (const [source_index, source] of sources.entries()) {
@@ -102,49 +114,49 @@ function meteredWindows(plan: UnclockedRun, takers: Taker[], hands: number[], T:
             const rotation = taker.inserter.animation.rotation.ticks;
             if (!Number.isSafeInteger(rotation) || rotation < 1) return unproved(taker, "rotation", "the swing needs a known positive whole number of ticks");
             const count = hands[takers.indexOf(taker)];
-            const slot = T / count;
+            const slot = window_cycle_ticks / count;
             const swing_entry = 1; // relative to the full pickup
             const width = swing_entry + 1; // inclusive of swing entry
             const drop = swing_entry + rotation;
             const first_return = drop + 1 + rotation; // whole drop, then return swing entry, then the pickup test
             if (width > first_return || slot < width - 1 + first_return) {
-                return unproved(taker, "return", `a ${width}-tick window every ${slot} ticks leaves too little time for the ${first_return}-tick return`);
+                return unproved(taker, "return", `a ${width}-tick enable window every ${slot} ticks leaves too little time for the ${first_return}-tick return`);
             }
             // The existing turn placement: a source's takers divide the slot, then the sources divide a turn.
             const offset = Math.round(k * slot / of_source.length + source_index * slot / (of_source.length * sources.length));
             const ranges = Array.from({ length: count }, (_, j) => OpenRange.fromStartAndDuration(offset + j * slot, width));
-            if (ranges[count - 1].end_inclusive >= T) return unproved(taker, "cycle_edge", "the window crosses the end of the planned cycle");
-            windows.set(taker.inserter.entity_id.id, ranges);
+            if (ranges[count - 1].end_inclusive >= window_cycle_ticks) return unproved(taker, "cycle_edge", "the enable window crosses the end of the window cycle");
+            enable_windows.set(taker.inserter.entity_id.id, ranges);
             turns.push(...ranges.map(range => ({ taker, range })));
         }
         // Only one group is shifted at a time. Check the actual turn order, including last to first.
         turns.sort((a, b) => a.range.start_inclusive - b.range.start_inclusive);
         for (const [index, { taker, range }] of turns.entries()) {
             const next = turns[(index + 1) % turns.length];
-            const next_start = next.range.start_inclusive + (index + 1 === turns.length ? T : 0);
+            const next_start = next.range.start_inclusive + (index + 1 === turns.length ? window_cycle_ticks : 0);
             const shift = taker === next.taker ? 0 : MARGIN_SHIFT_TICKS;
-            if (range.end_inclusive >= next_start - shift) return unproved(taker, "overlap", `the window ending at ${range.end_inclusive} overlaps inserter ${next.taker.inserter.entity_id.number} opening at ${next_start} with the margin`);
+            if (range.end_inclusive >= next_start - shift) return unproved(taker, "overlap", `the enable window ending at ${range.end_inclusive} overlaps inserter ${next.taker.inserter.entity_id.number} opening at ${next_start} with the margin`);
         }
     }
-    return windows;
+    return enable_windows;
 }
 
-/** The clock of the first output swing count whose windows hold, with their margin; a coded error where none does */
-export function meteredTakersClock(config: Config, logger: Logger): BlueprintGenerationResult {
+/** The clock of the first output swing count whose enable windows hold, with their margin; a coded error where none does */
+export function meteredTakersClock(configuration: Config, logger: Logger): BlueprintGenerationResult {
     const refused: string[] = [];
     let whole_counts = 0;
     let as_built_refusals = 0;
     let margin_refusals = 0;
     let first_unproved: CodedError | undefined;
-    const forced = config.overrides?.terminal_swing_count;
-    const lcm = config.overrides?.lcm ?? 1;
+    const forced = configuration.overrides?.terminal_swing_count;
+    const lcm = configuration.overrides?.lcm ?? 1;
     if (lcm !== 1 || (forced !== undefined && (!Number.isInteger(forced) || forced < 1 || forced > MAX_SWINGS))) {
         throw new CodedError(`metered takers cannot use the requested output swing count ${forced ?? "AUTO"} and recipe LCM ${lcm}`,
             reasonOf("metered_plan_override", { terminal_swing_count: forced ?? null, lcm }));
     }
     const last = forced ?? MAX_SWINGS;
     for (let swings = forced ?? 1; swings <= last; swings++) {
-        const planned_on: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false, terminal_swing_count: swings, lcm: 1 } };
+        const planned_on: Config = { ...configuration, overrides: { ...configuration.overrides, derive_clock_windows: false, terminal_swing_count: swings, lcm: 1 } };
         const plan = unclockedRun(planned_on, { logger });
         const { takers, target_machines } = takersOf(plan);
         if (takers.length === 0) {
@@ -153,25 +165,25 @@ export function meteredTakersClock(config: Config, logger: Logger): BlueprintGen
         }
         checkRoutes(plan, takers);
         const hands = takers.map(taker => wholeHands(plan, taker));
-        const T = plan.run.duration.ticks;
-        if (!Number.isSafeInteger(T) || !hands.every((count): count is number => count !== null && count > 0 && T % count === 0)) continue;
+        const window_cycle_ticks = plan.run.duration.ticks;
+        if (!Number.isSafeInteger(window_cycle_ticks) || !hands.every((count): count is number => count !== null && count > 0 && window_cycle_ticks % count === 0)) continue;
         whole_counts++;
-        const windows = meteredWindows(plan, takers, hands, T);
-        if (windows instanceof CodedError) {
-            first_unproved ??= windows;
-            refused.push(`${swings} output swings (${T} ticks): ${windows.message}`);
+        const enable_windows = meteredEnableWindows(plan, takers, hands, window_cycle_ticks);
+        if (enable_windows instanceof CodedError) {
+            first_unproved ??= enable_windows;
+            refused.push(`${swings} output swings (${window_cycle_ticks} ticks): ${enable_windows.message}`);
             continue;
         }
-        const serial = Object.fromEntries([...windows].map(([id, ranges]) => [id, ranges.map(range => ({ start: range.start_inclusive, end: range.end_inclusive }))]));
-        const result = clockFromWindows(planned_on, serial, T, logger);
-        const count = `${swings} output swing${swings === 1 ? "" : "s"} (${T} ticks)`;
+        const serial = Object.fromEntries([...enable_windows].map(([id, ranges]) => [id, ranges.map(range => ({ start: range.start_inclusive, end: range.end_inclusive }))]));
+        const result = clockFromWindows(planned_on, serial, window_cycle_ticks, logger);
+        const count = `${swings} output swing${swings === 1 ? "" : "s"} (${window_cycle_ticks} ticks)`;
         if (!(result.stability_check.as_built?.holds ?? false)) {
             as_built_refusals++;
             refused.push(`${count}: the as-built check does not hold`);
             logger.log(`Metered takers on ${count}: refused, the as-built check does not hold`);
             continue;
         }
-        const margin = marginFailureOf(plan, windows, T);
+        const margin = marginFailureOf(plan, enable_windows, window_cycle_ticks);
         if (margin !== null) {
             margin_refusals++;
             refused.push(`${count}: ${marginText(margin)}`);

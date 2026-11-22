@@ -11,6 +11,7 @@ import { generateClockAlternatives, planClockAlternatives, type ClockAlternative
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { ConfigSchema, type Config } from "../config/schema";
+import { runClockAlternativeTask } from "./alternatives";
 import { meteredTakersClock } from "./candidates/metered-takers";
 import type { MakerLogEvent } from "./maker-log";
 import { quiet } from "./generate-blueprint-test-helpers";
@@ -18,11 +19,11 @@ import { quiet } from "./generate-blueprint-test-helpers";
 // A utility science build at 320 a second with 3 copies: two foundries each hand low density structure to three of the six
 // assemblers, and no clock made before Round-Robin Polling with metered takers is stable. A fixture, not a job of the record.
 describe("Round-Robin Polling with metered takers on a build whose foundries each feed three assemblers", () => {
-    let config: Config;
+    let configuration: Config;
     let generated: ClockAlternativesResult;
     beforeAll(async () => {
-        config = await loadConfigFromFile(path.join(__dirname, "fixtures", "utility-science-320-metered-takers.json"));
-        generated = generateClockAlternatives(config, { logger: quiet });
+        configuration = await loadConfigFromFile(path.join(__dirname, "fixtures", "utility-science-320-metered-takers.json"));
+        generated = generateClockAlternatives(configuration, { logger: quiet });
     });
     const alternative = (id: string) => generated.alternatives.find(it => it.id === id);
 
@@ -36,30 +37,30 @@ describe("Round-Robin Polling with metered takers on a build whose foundries eac
 
     it("clocks only the takers of the foundries, with the full pickup and the following swing entry both enabled, in turn; every other inserter is always enabled", () => {
         const metered = alternative("round_robin_polling_metered_takers")!;
-        const windows = metered.result.clock_windows;
-        const source = (id: string) => config.inserters.find(inserter => `inserter:${inserter.id}` === id)!.source;
-        const takers = Object.keys(windows).filter(id => id.startsWith("inserter:") && !(windows[id].length === 1 && windows[id][0].start === 0 && windows[id][0].end === 323));
+        const enable_windows = metered.result.clock_windows;
+        const source = (id: string) => configuration.inserters.find(inserter => `inserter:${inserter.id}` === id)!.source;
+        const takers = Object.keys(enable_windows).filter(id => id.startsWith("inserter:") && !(enable_windows[id].length === 1 && enable_windows[id][0].start === 0 && enable_windows[id][0].end === 323));
         expect(takers.sort()).toEqual(["inserter:14", "inserter:16", "inserter:17", "inserter:5", "inserter:6", "inserter:9"]);
         for (const id of takers) {
             expect(source(id).type, id).toBe("machine");
-            expect(windows[id].map(range => range.end - range.start + 1), id).toEqual([2, 2, 2]);
-            expect(windows[id].map(range => range.start - windows[id][0].start), id).toEqual([0, 108, 216]);
+            expect(enable_windows[id].map(range => range.end - range.start + 1), id).toEqual([2, 2, 2]);
+            expect(enable_windows[id].map(range => range.start - enable_windows[id][0].start), id).toEqual([0, 108, 216]);
         }
-        const first = (id: string) => windows[id][0].start;
+        const first = (id: string) => enable_windows[id][0].start;
         // foundry 3's takers 36 apart, foundry 7's the same, 18 after foundry 3's
         expect(["inserter:5", "inserter:6", "inserter:9"].map(first)).toEqual([0, 36, 72]);
         expect(["inserter:14", "inserter:16", "inserter:17"].map(first)).toEqual([18, 54, 90]);
-        const others = Object.keys(windows).filter(id => id.startsWith("inserter:") && !takers.includes(id));
+        const others = Object.keys(enable_windows).filter(id => id.startsWith("inserter:") && !takers.includes(id));
         expect(others).toHaveLength(15);
-        for (const id of others) expect(windows[id], id).toEqual([{ start: 0, end: 323 }]);
+        for (const id of others) expect(enable_windows[id], id).toEqual([{ start: 0, end: 323 }]);
     });
 
-    // Use the same six turn placements together from the empty start. Only the width differs.
+    // Use the same six turn placements together from the cold start. Only the width differs.
     function coldTurns(width: number) {
         const { result } = alternative("round_robin_polling_metered_takers")!;
-        const windows = new Map(Object.entries(result.clock_windows).map(([id, ranges]) => [id,
+        const enable_windows = new Map(Object.entries(result.clock_windows).map(([id, ranges]) => [id,
             ranges.map(range => OpenRange.from(range.start, ranges.length === 3 ? range.start + width - 1 : range.end))]));
-        const on = buildAsBuiltConfig(config, windows, 324);
+        const on = buildAsBuiltConfig(configuration, enable_windows, 324);
         const context = coldControlledTrialBuild(on, result.output_cycle_plan, result.used_lcm, {}, quiet);
         const world = World.of(context);
         let tick = 0;
@@ -73,7 +74,7 @@ describe("Round-Robin Polling with metered takers on a build whose foundries eac
         };
     }
 
-    it.each([8, 9])("tests the first return against the inclusive end of a %i-tick window", width => {
+    it.each([8, 9])("tests the first return against the inclusive end of a %i-tick enable window", width => {
         const turn = coldTurns(width);
         const arm = turn.arm(6);
         turn.advance(38);
@@ -99,6 +100,15 @@ describe("Round-Robin Polling with metered takers on a build whose foundries eac
         expect([arm.inserter_state.items_picked_up, arm.inserter_state.items_dropped]).toEqual([16, 16]);
     });
 
+    it("uses the compatible requested count and LCM even with a different primary count", () => {
+        const context = { swings: 6, primary_stable: false, window_cycle_ticks: 324,
+            secondary_planning: { source: "primitive-primary" as const, terminal_swing_count: 1 } };
+        const result = runClockAlternativeTask({ ...configuration, overrides: { ...configuration.overrides, terminal_swing_count: 6, lcm: 1 } },
+            context, "metered-takers", { logger: quiet });
+        const clock = result?.alternatives[0]?.result;
+        expect([clock?.used_terminal_swing_count, clock?.used_lcm]).toEqual([6, 1]);
+    });
+
     it("selects Coordinated Sources, made from it, stable at the target rate", () => {
         const selected = generated.alternatives[generated.selected_index];
         expect([selected.id, selected.verdict, selected.assessment.items_per_second.toFixed(2), selected.result.simulation_duration.ticks])
@@ -110,11 +120,11 @@ describe("Round-Robin Polling with metered takers on a build whose foundries eac
 // target, and the clock made before the fallbacks is stable, so the metered takers clock is planned and never made
 describe("Round-Robin Polling with metered takers where a clock made before it is stable", () => {
     it("is planned as a fallback and not made", async () => {
-        const config = await loadConfigFromFile(ConfigPaths.ADVANCED_CIRCUIT_240);
-        const fallbacks = planClockAlternatives(config, { logger: quiet }).tasks.filter(task => task.fallback === true).map(task => task.id);
+        const configuration = await loadConfigFromFile(ConfigPaths.ADVANCED_CIRCUIT_240);
+        const fallbacks = planClockAlternatives(configuration, { logger: quiet }).tasks.filter(task => task.fallback === true).map(task => task.id);
         expect(fallbacks).toContain("metered-takers");
         const events: MakerLogEvent[] = [];
-        const generated = generateClockAlternatives(config, { logger: quiet, maker_log: event => { events.push(event); } });
+        const generated = generateClockAlternatives(configuration, { logger: quiet, maker_log: event => { events.push(event); } });
         expect(generated.alternatives[generated.selected_index].verdict).toBe("stable");
         expect(generated.alternatives.filter(it => it.maker === "metered-takers")).toEqual([]);
         expect(generated.not_made.filter(it => it.id === "metered-takers")).toEqual([]);
@@ -175,5 +185,4 @@ describe("source and target placement on a metered route", () => {
         const clock = meteredTakersClock(configuration, quiet);
         expect([clock.used_terminal_swing_count, clock.used_lcm, clock.stability_check.as_built?.holds]).toEqual([10, 1, true]);
     });
-
 });
