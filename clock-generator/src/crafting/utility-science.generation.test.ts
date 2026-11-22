@@ -26,9 +26,9 @@ describe("the searches only run when they are needed", () => {
 
         it("plans the searches as tasks that wait for the others, and as tasks like the others when the config asks for them", () => {
             const waiting = (planned: Config) => planClockAlternatives(planned, {logger: quiet}).tasks.filter(task => task.only_when_needed).map(task => task.id);
-            // Round-Robin Polling, shorter window cycle, where no planned count holds, is a fallback: it waits either way
-            expect(waiting(config)).toEqual([...SEARCH_MAKERS, "primitive-grouped"]);
-            expect(waiting(withSearches(config))).toEqual(["primitive-grouped"]);
+            // Round-Robin Polling, shorter window cycle, where no planned count holds, and with metered takers are fallbacks: they wait either way
+            expect(waiting(config)).toEqual([...SEARCH_MAKERS, "primitive-grouped", "metered-takers"]);
+            expect(waiting(withSearches(config))).toEqual(["primitive-grouped", "metered-takers"]);
         });
     });
 });
