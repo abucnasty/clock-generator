@@ -466,7 +466,7 @@ export function createSignalPerInserterBlueprint(
         .setDirection(Direction.SOUTH)
         .setMultiLinePlayerDescription(clockDescriptionLines({
             item_name: final_output_item_name,
-            items_per_second: cycle.production_rate.total_production_rate.amount_per_second.toDecimal(),
+            items_per_second: cycle.production_rate.exact_setpoint ?? cycle.production_rate.total_production_rate.amount_per_second.toDecimal(),
             copies: cycle.production_rate.copies,
             window_cycle_text: subtick_clock
                 ? `Window cycle time ${window_cycle.ticks} ticks; counts ${CLOCK_FIRST_VALUE}–${subtick_clock.window_cycle_ticks} (${subtick_clock.scale} window cycles), read in 1/${subtick_clock.scale} ticks`

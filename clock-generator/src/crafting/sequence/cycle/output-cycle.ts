@@ -171,7 +171,7 @@ function createMadePlan(
     fractional_swings: boolean,
 ): OutputCyclePlan {
     const returned = returnedTargetRefusal({ item: target_production_rate.machine_production_rate.item, counts: "made" },
-        target_production_rate.total_production_rate.amount_per_second.toDecimal(), entity_registry);
+        target_production_rate.exact_setpoint ?? target_production_rate.total_production_rate.amount_per_second.toDecimal(), entity_registry);
     if (returned !== null) {
         throw new Error(returned);
     }

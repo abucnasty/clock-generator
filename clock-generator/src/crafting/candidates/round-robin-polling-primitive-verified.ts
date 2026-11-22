@@ -62,7 +62,8 @@ export function verifiedPrimitiveRoundRobinPollingClock(
     const { run } = made;
     assert(plannedTerminalSwingCount(run.output_cycle_plan) === construction.terminal_swing_count, "primitive planner count changed");
     assert(run.duration.ticks === construction.window_cycle_ticks && run.recipe_lcm === construction.grouped_cycles, "primitive window cycle time/output cycles changed");
-    assert(canonicalVerificationJson(EntityTransferCountMap.serialize(run.swing_counts)) === canonicalVerificationJson(construction.transfer_plan), "primitive transfer facts changed");
+    const transfer_plan = EntityTransferCountMap.serialize(run.swing_counts, undefined, run.output_cycle_plan.production_rate.exact_setpoint);
+    assert(canonicalVerificationJson(transfer_plan) === canonicalVerificationJson(construction.transfer_plan), "primitive transfer facts changed");
     const registry = run.simulation_context.entity_registry;
     const clocks = unplannedInserterClocks(registry, construction.window_cycle_ticks);
     const retained = Object.fromEntries([...clocks].map(([id, clock]) => [id, { kind: clock.kind, modulus: clock.modulus,

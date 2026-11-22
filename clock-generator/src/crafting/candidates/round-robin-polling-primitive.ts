@@ -182,7 +182,7 @@ export function constructPrimitiveRoundRobinPolling(config: Config): PrimitiveRo
     }
     return { kind: "pure-construction", terminal_swing_count: plannedTerminalSwingCount(cycle)!,
         base_cycle_ticks: cycle.total_duration_ticks.toDecimal(), grouped_cycles, window_cycle_ticks,
-        transfer_plan: EntityTransferCountMap.serialize(cycle.entity_transfer_map),
+        transfer_plan: EntityTransferCountMap.serialize(cycle.entity_transfer_map, undefined, target.exact_setpoint),
         final_output_inserter_ids, inserters,
         direct_dependencies, retained_clocks, attempts };
 }

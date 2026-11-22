@@ -202,7 +202,8 @@ function computeLCM(swing_counts: EntityTransferCountMap, ignored_items?: string
 
 function serializeTransferPlan(
     swing_counts: EntityTransferCountMap,
-    ignored_items?: string[]
+    ignored_items?: string[],
+    exact?: Ratio,
 ): SerializableTransferPlan {
     const entities: SerializableEntityTransferCount[] = [];
     swing_counts.forEach((count, entityId) => {
@@ -220,7 +221,7 @@ function serializeTransferPlan(
     });
     return {
         entities,
-        computed_lcm: computeLCM(swing_counts, ignored_items),
+        computed_lcm: computeLCM(swing_counts, ignored_items, exact),
     };
 }
 

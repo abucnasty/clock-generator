@@ -2243,7 +2243,8 @@ function outputsOfPreparedBuild(config: Config, simulation_context: SimulationCo
 
     // Find all output machines: the machines that produce the target output item, or that destroy it
     const target = { item: target_production_rate.machine_production_rate.item, counts: target_production_rate.counts };
-    const returned = returnedTargetRefusal(target, target_production_rate.total_production_rate.amount_per_second.toDecimal(), simulation_context.entity_registry);
+    const returned = returnedTargetRefusal(target, target_production_rate.exact_setpoint ?? target_production_rate.total_production_rate.amount_per_second.toDecimal(),
+        simulation_context.entity_registry);
     if (returned !== null) {
         throw new Error(returned);
     }
@@ -2309,11 +2310,12 @@ export function transferPlanOf(config: Config, output_cycle_plan: OutputCyclePla
 
     const ignored = ignoredLcmItemsOf(config, output_cycle_plan);
     const ignored_ingredients = ignored.length > 0 ? ignored : undefined;
-    const computed_lcm = EntityTransferCountMap.lcm(swing_counts, ignored_ingredients, output_cycle_plan.production_rate.exact_setpoint);
+    const serializable_transfer_plan = EntityTransferCountMap.serialize(swing_counts, ignored_ingredients, output_cycle_plan.production_rate.exact_setpoint);
+    const { computed_lcm } = serializable_transfer_plan;
     return {
         computed_lcm,
         recipe_lcm: config.overrides?.lcm ?? computed_lcm,
-        serializable_transfer_plan: EntityTransferCountMap.serialize(swing_counts, ignored_ingredients),
+        serializable_transfer_plan,
     };
 }
 

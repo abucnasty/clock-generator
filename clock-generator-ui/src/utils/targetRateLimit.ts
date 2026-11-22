@@ -46,7 +46,12 @@ export function rateMaxOf(machines: MachinesMax | null, feasible: FeasibleMax, r
     if (typeof rate === 'object' && parts) {
         const compared = compareRateToCapacity(found.per_copy, parts, 1);
         if (compared.above || compared.equal) return machines;
-    } else if (same) return machines;
+    } else if (same && machines) {
+        if (typeof rate === 'object') {
+            return { ...machines, perCopy: found.per_copy_per_second, perCopyRatio: found.per_copy };
+        }
+        return machines;
+    }
     return {
         machineIds: machines?.machineIds ?? [],
         perCopy: found.per_copy_per_second,
