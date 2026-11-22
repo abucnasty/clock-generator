@@ -1,7 +1,9 @@
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { loadConfigFromFile } from "../../config/loader";
 import { ConfigPaths } from "../../config/config-paths";
 import { CodedError, MAKER_REASON_CODES, reasonOfError } from "../maker-log";
+import { runClockAlternativeTask } from "../alternatives";
 import { meteredTakersClock } from "./metered-takers";
 
 const quiet = { log() {}, warn() {}, error() {}, debug() {} };
@@ -46,5 +48,44 @@ describe("the metered takers maker", () => {
         const config = await loadConfigFromFile(ConfigPaths.ADVANCED_CIRCUIT_240);
         const clock = meteredTakersClock(config, quiet);
         expect([clock.used_terminal_swing_count, clock.simulation_duration.ticks, clock.stability_check.as_built?.holds]).toEqual([11, 264, true]);
+    });
+});
+
+const utility = () => loadConfigFromFile(path.join(__dirname, "../fixtures/utility-science-320-metered-takers.json"));
+
+describe("metered taker window bounds", () => {
+    it("refuses a taker that is set to always enabled", async () => {
+        const config = await utility();
+        const inserter = config.inserters.find(it => it.id === 5)!;
+        inserter.overrides = { ...inserter.overrides, enable_control: { mode: "ALWAYS" } };
+        const error = refusalOf(() => meteredTakersClock(config, quiet));
+        expect(reasonOfError(error)).toMatchObject({ code: "metered_window_unproved", inserter: 5, cause: "control" });
+    });
+});
+
+describe("the metered fallback task with an explicit planning override", () => {
+    // The primary's internal count may travel through the worker alongside the caller's config.
+    const context = { swings: 6, primary_stable: false, window_cycle_ticks: 324,
+        secondary_planning: { source: "primitive-primary" as const, terminal_swing_count: 6 } };
+
+    it("uses the requested compatible count and LCM even with a different primary count", async () => {
+        const config = await utility();
+        const result = runClockAlternativeTask({ ...config, overrides: { ...config.overrides, terminal_swing_count: 6, lcm: 1 } },
+            { ...context, secondary_planning: { source: "primitive-primary", terminal_swing_count: 1 } }, "metered-takers", { logger: quiet });
+        const clock = result?.alternatives[0]?.result;
+        expect([clock?.used_terminal_swing_count, clock?.used_lcm]).toEqual([6, 1]);
+    });
+
+    it.each([
+        { overrides: { terminal_swing_count: 1 }, reason: /1 output swing/ },
+        { overrides: { lcm: 2 }, reason: /LCM.*2/i },
+    ])("keeps the caller's $overrides when the worker attempts the fallback", async ({ overrides, reason }) => {
+        const config = await utility();
+        const messages: string[] = [];
+        const result = runClockAlternativeTask({ ...config, overrides: { ...config.overrides, ...overrides } }, context,
+            "metered-takers", { logger: quiet, on_not_made: entry => { messages.push(entry.reason); } });
+        expect(result === null).toBe(true);
+        expect(messages).toHaveLength(1);
+        expect(messages[0]).toMatch(reason);
     });
 });
