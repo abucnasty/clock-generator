@@ -1,3 +1,5 @@
+import { SetpointRateField } from './SetpointRateField';
+import type { SetpointRate } from 'clock-generator/light';
 import { Box, MenuItem, Paper, TextField, Typography } from '@mui/material';
 import { useState } from 'react';
 import { refusalOfPickIn, type SetpointOutput, type SetpointReason } from 'clock-generator/light';
@@ -17,7 +19,7 @@ import { COUNTS_CHOICES, COUNTS_TEXT, type TargetCounts } from '../utils/targetC
 
 interface SetpointFormProps {
     recipe: string;
-    itemsPerSecond: number;
+    itemsPerSecond: SetpointRate;
     /** Number of duplicate setups being modeled; may be fractional, such as 5.5, for a partial block */
     copies: number;
     /** What the rate counts: the item made and taken out, or the item brought in and destroyed */
@@ -33,7 +35,7 @@ interface SetpointFormProps {
     machineRecipes?: readonly string[];
     /** Called with the item the setpoint counts: the output of the chosen recipe, or the output chosen of its several */
     onRecipeChange: (recipe: string) => void;
-    onItemsPerSecondChange: (value: number) => void;
+    onItemsPerSecondChange: (value: SetpointRate) => void;
     onCountsChange: (counts: TargetCounts) => void;
     onCopiesChange: (value: number) => void;
     /** Where the next copy stands from this one, in tiles; undefined while not given */
@@ -100,7 +102,7 @@ export function SetpointForm({
         <Paper component="section" variant="outlined" data-build-anchor="target" aria-labelledby={SETPOINT_HEADING_ID}
             sx={{ mb: 2, p: 1.5, containerType: 'inline-size', containerName: 'setpoint' }}>
             <Box sx={{ display: 'grid', gap: 1.5, alignItems: 'start', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
-                '@container setpoint (min-width: 820px)': { gridTemplateColumns: 'auto minmax(0, 1fr) 160px 200px 110px', alignItems: 'center' } }}>
+                '@container setpoint (min-width: 820px)': { gridTemplateColumns: 'auto minmax(0, 1fr) 168px 200px 110px', alignItems: 'center' } }}>
                 <Typography component="h2" variant="subtitle1" id={SETPOINT_HEADING_ID} tabIndex={-1}
                     sx={{ fontWeight: 600, gridColumn: '1 / -1', '@container setpoint (min-width: 820px)': { gridColumn: 'auto' } }}>Setpoint</Typography>
                 <ItemSelector
@@ -122,20 +124,8 @@ export function SetpointForm({
                     inputAriaLabel={TARGET_RECIPE_NAME}
                     freeSolo
                 />
-                <NumberField
-                    id={ELEMENT_IDS.targetRate}
-                    label="Items per Second"
-                    value={itemsPerSecond}
-                    onValueChange={(val) => onItemsPerSecondChange(parseFloat(val?.toString() || '') || 0)}
-                    min={0}
-                    step={0.1}
-                    sx={{ minWidth: 0 }}
-                    size="small"
-                    required
-                    error={itemsPerSecond <= 0}
-                    helperText={itemsPerSecond <= 0 ? 'Must be more than 0' : undefined}
-                    problem={targetRateLineOf({ itemsPerSecond, copies, max: machinesMax, counts })}
-                />
+                <SetpointRateField value={itemsPerSecond} copies={copies} onChange={onItemsPerSecondChange}
+                    capacityProblem={targetRateLineOf({ itemsPerSecond, copies, max: machinesMax, counts })} />
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
                     <TextField select size="small" fullWidth label={COUNTS_TEXT.label} value={counts}
                         onChange={(event) => onCountsChange(event.target.value as TargetCounts)} sx={{ minWidth: 0 }}>

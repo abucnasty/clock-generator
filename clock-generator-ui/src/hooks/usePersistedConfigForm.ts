@@ -1,3 +1,4 @@
+import { canonicalRate, isRatePair } from 'clock-generator/light';
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { ChestType, dropFractionalSwingsOverride, migrateBeltSupplyOverrides, migrateMiningProductivityLevel, readNeverOverridesInConfig, renameClockedPeriodInConfig, renameLoopSeedItemsToKickStart, renameSetpointRecipeToItem, renameTargetOutputToSetpoint } from 'clock-generator/light';
 import { askEngine } from '../worker/engineClient';
@@ -135,7 +136,8 @@ export function readSavedConfig(stored: string): ConfigFormData | null {
             }
             // forms saved before ids were renumbered on delete carry a UI-only `next_ids`; it is no longer used
             delete parsed.next_ids;
-            return parsed as ConfigFormData;
+            if (typeof parsed.setpoint.items_per_second !== 'number' && !isRatePair(parsed.setpoint.items_per_second)) return null;
+            return canonicalRate(parsed) as ConfigFormData;
         }
     } catch (e) {
         console.warn('Failed to load config from localStorage:', e);
@@ -201,7 +203,7 @@ export function backUpSavedConfig(storage: Pick<Storage, 'setItem'>, text: strin
 /** The form state as saved in localStorage */
 export function serializeConfig(config: ConfigFormData): string {
     // Strip internal _uuid fields — they are UI-only and shouldn't be in the exported config.
-    return JSON.stringify(config, (key, value) =>
+    return JSON.stringify(canonicalRate(config), (key, value) =>
         key === '_uuid' ? undefined : value
     );
 }

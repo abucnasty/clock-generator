@@ -1,3 +1,5 @@
+import { exactRateUnits } from 'clock-generator/light';
+import type { SetpointRate } from 'clock-generator/light';
 import { copiesProblem } from './copiesProblem';
 import { rateVerbs, type TargetCounts } from './targetCounts';
 
@@ -88,7 +90,16 @@ export function maxRateLabel(rate: number, locale?: Intl.LocalesArgument): strin
 }
 
 /** Under Items per Second: the target is the total for every copy, and what one copy makes of it */
-export function itemsPerSecondHelper(itemsPerSecond: number, copies: number, locale?: Intl.LocalesArgument): string {
+export function itemsPerSecondHelper(itemsPerSecond: SetpointRate, copies: number, locale?: Intl.LocalesArgument): string {
+    if (typeof itemsPerSecond !== 'number') {
+        if (copiesProblem(copies)) return '';
+        try {
+            const perCopy = exactRateUnits(itemsPerSecond, copies).copySecond;
+            if (copies === 1) return 'Total for the build';
+            const value = perCopy.getDenominator === 1 ? String(perCopy.getNumerator) : `${perCopy.getNumerator}/${perCopy.getDenominator}`;
+            return `${value} items/s per copy`;
+        } catch { return ''; }
+    }
     const shared = copies !== 1 && !copiesProblem(copies) && itemsPerSecond > 0 && Number.isFinite(itemsPerSecond);
     if (!shared) {
         return 'Total for the build';

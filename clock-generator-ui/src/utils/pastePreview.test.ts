@@ -163,3 +163,11 @@ describe('atomic selective Paste', () => {
         expect(applyPaste(form, empty(), { ...none, drills: true }).drills).toBe(form.drills);
     });
 });
+
+it('retains an exact rate unless the suggested numeric setpoint is selected', () => {
+    const form = current();
+    form.setpoint = { item: 'iron-gear-wheel', items_per_second: { numerator: 16, denominator: 7 }, copies: 2.25 };
+    const suggested = { item: 'iron-gear-wheel', items_per_second: 2.5, copies: 1 };
+    expect(applyPaste(form, empty(), none, suggested).setpoint).toEqual(form.setpoint);
+    expect(applyPaste(form, empty(), { ...none, target: true }, suggested).setpoint).toEqual(suggested);
+});

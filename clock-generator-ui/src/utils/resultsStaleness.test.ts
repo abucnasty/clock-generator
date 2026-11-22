@@ -166,3 +166,15 @@ describe('fractional and metadata identity', () => {
         expect(keyOf(configToFormData(formDataToConfig(original)))).toBe(keyOf(original));
     });
 });
+
+it('matches fractions by value and names the previous rate after a real edit', () => {
+    const entered = form();
+    entered.setpoint.items_per_second = { denominator: 7, numerator: 16 };
+    const saved = generatedOf(entered);
+    expect(generatedForText(saved)).toContain('16/7');
+    const reopened = structuredClone(entered);
+    reopened.setpoint.items_per_second = { numerator: 16, denominator: 7 };
+    expect(isStale(saved, keyOf(reopened))).toBe(false);
+    reopened.setpoint.items_per_second = { numerator: 17, denominator: 7 };
+    expect(isStale(saved, keyOf(reopened))).toBe(true);
+});

@@ -1,3 +1,5 @@
+import { compareRateToCapacity, isPositiveRate, rateDecimal, rateText } from 'clock-generator/light';
+import type { Ratio, SetpointRate } from 'clock-generator/light';
 import { fraction } from 'clock-generator/light';
 import { copiesProblem } from './copiesProblem';
 import type { SerializableMachineFacts } from 'clock-generator/browser';
@@ -13,6 +15,8 @@ export interface MachinesMax {
     perCopy: number;
     /** Present when every machine supplied its exact capacity. */
     perCopyRatio?: { numerator: number; denominator: number };
+    /** Kept when the exact sum does not fit a single ratio. */
+    perCopyParts?: readonly Ratio[];
     /**
      * Set when something other than the machines' speed stops the target (a hand, an inserter, a belt): the engine's
      * words for it, empty while they are not yet known for the rate typed in. The most is then the engine's.
@@ -33,18 +37,32 @@ interface FeasibleMax {
  * or has not answered yet) it is the machines' alone. Where the machines are what stops the target, the machines'
  * clause stays; otherwise `otherLimit` says what does.
  */
-export function rateMaxOf(machines: MachinesMax | null, feasible: FeasibleMax): MachinesMax | null {
+export function rateMaxOf(machines: MachinesMax | null, feasible: FeasibleMax, rate?: SetpointRate): MachinesMax | null {
     const found = feasible.max;
     if (found === null) return machines;
     // the same to within the float noise of the facts' yields, which the pass leaves unrefused too (a billionth)
     const same = machines !== null && Math.abs(machines.perCopy - found.per_copy_per_second) <= 1e-9 * found.per_copy_per_second;
-    if (same) return machines;
+    const parts = machines && capacityParts(machines);
+    if (typeof rate === 'object' && parts) {
+        const compared = compareRateToCapacity(found.per_copy, parts, 1);
+        if (compared.above || compared.equal) return machines;
+    } else if (same) return machines;
     return {
         machineIds: machines?.machineIds ?? [],
         perCopy: found.per_copy_per_second,
         perCopyRatio: found.per_copy,
         otherLimit: feasible.current && found.limit ? found.limit : '',
     };
+}
+
+function capacityParts(max: MachinesMax): readonly Ratio[] | undefined {
+    return max.perCopyParts ?? (max.perCopyRatio && [max.perCopyRatio]);
+}
+
+function exactSum(parts: Ratio[]) {
+    const sum = parts.reduce((sum, part) => sum.add(fraction(part.numerator, part.denominator)), fraction(0));
+    const ratio = { numerator: sum.getNumerator, denominator: sum.getDenominator };
+    return compareRateToCapacity(ratio, parts, 1).equal ? { perCopyRatio: ratio } : { perCopyRatio: ratio, perCopyParts: parts };
 }
 
 /** What a machine's facts say of its output; null when they could not be worked out, undefined until they are */
@@ -110,10 +128,11 @@ export function machinesMaxOf(targetRecipe: string, machines: MachineWithFacts[]
         if (destroying.length === 0 || capacities.some((capacity) => capacity === null)) return null;
         const perCopy = capacities.reduce((sum, capacity) => sum + capacity!.value, 0);
         if (!Number.isFinite(perCopy)) return null;
-        const exact = capacities.every((capacity) => capacity!.exact !== null)
-            ? capacities.reduce((sum, capacity) => sum.add(capacity!.exact!), fraction(0)) : null;
+        const parts = capacities.map(capacity => capacity!.exact);
+        const exact = parts.every(part => part !== null)
+            ? exactSum(parts.map(part => ({ numerator: part.getNumerator, denominator: part.getDenominator }))) : {};
         return {
-            ...(exact && Number.isFinite(exact.toDecimal()) && { perCopyRatio: { numerator: exact.getNumerator, denominator: exact.getDenominator } }),
+            ...exact,
             machineIds: destroying.map((machine) => machine.id),
             perCopy,
         };
@@ -125,14 +144,10 @@ export function machinesMaxOf(targetRecipe: string, machines: MachineWithFacts[]
     const perCopy = making.reduce((sum, machine) => sum + (machine.facts?.output_rate_per_second ?? 0), 0);
     if (!Number.isFinite(perCopy)) return null;
     try {
-        const exact = making.every(machine => machine.facts?.output_rate_ratio)
-            ? making.reduce((sum, machine) => {
-                const ratio = machine.facts!.output_rate_ratio!;
-                return sum.add(fraction(ratio.numerator, ratio.denominator));
-            }, fraction(0)) : null;
-        if (exact && !Number.isFinite(exact.toDecimal())) return null;
+        const parts = making.map(machine => machine.facts!.output_rate_ratio);
+        const exact = parts.every(part => part !== undefined && part !== null) ? exactSum(parts) : {};
         return {
-            ...(exact && { perCopyRatio: { numerator: exact.getNumerator, denominator: exact.getDenominator } }),
+            ...exact,
             machineIds: making.map((machine) => machine.id),
             perCopy,
         };
@@ -155,10 +170,15 @@ export function totalMachineCapacity(max: MachinesMax, copies: number): number |
 }
 
 /** Same comparison as planOutputCycle for supported values; unsupported arithmetic must not crash the editable form. */
-export function isTargetAboveMax(itemsPerSecond: number, copies: number, max: MachinesMax | null): boolean {
-    if (!max || !(itemsPerSecond > 0) || copiesProblem(copies) || !Number.isFinite(itemsPerSecond)) return false;
+export function isTargetAboveMax(itemsPerSecond: SetpointRate, copies: number, max: MachinesMax | null): boolean {
+    if (!max || !isPositiveRate(itemsPerSecond) || copiesProblem(copies)) return false;
+    const parts = capacityParts(max);
+    if (typeof itemsPerSecond !== 'number' && parts) {
+        return compareRateToCapacity(itemsPerSecond, parts, copies).above;
+    }
     const capacity = totalMachineCapacity(max, copies);
     if (capacity === null) return false;
+    if (typeof itemsPerSecond !== 'number') return rateDecimal(itemsPerSecond) > capacity;
     try {
         const target = fraction(itemsPerSecond).divide(60).multiply(60).toDecimal();
         return Number.isFinite(target) && target > capacity;
@@ -202,7 +222,7 @@ function machinesText(ids: number[]): string {
  */
 export function targetRateLineOf(
     { itemsPerSecond, copies, max, counts = 'made', locale }: {
-        itemsPerSecond: number;
+        itemsPerSecond: SetpointRate;
         copies: number;
         max: MachinesMax | null;
         /** What the rate counts: a target that counts the item destroyed says what the machines destroy */
@@ -215,6 +235,11 @@ export function targetRateLineOf(
     }
     const capacity = totalMachineCapacity(max, copies);
     if (capacity === null) return null;
+    const parts = capacityParts(max);
+    if (typeof itemsPerSecond !== 'number' && parts && rateDecimal(itemsPerSecond) === capacity) {
+        const bound = compareRateToCapacity(itemsPerSecond, parts, copies).bound;
+        return `At most ${bound} items/s. Lower the rate from ${rateText(itemsPerSecond)} items/s or raise Copies.`;
+    }
     if (max.otherLimit !== undefined) {
         const total = maxRateText(capacity, locale);
         if (max.otherLimit === '') return `At most ${total}. Lower the rate or raise Copies. Describe only one copy of the build.`;

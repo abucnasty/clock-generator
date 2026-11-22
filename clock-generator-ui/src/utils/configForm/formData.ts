@@ -1,3 +1,4 @@
+import type { SetpointRate } from 'clock-generator/light';
 import type {
     Config,
     Condition,
@@ -294,7 +295,7 @@ export type EntityKind = 'machines' | 'inserters' | 'belts' | 'chests' | 'drills
 export interface ConfigFormData {
     setpoint: {
         item: string;
-        items_per_second: number;
+        items_per_second: SetpointRate;
         /** Number of duplicate setups being modeled (multiplier for ratio calculations) */
         copies: number;
         /** Where the next copy stands from this one, in tiles: the result checks the drops of the copies onto a shared belt with it */

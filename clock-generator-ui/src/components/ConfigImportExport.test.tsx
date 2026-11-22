@@ -72,6 +72,21 @@ it('says in the paste preview which drop side-loads onto another belt, in the ap
     expect(screen.queryByText(/3 tile belt buffer/)).toBeNull();
 });
 
+it.each([false, true])('shows the current fraction and applies the numeric suggestion only when checked (%s)', async checked => {
+    props.currentForm.inserters = [];
+    props.currentForm.setpoint = { item: 'iron-gear-wheel', items_per_second: { numerator: 16, denominator: 7 }, copies: 1 };
+    props.target = props.currentForm.setpoint;
+    incoming.suggested_target = Option.some({ source: 'mod', target: { item: 'iron-gear-wheel', items_per_second: 3.75, copies: 1 } });
+    const { user } = Render();
+    await paste();
+    expect(screen.getByText(/16\/7\/s/)).toBeDefined();
+    const field = screen.getByRole<HTMLInputElement>('checkbox', { name: /^Setpoint:/ });
+    expect(field.checked).toBe(false);
+    if (checked) await user.click(field);
+    await user.click(apply());
+    expect(vi.mocked(props.onApplyPaste).mock.calls[0][0].setpoint.items_per_second).toEqual(checked ? 3.75 : { numerator: 16, denominator: 7 });
+});
+
 describe('Paste acknowledgment bound to the actual preview', () => {
     it('guards Apply until the current mixed preview is deliberately acknowledged, then applies once with one Undo', async () => {
         const { user } = Render();

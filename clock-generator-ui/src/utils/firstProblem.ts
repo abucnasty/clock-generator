@@ -1,3 +1,5 @@
+import { isPositiveRate, exactRateUnits, RATE_PRECISION_ERROR } from 'clock-generator/light';
+import type { SetpointRate } from 'clock-generator/light';
 import { COPIES_POSITIVE_PROBLEM, copiesProblem } from './copiesProblem';
 import type { InserterCoverageIssue } from 'clock-generator/browser';
 import type { CheckStatus } from './checkThenGenerate';
@@ -82,7 +84,7 @@ export interface Problem {
 }
 
 interface ProblemsInput {
-    setpoint: { item: string; items_per_second: number; copies: number; counts?: TargetCounts };
+    setpoint: { item: string; items_per_second: SetpointRate; copies: number; counts?: TargetCounts };
     machines: { id: number; recipe: string }[];
     /** The most the machines making (or, for a target that counts the item destroyed, destroying) the target item can make; null or left out while it is not known */
     machinesMax?: MachinesMax | null;
@@ -98,12 +100,16 @@ export function problemsOf({ setpoint, machines, machinesMax = null }: ProblemsI
     if (!setpoint.item) {
         problems.push({ text: PROBLEM_TEXT.noRecipe, target: { kind: 'target-recipe' } });
     }
-    if (!(setpoint.items_per_second > 0)) {
+    if (!isPositiveRate(setpoint.items_per_second)) {
         problems.push({ text: PROBLEM_TEXT.noRate, target: { kind: 'target-rate' } });
     }
     const copiesIssue = copiesProblem(setpoint.copies);
     if (copiesIssue) {
         problems.push({ text: copiesIssue, target: { kind: 'target-copies' } });
+    }
+    if (!copiesIssue && typeof setpoint.items_per_second === 'object') {
+        try { exactRateUnits(setpoint.items_per_second, setpoint.copies); }
+        catch { problems.push({ text: RATE_PRECISION_ERROR, target: { kind: 'target-rate' } }); }
     }
     if (machines.length === 0) {
         problems.push({ text: PROBLEM_TEXT.noMachines, target: { kind: 'add-machine' } });

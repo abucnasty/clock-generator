@@ -105,7 +105,7 @@ function removeAndRenumber<T extends { id: number }>(items: T[], index: number):
 export function updateSetpoint(
     prev: ConfigFormData,
     field: keyof ConfigFormData['setpoint'],
-    value: string | number | { x: number; y: number } | undefined,
+    value: ConfigFormData['setpoint'][keyof ConfigFormData['setpoint']],
 ): ConfigFormData {
     // an optional field cleared is left out, not kept as undefined
     const target: Record<string, unknown> = { ...prev.setpoint };

@@ -1,11 +1,12 @@
+import { rateText, type SetpointRate } from 'clock-generator/light';
 import type { SuggestedTarget } from 'clock-generator/browser';
 import { formatNumberText } from './numberText';
 import { entityLabel, nameInSentence } from './entityLabel';
 
 /** A target output, as the form and the export hold it */
-export interface TargetValues {
+export interface TargetValues<Rate extends SetpointRate = SetpointRate> {
     item: string;
-    items_per_second: number;
+    items_per_second: Rate;
     copies: number;
     /** Where the next copy stands; the export states it where the selection shows copies at one spacing */
     copy_offset?: { x: number; y: number };
@@ -19,7 +20,7 @@ const TARGET_DECIMALS = 3;
  * make, so it is never rounded up past it, and float noise from the mod (1.8000000000000003) goes. The gap to the next
  * copy comes with it where the export states one.
  */
-export function targetToFill(suggestion: SuggestedTarget): TargetValues {
+export function targetToFill(suggestion: SuggestedTarget): TargetValues<number> {
     const scale = 10 ** TARGET_DECIMALS;
     const max = suggestion.target.items_per_second;
     // the small nudge keeps a value such as 1.8 (1.7999999…98 when scaled) from flooring a step too low; a nudge that
@@ -39,7 +40,8 @@ const copiesText = (copies: number) => `${copies} ${copies === 1 ? 'copy' : 'cop
  * science pack, up to 22.968/s, 1 copy"
  */
 export function targetRowLabel(target: TargetValues, name: (id: string) => string): string {
-    return `Setpoint: ${name(target.item)}, up to ${formatNumberText(target.items_per_second, { maxDecimals: TARGET_DECIMALS })}/s, ${copiesText(target.copies)}`;
+    const rate = typeof target.items_per_second === 'number' ? formatNumberText(target.items_per_second, { maxDecimals: TARGET_DECIMALS }) : rateText(target.items_per_second);
+    return `Setpoint: ${name(target.item)}, up to ${rate}/s, ${copiesText(target.copies)}`;
 }
 
 /**
@@ -79,7 +81,7 @@ export function maximumTargetNote(source: SuggestedTarget['source']): string | n
 
 /** Said under the row when Target Output is already set, so the row starts unticked */
 export function replacesTargetNote(current: TargetValues, name: (id: string) => string): string {
-    return `Tick to replace your current target (${nameInSentence(name(current.item))} at ${formatNumberText(current.items_per_second)}/s).`;
+    return `Tick to replace your current target (${nameInSentence(name(current.item))} at ${typeof current.items_per_second === 'number' ? formatNumberText(current.items_per_second) : rateText(current.items_per_second)}/s).`;
 }
 
 export const NO_TARGET_NOTE = 'Could not tell what the build makes. Set the setpoint after importing.';

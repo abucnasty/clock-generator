@@ -47,9 +47,9 @@ const imported = {
 const importedWith = (fields: Record<string, unknown>) => ({ ...imported, ...fields }) as unknown as Config;
 
 describe('canonical repeated-unit form application', () => {
-    it('retains source UUIDs and forced metadata through composite extraction and refuses an inconsistent payload', () => {
+    it.each([4, { denominator: 7, numerator: 16 }])('retains the rate, source UUIDs and forced metadata through extraction (%j)', (rate) => {
         const form = configToFormData({
-            setpoint: { item: 'iron-gear-wheel', items_per_second: 4, copies: 0.5 },
+            setpoint: { item: 'iron-gear-wheel', items_per_second: rate, copies: 0.5 },
             machines: Array.from({ length: 6 }, (_, i) => ({ id: i + 1, recipe: i < 4 ? 'iron-gear-wheel' : 'copper-cable', crafting_speed: 1, productivity: 0 })),
             belts: [
                 { id: 1, type: 'transport-belt', lanes: [{ ingredient: 'iron-plate', stack_size: 1 }, { ingredient: 'copper-plate', stack_size: 1 }] },

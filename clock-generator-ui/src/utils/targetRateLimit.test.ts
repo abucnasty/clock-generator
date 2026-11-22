@@ -192,3 +192,14 @@ it('distinguishes a higher rational target from an equal displayed capacity', ()
     expect(isTargetAboveMax(bound, 1, max)).toBe(false);
     expect(isTargetAboveMax(above, 1, max)).toBe(true);
 });
+
+it('uses the lower exact worker bound even if its displayed value matches the machines', () => {
+    const bound = { numerator: 7, denominator: 6 };
+    const above = { numerator: 8400000000000300, denominator: 7200000000000257 };
+    const machine = { machineIds: [1], perCopy: 7 / 6, perCopyRatio: above };
+    const worker = { current: true, max: { per_copy: bound, per_copy_per_second: 7 / 6, limit: null } };
+    const max = rateMaxOf(machine, worker, above);
+    expect(isTargetAboveMax(bound, 1, max)).toBe(false);
+    expect(isTargetAboveMax(above, 1, max)).toBe(true);
+    expect(targetRateLineOf({ itemsPerSecond: above, copies: 1, max })).toContain('7/6');
+});

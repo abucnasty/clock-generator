@@ -1,3 +1,4 @@
+import { applyRepeatedUnitConversion } from '../utils/configForm/repeatedUnitConversion';
 import factorioData from '../../../clock-generator/resources/data-filtered.json?raw';
 import formerSetpoint from '../../../clock-generator/src/config/fixtures/legacy/recipe-setpoint.json?raw';
 import grenadeSample from '../../../clock-generator/resources/config-samples/intermediates/grenade/grenade-240-fills-belt-exactly.json?raw';
@@ -707,19 +708,30 @@ describe('a setpoint named by a recipe, as the picker stores it', () => {
         expect(named).toEqual(before);
     });
 
-    it('offers the conversion of repeated units for the build as the form holds it, with the recipe name', async () => {
+    it.each([false, true])('offers conversion of the original recipe and canonical rate (fraction %s)', async fractional => {
         const one = jellynut('jellynut-processing');
         // two units that share the belts, as 2 units set as one copy
-        const named: Config = { ...one,
+        const repeated: Config = { ...one,
             machines: [one.machines[0], { ...one.machines[0], id: 2 }],
             inserters: [...one.inserters, ...one.inserters.map(inserter => ({ ...inserter, id: (inserter.id ?? 0) + 4,
                 source: inserter.source.type === 'machine' ? { ...inserter.source, id: 2 } : inserter.source,
                 sink: inserter.sink.type === 'machine' ? { ...inserter.sink, id: 2 } : inserter.sink }))] };
+        const form = configToFormData(repeated);
+        const named = formDataToConfig(form);
+        if (fractional) named.setpoint.items_per_second = { denominator: 7, numerator: 16 };
+        const canonical = { ...named, setpoint: { ...named.setpoint,
+            items_per_second: fractional ? { numerator: 16, denominator: 7 } : named.setpoint.items_per_second } };
         const response = await send({ type: 'validate', requestId: 33, config: named });
-        expect(response).toMatchObject({ type: 'validated', recovery: { kind: 'repeated-units', sourceConfigKey: JSON.stringify(named), detectedCopies: 2 } });
+        expect(response).toMatchObject({ type: 'validated', recovery: { kind: 'repeated-units', sourceConfigKey: JSON.stringify(canonical), detectedCopies: 2 } });
         const conversion = await ask({ kind: 'repeated-unit-conversion', config: named });
         expect(conversion).toMatchObject({ kind: 'available' });
-        if (conversion.kind === 'available') expect(conversion.plan.candidate.setpoint.item).toBe('jellynut-processing');
+        if (conversion.kind === 'available') {
+            expect(conversion.plan.sourceConfigKey).toBe(JSON.stringify(canonical));
+            form.setpoint.items_per_second = named.setpoint.items_per_second;
+            const applied = applyRepeatedUnitConversion(form, conversion.plan);
+            expect(applied?.setpoint).toMatchObject({ item: 'jellynut-processing', items_per_second: canonical.setpoint.items_per_second, copies: 2 });
+            expect(conversion.plan.candidate.setpoint).toMatchObject({ item: 'jellynut-processing', items_per_second: canonical.setpoint.items_per_second });
+        }
     });
 
     it('is answered as the item in the queries, and kept as the recipe in an imported file', async () => {
@@ -793,4 +805,37 @@ describe('a setpoint that holds `recipe`', () => {
         expect(heldBy(await ask({ kind: 'config-file', config: zero }))).toMatchObject({ item: 'jellynut-processing', items_per_second: 0 });
         expect(heldBy((await ask({ kind: 'saved-config', config: zero })).form)).toMatchObject({ item: 'jellynut-processing' });
     });
+});
+
+it('keeps a pair on saved and file reads, then refuses both strict actions until Copies is corrected', async () => {
+    const config: Config = JSON.parse(grenadeSample);
+    config.setpoint = { ...config.setpoint, copies: 2, items_per_second: { denominator: 100000000000000, numerator: 1 } };
+    const saved = await ask({ kind: 'saved-config', config });
+    expect(saved.problem).toBeNull();
+    for (const opened of [saved.form as Config, await ask({ kind: 'config-file', config })]) {
+        expect(JSON.stringify(opened.setpoint.items_per_second)).toBe('{"numerator":1,"denominator":100000000000000}');
+        expect(opened.setpoint.copies).toBe(2);
+    }
+    expect(await send({ type: 'validate', requestId: 320, config })).toMatchObject({ type: 'validation-failed', message: expect.stringMatching(/precision/i) });
+    expect(await send({ type: 'plan', runId: 321, config, streamLogs: false, debugSteps: noDebug }))
+        .toMatchObject({ type: 'error', message: expect.stringMatching(/precision/i) });
+});
+
+it('checks and plans the exact entered rate after a structured-clone handoff', async () => {
+    const config = structuredClone({
+        setpoint: { item: 'iron-gear-wheel', items_per_second: { denominator: 7, numerator: 16 }, copies: 1 },
+        machines: [{ id: 1, recipe: 'iron-gear-wheel', prototype: 'assembling-machine-3', productivity: 0, crafting_speed: 4 }],
+        inserters: [
+            { id: 1, source: { type: 'chest', id: 1 }, sink: { type: 'machine', id: 1 }, stack_size: 2 },
+            { id: 2, source: { type: 'machine', id: 1 }, sink: { type: 'chest', id: 2 }, stack_size: 1 },
+        ], belts: [],
+        chests: [{ id: 1, type: 'infinity-chest', item_filter: [{ item_name: 'iron-plate', request_count: 100 }] },
+            { id: 2, type: 'buffer-chest', prototype: 'steel-chest', item_filter: 'iron-gear-wheel', storage_size: 4800 }],
+        overrides: { terminal_swing_count: 1, lcm: 1 },
+    } satisfies Config);
+    expect(await send({ type: 'validate', requestId: 323, config })).toMatchObject({ type: 'validated' });
+    const { primary } = await primaryOf(config);
+    expect(primary?.alternatives.length).toBeGreaterThan(0);
+    const received = await ask({ kind: 'config-file', config });
+    expect(JSON.stringify(received.setpoint.items_per_second)).toBe('{"numerator":16,"denominator":7}');
 });

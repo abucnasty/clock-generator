@@ -68,7 +68,7 @@ interface UseConfigFormResult {
     updateInserters: (uuids: readonly string[], updates: Partial<InserterFormData>) => void;
 
     // Target output
-    updateSetpoint: (field: keyof ConfigFormData['setpoint'], value: string | number | { x: number; y: number } | undefined) => void;
+    updateSetpoint: (field: keyof ConfigFormData['setpoint'], value: ConfigFormData['setpoint'][keyof ConfigFormData['setpoint']]) => void;
     
     // Machines
     addMachine: () => void;

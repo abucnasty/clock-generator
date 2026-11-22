@@ -1,3 +1,4 @@
+import { canonicalRate, rateText } from 'clock-generator/light';
 import { Alert, AlertTitle, Box, Button, Typography } from '@mui/material';
 import { useEffect, useRef, useState } from 'react';
 import type { Config, RepeatedUnitConversionPlan } from 'clock-generator/browser';
@@ -25,7 +26,7 @@ export function ImportSimplification({ config, applied, onSimplify, onRestore, o
     onRepeated: (sourceKey: string) => void;
 }) {
     const { recipeLabel } = useGameNames();
-    const key = config ? JSON.stringify(config) : null;
+    const key = config ? JSON.stringify(canonicalRate(config)) : null;
     const [result, setResult] = useState<{ key: string; checked: CheckedRepeatedUnitConversion | null } | null>(null);
     const reportedKey = useRef<string | null>(null);
     const simplifyButton = useRef<HTMLButtonElement>(null);
@@ -55,7 +56,7 @@ export function ImportSimplification({ config, applied, onSimplify, onRestore, o
     if (applied) return <Alert severity="success" sx={{ mb: 2 }}>
         <AlertTitle>Simpler build ready to import</AlertTitle>
         <Changes reduction={applied} />
-        <Typography variant="body2">Total output: {applied.target.items_per_second}/s {nameInSentence(recipeLabel(applied.target.item))} across {applied.copies} copies.</Typography>
+        <Typography variant="body2">Total output: {rateText(applied.target.items_per_second)}/s {nameInSentence(recipeLabel(applied.target.item))} across {applied.copies} copies.</Typography>
         <Button size="small" color="inherit" onClick={onRestore} sx={{ mt: 0.5 }}>Review full pasted build</Button>
     </Alert>;
     const checked = result?.key === key ? result.checked : null;
