@@ -64,7 +64,7 @@ describe("Round-Robin Polling with metered takers on a build whose foundries eac
         let tick = 0;
         return {
             advance(to: number) {
-                for (; tick < to; tick++) runTick(world);
+                for (; tick < to; tick++) runTick(world, null);
             },
             arm: (id: number) => world.inserters.find(it => it.entity_id.number === id)!,
             stock: (id: number) => context.state_registry.getStateByEntityIdOrThrow(EntityId.forMachine(id))
