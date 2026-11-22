@@ -1583,8 +1583,6 @@ export function startDependenceSummary(config: Config, alternatives: readonly Pi
     };
 }
 
-const default_alternative_options: GenerateClockOptions = {};
-
 /**
  * Generates the same config several ways (batched swings, derived
  * per-craft windows, fractional swings toggled, lower output swing counts, full-hand output) and checks each
@@ -1600,11 +1598,10 @@ const default_alternative_options: GenerateClockOptions = {};
  */
 export function generateClockAlternatives(
     config: Config,
-    options: GenerateClockOptions = default_alternative_options,
+    options: GenerateClockOptions = {},
 ): ClockAlternativesResult {
-    // A supplied object can return progress from a getter or a proxy. Only the engine owns its fresh defaults.
-    const owns_options = options === default_alternative_options;
-    return generateAlternativesWithOptions(config, owns_options ? {} : options, owns_options);
+    // Public calls can read caller-initialized game data and report progress through caller options.
+    return generateAlternativesWithOptions(config, options, false);
 }
 
 /** The command-line listing owns both its options and its quiet logger. */
