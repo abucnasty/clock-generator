@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { loadConfigFromFile } from "../../../config/loader";
 import type { Config } from "../../../config/schema";
-import { createEntityRegistryFromConfig } from "../simulation-context";
+import { planOutputCycle } from "../../plan/unclocked-run";
+import { quiet } from "../../generate-blueprint-test-helpers";
+import { SimulationContext, createEntityRegistryFromConfig } from "../simulation-context";
 import { TargetProductionRate } from "../../target-production-rate";
 import { OutputCyclePlan } from "./output-cycle";
 import { targetInsertersOf, targetMachinesOf } from "./target-ends";
@@ -50,6 +52,14 @@ describe("a target that counts an item destroyed", () => {
             + "back into the machine: none leaves the build, so it is not made. A machine that destroys an item it is brought is planned "
             + "on what it destroys: set `setpoint.counts` to \"destroyed\" and `items_per_second` to the iron-ore it is brought from "
             + "outside, 400 for the 133.333333 a second it gives back.");
+    });
+
+    it("names the exact requested total when refusing a target that counts recycler returns", async () => {
+        const config = await loadConfigFromFile(FIXTURE);
+        config.setpoint = { item: "iron-ore", items_per_second: { numerator: 16, denominator: 7 }, copies: 2.25 };
+        const message = "for the 16/7 a second it gives back";
+        expect(() => planOutputCycle(config, SimulationContext.fromConfig(config), quiet)).toThrow(message);
+        await expect(planOf(() => config)).rejects.toThrow(message);
     });
 
     it("is refused where the machine does not place its results itself, or nothing takes them out of its container", async () => {

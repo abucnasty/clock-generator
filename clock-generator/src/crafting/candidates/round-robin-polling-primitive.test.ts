@@ -257,3 +257,34 @@ it("checks both planning guards against the exact machine capacity", () => {
         }
     } finally { capacity.mockRestore(); }
 });
+
+// Two plates per gear, divided equally among its feeders. Only the output hand sets the grouped period.
+function gearWithInputHands(hands: number[]): Config {
+    const config = gearSetpoint({ numerator: 1, denominator: 1 });
+    return {
+        ...config, overrides: undefined,
+        inserters: [
+            config.inserters[1],
+            ...hands.map((stack_size, index) => ({ ...config.inserters[0], id: index + 3, stack_size })),
+        ],
+    };
+}
+
+it.each([
+    { hands: [11, 13], expected: 143 },
+    // All nine denominators share a factor of nine. The repeated 59 adds no factor to their LCM.
+    { hands: [59, 61, 67, 71, 73, 79, 83, 89, 59], expected: 6_564_105_581_825_223 },
+])("reports the full transfer LCM $expected with a one-cycle grouped output", ({ hands, expected }) => {
+    const result = constructPrimitiveRoundRobinPolling(gearWithInputHands(hands));
+    expect(result.grouped_cycles).toBe(1);
+    expect(result.transfer_plan.computed_lcm).toBe(expected);
+});
+
+it("refuses an unrepresentable reported LCM even when the grouped output needs only one cycle", () => {
+    // Replacing the repeated 59 with 97 grows the true LCM to 636718241437046631.
+    const config = gearWithInputHands([59, 61, 67, 71, 73, 79, 83, 89, 97]);
+    const legacy = constructPrimitiveRoundRobinPolling({ ...config, setpoint: { ...config.setpoint, items_per_second: 1 } });
+    expect(legacy.grouped_cycles).toBe(1);
+    expect(Number.isSafeInteger(legacy.transfer_plan.computed_lcm)).toBe(false);
+    expect(() => constructPrimitiveRoundRobinPolling(config)).toThrow(/cycle multiplier at 1\/1 items\/s exceeds exact precision/);
+});

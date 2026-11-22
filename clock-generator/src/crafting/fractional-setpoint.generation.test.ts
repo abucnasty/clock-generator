@@ -4,6 +4,7 @@ import { gearSetpoint } from "../../tests/configs/fractional-setpoint";
 import { OpenRange } from "../data-types";
 import { ratioOf } from "../entities/traits/ratio";
 import { generateClockAlternatives } from "./alternatives";
+import { generateClockForConfig } from "./generate-blueprint";
 import { quiet } from "./generate-blueprint-test-helpers";
 import { copyLaneTakes, sharedLaneRunsOf } from "./shared-lane-verdict";
 
@@ -12,6 +13,8 @@ it("generates one output hand per 105/4 ticks at the entered gear setpoint", () 
     const selected = result.alternatives[result.selected_index];
     expect(selected).toMatchObject({ id: "takt_batches_observed_subtick", maker: "planned-belt-slack-subtick", verdict: "no recovery" });
     const made = selected.result;
+    const clock = made.blueprint.entities.find(entity => entity.player_description?.startsWith("Clock for"));
+    expect(clock?.player_description).toContain("16/7/s.");
     const plan = made.output_cycle_plan;
     expect(ratioOf(plan.production_rate.total_production_rate.amount_per_tick)).toEqual({ numerator: 4, denominator: 105 });
     expect(ratioOf(plan.production_rate.total_production_rate.amount_per_second)).toEqual({ numerator: 16, denominator: 7 });
@@ -47,4 +50,12 @@ it("keeps the exact period for every candidate, trial and installed clock before
             expect(alternative.rounded).toMatchObject({ window_cycle_ticks: 104, tried_on_its_window_cycle: false });
         }
     } finally { counter.mockRestore(); }
+});
+
+it("prints the requested total and the exact share of each copy on the exported clock", () => {
+    const config = gearSetpoint();
+    config.setpoint.copies = 2.25;
+    const result = generateClockForConfig(config, { logger: quiet });
+    const clock = result.blueprint.entities.find(entity => entity.player_description?.startsWith("Clock for"));
+    expect(clock?.player_description).toContain("16/7/s over 2.25 copies (64/63/s each)");
 });

@@ -203,3 +203,18 @@ it('uses the lower exact worker bound even if its displayed value matches the ma
     expect(isTargetAboveMax(above, 1, max)).toBe(true);
     expect(targetRateLineOf({ itemsPerSecond: above, copies: 1, max })).toContain('7/6');
 });
+
+it('checks the worker ceiling when the machines report only a matching decimal', () => {
+    const bound = { numerator: 7, denominator: 6 };
+    const above = { numerator: 8400000000000300, denominator: 7200000000000257 };
+    const machines = machinesMaxOf('iron-gear-wheel', [gears(1, 7 / 6)]);
+    const worker = { current: true, max: { per_copy: bound, per_copy_per_second: 7 / 6, limit: null } };
+    expect(above.numerator / above.denominator).toBe(7 / 6);
+    expect(rateMaxOf(machines, worker, 7 / 6)).toBe(machines);
+    const max = rateMaxOf(machines, worker, above);
+    expect(isTargetAboveMax(bound, 1, max)).toBe(false);
+    expect(targetRateLineOf({ itemsPerSecond: bound, copies: 1, max })).toBeNull();
+    expect(isTargetAboveMax(above, 1, max)).toBe(true);
+    expect(targetRateLineOf({ itemsPerSecond: above, copies: 1, max }))
+        .toMatch(/7\/6 items\/s.*8400000000000300\/7200000000000257 items\/s/);
+});
