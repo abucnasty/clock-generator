@@ -3,7 +3,7 @@ import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import { generateClockAlternatives } from "./alternatives";
 import { quiet } from "./generate-blueprint-test-helpers";
-import type { MakerLogEvent } from "./maker-log";
+import { withMakerLog, type MakerLogEvent } from "./maker-log";
 import type { GenerateClockOptions, GenerationProgress } from "./plan/unclocked-run";
 import { observeFills, type FillReport } from "./runner/steps/backpressure-fill-step";
 import { withTickLedger, type TickLedgerCount } from "./tick-ledger";
@@ -17,10 +17,10 @@ it("keeps the better ghost wakeup retry without repeating the losing trial's shi
     const generate = () => {
         const events: MakerLogEvent[] = [];
         let ledger: TickLedgerCount | undefined;
-        const result = withTickLedger(count => { ledger = count; }, () => generateClockAlternatives(config, {
-            logger: quiet,
-            maker_log: event => { if (event.event !== "seconds") events.push(event); },
-        }));
+        const result = withTickLedger(count => { ledger = count; }, () => withMakerLog(
+            event => { if (event.event !== "seconds") events.push(event); },
+            () => generateClockAlternatives(config),
+        ));
         return { result, events, ledger: ledger! };
     };
 
@@ -49,6 +49,20 @@ it("keeps the better ghost wakeup retry without repeating the losing trial's shi
         { loop: "warmup_step", runs: 23, ticks: 198720 },
         { loop: "simulate_step", runs: 23, ticks: 19872 },
     ]);
+});
+
+it("reports every shifted start to a callback supplied by the options object", async () => {
+    const config = await loadConfigFromFile(ConfigPaths.ELECTRIC_FURNACE_20);
+    const reports: GenerationProgress[] = [];
+    const report = (progress: GenerationProgress) => { reports.push(progress); };
+    const options = new Proxy({ logger: quiet }, {
+        get(target, key, receiver) {
+            return key === "on_progress" ? report : Reflect.get(target, key, receiver);
+        },
+    });
+    generateClockAlternatives(config, options);
+    expect(reports).toHaveLength(68);
+    expect(reports.at(-1)?.step).toBe("Done");
 });
 
 it("reports shifted starts to a progress callback registered during generation", async () => {
