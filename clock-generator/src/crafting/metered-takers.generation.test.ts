@@ -114,6 +114,18 @@ describe("Round-Robin Polling with metered takers on a build whose foundries eac
         expect([selected.id, selected.verdict, selected.assessment.items_per_second.toFixed(2), selected.result.simulation_duration.ticks])
             .toEqual(["coordinated_sources", "stable", "320.00", 324]);
     });
+
+    it("recommends a clock with a proper enable window on each science output", () => {
+        const clock = generated.alternatives[generated.selected_index].result;
+        const period = clock.simulation_duration.ticks;
+        for (const id of [1, 4, 11, 13, 18, 19]) {
+            const ranges = clock.clock_windows[`inserter:${id}`];
+            const width = Array.from({ length: period }, (_, tick) =>
+                ranges?.some(range => range.start <= tick && tick <= range.end)).filter(Boolean).length;
+            expect(width, `inserter ${id}`).toBeGreaterThan(0);
+            expect(width, `inserter ${id}`).toBeLessThan(period);
+        }
+    });
 });
 
 // ADVANCED_CIRCUIT_240, a job of the record: a machine there hands an ingredient to two or more of the machines that make the
