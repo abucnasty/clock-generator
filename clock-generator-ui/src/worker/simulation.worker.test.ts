@@ -490,6 +490,33 @@ describe('the shared hand of a recycler that places its results in a cargo wagon
             } },
         });
     });
+
+    it('keeps the plain planner refusal when the inserter takes without waiting for a full hand', async () => {
+        const build: Config = {
+            ...config,
+            setpoint: { ...config.setpoint, item: 'processing-unit', counts: 'destroyed' },
+            inserters: config.inserters.map(inserter => inserter.id === 7 ? { ...inserter, prototype: 'bulk-inserter' } : inserter),
+        };
+        const checked = await send({ type: 'validate', requestId: 67, config: build }) as ValidationFailedResponse;
+        const preview = await send({ type: 'query', requestId: 69, query: { kind: 'machine-target-rates', config: build } });
+        const offset = posted.length;
+        const plan = await send({ type: 'plan', runId: 68, config: build, debugSteps: noDebug, streamLogs: true });
+
+        expect.soft(checked).toStrictEqual({ type: 'validation-failed', requestId: 67, message: problem, internal: undefined, diagnostics: undefined });
+        expect.soft(preview).toStrictEqual({ type: 'query-failed', requestId: 69, message: problem });
+        const stream = posted.slice(offset);
+        expect.soft(stream.some(response => response.type === 'log' && response.runId === 68)).toBe(true);
+        expect.soft(stream.filter(response => response.type !== 'log').map(response => response.type)).toEqual(['error']);
+        expect.soft(plan).toStrictEqual({ type: 'error', runId: 68, message: problem, stack: expect.any(String) });
+        if (plan.type !== 'error') throw new Error('Expected the plain planner refusal');
+        expect.soft(plan.stack?.split('\n')[0]).toBe(`Error: ${problem}`);
+
+        const issues = listed(nothingLive, build.machines, checked);
+        expect(issues).toHaveLength(1);
+        expect(issues[0]).toMatchObject({ id: 'engine-check', text: checked.message, blocksGeneration: true, source: 'engine' });
+        expect(issues[0].inserters).toBeUndefined();
+        expect([...refusedInserterIdsOf(issues)]).toEqual([]);
+    });
 });
 
 describe('live advice on a gear assembler, which does not block', () => {
