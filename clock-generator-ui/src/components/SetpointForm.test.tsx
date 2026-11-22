@@ -197,7 +197,12 @@ it('keeps slash entry editable and commits its reduced total independently of Co
     expect(input.value).toBe('16/7');
 });
 
-it.each(['', '0', '-1', 'NaN', 'Infinity', '1/0', '1/-3', '1/2/3', '16/7 items/s', '1/', '1+2', '5%', '9007199254740992/2', '11111111111111111/1'])(
+it.each([
+    '', '0', '-1', 'NaN', 'Infinity', '1/0', '1/-3', '1/2/3', '16/7 items/s', '1/', '1+2', '5%',
+    '9007199254740992/2', '11111111111111111/1', '1,234.5',
+    '١٢٬٣٤٫٥', '１，，２３４．５', '١٬٢٣٤，٥٦٧٫٨', '١٫٢٬٣٤٥',
+    '١٬٢٣٤/7', '16/１，２３４', '١٬٢٣٤٫٥ items/s', '１，２３４．５+1',
+])(
     'retains an invalid pasted rate and clears the previous checked value (%j)', async text => {
         const changed = vi.fn();
         function Editor() {
@@ -214,7 +219,11 @@ it.each(['', '0', '-1', 'NaN', 'Infinity', '1/0', '1/-3', '1/2/3', '16/7 items/s
         expect(field.getAttribute('aria-invalid')).toBe('true');
     });
 
-it.each([['2', 2], ['2.5', 2.5], ['２．５', 2.5], ['٢٫٥', 2.5], ['＋۲٫۵', 2.5], ['二.五', 2.5], ['000000000000000016 / 0008', { numerator: 2, denominator: 1 }]] as const)(
+it.each([
+    ['2', 2], ['2.5', 2.5], ['２．５', 2.5], ['٢٫٥', 2.5], ['＋۲٫۵', 2.5], ['二.五', 2.5],
+    ['١٬٢٣٤٫٥', 1234.5], ['１，２３４．５', 1234.5], ['１２，３４５，６７８', 12345678],
+    ['000000000000000016 / 0008', { numerator: 2, denominator: 1 }],
+] as const)(
     'commits the wire type entered (%s)', async (text, expected) => {
         const changed = vi.fn();
         function Editor() {
@@ -227,8 +236,8 @@ it.each([['2', 2], ['2.5', 2.5], ['２．５', 2.5], ['٢٫٥', 2.5], ['＋۲٫�
         await user.keyboard('{Control>}a{/Control}');
         await user.paste(text);
         await user.tab();
-        expect(field.getAttribute('aria-invalid')).toBe('false');
         expect(changed).toHaveBeenLastCalledWith(expected);
+        expect(field.getAttribute('aria-invalid')).toBe('false');
     });
 
 it('marks a reopened zero draft as invalid on its rate field', () => {
