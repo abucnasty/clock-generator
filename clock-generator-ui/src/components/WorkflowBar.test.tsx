@@ -91,7 +91,7 @@ it('leaves Generate on for the other blocking errors, which it goes to instead',
 it('disables Check and Generate after a checked form acquires an invalid rate', () => {
     const props = bar();
     const view = show(<WorkflowBar {...props} checkStatus="valid" />);
-    view.rerender(<WorkflowBar {...props} invalidRate />);
+    view.rerender(<WorkflowBar {...props} invalid_rate />);
     for (const name of [CHECK_TEXT.checkOnly, CHECK_TEXT.generate]) {
         const button = screen.getByText(name).closest('button')!;
         expect(button.disabled).toBe(true);

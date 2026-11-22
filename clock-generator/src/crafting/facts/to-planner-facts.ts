@@ -205,7 +205,7 @@ export function toPlannerFacts(config: Config): PlannerFacts {
             items_per_second: target.items_per_second,
             copies: target.copies,
             per_copy: ratioOf(typeof target.items_per_second === "number" ? fraction(target.items_per_second).divide(target.copies)
-                : exactRateUnits(target.items_per_second, target.copies).copySecond),
+                : exactRateUnits(target.items_per_second, target.copies).copy_second),
         },
         nodes,
         edges,

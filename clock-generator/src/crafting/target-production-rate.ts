@@ -32,8 +32,8 @@ function fromConfig(config: TargetProductionRateConfig): TargetProductionRate {
             exact_setpoint: config.items_per_second,
             counts: config.counts ?? "made",
             copies: config.copies,
-            machine_production_rate: { item: recipe, amount_per_tick: units.copyTick, amount_per_second: units.copySecond },
-            total_production_rate: { item: recipe, amount_per_tick: units.totalTick, amount_per_second: units.totalSecond },
+            machine_production_rate: { item: recipe, amount_per_tick: units.copy_tick, amount_per_second: units.copy_second },
+            total_production_rate: { item: recipe, amount_per_tick: units.total_tick, amount_per_second: units.total_second },
         };
     }
     const target_output_per_tick = fraction(config.items_per_second)

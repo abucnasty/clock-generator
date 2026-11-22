@@ -568,7 +568,7 @@ function App() {
             : error && errorRecovery?.sourceConfigKey === configKey ? { message: error } : undefined,
     }), [config.setpoint, config.machines, config.chests, config.inserters, config.belts, checkedCoverage, chestIssues, machinesMax, gameNames, validation, checkStatus, error, errorRecovery, configKey, outputGenerationIssues, repeatedCopiesText]);
     const problems = useMemo(() => validationIssues.filter(issue => issue.blocksGeneration), [validationIssues]);
-    const invalidRate = problems.some(problem => problem.fieldTarget?.kind === 'target-rate');
+    const invalid_rate = problems.some(problem => problem.fieldTarget?.kind === 'target-rate');
     // the inserters the engine's refusal names, live or from the last check: their rows are outlined while it stands
     const refusedInserterIds = useMemo(() => refusedInserterIdsOf(problems), [problems]);
     // the engine's refusal is for the build as the last check saw it: any change to the build takes it away
@@ -1139,7 +1139,7 @@ function App() {
                             toolsMenuItems={toolsMenuItems}
                             onInstall={blueprintString ? () => setInstallOpen(true) : undefined}
                             onCheckOnly={handleCheckOnly}
-                            checkDisabled={busy || invalidRate}
+                            checkDisabled={busy || invalid_rate}
                             renderControls={(paste, menu) => (
                                 <WorkflowBar
                                     entryAction={paste}
@@ -1171,7 +1171,7 @@ function App() {
                                     onGenerate={handleGenerate}
                                     onCheckOnly={handleCheckOnly}
                                     primaryAction={conversionIsNextStep ? null : primaryAction}
-                                    invalidRate={invalidRate}
+                                    invalid_rate={invalid_rate}
                                     busy={busy}
                                     checking={checking}
                                     checkStatus={checkStatus}
@@ -1448,7 +1448,7 @@ function App() {
                                 staleFor={staleFor}
                                 changes={staleChanges}
                                 onGenerate={handleGenerate}
-                                canGenerate={!busy && !invalidRate}
+                                canGenerate={!busy && !invalid_rate}
                                 stoppedEarly={stoppedEarly}
                                 pickGone={pickGone}
                                 copied={copy.copied}

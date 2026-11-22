@@ -16,7 +16,7 @@ export interface MachinesMax {
     /** Present when every machine supplied its exact capacity. */
     perCopyRatio?: { numerator: number; denominator: number };
     /** Kept when the exact sum does not fit a single ratio. */
-    perCopyParts?: readonly Ratio[];
+    per_copy_parts?: readonly Ratio[];
     /**
      * Set when something other than the machines' speed stops the target (a hand, an inserter, a belt): the engine's
      * words for it, empty while they are not yet known for the rate typed in. The most is then the engine's.
@@ -61,13 +61,13 @@ export function rateMaxOf(machines: MachinesMax | null, feasible: FeasibleMax, r
 }
 
 function capacityParts(max: MachinesMax): readonly Ratio[] | undefined {
-    return max.perCopyParts ?? (max.perCopyRatio && [max.perCopyRatio]);
+    return max.per_copy_parts ?? (max.perCopyRatio && [max.perCopyRatio]);
 }
 
 function exactSum(parts: Ratio[]) {
     const sum = parts.reduce((sum, part) => sum.add(fraction(part.numerator, part.denominator)), fraction(0));
     const ratio = { numerator: sum.getNumerator, denominator: sum.getDenominator };
-    return compareRateToCapacity(ratio, parts, 1).equal ? { perCopyRatio: ratio } : { perCopyRatio: ratio, perCopyParts: parts };
+    return compareRateToCapacity(ratio, parts, 1).equal ? { perCopyRatio: ratio } : { perCopyRatio: ratio, per_copy_parts: parts };
 }
 
 /** What a machine's facts say of its output; null when they could not be worked out, undefined until they are */

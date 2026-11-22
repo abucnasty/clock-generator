@@ -61,10 +61,10 @@ export function exactRateUnits(rate: Ratio, copies: number) {
     const cn = BigInt(c.getNumerator), cd = BigInt(c.getDenominator);
     const ticks = BigInt(TICKS_PER_SECOND.getNumerator);
     return {
-        totalSecond: fractionOf(rate),
-        totalTick: checked(n, d * ticks, RATE_PRECISION_ERROR),
-        copySecond: checked(n * cd, d * cn, RATE_PRECISION_ERROR),
-        copyTick: checked(n * cd, d * cn * ticks, RATE_PRECISION_ERROR),
+        total_second: fractionOf(rate),
+        total_tick: checked(n, d * ticks, RATE_PRECISION_ERROR),
+        copy_second: checked(n * cd, d * cn, RATE_PRECISION_ERROR),
+        copy_tick: checked(n * cd, d * cn * ticks, RATE_PRECISION_ERROR),
     };
 }
 

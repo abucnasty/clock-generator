@@ -8,15 +8,15 @@ import { NUMBER_FIELD_INPUT_FORMAT } from '../utils/numberText';
 const format = new Intl.NumberFormat(undefined, NUMBER_FIELD_INPUT_FORMAT);
 const decimal = format.formatToParts(0.5).find(part => part.type === 'decimal')?.value ?? '.';
 const digits = Array.from({ length: 10 }, (_, index) => format.format(index));
-const numericDigits = new Map(digits.map((digit, index) => [digit, String(index)]));
+const numeric_digits = new Map(digits.map((digit, index) => [digit, String(index)]));
 for (const system of ['０１２３４５６７８９', '٠١٢٣٤٥٦٧٨٩', '۰۱۲۳۴۵۶۷۸۹', '零一二三四五六七八九']) {
-    [...system].forEach((digit, index) => numericDigits.set(digit, String(index)));
+    [...system].forEach((digit, index) => numeric_digits.set(digit, String(index)));
 }
-numericDigits.set('〇', '0');
+numeric_digits.set('〇', '0');
 
 /** Accept the numeral systems and punctuation of the numeric field before checking the complete token. */
 function numericToken(text: string): string {
-    const token = [...text].map(digit => numericDigits.get(digit) ?? digit).join('')
+    const token = [...text].map(digit => numeric_digits.get(digit) ?? digit).join('')
         .replace(/\p{Cf}/gu, '').replace(/[−－‒–—﹣]/g, '-').replace(/[＋﹢]/g, '+')
         .replace(/[٫．]/g, '.').replace(decimal, '.');
     // Strip Arabic or fullwidth grouping only from a complete token with consistent three-digit groups.

@@ -94,9 +94,9 @@ export function itemsPerSecondHelper(itemsPerSecond: SetpointRate, copies: numbe
     if (typeof itemsPerSecond !== 'number') {
         if (copiesProblem(copies)) return '';
         try {
-            const perCopy = exactRateUnits(itemsPerSecond, copies).copySecond;
+            const per_copy = exactRateUnits(itemsPerSecond, copies).copy_second;
             if (copies === 1) return 'Total for the build';
-            const value = perCopy.getDenominator === 1 ? String(perCopy.getNumerator) : `${perCopy.getNumerator}/${perCopy.getDenominator}`;
+            const value = per_copy.getDenominator === 1 ? String(per_copy.getNumerator) : `${per_copy.getNumerator}/${per_copy.getDenominator}`;
             return `${value} items/s per copy`;
         } catch { return ''; }
     }

@@ -410,7 +410,7 @@ export function clockDescriptionLines(args: {
     let rate = `${total}/s`;
     if (copies !== 1) {
         const each = typeof items_per_second === "number" ? formatRate(items_per_second / copies)
-            : exactRateUnits(items_per_second, copies).copySecond.toString();
+            : exactRateUnits(items_per_second, copies).copy_second.toString();
         rate += ` over ${formatRate(copies)} copies (${each}/s each)`;
     }
     const lines = [
