@@ -13,6 +13,7 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ### Added
 - ui: the setpoint picker lets you choose the output of a recipe with several outputs
+- ui: enter an exact fraction in the setpoint rate field
 
 ### Changed
 - ui: configuration files name the setpoint's item; older files still open
