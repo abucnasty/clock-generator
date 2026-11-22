@@ -16,9 +16,14 @@ numericDigits.set('〇', '0');
 
 /** Accept the numeral systems and punctuation of the numeric field before checking the complete token. */
 function numericToken(text: string): string {
-    return [...text].map(digit => numericDigits.get(digit) ?? digit).join('')
+    const token = [...text].map(digit => numericDigits.get(digit) ?? digit).join('')
         .replace(/\p{Cf}/gu, '').replace(/[−－‒–—﹣]/g, '-').replace(/[＋﹢]/g, '+')
         .replace(/[٫．]/g, '.').replace(decimal, '.');
+    // Strip Arabic or fullwidth grouping only from a complete token with consistent three-digit groups.
+    if (/^[+-]?\d{1,3}([٬，])\d{3}(?:\1\d{3})*(?:\.\d*)?$/.test(token)) {
+        return token.replace(/[٬，]/g, '');
+    }
+    return token;
 }
 type ReadRate = { value: SetpointRate } | { error: string };
 
