@@ -3,7 +3,7 @@ import formerSetpoint from '../../../clock-generator/src/config/fixtures/legacy/
 import grenadeSample from '../../../clock-generator/resources/config-samples/intermediates/grenade/grenade-240-fills-belt-exactly.json?raw';
 import militarySample from '../../../clock-generator/resources/config-samples/science/military/military-240.json?raw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { LATEST_SIDECAR_VERSION, type Config, type DebugSteps } from 'clock-generator/browser';
+import { ConfigSchema, LATEST_SIDECAR_VERSION, type Config, type DebugSteps } from 'clock-generator/browser';
 import type { EngineAnswers, EngineQuery, LiveCoverage, PastedEntities, PrimaryCompletedResponse, ValidationFailedResponse, WorkerRequest, WorkerResponse } from './types';
 import { readConfigFile, readSavedConfig, serializeConfig } from '../hooks/usePersistedConfigForm';
 import { configToFormData, formDataToConfig } from '../utils/configForm/configMapping';
@@ -371,14 +371,18 @@ describe('inserters that take from a belt into chests (#650)', () => {
             { id: 3, type: 'buffer-chest', storage_size: 1, item_filter: 'stone', prototype: 'wooden-chest' },
         ],
     } as unknown as Config;
-    const says = 'Inserters 3 and 5 take from a belt and drop into something other than a machine';
+    const says = 'Inserters 3 and 5 take from a belt and drop into something other than a machine: '
+        + 'Inserter 3 takes from Belt 2 and drops into Chest 2; Inserter 5 takes from Belt 3 and drops into Chest 3. '
+        + 'Taking from a belt into anything but a machine is not supported, so this build cannot be clocked. '
+        + 'Make each of them drop into a machine, so that the machine is fed straight from the belt.';
 
     it('names inserters 3 and 5 live, in the one error the Build validation lists', async () => {
-        const live = await coverageOf(config);
-        expect(live).toMatchObject({ refusal: expect.stringContaining(says), refusal_inserters: [3, 5], issues: [] });
+        const response = await send({ type: 'query', requestId: 55, query: { kind: 'inserter-coverage', config } });
+        const live = { ...nothingLive, refusal: says, refusal_inserters: [3, 5] };
+        expect(response).toStrictEqual({ type: 'answer', requestId: 55, answer: live });
         const blocking = listed(live, config.machines).filter(issue => issue.blocksGeneration);
         expect(blocking).toHaveLength(1);
-        expect(blocking[0]).toMatchObject({ source: 'engine', id: 'inserter-scope', inserters: [3, 5], text: expect.stringContaining(says) });
+        expect(blocking[0]).toMatchObject({ source: 'engine', id: 'inserter-scope', inserters: [3, 5], text: says });
     });
 
     it('outlines rows 3 and 5 only while they take from a belt into a chest: none once they drop into a machine', async () => {
@@ -391,15 +395,100 @@ describe('inserters that take from a belt into chests (#650)', () => {
         expect([...refusedInserterIdsOf([{ blocksGeneration: false, inserters: [3] }, { blocksGeneration: true }])]).toEqual([]);
     });
 
-    it('Check refuses it as a refusal that names them, once beside the live one', async () => {
+    it('Check refuses it with structured IDs, folding once beside the live refusal or by itself', async () => {
         const checked = await send({ type: 'validate', requestId: 56, config }) as ValidationFailedResponse;
-        expect(checked.message).toContain(says);
-        expect(checked.internal).toBeUndefined();
-        expect(checked.diagnostics).toEqual([{ kind: 'inserters', ids: [3, 5], message: checked.message }]);
-        const withCheck = listed(await coverageOf(config), config.machines, { message: checked.message, diagnostics: checked.diagnostics });
+        const live = await coverageOf(config);
+        const failure = { message: checked.message, diagnostics: checked.diagnostics };
+        const withCheck = listed(live, config.machines, failure);
         expect(withCheck).toHaveLength(1);
-        // a Check without the live answer lists the same issue from the diagnostic alone
-        expect(listed(nothingLive, config.machines, { message: checked.message, diagnostics: checked.diagnostics })[0]).toMatchObject({ id: 'inserter-scope', inserters: [3, 5] });
+        expect(withCheck).toEqual(listed(live, config.machines));
+        expect(withCheck).toEqual(listed(nothingLive, config.machines, failure));
+        expect(checked).toStrictEqual({ type: 'validation-failed', requestId: 56, message: says, internal: undefined,
+            diagnostics: [{ kind: 'inserters', ids: [3, 5], message: says }] });
+    });
+
+    it('returns the same text with the at-target preview failure shape', async () => {
+        expect(await send({ type: 'query', requestId: 57, query: { kind: 'machine-target-rates', config } }))
+            .toStrictEqual({ type: 'query-failed', requestId: 57, message: says });
+    });
+
+    it('still sends the refused plan as one run error with its class in the stack', async () => {
+        const offset = posted.length;
+        const error = await send({ type: 'plan', runId: 56, config, debugSteps: noDebug, streamLogs: true });
+        expect(posted.slice(offset).map(response => response.type)).toEqual(['error']);
+        expect(error).toStrictEqual({ type: 'error', runId: 56, message: says, stack: expect.any(String) });
+        if (error.type !== 'error') throw new Error('Expected the run failure');
+        expect(error.stack?.split('\n')[0]).toBe(`BeltPickupSinkError: ${says}`);
+    });
+
+    it('folds a diagnostic-free Check only when its text equals a live refusal', async () => {
+        const live = await coverageOf(config);
+        expect(live.refusal).toBeTypeOf('string');
+        const same = { message: live.refusal! };
+        const liveOnly = listed(live, config.machines);
+        expect(liveOnly).toHaveLength(1);
+        expect(listed(live, config.machines, same)).toEqual(liveOnly);
+        expect(listed(live, config.machines, { ...same, diagnostics: [] })).toEqual(liveOnly);
+        expect([...refusedInserterIdsOf(liveOnly)]).toEqual([3, 5]);
+
+        const checkOnly = listed(nothingLive, config.machines, same);
+        expect(checkOnly).toHaveLength(1);
+        expect(checkOnly[0]).toMatchObject({ id: 'engine-check', source: 'engine', blocksGeneration: true, text: same.message });
+        expect(checkOnly[0].inserters).toBeUndefined();
+        expect([...refusedInserterIdsOf(checkOnly)]).toEqual([]);
+
+        const both = listed(live, config.machines, { message: 'The check failed.' });
+        expect(both).toMatchObject([liveOnly[0], { id: 'engine-check', source: 'engine', blocksGeneration: true, text: 'The check failed.' }]);
+        expect(both[1].inserters).toBeUndefined();
+        expect([...refusedInserterIdsOf(both)]).toEqual([3, 5]);
+    });
+});
+
+describe('the shared hand of a recycler that places its results in a cargo wagon', () => {
+    const config = ConfigSchema.parse({
+        setpoint: { item: 'electronic-circuit', items_per_second: 0.1, copies: 1 },
+        machines: [{ id: 1, recipe: 'processing-unit-recycling', prototype: 'recycler', crafting_speed: 1,
+            productivity: 0, result_target: { type: 'chest', id: 14 } }],
+        belts: [],
+        chests: [
+            { id: 11, type: 'infinity-chest', item_filter: [{ item_name: 'processing-unit', request_count: 100 }], remove_unfiltered_items: true },
+            { id: 14, type: 'cargo-wagon' },
+            { id: 15, type: 'infinity-chest', item_filter: [], remove_unfiltered_items: true },
+        ],
+        inserters: [
+            { id: 2, source: { type: 'chest', id: 11 }, sink: { type: 'machine', id: 1 }, prototype: 'stack-inserter' },
+            { id: 7, source: { type: 'chest', id: 14 }, sink: { type: 'chest', id: 15 }, prototype: 'stack-inserter',
+                filters: ['electronic-circuit', 'advanced-circuit'] },
+        ],
+    });
+    const opening = "No clock can hold this build's setpoint:";
+    const problem = 'Inserter 7 takes electronic circuit and advanced circuit out of the cargo wagon. '
+        + 'An inserter that holds part of a hand of one of them takes only more of that one, so the others pile up in '
+        + 'the cargo wagon, and once it is full the one it waits for cannot come in: the build stops for good. Give each result an '
+        + 'inserter of its own. An inserter whose filters the clock sets by signal would not wait; such a clock is not planned yet.';
+    const message = `${opening} ${problem}`;
+
+    it('sends the ordered problems in Check and lists one blocking issue for each', async () => {
+        const checked = await send({ type: 'validate', requestId: 58, config }) as ValidationFailedResponse;
+        expect(checked).toStrictEqual({ type: 'validation-failed', requestId: 58, message, internal: undefined,
+            diagnostics: [{ kind: 'refusal', opening, problems: [problem] }] });
+        const issues = listed(nothingLive, config.machines, checked);
+        expect(issues).toHaveLength(1);
+        expect(issues[0]).toMatchObject({ id: 'refusal:0', text: problem, blocksGeneration: true, source: 'refusal', lead: opening });
+        expect([...refusedInserterIdsOf(issues)]).toEqual([]);
+    });
+
+    it('sends only the query ID and entire refusal in the at-target preview failure', async () => {
+        expect(await send({ type: 'query', requestId: 58, query: { kind: 'machine-target-rates', config } }))
+            .toStrictEqual({ type: 'query-failed', requestId: 58, message });
+    });
+
+    it('refuses repeated-unit conversion at proof before it can check the candidate', async () => {
+        expect(await send({ type: 'query', requestId: 59, query: { kind: 'repeated-unit-conversion', config } })).toStrictEqual({
+            type: 'answer', requestId: 59, answer: { kind: 'unavailable', stage: 'proof', repeatedGroups: 1, reason: {
+                code: 'unsupported-boundary', message: 'A machine that places its results into a container is not supported in repeated copies.',
+            } },
+        });
     });
 });
 

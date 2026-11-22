@@ -2,7 +2,7 @@
 import data from '../../../clock-generator/resources/data-filtered.json?raw';
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { ConfigSchema, FactorioDataService, laneFactsOfConfig, type Config } from 'clock-generator/browser';
+import { beltPickupSinkRefusal, ConfigSchema, FactorioDataService, laneFactsOfConfig, type Config } from 'clock-generator/browser';
 import automation from '../../../clock-generator/resources/config-samples/science/automation/automation-240.json';
 import metallurgic from '../../../clock-generator/resources/config-samples/science/metallurgic/metallurgic-45.json';
 import military from '../../../clock-generator/resources/config-samples/science/military/military-240.json';
@@ -12,15 +12,36 @@ import chemical from '../../../clock-generator/resources/config-samples/science/
 import electromagnetic from '../../../clock-generator/resources/config-samples/science/electromagnetic/electromagnetic-330.json';
 import production from '../../../clock-generator/resources/config-samples/science/production/production-120-two-belts.json';
 import agriculture from '../../../clock-generator/resources/config-samples/science/agricultural/agricultural-250.json';
-import { belt as beltRow, build, inserter, machine, show } from '../test/fixtures';
+import { belt as beltRow, build, containerChest, inserter, machine, show } from '../test/fixtures';
 import { configToFormData, formDataToConfig } from '../utils/configForm/configMapping';
 import type { BeltFormData, ConfigFormData } from '../utils/configForm/formData';
 import { formLaneFactsOf, type FormLaneFacts } from '../utils/laneFacts';
 import { laneRolesAnswer } from '../worker/laneRoles';
 import { BeltsForm } from './BeltsForm';
+import { ChestsForm } from './ChestsForm';
 import { BeltLaneFields } from './EntityFields';
 
 FactorioDataService.initialize(JSON.parse(data));
+
+it('uses the same row labels in a belt-to-wagon refusal and the rendered forms', () => {
+    const form = build({
+        belts: [beltRow(2)],
+        chests: [containerChest(2, 'cargo-wagon'), containerChest(3, 'cargo-wagon')],
+        inserters: [inserter(3, { source: { type: 'belt', id: 2 }, sink: { type: 'chest', id: 2 } })],
+    });
+    show(<>
+        <BeltsForm belts={form.belts} itemNames={[]} onAdd={vi.fn()} onUpdate={vi.fn()} onRemove={vi.fn()} onReorder={vi.fn()}
+            onDuplicate={vi.fn()} copies={form.setpoint.copies} />
+        <ChestsForm chests={form.chests} itemNames={[]} onAdd={vi.fn()} onUpdate={vi.fn()} onSwitchType={vi.fn()} onRemove={vi.fn()}
+            onReorder={vi.fn()} onDuplicate={vi.fn()} />
+    </>);
+    expect(screen.getByRole('button', { name: 'Entity details for Belt 2' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Entity details for Cargo wagon 2' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Entity details for Cargo wagon 3' })).toBeDefined();
+    expect(beltPickupSinkRefusal(formDataToConfig(form))?.message).toBe(
+        'Inserter 3 takes from Belt 2 and drops into Cargo wagon 2. Taking from a belt into anything but a machine is not supported, '
+        + 'so this build cannot be clocked. Make that inserter drop into a machine, so that the machine is fed straight from the belt.');
+});
 
 const exampleForm = (sample: unknown) => configToFormData(ConfigSchema.parse(sample));
 const AUTOMATION = automation;

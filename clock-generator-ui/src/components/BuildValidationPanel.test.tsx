@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { screen, waitFor, within } from '@testing-library/react';
-import type { InserterCoverageIssue } from 'clock-generator/browser';
+import { BeltPickupSinkError, type InserterCoverageIssue } from 'clock-generator/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { bufferChest, infinityChest, inserter, names, show } from '../test/fixtures';
 import { buildValidationIssues, navigateToOutputRouteRepair, outputRouteRepairTarget } from '../utils/buildValidation';
@@ -253,16 +253,33 @@ describe('an advisory as one line with a detail window', () => {
 });
 
 it('points at each inserter the engine refuses (#650): one button per named inserter, to its row', async () => {
-    const message = 'Inserters 3 and 5 take from a belt and drop into something other than a machine: inserter 3 takes from belt 4 and drops into chest 2; '
-        + 'inserter 5 takes from belt 3 and drops into chest 1. Taking from a belt into anything but a machine is not supported, so this build cannot be clocked. '
+    const refusal = new BeltPickupSinkError([
+        { inserter_id: 3, belt_id: 4, sink: { type: 'chest', id: 2 } },
+        { inserter_id: 5, belt_id: 3, sink: { type: 'chest', id: 1 } },
+    ]);
+    const message = 'Inserters 3 and 5 take from a belt and drop into something other than a machine: Inserter 3 takes from Belt 4 and drops into Chest 2; '
+        + 'Inserter 5 takes from Belt 3 and drops into Chest 1. Taking from a belt into anything but a machine is not supported, so this build cannot be clocked. '
         + 'Make each of them drop into a machine, so that the machine is fed straight from the belt.';
     const issues = buildValidationIssues({ fieldProblems: [], coverage: [], chests: [], inserters: [], machines: [{ id: 1 }], chestIssues: [],
-        coverageText: () => '', scopeRefusal: message, scopeRefusalInserters: [3, 5] });
+        coverageText: () => '', scopeRefusal: refusal.message, scopeRefusalInserters: refusal.inserter_ids,
+        failure: { message: refusal.message } });
     const onReviewInserter = vi.fn();
     const { user } = show(<BuildValidationPanel issues={issues} machines={[]} belts={[]} chests={[]} inserters={[]}
         onApplyFix={vi.fn()} onSwitchType={vi.fn()} onEnableRemoval={vi.fn()} onReview={vi.fn()} onReviewInserter={onReviewInserter} />);
-    expect(screen.getAllByText(message)).toHaveLength(1);
+    expect(screen.getAllByText(refusal.message)).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: /^Review inserter / }).map(button => button.textContent))
+        .toEqual(['Review inserter 3', 'Review inserter 5']);
     await user.click(screen.getByRole('button', { name: 'Review inserter 5' }));
     expect(onReviewInserter).toHaveBeenCalledExactlyOnceWith(5);
-    expect(screen.getByRole('button', { name: 'Review inserter 3' })).toBeDefined();
+    expect(refusal.message).toBe(message);
+});
+
+it('has no inserter review action for a plain Check refusal with no live IDs', () => {
+    const message = 'The check failed.';
+    const issues = buildValidationIssues({ fieldProblems: [], coverage: [], chests: [], inserters: [], machines: [], chestIssues: [],
+        coverageText: () => '', failure: { message } });
+    show(<BuildValidationPanel issues={issues} machines={[]} belts={[]} chests={[]} inserters={[]}
+        onApplyFix={vi.fn()} onSwitchType={vi.fn()} onEnableRemoval={vi.fn()} onReview={vi.fn()} onReviewInserter={vi.fn()} />);
+    expect(screen.getAllByText(message)).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: /^Review inserter / })).toBeNull();
 });
