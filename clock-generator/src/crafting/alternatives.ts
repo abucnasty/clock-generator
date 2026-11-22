@@ -289,8 +289,8 @@ type QuietAlternativeOptions = GenerateClockOptions & {
     [quiet_fractional_generator]?: (config: Config, options: GenerateClockOptions) => BlueprintGenerationResult;
 };
 
-/** Read the same live options as the reporter, without invoking a progress getter. */
-function progressIsUnobserved(options: GenerateClockOptions): boolean {
+/** Read the live engine-owned options without invoking a progress getter. */
+function ownedProgressIsUnobserved(options: GenerateClockOptions): boolean {
     const progress = Object.getOwnPropertyDescriptor(options, "on_progress");
     return progress === undefined ? !("on_progress" in options) : "value" in progress && progress.value === undefined;
 }
@@ -1583,6 +1583,8 @@ export function startDependenceSummary(config: Config, alternatives: readonly Pi
     };
 }
 
+const default_alternative_options: GenerateClockOptions = {};
+
 /**
  * Generates the same config several ways (batched swings, derived
  * per-craft windows, fractional swings toggled, lower output swing counts, full-hand output) and checks each
@@ -1598,13 +1600,17 @@ export function startDependenceSummary(config: Config, alternatives: readonly Pi
  */
 export function generateClockAlternatives(
     config: Config,
-    options: GenerateClockOptions = {}
+    options: GenerateClockOptions = default_alternative_options,
 ): ClockAlternativesResult {
-    return withMakerLog(options.maker_log, () => withRunMemo(() => withBuildFeeders(config, () => generateAllAlternatives(withoutOutsideSupply(config), options))),
-        { repeat_check: options.maker_log_repeat_check === true });
+    // A supplied object can return progress from a getter or a proxy. Only the engine owns its fresh defaults.
+    const owns_options = options === default_alternative_options;
+    const actual_options = owns_options ? {} : options;
+    return withMakerLog(actual_options.maker_log, () => withRunMemo(() => withBuildFeeders(config, () =>
+        generateAllAlternatives(withoutOutsideSupply(config), actual_options, owns_options))),
+        { repeat_check: actual_options.maker_log_repeat_check === true });
 }
 
-function generateAllAlternatives(config: Config, options: GenerateClockOptions): ClockAlternativesResult {
+function generateAllAlternatives(config: Config, options: GenerateClockOptions, owns_options: boolean): ClockAlternativesResult {
     const logger = options.logger ?? defaultLogger;
     let current_step = TAKT_BATCHES;
     let completed = 0;
@@ -1627,8 +1633,11 @@ function generateAllAlternatives(config: Config, options: GenerateClockOptions):
         const {disturbance_trial, disturbance_trial_not_tried, start_dependence} = plan.primary.alternatives[0].assessment;
         verification_cache.set(plan.primary.signature, {disturbance_trial, disturbance_trial_not_tried, start_dependence});
     }
-    const quiet = { ...quietOptions(options, logger, report), [quiet_fractional_generator]: (config: Config, trial_options: GenerateClockOptions) =>
-        generateClockForQuietFractionalAlternative(config, trial_options, () => progressIsUnobserved(options)) };
+    const quiet: QuietAlternativeOptions = quietOptions(options, logger, report);
+    if (owns_options) {
+        quiet[quiet_fractional_generator] = (config, trial_options) =>
+            generateClockForQuietFractionalAlternative(config, trial_options, () => ownedProgressIsUnobserved(options));
+    }
     const all_definitions = runnable(alternativeDefinitions(config, plan.context, quiet), options);
     // the explored ones are made after every shipped one and take no part in choosing what is made or selected (see exploredRuns)
     const definitions = all_definitions.filter(definition => !isExplored(definition.strategy));
