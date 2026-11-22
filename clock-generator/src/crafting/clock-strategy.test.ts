@@ -25,6 +25,11 @@ describe("strategyOf", () => {
         expect(a_swing.settings).toEqual({ ...plain, window_cycle: [{ kind: "shorter_window_cycle" }], shared_windows: "window_a_swing" });
     });
 
+    test("metered takers are Round-Robin Polling with the setting of the definition", () => {
+        const metered = strategyOf("round_robin_polling", result(), findings({ definition_settings: { metered_takers: true } }));
+        expect(metered).toEqual({ id: "round_robin_polling", tuning_method: "calculated", settings: { ...plain, shared_windows: "metered_takers" }, output_swings: 2, routing: { router: "direct" } });
+    });
+
     test("small batches are Round-Robin Polling with a shorter window cycle", () => {
         const small = strategyOf("round_robin_polling", result({ primitive_round_robin_polling: {} }), findings({ definition_settings: { shorter_window_cycle: true } }));
         expect(small).toEqual({ id: "round_robin_polling", tuning_method: "calculated", settings: { ...plain, window_cycle: [{ kind: "shorter_window_cycle" }] }, output_swings: 2, routing: { router: "direct" } });
@@ -119,5 +124,6 @@ describe("the id of an alternative", () => {
         expect(alternativeIdOf(made("batched_swings", { round_robin_polling: { shared_windows: true } }), {})).toBe("round_robin_polling_shared");
         expect(alternativeIdOf(made("batched_swings", polling, { definition_settings: { window_a_swing: true } }), {})).toBe("round_robin_polling_per_hand");
         expect(alternativeIdOf(strategyListedAs(made("batched_swings", polling), { subtick_clock: true }), {})).toBe("round_robin_polling_subtick");
+        expect(alternativeIdOf(made("round_robin_polling", {}, { definition_settings: { metered_takers: true } }), {})).toBe("round_robin_polling_metered_takers");
     });
 });

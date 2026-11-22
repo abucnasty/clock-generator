@@ -1,0 +1,719 @@
+{
+  "setpoint": {
+    "recipe": "utility-science-pack",
+    "items_per_second": 320,
+    "copies": 3
+  },
+  "machines": [
+    {
+      "id": 1,
+      "recipe": "utility-science-pack",
+      "productivity": 100,
+      "crafting_speed": 63.00781250000001,
+      "prototype": "assembling-machine-3",
+      "quality": "legendary",
+      "recipe_quality": "uncommon",
+      "position": {
+        "x": 77.5,
+        "y": -75.5
+      }
+    },
+    {
+      "id": 2,
+      "recipe": "utility-science-pack",
+      "productivity": 100,
+      "crafting_speed": 63.00781250000001,
+      "prototype": "assembling-machine-3",
+      "quality": "legendary",
+      "recipe_quality": "uncommon",
+      "position": {
+        "x": 83.5,
+        "y": -75.5
+      }
+    },
+    {
+      "id": 3,
+      "recipe": "casting-low-density-structure",
+      "productivity": 300,
+      "crafting_speed": 185,
+      "prototype": "foundry",
+      "quality": "legendary",
+      "recipe_quality": "uncommon",
+      "position": {
+        "x": 80.5,
+        "y": -70.5
+      }
+    },
+    {
+      "id": 4,
+      "recipe": "plastic-bar",
+      "productivity": 300,
+      "crafting_speed": 148.7405,
+      "prototype": "cryogenic-plant",
+      "quality": "legendary",
+      "recipe_quality": "uncommon",
+      "position": {
+        "x": 76.5,
+        "y": -64.5
+      }
+    },
+    {
+      "id": 5,
+      "recipe": "utility-science-pack",
+      "productivity": 100,
+      "crafting_speed": 63.00781250000001,
+      "prototype": "assembling-machine-3",
+      "quality": "legendary",
+      "recipe_quality": "uncommon",
+      "position": {
+        "x": 83.5,
+        "y": -65.5
+      }
+    },
+    {
+      "id": 6,
+      "recipe": "utility-science-pack",
+      "productivity": 100,
+      "crafting_speed": 63.00781250000001,
+      "prototype": "assembling-machine-3",
+      "quality": "legendary",
+      "recipe_quality": "uncommon",
+      "position": {
+        "x": 69.5,
+        "y": -63.5
+      }
+    },
+    {
+      "id": 7,
+      "recipe": "casting-low-density-structure",
+      "productivity": 300,
+      "crafting_speed": 199.75,
+      "prototype": "foundry",
+      "quality": "legendary",
+      "recipe_quality": "uncommon",
+      "position": {
+        "x": 72.5,
+        "y": -58.5
+      }
+    },
+    {
+      "id": 8,
+      "recipe": "utility-science-pack",
+      "productivity": 100,
+      "crafting_speed": 63.00781250000001,
+      "prototype": "assembling-machine-3",
+      "quality": "legendary",
+      "recipe_quality": "uncommon",
+      "position": {
+        "x": 69.5,
+        "y": -53.5
+      }
+    },
+    {
+      "id": 9,
+      "recipe": "utility-science-pack",
+      "productivity": 100,
+      "crafting_speed": 63.00781250000001,
+      "prototype": "assembling-machine-3",
+      "quality": "legendary",
+      "recipe_quality": "uncommon",
+      "position": {
+        "x": 75.5,
+        "y": -53.5
+      }
+    }
+  ],
+  "inserters": [
+    {
+      "id": 1,
+      "source": {
+        "type": "machine",
+        "id": 1
+      },
+      "sink": {
+        "type": "belt",
+        "id": 4,
+        "belt_direction": 0
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 75.5,
+        "y": -76.5
+      },
+      "direction": 4,
+      "overrides": {}
+    },
+    {
+      "id": 2,
+      "source": {
+        "type": "belt",
+        "id": 5,
+        "near_lane": 1,
+        "pickup_length": 1,
+        "pickup_layout": "side-straight",
+        "pickup_capture": {
+          "status": "supported",
+          "model": "belt",
+          "model_version": 2,
+          "entity_type": "transport-belt",
+          "entity_name": "turbo-transport-belt",
+          "sidecar_version": "0.16.0"
+        }
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 77.5,
+        "y": -77.5
+      },
+      "direction": 0,
+      "overrides": {}
+    },
+    {
+      "id": 3,
+      "source": {
+        "type": "belt",
+        "id": 5,
+        "near_lane": 1,
+        "pickup_length": 1,
+        "pickup_layout": "side-straight",
+        "pickup_capture": {
+          "status": "supported",
+          "model": "belt",
+          "model_version": 2,
+          "entity_type": "transport-belt",
+          "entity_name": "turbo-transport-belt",
+          "sidecar_version": "0.16.0"
+        }
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 83.5,
+        "y": -77.5
+      },
+      "direction": 0,
+      "overrides": {}
+    },
+    {
+      "id": 4,
+      "source": {
+        "type": "machine",
+        "id": 2
+      },
+      "sink": {
+        "type": "belt",
+        "id": 4,
+        "belt_direction": 8
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 85.5,
+        "y": -75.5
+      },
+      "direction": 12,
+      "overrides": {}
+    },
+    {
+      "id": 5,
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 1
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 78.5,
+        "y": -73.5
+      },
+      "direction": 8,
+      "overrides": {}
+    },
+    {
+      "id": 6,
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 2
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 82.5,
+        "y": -73.5
+      },
+      "direction": 8,
+      "overrides": {}
+    },
+    {
+      "id": 7,
+      "source": {
+        "type": "belt",
+        "id": 1,
+        "near_lane": 2,
+        "pickup_length": 1,
+        "pickup_layout": "side-straight",
+        "pickup_capture": {
+          "status": "supported",
+          "model": "belt",
+          "model_version": 2,
+          "entity_type": "transport-belt",
+          "entity_name": "express-transport-belt",
+          "sidecar_version": "0.16.0"
+        }
+      },
+      "sink": {
+        "type": "machine",
+        "id": 4
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 77.5,
+        "y": -67.5
+      },
+      "direction": 0,
+      "overrides": {}
+    },
+    {
+      "id": 8,
+      "source": {
+        "type": "machine",
+        "id": 4
+      },
+      "sink": {
+        "type": "machine",
+        "id": 3
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 15,
+      "position": {
+        "x": 78.5,
+        "y": -67.5
+      },
+      "direction": 8,
+      "overrides": {}
+    },
+    {
+      "id": 9,
+      "source": {
+        "type": "machine",
+        "id": 3
+      },
+      "sink": {
+        "type": "machine",
+        "id": 5
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 82.5,
+        "y": -67.5
+      },
+      "direction": 0,
+      "overrides": {}
+    },
+    {
+      "id": 10,
+      "source": {
+        "type": "belt",
+        "id": 5,
+        "near_lane": 1,
+        "pickup_length": 1,
+        "pickup_layout": "side-straight",
+        "pickup_capture": {
+          "status": "supported",
+          "model": "belt",
+          "model_version": 2,
+          "entity_type": "transport-belt",
+          "entity_name": "turbo-transport-belt",
+          "sidecar_version": "0.16.0"
+        }
+      },
+      "sink": {
+        "type": "machine",
+        "id": 5
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 85.5,
+        "y": -66.5
+      },
+      "direction": 4,
+      "overrides": {}
+    },
+    {
+      "id": 11,
+      "source": {
+        "type": "machine",
+        "id": 6
+      },
+      "sink": {
+        "type": "belt",
+        "id": 3,
+        "belt_direction": 12
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 68.5,
+        "y": -65.5
+      },
+      "direction": 8,
+      "overrides": {}
+    },
+    {
+      "id": 12,
+      "source": {
+        "type": "belt",
+        "id": 2,
+        "near_lane": 2,
+        "pickup_length": 1,
+        "pickup_layout": "side-straight",
+        "pickup_capture": {
+          "status": "supported",
+          "model": "belt",
+          "model_version": 2,
+          "entity_type": "transport-belt",
+          "entity_name": "turbo-transport-belt",
+          "sidecar_version": "0.16.0"
+        }
+      },
+      "sink": {
+        "type": "machine",
+        "id": 6
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 67.5,
+        "y": -62.5
+      },
+      "direction": 12,
+      "overrides": {}
+    },
+    {
+      "id": 13,
+      "source": {
+        "type": "machine",
+        "id": 5
+      },
+      "sink": {
+        "type": "belt",
+        "id": 4,
+        "belt_direction": 12
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 84.5,
+        "y": -63.5
+      },
+      "direction": 0,
+      "overrides": {}
+    },
+    {
+      "id": 14,
+      "source": {
+        "type": "machine",
+        "id": 7
+      },
+      "sink": {
+        "type": "machine",
+        "id": 6
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 70.5,
+        "y": -61.5
+      },
+      "direction": 8,
+      "overrides": {}
+    },
+    {
+      "id": 15,
+      "source": {
+        "type": "machine",
+        "id": 4
+      },
+      "sink": {
+        "type": "machine",
+        "id": 7
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 15,
+      "position": {
+        "x": 74.5,
+        "y": -61.5
+      },
+      "direction": 0,
+      "overrides": {}
+    },
+    {
+      "id": 16,
+      "source": {
+        "type": "machine",
+        "id": 7
+      },
+      "sink": {
+        "type": "machine",
+        "id": 8
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 70.5,
+        "y": -55.5
+      },
+      "direction": 0,
+      "overrides": {}
+    },
+    {
+      "id": 17,
+      "source": {
+        "type": "machine",
+        "id": 7
+      },
+      "sink": {
+        "type": "machine",
+        "id": 9
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 74.5,
+        "y": -55.5
+      },
+      "direction": 0,
+      "overrides": {}
+    },
+    {
+      "id": 18,
+      "source": {
+        "type": "machine",
+        "id": 8
+      },
+      "sink": {
+        "type": "belt",
+        "id": 3,
+        "belt_direction": 8
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 67.5,
+        "y": -53.5
+      },
+      "direction": 4,
+      "overrides": {}
+    },
+    {
+      "id": 19,
+      "source": {
+        "type": "machine",
+        "id": 9
+      },
+      "sink": {
+        "type": "belt",
+        "id": 3,
+        "belt_direction": 0
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 77.5,
+        "y": -53.5
+      },
+      "direction": 12,
+      "overrides": {}
+    },
+    {
+      "id": 20,
+      "source": {
+        "type": "belt",
+        "id": 2,
+        "near_lane": 2,
+        "pickup_length": 1,
+        "pickup_layout": "side-straight",
+        "pickup_capture": {
+          "status": "supported",
+          "model": "belt",
+          "model_version": 2,
+          "entity_type": "transport-belt",
+          "entity_name": "turbo-transport-belt",
+          "sidecar_version": "0.16.0"
+        }
+      },
+      "sink": {
+        "type": "machine",
+        "id": 8
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 69.5,
+        "y": -51.5
+      },
+      "direction": 8,
+      "overrides": {}
+    },
+    {
+      "id": 21,
+      "source": {
+        "type": "belt",
+        "id": 2,
+        "near_lane": 2,
+        "pickup_length": 1,
+        "pickup_layout": "side-straight",
+        "pickup_capture": {
+          "status": "supported",
+          "model": "belt",
+          "model_version": 2,
+          "entity_type": "transport-belt",
+          "entity_name": "turbo-transport-belt",
+          "sidecar_version": "0.16.0"
+        }
+      },
+      "sink": {
+        "type": "machine",
+        "id": 9
+      },
+      "prototype": "stack-inserter",
+      "quality": "legendary",
+      "stack_size": 16,
+      "position": {
+        "x": 75.5,
+        "y": -51.5
+      },
+      "direction": 8,
+      "overrides": {}
+    }
+  ],
+  "belts": [
+    {
+      "id": 1,
+      "type": "express-transport-belt",
+      "flow_direction": 4,
+      "lanes": [
+        {
+          "ingredient": "coal",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
+        },
+        {
+          "ingredient": "coal",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "processing-unit",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
+        },
+        {
+          "ingredient": "flying-robot-frame",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "utility-science-pack",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "utility-science-pack",
+          "stack_size": 4
+        },
+        {
+          "ingredient": "",
+          "stack_size": 4
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "turbo-transport-belt",
+      "lanes": [
+        {
+          "ingredient": "flying-robot-frame",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
+        },
+        {
+          "ingredient": "processing-unit",
+          "stack_size": 4,
+          "lane_end": {
+            "kind": "dead_end"
+          }
+        }
+      ]
+    }
+  ],
+  "chests": []
+}

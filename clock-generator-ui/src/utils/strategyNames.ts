@@ -36,6 +36,8 @@ const SETTING_LINES: Record<string, string> = {
     'output_count:hands_brought_in': 'The inserters bring in this many hands each time the output cycle repeats.',
     'shared_windows:shared_enable_windows': 'Inserters that open on the same tick share one enable window, the longest any needs. They share one decider.',
     'shared_windows:window_a_swing': 'The machine has room for more hands than the inserter needs. The inserter is enabled for one tick at each swing.',
+    'shared_windows:metered_takers': 'A machine feeds two or more of the machines that make the target. Only the inserters that take from it are clocked, '
+        + 'one hand each in turn. Every other inserter is always enabled.',
     'window_cycle:shorter_window_cycle': 'Made from fewer swings each output cycle, so the whole window cycle is shorter.',
     'window_cycle:subtick_clock': 'The clock counts the window cycle in fractions of a tick. The build then runs at exactly your rate. '
         + 'Source: Wikipedia, "Direct digital synthesis" (the phase accumulator).',
@@ -123,6 +125,7 @@ export function pendingClockName(task: { id: string; label: string }): string {
         'shifted-swings': { id: 'phase_shifted_batch', tuning_method: 'observed' },
         'full-hand': { id: 'pitch_pickups', tuning_method: 'observed' },
         'primitive-grouped': { id: 'round_robin_polling', tuning_method: 'calculated' },
+        'metered-takers': { id: 'round_robin_polling', tuning_method: 'calculated' },
     };
     if (task.id === 'per-branch') return routerRowOf('coordinated_sources').name;
     const known = names[task.id];

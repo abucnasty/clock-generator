@@ -65,6 +65,7 @@ describe("the chip words of the settings", () => {
         expect(settingChipsOf({ ...plain, output_count: { kind: "hands_brought_in", count: 1 } })[0].label).toBe("1 hand brought in each output cycle");
         expect(settingChipsOf({ ...plain, shared_windows: "shared_enable_windows", loops: "loop_windows" }).map(it => it.label).slice(1))
             .toEqual(["shared enable windows", "kanban pull: loop windows"]);
+        expect(settingChipsOf({ ...plain, shared_windows: "metered_takers" }).map(it => it.label).slice(1)).toEqual(["metered takers, the rest always enabled"]);
         expect(settingChipsOf({ ...plain, window_cycle: [{ kind: "rounded_clock", window_cycle_ticks: 10, runs_fast: 0.00001 }] })[1].label).toBe("rounded to 10 ticks, under 0.01% fast");
     });
 });
