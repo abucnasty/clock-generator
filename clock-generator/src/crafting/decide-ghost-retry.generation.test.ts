@@ -1,7 +1,11 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { expect, it } from "vitest";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
-import { generateClockAlternatives } from "./alternatives";
+import type { FactorioData } from "../data/factorio-data-types";
+import { FactorioDataService, generateClockAlternatives, parseConfigFromJson } from "../index";
+import { generateQuietClockAlternatives } from "./alternatives";
 import { quiet } from "./generate-blueprint-test-helpers";
 import { withMakerLog, type MakerLogEvent } from "./maker-log";
 import type { GenerateClockOptions, GenerationProgress } from "./plan/unclocked-run";
@@ -12,14 +16,14 @@ const shiftedWorkOf = (ledger: TickLedgerCount) => ledger.rows
     .filter(row => row.maker === "fractional" && row.purpose === "start_phase")
     .map(({ loop, runs, ticks }) => ({ loop, runs, ticks }));
 
-it("keeps the better ghost wakeup retry without repeating the losing trial's shifted start", async () => {
+it("keeps the better ghost wakeup retry in the quiet listing without repeating the losing trial's shifted start", async () => {
     const config = await loadConfigFromFile(ConfigPaths.ELECTRIC_FURNACE_20);
     const generate = () => {
         const events: MakerLogEvent[] = [];
         let ledger: TickLedgerCount | undefined;
         const result = withTickLedger(count => { ledger = count; }, () => withMakerLog(
             event => { if (event.event !== "seconds") events.push(event); },
-            () => generateClockAlternatives(config),
+            () => generateQuietClockAlternatives(config),
         ));
         return { result, events, ledger: ledger! };
     };
@@ -49,6 +53,30 @@ it("keeps the better ghost wakeup retry without repeating the losing trial's shi
         { loop: "warmup_step", runs: 23, ticks: 198720 },
         { loop: "simulate_step", runs: 23, ticks: 19872 },
     ]);
+});
+
+it("keeps the public default listing's reads of caller-initialized recipe data", async () => {
+    const dataPath = path.resolve(__dirname, "../../resources/data-filtered.json");
+    const [dataText, configText] = await Promise.all([readFile(dataPath, "utf8"), readFile(ConfigPaths.ELECTRIC_FURNACE_20, "utf8")]);
+    const data: FactorioData = JSON.parse(dataText);
+    const recipe = data.recipe["electric-furnace"];
+    const original = Object.getOwnPropertyDescriptor(recipe, "energy_required")!;
+    const energy_required = recipe.energy_required;
+    expect(energy_required).toBe(5);
+    let reads = 0;
+    Object.defineProperty(recipe, "energy_required", {
+        configurable: original.configurable, enumerable: original.enumerable,
+        get() { reads++; return energy_required; },
+    });
+    try {
+        FactorioDataService.initialize(data);
+        const config = parseConfigFromJson(configText);
+        const before = reads;
+        generateClockAlternatives(config);
+        expect(reads - before).toBe(8_746);
+    } finally {
+        Object.defineProperty(recipe, "energy_required", original);
+    }
 });
 
 it("reports every shifted start to a callback supplied by the options object", async () => {
