@@ -17,6 +17,9 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 ### Changed
 - ui: configuration files name the setpoint's item; older files still open
 
+### Fixed
+- ui: inserter refusals use form labels and name the containers, machines and items involved
+
 ## [0.31.1] - 2026-11-20
 
 ### Fixed
