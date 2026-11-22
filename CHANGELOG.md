@@ -20,6 +20,9 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - ui: configuration files name the setpoint's item; older files still open
 - generation: quiet command-line generation does less work
 
+### Fixed
+- ui: inserter refusals use form labels and name the containers, machines and items involved
+
 ## [0.31.1] - 2026-11-20
 
 ### Fixed

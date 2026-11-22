@@ -23,4 +23,11 @@ describe("the output swing estimate", () => {
         expect(estimate).toMatchObject({ verdict: "no rule", reason: expect.stringMatching(/drills/) });
         expect(estimatedOutputSwings(await sample("STONE_BRICK_120_DRILL_DIRECT_INSERT"), 3).swings).toBeNull();
     });
+
+    it("carries the first arithmetic refusal into a no-rule estimate, without trying a lower count", async () => {
+        const config = await sample("LDS_240");
+        const reason = "The inserter (inserter 6) that takes plastic bar out of a chest takes from a chest the build fills";
+        expect(outputSwingEstimate(config, 1)).toEqual({ swings: 1, verdict: "no rule", reason });
+        expect(estimatedOutputSwings(config, 2)).toEqual({ swings: null, above: [{ swings: 2, verdict: "no rule", reason }] });
+    });
 });
