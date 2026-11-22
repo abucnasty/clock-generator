@@ -330,6 +330,10 @@ export interface BlueprintGenerationResult {
      * from, took its windows from, and what the router gave each of their entities; absent for any other clock
      */
     coordinated_sources?: { parts: Record<string, string>; sources: SourceControl[] };
+    /** Direct ingredient takers whose exclusive turns this maker verified, for clocks composed from those turns. */
+    metered_takers?: string[];
+    /** The output service observed around the chosen direct turns, or why the original output control was kept. */
+    metered_output_windows?: Record<string, import("../candidates/metered-output-windows").OutputWindowDecision>;
     /** The windows are of a planning run that counts every belt pickup from its entry, not from the take that freed it (see clockWithPickupsFromTheirEntry) */
     pickups_from_entry?: true;
     /**

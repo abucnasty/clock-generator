@@ -15,6 +15,79 @@ import { runClockAlternativeTask } from "./alternatives";
 import { meteredTakersClock } from "./candidates/metered-takers";
 import type { MakerLogEvent } from "./maker-log";
 import { quiet } from "./generate-blueprint-test-helpers";
+import { combineClockAlternativeRuns, coordinatedSourcesInputOf, runCoordinatedSourcesTask, type BlueprintGenerationResult } from "./generate-blueprint";
+import { outputServiceWindow } from "./candidates/metered-output-windows";
+import { CIRCUIT_LATENCY_TICKS } from "../common/rule-constants";
+
+/** Read the enabling deciders as the circuit sees them with the lock off. The counter starts at one;
+ * a modulo computed from the previous count also receives the counter's constant one. */
+function checkScienceExport(config: Config, clock: BlueprintGenerationResult) {
+    const period = clock.simulation_duration.ticks;
+    const windows = new Map(Object.entries(clock.clock_windows).map(([id, ranges]) =>
+        [id, ranges.map(range => OpenRange.from(range.start, range.end))]));
+    const built = buildAsBuiltConfig(config, windows, period);
+    const forms = [{ blueprint: clock.blueprint, schedule: clock.schedule }];
+    expect(clock.modulo_blueprint).toBeDefined();
+    if (clock.modulo_blueprint && clock.modulo_schedule) forms.push({ blueprint: clock.modulo_blueprint, schedule: clock.modulo_schedule });
+    // This fixture has a whole counter and offers no fractional export.
+    expect(clock.subtick).toBeUndefined();
+    for (const { blueprint, schedule } of forms) {
+        expect(schedule.counted_ticks).toBe(period);
+        const counter = blueprint.entities.find(entity => entity.tags?.clock_generator.generator)?.control_behavior?.decider_conditions;
+        expect(counter?.conditions).toContainEqual(expect.objectContaining({ first_signal: expect.objectContaining({ name: "signal-clock" }), comparator: "<", constant: period }));
+        const moduli = new Map(blueprint.entities.flatMap(entity => {
+            const arithmetic = entity.control_behavior?.arithmetic_conditions;
+            if (!arithmetic) return [];
+            expect([arithmetic.first_signal.name, arithmetic.operation]).toEqual(["signal-clock", "%"]);
+            expect(counter?.outputs).toContainEqual(expect.objectContaining({ signal: arithmetic.output_signal, constant: 1, copy_count_from_input: false }));
+            return [[arithmetic.output_signal.name, arithmetic.second_constant] as const];
+        }));
+        for (const id of [1, 4, 11, 13, 18, 19]) {
+            const groups = schedule.inserter_combinators.filter(group => group.inserter_ids.includes(id));
+            expect(groups).toHaveLength(1);
+            const entity = blueprint.entities.find(entity => entity.entity_number === groups[0].entity_number)!;
+            expect(entity.tags?.clock_generator.inserters).toContain(id);
+            const decider = entity.control_behavior!.decider_conditions!;
+            expect(decider.outputs).toContainEqual(expect.objectContaining({ signal: expect.objectContaining({ name: "utility-science-pack" }), copy_count_from_input: false, constant: 1 }));
+            expect(decider.else_outputs ?? []).toHaveLength(0);
+            const control = built.inserters.find(arm => arm.id === id)!.overrides!.enable_control!;
+            expect(control.mode).toBe("CLOCKED");
+            if (control.mode !== "CLOCKED") throw new Error(`Missing clock for inserter ${id}`);
+            const signal: boolean[] = [], expected: boolean[] = [];
+            for (let tick = 0; tick < period; tick++) {
+                const raw = (tick + period - CIRCUIT_LATENCY_TICKS) % period;
+                let prior = false, term = false;
+                for (const condition of decider.conditions!) {
+                    const name = condition.first_signal.name;
+                    const value = name === "signal-clock" ? raw + 1 : raw % moduli.get(name)! + 1;
+                    if (!Number.isFinite(value)) throw new Error(`Unknown circuit signal ${name}`);
+                    const bound = condition.constant ?? 0;
+                    let holds: boolean;
+                    switch (condition.comparator) {
+                        case "=": holds = value === bound; break;
+                        case "≥": holds = value >= bound; break;
+                        case "≤": holds = value <= bound; break;
+                        default: throw new Error(`Unexpected output predicate ${condition.comparator}`);
+                    }
+                    if (condition.compare_type === "and") term = term && holds;
+                    else { prior ||= term; term = holds; }
+                }
+                signal.push(prior || term);
+                expected.push(control.ranges.some(range => range.start <= tick && tick <= range.end));
+            }
+            expect(signal, `export of inserter ${id}`).toEqual(expected);
+            expect(signal).toContain(true);
+            expect(signal).toContain(false);
+        }
+    }
+}
+
+it("keeps acquisition, outbound entry and margin across the wrap, and keeps the full clock when no idle gap fits", () => {
+    expect(outputServiceWindow(new Set([7]), new Set([7]), 8, 16)).toEqual([
+        { start: 0, end: 1 }, { start: 6, end: 7 }, { start: 8, end: 9 }, { start: 14, end: 15 },
+    ]);
+    expect(outputServiceWindow(new Set([0, 2, 4, 6]), new Set([0, 4]), 8, 16)).toBeNull();
+});
 
 // A utility science build at 320 a second with 3 copies: two foundries each hand low density structure to three of the six
 // assemblers, and no clock made before Round-Robin Polling with metered takers is stable. A fixture, not a job of the record.
@@ -125,6 +198,23 @@ describe("Round-Robin Polling with metered takers on a build whose foundries eac
             expect(width, `inserter ${id}`).toBeGreaterThan(0);
             expect(width, `inserter ${id}`).toBeLessThan(period);
         }
+        checkScienceExport(configuration, clock);
+    });
+
+    it("carries the metered turns through the worker tasks to the selected clock and its two exports", () => {
+        const plan = planClockAlternatives(configuration, { logger: quiet });
+        const runs = [plan.primary, ...plan.tasks.filter(task => !task.coordinated_sources && !task.explored)
+            .map(task => runClockAlternativeTask(configuration, plan.context, task.id, { logger: quiet }))];
+        const before = combineClockAlternativeRuns(runs, alternative => alternative.ranking);
+        const ids = before.order.map(index => before.alternatives[index].id);
+        const input = structuredClone(coordinatedSourcesInputOf(runs, ids));
+        expect(input.parts.some(part => part.metered_takers?.length === 6)).toBe(true);
+        const composed = runCoordinatedSourcesTask(configuration, input, { logger: quiet });
+        const final = combineClockAlternativeRuns([...runs, composed], alternative => alternative.ranking);
+        const selected = final.alternatives[final.selected_index];
+        expect([selected.id, selected.verdict, selected.assessment.items_per_second.toFixed(2)]).toEqual(["coordinated_sources", "stable", "320.00"]);
+        expect(selected.result.clock_windows).toEqual(generated.alternatives[generated.selected_index].result.clock_windows);
+        checkScienceExport(configuration, selected.result);
     });
 });
 
