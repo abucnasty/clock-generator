@@ -40,6 +40,9 @@ export const MAKER_REASON_CODES = {
     plans_on_other_window_cycle: ["planned_ticks", "recommended_ticks"],
     keeps_recommended_clock: [],
     same_as_listed_clock: [],
+    // metered takers: no source hands to two or more target machines, or no output swing count up to the most gives windows that hold
+    no_metered_takers: ["target_machines"],
+    no_count_holds: ["swings_max", "whole_counts", "as_built_refusals", "margin_refusals"],
     // a clock, part or composition that was made and is not listed or taken
     not_stable: ["verdict"],
     margin_check: ["check", "shift_ticks", "group_size"],

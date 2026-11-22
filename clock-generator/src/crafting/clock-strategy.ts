@@ -37,6 +37,8 @@ export interface DefinitionSettings {
     shorter_window_cycle?: true;
     /** Inserters whose machines have room for more than the hands they need are enabled for one tick at each swing */
     window_a_swing?: true;
+    /** Only the takers of a machine that feeds two or more of the machines that make the target are clocked, one hand a window */
+    metered_takers?: true;
 }
 
 /** What the listing of a clock adds to the settings of the run's clock: a subtick clock, or a clock rounded down to whole ticks */
@@ -84,6 +86,7 @@ export function strategyOf(
     if (result.pickups_from_entry === true) settings.belt_pickups.push("counted_from_entry");
     if (findings.definition_settings?.shorter_window_cycle === true) settings.window_cycle.push({ kind: "shorter_window_cycle" });
     if (findings.definition_settings?.window_a_swing === true) settings.shared_windows = "window_a_swing";
+    if (findings.definition_settings?.metered_takers === true) settings.shared_windows = "metered_takers";
     if (result.loop_windows !== undefined) settings.loops = (result.loop_windows.in_loop_ids?.length ?? 0) > 0 ? "loop_windows" : "loop_exits_only";
     if (findings.chest_drill_fallback === "tick-longer") settings.drill_windows = "a_tick_longer";
     if (Object.keys(result.fuel_hand_room_ticks).length > 0) settings.belt_pickups.push("room_for_a_hand_of_fuel");
@@ -124,7 +127,8 @@ export function alternativeIdOf(strategy: ClockStrategy, maker: { offers_output_
         ...(strategy.id === "takt_batches" && strategy.tuning_method === "observed" ? ["observed"] : []),
         ...(maker.offers_output_count === true ? ["swings", String(strategy.output_swings)] : []),
         ...(cycle("shorter_window_cycle") ? ["shorter_window_cycle"] : []),
-        ...(strategy.settings.shared_windows === "shared_enable_windows" ? ["shared"] : strategy.settings.shared_windows === "window_a_swing" ? ["per_hand"] : []),
+        ...(strategy.settings.shared_windows === "shared_enable_windows" ? ["shared"] : strategy.settings.shared_windows === "window_a_swing" ? ["per_hand"]
+            : strategy.settings.shared_windows === "metered_takers" ? ["metered_takers"] : []),
         ...(cycle("subtick_clock") ? ["subtick"] : []),
     ].join("_");
 }
