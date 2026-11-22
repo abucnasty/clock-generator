@@ -1118,6 +1118,12 @@ export function startShiftsOf(window_cycle_ticks: number, counter: SubtickWindow
  * on the express mirrored moving over-the-hood pickup windows read that way held their first window cycle from every lane
  * phase but repeated six window cycles of 112 and one of 96 from nine of them, as the game does after a loss.
  */
+type AsBuiltCheckInputs = [config: Config, decider_windows: Map<string, OpenRange[]>, window_cycle_ticks: number, logger: Logger,
+    start_phases?: number, report?: (checked: number, total: number) => void, long_run_ticks?: number,
+    passed?: { run: AsBuiltRun; long_run_ticks: number }, pickup_phase_cycles?: boolean, stock_detail?: StockDetail, swings?: FractionalSwings];
+
+export function runAsBuiltCheck(...args: [...AsBuiltCheckInputs, discard_after_long_run: (wakeups: number) => boolean]): AsBuiltRun | null;
+export function runAsBuiltCheck(...args: [...AsBuiltCheckInputs, through?: "long-run" | "starts"]): AsBuiltRun;
 export function runAsBuiltCheck(
     config: Config,
     decider_windows: Map<string, OpenRange[]>,
@@ -1146,8 +1152,8 @@ export function runAsBuiltCheck(
      * "long-run" stops after the long run, before the other taker orders and the start phases: a check that holds there is
      * finished by `completedAsBuiltCheck`, with the same result as this check run through. "starts" (the default) runs it all.
      */
-    through: "long-run" | "starts" = "starts",
-): AsBuiltRun {
+    through: "long-run" | "starts" | ((wakeups: number) => boolean) = "starts",
+): AsBuiltRun | null {
     // the drills into chests run on the windows made from their takers' in these windows, as the export gives them
     decider_windows = withChestDrillWindows(config, decider_windows, window_cycle_ticks);
     const counter = wholeCounterOf(window_cycle_ticks);
@@ -1275,6 +1281,9 @@ export function runAsBuiltCheck(
         }
     }
     if (through === "long-run" && check.holds) return { result, check, stock };
+    const wakeups = check.wake_ups?.wake_ups_per_minute;
+    if (typeof through === "function" && passed === undefined && check.holds && stock !== undefined
+        && wakeups !== undefined && Number.isFinite(wakeups) && through(wakeups)) return null;
     return afterTheLongRun(config, decider_windows, window_cycle_ticks, logger, start_phases, report, long_run_ticks,
         { result, check, stock }, passed?.long_run_ticks === long_run_ticks ? passed.run.check : undefined, swings);
 }

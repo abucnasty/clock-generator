@@ -25,7 +25,7 @@ import { pitchPickupsClock } from "./candidates/pitch-pickups";
 import { perHandWindowsClock } from "./candidates/round-robin-polling";
 import { timeStudyWindowsClock } from "./candidates/time-study-windows";
 import { phaseShiftedBatchClock } from "./candidates/phase-shifted-batch";
-import { generateClockForConfig, generateClockWithSwingBackoff, terminalCountForAlternativePlanning } from "./generate-clock";
+import { generateClockForConfig, generateClockForQuietFractionalAlternative, generateClockWithSwingBackoff, terminalCountForAlternativePlanning } from "./generate-clock";
 import { primitiveRoundRobinPollingOptionsSupported, verifiedPrimitiveRoundRobinPollingClock } from "./candidates/round-robin-polling-primitive-verified";
 import { primitiveRoundRobinPollingConfigSupported } from "./candidates/round-robin-polling-primitive";
 import { MAX_OBSERVED_WINDOWS_WINDOW_CYCLE_TICKS, swingCountsListed } from "./planner/window-cycles";
@@ -284,6 +284,9 @@ function quietOptions(options: GenerateClockOptions, logger: Logger, report?: (d
     };
 }
 
+const unobserved_trial_progress = Symbol();
+type QuietAlternativeOptions = GenerateClockOptions & { [unobserved_trial_progress]?: boolean };
+
 /**
  * Whether the clock-only check reached the expected output from the start the generator gives a clock (the "holds"
  * of a clock's assessment), or the planning run did, where no clock-only check ran
@@ -458,7 +461,7 @@ function beltNote(config: Config, result: BlueprintGenerationResult): string {
 function alternativeDefinitions(
     config: Config,
     context: ClockAlternativeContext,
-    quiet: GenerateClockOptions,
+    quiet: QuietAlternativeOptions,
     with_chest_drill_fallbacks: boolean = true,
 ): AlternativeDefinition[] {
     const definitions = withChestDrillFallbacks(alternativeDefinitionsWithFuelHandRoom(config, context, quiet), config,
@@ -484,7 +487,7 @@ function alternativeDefinitions(
 function alternativeDefinitionsWithFuelHandRoom(
     config: Config,
     context: ClockAlternativeContext,
-    quiet: GenerateClockOptions,
+    quiet: QuietAlternativeOptions,
 ): AlternativeDefinition[] {
     let definitions = alternativeDefinitionsFor(config, context, quiet);
     if (takesFuelOffABelt(config)) {
@@ -536,7 +539,7 @@ const EVEN_HANDS_DESCRIPTION = "One enable window for each hand an inserter move
 function alternativeDefinitionsFor(
     config: Config,
     context: ClockAlternativeContext,
-    quiet: GenerateClockOptions,
+    quiet: QuietAlternativeOptions,
 ): AlternativeDefinition[] {
     const secondary = secondaryPlanningCountOf(config, context);
     const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false,
@@ -573,7 +576,8 @@ function alternativeDefinitionsFor(
                 + "between 1 and 2 swings instead of rounding, which can need fewer or shorter enable windows.",
             strategy: "euclidean_swings" as const,
             // planned with fractional swings asked for: its clock's runs are planned so too, as its cycle plan says
-            run: () => generateClockWithSwingBackoff(base_config, { ...quiet, fractional_swings: true }),
+            run: () => generateClockWithSwingBackoff(base_config, { ...quiet, fractional_swings: true },
+                quiet[unobserved_trial_progress] === true ? generateClockForQuietFractionalAlternative : undefined),
             // the config it is checked on is the alternatives' own, as with the other definitions, and stays so for its
             // chest drill fallbacks, whose own configs would otherwise take its place (withChestDrillFallbacks)
             planned_on: config,
@@ -1615,7 +1619,8 @@ function generateAllAlternatives(config: Config, options: GenerateClockOptions):
         const {disturbance_trial, disturbance_trial_not_tried, start_dependence} = plan.primary.alternatives[0].assessment;
         verification_cache.set(plan.primary.signature, {disturbance_trial, disturbance_trial_not_tried, start_dependence});
     }
-    const all_definitions = runnable(alternativeDefinitions(config, plan.context, quietOptions(options, logger, report)), options);
+    const quiet = { ...quietOptions(options, logger, report), [unobserved_trial_progress]: options.on_progress === undefined };
+    const all_definitions = runnable(alternativeDefinitions(config, plan.context, quiet), options);
     // the explored ones are made after every shipped one and take no part in choosing what is made or selected (see exploredRuns)
     const definitions = all_definitions.filter(definition => !isExplored(definition.strategy));
     // listed in the order of the definitions, whichever are made first

@@ -1199,6 +1199,8 @@ function shadowOfOutputs(build: RecordedBuild, all_output_inserters: InserterSta
     return beginShadow(duration.ticks, Math.floor(warmup_window_cycle.ticks / duration.ticks), output_states.length, () => output_states.map(state => state.items_dropped));
 }
 
+export const DEFAULT_WARMUP_WINDOW_CYCLES = 10;
+
 /** The window cycle of the plan and the warmup, shortened where a long window cycle would take it past SIMULATION_BUDGET_TICKS */
 function runWindowCyclesOf(output_cycle_plan: OutputCyclePlan, recipe_lcm: number, options: RunOptions, logger: Logger,
     overLimit: (window_cycle_ticks: number) => ClockWindowCycleLimitError): RunWindowCycles {
@@ -1206,7 +1208,7 @@ function runWindowCyclesOf(output_cycle_plan: OutputCyclePlan, recipe_lcm: numbe
     if (Number.isFinite(duration.ticks) && duration.ticks > 0 && duration.ticks >= SIMULATION_BUDGET_TICKS) throw overLimit(duration.ticks);
     assert(Number.isFinite(duration.ticks) && duration.ticks > 0 && duration.ticks < SIMULATION_BUDGET_TICKS, `Window cycle time of ${duration.ticks} ticks exceeds maximum allowed ${SIMULATION_BUDGET_TICKS} ticks`);
     // a recording of a settled window cycle runs the build that long from its cold start, as the long run of the clock does
-    const requested_warmup_window_cycles = Math.max(options.warmup_window_cycles ?? 10, options.timeline_recording?.settle_window_cycles ?? 0);
+    const requested_warmup_window_cycles = Math.max(options.warmup_window_cycles ?? DEFAULT_WARMUP_WINDOW_CYCLES, options.timeline_recording?.settle_window_cycles ?? 0);
     // long window cycles (large ingredient LCMs) get fewer warmup window cycles to stay under the tick budget
     const warmup_window_cycles = Math.min(requested_warmup_window_cycles, Math.floor((SIMULATION_BUDGET_TICKS - 1) / duration.ticks));
     const exact_ticks = options.timeline_recording?.settle_ticks;
@@ -2107,23 +2109,27 @@ export function clockOnlyRunOf(run: TrialRun): ClockOnlyRun {
  * dispatch (simulation/dispatch.ts) they are tried where it does not hold too, and kept where the clock holds with them:
  * a clock planned for a loop can fail with the loop running free and hold with its windows.
  */
+type ClockCheckExtras = Pick<ClockExportExtras, "search" | "left_open"> & {
+    /** A search's confirmation that passed on exactly `windows`, whose early stages the check here takes over */
+    verified?: { windows: Map<string, OpenRange[]>; run: AsBuiltRun };
+    /** Given the clock-only check the verdict is of, with the windows it ran on (the loop's added where it has them) */
+    on_as_built?: (run: AsBuiltRun, windows: Map<string, OpenRange[]>) => void;
+    /** Stops after a holding long run. `completedClockCheck` finishes it. */
+    through?: "long-run";
+};
+
+export function checkedClock(plan: UnclockedRun, clock: PlannedClock, windows: Map<string, OpenRange[]>,
+    options: GenerateClockOptions, extras: undefined, discard_after_long_run: (wakeups: number) => boolean): BlueprintGenerationResult | null;
+export function checkedClock(plan: UnclockedRun, clock: PlannedClock, windows: Map<string, OpenRange[]>,
+    options?: GenerateClockOptions, extras?: ClockCheckExtras): BlueprintGenerationResult;
 export function checkedClock(
     plan: UnclockedRun,
     clock: PlannedClock,
     windows: Map<string, OpenRange[]>,
     options: GenerateClockOptions = {},
-    extras: Pick<ClockExportExtras, "search" | "left_open"> & {
-        /** A search's confirmation that passed on exactly `windows`, whose early stages the check here takes over */
-        verified?: { windows: Map<string, OpenRange[]>; run: AsBuiltRun };
-        /** Given the clock-only check the verdict is of, with the windows it ran on (the loop's added where it has them) */
-        on_as_built?: (run: AsBuiltRun, windows: Map<string, OpenRange[]>) => void;
-        /**
-         * "long-run": the clock-only check stops after its long run where it holds there (see runAsBuiltCheck), and
-         * `completedClockCheck` finishes it; the check, the verdict and the export are then of the check that far
-         */
-        through?: "long-run";
-    } = {},
-): BlueprintGenerationResult {
+    extras: ClockCheckExtras = {},
+    discard_after_long_run?: (wakeups: number) => boolean,
+): BlueprintGenerationResult | null {
     const { config, logger, run: { stability_check, total_expected_output, duration, output_cycle_plan } } = plan;
     const swings = fractionalSwingsOf(output_cycle_plan);
     const long_run_ticks = longRunTicksOf(plan);
@@ -2131,15 +2137,21 @@ export function checkedClock(
     let loop_windows: BlueprintGenerationResult["loop_windows"];
     let item_names: ReadonlyMap<string, string> | undefined;
     if (options.verify_as_built ?? false) {
+        const report = (n: number, total: number) => options.on_progress_detail?.(`Checking clock-only output, clock start ${n}/${total}`);
+        // a confirmed search pick ran the same unshifted run, pickup phase starts and long run on these windows
+        const passed = extras.verified !== undefined && extras.verified.windows === windows
+            ? { run: extras.verified.run, long_run_ticks: FREE_RUNNING_CHECK_TICKS } : undefined;
+        const input = [config, windows, duration.ticks, logger, AS_BUILT_START_PHASES, report, long_run_ticks,
+            passed, false, "loop-windows", swings] as const;
         // the identical check may have run for the room's trial on exactly these windows (see clockOfPlan)
         const as_built_run = clock.as_built_run !== null && windows === clock.windows ? clock.as_built_run
-            : runAsBuiltCheck(config, windows, duration.ticks, logger, AS_BUILT_START_PHASES,
-                (n, total) => options.on_progress_detail?.(`Checking clock-only output, clock start ${n}/${total}`),
-                long_run_ticks,
-                // a confirmed search pick ran the same unshifted run, pickup phase starts and long run on these windows
-                extras.verified !== undefined && extras.verified.windows === windows
-                    ? { run: extras.verified.run, long_run_ticks: FREE_RUNNING_CHECK_TICKS } : undefined,
-                false, "loop-windows", swings, extras.through ?? "starts");
+            : discard_after_long_run === undefined ? runAsBuiltCheck(...input, extras.through ?? "starts")
+                : runAsBuiltCheck(...input, discard_after_long_run);
+        if (as_built_run === null) {
+            // A discarded retry can still fail to export. Give the caller that error without publishing a partial check.
+            exportClock(plan, clock, windows, options);
+            return null;
+        }
         let kept_run = as_built_run;
         // also where the clock does not hold without them: the windows of a loop can make it hold
         if (options.loop_windows !== false) {
