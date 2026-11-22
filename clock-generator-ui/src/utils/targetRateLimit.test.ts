@@ -183,3 +183,12 @@ describe('rateMaxOf', () => {
         expect(totalMachineCapacity(rateMaxOf(null, feasible(20, null))!, 1)).toBe(20);
     });
 });
+
+it('distinguishes a higher rational target from an equal displayed capacity', () => {
+    const bound = { numerator: 7, denominator: 6 };
+    const above = { numerator: 8400000000000300, denominator: 7200000000000257 };
+    const max = { perCopyRatio: bound, perCopy: 7 / 6, machineIds: [1] };
+    expect(above.numerator / above.denominator).toBe(max.perCopy);
+    expect(isTargetAboveMax(bound, 1, max)).toBe(false);
+    expect(isTargetAboveMax(above, 1, max)).toBe(true);
+});

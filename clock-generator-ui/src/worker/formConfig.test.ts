@@ -174,3 +174,16 @@ describe('parseFormConfig, for a setpoint the engine does not count yet', () => 
         expect(parseFormConfig(ConfigSchema, form).success).toBe(false);
     });
 });
+
+it('keeps a valid pair through an editable precision failure and rejects a malformed pair beside it', () => {
+    const config = formDataToConfig(createDefaultConfig());
+    const rate = { denominator: 100_000_000_000_000, numerator: 1 };
+    const build = { ...config, setpoint: { ...config.setpoint, copies: 2, items_per_second: rate } };
+    expect(ConfigSchema.safeParse(build).success).toBe(false);
+    const draft = parseFormConfig(ConfigSchema, readConfigFile(JSON.stringify(build)));
+    expect(JSON.stringify(draft.data?.setpoint.items_per_second)).toBe('{"numerator":1,"denominator":100000000000000}');
+    expect(draft.data?.setpoint.copies).toBe(2);
+    expect(ConfigSchema.safeParse({ ...build, setpoint: { ...build.setpoint, copies: 1 } }).success).toBe(true);
+    expect(parseFormConfig(ConfigSchema, { ...build, setpoint: { ...build.setpoint, copies: 0,
+        items_per_second: { numerator: 2, denominator: 4 } } }).success).toBe(false);
+});

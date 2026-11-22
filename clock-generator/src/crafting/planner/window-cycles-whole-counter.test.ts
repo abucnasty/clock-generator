@@ -14,3 +14,11 @@ describe("periods whose whole counter one run cannot hold, ", () => {
         expect(wholeCounterOf(160)).toBeNull();
     });
 });
+
+it("prunes an exact counter only when the run budget cannot hold it", () => {
+    const check = (numerator: number, denominator: number) =>
+        counterOverLimitOf(numerator / denominator, { numerator, denominator });
+    expect(check(499999, 7)).toBeNull();
+    expect(check(500000, 7)).toBe(500000);
+    expect(check(10499999999, 100000000)).toBeNull();
+});

@@ -45,3 +45,11 @@ describe("the former loop_seed_items override", () => {
         expect(config.overrides).toEqual({ kick_start_items: 50, lcm: 2 });
     });
 });
+
+it("loads a pair through the former target and recipe names", async () => {
+    const legacy = JSON.parse(fs.readFileSync(path.join(LEGACY, "target-output.json"), "utf8"));
+    legacy.target_output.items_per_second = { denominator: 7, numerator: 16 };
+    const parsed = await parseConfig(JSON.stringify(legacy));
+    expect(parsed.setpoint.item).toBe("iron-gear-wheel");
+    expect(JSON.stringify(parsed.setpoint.items_per_second)).toBe('{"numerator":16,"denominator":7}');
+});

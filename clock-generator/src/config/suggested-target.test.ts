@@ -403,3 +403,7 @@ describe("a paste whose machines make a recipe with several outputs", () => {
         expect(refused.error?.issues.some(issue => issue.path.join(".") === "setpoint.item")).toBe(true);
     });
 });
+
+it("keeps Sidecar suggestions numeric", () => {
+    expect(parseSuggestedTarget({ recipe: "iron-gear-wheel", copies: 1, items_per_second: { numerator: 16, denominator: 7 } })).toEqual(O.none);
+});

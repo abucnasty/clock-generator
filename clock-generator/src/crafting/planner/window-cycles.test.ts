@@ -88,3 +88,15 @@ describe("the composition into the main period", () => {
         expect(plan.groups[0].window_cycles[0]).toMatchObject({ cycles: 5 });
     });
 });
+
+import { gearSetpoint } from "../../../tests/configs/fractional-setpoint";
+import { validateConfig } from "../plan/validate-config";
+
+it("cancels a period denominator when composing the main window and refuses an oversized composition", () => {
+    const config = gearSetpoint();
+    config.overrides = { terminal_swing_count: 1, lcm: 4 };
+    expect(planOfConfig(config).plan.composition?.main_window_cycle.exact).toEqual({ numerator: 105, denominator: 1 });
+    const large = gearSetpoint({ numerator: 342857142857143, denominator: 150000000000000 });
+    large.overrides = { terminal_swing_count: 1, lcm: 4 };
+    expect(() => validateConfig(large)).toThrow(/precision|period.*exact/i);
+});

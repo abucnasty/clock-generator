@@ -160,3 +160,13 @@ describe("the transforms of a search on a fractional window cycle", () => {
         }
     });
 });
+
+it("uses the exact reduced period for subtick eligibility", () => {
+    const exact = (numerator: number, denominator: number) =>
+        subtickClockForWindowCycle(numerator / denominator, { numerator, denominator });
+    expect(exact(105, 4)).toEqual({ window_cycle_ticks: 105, scale: 4 });
+    expect(exact(10499999999, 100000000)).toBeNull();
+    expect(exact(1002, 1001)).toBeNull();
+    expect(exact(1073741825, 2)).toBeNull();
+    expect(exact(1073741823, 2)).toEqual({ window_cycle_ticks: 1073741823, scale: 2 });
+});

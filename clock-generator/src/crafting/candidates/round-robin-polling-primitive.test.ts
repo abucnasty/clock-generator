@@ -235,3 +235,24 @@ describe("pure primitive grouped construction", () => {
         }
     });
 });
+
+import * as machineTraits from "../../entities/traits/traits-of";
+import { gearSetpoint } from "../../../tests/configs/fractional-setpoint";
+import { validateConfig } from "../plan/validate-config";
+
+it("checks both planning guards against the exact machine capacity", () => {
+    const capacity = vi.spyOn(machineTraits, "mainProductRateOf").mockReturnValue(fraction(7, 6));
+    try {
+        const equal = gearSetpoint({ numerator: 7, denominator: 6 });
+        const above = gearSetpoint({ numerator: 8400000000000300, denominator: 7200000000000257 });
+        delete equal.overrides;
+        delete above.overrides;
+        for (const check of [validateConfig, constructPrimitiveRoundRobinPolling]) {
+            expect(() => check(above)).toThrow(/8400000000000300\/7200000000000257/);
+            try { check(equal); } catch (error) {
+                // A whole-only candidate can still refuse this fractional period after capacity passed.
+                expect(String(error)).toMatch(/whole|integer|fractional/i);
+            }
+        }
+    } finally { capacity.mockRestore(); }
+});

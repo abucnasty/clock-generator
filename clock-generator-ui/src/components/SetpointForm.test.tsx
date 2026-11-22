@@ -170,3 +170,24 @@ describe('the gap between copies', () => {
         expect(onCopyOffsetChange).toHaveBeenLastCalledWith({ x: 1, y: 0 });
     });
 });
+
+it('keeps slash entry editable and commits its reduced total independently of Copies', async () => {
+    function Editor() {
+        const [rate, setRate] = useState<Props['itemsPerSecond']>(2);
+        return <SetpointForm {...props} itemsPerSecond={rate} copies={2.25} onItemsPerSecondChange={setRate} />;
+    }
+    const { user } = show(<Editor />);
+    const input = screen.getByRole('textbox', { name: /Items per Second/ }) as HTMLInputElement;
+    await user.clear(input);
+    await user.type(input, '32 / 14');
+    await user.tab();
+    expect(input.value).toBe('16/7');
+    expect(screen.getByText('64/63 items/s per copy')).toBeDefined();
+    await user.clear(input);
+    await user.type(input, '16/0{Enter}');
+    expect(input.value).toBe('16/0');
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(screen.getByText('Denominator must be more than 0.')).toBeDefined();
+    await user.keyboard('{End}{Backspace}7{Tab}');
+    expect(input.value).toBe('16/7');
+});
