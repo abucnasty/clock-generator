@@ -214,7 +214,7 @@ it.each(['', '0', '-1', 'NaN', 'Infinity', '1/0', '1/-3', '1/2/3', '16/7 items/s
         expect(field.getAttribute('aria-invalid')).toBe('true');
     });
 
-it.each([['2', 2], ['2.5', 2.5], ['000000000000000016 / 0008', { numerator: 2, denominator: 1 }]] as const)(
+it.each([['2', 2], ['2.5', 2.5], ['２．５', 2.5], ['٢٫٥', 2.5], ['＋۲٫۵', 2.5], ['二.五', 2.5], ['000000000000000016 / 0008', { numerator: 2, denominator: 1 }]] as const)(
     'commits the wire type entered (%s)', async (text, expected) => {
         const changed = vi.fn();
         const { user } = form({ onItemsPerSecondChange: changed });
@@ -225,3 +225,10 @@ it.each([['2', 2], ['2.5', 2.5], ['000000000000000016 / 0008', { numerator: 2, d
         await user.paste(text);
         expect(changed).toHaveBeenLastCalledWith(expected);
     });
+
+it('marks a reopened zero draft as invalid on its rate field', () => {
+    form({ itemsPerSecond: 0 });
+    const field = screen.getByRole<HTMLInputElement>('textbox', { name: 'Items per Second' });
+    expect(field.getAttribute('aria-invalid')).toBe('true');
+    expect(screen.getByText('Rate must be more than 0.')).toBeDefined();
+});
