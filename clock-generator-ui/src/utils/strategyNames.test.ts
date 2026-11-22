@@ -138,6 +138,10 @@ describe('the chips of the settings', () => {
         }
         const others = clockChipsOf(clock({ strategy: strategy('takt_batches', 'calculated', { ...plain(), shared_windows: 'shared_enable_windows', loops: 'loop_exits_only' }) }));
         expect(others.slice(2).map(chip => [chip.id, chip.line.length > 0])).toEqual([['output_count:output_swings', true], ['shared_windows:shared_enable_windows', true], ['loops:loop_exits_only', true]]);
+        const metered = clockChipsOf(clock({ strategy: strategy('round_robin_polling', 'calculated', { ...plain(), shared_windows: 'metered_takers' }) })).slice(3);
+        expect(metered.map(chip => [chip.id, chip.label])).toEqual([['shared_windows:metered_takers', 'metered takers, the rest always enabled']]);
+        expect(metered[0].line.length).toBeGreaterThan(0);
+        expect(metered[0].label + metered[0].line).not.toMatch(/wake-up|window cycle time|\bperiod\b|whole swings only/i);
     });
 
     it('cite a source for the harmonic window cycle, the kanban latch and the split-time controller', () => {
@@ -166,6 +170,7 @@ describe('pendingClockName', () => {
         expect(pendingClockName({ id: 'derived', label: 'Observed windows' })).toBe('Time-Study Windows');
         expect(pendingClockName({ id: 'full-hand', label: 'Full-hand output swings' })).toBe('Pitch Pickups');
         expect(pendingClockName({ id: 'primitive-grouped', label: 'Small batches' })).toBe('Round-Robin Polling');
+        expect(pendingClockName({ id: 'metered-takers', label: 'Round-Robin Polling, metered takers' })).toBe('Round-Robin Polling');
         expect(pendingClockName({ id: 'per-branch', label: 'Coordinated sources' })).toBe('Coordinated Sources');
     });
 

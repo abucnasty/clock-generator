@@ -27,6 +27,7 @@ import { timeStudyWindowsClock } from "./candidates/time-study-windows";
 import { phaseShiftedBatchClock } from "./candidates/phase-shifted-batch";
 import { generateClockForConfig, generateClockForQuietFractionalAlternative, generateClockWithSwingBackoff, terminalCountForAlternativePlanning } from "./generate-clock";
 import { primitiveRoundRobinPollingOptionsSupported, verifiedPrimitiveRoundRobinPollingClock } from "./candidates/round-robin-polling-primitive-verified";
+import { meteredTakersClock } from "./candidates/metered-takers";
 import { primitiveRoundRobinPollingConfigSupported } from "./candidates/round-robin-polling-primitive";
 import { MAX_OBSERVED_WINDOWS_WINDOW_CYCLE_TICKS, swingCountsListed } from "./planner/window-cycles";
 import { secondaryPlanningCountOf, verificationPlanningConfigOf, withSecondaryPlanningProvenance, type SecondaryPlanningCount } from "./round-robin-polling-primitive-policy";
@@ -707,6 +708,19 @@ function alternativeDefinitionsFor(
             },
             fallback: true,
         }]),
+        // only the takers of a machine that feeds two or more of the machines that make the target are clocked: a fallback, made
+        // only where no clock made before it can be selected as stable, so it never moves a clock that was selected
+        {
+            id: "metered-takers",
+            label: `${nameOf("round_robin_polling")}, metered takers`,
+            strategy: "round_robin_polling" as const,
+            settings: { metered_takers: true as const },
+            description: `${nameOf("round_robin_polling")} with only the takers of a machine that feeds two or more of the machines that make the target clocked: `
+                + "each opens long enough to collect a full hand and begin its swing when supplied, in turn with the other takers of its machine. Every other inserter is always enabled. "
+                + "The window cycle is the shortest on which each taker moves whole hands and whole crafts of its machine.",
+            run: () => meteredTakersClock(config, quiet.logger ?? defaultLogger),
+            fallback: true,
+        },
     ];
 }
 

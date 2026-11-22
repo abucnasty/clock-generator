@@ -22,6 +22,7 @@ describe("why the selected clock does not meet goal 1, as a generation says it",
                 + "output cycle, moves 0 a second, 48 under the target. Use an infinity chest, or add an inserter that takes the items out, and "
                 + "generate again. Not made: Time-Division Windows (only "
                 + "made where every inserter takes from a machine or a chest; inserter 5 takes from a belt); Phase-Shifted Batch (no Phase-Shifted Batch passes the clock-only check); "
+                + "Round-Robin Polling, metered takers (cannot bound the enable windows of inserter 3: the taker does not use the metered enable window); "
                 + "Coordinated Sources (no source has another choice than the recommended clock's).",
         });
     });
