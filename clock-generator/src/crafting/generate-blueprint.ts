@@ -12,6 +12,7 @@ export { hasPlannedWindowsNotHands } from "./candidates/pitch-pickups";
 export { anyFeederCarriesFuel, drawWindowTicks } from "./candidates/loop-windows";
 export { ClockRanking, rankingOf, rankingWindowCount, combineClockAlternativeRuns, selectableAsStable, searchesAreNeeded } from "./rank";
 export { ClockAlternative, ClockAlternativesResult, ClockAlternativeRun, ClockAlternativeContext, ClockAlternativeTask, ClockAlternativesPlan, planClockAlternatives, runClockAlternativeTask, runCoordinatedSourcesTask, COORDINATED_SOURCES_MAKER, generateClockAlternatives } from "./alternatives";
+export { generateQuietClockAlternatives } from "./alternatives";
 export { coordinatedSourcesInputOf, CoordinatedSourcesInput, CoordinatedSourcesPart } from "./candidates/coordinated-sources-parts";
 export { blueprintFileFor } from "./blueprint-export";
 export type { AlwaysOnReason, AlwaysOnReasons } from "./enable-control-router";

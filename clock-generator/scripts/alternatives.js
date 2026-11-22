@@ -4,7 +4,7 @@
 // "Search for fewer wake-ups" on; START_DEPENDENCE=1 tries every clock from other starts too (start-dependent clocks are named).
 const [key, belts = "off", swings] = process.argv.slice(2);
 const { dist, quiet, loadSample } = require("./lib");
-const { generateClockAlternatives, clockBeltLabel } = dist("crafting/generate-blueprint.js");
+const { generateClockAlternatives, generateQuietClockAlternatives, clockBeltLabel } = dist("crafting/generate-blueprint.js");
 const { deadlockRiskNote } = dist("crafting/deadlock-risk.js");
 
 (async () => {
@@ -12,7 +12,10 @@ const { deadlockRiskNote } = dist("crafting/deadlock-risk.js");
     if (swings !== undefined) {
         config.overrides = { ...config.overrides, terminal_swing_count: Number(swings) };
     }
-    const { alternatives, selected_index, skipped_searches, start_dependence_note } = generateClockAlternatives(config, { logger: quiet });
+    // CLOCK_GENERATOR_ROOT can select an older build without the quiet entry.
+    const generated = generateQuietClockAlternatives === undefined ? generateClockAlternatives(config, { logger: quiet })
+        : generateQuietClockAlternatives(config);
+    const { alternatives, selected_index, skipped_searches, start_dependence_note } = generated;
     alternatives.forEach((a, index) => console.log(
         index === selected_index ? "*" : " ", a.id.padEnd(28), a.verdict === "stable" ? "stable     " : a.verdict === "no recovery" ? "NO RECOVERY" : "UNSTABLE   ", `${a.assessment.items_per_second.toFixed(2)}/s`.padEnd(10),
         `wake ${a.assessment.wake_ups_per_minute?.toFixed(1) ?? "-"}`.padEnd(13), (a.belt ? clockBeltLabel(a.belt) : "-").padEnd(18), a.label,

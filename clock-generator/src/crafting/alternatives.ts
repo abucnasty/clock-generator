@@ -1604,10 +1604,18 @@ export function generateClockAlternatives(
 ): ClockAlternativesResult {
     // A supplied object can return progress from a getter or a proxy. Only the engine owns its fresh defaults.
     const owns_options = options === default_alternative_options;
-    const actual_options = owns_options ? {} : options;
-    return withMakerLog(actual_options.maker_log, () => withRunMemo(() => withBuildFeeders(config, () =>
-        generateAllAlternatives(withoutOutsideSupply(config), actual_options, owns_options))),
-        { repeat_check: actual_options.maker_log_repeat_check === true });
+    return generateAlternativesWithOptions(config, owns_options ? {} : options, owns_options);
+}
+
+/** The command-line listing owns both its options and its quiet logger. */
+export function generateQuietClockAlternatives(config: Config): ClockAlternativesResult {
+    return generateAlternativesWithOptions(config, { logger: { log() {}, warn() {}, error() {}, debug() {} } }, true);
+}
+
+function generateAlternativesWithOptions(config: Config, options: GenerateClockOptions, owns_options: boolean): ClockAlternativesResult {
+    return withMakerLog(options.maker_log, () => withRunMemo(() => withBuildFeeders(config, () =>
+        generateAllAlternatives(withoutOutsideSupply(config), options, owns_options))),
+        { repeat_check: options.maker_log_repeat_check === true });
 }
 
 function generateAllAlternatives(config: Config, options: GenerateClockOptions, owns_options: boolean): ClockAlternativesResult {
