@@ -284,8 +284,16 @@ function quietOptions(options: GenerateClockOptions, logger: Logger, report?: (d
     };
 }
 
-const unobserved_trial_progress = Symbol();
-type QuietAlternativeOptions = GenerateClockOptions & { [unobserved_trial_progress]?: boolean };
+const quiet_fractional_generator = Symbol();
+type QuietAlternativeOptions = GenerateClockOptions & {
+    [quiet_fractional_generator]?: (config: Config, options: GenerateClockOptions) => BlueprintGenerationResult;
+};
+
+/** Read the same live options as the reporter, without invoking a progress getter. */
+function progressIsUnobserved(options: GenerateClockOptions): boolean {
+    const progress = Object.getOwnPropertyDescriptor(options, "on_progress");
+    return progress === undefined ? !("on_progress" in options) : "value" in progress && progress.value === undefined;
+}
 
 /**
  * Whether the clock-only check reached the expected output from the start the generator gives a clock (the "holds"
@@ -577,7 +585,7 @@ function alternativeDefinitionsFor(
             strategy: "euclidean_swings" as const,
             // planned with fractional swings asked for: its clock's runs are planned so too, as its cycle plan says
             run: () => generateClockWithSwingBackoff(base_config, { ...quiet, fractional_swings: true },
-                quiet[unobserved_trial_progress] === true ? generateClockForQuietFractionalAlternative : undefined),
+                quiet[quiet_fractional_generator]),
             // the config it is checked on is the alternatives' own, as with the other definitions, and stays so for its
             // chest drill fallbacks, whose own configs would otherwise take its place (withChestDrillFallbacks)
             planned_on: config,
@@ -1619,7 +1627,8 @@ function generateAllAlternatives(config: Config, options: GenerateClockOptions):
         const {disturbance_trial, disturbance_trial_not_tried, start_dependence} = plan.primary.alternatives[0].assessment;
         verification_cache.set(plan.primary.signature, {disturbance_trial, disturbance_trial_not_tried, start_dependence});
     }
-    const quiet = { ...quietOptions(options, logger, report), [unobserved_trial_progress]: options.on_progress === undefined };
+    const quiet = { ...quietOptions(options, logger, report), [quiet_fractional_generator]: (config: Config, trial_options: GenerateClockOptions) =>
+        generateClockForQuietFractionalAlternative(config, trial_options, () => progressIsUnobserved(options)) };
     const all_definitions = runnable(alternativeDefinitions(config, plan.context, quiet), options);
     // the explored ones are made after every shipped one and take no part in choosing what is made or selected (see exploredRuns)
     const definitions = all_definitions.filter(definition => !isExplored(definition.strategy));

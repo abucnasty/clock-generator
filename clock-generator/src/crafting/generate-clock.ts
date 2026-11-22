@@ -48,15 +48,16 @@ export function generateClockForConfig(
     given: Config,
     options: GenerateClockOptions = {}
 ): BlueprintGenerationResult {
-    return generatePlannedClock(given, options, false);
+    return generatePlannedClock(given, options);
 }
 
-/** The fractional alternative in a sequential listing with quiet logs and no observer for its progress. */
-export function generateClockForQuietFractionalAlternative(given: Config, options: GenerateClockOptions): BlueprintGenerationResult {
-    return generatePlannedClock(given, options, true);
+/** The fractional alternative in a sequential listing with quiet logs. The reporter reads live options. */
+export function generateClockForQuietFractionalAlternative(given: Config, options: GenerateClockOptions,
+    progressIsUnobserved: () => boolean): BlueprintGenerationResult {
+    return generatePlannedClock(given, options, () => !fillsAreObserved() && progressIsUnobserved());
 }
 
-function generatePlannedClock(given: Config, options: GenerateClockOptions, consider_ghost_retry: boolean): BlueprintGenerationResult {
+function generatePlannedClock(given: Config, options: GenerateClockOptions, trialIsUnobserved?: () => boolean): BlueprintGenerationResult {
     // the build that is clocked: outside supply gets no window (outside-supply.ts)
     const config = withoutOutsideSupply(given);
     if (config.overrides?.derive_clock_windows) {
@@ -92,7 +93,7 @@ function generatePlannedClock(given: Config, options: GenerateClockOptions, cons
         // then the planning run's windows with the room for one hand they hold already, where they wake fewer than that
         const inside = withHandRoomInside(made, plan, primary, options);
         // and last its windows shaped against ghost wakeups, where that wakes fewer
-        return withoutGhostWakeUps(made, inside, options, consider_ghost_retry);
+        return withoutGhostWakeUps(made, inside, options, trialIsUnobserved);
     }
     const grouped = roundRobinPollingClock(plan, options);
     if (grouped !== null && grouped.stability_check.holds) {
@@ -232,7 +233,7 @@ function checkedAndKept(made: MadeClocks, plan: UnclockedRun, clock: PlannedCloc
  * the windows of an inserter that would keep none, are left as they are.
  */
 function withoutGhostWakeUps(made: MadeClocks, primary: BlueprintGenerationResult, options: GenerateClockOptions,
-    consider_ghost_retry = false): BlueprintGenerationResult {
+    trialIsUnobserved?: () => boolean): BlueprintGenerationResult {
     const kept = made.get(primary);
     const stock = kept?.run?.stock;
     if (kept === undefined || stock === undefined || !(primary.stability_check.as_built?.holds ?? false)) {
@@ -273,6 +274,8 @@ function withoutGhostWakeUps(made: MadeClocks, primary: BlueprintGenerationResul
     // where they wake fewer than what is kept so far
     let best = primary, best_windows = windows;
     const moved: GhostWindow[] = [];
+    // A callback in the original check can change the inputs or register for progress before a retry begins.
+    let unobserved_since_original = trialIsUnobserved?.() === true;
     const all = checked(shaped.windows);
     const inserters = Array.from(new Set(shaped.shaped.map(it => it.inserter_id)));
     if (fewer(all, primary)) {
@@ -285,11 +288,14 @@ function withoutGhostWakeUps(made: MadeClocks, primary: BlueprintGenerationResul
             const own = new Map(best_windows);
             own.set(id, shaped.windows.get(id)!);
             const kept_wakeups = wake_ups(best);
-            const previous_wakeups = consider_ghost_retry && kept_wakeups !== undefined && Number.isFinite(kept_wakeups)
+            unobserved_since_original &&= trialIsUnobserved?.() === true;
+            const previous_wakeups = unobserved_since_original && kept_wakeups !== undefined && Number.isFinite(kept_wakeups)
                 ? repeatedGhostTrialWakeups(plan, options, all, shaped.windows, own) : undefined;
             const one = previous_wakeups === undefined || kept_wakeups === undefined ? checked(own)
-                : checkedClock(ownPlan(), clock, own, options, undefined,
-                    wakeups => wakeups === previous_wakeups && wakeups >= kept_wakeups && !fillsAreObserved());
+                : checkedClock(ownPlan(), clock, own, options, undefined, wakeups => {
+                    unobserved_since_original &&= trialIsUnobserved?.() === true;
+                    return unobserved_since_original && wakeups === previous_wakeups && wakeups >= kept_wakeups;
+                });
             const shaped_of = shaped.shaped.filter(it => it.inserter_id === id);
             if (one !== null && fewer(one, best)) {
                 best = one;
@@ -323,7 +329,7 @@ function repeatedGhostTrialWakeups(plan: UnclockedRun, options: GenerateClockOpt
     const first_span_ticks = (DEFAULT_WARMUP_WINDOW_CYCLES + 1) * ticks;
     if (check?.failed_start_offset === undefined || check.failed_start_offset <= 0 || check.taker_orders_checked !== undefined
         || !Number.isInteger(ticks) || first_span_ticks >= (currentRunMemo()?.min_ticks ?? Infinity)
-        || options.debug !== undefined || options.debug_steps !== undefined || fillsAreObserved()
+        || options.debug !== undefined || options.debug_steps !== undefined
         || (typeof process !== "undefined" && process.env?.CLOCK_PROOF_PHASES === "1")
         || all.chest_drills !== undefined || Object.keys(all.unplanned_inserter_clocks ?? {}).length > 0) return undefined;
     // Integer windows within the cycle rotate without a range clamp. Keep map and range order for the installed deciders.
