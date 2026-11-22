@@ -1,7 +1,9 @@
 import { OpenRange } from "../../data-types";
-import { Entity, handSizeFor, Inserter, Machine, ReadableEntityRegistry } from "../../entities";
+import { Entity, EntityId, handSizeFor, Inserter, Machine, ReadableEntityRegistry } from "../../entities";
 import { FactorioDataService } from "../../data/factorio-data-service";
 import { machineFactsOfEntity } from "../../entities/traits/machine-facts-of";
+import { capitalized, entityNameOf, NO_BUILD, theName, type EndToName } from "../entity-name";
+import { machineNameOf } from "../machine-name";
 import { OutputCyclePlan } from "../sequence/cycle/output-cycle";
 import { targetMachinesOf } from "../sequence/cycle/target-ends";
 import { alwaysEnabledInserters, byProductOnlyInserters, fuelOnlyInserters } from "../sequence/unplanned-inserter-clock";
@@ -38,6 +40,23 @@ function refuse(reason: string): never {
     throw new ArithmeticWindowsNotApplicable(reason);
 }
 
+/** The registry of this plan is one copy; its other machines and inserters decide which names need numbers. */
+function machineInRefusal(id: EntityId, machines: readonly Machine[]): string {
+    const name = machineNameOf(id.number, machines.map(machine => ({
+        id: machine.entity_id.number, prototype: machine.metadata.prototype, recipe: machine.metadata.recipe.name,
+    })));
+    return name === undefined ? `machine ${id.number}` : `the ${name}`;
+}
+
+function inserterInRefusal(id: string, inserters: readonly Inserter[]): string {
+    const end = (type: EntityId["type"]): EndToName => type === "belt" || type === "machine" || type === "chest" ? type : "other";
+    const build = { ...NO_BUILD, inserters: inserters.map(inserter => ({
+        id: inserter.entity_id.number, from: end(inserter.source.entity_id.type), to: end(inserter.sink.entity_id.type),
+        items: [...inserter.filtered_items],
+    })) };
+    return theName(entityNameOf(id, build) ?? id);
+}
+
 export interface ArithmeticWindowsInput {
     entity_registry: ReadableEntityRegistry;
     output_cycle_plan: OutputCyclePlan;
@@ -57,9 +76,9 @@ export interface ArithmeticWindows {
 }
 
 /** Hands an inserter moves in each cycle of the window cycle: a fraction of hands a cycle is spread as evenly as whole hands go */
-function handsPerCycle(hands: { getNumerator: number; getDenominator: number }, cycles: number, id: string): number[] {
+function handsPerCycle(hands: { getNumerator: number; getDenominator: number }, cycles: number, id: string, inserters: readonly Inserter[]): number[] {
     const numerator = hands.getNumerator, denominator = hands.getDenominator;
-    if (cycles % denominator !== 0) refuse(`${id} moves ${numerator}/${denominator} hands each output cycle, not whole in ${cycles} output cycles`);
+    if (cycles % denominator !== 0) refuse(`${capitalized(inserterInRefusal(id, inserters))} moves ${numerator}/${denominator} hands each output cycle, not whole in ${cycles} output cycles`);
     return Array.from({ length: cycles }, (_, cycle) => {
         const at = cycle % denominator;
         return Math.floor((at + 1) * numerator / denominator) - Math.floor(at * numerator / denominator);
@@ -104,11 +123,12 @@ function walkWithBatches(
     batch: Map<string, OpenRange[]>,
     cycle_starts: readonly number[],
     quotas: ReadonlyMap<string, number[]>,
-    machine_id: string,
+    machine_id: EntityId,
+    machines: readonly Machine[],
 ): StockWalk {
     for (let pass = 0; ; pass++) {
         const walk = walkMachineStock({ machine: facts, window_cycle_ticks, takers, fillers, max_window_cycles: 128 });
-        if (!walk.converged) refuse(`the stock walk of ${machine_id} does not repeat`);
+        if (!walk.converged) refuse(`The stock walk of ${machineInRefusal(machine_id, machines)} does not repeat`);
         let lengthened = false;
         for (const [id, ranges] of batch) {
             const hands = walk.hands.filter(hand => hand.id === id);
@@ -131,7 +151,9 @@ function walkWithBatches(
             lengthened = true;
         }
         if (!lengthened) return walk;
-        if (pass + 1 >= MAX_BATCH_PASSES) throw new ArithmeticBatchesFallBehind(`the output of ${machine_id} does not keep up with its batches`);
+        if (pass + 1 >= MAX_BATCH_PASSES) {
+            throw new ArithmeticBatchesFallBehind(`The output of ${machineInRefusal(machine_id, machines)} does not keep up with its batches`);
+        }
     }
 }
 
@@ -160,28 +182,30 @@ export function batchedSwingsWindowsByArithmetic(input: ArithmeticWindowsInput):
     if (fuelOnlyInserters(registry).length > 0 || byProductOnlyInserters(registry).length > 0) refuse("a build with inserters outside the plan");
     const machines = entities.filter(Entity.isMachine);
     for (const machine of machines) {
-        if (machine.outputs.length > 1) refuse(`${machine.entity_id.id} makes more than one result`);
-        if (machine.result_target !== undefined) refuse(`${machine.entity_id.id} places its results itself`);
-        if (machine.fuel_slot !== undefined) refuse(`${machine.entity_id.id} burns fuel`);
+        if (machine.outputs.length > 1) refuse(`${capitalized(machineInRefusal(machine.entity_id, machines))} makes more than one result`);
+        if (machine.result_target !== undefined) refuse(`${capitalized(machineInRefusal(machine.entity_id, machines))} places its results itself`);
+        if (machine.fuel_slot !== undefined) refuse(`${capitalized(machineInRefusal(machine.entity_id, machines))} burns fuel`);
     }
     const inserters = entities.filter(Entity.isInserter);
     const transfers = new Map(Array.from(plan.entity_transfer_map.entries(), ([id, transfer]) => [id.id, transfer] as const));
     for (const inserter of inserters) {
-        if (!transfers.has(inserter.entity_id.id)) refuse(`${inserter.entity_id.id} has no hands in the plan`);
+        if (!transfers.has(inserter.entity_id.id)) refuse(`${capitalized(inserterInRefusal(inserter.entity_id.id, inserters))} has no hands in the plan`);
         const source = registry.getEntityByIdOrThrow(inserter.source.entity_id);
         const sink = registry.getEntityByIdOrThrow(inserter.sink.entity_id);
         if (Entity.isChest(source) && entities.some(it => (Entity.isInserter(it) && it.sink.entity_id.id === source.entity_id.id)
             || (Entity.isDrill(it) && it.sink_id.id === source.entity_id.id))) {
-            refuse(`${inserter.entity_id.id} takes from a chest the build fills`);
+            refuse(`${capitalized(inserterInRefusal(inserter.entity_id.id, inserters))} takes from a chest the build fills`);
         }
-        if (!Entity.isMachine(source) && !Entity.isMachine(sink)) refuse(`${inserter.entity_id.id} moves between no machines`);
+        if (!Entity.isMachine(source) && !Entity.isMachine(sink)) {
+            refuse(`${capitalized(inserterInRefusal(inserter.entity_id.id, inserters))} moves between no machines`);
+        }
     }
 
     const cycle_starts = Array.from({ length: cycles }, (_, cycle) => Math.floor(cycle * cycle_ticks + 1e-9));
     const target = { item: plan.production_rate.machine_production_rate.item, counts: plan.production_rate.counts };
     const target_machines = new Set(targetMachinesOf(target, registry).map(it => it.entity_id.id));
     const quotas = new Map(inserters.map(inserter => [inserter.entity_id.id,
-        handsPerCycle(transfers.get(inserter.entity_id.id)!.total_transfer_count, cycles, inserter.entity_id.id)] as const));
+        handsPerCycle(transfers.get(inserter.entity_id.id)!.total_transfer_count, cycles, inserter.entity_id.id, inserters)] as const));
 
     const windows = new Map<string, OpenRange[]>();
     const walks = new Map<string, StockWalk>();
@@ -220,14 +244,16 @@ export function batchedSwingsWindowsByArithmetic(input: ArithmeticWindowsInput):
         const fillers: WalkHand[] = fillersOf(next).map(filler => {
             const source = registry.getEntityByIdOrThrow(filler.source.entity_id);
             const items = Array.from(filler.filtered_items).filter(item => facts.inputs.some(input => input.item_name === item));
-            if (items.length === 0) refuse(`${filler.entity_id.id} brings nothing ${next.entity_id.id} takes`);
+            if (items.length === 0) {
+                refuse(`${capitalized(inserterInRefusal(filler.entity_id.id, inserters))} brings nothing ${machineInRefusal(next.entity_id, machines)} takes`);
+            }
             const ordered = Entity.isChest(source)
                 ? [...items].sort((a, b) => FactorioDataService.itemInventoryRankOrThrow(b) - FactorioDataService.itemInventoryRankOrThrow(a))
                 : items;
             return { id: filler.entity_id.id, items: ordered, pick: Entity.isChest(source) ? "in-order" : "least-cover",
                 hand: filler.metadata.stack_size, swing: swingOf(filler, registry), quota: quotas.get(filler.entity_id.id)!, quota_starts: cycle_starts };
         });
-        const walk = walkWithBatches(facts, window_cycle_ticks, takers, fillers, batch, cycle_starts, quotas, next.entity_id.id);
+        const walk = walkWithBatches(facts, window_cycle_ticks, takers, fillers, batch, cycle_starts, quotas, next.entity_id, machines);
         walks.set(next.entity_id.id, walk);
         for (const [id, ranges] of batch) windows.set(id, ranges);
         // each other inserter's hands of a cycle in one window: from its first pickup to the tick after its last (a taker's
@@ -236,7 +262,8 @@ export function batchedSwingsWindowsByArithmetic(input: ArithmeticWindowsInput):
             const hands = walk.hands.filter(hand => hand.id === hand_owner.id);
             const expected = hand_owner.quota!.reduce((sum, it) => sum + it, 0);
             if (hands.length !== expected) {
-                refuse(`${hand_owner.id} moves ${hands.length} hands each window cycle in the stock walk of ${next.entity_id.id}, not ${expected}`);
+                refuse(`${capitalized(inserterInRefusal(hand_owner.id, inserters))} moves ${hands.length} hands each window cycle `
+                    + `in the stock walk of ${machineInRefusal(next.entity_id, machines)}, not ${expected}`);
             }
             const by_cycle = new Map<number, { first: number; last: number }>();
             for (const hand of hands) {
