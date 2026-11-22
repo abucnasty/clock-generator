@@ -1,3 +1,4 @@
+import { rateDecimal } from "../../../src/config/setpoint-rate";
 import {describe, expect, test} from "vitest";
 import {BELT_SPEEDS, CLOCK_TEST_SPEEDS} from "../helpers/belt-speed-fixtures";
 import {GameFixturePaths} from "../helpers/fixture-paths";
@@ -88,7 +89,7 @@ describe("the recorded clock controls of the belt pickup fixtures", () => {
     test.each(names.map(variant => variant.name))("%s: the game was recorded at the target rate over the pinned period", async name => {
         const variant = names.find(it => it.name === name)!;
         const config = await pickupClockConfig(variant);
-        expectRunIsConsistent(controls[name].native, controls[name].generation!, config.setpoint.items_per_second);
+        expectRunIsConsistent(controls[name].native, controls[name].generation!, rateDecimal(config.setpoint.items_per_second));
         // the rate of the target is the fixture's: the tier's belt units over four for the electromagnetic family
         if (variant.family === "electromagnetic") expect(config.setpoint.items_per_second).toBe(30 * variant.speed.units / 4);
     });

@@ -1,3 +1,4 @@
+import type { Ratio } from "../../entities/traits/ratio";
 import { subtickClockForWindowCycle } from "../../common/subtick-window-cycle";
 import type { EnableControlOverrideConfig } from "../../config/schema";
 import { controlRepeatOf, ControlRepeat, EnableControl } from "../../simulation/controls/enable-control";
@@ -33,11 +34,11 @@ export type WarmUpRepeat =
     | { armed: false; reason: UnarmedReason };
 
 /** The whole ticks a window cycle repeats in: itself, or p for a window cycle of p/q ticks; null where there are none */
-function wholeTicksOf(window_cycle_ticks: number): number | null {
+function wholeTicksOf(window_cycle_ticks: number, exact?: Ratio): number | null {
     if (Number.isInteger(window_cycle_ticks)) {
         return window_cycle_ticks > 0 ? window_cycle_ticks : null;
     }
-    return subtickClockForWindowCycle(window_cycle_ticks)?.window_cycle_ticks ?? null;
+    return subtickClockForWindowCycle(window_cycle_ticks, exact)?.window_cycle_ticks ?? null;
 }
 
 function gcd(a: number, b: number): number {
@@ -49,8 +50,8 @@ function gcd(a: number, b: number): number {
  * The bin is the whole-tick repeat of the window cycle merged with that of every clock inside the controls and the
  * span of every control that reads the tick. A control that keeps what no key holds is not armed (`controlRepeatOf`).
  */
-export function warmUpRepeatOf(window_cycle_ticks: number, controls: readonly InstalledControl[], warm_up_ticks: number): WarmUpRepeat {
-    let bin = wholeTicksOf(window_cycle_ticks);
+export function warmUpRepeatOf(window_cycle_ticks: number, controls: readonly InstalledControl[], warm_up_ticks: number, exact?: Ratio): WarmUpRepeat {
+    let bin = wholeTicksOf(window_cycle_ticks, exact);
     if (bin === null) {
         return { armed: false, reason: "no whole-tick repeat" };
     }
@@ -68,7 +69,7 @@ export function warmUpRepeatOf(window_cycle_ticks: number, controls: readonly In
             if (!Number.isInteger(clock.window_cycle_ticks) && !clock.exact_subtick_positions) {
                 return { armed: false, reason: "inexact clock" };
             }
-            const whole = wholeTicksOf(clock.window_cycle_ticks);
+            const whole = wholeTicksOf(clock.window_cycle_ticks, clock.exact_ticks);
             if (whole === null) {
                 return { armed: false, reason: "no whole-tick repeat" };
             }

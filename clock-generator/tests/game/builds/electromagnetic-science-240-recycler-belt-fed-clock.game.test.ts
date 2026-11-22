@@ -1,3 +1,4 @@
+import { rateDecimal } from "../../../src/config/setpoint-rate";
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -104,7 +105,7 @@ for (const run of runs) test(`original electromagnetic science scaffold, automat
             .flatMap((row: any) => row.inserter_ids.map((id: number) => [id, row.entity_number] as const)));
 
         // the build is two of the config's copies: 96 science a second, 5,760 in the trailing minute
-        const target = config.setpoint.items_per_second / (config.setpoint.copies ?? 1) * COPIES;
+        const target = rateDecimal(config.setpoint.items_per_second) / (config.setpoint.copies ?? 1) * COPIES;
         expect(target).toBe(96);
         const options = {window_cycle_ticks, cold: run.cold, initialization_delay_ticks: run.cold ? 2 : 0, window: RUN_PROTOCOL.window,
             expected: Math.round(target * RUN_PROTOCOL.window / 60 * 1e6) / 1e6, baseline: RUN_PROTOCOL.baseline, cap};

@@ -1,6 +1,7 @@
 import { BELT_PICKUP_LAYOUTS, pickupLaneLength, pickupLayoutProblem } from "../common/belt-pickup-layout";
 import { BeltPickupCaptureSchema, normalizePickupCaptureConfig, pickupCaptureProblem } from "./pickup-capture";
 import { sideLoadedPickupRefusal } from "./errors";
+import { exactRateUnits, isRatePair, RATE_PRECISION_ERROR } from "./setpoint-rate";
 import { z } from "zod";
 import { MiningDrillType, BeltType, BeltStrategy, ChestType } from "../common/entity-types";
 import {
@@ -145,7 +146,10 @@ export type TargetCounts = typeof TARGET_COUNTS[number];
 
 export const TargetProductionRateConfigSchema = z.object({
     item: z.string().describe("The name of the item that the setpoint counts. The name of a recipe is read as the output the setpoint counts of it, where a machine of the build makes it."),
-    items_per_second: z.number().positive().describe("The rate of the setpoint for all copies together, in items per second."),
+    items_per_second: z.union([z.number().positive(), z.strictObject({
+        numerator: z.number().int().positive().describe("A positive whole number, in lowest terms with the denominator."),
+        denominator: z.number().int().positive().describe("The positive whole number that divides the numerator."),
+    }).refine(isRatePair, "Use a reduced positive fraction.")]).describe("The rate of the setpoint for all copies together, in items per second, as a positive number or a reduced fraction."),
     copies: z.number().positive().refine(isShortDecimalCopies, {
         message: COPIES_DECIMAL_ERROR,
     }).describe("The number of identical builds in the game, which can be partial, for example 2.25. "
@@ -166,6 +170,10 @@ export const TargetProductionRateConfigSchema = z.object({
      * it is not counted.
      */
     counts: z.enum(TARGET_COUNTS).optional().describe("What the rate counts: \"made\" (default) for items that the build makes, or \"destroyed\" for items that it destroys."),
+}).superRefine(({ items_per_second, copies }, ctx) => {
+    if (!isRatePair(items_per_second) || copies <= 0 || !isShortDecimalCopies(copies)) return;
+    try { exactRateUnits(items_per_second, copies); }
+    catch { ctx.addIssue({ code: "custom", path: ["items_per_second"], message: RATE_PRECISION_ERROR, params: { rate_precision: true } }); }
 });
 
 export type TargetProductionRateConfig = z.infer<typeof TargetProductionRateConfigSchema>;

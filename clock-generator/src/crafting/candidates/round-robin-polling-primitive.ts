@@ -1,3 +1,5 @@
+import { compareRateToCapacity, composedPeriod, periodAtLimit, rateText } from "../../config/setpoint-rate";
+import { ratioOf } from "../../entities/traits/ratio";
 import assert from "../../common/assert";
 import type { Config } from "../../config/schema";
 import { assertInserterCoverage } from "../../config/inserter-coverage-validator";
@@ -84,8 +86,14 @@ export function constructPrimitiveRoundRobinPolling(config: Config): PrimitiveRo
     const output_machines = registry.getAll().filter(Entity.isMachine).filter(it => it.output.item_name === target.machine_production_rate.item);
     // what each makes of the item a second, as its Yield trait gives it
     const traits = traitsOf(config);
-    const capacity = output_machines.reduce((sum, machine) => sum.add(mainProductRateOf(traits, machine.entity_id.id)), fraction(0)).multiply(target.copies);
-    assert(capacity.toDecimal() >= target.total_production_rate.amount_per_second.toDecimal(), "The current configuration cannot meet the setpoint.");
+    const capacities = output_machines.map(machine => mainProductRateOf(traits, machine.entity_id.id));
+    if (target.exact_setpoint) {
+        const capacity = compareRateToCapacity(target.exact_setpoint, capacities.map(ratioOf), target.copies);
+        assert(!capacity.above, `The current configuration cannot meet the setpoint of ${rateText(target.exact_setpoint)} items/second. Total output capacity is ${capacity.bound} items/second.`);
+    } else {
+        const capacity = capacities.reduce((sum, part) => sum.add(part), fraction(0)).multiply(target.copies);
+        assert(capacity.toDecimal() >= target.total_production_rate.amount_per_second.toDecimal(), "The current configuration cannot meet the setpoint.");
+    }
     const cycle = OutputCyclePlan.create(target, registry, config, fraction(1), config.overrides);
     const output_paths = output_machines.map(machine => outputPathOf(machine, registry));
     const direct_sources = new Map<string, string[]>();
@@ -100,17 +108,18 @@ export function constructPrimitiveRoundRobinPolling(config: Config): PrimitiveRo
         direct_dependencies.push({ source, target });
     }
     const route_facts = { output_paths, direct_sources, retained_clocks: new Map() } satisfies RoundRobinPollingComposition;
-    const grouped_cycles = roundRobinPollingCycles(registry, cycle.entity_transfer_map, route_facts);
+    const grouped_cycles = roundRobinPollingCycles(registry, cycle.entity_transfer_map, route_facts, target.exact_setpoint);
     if (grouped_cycles === null) throw new RoundRobinPollingNotApplicable("the plan has no output hands");
-    const window_cycle_ticks = OutputCyclePlan.ticksOfCycles(cycle, grouped_cycles);
-    if (Number.isFinite(window_cycle_ticks) && window_cycle_ticks > 0 && window_cycle_ticks >= SIMULATION_BUDGET_TICKS) {
+    const period = target.exact_setpoint && composedPeriod(cycle.total_duration_ticks, grouped_cycles, target.exact_setpoint);
+    const window_cycle_ticks = period?.toDecimal() ?? OutputCyclePlan.ticksOfCycles(cycle, grouped_cycles);
+    if (Number.isFinite(window_cycle_ticks) && window_cycle_ticks > 0 && (period ? periodAtLimit(period, SIMULATION_BUDGET_TICKS, true) : window_cycle_ticks >= SIMULATION_BUDGET_TICKS)) {
         throw new ClockWindowCycleLimitError({ terminal_swing_count: plannedTerminalSwingCount(cycle)!,
-            base_cycle_ticks: cycle.total_duration_ticks.toDecimal(), computed_lcm: EntityTransferCountMap.lcm(cycle.entity_transfer_map),
+            base_cycle_ticks: cycle.total_duration_ticks.toDecimal(), computed_lcm: EntityTransferCountMap.lcm(cycle.entity_transfer_map, undefined, target.exact_setpoint),
             effective_lcm: grouped_cycles, window_cycle_ticks, limit_ticks: SIMULATION_BUDGET_TICKS });
     }
     assert(Number.isFinite(window_cycle_ticks) && window_cycle_ticks > 0, `Window cycle time must be positive and finite, got ${window_cycle_ticks}`);
     // the turns are planned in whole ticks of the window cycle, as roundRobinPollingPlan refuses any other
-    if (!Number.isInteger(window_cycle_ticks)) throw new RoundRobinPollingNotApplicable(`not offered on a fractional window cycle (${window_cycle_ticks} ticks)`);
+    if (period ? period.getDenominator !== 1 : !Number.isInteger(window_cycle_ticks)) throw new RoundRobinPollingNotApplicable(`not offered on a fractional window cycle (${window_cycle_ticks} ticks)`);
     const clocks = unplannedInserterClocks(registry, window_cycle_ticks);
     if ([...clocks.values()].some(clock => clock.kind !== "by-product")) throw new RoundRobinPollingNotApplicable("primitive grouped construction retains by-product clocks only");
     const composition: RoundRobinPollingComposition = { ...route_facts, retained_clocks: clocks };

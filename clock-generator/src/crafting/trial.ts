@@ -1,3 +1,4 @@
+import type { Ratio } from "../entities/traits/ratio";
 import assert from "../common/assert";
 import { targetInsertersOf, targetItemOf, targetMachinesOf } from "./sequence/cycle/target-ends";
 import { Config } from "../config";
@@ -315,7 +316,7 @@ function clockBuildRun(
 function firstClockSpan(
     config: Config, windows: Map<string, OpenRange[]>, window_cycle_ticks: number, logger: Logger, options: ClockTrialOptions = {},
 ): TrialRun {
-    const repeat = wholeCounterOf(window_cycle_ticks);
+    const repeat = wholeCounterOf(window_cycle_ticks, options.exact_window_cycle);
     if (repeat === null) return runClockOnBuild(config, windows, window_cycle_ticks, logger, options);
     const run = runClockOnBuild(config, windows, window_cycle_ticks, logger,
         { ...options, simulate_window_cycles: repeat.scale, observation_ticks: repeat.window_cycle_ticks, counter_runs_through: true, machine_stock: true, stock_detail: "hands" });
@@ -447,11 +448,11 @@ export const LOOP_WINDOW_CHECK_TICKS = 2 * FREE_RUNNING_CHECK_TICKS;
 const LONG_RUN_MAX_WINDOW_CYCLES = 120;
 
 /** Window cycles the long run of a clock of this window cycle lasts when it is asked to cover `check_ticks` ticks (see longRunWindowCycles) */
-export function longRunWindowCyclesOf(window_cycle_ticks: number, check_ticks: number = FREE_RUNNING_CHECK_TICKS): number {
+export function longRunWindowCyclesOf(window_cycle_ticks: number, check_ticks: number = FREE_RUNNING_CHECK_TICKS, exact?: Ratio): number {
     const max_window_cycles = Math.floor((SIMULATION_BUDGET_TICKS - 1) / window_cycle_ticks);
     // a longer check than the standard one is not cut short by the cap on window cycles, which short window cycles would hit first
     const wanted_window_cycles = Math.ceil(check_ticks / window_cycle_ticks);
-    return longRunWindowCycles(window_cycle_ticks, subtickClockForWindowCycle(window_cycle_ticks), Math.min(check_ticks > FREE_RUNNING_CHECK_TICKS ? wanted_window_cycles : Math.min(LONG_RUN_MAX_WINDOW_CYCLES, wanted_window_cycles), max_window_cycles), max_window_cycles);
+    return longRunWindowCycles(window_cycle_ticks, subtickClockForWindowCycle(window_cycle_ticks, exact), Math.min(check_ticks > FREE_RUNNING_CHECK_TICKS ? wanted_window_cycles : Math.min(LONG_RUN_MAX_WINDOW_CYCLES, wanted_window_cycles), max_window_cycles), max_window_cycles);
 }
 
 /**
@@ -476,7 +477,7 @@ function longRunOfFreeRunningBuild(
     logger: Logger,
     check_ticks: number = FREE_RUNNING_CHECK_TICKS,
     /** How the run starts; the cold start of the staged scaffold with the default orders by default */
-    start: Pick<ClockTrialOptions, "competing_takers_order" | "decider_order" | "main_clock_shift" | "fractional_swings"> = {},
+    start: Pick<ClockTrialOptions, "competing_takers_order" | "decider_order" | "main_clock_shift" | "fractional_swings" | "exact_window_cycle"> = {},
     /** What the caller reads of the stock: the stock it gets is recorded in no more detail */
     stock_detail: StockDetail = "full",
     /** A reader put into each run's context before its first tick (the maker log's); it changes nothing in the run */
@@ -515,8 +516,8 @@ function longRunOfFreeRunningBuild(
     // every build: a machine with spare speed over its plan can drift for dozens of window cycles before it shows
     const registry = createEntityRegistryFromConfig(config);
     // a fractional window cycle repeats in whole ticks only every few window cycles, as its subtick clock counts them
-    const repeat = subtickClockForWindowCycle(window_cycle_ticks);
-    const window_cycles = longRunWindowCyclesOf(window_cycle_ticks, check_ticks);
+    const repeat = subtickClockForWindowCycle(window_cycle_ticks, start.exact_window_cycle);
+    const window_cycles = longRunWindowCyclesOf(window_cycle_ticks, check_ticks, start.exact_window_cycle);
     if (window_cycles <= 1) {
         return null;
     }
@@ -834,7 +835,7 @@ export function wakeUpsFromStartsOf(
     const windows = withChestDrillWindows(check_config, new Map(Object.entries(clock_windows).map(([entity_id, ranges]) =>
         [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const)), window_cycle_ticks);
     const ends = inserterEnds(check_config);
-    const repeat = subtickClockForWindowCycle(window_cycle_ticks);
+    const repeat = subtickClockForWindowCycle(window_cycle_ticks, swings.exact_window_cycle);
     const bin = Number.isInteger(window_cycle_ticks) ? window_cycle_ticks : repeat?.window_cycle_ticks ?? null;
     const quiet = quietLogger(logger);
     const figureAt = (place: number): number | null => {
@@ -920,12 +921,12 @@ export function exhaustiveStartPhases(
     swings: FractionalSwings = {},
 ): ExhaustiveStartPhasesOutcome | null {
     // under whole-counter checks a p/q-tick window cycle's phases are those of its counter's p ticks
-    const counter_ticks = wholeCounterOf(window_cycle_ticks)?.window_cycle_ticks ?? window_cycle_ticks;
+    const counter_ticks = wholeCounterOf(window_cycle_ticks, swings.exact_window_cycle)?.window_cycle_ticks ?? window_cycle_ticks;
     if (!Number.isInteger(counter_ticks)) {
         return null;
     }
     const as_built = buildAsBuiltConfig(config, decider_windows, window_cycle_ticks);
-    const proof_bin = provenRepeatBin(as_built, window_cycle_ticks);
+    const proof_bin = provenRepeatBin(as_built, window_cycle_ticks, swings.exact_window_cycle);
     if (proof_bin === null) {
         return null;
     }
@@ -950,7 +951,7 @@ export function exhaustiveStartPhases(
 
     for (let offset = 0; offset < counter_ticks && outcome.holds; offset++) {
         const rotated_config = offset === 0 ? as_built : buildAsBuiltConfig(config, decider_windows, window_cycle_ticks, undefined, "built", offset);
-        const context = coldControlledTrialBuild(rotated_config, base.output_cycle_plan, base.recipe_lcm, {}, quiet);
+        const context = coldControlledTrialBuild(rotated_config, base.output_cycle_plan, base.recipe_lcm, swings, quiet);
         const output_states = context.inserters.map(it => it.inserter_state)
             .filter(state => base.output_inserter_ids.has(state.entity_id.id));
         const dropped = () => output_states.reduce((sum, state) => sum + state.items_dropped, 0);
@@ -1150,7 +1151,7 @@ export function runAsBuiltCheck(
 ): AsBuiltRun {
     // the drills into chests run on the windows made from their takers' in these windows, as the export gives them
     decider_windows = withChestDrillWindows(config, decider_windows, window_cycle_ticks);
-    const counter = wholeCounterOf(window_cycle_ticks);
+    const counter = wholeCounterOf(window_cycle_ticks, swings.exact_window_cycle);
     // the count the progress is reported against: as it always was where no whole counter is checked
     const total = startPhaseTotalOf(window_cycle_ticks, counter, start_phases);
     const result = passed !== undefined ? passed.run.result
@@ -1324,7 +1325,7 @@ function afterTheLongRun(
     orders_passed: AsBuiltStabilityCheck | undefined,
     swings: FractionalSwings,
 ): AsBuiltRun {
-    const counter = wholeCounterOf(window_cycle_ticks);
+    const counter = wholeCounterOf(window_cycle_ticks, swings.exact_window_cycle);
     const start_shifts = startShiftsOf(window_cycle_ticks, counter, start_phases);
     const total = startPhaseTotalOf(window_cycle_ticks, counter, start_phases);
     const strict = long_run_ticks > 0;
@@ -1896,7 +1897,7 @@ export function startDependenceVerdictOf(
     try {
         report?.("Trying other starts");
         return startDependenceOf(config, result.clock_windows, result.simulation_duration.ticks, result.stability_check.expected_output_items, cold_holds, quiet,
-            CLOCK_STARTS, fractionalSwingsOf(result.output_cycle_plan));
+            CLOCK_STARTS, fractionalSwingsOf(result.output_cycle_plan, result.simulation_duration.exact_ticks));
     } catch (error) {
         if (errors === "throw") throw error;
         logger.log(`Start dependence could not be tried: ${error instanceof Error ? error.message : error}`);
@@ -1950,7 +1951,7 @@ function triedDisturbanceTrial(
         return { disturbance_trial: verdictOf(disturbanceTrialOf(config, result.clock_windows, result.simulation_duration.ticks,
             result.stability_check.expected_output_items, quiet, {}, (_loss, index, total) => report?.(`Trying loss trial ${index + 1}/${total}`),
             result.exhaust === undefined ? undefined : resultLossOptionsOf(result.exhaust.plans), excess === null ? [] : [excess],
-            fractionalSwingsOf(result.output_cycle_plan))) };
+            fractionalSwingsOf(result.output_cycle_plan, result.simulation_duration.exact_ticks))) };
     } catch (error) {
         if (errors === "throw") throw error;
         const reason = error instanceof Error ? error.message : String(error);
@@ -2058,7 +2059,7 @@ export function withSettledOutput(
     try {
         const planning = verificationPlanningConfigOf(planned_on, result);
         const config = { ...planning, overrides: { ...planning.overrides, derive_clock_windows: false } };
-        const swings = fractionalSwingsOf(result.output_cycle_plan);
+        const swings = fractionalSwingsOf(result.output_cycle_plan, result.simulation_duration.exact_ticks);
         const windows = withChestDrillWindows(config, new Map(Object.entries(result.clock_windows).map(([entity_id, ranges]) =>
             [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const)), window_cycle_ticks);
         const long_run = longRunOfFreeRunningBuild(config, windows, window_cycle_ticks, result.stability_check.expected_output_items, quietLogger(logger), FREE_RUNNING_CHECK_TICKS, swings, "hands");

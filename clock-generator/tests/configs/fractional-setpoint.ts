@@ -1,8 +1,8 @@
-import { ConfigSchema } from "../../src/config/schema";
+import { ConfigSchema, type Config } from "../../src/config/schema";
 import type { Ratio } from "../../src/entities/traits/ratio";
 
 /** A single assembler with independent supply and room for its gears. */
-export function gearSetpoint(rate: Ratio = { numerator: 16, denominator: 7 }, hand = 1, speed = 4) {
+export function gearSetpoint(rate: Ratio = { numerator: 16, denominator: 7 }, hand = 1, speed = 4): Config {
     return ConfigSchema.parse(JSON.parse(JSON.stringify({
         setpoint: { item: "iron-gear-wheel", items_per_second: rate, copies: 1 },
         machines: [{ id: 1, recipe: "iron-gear-wheel", prototype: "assembling-machine-3", productivity: 0, crafting_speed: speed }],

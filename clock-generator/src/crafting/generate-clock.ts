@@ -355,7 +355,7 @@ export function generateClockWithSwingBackoff(
     const window_cycle_rejections: SwingWindowCycleRejection[] = [];
     let requested_initial_count: number | undefined;
     let first_window_cycle_refusal: ClockWindowCycleLimitError | undefined;
-    let window_cycle_frontier: Generator<SwingWindowCycleRejection> | undefined;
+    let window_cycle_frontier: ReturnType<typeof wholeSwingWindowCyclesBelow> | undefined;
     let generated_count: number | undefined;
     let primitive_attempt: PrimitiveRoundRobinPollingAttemptReport | undefined;
     const can_lower_refused_fractions = !swing_count_forced && options.fractional_swings === true;
@@ -367,9 +367,9 @@ export function generateClockWithSwingBackoff(
             const ceiling = candidate.overrides?.terminal_swing_count ?? Infinity;
             let eligible: number | undefined;
             for (let next = window_cycle_frontier.next(); !next.done; next = window_cycle_frontier.next()) {
-                const window_cycle = next.value;
+                const { at_limit, ...window_cycle } = next.value;
                 if (window_cycle.terminal_swing_count > ceiling) continue;
-                if (window_cycle.window_cycle_ticks >= window_cycle.limit_ticks) window_cycle_rejections.push(window_cycle);
+                if (at_limit ?? (window_cycle.window_cycle_ticks >= window_cycle.limit_ticks)) window_cycle_rejections.push(window_cycle);
                 else { eligible = window_cycle.terminal_swing_count; break; }
             }
             if (eligible === undefined) return null;

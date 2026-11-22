@@ -1,3 +1,4 @@
+import { composedPeriod, exactCycleLcm, periodAtLimit } from "../../config/setpoint-rate";
 /**
  * The composition of a build's group window cycles into its one main window cycle, as today makes it: the cycle's ticks times the
  * lcm of the denominators of every hand a cycle (`EntityTransferCountMap.lcm`), or the config's own lcm. A group's
@@ -47,17 +48,21 @@ const lcm = (a: number, b: number): number => a / gcd(a, b) * b;
  */
 export function cycleMeasureOf(config: Config, cycle: OutputCyclePlan, groups: readonly GroupShape[], group_of: ReadonlyMap<string, number>): CycleMeasure {
     const ignored = ignoredLcmItemsOf(config, cycle);
-    const computed_lcm = EntityTransferCountMap.lcm(cycle.entity_transfer_map, ignored.length > 0 ? ignored : undefined);
+    const exact = cycle.production_rate.exact_setpoint;
+    const computed_lcm = EntityTransferCountMap.lcm(cycle.entity_transfer_map, ignored.length > 0 ? ignored : undefined, exact);
     const group_cycles = groups.map(() => 1);
     cycle.entity_transfer_map.forEach((transfer, entity_id) => {
         for (const item of transfer.item_transfers) {
             if (ignored.includes(item.item_name)) continue;
             const group = group_of.get(transferKeyOf(entity_id.id, item.item_name));
-            if (group !== undefined) group_cycles[group] = lcm(group_cycles[group], item.transfer_count.getDenominator);
+            if (group !== undefined) group_cycles[group] = exact ? exactCycleLcm(group_cycles[group], item.transfer_count.getDenominator, exact)
+                : lcm(group_cycles[group], item.transfer_count.getDenominator);
         }
     });
     const override_lcm = config.overrides?.lcm ?? null;
     const effective_lcm = override_lcm ?? computed_lcm;
+    // Validate each exposed group period while an alternative can still be listed as refused.
+    if (exact) for (const cycles of group_cycles) composedPeriod(cycle.total_duration_ticks, override_lcm ?? cycles, exact);
     return {
         cycle_ticks: cycle.total_duration_ticks,
         group_cycles,
@@ -65,7 +70,7 @@ export function cycleMeasureOf(config: Config, cycle: OutputCyclePlan, groups: r
         computed_lcm,
         override_lcm,
         effective_lcm,
-        main_window_cycle: cycle.total_duration_ticks.multiply(effective_lcm),
+        main_window_cycle: composedPeriod(cycle.total_duration_ticks, effective_lcm, exact),
     };
 }
 
@@ -76,14 +81,14 @@ export function compositionOf(window_cycles: PlannedWindowCycles, groups: readon
     const { main, tried } = window_cycles;
     const measure = main.measure;
     const first = tried[0];
-    const over = first.measure.main_window_cycle.toDecimal() >= SIMULATION_BUDGET_TICKS;
+    const over = periodAtLimit(first.measure.main_window_cycle, SIMULATION_BUDGET_TICKS, !!first.cycle.production_rate.exact_setpoint);
     const terms = {
         requested_swings: first.swings,
         limit_ticks: SIMULATION_BUDGET_TICKS,
         tried: tried.map(count => ({ swings: count.swings, window_cycle_ticks: count.measure.main_window_cycle.toDecimal() })),
     };
     const over_limit_action: OverLimitAction = !over ? { action: "none" }
-        : window_cycles.can_back_off && measure.main_window_cycle.toDecimal() < SIMULATION_BUDGET_TICKS
+        : window_cycles.can_back_off && !periodAtLimit(measure.main_window_cycle, SIMULATION_BUDGET_TICKS, !!main.cycle.production_rate.exact_setpoint)
             ? { action: "swing-backoff", rule: "P-limit", terms }
             : { action: "refused", rule: "P-limit", terms };
     return {

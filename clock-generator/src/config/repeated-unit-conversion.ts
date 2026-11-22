@@ -1,3 +1,4 @@
+import { canonicalRate } from "./setpoint-rate";
 import { Config, ConfigSchema } from './schema';
 import { findRepeatedUnits } from './copies-validator';
 import { outsideSupplyOf } from './outside-supply';
@@ -312,7 +313,8 @@ function multipliedCopies(copies: number, multiplicity: number): number {
 }
 
 /** A sufficient ordered structural proof; ordinary candidate planning remains a separate worker Check. */
-export function planRepeatedUnitConversion(config: Config): RepeatedUnitConversionResult {
+export function planRepeatedUnitConversion(given: Config): RepeatedUnitConversionResult {
+    const config = canonicalRate(given);
     try {
         const analysis = analyze(config);
         const groups = new Map<string, { component: Component; witness: unknown; places: Place[] }[]>();

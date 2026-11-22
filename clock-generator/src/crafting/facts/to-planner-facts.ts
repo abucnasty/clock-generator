@@ -1,3 +1,4 @@
+import { exactRateUnits } from "../../config/setpoint-rate";
 import { Config, InserterConfig } from "../../config/schema";
 import { fraction } from "../../data-types/fraction";
 import {
@@ -203,7 +204,8 @@ export function toPlannerFacts(config: Config): PlannerFacts {
             counts: target.counts ?? "made",
             items_per_second: target.items_per_second,
             copies: target.copies,
-            per_copy: ratioOf(fraction(target.items_per_second).divide(target.copies)),
+            per_copy: ratioOf(typeof target.items_per_second === "number" ? fraction(target.items_per_second).divide(target.copies)
+                : exactRateUnits(target.items_per_second, target.copies).copySecond),
         },
         nodes,
         edges,

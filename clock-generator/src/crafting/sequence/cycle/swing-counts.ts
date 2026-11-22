@@ -1,3 +1,5 @@
+import { exactCycleLcm } from "../../../config/setpoint-rate";
+import type { Ratio } from "../../../entities/traits/ratio";
 import Fraction, { fraction } from "../../../data-types/fraction";
 import { Chest, Entity, EntityId, Inserter, Machine, MiningDrill, ReadableEntityRegistry } from "../../../entities";
 import assert from "../../../common/assert";
@@ -184,7 +186,7 @@ function divideTransfers(
     );
 }
 
-function computeLCM(swing_counts: EntityTransferCountMap, ignored_items?: string[]): number {
+function computeLCM(swing_counts: EntityTransferCountMap, ignored_items?: string[], exact?: Ratio): number {
     const allTransfers = swing_counts.mapValues(it => it.item_transfers).flat();
     const filtered = ignored_items && ignored_items.length > 0
         ? allTransfers.filter(it => !ignored_items.includes(it.item_name))
@@ -194,6 +196,7 @@ function computeLCM(swing_counts: EntityTransferCountMap, ignored_items?: string
     const denominators = ratios.map(it => it.getDenominator);
 
     const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
+    if (exact) return denominators.reduce((multiple, d) => exactCycleLcm(multiple, d, exact), 1);
     return denominators.reduce((lcm, denominator) => lcm / gcd(lcm, denominator) * denominator, 1);
 }
 

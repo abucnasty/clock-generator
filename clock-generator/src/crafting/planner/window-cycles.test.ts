@@ -5,6 +5,8 @@ import { loadConfigFromFile } from "../../config/loader";
 import { productionScienceSharedPickup } from "../generate-blueprint-test-helpers";
 import { planOfConfig, planOfSample } from "./plan-test-helpers";
 import { swingCountsListed } from "./window-cycles";
+import { gearSetpoint } from "../../../tests/configs/fractional-setpoint";
+import { validateConfig } from "../plan/validate-config";
 
 /** A choice as [swings, listed as, window cycle ticks, kept or the rule that prunes it] */
 const brief = (choice: WindowCycleChoice) => [choice.swings, choice.listed_as, "window_cycle_ticks" in choice ? choice.window_cycle_ticks : null,
@@ -89,8 +91,6 @@ describe("the composition into the main period", () => {
     });
 });
 
-import { gearSetpoint } from "../../../tests/configs/fractional-setpoint";
-import { validateConfig } from "../plan/validate-config";
 
 it("cancels a period denominator when composing the main window and refuses an oversized composition", () => {
     const config = gearSetpoint();

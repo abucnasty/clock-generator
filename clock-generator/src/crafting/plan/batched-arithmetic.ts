@@ -1,3 +1,4 @@
+import { composedPeriod } from "../../config/setpoint-rate";
 import { OpenRange } from "../../data-types";
 import { Entity, handSizeFor, Inserter, Machine, ReadableEntityRegistry } from "../../entities";
 import { FactorioDataService } from "../../data/factorio-data-service";
@@ -148,7 +149,7 @@ function cycleOf(tick: number, cycle_starts: readonly number[]): number {
  */
 export function batchedSwingsWindowsByArithmetic(input: ArithmeticWindowsInput): ArithmeticWindows {
     const { entity_registry: registry, output_cycle_plan: plan, window_cycle_ticks, recipe_lcm: cycles } = input;
-    if (!Number.isInteger(window_cycle_ticks)) refuse(`a window cycle time of ${window_cycle_ticks} ticks is not whole`);
+    if (plan.production_rate.exact_setpoint ? composedPeriod(plan.total_duration_ticks, cycles, plan.production_rate.exact_setpoint).getDenominator !== 1 : !Number.isInteger(window_cycle_ticks)) refuse(`a window cycle time of ${window_cycle_ticks} ticks is not whole`);
     if (plan.fractional_swings_enabled) refuse("fractional swings are planned by their own clock");
     if (plan.exhaust !== undefined) refuse("results that come by chance get enable windows of their own");
     if (plan.production_rate.counts !== "made") refuse("a target that counts an item destroyed is planned by its own arithmetic");

@@ -1,3 +1,4 @@
+import { rateDecimal } from "../config/setpoint-rate";
 import fs from "fs";
 import { describe, expect, it } from "vitest";
 import assert from "../common/assert";
@@ -57,7 +58,7 @@ function oldOutputCapacityPerSecond(config: Config): number {
 function oldComputeMachineTargetRates(config: Config): MachineTargetRate[] {
     assertOutputTransferGenerationSupported(config);
     validateCopies(config);
-    assert(Number.isFinite(config.setpoint.items_per_second) && config.setpoint.items_per_second > 0,
+    assert(Number.isFinite(rateDecimal(config.setpoint.items_per_second)) && rateDecimal(config.setpoint.items_per_second) > 0,
         "Set a positive target output rate to see at-target rates.");
     assertInserterCoverage(config);
     const registry = createEntityRegistryFromConfig(config);

@@ -112,7 +112,7 @@ function dropTicks(history: CompactStateTransitionHistory, entity_id: string): n
 function spareTimeInsight(result: BlueprintGenerationResult, run: CompactStateTransitionHistory, nameOf: (entity: { entity_id: string; label: string }) => EntityName): ClockInsight | null {
     // a fractional window cycle runs on a subtick clock, whose run is the whole ticks it repeats in: many window cycles, so the
     // ticks of the run are told per window cycle. A whole-tick window cycle's run is told as it is.
-    const subtick = subtickClockForWindowCycle(result.simulation_duration.ticks);
+    const subtick = subtickClockForWindowCycle(result.simulation_duration.ticks, result.simulation_duration.exact_ticks);
     const run_window_cycles = subtick === null ? 1 : Math.max(1, Math.round(run.total_duration_ticks / result.simulation_duration.ticks));
     const window_cycle_ticks = run.total_duration_ticks / run_window_cycles;
     // the window cycles a build is given to be back after a loss, in the whole bins its trials count (recoveryBinsOf)

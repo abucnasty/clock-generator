@@ -1,3 +1,4 @@
+import type { SetpointRate } from "../../config/setpoint-rate";
 /**
  * The feasibility pass (P3 design section 3): one linear pass over a build's planner graph that refuses, before any
  * simulation, a build no clock could carry. It checks necessary conditions only, from true maxima and exact fractions,
@@ -64,7 +65,7 @@ export function feasibilityOf(facts: PlannerFacts, graph: PlannerGraph): Feasibi
     return { cuts, issues: issues.sort((a, b) => RULE_ORDER.indexOf(a.rule) - RULE_ORDER.indexOf(b.rule)), utilizations: utilizationsOf(demand) };
 }
 
-const checked = new WeakMap<Config, { issues: readonly FeasibilityIssue[]; target: { items_per_second: number; copies: number } }>();
+const checked = new WeakMap<Config, { issues: readonly FeasibilityIssue[]; target: { items_per_second: SetpointRate; copies: number } }>();
 
 /**
  * The facts and graph of a config, or null where they cannot be built: the config is refused elsewhere, as today. Every

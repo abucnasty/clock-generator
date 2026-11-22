@@ -1,3 +1,4 @@
+import { rateDecimal } from "../config/setpoint-rate";
 import { describe, it, expect, beforeAll } from "vitest";
 import { generateClockForConfig, generateClockAlternatives, validateConfig, type BlueprintGenerationResult, type ClockAlternative } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
@@ -165,7 +166,7 @@ describe("generateClockForConfig", () => {
             // - Modified: 480 items/sec, 12 copies → per-machine rate = 480/12/60/2 = 1/3 items/tick
             const modifiedResult = generateClockForConfig({
                 ...config,
-                setpoint: { ...config.setpoint, items_per_second: config.setpoint.items_per_second * 2, copies: config.setpoint.copies * 2 },
+                setpoint: { ...config.setpoint, items_per_second: rateDecimal(config.setpoint.items_per_second) * 2, copies: config.setpoint.copies * 2 },
             });
             expect(modifiedResult.output_cycle_plan.total_duration.ticks).toBe(result.output_cycle_plan.total_duration.ticks);
         });

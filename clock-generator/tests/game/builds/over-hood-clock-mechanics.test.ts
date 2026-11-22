@@ -1,3 +1,4 @@
+import { rateDecimal } from "../../../src/config/setpoint-rate";
 import {describe, expect, test} from "vitest";
 import {GameFixturePaths} from "../helpers/fixture-paths";
 import {expectRunIsConsistent, firstHandPatterns, readFixtureFigures} from "../helpers/fixture-mechanics";
@@ -124,7 +125,7 @@ describe("the recorded clock controls of the over-the-hood fixtures", () => {
         const {native, generation} = controls[name];
         const config = overHoodClockConfig(variant);
         expect(config.setpoint.items_per_second).toBe(6);
-        expectRunIsConsistent(native, generation!, config.setpoint.items_per_second);
+        expectRunIsConsistent(native, generation!, rateDecimal(config.setpoint.items_per_second));
         // every fixture is judged stable, and its run holds the target and recovers from the three disturbances
         expect({native: native.generationVerdict, pinned: generation!.verdict, why: generation!.why_not_stable}).toEqual({native: "stable", pinned: "stable", why: undefined});
         expect(native.disturbances).toHaveLength(3);

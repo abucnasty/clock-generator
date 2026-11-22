@@ -1,3 +1,4 @@
+import { rateDecimal } from "../../../src/config/setpoint-rate";
 import fs from "fs";
 import path from "path";
 import {expect} from "vitest";
@@ -140,7 +141,7 @@ async function prepare(scenario: PickupClockScenario): Promise<Prepared> {
     const started = performance.now();
     if (scenario.keep_built_clock) {
         const built = scenario.built_clock!;
-        const kept = {config, period: built.window_cycle_ticks, expected: config.setpoint.items_per_second * built.window_cycle_ticks / 60,
+        const kept = {config, period: built.window_cycle_ticks, expected: rateDecimal(config.setpoint.items_per_second) * built.window_cycle_ticks / 60,
             generationSeconds: 0, generationVerdict: "the build's own clock", clockSha256: scenario.builtClockSha256?.()};
         generated.set(key, kept);
         return kept;
@@ -153,11 +154,11 @@ async function prepare(scenario: PickupClockScenario): Promise<Prepared> {
     // their output is evidence of a shortfall, rather than a reason to skip the game measurement entirely.
     if (process.env.BELT_CLOCK_GENERATION_ONLY === "1" && process.env.BELT_CLOCK_CALIBRATE !== "1") {
         // the rate is a sum of floating-point rates: 26 steel plates a second came out as 26.000000000000004
-        expect(selected.assessment.items_per_second).toBeCloseTo(config.setpoint.items_per_second, 9);
+        expect(selected.assessment.items_per_second).toBeCloseTo(rateDecimal(config.setpoint.items_per_second), 9);
     }
     const exported = selected.result.subtick ?? selected.result;
     const window_cycle_ticks = selected.result.subtick?.clock.window_cycle_ticks ?? selected.result.simulation_duration.ticks;
-    const prepared = {config, period: window_cycle_ticks, expected: config.setpoint.items_per_second * window_cycle_ticks / 60,
+    const prepared = {config, period: window_cycle_ticks, expected: rateDecimal(config.setpoint.items_per_second) * window_cycle_ticks / 60,
         clock: {blueprint: encodeBlueprintFile({blueprint: exported.blueprint}), schedule: exported.schedule},
         generationSeconds: (performance.now() - started) / 1000, generationVerdict: selected.verdict, clockSha256: clockHash(exported),
         selection: {id: selected.id, holds: selected.assessment.holds, rate: selected.assessment.items_per_second,
@@ -227,7 +228,7 @@ export async function capturePickupClockScenario(scenario: PickupClockScenario) 
         const blueprint = scenario.scaffold();
         fs.writeFileSync(path.join(capture.directory, "scaffold.txt"), blueprint.trim() + "\n");
         const share = scenario.share ?? 1;
-        const target = config.setpoint.items_per_second * share;
+        const target = rateDecimal(config.setpoint.items_per_second) * share;
         const expectedPerWindow = Math.round(target * RUN_PROTOCOL.window / 60 * 1e6) / 1e6;
         const baselineTicks = scenario.baseline?.ticks ?? RUN_PROTOCOL.baseline;
         if (scenario.baseline && (!scenario.baseline.reason.trim() || baselineTicks > RUN_PROTOCOL.maxBaseline || baselineTicks <= RUN_PROTOCOL.baseline)) {

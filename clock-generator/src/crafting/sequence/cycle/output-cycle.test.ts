@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { fraction } from "../../../data-types/fraction";
 import { OutputCyclePlan } from "./output-cycle";
+import { gearSetpoint } from "../../../../tests/configs/fractional-setpoint";
+import { TargetProductionRate } from "../../target-production-rate";
+import { createEntityRegistryFromConfig } from "../simulation-context";
+import { exactPeriod } from "../../../config/setpoint-rate";
+import { ratioOf } from "../../../entities/traits/ratio";
+import { destroyedTargetBasisOf } from "../../planner/exhaust";
+import { ConfigPaths } from "../../../config/config-paths";
+import { loadConfigFromFile } from "../../../config/loader";
 
 describe("the ticks of a whole number of crafting cycles", () => {
     it("come out whole where the cycles are a whole number of ticks together", () => {
@@ -27,13 +35,27 @@ describe("the ticks of a whole number of crafting cycles", () => {
     });
 });
 
-import { gearSetpoint } from "../../../../tests/configs/fractional-setpoint";
-import { TargetProductionRate } from "../../target-production-rate";
-import { createEntityRegistryFromConfig } from "../simulation-context";
 
 it("refuses the four-item period that would round to 105 ticks", () => {
     const config = gearSetpoint({ numerator: 342857142857143, denominator: 150000000000000 }, 4);
     const target = TargetProductionRate.fromConfig(config.setpoint);
     expect(() => OutputCyclePlan.create(target, createEntityRegistryFromConfig(config), config, fraction(1)))
         .toThrow(/period.*exact|precision/i);
+});
+
+
+it("reduces the selected swing count before checking the base period", () => {
+    const rate = { numerator: 342857142857143, denominator: 150000000000000 };
+    const tick = TargetProductionRate.fromConfig(gearSetpoint(rate).setpoint).machine_production_rate.amount_per_tick;
+    expect(ratioOf(exactPeriod(rate, [4, 1, tick.getDenominator, 1], [tick.getNumerator, 4], "base cycle")))
+        .toEqual({ numerator: 9000000000000000, denominator: 342857142857143 });
+});
+
+it("refuses an unrepresentable destroyed-hand basis", async () => {
+    const source = await loadConfigFromFile(ConfigPaths.IRON_ORE_VOIDER_400_EXACT_SPEED);
+    const config = { ...source, setpoint: { ...source.setpoint, copies: 1,
+        items_per_second: { numerator: 342857142857143, denominator: 150000000000000 } },
+        inserters: source.inserters.map(arm => ({ ...arm, stack_size: 4 })) };
+    const target = TargetProductionRate.fromConfig(config.setpoint);
+    expect(() => destroyedTargetBasisOf(target, createEntityRegistryFromConfig(config), {})).toThrow(/destroyed hand period.*exact/);
 });

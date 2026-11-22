@@ -1,3 +1,4 @@
+import { rateText } from "../config/setpoint-rate";
 import { FactorioBlueprint, BlueprintBuilder } from "../blueprints/blueprint";
 import { Direction, Entity as CircuitEntity, fitPlayerDescription, Position, SignalId, Wire, WireConnection } from "../blueprints/components";
 import { DeciderCombinatorEntity } from "../blueprints/entity/decider-combinator";
@@ -133,11 +134,11 @@ function createDeciderCombinatorForTransfers(
 function targetRateDescription(cycle: OutputCyclePlan): string {
     const target = cycle.production_rate;
     const item_icon = SignalId.toDescriptionString(SignalId.item(target.total_production_rate.item));
-    const total = formatRate(target.total_production_rate.amount_per_second.toDecimal());
+    const total = target.exact_setpoint ? rateText(target.exact_setpoint) : formatRate(target.total_production_rate.amount_per_second.toDecimal());
     if (target.copies === 1) {
         return `Setpoint: ${total} ${item_icon} per second`;
     }
-    const each = formatRate(target.machine_production_rate.amount_per_second.toDecimal());
+    const each = target.exact_setpoint ? target.machine_production_rate.amount_per_second.toString() : formatRate(target.machine_production_rate.amount_per_second.toDecimal());
     return `Setpoint: ${total} ${item_icon} per second over ${target.copies} copies (${each} each)`;
 }
 
@@ -389,15 +390,17 @@ export function createSignalPerInserterBlueprint(
         .filter(inserter_clock => inserter_clock.own_clock)
         .sort((a, b) => a.inserter_id.number - b.inserter_id.number);
     const fuel_moduli = Array.from(new Set(fuel_inserter_clocks.map(inserter_clock => inserter_clock.modulus))).sort((a, b) => a - b);
-    const merged_clock_ticks = subtick_clock || fuel_moduli.length === 0 ? null : mergedClockTicks(total_duration.ticks, fuel_moduli);
+    const merged_clock_ticks = subtick_clock || (total_duration.exact_ticks && total_duration.exact_ticks.denominator !== 1) || fuel_moduli.length === 0 ? null : mergedClockTicks(total_duration.ticks, fuel_moduli);
     // the clock of the window cycle is a modulo of the one clock, unless every fuel clock already fits the window cycle
     const window_cycle_modulus = merged_clock_ticks !== null && merged_clock_ticks !== total_duration.ticks ? total_duration.ticks : null;
     const counted_signal = window_cycle_modulus === null ? SignalId.clock : MERGED_CLOCK_SIGNAL;
-    const counted_ticks = merged_clock_ticks ?? (subtick_clock ? subtick_clock.window_cycle_ticks : total_duration.ticks);
+    const period = total_duration.exact_ticks;
+    const whole_ticks = period ? Number(BigInt(period.numerator) / BigInt(period.denominator)) : total_duration.ticks;
+    const counted_ticks = merged_clock_ticks ?? (subtick_clock ? subtick_clock.window_cycle_ticks : whole_ticks);
 
     const clock_x = x;
     const window_cycle: WindowCycleText = {
-        ticks: shownWindowCycleTicks(total_duration.ticks, subtick_clock !== undefined),
+        ticks: shownWindowCycleTicks(subtick_clock ? total_duration.ticks : whole_ticks, subtick_clock !== undefined),
         ...(subtick_clock ? { subtick_scale: subtick_clock.scale } : {}),
     };
 

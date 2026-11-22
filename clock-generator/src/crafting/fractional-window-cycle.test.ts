@@ -6,6 +6,9 @@ import { subtickClockForWindowCycle, windowOfTicks, windowTicks, withWindowsAtLe
 import { evenlySpacedOutputWindows, paddedWindows } from "./candidates/transforms";
 import { movedOutputSwingCandidates } from "./candidates/moved-output-swing";
 import { shiftedCycleCandidates } from "./candidates/phase-shifted-batch";
+import { gearSetpoint } from "../../tests/configs/fractional-setpoint";
+import { planClockAlternatives } from "./alternatives";
+import { quiet } from "./generate-blueprint-test-helpers";
 
 // The production science rebuild at 231 a second: a window cycle of 38400/77 ticks, a subtick clock of 38400 ticks read in
 // 1/77 ticks. A window [s, e] is open in the whole ticks whose position is in it, so a window read off whole ticks covers
@@ -169,4 +172,16 @@ it("uses the exact reduced period for subtick eligibility", () => {
     expect(exact(1002, 1001)).toBeNull();
     expect(exact(1073741825, 2)).toBeNull();
     expect(exact(1073741823, 2)).toEqual({ window_cycle_ticks: 1073741823, scale: 2 });
+});
+
+
+it("lists the near-whole four-item period at its exported 104 ticks", () => {
+    const config = gearSetpoint({ numerator: 24_000_000_000, denominator: 10_499_999_999 }, 4);
+    const primary = planClockAlternatives(config, { logger: quiet }).primary!;
+    const clock = primary.alternatives[0];
+    expect(clock.result.simulation_duration.exact_ticks).toEqual({ numerator: 10_499_999_999, denominator: 100_000_000 });
+    expect(clock.result.subtick).toBeUndefined();
+    expect(clock.result.schedule.counted_ticks).toBe(104);
+    expect(clock.rounded).toMatchObject({ window_cycle_ticks: 104, tried_on_its_window_cycle: false });
+    expect(clock.result.output_cycle_plan.production_rate.exact_setpoint).toEqual(config.setpoint.items_per_second);
 });

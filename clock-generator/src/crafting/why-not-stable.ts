@@ -171,6 +171,7 @@ function shortfallOf(clock: WhyNotStableClock): string {
 export interface WhyNotStableBuild {
     /** The target over all copies, as the clocks' rates are */
     target_items_per_second: number;
+    target_rate_text?: string;
     not_made: readonly NotMadeClock[];
     /**
      * The names a sentence gives the build's belts, inserters and chests, by entity id ("inserter:3"): by their items, in
@@ -288,7 +289,7 @@ function noRecovery(clock: WhyNotStableClock): WhyNotStable {
 function nothingHolds(clock: WhyNotStableClock, build: WhyNotStableBuild): WhyNotStable {
     return {
         cause: "nothing holds",
-        message: `No clock holds the setpoint of ${figure(build.target_items_per_second)} a second. ${nearestOf(clock, build)}${notMadeOf(build)}`,
+        message: `No clock holds the setpoint of ${build.target_rate_text ?? figure(build.target_items_per_second)} a second. ${nearestOf(clock, build)}${notMadeOf(build)}`,
     };
 }
 
@@ -332,7 +333,7 @@ function outputChestFull(clock: WhyNotStableClock, build: WhyNotStableBuild): Wh
     }
     return {
         cause: "output chest full",
-        message: `No clock holds the setpoint of ${figure(build.target_items_per_second)} a second: ${clock.full_output_chests.map(chest => fullChestSentence(chest, build)).join(" ")} `
+        message: `No clock holds the setpoint of ${build.target_rate_text ?? figure(build.target_items_per_second)} a second: ${clock.full_output_chests.map(chest => fullChestSentence(chest, build)).join(" ")} `
             + `${nearestOf(clock, build)} Use an infinity chest, or add an inserter that takes the items out, and generate again.${notMadeOf(build)}`,
     };
 }

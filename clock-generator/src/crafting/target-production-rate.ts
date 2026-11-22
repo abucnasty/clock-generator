@@ -4,7 +4,11 @@ import { TICKS_PER_SECOND } from "../data-types";
 import { TargetProductionRateConfig } from "../config";
 import type { TargetCounts } from "../config/schema";
 
+import { exactRateUnits } from "../config/setpoint-rate";
+import type { Ratio } from "../entities/traits/ratio";
+
 export interface TargetProductionRate {
+    readonly exact_setpoint?: Ratio;
     /**
      * The rate per copy of the build. Its item is the target item, made by the machines of the target or, where the
      * target counts the item destroyed, taken in from outside the build and destroyed by them
@@ -22,6 +26,16 @@ function fromConfig(config: TargetProductionRateConfig): TargetProductionRate {
 
     const recipe = config.item;
 
+    if (typeof config.items_per_second !== "number") {
+        const units = exactRateUnits(config.items_per_second, config.copies);
+        return {
+            exact_setpoint: config.items_per_second,
+            counts: config.counts ?? "made",
+            copies: config.copies,
+            machine_production_rate: { item: recipe, amount_per_tick: units.copyTick, amount_per_second: units.copySecond },
+            total_production_rate: { item: recipe, amount_per_tick: units.totalTick, amount_per_second: units.totalSecond },
+        };
+    }
     const target_output_per_tick = fraction(config.items_per_second)
         .divide(TICKS_PER_SECOND)
 

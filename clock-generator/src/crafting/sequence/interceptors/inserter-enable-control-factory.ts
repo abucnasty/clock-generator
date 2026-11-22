@@ -1184,7 +1184,7 @@ export class EnableControlFactory {
      */
     private getExtendedWindowCycleDuration(): Duration {
         if (this.output_cycle_plan.fractional_swings_enabled && this.output_cycle_plan.cycle_multiplier) {
-            return Duration.ofTicks(OutputCyclePlan.ticksOfCycles(this.output_cycle_plan, this.output_cycle_plan.cycle_multiplier));
+            return OutputCyclePlan.durationOfCycles(this.output_cycle_plan, this.output_cycle_plan.cycle_multiplier);
         }
         return this.output_cycle_plan.total_duration;
     }
@@ -1211,7 +1211,7 @@ export class EnableControlFactory {
         }
 
         const clocked_control = EnableControl.clocked({
-            windowCycleDuration: Duration.ofTicks(OutputCyclePlan.ticksOfCycles(this.output_cycle_plan, cycles)),
+            windowCycleDuration: OutputCyclePlan.durationOfCycles(this.output_cycle_plan, cycles),
             enabledRanges: enabled_ranges,
             exact_subtick_positions: this.exact_subtick_positions,
             tickProvider: this.tick_provider,

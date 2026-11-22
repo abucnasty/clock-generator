@@ -1,3 +1,4 @@
+import { rateDecimal } from "../../config/setpoint-rate";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { loadConfigFromFile } from "../../config/loader";
 import { ConfigPaths } from "../../config/config-paths";
@@ -14,6 +15,9 @@ import { ClockWindowCycleLimitError } from "../plan/clock-window-cycle-limit";
 import * as unplanned from "../sequence/unplanned-inserter-clock";
 import { roundRobinPollingPlan, RoundRobinPollingNotApplicable, heldAtTurn, roomAtTurn, type RoundRobinPollingComposition } from "./round-robin-polling";
 import { assertAcyclicGroupedDependencies, constructPrimitiveRoundRobinPolling } from "./round-robin-polling-primitive";
+import * as machineTraits from "../../entities/traits/traits-of";
+import { gearSetpoint } from "../../../tests/configs/fractional-setpoint";
+import { validateConfig } from "../plan/validate-config";
 
 describe("pure primitive grouped construction", () => {
     let config: Config;
@@ -171,7 +175,7 @@ describe("pure primitive grouped construction", () => {
     });
 
     it.each([500000, 600000])("rejects primitive period %s before computing/unrolling by-product clocks", window_cycle_ticks => {
-        const too_slow = { ...config, setpoint: { ...config.setpoint, items_per_second: config.setpoint.items_per_second * 40 / window_cycle_ticks } };
+        const too_slow = { ...config, setpoint: { ...config.setpoint, items_per_second: rateDecimal(config.setpoint.items_per_second) * 40 / window_cycle_ticks } };
         const compute = vi.spyOn(unplanned, "unplannedInserterClocks");
         try {
             expect(() => constructPrimitiveRoundRobinPolling(too_slow)).toThrow(ClockWindowCycleLimitError);
@@ -236,9 +240,6 @@ describe("pure primitive grouped construction", () => {
     });
 });
 
-import * as machineTraits from "../../entities/traits/traits-of";
-import { gearSetpoint } from "../../../tests/configs/fractional-setpoint";
-import { validateConfig } from "../plan/validate-config";
 
 it("checks both planning guards against the exact machine capacity", () => {
     const capacity = vi.spyOn(machineTraits, "mainProductRateOf").mockReturnValue(fraction(7, 6));

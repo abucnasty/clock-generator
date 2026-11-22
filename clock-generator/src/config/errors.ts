@@ -1,3 +1,4 @@
+import { rateText, type SetpointRate } from "./setpoint-rate";
 import { ZodError } from "zod";
 import type { SetpointReason } from "./setpoint-refusal";
 
@@ -771,7 +772,7 @@ export class FeasibilityError extends Error {
     public readonly problems: string[];
 
     /** `target` is the config's, in all: where it is shared by copies, the message says its figures are for one copy */
-    constructor(issues: FeasibilityIssue[], target: { items_per_second: number; copies: number } | null = null) {
+    constructor(issues: FeasibilityIssue[], target: { items_per_second: SetpointRate; copies: number } | null = null) {
         const opening = FeasibilityError.openingOf(target);
         const problems = issues.map(describeFeasibilityIssue);
         super(`${opening} ${problems.join(' ')}`);
@@ -781,10 +782,13 @@ export class FeasibilityError extends Error {
         this.problems = problems;
     }
 
-    private static openingOf(target: { items_per_second: number; copies: number } | null): string {
+    private static openingOf(target: { items_per_second: SetpointRate; copies: number } | null): string {
         // copies as configured: a short decimal (copies-value.ts), never rounded the way a rate is
+        if (target !== null && target.copies === 1 && typeof target.items_per_second !== 'number') {
+            return `No clock can hold this build's setpoint of ${rateText(target.items_per_second)} a second:`;
+        }
         const copies = target === null || target.copies === 1 ? ''
-            : ` of ${formatRate(target.items_per_second)} a second over ${target.copies} copies (every figure here is for one copy)`;
+            : ` of ${typeof target.items_per_second === "number" ? formatRate(target.items_per_second) : rateText(target.items_per_second)} a second over ${target.copies} copies (every figure here is for one copy)`;
         return `No clock can hold this build's setpoint${copies}:`;
     }
 }

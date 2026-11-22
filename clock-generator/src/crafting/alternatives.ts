@@ -1,3 +1,4 @@
+import { rateDecimal, rateText } from "../config/setpoint-rate";
 import assert from "../common/assert";
 import { judgedStartOf, type TargetCounts } from "../config/schema";
 import { fraction } from "../data-types/fraction";
@@ -1080,7 +1081,7 @@ function runAlternativeOf(
                     { ...(used.planned_on ?? config), overrides: { ...(used.planned_on ?? config).overrides, terminal_swing_count: trial.result.used_terminal_swing_count } },
                     trial.result.clock_windows, trial.clock_window_cycle, expected_output_items,
                     exact && trial.result.loop_windows !== undefined ? LOOP_WINDOW_CHECK_TICKS : FREE_RUNNING_CHECK_TICKS, logger,
-                    fractionalSwingsOf(trial.result.output_cycle_plan));
+                    fractionalSwingsOf(trial.result.output_cycle_plan, trial.clock_window_cycle === trial.result.simulation_duration.ticks ? trial.result.simulation_duration.exact_ticks : undefined));
             } catch (error) {
                 logger.log(`Clock "${label}" could not be started from other places: ${error instanceof Error ? error.message : String(error)}`);
                 made = null;
@@ -1204,7 +1205,7 @@ function runAlternativeOf(
             noteClockRun(clock.result, { config: { ...planned_on, overrides: { ...planned_on.overrides, terminal_swing_count: tried_as.result.used_terminal_swing_count } },
                 windows: tried_as.result.clock_windows, window_cycle_ticks: tried_as.clock_window_cycle, expected_output_items,
                 long_run_ticks: tried_as === exact_trial && tried_as.result.loop_windows !== undefined ? LOOP_WINDOW_CHECK_TICKS : FREE_RUNNING_CHECK_TICKS,
-                swings: fractionalSwingsOf(tried_as.result.output_cycle_plan) });
+                swings: fractionalSwingsOf(tried_as.result.output_cycle_plan, tried_as.clock_window_cycle === tried_as.result.simulation_duration.ticks ? tried_as.result.simulation_duration.exact_ticks : undefined) });
         }
         const ranking = rankingOf(clock, config);
         // where its wake-ups decide the selection, a clock of a build with a loop, whose wake-ups depend on how it starts, is ranked by their mean
@@ -1223,7 +1224,7 @@ function runAlternativeOf(
     const exact_trial: Trial = { result, held, loss, start_dependence, clock_window_cycle: window_cycle_ticks };
     const exact = alternativeOf(exact_trial, { id, label, description_suffix: "", result });
     logger.log(`Clock "${label}": windows=${inserter_window_count} verdict=${exact.verdict} stable=${disturbance_trial?.survives ?? "not tried"} as-built=${as_built?.actual_output_items}/${expected_output_items} planned=${actual_output_items} belt=${clockBeltLabel(belt) || "none"}`);
-    if (Number.isInteger(window_cycle_ticks)) {
+    if (result.simulation_duration.exact_ticks ? result.simulation_duration.exact_ticks.denominator === 1 : Number.isInteger(window_cycle_ticks)) {
         return { signature, alternatives: [exact] };
     }
     // a window cycle that is not a whole number of ticks is exported with its subtick clock where it has one: listed as that
@@ -1244,9 +1245,10 @@ function runAlternativeOf(
     // with no subtick clock its blueprint counts the window cycle rounded down (blueprint.ts): listed as that clock, it is
     // judged by its own rate. One whose rate may meet goal 1 (at most 0.1% fast, within the machines) is tried on its
     // own window cycle
-    const rounded_ticks = Math.floor(window_cycle_ticks);
+    const period = result.simulation_duration.exact_ticks;
+    const rounded_ticks = period ? Number(BigInt(period.numerator) / BigInt(period.denominator)) : Math.floor(window_cycle_ticks);
     const rounded_rate = itemsPerSecondOverCopies(expected_output_items, rounded_ticks, copies);
-    const target = config.setpoint.items_per_second;
+    const target = rateDecimal(config.setpoint.items_per_second);
     const runs_fast = rounded_rate / target - 1;
     const within_machines = rounded_rate <= outputCapacityPerSecond(config) * (1 + 1e-9);
     const may_meet = roundedRateAllowed({ runs_fast, within_machines });
@@ -1733,7 +1735,8 @@ export function whyNotStableOf(
     const clocks = alternatives.map(alternative => whyNotStableClockOf({ ...alternative,
         as_built: alternative.result.stability_check.as_built, expected_output_items: alternative.result.stability_check.expected_output_items }));
     return whyNotStable(clocks, selected_index, {
-        target_items_per_second: config.setpoint.items_per_second,
+        target_items_per_second: rateDecimal(config.setpoint.items_per_second),
+        ...(typeof config.setpoint.items_per_second !== "number" && { target_rate_text: rateText(config.setpoint.items_per_second) }),
         not_made,
         entity_names: entityNamesInSentence(config),
     });

@@ -1,3 +1,4 @@
+import { composedPeriod, exactPeriod } from "../../config/setpoint-rate";
 /**
  * Whether a target that counts an item destroyed gets windows of results (exhaust.ts), by arithmetic over the
  * registry: the decision the build plan records and the cycle plan of such a target is made from
@@ -47,10 +48,13 @@ export function destroyedTargetBasisOf(
     const machines = targetMachinesOf(target, entity_registry);
     assert(machines.length > 0, `No machine takes ${item} in from outside the build to destroy it`);
     const hand = handSizeFor(targetInsertersOf(machines[0], target, entity_registry)[0], item);
-    const per_machine_rate = target_production_rate.machine_production_rate.amount_per_tick.divide(machines.length);
-    const ticks_per_hand = fraction(hand).divide(per_machine_rate);
-    let base_hands = 1;
-    while (base_hands < MAX_DESTROYED_CYCLE_HANDS && ticks_per_hand.multiply(base_hands).getDenominator !== 1) {
+    const rate = target_production_rate.machine_production_rate.amount_per_tick;
+    const exact = target_production_rate.exact_setpoint;
+    const ticks_per_hand = exact
+        ? exactPeriod(exact, [hand, machines.length, rate.getDenominator], [rate.getNumerator], "destroyed hand")
+        : fraction(hand).divide(rate.divide(machines.length));
+    let base_hands = exact ? Math.min(ticks_per_hand.getDenominator, MAX_DESTROYED_CYCLE_HANDS) : 1;
+    while (!exact && base_hands < MAX_DESTROYED_CYCLE_HANDS && ticks_per_hand.multiply(base_hands).getDenominator !== 1) {
         base_hands++;
     }
     return { item, machines, hand, ticks_per_hand, base_hands, forced: config_overrides.terminal_swing_count };
@@ -78,9 +82,9 @@ export function exhaustDecisionOf(
     const whole_hands = forced ?? base_hands;
     const whole_transfers = transfersOfBalance(destroyedTargetBalance([...machines], entity_registry, config, item, fraction(whole_hands),
         (machine, brought) => destroyedTargetCrafts(machine, entity_registry, item, brought)), entity_registry);
-    const cycle_ticks = ticks_per_hand.multiply(base_hands).toDecimal();
+    const cycle_ticks = composedPeriod(ticks_per_hand, base_hands, target_production_rate.exact_setpoint).toDecimal();
     const crafts_per_cycle = (machine: Machine) => craftsOf(machine, base_hands);
-    const whole_fits = wholeHandsFit(whole_transfers, ticks_per_hand.multiply(whole_hands).toDecimal(), machines, entity_registry,
+    const whole_fits = wholeHandsFit(whole_transfers, composedPeriod(ticks_per_hand, whole_hands, target_production_rate.exact_setpoint).toDecimal(), machines, entity_registry,
         machine => craftsOf(machine, whole_hands));
     // asked only where whole hands do not fit, as the plan asks it
     const feasible = whole_fits ? null

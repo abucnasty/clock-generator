@@ -1,3 +1,5 @@
+import { exactCycleLcm } from "../../config/setpoint-rate";
+import type { Ratio } from "../../entities/traits/ratio";
 import { OpenRange } from "../../data-types";
 import { Entity, EntityId, handSizeFor, Inserter, isNeverBlockingSink, Machine, MiningDrill, miningDrillMaxInsertion, ReadableEntityRegistry } from "../../entities";
 import { DRILL_ITEMS_PER_SWING } from "../planner/balance";
@@ -291,7 +293,7 @@ const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
  * whole hands. The hands of the inserters that fill a machine, or a chest a machine is filled from, are made whole by
  * rounding them up (rule F, below), so they set nothing. Null where the plan has no such inserter.
  */
-export function roundRobinPollingCycles(entity_registry: ReadableEntityRegistry, swing_counts: EntityTransferCountMap, composition?: RoundRobinPollingComposition): number | null {
+export function roundRobinPollingCycles(entity_registry: ReadableEntityRegistry, swing_counts: EntityTransferCountMap, composition?: RoundRobinPollingComposition, rate?: Ratio): number | null {
     let lcm = 1;
     let found = false;
     const transfers = new Map(Array.from(swing_counts.entries(), ([entity_id, transfer]) => [entity_id.id, transfer] as const));
@@ -307,7 +309,7 @@ export function roundRobinPollingCycles(entity_registry: ReadableEntityRegistry,
         found = true;
         // the hands of the inserter in all, not each lane's or item's part: an export onto two lanes at 1/2 + 1/2 is one hand
         const denominator = transfer.total_transfer_count.getDenominator;
-        lcm = lcm / gcd(lcm, denominator) * denominator;
+        lcm = rate ? exactCycleLcm(lcm, denominator, rate) : lcm / gcd(lcm, denominator) * denominator;
     }
     return found ? lcm : null;
 }
@@ -709,7 +711,7 @@ export function marginText(failure: MarginFailure): string {
 
 /** `holdsWithMargin` with the failure as data: the first group moved a tick that does not hold, or the clock as it stands */
 export function marginFailureOf(plan: UnclockedRun, windows: Map<string, OpenRange[]>, window_cycle_ticks: number): MarginFailure | null {
-    const swings = fractionalSwingsOf(plan.run.output_cycle_plan);
+    const swings = fractionalSwingsOf(plan.run.output_cycle_plan, plan.run.duration.exact_ticks);
     const holdsOn = (on: Map<string, OpenRange[]>) =>
         withTickPurpose("margin_check", () => runClockOnBuild(plan.config, on, window_cycle_ticks, plan.logger, swings).stability_check.holds, { claim: true });
     if (!holdsOn(windows)) return { check: "as_placed" };
@@ -880,11 +882,12 @@ export function roundRobinPollingClock(
         if (plan.run.always_enabled_by_config.size > 0 || plan.run.inserter_clocks.size > 0 || alwaysEnabledInserters(plan.run.simulation_context.entity_registry).length > 0) {
             refuse("the build has inserters outside the plan");
         }
-        const cycles = roundRobinPollingCycles(plan.run.simulation_context.entity_registry, plan.run.swing_counts);
+        const cycles = roundRobinPollingCycles(plan.run.simulation_context.entity_registry, plan.run.swing_counts, undefined, plan.run.output_cycle_plan.production_rate.exact_setpoint);
         if (cycles !== null && plan.config.overrides?.lcm === undefined && cycles !== plan.run.recipe_lcm) {
             made = unclockedRun({ ...plan.config, overrides: { ...plan.config.overrides, lcm: cycles } }, options);
         }
         const { simulation_context, swing_counts, recipe_lcm, duration } = made.run;
+        if (duration.exact_ticks && duration.exact_ticks.denominator !== 1) refuse(`not offered on a fractional window cycle (${duration.ticks} ticks)`);
         const tried = new Set<string>();
         const drops = dropTieBreak(made.config, duration.ticks);
         const losses_decide = options.shared_windows === true || sharedItemDeadlockRisks(simulation_context.entity_registry).length === 0;

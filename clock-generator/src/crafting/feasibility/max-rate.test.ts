@@ -1,3 +1,4 @@
+import { rateDecimal } from "../../config/setpoint-rate";
 import { beforeAll, describe, expect, it } from "vitest";
 import { ConfigPaths } from "../../config/config-paths";
 import { FeasibilityError } from "../../config/errors";
@@ -34,7 +35,7 @@ describe("the most a target can be agrees with the feasibility pass and the shar
         expect(refused(config)).toBe(false);
         if (max === null) return;
         const total = max.per_copy_per_second * config.setpoint.copies;
-        expect(total).toBeGreaterThanOrEqual(config.setpoint.items_per_second * (1 - 1e-9));
+        expect(total).toBeGreaterThanOrEqual(rateDecimal(config.setpoint.items_per_second) * (1 - 1e-9));
         expect(refused(withRate(config, typedMax(config, max.per_copy_per_second)))).toBe(false);
         expect(refused(withRate(config, Math.ceil(total * 1000 + 1) / 1000))).toBe(true);
         expect(max.limit).toBeNull();

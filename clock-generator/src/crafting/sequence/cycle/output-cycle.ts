@@ -1,3 +1,5 @@
+import { ratioOf } from "../../../entities/traits/ratio";
+import { composedPeriod, exactPeriod } from "../../../config/setpoint-rate";
 import { assertMachineResultTargetsSupported } from "../../../config/output-transfer-generation";
 import assert from "../../../common/assert";
 import Fraction, { fraction } from "../../../data-types/fraction";
@@ -62,6 +64,10 @@ export const OutputCyclePlan = {
     create: createPlan,
     print: print,
     ticksOfCycles: ticksOfCycles,
+    durationOfCycles(plan: OutputCyclePlan, cycles: number): Duration {
+        const period = composedPeriod(plan.total_duration_ticks, cycles, plan.production_rate.exact_setpoint);
+        return Duration.ofTicks(period.toDecimal(), plan.production_rate.exact_setpoint && ratioOf(period));
+    },
 }
 
 // Internal arithmetic provenance, separate from final-taker aggregate reporting. It adds no serialized plan/API field.
@@ -92,8 +98,8 @@ function withPlannedTerminalCount(plan: OutputCyclePlan, count: Fraction): Outpu
  * LCM). Multiplied as a fraction: 25 cycles of 115.2 ticks are 2880 ticks, where 19.2 * 6 * 25 in floating point is
  * 2879.9999999999995, which is no whole number of ticks to anything that asks.
  */
-function ticksOfCycles(plan: Pick<OutputCyclePlan, "total_duration_ticks">, cycles: number): number {
-    return plan.total_duration_ticks.multiply(cycles).toDecimal();
+function ticksOfCycles(plan: Pick<OutputCyclePlan, "total_duration_ticks"> & Partial<Pick<OutputCyclePlan, "production_rate">>, cycles: number): number {
+    return composedPeriod(plan.total_duration_ticks, cycles, plan.production_rate?.exact_setpoint).toDecimal();
 }
 
 /**
@@ -113,9 +119,9 @@ function createDestroyedPlan(
     const basis = destroyedTargetBasisOf(target_production_rate, entity_registry, config_overrides);
     const { item, machines, ticks_per_hand, forced } = basis;
     const planOf = (hands: number, exhaust?: readonly ExhaustPlan[]): OutputCyclePlan => {
-        const window_cycle_ticks = ticks_per_hand.multiply(hands);
+        const window_cycle_ticks = composedPeriod(ticks_per_hand, hands, target_production_rate.exact_setpoint);
         return {
-            total_duration: Duration.ofTicks(window_cycle_ticks.toDecimal()),
+            total_duration: Duration.ofTicks(window_cycle_ticks.toDecimal(), target_production_rate.exact_setpoint && ratioOf(window_cycle_ticks)),
             total_duration_ticks: window_cycle_ticks,
             entity_transfer_map: transfersOfBalance(destroyedTargetBalance([...machines], entity_registry, config, item, fraction(hands),
                 (machine, brought) => destroyedTargetCrafts(machine, entity_registry, item, brought)), entity_registry),
@@ -208,11 +214,6 @@ function createMadePlan(
     // The target_production_rate.machine_production_rate is the target for the whole setup,
     // so we need to divide by the number of output machines to get the per-machine rate.
     const num_output_machines = output_machines.length;
-    const per_machine_rate = target_production_rate.machine_production_rate.amount_per_tick
-        .divide(num_output_machines);
-    
-    const single_swing_window_cycle_ticks = fraction(output_stack_size).divide(per_machine_rate);
-
     // Determine swings per cycle - either fractional or integer
     let swings_per_cycle: Fraction;
     
@@ -244,8 +245,13 @@ function createMadePlan(
     }
 
     // kept as a fraction: the product of the two as floating point numbers can miss a whole number of ticks
-    const final_window_cycle_ticks = single_swing_window_cycle_ticks.multiply(swings_per_cycle);
-    const final_window_cycle_duration = Duration.ofTicks(final_window_cycle_ticks.toDecimal())
+    const tick_rate = target_production_rate.machine_production_rate.amount_per_tick;
+    const exact = target_production_rate.exact_setpoint;
+    const final_window_cycle_ticks = exact
+        ? exactPeriod(exact, [output_stack_size, num_output_machines, tick_rate.getDenominator, swings_per_cycle.getNumerator],
+            [tick_rate.getNumerator, swings_per_cycle.getDenominator], "base cycle")
+        : fraction(output_stack_size).divide(tick_rate.divide(num_output_machines)).multiply(swings_per_cycle);
+    const final_window_cycle_duration = Duration.ofTicks(final_window_cycle_ticks.toDecimal(), exact && ratioOf(final_window_cycle_ticks))
 
     // Compute swing counts for all output machines
     // Each output machine handles the same swing count per machine
@@ -260,7 +266,7 @@ function createMadePlan(
 
     // Compute swing distributions if fractional swings are enabled
     if (fractional_swings) {
-        const cycle_multiplier = EntityTransferCountMap.lcm(swing_counts);
+        const cycle_multiplier = EntityTransferCountMap.lcm(swing_counts, undefined, exact);
         
         // Only compute distributions if there are actual fractional swings (LCM > 1)
         if (cycle_multiplier > 1) {

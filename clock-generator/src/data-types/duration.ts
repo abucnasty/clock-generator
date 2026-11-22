@@ -1,15 +1,20 @@
+import type { Ratio } from "../entities/traits/ratio";
 import {
     SECONDS_PER_TICK,
     TICKS_PER_SECOND
 } from "./constants"
 
 export class Duration {
+    /** Present for a window cycle derived from an exact setpoint. */
+    declare exact_ticks?: Ratio;
 
-    public static ofTicks(ticks: number): Duration {
-        return new Duration(
+    public static ofTicks(ticks: number, exact?: Ratio): Duration {
+        const duration = new Duration(
             ticks,
             SECONDS_PER_TICK.multiply(ticks).toDecimal()
         );
+        if (exact) duration.exact_ticks = exact;
+        return duration;
     }
     public static ofSeconds(seconds: number): Duration {
         return new Duration(

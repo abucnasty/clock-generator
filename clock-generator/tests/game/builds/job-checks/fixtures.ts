@@ -1,3 +1,4 @@
+import { rateDecimal } from "../../../../src/config/setpoint-rate";
 // Per-job checks of the fixture jobs (belt pickup, front pickup): what the generation tests of these builds checked on the result and the record
 // does not hold: the model's lane-phase evidence of the selection and the cause given where it is not stable, set against the pin beside the
 // in-game recording. That every inserter and drill of a clock has exactly one route, an always-on one with its reason, is a property of the record (`entity-routes-total`),
@@ -26,7 +27,7 @@ function beltPickupChecks(family: 'electromagnetic' | 'same-item', name: string)
             const window_cycle = selected.result.subtick?.clock.window_cycle_ticks ?? selected.result.simulation_duration.ticks;
             if (pin!.as_built) expect(selected.result.stability_check.as_built, "the model's lane-phase evidence of the selection").toMatchObject(pin!.as_built);
             expect(generated.why_not_stable?.cause).toBe(pin!.why_not_stable);
-            expect(Math.round(config.setpoint.items_per_second * window_cycle / 60 * 1e6) / 1e6).toBe(pin!.expected);
+            expect(Math.round(rateDecimal(config.setpoint.items_per_second) * window_cycle / 60 * 1e6) / 1e6).toBe(pin!.expected);
             if (runHolds(native)) {
                 expect(selected.verdict).toBe('stable');
                 expect(selected.assessment.items_per_second).toBe(config.setpoint.items_per_second);

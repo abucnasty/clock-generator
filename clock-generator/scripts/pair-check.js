@@ -72,6 +72,15 @@ const share = x => `${(x * 100).toFixed(2)}%`;
  * neither the items a finished product makes nor how many builds a copy of the grid holds.
  * @returns {{ item: string, claim: number|null, rate: number|null, amount: number|null, builds_per_copy: number|null, lane_rate: number|null }}
  */
+function validRatePair(rate) {
+    const { numerator, denominator } = rate;
+    if (Object.keys(rate).length !== 2 || !Object.hasOwn(rate, "numerator") || !Object.hasOwn(rate, "denominator")
+        || !Number.isSafeInteger(numerator) || numerator <= 0 || !Number.isSafeInteger(denominator) || denominator <= 0) return false;
+    let a = numerator, b = denominator;
+    while (b !== 0) [a, b] = [b, a % b];
+    return a === 1;
+}
+
 function setpointOf(file, options = {}) {
     const base = file && file.setpoint && typeof file.setpoint === "object"
         ? { item: file.setpoint.item, rate: file.setpoint.items_per_second }
@@ -83,10 +92,13 @@ function setpointOf(file, options = {}) {
         }
         return value;
     };
+    const input = pick("rate");
+    const pair = options.rate == null && file?.setpoint && input !== null && typeof input === "object";
+    if (pair && !validRatePair(input)) throw new UsageError("rate must be a reduced positive fraction");
     const setpoint = {
         item: pick("item"),
         claim: number("claim", pick("claim")),
-        rate: number("rate", pick("rate")),
+        rate: pair ? { numerator: input.numerator, denominator: input.denominator } : number("rate", input),
         amount: number("amount", pick("amount")),
         builds_per_copy: number("builds-per-copy", options.builds_per_copy ?? base.builds_per_copy ?? null),
         lane_rate: number("lane-rate", options.lane_rate ?? base.lane_rate ?? null),
@@ -198,12 +210,13 @@ function judge({ today, new: other, setpoint, window_ticks = null, sim_game = {}
     }
 
     // the setpoint
-    const expected = setpoint.claim ?? setpoint.rate * setpoint.builds_per_copy * ticks / 60 / setpoint.amount;
+    const rate = typeof setpoint.rate === "object" && setpoint.rate !== null ? setpoint.rate.numerator / setpoint.rate.denominator : setpoint.rate;
+    const expected = setpoint.claim ?? rate * setpoint.builds_per_copy * ticks / 60 / setpoint.amount;
     let lane_tolerance = null;
     if (setpoint.lane_rate !== null) {
         lane_tolerance = tol.lane_tolerance;
-        if (setpoint.claim === null && setpoint.rate < setpoint.lane_rate) {
-            failures.push(`the setpoint rate ${setpoint.rate} a second is under the ${setpoint.lane_rate} of a saturated lane: the build does not fill its lane`);
+        if (setpoint.claim === null && rate < setpoint.lane_rate) {
+            failures.push(`the setpoint rate ${rate} a second is under the ${setpoint.lane_rate} of a saturated lane: the build does not fill its lane`);
         }
     }
     const limit = lane_tolerance ?? tol.setpoint_tolerance;
