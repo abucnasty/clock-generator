@@ -1,4 +1,10 @@
-import type { Ratio } from "../entities/traits/ratio";
+import { decimalOf, type Ratio } from "../entities/traits/ratio";
+
+/** A window cycle in ticks; a plan from a rational setpoint supplies its verified pair. */
+export type WindowCycle = number | Ratio;
+
+export const windowCycleTicks = (cycle: WindowCycle): number => typeof cycle === "number" ? cycle : decimalOf(cycle);
+
 /** A fractional window cycle as p/q ticks with small integers: the count of a subtick clock and the units of its position */
 export interface SubtickWindowCycle {
     /** p: the whole ticks the subtick clock counts, q window cycles */

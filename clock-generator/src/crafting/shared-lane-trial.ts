@@ -1,3 +1,4 @@
+import { windowCycleTicks, type WindowCycle } from "../common/subtick-window-cycle";
 /**
  * The disturbance trials of a clock on the copies that share a lane (docs/stability.md, "Copies that share a lane").
  *
@@ -103,11 +104,11 @@ export function describeCopiesShort(loss: DisturbanceTrial, lanes: readonly stri
  * lane, which makes no run. `config` is the config the shared-lane verdict judges the clock on, with its output swings.
  * Made every time it is asked: the verdict with the copies (copies-verdict.ts) keeps it for a generation.
  */
-export function copiesDisturbanceTrial(config: Config, clock_windows: SerializableClockWindows, window_cycle_ticks: number,
+export function copiesDisturbanceTrial(config: Config, clock_windows: SerializableClockWindows, window_cycle: WindowCycle,
     expected_output_items: number, logger: Logger, feeders?: LaneFeeders): CopiesTrialVerdict | null {
     const { lanes, readings } = sharedLaneRunsOf(config, undefined, feeders);
     if (!lanes.some(lane => lane.shared)) return null;
-    return triedOnCopies(config, lanes, readings, clock_windows, window_cycle_ticks, expected_output_items, logger);
+    return triedOnCopies(config, lanes, readings, clock_windows, window_cycle, expected_output_items, logger);
 }
 
 /**
@@ -128,17 +129,18 @@ export function copiesTrialKey(config: Config, clock_windows: SerializableClockW
  * null where the copies share no lane). Either is null too where it cannot be made, whatever stops it: that check is then made
  * without the memo, and an error of the config or the windows is met there, where the check's own handling gives it.
  */
-export function copiesCheckKeys(config: Config, clock_windows: SerializableClockWindows, window_cycle_ticks: number,
+export function copiesCheckKeys(config: Config, clock_windows: SerializableClockWindows, window_cycle: WindowCycle,
     expected_output_items: number, feeders?: LaneFeeders): { shared_lanes: string | null; trials: string | null } {
     try {
-        return checkKeysOf(config, clock_windows, window_cycle_ticks, expected_output_items, feeders);
+        return checkKeysOf(config, clock_windows, window_cycle, expected_output_items, feeders);
     } catch {
         return { shared_lanes: null, trials: null };
     }
 }
 
-function checkKeysOf(config: Config, clock_windows: SerializableClockWindows, window_cycle_ticks: number,
+function checkKeysOf(config: Config, clock_windows: SerializableClockWindows, window_cycle: WindowCycle,
     expected_output_items: number, feeders?: LaneFeeders): { shared_lanes: string | null; trials: string | null } {
+    const window_cycle_ticks = windowCycleTicks(window_cycle);
     const runs = sharedLaneRunsOf(config, undefined, feeders);
     // the feeders of the lanes, where the build has any, are part of both keys: the runs of the copies take their items from them
     const fed = feeders === undefined || feeders.size === 0 ? {} : { feeders: [...feeders].sort(([a], [b]) => a.localeCompare(b)) };
@@ -150,13 +152,14 @@ function checkKeysOf(config: Config, clock_windows: SerializableClockWindows, wi
     const modelled = runs.lanes.map(lane => `${lane.belt_id}/${lane.lane}`);
     return {
         // the judge of the lanes is part of the key only where it is switched on, so that the key stays as it was with it off
-        shared_lanes: canonicalKey([{ check: "shared_lanes", lanes: modelled, ...(SHARED_LANES_JUDGED_BY_RATE && { by_rate: true }), ...fed }, config, decider_orders, clock_windows, window_cycle_ticks]),
-        trials: lanes.length === 0 ? null : canonicalKey([{ trial: "copies", lanes, ...fed }, config, decider_orders, clock_windows, window_cycle_ticks, expected_output_items]),
+        shared_lanes: canonicalKey([{ check: "shared_lanes", lanes: modelled, ...(SHARED_LANES_JUDGED_BY_RATE && { by_rate: true }), ...fed }, config, decider_orders, clock_windows, window_cycle]),
+        trials: lanes.length === 0 ? null : canonicalKey([{ trial: "copies", lanes, ...fed }, config, decider_orders, clock_windows, window_cycle, expected_output_items]),
     };
 }
 
 function triedOnCopies(config: Config, lanes: ReturnType<typeof sharedLaneRunsOf>["lanes"], readings: ReturnType<typeof sharedLaneRunsOf>["readings"],
-    clock_windows: SerializableClockWindows, window_cycle_ticks: number, expected_output_items: number, logger: Logger): CopiesTrialVerdict {
+    clock_windows: SerializableClockWindows, window_cycle: WindowCycle, expected_output_items: number, logger: Logger): CopiesTrialVerdict {
+    const window_cycle_ticks = windowCycleTicks(window_cycle);
     const windows = new Map(Object.entries(clock_windows).map(([id, ranges]) => [id, ranges.map(range => OpenRange.from(range.start, range.end))] as const));
     const shared_keys = lanes.filter(lane => lane.shared).map(lane => `${lane.belt_id}/${lane.lane}`);
     const registry = createEntityRegistryFromConfig(config);
@@ -167,7 +170,7 @@ function triedOnCopies(config: Config, lanes: ReturnType<typeof sharedLaneRunsOf
     let recovered = 0;
     for (const { under, layouts } of readings) {
         for (const layout of layouts) {
-            const runOf = (loss: DisturbanceTrial, skipped?: readonly SkippedTrial[]): LossOutcome => runOnSharedLanes(under, windows, window_cycle_ticks, layout, 1, logger, undefined,
+            const runOf = (loss: DisturbanceTrial, skipped?: readonly SkippedTrial[]): LossOutcome => runOnSharedLanes(under, windows, window_cycle, layout, 1, logger, undefined,
                 { loss, window_cycle_ticks, expected_output_items, loss_limit_ticks: loss_limit?.ticks, ...(skipped !== undefined && { skipped_trials: skipped }) }).disturbance_trial!;
             // a loss a copy is not back from has every trial of its plan counted (withEveryTrialCounted)
             const outcomeOf = (loss: DisturbanceTrial): LossOutcome => withEveryTrialCounted(runOf(loss), skipped => runOf(loss, skipped));

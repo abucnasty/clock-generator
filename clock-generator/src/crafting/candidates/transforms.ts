@@ -1,3 +1,4 @@
+import { windowCycleTicks, type WindowCycle } from "../../common/subtick-window-cycle";
 import { OpenRange } from "../../data-types";
 import { InserterStatus } from "../../state";
 import { positionStep, rotateRanges, windowOfTicks, windowTicks, withWindowTicksUpToTheEnd } from "../clock";
@@ -21,18 +22,19 @@ export function paddedWindows(
     windows: Map<string, OpenRange[]>,
     padded_ids: Iterable<string>,
     padding: number,
-    window_cycle_ticks: number,
+    window_cycle: WindowCycle,
     in_positions: boolean = true,
 ): Map<string, OpenRange[]> {
+    const window_cycle_ticks = windowCycleTicks(window_cycle);
     const result = new Map(windows);
-    const step = in_positions ? positionStep(window_cycle_ticks) : 1;
+    const step = in_positions ? positionStep(window_cycle) : 1;
     for (const key of padded_ids) {
         const ranges = windows.get(key);
         if (ranges === undefined) {
             continue;
         }
         if (step !== null && step !== 1) {
-            result.set(key, withWindowTicksUpToTheEnd(ranges, window_cycle_ticks, ticks => ticks + padding));
+            result.set(key, withWindowTicksUpToTheEnd(ranges, window_cycle, ticks => ticks + padding));
             continue;
         }
         result.set(key, OpenRange.reduceRanges(ranges.map(r =>
@@ -118,14 +120,15 @@ export function withSingleSwingOutput(
 export function evenlySpacedOutputWindows(
     output_windows: Map<string, OpenRange[]>,
     swing_counts: ReadonlyMap<string, number>,
-    window_cycle_ticks: number,
+    window_cycle: WindowCycle,
 ): Map<string, OpenRange[]> | null {
-    const step = positionStep(window_cycle_ticks);
+    const window_cycle_ticks = windowCycleTicks(window_cycle);
+    const step = positionStep(window_cycle);
     if (step === null) {
         return null;
     }
     if (step !== 1) {
-        return evenlySpacedOutputWindowsInPositions(output_windows, swing_counts, window_cycle_ticks, step);
+        return evenlySpacedOutputWindowsInPositions(output_windows, swing_counts, window_cycle, step);
     }
     const even = new Map<string, OpenRange[]>();
     let changed = false;
@@ -154,9 +157,10 @@ export function evenlySpacedOutputWindows(
 function evenlySpacedOutputWindowsInPositions(
     output_windows: Map<string, OpenRange[]>,
     swing_counts: ReadonlyMap<string, number>,
-    window_cycle_ticks: number,
+    window_cycle: WindowCycle,
     step: number,
 ): Map<string, OpenRange[]> | null {
+    const window_cycle_ticks = windowCycleTicks(window_cycle);
     const even = new Map<string, OpenRange[]>();
     let changed = false;
     for (const [key, ranges] of output_windows) {
@@ -164,7 +168,7 @@ function evenlySpacedOutputWindowsInPositions(
         if (swings === 0 || ranges.length === 0) {
             return null;
         }
-        const length = Math.min(...ranges.map(r => windowTicks(r, window_cycle_ticks))) - CIRCUIT_LATENCY_TICKS;
+        const length = Math.min(...ranges.map(r => windowTicks(r, window_cycle))) - CIRCUIT_LATENCY_TICKS;
         if (length < 1 || length >= window_cycle_ticks / swings) {
             return null;
         }
@@ -172,7 +176,7 @@ function evenlySpacedOutputWindowsInPositions(
         const spaced: OpenRange[] = [];
         for (let k = 0; k < swings; k++) {
             const offset = Math.round(k * window_cycle_ticks / swings / step) * step;
-            spaced.push(...rotateRanges([windowOfTicks(first, length, window_cycle_ticks)], offset, window_cycle_ticks));
+            spaced.push(...rotateRanges([windowOfTicks(first, length, window_cycle)], offset, window_cycle_ticks));
         }
         const reduced = OpenRange.reduceRanges(spaced, step);
         const sorted = [...ranges].sort((a, b) => a.start_inclusive - b.start_inclusive);

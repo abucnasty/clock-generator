@@ -1,3 +1,4 @@
+import { windowCycleTicks, type SubtickWindowCycle, type WindowCycle } from "../common/subtick-window-cycle";
 import type { Ratio } from "../entities/traits/ratio";
 import assert from "../common/assert";
 import { targetInsertersOf, targetItemOf, targetMachinesOf } from "./sequence/cycle/target-ends";
@@ -14,7 +15,6 @@ import { InserterCounters, inserterEnds, wakeUpsAndCountersOfStock } from "./ins
 import { judgeCounterSpan, judgeLongRun, judgeProvenCycle, LONG_RUN_MAX_TICKS, LONG_RUN_SETTLE_SHARE, longRunWindowCycles, OutputReason, outputReasonOf, wholeOutputRepeats } from "./long-run";
 import { DisturbanceTrial, DisturbanceTrialOptions, DisturbanceTrialReport, DisturbanceTrialVerdict, disturbanceTrialsOf, ExcessLoss, LATE_AFTER_WINDOW_CYCLES, LossOutcome, lossLimitOf, MAX_RECOVERY_WINDOW_CYCLES, reportOf, type SkippedTrial, verdictOf, withEveryTrialCounted } from "./disturbance-trial";
 import { SerializableClockWindows, positionStep, rotateRanges, shiftRangesForCircuitLatency, subtickClockForWindowCycle, withWindowsLengthened } from "./clock";
-import type { SubtickWindowCycle } from "../common/subtick-window-cycle";
 import { canonicalKey, currentRunMemo } from "./plan/run-memo";
 import { wholeCounterOf } from "./plan/clock-window-cycle-limit";
 import { assessTargetProduction, TargetProduction } from "./target-production";
@@ -282,12 +282,14 @@ export interface ClockTrialOptions extends RunOptions {
 export function runClockOnBuild(
     config: Config,
     windows: Map<string, OpenRange[]>,
-    window_cycle_ticks: number,
+    window_cycle: WindowCycle,
     logger: Logger,
     options: ClockTrialOptions = {},
     /** Fuel clocks to run the fuel inserters on; without them the run makes its own from its plan */
     fuel_clocks?: ReadonlyMap<string, InserterClock>,
 ): TrialRun {
+    const window_cycle_ticks = windowCycleTicks(window_cycle);
+    if (typeof window_cycle !== "number") options = { ...options, exact_window_cycle: window_cycle };
     return trialRunOf(clockBuildRun(config, windows, window_cycle_ticks, logger, options, fuel_clocks));
 }
 
@@ -1122,7 +1124,7 @@ export function startShiftsOf(window_cycle_ticks: number, counter: SubtickWindow
 export function runAsBuiltCheck(
     config: Config,
     decider_windows: Map<string, OpenRange[]>,
-    window_cycle_ticks: number,
+    window_cycle: WindowCycle,
     logger: Logger,
     start_phases: number = AS_BUILT_START_PHASES,
     report?: (checked: number, total: number) => void,
@@ -1149,6 +1151,8 @@ export function runAsBuiltCheck(
      */
     through: "long-run" | "starts" = "starts",
 ): AsBuiltRun {
+    const window_cycle_ticks = windowCycleTicks(window_cycle);
+    if (typeof window_cycle !== "number") swings = { ...swings, exact_window_cycle: window_cycle };
     // the drills into chests run on the windows made from their takers' in these windows, as the export gives them
     decider_windows = withChestDrillWindows(config, decider_windows, window_cycle_ticks);
     const counter = wholeCounterOf(window_cycle_ticks, swings.exact_window_cycle);
@@ -1578,7 +1582,7 @@ function placedOutOfLoopWindows(
 export function trialWithLoopWindows(
     config: Config,
     windows: Map<string, OpenRange[]>,
-    window_cycle_ticks: number,
+    window_cycle: WindowCycle,
     run: { check: AsBuiltStabilityCheck; stock?: StockRecording },
     start_phases: number,
     logger: Logger,
@@ -1597,6 +1601,8 @@ export function trialWithLoopWindows(
     loop_windows: NonNullable<BlueprintGenerationResult["loop_windows"]>;
     item_names: Map<string, string>;
 } | null {
+    const window_cycle_ticks = windowCycleTicks(window_cycle);
+    if (typeof window_cycle !== "number") swings = { ...swings, exact_window_cycle: window_cycle };
     if (run.stock === undefined) {
         return null;
     }
@@ -1604,7 +1610,7 @@ export function trialWithLoopWindows(
     // `checkedClock`) by the windows' own check holding from every start phase it runs
     const passesAsBefore = (check: AsBuiltStabilityCheck) => check.holds && check.failed_start_offset === undefined
         && (!run.check.holds || check.start_phases_checked === run.check.start_phases_checked);
-    const checkOf = (candidate: Map<string, OpenRange[]>, what: string) => runAsBuiltCheck(config, candidate, window_cycle_ticks, logger, start_phases,
+    const checkOf = (candidate: Map<string, OpenRange[]>, what: string) => runAsBuiltCheck(config, candidate, window_cycle, logger, start_phases,
         (n, total) => report?.(`Checking the enable windows ${what}, clock start ${n}/${total}`), LOOP_WINDOW_CHECK_TICKS, undefined, pickup_phase_cycles, "wake-ups", swings);
     let kept: (AsBuiltRun & { windows: Map<string, OpenRange[]>; item_names: Map<string, string>; in_loop_ids: string[] }) | null = null;
     const out_of_loop = placedOutOfLoopWindows(config, windows, loopInserterWindows(config, window_cycle_ticks, run.stock, logger),
@@ -1678,7 +1684,7 @@ export function loopWindowsMargin(
 ): string | null {
     // the alternatives that make the same clock more than once judge its windows once
     const memo = currentRunMemo();
-    const key = memo === undefined ? null : canonicalKey([config, swings.fractional_swings === true, window_cycle_ticks, pickup_phase_cycles, inserter_ids,
+    const key = memo === undefined ? null : canonicalKey([config, swings.fractional_swings === true, swings.exact_window_cycle ?? window_cycle_ticks, pickup_phase_cycles, inserter_ids,
         Array.from(windows, ([id, ranges]) => [id, ranges.map(range => [range.start_inclusive, range.end_inclusive])])]);
     return memo === undefined || key === null ? marginOfLoopWindows(config, windows, inserter_ids, window_cycle_ticks, logger, pickup_phase_cycles, swings)
         : memo.judgement(key, () => marginOfLoopWindows(config, windows, inserter_ids, window_cycle_ticks, logger, pickup_phase_cycles, swings));
@@ -1758,11 +1764,11 @@ export function laneHandRoomTrial(
     swings: FractionalSwings = {},
 ): LaneHandRoomDecision {
     // a fractional window cycle with no subtick clock gets no room (withWindowsLengthened): nothing to decide
-    if (Array.from(room.values()).every(ticks => ticks === 0) || positionStep(window_cycle_ticks) === null) {
+    if (Array.from(room.values()).every(ticks => ticks === 0) || positionStep(swings.exact_window_cycle ?? window_cycle_ticks) === null) {
         return { helps: true, verified: null };
     }
     const base_config: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false } };
-    const with_room_windows = withWindowsLengthened(windows, room, window_cycle_ticks);
+    const with_room_windows = withWindowsLengthened(windows, room, swings.exact_window_cycle ?? window_cycle_ticks);
     const check = (checked: Map<string, OpenRange[]>) => runAsBuiltCheck(base_config, checked, window_cycle_ticks, logger, AS_BUILT_START_PHASES, undefined,
         FREE_RUNNING_CHECK_TICKS, undefined, false, "loop-windows", swings);
     // on a p/q-tick window cycle the room is added only where the clock does not hold without it: its windows were held
@@ -2046,9 +2052,10 @@ export function roundedClockTrial(
 export function withSettledOutput(
     planned_on: Config,
     result: BlueprintGenerationResult,
-    window_cycle_ticks: number,
+    window_cycle: WindowCycle,
     logger: Logger,
 ): BlueprintGenerationResult {
+    const window_cycle_ticks = windowCycleTicks(window_cycle);
     const { as_built } = result.stability_check;
     if (as_built === undefined || as_built.first_check_failed !== true) {
         return result;
@@ -2059,7 +2066,7 @@ export function withSettledOutput(
     try {
         const planning = verificationPlanningConfigOf(planned_on, result);
         const config = { ...planning, overrides: { ...planning.overrides, derive_clock_windows: false } };
-        const swings = fractionalSwingsOf(result.output_cycle_plan, result.simulation_duration.exact_ticks);
+        const swings = fractionalSwingsOf(result.output_cycle_plan, typeof window_cycle === "number" ? undefined : window_cycle);
         const windows = withChestDrillWindows(config, new Map(Object.entries(result.clock_windows).map(([entity_id, ranges]) =>
             [entity_id, ranges.map(range => OpenRange.from(range.start, range.end))] as const)), window_cycle_ticks);
         const long_run = longRunOfFreeRunningBuild(config, windows, window_cycle_ticks, result.stability_check.expected_output_items, quietLogger(logger), FREE_RUNNING_CHECK_TICKS, swings, "hands");

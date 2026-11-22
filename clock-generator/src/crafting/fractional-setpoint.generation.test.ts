@@ -1,8 +1,11 @@
 import { expect, it, vi } from "vitest";
+import { automationRow } from "../../tests/configs/automation-row";
 import { gearSetpoint } from "../../tests/configs/fractional-setpoint";
+import { OpenRange } from "../data-types";
 import { ratioOf } from "../entities/traits/ratio";
 import { generateClockAlternatives } from "./alternatives";
 import { quiet } from "./generate-blueprint-test-helpers";
+import { copyLaneTakes, sharedLaneRunsOf } from "./shared-lane-verdict";
 
 it("generates one output hand per 105/4 ticks at the entered gear setpoint", () => {
     const result = generateClockAlternatives(gearSetpoint(), { logger: quiet });
@@ -25,12 +28,18 @@ it("keeps the exact period for every candidate, trial and installed clock before
     const exact = { numerator: 10_499_999_999, denominator: 100_000_000 };
     const ticks = exact.numerator / exact.denominator;
     // The generation project loads the CommonJS build. Observe its clock decisions through the full alternatives run.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const clocks: typeof import("../common/subtick-window-cycle") = require("../../dist/common/subtick-window-cycle");
     const counter = vi.spyOn(clocks, "subtickClockForWindowCycle");
     try {
         const result = generateClockAlternatives(gearSetpoint({ numerator: 24_000_000_000, denominator: exact.numerator }, 4), { logger: quiet });
+        const planned_calls = counter.mock.calls.filter(([value]) => value === ticks).length;
+        expect(planned_calls).toBeGreaterThan(0);
+        const row = automationRow({ machines: 1, pitch: 9, copies: 2, copy_offset: { x: 9, y: 0 }, items_per_second: 2 });
+        const { under, layouts } = sharedLaneRunsOf(row).readings[0];
+        copyLaneTakes(under, new Map([["inserter:1", [OpenRange.from(1, 24)]]]), exact, layouts[0], 1, quiet);
         const choices = counter.mock.calls.flatMap(([value, pair], index) => value === ticks ? [{ pair, decision: counter.mock.results[index].value }] : []);
-        expect(choices.length).toBeGreaterThan(0);
+        expect(choices.length).toBeGreaterThan(planned_calls);
         expect(choices.every(choice => choice.decision === null && choice.pair?.numerator === exact.numerator
             && choice.pair.denominator === exact.denominator)).toBe(true);
         for (const alternative of result.alternatives) {

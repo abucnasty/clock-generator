@@ -1,3 +1,4 @@
+import { type WindowCycle } from "../../common/subtick-window-cycle";
 import { Config } from "../../config";
 import { OpenRange } from "../../data-types";
 import { EntityId } from "../../entities";
@@ -148,11 +149,11 @@ export function search<C, Q extends QuickTrial, R>(it: Search<C, Q, R>): SearchR
  * in the game on automation science; the dozen phases keep every clock the game has confirmed, at more runs on the
  * full-hand search, whose scan had used one run.
  */
-export function quickTrial(config: Config, windows: Map<string, OpenRange[]>, window_cycle_ticks: number, logger: Logger,
+export function quickTrial(config: Config, windows: Map<string, OpenRange[]>, window_cycle: WindowCycle, logger: Logger,
     /** Judge each lane-phase start over its repeating cycle (see runAsBuiltCheck): observed windows do */
     pickup_phase_cycles: boolean = false,
 ): QuickTrial & { result: TrialRun; run: AsBuiltRun } {
-    const run = withTickPurpose("quick_trial", () => runAsBuiltCheck(config, windows, window_cycle_ticks, logger, AS_BUILT_START_PHASES, undefined, 0, undefined, pickup_phase_cycles), { claim: true });
+    const run = withTickPurpose("quick_trial", () => runAsBuiltCheck(config, windows, window_cycle, logger, AS_BUILT_START_PHASES, undefined, 0, undefined, pickup_phase_cycles), { claim: true });
     return { holds: run.check.holds, result: run.result, run };
 }
 
@@ -168,13 +169,13 @@ export interface Confirmed {
  * which the quick trial's dozen phases are the first of. Null when it fails. `label` names the candidate in the
  * progress shown.
  */
-export function confirm(config: Config, windows: Map<string, OpenRange[]>, window_cycle_ticks: number, logger: Logger, label: string, report?: (detail: string) => void,
+export function confirm(config: Config, windows: Map<string, OpenRange[]>, window_cycle: WindowCycle, logger: Logger, label: string, report?: (detail: string) => void,
     /** The quick trial that passed on exactly these windows, whose unshifted run and pickup phase starts the confirmation takes over */
     passed?: AsBuiltRun,
     /** Judge each lane-phase start over its repeating cycle (see runAsBuiltCheck), as the quick trial did */
     pickup_phase_cycles: boolean = false,
 ): Confirmed | null {
-    const full = runAsBuiltCheck(config, windows, window_cycle_ticks, logger, FULL_CHECK_START_PHASES,
+    const full = runAsBuiltCheck(config, windows, window_cycle, logger, FULL_CHECK_START_PHASES,
         (n, total) => report?.(`Confirming ${label}, clock start ${n}/${total}`), undefined,
         passed === undefined ? undefined : { run: passed, long_run_ticks: 0 }, pickup_phase_cycles);
     logger.log(`Search: ${label} confirmed from ${full.check.start_phases_checked} start phases -> stable=${full.check.holds}`);

@@ -1055,6 +1055,7 @@ function runAlternativeOf(
         start_dependence: StartDependence | null;
         /** The ticks of a window cycle it is run at */
         clock_window_cycle: number;
+        exact_window_cycle?: BlueprintGenerationResult["simulation_duration"]["exact_ticks"];
     }
     /** The stability check of a trial with its output as the clock is listed by (see `withSettledOutput`), made once per trial */
     const settled_checks = new Map<SimulationStabilityCheck, Map<number, SimulationStabilityCheck>>();
@@ -1063,7 +1064,7 @@ function runAlternativeOf(
         const by_window_cycle = settled_checks.get(check) ?? new Map<number, SimulationStabilityCheck>();
         settled_checks.set(check, by_window_cycle);
         if (!by_window_cycle.has(trial.clock_window_cycle)) {
-            by_window_cycle.set(trial.clock_window_cycle, withSettledOutput(used.planned_on ?? config, trial.result, trial.clock_window_cycle, logger).stability_check);
+            by_window_cycle.set(trial.clock_window_cycle, withSettledOutput(used.planned_on ?? config, trial.result, trial.exact_window_cycle ?? trial.clock_window_cycle, logger).stability_check);
         }
         return by_window_cycle.get(trial.clock_window_cycle)!;
     };
@@ -1081,7 +1082,7 @@ function runAlternativeOf(
                     { ...(used.planned_on ?? config), overrides: { ...(used.planned_on ?? config).overrides, terminal_swing_count: trial.result.used_terminal_swing_count } },
                     trial.result.clock_windows, trial.clock_window_cycle, expected_output_items,
                     exact && trial.result.loop_windows !== undefined ? LOOP_WINDOW_CHECK_TICKS : FREE_RUNNING_CHECK_TICKS, logger,
-                    fractionalSwingsOf(trial.result.output_cycle_plan, trial.clock_window_cycle === trial.result.simulation_duration.ticks ? trial.result.simulation_duration.exact_ticks : undefined));
+                    fractionalSwingsOf(trial.result.output_cycle_plan, trial.exact_window_cycle));
             } catch (error) {
                 logger.log(`Clock "${label}" could not be started from other places: ${error instanceof Error ? error.message : String(error)}`);
                 made = null;
@@ -1106,7 +1107,7 @@ function runAlternativeOf(
         if (!verdicts_with_copies_of.has(trial)) {
             const on = used.planned_on ?? config;
             verdicts_with_copies_of.set(trial, verdictWithCopies({ config: { ...on, overrides: { ...on.overrides, terminal_swing_count: trial.result.used_terminal_swing_count } },
-                windows: trial.result.clock_windows, window_cycle_ticks: trial.clock_window_cycle, expected_output_items: trial.result.stability_check.expected_output_items },
+                windows: trial.result.clock_windows, window_cycle_ticks: trial.exact_window_cycle ?? trial.clock_window_cycle, expected_output_items: trial.result.stability_check.expected_output_items },
             () => trial.loss.disturbance_trial?.survives === true, config.overrides?.disturbance_trials_on_copies !== false, label, logger));
         }
         return verdicts_with_copies_of.get(trial)!;
@@ -1127,7 +1128,7 @@ function runAlternativeOf(
             let fewer: ReturnType<typeof fewerCopiesThatHold> = null;
             if (judgement !== null && judgement.losses.length > 0) {
                 try {
-                    fewer = timedCheck("fewer_copies", () => withTickPurpose("fewer_copies", () => fewerCopiesThatHold(with_swings, trial.result.clock_windows, trial.clock_window_cycle, logger, undefined, buildFeeders()), { claim: true }));
+                    fewer = timedCheck("fewer_copies", () => withTickPurpose("fewer_copies", () => fewerCopiesThatHold(with_swings, trial.result.clock_windows, trial.exact_window_cycle ?? trial.clock_window_cycle, logger, undefined, buildFeeders()), { claim: true }));
                 } catch (error) {
                     if (isInternalError(error)) throw error;
                     logger.warn(`Clock "${label}": the runs with fewer copies on the shared lanes could not be made: ${error instanceof Error ? error.message : String(error)}`);
@@ -1205,7 +1206,7 @@ function runAlternativeOf(
             noteClockRun(clock.result, { config: { ...planned_on, overrides: { ...planned_on.overrides, terminal_swing_count: tried_as.result.used_terminal_swing_count } },
                 windows: tried_as.result.clock_windows, window_cycle_ticks: tried_as.clock_window_cycle, expected_output_items,
                 long_run_ticks: tried_as === exact_trial && tried_as.result.loop_windows !== undefined ? LOOP_WINDOW_CHECK_TICKS : FREE_RUNNING_CHECK_TICKS,
-                swings: fractionalSwingsOf(tried_as.result.output_cycle_plan, tried_as.clock_window_cycle === tried_as.result.simulation_duration.ticks ? tried_as.result.simulation_duration.exact_ticks : undefined) });
+                swings: fractionalSwingsOf(tried_as.result.output_cycle_plan, tried_as.exact_window_cycle) });
         }
         const ranking = rankingOf(clock, config);
         // where its wake-ups decide the selection, a clock of a build with a loop, whose wake-ups depend on how it starts, is ranked by their mean
@@ -1221,7 +1222,7 @@ function runAlternativeOf(
             insights: withWakeUpsFromStarts(clock.insights, from_starts) };
         return { ...with_mean, ranking: rankingOf(with_mean, config) };
     };
-    const exact_trial: Trial = { result, held, loss, start_dependence, clock_window_cycle: window_cycle_ticks };
+    const exact_trial: Trial = { result, held, loss, start_dependence, clock_window_cycle: window_cycle_ticks, exact_window_cycle: result.simulation_duration.exact_ticks };
     const exact = alternativeOf(exact_trial, { id, label, description_suffix: "", result });
     logger.log(`Clock "${label}": windows=${inserter_window_count} verdict=${exact.verdict} stable=${disturbance_trial?.survives ?? "not tried"} as-built=${as_built?.actual_output_items}/${expected_output_items} planned=${actual_output_items} belt=${clockBeltLabel(belt) || "none"}`);
     if (result.simulation_duration.exact_ticks ? result.simulation_duration.exact_ticks.denominator === 1 : Number.isInteger(window_cycle_ticks)) {
@@ -1269,7 +1270,7 @@ function runAlternativeOf(
     if (rounded_trial !== null) {
         logger.log(`Clock "${label}" rounded to ${rounded_ticks} ticks (runs ${fast}): holds=${rounded_trial.held} stable=${rounded_trial.loss.disturbance_trial?.survives ?? "not tried"}`);
     }
-    return { signature, alternatives: [alternativeOf(rounded_trial ?? { ...exact_trial, clock_window_cycle: rounded_ticks }, {
+    return { signature, alternatives: [alternativeOf(rounded_trial ?? { ...exact_trial, clock_window_cycle: rounded_ticks, exact_window_cycle: undefined }, {
         id,
         label: `${label} (rounded to ${rounded_ticks} ticks, ${fast})`,
         listing: { rounded: { window_cycle_ticks: rounded_ticks, runs_fast } },

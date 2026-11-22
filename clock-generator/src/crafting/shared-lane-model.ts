@@ -1,3 +1,4 @@
+import { type WindowCycle } from "../common/subtick-window-cycle";
 import assert from "../common/assert";
 import { pickupLaneLength } from "../common/belt-pickup-layout";
 import { Config } from "../config";
@@ -434,7 +435,7 @@ export function installSharedLanes(context: SimulationContext, config: Config, r
 export function runOnSharedLanes(
     config: Config,
     windows: Map<string, OpenRange[]>,
-    window_cycle_ticks: number,
+    window_cycle: WindowCycle,
     layout: SharedLaneLayout,
     window_cycles: number,
     logger: Logger,
@@ -445,7 +446,7 @@ export function runOnSharedLanes(
     const copies: CopiesOnSharedLanes = { lanes: [] };
     // the copies run without the outside supply (its feeders are the rows' entries, laid out once for the row)
     const clocked = withoutOutsideSupply(config);
-    const run = runClockOnBuild({ ...clocked, overrides: { ...clocked.overrides, derive_clock_windows: false } }, windows, window_cycle_ticks, logger, {
+    const run = runClockOnBuild({ ...clocked, overrides: { ...clocked.overrides, derive_clock_windows: false } }, windows, window_cycle, logger, {
         simulate_window_cycles: window_cycles, record_histories: false, factorio_states: false, build_copies: layout.copies,
         shared_lanes: copies,
         ...(disturbance_trial !== undefined && { disturbance_trial: { ...disturbance_trial, copies } }),

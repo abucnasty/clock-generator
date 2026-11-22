@@ -1,3 +1,4 @@
+import type { WindowCycle } from "../common/subtick-window-cycle";
 /**
  * A clock's verdict with the copies that share a lane (docs/stability.md, "Copies that share a lane"): the check of the lanes
  * the copies share, then the disturbance trials on the copies. One function, so that a maker that judges a clock before it is
@@ -60,7 +61,7 @@ export interface ClockOnCopies {
     config: Config;
     windows: SerializableClockWindows;
     /** The ticks of the window cycle it runs at */
-    window_cycle_ticks: number;
+    window_cycle_ticks: WindowCycle;
     /** Items one copy is expected to move a window cycle */
     expected_output_items: number;
 }
@@ -68,8 +69,8 @@ export interface ClockOnCopies {
 /** The checks a verdict with the copies makes: the generator's by default (`judgeSharedLanes`, `copiesDisturbanceTrial`), a test's own */
 export interface CopiesChecks {
     /** `for_log`: the maker log asks for the facts of the lanes beside the judgement (`SharedLaneJudgement.for_log`) */
-    sharedLanes(config: Config, windows: SerializableClockWindows, window_cycle_ticks: number, logger: Logger, options?: { for_log?: boolean }): SharedLaneJudgement;
-    trials(config: Config, windows: SerializableClockWindows, window_cycle_ticks: number, expected_output_items: number, logger: Logger): CopiesTrialVerdict | null;
+    sharedLanes(config: Config, windows: SerializableClockWindows, window_cycle_ticks: WindowCycle, logger: Logger, options?: { for_log?: boolean }): SharedLaneJudgement;
+    trials(config: Config, windows: SerializableClockWindows, window_cycle_ticks: WindowCycle, expected_output_items: number, logger: Logger): CopiesTrialVerdict | null;
 }
 
 /** The feeders of the lanes of the build the generation that is running was given (`withBuildFeeders`) */

@@ -1,5 +1,5 @@
 import { compareRateToCapacity, composedPeriod, periodAtLimit, rateText } from "../../config/setpoint-rate";
-import { ratioOf, type Ratio } from "../../entities/traits/ratio";
+import { fractionOf, ratioOf, type Ratio } from "../../entities/traits/ratio";
 import { BuildCopies, twinOf } from "../sequence/build-copies";
 import { ClockWindowCycleLimitError, SIMULATION_BUDGET_TICKS, type SwingWindowCyclePruning } from "./clock-window-cycle-limit";
 import { assertOutputTransferGenerationSupported } from "../../config/output-transfer-generation";
@@ -1210,10 +1210,10 @@ function runWindowCyclesOf(output_cycle_plan: OutputCyclePlan, recipe_lcm: numbe
     overLimit: (window_cycle_ticks: number) => ClockWindowCycleLimitError): RunWindowCycles {
     const override = options.window_cycle_ticks ?? options.timeline_recording?.window_cycle_ticks;
     const exact = output_cycle_plan.production_rate.exact_setpoint;
-    const period = exact && override === undefined ? composedPeriod(output_cycle_plan.total_duration_ticks, recipe_lcm, exact) : undefined;
+    const period = options.exact_window_cycle ? fractionOf(options.exact_window_cycle)
+        : exact && override === undefined ? composedPeriod(output_cycle_plan.total_duration_ticks, recipe_lcm, exact) : undefined;
     const duration = Duration.ofTicks(override ?? period?.toDecimal() ?? OutputCyclePlan.ticksOfCycles(output_cycle_plan, recipe_lcm));
     if (period) duration.exact_ticks = ratioOf(period);
-    else if (options.exact_window_cycle) duration.exact_ticks = options.exact_window_cycle;
     const over_limit = period ? periodAtLimit(period, SIMULATION_BUDGET_TICKS, true) : duration.ticks >= SIMULATION_BUDGET_TICKS;
     if (Number.isFinite(duration.ticks) && duration.ticks > 0 && over_limit) throw overLimit(duration.ticks);
     assert(Number.isFinite(duration.ticks) && duration.ticks > 0 && !over_limit, `Window cycle time of ${duration.ticks} ticks exceeds maximum allowed ${SIMULATION_BUDGET_TICKS} ticks`);
@@ -1806,6 +1806,7 @@ export function clockOfWindows(
     options: Pick<GenerateClockOptions, "lane_hand_room" | "fuel_hand_room"> = {},
 ): PlannedClock {
     const { config, logger, run: { simulation_context, duration, total_expected_output } } = plan;
+    const window_cycle = duration.exact_ticks ?? duration.ticks;
     const full_lane_hand_room = laneHandRoomTicks(simulation_context.entity_registry);
     // on a window cycle of part ticks the room is added only where the clock does not hold without it, asked for always or not
     const asked = options.lane_hand_room ?? "trial";
@@ -1824,7 +1825,7 @@ export function clockOfWindows(
     // where a lane has backpressure every window of an inserter that takes from it lasts as long as a hand takes from the
     // lanes at rest at the belt's speed, and the room for one more hand is added after that.
     const backpressure_hand_ticks = backpressureHandTicks(simulation_context.entity_registry);
-    const base_windows = withWindowsAtLeast(withWindowsLengthened(unslacked_windows, fuel_hand_room, duration.ticks), backpressure_hand_ticks, duration.ticks);
+    const base_windows = withWindowsAtLeast(withWindowsLengthened(unslacked_windows, fuel_hand_room, window_cycle), backpressure_hand_ticks, window_cycle);
     const trial = mode === "trial"
         ? laneHandRoomTrial(config, base_windows, full_lane_hand_room, duration.ticks, total_expected_output, logger,
             fractionalSwingsOf(plan.run.output_cycle_plan, plan.run.duration.exact_ticks))
@@ -1834,7 +1835,7 @@ export function clockOfWindows(
     const belt = clockBeltOf(config, simulation_context.entity_registry, unslacked_windows);
     // the trial already checked the windows with the room: its run is handed over, with the exact map it ran on
     const verified = use_lane_hand_room ? trial?.verified ?? null : null;
-    const windows = verified !== null ? verified.windows : withWindowsLengthened(base_windows, added, duration.ticks);
+    const windows = verified !== null ? verified.windows : withWindowsLengthened(base_windows, added, window_cycle);
     // the room the windows have, added after them or inside them already
     const lane_hand_room = inside ?? added;
     // the windows that carry a result that comes by chance get room for its spread (a target that counts an item destroyed)
@@ -2137,6 +2138,7 @@ export function checkedClock(
     } = {},
 ): BlueprintGenerationResult {
     const { config, logger, run: { stability_check, total_expected_output, duration, output_cycle_plan } } = plan;
+    const window_cycle = duration.exact_ticks ?? duration.ticks;
     const swings = fractionalSwingsOf(output_cycle_plan, duration.exact_ticks);
     const long_run_ticks = longRunTicksOf(plan);
     let clock_only_run: ClockOnlyRun | undefined;
@@ -2145,7 +2147,7 @@ export function checkedClock(
     if (options.verify_as_built ?? false) {
         // the identical check may have run for the room's trial on exactly these windows (see clockOfPlan)
         const as_built_run = clock.as_built_run !== null && windows === clock.windows ? clock.as_built_run
-            : runAsBuiltCheck(config, windows, duration.ticks, logger, AS_BUILT_START_PHASES,
+            : runAsBuiltCheck(config, windows, window_cycle, logger, AS_BUILT_START_PHASES,
                 (n, total) => options.on_progress_detail?.(`Checking clock-only output, clock start ${n}/${total}`),
                 long_run_ticks,
                 // a confirmed search pick ran the same unshifted run, pickup phase starts and long run on these windows
@@ -2155,7 +2157,7 @@ export function checkedClock(
         let kept_run = as_built_run;
         // also where the clock does not hold without them: the windows of a loop can make it hold
         if (options.loop_windows !== false) {
-            const looped = trialWithLoopWindows(config, windows, duration.ticks, as_built_run, AS_BUILT_START_PHASES, logger, options.on_progress_detail,
+            const looped = trialWithLoopWindows(config, windows, window_cycle, as_built_run, AS_BUILT_START_PHASES, logger, options.on_progress_detail,
                 false, options.loop_windows !== "out-of-loop", swings);
             if (looped !== null) {
                 kept_run = looped;
