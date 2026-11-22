@@ -125,7 +125,7 @@ export function SetpointForm({
                     freeSolo
                 />
                 <SetpointRateField value={itemsPerSecond} copies={copies} onChange={onItemsPerSecondChange}
-                    capacityProblem={targetRateLineOf({ itemsPerSecond, copies, max: machinesMax, counts })} />
+                    capacity_problem={targetRateLineOf({ itemsPerSecond, copies, max: machinesMax, counts })} />
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
                     <TextField select size="small" fullWidth label={COUNTS_TEXT.label} value={counts}
                         onChange={(event) => onCountsChange(event.target.value as TargetCounts)} sx={{ minWidth: 0 }}>

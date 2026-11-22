@@ -55,8 +55,8 @@ function readRate(text: string): ReadRate {
 }
 
 /** The draft stays in the field. The form holds its parsed value or its existing incomplete value, zero. */
-export function SetpointRateField({ value, copies, onChange, capacityProblem }: {
-    value: SetpointRate; copies: number; onChange: (value: SetpointRate) => void; capacityProblem: string | null;
+export function SetpointRateField({ value, copies, onChange, capacity_problem }: {
+    value: SetpointRate; copies: number; onChange: (value: SetpointRate) => void; capacity_problem: string | null;
 }) {
     const [draft, setDraft] = useState<{ text: string; key: string; committed: boolean } | null>(null);
     const current = draft?.key === rateText(value) ? draft : null;
@@ -66,7 +66,7 @@ export function SetpointRateField({ value, copies, onChange, capacityProblem }: 
     if (typeof value !== 'number' && !copiesProblem(copies)) {
         try { exactRateUnits(value, copies); } catch { problem = RATE_PRECISION_ERROR; }
     }
-    problem ??= capacityProblem;
+    problem ??= capacity_problem;
     const update = (next: string, commit: boolean) => {
         const result = readRate(next);
         const rate = 'value' in result ? result.value : 0;
