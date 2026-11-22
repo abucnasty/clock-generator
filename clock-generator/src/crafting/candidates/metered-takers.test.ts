@@ -55,6 +55,18 @@ describe("the metered takers maker", () => {
 const utility = () => loadConfigFromFile(path.join(__dirname, "../fixtures/utility-science-320-metered-takers.json"));
 
 describe("metered taker window bounds", () => {
+    it.each([
+        { id: 6, stack_size: 8, rate: 320, cause: "overlap" }, // [72,73] coincides with taker 9
+        { id: 5, stack_size: 1, rate: 270, cause: "return" }, // a last-tick fill needs 8 more ticks, the cadence is 8
+    ])("refuses an unproved $cause bound on a changed utility route", async ({ id, stack_size, rate, cause }) => {
+        const config = await utility();
+        config.overrides = { ...config.overrides, terminal_swing_count: 6, lcm: 1 };
+        config.setpoint.items_per_second = rate;
+        config.inserters.find(it => it.id === id)!.stack_size = stack_size;
+        const error = refusalOf(() => meteredTakersClock(config, quiet));
+        expect(reasonOfError(error)).toEqual({ code: "metered_window_unproved", inserter: id, cause });
+    });
+
     it("refuses a taker that is set to always enabled", async () => {
         const config = await utility();
         const inserter = config.inserters.find(it => it.id === 5)!;
