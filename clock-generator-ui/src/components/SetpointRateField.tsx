@@ -8,6 +8,18 @@ import { NUMBER_FIELD_INPUT_FORMAT } from '../utils/numberText';
 const format = new Intl.NumberFormat(undefined, NUMBER_FIELD_INPUT_FORMAT);
 const decimal = format.formatToParts(0.5).find(part => part.type === 'decimal')?.value ?? '.';
 const digits = Array.from({ length: 10 }, (_, index) => format.format(index));
+const numericDigits = new Map(digits.map((digit, index) => [digit, String(index)]));
+for (const system of ['０１２３４５６７８９', '٠١٢٣٤٥٦٧٨٩', '۰۱۲۳۴۵۶۷۸۹', '零一二三四五六七八九']) {
+    [...system].forEach((digit, index) => numericDigits.set(digit, String(index)));
+}
+numericDigits.set('〇', '0');
+
+/** Accept the numeral systems and punctuation of the numeric field before checking the complete token. */
+function numericToken(text: string): string {
+    return [...text].map(digit => numericDigits.get(digit) ?? digit).join('')
+        .replace(/\p{Cf}/gu, '').replace(/[−－‒–—﹣]/g, '-').replace(/[＋﹢]/g, '+')
+        .replace(/[٫．]/g, '.').replace(decimal, '.');
+}
 type ReadRate = { value: SetpointRate } | { error: string };
 
 function operand(text: string, name: string): number | string {
@@ -30,7 +42,7 @@ function readRate(text: string): ReadRate {
         const reduced = fraction(n, d);
         return { value: { numerator: reduced.getNumerator, denominator: reduced.getDenominator } };
     }
-    const token = normalized.replace(decimal, '.');
+    const token = numericToken(normalized);
     if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(token)) return { error: 'Enter a whole number, decimal or fraction.' };
     const value = Number(token);
     if (!Number.isFinite(value)) return { error: 'Enter a finite rate.' };
@@ -45,7 +57,7 @@ export function SetpointRateField({ value, copies, onChange, capacityProblem }: 
     const current = draft?.key === rateText(value) ? draft : null;
     const text = current?.text ?? (typeof value === 'number' ? format.format(value) : rateText(value));
     const parsed = readRate(text);
-    let problem = current?.committed && 'error' in parsed ? parsed.error : null;
+    let problem = (!current || current.committed) && 'error' in parsed ? parsed.error : null;
     if (typeof value !== 'number' && !copiesProblem(copies)) {
         try { exactRateUnits(value, copies); } catch { problem = RATE_PRECISION_ERROR; }
     }

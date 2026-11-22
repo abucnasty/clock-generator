@@ -173,7 +173,7 @@ describe('the gap between copies', () => {
 
 it('keeps slash entry editable and commits its reduced total independently of Copies', async () => {
     function Editor() {
-        const [rate, setRate] = useState<Props['itemsPerSecond']>(2);
+        const [rate, setRate] = useState<Props['itemsPerSecond']>(3);
         const [copies, setCopies] = useState(1);
         return <SetpointForm {...props} itemsPerSecond={rate} copies={copies} onCopiesChange={setCopies} onItemsPerSecondChange={setRate} />;
     }
@@ -217,12 +217,17 @@ it.each(['', '0', '-1', 'NaN', 'Infinity', '1/0', '1/-3', '1/2/3', '16/7 items/s
 it.each([['2', 2], ['2.5', 2.5], ['２．５', 2.5], ['٢٫٥', 2.5], ['＋۲٫۵', 2.5], ['二.五', 2.5], ['000000000000000016 / 0008', { numerator: 2, denominator: 1 }]] as const)(
     'commits the wire type entered (%s)', async (text, expected) => {
         const changed = vi.fn();
-        const { user } = form({ onItemsPerSecondChange: changed });
+        function Editor() {
+            const [rate, setRate] = useState<Props['itemsPerSecond']>(3);
+            return <SetpointForm {...props} itemsPerSecond={rate} onItemsPerSecondChange={next => { setRate(next); changed(next); }} />;
+        }
+        const { user } = show(<Editor />);
         const field = screen.getByRole<HTMLInputElement>('textbox', { name: 'Items per Second' });
-        // Controlled form: paste replaces the entire selected value in one edit.
         await user.click(field);
         await user.keyboard('{Control>}a{/Control}');
         await user.paste(text);
+        await user.tab();
+        expect(field.getAttribute('aria-invalid')).toBe('false');
         expect(changed).toHaveBeenLastCalledWith(expected);
     });
 
