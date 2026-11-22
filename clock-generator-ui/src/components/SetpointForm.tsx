@@ -102,7 +102,7 @@ export function SetpointForm({
         <Paper component="section" variant="outlined" data-build-anchor="target" aria-labelledby={SETPOINT_HEADING_ID}
             sx={{ mb: 2, p: 1.5, containerType: 'inline-size', containerName: 'setpoint' }}>
             <Box sx={{ display: 'grid', gap: 1.5, alignItems: 'start', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
-                '@container setpoint (min-width: 820px)': { gridTemplateColumns: 'auto minmax(0, 1fr) 168px 200px 110px', alignItems: 'center' } }}>
+                '@container setpoint (min-width: 820px)': { gridTemplateColumns: 'auto minmax(0, 1fr) 168px 200px 110px' } }}>
                 <Typography component="h2" variant="subtitle1" id={SETPOINT_HEADING_ID} tabIndex={-1}
                     sx={{ fontWeight: 600, gridColumn: '1 / -1', '@container setpoint (min-width: 820px)': { gridColumn: 'auto' } }}>Setpoint</Typography>
                 <ItemSelector
