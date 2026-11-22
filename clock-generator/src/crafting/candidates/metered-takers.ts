@@ -1,9 +1,10 @@
 import { OpenRange } from "../../data-types";
-import { Entity, EntityId, Inserter, Machine } from "../../entities";
+import { Entity, EntityId, handSizeFor, Inserter, Machine } from "../../entities";
+import { fullHandOf } from "../../entities/traits/hand";
 import type { Config } from "../../config";
 import { BlueprintGenerationResult, unclockedRun, type UnclockedRun } from "../plan/unclocked-run";
 import { clockFromWindows } from "../trial";
-import { marginFailureOf, marginReasonOf, marginText } from "./round-robin-polling";
+import { MARGIN_SHIFT_TICKS, marginFailureOf, marginReasonOf, marginText } from "./round-robin-polling";
 import { withSecondaryPlanningProvenance } from "../round-robin-polling-primitive-policy";
 import { targetItemOf, targetMachinesOf } from "../sequence/cycle/target-ends";
 import { CodedError, reasonOf } from "../maker-log";
@@ -11,7 +12,7 @@ import type { Logger } from "../../common/logger";
 
 /**
  * Metered takers: where one machine hands an ingredient to two or more of the machines that make the target, only those
- * takers are clocked. Each takes one hand in a window of `METERED_TAKERS_WINDOW_TICKS` ticks, its windows a hand's share of
+ * takers are clocked. Each opens for a full pickup and the following swing entry, its windows a hand's share of
  * the window cycle apart, and the takers of one source open in turn, a share of that apart. Every other inserter and drill
  * has one window of the whole cycle: it is always enabled, and the insertion limits and output blocks meter it.
  * The window cycle is the plan's at the smallest output swing count (on a recipe LCM of 1) where each taker moves whole
@@ -19,8 +20,6 @@ import type { Logger } from "../../common/logger";
  * whose windows fail the as-built check or the margin check is refused, and the next count is tried.
  */
 const MAX_SWINGS = 12;
-/** The length of each taker's window, in ticks */
-export const METERED_TAKERS_WINDOW_TICKS = 4;
 
 interface Taker { inserter: Inserter; source: string; sink: Machine; item: string }
 
@@ -55,13 +54,96 @@ function wholeHands(plan: UnclockedRun, taker: Taker): number | null {
     return hands;
 }
 
+function unproved(taker: Taker, cause: string, why: string): CodedError {
+    const inserter = taker.inserter.entity_id.number;
+    return new CodedError(`cannot bound the enable windows of inserter ${inserter}: ${why}`,
+        reasonOf("metered_window_unproved", { inserter, cause }));
+}
+
+/** The direct machine ports must move the planned item and whole hand under the taker's own window. */
+function checkRoutes(plan: UnclockedRun, takers: Taker[]): void {
+    const arms = plan.run.simulation_context.entity_registry.getAll().filter(Entity.isInserter);
+    const metered = new Set(takers.map(taker => taker.inserter));
+    for (const taker of takers) {
+        const { inserter, item } = taker;
+        const id = inserter.entity_id.id;
+        if (plan.run.always_enabled_by_config.has(id) || plan.run.inserter_clocks.has(id)) {
+            throw unproved(taker, "control", "the taker does not use the metered window");
+        }
+        const hand = handSizeFor(inserter, item);
+        const transfer = plan.run.swing_counts.get(inserter.entity_id)!;
+        if (inserter.filtered_items.size !== 1 || !inserter.filtered_items.has(item) || !fullHandOf(inserter.metadata.type).elsewhere
+            || !Number.isSafeInteger(hand) || hand < 1 || hand !== transfer.stack_size) {
+            throw unproved(taker, "hand", "the direct route must wait for a whole hand of one planned item");
+        }
+        for (const arm of arms) {
+            if (arm === inserter || !arm.filtered_items.has(item)) continue;
+            if (arm.source.entity_id.id === taker.source && !metered.has(arm)) {
+                throw unproved(taker, "shared_route", `inserter ${arm.entity_id.number} also takes ${item} from the source outside the metered turns`);
+            }
+            if (arm.sink.entity_id.id === taker.sink.entity_id.id) {
+                throw unproved(taker, "shared_route", `inserter ${arm.entity_id.number} also supplies ${item} to the target`);
+            }
+        }
+    }
+}
+
+/** One ready pickup step fills the hand. The next update enters the outbound swing. */
+function meteredWindows(plan: UnclockedRun, takers: Taker[], hands: number[], T: number): Map<string, OpenRange[]> | CodedError {
+    const windows = new Map<string, OpenRange[]>();
+    for (const entity of plan.run.simulation_context.entity_registry.getAll()) {
+        if (Entity.isInserter(entity) || Entity.isDrill(entity)) windows.set(entity.entity_id.id, [OpenRange.from(0, T - 1)]);
+    }
+    const sources = [...new Set(takers.map(it => it.source))];
+    for (const [source_index, source] of sources.entries()) {
+        const of_source = takers.filter(it => it.source === source);
+        const turns: { taker: Taker; range: OpenRange }[] = [];
+        for (const [k, taker] of of_source.entries()) {
+            const rotation = taker.inserter.animation.rotation.ticks;
+            if (!Number.isSafeInteger(rotation) || rotation < 1) return unproved(taker, "rotation", "the swing needs a known positive whole number of ticks");
+            const count = hands[takers.indexOf(taker)];
+            const slot = T / count;
+            const swing_entry = 1; // relative to the full pickup
+            const width = swing_entry + 1; // inclusive of swing entry
+            const drop = swing_entry + rotation;
+            const first_return = drop + 1 + rotation; // whole drop, then return swing entry, then the pickup test
+            if (width > first_return || slot < width - 1 + first_return) {
+                return unproved(taker, "return", `a ${width}-tick window every ${slot} ticks leaves too little time for the ${first_return}-tick return`);
+            }
+            // The existing turn placement: a source's takers divide the slot, then the sources divide a turn.
+            const offset = Math.round(k * slot / of_source.length + source_index * slot / (of_source.length * sources.length));
+            const ranges = Array.from({ length: count }, (_, j) => OpenRange.fromStartAndDuration(offset + j * slot, width));
+            if (ranges[count - 1].end_inclusive >= T) return unproved(taker, "cycle_edge", "the window crosses the end of the planned cycle");
+            windows.set(taker.inserter.entity_id.id, ranges);
+            turns.push(...ranges.map(range => ({ taker, range })));
+        }
+        // Only one group is shifted at a time. Check the actual turn order, including last to first.
+        turns.sort((a, b) => a.range.start_inclusive - b.range.start_inclusive);
+        for (const [index, { taker, range }] of turns.entries()) {
+            const next = turns[(index + 1) % turns.length];
+            const next_start = next.range.start_inclusive + (index + 1 === turns.length ? T : 0);
+            const shift = taker === next.taker ? 0 : MARGIN_SHIFT_TICKS;
+            if (range.end_inclusive >= next_start - shift) return unproved(taker, "overlap", `the window ending at ${range.end_inclusive} overlaps inserter ${next.taker.inserter.entity_id.number} opening at ${next_start} with the margin`);
+        }
+    }
+    return windows;
+}
+
 /** The clock of the first output swing count whose windows hold, with their margin; a coded error where none does */
 export function meteredTakersClock(config: Config, logger: Logger): BlueprintGenerationResult {
     const refused: string[] = [];
     let whole_counts = 0;
     let as_built_refusals = 0;
     let margin_refusals = 0;
-    for (let swings = 1; swings <= MAX_SWINGS; swings++) {
+    let first_unproved: CodedError | undefined;
+    const forced = config.overrides?.terminal_swing_count;
+    const lcm = config.overrides?.lcm ?? 1;
+    if (lcm !== 1 || (forced !== undefined && (!Number.isInteger(forced) || forced < 1 || forced > MAX_SWINGS))) {
+        throw new CodedError(`metered takers cannot use the requested output swing count ${forced ?? "AUTO"} and recipe LCM ${lcm}`,
+            reasonOf("metered_plan_override", { terminal_swing_count: forced ?? null, lcm }));
+    }
+    const last = forced ?? MAX_SWINGS;
+    for (let swings = forced ?? 1; swings <= last; swings++) {
         const planned_on: Config = { ...config, overrides: { ...config.overrides, derive_clock_windows: false, terminal_swing_count: swings, lcm: 1 } };
         const plan = unclockedRun(planned_on, { logger });
         const { takers, target_machines } = takersOf(plan);
@@ -69,25 +151,17 @@ export function meteredTakersClock(config: Config, logger: Logger): BlueprintGen
             throw new CodedError("no machine hands an ingredient to two or more of the machines that make the target",
                 reasonOf("no_metered_takers", { target_machines }));
         }
+        checkRoutes(plan, takers);
         const hands = takers.map(taker => wholeHands(plan, taker));
         const T = plan.run.duration.ticks;
-        if (!Number.isInteger(T) || hands.some(it => it === null || T % it !== 0)) continue;
+        if (!Number.isSafeInteger(T) || !hands.every((count): count is number => count !== null && count > 0 && T % count === 0)) continue;
         whole_counts++;
-        const windows = new Map<string, OpenRange[]>();
-        const registry = plan.run.simulation_context.entity_registry;
-        for (const entity of registry.getAll()) {
-            if (Entity.isInserter(entity) || Entity.isDrill(entity)) windows.set(entity.entity_id.id, [OpenRange.from(0, T - 1)]);
+        const windows = meteredWindows(plan, takers, hands, T);
+        if (windows instanceof CodedError) {
+            first_unproved ??= windows;
+            refused.push(`${swings} output swings (${T} ticks): ${windows.message}`);
+            continue;
         }
-        const sources = [...new Set(takers.map(it => it.source))];
-        takers.forEach((taker, index) => {
-            const of_source = takers.filter(it => it.source === taker.source);
-            const k = of_source.indexOf(taker);
-            const slot = T / hands[index]!;
-            // the takers of one source a share of the slot apart; the sources spread evenly inside one share
-            const offset = Math.round(k * slot / of_source.length + sources.indexOf(taker.source) * slot / (of_source.length * sources.length));
-            windows.set(taker.inserter.entity_id.id, Array.from({ length: hands[index]! },
-                (_, j) => OpenRange.from(offset + j * slot, offset + j * slot + METERED_TAKERS_WINDOW_TICKS - 1)));
-        });
         const serial = Object.fromEntries([...windows].map(([id, ranges]) => [id, ranges.map(range => ({ start: range.start_inclusive, end: range.end_inclusive }))]));
         const result = clockFromWindows(planned_on, serial, T, logger);
         const count = `${swings} output swing${swings === 1 ? "" : "s"} (${T} ticks)`;
@@ -107,6 +181,8 @@ export function meteredTakersClock(config: Config, logger: Logger): BlueprintGen
         // the checks after the maker plan the clock on its own count and LCM (verificationPlanningConfigOf), as they do the primitive one
         return withSecondaryPlanningProvenance(result);
     }
-    throw new CodedError(`no metered takers clock holds${refused.length === 0 ? " (no output swing count gives whole hands and crafts)" : `: ${refused.join("; ")}`}`,
-        reasonOf("no_count_holds", { swings_max: MAX_SWINGS, whole_counts, as_built_refusals, margin_refusals }));
+    if (first_unproved !== undefined && as_built_refusals + margin_refusals === 0) throw first_unproved;
+    const request = forced === undefined ? "" : ` at ${forced} output swing${forced === 1 ? "" : "s"}`;
+    throw new CodedError(`no metered takers clock holds${request}${refused.length === 0 ? " (no output swing count gives whole hands and crafts)" : `: ${refused.join("; ")}`}`,
+        reasonOf("no_count_holds", { swings_max: last, whole_counts, as_built_refusals, margin_refusals }));
 }

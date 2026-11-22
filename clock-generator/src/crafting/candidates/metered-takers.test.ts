@@ -30,17 +30,18 @@ describe("the metered takers maker", () => {
         expect(MAKER_REASON_CODES.no_metered_takers).toEqual(["target_machines"]);
     });
 
-    it("refuses a count whose windows fail the as-built check and tries the next count with whole hands and crafts", async () => {
-        // LDS_240: the cryogenic plant's takers move whole hands and crafts on 3, 6, 9 and 12 output swings, and no windows hold
+    it("refuses an explicit recipe LCM outside the metered whole-craft plan", async () => {
         const config = await loadConfigFromFile(ConfigPaths.LDS_240);
-        const lines: string[] = [];
-        const error = refusalOf(() => meteredTakersClock(config, { ...quiet, log: (line: string) => { lines.push(line); } }));
-        expect(lines.filter(line => line.startsWith("Metered takers on"))).toEqual([3, 6, 9, 12].map(swings =>
-            `Metered takers on ${swings} output swings (${swings * 16} ticks): refused, the as-built check does not hold`));
-        expect(error.message).toBe(`no metered takers clock holds: ${[3, 6, 9, 12].map(swings =>
-            `${swings} output swings (${swings * 16} ticks): the as-built check does not hold`).join("; ")}`);
-        expect(reasonOfError(error)).toEqual({ code: "no_count_holds", swings_max: 12, whole_counts: 4, as_built_refusals: 4, margin_refusals: 0 });
-        expect(MAKER_REASON_CODES.no_count_holds).toEqual(["swings_max", "whole_counts", "as_built_refusals", "margin_refusals"]);
+        const error = refusalOf(() => meteredTakersClock(config, quiet));
+        expect(reasonOfError(error)).toEqual({ code: "metered_plan_override", terminal_swing_count: null, lcm: 3 });
+    });
+
+    it("refuses a source with another drawer on an uncontrolled route", async () => {
+        const sample = await loadConfigFromFile(ConfigPaths.LDS_240);
+        // The cryogenic plant supplies the same plastic through chests as well as direct arms.
+        const config = { ...sample, overrides: { ...sample.overrides, lcm: 1 } };
+        const error = refusalOf(() => meteredTakersClock(config, quiet));
+        expect(reasonOfError(error)).toEqual({ code: "metered_window_unproved", inserter: 3, cause: "shared_route" });
     });
 
     it("makes a clock on the first count whose windows hold, where the generation would ask it", async () => {

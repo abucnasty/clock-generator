@@ -41,6 +41,8 @@ export const MAKER_REASON_CODES = {
     keeps_recommended_clock: [],
     same_as_listed_clock: [],
     // metered takers: no source hands to two or more target machines, or no output swing count up to the most gives windows that hold
+    metered_window_unproved: ["inserter", "cause"],
+    metered_plan_override: ["terminal_swing_count", "lcm"],
     no_metered_takers: ["target_machines"],
     no_count_holds: ["swings_max", "whole_counts", "as_built_refusals", "margin_refusals"],
     // a clock, part or composition that was made and is not listed or taken
