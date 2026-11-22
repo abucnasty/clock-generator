@@ -84,7 +84,7 @@ describe("an S2 refusal of a recycler placing both its results into a wagon", ()
         + `${where}, and once it is full the one it waits for cannot come in: the build stops for good. Give each result an `
         + "inserter of its own. An inserter whose filters the clock sets by signal would not wait; such a clock is not planned yet.";
 
-    function refusalOf(run: (config: Config) => unknown, build = config) {
+    function refusalOf(run: (config: Config) => unknown, build: Config = config) {
         try {
             run(build);
         } catch (error) {

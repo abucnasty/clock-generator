@@ -4,7 +4,7 @@ import { ConfigPaths } from "../../config/config-paths";
 import { ConfigSchema } from "../../config/schema";
 import { Duration } from "../../data-types/duration";
 import { fraction } from "../../data-types/fraction";
-import { Entity, EntityId, Machine, RecipeMetadata } from "../../entities";
+import { Entity, EntityId, type Inserter, Machine, RecipeMetadata } from "../../entities";
 import { quiet } from "../generate-blueprint-test-helpers";
 import { EntityTransferCountMap } from "../sequence/cycle/swing-counts";
 import { createEntityRegistryFromConfig } from "../sequence/simulation-context";
@@ -156,20 +156,23 @@ describe("what the batched arithmetic refuses about an entity", () => {
 
     it("uses the numbered fallback for an inserter whose items and hands are unknown", () => {
         const { run, registry, filler: input, transfers } = gears();
-        registry.add({ ...input, filtered_items: new Set() });
+        const empty: Inserter = { ...input, filtered_items: new Set() };
+        registry.add(empty);
         transfers.delete(input.entity_id);
         expect(refusal(run).message).toBe("Inserter 6 has no hands in the plan");
     });
 
     it("names an inserter on a transfer with neither end a machine", () => {
         const { run, registry, filler: input } = gears();
-        registry.add({ ...input, sink: { ...input.sink, entity_id: EntityId.forChest(2) } });
+        const betweenChests: Inserter = { ...input, sink: { ...input.sink, entity_id: EntityId.forChest(2) } };
+        registry.add(betweenChests);
         expect(refusal(run).message).toBe("The inserter that takes iron plate out of a chest moves between no machines");
     });
 
     it("names both entities when a planned filler brings no item the machine takes", () => {
         const { run, registry, filler: input } = gears();
-        registry.add({ ...input, filtered_items: new Set(["plastic-bar"]) });
+        const wrongItem: Inserter = { ...input, filtered_items: new Set(["plastic-bar"]) };
+        registry.add(wrongItem);
         expect(refusal(run).message).toBe(`The inserter that takes plastic bar out of a chest brings nothing ${machine} takes`);
     });
 
