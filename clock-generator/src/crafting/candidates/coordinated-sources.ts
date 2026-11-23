@@ -15,7 +15,8 @@ import { costKey } from "../rank";
 import { CodedError, emitMakerLog, makerLogOn, reasonOf, type MakerReason } from "../maker-log";
 import { verdictWithCopies, type VerdictWithCopies } from "../copies-verdict";
 import { meteredOutputWindows } from "./metered-output-windows";
-import { chooseInputWindows, meteredInputWindows, type InputJointStage, type InputWindowJudge } from "./metered-input-windows";
+import { chooseInputWindows, meteredInputWindows, type InputJointStage, type InputWindowJudge, type InputWindowProposal } from "./metered-input-windows";
+import { chooseStaggeredGroups, staggeredInputWindows } from "./staggered-input-windows";
 
 /**
  * The per-branch clock (DESIGN D7, PR 18): each part of the build gets the windows of the clock that fits it, all on one shared
@@ -574,6 +575,8 @@ export function coordinatedSourcesClock(
         }
         output_decisions = decisions;
     }
+    // the proposal the input step takes, which the stagger step's clock carries
+    let inputs_taken: InputWindowProposal | null = null;
     if (inputs) {
         const { proposals, decisions, witnesses } = inputs;
         if (proposals.length > 0) {
@@ -601,11 +604,46 @@ export function coordinatedSourcesClock(
             };
             const choice = chooseInputWindows(proposals, witnesses, judge);
             Object.assign(decisions, choice.decisions);
+            inputs_taken = choice.taken;
             if (choice.taken !== null) result = finishedClock(made, trialWith(choice.taken.changes).map, [], finish, left_open);
         }
         result = { ...result, metered_input_windows: decisions };
     }
     if (output_decisions) result = { ...result, metered_output_windows: output_decisions };
+    // the stagger step: a belt-fed window that inputs share, moved to each machine's turn, on the clock the input step leaves
+    const left: SerializableClockWindows = { ...composed, ...inputs_taken?.changes };
+    const staggers = metered.size === 0 ? null : staggeredInputWindows(made, left, metered, output_decisions ?? {});
+    if (staggers) {
+        // each group judged against the clock the group before leaves, with the gates of the input step
+        const { clock, decisions } = chooseStaggeredGroups(staggers.groups, left, base => {
+            const trialWith = (changes: SerializableClockWindows) => trialOf({ ...base, ...changes }, left_open);
+            return {
+                longRun: changes => {
+                    const trial = trialWith(changes);
+                    return { holds: trial.holds_to_long_run, wake_ups: trial.wake_ups,
+                        stage: trial.holds_to_long_run ? null : notHeldFields(trial).check as InputJointStage };
+                },
+                wholeCheck: changes => {
+                    const trial = trialWith(changes);
+                    if (!holdsOf(trial)) return "whole_check";
+                    if (marginOf(trial) !== null) return "margin";
+                    if (lossOf(trial)?.survives !== true) return "loss";
+                    return holdsWithCopies(trial) ? null : "copies";
+                },
+                recovery: changes => {
+                    const trial = trialWith(changes);
+                    return { one_copy: lossOf(trial)?.recovered_after_window_cycles ?? null,
+                        copies: copiesVerdictOf(trial)?.copies_trial?.recovered_after_window_cycles ?? null };
+                },
+            };
+        });
+        if (clock !== left) {
+            const { metered_input_windows, metered_output_windows } = result;
+            result = { ...finishedClock(made, trialOf(clock, left_open).map, [], finish, left_open),
+                ...(metered_input_windows && { metered_input_windows }), ...(metered_output_windows && { metered_output_windows }) };
+        }
+        result = { ...result, staggered_input_windows: { ...staggers.decisions, ...decisions } };
+    }
     return { ...result, coordinated_sources: { parts: Object.fromEntries(groups.map(group => [group.source, partName(group.choices[current.get(group.source)!].parts[0])])),
         sources: sourceControlsOf(groups, current, result.always_on_reasons ?? {}, logger, config.setpoint.item) } };
 }

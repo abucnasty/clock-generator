@@ -203,7 +203,7 @@ export interface InputWindowJudge {
 }
 
 /** A recovery part where the proposal's is worse than the clock's: null on the proposal only is worse; null on the clock passes */
-function recoveryWorse(proposal: number | null, current: number | null): boolean {
+export function recoveryWorse(proposal: number | null, current: number | null): boolean {
     if (proposal === null) return current !== null;
     return current !== null && proposal > current;
 }
