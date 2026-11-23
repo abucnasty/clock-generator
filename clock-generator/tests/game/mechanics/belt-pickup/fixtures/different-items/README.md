@@ -39,8 +39,8 @@ same-item fallback. They run offline with:
 npm test -- src/state/backpressure-pickup-lane.test.ts tests/game/mechanics/belt-pickup/jammed-pickup-replay.test.ts
 ```
 
-Five [belt-end clips](front-pickup-end-clips.json), recorded in Factorio 2.1.24, hold the same pickup at the dead end of
-a full turbo belt kept fed: in line with the belt, unmirrored and mirrored, one item or two, and beside the end tile.
+Five [clips](front-pickup-end-clips.json), recorded in Factorio 2.1.24, hold the same pickup where a full turbo belt
+stops and is kept fed: in line with the belt, unmirrored and mirrored, one item or two, and beside the last tile.
 `src/state/front-pickup-belt-end.test.ts` replays them.
 
 The earlier three manual ingredient-demand controls are now automated at all four speeds. All 12 pass:
