@@ -11,6 +11,8 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-11-23
+
 ### Added
 - ui: the setpoint picker lets you choose the output of a recipe with several outputs
 - generation: a clock for builds where one machine feeds several machines that make the target
@@ -21,8 +23,6 @@ Entries from 0.6.0 on follow Changelogs in [Contributing](CONTRIBUTING.md#change
 - generation: science output inserters can keep enable windows when one machine feeds several science assemblers
 - generation: belt-fed inserters into science assemblers can get staggered enable windows when one machine feeds several
 - ui: configuration files name the setpoint's item; older files still open
-- generation: quiet command-line generation does less work
-- generation: quiet command-line generation checks a repeated clock start once
 - ui: a belt pickup that drops elsewhere is refused with clearer text
 
 ### Removed
