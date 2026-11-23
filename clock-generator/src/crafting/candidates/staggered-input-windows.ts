@@ -276,14 +276,21 @@ export function chooseStaggeredWindows(proposals: readonly StaggerProposal[], ju
 
 /**
  * The groups judged one at a time, in their order, each against the clock the group before leaves (`judgeOn` gives the judge of
- * a clock): the clock at the end, and every arm's decision.
+ * a clock): the clock at the end, and every arm's decision. Where groups share an arm, the arm's decision is that of the last group
+ * that took a proposal holding it, the group whose windows the clock keeps; a group that did not take it never overrides it. An arm
+ * no group took keeps the decision of the last group that holds it.
  */
 export function chooseStaggeredGroups(groups: readonly StaggerGroup[], clock: SerializableClockWindows, judgeOn: (clock: SerializableClockWindows) => InputWindowJudge) {
     const decisions: Record<string, StaggerDecision> = {};
+    const taken_ids = new Set<string>();
     let current = clock;
     for (const group of groups) {
         const choice = chooseStaggeredWindows(group.proposals, judgeOn(current));
-        Object.assign(decisions, choice.decisions);
+        const mine = new Set(choice.taken === null ? [] : Object.keys(choice.taken.changes).filter(id => choice.taken!.staggered[id] !== undefined));
+        for (const [id, decision] of Object.entries(choice.decisions)) {
+            if (mine.has(id) || !taken_ids.has(id)) decisions[id] = decision;
+        }
+        for (const id of mine) taken_ids.add(id);
         if (choice.taken !== null) current = { ...current, ...choice.taken.changes };
     }
     return { clock: current, decisions };

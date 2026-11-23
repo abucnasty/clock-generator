@@ -277,4 +277,80 @@ describe("the choice of a stagger", () => {
         expect(decisions["inserter:2"]).toEqual({ kind: "retained", reason: "no_fewer_wake_ups" });
         expect(clock).toEqual({ "inserter:12": every(41, 58) });
     });
+
+    describe("two belts that feed the same assemblers", () => {
+        // belt 2 and belt 5 each stagger their own input arm, and both propose the one output arm of the shared machine
+        const output = (windows: Range[], shift_ticks: number): Pick<StaggerProposal, "changes" | "staggered"> => ({
+            changes: { "inserter:1": windows },
+            staggered: { "inserter:1": { kind: "staggered", role: "output", relation_from: ["inserter:14"], shift_ticks, service_ticks: SERVICE } } });
+        const proposalFor = (input: number, shared: Range[], out: Pick<StaggerProposal, "changes" | "staggered">): StaggerProposal => ({
+            reference: `inserter:${input}`,
+            changes: { [`inserter:${input}`]: shared, ...out.changes },
+            staggered: { [`inserter:${input}`]: { kind: "staggered", role: "input", reference: `inserter:${input}`, shift_ticks: 0, service_ticks: SERVICE }, ...out.staggered } });
+        const outputOne = every(70, 81), outputTwo = every(90, 101);
+        const belt2 = proposalFor(12, every(41, 58), output(outputOne, 70));
+        const belt5 = proposalFor(2, every(14, 41), output(outputOne, 70));
+        const belt5Other = proposalFor(2, every(14, 41), output(outputTwo, 90));
+        const start: SerializableClockWindows = { "inserter:1": whole, "inserter:2": whole, "inserter:12": whole };
+
+        /** Each group has the one proposal it is given, judged against the clock at its turn: `seen[n]` is what the judge says of group n's proposal */
+        function choose(proposals: readonly StaggerProposal[], bases: readonly number[], seen: readonly Seen[]) {
+            let turn = 0;
+            return chooseStaggeredGroups(proposals.map((proposal, i) => ({ belt: `belt:${i}`, proposals: [proposal] })), start, () => {
+                const n = turn++;
+                return judge(proposals, { ...now, wake_ups: bases[n] }, Object.fromEntries(proposals.map((proposal, i) => [proposal.reference, i === n ? seen[n] : {}])));
+            });
+        }
+
+        /** For every id: staggered exactly where a taken proposal holds it, by the last such proposal, which also gave the clock its windows */
+        function expectTheLastTaken(result: ReturnType<typeof choose>, proposals: readonly StaggerProposal[], taken: readonly StaggerProposal[]) {
+            for (const id of new Set(proposals.flatMap(proposal => Object.keys(proposal.changes)))) {
+                const last = taken.filter(proposal => id in proposal.changes).at(-1);
+                if (last === undefined) {
+                    expect(result.decisions[id]).toBeDefined();
+                    expect(result.decisions[id].kind).not.toBe("staggered");
+                    expect(result.clock[id]).toEqual(start[id]);
+                } else {
+                    expect(result.decisions[id]).toEqual(last.staggered[id]);
+                    expect(result.clock[id]).toEqual(last.changes[id]);
+                }
+            }
+        }
+
+        it("keeps the staggered decision of an output that the first group took and the second refused", () => {
+            const result = choose([belt2, belt5], [964.77, 565.39], [{ wake_ups: 565.39 }, { wake_ups: 600 }]);
+            expect(result.clock).toEqual({ "inserter:1": outputOne, "inserter:2": whole, "inserter:12": every(41, 58) });
+            expect(result.decisions["inserter:1"]).toEqual(belt2.staggered["inserter:1"]);
+            expect(result.decisions["inserter:12"]).toEqual(belt2.staggered["inserter:12"]);
+            expect(result.decisions["inserter:2"]).toEqual({ kind: "retained", reason: "no_fewer_wake_ups" });
+            expectTheLastTaken(result, [belt2, belt5], [belt2]);
+        });
+
+        it("gives the output to the second group where the first refused and the second took", () => {
+            const result = choose([belt2, belt5], [964.77, 964.77], [{ wake_ups: 964.77 }, { wake_ups: 565.39 }]);
+            expect(result.clock).toEqual({ "inserter:1": outputOne, "inserter:2": every(14, 41), "inserter:12": whole });
+            expect(result.decisions["inserter:1"]).toEqual(belt5.staggered["inserter:1"]);
+            expect(result.decisions["inserter:2"]).toEqual(belt5.staggered["inserter:2"]);
+            expect(result.decisions["inserter:12"]).toEqual({ kind: "retained", reason: "no_fewer_wake_ups" });
+            expectTheLastTaken(result, [belt2, belt5], [belt5]);
+        });
+
+        it("gives the output to the second group where both took it with different windows, as the clock has them", () => {
+            const result = choose([belt2, belt5Other], [964.77, 565.39], [{ wake_ups: 565.39 }, { wake_ups: 500 }]);
+            expect(result.clock).toEqual({ "inserter:1": outputTwo, "inserter:2": every(14, 41), "inserter:12": every(41, 58) });
+            expect(result.decisions["inserter:1"]).toEqual(belt5Other.staggered["inserter:1"]);
+            expect(result.decisions["inserter:12"]).toEqual(belt2.staggered["inserter:12"]);
+            expect(result.decisions["inserter:2"]).toEqual(belt5Other.staggered["inserter:2"]);
+            expectTheLastTaken(result, [belt2, belt5Other], [belt2, belt5Other]);
+        });
+
+        it("gives the output the code of the last group where both refused", () => {
+            const result = choose([belt2, belt5], [964.77, 964.77], [{ wake_ups: 964.77 }, { holds: false, stage: "first_window_cycle" }]);
+            expect(result.clock).toEqual(start);
+            expect(result.decisions["inserter:1"]).toEqual({ kind: "retained", reason: "joint_check_failed", stage: "first_window_cycle" });
+            expect(result.decisions["inserter:12"]).toEqual({ kind: "retained", reason: "no_fewer_wake_ups" });
+            expect(result.decisions["inserter:2"]).toEqual({ kind: "retained", reason: "joint_check_failed", stage: "first_window_cycle" });
+            expectTheLastTaken(result, [belt2, belt5], []);
+        });
+    });
 });
