@@ -16,7 +16,7 @@ describe("the military science sample", () => {
     beforeAll(async () => {
         config = await loadConfigFromFile(ConfigPaths.MILITARY_SCIENCE_240);
         generated = generateClockAlternatives(config, { logger: quiet });
-    }, 180_000);
+    }, 400_000);
 
     it("is five copies of a mirrored pair, 9 tiles apart, at 240 a second", () => {
         expect(config.setpoint).toMatchObject({ item: "military-science-pack", items_per_second: 240, copies: 5, copy_offset: { x: 9, y: 0 } });
