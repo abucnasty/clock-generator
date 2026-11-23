@@ -6,16 +6,19 @@ import { ConfigPaths } from "../config/config-paths";
 import type { Config } from "../config/schema";
 import { laneFactsOfConfig } from "../entities/traits/build-traits";
 import { outputBeltGeometry, outputBeltProblems } from "../config/output-belt";
+import { withTickLedger, type TickLedgerRow } from "./tick-ledger";
 
 // abucnasty's military science build: five copies 9 tiles apart, each a mirrored pair (a military science assembler and a
 // grenade assembler above a foundry, and the same below it) that makes 48 a second, 240 in all.
 describe("the military science sample", () => {
     let config: Config;
     let generated: ClockAlternativesResult;
+    // the ticks the generation simulates, by the run they were for
+    let rows: TickLedgerRow[] = [];
 
     beforeAll(async () => {
         config = await loadConfigFromFile(ConfigPaths.MILITARY_SCIENCE_240);
-        generated = generateClockAlternatives(config, { logger: quiet });
+        generated = withTickLedger(count => { rows = count.rows; }, () => generateClockAlternatives(config, { logger: quiet }));
     }, 400_000);
 
     it("is five copies of a mirrored pair, 9 tiles apart, at 240 a second", () => {
@@ -102,6 +105,16 @@ describe("the military science sample", () => {
             const short = generated.alternatives.find(alternative => alternative.id === "time_study_windows")!;
             expect(short.verdict).toBe("unstable");
             expect(short.shared_lane_loss_note).toMatch(/^It is not stable on its output belt\. The side belt of copy 5 from the entry is full at its join onto the output belt\./);
+        });
+
+        it("runs no count of fewer copies for the clock that falls short, and names the other clock that has no full join", () => {
+            expect(rows.filter(row => String(row.purpose) === "fewer_copies")).toEqual([]);
+            const cause = generated.alternatives.find(alternative => alternative.id === "time_study_windows")!.checked_lanes!.cause!;
+            expect(cause.alone.text).toBe("The same inserter makes all 3,672 swings. The clock is right for one copy.");
+            expect(cause.changes).toEqual({
+                text: "Another clock of this build has no full join: Coordinated Sources, window cycle 80 ticks.",
+                data: { fewer_copies: null, other_clock: { id: "coordinated_sources", label: "Coordinated Sources: 2 output swings each output cycle", window_cycle_ticks: 80 } },
+            });
         });
     });
 });

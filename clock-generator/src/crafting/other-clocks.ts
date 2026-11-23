@@ -32,8 +32,7 @@ export function withOtherClocks<T extends { id: string; label: string; verdict: 
         const window_cycle_ticks = other.result.simulation_duration.ticks;
         const text = cause.kind === "join" ? `Another clock of this build has no full join: ${name}, window cycle ${figure(window_cycle_ticks)} ticks.`
             : `Another clock of this build holds with all ${figure(copies)}: ${name}, window cycle ${figure(window_cycle_ticks)} ticks.`;
-        const changes = { text: cause.changes === null ? text : `${cause.changes.text} ${text}`,
-            data: { fewer_copies: cause.changes?.data.fewer_copies ?? null, other_clock: { id: other.id, label: other.label, window_cycle_ticks } } };
+        const changes = { text, data: { fewer_copies: null, other_clock: { id: other.id, label: other.label, window_cycle_ticks } } };
         return { ...alternative, checked_lanes: { ...alternative.checked_lanes!, cause: { ...cause, changes } } };
     });
 }

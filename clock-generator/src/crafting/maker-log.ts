@@ -15,7 +15,7 @@ import type { SharedLanesForLog } from "./shared-lane-log";
 import { withTickLedger, withTickMaker, type TickLedgerCount } from "./tick-ledger";
 
 /** The format of the log, on the `job` event: a field's name and meaning do not change, a new field, a field less or a changed meaning is a new number */
-export const MAKER_LOG_FORMAT = "maker-log-4";
+export const MAKER_LOG_FORMAT = "maker-log-5";
 
 /** A reason as a code with numbers: the fields a code has are those `MAKER_REASON_CODES` lists for it */
 export interface MakerReason {
@@ -118,8 +118,8 @@ export function shadowEventOf(count: TickLedgerCount): MakerLogEvent {
 }
 
 /** The seconds a log counts, by what they were spent on */
-export type MakerSecondsKind = "shared_lane_check" | "copies_trial" | "fewer_copies" | "loss_trials_one_copy" | "timetable" | "repeat_check";
-const SECONDS_KINDS: readonly MakerSecondsKind[] = ["shared_lane_check", "copies_trial", "fewer_copies", "loss_trials_one_copy", "timetable", "repeat_check"];
+export type MakerSecondsKind = "shared_lane_check" | "copies_trial" | "loss_trials_one_copy" | "timetable" | "repeat_check";
+const SECONDS_KINDS: readonly MakerSecondsKind[] = ["shared_lane_check", "copies_trial", "loss_trials_one_copy", "timetable", "repeat_check"];
 
 interface Scope {
     sink: MakerLogSink;

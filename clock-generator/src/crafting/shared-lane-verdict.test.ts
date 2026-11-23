@@ -5,7 +5,7 @@ import { Config } from "../config/schema";
 import { ConfigPaths } from "../config/config-paths";
 import { loadConfigFromFile } from "../config/loader";
 import { SerializableClockWindows } from "./clock";
-import { behindTargetIn, CopyMade, describeSharedLaneLoss, fewerCopiesThatHold, judgedCopiesMade, judgeSharedLanes as judgeSharedLanesOnDefault, RunOfCopies, SharedLaneJudgement, SharedLaneLoss, TargetRates } from "./shared-lane-verdict";
+import { behindTargetIn, CopyMade, describeSharedLaneLoss, judgedCopiesMade, judgeSharedLanes as judgeSharedLanesOnDefault, RunOfCopies, SharedLaneJudgement, SharedLaneLoss, TargetRates } from "./shared-lane-verdict";
 import { withoutSharedLaneFacts } from "./generate-blueprint-test-helpers";
 import { lithiumRows } from "../../tests/configs/lithium-rows";
 import { checkedLanesOf } from "./checked-lanes";
@@ -168,8 +168,6 @@ describe("the clocks recorded on the inserter build whose copies share flowing o
 // before it stated the spacing of its copies and the way its belts move, with the four lanes an infinite end. The sample now
 // states that those lanes end in a dead end, and this test is of lanes that flow on: it takes the sample without those
 // facts.
-// measured on this clock (2026-11-12): two copies of the three on the lanes hold
-const FEWER_COPIES_HOLD = 2;
 
 describe("a clock whose copy is short by more than one hand in the run twice as long", () => {
     it("fails it on that copy", async () => {
@@ -190,7 +188,7 @@ describe("a clock whose copy is short by more than one hand in the run twice as 
         expect(losses.some(loss => loss.belt_id === 4 && loss.alone_items - loss.items === 112)).toBe(true);
     });
 
-    it("keeps beside each loss what the run shows, and finds the most copies on the lanes whose run holds", async () => {
+    it("keeps beside each loss what the run shows", async () => {
         const infinite_end = { lane_end: { kind: "infinite" } };
         const config = withFacts(withoutSharedLaneFacts(await loadConfigFromFile(ConfigPaths.ADVANCED_CIRCUIT_240)),
             { "1/1": infinite_end, "3/1": infinite_end, "3/2": infinite_end, "4/1": infinite_end });
@@ -203,9 +201,6 @@ describe("a clock whose copy is short by more than one hand in the run twice as 
         const judgement = judgeSharedLanes(config, windows, 24, quiet);
         expect(judgement.loss_facts).toHaveLength(judgement.losses.length);
         expect(judgement.loss_facts!.every(facts => facts.hand === 16 && facts.stops !== undefined)).toBe(true);
-        const fewer = fewerCopiesThatHold(config, windows, 24, quiet)!;
-        expect(fewer.copies).toBe(FEWER_COPIES_HOLD);
-        expect(fewer.tried.every(it => it.holds === (it.copies <= FEWER_COPIES_HOLD))).toBe(true);
     });
 });
 
@@ -426,7 +421,7 @@ describe("the output belt of a build of one copy that shares no lane, on the lit
     it("gives the result's line and cause for the output belt, with no lane taken from", () => {
         const config = lithiumRows(sample, "as built");
         const under = { ...config, overrides: { ...config.overrides, terminal_swing_count: clocks.short_in_game.output_swings } };
-        const checked = checkedLanesOf({ config: under, holds: true, judged: judged(config, "short_in_game"), window_cycle_ticks: 4320, copies_trial: null, fewer: null })!;
+        const checked = checkedLanesOf({ config: under, holds: true, judged: judged(config, "short_in_game"), window_cycle_ticks: 4320, copies_trial: null })!;
         expect(checked.line).toMatchObject({ run_with_copies: true, every_copy_gets_items: null, output_belt: "misses",
             sentence: "Checked with every output inserter on the output belt. The build misses swings at the output belt." });
         expect(checked.cause).toMatchObject({ kind: "join", reason: { code: "target_full" }, cause: { text: "The output belt has no room where the output inserters of the build drop." } });
@@ -445,7 +440,7 @@ describe("the output belt of a build of one copy that shares no lane, on the lit
         const no_belt = { ...sample, output_belt: undefined };
         const judgement = judged(no_belt, "short_in_game");
         expect(judgement).toEqual({ losses: [], fast_check_passes: true, simulated: false, longer_run: false, lanes: [] });
-        expect(checkedLanesOf({ config: no_belt, holds: true, judged: judgement, window_cycle_ticks: 4320, copies_trial: null, fewer: null })!.line)
+        expect(checkedLanesOf({ config: no_belt, holds: true, judged: judgement, window_cycle_ticks: 4320, copies_trial: null })!.line)
             .toMatchObject({ run_with_copies: false, sentence: "Checked on one copy. No lane the copies take from is run with every copy on it. On the output belt, only the sum of the drops is checked." });
     });
 

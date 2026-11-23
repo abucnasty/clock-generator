@@ -39,8 +39,7 @@ import { coordinatedSourcesClock, onWindowCycles, withNotAdmitted, type NotAdmit
 import { BlueprintGenerationResult, clockedByConfig, GenerateClockOptions, SimulationStabilityCheck, fractionalStartOf, fractionalSwingsOf } from "./plan/unclocked-run";
 import { EntityTransferCountMap } from "./sequence/cycle/swing-counts";
 import { currentRunMemo, withQuietSampledStarts, withRunMemo } from "./plan/run-memo";
-import { CodedError, emitMakerLog, heldMakerLog, makerLogOn, noteClockLanes, noteClockRun, reasonOf, reasonOfError, timedCheck, timedMaker, withMakerLog, type MakerLogEvent } from "./maker-log";
-import { withTickPurpose } from "./tick-ledger";
+import { CodedError, emitMakerLog, heldMakerLog, makerLogOn, noteClockLanes, noteClockRun, reasonOf, reasonOfError, timedMaker, withMakerLog, type MakerLogEvent } from "./maker-log";
 import { madeCompositionEvent, notMadeEvent, resultEvents } from "./maker-log-events";
 import { clockCost, ClockRanking, combineClockAlternativeRuns, rankingOf, rankingWindowCount, ROUNDED_CLOCK_MAX_FAST, RoundedClock, roundedRateAllowed, searchesToRun, searchesAreNeeded } from "./rank";
 import { TargetProductionRate } from "./target-production-rate";
@@ -54,8 +53,8 @@ import { signalsPerMinuteOf } from "./clock-signals";
 import { StartDependence, startDependenceNote, startDependenceNotChecked } from "./start-dependence";
 import { NotMadeClock, notTriedSentence, WhyNotStable, whyNotStable, whyNotStableClockOf } from "./why-not-stable";
 import { DEFAULT_KICK_START_ITEMS } from "./runner/cold-start";
-import { ClockSharedLaneLoss, fewerCopiesThatHold, isNotChecked } from "./shared-lane-verdict";
-import { buildFeeders, isInternalError, SharedLaneCheck, verdictWithCopies, VerdictWithCopies, withBuildFeeders } from "./copies-verdict";
+import { ClockSharedLaneLoss, isNotChecked } from "./shared-lane-verdict";
+import { isInternalError, SharedLaneCheck, verdictWithCopies, VerdictWithCopies, withBuildFeeders } from "./copies-verdict";
 import { buildLanesOf, BuildLane, CheckedLanes, checkedLanesOf, withOtherClocks } from "./checked-lanes";
 import { buildToNameOf, entityNamesInSentence } from "./build-names";
 import { capitalized, drillNameInText, insertersInSentence, textWords } from "./entity-name";
@@ -1144,29 +1143,16 @@ function runAlternativeOf(
     };
     const sharedLaneCheck = (trial: Trial): SharedLaneCheck | null => verdictWithCopiesOf(trial)?.lane_check ?? null;
     const sharedLaneLosses = (trial: Trial): readonly ClockSharedLaneLoss[] => sharedLaneCheck(trial)?.losses ?? [];
-    /**
-     * What was checked on the lanes the copies share (checked-lanes.ts), made once per trial: from the check of the shared
-     * lanes, and for a clock that loses swings there, the runs with fewer copies on the lanes (`fewerCopiesThatHold`)
-     */
+    /** What was checked on the lanes the copies share (checked-lanes.ts), made once per trial from the check of the shared lanes */
     const checked_lanes_of = new Map<Trial, CheckedLanes | null>();
     const checkedLanes = (trial: Trial, copies_trial: CopiesTrialVerdict | null): CheckedLanes | null => {
         if (!checked_lanes_of.has(trial)) {
             const on = used.planned_on ?? config;
             const check = sharedLaneCheck(trial);
             const judgement = check?.judgement ?? null;
-            const with_swings = { ...on, overrides: { ...on.overrides, terminal_swing_count: trial.result.used_terminal_swing_count } };
-            let fewer: ReturnType<typeof fewerCopiesThatHold> = null;
-            if (judgement !== null && judgement.losses.length > 0) {
-                try {
-                    fewer = timedCheck("fewer_copies", () => withTickPurpose("fewer_copies", () => fewerCopiesThatHold(with_swings, trial.result.clock_windows, trial.exact_window_cycle ?? trial.clock_window_cycle, logger, undefined, buildFeeders()), { claim: true }));
-                } catch (error) {
-                    if (isInternalError(error)) throw error;
-                    logger.warn(`Clock "${label}": the runs with fewer copies on the shared lanes could not be made: ${error instanceof Error ? error.message : String(error)}`);
-                }
-            }
             const stopped = check?.losses.find(isNotChecked);
             checked_lanes_of.set(trial, checkedLanesOf({ config: on, holds: trial.held,
-                judged: stopped !== undefined ? { stopped } : judgement, window_cycle_ticks: trial.clock_window_cycle, copies_trial, fewer }));
+                judged: stopped !== undefined ? { stopped } : judgement, window_cycle_ticks: trial.clock_window_cycle, copies_trial }));
         }
         return checked_lanes_of.get(trial)!;
     };

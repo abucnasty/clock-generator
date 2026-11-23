@@ -48,7 +48,6 @@ export const MISSED_SWINGS_COPY = {
     /** The head of the chip of a part copy (5.5 copies): the last, as it stands last from the entry */
     partCopy: (copy: number, narrow: boolean) => narrow ? 'part' : `${figure(copy)} (part)`,
     allCopies: (copies: number) => `All ${figure(copies)} copies`,
-    fewerCopies: (copies: number) => `${figure(copies)} ${copies === 1 ? 'copy' : 'copies'}`,
     oneCopyAlone: '1 copy alone',
     entryOfLanes: (items: readonly string[]) => items.length === 0 ? 'Entry' : `Entry of the ${listText(items)} ${items.length === 1 ? 'lane' : 'lanes'}`,
     entry: 'Entry',
@@ -61,14 +60,11 @@ export const MISSED_SWINGS_COPY = {
     figureOf: figure,
     unit: (swings: number | null) => swings === null ? 'swings missed' : `swings missed, of ${figure(swings)} each`,
     /** The caption of picture one on a lane loss */
-    laneCaption: (missing: readonly number[], fewer: number | null, aloneMisses: number) => {
+    laneCaption: (missing: readonly number[], aloneMisses: number) => {
         const one = missing.length === 1;
         const who = one ? `Only copy ${figure(missing[0])}, the ${ordinal(missing[0])} copy from the entry, misses swings.`
             : `${capitalized(copiesText(missing))}, the ${listText(missing.map(ordinal))} copies from the entry, miss swings.`;
-        const alone = aloneMisses === 0;
-        const then = fewer !== null && alone ? `With ${figure(fewer)} ${fewer === 1 ? 'copy' : 'copies'}, or with one copy alone, no copy misses one.`
-            : fewer !== null ? `With ${figure(fewer)} ${fewer === 1 ? 'copy' : 'copies'}, no copy misses one.`
-                : alone ? 'With one copy alone, no copy misses one.' : '';
+        const then = aloneMisses === 0 ? 'With one copy alone, no copy misses one.' : '';
         return [who, then].filter(Boolean).join(' ');
     },
     /** The caption of picture one at a full join: which copies' output swings are blocked, then the hint for the layout */
@@ -134,19 +130,15 @@ interface ChipRow {
 }
 
 /**
- * The rows of picture one: the swings each copy misses with all the copies (the headline); with the most copies whose run
- * holds (`changes.data.fewer_copies`), every chip zero and the copies taken off absent; and with one copy alone.
+ * The rows of picture one: the swings each copy misses with all the copies (the headline), and with one copy alone.
  * A part copy (5.5 copies) has a chip of its own, the last.
  */
 export function chipRowsOf(cause: SharedLaneCause, copies: number): ChipRow[] {
     const all = Array.from({ length: Math.ceil(copies) }, (_, index) => cause.headline.data.copies.find(it => it.copy === index + 1)?.missed ?? 0);
-    const rows: ChipRow[] = [{ label: MISSED_SWINGS_COPY.allCopies(copies), values: all }];
-    const fewer = cause.changes?.data.fewer_copies ?? null;
-    if (fewer !== null && fewer > 1 && fewer < copies) {
-        rows.push({ label: MISSED_SWINGS_COPY.fewerCopies(fewer), values: all.map((_, index) => index < fewer ? 0 : null) });
-    }
-    rows.push({ label: MISSED_SWINGS_COPY.oneCopyAlone, values: all.map((_, index) => index === 0 ? cause.alone.data.missed : null) });
-    return rows;
+    return [
+        { label: MISSED_SWINGS_COPY.allCopies(copies), values: all },
+        { label: MISSED_SWINGS_COPY.oneCopyAlone, values: all.map((_, index) => index === 0 ? cause.alone.data.missed : null) },
+    ];
 }
 
 /** A taker of the cause, as the engine's `where` gives it */
@@ -250,13 +242,6 @@ export function legendOf(swings: MissedSwings, oneCopy = false): { kind: MissedS
     return CAUSE_ORDER.filter(kind => (counts.get(kind) ?? 0) > 0).map(kind => ({ kind, text: MISSED_SWINGS_COPY.legendCount((oneCopy && CAUSE_WORDS[kind].legendOneCopy) || CAUSE_WORDS[kind].legend, counts.get(kind)!) }));
 }
 
-/** The engine's sentences of a text, one by one */
-const sentencesOf = (text: string) => text.split(/(?<=[.!?])\s+(?=[A-Z])/).filter(Boolean);
-
-/** "What changes it" without the sentence that names another clock, which the page shows as its own line */
-const fewerCopiesText = (cause: SharedLaneCause) => cause.changes === null ? ''
-    : sentencesOf(cause.changes.text).filter(it => !it.startsWith('Another clock of this build')).join(' ');
-
 /**
  * What each picture stands for, for a screen reader: the sentences of the cause the page no longer shows as text beside
  * the pictures (the engine's words)
@@ -268,8 +253,8 @@ export function pictureLabelsOf(cause: SharedLaneCause, oneCopy?: { named: Inser
     }
     const headline = `${cause.headline.text}.`;
     const one = cause.kind === 'join'
-        ? [headline, cause.cause?.text, cause.alone.text, fewerCopiesText(cause)]
-        : [headline, cause.spacing?.text, cause.alone.text, fewerCopiesText(cause)];
+        ? [headline, cause.cause?.text, cause.alone.text]
+        : [headline, cause.spacing?.text, cause.alone.text];
     const two = cause.kind === 'join' ? [cause.where.text] : [cause.cause?.text, cause.where.text];
     return { one: one.filter(Boolean).join(' '), two: two.filter(Boolean).join(' ') };
 }
@@ -279,7 +264,7 @@ export function pictureLabelsOf(cause: SharedLaneCause, oneCopy?: { named: Inser
  * join, the side belts that are full (picture one's caption); and the other clock of the build (its own line)
  */
 export function textPartsOf(cause: SharedLaneCause): string[] {
-    return [cause.kind === 'join' ? undefined : cause.cause?.text, cause.spacing?.text, cause.where.text, cause.alone.text, fewerCopiesText(cause)]
+    return [cause.kind === 'join' ? undefined : cause.cause?.text, cause.spacing?.text, cause.where.text, cause.alone.text]
         .filter((it): it is string => Boolean(it));
 }
 

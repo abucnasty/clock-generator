@@ -1400,7 +1400,7 @@ export function judgeSharedLanes(config: Config, clock_windows: SerializableCloc
 /**
  * `judgeSharedLanes`, with the runs of one copy alone kept in `alone_runs` by the reading and the window cycles they run:
  * such a run does not depend on the copies on the lanes, so a caller that judges one clock with several counts of copies
- * makes each once (`fewerCopiesThatHold`)
+ * makes each once
  */
 function judgedOnLanes(config: Config, clock_windows: SerializableClockWindows, window_cycle: WindowCycle, logger: Logger,
     copies_on_lanes: number | undefined, alone_runs: Map<string, AloneRun>, for_log = false, by_rate_on = false, feeders?: LaneFeeders): SharedLaneJudgement {
@@ -1612,48 +1612,4 @@ function judgedOnLanes(config: Config, clock_windows: SerializableClockWindows, 
         }
     }
     return judged(found, true);
-}
-
-/**
- * The largest count of copies on the lanes the copies share whose own run holds, for a clock that loses swings there: the
- * verdict (`judgeSharedLanes`) made again with the most downstream copies off the lanes (`copies_on_lanes`; they keep their
- * machines and output inserters and take from stocks of their own, and the lanes keep their supply and end), counts tried
- * by bisection between one and the copies less one; the runs of one copy alone are made once for them all. It assumes that a count that holds is held by every smaller count. Where
- * the run with one copy on the lanes is made and does not hold, that copy's swings missed by inserter. Null where the
- * copies share no lane the verdict runs.
- */
-export function fewerCopiesThatHold(config: Config, clock_windows: SerializableClockWindows, window_cycle: WindowCycle, logger: Logger,
-    by_rate: boolean = SHARED_LANES_JUDGED_BY_RATE, feeders?: LaneFeeders):
-    { copies: number | null; tried: { copies: number; holds: boolean }[]; one_copy_short?: { inserter_id: number; missed: number; swings: number }[] } | null {
-    const layout = sharedLaneRunsOf(config, undefined, feeders).readings[0]?.layouts[0];
-    if (layout === undefined) return null;
-    const slots = Math.max(0, ...layout.rows.flatMap(row => row.takers.map(taker => taker.copy))) + 1;
-    if (slots < 2) return null;
-    let low = 1, high = slots - 1;
-    let copies: number | null = null;
-    const tried: { copies: number; holds: boolean }[] = [];
-    let one_copy_short: { inserter_id: number; missed: number; swings: number }[] | undefined;
-    // the runs of one copy alone do not depend on the copies on the lanes: made once for every count tried
-    const alone_runs = new Map<string, AloneRun>();
-    while (low <= high) {
-        const middle = Math.floor((low + high) / 2);
-        const judged = judgedOnLanes(config, clock_windows, window_cycle, logger, middle, alone_runs, false, by_rate, feeders);
-        const holds = judged.losses.length === 0;
-        tried.push({ copies: middle, holds });
-        if (holds) {
-            copies = middle;
-            low = middle + 1;
-        } else {
-            high = middle - 1;
-            if (middle === 1) {
-                const by_inserter = new Map<number, { inserter_id: number; missed: number; swings: number }>();
-                for (const loss of judged.losses.filter(it => it.copy === 1)) {
-                    const known = by_inserter.get(loss.inserter_id) ?? { inserter_id: loss.inserter_id, missed: 0, swings: 0 };
-                    by_inserter.set(loss.inserter_id, { inserter_id: loss.inserter_id, missed: known.missed + Math.max(0, loss.alone_swings - loss.swings), swings: known.swings + loss.alone_swings });
-                }
-                one_copy_short = [...by_inserter.values()];
-            }
-        }
-    }
-    return { copies, tried, ...(one_copy_short !== undefined && { one_copy_short }) };
 }

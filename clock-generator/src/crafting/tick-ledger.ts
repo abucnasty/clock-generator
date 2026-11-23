@@ -32,7 +32,7 @@ export const TICK_PURPOSES = [
     // a clock-only check of a search that makes no long run
     "quick_trial",
     // what a clock is tried on after its check
-    "trial_one_copy", "trial_copies", "shared_lane_check", "fewer_copies",
+    "trial_one_copy", "trial_copies", "shared_lane_check",
     // what only a log asks for: the repeat check runs a clock again on its narrowed windows
     "repeat_check",
     // the checks that a clock is judged by besides the above

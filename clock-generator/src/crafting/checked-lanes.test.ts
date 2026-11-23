@@ -40,7 +40,7 @@ function judged(losses: SharedLaneLoss[], more: Partial<SharedLaneJudgement> = {
 }
 
 const checked = (input: Partial<CheckedLanesInput> & { config: Config }): CheckedLanes =>
-    checkedLanesOf({ holds: true, judged: judged([]), window_cycle_ticks: 60, copies_trial: null, fewer: null, ...input })!;
+    checkedLanesOf({ holds: true, judged: judged([]), window_cycle_ticks: 60, copies_trial: null, ...input })!;
 
 const rows = (lanes: CheckedLanes) => lanes.rows.map(row => [`${row.belt_id}/${row.lane}`, row.state.kind, row.label, row.sentence]);
 
@@ -52,7 +52,7 @@ describe("the lanes of the build", () => {
             { belt_id: 2, lane: 1, item: "iron-gear-wheel", role: "output", end: "infinite", end_given_by: "role", sharing: "shared", supply_rate: 120, supply_rate_by_default: true, capacity: 120 },
         ]);
         // a build of one copy has no row
-        expect(checkedLanesOf({ config: one, holds: true, judged: judged([]), window_cycle_ticks: 60, copies_trial: null, fewer: null })).toBeNull();
+        expect(checkedLanesOf({ config: one, holds: true, judged: judged([]), window_cycle_ticks: 60, copies_trial: null })).toBeNull();
     });
 
     it("give the switch as where the end comes from where the config states it", () => {
@@ -169,9 +169,6 @@ describe("the rows of a build that states its output belt", () => {
         expect(lanes.cause!.cause!.text).toBe("The side belts of copies 4 and 8 are full where they join the automation science pack output belt.");
         // a full join: its code, with the missed output swings and the output swings over the copies
         expect(lanes.cause!.reason).toEqual({ code: "target_full", data: { missed: 84, swings: 756 } });
-        // fewer copies are fewer on the output belt too: what changes it names no lane
-        const fewer = checked({ config, judged: judgement, fewer: { copies: 3 } });
-        expect(fewer.cause!.changes!.text).toBe("With 3 copies, every copy makes every swing.");
     });
 
     it("hold at the output belt and count the waits at a join that misses no swing", async () => {
@@ -200,14 +197,10 @@ describe("the line of a build that drops into a chest of each copy", () => {
 });
 
 describe("the parts of the cause", () => {
-    it("say what changes it with fewer copies only where their run holds, and where one copy alone on the lanes is short, say so", () => {
-        const loss = lossOf(2, 3, 65);
-        const holds = checked({ config: gears(), judged: judged([loss]), fewer: { copies: 2 } });
-        expect(holds.cause!.changes!.text).toBe("With 2 copies on the iron plate lane, every copy makes every swing.");
-        expect(holds.cause!.alone.text).toBe("The same inserter makes all 65 swings. The clock is right for one copy.");
-        const none = checked({ config: gears(), judged: judged([loss]), fewer: { copies: null, one_copy_short: [{ inserter_id: 1, missed: 5, swings: 65 }] } });
-        expect(none.cause!.changes).toBeNull();
-        expect(none.cause!.alone).toEqual({ text: "With one copy alone on the lanes, the same inserter misses 5 of 65 swings.", data: { makes_all: false, missed: 5, swings: 65 } });
+    it("say that the same inserter makes every swing for one copy, and say no change before the other clocks are known", () => {
+        const short = checked({ config: gears(), judged: judged([lossOf(2, 3, 65)]) });
+        expect(short.cause!.alone).toEqual({ text: "The same inserter makes all 65 swings. The clock is right for one copy.", data: { makes_all: true, missed: 0, swings: 65 } });
+        expect(short.cause!.changes).toBeNull();
     });
 
     it("write the cause only where the run shows it: the copy before's gap, the full output, both, with their counts", () => {
