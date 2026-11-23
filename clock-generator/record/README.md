@@ -49,7 +49,7 @@ difference. A pin of a game test (`selection.id`) is of the record's ids: its cl
 ## Regenerating it
 
 ```bash
-# all seven groups, every job (the record covers all 86), then write the files
+# all seven groups, every job (the record covers all 87), then write the files
 BLAST_GROUPS=config,pickup,overhood,front,blocked,containers,variants bash scripts/blast/blast.sh run .. <out>
 bash scripts/blast/blast.sh record write <out>          # or the cache entry's key, as `blast.sh list` prints it
 bash scripts/blast/blast.sh record check <out>          # the table of differences against the committed files; exit 1 on any
