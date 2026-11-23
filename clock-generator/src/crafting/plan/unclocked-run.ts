@@ -335,6 +335,8 @@ export interface BlueprintGenerationResult {
     metered_takers?: string[];
     /** The output service observed around the chosen direct turns, or why the original output control was kept. */
     metered_output_windows?: Record<string, import("../candidates/metered-output-windows").OutputWindowDecision>;
+    /** The windows given to the belt-fed inputs of the machines the chosen direct turns feed, or why their control was kept. */
+    metered_input_windows?: Record<string, import("../candidates/metered-input-windows").InputWindowDecision>;
     /** The windows are of a planning run that counts every belt pickup from its entry, not from the take that freed it (see clockWithPickupsFromTheirEntry) */
     pickups_from_entry?: true;
     /**
