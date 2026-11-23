@@ -8,7 +8,7 @@ a line that names the reason and lists the jobs. A pull request that moves no re
 CI checks this file: the "Record check" fails when a selected clock got worse than in the base and its job key is not in the lines the pull
 request adds to this file.
 
-## A belt-fed window that inputs share moves to each assembler's turn, and their outputs get windows
+## A belt-fed window that inputs share moves to each assembler's turn, and their outputs get windows (#888)
 1 job moved, its selected clock, by a new strategy step. Coordinated Sources moves the window that the three inputs taking processing units and flying robot frames from one belt shared to each assembler's own turn, and gives those assemblers' outputs one window each 108-tick service interval, as the other three science outputs have. It is kept only because the clock holds every check with fewer wake-ups. The gain is in the simulator only: those outputs were enabled most of the cycle before, and the simulator may count such arms low, so the gain in the game is not yet measured.
 - config-UTILITY_SCIENCE_320_METERED_TAKERS: selected coordinated_sources stays stable at 320/s on 324 ticks; wake-ups 964.769 -> 565.387 a minute, better; windows inserter:1 0-1,7-107,108-109,115-215,216-217,223-323 -> 0-6,90-114,198-222,306-323, inserter:3 14-41,122-149,230-257 -> 50-77,158-185,266-293, inserter:4 0-17,23-107,108-125,131-215,216-233,239-323 -> 18-42,126-150,234-258, inserter:10 14-41,122-149,230-257 -> 0-5,86-113,194-221,302-323, inserter:13 0-13,19-107,108-121,127-215,216-229,235-323 -> 54-78,162-186,270-294; `clock_sha256`, `windows_sha256`, `results_sha256` of coordinated_sources
 
