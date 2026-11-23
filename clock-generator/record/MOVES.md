@@ -8,8 +8,8 @@ a line that names the reason and lists the jobs. A pull request that moves no re
 CI checks this file: the "Record check" fails when a selected clock got worse than in the base and its job key is not in the lines the pull
 request adds to this file.
 
-## The belt-fed inputs of metered science assemblers get enable windows (pull request number to come)
-1 job moved, its selected clock. Coordinated Sources gives the three inputs that take processing units and flying robot frames from the belt one window each 108-tick service interval, kept only because the clock holds every check with fewer wake-ups (simulator only; the gain in the game is not yet measured). Waits on abucnasty (question 80).
+## The belt-fed inputs of metered science assemblers get enable windows (#883)
+1 job moved, its selected clock. Coordinated Sources gives the three inputs that take processing units and flying robot frames from the belt one window each 108-tick service interval, kept only because the clock holds every check with fewer wake-ups (simulator only; the gain in the game is not yet measured).
 - config-UTILITY_SCIENCE_320_METERED_TAKERS: selected coordinated_sources stays stable at 320/s on 324 ticks; wake-ups 1620.451 -> 964.769 a minute, better; windows inserter:12 0-323 -> 41-58,149-166,257-274, inserter:20 0-323 -> 77-94,185-202,293-310, inserter:21 0-323 -> 5-22,113-130,221-238; `clock_sha256`, `windows_sha256`, `results_sha256` of coordinated_sources
 
 ## An item waits a tick at an underground entrance on the lanes that state their entrances (#848)
