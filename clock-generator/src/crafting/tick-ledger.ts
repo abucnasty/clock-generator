@@ -150,6 +150,46 @@ interface Scope {
 /** The ledger being made: set while a generation that asked for one runs, as the maker log's is */
 let scope: Scope | undefined;
 
+interface RunWork {
+    open: number;
+    loops: Set<TickLoop>;
+    ticks: number;
+    valid: boolean;
+}
+
+let sampled_run: RunWork | undefined;
+
+/** Reads the actual work of one sampled run, independently of any external tick ledger. */
+export function withSampledRunWork<T>(work: () => T): { result: T; ticks: number | undefined } {
+    if (sampled_run !== undefined) {
+        sampled_run.valid = false;
+        return { result: work(), ticks: undefined };
+    }
+    const run: RunWork = { open: 0, loops: new Set(), ticks: 0, valid: true };
+    sampled_run = run;
+    try {
+        const result = work();
+        const measured = run.valid && run.open === 0 && run.loops.has("prepare_step") && run.loops.has("warmup_step") && run.loops.has("simulate_step");
+        return { result, ticks: measured ? run.ticks : undefined };
+    } finally {
+        sampled_run = undefined;
+    }
+}
+
+function sampledRunLoop(run: RunWork, loop: TickLoop, ticks: () => number): OpenTickLoop {
+    run.open++;
+    run.loops.add(loop);
+    let closed = false;
+    return { close: () => {
+        if (closed) return;
+        closed = true;
+        const executed = ticks();
+        if (!Number.isSafeInteger(executed) || executed < 0 || loop === "loss_trials" || loop === "phase_proof") run.valid = false;
+        run.ticks += executed;
+        run.open--;
+    } };
+}
+
 /** Whether a ledger is open: where none is, build no row and count nothing */
 export function tickLedgerOn(): boolean {
     return scope !== undefined;
@@ -256,18 +296,20 @@ function countedUnderPurpose<T>(purpose: TickPurpose, work: () => T, options: { 
 }
 
 /**
- * Begins a loop of ticks, where a ledger is open: `ticks` reads the ticks it has run so far. Call `close` on the returned
- * loop when the loop ends. Returns undefined where no ledger is open.
+ * Begins a loop of ticks where a ledger or sampled work count is open. Call `close` on the returned loop when the
+ * loop ends. `ticks` reads the ticks it has run so far. Returns undefined when neither count is open.
  */
 export function beginTickLoop(loop: TickLoop, ticks: () => number): OpenTickLoop | undefined {
     const own = scope;
-    if (own === undefined) return undefined;
+    const counted = sampled_run === undefined ? undefined : sampledRunLoop(sampled_run, loop, ticks);
+    if (own === undefined) return counted;
     const open: OpenLoop = {
         maker: own.maker,
         purpose: own.purpose,
         loop,
         ticks,
         close: () => {
+            counted?.close();
             if (own.open.delete(open)) count(own, open.maker, open.purpose, open.loop, ticks());
         },
     };

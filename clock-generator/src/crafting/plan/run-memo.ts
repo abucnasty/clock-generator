@@ -3,12 +3,19 @@ import type { Config } from "../../config";
 import type { DisturbanceTrialAssessment } from "../trial";
 import type { CopiesTrialVerdict } from "../shared-lane-trial";
 import type { SharedLaneJudgement } from "../shared-lane-verdict";
+import { SampledStartMemo } from "./sampled-start-memo";
 
 /**
  * A run shorter than this is simulated again rather than kept. A run of 100,000 ticks takes seconds; a shorter one
  * costs less to make again than the memory of its histories, so a generation of builds with short window cycles keeps none.
  */
 export const RUN_MEMO_MIN_TICKS = 100_000;
+
+/** A stage is below the raw memo's floor on both measures, after the observed simulator miss completed. */
+export function shortSampledStart(requested: number, executed: number | undefined): boolean {
+    return Number.isFinite(requested) && requested > 0 && requested < RUN_MEMO_MIN_TICKS
+        && executed !== undefined && Number.isSafeInteger(executed) && executed > 0 && executed < RUN_MEMO_MIN_TICKS;
+}
 
 /**
  * The most ticks of runs the memo keeps at once; the run used longest ago goes first. A kept run holds its histories,
@@ -107,8 +114,12 @@ export class RunMemo {
     hits = 0;
     private readonly kept = new Map<string, BuildRun>();
     private kept_ticks = 0;
+    /** Measurements reused between a quick check and its own strict confirmation. */
+    readonly sampled_starts: SampledStartMemo | undefined;
 
-    constructor(readonly min_ticks: number = RUN_MEMO_MIN_TICKS, readonly max_ticks: number = RUN_MEMO_MAX_TICKS) { }
+    constructor(readonly min_ticks: number = RUN_MEMO_MIN_TICKS, readonly max_ticks: number = RUN_MEMO_MAX_TICKS, reuse_sampled_starts = false) {
+        if (reuse_sampled_starts) this.sampled_starts = new SampledStartMemo();
+    }
 
     /** Runs kept so far */
     get size(): number {
@@ -261,10 +272,17 @@ export function currentRunMemo(): RunMemo | undefined {
  * is already running shares its memo. The generation has to be synchronous: the memo is closed when `generate` returns.
  */
 export function withRunMemo<T>(generate: () => T, min_ticks?: number, max_ticks?: number): T {
-    if (open !== undefined) {
-        return generate();
-    }
-    open = new RunMemo(min_ticks, max_ticks);
+    return inRunMemo(generate, min_ticks, max_ticks);
+}
+
+/** The quiet command can keep sampled measurements when it owns the generation and its data. */
+export function withQuietSampledStarts<T>(generate: () => T): T {
+    return inRunMemo(generate, undefined, undefined, true);
+}
+
+function inRunMemo<T>(generate: () => T, min_ticks?: number, max_ticks?: number, reuse_sampled_starts = false): T {
+    if (open !== undefined) return generate();
+    open = new RunMemo(min_ticks, max_ticks, reuse_sampled_starts);
     try {
         return generate();
     } finally {

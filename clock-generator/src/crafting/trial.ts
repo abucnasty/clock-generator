@@ -19,7 +19,7 @@ import { canonicalKey, currentRunMemo } from "./plan/run-memo";
 import { wholeCounterOf } from "./plan/clock-window-cycle-limit";
 import { assessTargetProduction, TargetProduction } from "./target-production";
 import { TARGET_RATE_TOLERANCE } from "./rank";
-import { BlueprintGenerationResult, BuildRun, FractionalSwings, LCM_STABILITY_TOLERANCE, SIMULATION_BUDGET_TICKS, RunOptions, fractionalSwingsOf, SimulationStabilityCheck, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, coldControlledTrialBuild, unclockedRun, provenRepeatBin, runBuild, trialRunOf, withInserterClocks } from "./plan/unclocked-run";
+import { BlueprintGenerationResult, BuildRun, FractionalSwings, LCM_STABILITY_TOLERANCE, SIMULATION_BUDGET_TICKS, RunOptions, fractionalSwingsOf, SimulationStabilityCheck, TrialRun, alwaysEnabledByConfig, checkedClock, clockOfPlan, coldControlledTrialBuild, measureSampledStart, unclockedRun, provenRepeatBin, runBuild, trialRunOf, withInserterClocks } from "./plan/unclocked-run";
 import { SimulationTick } from "./runner/simulation-tick";
 import { simulationStateKey } from "./runner/steady-state";
 import { inLoopInserterWindows, loopInserterWindows, type OutOfLoopWindows } from "./candidates/loop-windows";
@@ -302,11 +302,22 @@ function clockBuildRun(
     options: ClockTrialOptions = {},
     fuel_clocks?: ReadonlyMap<string, InserterClock>,
 ): BuildRun {
+    return runBuild(...clockBuildInputs(config, windows, window_cycle_ticks, logger, options, fuel_clocks));
+}
+
+function clockBuildInputs(
+    configuration: Config,
+    enable_windows: Map<string, OpenRange[]>,
+    window_cycle_ticks: number,
+    logger: Logger,
+    options: ClockTrialOptions,
+    fuel_clocks?: ReadonlyMap<string, InserterClock>,
+): [Config, RunOptions] {
     const { main_clock_shift = 0, ...run_options } = options;
     const named_start = run_options.keep_output_buffers === true || run_options.start_stock !== undefined;
     // a clock of whole ticks is counted by its own window cycle, also where the plan's is not whole (a clock rounded down)
-    return runBuild(buildAsBuiltConfig(config, windows, window_cycle_ticks, fuel_clocks, run_options.decider_order, main_clock_shift),
-        { logger: quietLogger(logger), cold_start: !named_start, output_belt: true, ...(Number.isInteger(window_cycle_ticks) && { window_cycle_ticks }), ...run_options });
+    return [buildAsBuiltConfig(configuration, enable_windows, window_cycle_ticks, fuel_clocks, run_options.decider_order, main_clock_shift),
+        { logger: quietLogger(logger), cold_start: !named_start, output_belt: true, ...(Number.isInteger(window_cycle_ticks) && { window_cycle_ticks }), ...run_options }];
 }
 
 /**
@@ -1289,8 +1300,16 @@ export function runAsBuiltCheck(
     const wakeups = check.wake_ups?.wake_ups_per_minute;
     if (typeof through === "function" && passed === undefined && check.holds && stock !== undefined
         && wakeups !== undefined && Number.isFinite(wakeups) && through(wakeups)) return null;
+    const passed_ticks = passed?.long_run_ticks;
+    // The quick check and its confirmation already share the unshifted result. Use that object only as the owner;
+    // each shifted measurement still matches its own current inputs.
+    let sampled_start_owner: TrialRun | undefined;
+    if (currentRunMemo()?.sampled_starts !== undefined) {
+        if (long_run_ticks === 0 && start_phases === AS_BUILT_START_PHASES && passed === undefined) sampled_start_owner = result;
+        if (long_run_ticks > 0 && start_phases === FULL_CHECK_START_PHASES && passed_ticks === 0) sampled_start_owner = result;
+    }
     return afterTheLongRun(config, decider_windows, window_cycle_ticks, logger, start_phases, report, long_run_ticks,
-        { result, check, stock }, passed?.long_run_ticks === long_run_ticks ? passed.run.check : undefined, swings);
+        { result, check, stock }, passed !== undefined && passed_ticks === long_run_ticks ? passed.run.check : undefined, swings, sampled_start_owner);
 }
 
 /** The count of the start phases a check reports its progress against (see runAsBuiltCheck) */
@@ -1337,6 +1356,7 @@ function afterTheLongRun(
     { result, check, stock }: AsBuiltRun,
     orders_passed: AsBuiltStabilityCheck | undefined,
     swings: FractionalSwings,
+    sampled_start_owner?: TrialRun,
 ): AsBuiltRun {
     const counter = wholeCounterOf(window_cycle_ticks, swings.exact_window_cycle);
     const start_shifts = startShiftsOf(window_cycle_ticks, counter, start_phases);
@@ -1351,7 +1371,8 @@ function afterTheLongRun(
         return { result, check, stock };
     }
 
-    if (typeof process !== "undefined" && process.env?.CLOCK_PROOF_PHASES === "1") {
+    const prove_phases = typeof process !== "undefined" && process.env?.CLOCK_PROOF_PHASES === "1";
+    if (prove_phases) {
         const exhaustive = withTickPurpose("start_phase", () => exhaustiveStartPhases(config, decider_windows, window_cycle_ticks, logger, report, swings));
         if (exhaustive !== null) {
             check.start_phases_checked = exhaustive.phases_checked;
@@ -1379,25 +1400,32 @@ function afterTheLongRun(
     }
     for (const offset of start_shifts) {
         // only its output count is read
-        const shifted = withTickPurpose("start_phase", () =>
-            firstClockSpan(config, decider_windows, window_cycle_ticks, logger, { ...swings, factorio_states: false, main_clock_shift: offset }));
+        const shifted = withTickPurpose("start_phase", () => {
+            const options = { ...swings, factorio_states: false, main_clock_shift: offset };
+            if (sampled_start_owner === undefined || prove_phases || !Number.isInteger(window_cycle_ticks)
+                || !Reflect.ownKeys(options).every(key => key === "fractional_swings" || key === "factorio_states" || key === "main_clock_shift")) {
+                return firstClockSpan(config, decider_windows, window_cycle_ticks, logger, options).stability_check;
+            }
+            return measureSampledStart(...clockBuildInputs(config, decider_windows, window_cycle_ticks, logger, options),
+                { owner: sampled_start_owner, save: !strict, enable_windows: decider_windows, offset });
+        });
         check.start_phases_checked++;
         report?.(check.start_phases_checked, total);
-        const amount = strict ? measuredAmountOf(shifted.stability_check) : null;
-        if (!shifted.stability_check.holds || amount?.target_production.valid === false) {
+        const amount = strict ? measuredAmountOf(shifted) : null;
+        if (!shifted.holds || amount?.target_production.valid === false) {
             check.holds = false;
             clearJudgedClock(check);
-            check.actual_output_items = shifted.stability_check.actual_output_items;
+            check.actual_output_items = shifted.actual_output_items;
             if (amount !== null) failedOnAmount(check, amount);
             check.failed_start_offset = offset;
-            if (shifted.stability_check.full_output_chests !== undefined) {
-                check.full_output_chests = shifted.stability_check.full_output_chests;
+            if (shifted.full_output_chests !== undefined) {
+                check.full_output_chests = shifted.full_output_chests;
             }
-            if (shifted.stability_check.export_shortfalls !== undefined) {
-                check.export_shortfalls = shifted.stability_check.export_shortfalls;
+            if (shifted.export_shortfalls !== undefined) {
+                check.export_shortfalls = shifted.export_shortfalls;
             }
-            check.repeat_window_cycles = shifted.stability_check.repeat_window_cycles;
-            check.repeat_output_items = shifted.stability_check.repeat_output_items;
+            check.repeat_window_cycles = shifted.repeat_window_cycles;
+            check.repeat_output_items = shifted.repeat_output_items;
             break;
         }
     }

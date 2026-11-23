@@ -39,6 +39,11 @@ export function setGameWords(source: () => TextWords | undefined): () => TextWor
     return previous;
 }
 
+/** Whether the caller's source still supplies the game's names. */
+export function hasGameWordsSource(source: () => TextWords | undefined): boolean {
+    return game_words === source;
+}
+
 /**
  * The one place that decides how a text writes the game's ids: with the game data loaded, its names in a sentence ("iron
  * gear wheel", "assembling machine 3", "rocket fuel from jelly"), whatever the caller passes; without it, the words the

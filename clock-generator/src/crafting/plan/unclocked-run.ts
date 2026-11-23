@@ -5,7 +5,7 @@ import { ClockWindowCycleLimitError, SIMULATION_BUDGET_TICKS, type SwingWindowCy
 import { assertOutputTransferGenerationSupported } from "../../config/output-transfer-generation";
 import assert from "../../common/assert";
 import type { NotMadeClock } from "../why-not-stable";
-import type { MakerLogSink } from "../maker-log";
+import { makerLogOn, type MakerLogSink } from "../maker-log";
 import { Config } from "../../config";
 import { EnableControlOverrideConfig, judgedStartOf } from "../../config/schema";
 import { assertInserterCoverage } from "../../config/inserter-coverage-validator";
@@ -18,7 +18,7 @@ import { assertLaneCapacity } from "../../config/lane-capacity-validator";
 import { DebugObserverFactory } from "../sequence/debug/debug-observer-factory";
 import { DebugSettingsProvider, MutableDebugSettingsProvider } from "../sequence/debug/debug-settings-provider";
 import { InserterClock, byProductOnlyInserters, clockWindowsOverWindowCycle, fuelOnlyInserters, isByProductOnlyInserter, alwaysEnabledInserters, loopInserters, unplannedInserterClocks } from "../sequence/unplanned-inserter-clock";
-import { BackpressureFillStep, reportFill } from "../runner/steps/backpressure-fill-step";
+import { BackpressureFillStep, fillsAreObserved, reportFill } from "../runner/steps/backpressure-fill-step";
 import { createEntityRegistryFromConfig, MovingPickupPhases, SimulationContext } from "../sequence/simulation-context";
 import { Duration, OpenRange } from "../../data-types";
 import { Entity, EntityId, handSizeFor, Inserter, Machine, ReadableEntityRegistry } from "../../entities";
@@ -82,8 +82,9 @@ import { ChestDrillClock, chestDrillClockLine, chestDrillWindows } from "../ches
 import type { TurnGroup } from "../turn-groups";
 import type { SourceControl } from "../strategy-catalog";
 import { AlwaysOnReason, AlwaysOnReasons, alwaysOnReasonsOf, classifyEntities } from "../enable-control-router";
-import { RunMemo, currentRunMemo } from "./run-memo";
-import { beginShadow, countRunMemoHit, runsThatMakeWindows, tickLedgerOn, withTickPurpose, type ShadowWatch } from "../tick-ledger";
+import { canonicalKey, RUN_MEMO_MIN_TICKS, RunMemo, currentRunMemo, shortSampledStart } from "./run-memo";
+import { MAX_SAMPLED_START_KEY_CHARACTERS, sampledStartInputs, type SampledStart } from "./sampled-start-memo";
+import { beginShadow, countRunMemoHit, runsThatMakeWindows, tickLedgerOn, withSampledRunWork, withTickPurpose, type ShadowWatch } from "../tick-ledger";
 import { AS_BUILT_START_PHASES, AsBuiltRun, AsBuiltStabilityCheck, FREE_RUNNING_CHECK_TICKS, completedAsBuiltCheck, laneHandRoomTrial, runAsBuiltCheck, runClockOnBuild, trialWithLoopWindows } from "../trial";
 
 export { SIMULATION_BUDGET_TICKS };
@@ -687,14 +688,46 @@ export interface BuildRun extends PlannedOutputCycle, TransferPlan {
  * (see `RunMemo`).
  */
 export function runBuild(config: Config, asked: RunOptions): BuildRun {
-    const options = withTheStartOf(config, asked);
+    return runBuildFrom(config, withTheStartOf(config, asked));
+}
+
+function runBuildFrom(configuration: Config, options: RunOptions): BuildRun {
     const memo = currentRunMemo();
-    if (memo === undefined || !RunMemo.accepts(options)) return simulateBuild(config, options);
+    if (memo === undefined || !RunMemo.accepts(options)) return simulateBuild(configuration, options);
     // a run the memo hands out again simulates no tick: the tick ledger counts it as a run asked and not made
     const hits_before = memo.hits;
-    const run = memo.run(config, options, () => simulateBuild(config, options));
+    const run = memo.run(configuration, options, () => simulateBuild(configuration, options));
     if (memo.hits > hits_before) countRunMemoHit();
     return run;
+}
+
+const sampled_options = new Set(["cold_start", "fill_start", "output_belt", "window_cycle_ticks", "factorio_states", "fractional_swings"]);
+
+/** The output-only answer of a sampled main-counter start. Its caller has already quieted the trial logger. */
+export function measureSampledStart(configuration: Config, asked: RunOptions, start: SampledStart): SimulationStabilityCheck {
+    const options = withTheStartOf(configuration, asked);
+    const eager = () => trialRunOf(runBuildFrom(configuration, options)).stability_check;
+    const memo = currentRunMemo();
+    if (memo?.sampled_starts === undefined || memo.min_ticks !== RUN_MEMO_MIN_TICKS || fillsAreObserved() || makerLogOn()
+        || !RunMemo.accepts(options) || options.cold_start !== true) return eager();
+    const { logger, ...read } = options;
+    if (logger === undefined || !Object.keys(read).every(key => sampled_options.has(key))) return eager();
+    const input = sampledStartInputs(start, configuration, read);
+    const key = input === null ? null : canonicalKey(input);
+    if (key === null || key.length > MAX_SAMPLED_START_KEY_CHARACTERS) return eager();
+    if (!start.save) return memo.sampled_starts.get(start.owner, key) ?? eager();
+
+    let error_logged = false;
+    const logged = { ...logger, error(message: string) { error_logged = true; logger.error(message); } };
+    const prior_hits = memo.hits;
+    const { result, ticks } = withSampledRunWork(() => {
+        const run = runBuildFrom(configuration, { ...options, logger: logged });
+        return { answer: trialRunOf(run).stability_check, requested: run.ticks_simulated };
+    });
+    if (!error_logged && prior_hits === memo.hits && shortSampledStart(result.requested, ticks)) {
+        memo.sampled_starts.save(start.owner, key, result.answer);
+    }
+    return result.answer;
 }
 
 /**

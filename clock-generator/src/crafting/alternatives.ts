@@ -3,7 +3,9 @@ import assert from "../common/assert";
 import { judgedStartOf, type TargetCounts } from "../config/schema";
 import { fraction } from "../data-types/fraction";
 import { Config } from "../config";
+import { isPlainJsonConfiguration } from "../config/json-configuration";
 import { withoutOutsideSupply } from "../config/outside-supply";
+import { FactorioDataService } from "../data/factorio-data-service";
 import { warnUncalibratedBeltPickups } from "../config/pickup-calibration";
 import { warnLanesSharedByCopies } from "../config/lane-capacity-validator";
 import { warnSideLoadedDrops } from "../config/side-loaded-drop";
@@ -36,7 +38,7 @@ import { collectingParts, coordinatedSourcesInputOf, type CoordinatedSourcesInpu
 import { coordinatedSourcesClock, onWindowCycles, withNotAdmitted, type NotAdmittedPart } from "./candidates/coordinated-sources";
 import { BlueprintGenerationResult, clockedByConfig, GenerateClockOptions, SimulationStabilityCheck, fractionalStartOf, fractionalSwingsOf } from "./plan/unclocked-run";
 import { EntityTransferCountMap } from "./sequence/cycle/swing-counts";
-import { withRunMemo } from "./plan/run-memo";
+import { currentRunMemo, withQuietSampledStarts, withRunMemo } from "./plan/run-memo";
 import { CodedError, emitMakerLog, heldMakerLog, makerLogOn, noteClockLanes, noteClockRun, reasonOf, reasonOfError, timedCheck, timedMaker, withMakerLog, type MakerLogEvent } from "./maker-log";
 import { withTickPurpose } from "./tick-ledger";
 import { madeCompositionEvent, notMadeEvent, resultEvents } from "./maker-log-events";
@@ -58,6 +60,7 @@ import { buildLanesOf, BuildLane, CheckedLanes, checkedLanesOf, withOtherClocks 
 import { buildToNameOf, entityNamesInSentence } from "./build-names";
 import { capitalized, drillNameInText, insertersInSentence, textWords } from "./entity-name";
 import { CopiesTrialVerdict } from "./shared-lane-trial";
+import { fillsAreObserved } from "./runner/steps/backpressure-fill-step";
 
 
 export interface ClockAlternative {
@@ -1622,8 +1625,14 @@ export function generateClockAlternatives(
 }
 
 /** The command-line listing owns both its options and its quiet logger. */
-export function generateQuietClockAlternatives(config: Config): ClockAlternativesResult {
-    return generateAlternativesWithOptions(config, { logger: { log() {}, warn() {}, error() {}, debug() {} } }, true);
+export function generateQuietClockAlternatives(configuration: Config): ClockAlternativesResult {
+    const options: GenerateClockOptions = { logger: { log() {}, warn() {}, error() {}, debug() {} } };
+    const generate = () => generateAlternativesWithOptions(configuration, options, true);
+    // The command owns its options. A supplied or inherited observer, or a generation already open, keeps its own path.
+    if (currentRunMemo() !== undefined || makerLogOn() || fillsAreObserved()
+        || ["on_progress", "on_progress_detail", "on_not_made", "maker_log", "debug", "debug_steps"].some(key => key in options)
+        || !isPlainJsonConfiguration(configuration) || !FactorioDataService.hasPlainBundledData()) return generate();
+    return withQuietSampledStarts(generate);
 }
 
 function generateAlternativesWithOptions(config: Config, options: GenerateClockOptions, owns_options: boolean): ClockAlternativesResult {
