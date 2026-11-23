@@ -1,6 +1,8 @@
 // .github/workflows/release.yml: a job that needs another job has a status function in its `if`. Without one GitHub adds
 // `success()`, which is false when a job further up the chain was skipped, and `tests` is skipped when a pull request
 // already tested the same tree. Before this check, `production` and `sidecar` were skipped on such a release.
+// It also checks where the variable `PREVIEW_COMMIT` is set: on the build line of the `preview` job and nowhere else,
+// so that the page of the preview has a banner with the commit and the page of production has none.
 import fs from 'fs';
 import path from 'path';
 import { describe, expect, it } from 'vitest';
@@ -38,6 +40,15 @@ function jobsOf(text: string): Job[] {
     return jobs;
 }
 
+/** The text of one job: from its `  <id>:` line to the next job's line, or to the end of the file */
+function jobBody(text: string, id: string): string {
+    const lines = text.split('\n');
+    const start = lines.findIndex(line => line === `  ${id}:`);
+    if (start < 0) return '';
+    const next = lines.findIndex((line, index) => index > start && /^ {2}[\w-]+:\s*$/.test(line));
+    return lines.slice(start, next < 0 ? undefined : next).join('\n');
+}
+
 /** The jobs that need another job and have no status function in their `if` */
 function withoutStatusFunction(jobs: Job[]): string[] {
     return jobs
@@ -72,5 +83,36 @@ describe('release.yml', () => {
         ].join('\n');
         const parsed = jobsOf(`jobs:\n  sidecar:\n${before}\n`);
         expect(withoutStatusFunction(parsed)).toEqual(['sidecar']);
+    });
+
+    describe('PREVIEW_COMMIT', () => {
+        const text = fs.readFileSync(releaseYml, 'utf8');
+        const buildLine = 'PREVIEW_COMMIT="${GITHUB_SHA::7}" npm run build';
+
+        it('is set on the build line of the preview job', () => {
+            const lines = jobBody(text, 'preview').split('\n').map(line => line.trim());
+            expect(lines).toContain(buildLine);
+        });
+
+        it('is set nowhere in the production job, so production has no banner', () => {
+            expect(jobBody(text, 'production')).not.toContain('PREVIEW_COMMIT');
+        });
+
+        it('is set in no other job and not at the level of the workflow', () => {
+            const outside = text.replace(jobBody(text, 'preview'), '');
+            expect(outside).not.toContain('PREVIEW_COMMIT');
+        });
+
+        it('is not set in an env of the preview job, where wrangler and every later command would read it', () => {
+            const envLines = jobBody(text, 'preview').split('\n').filter(line => /^\s*PREVIEW_COMMIT:/.test(line));
+            expect(envLines).toEqual([]);
+        });
+
+        it('cuts a job out of a workflow by its line', () => {
+            const parsed = ['jobs:', '  a:', '    run: one', '  b:', '    run: two', ''].join('\n');
+            expect(jobBody(parsed, 'a')).toBe('  a:\n    run: one');
+            expect(jobBody(parsed, 'b')).toBe('  b:\n    run: two\n');
+            expect(jobBody(parsed, 'c')).toBe('');
+        });
     });
 });
