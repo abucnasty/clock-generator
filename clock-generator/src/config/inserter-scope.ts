@@ -78,15 +78,25 @@ function carriesFromBeltIntoChest(config: BeltPickupSinkConfig, inserter: Scoped
 }
 
 /**
- * The refusal of the inserters that take from a belt and drop into anything but a machine, all of them named by their
- * ids, or null when there are none. The simulator's belt pickup is made for a machine's ingredients only. An inserter
- * from a belt into a chest that carries nothing is left alone; one from a belt onto a belt is always refused, as the
- * simulator never builds it.
+ * Whether a belt pickup may drop into the chest: a steel chest of one item, its slots limited to at most the 48 it has, as
+ * the game limits them. Its belt pickup and its drop were compared with the game on a steel chest of 48 slots. A chest
+ * that names no prototype is not known to be a steel chest.
+ */
+function beltPickupDropsInto(chest: ChestConfig | undefined): boolean {
+    return chest !== undefined && chest.type === "buffer-chest" && chest.prototype === "steel-chest" && chest.storage_size <= 48;
+}
+
+/**
+ * The refusal of the inserters that take from a belt and drop where a belt pickup cannot (onto a belt, or into a chest
+ * other than a steel chest), all of them named by their ids, or null when there are none. The simulator's belt pickup
+ * drops into a machine or into a steel chest only. An inserter from a belt into a chest that carries nothing is
+ * left alone; one from a belt onto a belt is always refused, as the simulator never builds it.
  */
 export function beltPickupSinkRefusal(config: BeltPickupSinkConfig): BeltPickupSinkError | null {
     const found: BeltPickupSinkInserter[] = [];
     config.inserters.forEach((inserter, index) => {
         if (inserter.source.type !== "belt" || inserter.sink.type === "machine") return;
+        if (inserter.sink.type === "chest" && beltPickupDropsInto(config.chests?.find(it => it.id === inserter.sink.id))) return;
         if (inserter.sink.type !== "belt" && !carriesFromBeltIntoChest(config, inserter)) return;
         found.push({ inserter_id: inserter.id ?? index + 1, belt_id: inserter.source.id,
             sink: { type: inserter.sink.type === "belt" ? "belt" : "chest", id: inserter.sink.id } });
@@ -100,7 +110,7 @@ export function beltPickupSinkRefusal(config: BeltPickupSinkConfig): BeltPickupS
  * coverage check, as Check does.
  */
 export function insertersScopeProblem(config: BeltPickupSinkConfig): string | null {
-    // the whole build's refusal first: a pickup kind's advice (take from this belt with a legendary stack inserter) does not fit an inserter that drops into a chest
+    // the whole build's refusal first: a pickup kind's advice (take from this belt with a legendary stack inserter) does not fit an inserter that drops where a belt pickup cannot
     const beltToNonMachine = beltPickupSinkRefusal(config);
     if (beltToNonMachine) return beltToNonMachine.message;
     for (const [index, inserter] of config.inserters.entries()) {

@@ -62,7 +62,8 @@ export function bindHandPorts(args: HandPortArgs): HandPorts {
     const drop = bindDrop(state, scratch, items, sink, notifications, tick_provider);
     let pickup: HandPickupPort;
     if (EntityState.isBelt(source)) {
-        pickup = new BeltHandPickup(state, scratch, items, drop, source, EntityState.isMachine(sink) ? sink.wakes : null, tick_provider, notifications);
+        pickup = new BeltHandPickup(state, scratch, items, drop, source, EntityState.isMachine(sink) ? sink.wakes : null, tick_provider, notifications,
+            ContainerStorage.isSingleItem(sink));
     } else if (EntityState.isMachine(source)) {
         pickup = new MachineHandPickup(state, scratch, items, drop, source, control, notifications);
     } else if (ContainerStorage.isMixed(source)) {

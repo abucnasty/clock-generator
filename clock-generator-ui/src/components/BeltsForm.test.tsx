@@ -39,8 +39,8 @@ it('uses the same row labels in a belt-to-wagon refusal and the rendered forms',
     expect(screen.getByRole('button', { name: 'Entity details for Cargo wagon 2' })).toBeDefined();
     expect(screen.getByRole('button', { name: 'Entity details for Cargo wagon 3' })).toBeDefined();
     expect(beltPickupSinkRefusal(formDataToConfig(form))?.message).toBe(
-        'Inserter 3 takes from Belt 2 and drops into Cargo wagon 2. Taking from a belt into anything but a machine is not supported, '
-        + 'so this build cannot be clocked. Make that inserter drop into a machine, so that the machine is fed straight from the belt.');
+        'Inserter 3 takes from Belt 2 and drops into Cargo wagon 2. A belt pickup can drop into a machine or into a steel chest, '
+        + 'and nowhere else, so this build cannot be clocked. Make that inserter drop into a machine or into a steel chest.');
 });
 
 const exampleForm = (sample: unknown) => configToFormData(ConfigSchema.parse(sample));

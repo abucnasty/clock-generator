@@ -257,9 +257,9 @@ it('points at each inserter the engine refuses (#650): one button per named inse
         { inserter_id: 3, belt_id: 4, sink: { type: 'chest', id: 2 } },
         { inserter_id: 5, belt_id: 3, sink: { type: 'chest', id: 1 } },
     ]);
-    const message = 'Inserters 3 and 5 take from a belt and drop into something other than a machine: Inserter 3 takes from Belt 4 and drops into Chest 2; '
-        + 'Inserter 5 takes from Belt 3 and drops into Chest 1. Taking from a belt into anything but a machine is not supported, so this build cannot be clocked. '
-        + 'Make each of them drop into a machine, so that the machine is fed straight from the belt.';
+    const message = 'Inserters 3 and 5 take from a belt and drop into something a belt pickup cannot drop into: Inserter 3 takes from Belt 4 and drops into Chest 2; '
+        + 'Inserter 5 takes from Belt 3 and drops into Chest 1. A belt pickup can drop into a machine or into a steel chest, and nowhere else, '
+        + 'so this build cannot be clocked. Make each of them drop into a machine or into a steel chest.';
     const issues = buildValidationIssues({ fieldProblems: [], coverage: [], chests: [], inserters: [], machines: [{ id: 1 }], chestIssues: [],
         coverageText: () => '', scopeRefusal: refusal.message, scopeRefusalInserters: refusal.inserter_ids,
         failure: { message: refusal.message } });

@@ -247,10 +247,10 @@ export class InserterCoverageError extends Error {
 }
 
 // ============================================================================
-// Belt pickup into something other than a machine
+// Belt pickup into something it cannot drop into
 // ============================================================================
 
-/** One inserter that takes from a belt and drops into anything but a machine */
+/** One inserter that takes from a belt and drops where a belt pickup cannot: onto a belt, or into a chest other than a steel chest */
 export interface BeltPickupSinkInserter {
     inserter_id: number;
     belt_id: number;
@@ -259,8 +259,10 @@ export interface BeltPickupSinkInserter {
 }
 
 /**
- * A build has an inserter that takes from a belt and drops into anything but a machine, which the generator does not
- * clock. Thrown before any simulation (config/inserter-scope.ts) and names every such inserter by its id.
+ * A build has an inserter that takes from a belt and drops where a belt pickup cannot (onto a belt, or into a chest other
+ * than a steel chest), which the generator does not clock. Thrown before any simulation (config/inserter-scope.ts) and
+ * names every such inserter by its id. Inserters that all drop onto a belt get the belt's text; any other list gets the
+ * text of what a belt pickup can drop into.
  */
 export class BeltPickupSinkError extends Error {
     public readonly inserters: BeltPickupSinkInserter[];
@@ -279,16 +281,18 @@ export class BeltPickupSinkError extends Error {
             const drop = sink.type === 'belt' ? `onto Belt ${sink.id}` : `into ${chestName(chests.find(chest => chest.id === sink.id)?.type, sink.id)}`;
             return `takes from Belt ${belt_id} and drops ${drop}`;
         };
-        const rule = 'Taking from a belt into anything but a machine is not supported, so this build cannot be clocked.';
+        const onto_belts = inserters.every(it => it.sink.type === 'belt');
+        const rule = onto_belts
+            ? 'Taking from a belt onto a belt is not supported, so this build cannot be clocked.'
+            : 'A belt pickup can drop into a machine or into a steel chest, and nowhere else, so this build cannot be clocked.';
+        const fix = 'drop into a machine or into a steel chest.';
         if (inserters.length === 1) {
-            return `Inserter ${inserters[0].inserter_id} ${route(inserters[0])}. ${rule} `
-                + 'Make that inserter drop into a machine, so that the machine is fed straight from the belt.';
+            return `Inserter ${inserters[0].inserter_id} ${route(inserters[0])}. ${rule} Make that inserter ${fix}`;
         }
         const ids = inserters.map(it => String(it.inserter_id));
         const list = `${ids.slice(0, -1).join(', ')} and ${ids[ids.length - 1]}`;
-        return `Inserters ${list} take from a belt and drop into something other than a machine: `
-            + `${inserters.map(it => `Inserter ${it.inserter_id} ${route(it)}`).join('; ')}. ${rule} `
-            + 'Make each of them drop into a machine, so that the machine is fed straight from the belt.';
+        return `Inserters ${list} take from a belt and ${onto_belts ? 'drop onto a belt' : 'drop into something a belt pickup cannot drop into'}: `
+            + `${inserters.map(it => `Inserter ${it.inserter_id} ${route(it)}`).join('; ')}. ${rule} Make each of them ${fix}`;
     }
 }
 
