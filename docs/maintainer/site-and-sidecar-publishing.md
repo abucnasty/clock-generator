@@ -18,6 +18,10 @@ deployed, with `wrangler versions upload --preview-alias master`. Its address is
 `master-clock-generator.<account subdomain>.workers.dev`, and the summary of the workflow run shows it. A preview does
 not change the site of the users. The UAT of a release uses this address.
 
+The page of the preview has a thin bar at the top: `preview <hash>`. The hash is the first seven characters of the
+commit that the preview was built from. The build of the `preview` job sets the variable `PREVIEW_COMMIT` for this. The
+build of the `production` job does not set it, so the site of the users has no bar.
+
 ## Tests that a pull request already passed
 
 The `tests` job of `release.yml` takes about 6.5 minutes, and the `test.yml` run of the pull request usually tested the
@@ -44,7 +48,7 @@ The `production` and `sidecar` jobs need the `release` job. They start when the 
 was cancelled. Their `if` lines have a status function (`!cancelled()`) for this reason. Without one, GitHub adds
 `success()`, and a `tests` job that did not start would stop these jobs. The test
 `clock-generator/tests/scripts/release-workflow.test.ts` checks that each job of `release.yml` that needs another job has
-a status function.
+a status function. It also checks that `PREVIEW_COMMIT` is set on the build line of the `preview` job and nowhere else.
 
 The tree of a squash merge is the same as the tree of the merge commit of the pull request only when `master` did not
 change after that run. If `master` changed, bring the branch up to date, wait for the new run of `test.yml`, and then

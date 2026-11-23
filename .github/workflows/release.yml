@@ -274,7 +274,8 @@ jobs:
         run: |
           set -o pipefail
           npm ci
-          npm run build
+          # PREVIEW_COMMIT puts a banner with the commit on this build; the production job sets none
+          PREVIEW_COMMIT="${GITHUB_SHA::7}" npm run build
           npm install --global "wrangler@$WRANGLER_VERSION"
           # a version needs a Worker: before its first deployment (docs/maintainer/redeploy-the-site-by-hand.md) there is none
           if ! wrangler versions upload --preview-alias master --message "master at ${GITHUB_SHA::7}" 2>&1 | tee "$RUNNER_TEMP/upload.log"; then
