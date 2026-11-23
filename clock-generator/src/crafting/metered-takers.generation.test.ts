@@ -19,10 +19,13 @@ import { quiet } from "./generate-blueprint-test-helpers";
 import { combineClockAlternativeRuns, coordinatedSourcesInputOf, runCoordinatedSourcesTask, type BlueprintGenerationResult } from "./generate-blueprint";
 import { CircuitReplay } from "./circuit-replay";
 
+/** The six science outputs, which #877's output windows clock */
+const SCIENCE_OUTPUTS = [1, 4, 11, 13, 18, 19];
+
 /** Replay both exported circuits from the wires of their blueprints and compare what each enable combinator puts out, tick
  * by tick over one window cycle once the counter runs, with the command the clock was planned to give its inserters. The
  * combinator that holds the clock on the filter's output answers the count two ticks late, as the planned command does. */
-function checkScienceExport(config: Config, clock: BlueprintGenerationResult) {
+function checkScienceExport(config: Config, clock: BlueprintGenerationResult, ids: readonly number[]) {
     const period = clock.simulation_duration.ticks;
     const windows = new Map(Object.entries(clock.clock_windows).map(([id, ranges]) =>
         [id, ranges.map(range => OpenRange.from(range.start, range.end))]));
@@ -44,7 +47,8 @@ function checkScienceExport(config: Config, clock: BlueprintGenerationResult) {
             for (const [entity_number, ticks] of seen) ticks.push([...replay.output(entity_number).values()].some(count => count > 0));
         }
         const clocked = new Set<number>();
-        for (const id of [1, 4, 11, 13, 18, 19]) {
+        // each arm of `ids` has its own enable combinator and a window that is neither always on nor always off
+        for (const id of ids) {
             const groups = schedule.inserter_combinators.filter(group => group.inserter_ids.includes(id));
             expect(groups, `${name} export of inserter ${id}`).toHaveLength(1);
             expect(blueprint.entities.find(entity => entity.entity_number === groups[0].entity_number)?.tags?.clock_generator.inserters).toContain(id);
@@ -178,7 +182,7 @@ describe("Round-Robin Polling with metered takers on a build whose foundries eac
             expect(width, `inserter ${id}`).toBeGreaterThan(0);
             expect(width, `inserter ${id}`).toBeLessThan(period);
         }
-        checkScienceExport(configuration, clock);
+        checkScienceExport(configuration, clock, SCIENCE_OUTPUTS);
     });
 
     // The worker's runs before the composition, made once for the tests below
@@ -206,7 +210,7 @@ describe("Round-Robin Polling with metered takers on a build whose foundries eac
         const selected = compose();
         expect([selected.id, selected.verdict, selected.assessment.items_per_second.toFixed(2)]).toEqual(["coordinated_sources", "stable", "320.00"]);
         expect(selected.result.clock_windows).toEqual(generated.alternatives[generated.selected_index].result.clock_windows);
-        checkScienceExport(configuration, selected.result);
+        checkScienceExport(configuration, selected.result, SCIENCE_OUTPUTS);
     });
 
     it("keeps the selected and exported controls when the whole clock refuses a proposed output window", () => {
@@ -251,6 +255,97 @@ describe("Round-Robin Polling with metered takers on a build whose foundries eac
         for (const id of outputs) expect(decisions[id], id).toEqual({ kind: "retained", reason: "joint_check_failed" });
         // the unchanged controls are the all-cycle ones, not the bounded windows the unaltered maker proposes and the clock accepts
         expect(unchanged.result.clock_windows).not.toEqual(generated.alternatives[generated.selected_index].result.clock_windows);
+    });
+
+    // The belt-fed inputs of the assemblers the second foundry's takers feed: PU and FRF from turbo belt 2
+    const BELT_INPUTS = [12, 20, 21];
+    // The modeled wake-ups of the selected clock on master after #877 (1,620.45 a minute a copy), and the most the screen of the
+    // padded one-window form held at on #877's windows (964.77)
+    const BEFORE_WAKE_UPS = 1620.45;
+    const SCREENED_WAKE_UPS = 964.77;
+    const SERVICE_TICKS = 108;
+
+    it("keeps the belt-fed inputs of metered assemblers in one window each service interval", () => {
+        const selected = generated.alternatives[generated.selected_index];
+        const clock = selected.result;
+        expect([selected.id, selected.verdict, selected.assessment.items_per_second.toFixed(2), clock.simulation_duration.ticks])
+            .toEqual(["coordinated_sources", "stable", "320.00", 324]);
+        for (const id of BELT_INPUTS) {
+            const ranges = clock.clock_windows[`inserter:${id}`];
+            const on = Array.from({ length: clock.simulation_duration.ticks }, (_, tick) => ranges.some(range => range.start <= tick && tick <= range.end));
+            for (let from = 0; from < on.length; from += SERVICE_TICKS) {
+                const interval = on.slice(from, from + SERVICE_TICKS);
+                // one circular window: the ticks it is on open once, the wrap of the interval counted
+                const openings = interval.filter((enabled, tick) => enabled && !interval[(tick - 1 + SERVICE_TICKS) % SERVICE_TICKS]).length;
+                expect(openings, `inserter ${id} from ${from}`).toBe(1);
+                expect(interval.filter(Boolean).length, `inserter ${id} from ${from}`).toBeLessThan(SERVICE_TICKS);
+            }
+        }
+        const decisions = (clock as { metered_input_windows?: Record<string, { kind: string }> }).metered_input_windows;
+        for (const id of BELT_INPUTS) expect(decisions?.[`inserter:${id}`]?.kind, `inserter ${id}`).toBe("bounded");
+        const wake_ups = clock.stability_check.as_built?.wake_ups?.wake_ups_per_minute;
+        expect(wake_ups).toBeDefined();
+        expect(Number(wake_ups!.toFixed(2))).toBeLessThan(BEFORE_WAKE_UPS);
+        expect(Number(wake_ups!.toFixed(2))).toBeLessThanOrEqual(SCREENED_WAKE_UPS);
+        checkScienceExport(configuration, clock, [...SCIENCE_OUTPUTS, ...BELT_INPUTS]);
+    });
+
+    // Replace what the input step proposes where the composition reads it (the CommonJS build, as above)
+    function composeWithInputs(alter: (proposed: { proposals: { form: string; changes: Record<string, { start: number; end: number }[]> }[] }) => unknown) {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const owner = require("../../dist/crafting/candidates/metered-input-windows");
+        const propose = owner.meteredInputWindows;
+        const proposals: string[][] = [];
+        const spy = vi.spyOn(owner, "meteredInputWindows").mockImplementation((...args: unknown[]) => {
+            const proposed = propose(...args);
+            proposals.push(proposed.proposals.flatMap((proposal: { changes: object }) => Object.keys(proposal.changes)));
+            return alter(proposed);
+        });
+        try {
+            return { selected: compose(), proposals };
+        } finally {
+            spy.mockRestore();
+        }
+    }
+    const exportedOf = (clock: BlueprintGenerationResult) => createHash("sha256")
+        .update(JSON.stringify([clock.clock_windows, clock.blueprint, clock.schedule, clock.modulo_blueprint, clock.modulo_schedule])).digest("hex");
+    // the run with no input proposal, made once for the two refusals below
+    let without: ReturnType<typeof composeWithInputs> | undefined;
+    const withoutProposal = () => without ??= composeWithInputs(proposed => ({ ...proposed, proposals: [] }));
+
+    function expectRefused(refused: ReturnType<typeof composeWithInputs>, stage: string) {
+        const unchanged = withoutProposal().selected;
+        const kept = refused.selected;
+        // the real step proposed windows for all three inputs
+        expect(refused.proposals.some(ids => BELT_INPUTS.every(id => ids.includes(`inserter:${id}`)))).toBe(true);
+        expect([kept.id, kept.verdict, kept.assessment.items_per_second.toFixed(2)]).toEqual([unchanged.id, unchanged.verdict, "320.00"]);
+        expect(kept.result.clock_windows).toEqual(unchanged.result.clock_windows);
+        expect(exportedOf(kept.result)).toBe(exportedOf(unchanged.result));
+        for (const id of BELT_INPUTS) {
+            expect(kept.result.clock_windows[`inserter:${id}`], `inserter ${id}`).toEqual([{ start: 0, end: 323 }]);
+            expect((kept.result as { metered_input_windows?: Record<string, unknown> }).metered_input_windows?.[`inserter:${id}`], `inserter ${id}`)
+                .toEqual({ kind: "retained", reason: "joint_check_failed", stage });
+        }
+    }
+
+    it("keeps the selected and exported controls when the clock refuses 12-tick input windows", () => {
+        // each proposed window cut to 12 ticks from one tick after its start: two hands' picks do not fit, and the clock falls
+        // short in its first window cycle
+        const refused = composeWithInputs(proposed => ({ ...proposed, proposals: proposed.proposals.slice(0, 1).map(proposal => ({ ...proposal,
+            changes: Object.fromEntries(Object.entries(proposal.changes).map(([id, ranges]) => [id, ranges.map(range => ({ start: range.start + 1, end: range.start + 12 }))])) })) }));
+        expectRefused(refused, "first_window_cycle");
+    });
+
+    it("keeps the selected and exported controls when the clock refuses input windows cut to one run's pick clusters", () => {
+        // the pick clusters of one run of the inputs on the clock without input windows, each once a window cycle, not each service interval
+        const clusters: Record<string, { start: number; end: number }[]> = {
+            "inserter:12": [{ start: 42, end: 57 }, { start: 229, end: 233 }],
+            "inserter:20": [{ start: 78, end: 93 }, { start: 265, end: 269 }],
+            "inserter:21": [{ start: 6, end: 21 }, { start: 193, end: 197 }],
+        };
+        const refused = composeWithInputs(proposed => ({ ...proposed, proposals: proposed.proposals.slice(0, 1).map(proposal => ({ ...proposal, changes: clusters })) }));
+        // it holds to the long run and fails the whole check, which starts the clock from its other start phases
+        expectRefused(refused, "whole_check");
     });
 });
 
