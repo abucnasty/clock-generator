@@ -70,7 +70,10 @@ function checkScienceExport(config: Config, clock: BlueprintGenerationResult) {
 }
 
 // A utility science build at 320 a second with 3 copies: two foundries each hand low density structure to three of the six
-// assemblers, and no clock made before Round-Robin Polling with metered takers is stable. A fixture, not a job of the record.
+// assemblers, and no clock made before Round-Robin Polling with metered takers is stable. The record job UTILITY_SCIENCE_320_METERED_TAKERS is
+// the same build with the directions of its shared belts stated: the record pins the verdicts, rates and window cycles of its clocks and the
+// selected clock, and its per-job checks (tests/game/builds/job-checks/samples.ts) the metered clock's maker, strategy and output swings. The
+// tests here are of the mechanism, on the fixture.
 describe("Round-Robin Polling with metered takers on a build whose foundries each feed three assemblers", () => {
     let configuration: Config;
     let generated: ClockAlternativesResult;
@@ -79,14 +82,6 @@ describe("Round-Robin Polling with metered takers on a build whose foundries eac
         generated = generateClockAlternatives(configuration, { logger: quiet });
     });
     const alternative = (id: string) => generated.alternatives.find(it => it.id === id);
-
-    it("lists the metered clock stable at the target rate on 324 ticks, 6 output swings", () => {
-        const metered = alternative("round_robin_polling_metered_takers");
-        expect(metered, generated.alternatives.map(it => it.id).join(", ")).toBeDefined();
-        expect([metered!.maker, metered!.verdict, metered!.assessment.items_per_second.toFixed(2), metered!.result.simulation_duration.ticks, metered!.result.used_terminal_swing_count])
-            .toEqual(["metered-takers", "stable", "320.00", 324, 6]);
-        expect(metered!.strategy).toMatchObject({ id: "round_robin_polling", settings: { shared_windows: "metered_takers" } });
-    });
 
     it("clocks only the takers of the foundries, with the full pickup and the following swing entry both enabled, in turn; every other inserter is always enabled", () => {
         const metered = alternative("round_robin_polling_metered_takers")!;
@@ -160,12 +155,6 @@ describe("Round-Robin Polling with metered takers on a build whose foundries eac
             context, "metered-takers", { logger: quiet });
         const clock = result?.alternatives[0]?.result;
         expect([clock?.used_terminal_swing_count, clock?.used_lcm]).toEqual([6, 1]);
-    });
-
-    it("selects Coordinated Sources, made from it, stable at the target rate", () => {
-        const selected = generated.alternatives[generated.selected_index];
-        expect([selected.id, selected.verdict, selected.assessment.items_per_second.toFixed(2), selected.result.simulation_duration.ticks])
-            .toEqual(["coordinated_sources", "stable", "320.00", 324]);
     });
 
     it("recommends a clock with a proper enable window on each science output", () => {

@@ -220,6 +220,7 @@ describe("the roles of the lanes of the samples", () => {
     IRON_BACTERIA_380_CULTIVATION: "input input",
     PROCESSING_UNIT_80_CIRCUIT_EXPORT: "input input input input output output output output",
     UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN: "input input input input output output input input",
+    UTILITY_SCIENCE_320_METERED_TAKERS: "input input input input output output empty input input",
     ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED: "input input input empty output input input input empty",
     LITHIUM_PLATE_80_SILO_CHEST: "output output",
     IRON_PLATE_80_CAR_CHEST: "output output",
@@ -247,6 +248,6 @@ describe("the roles of the lanes of the samples", () => {
             }
             for (const role of expected ?? []) counts.set(role, (counts.get(role) ?? 0) + 1);
         }
-        expect(Object.fromEntries(counts)).toEqual({ input: 84, buffer: 2, output: 43, empty: 10 });
+        expect(Object.fromEntries(counts)).toEqual({ input: 90, buffer: 2, output: 45, empty: 11 });
     });
 });

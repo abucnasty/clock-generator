@@ -241,6 +241,21 @@ const utility480: JobCheck[] = [
     { name: 'the targeted searches that run past the short plan are the two skipped', run: ({ generated }) => { expect(generated.skipped_searches).toEqual(['Moved Output Swing', 'Pitch Pickups']); } },
 ];
 
+// The utility science build at 320 a second over 3 copies (UTILITY_SCIENCE_320_METERED_TAKERS): two foundries each hand low density structure to
+// three of the six assemblers, and no clock made before Round-Robin Polling with metered takers is stable. The mechanism tests of the same build
+// stay on its fixture in src/crafting/metered-takers.generation.test.ts
+const utility320: JobCheck[] = [
+    {
+        name: 'the metered clock is made by the metered takers maker, as Round-Robin Polling with metered takers, on 6 output swings',
+        run: ({ generated }) => {
+            const metered = byId(generated, 'round_robin_polling_metered_takers');
+            expect(metered, generated.alternatives.map(it => it.id).join(', ')).toBeDefined();
+            expect([metered.maker, metered.result.used_terminal_swing_count]).toEqual(['metered-takers', 6]);
+            expect(metered.strategy).toMatchObject({ id: 'round_robin_polling', settings: { shared_windows: 'metered_takers' } });
+        },
+    },
+];
+
 // Metallurgic science at the speeds the game gives its scaffold, its packs taken into a chest that removes them
 const metallurgic: JobCheck[] = [
     {
@@ -866,6 +881,7 @@ export const SAMPLE_CHECKS: Record<string, JobCheck[]> = {
     'config-PROCESSING_UNIT_80_CIRCUIT_EXPORT': circuitExport,
     'config-STEEL_PLATE_26_WAGON_CHEST': steelWagon,
     'config-UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN': utility480,
+    'config-UTILITY_SCIENCE_320_METERED_TAKERS': utility320,
     'config-METALLURGIC_SCIENCE_45': metallurgic,
     'config-ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED': electromagnetic240,
     'config-ELECTROMAGNETIC_SCIENCE_330': electromagnetic330,

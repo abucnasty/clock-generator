@@ -56,8 +56,8 @@ const throughSave = (form: ConfigFormData) => formDataToConfig(migrateMachineTyp
 describe('nothing is written that the user did not state', () => {
     const samples = Object.entries(ConfigPaths) as [string, string][];
 
-    it('has the 33 samples, the 9 examples among them', () => {
-        expect(samples).toHaveLength(33);
+    it('has the 34 samples, the 9 examples among them', () => {
+        expect(samples).toHaveLength(34);
     });
 
     it.each(samples)('%s: through the form, a share link and a saved build, only what the form wrote before, and nothing under belts', async (_name, file) => {

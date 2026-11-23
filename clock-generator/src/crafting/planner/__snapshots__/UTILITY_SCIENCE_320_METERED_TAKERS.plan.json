@@ -1,0 +1,189 @@
+{
+  "schema": 1,
+  "sample": "UTILITY_SCIENCE_320_METERED_TAKERS",
+  "target": {
+    "item": "utility-science-pack",
+    "counts": "made",
+    "per_copy": {
+      "numerator": 320,
+      "denominator": 3
+    }
+  },
+  "unbounded_sources": [
+    {
+      "vertex": "belt:1/lane:1#coal",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:1/lane:2#coal",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:2/lane:1#processing-unit",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:2/lane:2#flying-robot-frame",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:5/lane:1#flying-robot-frame",
+      "kind": "nothing-drops-on"
+    },
+    {
+      "vertex": "belt:5/lane:2#processing-unit",
+      "kind": "nothing-drops-on"
+    }
+  ],
+  "groups": [
+    {
+      "key": "group:1",
+      "members": [
+        "machine:4",
+        "machine:3",
+        "machine:1",
+        "machine:2",
+        "machine:5",
+        "belt:4/lane:1#utility-science-pack",
+        "machine:7",
+        "machine:6",
+        "machine:8",
+        "machine:9",
+        "belt:3/lane:1#utility-science-pack"
+      ],
+      "edges": [
+        "inserter:1/utility-science-pack",
+        "inserter:2/flying-robot-frame",
+        "inserter:2/processing-unit",
+        "inserter:3/flying-robot-frame",
+        "inserter:3/processing-unit",
+        "inserter:4/utility-science-pack",
+        "inserter:5/low-density-structure",
+        "inserter:6/low-density-structure",
+        "inserter:7/coal",
+        "inserter:8/plastic-bar",
+        "inserter:9/low-density-structure",
+        "inserter:10/flying-robot-frame",
+        "inserter:10/processing-unit",
+        "inserter:11/utility-science-pack",
+        "inserter:12/flying-robot-frame",
+        "inserter:12/processing-unit",
+        "inserter:13/utility-science-pack",
+        "inserter:14/low-density-structure",
+        "inserter:15/plastic-bar",
+        "inserter:16/low-density-structure",
+        "inserter:17/low-density-structure",
+        "inserter:18/utility-science-pack",
+        "inserter:19/utility-science-pack",
+        "inserter:20/flying-robot-frame",
+        "inserter:20/processing-unit",
+        "inserter:21/flying-robot-frame",
+        "inserter:21/processing-unit"
+      ],
+      "window_cycles": [
+        {"swings":3,"fractional":false,"listed_as":"main","cycle_ticks":{"numerator":162,"denominator":1},"cycles":32,"window_cycle_ticks":5184,"kept":true},
+        {"swings":2,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":108,"denominator":1},"cycles":48,"window_cycle_ticks":5184,"kept":true},
+        {"swings":1,"fractional":false,"listed_as":"lower","cycle_ticks":{"numerator":54,"denominator":1},"cycles":96,"window_cycle_ticks":5184,"kept":true},
+        {"swings":3,"fractional":true,"listed_as":"fractional","cycle_ticks":{"numerator":162,"denominator":1},"cycles":32,"window_cycle_ticks":5184,"kept":true}
+      ],
+      "utilization": [
+        {
+          "producer": "machine:utility-science-pack",
+          "members": [
+            "machine:1",
+            "machine:2",
+            "machine:5",
+            "machine:6",
+            "machine:8",
+            "machine:9"
+          ],
+          "crafts_needed": {
+            "numerator": 160,
+            "denominator": 9
+          },
+          "crafts_capacity": {
+            "numerator": 6300781250000001,
+            "denominator": 350000000000000
+          },
+          "utilization": {
+            "numerator": 868055559366,
+            "denominator": 879015245209
+          }
+        },
+        {
+          "producer": "machine:casting-low-density-structure",
+          "members": [
+            "machine:3",
+            "machine:7"
+          ],
+          "crafts_needed": {
+            "numerator": 40,
+            "denominator": 3
+          },
+          "crafts_capacity": {
+            "numerator": 513,
+            "denominator": 20
+          },
+          "utilization": {
+            "numerator": 800,
+            "denominator": 1539
+          }
+        },
+        {
+          "producer": "machine:plastic-bar",
+          "members": [
+            "machine:4"
+          ],
+          "crafts_needed": {
+            "numerator": 25,
+            "denominator": 3
+          },
+          "crafts_capacity": {
+            "numerator": 297481,
+            "denominator": 2000
+          },
+          "utilization": {
+            "numerator": 50000,
+            "denominator": 892443
+          }
+        }
+      ]
+    }
+  ],
+  "composition": {
+    "swings": 3,
+    "fractional": false,
+    "listed_from": {
+      "swings": 3,
+      "planned": 3,
+      "higher_up_to_ticks": 2400
+    },
+    "main_window_cycle": {
+      "ticks": 5184,
+      "exact": {
+        "numerator": 5184,
+        "denominator": 1
+      }
+    },
+    "lcm_terms": {
+      "cycle_ticks": {
+        "numerator": 162,
+        "denominator": 1
+      },
+      "group_cycles": [
+        {
+          "group": "group:1",
+          "cycles": 32
+        }
+      ],
+      "ignored_items": [],
+      "computed_lcm": 32,
+      "override_lcm": null,
+      "effective_lcm": 32
+    },
+    "over_limit_action": {
+      "action": "none"
+    }
+  },
+  "exhaust": null
+}

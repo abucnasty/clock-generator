@@ -78,6 +78,8 @@ const TERMINAL: Readonly<Record<string, number>> = {
     PRODUCTIVITY_MODULE_80_CHEST_CHAIN: 1,
     PROCESSING_UNIT_80_CIRCUIT_EXPORT: 4,
     UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN: 8,
+    // the output inserters of the six utility science assemblers (1, 4, 11, 13, 18 and 19)
+    UTILITY_SCIENCE_320_METERED_TAKERS: 6,
     STEEL_PLATE_26_WAGON_CHEST: 1,
     STONE_BRICK_120_DRILL_DIRECT_INSERT: 1,
     UTILITY_SCIENCE_120: 1,

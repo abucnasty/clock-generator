@@ -48,6 +48,8 @@ export const ConfigPaths = {
     IRON_BACTERIA_380_CULTIVATION: path.join(CONFIG_SAMPLES_DIR, 'gleba', 'iron-bacteria', 'iron-bacteria-380-cultivation.json'),
     PROCESSING_UNIT_80_CIRCUIT_EXPORT: path.join(CONFIG_SAMPLES_DIR, 'intermediates', 'processing-unit', 'processing-unit-80-circuit-export.json'),
     UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN: path.join(CONFIG_SAMPLES_DIR, 'science', 'utility', 'utility-480-lds-foundry-chain.json'),
+    /** The utility science build, 320 a second over 3 copies: two foundries each hand low density structure to three of the six assemblers, and no clock made before Round-Robin Polling with metered takers is stable */
+    UTILITY_SCIENCE_320_METERED_TAKERS: path.join(CONFIG_SAMPLES_DIR, 'science', 'utility', 'utility-320-metered-takers.json'),
     /** The original duplicated electromagnetic science scaffold, described as one cell: five cells make 240/s */
     ELECTROMAGNETIC_SCIENCE_240_RECYCLER_BELT_FED: path.join(CONFIG_SAMPLES_DIR, 'science', 'electromagnetic', 'electromagnetic-240-recycler-belt-fed.json'),
     /** The lithium plate build, 80 a second: two cryogenic plants fill a rocket silo used as a chest, which six furnaces empty */
