@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import path from "path";
 import { OpenRange } from "../data-types";
 import { EntityId } from "../entities";
@@ -6,8 +7,8 @@ import { World } from "../simulation/world";
 import { runTick } from "../simulation/tick-phases";
 import { coldControlledTrialBuild } from "./plan/unclocked-run";
 import { buildAsBuiltConfig } from "./trial";
-import { beforeAll, describe, expect, it } from "vitest";
-import { generateClockAlternatives, planClockAlternatives, type ClockAlternativesResult } from "./generate-blueprint";
+import { beforeAll, describe, expect, it, vi } from "vitest";
+import { generateClockAlternatives, planClockAlternatives, type ClockAlternativesResult, type ClockAlternativeRun } from "./generate-blueprint";
 import { loadConfigFromFile } from "../config/loader";
 import { ConfigPaths } from "../config/config-paths";
 import { ConfigSchema, type Config } from "../config/schema";
@@ -16,67 +17,54 @@ import { meteredTakersClock } from "./candidates/metered-takers";
 import type { MakerLogEvent } from "./maker-log";
 import { quiet } from "./generate-blueprint-test-helpers";
 import { combineClockAlternativeRuns, coordinatedSourcesInputOf, runCoordinatedSourcesTask, type BlueprintGenerationResult } from "./generate-blueprint";
-import { CIRCUIT_LATENCY_TICKS } from "../common/rule-constants";
+import { CircuitReplay } from "./circuit-replay";
 
-/** Read the enabling deciders as the circuit sees them with the lock off. The counter starts at one;
- * a modulo computed from the previous count also receives the counter's constant one. */
+/** Replay both exported circuits from the wires of their blueprints and compare what each enable combinator puts out, tick
+ * by tick over one window cycle once the counter runs, with the command the clock was planned to give its inserters. The
+ * combinator that holds the clock on the filter's output answers the count two ticks late, as the planned command does. */
 function checkScienceExport(config: Config, clock: BlueprintGenerationResult) {
     const period = clock.simulation_duration.ticks;
     const windows = new Map(Object.entries(clock.clock_windows).map(([id, ranges]) =>
         [id, ranges.map(range => OpenRange.from(range.start, range.end))]));
     const built = buildAsBuiltConfig(config, windows, period);
-    const forms = [{ blueprint: clock.blueprint, schedule: clock.schedule }];
-    expect(clock.modulo_blueprint).toBeDefined();
-    if (clock.modulo_blueprint && clock.modulo_schedule) forms.push({ blueprint: clock.modulo_blueprint, schedule: clock.modulo_schedule });
-    // This fixture has a whole counter and offers no fractional export.
+    // This fixture has a whole counter and offers both the floor and the modulo export.
     expect(clock.subtick).toBeUndefined();
-    for (const { blueprint, schedule } of forms) {
-        expect(schedule.counted_ticks).toBe(period);
-        const counter = blueprint.entities.find(entity => entity.tags?.clock_generator.generator)?.control_behavior?.decider_conditions;
-        expect(counter?.conditions).toContainEqual(expect.objectContaining({ first_signal: expect.objectContaining({ name: "signal-clock" }), comparator: "<", constant: period }));
-        const moduli = new Map(blueprint.entities.flatMap(entity => {
-            const arithmetic = entity.control_behavior?.arithmetic_conditions;
-            if (!arithmetic) return [];
-            expect([arithmetic.first_signal.name, arithmetic.operation]).toEqual(["signal-clock", "%"]);
-            expect(counter?.outputs).toContainEqual(expect.objectContaining({ signal: arithmetic.output_signal, constant: 1, copy_count_from_input: false }));
-            return [[arithmetic.output_signal.name, arithmetic.second_constant] as const];
-        }));
+    expect(clock.modulo_blueprint).toBeDefined();
+    expect(clock.modulo_schedule).toBeDefined();
+    const forms = [{ name: "floor", blueprint: clock.blueprint, schedule: clock.schedule },
+        { name: "modulo", blueprint: clock.modulo_blueprint!, schedule: clock.modulo_schedule! }];
+    for (const { name, blueprint, schedule } of forms) {
+        expect(schedule.counted_ticks, name).toBe(period);
+        const replay = new CircuitReplay(blueprint);
+        const seen = new Map(schedule.inserter_combinators.map(group => [group.entity_number, [] as boolean[]]));
+        for (let step = 0; step < 3 * period; step++) {
+            replay.step();
+            // the first two window cycles let the counter and the modulo settle
+            if (step < 2 * period) continue;
+            for (const [entity_number, ticks] of seen) ticks.push([...replay.output(entity_number).values()].some(count => count > 0));
+        }
+        const clocked = new Set<number>();
         for (const id of [1, 4, 11, 13, 18, 19]) {
             const groups = schedule.inserter_combinators.filter(group => group.inserter_ids.includes(id));
-            expect(groups).toHaveLength(1);
-            const entity = blueprint.entities.find(entity => entity.entity_number === groups[0].entity_number)!;
-            expect(entity.tags?.clock_generator.inserters).toContain(id);
-            const decider = entity.control_behavior!.decider_conditions!;
-            expect(decider.outputs).toContainEqual(expect.objectContaining({ signal: expect.objectContaining({ name: "utility-science-pack" }), copy_count_from_input: false, constant: 1 }));
-            expect(decider.else_outputs ?? []).toHaveLength(0);
-            const control = built.inserters.find(arm => arm.id === id)!.overrides!.enable_control!;
-            expect(control.mode).toBe("CLOCKED");
-            if (control.mode !== "CLOCKED") throw new Error(`Missing clock for inserter ${id}`);
-            const signal: boolean[] = [], expected: boolean[] = [];
-            for (let tick = 0; tick < period; tick++) {
-                const raw = (tick + period - CIRCUIT_LATENCY_TICKS) % period;
-                let prior = false, term = false;
-                for (const condition of decider.conditions!) {
-                    const name = condition.first_signal.name;
-                    const value = name === "signal-clock" ? raw + 1 : raw % moduli.get(name)! + 1;
-                    if (!Number.isFinite(value)) throw new Error(`Unknown circuit signal ${name}`);
-                    const bound = condition.constant ?? 0;
-                    let holds: boolean;
-                    switch (condition.comparator) {
-                        case "=": holds = value === bound; break;
-                        case "≥": holds = value >= bound; break;
-                        case "≤": holds = value <= bound; break;
-                        default: throw new Error(`Unexpected output predicate ${condition.comparator}`);
-                    }
-                    if (condition.compare_type === "and") term = term && holds;
-                    else { prior ||= term; term = holds; }
+            expect(groups, `${name} export of inserter ${id}`).toHaveLength(1);
+            expect(blueprint.entities.find(entity => entity.entity_number === groups[0].entity_number)?.tags?.clock_generator.inserters).toContain(id);
+            clocked.add(id);
+        }
+        for (const group of schedule.inserter_combinators) {
+            for (const id of group.inserter_ids) {
+                const control = built.inserters.find(arm => arm.id === id)?.overrides?.enable_control;
+                if (control?.mode !== "CLOCKED") {
+                    expect(clocked.has(id), `inserter ${id} is clocked`).toBe(false);
+                    continue;
                 }
-                signal.push(prior || term);
-                expected.push(control.ranges.some(range => range.start <= tick && tick <= range.end));
+                const expected = Array.from({ length: period }, (_, tick) => control.ranges.some(range => range.start <= tick && tick <= range.end));
+                const replayed = seen.get(group.entity_number)!;
+                expect(replayed, `${name} export of inserter ${id}`).toEqual(expected);
+                if (clocked.has(id)) {
+                    expect(replayed).toContain(true);
+                    expect(replayed).toContain(false);
+                }
             }
-            expect(signal, `export of inserter ${id}`).toEqual(expected);
-            expect(signal).toContain(true);
-            expect(signal).toContain(false);
         }
     }
 }
@@ -193,20 +181,76 @@ describe("Round-Robin Polling with metered takers on a build whose foundries eac
         checkScienceExport(configuration, clock);
     });
 
-    it("carries the metered turns through the worker tasks to the selected clock and its two exports", () => {
-        const plan = planClockAlternatives(configuration, { logger: quiet });
-        const runs = [plan.primary, ...plan.tasks.filter(task => !task.coordinated_sources && !task.explored)
-            .map(task => runClockAlternativeTask(configuration, plan.context, task.id, { logger: quiet }))];
-        const before = combineClockAlternativeRuns(runs, alternative => alternative.ranking);
-        const ids = before.order.map(index => before.alternatives[index].id);
-        const input = structuredClone(coordinatedSourcesInputOf(runs, ids));
-        expect(input.parts.some(part => part.metered_takers?.length === 6)).toBe(true);
-        const composed = runCoordinatedSourcesTask(configuration, input, { logger: quiet });
+    // The worker's runs before the composition, made once for the tests below
+    let worker: { runs: (ClockAlternativeRun | null)[]; input: ReturnType<typeof coordinatedSourcesInputOf> } | undefined;
+    function workerRuns(): NonNullable<typeof worker> {
+        if (worker === undefined) {
+            const plan = planClockAlternatives(configuration, { logger: quiet });
+            const runs = [plan.primary, ...plan.tasks.filter(task => !task.coordinated_sources && !task.explored)
+                .map(task => runClockAlternativeTask(configuration, plan.context, task.id, { logger: quiet }))];
+            const before = combineClockAlternativeRuns(runs, alternative => alternative.ranking);
+            const ids = before.order.map(index => before.alternatives[index].id);
+            worker = { runs, input: coordinatedSourcesInputOf(runs, ids) };
+        }
+        return worker;
+    }
+    function compose() {
+        const { runs, input } = workerRuns();
+        const composed = runCoordinatedSourcesTask(configuration, structuredClone(input), { logger: quiet });
         const final = combineClockAlternativeRuns([...runs, composed], alternative => alternative.ranking);
-        const selected = final.alternatives[final.selected_index];
+        return final.alternatives[final.selected_index];
+    }
+
+    it("carries the metered turns through the worker tasks to the selected clock and its two exports", () => {
+        expect(workerRuns().input.parts.some(part => part.metered_takers?.length === 6)).toBe(true);
+        const selected = compose();
         expect([selected.id, selected.verdict, selected.assessment.items_per_second.toFixed(2)]).toEqual(["coordinated_sources", "stable", "320.00"]);
         expect(selected.result.clock_windows).toEqual(generated.alternatives[generated.selected_index].result.clock_windows);
         checkScienceExport(configuration, selected.result);
+    });
+
+    it("keeps the selected and exported controls when the whole clock refuses a proposed output window", () => {
+        // The generation project loads the CommonJS build: replace the maker's proposal where the composition reads it.
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const owner: typeof import("./candidates/metered-output-windows") = require("../../dist/crafting/candidates/metered-output-windows");
+        const propose = owner.meteredOutputWindows;
+        // the three science outputs whose clock covers the whole window cycle without the proposal; the other three have windows already
+        const outputs = [1, 4, 13].map(id => `inserter:${id}`);
+        // Alter only what the maker proposes: nothing for the reference, and for the refusal one tick of each turn, which no output can be served in.
+        const composeWith = (alter: (proposed: ReturnType<typeof propose>) => ReturnType<typeof propose>) => {
+            const proposals: string[][] = [];
+            const spy = vi.spyOn(owner, "meteredOutputWindows").mockImplementation((...args) => {
+                const proposed = propose(...args);
+                proposals.push(Object.keys(proposed.changes));
+                return alter(proposed);
+            });
+            try {
+                return { selected: compose(), proposals };
+            } finally {
+                spy.mockRestore();
+            }
+        };
+        const reference = composeWith(proposed => ({ ...proposed, changes: {} }));
+        const refused = composeWith(proposed => ({ ...proposed, changes: Object.fromEntries(Object.entries(proposed.changes)
+            .map(([id, ranges]) => [id, ranges.map(range => ({ start: range.start, end: range.start }))])) }));
+        // the real composition made its proposal for all three outputs on both runs, and the refusal tried the narrowed windows
+        for (const { proposals } of [reference, refused]) expect(proposals.some(ids => outputs.every(id => ids.includes(id)))).toBe(true);
+
+        const exported = (clock: BlueprintGenerationResult) => createHash("sha256")
+            .update(JSON.stringify([clock.clock_windows, clock.blueprint, clock.schedule, clock.modulo_blueprint, clock.modulo_schedule])).digest("hex");
+        const [kept, unchanged] = [refused.selected, reference.selected];
+        expect([kept.id, kept.verdict, kept.assessment.items_per_second.toFixed(2)]).toEqual([unchanged.id, unchanged.verdict, "320.00"]);
+        expect(kept.result.clock_windows).toEqual(unchanged.result.clock_windows);
+        expect(exported(kept.result)).toBe(exported(unchanged.result));
+        for (const id of outputs) {
+            const ticks = new Set(kept.result.clock_windows[id].flatMap(range => Array.from({ length: range.end - range.start + 1 }, (_, i) => range.start + i)));
+            expect(ticks.size, id).toBe(kept.result.simulation_duration.ticks);
+        }
+        const decisions = kept.result.metered_output_windows!;
+        expect(Object.values(decisions).filter(decision => decision.kind === "bounded")).toEqual([]);
+        for (const id of outputs) expect(decisions[id], id).toEqual({ kind: "retained", reason: "joint_check_failed" });
+        // the unchanged controls are the all-cycle ones, not the bounded windows the unaltered maker proposes and the clock accepts
+        expect(unchanged.result.clock_windows).not.toEqual(generated.alternatives[generated.selected_index].result.clock_windows);
     });
 });
 
