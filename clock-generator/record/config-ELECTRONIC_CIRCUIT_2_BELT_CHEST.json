@@ -1,0 +1,20 @@
+{
+  "format": "clock-record-3",
+  "job": "config-ELECTRONIC_CIRCUIT_2_BELT_CHEST",
+  "group": "config",
+  "name": "ELECTRONIC_CIRCUIT_2_BELT_CHEST",
+  "config_sha256": "020faf0f3a6e29699e256c7d4cde44f396a46393f7e6a4122789d75c15ff39a7",
+  "job_results_sha256": "4990fad4a6aadec530024eb0137d692998180cdd221f8084746507a0a7e6beac",
+  "selected": "time_study_windows",
+  "selected_windows": {
+    "inserter:1": "108-119",
+    "inserter:2": "108-116",
+    "inserter:3": "12-20,60-68,108-116,156-164,204-212,252-260,300-308,348-356,396-404,444-452"
+  },
+  "alternatives": [
+    {"id": "takt_batches_observed", "verdict": "unstable", "holds": false, "rate": 0.75, "supply": null, "window_cycle_ticks": 480, "wake_ups": 45.012, "descriptions_cut": 0, "clock_sha256": "16f5b074ffb75bd989bb486e51f61d134665e74e6cb1872e4100d7f09ad8a3a7", "windows_sha256": "763487efc251f957858efe5d4abe1eb4bd76199c0a6b51ba9c541aeb35a83a07", "results_sha256": "cf57aa754213f7a654cf5233b8dbb52e30ce357c7546404b05cf4d1de69d2830"},
+    {"id": "time_study_windows", "verdict": "stable", "holds": true, "rate": 2, "supply": null, "window_cycle_ticks": 480, "wake_ups": 165, "descriptions_cut": 0, "clock_sha256": "fbcc3bacbbd73c0b2950a5f9a4acf92e03cc83c79fee4157861196439880c192", "windows_sha256": "6cf309c10cd9c303ce33a71f077e166b62b66a5db7610588bbf4e036507609fd", "results_sha256": "c052ca8d4ff743eb995a10e3bbfc121c19054107db108dcd4199a7bbdda347bb"},
+    {"id": "takt_batches_observed_swings_2", "verdict": "unstable", "holds": false, "rate": 0.375, "supply": null, "window_cycle_ticks": 960, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "7ea33da8a7e95c52a17f40af7ae343916f081b431ae4f98423bc188b3af50e94", "windows_sha256": "763487efc251f957858efe5d4abe1eb4bd76199c0a6b51ba9c541aeb35a83a07", "results_sha256": "932917db5cbd6da1219f562dc8fae42aac5e3672d776f208569dcda29c0d8daf"},
+    {"id": "takt_batches_observed_swings_3", "verdict": "unstable", "holds": false, "rate": 0.25, "supply": null, "window_cycle_ticks": 1440, "wake_ups": null, "descriptions_cut": 0, "clock_sha256": "30b4800ca085f3a36a2a0a919f3d2facd4ba45cff60b8af323591f13939ea3e6", "windows_sha256": "763487efc251f957858efe5d4abe1eb4bd76199c0a6b51ba9c541aeb35a83a07", "results_sha256": "0842217046687c6e5a607362bf44f5f5a51707ce43e3f12c7fa77f1d049a1f67"}
+  ]
+}
