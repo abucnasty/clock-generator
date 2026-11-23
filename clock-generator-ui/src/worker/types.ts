@@ -529,7 +529,7 @@ export interface LaneRoleOfLane {
 export interface LiveCoverage {
     issues: InserterCoverageIssue[];
     refusal: string | null;
-    /** The ids of the inserters `refusal` names, when it is the one for inserters that take from a belt into anything but a machine; else empty */
+    /** The ids of the inserters `refusal` names, when it is the one for inserters that take from a belt and drop where a belt pickup cannot; else empty */
     refusal_inserters: number[];
     /** The engine's belt pickups outside 16-item hands on 4-item belt stacks, which the site words; they do not block generation */
     pickupsNotTested: UncalibratedBeltPickup[];

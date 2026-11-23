@@ -6,6 +6,9 @@ import { gameDataPlugin } from './scripts/game-data-plugin.ts'
 
 const packageJson = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'))
 const changelog = readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf8')
+// The preview of `master` sets `PREVIEW_COMMIT` to the short commit and shows it in a bar; any other value, or none,
+// gives no bar
+const previewCommit = /^[0-9a-f]{7,40}$/.test(process.env.PREVIEW_COMMIT ?? '') ? process.env.PREVIEW_COMMIT : ''
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -13,6 +16,7 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(packageJson.version),
     __CHANGELOG__: JSON.stringify(changelog),
+    __PREVIEW_COMMIT__: JSON.stringify(previewCommit),
   },
   optimizeDeps: {
     include: ['clock-generator', 'clock-generator/browser', 'clock-generator/light'],

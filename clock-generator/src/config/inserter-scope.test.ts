@@ -173,7 +173,7 @@ describe("coverage of an inserter whose filters are a blacklist", () => {
     });
 });
 
-describe("a belt pickup that drops into anything but a machine", () => {
+describe("a belt pickup that drops where a belt pickup cannot", () => {
     /** The shape of the build in #650: belts fill two chests by inserter, and a machine takes from one of them */
     const beltIntoChests = (): Config => {
         const config = base();
@@ -197,10 +197,10 @@ describe("a belt pickup that drops into anything but a machine", () => {
             ],
         });
     };
-    const both = "Inserters 3 and 5 take from a belt and drop into something other than a machine: "
+    const both = "Inserters 3 and 5 take from a belt and drop into something a belt pickup cannot drop into: "
         + "Inserter 3 takes from Belt 2 and drops into Chest 2; Inserter 5 takes from Belt 3 and drops into Chest 3. "
-        + "Taking from a belt into anything but a machine is not supported, so this build cannot be clocked. "
-        + "Make each of them drop into a machine, so that the machine is fed straight from the belt.";
+        + "A belt pickup can drop into a machine or into a steel chest, and nowhere else, so this build cannot be clocked. "
+        + "Make each of them drop into a machine or into a steel chest.";
 
     it("is refused before any simulation, naming every such inserter by its id", () => {
         const config = beltIntoChests();
@@ -234,8 +234,8 @@ describe("a belt pickup that drops into anything but a machine", () => {
         expect(beltPickupSinkRefusal(one)).toMatchObject({
             inserter_ids: [3],
             inserters: [{ inserter_id: 3, belt_id: 2, sink: { type: "chest", id: 2 } }],
-            message: "Inserter 3 takes from Belt 2 and drops into Chest 2. Taking from a belt into anything but a machine is not supported, "
-                + "so this build cannot be clocked. Make that inserter drop into a machine, so that the machine is fed straight from the belt.",
+            message: "Inserter 3 takes from Belt 2 and drops into Chest 2. A belt pickup can drop into a machine or into a steel chest, "
+                + "and nowhere else, so this build cannot be clocked. Make that inserter drop into a machine or into a steel chest.",
         });
     });
 
@@ -248,8 +248,8 @@ describe("a belt pickup that drops into anything but a machine", () => {
         expect(beltPickupSinkRefusal(onto)).toMatchObject({
             inserter_ids: [4],
             inserters: [{ inserter_id: 4, belt_id: 2, sink: { type: "belt", id: 3 } }],
-            message: "Inserter 4 takes from Belt 2 and drops onto Belt 3. Taking from a belt into anything but a machine is not supported, "
-                + "so this build cannot be clocked. Make that inserter drop into a machine, so that the machine is fed straight from the belt.",
+            message: "Inserter 4 takes from Belt 2 and drops onto Belt 3. Taking from a belt onto a belt is not supported, "
+                + "so this build cannot be clocked. Make that inserter drop into a machine or into a steel chest.",
         });
     });
 
@@ -263,8 +263,8 @@ describe("a belt pickup that drops into anything but a machine", () => {
         const refusal = beltPickupSinkRefusal(wagon)!;
         expect(refusal.inserters).toEqual([{ inserter_id: 3, belt_id: 2, sink: { type: "chest", id: 2 } }]);
         expect(refusal.inserter_ids).toEqual([3]);
-        const ending = " Taking from a belt into anything but a machine is not supported, so this build cannot be clocked. "
-            + "Make that inserter drop into a machine, so that the machine is fed straight from the belt.";
+        const ending = " A belt pickup can drop into a machine or into a steel chest, and nowhere else, so this build "
+            + "cannot be clocked. Make that inserter drop into a machine or into a steel chest.";
         expect(refusal.message).toBe("Inserter 3 takes from Belt 2 and drops into Cargo wagon 2." + ending);
         expect(new BeltPickupSinkError(refusal.inserters).message).toBe("Inserter 3 takes from Belt 2 and drops into Chest 2." + ending);
     });
@@ -299,5 +299,102 @@ describe("a belt pickup that drops into anything but a machine", () => {
     it("leaves a belt that feeds a machine, and a machine into a chest, alone", () => {
         expect(() => validateConfig(withInserter(1, {}))).not.toThrow();
         expect(insertersScopeProblem(withInserter(2, {}))).toBeNull();
+    });
+});
+
+describe("a belt pickup into a steel chest", () => {
+    const lane = { ingredient: "iron-plate", stack_size: 4, lane_end: { kind: "dead_end" } };
+    /** A machine fed from a belt through chest 1, which is `chest` */
+    const throughChest = (chest: object, extra: { inserters?: object[]; belts?: object[]; chests?: object[] } = {}): Config => ConfigSchema.parse({
+        setpoint: { item: "electronic-circuit", items_per_second: 2, copies: 1 },
+        machines: [{ id: 1, recipe: "electronic-circuit", prototype: "assembling-machine-3", crafting_speed: 1.25, productivity: 0 }],
+        belts: [{ id: 1, type: "turbo-transport-belt", lanes: [lane, lane] }, ...(extra.belts ?? [])],
+        inserters: [
+            { id: 1, source: { type: "belt", id: 1, near_lane: 1, pickup_length: 1, pickup_layout: "side-straight" },
+                sink: { type: "chest", id: 1 }, prototype: "stack-inserter", quality: "legendary", stack_size: 16, filters: ["iron-plate"] },
+            { id: 2, source: { type: "chest", id: 1 }, sink: { type: "machine", id: 1 }, prototype: "stack-inserter", quality: "legendary", stack_size: 16 },
+            { id: 3, source: { type: "chest", id: 2 }, sink: { type: "machine", id: 1 }, prototype: "stack-inserter", quality: "legendary",
+                stack_size: 6, filters: ["copper-cable"] },
+            { id: 4, source: { type: "machine", id: 1 }, sink: { type: "chest", id: 3 }, prototype: "stack-inserter", quality: "legendary",
+                stack_size: 16, filters: ["electronic-circuit"] },
+            ...(extra.inserters ?? []),
+        ],
+        chests: [
+            { id: 1, ...chest },
+            { id: 2, type: "infinity-chest", item_filter: [{ item_name: "copper-cable", request_count: 192 }] },
+            { id: 3, type: "infinity-chest", item_filter: [], remove_unfiltered_items: true },
+            ...(extra.chests ?? []),
+        ],
+    });
+    const steel48 = { type: "buffer-chest", storage_size: 48, item_filter: "iron-plate", prototype: "steel-chest" };
+    const chestText = (into: string) => `Inserter 1 takes from Belt 1 and drops into ${into}. A belt pickup can drop into a machine or `
+        + "into a steel chest, and nowhere else, so this build cannot be clocked. "
+        + "Make that inserter drop into a machine or into a steel chest.";
+
+    it.each([
+        { name: "a steel chest of 48 slots", chest: steel48 },
+        { name: "a steel chest limited to 10 slots", chest: { ...steel48, storage_size: 10 } },
+    ])("is not refused into $name", ({ chest }) => {
+        const config = throughChest(chest);
+        expect(beltPickupSinkRefusal(config)).toBeNull();
+        expect(insertersScopeProblem(config)).toBeNull();
+        expect(() => validateConfig(config)).not.toThrow();
+    });
+
+    it.each([
+        { name: "a chest of 48 slots that names no prototype", chest: { type: "buffer-chest", storage_size: 48, item_filter: "iron-plate" }, into: "Chest 1" },
+        { name: "a chest of 48 slots of another prototype", chest: { ...steel48, prototype: "wooden-chest" }, into: "Chest 1" },
+        { name: "a steel chest of 49 slots", chest: { ...steel48, storage_size: 49 }, into: "Chest 1" },
+        { name: "an infinity chest", chest: { type: "infinity-chest", item_filter: [], remove_unfiltered_items: true }, into: "Chest 1" },
+        { name: "a car", chest: { type: "car" }, into: "Car 1" },
+        { name: "a tank", chest: { type: "tank" }, into: "Tank 1" },
+        { name: "a cargo wagon", chest: { type: "cargo-wagon" }, into: "Cargo wagon 1" },
+        { name: "a rocket silo", chest: { type: "rocket-silo" }, into: "Rocket silo 1" },
+    ])("is refused into $name, before any simulation", ({ chest, into }) => {
+        const config = throughChest(chest);
+        expect(beltPickupSinkRefusal(config)?.message).toBe(chestText(into));
+        expect(() => validateConfig(config)).toThrow(BeltPickupSinkError);
+        expect(() => validateConfig(config)).toThrow(chestText(into));
+    });
+
+    it("leaves an infinity chest that takes none of the belt's items alone, as before", () => {
+        const config = throughChest({ type: "infinity-chest", item_filter: [{ item_name: "copper-plate", request_count: 10 }] });
+        expect(beltPickupSinkRefusal(config)).toBeNull();
+    });
+
+    describe("keeps a belt onto a belt refused", () => {
+        const belt = (id: number) => ({ id, type: "turbo-transport-belt", lanes: [{ ingredient: "iron-plate", stack_size: 4 }] });
+        const ontoBelt = (id: number, from: number, to: number) => ({ id, source: { type: "belt", id: from }, sink: { type: "belt", id: to }, stack_size: 16 });
+        const steel = steel48;
+
+        it("one inserter", () => {
+            const config = throughChest(steel, { belts: [belt(2), belt(3)], inserters: [ontoBelt(5, 2, 3)] });
+            expect(beltPickupSinkRefusal(config)).toMatchObject({
+                inserter_ids: [5],
+                message: "Inserter 5 takes from Belt 2 and drops onto Belt 3. Taking from a belt onto a belt is not supported, so this "
+                    + "build cannot be clocked. Make that inserter drop into a machine or into a steel chest.",
+            });
+            expect(() => validateConfig(config)).toThrow(BeltPickupSinkError);
+        });
+
+        it("two inserters", () => {
+            const config = throughChest(steel, { belts: [belt(2), belt(3), belt(5)], inserters: [ontoBelt(5, 2, 3), ontoBelt(6, 3, 5)] });
+            expect(beltPickupSinkRefusal(config)?.message).toBe("Inserters 5 and 6 take from a belt and drop onto a belt: "
+                + "Inserter 5 takes from Belt 2 and drops onto Belt 3; Inserter 6 takes from Belt 3 and drops onto Belt 5. "
+                + "Taking from a belt onto a belt is not supported, so this build cannot be clocked. "
+                + "Make each of them drop into a machine or into a steel chest.");
+        });
+
+        it("with a chest a belt pickup cannot drop into", () => {
+            const config = throughChest(steel, {
+                belts: [belt(2), belt(3)],
+                inserters: [ontoBelt(5, 2, 3), { id: 6, source: { type: "belt", id: 3 }, sink: { type: "chest", id: 4 }, stack_size: 16 }],
+                chests: [{ id: 4, type: "buffer-chest", storage_size: 16, item_filter: "iron-plate", prototype: "wooden-chest" }],
+            });
+            expect(beltPickupSinkRefusal(config)?.message).toBe("Inserters 5 and 6 take from a belt and drop into something a belt "
+                + "pickup cannot drop into: Inserter 5 takes from Belt 2 and drops onto Belt 3; Inserter 6 takes from Belt 3 and drops "
+                + "into Chest 4. A belt pickup can drop into a machine or into a steel chest, and nowhere else, so this "
+                + "build cannot be clocked. Make each of them drop into a machine or into a steel chest.");
+        });
     });
 });
