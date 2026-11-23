@@ -669,6 +669,8 @@ export interface BuildRun extends PlannedOutputCycle, TransferPlan {
     state_transition_history: CompactStateTransitionHistory;
     fuel_levels: FuelLevelSeries[] | undefined;
     machine_stock: StockRecording | undefined;
+    /** With machine_stock, the target items dropped on the recording's first executed tick. */
+    output_dropped_at_first_tick?: number;
     timeline_recording?: TimelineRecording;
     /** What the run moved against what the plan expects */
     stability_check: SimulationStabilityCheck;
@@ -833,6 +835,9 @@ function simulateBuild(config: Config, options: RunOptions): BuildRun {
         state_transition_history,
         fuel_levels: simulated.fuel_levels,
         machine_stock: simulated.machine_stock,
+        ...(simulated.output_dropped_at_first_tick !== undefined && {
+            output_dropped_at_first_tick: simulated.output_dropped_at_first_tick,
+        }),
         // the warm-up counts in full where it stopped at a repeating state: the recording is of the window cycle after it
         timeline_recording: (options.timeline_recording?.settle_window_cycles !== undefined || options.timeline_recording?.settle_ticks !== undefined) && simulated.timeline_recording
             ? { ...simulated.timeline_recording, ticks_before_recording: warmup_window_cycle.ticks } : simulated.timeline_recording,
@@ -1373,6 +1378,7 @@ interface SimulatedRun {
     dropped_before_run: number;
     fuel_levels: FuelLevelSeries[] | undefined;
     machine_stock: StockRecording | undefined;
+    output_dropped_at_first_tick?: number;
     timeline_recording?: TimelineRecording;
 }
 
@@ -1458,7 +1464,14 @@ function simulate(
     // the after-tick phase's recorders, in this order
     const first_tick_of_run = simulation_context.tick_provider.getCurrentTick();
     const judged_recorder = shadow?.judged(() => simulation_context.tick_provider.getCurrentTick() - first_tick_of_run);
-    const recorders: TickRecorder[] = [fuel_level_recorder, stock_recorder, timeline_recorder, judged_recorder]
+    // The held series starts after this tick, so only the physical drop counter can account for its full delivery.
+    let output_dropped_at_first_tick: number | undefined;
+    const first_drop_recorder: TickRecorder | undefined = stock_recorder === undefined ? undefined : {
+        record() {
+            output_dropped_at_first_tick ??= output_inserter_states.reduce((sum, state) => sum + state.items_dropped, 0) - dropped_before_run;
+        },
+    };
+    const recorders: TickRecorder[] = [fuel_level_recorder, stock_recorder, timeline_recorder, judged_recorder, first_drop_recorder]
         .filter(recorder => recorder !== undefined);
     const simulate_step = new SimulateStep(simulation_context, recorded_duration, recorders, stop_early);
     withDebugFor(debug, debug_steps, RunnerStepType.SIMULATE, () => simulate_step.execute());
@@ -1480,6 +1493,7 @@ function simulate(
         dropped_before_run,
         fuel_levels: fuel_level_recorder?.series(),
         machine_stock: stock_recorder?.recording(),
+        output_dropped_at_first_tick,
         timeline_recording: timeline_recorder?.recording("clock", actual_duration.ticks,
             inventory_transfer_history.ticks_before_run, simulation_context.target_production_rate.copies),
     };

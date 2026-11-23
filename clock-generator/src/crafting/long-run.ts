@@ -112,6 +112,7 @@ export function longRunWindowCycles(window_cycle_ticks: number, repeat: WindowCy
  *
  * @param held what each output inserter held after each tick of the run; a fall from one tick to the next is a drop
  * @param ticks ticks of the run: the repeating boundary's, so the judged bins are exactly the cycle
+ * @param first_tick_drops physical drops before the first held sample
  */
 export function judgeProvenCycle(
     held: readonly (readonly number[])[],
@@ -119,9 +120,11 @@ export function judgeProvenCycle(
     repeat: { bin_ticks: number; window_cycles_per_bin: number; from_bin: number; cycle_bins: number },
     expected_per_window_cycle: number,
     hand: number,
+    first_tick_drops: number = 0,
 ): LongRunVerdict {
     const first_judged_tick = repeat.from_bin * repeat.bin_ticks;
     const judged = new Array<number>(repeat.cycle_bins).fill(0);
+    if (first_judged_tick === 0 && judged.length > 0) judged[0] = first_tick_drops;
     for (const series of held) {
         for (let t = Math.max(1, first_judged_tick); t < ticks; t++) {
             if (series[t] < series[t - 1]) {
@@ -162,6 +165,7 @@ export function judgeProvenCycle(
  * @param ticks ticks of the run
  * @param expected_per_window_cycle items a window cycle is expected to move
  * @param hand the largest hand of an output inserter: a bin, and the judged span as a whole, may be this far off
+ * @param first_tick_drops physical drops before the first held sample
  */
 export function judgeLongRun(
     held: readonly (readonly number[])[],
@@ -170,6 +174,7 @@ export function judgeLongRun(
     repeat: WindowCycleRepeat | null,
     expected_per_window_cycle: number,
     hand: number,
+    first_tick_drops: number = 0,
 ): LongRunVerdict {
     const run_window_cycles = Math.floor(ticks / window_cycle_ticks);
     // the first third of the run carries its start-up; at least the last window cycle is judged
@@ -184,6 +189,7 @@ export function judgeLongRun(
     const bin_ticks = bin?.ticks ?? ticks - first_judged_tick;
     const window_cycles_per_bin = bin?.window_cycles ?? run_window_cycles - settle_window_cycles;
     const judged = new Array<number>(bin === null ? 1 : bin_count).fill(0);
+    if (first_judged_tick === 0) judged[0] = first_tick_drops;
     for (const series of held) {
         for (let t = Math.max(1, first_judged_tick); t < ticks; t++) {
             if (series[t] < series[t - 1]) {

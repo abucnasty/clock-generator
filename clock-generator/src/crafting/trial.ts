@@ -554,22 +554,22 @@ function longRunOfFreeRunningBuild(
         .flatMap(machine => targetInsertersOf(machine, target, registry).map(inserter => inserter.entity_id.id)));
     const output_inserters = registry.getAll().filter(Entity.isInserter).filter(inserter => output_ids.has(inserter.entity_id.id));
     const hand = Math.max(1, ...output_inserters.map(it => it.metadata.stack_size));
-    const judged = (of: TrialRun) => {
+    const judged = (of: TrialRun, first_tick_drops: number = 0) => {
         const recorded = of.machine_stock!;
         const held = recorded.inserters.filter(it => output_ids.has(it.inserter_id)).map(it => it.held);
         // the first third of the run carries its start-up, which a loop can take a dozen window cycles to work out of, as a
         // build does in game before a recording is settled; a build is judged by what follows: the span as a whole has
         // to come out within a hand, and no bin further off than a hand. A run that repeated is judged on its cycle.
         const verdict = of.state_repeat !== undefined
-            ? judgeProvenCycle(held, recorded.ticks, of.state_repeat, expected_output_items, hand)
-            : judgeLongRun(held, recorded.ticks, window_cycle_ticks, repeat, expected_output_items, hand);
+            ? judgeProvenCycle(held, recorded.ticks, of.state_repeat, expected_output_items, hand, first_tick_drops)
+            : judgeLongRun(held, recorded.ticks, window_cycle_ticks, repeat, expected_output_items, hand, first_tick_drops);
         // under the strict amount the judged span must move its target in all: a proven cycle as it is, the settled bins
         // of a sample over whole repeats of its output where it repeats in them (`wholeOutputRepeats`)
         const amount = of.state_repeat !== undefined ? assessTargetProduction(verdict, true)
             : sampledAmountOf(verdict);
         return { held, verdict, amount };
     };
-    let { held, verdict, amount: target_production } = judged(run);
+    let { held, verdict, amount: target_production } = judged(run, build_run.output_dropped_at_first_tick);
     // Under the strict amount a sample short by a hand or less is run on, up to the cap the long run is lengthened to
     // (LONG_RUN_MAX_TICKS), for its repeat: where the repeat is proven the amount is judged on it alone, so a start-up
     // loss inside the sampled span is not charged as rate; where it is not, the sample stands as it was judged.
@@ -581,7 +581,7 @@ function longRunOfFreeRunningBuild(
                 + (longer.run.state_repeat !== undefined ? "its repeat is proven" : "no repeat proven, the sample stands"));
             if (longer.run.state_repeat !== undefined && longer.run.machine_stock) {
                 ({ build_run, run } = longer);
-                ({ held, verdict, amount: target_production } = judged(run));
+                ({ held, verdict, amount: target_production } = judged(run, build_run.output_dropped_at_first_tick));
             }
         }
     }
@@ -591,7 +591,9 @@ function longRunOfFreeRunningBuild(
     // the mean is the expected output to within the rate tolerance of the ranking, which is over all the copies: the
     // long run is of one copy
     const output_reason = outputReasonOf(verdict, TARGET_RATE_TOLERANCE * window_cycle_ticks / 60 / (config.setpoint.copies ?? 1), cycle_window_cycles);
-    const start_up_shortfall = proven ? startUpShortfallOf(held, verdict.first_judged_tick, window_cycle_ticks, expected_output_items) : undefined;
+    const start_up_shortfall = proven
+        ? startUpShortfallOf(held, verdict.first_judged_tick, window_cycle_ticks, expected_output_items, build_run.output_dropped_at_first_tick)
+        : undefined;
     // the exports are judged in the bins of the output: a belt with a consumption rate has to receive it in every bin
     const exported = exportedItemsOf(registry, output_ids);
     const export_shortfalls = exportShortfallsOfRun(exported, new Map(stock.inserters.map(it => [it.inserter_id, it.held])),
@@ -634,8 +636,9 @@ function longRunOfFreeRunningBuild(
  * What a proven run moved short of its target before its repeat starts at `orbit_tick`: the items its output inserters
  * dropped against what the window cycles before it expect. Undefined where nothing was short.
  */
-function startUpShortfallOf(held: readonly (readonly number[])[], orbit_tick: number, window_cycle_ticks: number, expected_per_window_cycle: number): StartUpShortfall | undefined {
-    let dropped = 0;
+function startUpShortfallOf(held: readonly (readonly number[])[], orbit_tick: number, window_cycle_ticks: number,
+    expected_per_window_cycle: number, first_tick_drops: number = 0): StartUpShortfall | undefined {
+    let dropped = orbit_tick > 0 ? first_tick_drops : 0;
     for (const series of held) {
         for (let t = 1; t < orbit_tick; t++) {
             if (series[t] < series[t - 1]) dropped += series[t - 1] - series[t];
