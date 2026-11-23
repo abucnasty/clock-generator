@@ -57,6 +57,7 @@ import { BuildPanel, type BuildView } from './components/BuildPanel';
 import { PanelSection } from './components/Panel';
 import { advancedSetCount } from './utils/advancedSummary';
 import { ChangelogDialog } from './components/ChangelogDialog';
+import { PreviewBanner } from './components/PreviewBanner';
 import { MessageHost, MessageSlot } from './components/Messages';
 import { DisplayPreferencesProvider } from './hooks/useDisplayPreferences';
 import type { ResultDetail } from './utils/resultsView';
@@ -1120,6 +1121,7 @@ function App() {
         <PageProviders gameNames={gameNames} searchOnlyRecipes={searchOnlyRecipes} craftingMachines={craftingMachines} ruleTiming={ruleTiming}>
             <CssBaseline />
             <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', pb: { xs: 'calc(72px + env(safe-area-inset-bottom))', sm: 'calc(48px + env(safe-area-inset-bottom))' } }}>
+                <PreviewBanner />
                 <AppBar position="sticky" ref={headerRef}>
                     {isInitialized && (
                         <ConfigImportExport

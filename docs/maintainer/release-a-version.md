@@ -17,7 +17,8 @@ Release the work on `master`: the clock generator, the site and, if its version 
 ## Procedure
 
 1. Do the UAT on the preview deployment of `master`. The summary of the last run of `release.yml` on `master` shows
-   its address.
+   its address. The bar at the top of the page shows `preview <hash>`: check that the hash is the start of the commit
+   that you test.
 
 2. Make the branch `release/<slug>` from `master`.
 
