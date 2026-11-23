@@ -35,6 +35,7 @@
  "config-STONE_BRICK_120_DRILL_DIRECT_INSERT": 2.8,
  "config-UTILITY_SCIENCE_120": 14.8,
  "config-UTILITY_SCIENCE_120_PROCESSING_UNIT_AND_LDS_ON_ONE_BELT": 33.4,
+ "config-UTILITY_SCIENCE_320_METERED_TAKERS": 53.2,
  "config-UTILITY_SCIENCE_480_LDS_FOUNDRY_CHAIN": 106.1,
  "containers-container-car-mixed": 19.6,
  "containers-container-tank-mixed": 18.9,
