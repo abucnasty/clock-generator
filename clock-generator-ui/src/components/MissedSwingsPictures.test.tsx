@@ -35,9 +35,8 @@ describe('the pictures in place of the sentences of a cause', () => {
         details.open = true;
         const inside = details.textContent!;
         // the other clock is its own line above; at a full join, picture one's caption says the side belts are full
-        const fewer = cause.changes!.text.split(/(?<=\.)\s+(?=[A-Z])/).filter(it => !it.startsWith('Another clock of this build'));
         const said = textParts(cause).filter(part => !(cause.kind === 'join' && part === cause.cause?.text));
-        for (const part of [...said, ...fewer]) expect(inside).toContain(part);
+        for (const part of said) expect(inside).toContain(part);
         expect(inside).not.toContain('Another clock of this build');
         if (cause.kind === 'join') expect(inside).not.toContain(cause.cause!.text);
         expect(visibleText(container).split('Another clock of this build')).toHaveLength(2);
@@ -62,13 +61,11 @@ describe('the pictures in place of the sentences of a cause', () => {
         for (const part of [cause.headline.text, ...textParts(cause)]) expect(labels).toContain(part);
     });
 
-    it('on the 72-tick clock: the chips of the copies, the 8 copies that hold, and six marked window cycles with their words', () => {
+    it('on the 72-tick clock: the chips of the copies, one copy alone, and six marked window cycles with their words', () => {
         const { container } = show(<LaneDiagnostics clock={viewOf(AUTOMATION_240, 'euclidean_swings')} />, { names: gameNames });
         const chips = [...container.querySelectorAll('[data-picture="copies"] [data-chip]')].map(it => it.getAttribute('data-chip'));
         expect(chips.slice(0, 9)).toEqual(['0', '6', '0', '0', '0', '0', '0', '0', '0']);
-        expect(chips.slice(9, 18)).toEqual([...Array(8).fill('0'), 'absent']);
-        expect(chips.slice(18)).toEqual(['0', ...Array(8).fill('absent')]);
-        expect(screen.getByText('8 copies')).toBeTruthy();
+        expect(chips.slice(9)).toEqual(['0', ...Array(8).fill('absent')]);
         expect(screen.getByText('Travel between copies: 72 ticks (9 tiles), one window cycle')).toBeTruthy();
         const marks = [...container.querySelectorAll('[data-mark]')];
         expect(marks.map(it => `${it.getAttribute('data-mark')} ${it.querySelector('title')!.textContent}`)).toEqual([
@@ -84,13 +81,12 @@ describe('the pictures in place of the sentences of a cause', () => {
             `${CAUSE_WORDS.gap.legend} (1)${CAUSE_WORDS.full.legend} (3)${CAUSE_WORDS.both.legend} (2)`);
     });
 
-    it('on the 216-tick clock: the join\'s caption with its hint, 42 marked window cycles a copy, and the 3 copies that hold', () => {
+    it('on the 216-tick clock: the join\'s caption with its hint, and 42 marked window cycles a copy', () => {
         const { container } = show(<LaneDiagnostics clock={viewOf(AUTOMATION_240, 'takt_batches_observed')} />, { names: gameNames });
         expect(container.textContent).toContain('The side-loaded belts of copies 4 and 8 are full where they join the output belt. '
             + 'Usually the side-loaded belt is too short, or items from an upstream copy are passing on the output belt.');
         expect(container.textContent).toContain(MISSED_SWINGS_COPY.entryOfInputLanes);
         expect(container.textContent).not.toContain(MISSED_SWINGS_COPY.beltFlows);
-        expect(screen.getByText('3 copies')).toBeTruthy();
         const marks = [...container.querySelectorAll('[data-mark]')];
         expect(marks).toHaveLength(84);
         expect(marks[0].querySelector('title')!.textContent).toBe('Window cycle 1: 5 of its 6 swings made.');

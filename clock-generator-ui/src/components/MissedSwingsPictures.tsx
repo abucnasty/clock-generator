@@ -48,7 +48,7 @@ function Text({ x, y, size = 12, fill, anchor = 'start', weight = 400, children 
     return <text x={x} y={y} fontSize={size} fill={fill} textAnchor={anchor} fontWeight={weight}>{children}</text>;
 }
 
-/** Picture one: one chip for each copy, in their order from the entry; a row for all the copies, the fewer copies that hold, one copy alone */
+/** Picture one: one chip for each copy, in their order from the entry; a row for all the copies and one for one copy alone */
 function CopiesPicture({ cause, copies, width, narrow, laneItems, label, named, along }: {
     cause: SharedLaneCause; copies: number; width: number; narrow: boolean; laneItems: string[]; label: string; named: InserterNamer | null;
     /** A build of one copy: the inserters on the lanes that miss swings in order along the belt, and the tiles between each and the next where known */
@@ -261,10 +261,9 @@ export function MissedSwingsPictures({ checked, cause, lanes, assumptions, onSel
     const labels = pictureLabelsOf(cause, named ? { named, itemLabel: id => itemLabel(id) } : undefined);
     const shortItems = [...new Set(checked.rows.filter(row => row.state.kind === 'short').map(row => laneOf(lanes, row)?.item).filter((it): it is string => Boolean(it)))];
     const laneItems = shortItems.map(item => nameInText(itemLabel(item)));
-    const fewer = cause.changes?.data.fewer_copies ?? null;
     const caption = named ? oneCopyCaptionOf(cause) : cause.kind === 'join'
         ? MISSED_SWINGS_COPY.joinCaption(missing, cause.swings?.kind === 'join' ? cause.swings.side_belt : true)
-        : MISSED_SWINGS_COPY.laneCaption(missing, fewer !== null && fewer > 1 ? fewer : null, cause.alone.data.missed);
+        : MISSED_SWINGS_COPY.laneCaption(missing, cause.alone.data.missed);
     const swings = cause.swings;
     const takers = takersOf(cause);
     // a build of one copy: every inserter on the lanes that miss swings, in order along the belt

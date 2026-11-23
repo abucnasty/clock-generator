@@ -104,7 +104,7 @@ const withoutPositions = (config: Config, which: (index: number) => boolean): Co
     ({ ...config, inserters: config.inserters.map(({ position, ...inserter }, index) => which(index) ? inserter : { ...inserter, position }) }) as Config;
 
 /** The rows of a clock's lanes, from the judgement of the lanes as the generation makes it (no lane in the model: no run) */
-const rowsOf = (config: Config) => checkedLanesOf({ config, holds: true, judged: judgeSharedLanes(config, {}, 72, quiet), window_cycle_ticks: 72, copies_trial: null, fewer: null })
+const rowsOf = (config: Config) => checkedLanesOf({ config, holds: true, judged: judgeSharedLanes(config, {}, 72, quiet), window_cycle_ticks: 72, copies_trial: null })
     ?.rows.map(row => `${row.belt_id}/${row.lane} ${row.state.kind}${row.state.kind === "not_checked" ? ` ${row.state.reason.code}` : ""}`);
 
 // a build of one copy whose takers of a lane do not all have positions: how far apart they stand is not known, so the lane
@@ -125,7 +125,7 @@ describe("the input-lane check of a build of one copy whose takers have no posit
         expect(modelLanesOf(none)).toEqual([]);
         expect(sharedLanesOf(none).map(lane => `${lane.belt_id}/${lane.lane}`)).toEqual(["1/1", "1/2", "2/1"]);
         expect(rowsOf(none)).toEqual(["1/1 not_checked taker_spacing_unknown", "1/2 not_checked taker_spacing_unknown", "2/1 rate_fits"]);
-        const checked = checkedLanesOf({ config: none, holds: true, judged: judgeSharedLanes(none, {}, 72, quiet), window_cycle_ticks: 72, copies_trial: null, fewer: null })!;
+        const checked = checkedLanesOf({ config: none, holds: true, judged: judgeSharedLanes(none, {}, 72, quiet), window_cycle_ticks: 72, copies_trial: null })!;
         expect(checked.rows[0]).toMatchObject({ label: "Not checked", sentence: "Not every inserter on this lane has a position, so the distance between them is not known." });
         expect(checked.line.run_with_copies).toBe(false);
     });
